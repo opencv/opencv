@@ -65,9 +65,66 @@ inline int getLargestPowerOf2SmallerThan(unsigned x)
     return x - (x >> 1);
 }
 
-template <typename DT, typename CT>
-struct BlockMatch
+template <typename T, typename DT, typename CT>
+class BlockMatch
 {
+public:
+    // Data accessor
+    T* data()
+    {
+        return data_;
+    }
+
+    // Const version of data accessor
+    const T* data() const
+    {
+        return data_;
+    }
+
+    // Allocate memory for data
+    void init(const int &blockSizeSq)
+    {
+        data_ = new T[blockSizeSq];
+    }
+
+    // Release data memory
+    void release()
+    {
+        delete[] data_;
+    }
+
+    // Overloaded operator for convenient assignment
+    void operator()(const DT &_dist, const CT &_coord_x, const CT &_coord_y)
+    {
+        dist = _dist;
+        coord_x = _coord_x;
+        coord_y = _coord_y;
+    }
+
+    // Overloaded array subscript operator
+    T& operator[](const std::size_t &idx)
+    {
+        return data_[idx];
+    };
+
+    // Overloaded const array subscript operator
+    const T& operator[](const std::size_t &idx) const
+    {
+        return data_[idx];
+    };
+
+    // Overloaded comparison operator
+    const inline bool operator==(const BlockMatch& other) const
+    {
+        return (coord_x == other.coord_x && coord_y == other.coord_y);
+    }
+
+    // Overloaded comparison operator for sorting
+    bool operator<(const BlockMatch& right) const
+    {
+        return dist < right.dist;
+    }
+
     // Block matching distance
     DT dist;
 
@@ -75,13 +132,9 @@ struct BlockMatch
     CT coord_x;
     CT coord_y;
 
-    // Overloaded operator for convenient assignment
-    void operator()(const DT &_dst, const CT &_coord_x, const CT &_coord_y)
-    {
-        dist = _dst;
-        coord_x = _coord_x;
-        coord_y = _coord_y;
-    }
+private:
+    // Pointer to the pixel values of the block
+    T *data_;
 };
 
 class DistAbs
@@ -222,15 +275,16 @@ public:
 #include <iostream>
 #endif
 
+template <typename T>
 void ComputeThresholdMap1D(
-    short *outThrMap1D,
+    T *outThrMap1D,
     const float *thrMap1D,
     float *thrMap2D,
     const float &hardThr1D,
     const float *coeff,
     const int &templateWindowSizeSq)
 {
-    short *thrMapPtr1D = outThrMap1D;
+    T *thrMapPtr1D = outThrMap1D;
     for (int ii = 0; ii < 4; ++ii)
     {
 #ifdef DEBUG_PRINT
@@ -248,13 +302,13 @@ void ComputeThresholdMap1D(
                 int indexIn1D = (1 << ii) - 1 + ii1;
                 int indexIn2D = jj;
                 int thr = static_cast<int>(thrMap1D[indexIn1D] * thrMap2D[indexIn2D] * hardThr1D * coeff[ii]);
-                if (thr > std::numeric_limits<short>::max())
-                    thr = std::numeric_limits<short>::max();
+                if (thr > std::numeric_limits<T>::max())
+                    thr = std::numeric_limits<T>::max();
 
                 if (jj == 0 && ii1 == 0)
                     thr = 0;
 
-                *thrMapPtr1D++ = (short)thr;
+                *thrMapPtr1D++ = (T)thr;
 
 #ifdef DEBUG_PRINT
                 std::cout << thr << " ";

@@ -45,7 +45,7 @@
 using namespace cv;
 
 template <typename T>
-inline static void shrink(T &val, T &nonZeroCount, const short &threshold)
+inline static void shrink(T &val, T &nonZeroCount, const T &threshold)
 {
     if (std::abs(val) < threshold)
         val = 0;
@@ -53,7 +53,8 @@ inline static void shrink(T &val, T &nonZeroCount, const short &threshold)
         ++nonZeroCount;
 }
 
-inline static void hardThreshold2D(short *dst, short *thrMap, const int &templateWindowSizeSq)
+template <typename T>
+inline static void hardThreshold2D(T *dst, T *thrMap, const int &templateWindowSizeSq)
 {
     for (int i = 1; i < templateWindowSizeSq; ++i)
     {
@@ -94,21 +95,21 @@ static const float kCoeff[4] = {
 };
 
 // Forward transform 4x4 block
-template <typename T>
-inline static void HaarColumn4x4(const T *src, short *dst, const int &step)
+template <typename T, typename TT>
+inline static void HaarColumn4x4(const T *src, TT *dst, const int &step)
 {
     const T *src0 = src;
     const T *src1 = src + 1 * step;
     const T *src2 = src + 2 * step;
     const T *src3 = src + 3 * step;
 
-    short sum0 = (*src0 + *src1 + 1) >> 1;
-    short sum1 = (*src2 + *src3 + 1) >> 1;
-    short dif0 = *src0 - *src1;
-    short dif1 = *src2 - *src3;
+    TT sum0 = (*src0 + *src1 + 1) >> 1;
+    TT sum1 = (*src2 + *src3 + 1) >> 1;
+    TT dif0 = *src0 - *src1;
+    TT dif1 = *src2 - *src3;
 
-    short sum00 = (sum0 + sum1 + 1) >> 1;
-    short dif00 = sum0 - sum1;
+    TT sum00 = (sum0 + sum1 + 1) >> 1;
+    TT dif00 = sum0 - sum1;
 
     dst[0 * 4] = sum00;
     dst[1 * 4] = dif00;
@@ -116,16 +117,16 @@ inline static void HaarColumn4x4(const T *src, short *dst, const int &step)
     dst[3 * 4] = dif1;
 }
 
-template <typename T>
-inline static void HaarRow4x4(const T *src, short *dst)
+template <typename T, typename TT>
+inline static void HaarRow4x4(const T *src, TT *dst)
 {
-    short sum0 = (src[0] + src[1] + 1) >> 1;
-    short sum1 = (src[2] + src[3] + 1) >> 1;
-    short dif0 = src[0] - src[1];
-    short dif1 = src[2] - src[3];
+    TT sum0 = (src[0] + src[1] + 1) >> 1;
+    TT sum1 = (src[2] + src[3] + 1) >> 1;
+    TT dif0 = src[0] - src[1];
+    TT dif1 = src[2] - src[3];
 
-    short sum00 = (sum0 + sum1 + 1) >> 1;
-    short dif00 = sum0 - sum1;
+    TT sum00 = (sum0 + sum1 + 1) >> 1;
+    TT dif00 = sum0 - sum1;
 
     dst[0] = sum00;
     dst[1] = dif00;
@@ -133,10 +134,10 @@ inline static void HaarRow4x4(const T *src, short *dst)
     dst[3] = dif1;
 }
 
-template <typename T>
-inline static void Haar4x4(const T *ptr, short *dst, const int &step)
+template <typename T, typename TT>
+inline static void Haar4x4(const T *ptr, TT *dst, const int &step)
 {
-    short temp[16];
+    TT temp[16];
 
     // Transform columns first
     for (int i = 0; i < 4; ++i)
@@ -147,15 +148,16 @@ inline static void Haar4x4(const T *ptr, short *dst, const int &step)
         HaarRow4x4(temp + i * 4, dst + i * 4);
 }
 
-inline static void InvHaarColumn4x4(short *src, short *dst)
+template <typename TT>
+inline static void InvHaarColumn4x4(TT *src, TT *dst)
 {
-    short src0 = src[0 * 4] * 2;
-    short src1 = src[1 * 4];
-    short src2 = src[2 * 4];
-    short src3 = src[3 * 4];
+    TT src0 = src[0 * 4] * 2;
+    TT src1 = src[1 * 4];
+    TT src2 = src[2 * 4];
+    TT src3 = src[3 * 4];
 
-    short sum0 = src0 + src1;
-    short dif0 = src0 - src1;
+    TT sum0 = src0 + src1;
+    TT dif0 = src0 - src1;
 
     dst[0 * 4] = (sum0 + src2) >> 1;
     dst[1 * 4] = (sum0 - src2) >> 1;
@@ -163,15 +165,16 @@ inline static void InvHaarColumn4x4(short *src, short *dst)
     dst[3 * 4] = (dif0 - src3) >> 1;
 }
 
-inline static void InvHaarRow4x4(short *src, short *dst)
+template <typename TT>
+inline static void InvHaarRow4x4(TT *src, TT *dst)
 {
-    short src0 = src[0] * 2;
-    short src1 = src[1];
-    short src2 = src[2];
-    short src3 = src[3];
+    TT src0 = src[0] * 2;
+    TT src1 = src[1];
+    TT src2 = src[2];
+    TT src3 = src[3];
 
-    short sum0 = src0 + src1;
-    short dif0 = src0 - src1;
+    TT sum0 = src0 + src1;
+    TT dif0 = src0 - src1;
 
     dst[0] = (sum0 + src2) >> 1;
     dst[1] = (sum0 - src2) >> 1;
@@ -179,9 +182,10 @@ inline static void InvHaarRow4x4(short *src, short *dst)
     dst[3] = (dif0 - src3) >> 1;
 }
 
-inline static void InvHaar4x4(short *src)
+template <typename TT>
+inline static void InvHaar4x4(TT *src)
 {
-    short temp[16];
+    TT temp[16];
 
     // Invert columns first
     for (int i = 0; i < 4; ++i)
@@ -194,10 +198,11 @@ inline static void InvHaar4x4(short *src)
 
 /// 1D forward transformations
 
-inline static short HaarTransformShrink2(short **z, const int &n, short *&thrMap)
+template <typename T, typename DT, typename CT>
+inline static short HaarTransformShrink2(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
 {
-    short sum = (z[0][n] + z[1][n] + 1) >> 1;
-    short dif = z[0][n] - z[1][n];
+    T sum = (z[0][n] + z[1][n] + 1) >> 1;
+    T dif = z[0][n] - z[1][n];
 
     short nonZeroCount = 0;
     shrink(sum, nonZeroCount, *thrMap++);
@@ -209,15 +214,16 @@ inline static short HaarTransformShrink2(short **z, const int &n, short *&thrMap
     return nonZeroCount;
 }
 
-inline static short HaarTransformShrink4(short **z, const int &n, short *&thrMap)
+template <typename T, typename DT, typename CT>
+inline static short HaarTransformShrink4(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
 {
-    short sum0 = (z[0][n] + z[1][n] + 1) >> 1;
-    short sum1 = (z[2][n] + z[3][n] + 1) >> 1;
-    short dif0 = z[0][n] - z[1][n];
-    short dif1 = z[2][n] - z[3][n];
+    T sum0 = (z[0][n] + z[1][n] + 1) >> 1;
+    T sum1 = (z[2][n] + z[3][n] + 1) >> 1;
+    T dif0 = z[0][n] - z[1][n];
+    T dif1 = z[2][n] - z[3][n];
 
-    short sum00 = (sum0 + sum1 + 1) >> 1;
-    short dif00 = sum0 - sum1;
+    T sum00 = (sum0 + sum1 + 1) >> 1;
+    T dif00 = sum0 - sum1;
 
     short nonZeroCount = 0;
     shrink(sum00, nonZeroCount, *thrMap++);
@@ -233,7 +239,8 @@ inline static short HaarTransformShrink4(short **z, const int &n, short *&thrMap
     return nonZeroCount;
 }
 
-inline static short HaarTransformShrink8(short **z, const int &n, short *&thrMap)
+template <typename T, typename DT, typename CT>
+inline static short HaarTransformShrink8(BlockMatch<T, DT, CT> *z, const int &n, short *&thrMap)
 {
     short sum0 = (z[0][n] + z[1][n] + 1) >> 1;
     short sum1 = (z[2][n] + z[3][n] + 1) >> 1;
@@ -276,8 +283,8 @@ inline static short HaarTransformShrink8(short **z, const int &n, short *&thrMap
 
 /// Functions for inverse 1D transforms
 
-template <typename T>
-inline static void InverseHaarTransform2(T **src, const int &n)
+template <typename T, typename DT, typename CT>
+inline static void InverseHaarTransform2(BlockMatch<T, DT, CT> *src, const int &n)
 {
     T src0 = src[0][n] * 2;
     T src1 = src[1][n];
@@ -286,8 +293,8 @@ inline static void InverseHaarTransform2(T **src, const int &n)
     src[1][n] = (src0 - src1) >> 1;
 }
 
-template <typename T>
-inline static void InverseHaarTransform4(T **src, const int &n)
+template <typename T, typename DT, typename CT>
+inline static void InverseHaarTransform4(BlockMatch<T, DT, CT> *src, const int &n)
 {
     T src0 = src[0][n] * 2;
     T src1 = src[1][n];
@@ -303,8 +310,8 @@ inline static void InverseHaarTransform4(T **src, const int &n)
     src[3][n] = (dif0 - src3) >> 1;
 }
 
-template <typename T>
-inline static void InverseHaarTransform8(T **src, const int &n)
+template <typename T, typename DT, typename CT>
+inline static void InverseHaarTransform8(BlockMatch<T, DT, CT> *src, const int &n)
 {
     T src0 = src[0][n] * 2;
     T src1 = src[1][n];

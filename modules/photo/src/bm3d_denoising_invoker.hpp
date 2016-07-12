@@ -51,9 +51,8 @@
 
 using namespace cv;
 
-template <typename T, typename IT, typename UIT, typename D, typename WT>
-struct Bm3dDenoisingInvoker :
-    public ParallelLoopBody
+template <typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
+struct Bm3dDenoisingInvoker : public ParallelLoopBody
 {
 public:
     Bm3dDenoisingInvoker(
@@ -91,15 +90,15 @@ private:
     int groupSize_;
 
     // Function pointers
-    void(*haarTransform2D)(const T *ptr, short *dst, const int &step);
-    void(*inverseHaar2D)(short *src);
+    void(*haarTransform2D)(const T *ptr, TT *dst, const int &step);
+    void(*inverseHaar2D)(TT *src);
 
     // Threshold map
-    short *thrMap_;
+    TT *thrMap_;
 };
 
-template <typename T, typename IT, typename UIT, typename D, typename WT>
-Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
+template <typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
+Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
     const Mat& src,
     Mat& dst,
     const int &templateWindowSize,
@@ -136,7 +135,7 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
     copyMakeBorder(src_, srcExtended_, borderSize_, borderSize_, borderSize_, borderSize_, BORDER_DEFAULT);
 
     // Allocate memory for threshold map
-    thrMap_ = new short[templateWindowSizeSq_ * ((BM3D_MAX_3D_SIZE << 1) - 1)];
+    thrMap_ = new TT[templateWindowSizeSq_ * ((BM3D_MAX_3D_SIZE << 1) - 1)];
 
     // Calculate block matching threshold
     hBM_ = D::template calcBlockMatchingThreshold<int>(hBM, templateWindowSizeSq_);
@@ -157,18 +156,18 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::Bm3dDenoisingInvoker(
     }
 }
 
-template<typename T, typename IT, typename UIT, typename D, typename WT>
-inline Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::~Bm3dDenoisingInvoker()
+template<typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
+inline Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::~Bm3dDenoisingInvoker()
 {
     delete[] thrMap_;
 }
 
-template <typename T, typename IT, typename UIT, typename D, typename WT>
-void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) const
+template <typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
+void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range) const
 {
     const int size = (range.size() + 2 * borderSize_) * srcExtended_.cols;
-    std::vector<float> weightedSum(size, 0.0);
-    std::vector<float> weights(size, 0.0);
+    std::vector<WT> weightedSum(size, 0.0);
+    std::vector<WT> weights(size, 0.0);
     int row_from = range.start;
     int row_to = range.end - 1;
 
@@ -188,7 +187,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
     const int halfBlockSize = halfTemplateWindowSize_;
     const int searchWindowSize = searchWindowSize_;
     const int searchWindowSizeSq = searchWindowSizeSq_;
-    const int halfSearchWindowSize = halfSearchWindowSize_;
+    const short halfSearchWindowSize = (short)halfSearchWindowSize_;
     const int hBM = hBM_;
     const int groupSize = groupSize_;
 
@@ -201,12 +200,10 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
     const int dstcstep = dstStep - blockSize;
     const int weicstep = weiStep - blockSize;
 
-    // Buffers
-    short *r = new short[blockSizeSq];    // reference block
-    short **z = new short*[searchWindowSizeSq];  // 3D array
+    // Buffer to store 3D group
+    BlockMatch<TT, int, TT> *bm = new BlockMatch<TT, int, TT>[searchWindowSizeSq];
     for (int i = 0; i < searchWindowSizeSq; ++i)
-        z[i] = new short[blockSizeSq];
-    BlockMatch<int, short> *bm = new BlockMatch<int, short>[searchWindowSizeSq];
+        bm[i].init(blockSizeSq);
 
 #ifdef DEBUG_PRINT
     printf("Entering the loop...\n");
@@ -224,20 +221,28 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
             const T *referencePatch = srcExtended_.ptr<T>(0) + step*(halfSearchWindowSize + j) + (halfSearchWindowSize + i);
             const T *currentPixel = srcExtended_.ptr<T>(0) + step*j + i;
 
-            haarTransform2D(referencePatch, r, step);
+            // Transform reference patch and place it as the first element
+            haarTransform2D(referencePatch, bm[0].data(), step);
+            bm[0](0, halfSearchWindowSize, halfSearchWindowSize);
 
-            int elementSize = 0;
+            int elementSize = 1;
+            const TT *referenceBlock = bm[0].data();
             for (short l = 0; l < searchWindowSize; ++l)
             {
                 const T *candidatePatch = currentPixel + step*l;
                 for (short k = 0; k < searchWindowSize; ++k)
                 {
-                    haarTransform2D(candidatePatch + k, z[elementSize], step);
+                    if (l == halfSearchWindowSize && k == halfSearchWindowSize)
+                        continue;
+
+                    // Transform candidate patch
+                    haarTransform2D(candidatePatch + k, bm[elementSize].data(), step);
 
                     // Calc distance
                     int e = 0;
+                    const TT *candidateBlock = bm[elementSize].data();
                     for (int n = blockSizeSq; n--;)
-                        e += D::template calcDist<short>(z[elementSize][n], r[n]);
+                        e += D::template calcDist<TT>(candidateBlock[n], referenceBlock[n]);
 
                     // Save the distance, coordinate and increase the counter
                     if (e < hBM)
@@ -245,30 +250,8 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
                 }
             }
 
-            if (elementSize == 0)
-                continue;
-
-            // Sort z by distance
-            for (int k = 0; k < elementSize; ++k)
-            {
-                for (int l = k + 1; l < elementSize; ++l)
-                {
-                    if (bm[l].dist < bm[k].dist)
-                    {
-                        // swap pointers in z
-                        short *temp = z[k];
-                        z[k] = z[l];
-                        z[l] = temp;
-
-                        // swap dist
-                        std::swap(bm[k].dist, bm[l].dist);
-
-                        // swap coords
-                        std::swap(bm[k].coord_x, bm[l].coord_x);
-                        std::swap(bm[k].coord_y, bm[l].coord_y);
-                    }
-                }
-            }
+            // Sort bm by distance (first element is already sorted)
+            std::sort(bm + 1, bm + elementSize);
 
             // Find the nearest power of 2 and cap the group size from the top
             elementSize = getLargestPowerOf2SmallerThan(elementSize);
@@ -277,37 +260,38 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
 
             // Transform and shrink 1D columns
             short sumNonZero = 0;
-            short *thrMapPtr1D = thrMap_ + (elementSize - 1) * blockSizeSq;
+            TT *thrMapPtr1D = thrMap_ + (elementSize - 1) * blockSizeSq;
             switch (elementSize)
             {
             case 8:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
-                    sumNonZero += HaarTransformShrink8(z, n, thrMapPtr1D);
-                    InverseHaarTransform8(z, n);
+                    sumNonZero += HaarTransformShrink8(bm, n, thrMapPtr1D);
+                    InverseHaarTransform8(bm, n);
                 }
                 break;
 
             case 4:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
-                    sumNonZero += HaarTransformShrink4(z, n, thrMapPtr1D);
-                    InverseHaarTransform4(z, n);
+                    sumNonZero += HaarTransformShrink4(bm, n, thrMapPtr1D);
+                    InverseHaarTransform4(bm, n);
                 }
                 break;
 
             case 2:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
-                    sumNonZero += HaarTransformShrink2(z, n, thrMapPtr1D);
-                    InverseHaarTransform2(z, n);
+                    sumNonZero += HaarTransformShrink2(bm, n, thrMapPtr1D);
+                    InverseHaarTransform2(bm, n);
                 }
                 break;
 
             case 1:
-                for (int n = 0; n < blockSizeSq; n++)
                 {
-                    shrink(z[0][n], sumNonZero, *thrMapPtr1D++);
+                    TT *block = bm[0].data();
+                    for (int n = 0; n < blockSizeSq; n++)
+                        shrink(block[n], sumNonZero, *thrMapPtr1D++);
                 }
                 break;
             case 0:
@@ -317,7 +301,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
 
             // Inverse 2D transform
             for (int n = elementSize; n--;)
-                inverseHaar2D(z[n]);
+                inverseHaar2D(bm[n].data());
 
             // Aggregate the results
             ++sumNonZero;
@@ -328,20 +312,21 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
             weight /= BM3D_MAX_3D_SIZE;
 
             // Put patches back to their original positions
-            float *dstPtr = weightedSum.data() + jj * dstStep + i;
-            float *weiPtr = weights.data() + jj * dstStep + i;
+            WT *dstPtr = weightedSum.data() + jj * dstStep + i;
+            WT *weiPtr = weights.data() + jj * dstStep + i;
 
             for (int l = 0; l < elementSize; ++l)
             {
+                const TT *block = bm[l].data();
                 int offset = bm[l].coord_y * dstStep + bm[l].coord_x;
-                float *d = dstPtr + offset;
-                float *dw = weiPtr + offset;
+                WT *d = dstPtr + offset;
+                WT *dw = weiPtr + offset;
 
                 for (int n = 0; n < blockSize; ++n)
                 {
                     for (int m = 0; m < blockSize; ++m)
                     {
-                        *d += z[l][n * blockSize + m] * weight;
+                        *d += block[n * blockSize + m] * weight;
                         *dw += weight;
                         ++d, ++dw;
                     }
@@ -353,10 +338,8 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& range) co
     } // j
 
     // Cleanup
-    delete[] r;
     for (int i = 0; i < searchWindowSizeSq; ++i)
-        delete[] z[i];
-    delete[] z;
+        bm[i].release();
     delete[] bm;
 
 #ifdef DEBUG_PRINT
