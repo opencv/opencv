@@ -158,25 +158,35 @@ namespace grid_transform_detail
     template <class SrcPtr, typename DstType, class UnOp, class MaskPtr>
     __global__ void transformSimple(const SrcPtr src, GlobPtr<DstType> dst, const UnOp op, const MaskPtr mask, const int rows, const int cols)
     {
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (x >= cols || y >= rows || !mask(y, x))
-            return;
-
-        dst(y, x) = saturate_cast<DstType>(op(src(y, x)));
+        const int nx = blockDim.x * gridDim.x;
+        const int ny = blockDim.y * gridDim.y;
+        for(int y = blockIdx.y * blockDim.y + threadIdx.y;
+            y < rows;
+            y += ny)
+        {
+            for(int x = blockIdx.x * blockDim.x + threadIdx.x;
+                x < cols;
+                x += nx)
+            {
+                if(mask(y,x))
+                    dst(y, x) = saturate_cast<DstType>(op(src(y, x)));
+            }
+        }
     }
 
     template <class SrcPtr1, class SrcPtr2, typename DstType, class BinOp, class MaskPtr>
     __global__ void transformSimple(const SrcPtr1 src1, const SrcPtr2 src2, GlobPtr<DstType> dst, const BinOp op, const MaskPtr mask, const int rows, const int cols)
     {
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (x >= cols || y >= rows || !mask(y, x))
-            return;
-
-        dst(y, x) = saturate_cast<DstType>(op(src1(y, x), src2(y, x)));
+        const int nx = blockDim.x * gridDim.x;
+        const int ny = blockDim.y * gridDim.y;
+        for(int y = blockIdx.y * blockDim.y + threadIdx.y; y < rows; y += ny)
+        {
+            for(int x = blockIdx.x * blockDim.x + threadIdx.x; x < cols; x += nx)
+            {
+                if(mask(y,x))
+                    dst(y, x) = saturate_cast<DstType>(op(src1(y, x), src2(y, x)));
+            }
+        }
     }
 
     // transformSmart
@@ -186,31 +196,31 @@ namespace grid_transform_detail
     {
         typedef typename MakeVec<SrcType, SHIFT>::type read_type;
         typedef typename MakeVec<DstType, SHIFT>::type write_type;
-
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-        const int x_shifted = x * SHIFT;
-
-        if (y < rows)
+        const int nx = blockDim.x * gridDim.x;
+        const int ny = blockDim.y * gridDim.y;
+        for(int y = blockIdx.y * blockDim.y + threadIdx.y; y < rows; y += ny)
         {
             const SrcType* src = src_.row(y);
             DstType* dst = dst_.row(y);
-
-            if (x_shifted + SHIFT - 1 < cols)
+            for(int x = blockIdx.x * blockDim.x + threadIdx.x; x < cols; x += nx)
             {
-                const read_type src_n_el = ((const read_type*)src)[x];
-                write_type dst_n_el = ((const write_type*)dst)[x];
-
-                OpUnroller<SHIFT>::unroll(src_n_el, dst_n_el, op, mask, x_shifted, y);
-
-                ((write_type*)dst)[x] = dst_n_el;
-            }
-            else
-            {
-                for (int real_x = x_shifted; real_x < cols; ++real_x)
+                const int x_shifted = x * SHIFT;
+                if (x_shifted + SHIFT - 1 < cols)
                 {
-                    if (mask(y, real_x))
-                        dst[real_x] = op(src[real_x]);
+                    const read_type src_n_el = ((const read_type*)src)[x];
+                    write_type dst_n_el = ((const write_type*)dst)[x];
+
+                    OpUnroller<SHIFT>::unroll(src_n_el, dst_n_el, op, mask, x_shifted, y);
+
+                    ((write_type*)dst)[x] = dst_n_el;
+                }
+                else
+                {
+                    for (int real_x = x_shifted; real_x < cols; ++real_x)
+                    {
+                        if (mask(y, real_x))
+                            dst[real_x] = op(src[real_x]);
+                    }
                 }
             }
         }
@@ -223,32 +233,33 @@ namespace grid_transform_detail
         typedef typename MakeVec<SrcType2, SHIFT>::type read_type2;
         typedef typename MakeVec<DstType, SHIFT>::type write_type;
 
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-        const int x_shifted = x * SHIFT;
-
-        if (y < rows)
+        const int nx = blockDim.x * gridDim.x;
+        const int ny = blockDim.y * gridDim.y;
+        for(int y = blockIdx.y * blockDim.y + threadIdx.y; y < rows; y += ny)
         {
             const SrcType1* src1 = src1_.row(y);
             const SrcType2* src2 = src2_.row(y);
             DstType* dst = dst_.row(y);
-
-            if (x_shifted + SHIFT - 1 < cols)
+            for(int x = blockIdx.x * blockDim.x + threadIdx.x; x < cols; x += nx)
             {
-                const read_type1 src1_n_el = ((const read_type1*)src1)[x];
-                const read_type2 src2_n_el = ((const read_type2*)src2)[x];
-                write_type dst_n_el = ((const write_type*)dst)[x];
-
-                OpUnroller<SHIFT>::unroll(src1_n_el, src2_n_el, dst_n_el, op, mask, x_shifted, y);
-
-                ((write_type*)dst)[x] = dst_n_el;
-            }
-            else
-            {
-                for (int real_x = x_shifted; real_x < cols; ++real_x)
+                const int x_shifted = x * SHIFT;
+                if (x_shifted + SHIFT - 1 < cols)
                 {
-                    if (mask(y, real_x))
-                        dst[real_x] = op(src1[real_x], src2[real_x]);
+                    const read_type1 src1_n_el = ((const read_type1*)src1)[x];
+                    const read_type2 src2_n_el = ((const read_type2*)src2)[x];
+                    write_type dst_n_el = ((const write_type*)dst)[x];
+
+                    OpUnroller<SHIFT>::unroll(src1_n_el, src2_n_el, dst_n_el, op, mask, x_shifted, y);
+
+                    ((write_type*)dst)[x] = dst_n_el;
+                }
+                else
+                {
+                    for (int real_x = x_shifted; real_x < cols; ++real_x)
+                    {
+                        if (mask(y, real_x))
+                            dst[real_x] = op(src1[real_x], src2[real_x]);
+                    }
                 }
             }
         }
@@ -264,7 +275,7 @@ namespace grid_transform_detail
         __host__ static void call(const SrcPtr& src, const GlobPtr<DstType>& dst, const UnOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
         {
             const dim3 block(Policy::block_size_x, Policy::block_size_y);
-            const dim3 grid(divUp(cols, block.x), divUp(rows, block.y));
+            const dim3 grid(32*16, 32*16);
 
             transformSimple<<<grid, block, 0, stream>>>(src, dst, op, mask, rows, cols);
             CV_CUDEV_SAFE_CALL( cudaGetLastError() );
@@ -277,7 +288,7 @@ namespace grid_transform_detail
         __host__ static void call(const SrcPtr1& src1, const SrcPtr2& src2, const GlobPtr<DstType>& dst, const BinOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
         {
             const dim3 block(Policy::block_size_x, Policy::block_size_y);
-            const dim3 grid(divUp(cols, block.x), divUp(rows, block.y));
+            const dim3 grid(32*16, 32*16);
 
             transformSimple<<<grid, block, 0, stream>>>(src1, src2, dst, op, mask, rows, cols);
             CV_CUDEV_SAFE_CALL( cudaGetLastError() );
