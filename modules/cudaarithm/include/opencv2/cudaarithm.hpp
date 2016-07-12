@@ -77,7 +77,7 @@ namespace cv { namespace cuda {
 @param dst Destination matrix that has the same size and number of channels as the input array(s).
 The depth is defined by dtype or src1 depth.
 @param mask Optional operation mask, 8-bit single channel array, that specifies elements of the
-destination array to be changed.
+destination array to be changed. The mask can be used only with single channel images.
 @param dtype Optional depth of the output array.
 @param stream Stream for the asynchronous version.
 
@@ -92,7 +92,7 @@ CV_EXPORTS void add(InputArray src1, InputArray src2, OutputArray dst, InputArra
 @param dst Destination matrix that has the same size and number of channels as the input array(s).
 The depth is defined by dtype or src1 depth.
 @param mask Optional operation mask, 8-bit single channel array, that specifies elements of the
-destination array to be changed.
+destination array to be changed. The mask can be used only with single channel images.
 @param dtype Optional depth of the output array.
 @param stream Stream for the asynchronous version.
 
@@ -226,7 +226,8 @@ CV_EXPORTS void compare(InputArray src1, InputArray src2, OutputArray dst, int c
 
 @param src Source matrix.
 @param dst Destination matrix with the same size and type as src .
-@param mask Optional operation mask. 8-bit single channel image.
+@param mask Optional operation mask, 8-bit single channel array, that specifies elements of the
+destination array to be changed. The mask can be used only with single channel images.
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS void bitwise_not(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
@@ -236,7 +237,8 @@ CV_EXPORTS void bitwise_not(InputArray src, OutputArray dst, InputArray mask = n
 @param src1 First source matrix or scalar.
 @param src2 Second source matrix or scalar.
 @param dst Destination matrix that has the same size and type as the input array(s).
-@param mask Optional operation mask. 8-bit single channel image.
+@param mask Optional operation mask, 8-bit single channel array, that specifies elements of the
+destination array to be changed. The mask can be used only with single channel images.
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
@@ -246,7 +248,8 @@ CV_EXPORTS void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, In
 @param src1 First source matrix or scalar.
 @param src2 Second source matrix or scalar.
 @param dst Destination matrix that has the same size and type as the input array(s).
-@param mask Optional operation mask. 8-bit single channel image.
+@param mask Optional operation mask, 8-bit single channel array, that specifies elements of the
+destination array to be changed. The mask can be used only with single channel images.
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
@@ -256,7 +259,8 @@ CV_EXPORTS void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, I
 @param src1 First source matrix or scalar.
 @param src2 Second source matrix or scalar.
 @param dst Destination matrix that has the same size and type as the input array(s).
-@param mask Optional operation mask. 8-bit single channel image.
+@param mask Optional operation mask, 8-bit single channel array, that specifies elements of the
+destination array to be changed. The mask can be used only with single channel images.
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
