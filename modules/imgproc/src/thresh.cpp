@@ -397,7 +397,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     size_t dst_step = _dst.step/sizeof(dst[0]);
 
 #if CV_SSE2
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
+    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
 #endif
 
     if( _src.isContinuous() && _dst.isContinuous() )
@@ -665,7 +665,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     size_t src_step = _src.step/sizeof(src[0]);
     size_t dst_step = _dst.step/sizeof(dst[0]);
 
-#if CV_SSE2
+#if CV_SSE
     volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
 #endif
 
@@ -720,7 +720,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-#if CV_SSE2
+#if CV_SSE
                 if( useSIMD )
                 {
                     __m128 thresh4 = _mm_set1_ps(thresh), maxval4 = _mm_set1_ps(maxval);
@@ -758,7 +758,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-#if CV_SSE2
+#if CV_SSE
                 if( useSIMD )
                 {
                     __m128 thresh4 = _mm_set1_ps(thresh), maxval4 = _mm_set1_ps(maxval);
@@ -796,7 +796,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-#if CV_SSE2
+#if CV_SSE
                 if( useSIMD )
                 {
                     __m128 thresh4 = _mm_set1_ps(thresh);
@@ -827,7 +827,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-#if CV_SSE2
+#if CV_SSE
                 if( useSIMD )
                 {
                     __m128 thresh4 = _mm_set1_ps(thresh);
@@ -866,7 +866,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-#if CV_SSE2
+#if CV_SSE
                 if( useSIMD )
                 {
                     __m128 thresh4 = _mm_set1_ps(thresh);
@@ -916,7 +916,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
     size_t dst_step = _dst.step / sizeof(dst[0]);
 
 #if CV_SSE2
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
+    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
 #endif
 
     if (_src.isContinuous() && _dst.isContinuous())
