@@ -3477,7 +3477,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 {
     Size ssize = _src.size();
 
-    CV_Assert( ssize.area() > 0 );
+    CV_Assert( ssize.width > 0 && ssize.height > 0 );
     CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
     if( dsize.area() == 0 )
     {
@@ -3498,10 +3498,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     _dst.create(dsize, src.type());
     Mat dst = _dst.getMat();
 
-    if (dsize == ssize) {
-      // Source and destination are of same size. Use simple copy.
-      src.copyTo(dst);
-      return;
+    if (dsize == ssize)
+    {
+        // Source and destination are of same size. Use simple copy.
+        src.copyTo(dst);
+        return;
     }
 
     hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
