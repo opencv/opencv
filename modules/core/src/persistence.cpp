@@ -1852,7 +1852,7 @@ icvYMLWriteString( CvFileStorage* fs, const char* key,
 
     if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
     {
-        int need_quote = quote || len == 0;
+        int need_quote = quote || len == 0 || str[0] == ' ';
         data = buf;
         *data++ = '\"';
         for( i = 0; i < len; i++ )
