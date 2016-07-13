@@ -61,8 +61,8 @@ int cvCheckChessboardBinary(IplImage* src, CvSize size);
 
 static void icvGetQuadrangleHypotheses(CvSeq* contours, std::vector<std::pair<float, int> >& quads, int class_id)
 {
-    const float min_aspect_ratio = 0.2f;
-    const float max_aspect_ratio = 5.0f;
+    const float min_aspect_ratio = 0.3f;
+    const float max_aspect_ratio = 3.0f;
     const float min_box_size = 10.0f;
 
     for(CvSeq* seq = contours; seq != NULL; seq = seq->h_next)
