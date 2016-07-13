@@ -79,14 +79,7 @@
 //#define ENABLE_TRIM_COL_ROW
 
 //#define DEBUG_CHESSBOARD
-#ifdef DEBUG_CHESSBOARD
-#  include "opencv2/opencv_modules.hpp"
-#  ifdef HAVE_OPENCV_HIGHGUI
-#    include "opencv2/highgui.hpp"
-#  else
-#    undef DEBUG_CHESSBOARD
-#  endif
-#endif
+
 #ifdef DEBUG_CHESSBOARD
 static int PRINTF( const char* fmt, ... )
 {
@@ -400,38 +393,6 @@ bool icvBinarizationHistogramBased( unsigned char* pucImg, int iCols, int iRows 
 
   return true;
 }
-#if 0
-static void
-icvCalcAffineTranf2D32f(CvPoint2D32f* pts1, CvPoint2D32f* pts2, int count, CvMat* affine_trans)
-{
-    int i, j;
-    int real_count = 0;
-    for( j = 0; j < count; j++ )
-    {
-        if( pts1[j].x >= 0 ) real_count++;
-    }
-    if(real_count < 3) return;
-    cv::Ptr<CvMat> xy = cvCreateMat( 2*real_count, 6, CV_32FC1 );
-    cv::Ptr<CvMat> uv = cvCreateMat( 2*real_count, 1, CV_32FC1 );
-    //estimate affine transfromation
-    for( i = 0, j = 0; j < count; j++ )
-    {
-        if( pts1[j].x >= 0 )
-        {
-            CV_MAT_ELEM( *xy, float, i*2+1, 2 ) = CV_MAT_ELEM( *xy, float, i*2, 0 ) = pts2[j].x;
-            CV_MAT_ELEM( *xy, float, i*2+1, 3 ) = CV_MAT_ELEM( *xy, float, i*2, 1 ) = pts2[j].y;
-            CV_MAT_ELEM( *xy, float, i*2, 2 ) = CV_MAT_ELEM( *xy, float, i*2, 3 ) = CV_MAT_ELEM( *xy, float, i*2, 5 ) = \
-                CV_MAT_ELEM( *xy, float, i*2+1, 0 ) = CV_MAT_ELEM( *xy, float, i*2+1, 1 ) = CV_MAT_ELEM( *xy, float, i*2+1, 4 ) = 0;
-            CV_MAT_ELEM( *xy, float, i*2, 4 ) = CV_MAT_ELEM( *xy, float, i*2+1, 5 ) = 1;
-            CV_MAT_ELEM( *uv, float, i*2, 0 ) = pts1[j].x;
-            CV_MAT_ELEM( *uv, float, i*2+1, 0 ) = pts1[j].y;
-            i++;
-        }
-    }
-
-    cvSolve( xy, uv, affine_trans, CV_SVD );
-}
-#endif
 
 CV_IMPL
 int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
@@ -449,11 +410,6 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     const int min_dilations = 0;
     const int max_dilations = 7;
     cv::Ptr<CvMat> norm_img, thresh_img;
-#ifdef DEBUG_CHESSBOARD
-    cv::Ptr<IplImage> dbg_img;
-    cv::Ptr<IplImage> dbg1_img;
-    cv::Ptr<IplImage> dbg2_img;
-#endif
     cv::Ptr<CvMemStorage> storage;
 
     CvMat stub, *img = (CvMat*)arr;
@@ -486,12 +442,6 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
     storage.reset(cvCreateMemStorage(0));
     thresh_img.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
-
-#ifdef DEBUG_CHESSBOARD
-    dbg_img = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 3 );
-    dbg1_img = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 3 );
-    dbg2_img = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 3 );
-#endif
 
     if( CV_MAT_CN(img->type) != 1 || (flags & CV_CALIB_CB_NORMALIZE_IMAGE) )
     {
@@ -627,9 +577,12 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
       }
     }//dilations
 
+    PRINTF("Chessboard detection result 0: %d\n", found);
+
     // revert to old, slower, method if detection failed
     if (!found)
     {
+      PRINTF("Fallback to old algorithm\n");
       // empiric threshold level
       // thresholding performed here and not inside the cycle to save processing time
       int thresh_level;
@@ -671,10 +624,6 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
             cvDilate( thresh_img, thresh_img, 0, 1 );
           }
 
-#ifdef DEBUG_CHESSBOARD
-          cvCvtColor(thresh_img,dbg_img,CV_GRAY2BGR);
-#endif
-
           // So we can find rectangles that go to the edge, we draw a white line around the image edge.
           // Otherwise FindContours will miss those clipped rectangle contours.
           // The border color will be the image mean, because otherwise we risk screwing up filters like cvSmooth()...
@@ -683,31 +632,6 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
           quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img, flags, &max_quad_buf_size);
           PRINTF("Quad count: %d/%d\n", quad_count, expected_corners_num);
-
-#ifdef DEBUG_CHESSBOARD
-              cvCopy(dbg_img, dbg1_img);
-              cvNamedWindow("all_quads", 1);
-              // copy corners to temp array
-              for(int i = 0; i < quad_count; i++ )
-              {
-                  for (int z=0; z<4; z++)
-                  {
-                      CvPoint2D32f pt1, pt2;
-                      CvScalar color = CV_RGB(30,255,30);
-                      pt1 = quads[i].corners[z]->pt;
-                      pt2 = quads[i].corners[(z+1)%4]->pt;
-                      pt2.x = (pt1.x + pt2.x)/2;
-                      pt2.y = (pt1.y + pt2.y)/2;
-                      if (z>0)
-                          color = CV_RGB(200,200,0);
-                      cvLine( dbg1_img, cvPointFrom32f(pt1), cvPointFrom32f(pt2), color, 3, 8);
-                  }
-              }
-
-
-              cvShowImage("all_quads", (IplImage*)dbg1_img);
-              cvWaitKey();
-#endif
 
           if( quad_count <= 0 )
           {
@@ -738,33 +662,6 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
             count = icvOrderFoundConnectedQuads(count, quad_group, &quad_count, &quads, &corners, pattern_size, max_quad_buf_size, storage );
 
             PRINTF("Orig count: %d  After ordering: %d\n", icount, count);
-
-
-#ifdef DEBUG_CHESSBOARD
-                  cvCopy(dbg_img,dbg2_img);
-                  cvNamedWindow("connected_group", 1);
-                  // copy corners to temp array
-                  for(int i = 0; i < quad_count; i++ )
-                  {
-                      if (quads[i].group_idx == group_idx)
-                          for (int z=0; z<4; z++)
-                          {
-                              CvPoint2D32f pt1, pt2;
-                              CvScalar color = CV_RGB(30,255,30);
-                              if (quads[i].ordered)
-                                  color = CV_RGB(255,30,30);
-                              pt1 = quads[i].corners[z]->pt;
-                              pt2 = quads[i].corners[(z+1)%4]->pt;
-                              pt2.x = (pt1.x + pt2.x)/2;
-                              pt2.y = (pt1.y + pt2.y)/2;
-                              if (z>0)
-                                  color = CV_RGB(200,200,0);
-                              cvLine( dbg2_img, cvPointFrom32f(pt1), cvPointFrom32f(pt2), color, 3, 8);
-                          }
-                  }
-                  cvShowImage("connected_group", (IplImage*)dbg2_img);
-                  cvWaitKey();
-#endif
 
             if (count == 0)
               continue;       // haven't found inner quads
@@ -812,9 +709,12 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
       }// for k = 0 -> 6
     }
 
+    PRINTF("Chessboard detection result 1: %d\n", found);
 
     if( found )
         found = icvCheckBoardMonotony( out_corners, pattern_size );
+
+    PRINTF("Chessboard detection result 2: %d\n", found);
 
     // check that none of the found corners is too close to the image boundary
     if( found )
@@ -830,36 +730,38 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         found = k == pattern_size.width*pattern_size.height;
     }
 
-    if( found && pattern_size.height % 2 == 0 && pattern_size.width % 2 == 0 )
+    PRINTF("Chessboard detection result 3: %d\n", found);
+
+    if( found )
     {
+      if ( pattern_size.height % 2 == 0 && pattern_size.width % 2 == 0 )
+      {
         int last_row = (pattern_size.height-1)*pattern_size.width;
         double dy0 = out_corners[last_row].y - out_corners[0].y;
         if( dy0 < 0 )
         {
-            int n = pattern_size.width*pattern_size.height;
-            for(int i = 0; i < n/2; i++ )
-            {
-                CvPoint2D32f temp;
-                CV_SWAP(out_corners[i], out_corners[n-i-1], temp);
-            }
+          int n = pattern_size.width*pattern_size.height;
+          for(int i = 0; i < n/2; i++ )
+          {
+            CvPoint2D32f temp;
+            CV_SWAP(out_corners[i], out_corners[n-i-1], temp);
+          }
         }
-    }
-
-    if( found )
-    {
-        cv::Ptr<CvMat> gray;
-        if( CV_MAT_CN(img->type) != 1 )
-        {
-            gray.reset(cvCreateMat(img->rows, img->cols, CV_8UC1));
-            cvCvtColor(img, gray, CV_BGR2GRAY);
-        }
-        else
-        {
-            gray.reset(cvCloneMat(img));
-        }
-        int wsize = 2;
-        cvFindCornerSubPix( gray, out_corners, pattern_size.width*pattern_size.height,
-            cvSize(wsize, wsize), cvSize(-1,-1), cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 15, 0.1));
+      }
+      cv::Ptr<CvMat> gray;
+      if( CV_MAT_CN(img->type) != 1 )
+      {
+        gray.reset(cvCreateMat(img->rows, img->cols, CV_8UC1));
+        cvCvtColor(img, gray, CV_BGR2GRAY);
+      }
+      else
+      {
+        gray.reset(cvCloneMat(img));
+      }
+      int wsize = 2;
+      cvFindCornerSubPix( gray, out_corners, pattern_size.width*pattern_size.height,
+                          cvSize(wsize, wsize), cvSize(-1,-1),
+                          cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 15, 0.1));
     }
     }
     catch(...)
