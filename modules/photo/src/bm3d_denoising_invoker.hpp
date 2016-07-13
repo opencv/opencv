@@ -68,6 +68,8 @@ public:
     void operator() (const Range& range) const;
 
 private:
+    void operator= (const Bm3dDenoisingInvoker&);
+
     const Mat& src_;
     Mat& dst_;
     Mat srcExtended_;
@@ -176,7 +178,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
     const int hBM = hBM_;
     const int groupSize = groupSize_;
 
-    const int step = srcExtended_.step / sizeof(T);
+    const int step = srcExtended_.cols;
     const int cstep = step - templateWindowSize_;
 
     const int dstStep = srcExtended_.cols;
