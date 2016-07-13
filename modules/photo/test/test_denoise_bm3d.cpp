@@ -71,10 +71,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
-    double t = (double)cv::getTickCount();
     cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 8, cv::NORM_L2);
-    t = (double)cv::getTickCount() - t;
-    printf("execution time: %gms\n", t*1000. / cv::getTickFrequency());
 
     DUMP(result, expected_path + ".res.png");
 
@@ -94,10 +91,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
-    double t = (double)cv::getTickCount();
     cv::bm3dDenoising(original, result, 10, 4, 16, 2500, 8, cv::NORM_L1);
-    t = (double)cv::getTickCount() - t;
-    printf("execution time: %gms\n", t*1000. / cv::getTickFrequency());
 
     DUMP(result, expected_path + ".res.png");
 
@@ -117,10 +111,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2_8x8)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     cv::Mat result;
-    double t = (double)cv::getTickCount();
     cv::bm3dDenoising(original, result, 10, 8, 16, 2500, 8, cv::NORM_L2);
-    t = (double)cv::getTickCount() - t;
-    printf("execution time: %gms\n", t*1000. / cv::getTickFrequency());
 
     DUMP(result, expected_path + ".res.png");
 
@@ -203,7 +194,6 @@ static void Test1dTransform(
     }
 
     // Assert shrinkage
-    printf("sumNonZero: %d\n", sumNonZero);
     ASSERT_EQ(sumNonZero, expectedNonZeroCount);
 }
 
