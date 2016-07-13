@@ -142,7 +142,7 @@ class DistAbs
     template <typename T>
     struct calcDist_
     {
-        static inline int f(const T a, const T b)
+        static inline int f(const T &a, const T &b)
         {
             return std::abs(a - b);
         }
@@ -184,7 +184,7 @@ class DistAbs
 
 public:
     template <typename T>
-    static inline int calcDist(const T a, const T b)
+    static inline int calcDist(const T &a, const T &b)
     {
         return calcDist_<T>::f(a, b);
     }
@@ -209,7 +209,7 @@ class DistSquared
     template <typename T>
     struct calcDist_
     {
-        static inline int f(const T a, const T b)
+        static inline int f(const T &a, const T &b)
         {
             return (a - b) * (a - b);
         }
@@ -251,7 +251,7 @@ class DistSquared
 
 public:
     template <typename T>
-    static inline int calcDist(const T a, const T b)
+    static inline int calcDist(const T &a, const T &b)
     {
         return calcDist_<T>::f(a, b);
     }

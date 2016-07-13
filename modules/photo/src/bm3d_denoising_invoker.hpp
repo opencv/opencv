@@ -190,6 +190,9 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
     for (int i = 0; i < searchWindowSizeSq; ++i)
         bm[i].init(blockSizeSq);
 
+    // First element in a group is always the reference patch. Hence distance is 0.
+    bm[0](0, halfSearchWindowSize, halfSearchWindowSize);
+
     for (int j = row_from, jj = 0; j <= row_to; ++j, ++jj)
     {
         for (int i = 0; i < src_.cols; ++i)
@@ -197,12 +200,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
             const T *referencePatch = srcExtended_.ptr<T>(0) + step*(halfSearchWindowSize + j) + (halfSearchWindowSize + i);
             const T *currentPixel = srcExtended_.ptr<T>(0) + step*j + i;
 
-            // Transform reference patch and place it as the first element
-            haarTransform2D(referencePatch, bm[0].data(), step);
-            bm[0](0, halfSearchWindowSize, halfSearchWindowSize);
-
             int elementSize = 1;
-            const TT *referenceBlock = bm[0].data();
             for (short l = 0; l < searchWindowSize; ++l)
             {
                 const T *candidatePatch = currentPixel + step*l;
@@ -211,14 +209,17 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
                     if (l == halfSearchWindowSize && k == halfSearchWindowSize)
                         continue;
 
-                    // Transform candidate patch
-                    haarTransform2D(candidatePatch + k, bm[elementSize].data(), step);
-
                     // Calc distance
                     int e = 0;
-                    const TT *candidateBlock = bm[elementSize].data();
-                    for (int n = blockSizeSq; n--;)
-                        e += D::template calcDist<TT>(candidateBlock[n], referenceBlock[n]);
+                    const T *canPtr = candidatePatch + k;
+                    const T *refPtr = referencePatch;
+                    for (int n = 0; n < blockSize; ++n)
+                    {
+                        for (int m = 0; m < blockSize; ++m)
+                            e += D::template calcDist<TT>(*canPtr++, *refPtr++);
+                        canPtr += cstep;
+                        refPtr += cstep;
+                    }
 
                     // Save the distance, coordinate and increase the counter
                     if (e < hBM)
@@ -233,6 +234,13 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
             elementSize = getLargestPowerOf2SmallerThan(elementSize);
             if (elementSize > groupSize)
                 elementSize = groupSize;
+
+            // Transform 2D patches
+            for (int n = 0; n < elementSize; ++n)
+            {
+                const T *candidatePatch = currentPixel + step * bm[n].coord_y + bm[n].coord_x;
+                haarTransform2D(candidatePatch, bm[n].data(), step);
+            }
 
             // Transform and shrink 1D columns
             short sumNonZero = 0;
@@ -276,7 +284,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
             }
 
             // Inverse 2D transform
-            for (int n = elementSize; n--;)
+            for (int n = 0; n < elementSize; ++n)
                 inverseHaar2D(bm[n].data());
 
             // Aggregate the results
