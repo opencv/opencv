@@ -64,8 +64,8 @@ public:
         const int &hBM,
         const int &groupSize);
 
-    void operator() (const Range& range) const;
     virtual ~Bm3dDenoisingInvoker();
+    void operator() (const Range& range) const;
 
 private:
     const Mat& src_;
@@ -118,18 +118,6 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
     templateWindowSizeSq_ = templateWindowSize_ * templateWindowSize_;
     searchWindowSizeSq_ = searchWindowSize_ * searchWindowSize_;
 
-#ifdef DEBUG_PRINT
-    printf("Inside Bm3dDenoisingInvoker...\n");
-    printf("groupSize: %d\n", groupSize);
-    printf("groupSize_: %d\n", groupSize_);
-    printf("templateWIndowSize: %d\n", templateWindowSize);
-    printf("searchWindowSize: %d\n", searchWindowSize);
-    printf("templateWindowSize_: %d\n", templateWindowSize_);
-    printf("templateWindowSizeSq_: %d\n", templateWindowSizeSq_);
-    printf("searchWindowSize_: %d\n", searchWindowSize_);
-    printf("searchWindowSizeSq_: %d\n", searchWindowSizeSq_);
-#endif
-
     // Extend image to avoid border problem
     borderSize_ = halfSearchWindowSize_ + halfTemplateWindowSize_;
     copyMakeBorder(src_, srcExtended_, borderSize_, borderSize_, borderSize_, borderSize_, BORDER_DEFAULT);
@@ -140,28 +128,27 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
     // Calculate block matching threshold
     hBM_ = D::template calcBlockMatchingThreshold<int>(hBM, templateWindowSizeSq_);
 
+    // Select transforms depending on the template size
+    float *thrMap2D = NULL;
     switch (templateWindowSize_)
     {
     case 4:
-        // Precompute threshold map
-        ComputeThresholdMap1D(thrMap_, kThrMap1D, kThrMap4x4, h, kCoeff, templateWindowSizeSq_);
-
-        // Select transforms
+        thrMap2D = kThrMap4x4;
         haarTransform2D = Haar4x4;
         inverseHaar2D = InvHaar4x4;
         break;
     case 8:
-        // Precompute threshold map
-        ComputeThresholdMap1D(thrMap_, kThrMap1D, kThrMap8x8, h, kCoeff, templateWindowSizeSq_);
-
-        // Select transforms
+        thrMap2D = kThrMap8x8;
         haarTransform2D = Haar8x8;
         inverseHaar2D = InvHaar8x8;
         break;
     default:
         CV_Error(Error::StsBadArg,
-            "Unsupported template size! Only 1, 2 and 4 are supported currently.");
+            "Unsupported template size! Only 1, 2, 4 and 8 are supported currently.");
     }
+
+    // Precompute threshold map
+    ComputeThresholdMap1D(thrMap_, kThrMap1D, thrMap2D, h, kCoeff, templateWindowSizeSq_);
 }
 
 template<typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
@@ -178,16 +165,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
     std::vector<WT> weights(size, 0.0);
     int row_from = range.start;
     int row_to = range.end - 1;
-
-#ifdef DEBUG_PRINT
-    printf("Size of the weights is: %d\n", size);
-    printf("srcExtended_.total(): %d\n", srcExtended_.total());
-    printf("range.size(): %d\n", range.size());
-    printf("borderSize_: %d\n", borderSize_);
-    printf("srcExtended_.cols: %d\n", srcExtended_.cols);
-    printf("sizeof(T): %d\n", sizeof(T));
-    printf("from %d to %d\n", row_from, row_to);
-#endif
 
     // Local vars for faster processing
     const int blockSize = templateWindowSize_;
@@ -213,17 +190,8 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
     for (int i = 0; i < searchWindowSizeSq; ++i)
         bm[i].init(blockSizeSq);
 
-#ifdef DEBUG_PRINT
-    printf("Entering the loop...\n");
-#endif
-
     for (int j = row_from, jj = 0; j <= row_to; ++j, ++jj)
     {
-#ifdef DEBUG_PRINT
-        if (j % 50 == 0)
-            printf("%d / %d\n", j, row_to);
-#endif
-
         for (int i = 0; i < src_.cols; ++i)
         {
             const T *referencePatch = srcExtended_.ptr<T>(0) + step*(halfSearchWindowSize + j) + (halfSearchWindowSize + i);
@@ -350,10 +318,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
         bm[i].release();
     delete[] bm;
 
-#ifdef DEBUG_PRINT
-    printf("Aggregate results...\n");
-#endif
-
     // Divide accumulation buffer by the corresponding weights
     for (int i = row_from, ii = 0; i <= row_to; ++i, ++ii)
     {
@@ -363,10 +327,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
         for (int j = 0; j < dst_.cols; ++j)
             d[j] = cv::saturate_cast<T>(dE[j + halfBlockSize] / dw[j + halfBlockSize]);
     }
-
-#ifdef DEBUG_PRINT
-    printf("All done.\n");
-#endif
 }
 
 #endif

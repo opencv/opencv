@@ -54,9 +54,7 @@ static void bm3dDenoising_(
     const int &hBM,
     const int &groupSize)
 {
-
     double granularity = (double)std::max(1., (double)dst.total() / (1 << 16));
-    printf("Granularity: %.4f\n", granularity);
 
     switch (CV_MAT_CN(src.type())) {
     case 1:
@@ -65,45 +63,9 @@ static void bm3dDenoising_(
                 src, dst, templateWindowSize, searchWindowSize, h, hBM, groupSize),
             granularity);
         break;
-    /*case 2:
-        if (hn == 1)
-            parallel_for_(cv::Range(0, src.rows),
-                Bm3dDenoisingInvoker<Vec<ST, 2>, IT, UIT, D, int>(
-                    src, dst, templateWindowSize, searchWindowSize, h),
-                granularity);
-        else
-            parallel_for_(cv::Range(0, src.rows),
-                Bm3dDenoisingInvoker<Vec<ST, 2>, IT, UIT, D, Vec2i>(
-                    src, dst, templateWindowSize, searchWindowSize, h),
-                granularity);
-        break;
-    case 3:
-        if (hn == 1)
-            parallel_for_(cv::Range(0, src.rows),
-                Bm3dDenoisingInvoker<Vec<ST, 3>, IT, UIT, D, int>(
-                    src, dst, templateWindowSize, searchWindowSize, h),
-                granularity);
-        else
-            parallel_for_(cv::Range(0, src.rows),
-                Bm3dDenoisingInvoker<Vec<ST, 3>, IT, UIT, D, Vec3i>(
-                    src, dst, templateWindowSize, searchWindowSize, h),
-                granularity);
-        break;
-    case 4:
-        if (hn == 1)
-            parallel_for_(cv::Range(0, src.rows),
-                Bm3dDenoisingInvoker<Vec<ST, 4>, IT, UIT, D, int>(
-                    src, dst, templateWindowSize, searchWindowSize, h),
-                granularity);
-        else
-            parallel_for_(cv::Range(0, src.rows),
-                Bm3dDenoisingInvoker<Vec<ST, 4>, IT, UIT, D, Vec4i>(
-                    src, dst, templateWindowSize, searchWindowSize, h),
-                granularity);
-        break;*/
     default:
         CV_Error(Error::StsBadArg,
-            "Unsupported number of channels! Only 1, 2, 3, and 4 are supported");
+            "Unsupported number of channels! Only 1 channel is supported at the moment.");
     }
 }
 

@@ -271,10 +271,6 @@ public:
     }
 };
 
-#ifdef DEBUG_PRINT
-#include <iostream>
-#endif
-
 template <typename T>
 void ComputeThresholdMap1D(
     T *outThrMap1D,
@@ -287,39 +283,21 @@ void ComputeThresholdMap1D(
     T *thrMapPtr1D = outThrMap1D;
     for (int ii = 0; ii < 4; ++ii)
     {
-#ifdef DEBUG_PRINT
-        std::cout << "group size: " << (1 << ii) << std::endl;
-#endif
         for (int jj = 0; jj < templateWindowSizeSq; ++jj)
         {
-#ifdef DEBUG_PRINT
-            if (jj % (int)std::sqrt(templateWindowSizeSq) == 0)
-                std::cout << std::endl;
-            std::cout << "\t";
-#endif
             for (int ii1 = 0; ii1 < (1 << ii); ++ii1)
             {
                 int indexIn1D = (1 << ii) - 1 + ii1;
                 int indexIn2D = jj;
                 int thr = static_cast<int>(thrMap1D[indexIn1D] * thrMap2D[indexIn2D] * hardThr1D * coeff[ii]);
-                if (thr > std::numeric_limits<T>::max())
-                    thr = std::numeric_limits<T>::max();
 
+                // Set DC component to zero
                 if (jj == 0 && ii1 == 0)
                     thr = 0;
 
-                *thrMapPtr1D++ = (T)thr;
-
-#ifdef DEBUG_PRINT
-                std::cout << thr << " ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-#else
+                *thrMapPtr1D++ = cv::saturate_cast<T>(thr);
            }
         }
-#endif
     }
 }
 
