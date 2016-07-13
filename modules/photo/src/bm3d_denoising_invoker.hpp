@@ -178,7 +178,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
 
     const int step = srcExtended_.step / sizeof(T);
     const int cstep = step - templateWindowSize_;
-    const int csstep = step - searchWindowSize_;
 
     const int dstStep = srcExtended_.cols;
     const int weiStep = srcExtended_.cols;

@@ -113,12 +113,6 @@ public:
         return data_[idx];
     };
 
-    // Overloaded comparison operator
-    const inline bool operator==(const BlockMatch& other) const
-    {
-        return (coord_x == other.coord_x && coord_y == other.coord_y);
-    }
-
     // Overloaded comparison operator for sorting
     bool operator<(const BlockMatch& right) const
     {
