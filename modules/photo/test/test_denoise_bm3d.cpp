@@ -45,7 +45,7 @@
 #include <string>
 
 #define DUMP_RESULTS
-#define TEST_TRANSFORMS
+//#define TEST_TRANSFORMS
 
 #ifdef TEST_TRANSFORMS
 #include "..\..\photo\src\bm3d_denoising_invoker.hpp"
@@ -262,13 +262,13 @@ TEST(Photo_Bm3dDenoising, powerOf2)
 
 #endif
 
-//TEST(Photo_Bm3dDenoising, speed)
-//{
-//    std::string imgname = std::string(cvtest::TS::ptr()->get_data_path()) + "shared/5MP.png";
-//    Mat src = imread(imgname, 0), dst;
-//
-//    double t = (double)getTickCount();
-//    bm3dDenoising(src, dst, 1, 4, 16, 1);
-//    t = (double)getTickCount() - t;
-//    printf("execution time: %gms\n", t*1000. / getTickFrequency());
-//}
+TEST(Photo_DenoisingBm3d, speed)
+{
+    std::string imgname = std::string(cvtest::TS::ptr()->get_data_path()) + "shared/5MP.png";
+    cv::Mat src = cv::imread(imgname, 0), dst;
+
+    double t = (double)cv::getTickCount();
+    cv::bm3dDenoising(src, dst, 1, 4, 8, 1);
+    t = (double)cv::getTickCount() - t;
+    printf("execution time: %gms\n", t*1000. / cv::getTickFrequency());
+}
