@@ -104,6 +104,29 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
     ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
 }
 
+TEST(Photo_DenoisingBm3dGrayscale, regression_L2_8x8)
+{
+    std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
+    std::string original_path = folder + "lena_noised_gaussian_sigma=10.png";
+    std::string expected_path = folder + "lena_noised_denoised_bm3d_grayscale_l2_tw=8_sw=16_h=10_bm=2500.png";
+
+    cv::Mat original = cv::imread(original_path, cv::IMREAD_GRAYSCALE);
+    cv::Mat expected = cv::imread(expected_path, cv::IMREAD_GRAYSCALE);
+
+    ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
+    ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
+
+    cv::Mat result;
+    double t = (double)cv::getTickCount();
+    cv::bm3dDenoising(original, result, 10, 8, 16, 2500, 8, cv::NORM_L2);
+    t = (double)cv::getTickCount() - t;
+    printf("execution time: %gms\n", t*1000. / cv::getTickFrequency());
+
+    DUMP(result, expected_path + ".res.png");
+
+    ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
+}
+
 #ifdef TEST_TRANSFORMS
 
 TEST(Photo_DenoisingBm3dTransforms, regression_2D_4x4)
