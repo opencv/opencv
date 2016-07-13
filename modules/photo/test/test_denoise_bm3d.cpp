@@ -75,7 +75,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
+    ASSERT_LT(cvtest::norm(result, expected, cv::NORM_L2), 200);
 }
 
 TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
@@ -95,7 +95,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L1)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
+    ASSERT_LT(cvtest::norm(result, expected, cv::NORM_L2), 200);
 }
 
 TEST(Photo_DenoisingBm3dGrayscale, regression_L2_8x8)
@@ -115,7 +115,7 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2_8x8)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, cvtest::norm(result, expected, cv::NORM_L2));
+    ASSERT_LT(cvtest::norm(result, expected, cv::NORM_L2), 200);
 }
 
 #ifdef TEST_TRANSFORMS
