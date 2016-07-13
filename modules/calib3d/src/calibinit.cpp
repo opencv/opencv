@@ -202,6 +202,8 @@ static void icvRemoveQuadFromGroup(CvCBQuad **quads, int count, CvCBQuad *q0);
 
 static int icvCheckBoardMonotony( CvPoint2D32f* corners, CvSize pattern_size );
 
+int cvCheckChessboardBinary(IplImage* src, CvSize size);
+
 /***************************************************************************************************/
 //COMPUTE INTENSITY HISTOGRAM OF INPUT IMAGE
 static int icvGetIntensityHistogram( unsigned char* pucImage, int iSizeCols, int iSizeRows, std::vector<int>& piHist );
@@ -515,7 +517,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         //perform new method for checking chessboard using a binary image.
         //image is binarised using a threshold dependent on the image histogram
         icvBinarizationHistogramBased( (unsigned char*) cImgSeg->imageData, cImgSeg->width, cImgSeg->height );
-        check_chessboard_result = cvCheckChessboardBinary(cImgSeg, pattern_size);
+        int check_chessboard_result = cvCheckChessboardBinary(cImgSeg, pattern_size);
         if(check_chessboard_result <= 0) //fall back to the old method
         {
             IplImage _img;
@@ -528,16 +530,6 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         }
     }
 
-    // empiric threshold level
-    // thresholding performed here and not inside the cycle to save processing time
-    int thresh_level;
-    if ( !(flags & CV_CALIB_CB_ADAPTIVE_THRESH) )
-    {
-          double mean = cvAvg( img ).val[0];
-          thresh_level = cvRound( mean - 10 );
-          thresh_level = MAX( thresh_level, 10 );
-          cvThreshold( img, thresh_img, thresh_level, 255, CV_THRESH_BINARY );
-    }
     // Try our standard "1" dilation, but if the pattern is not found, iterate the whole procedure with higher dilations.
     // This is necessary because some squares simply do not separate properly with a single dilation.  However,
     // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
@@ -549,6 +541,8 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
       cvFree(&quads);
       cvFree(&corners);
+
+      int max_quad_buf_size = 0;
 
       //USE BINARY IMAGE COMPUTED USING icvBinarizationHistogramBased METHOD
       cvDilate( thresh_img_new, thresh_img_new, 0, 1 );
@@ -586,8 +580,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         // order the quad corners globally
         // maybe delete or add some
         PRINTF("Starting ordering of inner quads\n");
-        count = icvOrderFoundConnectedQuads(count, quad_group, &quad_count, &quads, &corners,
-            pattern_size, storage );
+        count = icvOrderFoundConnectedQuads(count, quad_group, &quad_count, &quads, &corners, pattern_size, max_quad_buf_size, storage );
         PRINTF("Orig count: %d  After ordering: %d\n", icount, count);
 
         if (count == 0)
@@ -637,6 +630,16 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     // revert to old, slower, method if detection failed
     if (!found)
     {
+      // empiric threshold level
+      // thresholding performed here and not inside the cycle to save processing time
+      int thresh_level;
+      if ( !(flags & CV_CALIB_CB_ADAPTIVE_THRESH) )
+      {
+          double mean = cvAvg( img ).val[0];
+          thresh_level = cvRound( mean - 10 );
+          thresh_level = MAX( thresh_level, 10 );
+          cvThreshold( img, thresh_img, thresh_level, 255, CV_THRESH_BINARY );
+      }
       for( k = 0; k < 6; k++ )
       {
         int max_quad_buf_size = 0;
@@ -669,7 +672,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
           }
 
 #ifdef DEBUG_CHESSBOARD
-                  cvCvtColor(thresh_img,dbg_img,CV_GRAY2BGR);
+          cvCvtColor(thresh_img,dbg_img,CV_GRAY2BGR);
 #endif
 
           // So we can find rectangles that go to the edge, we draw a white line around the image edge.
