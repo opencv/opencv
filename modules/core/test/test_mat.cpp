@@ -1520,3 +1520,21 @@ TEST(Reduce, regression_should_fail_bug_4594)
     EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
     EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
 }
+
+TEST(Mat, push_back_vector)
+{
+    cv::Mat result(1, 5, CV_32FC1);
+
+    std::vector<float> vec1(result.cols + 1);
+    std::vector<int> vec2(result.cols);
+
+    EXPECT_THROW(result.push_back(vec1), cv::Exception);
+    EXPECT_THROW(result.push_back(vec2), cv::Exception);
+
+    vec1.resize(result.cols);
+
+    for (int i = 0; i < 5; ++i)
+        result.push_back(cv::Mat(vec1).reshape(1, 1));
+
+    ASSERT_EQ(6, result.rows);
+}
