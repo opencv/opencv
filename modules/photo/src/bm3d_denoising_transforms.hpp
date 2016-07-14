@@ -42,6 +42,8 @@
 #ifndef __OPENCV_BM3D_DENOISING_TRANSFORMS_HPP__
 #define __OPENCV_BM3D_DENOISING_TRANSFORMS_HPP__
 
+#define BM3D_MAX_3D_SIZE 8
+
 using namespace cv;
 
 template <typename T>
@@ -66,32 +68,7 @@ inline static void hardThreshold2D(T *dst, T *thrMap, const int &templateWindowS
 /// 1D and 2D threshold map coefficients. Implementation dependent, thus stored
 /// together with transforms.
 
-#define BM3D_MAX_3D_SIZE 8
-
-const float sqrt2 = std::sqrt(2.0f);
-
-// 2D map of threshold multipliers in case of 4x4 block size
-static float kThrMap4x4[16] = {
-    0.25f,           0.5f,       sqrt2 / 2.0f,    sqrt2 / 2.0f,
-    0.5f,            1.0f,       sqrt2,           sqrt2,
-    sqrt2 / 2.0f,    sqrt2,      2.0f,            2.0f,
-    sqrt2 / 2.0f,    sqrt2,      2.0f,            2.0f
-};
-
-// 2D map of threshold multipliers in case of 8x8 block size
-static float kThrMap8x8[64] = {
-    0.125f,       0.25f,        sqrt2 / 4.0f, sqrt2 / 4.0f, 0.5f,  0.5f,  0.5f,  0.5f,
-    0.25f,        0.5f,         sqrt2 / 2.0f, sqrt2 / 2.0f, 1.0f,  1.0f,  1.0f,  1.0f,
-    sqrt2 / 4.0f, sqrt2 / 2.0f, 1.0f,         1.0f,         sqrt2, sqrt2, sqrt2, sqrt2,
-    sqrt2 / 4.0f, sqrt2 / 2.0f, 1.0f,         1.0f,         sqrt2, sqrt2, sqrt2, sqrt2,
-    0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
-    0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
-    0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
-    0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f
-};
-
-// Method to generate threshold coefficients for 1D transform depending on the number of elements.
-static void calcHaarCoefficients1D(float *thrCoeff1D, int &idx, const int &numberOfElements)
+static void calcHaarCoefficients1D(cv::Mat &coeff1D, const int &numberOfElements)
 {
     // Generate base array and initialize with zeros
     cv::Mat baseArr = cv::Mat::zeros(numberOfElements, numberOfElements, CV_32FC1);
@@ -122,15 +99,39 @@ static void calcHaarCoefficients1D(float *thrCoeff1D, int &idx, const int &numbe
 
     // Multiply baseArray with 1D vector of ones
     cv::Mat unitaryArr = cv::Mat::ones(numberOfElements, 1, CV_32FC1);
-    cv::Mat res = baseArr * unitaryArr;
+    coeff1D = baseArr * unitaryArr;
+}
+
+// Method to generate threshold coefficients for 1D transform depending on the number of elements.
+static void fillHaarCoefficients1D(float *thrCoeff1D, int &idx, const int &numberOfElements)
+{
+    cv::Mat coeff1D;
+    calcHaarCoefficients1D(coeff1D, numberOfElements);
 
     // Square root the array to get standard deviation
-    ptr = res.ptr<float>(0);
-    for (unsigned i = 0; i < res.total(); ++i)
+    float *ptr = coeff1D.ptr<float>(0);
+    for (unsigned i = 0; i < coeff1D.total(); ++i)
     {
         ptr[i] = std::sqrt(ptr[i]);
         thrCoeff1D[idx++] = ptr[i];
     }
+}
+
+// Method to generate threshold coefficients for 1D transform depending on the number of elements.
+static void fillHaarCoefficients2D(float *thrCoeff2D, const int &templateWindowSize)
+{
+    cv::Mat coeff1D;
+    calcHaarCoefficients1D(coeff1D, templateWindowSize);
+
+    // Calculate 2D array
+    cv::Mat coeff1Dt;
+    cv::transpose(coeff1D, coeff1Dt);
+    cv::Mat coeff2D = coeff1D * coeff1Dt;
+
+    // Square root the array to get standard deviation
+    float *ptr = coeff2D.ptr<float>(0);
+    for (unsigned i = 0; i < coeff2D.total(); ++i)
+        thrCoeff2D[i] = std::sqrt(ptr[i]);
 }
 
 // Method to calculate 1D threshold map based on the maximum number of elements
@@ -145,7 +146,18 @@ static void calcHaarThresholdMap1D(float *&thrMap1D, const int &numberOfElements
         thrMap1D = new float[arrSize];
 
     for (int i = 1, idx = 0; i <= numberOfElements; i *= 2)
-        calcHaarCoefficients1D(thrMap1D, idx, i);
+        fillHaarCoefficients1D(thrMap1D, idx, i);
+}
+
+// Method to calculate 1D threshold map based on the maximum number of elements
+// Allocates memory for the output array.
+static void calcHaarThresholdMap2D(float *&thrMap2D, const int &templateWindowSize)
+{
+    // Allocate memory for the array
+    if (thrMap2D == NULL)
+        thrMap2D = new float[templateWindowSize * templateWindowSize];
+
+    fillHaarCoefficients2D(thrMap2D, templateWindowSize);
 }
 
 // Method to calculate 3D threshold map based on the maximum number of elements.
@@ -153,11 +165,12 @@ static void calcHaarThresholdMap1D(float *&thrMap1D, const int &numberOfElements
 template <typename T>
 static void calcHaarThresholdMap3D(
     T *&outThrMap1D,
-    float *thrMap2D,
     const float &hardThr1D,
-    const int &templateWindowSizeSq,
+    const int &templateWindowSize,
     const int &groupSize)
 {
+    const int templateWindowSizeSq = templateWindowSize * templateWindowSize;
+
     // Allocate memory for the output array
     if (outThrMap1D == NULL)
         outThrMap1D = new T[templateWindowSizeSq * ((groupSize << 1) - 1)];
@@ -165,6 +178,10 @@ static void calcHaarThresholdMap3D(
     // Generate 1D coefficients map
     float *thrMap1D = NULL;
     calcHaarThresholdMap1D(thrMap1D, groupSize);
+
+    // Generate 2D coefficients map
+    float *thrMap2D = NULL;
+    calcHaarThresholdMap2D(thrMap2D, templateWindowSize);
 
     // Generate 3D threshold map
     T *thrMapPtr1D = outThrMap1D;
@@ -187,6 +204,9 @@ static void calcHaarThresholdMap3D(
             }
         }
     }
+
+    delete[] thrMap1D;
+    delete[] thrMap2D;
 }
 
 /// Transforms for 4x4 2D block

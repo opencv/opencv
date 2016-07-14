@@ -209,8 +209,8 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
     // Precompute separate maps for transform and shrinkage verification
     short *thrMapTransform = NULL;
     short *thrMapShrinkage = NULL;
-    calcHaarThresholdMap3D(thrMapTransform, kThrMap4x4, 0, templateWindowSizeSq, maxGroupSize);
-    calcHaarThresholdMap3D(thrMapShrinkage, kThrMap4x4, h, templateWindowSizeSq, maxGroupSize);
+    calcHaarThresholdMap3D(thrMapTransform, 0, templateWindowSize, maxGroupSize);
+    calcHaarThresholdMap3D(thrMapShrinkage, h, templateWindowSize, maxGroupSize);
 
     // Generate some data
     BlockMatch<short, int, short> *bm = new BlockMatch<short, int, short>[maxGroupSize];
@@ -247,6 +247,8 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
         HaarTransformShrink8<short, int, short>, InverseHaarTransform8<short, int, short>, 6);
 }
 
+const float sqrt2 = std::sqrt(2.0f);
+
 TEST(Photo_DenoisingBm3dTransforms, regression_1D_generate)
 {
     const int numberOfElements = 8;
@@ -266,6 +268,50 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_generate)
         ASSERT_EQ(thrMap1D[j], kThrMap1D[j]);
 
     delete[] thrMap1D;
+}
+
+TEST(Photo_DenoisingBm3dTransforms, regression_2D_generate_4x4)
+{
+    const int templateWindowSize = 4;
+    float *thrMap2D = NULL;
+    calcHaarThresholdMap2D(thrMap2D, templateWindowSize);
+
+    // Expected array
+    const float kThrMap4x4[templateWindowSize * templateWindowSize] = {
+        0.25f,           0.5f,       sqrt2 / 2.0f,    sqrt2 / 2.0f,
+        0.5f,            1.0f,       sqrt2,           sqrt2,
+        sqrt2 / 2.0f,    sqrt2,      2.0f,            2.0f,
+        sqrt2 / 2.0f,    sqrt2,      2.0f,            2.0f
+    };
+
+    for (int j = 0; j < templateWindowSize * templateWindowSize; ++j)
+        ASSERT_EQ(thrMap2D[j], kThrMap4x4[j]);
+
+    delete[] thrMap2D;
+}
+
+TEST(Photo_DenoisingBm3dTransforms, regression_2D_generate_8x8)
+{
+    const int templateWindowSize = 8;
+    float *thrMap2D = NULL;
+    calcHaarThresholdMap2D(thrMap2D, templateWindowSize);
+
+    // Expected array
+    const float kThrMap8x8[templateWindowSize * templateWindowSize] = {
+        0.125f,       0.25f,        sqrt2 / 4.0f, sqrt2 / 4.0f, 0.5f,  0.5f,  0.5f,  0.5f,
+        0.25f,        0.5f,         sqrt2 / 2.0f, sqrt2 / 2.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+        sqrt2 / 4.0f, sqrt2 / 2.0f, 1.0f,         1.0f,         sqrt2, sqrt2, sqrt2, sqrt2,
+        sqrt2 / 4.0f, sqrt2 / 2.0f, 1.0f,         1.0f,         sqrt2, sqrt2, sqrt2, sqrt2,
+        0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
+        0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
+        0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f,
+        0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f
+    };
+
+    for (int j = 0; j < templateWindowSize * templateWindowSize; ++j)
+        ASSERT_EQ(thrMap2D[j], kThrMap8x8[j]);
+
+    delete[] thrMap2D;
 }
 
 TEST(Photo_Bm3dDenoising, powerOf2)

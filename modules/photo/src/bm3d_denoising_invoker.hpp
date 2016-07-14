@@ -128,26 +128,23 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
     hBM_ = D::template calcBlockMatchingThreshold<int>(hBM, templateWindowSizeSq_);
 
     // Select transforms depending on the template size
-    float *thrMap2D = NULL;
     switch (templateWindowSize_)
     {
     case 4:
-        thrMap2D = kThrMap4x4;
         haarTransform2D = Haar4x4;
         inverseHaar2D = InvHaar4x4;
         break;
     case 8:
-        thrMap2D = kThrMap8x8;
         haarTransform2D = Haar8x8;
         inverseHaar2D = InvHaar8x8;
         break;
     default:
         CV_Error(Error::StsBadArg,
-            "Unsupported template size! Only 1, 2, 4 and 8 are supported currently.");
+            "Unsupported template size! Only 4 and 8 are supported currently.");
     }
 
     // Precompute threshold map
-    calcHaarThresholdMap3D(thrMap_, thrMap2D, h, templateWindowSizeSq_, groupSize_);
+    calcHaarThresholdMap3D(thrMap_, h, templateWindowSize_, groupSize_);
 }
 
 template<typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
