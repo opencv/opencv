@@ -54,6 +54,15 @@
 
 namespace cv { namespace cuda { namespace device
 {
+    struct CV_EXPORTS ThrustAllocator
+    {
+        typedef uchar value_type;
+        virtual ~ThrustAllocator();
+        virtual __device__ __host__ uchar* allocate(size_t numBytes) = 0;
+        virtual __device__ __host__ void deallocate(uchar* ptr, size_t numBytes) = 0;
+        static ThrustAllocator& getAllocator();
+        static void setAllocator(ThrustAllocator* allocator);
+    };
     #define OPENCV_CUDA_LOG_WARP_SIZE        (5)
     #define OPENCV_CUDA_WARP_SIZE            (1 << OPENCV_CUDA_LOG_WARP_SIZE)
     #define OPENCV_CUDA_LOG_MEM_BANKS        ((__CUDA_ARCH__ >= 200) ? 5 : 4) // 32 banks on fermi, 16 on tesla

@@ -734,6 +734,12 @@ cv::RNG& cv::theRNG()
     return getCoreTlsData().get()->rng;
 }
 
+void cv::setRNGSeed(int seed)
+{
+    theRNG() = RNG(static_cast<uint64>(seed));
+}
+
+
 void cv::randu(InputOutputArray dst, InputArray low, InputArray high)
 {
     theRNG().fill(dst, RNG::UNIFORM, low, high);

@@ -68,18 +68,16 @@ private:
 int main(int argc, char** argv)
 {
     const char* keys =
-        "{ h help      | false          | print help message }"
+        "{ h help      |                | print help message }"
         "{ i input     |                | specify input image}"
         "{ c camera    | -1             | enable camera capturing }"
         "{ v video     | ../data/768x576.avi | use video as input }"
-        "{ g gray      | false          | convert image to gray one or not}"
+        "{ g gray      |                | convert image to gray one or not}"
         "{ s scale     | 1.0            | resize the image before detect}"
         "{ o output    |                | specify output path when input is images}";
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help"))
     {
-        cout << "Usage : hog [options]" << endl;
-        cout << "Available options:" << endl;
         cmd.printMessage();
         return EXIT_SUCCESS;
     }

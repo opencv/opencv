@@ -17,7 +17,7 @@ graph cuts](http://dl.acm.org/citation.cfm?id=1015720) . An algorithm was needed
 extraction with minimal user interaction, and the result was GrabCut.
 
 How it works from user point of view ? Initially user draws a rectangle around the foreground region
-(foreground region shoule be completely inside the rectangle). Then algorithm segments it
+(foreground region should be completely inside the rectangle). Then algorithm segments it
 iteratively to get the best result. Done. But in some cases, the segmentation won't be fine, like,
 it may have marked some foreground region as background and vice versa. In that case, user need to
 do fine touch-ups. Just give some strokes on the images where some faulty results are there. Strokes

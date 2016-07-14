@@ -75,7 +75,7 @@ static void drawArrows(UMat& _frame, const vector<Point2f>& prevPts, const vecto
 int main(int argc, const char* argv[])
 {
     const char* keys =
-        "{ h help           | false           | print help message }"
+        "{ h help           |                 | print help message }"
         "{ l left           |                 | specify left image }"
         "{ r right          |                 | specify right image }"
         "{ c camera         | 0               | enable camera capturing }"

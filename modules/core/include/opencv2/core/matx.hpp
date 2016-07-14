@@ -438,7 +438,7 @@ template<typename _Tp, int m> struct Matx_DetOp
             return p;
         for( int i = 0; i < m; i++ )
             p *= temp(i, i);
-        return 1./p;
+        return p;
     }
 };
 
@@ -1022,17 +1022,17 @@ Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>&) const
 template<> inline
 Vec<float, 3> Vec<float, 3>::cross(const Vec<float, 3>& v) const
 {
-    return Vec<float,3>(val[1]*v.val[2] - val[2]*v.val[1],
-                     val[2]*v.val[0] - val[0]*v.val[2],
-                     val[0]*v.val[1] - val[1]*v.val[0]);
+    return Vec<float,3>(this->val[1]*v.val[2] - this->val[2]*v.val[1],
+                     this->val[2]*v.val[0] - this->val[0]*v.val[2],
+                     this->val[0]*v.val[1] - this->val[1]*v.val[0]);
 }
 
 template<> inline
 Vec<double, 3> Vec<double, 3>::cross(const Vec<double, 3>& v) const
 {
-    return Vec<double,3>(val[1]*v.val[2] - val[2]*v.val[1],
-                     val[2]*v.val[0] - val[0]*v.val[2],
-                     val[0]*v.val[1] - val[1]*v.val[0]);
+    return Vec<double,3>(this->val[1]*v.val[2] - this->val[2]*v.val[1],
+                     this->val[2]*v.val[0] - this->val[0]*v.val[2],
+                     this->val[0]*v.val[1] - this->val[1]*v.val[0]);
 }
 
 template<typename _Tp, int cn> template<typename T2> inline

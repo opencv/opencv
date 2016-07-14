@@ -227,7 +227,7 @@ namespace
         }
     }
 
-    template <class T>
+    template <class T, int shift>
     class CLAHE_Interpolation_Body : public cv::ParallelLoopBody
     {
     public:
@@ -277,8 +277,8 @@ namespace
         float * xa_p, * xa1_p;
     };
 
-    template <class T>
-    void CLAHE_Interpolation_Body<T>::operator ()(const cv::Range& range) const
+    template <class T, int shift>
+    void CLAHE_Interpolation_Body<T, shift>::operator ()(const cv::Range& range) const
     {
         float inv_th = 1.0f / tileSize_.height;
 
@@ -302,7 +302,7 @@ namespace
 
             for (int x = 0; x < src_.cols; ++x)
             {
-                int srcVal = srcRow[x];
+                int srcVal = srcRow[x] >> shift;
 
                 int ind1 = ind1_p[x] + srcVal;
                 int ind2 = ind2_p[x] + srcVal;
@@ -310,7 +310,7 @@ namespace
                 float res = (lutPlane1[ind1] * xa1_p[x] + lutPlane1[ind2] * xa_p[x]) * ya1 +
                             (lutPlane2[ind1] * xa1_p[x] + lutPlane2[ind2] * xa_p[x]) * ya;
 
-                dstRow[x] = cv::saturate_cast<T>(res);
+                dstRow[x] = cv::saturate_cast<T>(res) << shift;
             }
         }
     }
@@ -422,9 +422,9 @@ namespace
 
         cv::Ptr<cv::ParallelLoopBody> interpolationBody;
         if (_src.type() == CV_8UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
         else if (_src.type() == CV_16UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 4> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
 
         cv::parallel_for_(cv::Range(0, src.rows), *interpolationBody);
     }

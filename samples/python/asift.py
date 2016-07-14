@@ -112,7 +112,7 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
-    feature_name = opts.get('--feature', 'sift-flann')
+    feature_name = opts.get('--feature', 'brisk-flann')
     try:
         fn1, fn2 = args
     except:

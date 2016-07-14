@@ -300,37 +300,37 @@ int wrong_div64f(const double* src1, size_t sz1, const double* src2, size_t sz2,
     return CV_HAL_ERROR_UNKNOWN; // to test how OpenCV handles errors from external HAL
 }
 
-int wrong_recip8u(const uchar* src1, size_t sz1, const uchar* src2, size_t sz2, uchar* dst, size_t sz, int w, int h, double scale)
+int wrong_recip8u(const uchar* src2, size_t sz2, uchar* dst, size_t sz, int w, int h, double scale)
 {
     return CV_HAL_ERROR_UNKNOWN; // to test how OpenCV handles errors from external HAL
 }
 
-int wrong_recip8s(const schar* src1, size_t sz1, const schar* src2, size_t sz2, schar* dst, size_t sz, int w, int h, double scale)
+int wrong_recip8s(const schar* src2, size_t sz2, schar* dst, size_t sz, int w, int h, double scale)
 {
     return CV_HAL_ERROR_UNKNOWN; // to test how OpenCV handles errors from external HAL
 }
 
-int wrong_recip16u(const ushort* src1, size_t sz1, const ushort* src2, size_t sz2, ushort* dst, size_t sz, int w, int h, double scale)
+int wrong_recip16u(const ushort* src2, size_t sz2, ushort* dst, size_t sz, int w, int h, double scale)
 {
     return CV_HAL_ERROR_UNKNOWN; // to test how OpenCV handles errors from external HAL
 }
 
-int wrong_recip16s(const short* src1, size_t sz1, const short* src2, size_t sz2, short* dst, size_t sz, int w, int h, double scale)
+int wrong_recip16s(const short* src2, size_t sz2, short* dst, size_t sz, int w, int h, double scale)
 {
     return CV_HAL_ERROR_UNKNOWN; // to test how OpenCV handles errors from external HAL
 }
 
-int wrong_recip32s(const int* src1, size_t sz1, const int* src2, size_t sz2, int* dst, size_t sz, int w, int h, double scale)
+int wrong_recip32s(const int* src2, size_t sz2, int* dst, size_t sz, int w, int h, double scale)
 {
     return CV_HAL_ERROR_UNKNOWN; // to test how OpenCV handles errors from external HAL
 }
 
-int wrong_recip32f(const float* src1, size_t sz1, const float* src2, size_t sz2, float* dst, size_t sz, int w, int h, double scale)
+int wrong_recip32f(const float* src2, size_t sz2, float* dst, size_t sz, int w, int h, double scale)
 {
     return CV_HAL_ERROR_UNKNOWN; // to test how OpenCV handles errors from external HAL
 }
 
-int wrong_recip64f(const double* src1, size_t sz1, const double* src2, size_t sz2, double* dst, size_t sz, int w, int h, double scale)
+int wrong_recip64f(const double* src2, size_t sz2, double* dst, size_t sz, int w, int h, double scale)
 {
     return CV_HAL_ERROR_UNKNOWN; // to test how OpenCV handles errors from external HAL
 }

@@ -158,15 +158,14 @@ void PCA::write(FileStorage& fs ) const
     fs << "mean" << mean;
 }
 
-void PCA::read(const FileNode& fs)
+void PCA::read(const FileNode& fn)
 {
-    CV_Assert( !fs.empty() );
-    String name = (String)fs["name"];
-    CV_Assert( name == "PCA" );
+    CV_Assert( !fn.empty() );
+    CV_Assert( (String)fn["name"] == "PCA" );
 
-    cv::read(fs["vectors"], eigenvectors);
-    cv::read(fs["values"], eigenvalues);
-    cv::read(fs["mean"], mean);
+    cv::read(fn["vectors"], eigenvectors);
+    cv::read(fn["values"], eigenvalues);
+    cv::read(fn["mean"], mean);
 }
 
 template <typename T>

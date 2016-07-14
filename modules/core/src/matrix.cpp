@@ -397,6 +397,14 @@ void Mat::create(int d, const int* _sizes, int _type)
             return;
     }
 
+    int _sizes_backup[CV_MAX_DIM]; // #5991
+    if (_sizes == (this->size.p))
+    {
+        for(i = 0; i < d; i++ )
+            _sizes_backup[i] = _sizes[i];
+        _sizes = _sizes_backup;
+    }
+
     release();
     if( d == 0 )
         return;
@@ -4898,6 +4906,13 @@ void SparseMat::create(int d, const int* _sizes, int _type)
             clear();
             return;
         }
+    }
+    int _sizes_backup[CV_MAX_DIM]; // #5991
+    if (_sizes == hdr->size)
+    {
+        for(i = 0; i < d; i++ )
+            _sizes_backup[i] = _sizes[i];
+        _sizes = _sizes_backup;
     }
     release();
     flags = MAGIC_VAL | _type;

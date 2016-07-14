@@ -1,8 +1,5 @@
-#if defined __APPLE__
-#include <OpenCL/cl.h>
-#else
+// custom OpenCL headers are located in "CL" subfolder (3rdparty/include/...)
 #include <CL/cl.h>
-#endif
 
 #ifndef _MSC_VER
 #ifdef CL_VERSION_1_2

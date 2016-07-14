@@ -246,6 +246,7 @@ CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
 #define CV_CALIB_TILTED_MODEL  262144
 #define CV_CALIB_FIX_TAUX_TAUY  524288
 
+#define CV_CALIB_NINTRINSIC 18
 
 /* Finds intrinsic and extrinsic camera parameters
    from a few views of known calibration pattern */

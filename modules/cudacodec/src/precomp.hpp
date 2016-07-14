@@ -61,7 +61,9 @@
     #ifdef WIN32
         #define NOMINMAX
         #include <windows.h>
-        #include <NVEncoderAPI.h>
+        #ifdef HAVE_NVCUVENC
+            #include <NVEncoderAPI.h>
+        #endif
     #else
         #include <pthread.h>
         #include <unistd.h>

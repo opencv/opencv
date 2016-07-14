@@ -120,6 +120,9 @@
 /* NVidia Video Decoding API*/
 #cmakedefine HAVE_NVCUVID
 
+/* NVidia Video Encoding API*/
+#cmakedefine HAVE_NVCUVENC
+
 /* OpenCL Support */
 #cmakedefine HAVE_OPENCL
 #cmakedefine HAVE_OPENCL_STATIC
@@ -194,3 +197,6 @@
 
 /* Intel VA-API/OpenCL */
 #cmakedefine HAVE_VA_INTEL
+
+/* Lapack */
+#cmakedefine HAVE_LAPACK

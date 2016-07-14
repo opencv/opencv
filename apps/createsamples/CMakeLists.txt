@@ -23,7 +23,6 @@ set_target_properties(${the_target} PROPERTIES
                       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
                       ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
                       RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-                      INSTALL_NAME_DIR lib
                       OUTPUT_NAME "opencv_createsamples")
 
 if(ENABLE_SOLUTION_FOLDERS)

@@ -187,7 +187,7 @@ static void onMouse(int event, int x, int y, int flags, void*)
         else
             rObs -= (float)0.1;
     }
-    float pi = (float)acos(-1.0);
+    float pi = static_cast<float>(CV_PI);
     if (thetaObs>pi)
     {
         thetaObs = -2 * pi + thetaObs;
@@ -282,7 +282,7 @@ static void DrawOpenGLMSER(Mat img, Mat result)
             break;
         if (key == 0x20)
             rotateEnable = !rotateEnable;
-        float	pi = (float)acos(-1);
+        float pi = static_cast<float>(CV_PI);
 
         switch (key) {
             case '5':
@@ -466,7 +466,7 @@ int main(int argc, char *argv[])
     // Descriptor loop
     vector<String>::iterator itDesc;
     Mat result(img.rows, img.cols, CV_8UC3);
-    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); itDesc++)
+    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); ++itDesc)
     {
         vector<KeyPoint> keyImg1;
         if (*itDesc == "MSER"){
@@ -475,7 +475,7 @@ int main(int argc, char *argv[])
                 b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity, itMSER->maxEvolution,
                                  itMSER->areaThreshold, itMSER->minMargin, itMSER->edgeBlurSize);
                 label = Legende(*itMSER);
-                itMSER++;
+                ++itMSER;
 
             }
             else
@@ -483,7 +483,7 @@ int main(int argc, char *argv[])
                 b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity);
                 b.dynamicCast<MSER>()->setPass2Only(itMSER->pass2Only);
                 label = Legende(*itMSER);
-                itMSER++;
+                ++itMSER;
             }
         }
         if (img.type()==CV_8UC3)
@@ -513,9 +513,9 @@ int main(int argc, char *argv[])
                 int i = 0;
                 //result = Scalar(0, 0, 0);
                 int nbPixelInMSER=0;
-                for (vector<vector <Point> >::iterator itr = region.begin(); itr != region.end(); itr++, i++)
+                for (vector<vector <Point> >::iterator itr = region.begin(); itr != region.end(); ++itr, ++i)
                 {
-                    for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); itp ++)
+                    for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); ++itp)
                     {
                         // all pixels belonging to region become blue
                         result.at<Vec3b>(itp->y, itp->x) = Vec3b(128, 0, 0);

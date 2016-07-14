@@ -77,6 +77,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "distance" << distanceFlag
            << "rank" << rankProportion;

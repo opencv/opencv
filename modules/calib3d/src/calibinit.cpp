@@ -1043,7 +1043,7 @@ icvRemoveQuadFromGroup(CvCBQuad **quads, int count, CvCBQuad *q0)
                         q0->count--;
                         break;
                     }
-                    break;
+                break;
             }
         }
     }

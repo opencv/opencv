@@ -292,18 +292,22 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         const gchar* name = gst_structure_get_name(structure);
         const gchar* format = gst_structure_get_string(structure, "format");
 
-        if (!name || !format)
+        if (!name)
             return 0;
 
         // we support 3 types of data:
         //     video/x-raw, format=BGR   -> 8bit, 3 channels
         //     video/x-raw, format=GRAY8 -> 8bit, 1 channel
         //     video/x-bayer             -> 8bit, 1 channel
+        //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
         // bayer data is never decoded, the user is responsible for that
         // everything is 8 bit, so we just test the caps for bit depth
 
         if (strcasecmp(name, "video/x-raw") == 0)
         {
+            if (!format)
+                return 0;
+
             if (strcasecmp(format, "BGR") == 0) {
                 depth = 3;
             }
@@ -314,6 +318,9 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         else if (strcasecmp(name, "video/x-bayer") == 0)
         {
             depth = 1;
+        } else if(strcasecmp(name, "image/jpeg") == 0) {
+            depth = 1;
+            // the correct size will be set once the first frame arrives
         }
 #endif
         if (depth > 0) {
@@ -334,6 +341,13 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
     // info.data ptr is valid until next grabFrame where the associated sample is unref'd
     GstMapInfo info = GstMapInfo();
     gboolean success = gst_buffer_map(buffer,&info, (GstMapFlags)GST_MAP_READ);
+
+    // with MJPEG streams frame size can change arbitrarily
+    if(int(info.size) != frame->imageSize) {
+        cvReleaseImageHeader(&frame);
+        frame = cvCreateImageHeader(cvSize(info.size, 1), IPL_DEPTH_8U, 1);
+    }
+
     if (!success){
         //something weird went wrong here. abort. abort.
         //fprintf(stderr,"GStreamer: unable to map buffer");
@@ -608,7 +622,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         struct stat buf;
         if (pathSize == 0 || stat(uri, &buf) != 0)
         {
-            delete uri;
+            delete[] uri;
             uri = NULL;
         }
 #else
@@ -797,7 +811,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
                                NULL);
 #else
     // support 1 and 3 channel 8 bit data, as well as bayer (also  1 channel, 8bit)
-    caps = gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}");
+    caps = gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg");
 #endif
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
     gst_caps_unref(caps);
@@ -833,7 +847,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             duration = -1;
         }
 
-        GstPad* pad = gst_element_get_static_pad(color, "src");
+        GstPad* pad = gst_element_get_static_pad(sink, "sink");
 #if GST_VERSION_MAJOR == 0
         GstCaps* buffer_caps = gst_pad_get_caps(pad);
 #else
@@ -860,8 +874,8 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         fps = (double)num/(double)denom;
 
          // GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline")
-
-        stopPipeline();
+        if (file)
+            stopPipeline();
     }
 
     __END__;
@@ -1400,7 +1414,19 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         g_object_set(G_OBJECT(file), "location", filename, NULL);
     }
 
-    if (is_color)
+    if (fourcc == CV_FOURCC('M','J','P','G') && frameSize.height == 1)
+    {
+#if GST_VERSION_MAJOR > 0
+        input_pix_fmt = GST_VIDEO_FORMAT_ENCODED;
+        caps = gst_caps_new_simple("image/jpeg",
+                                   "framerate", GST_TYPE_FRACTION, int(fps), 1,
+                                   NULL);
+        caps = gst_caps_fixate(caps);
+#else
+        CV_ERROR( CV_StsUnsupportedFormat, "Gstreamer 0.10 Opencv backend does not support writing encoded MJPEG data.");
+#endif
+    }
+    else if(is_color)
     {
         input_pix_fmt = GST_VIDEO_FORMAT_BGR;
         bufsize = frameSize.width * frameSize.height * 3;
@@ -1561,7 +1587,15 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
 
     handleMessage(pipeline);
 
-    if (input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
+#if GST_VERSION_MAJOR > 0
+    if (input_pix_fmt == GST_VIDEO_FORMAT_ENCODED) {
+        if (image->nChannels != 1 || image->depth != IPL_DEPTH_8U || image->height != 1) {
+            CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs images with depth = IPL_DEPTH_8U, nChannels = 1 and height = 1.");
+        }
+    }
+    else
+#endif
+    if(input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
         if (image->nChannels != 3 || image->depth != IPL_DEPTH_8U) {
             CV_ERROR(CV_StsUnsupportedFormat, "cvWriteFrame() needs images with depth = IPL_DEPTH_8U and nChannels = 3.");
         }

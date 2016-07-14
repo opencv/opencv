@@ -2046,13 +2046,13 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
     if (max1 > max2)
     {
       delta_x = delta_x1;
-      delta_y = delta_x1;
+      delta_y = delta_y1;
       return max1;
     }
     else
     {
       delta_x = delta_x2;
-      delta_y = delta_x2;
+      delta_y = delta_y2;
       return max2;
     }
   }
