@@ -408,14 +408,12 @@ public:
                         __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
                         __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
 
-                        __m128i v_dx_ml = _mm_mullo_epi16(v_dx, v_dx), v_dx_mh = _mm_mulhi_epi16(v_dx, v_dx);
-                        __m128i v_dy_ml = _mm_mullo_epi16(v_dy, v_dy), v_dy_mh = _mm_mulhi_epi16(v_dy, v_dy);
-
-                        __m128i v_norm = _mm_add_epi32(_mm_unpacklo_epi16(v_dx_ml, v_dx_mh), _mm_unpacklo_epi16(v_dy_ml, v_dy_mh));
-                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm);
-
-                        v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx_ml, v_dx_mh), _mm_unpackhi_epi16(v_dy_ml, v_dy_mh));
-                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
+                        __m128i v_dx_dy_ml = _mm_unpacklo_epi16(v_dx, v_dy);
+                        __m128i v_dx_dy_mh = _mm_unpackhi_epi16(v_dx, v_dy);
+                        __m128i v_norm_ml = _mm_madd_epi16(v_dx_dy_ml, v_dx_dy_ml);
+                        __m128i v_norm_mh = _mm_madd_epi16(v_dx_dy_mh, v_dx_dy_mh);
+                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm_ml);
+                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm_mh);
                     }
                 }
 #elif CV_NEON
@@ -799,14 +797,12 @@ while (borderPeaks.try_pop(m))
                         __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
                         __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
 
-                        __m128i v_dx_ml = _mm_mullo_epi16(v_dx, v_dx), v_dx_mh = _mm_mulhi_epi16(v_dx, v_dx);
-                        __m128i v_dy_ml = _mm_mullo_epi16(v_dy, v_dy), v_dy_mh = _mm_mulhi_epi16(v_dy, v_dy);
-
-                        __m128i v_norm = _mm_add_epi32(_mm_unpacklo_epi16(v_dx_ml, v_dx_mh), _mm_unpacklo_epi16(v_dy_ml, v_dy_mh));
-                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm);
-
-                        v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx_ml, v_dx_mh), _mm_unpackhi_epi16(v_dy_ml, v_dy_mh));
-                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
+                        __m128i v_dx_dy_ml = _mm_unpacklo_epi16(v_dx, v_dy);
+                        __m128i v_dx_dy_mh = _mm_unpackhi_epi16(v_dx, v_dy);
+                        __m128i v_norm_ml = _mm_madd_epi16(v_dx_dy_ml, v_dx_dy_ml);
+                        __m128i v_norm_mh = _mm_madd_epi16(v_dx_dy_mh, v_dx_dy_mh);
+                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm_ml);
+                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm_mh);
                     }
                 }
 #elif CV_NEON
