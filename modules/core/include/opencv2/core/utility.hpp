@@ -251,7 +251,8 @@ CV_EXPORTS_W const String& getBuildInformation();
 
 The function returns the number of ticks after the certain event (for example, when the machine was
 turned on). It can be used to initialize RNG or to measure a function execution time by reading the
-tick count before and after the function call. See also the tick frequency.
+tick count before and after the function call.
+@sa getTickFrequency, TickMeter
  */
 CV_EXPORTS_W int64 getTickCount();
 
@@ -264,8 +265,125 @@ execution time in seconds:
     // do something ...
     t = ((double)getTickCount() - t)/getTickFrequency();
 @endcode
+@sa getTickCount, TickMeter
  */
 CV_EXPORTS_W double getTickFrequency();
+
+/** @brief a Class to measure passing time.
+
+The class computes passing time by counting the number of ticks per second. That is, the following code computes the
+execution time in seconds:
+@code
+TickMeter tm;
+tm.start();
+// do something ...
+tm.stop();
+std::cout << tm.getTimeSec();
+@endcode
+@sa getTickCount, getTickFrequency
+*/
+
+class CV_EXPORTS_W TickMeter
+{
+public:
+    //! the default constructor
+    CV_WRAP TickMeter()
+    {
+    reset();
+    }
+
+    /**
+    starts counting ticks.
+    */
+    CV_WRAP void start()
+    {
+    startTime = cv::getTickCount();
+    }
+
+    /**
+    stops counting ticks.
+    */
+    CV_WRAP void stop()
+    {
+    int64 time = cv::getTickCount();
+    if (startTime == 0)
+    return;
+    ++counter;
+    sumTime += (time - startTime);
+    startTime = 0;
+    }
+
+    /**
+    returns counted ticks.
+    */
+    CV_WRAP int64 getTimeTicks() const
+    {
+    return sumTime;
+    }
+
+    /**
+    returns passed time in microseconds.
+    */
+    CV_WRAP double getTimeMicro() const
+    {
+    return getTimeMilli()*1e3;
+    }
+
+    /**
+    returns passed time in milliseconds.
+    */
+    CV_WRAP double getTimeMilli() const
+    {
+    return getTimeSec()*1e3;
+    }
+
+    /**
+    returns passed time in seconds.
+    */
+    CV_WRAP double getTimeSec()   const
+    {
+    return (double)getTimeTicks() / getTickFrequency();
+    }
+
+    /**
+    returns internal counter value.
+    */
+    CV_WRAP int64 getCounter() const
+    {
+    return counter;
+    }
+
+    /**
+    resets internal values.
+    */
+    CV_WRAP void reset()
+    {
+    startTime = 0;
+    sumTime = 0;
+    counter = 0;
+    }
+
+private:
+    int64 counter;
+    int64 sumTime;
+    int64 startTime;
+};
+
+/** @brief output operator
+@code
+TickMeter tm;
+tm.start();
+// do something ...
+tm.stop();
+std::cout << tm;
+@endcode
+*/
+
+static inline
+std::ostream& operator << (std::ostream& out, const TickMeter& tm)
+{
+    return out << tm.getTimeSec() << "sec";
+}
 
 /** @brief Returns the number of CPU ticks.
 
