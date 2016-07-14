@@ -826,9 +826,9 @@ CV_EXPORTS void minMaxLoc(const SparseMat& a, double* minVal,
 The function reduce reduces the matrix to a vector by treating the matrix rows/columns as a set of
 1D vectors and performing the specified operation on the vectors until a single row/column is
 obtained. For example, the function can be used to compute horizontal and vertical projections of a
-raster image. In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element
-bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction
-modes.
+raster image. In case of REDUCE_MAX and REDUCE_MIN , the output image should have the same type as the source one.
+In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
+And multi-channel arrays are also supported in these two reduction modes.
 @param src input 2D matrix.
 @param dst output vector. Its size and type is defined by dim and dtype parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to

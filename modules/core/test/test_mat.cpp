@@ -1509,3 +1509,14 @@ TEST(Mat, regression_6696_BigData_8Gb)
     EXPECT_EQ(4, destImageBGR.at<Vec4b>(height-1, width-1)[3]);
 }
 #endif
+
+TEST(Reduce, regression_should_fail_bug_4594)
+{
+    cv::Mat src = cv::Mat::eye(4, 4, CV_8U);
+    std::vector<int> dst;
+
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MIN, CV_32S), cv::Exception);
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MAX, CV_32S), cv::Exception);
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
+}
