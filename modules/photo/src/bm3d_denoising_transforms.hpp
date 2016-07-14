@@ -90,21 +90,104 @@ static float kThrMap8x8[64] = {
     0.5f,         1.0f,         sqrt2,        sqrt2,        2.0f,  2.0f,  2.0f,  2.0f
 };
 
-// 1D map of threshold multipliers for up to 8 elements in a group
-static const float kThrMap1D[(BM3D_MAX_3D_SIZE << 1) - 1] = {
-    1.0f,  // 1 element
-    sqrt2 / 2.0f,    sqrt2, // 2 elements
-    0.5f,            1.0f,            sqrt2,       sqrt2,  // 4 elements
-    sqrt2 / 4.0f,    sqrt2 / 2.0f,    1.0f,        1.0f,  sqrt2, sqrt2, sqrt2, sqrt2  // 8 elements
-};
+// Method to generate threshold coefficients for 1D transform depending on the number of elements.
+static void calcHaarCoefficients1D(float *thrCoeff1D, int &idx, const int &numberOfElements)
+{
+    // Generate base array and initialize with zeros
+    cv::Mat baseArr = cv::Mat::zeros(numberOfElements, numberOfElements, CV_32FC1);
 
-// 2D threshold multipliers for up to 8 elements in a group
-static const float kCoeff[4] = {
-    1.0f,                             // 1 element
-    std::sqrt(2.0f * std::log(2.0f)), // 2 elements
-    std::sqrt(2.0f * std::log(4.0f)), // 4 elements
-    std::sqrt(2.0f * std::log(8.0f))  // 8 elements
-};
+    // Calculate base array coefficients.
+    int currentRow = 0;
+    for (int i = numberOfElements; i > 0; i /= 2)
+    {
+        for (int k = 0, sign = -1; k < numberOfElements; ++k)
+        {
+            // Alternate sign every i-th element
+            if (k % i == 0)
+                sign *= -1;
+
+            // Move to the next row every 2*i-th element
+            if (k != 0 && (k % (2 * i) == 0))
+                ++currentRow;
+
+            baseArr.at<float>(currentRow, k) = sign * 1.0f / i;
+        }
+        ++currentRow;
+    }
+
+    // Square each elements of the base array
+    float *ptr = baseArr.ptr<float>(0);
+    for (unsigned i = 0; i < baseArr.total(); ++i)
+        ptr[i] = ptr[i] * ptr[i];
+
+    // Multiply baseArray with 1D vector of ones
+    cv::Mat unitaryArr = cv::Mat::ones(numberOfElements, 1, CV_32FC1);
+    cv::Mat res = baseArr * unitaryArr;
+
+    // Square root the array to get standard deviation
+    ptr = res.ptr<float>(0);
+    for (unsigned i = 0; i < res.total(); ++i)
+    {
+        ptr[i] = std::sqrt(ptr[i]);
+        thrCoeff1D[idx++] = ptr[i];
+    }
+}
+
+// Method to calculate 1D threshold map based on the maximum number of elements
+// Allocates memory for the output array.
+static void calcHaarThresholdMap1D(float *&thrMap1D, const int &numberOfElements)
+{
+    CV_Assert(numberOfElements <= BM3D_MAX_3D_SIZE && numberOfElements > 0);
+
+    // Allocate memory for the array
+    const int arrSize = (numberOfElements << 1) - 1;
+    if (thrMap1D == NULL)
+        thrMap1D = new float[arrSize];
+
+    for (int i = 1, idx = 0; i <= numberOfElements; i *= 2)
+        calcHaarCoefficients1D(thrMap1D, idx, i);
+}
+
+// Method to calculate 3D threshold map based on the maximum number of elements.
+// Allocates memory for the output array.
+template <typename T>
+static void calcHaarThresholdMap3D(
+    T *&outThrMap1D,
+    float *thrMap2D,
+    const float &hardThr1D,
+    const int &templateWindowSizeSq,
+    const int &groupSize)
+{
+    // Allocate memory for the output array
+    if (outThrMap1D == NULL)
+        outThrMap1D = new T[templateWindowSizeSq * ((groupSize << 1) - 1)];
+
+    // Generate 1D coefficients map
+    float *thrMap1D = NULL;
+    calcHaarThresholdMap1D(thrMap1D, groupSize);
+
+    // Generate 3D threshold map
+    T *thrMapPtr1D = outThrMap1D;
+    for (int i = 1, ii = 0; i <= groupSize; ++ii, i *= 2)
+    {
+        float coeff = (i == 1) ? 1.0f : std::sqrt(2.0f * std::log((float)i));
+        for (int jj = 0; jj < templateWindowSizeSq; ++jj)
+        {
+            for (int ii1 = 0; ii1 < (1 << ii); ++ii1)
+            {
+                int indexIn1D = (1 << ii) - 1 + ii1;
+                int indexIn2D = jj;
+                int thr = static_cast<int>(thrMap1D[indexIn1D] * thrMap2D[indexIn2D] * hardThr1D * coeff);
+
+                // Set DC component to zero
+                if (jj == 0 && ii1 == 0)
+                    thr = 0;
+
+                *thrMapPtr1D++ = cv::saturate_cast<T>(thr);
+            }
+        }
+    }
+}
 
 /// Transforms for 4x4 2D block
 

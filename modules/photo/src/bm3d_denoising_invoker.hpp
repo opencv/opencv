@@ -108,7 +108,7 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
     const float &h,
     const int &hBM,
     const int &groupSize) :
-    src_(src), dst_(dst), groupSize_(groupSize)
+    src_(src), dst_(dst), groupSize_(groupSize), thrMap_(NULL)
 {
     groupSize_ = getLargestPowerOf2SmallerThan(groupSize);
     CV_Assert(groupSize <= BM3D_MAX_3D_SIZE && groupSize > 0);
@@ -123,9 +123,6 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
     // Extend image to avoid border problem
     borderSize_ = halfSearchWindowSize_ + halfTemplateWindowSize_;
     copyMakeBorder(src_, srcExtended_, borderSize_, borderSize_, borderSize_, borderSize_, BORDER_DEFAULT);
-
-    // Allocate memory for threshold map
-    thrMap_ = new TT[templateWindowSizeSq_ * ((BM3D_MAX_3D_SIZE << 1) - 1)];
 
     // Calculate block matching threshold
     hBM_ = D::template calcBlockMatchingThreshold<int>(hBM, templateWindowSizeSq_);
@@ -150,7 +147,7 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
     }
 
     // Precompute threshold map
-    ComputeThresholdMap1D(thrMap_, kThrMap1D, thrMap2D, h, kCoeff, templateWindowSizeSq_);
+    calcHaarThresholdMap3D(thrMap_, thrMap2D, h, templateWindowSizeSq_, groupSize_);
 }
 
 template<typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
@@ -288,9 +285,8 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
             for (int n = 0; n < elementSize; ++n)
                 inverseHaar2D(bm[n].data());
 
-            // Aggregate the results
-            ++sumNonZero;
-            float weight = 1.0f / (float)sumNonZero;
+            // Aggregate the results (increase sumNonZero to avoid division by zero)
+            float weight = 1.0f / (float)(++sumNonZero);
 
             // Scale weight by element size
             weight *= elementSize;

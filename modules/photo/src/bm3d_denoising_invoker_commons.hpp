@@ -265,34 +265,4 @@ public:
     }
 };
 
-template <typename T>
-void ComputeThresholdMap1D(
-    T *outThrMap1D,
-    const float *thrMap1D,
-    float *thrMap2D,
-    const float &hardThr1D,
-    const float *coeff,
-    const int &templateWindowSizeSq)
-{
-    T *thrMapPtr1D = outThrMap1D;
-    for (int ii = 0; ii < 4; ++ii)
-    {
-        for (int jj = 0; jj < templateWindowSizeSq; ++jj)
-        {
-            for (int ii1 = 0; ii1 < (1 << ii); ++ii1)
-            {
-                int indexIn1D = (1 << ii) - 1 + ii1;
-                int indexIn2D = jj;
-                int thr = static_cast<int>(thrMap1D[indexIn1D] * thrMap2D[indexIn2D] * hardThr1D * coeff[ii]);
-
-                // Set DC component to zero
-                if (jj == 0 && ii1 == 0)
-                    thr = 0;
-
-                *thrMapPtr1D++ = cv::saturate_cast<T>(thr);
-           }
-        }
-    }
-}
-
 #endif

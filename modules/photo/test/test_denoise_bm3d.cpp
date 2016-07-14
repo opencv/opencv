@@ -207,10 +207,10 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
     int maxGroupSize = 8;
 
     // Precompute separate maps for transform and shrinkage verification
-    short *thrMapTransform = new short[templateWindowSizeSq * ((BM3D_MAX_3D_SIZE << 1) - 1)];
-    short *thrMapShrinkage = new short[templateWindowSizeSq * ((BM3D_MAX_3D_SIZE << 1) - 1)];
-    ComputeThresholdMap1D(thrMapTransform, kThrMap1D, kThrMap4x4, 0, kCoeff, templateWindowSizeSq);
-    ComputeThresholdMap1D(thrMapShrinkage, kThrMap1D, kThrMap4x4, h, kCoeff, templateWindowSizeSq);
+    short *thrMapTransform = NULL;
+    short *thrMapShrinkage = NULL;
+    calcHaarThresholdMap3D(thrMapTransform, kThrMap4x4, 0, templateWindowSizeSq, maxGroupSize);
+    calcHaarThresholdMap3D(thrMapShrinkage, kThrMap4x4, h, templateWindowSizeSq, maxGroupSize);
 
     // Generate some data
     BlockMatch<short, int, short> *bm = new BlockMatch<short, int, short>[maxGroupSize];
@@ -245,6 +245,27 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
         HaarTransformShrink4<short, int, short>, InverseHaarTransform4<short, int, short>, 6);
     Test1dTransform<short, int, short>(thrMapShrinkage, 8, templateWindowSizeSq, bm, bmOrig,
         HaarTransformShrink8<short, int, short>, InverseHaarTransform8<short, int, short>, 6);
+}
+
+TEST(Photo_DenoisingBm3dTransforms, regression_1D_generate)
+{
+    const int numberOfElements = 8;
+    const int arrSize = (numberOfElements << 1) - 1;
+    float *thrMap1D = NULL;
+    calcHaarThresholdMap1D(thrMap1D, numberOfElements);
+
+    // Expected array
+    const float kThrMap1D[arrSize] = {
+        1.0f,  // 1 element
+        sqrt2 / 2.0f,    sqrt2, // 2 elements
+        0.5f,            1.0f,            sqrt2,       sqrt2,  // 4 elements
+        sqrt2 / 4.0f,    sqrt2 / 2.0f,    1.0f,        1.0f,  sqrt2, sqrt2, sqrt2, sqrt2  // 8 elements
+    };
+
+    for (int j = 0; j < arrSize; ++j)
+        ASSERT_EQ(thrMap1D[j], kThrMap1D[j]);
+
+    delete[] thrMap1D;
 }
 
 TEST(Photo_Bm3dDenoising, powerOf2)
