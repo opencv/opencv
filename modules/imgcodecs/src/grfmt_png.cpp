@@ -187,27 +187,22 @@ bool  PngDecoder::readHeader()
 
                     if( bit_depth <= 8 || bit_depth == 16 )
                     {
-                        png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, &trans_values);
                         switch(color_type)
                         {
                             case PNG_COLOR_TYPE_RGB:
                             case PNG_COLOR_TYPE_PALETTE:
+                                png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, &trans_values);
                                 if( num_trans > 0 )
                                     m_type = CV_8UC4;
                                 else
                                     m_type = CV_8UC3;
                                 break;
+                            case PNG_COLOR_TYPE_GRAY_ALPHA:
                             case PNG_COLOR_TYPE_RGB_ALPHA:
                                 m_type = CV_8UC4;
                                 break;
-                            case PNG_COLOR_TYPE_GRAY_ALPHA:
-                                m_type = CV_8UC2;
-                                break;
                             default:
-                                if( num_trans > 0 )
-                                    m_type = CV_8UC2;
-                                else
-                                    m_type = CV_8UC1;
+                                m_type = CV_8UC1;
                         }
                         if( bit_depth == 16 )
                             m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
@@ -230,7 +225,7 @@ bool  PngDecoder::readData( Mat& img )
     volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);
     uchar** buffer = _buffer;
-    int color = img.channels() > 2;
+    int color = img.channels() > 1;
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
@@ -247,7 +242,7 @@ bool  PngDecoder::readData( Mat& img )
             else if( !isBigEndian() )
                 png_set_swap( png_ptr );
 
-            if(img.channels() != 4 && img.channels() != 2)
+            if(img.channels() < 4)
             {
                 /* observation: png_read_image() writes 400 bytes beyond
                  * end of data when reading a 400x118 color png
@@ -272,7 +267,7 @@ bool  PngDecoder::readData( Mat& img )
                 png_set_gray_1_2_4_to_8( png_ptr );
 #endif
 
-            if( CV_MAT_CN(m_type) > 2 && color )
+            if( (m_color_type & PNG_COLOR_MASK_COLOR) && color )
                 png_set_bgr( png_ptr ); // convert RGB to BGR
             else if( color )
                 png_set_gray_to_rgb( png_ptr ); // Gray->RGB
@@ -413,7 +408,6 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 
                     png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? isBilevel?1:8 : 16,
                         channels == 1 ? PNG_COLOR_TYPE_GRAY :
-                        channels == 2 ? PNG_COLOR_TYPE_GRAY_ALPHA :
                         channels == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGBA,
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                         PNG_FILTER_TYPE_DEFAULT );
