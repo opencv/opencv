@@ -67,7 +67,8 @@ namespace cv
             REPRESENTATION,
             IMMEDIATE_RENDERING,
             SHADING,
-            AMBIENT
+            AMBIENT,
+            LIGHTING
         };
 
         enum RepresentationValues

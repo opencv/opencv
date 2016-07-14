@@ -55,7 +55,7 @@ class App:
         cv2.imshow('watershed', vis)
 
     def run(self):
-        while True:
+        while cv2.getWindowProperty('img', 0) != -1 or cv2.getWindowProperty('watershed', 0) != -1:
             ch = 0xFF & cv2.waitKey(50)
             if ch == 27:
                 break

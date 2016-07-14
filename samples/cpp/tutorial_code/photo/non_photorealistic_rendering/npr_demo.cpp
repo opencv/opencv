@@ -35,9 +35,9 @@ int main(int argc, char* argv[])
 
     int num,type;
 
-    Mat I = imread(argv[1]);
+    Mat src = imread(argv[1], IMREAD_COLOR);
 
-    if(I.empty())
+    if(src.empty())
     {
         cout <<  "Image not found" << endl;
         exit(0);
@@ -71,25 +71,25 @@ int main(int argc, char* argv[])
 
         cin >> type;
 
-        edgePreservingFilter(I,img,type);
+        edgePreservingFilter(src,img,type);
         imshow("Edge Preserve Smoothing",img);
 
     }
     else if(num == 2)
     {
-        detailEnhance(I,img);
+        detailEnhance(src,img);
         imshow("Detail Enhanced",img);
     }
     else if(num == 3)
     {
         Mat img1;
-        pencilSketch(I,img1, img, 10 , 0.1f, 0.03f);
+        pencilSketch(src,img1, img, 10 , 0.1f, 0.03f);
         imshow("Pencil Sketch",img1);
         imshow("Color Pencil Sketch",img);
     }
     else if(num == 4)
     {
-        stylization(I,img);
+        stylization(src,img);
         imshow("Stylization",img);
     }
     waitKey(0);

@@ -50,6 +50,13 @@ static const int VAR_MISSED = VAR_ORDERED;
 
 TrainData::~TrainData() {}
 
+Mat TrainData::getTestSamples() const
+{
+    Mat idx = getTestSampleIdx();
+    Mat samples = getSamples();
+    return idx.empty() ? Mat() : getSubVector(samples, idx);
+}
+
 Mat TrainData::getSubVector(const Mat& vec, const Mat& idx)
 {
     if( idx.empty() )

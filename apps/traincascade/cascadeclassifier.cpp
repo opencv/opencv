@@ -190,6 +190,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     cascadeParams.printAttrs();
     stageParams->printAttrs();
     featureParams->printAttrs();
+    cout << "Number of unique features given windowSize [" << _cascadeParams.winSize.width << "," << _cascadeParams.winSize.height << "] : " << featureEvaluator->getNumFeatures() << "" << endl;
 
     int startNumStages = (int)stageClassifiers.size();
     if ( startNumStages > 1 )
@@ -289,7 +290,7 @@ int CvCascadeClassifier::predict( int sampleIdx )
 {
     CV_DbgAssert( sampleIdx < numPos + numNeg );
     for (vector< Ptr<CvCascadeBoost> >::iterator it = stageClassifiers.begin();
-        it != stageClassifiers.end(); it++ )
+        it != stageClassifiers.end();++it )
     {
         if ( (*it)->predict( sampleIdx ) == 0.f )
             return 0;
@@ -364,7 +365,7 @@ void CvCascadeClassifier::writeStages( FileStorage &fs, const Mat& featureMap ) 
     int i = 0;
     fs << CC_STAGES << "[";
     for( vector< Ptr<CvCascadeBoost> >::const_iterator it = stageClassifiers.begin();
-        it != stageClassifiers.end(); it++, i++ )
+        it != stageClassifiers.end();++it, ++i )
     {
         sprintf( cmnt, "stage %d", i );
         cvWriteComment( fs.fs, cmnt, 0 );
@@ -556,7 +557,7 @@ void CvCascadeClassifier::getUsedFeaturesIdxMap( Mat& featureMap )
     featureMap.setTo(Scalar(-1));
 
     for( vector< Ptr<CvCascadeBoost> >::const_iterator it = stageClassifiers.begin();
-        it != stageClassifiers.end(); it++ )
+        it != stageClassifiers.end();++it )
         (*it)->markUsedFeaturesInMap( featureMap );
 
     for( int fi = 0, idx = 0; fi < varCount; fi++ )

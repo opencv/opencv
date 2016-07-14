@@ -2,7 +2,7 @@
 #include "precomp.hpp"
 
 #ifdef WIN32
-#include "xiApi.h"
+#include <xiApi.h>
 #else
 #include <m3api/xiApi.h>
 #endif
@@ -19,7 +19,7 @@ public:
 
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -27,9 +27,9 @@ public:
 
 private:
     void init();
-    void errMsg(const char* msg, int errNum);
+    void errMsg(const char* msg, int errNum) const;
     void resetCvImage();
-    int  ocvParamtoXimeaParam(int value);
+    int  ocvParamtoXimeaParam(int value) const;
     IplImage* frame;
 
     HANDLE    hmv;
@@ -284,7 +284,7 @@ void CvCaptureCAM_XIMEA::resetCvImage()
 
 /**********************************************************************************/
 
-int CvCaptureCAM_XIMEA::ocvParamtoXimeaParam(int property_id)
+int CvCaptureCAM_XIMEA::ocvParamtoXimeaParam(int property_id) const
 {
     XI_RETURN stat = XI_OK;
     switch (property_id)
@@ -399,6 +399,16 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
+    case CV_CAP_PROP_XI_TEST_PATTERN_GENERATOR_SELECTOR:
+        ximea_param = "test_pattern_generator_selector";
+        value_type = xiTypeEnum;
+        doAcqReset = true;
+        break;
+    case CV_CAP_PROP_XI_TEST_PATTERN:
+        ximea_param = "test_pattern";
+        value_type = xiTypeEnum;
+        doAcqReset = true;
+        break;
     case CV_CAP_PROP_XI_IMAGE_DATA_FORMAT:
         ximea_param = "imgdataformat";
         value_type = xiTypeEnum;
@@ -478,6 +488,16 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
+    case CV_CAP_PROP_XI_REGION_SELECTOR :
+        ximea_param = "region_selector";
+        value_type = xiTypeInteger;
+        doAcqReset = true;
+        break;
+    case CV_CAP_PROP_XI_REGION_MODE :
+        ximea_param = "region_mode";
+        value_type = xiTypeInteger;
+        doAcqReset = true;
+        break;
     case CV_CAP_PROP_XI_EXP_PRIORITY:
         ximea_param = "exp_priority";
         value_type = xiTypeFloat;
@@ -542,6 +562,14 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
         break;
     case CV_CAP_PROP_XI_HOUS_TEMP:
         ximea_param = "hous_temp";
+        value_type = xiTypeFloat;
+        break;
+    case CV_CAP_PROP_XI_HOUS_BACK_SIDE_TEMP:
+        ximea_param = "hous_back_side_temp";
+        value_type = xiTypeFloat;
+        break;
+    case CV_CAP_PROP_XI_SENSOR_BOARD_TEMP:
+        ximea_param = "sensor_board_temp";
         value_type = xiTypeFloat;
         break;
     case CV_CAP_PROP_XI_CMS:
@@ -652,6 +680,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_TRG_SELECTOR:
         ximea_param = "trigger_selector";
         value_type = xiTypeEnum;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_ACQ_FRAME_BURST_COUNT:
         ximea_param = "acq_frame_burst_count";
@@ -756,14 +785,17 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_SENSOR_CLOCK_FREQ_HZ:
         ximea_param = "sensor_clock_freq_hz";
         value_type = xiTypeFloat;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_SENSOR_CLOCK_FREQ_INDEX:
         ximea_param = "sensor_clock_freq_index";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_SENSOR_OUTPUT_CHANNEL_COUNT:
         ximea_param = "sensor_output_channel_count";
         value_type = xiTypeEnum;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_FRAMERATE:
         ximea_param = "framerate";
@@ -784,6 +816,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_AVAILABLE_BANDWIDTH:
         ximea_param = "available_bandwidth";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_BUFFER_POLICY:
         ximea_param = "buffer_policy";
@@ -792,14 +825,17 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_LUT_EN:
         ximea_param = "LUTEnable";
         value_type = xiTypeBoolean;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_LUT_INDEX:
         ximea_param = "LUTIndex";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_LUT_VALUE:
         ximea_param = "LUTValue";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_TRG_DELAY:
         ximea_param = "trigger_delay";
@@ -820,22 +856,27 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_ACQ_BUFFER_SIZE:
         ximea_param = "acq_buffer_size";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_ACQ_BUFFER_SIZE_UNIT:
         ximea_param = "acq_buffer_size_unit";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_SIZE:
         ximea_param = "acq_transport_buffer_size";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_BUFFERS_QUEUE_SIZE:
         ximea_param = "buffers_queue_size";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_COMMIT:
         ximea_param = "acq_transport_buffer_commit";
         value_type = xiTypeInteger;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_RECENT_FRAME:
         ximea_param = "recent_frame";
@@ -850,9 +891,14 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
         ximea_param = "column_fpn_correction";
         value_type = xiTypeEnum;
         break;
+    case CV_CAP_PROP_XI_ROW_FPN_CORRECTION:
+        ximea_param = "row_fpn_correction";
+        value_type = xiTypeEnum;
+        break;
     case CV_CAP_PROP_XI_SENSOR_MODE:
         ximea_param = "sensor_mode";
         value_type = xiTypeEnum;
+        doAcqReset = true;
         break;
     case CV_CAP_PROP_XI_HDR:
         ximea_param = "hdr";
@@ -893,6 +939,14 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     case CV_CAP_PROP_XI_AUTO_BANDWIDTH_CALCULATION:
         ximea_param = "auto_bandwidth_calculation";
         value_type = xiTypeBoolean;
+        break;
+    case CV_CAP_PROP_XI_FFS_FILE_ID:
+        ximea_param = "ffs_file_id";
+        value_type = xiTypeInteger;
+        break;
+    case CV_CAP_PROP_XI_FFS_FILE_SIZE:
+        ximea_param = "ffs_file_size";
+        value_type = xiTypeInteger;
         break;
     case CV_CAP_PROP_XI_FREE_FFS_SIZE:
         ximea_param = "free_ffs_size";
@@ -963,7 +1017,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
 
 /**********************************************************************************/
 
-double CvCaptureCAM_XIMEA::getProperty( int property_id )
+double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
 {
     XI_RETURN stat = XI_OK;
     double getPropVal = 0;
@@ -1042,6 +1096,14 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id )
         ximea_param = "decimation_pattern";
         value_type = xiTypeEnum;
         break;
+    case CV_CAP_PROP_XI_TEST_PATTERN_GENERATOR_SELECTOR:
+        ximea_param = "test_pattern_generator_selector";
+        value_type = xiTypeEnum;
+        break;
+    case CV_CAP_PROP_XI_TEST_PATTERN:
+        ximea_param = "test_pattern";
+        value_type = xiTypeEnum;
+        break;
     case CV_CAP_PROP_XI_IMAGE_DATA_FORMAT:
         ximea_param = "imgdataformat";
         value_type = xiTypeEnum;
@@ -1114,6 +1176,14 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id )
         ximea_param = "offsetY";
         value_type = xiTypeInteger;
         break;
+    case CV_CAP_PROP_XI_REGION_SELECTOR :
+        ximea_param = "region_selector";
+        value_type = xiTypeInteger;
+        break;
+    case CV_CAP_PROP_XI_REGION_MODE :
+        ximea_param = "region_mode";
+        value_type = xiTypeInteger;
+        break;
     case CV_CAP_PROP_XI_EXP_PRIORITY:
         ximea_param = "exp_priority";
         value_type = xiTypeFloat;
@@ -1172,6 +1242,14 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id )
         break;
     case CV_CAP_PROP_XI_HOUS_TEMP:
         ximea_param = "hous_temp";
+        value_type = xiTypeFloat;
+        break;
+    case CV_CAP_PROP_XI_HOUS_BACK_SIDE_TEMP:
+        ximea_param = "hous_back_side_temp";
+        value_type = xiTypeFloat;
+        break;
+    case CV_CAP_PROP_XI_SENSOR_BOARD_TEMP:
+        ximea_param = "sensor_board_temp";
         value_type = xiTypeFloat;
         break;
     case CV_CAP_PROP_XI_CMS:
@@ -1478,6 +1556,10 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id )
         ximea_param = "column_fpn_correction";
         value_type = xiTypeEnum;
         break;
+    case CV_CAP_PROP_XI_ROW_FPN_CORRECTION:
+        ximea_param = "row_fpn_correction";
+        value_type = xiTypeEnum;
+        break;
     case CV_CAP_PROP_XI_SENSOR_MODE:
         ximea_param = "sensor_mode";
         value_type = xiTypeEnum;
@@ -1521,6 +1603,14 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id )
     case CV_CAP_PROP_XI_AUTO_BANDWIDTH_CALCULATION:
         ximea_param = "auto_bandwidth_calculation";
         value_type = xiTypeBoolean;
+        break;
+    case CV_CAP_PROP_XI_FFS_FILE_ID:
+        ximea_param = "ffs_file_id";
+        value_type = xiTypeInteger;
+        break;
+    case CV_CAP_PROP_XI_FFS_FILE_SIZE:
+        ximea_param = "ffs_file_size";
+        value_type = xiTypeInteger;
         break;
     case CV_CAP_PROP_XI_FREE_FFS_SIZE:
         ximea_param = "free_ffs_size";
@@ -1572,7 +1662,7 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id )
 
 /**********************************************************************************/
 
-void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum)
+void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
 {
     // with XI_OK there is nothing to report
     if(errNum == XI_OK) return;
@@ -1640,6 +1730,7 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum)
     case XI_BUFFER_SIZE_TOO_SMALL : error_message = "Buffer provided by user is too small"; break;
     case XI_COULDNT_INIT_PROCESSOR : error_message = "Couldnt initialize processor."; break;
     case XI_NOT_INITIALIZED : error_message = "The object/module/procedure/process being referred to has not been started."; break;
+    case XI_RESOURCE_NOT_FOUND : error_message = "Resource not found(could be processor, file, item..)."; break;
     case XI_UNKNOWN_PARAM : error_message = "Unknown parameter"; break;
     case XI_WRONG_PARAM_VALUE : error_message = "Wrong parameter value"; break;
     case XI_WRONG_PARAM_TYPE : error_message = "Wrong parameter type"; break;

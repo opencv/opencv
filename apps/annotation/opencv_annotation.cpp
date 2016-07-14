@@ -46,6 +46,9 @@ USAGE:
 ./opencv_annotation -images <folder location> -annotations <ouput file>
 
 Created by: Puttemans Steven - February 2015
+Adapted by: Puttemans Steven - April 2016 - Vectorize the process to enable better processing
+                                               + early leave and store by pressing an ESC key
+                                               + enable delete `d` button, to remove last annotation
 *****************************************************************************************************/
 
 #include <opencv2/core.hpp>
@@ -68,16 +71,15 @@ using namespace cv;
 
 // Function prototypes
 void on_mouse(int, int, int, int, void*);
-string int2string(int);
-void get_annotations(Mat, stringstream*);
+vector<Rect> get_annotations(Mat);
 
 // Public parameters
 Mat image;
 int roi_x0 = 0, roi_y0 = 0, roi_x1 = 0, roi_y1 = 0, num_of_rec = 0;
-bool start_draw = false;
+bool start_draw = false, stop = false;
 
 // Window name for visualisation purposes
-const string window_name="OpenCV Based Annotation Tool";
+const string window_name = "OpenCV Based Annotation Tool";
 
 // FUNCTION : Mouse response for selecting objects in images
 // If left button is clicked, start drawing a rectangle as long as mouse moves
@@ -98,7 +100,8 @@ void on_mouse(int event, int x, int y, int , void * )
             start_draw = false;
         }
     }
-    // Action when mouse is moving
+
+    // Action when mouse is moving and drawing is enabled
     if((event == EVENT_MOUSEMOVE) && start_draw)
     {
         // Redraw bounding box for annotation
@@ -109,42 +112,34 @@ void on_mouse(int event, int x, int y, int , void * )
     }
 }
 
-// FUNCTION : snippet to convert an integer value to a string using a clean function
-// instead of creating a stringstream each time inside the main code
-string int2string(int num)
+// FUNCTION : returns a vector of Rect objects given an image containing positive object instances
+vector<Rect> get_annotations(Mat input_image)
 {
-    stringstream temp_stream;
-    temp_stream << num;
-    return temp_stream.str();
-}
+    vector<Rect> current_annotations;
 
-// FUNCTION : given an image containing positive object instances, add all the object
-// annotations to a known stringstream
-void get_annotations(Mat input_image, stringstream* output_stream)
-{
-    // Make it possible to exit the annotation
-    bool stop = false;
-
-    // Reset the num_of_rec element at each iteration
-    // Make sure the global image is set to the current image
-    num_of_rec = 0;
-    image = input_image;
+    // Make it possible to exit the annotation process
+    stop = false;
 
     // Init window interface and couple mouse actions
     namedWindow(window_name, WINDOW_AUTOSIZE);
     setMouseCallback(window_name, on_mouse);
 
+    image = input_image;
     imshow(window_name, image);
-    stringstream temp_stream;
     int key_pressed = 0;
 
     do
     {
+        // Get a temporary image clone
+        Mat temp_image = input_image.clone();
+        Rect currentRect(0, 0, 0, 0);
+
         // Keys for processing
         // You need to select one for confirming a selection and one to continue to the next image
         // Based on the universal ASCII code of the keystroke: http://www.asciitable.com/
         //      c = 99		    add rectangle to current image
         //	    n = 110		    save added rectangles and show next image
+        //      d = 100         delete the last annotation made
         //	    <ESC> = 27      exit program
         key_pressed = 0xFF & waitKey(0);
         switch( key_pressed )
@@ -152,32 +147,53 @@ void get_annotations(Mat input_image, stringstream* output_stream)
         case 27:
                 destroyWindow(window_name);
                 stop = true;
+                break;
         case 99:
-                // Add a rectangle to the list
-                num_of_rec++;
                 // Draw initiated from top left corner
                 if(roi_x0<roi_x1 && roi_y0<roi_y1)
                 {
-                    temp_stream << " " << int2string(roi_x0) << " " << int2string(roi_y0) << " " << int2string(roi_x1-roi_x0) << " " << int2string(roi_y1-roi_y0);
+                    currentRect.x = roi_x0;
+                    currentRect.y = roi_y0;
+                    currentRect.width = roi_x1-roi_x0;
+                    currentRect.height = roi_y1-roi_y0;
                 }
                 // Draw initiated from bottom right corner
                 if(roi_x0>roi_x1 && roi_y0>roi_y1)
                 {
-                    temp_stream << " " << int2string(roi_x1) << " " << int2string(roi_y1) << " " << int2string(roi_x0-roi_x1) << " " << int2string(roi_y0-roi_y1);
+                    currentRect.x = roi_x1;
+                    currentRect.y = roi_y1;
+                    currentRect.width = roi_x0-roi_x1;
+                    currentRect.height = roi_y0-roi_y1;
                 }
                 // Draw initiated from top right corner
                 if(roi_x0>roi_x1 && roi_y0<roi_y1)
                 {
-                    temp_stream << " " << int2string(roi_x1) << " " << int2string(roi_y0) << " " << int2string(roi_x0-roi_x1) << " " << int2string(roi_y1-roi_y0);
+                    currentRect.x = roi_x1;
+                    currentRect.y = roi_y0;
+                    currentRect.width = roi_x0-roi_x1;
+                    currentRect.height = roi_y1-roi_y0;
                 }
                 // Draw initiated from bottom left corner
                 if(roi_x0<roi_x1 && roi_y0>roi_y1)
                 {
-                    temp_stream << " " << int2string(roi_x0) << " " << int2string(roi_y1) << " " << int2string(roi_x1-roi_x0) << " " << int2string(roi_y0-roi_y1);
+                    currentRect.x = roi_x0;
+                    currentRect.y = roi_y1;
+                    currentRect.width = roi_x1-roi_x0;
+                    currentRect.height = roi_y0-roi_y1;
                 }
-
-                rectangle(input_image, Point(roi_x0,roi_y0), Point(roi_x1,roi_y1), Scalar(0,255,0), 1);
-
+                // Draw the rectangle on the canvas
+                // Add the rectangle to the vector of annotations
+                current_annotations.push_back(currentRect);
+                break;
+        case 100:
+                // Remove the last annotation
+                if(current_annotations.size() > 0){
+                    current_annotations.pop_back();
+                }
+                break;
+        default:
+                // Default case --> do nothing at all
+                // Other keystrokes can simply be ignored
                 break;
         }
 
@@ -186,19 +202,24 @@ void get_annotations(Mat input_image, stringstream* output_stream)
         {
             break;
         }
+
+        // Draw all the current rectangles onto the top image and make sure that the global image is linked
+        for(int i=0; i < (int)current_annotations.size(); i++){
+            rectangle(temp_image, current_annotations[i], Scalar(0,255,0), 1);
+        }
+        image = temp_image;
+
+        // Force an explicit redraw of the canvas --> necessary to visualize delete correctly
+        imshow(window_name, image);
     }
     // Continue as long as the next image key has not been pressed
     while(key_pressed != 110);
 
-    // If there are annotations AND the next image key is pressed
-    // Write the image annotations to the file
-    if(num_of_rec>0 && key_pressed==110)
-    {
-        *output_stream << " " << num_of_rec << temp_stream.str() << endl;
-    }
-
     // Close down the window
     destroyWindow(window_name);
+
+    // Return the data
+    return current_annotations;
 }
 
 int main( int argc, const char** argv )
@@ -208,13 +229,13 @@ int main( int argc, const char** argv )
         cout << "Usage: " << argv[0] << endl;
         cout << " -images <folder_location> [example - /data/testimages/]" << endl;
         cout << " -annotations <ouput_file> [example - /data/annotations.txt]" << endl;
-
+        cout << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
         return -1;
     }
 
     // Read in the input arguments
     string image_folder;
-    string annotations;
+    string annotations_file;
     for(int i = 1; i < argc; ++i )
     {
         if( !strcmp( argv[i], "-images" ) )
@@ -223,7 +244,7 @@ int main( int argc, const char** argv )
         }
         else if( !strcmp( argv[i], "-annotations" ) )
         {
-            annotations = argv[++i];
+            annotations_file = argv[++i];
         }
     }
 
@@ -248,14 +269,9 @@ int main( int argc, const char** argv )
     }
     #endif
 
-    // Create the outputfilestream
-    ofstream output(annotations.c_str());
-    if ( !output.is_open() ){
-        cerr << "The path for the output file contains an error and could not be opened. Please check again!" << endl;
-        return 0;
-    }
-
+    // Start by processing the data
     // Return the image filenames inside the image folder
+    vector< vector<Rect> > annotations;
     vector<String> filenames;
     String folder(image_folder);
     glob(folder, filenames);
@@ -273,14 +289,32 @@ int main( int argc, const char** argv )
             continue;
         }
 
-        // Perform annotations & generate corresponding output
-        stringstream output_stream;
-        get_annotations(current_image, &output_stream);
+        // Perform annotations & store the result inside the vectorized structure
+        vector<Rect> current_annotations = get_annotations(current_image);
+        annotations.push_back(current_annotations);
 
-        // Store the annotations, write to the output file
-        if (output_stream.str() != ""){
-            output << filenames[i] << output_stream.str();
+        // Check if the ESC key was hit, then exit earlier then expected
+        if(stop){
+            break;
         }
+    }
+
+    // When all data is processed, store the data gathered inside the proper file
+    // This now even gets called when the ESC button was hit to store preliminary results
+    ofstream output(annotations_file.c_str());
+    if ( !output.is_open() ){
+        cerr << "The path for the output file contains an error and could not be opened. Please check again!" << endl;
+        return 0;
+    }
+
+    // Store the annotations, write to the output file
+    for(int i = 0; i < (int)annotations.size(); i++){
+        output << filenames[i] << " " << annotations[i].size();
+        for(int j=0; j < (int)annotations[i].size(); j++){
+            Rect temp = annotations[i][j];
+            output << " " << temp.x << " " << temp.y << " " << temp.width << " " << temp.height;
+        }
+        output << endl;
     }
 
     return 0;

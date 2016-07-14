@@ -1702,6 +1702,17 @@ public:
             for(int j = 0; j < H.cols; j++)
                 H.at<double>(i,j)=1./(i+j+1);
     @endcode
+
+    Keep in mind that the size identifier used in the at operator cannot be chosen at random. It depends
+    on the image from which you are trying to retrieve the data. The table below gives a better insight in this:
+     - If matrix is of type `CV_8U` then use `Mat.at<uchar>(y,x)`.
+     - If matrix is of type `CV_8S` then use `Mat.at<schar>(y,x)`.
+     - If matrix is of type `CV_16U` then use `Mat.at<ushort>(y,x)`.
+     - If matrix is of type `CV_16S` then use `Mat.at<short>(y,x)`.
+     - If matrix is of type `CV_32S`  then use `Mat.at<int>(y,x)`.
+     - If matrix is of type `CV_32F`  then use `Mat.at<float>(y,x)`.
+     - If matrix is of type `CV_64F` then use `Mat.at<double>(y,x)`.
+
     @param i0 Index along the dimension 0
      */
     template<typename _Tp> _Tp& at(int i0=0);
@@ -1805,12 +1816,11 @@ public:
     template<typename _Tp> MatIterator_<_Tp> end();
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
 
-    /** @brief Invoke with arguments functor, and runs the functor over all matrix element.
+    /** @brief Runs the given functor over all matrix elements in parallel.
 
-    The methods runs operation in parallel. Operation is passed by arguments. Operation have to be a
-    function pointer, a function object or a lambda(C++11).
+    The operation passed as argument has to be a function pointer, a function object or a lambda(C++11).
 
-    All of below operation is equal. Put 0xFF to first channel of all matrix elements:
+    Example 1. All of the operations below put 0xFF the first channel of all matrix elements:
     @code
         Mat image(1920, 1080, CV_8UC3);
         typedef cv::Point3_<uint8_t> Pixel;
@@ -1842,18 +1852,18 @@ public:
             p.x = 255;
         });
     @endcode
-    position parameter is index of current pixel:
+    Example 2. Using the pixel's position:
     @code
-        // Creating 3D matrix (255 x 255 x 255) typed uint8_t,
-        //  and initialize all elements by the value which equals elements position.
-        //  i.e. pixels (x,y,z) = (1,2,3) is (b,g,r) = (1,2,3).
+        // Creating 3D matrix (255 x 255 x 255) typed uint8_t
+        // and initialize all elements by the value which equals elements position.
+        // i.e. pixels (x,y,z) = (1,2,3) is (b,g,r) = (1,2,3).
 
         int sizes[] = { 255, 255, 255 };
         typedef cv::Point3_<uint8_t> Pixel;
 
         Mat_<Pixel> image = Mat::zeros(3, sizes, CV_8UC3);
 
-        image.forEachWithPosition([&](Pixel& pixel, const int position[]) -> void{
+        image.forEach<Pixel>([&](Pixel& pixel, const int position[]) -> void {
             pixel.x = position[0];
             pixel.y = position[1];
             pixel.z = position[2];
@@ -2359,15 +2369,16 @@ Elements can be accessed using the following methods:
     SparseMat::find), for example:
     @code
         const int dims = 5;
-        int size[] = {10, 10, 10, 10, 10};
+        int size[5] = {10, 10, 10, 10, 10};
         SparseMat sparse_mat(dims, size, CV_32F);
         for(int i = 0; i < 1000; i++)
         {
             int idx[dims];
             for(int k = 0; k < dims; k++)
-                idx[k] = rand()
+                idx[k] = rand() % size[k];
             sparse_mat.ref<float>(idx) += 1.f;
         }
+        cout << "nnz = " << sparse_mat.nzcount() << endl;
     @endcode
 -   Sparse matrix iterators. They are similar to MatIterator but different from NAryMatIterator.
     That is, the iteration loop is familiar to STL users:
@@ -2869,9 +2880,9 @@ public:
     //! copy operator
     MatConstIterator_& operator = (const MatConstIterator_& it);
     //! returns the current matrix element
-    _Tp operator *() const;
+    const _Tp& operator *() const;
     //! returns the i-th matrix element, relative to the current
-    _Tp operator [](ptrdiff_t i) const;
+    const _Tp& operator [](ptrdiff_t i) const;
 
     //! shifts the iterator forward by the specified number of elements
     MatConstIterator_& operator += (ptrdiff_t ofs);

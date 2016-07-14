@@ -177,7 +177,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
     resize( gray, smallImg, Size(), fx, fx, INTER_LINEAR );
     equalizeHist( smallImg, smallImg );
 
-    t = (double)cvGetTickCount();
+    t = (double)getTickCount();
     cascade.detectMultiScale( smallImg, faces,
         1.1, 2, 0
         //|CASCADE_FIND_BIGGEST_OBJECT
@@ -193,13 +193,13 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
                                  //|CASCADE_DO_ROUGH_SEARCH
                                  |CASCADE_SCALE_IMAGE,
                                  Size(30, 30) );
-        for( vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); r++ )
+        for( vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); ++r )
         {
             faces.push_back(Rect(smallImg.cols - r->x - r->width, r->y, r->width, r->height));
         }
     }
-    t = (double)cvGetTickCount() - t;
-    printf( "detection time = %g ms\n", t/((double)cvGetTickFrequency()*1000.) );
+    t = (double)getTickCount() - t;
+    printf( "detection time = %g ms\n", t*1000/getTickFrequency());
     for ( size_t i = 0; i < faces.size(); i++ )
     {
         Rect r = faces[i];

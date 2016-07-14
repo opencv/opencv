@@ -160,7 +160,7 @@
 
 //----------------------------------------------------------------------------
 
-#if VTK_MAJOR_VERSION >= 6 && VTK_MINOR_VERSION  >=2
+#if VTK_MAJOR_VERSION >= 6 && VTK_MINOR_VERSION >=2 || VTK_MAJOR_VERSION >=7
 
 namespace cv { namespace viz
     {

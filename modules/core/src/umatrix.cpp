@@ -345,6 +345,14 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
             return;
     }
 
+    int _sizes_backup[CV_MAX_DIM]; // #5991
+    if (_sizes == (this->size.p))
+    {
+        for(i = 0; i < d; i++ )
+            _sizes_backup[i] = _sizes[i];
+        _sizes = _sizes_backup;
+    }
+
     release();
     if( d == 0 )
         return;

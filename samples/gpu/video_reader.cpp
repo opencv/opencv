@@ -14,8 +14,6 @@
 #include <opencv2/cudacodec.hpp>
 #include <opencv2/highgui.hpp>
 
-#include "tick_meter.hpp"
-
 int main(int argc, const char* argv[])
 {
     if (argc != 2)

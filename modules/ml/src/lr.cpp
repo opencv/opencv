@@ -362,6 +362,42 @@ double LogisticRegressionImpl::compute_cost(const Mat& _data, const Mat& _labels
     return cost;
 }
 
+struct LogisticRegressionImpl_ComputeDradient_Impl : ParallelLoopBody
+{
+    const Mat* data;
+    const Mat* theta;
+    const Mat* pcal_a;
+    Mat* gradient;
+    double lambda;
+
+    LogisticRegressionImpl_ComputeDradient_Impl(const Mat& _data, const Mat &_theta, const Mat& _pcal_a, const double _lambda, Mat & _gradient)
+        : data(&_data)
+        , theta(&_theta)
+        , pcal_a(&_pcal_a)
+        , gradient(&_gradient)
+        , lambda(_lambda)
+    {
+
+    }
+
+    void operator()(const cv::Range& r) const
+    {
+        const Mat& _data  = *data;
+        const Mat &_theta = *theta;
+        Mat & _gradient   = *gradient;
+        const Mat & _pcal_a = *pcal_a;
+        const int m = _data.rows;
+        Mat pcal_ab;
+
+        for (int ii = r.start; ii<r.end; ii++)
+        {
+            Mat pcal_b = _data(Range::all(), Range(ii,ii+1));
+            multiply(_pcal_a, pcal_b, pcal_ab, 1);
+
+            _gradient.row(ii) = (1.0/m)*sum(pcal_ab)[0] + (lambda/m) * _theta.row(ii);
+        }
+    }
+};
 
 void LogisticRegressionImpl::compute_gradient(const Mat& _data, const Mat& _labels, const Mat &_theta, const double _lambda, Mat & _gradient )
 {
@@ -379,13 +415,8 @@ void LogisticRegressionImpl::compute_gradient(const Mat& _data, const Mat& _labe
     _gradient.row(0) = ((float)1/m) * sum(pcal_ab)[0];
 
     //cout<<"for each training data entry"<<endl;
-    for(int ii = 1;ii<_gradient.rows;ii++)
-    {
-        pcal_b = _data(Range::all(), Range(ii,ii+1));
-        multiply(pcal_a, pcal_b, pcal_ab, 1);
-
-        _gradient.row(ii) = (1.0/m)*sum(pcal_ab)[0] + (_lambda/m) * _theta.row(ii);
-    }
+    LogisticRegressionImpl_ComputeDradient_Impl invoker(_data, _theta, pcal_a, _lambda, _gradient);
+    cv::parallel_for_(cv::Range(1, _gradient.rows), invoker);
 }
 
 
@@ -547,6 +578,7 @@ void LogisticRegressionImpl::write(FileStorage& fs) const
     {
         CV_Error(CV_StsBadArg,"file can't open. Check file path");
     }
+    writeFormat(fs);
     string desc = "Logisitic Regression Classifier";
     fs<<"classifier"<<desc.c_str();
     fs<<"alpha"<<this->params.alpha;

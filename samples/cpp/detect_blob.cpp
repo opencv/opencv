@@ -159,14 +159,14 @@ int main(int argc, char *argv[])
     String label;
     // Descriptor loop
     vector<String>::iterator itDesc;
-    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); itDesc++)
+    for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); ++itDesc)
     {
         vector<KeyPoint> keyImg1;
         if (*itDesc == "BLOB")
         {
             b = SimpleBlobDetector::create(*itBLOB);
             label = Legende(*itBLOB);
-            itBLOB++;
+            ++itBLOB;
         }
         try
         {
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
                 sbd->detect(img, keyImg, Mat());
                 drawKeypoints(img, keyImg, result);
                 int i = 0;
-                for (vector<KeyPoint>::iterator k = keyImg.begin(); k != keyImg.end(); k++, i++)
+                for (vector<KeyPoint>::iterator k = keyImg.begin(); k != keyImg.end(); ++k, ++i)
                     circle(result, k->pt, (int)k->size, palette[i % 65536]);
             }
             namedWindow(*itDesc + label, WINDOW_AUTOSIZE);

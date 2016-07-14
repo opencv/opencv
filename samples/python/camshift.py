@@ -35,11 +35,12 @@ import cv2
 
 # local module
 import video
+from video import presets
 
 
 class App(object):
     def __init__(self, video_src):
-        self.cam = video.create_capture(video_src)
+        self.cam = video.create_capture(video_src, presets['cube'])
         ret, self.frame = self.cam.read()
         cv2.namedWindow('camshift')
         cv2.setMouseCallback('camshift', self.onmouse)

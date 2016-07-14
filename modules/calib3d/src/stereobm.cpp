@@ -1225,6 +1225,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
         << "minDisparity" << params.minDisparity
         << "numDisparities" << params.numDisparities

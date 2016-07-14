@@ -30,3 +30,14 @@ how to find out from the 2D images information about the 3D world.
 
     Real time pose estimation of a textured object using ORB features, FlannBased matcher, PnP
     approach plus Ransac and Linear Kalman Filter to reject possible bad poses.
+
+-   @subpage tutorial_interactive_calibration
+
+    *Compatibility:* \> OpenCV 3.1
+
+    *Author:* Vladislav Sovrasov
+
+    Camera calibration by using either the chessboard, chAruco, asymmetrical circle or dual asymmetrical circle
+    pattern. Calibration process is continious, so you can see results after each new pattern shot.
+    As an output you get average reprojection error, intrinsic camera parameters, distortion coefficients and
+     confidence intervals for all of evaluated variables.
