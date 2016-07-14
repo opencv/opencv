@@ -242,6 +242,13 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
             TT *thrMapPtr1D = thrMap_ + (elementSize - 1) * blockSizeSq;
             switch (elementSize)
             {
+            case 16:
+                for (int n = 0; n < blockSizeSq; n++)
+                {
+                    sumNonZero += HaarTransformShrink16(bm, n, thrMapPtr1D);
+                    InverseHaarTransform16(bm, n);
+                }
+                break;
             case 8:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
@@ -249,7 +256,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
                     InverseHaarTransform8(bm, n);
                 }
                 break;
-
             case 4:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
@@ -257,7 +263,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
                     InverseHaarTransform4(bm, n);
                 }
                 break;
-
             case 2:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
@@ -265,7 +270,6 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
                     InverseHaarTransform2(bm, n);
                 }
                 break;
-
             case 1:
                 {
                     TT *block = bm[0].data();
@@ -287,7 +291,7 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
 
             // Scale weight by element size
             weight *= elementSize;
-            weight /= BM3D_MAX_3D_SIZE;
+            weight /= groupSize;
 
             // Put patches back to their original positions
             WT *dstPtr = weightedSum.data() + jj * dstStep + i;

@@ -204,7 +204,7 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
     const int searchWindowSize = 16;
     const int searchWindowSizeSq = searchWindowSize * searchWindowSize;
     const float h = 10;
-    int maxGroupSize = 8;
+    int maxGroupSize = 16;
 
     // Precompute separate maps for transform and shrinkage verification
     short *thrMapTransform = NULL;
@@ -237,6 +237,8 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
         HaarTransformShrink4<short, int, short>, InverseHaarTransform4<short, int, short>);
     Test1dTransform<short, int, short>(thrMapTransform, 8, templateWindowSizeSq, bm, bmOrig,
         HaarTransformShrink8<short, int, short>, InverseHaarTransform8<short, int, short>);
+    Test1dTransform<short, int, short>(thrMapTransform, 16, templateWindowSizeSq, bm, bmOrig,
+        HaarTransformShrink16<short, int, short>, InverseHaarTransform16<short, int, short>);
 
     // Verify shrinkage
     Test1dTransform<short, int, short>(thrMapShrinkage, 2, templateWindowSizeSq, bm, bmOrig,
@@ -245,6 +247,8 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
         HaarTransformShrink4<short, int, short>, InverseHaarTransform4<short, int, short>, 6);
     Test1dTransform<short, int, short>(thrMapShrinkage, 8, templateWindowSizeSq, bm, bmOrig,
         HaarTransformShrink8<short, int, short>, InverseHaarTransform8<short, int, short>, 6);
+    Test1dTransform<short, int, short>(thrMapShrinkage, 16, templateWindowSizeSq, bm, bmOrig,
+        HaarTransformShrink16<short, int, short>, InverseHaarTransform16<short, int, short>, 6);
 }
 
 const float sqrt2 = std::sqrt(2.0f);

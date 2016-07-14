@@ -42,7 +42,7 @@
 #ifndef __OPENCV_BM3D_DENOISING_TRANSFORMS_HPP__
 #define __OPENCV_BM3D_DENOISING_TRANSFORMS_HPP__
 
-#define BM3D_MAX_3D_SIZE 8
+#define BM3D_MAX_3D_SIZE 16
 
 using namespace cv;
 
@@ -557,6 +557,81 @@ inline static short HaarTransformShrink8(BlockMatch<T, DT, CT> *z, const int &n,
     return nonZeroCount;
 }
 
+template <typename T, typename DT, typename CT>
+inline static short HaarTransformShrink16(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
+{
+    T sum0 = (z[0][n] + z[1][n] + 1) >> 1;
+    T sum1 = (z[2][n] + z[3][n] + 1) >> 1;
+    T sum2 = (z[4][n] + z[5][n] + 1) >> 1;
+    T sum3 = (z[6][n] + z[7][n] + 1) >> 1;
+    T sum4 = (z[8][n] + z[9][n] + 1) >> 1;
+    T sum5 = (z[10][n] + z[11][n] + 1) >> 1;
+    T sum6 = (z[12][n] + z[13][n] + 1) >> 1;
+    T sum7 = (z[14][n] + z[15][n] + 1) >> 1;
+    T dif0 = z[0][n] - z[1][n];
+    T dif1 = z[2][n] - z[3][n];
+    T dif2 = z[4][n] - z[5][n];
+    T dif3 = z[6][n] - z[7][n];
+    T dif4 = z[8][n] - z[9][n];
+    T dif5 = z[10][n] - z[11][n];
+    T dif6 = z[12][n] - z[13][n];
+    T dif7 = z[14][n] - z[15][n];
+
+    T sum00 = (sum0 + sum1 + 1) >> 1;
+    T sum11 = (sum2 + sum3 + 1) >> 1;
+    T sum22 = (sum4 + sum5 + 1) >> 1;
+    T sum33 = (sum6 + sum7 + 1) >> 1;
+    T dif00 = sum0 - sum1;
+    T dif11 = sum2 - sum3;
+    T dif22 = sum4 - sum5;
+    T dif33 = sum6 - sum7;
+
+    T sum000 = (sum00 + sum11 + 1) >> 1;
+    T sum111 = (sum22 + sum33 + 1) >> 1;
+    T dif000 = sum00 - sum11;
+    T dif111 = sum22 - sum33;
+
+    T sum0000 = (sum000 + sum111 + 1) >> 1;
+    T dif0000 = dif000 - dif111;
+
+    short nonZeroCount = 0;
+    shrink(sum0000, nonZeroCount, *thrMap++);
+    shrink(dif0000, nonZeroCount, *thrMap++);
+    shrink(dif000, nonZeroCount, *thrMap++);
+    shrink(dif111, nonZeroCount, *thrMap++);
+    shrink(dif00, nonZeroCount, *thrMap++);
+    shrink(dif11, nonZeroCount, *thrMap++);
+    shrink(dif22, nonZeroCount, *thrMap++);
+    shrink(dif33, nonZeroCount, *thrMap++);
+    shrink(dif0, nonZeroCount, *thrMap++);
+    shrink(dif1, nonZeroCount, *thrMap++);
+    shrink(dif2, nonZeroCount, *thrMap++);
+    shrink(dif3, nonZeroCount, *thrMap++);
+    shrink(dif4, nonZeroCount, *thrMap++);
+    shrink(dif5, nonZeroCount, *thrMap++);
+    shrink(dif6, nonZeroCount, *thrMap++);
+    shrink(dif7, nonZeroCount, *thrMap++);
+
+    z[0][n] = sum0000;
+    z[1][n] = dif0000;
+    z[2][n] = dif000;
+    z[3][n] = dif111;
+    z[4][n] = dif00;
+    z[5][n] = dif11;
+    z[6][n] = dif22;
+    z[7][n] = dif33;
+    z[8][n] = dif0;
+    z[9][n] = dif1;
+    z[10][n] = dif2;
+    z[11][n] = dif3;
+    z[12][n] = dif4;
+    z[13][n] = dif5;
+    z[14][n] = dif6;
+    z[15][n] = dif7;
+
+    return nonZeroCount;
+}
+
 /// Functions for inverse 1D transforms
 
 template <typename T, typename DT, typename CT>
@@ -614,6 +689,61 @@ inline static void InverseHaarTransform8(BlockMatch<T, DT, CT> *src, const int &
     src[5][n] = (sum11 - src6) >> 1;
     src[6][n] = (dif11 + src7) >> 1;
     src[7][n] = (dif11 - src7) >> 1;
+}
+
+template <typename T, typename DT, typename CT>
+inline static void InverseHaarTransform16(BlockMatch<T, DT, CT> *src, const int &n)
+{
+    T src0 = src[0][n] * 2;
+    T src1 = src[1][n];
+    T src2 = src[2][n];
+    T src3 = src[3][n];
+    T src4 = src[4][n];
+    T src5 = src[5][n];
+    T src6 = src[6][n];
+    T src7 = src[7][n];
+    T src8 = src[8][n];
+    T src9 = src[9][n];
+    T src10 = src[10][n];
+    T src11 = src[11][n];
+    T src12 = src[12][n];
+    T src13 = src[13][n];
+    T src14 = src[14][n];
+    T src15 = src[15][n];
+
+    T sum0 = src0 + src1;
+    T dif0 = src0 - src1;
+
+    T sum00 = sum0 + src2;
+    T dif00 = sum0 - src2;
+    T sum11 = dif0 + src3;
+    T dif11 = dif0 - src3;
+
+    T sum000 = sum00 + src4;
+    T dif000 = sum00 - src4;
+    T sum111 = dif00 + src5;
+    T dif111 = dif00 - src5;
+    T sum222 = sum11 + src6;
+    T dif222 = sum11 - src6;
+    T sum333 = dif11 + src7;
+    T dif333 = dif11 - src7;
+
+    src[0][n] = (sum000 + src8) >> 1;
+    src[1][n] = (sum000 - src8) >> 1;
+    src[2][n] = (dif000 + src9) >> 1;
+    src[3][n] = (dif000 - src9) >> 1;
+    src[4][n] = (sum111 + src10) >> 1;
+    src[5][n] = (sum111 - src10) >> 1;
+    src[6][n] = (dif111 + src11) >> 1;
+    src[7][n] = (dif111 - src11) >> 1;
+    src[8][n] = (sum222 + src12) >> 1;
+    src[9][n] = (sum222 - src12) >> 1;
+    src[10][n] = (dif222 + src13) >> 1;
+    src[11][n] = (dif222 - src13) >> 1;
+    src[12][n] = (sum333 + src14) >> 1;
+    src[13][n] = (sum333 - src14) >> 1;
+    src[14][n] = (dif333 + src15) >> 1;
+    src[15][n] = (dif333 - src15) >> 1;
 }
 
 #endif
