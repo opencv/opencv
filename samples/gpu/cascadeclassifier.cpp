@@ -13,8 +13,6 @@
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/cudawarping.hpp"
 
-#include "tick_meter.hpp"
-
 using namespace std;
 using namespace cv;
 using namespace cv::cuda;
