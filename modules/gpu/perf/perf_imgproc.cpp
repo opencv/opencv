@@ -1373,7 +1373,10 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate,
 
         TEST_CYCLE() cv::gpu::rotate(d_src, dst, size, 30.0, 0, 0, interpolation);
 
-        GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
+        if (depth == CV_8U)
+            GPU_SANITY_CHECK(dst, 1);
+        else
+            GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
     }
     else
     {
