@@ -55,7 +55,7 @@
 namespace cv
 {
 #ifdef HAVE_IPP
-static bool ippCanny(const Mat& _src, Mat& _dst, float low, float high)
+static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 {
 #if USE_IPP_CANNY
     int size = 0, size1 = 0;
@@ -186,8 +186,8 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         Sobel(_src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
 
         ocl::Kernel without_sobel("stage1_without_sobel", ocl::imgproc::canny_oclsrc,
-                                  format("-D WITHOUT_SOBEL -D cn=%d -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
-                                         cn, lSizeX, lSizeY, L2gradient ? " -D L2GRAD" : ""));
+                                    format("-D WITHOUT_SOBEL -D cn=%d -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
+                                           cn, lSizeX, lSizeY, L2gradient ? " -D L2GRAD" : ""));
         if (without_sobel.empty())
             return false;
 
@@ -229,7 +229,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
     // get edges
 
     ocl::Kernel getEdgesKernel("getEdges", ocl::imgproc::canny_oclsrc,
-                               format("-D GET_EDGES -D PIX_PER_WI=%d", PIX_PER_WI));
+                                format("-D GET_EDGES -D PIX_PER_WI=%d", PIX_PER_WI));
     if (getEdgesKernel.empty())
         return false;
 
@@ -329,9 +329,9 @@ public:
             Mat tempdy(boundaries.end - boundaries.start + 2 + 2 * ksize2, src.cols, CV_16SC(cn));
 
             Sobel(src.rowRange(boundaries.start - 1 - ksize2, boundaries.end + 1 + ksize2), tempdx,
-                    CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
+                  CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
             Sobel(src.rowRange(boundaries.start - 1 - ksize2, boundaries.end + 1 + ksize2), tempdy,
-                    CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+                  CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
 
             dx = tempdx.rowRange(ksize2, tempdx.rows - ksize2);
             dy = tempdy.rowRange(ksize2, tempdy.rows - ksize2);
@@ -367,20 +367,28 @@ public:
 #if CV_AVX2
                 if (checkHardwareSupport(CV_CPU_AVX2))
                 {
-                    const int size = width - 16;
                     __m256i v_zero = _mm256_setzero_si256();
-                    for (; j <= size; j += 16)
+                    for (; j <= width - 16; j += 16)
                     {
                         __m256i v_dx = _mm256_loadu_si256((const __m256i *)(_dx + j));
                         __m256i v_dy = _mm256_loadu_si256((const __m256i *)(_dy + j));
-                        v_dx = _mm256_permute4x64_epi64(_mm256_abs_epi16(v_dx), 216);
-                        v_dy = _mm256_permute4x64_epi64(_mm256_abs_epi16(v_dy), 216);
 
-                        __m256i v_norm = _mm256_add_epi32(_mm256_unpacklo_epi16(v_dx, v_zero), _mm256_unpacklo_epi16(v_dy, v_zero));
-                        _mm256_storeu_si256((__m256i *)(_norm + j), v_norm);
+                        __m256i v_dx_per = _mm256_permute4x64_epi64(v_dx, 216);
+                        __m256i v_dy_per = _mm256_permute4x64_epi64(v_dy, 216);
 
-                        v_norm = _mm256_add_epi32(_mm256_unpackhi_epi16(v_dx, v_zero), _mm256_unpackhi_epi16(v_dy, v_zero));
-                        _mm256_storeu_si256((__m256i *)(_norm + j + 8), v_norm);
+                        __m256i v_dx_abs = _mm256_abs_epi16(v_dx_per);
+                        __m256i v_dy_abs = _mm256_abs_epi16(v_dy_per);
+
+                        __m256i v_dx_ml = _mm256_unpacklo_epi16(v_dx_abs, v_zero);
+                        __m256i v_dy_ml = _mm256_unpacklo_epi16(v_dy_abs, v_zero);
+                        __m256i v_dx_mh = _mm256_unpackhi_epi16(v_dx_abs, v_zero);
+                        __m256i v_dy_mh = _mm256_unpackhi_epi16(v_dy_abs, v_zero);
+
+                        __m256i v_norm_ml = _mm256_add_epi32(v_dx_ml, v_dy_ml);
+                        __m256i v_norm_mh = _mm256_add_epi32(v_dx_mh, v_dy_mh);
+
+                        _mm256_storeu_si256((__m256i *)(_norm + j), v_norm_ml);
+                        _mm256_storeu_si256((__m256i *)(_norm + j + 8), v_norm_mh);
                     }
                     _mm256_zeroupper();
                 }
@@ -388,20 +396,28 @@ public:
 #if CV_SSE2
                 if (checkHardwareSupport(CV_CPU_SSE2))
                 {
-                    const int size = width - 8;
                     __m128i v_zero = _mm_setzero_si128();
-                    for (; j <= size; j += 8)
+                    for (; j <= width - 8; j += 8)
                     {
                         __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
                         __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
-                        v_dx = _mm_max_epi16(v_dx, _mm_sub_epi16(v_zero, v_dx));
-                        v_dy = _mm_max_epi16(v_dy, _mm_sub_epi16(v_zero, v_dy));
 
-                        __m128i v_norm = _mm_add_epi32(_mm_unpacklo_epi16(v_dx, v_zero), _mm_unpacklo_epi16(v_dy, v_zero));
-                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm);
+                        __m128i v_dx_neg = _mm_sub_epi16(v_zero, v_dx);
+                        __m128i v_dy_neg = _mm_sub_epi16(v_zero, v_dy);
 
-                        v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx, v_zero), _mm_unpackhi_epi16(v_dy, v_zero));
-                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
+                        __m128i v_dx_abs = _mm_max_epi16(v_dx, v_dx_neg);
+                        __m128i v_dy_abs = _mm_max_epi16(v_dy, v_dy_neg);
+
+                        __m128i v_dx_ml = _mm_unpacklo_epi16(v_dx_abs, v_zero);
+                        __m128i v_dy_ml = _mm_unpacklo_epi16(v_dy_abs, v_zero);
+                        __m128i v_dx_mh = _mm_unpackhi_epi16(v_dx_abs, v_zero);
+                        __m128i v_dy_mh = _mm_unpackhi_epi16(v_dy_abs, v_zero);
+
+                        __m128i v_norm_ml = _mm_add_epi32(v_dx_ml, v_dy_ml);
+                        __m128i v_norm_mh = _mm_add_epi32(v_dx_mh, v_dy_mh);
+
+                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm_ml);
+                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm_mh);
                     }
                 }
 #elif CV_NEON
@@ -422,22 +438,22 @@ public:
 #if CV_AVX2
                 if (checkHardwareSupport(CV_CPU_AVX2))
                 {
-                    const int size = width - 16;
-                    for (; j <= size; j += 16)
+                    for (; j <= width - 16; j += 16)
                     {
                         __m256i v_dx = _mm256_loadu_si256((const __m256i *)(_dx + j));
                         __m256i v_dy = _mm256_loadu_si256((const __m256i *)(_dy + j));
-                        v_dx = _mm256_permute4x64_epi64(v_dx, 216);
-                        v_dy = _mm256_permute4x64_epi64(v_dy, 216);
 
-                        __m256i v_dx_ml = _mm256_mullo_epi16(v_dx, v_dx), v_dx_mh = _mm256_mulhi_epi16(v_dx, v_dx);
-                        __m256i v_dy_ml = _mm256_mullo_epi16(v_dy, v_dy), v_dy_mh = _mm256_mulhi_epi16(v_dy, v_dy);
+                        __m256i v_dx_per = _mm256_permute4x64_epi64(v_dx, 216);
+                        __m256i v_dy_per = _mm256_permute4x64_epi64(v_dy, 216);
 
-                        __m256i v_norm = _mm256_add_epi32(_mm256_unpacklo_epi16(v_dx_ml, v_dx_mh), _mm256_unpacklo_epi16(v_dy_ml, v_dy_mh));
-                        _mm256_storeu_si256((__m256i *)(_norm + j), v_norm);
+                        __m256i v_dx_dy_ml = _mm_unpacklo_epi16(v_dx_per, v_dy_per);
+                        __m256i v_dx_dy_mh = _mm_unpackhi_epi16(v_dx_per, v_dy_per);
 
-                        v_norm = _mm256_add_epi32(_mm256_unpackhi_epi16(v_dx_ml, v_dx_mh), _mm256_unpackhi_epi16(v_dy_ml, v_dy_mh));
-                        _mm256_storeu_si256((__m256i *)(_norm + j + 8), v_norm);
+                        __m256i v_norm_ml = _mm_madd_epi16(v_dx_dy_ml, v_dx_dy_ml);
+                        __m256i v_norm_mh = _mm_madd_epi16(v_dx_dy_mh, v_dx_dy_mh);
+
+                        _mm_storeu_si256((__m256i *)(_norm + j), v_norm_ml);
+                        _mm_storeu_si256((__m256i *)(_norm + j + 8), v_norm_mh);
                     }
                     _mm256_zeroupper();
                 }
@@ -445,20 +461,19 @@ public:
 #if CV_SSE2
                 if (checkHardwareSupport(CV_CPU_SSE2))
                 {
-                    const int size = width - 8;
-                    for (; j <= size; j += 8)
+                    for (; j <= width - 8; j += 8)
                     {
                         __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
                         __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
 
-                        __m128i v_dx_ml = _mm_mullo_epi16(v_dx, v_dx), v_dx_mh = _mm_mulhi_epi16(v_dx, v_dx);
-                        __m128i v_dy_ml = _mm_mullo_epi16(v_dy, v_dy), v_dy_mh = _mm_mulhi_epi16(v_dy, v_dy);
+                        __m128i v_dx_dy_ml = _mm_unpacklo_epi16(v_dx, v_dy);
+                        __m128i v_dx_dy_mh = _mm_unpackhi_epi16(v_dx, v_dy);
 
-                        __m128i v_norm = _mm_add_epi32(_mm_unpacklo_epi16(v_dx_ml, v_dx_mh), _mm_unpacklo_epi16(v_dy_ml, v_dy_mh));
-                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm);
+                        __m128i v_norm_ml = _mm_madd_epi16(v_dx_dy_ml, v_dx_dy_ml);
+                        __m128i v_norm_mh = _mm_madd_epi16(v_dx_dy_mh, v_dx_dy_mh);
 
-                        v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx_ml, v_dx_mh), _mm_unpackhi_epi16(v_dy_ml, v_dy_mh));
-                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
+                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm_ml);
+                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm_mh);
                     }
                 }
 #elif CV_NEON
@@ -474,17 +489,17 @@ public:
                     vst1q_s32(_norm + j + 4, v_dst);
                 }
 #endif
-                for ( ; j < width; ++j)
+                for (; j < width; ++j)
                     _norm[j] = int(_dx[j])*_dx[j] + int(_dy[j])*_dy[j];
             }
 
             if (cn > 1)
             {
-                for(int j = 0, jn = 0; j < src.cols; ++j, jn += cn)
+                for (int j = 0, jn = 0; j < src.cols; ++j, jn += cn)
                 {
                     int maxIdx = jn;
-                    for(int k = 1; k < cn; ++k)
-                        if(_norm[jn + k] > _norm[maxIdx]) maxIdx = jn + k;
+                    for (int k = 1; k < cn; ++k)
+                        if (_norm[jn + k] > _norm[maxIdx]) maxIdx = jn + k;
                     _norm[j] = _norm[maxIdx];
                     _dx[j] = _dx[maxIdx];
                     _dy[j] = _dy[maxIdx];
@@ -523,7 +538,7 @@ public:
             bool canny_push = false;
             for (int j = 0; j < src.cols; j++)
             {
-                #define CANNY_SHIFT 15
+#define CANNY_SHIFT 15
                 const int TG22 = (int)(0.4142135623730950488016887242097*(1 << CANNY_SHIFT) + 0.5);
 
                 int m = _mag[j];
@@ -605,15 +620,15 @@ public:
 
             if (!m[-1])         CANNY_PUSH(m - 1);
             if (!m[1])          CANNY_PUSH(m + 1);
-            if (!m[-mapstep-1]) CANNY_PUSH(m - mapstep - 1);
+            if (!m[-mapstep - 1]) CANNY_PUSH(m - mapstep - 1);
             if (!m[-mapstep])   CANNY_PUSH(m - mapstep);
-            if (!m[-mapstep+1]) CANNY_PUSH(m - mapstep + 1);
-            if (!m[mapstep-1])  CANNY_PUSH(m + mapstep - 1);
+            if (!m[-mapstep + 1]) CANNY_PUSH(m - mapstep + 1);
+            if (!m[mapstep - 1])  CANNY_PUSH(m + mapstep - 1);
             if (!m[mapstep])    CANNY_PUSH(m + mapstep);
-            if (!m[mapstep+1])  CANNY_PUSH(m + mapstep + 1);
+            if (!m[mapstep + 1])  CANNY_PUSH(m + mapstep + 1);
         }
 
-        // Higher threads have to wait, no Sleep() because waiting time should be short and sleep overhead is huge in this case
+        // Higher threads have to wait
         while (boundaries.start > *actualRow)
             ;
 
@@ -658,8 +673,7 @@ public:
             if(checkHardwareSupport(CV_CPU_AVX2)) {
                 __m256i v_zero = _mm256_setzero_si256();
 
-                const int size = src.cols - 64;
-                for(; j <= size; j += 64) {
+                for(; j <= src.cols - 64; j += 64) {
                     __m256i v_pmap1 = _mm256_loadu_si256((const __m256i*)(pmap + j));
                     __m256i v_pmap2 = _mm256_loadu_si256((const __m256i*)(pmap + j + 32));
 
@@ -690,8 +704,7 @@ public:
             if(checkHardwareSupport(CV_CPU_SSE2)) {
                 __m128i v_zero = _mm_setzero_si128();
 
-                const int size = src.cols - 32;
-                for(; j <= size; j += 32) {
+                for(; j <= src.cols - 32; j += 32) {
                     __m128i v_pmap1 = _mm_loadu_si128((const __m128i*)(pmap + j));
                     __m128i v_pmap2 = _mm_loadu_si128((const __m128i*)(pmap + j + 16));
 
@@ -731,7 +744,6 @@ public:
                 }
             }
 #endif
-
             for (; j < src.cols; j++)
                 pdst[j] = (uchar)-(pmap[j] >> 1);
         }
@@ -764,7 +776,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     }
 
     if ((aperture_size & 1) == 0 || (aperture_size != -1 && (aperture_size < 3 || aperture_size > 7)))
-        CV_Error(CV_StsBadFlag, "Aperture size should be odd");
+        CV_Error(CV_StsBadFlag, "Aperture size should be odd between 3 and 7");
 
     if (low_thresh > high_thresh)
         std::swap(low_thresh, high_thresh);
@@ -793,6 +805,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     int high = cvFloor(high_thresh);
 
     ptrdiff_t mapstep = src.cols + 2;
+
     AutoBuffer<uchar> buffer((src.cols+2)*(src.rows+2) + cn * mapstep * 3 * sizeof(int));
 
     int* mag_buf[3];
@@ -801,7 +814,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     mag_buf[2] = mag_buf[1] + mapstep*cn;
     memset(mag_buf[0], 0, /* cn* */mapstep*sizeof(int));
 
-    uchar* map = (uchar*)(mag_buf[2] + mapstep*cn);
+    uchar *map = (uchar*)(mag_buf[2] + mapstep*cn);
     memset(map, 1, mapstep);
     memset(map + mapstep*(src.rows + 1), 1, mapstep);
 
@@ -845,7 +858,6 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     }
 
     parallel_for_(Range(0, src.rows), finalPass(src, dst, map, mapstep));
-
     return;
 }
 
