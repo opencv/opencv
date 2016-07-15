@@ -1844,3 +1844,12 @@ TEST(Normalize, regression_5876_inplace_change_type)
     normalize(m, m, 1, 0, NORM_MINMAX, CV_32F);
     EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
 }
+
+TEST(MinMaxLoc, regression_4955_nans)
+{
+    cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
+    cv::minMaxLoc(one_mat, NULL, NULL, NULL, NULL);
+
+    cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(NAN));
+    cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
+}
