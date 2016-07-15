@@ -1218,3 +1218,34 @@ TEST(Imgproc_Resize_Test, accuracy) { CV_Resize_Test test; test.safe_run(); }
 TEST(Imgproc_Remap_Test, accuracy) { CV_Remap_Test test; test.safe_run(); }
 TEST(Imgproc_WarpAffine_Test, accuracy) { CV_WarpAffine_Test test; test.safe_run(); }
 TEST(Imgproc_WarpPerspective_Test, accuracy) { CV_WarpPerspective_Test test; test.safe_run(); }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef OPENCV_TEST_BIGDATA
+
+CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
+
+class Imgproc_Resize :
+        public ::testing::TestWithParam<Interpolation>
+{
+public:
+    virtual void SetUp()
+    {
+        inter = GetParam();
+    }
+
+protected:
+    int inter;
+};
+
+TEST_P(Imgproc_Resize, BigSize)
+{
+    cv::Mat src(46342, 46342, CV_8UC3, cv::Scalar::all(10)), dst;
+    ASSERT_FALSE(src.empty());
+
+    ASSERT_NO_THROW(cv::resize(src, dst, cv::Size(), 0.5, 0.5, inter));
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Resize, Interpolation::all());
+
+#endif

@@ -46,6 +46,7 @@
 #define OPENCV_IMGPROC_HAL_REPLACEMENT_HPP
 
 #include "opencv2/core/hal/interface.h"
+#include "opencv2/imgproc/hal/interface.h"
 
 #if defined __GNUC__
 #  pragma GCC diagnostic push
@@ -298,6 +299,294 @@ inline int hal_ni_warpPerspectve(int src_type, const uchar *src_data, size_t src
 #define cv_hal_warpPerspective hal_ni_warpPerspectve
 //! @endcond
 
+/**
+   @brief hal_cvtBGRtoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U, CV_16U, CV_32F)
+   @param scn source image channels (3 or 4)
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R channels will be swapped (BGR->RGB or RGB->BGR)
+   Convert between BGR, BGRA, RGB and RGBA image formats.
+ */
+inline int hal_ni_cvtBGRtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, int dcn, bool swapBlue) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGRtoBGR5x5
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   @param greenBits number of bits for green channel (5 or 6)
+   Convert from BGR, BGRA, RGB and RGBA to packed BGR or RGB (16 bits per pixel, 555 or 565).
+   Support only CV_8U images (input 3 or 4 channels, output 2 channels).
+ */
+inline int hal_ni_cvtBGRtoBGR5x5(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int greenBits) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGR5x5toBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param greenBits number of bits for green channel (5 or 6)
+   Convert from packed BGR or RGB (16 bits per pixel, 555 or 565) to BGR, BGRA, RGB and RGBA.
+   Support only CV_8U images (input 2 channels, output 3 or 4 channels).
+ */
+inline int hal_ni_cvtBGR5x5toBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int dcn, bool swapBlue, int greenBits) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGRtoGray
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   Convert from BGR, BGRA, RGB or RGBA to 1-channel gray.
+ */
+inline int hal_ni_cvtBGRtoGray(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtGraytoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param dcn destination image channels (3 or 4)
+   Convert from 1-channel gray to BGR, RGB, RGBA or BGRA.
+ */
+inline int hal_ni_cvtGraytoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGR5x5toGray
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param greenBits number of bits for green channel (5 or 6)
+   Convert from packed BGR (16 bits per pixel, 555 or 565) to 1-channel gray.
+   Support only CV_8U images.
+ */
+inline int hal_ni_cvtBGR5x5toGray(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int greenBits) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtGraytoBGR5x5
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param greenBits number of bits for green channel (5 or 6)
+   Convert from 1-channel gray to packed BGR (16 bits per pixel, 555 or 565).
+   Support only CV_8U images.
+ */
+inline int hal_ni_cvtGraytoBGR5x5(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int greenBits) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGRtoYUV
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   @param isCbCr if set to true write output in YCbCr format
+   Convert from BGR, RGB, BGRA or RGBA to YUV or YCbCr.
+ */
+inline int hal_ni_cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue, bool isCbCr) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtYUVtoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param isCbCr if set to true treat source as YCbCr
+   Convert from YUV or YCbCr to BGR, RGB, BGRA or RGBA.
+ */
+inline int hal_ni_cvtYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue, bool isCbCr) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGRtoXYZ
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   Convert from BGR, RGB, BGRA or RGBA to XYZ.
+ */
+inline int hal_ni_cvtBGRtoXYZ(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtXYZtoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   Convert from XYZ to BGR, RGB, BGRA or RGBA.
+ */
+inline int hal_ni_cvtXYZtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGRtoHSV
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U or CV_32F)
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   @param isFullRange if set to true write hue in range 0-255 (0-360 for float) otherwise in range 0-180
+   @param isHSV if set to true write HSV otherwise HSL
+   Convert from BGR, RGB, BGRA or RGBA to HSV or HSL.
+ */
+inline int hal_ni_cvtBGRtoHSV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue, bool isFullRange, bool isHSV) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtHSVtoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U or CV_32F)
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param isFullRange if set to true read hue in range 0-255 (0-360 for float) otherwise in range 0-180
+   @param isHSV if set to true treat source as HSV otherwise HSL
+   Convert from HSV or HSL to BGR, RGB, BGRA or RGBA.
+ */
+inline int hal_ni_cvtHSVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue, bool isFullRange, bool isHSV) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGRtoLab
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U or CV_32F)
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   @param isLab if set to true write Lab otherwise Luv
+   @param srgb if set to true use sRGB gamma correction
+   Convert from BGR, RGB, BGRA or RGBA to Lab or Luv.
+ */
+inline int hal_ni_cvtBGRtoLab(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue, bool isLab, bool srgb) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtLabtoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param depth image depth (one of CV_8U or CV_32F)
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param isLab if set to true treat input as Lab otherwise Luv
+   @param srgb if set to true use sRGB gamma correction
+   Convert from Lab or Luv to BGR, RGB, BGRA or RGBA.
+ */
+inline int hal_ni_cvtLabtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue, bool isLab, bool srgb) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtTwoPlaneYUVtoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param dst_width,dst_height destination image size
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel index in the interleaved U/V plane (0 or 1)
+   Convert from YUV (YUV420sp (or NV12/NV21) - Y plane followed by interleaved U/V plane) to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+ */
+inline int hal_ni_cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtThreePlaneYUVtoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param dst_width,dst_height destination image size
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel plane index (0 or 1)
+   Convert from YUV (YUV420p (or YV12/YV21) - Y plane followed by U and V planes) to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+ */
+inline int hal_ni_cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGRtoThreePlaneYUV
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   @param uIdx U-channel plane index (0 or 1)
+   Convert from BGR, RGB, BGRA or RGBA to YUV (YUV420p (or YV12/YV21) - Y plane followed by U and V planes).
+   Only for CV_8U.
+ */
+inline int hal_ni_cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtOnePlaneYUVtoBGR
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel index (0 or 1)
+   @param ycn Y-channel index (0 or 1)
+   Convert from UYVY, YUY2 or YVYU to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+ */
+inline int hal_ni_cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int dcn, bool swapBlue, int uIdx, int ycn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+
+/**
+   @brief hal_cvtRGBAtoMultipliedRGBA
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   Convert from BGRA or RGBA to format with multiplied alpha channel.
+   Only for CV_8U.
+ */
+inline int hal_ni_cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtMultipliedRGBAtoRGBA
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   Convert from format with multiplied alpha channel to BGRA or RGBA.
+   Only for CV_8U.
+ */
+inline int hal_ni_cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_cvtBGRtoBGR hal_ni_cvtBGRtoBGR
+#define cv_hal_cvtBGRtoBGR5x5 hal_ni_cvtBGRtoBGR5x5
+#define cv_hal_cvtBGR5x5toBGR hal_ni_cvtBGR5x5toBGR
+#define cv_hal_cvtBGRtoGray hal_ni_cvtBGRtoGray
+#define cv_hal_cvtGraytoBGR hal_ni_cvtGraytoBGR
+#define cv_hal_cvtBGR5x5toGray hal_ni_cvtBGR5x5toGray
+#define cv_hal_cvtGraytoBGR5x5 hal_ni_cvtGraytoBGR5x5
+#define cv_hal_cvtBGRtoYUV hal_ni_cvtBGRtoYUV
+#define cv_hal_cvtYUVtoBGR hal_ni_cvtYUVtoBGR
+#define cv_hal_cvtBGRtoXYZ hal_ni_cvtBGRtoXYZ
+#define cv_hal_cvtXYZtoBGR hal_ni_cvtXYZtoBGR
+#define cv_hal_cvtBGRtoHSV hal_ni_cvtBGRtoHSV
+#define cv_hal_cvtHSVtoBGR hal_ni_cvtHSVtoBGR
+#define cv_hal_cvtBGRtoLab hal_ni_cvtBGRtoLab
+#define cv_hal_cvtLabtoBGR hal_ni_cvtLabtoBGR
+#define cv_hal_cvtTwoPlaneYUVtoBGR hal_ni_cvtTwoPlaneYUVtoBGR
+#define cv_hal_cvtThreePlaneYUVtoBGR hal_ni_cvtThreePlaneYUVtoBGR
+#define cv_hal_cvtBGRtoThreePlaneYUV hal_ni_cvtBGRtoThreePlaneYUV
+#define cv_hal_cvtOnePlaneYUVtoBGR hal_ni_cvtOnePlaneYUVtoBGR
+#define cv_hal_cvtRGBAtoMultipliedRGBA hal_ni_cvtRGBAtoMultipliedRGBA
+#define cv_hal_cvtMultipliedRGBAtoRGBA hal_ni_cvtMultipliedRGBAtoRGBA
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__
@@ -305,7 +594,6 @@ inline int hal_ni_warpPerspectve(int src_type, const uchar *src_data, size_t src
 #elif defined _MSC_VER
 #  pragma warning( pop )
 #endif
-
 
 #include "custom_hal.hpp"
 

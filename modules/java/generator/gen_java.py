@@ -991,12 +991,12 @@ class JavaWrapperGenerator(object):
 
         if classinfo.base:
             classinfo.addImports(classinfo.base)
-            type_dict["Ptr_"+name] = \
-                { "j_type" : name,
-                  "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-                  "jni_name" : "Ptr<"+name+">(("+name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
-                  "suffix" : "J" }
-        logging.info('ok: %s', classinfo)
+        type_dict["Ptr_"+name] = \
+            { "j_type" : name,
+              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jni_name" : "Ptr<"+name+">(("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "suffix" : "J" }
+        logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
         constinfo = ConstInfo(decl, namespaces=self.namespaces)
@@ -1347,7 +1347,7 @@ class JavaWrapperGenerator(object):
                 ret = "return (jlong) new %s(_retval_);" % self.fullTypeName(fi.ctype)
             elif fi.ctype.startswith('Ptr_'):
                 c_prologue.append("typedef Ptr<%s> %s;" % (self.fullTypeName(fi.ctype[4:]), fi.ctype))
-                ret = "return (jlong)(new %(ctype)s(_retval_));" % { 'ctype':fi.ctype }
+                ret = "%(ctype)s* curval = new %(ctype)s(_retval_);return (jlong)curval->get();" % { 'ctype':fi.ctype }
             elif self.isWrapped(ret_type): # pointer to wrapped class:
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
