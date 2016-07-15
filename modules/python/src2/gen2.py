@@ -44,6 +44,14 @@ gen_template_func_body = Template("""$code_decl
 """)
 
 py_major_version = sys.version_info[0]
+if __name__ == "__main__":
+    if len(sys.argv) > 3:
+        if sys.argv[3] == 'PYTHON3':
+            py_major_version = 3
+        elif sys.argv[3] == 'PYTHON2':
+            py_major_version = 2
+        else:
+            raise Exception('Incorrect argument: expected PYTHON2 or PYTHON3, received: ' + sys.argv[3])
 if py_major_version >= 3:
     head_init_str = "PyVarObject_HEAD_INIT(&PyType_Type, 0)"
 else:
