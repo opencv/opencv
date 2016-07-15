@@ -20422,7 +20422,7 @@
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----cv-shared-pic5-png---1--0-01--300->
   <lines>
     <kind>65536</kind>
-    <type>0</type>
+    <type>13</type>
     <val type_id="opencv-matrix">
       <rows>0</rows>
       <cols>0</cols>
@@ -20431,7 +20431,7 @@
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----cv-shared-pic5-png---1--0-01--500->
   <lines>
     <kind>65536</kind>
-    <type>0</type>
+    <type>13</type>
     <val type_id="opencv-matrix">
       <rows>0</rows>
       <cols>0</cols>
@@ -20440,7 +20440,7 @@
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----cv-shared-pic5-png---1--0-1--300->
   <lines>
     <kind>65536</kind>
-    <type>0</type>
+    <type>13</type>
     <val type_id="opencv-matrix">
       <rows>0</rows>
       <cols>0</cols>
@@ -20449,7 +20449,7 @@
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----cv-shared-pic5-png---1--0-1--500->
   <lines>
     <kind>65536</kind>
-    <type>0</type>
+    <type>13</type>
     <val type_id="opencv-matrix">
       <rows>0</rows>
       <cols>0</cols>
@@ -20478,7 +20478,7 @@
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----cv-shared-pic5-png---10--0-01--500->
   <lines>
     <kind>65536</kind>
-    <type>0</type>
+    <type>13</type>
     <val type_id="opencv-matrix">
       <rows>0</rows>
       <cols>0</cols>
@@ -20499,7 +20499,7 @@
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----cv-shared-pic5-png---10--0-1--500->
   <lines>
     <kind>65536</kind>
-    <type>0</type>
+    <type>13</type>
     <val type_id="opencv-matrix">
       <rows>0</rows>
       <cols>0</cols>
@@ -35999,7 +35999,7 @@
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-01--500->
   <lines>
     <kind>65536</kind>
-    <type>0</type>
+    <type>13</type>
     <val type_id="opencv-matrix">
       <rows>0</rows>
       <cols>0</cols>
@@ -36008,7 +36008,7 @@
 <Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----stitching-a1-png---1--0-1--500->
   <lines>
     <kind>65536</kind>
-    <type>0</type>
+    <type>13</type>
     <val type_id="opencv-matrix">
       <rows>0</rows>
       <cols>0</cols>
