@@ -452,8 +452,8 @@ public:
                         __m256i v_norm_ml = _mm256_madd_epi16(v_dx_dy_ml, v_dx_dy_ml);
                         __m256i v_norm_mh = _mm256_madd_epi16(v_dx_dy_mh, v_dx_dy_mh);
 
-                        _mm_storeu_si256((__m256i *)(_norm + j), v_norm_ml);
-                        _mm_storeu_si256((__m256i *)(_norm + j + 8), v_norm_mh);
+                        _mm256_storeu_si256((__m256i *)(_norm + j), v_norm_ml);
+                        _mm256_storeu_si256((__m256i *)(_norm + j + 8), v_norm_mh);
                     }
                     _mm256_zeroupper();
                 }
