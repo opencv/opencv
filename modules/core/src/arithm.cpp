@@ -3123,7 +3123,7 @@ void div8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
     if( src1 )
         div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
     else
-        recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+        recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
 void div8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
@@ -3172,53 +3172,53 @@ void div64f( const double* src1, size_t step1, const double* src2, size_t step2,
 // Reciprocial
 //=======================================
 
-void recip8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+void recip8u( const uchar*, size_t, const uchar* src2, size_t step2,
                   uchar* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip8u, cv_hal_recip8u, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip8u, cv_hal_recip8u, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
+void recip8s( const schar*, size_t, const schar* src2, size_t step2,
                   schar* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip8s, cv_hal_recip8s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip8s, cv_hal_recip8s, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+void recip16u( const ushort*, size_t, const ushort* src2, size_t step2,
                    ushort* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip16u, cv_hal_recip16u, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip16u, cv_hal_recip16u, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip16s( const short* src1, size_t step1, const short* src2, size_t step2,
+void recip16s( const short*, size_t, const short* src2, size_t step2,
                    short* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip16s, cv_hal_recip16s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip16s, cv_hal_recip16s, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip32s( const int* src1, size_t step1, const int* src2, size_t step2,
+void recip32s( const int*, size_t, const int* src2, size_t step2,
                    int* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip32s, cv_hal_recip32s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip32s, cv_hal_recip32s, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip32f( const float* src1, size_t step1, const float* src2, size_t step2,
+void recip32f( const float*, size_t, const float* src2, size_t step2,
                    float* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip32f, cv_hal_recip32f, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_f(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip32f, cv_hal_recip32f, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_f(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void recip64f( const double* src1, size_t step1, const double* src2, size_t step2,
+void recip64f( const double*, size_t, const double* src2, size_t step2,
                    double* dst, size_t step, int width, int height, void* scale)
 {
-    CALL_HAL(recip64f, cv_hal_recip64f, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    recip_f(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+    CALL_HAL(recip64f, cv_hal_recip64f, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_f(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
 //=======================================

@@ -141,6 +141,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "samples" << samples
            << "lambda" << lambda
@@ -250,6 +251,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "max_iter" << max_iter
            << "threshold" << threshold;

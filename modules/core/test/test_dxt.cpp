@@ -778,6 +778,9 @@ public:
 protected:
     void run_func();
     void prepare_to_validation( int test_case_idx );
+#if defined(__aarch64__) && defined(NDEBUG)
+    double get_success_error_level( int test_case_idx, int i, int j );
+#endif
 };
 
 
@@ -785,6 +788,31 @@ CxCore_MulSpectrumsTest::CxCore_MulSpectrumsTest() : CxCore_DXTBaseTest( true, t
 {
 }
 
+#if defined(__aarch64__) && defined(NDEBUG)
+double CxCore_MulSpectrumsTest::get_success_error_level( int test_case_idx, int i, int j )
+{
+    int elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
+    if( elem_depth <= CV_32F )
+    {
+        return ArrayTest::get_success_error_level( test_case_idx, i, j );
+    }
+    switch( test_case_idx )
+    {
+        //  Usual threshold is too strict for these test cases due to the difference of fmsub and fsub
+        case 399:
+        case 420:
+            return DBL_EPSILON * 20000;
+        case 65:
+        case 161:
+        case 287:
+        case 351:
+        case 458:
+            return DBL_EPSILON * 10000;
+        default:
+            return ArrayTest::get_success_error_level( test_case_idx, i, j );
+    }
+}
+#endif
 
 void CxCore_MulSpectrumsTest::run_func()
 {
@@ -887,3 +915,79 @@ TEST(Core_DFT, complex_output2)
         }
     }
 }
+
+class Core_DXTReverseTest : public cvtest::BaseTest
+{
+public:
+    enum Mode
+    {
+        ModeDFT,
+        ModeDCT
+    };
+    Core_DXTReverseTest(Mode m) : mode(m) {}
+private:
+    Mode mode;
+protected:
+    void run(int)
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            if (mode == ModeDCT && i != 0)
+                continue;
+            int flags = 0;
+            int flags_inv = DFT_INVERSE | DFT_SCALE;
+            int cn_in = 0;
+            int cn_out = 0;
+            switch (i)
+            {
+                case 0: cn_in = 1; cn_out = 1; break;
+                case 1: cn_in = 1; cn_out = 2; flags |= DFT_COMPLEX_OUTPUT; flags_inv |= DFT_REAL_OUTPUT; break;
+                case 2: cn_in = 2; cn_out = 2; break;
+            };
+            for (int j = 0; j < 100; ++j)
+            {
+                RNG& rng = ts->get_rng();
+                int type = rng.uniform(0, 2) ? CV_64F : CV_32F;
+                int m = rng.uniform(1, 10);
+                int n = rng.uniform(1, 10);
+                if (mode == ModeDCT)
+                {
+                    m *= 2;
+                    n *= 2;
+                }
+                Mat one(m, n, CV_MAKETYPE(type, cn_in));
+                cvtest::randUni(rng, one, Scalar::all(-1.), Scalar::all(1.));
+                Mat out;
+                Mat two;
+                if (mode == ModeDFT)
+                {
+                    cv::dft(one, out, flags);
+                    cv::dft(out, two, flags_inv);
+                }
+                else if (mode == ModeDCT)
+                {
+                    cv::dct(one, out, flags);
+                    cv::dct(out, two, flags_inv);
+                }
+                if (out.channels() != cn_out || two.channels() != cn_in || cvtest::norm(one, two, NORM_INF) > 1e-5)
+                {
+                    cout << "Test #" << j + 1 << " - "
+                        << "elements: " << m << " x " << n << ", "
+                        << "channels: "
+                        << one.channels() << " (" << cn_in << ")" << " -> "
+                        << out.channels() << " (" << cn_out << ")" << " -> "
+                        << two.channels() << " (" << cn_in << ")"
+                        << endl;
+                    cout << "signal:\n" << one << endl << endl;
+                    cout << "spectrum:\n" << out << endl << endl;
+                    cout << "inverse:\n" << two << endl << endl;
+                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                    break;
+                }
+            }
+        }
+    }
+};
+
+TEST(Core_DFT, reverse) { Core_DXTReverseTest test(Core_DXTReverseTest::ModeDFT); test.safe_run(); }
+TEST(Core_DCT, reverse) { Core_DXTReverseTest test(Core_DXTReverseTest::ModeDCT); test.safe_run(); }

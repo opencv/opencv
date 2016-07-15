@@ -8033,7 +8033,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
     makeAgastOffsets(pixel_, (int)img.step, type);
 
     std::vector<KeyPoint>::iterator kpt;
-    for(kpt = kpts.begin(); kpt != kpts.end(); kpt++)
+    for(kpt = kpts.begin(); kpt != kpts.end(); ++kpt)
     {
         switch(type) {
           case AgastFeatureDetector::AGAST_5_8:
@@ -8149,7 +8149,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
                     }
                 }
             }
-            currCorner++;
+            ++currCorner;
         }
 
         // collecting maximum corners

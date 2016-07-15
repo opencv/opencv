@@ -96,12 +96,12 @@ Making a project
 
                 /usr/local/lib
 
-            Then in **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 3 first
+            Then in **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 4 first
             on the list below are enough (for simple applications) . In my case, I am putting all of them
             since I plan to use the whole bunch:
 
-            opencv_core opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_features2d
-            opencv_calib3d opencv_objdetect opencv_contrib opencv_legacy opencv_flann
+            opencv_core opencv_imgproc opencv_imgcodecs opencv_highgui opencv_ml opencv_videoio opencv_video opencv_features2d
+            opencv_calib3d opencv_objdetect opencv_flann
 
             ![](images/a10.png)
 

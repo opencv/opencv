@@ -1216,13 +1216,33 @@ static void icvDeleteWindow( CvWindow* window )
     }
 
     cvFree( &window );
+
+    // if last window...
+    if( hg_windows == 0 )
+    {
 #ifdef HAVE_GTHREAD
-    // if last window, send key press signal
-    // to jump out of any waiting cvWaitKey's
-    if(hg_windows==0 && thread_started){
-        g_cond_broadcast(cond_have_key);
-    }
+        if( thread_started )
+        {
+            // send key press signal to jump out of any waiting cvWaitKey's
+            g_cond_broadcast( cond_have_key );
+        }
+        else
+        {
 #endif
+            // Some GTK+ modules (like the Unity module) use GDBusConnection,
+            // which has a habit of postponing cleanup by performing it via
+            // idle sources added to the main loop. Since this was the last window,
+            // we can assume that no event processing is going to happen in the
+            // nearest future, so we should force that cleanup (by handling all pending
+            // events) while we still have the chance.
+            // This is not needed if thread_started is true, because the background
+            // thread will process events continuously.
+            while( gtk_events_pending() )
+                gtk_main_iteration();
+#ifdef HAVE_GTHREAD
+        }
+#endif
+    }
 }
 
 

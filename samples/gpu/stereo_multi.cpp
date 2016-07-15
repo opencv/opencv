@@ -17,8 +17,6 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/cudastereo.hpp"
 
-#include "tick_meter.hpp"
-
 using namespace std;
 using namespace cv;
 using namespace cv::cuda;

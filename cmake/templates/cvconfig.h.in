@@ -197,3 +197,6 @@
 
 /* Intel VA-API/OpenCL */
 #cmakedefine HAVE_VA_INTEL
+
+/* Lapack */
+#cmakedefine HAVE_LAPACK

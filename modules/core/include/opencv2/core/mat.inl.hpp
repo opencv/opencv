@@ -314,8 +314,12 @@ inline _InputOutputArray::_InputOutputArray(const std::vector<UMat>& vec)
 
 inline _InputOutputArray::_InputOutputArray(const cuda::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_GPU_MAT + ACCESS_RW, &d_mat); }
+
 inline _InputOutputArray::_InputOutputArray(const std::vector<cuda::GpuMat>& d_mat)
-{	init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
+
+template<> inline _InputOutputArray::_InputOutputArray(std::vector<cuda::GpuMat>& d_mat)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
 
 inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
 { init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_RW, &buf); }
@@ -2546,7 +2550,7 @@ MatConstIterator_<_Tp>& MatConstIterator_<_Tp>::operator = (const MatConstIterat
 }
 
 template<typename _Tp> inline
-_Tp MatConstIterator_<_Tp>::operator *() const
+const _Tp& MatConstIterator_<_Tp>::operator *() const
 {
     return *(_Tp*)(this->ptr);
 }
@@ -2652,7 +2656,7 @@ MatConstIterator_<_Tp> operator - (const MatConstIterator_<_Tp>& a, ptrdiff_t of
 }
 
 template<typename _Tp> inline
-_Tp MatConstIterator_<_Tp>::operator [](ptrdiff_t i) const
+const _Tp& MatConstIterator_<_Tp>::operator [](ptrdiff_t i) const
 {
     return *(_Tp*)MatConstIterator::operator [](i);
 }

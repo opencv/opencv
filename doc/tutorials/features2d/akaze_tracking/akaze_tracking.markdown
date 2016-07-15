@@ -28,9 +28,9 @@ To do the tracking we need a video and object position on the first frame.
 You can download our example video and data from
 [here](https://docs.google.com/file/d/0B72G7D4snftJandBb0taLVJHMFk).
 
-To run the code you have to specify input and output video path and object bounding box.
+To run the code you have to specify input (camera id or video_file). Then, select a bounding box with the mouse, and press any key to start tracking
 @code{.none}
-./planar_tracking blais.mp4 result.avi blais_bb.xml.gz
+./planar_tracking blais.mp4
 @endcode
 
 Source Code

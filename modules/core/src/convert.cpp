@@ -50,6 +50,7 @@
 #define CV_NEON 0
 #endif
 
+#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/cn) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
 
 /****************************************************************************************\
 *                                       split & merge                                    *
@@ -93,8 +94,8 @@ void cv::split(const Mat& src, Mat* mv)
     SplitFunc func = getSplitFunc(depth);
     CV_Assert( func != 0 );
 
-    int esz = (int)src.elemSize(), esz1 = (int)src.elemSize1();
-    int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
+    size_t esz = src.elemSize(), esz1 = src.elemSize1();
+    size_t blocksize0 = (BLOCK_SIZE + esz-1)/esz;
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -107,14 +108,15 @@ void cv::split(const Mat& src, Mat* mv)
     }
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
+    size_t total = it.size;
+    size_t blocksize = std::min((size_t)CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn), cn <= 4 ? total : std::min(total, blocksize0));
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        for( int j = 0; j < total; j += blocksize )
+        for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
-            func( ptrs[0], &ptrs[1], bsz, cn );
+            size_t bsz = std::min(total - j, blocksize);
+            func( ptrs[0], &ptrs[1], (int)bsz, cn );
 
             if( j + blocksize < total )
             {
@@ -241,8 +243,11 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         return;
     }
 
+    MergeFunc func = getMergeFunc(depth);
+    CV_Assert( func != 0 );
+
     size_t esz = dst.elemSize(), esz1 = dst.elemSize1();
-    int blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
+    size_t blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -252,15 +257,15 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         arrays[k+1] = &mv[k];
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
-    MergeFunc func = getMergeFunc(depth);
+    size_t total = (int)it.size;
+    size_t blocksize = std::min((size_t)CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn), cn <= 4 ? total : std::min(total, blocksize0));
 
     for( i = 0; i < it.nplanes; i++, ++it )
     {
-        for( int j = 0; j < total; j += blocksize )
+        for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
-            func( (const uchar**)&ptrs[1], ptrs[0], bsz, cn );
+            size_t bsz = std::min(total - j, blocksize);
+            func( (const uchar**)&ptrs[1], ptrs[0], (int)bsz, cn );
 
             if( j + blocksize < total )
             {

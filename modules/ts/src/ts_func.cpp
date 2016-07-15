@@ -3035,31 +3035,31 @@ void printVersionInfo(bool useStdOut)
     if (checkHardwareSupport(CV_CPU_FMA3)) cpu_features += " fma3";
 #endif
 #if CV_AVX_512F
-    if (checkHardwareSupport(CV_CPU_AVX_512F) cpu_features += " avx-512f";
+    if (checkHardwareSupport(CV_CPU_AVX_512F)) cpu_features += " avx-512f";
 #endif
 #if CV_AVX_512BW
-    if (checkHardwareSupport(CV_CPU_AVX_512BW) cpu_features += " avx-512bw";
+    if (checkHardwareSupport(CV_CPU_AVX_512BW)) cpu_features += " avx-512bw";
 #endif
 #if CV_AVX_512CD
-    if (checkHardwareSupport(CV_CPU_AVX_512CD) cpu_features += " avx-512cd";
+    if (checkHardwareSupport(CV_CPU_AVX_512CD)) cpu_features += " avx-512cd";
 #endif
 #if CV_AVX_512DQ
-    if (checkHardwareSupport(CV_CPU_AVX_512DQ) cpu_features += " avx-512dq";
+    if (checkHardwareSupport(CV_CPU_AVX_512DQ)) cpu_features += " avx-512dq";
 #endif
 #if CV_AVX_512ER
-    if (checkHardwareSupport(CV_CPU_AVX_512ER) cpu_features += " avx-512er";
+    if (checkHardwareSupport(CV_CPU_AVX_512ER)) cpu_features += " avx-512er";
 #endif
 #if CV_AVX_512IFMA512
-    if (checkHardwareSupport(CV_CPU_AVX_512IFMA512) cpu_features += " avx-512ifma512";
+    if (checkHardwareSupport(CV_CPU_AVX_512IFMA512)) cpu_features += " avx-512ifma512";
 #endif
 #if CV_AVX_512PF
-    if (checkHardwareSupport(CV_CPU_AVX_512PF) cpu_features += " avx-512pf";
+    if (checkHardwareSupport(CV_CPU_AVX_512PF)) cpu_features += " avx-512pf";
 #endif
 #if CV_AVX_512VBMI
-    if (checkHardwareSupport(CV_CPU_AVX_512VBMI) cpu_features += " avx-512vbmi";
+    if (checkHardwareSupport(CV_CPU_AVX_512VBMI)) cpu_features += " avx-512vbmi";
 #endif
 #if CV_AVX_512VL
-    if (checkHardwareSupport(CV_CPU_AVX_512VL) cpu_features += " avx-512vl";
+    if (checkHardwareSupport(CV_CPU_AVX_512VL)) cpu_features += " avx-512vl";
 #endif
 #if CV_NEON
     if (checkHardwareSupport(CV_CPU_NEON)) cpu_features += " neon";
