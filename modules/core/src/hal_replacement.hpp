@@ -376,6 +376,110 @@ inline int hal_ni_merge64s(const int64 **src_data, int64 *dst_data, int len, int
 #define cv_hal_merge64s hal_ni_merge64s
 //! @endcond
 
+
+/**
+@param y,x source Y and X arrays
+@param dst destination array
+@param len length of arrays
+@param angleInDegrees if set to true return angles in degrees, otherwise in radians
+ */
+//! @addtogroup core_hal_interface_fastAtan Atan calculation
+//! @{
+inline int hal_ni_fastAtan32f(const float* y, const float* x, float* dst, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_fastAtan64f(const double* y, const double* x, double* dst, int len, bool angleInDegrees) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_fastAtan32f hal_ni_fastAtan32f
+#define cv_hal_fastAtan64f hal_ni_fastAtan64f
+//! @endcond
+
+
+/**
+@param x,y source X and Y arrays
+@param dst destination array
+@param len length of arrays
+ */
+//! @addtogroup core_hal_interface_magnitude Magnitude calculation
+//! @{
+inline int hal_ni_magnitude32f(const float *x, const float *y, float *dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_magnitude64f(const double *x, const double  *y, double *dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_magnitude32f hal_ni_magnitude32f
+#define cv_hal_magnitude64f hal_ni_magnitude64f
+//! @endcond
+
+
+/**
+@param src source array
+@param dst destination array
+@param len length of arrays
+ */
+//! @addtogroup core_hal_interface_invSqrt Inverse square root calculation
+//! @{
+inline int hal_ni_invSqrt32f(const float* src, float* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_invSqrt64f(const double* src, double* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_invSqrt32f hal_ni_invSqrt32f
+#define cv_hal_invSqrt64f hal_ni_invSqrt64f
+//! @endcond
+
+
+/**
+@param src source array
+@param dst destination array
+@param len length of arrays
+ */
+//! @addtogroup core_hal_interface_sqrt Square root calculation
+//! @{
+inline int hal_ni_sqrt32f(const float* src, float* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_sqrt64f(const double* src, double* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_sqrt32f hal_ni_sqrt32f
+#define cv_hal_sqrt64f hal_ni_sqrt64f
+//! @endcond
+
+
+/**
+@param src source array
+@param dst destination array
+@param len length of arrays
+ */
+//! @addtogroup core_hal_interface_log Natural logarithm calculation
+//! @{
+inline int hal_ni_log32f(const float* src, float* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_log64f(const double* src, double* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_log32f hal_ni_log32f
+#define cv_hal_log64f hal_ni_log64f
+//! @endcond
+
+
+/**
+@param src source array
+@param dst destination array
+@param len length of arrays
+ */
+//! @addtogroup core_hal_interface_exp Exponent calculation
+//! @{
+inline int hal_ni_exp32f(const float* src, float* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_exp64f(const double* src, double* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_exp32f hal_ni_exp32f
+#define cv_hal_exp64f hal_ni_exp64f
+//! @endcond
+
+
 /**
 @brief Dummy structure storing DFT/DCT context
 
@@ -599,21 +703,25 @@ inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* s
 
 //! @cond IGNORED
 #define CALL_HAL_RET(name, fun, retval, ...) \
+{ \
     int res = fun(__VA_ARGS__, &retval); \
     if (res == CV_HAL_ERROR_OK) \
         return retval; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
         CV_Error_(cv::Error::StsInternal, \
-            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res));
+            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res)); \
+}
 
 
 #define CALL_HAL(name, fun, ...) \
+{ \
     int res = fun(__VA_ARGS__); \
     if (res == CV_HAL_ERROR_OK) \
         return; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
         CV_Error_(cv::Error::StsInternal, \
-            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res));
+            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res)); \
+}
 //! @endcond
 
 #endif

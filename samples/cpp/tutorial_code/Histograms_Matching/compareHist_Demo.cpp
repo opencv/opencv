@@ -5,10 +5,9 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
 
 using namespace std;
 using namespace cv;
@@ -26,13 +25,19 @@ int main( int argc, char** argv )
     /// Load three images with different environment settings
     if( argc < 4 )
     {
-        printf("** Error. Usage: ./compareHist_Demo <image_settings0> <image_setting1> <image_settings2>\n");
+        printf("** Error. Usage: ./compareHist_Demo <image_settings0> <image_settings1> <image_settings2>\n");
         return -1;
     }
 
-    src_base = imread( argv[1], 1 );
-    src_test1 = imread( argv[2], 1 );
-    src_test2 = imread( argv[3], 1 );
+    src_base = imread( argv[1], IMREAD_COLOR );
+    src_test1 = imread( argv[2], IMREAD_COLOR );
+    src_test2 = imread( argv[3], IMREAD_COLOR );
+
+    if(src_base.empty() || src_test1.empty() || src_test2.empty())
+    {
+      cout << "Can't read one of the images" << endl;
+      return -1;
+    }
 
     /// Convert to HSV
     cvtColor( src_base, hsv_base, COLOR_BGR2HSV );

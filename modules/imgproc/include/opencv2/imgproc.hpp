@@ -1828,7 +1828,8 @@ with qualityLevel=B .
 @param image Input 8-bit or floating-point 32-bit, single-channel image.
 @param corners Output vector of detected corners.
 @param maxCorners Maximum number of corners to return. If there are more corners than are found,
-the strongest of them is returned.
+the strongest of them is returned. `maxCorners <= 0` implies that no limit on the maximum is set
+and all detected corners are returned.
 @param qualityLevel Parameter characterizing the minimal accepted quality of image corners. The
 parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue
 (see cornerMinEigenVal ) or the Harris function response (see cornerHarris ). The corners with the
@@ -3157,10 +3158,12 @@ same object.
 
 @param signature1 First signature, a \f$\texttt{size1}\times \texttt{dims}+1\f$ floating-point matrix.
 Each row stores the point weight followed by the point coordinates. The matrix is allowed to have
-a single column (weights only) if the user-defined cost matrix is used.
+a single column (weights only) if the user-defined cost matrix is used. The weights must be
+non-negative and have at least one non-zero value.
 @param signature2 Second signature of the same format as signature1 , though the number of rows
 may be different. The total weights may be different. In this case an extra "dummy" point is added
-to either signature1 or signature2 .
+to either signature1 or signature2. The weights must be non-negative and have at least one non-zero
+value.
 @param distType Used metric. See cv::DistanceTypes.
 @param cost User-defined \f$\texttt{size1}\times \texttt{size2}\f$ cost matrix. Also, if a cost matrix
 is used, lower boundary lowerBound cannot be calculated because it needs a metric function.

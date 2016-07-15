@@ -41,7 +41,7 @@ int main()
     cout << "First event loop is over" << endl;
 
     /// Access window via its name
-    viz::Viz3d sameWindow = viz::get("Viz Demo");
+    viz::Viz3d sameWindow = viz::getWindowByName("Viz Demo");
 
     /// Start event loop
     sameWindow.spin();
