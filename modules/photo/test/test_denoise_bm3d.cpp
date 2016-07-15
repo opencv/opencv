@@ -169,8 +169,6 @@ static void Test1dTransform(
     int templateWindowSizeSq,
     BlockMatch<T, DT, CT> *bm,
     BlockMatch<T, DT, CT> *bmOrig,
-    short (*HaarTransformShrink)(BlockMatch<T, DT, CT> *bm, const int &n, T *&thrMap),
-    void (*InverseHaarTransform)(BlockMatch<T, DT, CT> *src, const int &n),
     int expectedNonZeroCount = -1)
 {
     if (expectedNonZeroCount < 0)
@@ -181,8 +179,29 @@ static void Test1dTransform(
     T *thrMapPtr1D = thrMap + (groupSize - 1) * templateWindowSizeSq;
     for (int n = 0; n < templateWindowSizeSq; n++)
     {
-        sumNonZero += HaarTransformShrink(bm, n, thrMapPtr1D);
-        InverseHaarTransform(bm, n);
+        switch (groupSize)
+        {
+        case 16:
+            ForwardHaarTransform16(bm, n);
+            sumNonZero += HardThreshold<16>(bm, n, thrMapPtr1D);
+            InverseHaarTransform16(bm, n);
+            break;
+        case 8:
+            ForwardHaarTransform8(bm, n);
+            sumNonZero += HardThreshold<8>(bm, n, thrMapPtr1D);
+            InverseHaarTransform8(bm, n);
+            break;
+        case 4:
+            ForwardHaarTransform4(bm, n);
+            sumNonZero += HardThreshold<4>(bm, n, thrMapPtr1D);
+            InverseHaarTransform4(bm, n);
+            break;
+        case 2:
+            ForwardHaarTransform2(bm, n);
+            sumNonZero += HardThreshold<2>(bm, n, thrMapPtr1D);
+            InverseHaarTransform2(bm, n);
+            break;
+        }
     }
 
     // Assert transform
@@ -231,24 +250,16 @@ TEST(Photo_DenoisingBm3dTransforms, regression_1D_transform)
     }
 
     // Verify transforms
-    Test1dTransform<short, int, short>(thrMapTransform, 2, templateWindowSizeSq, bm, bmOrig,
-        HaarTransformShrink2<short, int, short>, InverseHaarTransform2<short, int, short>);
-    Test1dTransform<short, int, short>(thrMapTransform, 4, templateWindowSizeSq, bm, bmOrig,
-        HaarTransformShrink4<short, int, short>, InverseHaarTransform4<short, int, short>);
-    Test1dTransform<short, int, short>(thrMapTransform, 8, templateWindowSizeSq, bm, bmOrig,
-        HaarTransformShrink8<short, int, short>, InverseHaarTransform8<short, int, short>);
-    Test1dTransform<short, int, short>(thrMapTransform, 16, templateWindowSizeSq, bm, bmOrig,
-        HaarTransformShrink16<short, int, short>, InverseHaarTransform16<short, int, short>);
+    Test1dTransform<short, int, short>(thrMapTransform, 2, templateWindowSizeSq, bm, bmOrig);
+    Test1dTransform<short, int, short>(thrMapTransform, 4, templateWindowSizeSq, bm, bmOrig);
+    Test1dTransform<short, int, short>(thrMapTransform, 8, templateWindowSizeSq, bm, bmOrig);
+    Test1dTransform<short, int, short>(thrMapTransform, 16, templateWindowSizeSq, bm, bmOrig);
 
     // Verify shrinkage
-    Test1dTransform<short, int, short>(thrMapShrinkage, 2, templateWindowSizeSq, bm, bmOrig,
-        HaarTransformShrink2<short, int, short>, InverseHaarTransform2<short, int, short>, 6);
-    Test1dTransform<short, int, short>(thrMapShrinkage, 4, templateWindowSizeSq, bm, bmOrig,
-        HaarTransformShrink4<short, int, short>, InverseHaarTransform4<short, int, short>, 6);
-    Test1dTransform<short, int, short>(thrMapShrinkage, 8, templateWindowSizeSq, bm, bmOrig,
-        HaarTransformShrink8<short, int, short>, InverseHaarTransform8<short, int, short>, 6);
-    Test1dTransform<short, int, short>(thrMapShrinkage, 16, templateWindowSizeSq, bm, bmOrig,
-        HaarTransformShrink16<short, int, short>, InverseHaarTransform16<short, int, short>, 6);
+    Test1dTransform<short, int, short>(thrMapShrinkage, 2, templateWindowSizeSq, bm, bmOrig, 6);
+    Test1dTransform<short, int, short>(thrMapShrinkage, 4, templateWindowSizeSq, bm, bmOrig, 6);
+    Test1dTransform<short, int, short>(thrMapShrinkage, 8, templateWindowSizeSq, bm, bmOrig, 6);
+    Test1dTransform<short, int, short>(thrMapShrinkage, 16, templateWindowSizeSq, bm, bmOrig, 6);
 }
 
 const float sqrt2 = std::sqrt(2.0f);

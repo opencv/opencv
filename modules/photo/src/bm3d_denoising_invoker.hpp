@@ -245,28 +245,32 @@ void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range
             case 16:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
-                    sumNonZero += HaarTransformShrink16(bm, n, thrMapPtr1D);
+                    ForwardHaarTransform16(bm, n);
+                    sumNonZero += HardThreshold<16>(bm, n, thrMapPtr1D);
                     InverseHaarTransform16(bm, n);
                 }
                 break;
             case 8:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
-                    sumNonZero += HaarTransformShrink8(bm, n, thrMapPtr1D);
+                    ForwardHaarTransform8(bm, n);
+                    sumNonZero += HardThreshold<8>(bm, n, thrMapPtr1D);
                     InverseHaarTransform8(bm, n);
                 }
                 break;
             case 4:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
-                    sumNonZero += HaarTransformShrink4(bm, n, thrMapPtr1D);
+                    ForwardHaarTransform4(bm, n);
+                    sumNonZero += HardThreshold<4>(bm, n, thrMapPtr1D);
                     InverseHaarTransform4(bm, n);
                 }
                 break;
             case 2:
                 for (int n = 0; n < blockSizeSq; n++)
                 {
-                    sumNonZero += HaarTransformShrink2(bm, n, thrMapPtr1D);
+                    ForwardHaarTransform2(bm, n);
+                    sumNonZero += HardThreshold<2>(bm, n, thrMapPtr1D);
                     InverseHaarTransform2(bm, n);
                 }
                 break;

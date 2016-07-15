@@ -65,6 +65,17 @@ inline static void hardThreshold2D(T *dst, T *thrMap, const int &templateWindowS
     }
 }
 
+template <int N, typename T, typename DT, typename CT>
+inline static short HardThreshold(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
+{
+    short nonZeroCount = 0;
+
+    for (int i = 0; i < N; ++i)
+        shrink(z[i][n], nonZeroCount, *thrMap++);
+
+    return nonZeroCount;
+}
+
 /// 1D and 2D threshold map coefficients. Implementation dependent, thus stored
 /// together with transforms.
 
@@ -117,7 +128,7 @@ static void fillHaarCoefficients1D(float *thrCoeff1D, int &idx, const int &numbe
     }
 }
 
-// Method to generate threshold coefficients for 1D transform depending on the number of elements.
+// Method to generate threshold coefficients for 2D transform depending on the number of elements.
 static void fillHaarCoefficients2D(float *thrCoeff2D, const int &templateWindowSize)
 {
     cv::Mat coeff1D;
@@ -475,23 +486,17 @@ inline static void InvHaar8x8(TT *src)
 /// 1D forward transformations
 
 template <typename T, typename DT, typename CT>
-inline static short HaarTransformShrink2(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
+inline static void ForwardHaarTransform2(BlockMatch<T, DT, CT> *z, const int &n)
 {
     T sum = (z[0][n] + z[1][n] + 1) >> 1;
     T dif = z[0][n] - z[1][n];
 
-    short nonZeroCount = 0;
-    shrink(sum, nonZeroCount, *thrMap++);
-    shrink(dif, nonZeroCount, *thrMap++);
-
     z[0][n] = sum;
     z[1][n] = dif;
-
-    return nonZeroCount;
 }
 
 template <typename T, typename DT, typename CT>
-inline static short HaarTransformShrink4(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
+inline static void ForwardHaarTransform4(BlockMatch<T, DT, CT> *z, const int &n)
 {
     T sum0 = (z[0][n] + z[1][n] + 1) >> 1;
     T sum1 = (z[2][n] + z[3][n] + 1) >> 1;
@@ -501,22 +506,14 @@ inline static short HaarTransformShrink4(BlockMatch<T, DT, CT> *z, const int &n,
     T sum00 = (sum0 + sum1 + 1) >> 1;
     T dif00 = sum0 - sum1;
 
-    short nonZeroCount = 0;
-    shrink(sum00, nonZeroCount, *thrMap++);
-    shrink(dif00, nonZeroCount, *thrMap++);
-    shrink(dif0, nonZeroCount, *thrMap++);
-    shrink(dif1, nonZeroCount, *thrMap++);
-
     z[0][n] = sum00;
     z[1][n] = dif00;
     z[2][n] = dif0;
     z[3][n] = dif1;
-
-    return nonZeroCount;
 }
 
 template <typename T, typename DT, typename CT>
-inline static short HaarTransformShrink8(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
+inline static void ForwardHaarTransform8(BlockMatch<T, DT, CT> *z, const int &n)
 {
     T sum0 = (z[0][n] + z[1][n] + 1) >> 1;
     T sum1 = (z[2][n] + z[3][n] + 1) >> 1;
@@ -535,16 +532,6 @@ inline static short HaarTransformShrink8(BlockMatch<T, DT, CT> *z, const int &n,
     T sum000 = (sum00 + sum11 + 1) >> 1;
     T dif000 = sum00 - sum11;
 
-    short nonZeroCount = 0;
-    shrink(sum000, nonZeroCount, *thrMap++);
-    shrink(dif000, nonZeroCount, *thrMap++);
-    shrink(dif00, nonZeroCount, *thrMap++);
-    shrink(dif11, nonZeroCount, *thrMap++);
-    shrink(dif0, nonZeroCount, *thrMap++);
-    shrink(dif1, nonZeroCount, *thrMap++);
-    shrink(dif2, nonZeroCount, *thrMap++);
-    shrink(dif3, nonZeroCount, *thrMap++);
-
     z[0][n] = sum000;
     z[1][n] = dif000;
     z[2][n] = dif00;
@@ -553,12 +540,10 @@ inline static short HaarTransformShrink8(BlockMatch<T, DT, CT> *z, const int &n,
     z[5][n] = dif1;
     z[6][n] = dif2;
     z[7][n] = dif3;
-
-    return nonZeroCount;
 }
 
 template <typename T, typename DT, typename CT>
-inline static short HaarTransformShrink16(BlockMatch<T, DT, CT> *z, const int &n, T *&thrMap)
+inline static void ForwardHaarTransform16(BlockMatch<T, DT, CT> *z, const int &n)
 {
     T sum0 = (z[0][n] + z[1][n] + 1) >> 1;
     T sum1 = (z[2][n] + z[3][n] + 1) >> 1;
@@ -594,24 +579,6 @@ inline static short HaarTransformShrink16(BlockMatch<T, DT, CT> *z, const int &n
     T sum0000 = (sum000 + sum111 + 1) >> 1;
     T dif0000 = dif000 - dif111;
 
-    short nonZeroCount = 0;
-    shrink(sum0000, nonZeroCount, *thrMap++);
-    shrink(dif0000, nonZeroCount, *thrMap++);
-    shrink(dif000, nonZeroCount, *thrMap++);
-    shrink(dif111, nonZeroCount, *thrMap++);
-    shrink(dif00, nonZeroCount, *thrMap++);
-    shrink(dif11, nonZeroCount, *thrMap++);
-    shrink(dif22, nonZeroCount, *thrMap++);
-    shrink(dif33, nonZeroCount, *thrMap++);
-    shrink(dif0, nonZeroCount, *thrMap++);
-    shrink(dif1, nonZeroCount, *thrMap++);
-    shrink(dif2, nonZeroCount, *thrMap++);
-    shrink(dif3, nonZeroCount, *thrMap++);
-    shrink(dif4, nonZeroCount, *thrMap++);
-    shrink(dif5, nonZeroCount, *thrMap++);
-    shrink(dif6, nonZeroCount, *thrMap++);
-    shrink(dif7, nonZeroCount, *thrMap++);
-
     z[0][n] = sum0000;
     z[1][n] = dif0000;
     z[2][n] = dif000;
@@ -628,8 +595,6 @@ inline static short HaarTransformShrink16(BlockMatch<T, DT, CT> *z, const int &n
     z[13][n] = dif5;
     z[14][n] = dif6;
     z[15][n] = dif7;
-
-    return nonZeroCount;
 }
 
 /// Functions for inverse 1D transforms
