@@ -70,13 +70,12 @@ that should be used to find the match.
 -   The mask must have the same dimensions as the template
 
 
--   The mask should be a grayscale image where each pixel contains some value from black to white.
-    Pixels that are white are fully included in calculating the best match.  Pixels that are black
-    are excluded from the match.  A value between black and white will include some of
-    the match in proportion to how dark the pixel is.  Although the image should be a grayscale whose
-    output from the file command should look something like: "PNG image data, 128 x 128, 8-bit gray
-    +alpha, non-interlaced", opencv will read the image into an rgb matrix that will be applied
-    during the image match.
+-   The mask should have a CV_8U or CV_32F depth and the same number of channels
+    as the template image. In CV_8U case, the mask values are treated as binary,
+    i.e. zero and non-zero. In CV_32F case, the values should fall into [0..1]
+    range and the template pixels will be multiplied by the corresponding mask pixel
+    values. Since the input images in the sample have the CV_8UC3 type, the mask
+    is also read as color image.
 
     ![](images/Template_Matching_Mask_Example.jpg)
 
