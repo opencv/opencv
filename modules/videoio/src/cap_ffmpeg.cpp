@@ -41,6 +41,8 @@
 
 #include "precomp.hpp"
 
+#include <string>
+
 #if defined HAVE_FFMPEG && !defined WIN32
 #include "cap_ffmpeg_impl.hpp"
 #else
@@ -58,6 +60,17 @@ static CvReleaseVideoWriter_Plugin icvReleaseVideoWriter_FFMPEG_p = 0;
 static CvWriteFrame_Plugin icvWriteFrame_FFMPEG_p = 0;
 
 static cv::Mutex _icvInitFFMPEG_mutex;
+
+#if defined WIN32 || defined _WIN32
+static const HMODULE cv_GetCurrentModule()
+{
+    HMODULE h = 0;
+    ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        reinterpret_cast<LPCTSTR>(cv_GetCurrentModule),
+        &h);
+    return h;
+}
+#endif
 
 class icvInitFFMPEG
 {
@@ -95,14 +108,39 @@ private:
 
         icvFFOpenCV = LoadPackagedLibrary( module_name, 0 );
     # else
-        const char* module_name = "opencv_ffmpeg"
-            CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) CVAUX_STR(CV_SUBMINOR_VERSION)
+        const std::wstring module_name = L"opencv_ffmpeg"
+            CVAUX_STRW(CV_MAJOR_VERSION) CVAUX_STRW(CV_MINOR_VERSION) CVAUX_STRW(CV_SUBMINOR_VERSION)
         #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
-            "_64"
+            L"_64"
         #endif
-            ".dll";
+            L".dll";
 
-        icvFFOpenCV = LoadLibrary( module_name );
+        const wchar_t* ffmpeg_env_path = _wgetenv(L"OPENCV_FFMPEG_DLL_DIR");
+        std::wstring module_path =
+                ffmpeg_env_path
+                ? ((std::wstring(ffmpeg_env_path) + L"\\") + module_name)
+                : module_name;
+
+        icvFFOpenCV = LoadLibraryW(module_path.c_str());
+        if(!icvFFOpenCV && !ffmpeg_env_path)
+        {
+            HMODULE m = cv_GetCurrentModule();
+            if (m)
+            {
+                wchar_t path[MAX_PATH];
+                size_t sz = GetModuleFileNameW(m, path, sizeof(path));
+                if (sz > 0 && ERROR_SUCCESS == GetLastError())
+                {
+                    wchar_t* s = wcsrchr(path, L'\\');
+                    if (s)
+                    {
+                        s[0] = 0;
+                        module_path = (std::wstring(path) + L"\\") + module_name;
+                        icvFFOpenCV = LoadLibraryW(module_path.c_str());
+                    }
+                }
+            }
+        }
     # endif
 
         if( icvFFOpenCV )
