@@ -267,6 +267,10 @@ void AffineWarper::getRTfromHomogeneous(InputArray H_, Mat &R, Mat &T)
     T.at<float>(1,0) = R.at<float>(1,2);
     R.at<float>(0,2) = 0.f;
     R.at<float>(1,2) = 0.f;
+
+    // we want to compensate registered transformation
+    R = R.t();
+    T = T * -1;
 }
 
 
