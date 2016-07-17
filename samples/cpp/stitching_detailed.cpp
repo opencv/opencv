@@ -109,7 +109,7 @@ static void printUsage()
         "      Labels description: Nm is number of matches, Ni is number of inliers,\n"
         "      C is confidence.\n"
         "\nCompositing Flags:\n"
-        "  --warp (plane|cylindrical|spherical|fisheye|stereographic|compressedPlaneA2B1|compressedPlaneA1.5B1|compressedPlanePortraitA2B1|compressedPlanePortraitA1.5B1|paniniA2B1|paniniA1.5B1|paniniPortraitA2B1|paniniPortraitA1.5B1|mercator|transverseMercator)\n"
+        "  --warp (affine|plane|cylindrical|spherical|fisheye|stereographic|compressedPlaneA2B1|compressedPlaneA1.5B1|compressedPlanePortraitA2B1|compressedPlanePortraitA1.5B1|paniniA2B1|paniniA1.5B1|paniniPortraitA2B1|paniniPortraitA1.5B1|mercator|transverseMercator)\n"
         "      Warp surface type. The default is 'spherical'.\n"
         "  --seam_megapix <float>\n"
         "      Resolution for seam estimation step. The default is 0.1 Mpx.\n"
@@ -644,6 +644,8 @@ int main(int argc, char* argv[])
     {
         if (warp_type == "plane")
             warper_creator = makePtr<cv::PlaneWarper>();
+        else if (warp_type == "affine")
+            warper_creator = makePtr<cv::AffineWarper>();
         else if (warp_type == "cylindrical")
             warper_creator = makePtr<cv::CylindricalWarper>();
         else if (warp_type == "spherical")
