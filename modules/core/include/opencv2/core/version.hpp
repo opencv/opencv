@@ -55,7 +55,7 @@
 #define CVAUX_STR_EXP(__A)  #__A
 #define CVAUX_STR(__A)      CVAUX_STR_EXP(__A)
 
-#define CVAUX_STRW_EXP(__A)  L#__A
+#define CVAUX_STRW_EXP(__A)  L ## #__A
 #define CVAUX_STRW(__A)      CVAUX_STRW_EXP(__A)
 
 #if CV_VERSION_REVISION
