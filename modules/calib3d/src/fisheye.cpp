@@ -738,6 +738,8 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
     errors.isEstimate = finalParam.isEstimate;
 
+    int intrin_dim = cv::countNonZero(finalParam.isEstimate);
+
     std::vector<Vec3d> omc(objectPoints.total()), Tc(objectPoints.total());
 
     CalibrateExtrinsics(objectPoints, imagePoints, finalParam, check_cond, thresh_cond, omc, Tc);
@@ -758,7 +760,19 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
         Mat G;
         solve(JJ2, ex3, G);
+        CV_Assert(G.total() == intrin_dim + 6*imagePoints.total());
         currentParam = finalParam + alpha_smooth2*G;
+        for(size_t n=0; n< imagePoints.total(); ++n)
+        {
+            for(int i=0; i<3; ++i)
+            {
+                omc[n][i] += alpha_smooth2 * G.at<double>(intrin_dim + 6*n     + i);
+                Tc [n][i] += alpha_smooth2 * G.at<double>(intrin_dim + 6*n + 3 + i);
+            }
+            Matx33d R;
+            Rodrigues(omc[n], R);
+            Rodrigues(R, omc[n]);
+        }
 
         change = norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
                 Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
@@ -766,7 +780,11 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
         finalParam = currentParam;
 
-        if (recompute_extrinsic)
+        if (((criteria.type & 1) && iter >= criteria.maxCount)  ||
+            ((criteria.type & 2) && change <= criteria.epsilon) )
+            break;
+
+        if (recompute_extrinsic && false)
         {
             CalibrateExtrinsics(objectPoints,  imagePoints, finalParam, check_cond,
                                     thresh_cond, omc, Tc);
