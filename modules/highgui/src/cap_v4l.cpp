@@ -16,7 +16,7 @@ For Release:  OpenCV-Linux Beta4  opencv-0.9.6
 Tested On:    LMLBT44 with 8 video inputs
 Problems?     Post your questions at answers.opencv.org,
               Report bugs at code.opencv.org,
-              Submit your fixes at https://github.com/Itseez/opencv/
+              Submit your fixes at https://github.com/opencv/opencv/
 Patched Comments:
 
 TW: The cv cam utils that came with the initial release of OpenCV for LINUX Beta4

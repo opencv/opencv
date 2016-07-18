@@ -58,7 +58,7 @@ def deskew(img):
 
 class StatModel(object):
     def load(self, fn):
-        self.model.load(fn)  # Known bug: https://github.com/Itseez/opencv/issues/4969
+        self.model.load(fn)  # Known bug: https://github.com/opencv/opencv/issues/4969
     def save(self, fn):
         self.model.save(fn)
 

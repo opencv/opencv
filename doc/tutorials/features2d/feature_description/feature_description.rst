@@ -23,7 +23,7 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/features2D/SURF_descriptor.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/features2D/SURF_descriptor.cpp>`_
 
 .. code-block:: cpp
 
