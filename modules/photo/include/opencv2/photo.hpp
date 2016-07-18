@@ -314,9 +314,59 @@ increase it if the results are poor.
  */
 CV_EXPORTS_W void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda=1.0, int niters=30);
 
-/** @brief Performs image denoising using the first step of Block-Matching and
-3D-filtering algorithm <http://www.cs.tut.fi/~foi/3D-DFT/BM3DDEN_article.pdf>
-with several computational optimizations. Noise expected to be a gaussian white noise.
+// BM3D transform types
+enum { BM3D_HAAR = 0 };
+
+// BM3D steps
+enum { BM3D_STEPALL = 0, BM3D_STEP1 = 1, BM3D_STEP2 = 2};
+
+/** @brief Performs image denoising using the Block-Matching and 3D-filtering algorithm
+<http://www.cs.tut.fi/~foi/3D-DFT/BM3DDEN_article.pdf> with several computational
+optimizations. Noise expected to be a gaussian white noise.
+
+@param src Input 8-bit or 16-bit 1-channel image.
+@param dstStep1 Output image of the first step of BM3D with the same size and type as src.
+@param dstStep2 Output image of the second step of BM3D with the same size and type as src.
+@param h Parameter regulating filter strength. Big h value perfectly removes noise but also
+removes image details, smaller h value preserves details but also preserves some noise.
+@param templateWindowSize Size in pixels of the template patch that is used for block-matching.
+Should be power of 2. Currently supported is value 4 or 8 pixels.
+@param searchWindowSize Size in pixels of the window that is used to perform block-matching.
+Affect performance linearly: greater searchWindowsSize - greater denoising time.
+Must be larger than templateWindowSize.
+@param blockMatchingStep1 Block matching threshold for the first step of BM3D (hard thresholding),
+i.e. maximum distance for which two blocks are considered similar.
+Value expressed in euclidean distance.
+@param blockMatchingStep2 Block matching threshold for the second step of BM3D (Wiener filtering),
+i.e. maximum distance for which two blocks are considered similar.
+Value expressed in euclidean distance.
+@param groupSize Maximum size of the 3D group for collaborative filtering.
+@param normType Norm used to calculate distance between blocks. L2 is slower than L1
+but yields more accurate results.
+@param step Step of BM3D to be executed. Possible variants are: step 1, step 2, both steps.
+@param transformType Type of the orthogonal transform used in collaborative filtering step.
+Currently only Haar transform is supported.
+
+This function expected to be applied to grayscale images. Advanced usage of this function
+can be manual denoising of colored image in different colorspaces.
+*/
+CV_EXPORTS_W void bm3dDenoising(
+    InputArray src,
+    InputOutputArray dstStep1,
+    OutputArray dstStep2,
+    float h = 1,
+    int templateWindowSize = 4,
+    int searchWindowSize = 16,
+    int blockMatchingStep1 = 2500,
+    int blockMatchingStep2 = 400,
+    int groupSize = 8,
+    int normType = cv::NORM_L2,
+    int step = cv::BM3D_STEPALL,
+    int transformType = cv::BM3D_HAAR);
+
+/** @brief Performs image denoising using the Block-Matching and 3D-filtering algorithm
+<http://www.cs.tut.fi/~foi/3D-DFT/BM3DDEN_article.pdf> with several computational
+optimizations. Noise expected to be a gaussian white noise.
 
 @param src Input 8-bit or 16-bit 1-channel image.
 @param dst Output image with the same size and type as src.
@@ -327,11 +377,17 @@ Should be power of 2. Currently supported is value 4 or 8 pixels.
 @param searchWindowSize Size in pixels of the window that is used to perform block-matching.
 Affect performance linearly: greater searchWindowsSize - greater denoising time.
 Must be larger than templateWindowSize.
-@param blockMatchingThreshold Block matching threshold, i.e. maximum distance for which
-two blocks are considered similar. Value expressed in euclidean distance.
+@param blockMatchingStep1 Block matching threshold for the first step of BM3D (hard thresholding),
+i.e. maximum distance for which two blocks are considered similar.
+Value expressed in euclidean distance.
+@param blockMatchingStep2 Block matching threshold for the second step of BM3D (Wiener filtering),
+i.e. maximum distance for which two blocks are considered similar.
+Value expressed in euclidean distance.
 @param groupSize Maximum size of the 3D group for collaborative filtering.
 @param normType Norm used to calculate distance between blocks. L2 is slower than L1
 but yields more accurate results.
+@param step Step of BM3D to be executed. Allowed are only BM3D_STEP1 and BM3D_STEPALL.
+BM3D_STEP2 is not allowed as it requires basic estimate to be present.
 @param transformType Type of the orthogonal transform used in collaborative filtering step.
 Currently only Haar transform is supported.
 
@@ -344,10 +400,12 @@ CV_EXPORTS_W void bm3dDenoising(
     float h = 1,
     int templateWindowSize = 4,
     int searchWindowSize = 16,
-    int blockMatchingThreshold = 2500,
+    int blockMatchingStep1 = 2500,
+    int blockMatchingStep2 = 400,
     int groupSize = 8,
     int normType = cv::NORM_L2,
-    int transformType = 0);
+    int step = cv::BM3D_STEPALL,
+    int transformType = cv::BM3D_HAAR);
 
 //! @} photo_denoise
 

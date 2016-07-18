@@ -76,6 +76,27 @@ inline static short HardThreshold(BlockMatch<T, DT, CT> *z, const int &n, T *&th
     return nonZeroCount;
 }
 
+template <int N, typename T, typename DT, typename CT>
+inline static int WienerFiltering(BlockMatch<T, DT, CT> *zSrc, BlockMatch<T, DT, CT> *zBasic, const int &n, T *&thrMap)
+{
+    int wienerCoeffs = 0;
+
+    for (int i = 0; i < N; ++i)
+    {
+        // Possible optimization point here to get rid of floats and casts
+        int basicSq = zBasic[i][n] * zBasic[i][n];
+        int sigmaSq = *thrMap * *thrMap;
+        int denom = basicSq + sigmaSq;
+        float wie = (denom == 0) ? 1.0f : ((float)basicSq / (float)denom);
+
+        zBasic[i][n] = (T)(zSrc[i][n] * wie);
+        wienerCoeffs += (int)wie;
+        ++thrMap;
+    }
+
+    return wienerCoeffs;
+}
+
 /// 1D and 2D threshold map coefficients. Implementation dependent, thus stored
 /// together with transforms.
 

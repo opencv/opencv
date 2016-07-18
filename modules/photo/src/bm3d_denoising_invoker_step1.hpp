@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_BM3D_DENOISING_INVOKER_HPP__
-#define __OPENCV_BM3D_DENOISING_INVOKER_HPP__
+#ifndef __OPENCV_BM3D_DENOISING_INVOKER_STEP1_HPP__
+#define __OPENCV_BM3D_DENOISING_INVOKER_STEP1_HPP__
 
 #include "precomp.hpp"
 #include <limits>
@@ -52,10 +52,10 @@
 using namespace cv;
 
 template <typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
-struct Bm3dDenoisingInvoker : public ParallelLoopBody
+struct Bm3dDenoisingInvokerStep1 : public ParallelLoopBody
 {
 public:
-    Bm3dDenoisingInvoker(
+    Bm3dDenoisingInvokerStep1(
         const Mat& src,
         Mat& dst,
         const int &templateWindowSize,
@@ -64,11 +64,11 @@ public:
         const int &hBM,
         const int &groupSize);
 
-    virtual ~Bm3dDenoisingInvoker();
+    virtual ~Bm3dDenoisingInvokerStep1();
     void operator() (const Range& range) const;
 
 private:
-    void operator= (const Bm3dDenoisingInvoker&);
+    void operator= (const Bm3dDenoisingInvokerStep1&);
 
     const Mat& src_;
     Mat& dst_;
@@ -100,7 +100,7 @@ private:
 };
 
 template <typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
-Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
+Bm3dDenoisingInvokerStep1<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvokerStep1(
     const Mat& src,
     Mat& dst,
     const int &templateWindowSize,
@@ -148,13 +148,13 @@ Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::Bm3dDenoisingInvoker(
 }
 
 template<typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
-inline Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::~Bm3dDenoisingInvoker()
+inline Bm3dDenoisingInvokerStep1<T, IT, UIT, D, WT, TT>::~Bm3dDenoisingInvokerStep1()
 {
     delete[] thrMap_;
 }
 
 template <typename T, typename IT, typename UIT, typename D, typename WT, typename TT>
-void Bm3dDenoisingInvoker<T, IT, UIT, D, WT, TT>::operator() (const Range& range) const
+void Bm3dDenoisingInvokerStep1<T, IT, UIT, D, WT, TT>::operator() (const Range& range) const
 {
     const int size = (range.size() + 2 * borderSize_) * srcExtended_.cols;
     std::vector<WT> weightedSum(size, 0.0);

@@ -41,27 +41,41 @@
 
 #include "precomp.hpp"
 
-#include "bm3d_denoising_invoker.hpp"
+#include "bm3d_denoising_invoker_step1.hpp"
+#include "bm3d_denoising_invoker_step2.hpp"
 #include "bm3d_denoising_transforms.hpp"
 
 template<typename ST, typename IT, typename UIT, typename D>
 static void bm3dDenoising_(
     const Mat& src,
+    Mat& basic,
     Mat& dst,
     const float& h,
     const int &templateWindowSize,
     const int &searchWindowSize,
-    const int &hBM,
-    const int &groupSize)
+    const int &hBMStep1,
+    const int &hBMStep2,
+    const int &groupSize,
+    const int &step)
 {
-    double granularity = (double)std::max(1., (double)dst.total() / (1 << 16));
+    double granularity = (double)std::max(1., (double)src.total() / (1 << 16));
 
     switch (CV_MAT_CN(src.type())) {
     case 1:
-        parallel_for_(cv::Range(0, src.rows),
-            Bm3dDenoisingInvoker<ST, IT, UIT, D, float, short>(
-                src, dst, templateWindowSize, searchWindowSize, h, hBM, groupSize),
-            granularity);
+        if (step == cv::BM3D_STEP1 || step == cv::BM3D_STEPALL)
+        {
+            parallel_for_(cv::Range(0, src.rows),
+                Bm3dDenoisingInvokerStep1<ST, IT, UIT, D, float, short>(
+                    src, basic, templateWindowSize, searchWindowSize, h, hBMStep1, groupSize),
+                granularity);
+        }
+        if (step == cv::BM3D_STEP2 || step == cv::BM3D_STEPALL)
+        {
+            parallel_for_(cv::Range(0, src.rows),
+                Bm3dDenoisingInvokerStep2<ST, IT, UIT, D, float, short>(
+                    src, basic, dst, templateWindowSize, searchWindowSize, h, hBMStep2, groupSize),
+                granularity);
+        }
         break;
     default:
         CV_Error(Error::StsBadArg,
@@ -71,22 +85,42 @@ static void bm3dDenoising_(
 
 void cv::bm3dDenoising(
     InputArray _src,
+    InputOutputArray _basic,
     OutputArray _dst,
     float h,
     int templateWindowSize,
     int searchWindowSize,
-    int blockMatchingThreshold,
+    int blockMatchingStep1,
+    int blockMatchingStep2,
     int groupSize,
     int normType,
+    int step,
     int transformType)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(1 == cn);
-    CV_Assert(0 == transformType);
+    CV_Assert(cv::BM3D_HAAR == transformType);
 
     Size srcSize = _src.size();
+
+    switch (step)
+    {
+    case BM3D_STEP1:
+        _basic.create(srcSize, type);
+        break;
+    case BM3D_STEP2:
+        CV_Assert(type == _basic.type());
+        _dst.create(srcSize, type);
+        break;
+    case BM3D_STEPALL:
+        _dst.create(srcSize, type);
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "Unsupported BM3D step!");
+    }
+
     Mat src = _src.getMat();
-    _dst.create(srcSize, src.type());
+    Mat basic = _basic.getMat().empty() ? Mat(srcSize, type) : _basic.getMat();
     Mat dst = _dst.getMat();
 
     switch (normType) {
@@ -95,12 +129,15 @@ void cv::bm3dDenoising(
         case CV_8U:
             bm3dDenoising_<uchar, int, unsigned, DistSquared>(
                 src,
+                basic,
                 dst,
                 h,
                 templateWindowSize,
                 searchWindowSize,
-                blockMatchingThreshold,
-                groupSize);
+                blockMatchingStep1,
+                blockMatchingStep2,
+                groupSize,
+                step);
             break;
         default:
             CV_Error(Error::StsBadArg,
@@ -112,22 +149,28 @@ void cv::bm3dDenoising(
         case CV_8U:
             bm3dDenoising_<uchar, int, unsigned, DistAbs>(
                 src,
+                basic,
                 dst,
                 h,
                 templateWindowSize,
                 searchWindowSize,
-                blockMatchingThreshold,
-                groupSize);
+                blockMatchingStep1,
+                blockMatchingStep2,
+                groupSize,
+                step);
             break;
         case CV_16U:
             bm3dDenoising_<ushort, int64, uint64, DistAbs>(
                 src,
+                basic,
                 dst,
                 h,
                 templateWindowSize,
                 searchWindowSize,
-                blockMatchingThreshold,
-                groupSize);
+                blockMatchingStep1,
+                blockMatchingStep2,
+                groupSize,
+                step);
             break;
         default:
             CV_Error(Error::StsBadArg,
@@ -138,4 +181,41 @@ void cv::bm3dDenoising(
         CV_Error(Error::StsBadArg,
             "Unsupported norm type! Only NORM_L2 and NORM_L1 are supported");
     }
+}
+
+void cv::bm3dDenoising(
+    InputArray _src,
+    OutputArray _dst,
+    float h,
+    int templateWindowSize,
+    int searchWindowSize,
+    int blockMatchingStep1,
+    int blockMatchingStep2,
+    int groupSize,
+    int normType,
+    int step,
+    int transformType)
+{
+    if (step == BM3D_STEP2)
+        CV_Error(Error::StsBadArg,
+            "Unsupported step type! To use BM3D_STEP2 one need to provide basic image.");
+
+    Mat basic;
+
+    bm3dDenoising(
+        _src,
+        basic,
+        _dst,
+        h,
+        templateWindowSize,
+        searchWindowSize,
+        blockMatchingStep1,
+        blockMatchingStep2,
+        groupSize,
+        normType,
+        step,
+        transformType);
+
+    if (step == BM3D_STEP1)
+        _dst.assign(basic);
 }
