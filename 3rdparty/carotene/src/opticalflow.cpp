@@ -536,4 +536,3 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 }
 
 }//CAROTENE_NS
-

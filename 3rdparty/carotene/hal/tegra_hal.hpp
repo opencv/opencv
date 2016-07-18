@@ -67,7 +67,7 @@
                  size_t src2_step;
 
 #define DST_ARG1 DT * dst1_data_, size_t dst1_step_,
-#define DST_STORE1 dst1_data(dst1_data_), dst1_step(dst1_step_), 
+#define DST_STORE1 dst1_data(dst1_data_), dst1_step(dst1_step_),
 #define DST_VAR1 DT * dst1_data; \
                  size_t dst1_step;
 
@@ -1073,7 +1073,7 @@ struct FilterCtx
 inline int TEGRA_FILTERINIT(cvhalFilter2D **context, uchar *kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
                             int max_width, int max_height, int src_type, int dst_type, int borderType, double delta, int anchor_x, int anchor_y, bool allowSubmatrix, bool allowInplace)
 {
-    if(!context || !kernel_data || allowSubmatrix || allowInplace || 
+    if(!context || !kernel_data || allowSubmatrix || allowInplace ||
        src_type != CV_8UC1 || dst_type != CV_8UC1 ||
        delta != 0 || anchor_x != kernel_width / 2 || anchor_y != kernel_height / 2 )
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1105,7 +1105,7 @@ inline int TEGRA_FILTERINIT(cvhalFilter2D **context, uchar *kernel_data, size_t 
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    if(!CAROTENE_NS::isConvolutionSupported(CAROTENE_NS::Size2D(max_width, max_height), ctx->ksize, ctx->border))    
+    if(!CAROTENE_NS::isConvolutionSupported(CAROTENE_NS::Size2D(max_width, max_height), ctx->ksize, ctx->border))
     {
         delete ctx;
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1212,7 +1212,7 @@ inline int TEGRA_SEPFILTERINIT(cvhalFilter2D **context, int src_type, int dst_ty
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    if(!CAROTENE_NS::isSeparableFilter3x3Supported(CAROTENE_NS::Size2D(16, 16), ctx->border, 3, 3))    
+    if(!CAROTENE_NS::isSeparableFilter3x3Supported(CAROTENE_NS::Size2D(16, 16), ctx->border, 3, 3))
     {
         delete ctx;
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
