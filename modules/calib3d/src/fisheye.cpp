@@ -1290,7 +1290,7 @@ cv::Mat cv::internal::ComputeHomography(Mat m, Mat M)
     return H;
 }
 
-cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param)
+cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param, OutputArray rotation)
 {
     CV_Assert(!imagePoints.empty() && imagePoints.type() == CV_64FC2);
 
@@ -1302,7 +1302,40 @@ cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicPar
         ptr_d[i] = (ptr[i] - param.c).mul(Vec2d(1.0 / param.f[0], 1.0 / param.f[1]));
         ptr_d[i][0] -= param.alpha * ptr_d[i][1];
     }
-    cv::fisheye::undistortPoints(distorted, undistorted, Matx33d::eye(), param.k);
+
+    Matx33d R = Matx33d::eye();
+    if(rotation.needed())
+    {
+        Mat mean_;
+        reduce(distorted, mean_, 0, REDUCE_AVG);
+        Point2d mean = mean_.at<Point2d>(0);
+
+        double theta = sqrt(mean.dot(mean));
+        if(theta>1e-3)
+        {
+            double s = sin(theta)/theta;
+            Vec3d v(s*mean.x, s*mean.y,cos(theta));
+            int x_bigger = (abs(mean.x) > abs(mean.y));
+            // unit vector which is not too parallel to v:
+            Vec3d e(1-x_bigger, x_bigger, 0);
+            Vec3d e1 = e.cross(v);
+            e1 /= norm(e1);
+            Vec3d e2 = v.cross(e1);
+            for(int i=0; i<3; ++i)
+            {
+                R(0,i) = e1(i);
+                R(1,i) = e2(i);
+                R(2,i) = v (i);
+            }
+        }
+
+
+        rotation.create(3, 3, CV_64F);
+        rotation.getMat().at<Matx33d>(0) = R;
+    }
+
+    cv::fisheye::undistortPoints(distorted, undistorted, Matx33d::eye(), param.k, R);
+
     return undistorted;
 }
 
@@ -1311,7 +1344,8 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     CV_Assert(!_objectPoints.empty() && _objectPoints.type() == CV_64FC3);
     CV_Assert(!_imagePoints.empty() && _imagePoints.type() == CV_64FC2);
 
-    Mat imagePointsNormalized = NormalizePixels(_imagePoints, param).reshape(1).t();
+    Mat R_init;
+    Mat imagePointsNormalized = NormalizePixels(_imagePoints, param, R_init).reshape(1).t();
     Mat objectPoints = _objectPoints.reshape(1).t();
     Mat objectPointsMean, covObjectPoints;
     Mat Rckk;
@@ -1336,6 +1370,7 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     Mat RRR;
     hconcat(u1, u2, RRR);
     hconcat(RRR, u3, RRR);
+    RRR = R_init.t() * RRR;
     Rodrigues(RRR, omckk);
     Rodrigues(omckk, Rckk);
     Tckk = H.col(2).clone();
