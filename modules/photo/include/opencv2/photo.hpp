@@ -321,7 +321,7 @@ enum { BM3D_HAAR = 0 };
 enum { BM3D_STEPALL = 0, BM3D_STEP1 = 1, BM3D_STEP2 = 2};
 
 /** @brief Performs image denoising using the Block-Matching and 3D-filtering algorithm
-<http://www.cs.tut.fi/~foi/3D-DFT/BM3DDEN_article.pdf> with several computational
+<http://www.cs.tut.fi/~foi/GCF-BM3D/BM3D_TIP_2007.pdf> with several computational
 optimizations. Noise expected to be a gaussian white noise.
 
 @param src Input 8-bit or 16-bit 1-channel image.
@@ -365,7 +365,7 @@ CV_EXPORTS_W void bm3dDenoising(
     int transformType = cv::BM3D_HAAR);
 
 /** @brief Performs image denoising using the Block-Matching and 3D-filtering algorithm
-<http://www.cs.tut.fi/~foi/3D-DFT/BM3DDEN_article.pdf> with several computational
+<http://www.cs.tut.fi/~foi/GCF-BM3D/BM3D_TIP_2007.pdf> with several computational
 optimizations. Noise expected to be a gaussian white noise.
 
 @param src Input 8-bit or 16-bit 1-channel image.
