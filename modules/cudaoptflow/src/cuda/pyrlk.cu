@@ -347,13 +347,19 @@ namespace pyrlk
     template <typename T>
     struct DenormalizationFactor
     {
-        static const float factor = 1.0;
+        static __device__ __forceinline__ float factor()
+        {
+            return 1.0f;
+        }
     };
 
     template <>
     struct DenormalizationFactor<uchar>
     {
-        static const float factor = 255.0;
+        static __device__ __forceinline__ float factor()
+        {
+            return 255.0f;
+        }
     };
 
     template <int cn, int PATCH_X, int PATCH_Y, bool calcErr, typename T>
@@ -544,7 +550,7 @@ namespace pyrlk
             nextPts[blockIdx.x] = nextPt;
 
             if (calcErr)
-                err[blockIdx.x] = static_cast<float>(errval) / (::min(cn, 3) * c_winSize_x * c_winSize_y) * DenormalizationFactor<T>::factor;
+                err[blockIdx.x] = static_cast<float>(errval) / (::min(cn, 3) * c_winSize_x * c_winSize_y) * DenormalizationFactor<T>::factor();
         }
     }
 
