@@ -100,12 +100,12 @@ TEST(Photo_DenoisingBm3dGrayscale, regression_L2_separate)
 
     // BM3D step 1
     cv::bm3dDenoising(original, basic, 10, 4, 16, 2500, -1, 8, cv::NORM_L2, cv::BM3D_STEP1);
-    ASSERT_EQ(cvtest::norm(basic, expected_basic, cv::NORM_L2), 0);
+    ASSERT_LT(cvtest::norm(basic, expected_basic, cv::NORM_L2), 200);
     DUMP(basic, expected_basic_path + ".res.basic.png");
 
     // BM3D step 2
     cv::bm3dDenoising(original, basic, result, 10, 4, 16, 2500, 400, 8, cv::NORM_L2, cv::BM3D_STEP2);
-    ASSERT_EQ(cvtest::norm(basic, expected_basic, cv::NORM_L2), 0);
+    ASSERT_LT(cvtest::norm(basic, expected_basic, cv::NORM_L2), 200);
     DUMP(basic, expected_basic_path + ".res.basic2.png");
 
     DUMP(result, expected_path + ".res.png");
