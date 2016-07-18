@@ -109,8 +109,8 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
 
     Matx33d R;
     Matx<double, 3, 9> dRdom;
-    Rodrigues(om, R, dRdom);
-    Affine3d aff(om, T);
+    Rodrigues(om, R, jacobian.needed() ? dRdom : noArray());
+    Affine3d aff(R, T);
 
     const Vec3f* Xf = objectPoints.getMat().ptr<Vec3f>();
     const Vec3d* Xd = objectPoints.getMat().ptr<Vec3d>();
@@ -167,7 +167,7 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
             const Vec3d& dzdom = dYdom[2];
             const Vec3d& dzdT  = dYdT[2];
 
-            // double theta_ = r<1e-8*z ? 1/z - r2/(3*z*z*z) : atan2(r, z)/r;
+            // double theta_ = r<1e-8*z ? 1/z - r2/(3*z3) : atan2(r, z)/r;
             double dtheta_dr2 = r<1e-8*z ? -1/(3*z3) : 1/(2*r2)*(z/(r2+z2) - theta_);
             double dtheta_dz  = -1/(r2+z2);
 
