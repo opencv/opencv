@@ -203,3 +203,6 @@
 
 /* Lapack */
 #cmakedefine HAVE_LAPACK
+
+/* FP16 */
+#cmakedefine HAVE_FP16
