@@ -3064,6 +3064,9 @@ void printVersionInfo(bool useStdOut)
 #if CV_NEON
     if (checkHardwareSupport(CV_CPU_NEON)) cpu_features += " neon";
 #endif
+#if CV_FP16
+    if (checkHardwareSupport(CV_CPU_FP16)) cpu_features += " fp16";
+#endif
 
     cpu_features.erase(0, 1); // erase initial space
 
