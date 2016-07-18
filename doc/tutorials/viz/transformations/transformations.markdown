@@ -13,7 +13,7 @@ In this tutorial you will learn how to
 Code
 ----
 
-You can download the code from [here ](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/viz/transformations.cpp).
+You can download the code from [here ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/viz/transformations.cpp).
 @include samples/cpp/tutorial_code/viz/transformations.cpp
 
 Explanation

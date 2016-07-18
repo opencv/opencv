@@ -19,7 +19,7 @@
      Online docs:   http://docs.opencv.org
      Q&A forum:     http://answers.opencv.org
      Issue tracker: http://code.opencv.org
-     GitHub:        https://github.com/Itseez/opencv/
+     GitHub:        https://github.com/opencv/opencv/
    ************************************************** */
 
 #include "opencv2/calib3d.hpp"

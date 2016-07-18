@@ -47,7 +47,7 @@ Code
 ----
 
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp)
 
 Explanation
 -----------

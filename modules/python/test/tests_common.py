@@ -21,7 +21,7 @@ class NewOpenCVTests(unittest.TestCase):
     repoPath = None
     extraTestDataPath = None
     # github repository url
-    repoUrl = 'https://raw.github.com/Itseez/opencv/master'
+    repoUrl = 'https://raw.github.com/opencv/opencv/master'
 
     def get_sample(self, filename, iscolor = cv2.IMREAD_COLOR):
         if not filename in self.image_cache:

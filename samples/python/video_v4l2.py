@@ -27,7 +27,7 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 color = (0, 255, 0)
 
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_AUTOFOCUS, False)  # Known bug: https://github.com/Itseez/opencv/pull/5474
+cap.set(cv2.CAP_PROP_AUTOFOCUS, False)  # Known bug: https://github.com/opencv/opencv/pull/5474
 
 cv2.namedWindow("Video")
 

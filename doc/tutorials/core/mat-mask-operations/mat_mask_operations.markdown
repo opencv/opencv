@@ -133,7 +133,7 @@ For example:
 ![](images/resultMatMaskFilter2D.png)
 
 You can download this source code from [here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
 OpenCV source code libraries sample directory at
 `samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp`.
 
