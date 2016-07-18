@@ -340,7 +340,7 @@ if(CPACK_GENERATOR STREQUAL "DEB")
 
     set(CHANGELOG_OUT_FILE "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog")
     set(CHANGELOG_OUT_FILE_GZ "${CMAKE_BINARY_DIR}/deb-packages-gen/${comp}/changelog.gz")
-    file(WRITE ${CHANGELOG_OUT_FILE} "Upstream changelog stub. See https://github.com/Itseez/opencv/wiki/ChangeLog")
+    file(WRITE ${CHANGELOG_OUT_FILE} "Upstream changelog stub. See https://github.com/opencv/opencv/wiki/ChangeLog")
 
     execute_process(COMMAND "${GZIP_TOOL}" "-ncf9" "${CHANGELOG_OUT_FILE}"
                     OUTPUT_FILE "${CHANGELOG_OUT_FILE_GZ}"

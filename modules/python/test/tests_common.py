@@ -21,7 +21,7 @@ class OpenCVTests(unittest.TestCase):
     # path to local repository folder containing 'samples' folder
     repoPath = None
     # github repository url
-    repoUrl = 'https://raw.github.com/Itseez/opencv/2.4'
+    repoUrl = 'https://raw.github.com/opencv/opencv/2.4'
     # path to local folder containing 'camera_calibration.tar.gz'
     dataPath = None
     # data url
@@ -126,7 +126,7 @@ class NewOpenCVTests(unittest.TestCase):
     repoPath = None
     extraTestDataPath = None
     # github repository url
-    repoUrl = 'https://raw.github.com/Itseez/opencv/master'
+    repoUrl = 'https://raw.github.com/opencv/opencv/master'
 
     def get_sample(self, filename, iscolor = cv2.IMREAD_COLOR):
         if not filename in self.image_cache:

@@ -41,7 +41,7 @@ class gaussian_mix_test(NewOpenCVTests):
         em = cv2.EM(cluster_n,cv2.EM_COV_MAT_GENERIC)
         em.train(points)
         means = em.getMat("means")
-        covs = em.getMatVector("covs")  # Known bug: https://github.com/Itseez/opencv/pull/4232
+        covs = em.getMatVector("covs")  # Known bug: https://github.com/opencv/opencv/pull/4232
         found_distrs = zip(means, covs)
 
         matches_count = 0

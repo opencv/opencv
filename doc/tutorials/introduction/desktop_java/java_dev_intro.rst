@@ -41,7 +41,7 @@ The most simple way to get it is downloading the appropriate package of **versio
           For other OSes it's required to build OpenCV from sources.
 
 Another option to get OpenCV sources is to clone `OpenCV git repository
-<https://github.com/Itseez/opencv/>`_.
+<https://github.com/opencv/opencv/>`_.
 In order to build OpenCV with Java bindings you need :abbr:`JDK (Java Development Kit)`
 (we recommend `Oracle/Sun JDK 6 or 7 <http://www.oracle.com/technetwork/java/javase/downloads/>`_),
 `Apache Ant <http://ant.apache.org/>`_ and `Python` v2.6 or higher to be installed.
@@ -53,7 +53,7 @@ Let's build OpenCV:
 
 .. code-block:: bash
 
-   git clone git://github.com/Itseez/opencv.git
+   git clone git://github.com/opencv/opencv.git
    cd opencv
    git checkout 2.4
    mkdir build
