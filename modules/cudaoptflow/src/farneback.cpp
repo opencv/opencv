@@ -93,7 +93,7 @@ namespace cv { namespace cuda { namespace device { namespace optflow_farneback
 
 namespace
 {
-    class FarnebackOpticalFlowImpl : public FarnebackOpticalFlow
+    class FarnebackOpticalFlowImpl : public cv::cuda::FarnebackOpticalFlow
     {
     public:
         FarnebackOpticalFlowImpl(int numLevels, double pyrScale, bool fastPyramids, int winSize,
@@ -459,7 +459,7 @@ namespace
     }
 }
 
-Ptr<FarnebackOpticalFlow> cv::cuda::FarnebackOpticalFlow::create(int numLevels, double pyrScale, bool fastPyramids, int winSize,
+Ptr<cv::cuda::FarnebackOpticalFlow> cv::cuda::FarnebackOpticalFlow::create(int numLevels, double pyrScale, bool fastPyramids, int winSize,
                                                                  int numIters, int polyN, double polySigma, int flags)
 {
     return makePtr<FarnebackOpticalFlowImpl>(numLevels, pyrScale, fastPyramids, winSize,
