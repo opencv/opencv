@@ -64,7 +64,7 @@ function(_icv_downloader)
       if(DEFINED ENV{OPENCV_ICV_URL})
         set(OPENCV_ICV_URL $ENV{OPENCV_ICV_URL})
       else()
-        set(OPENCV_ICV_URL "https://raw.githubusercontent.com/Itseez/opencv_3rdparty/${IPPICV_BINARIES_COMMIT}/ippicv")
+        set(OPENCV_ICV_URL "https://raw.githubusercontent.com/opencv/opencv_3rdparty/${IPPICV_BINARIES_COMMIT}/ippicv")
       endif()
     endif()
 

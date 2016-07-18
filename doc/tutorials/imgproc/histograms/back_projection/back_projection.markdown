@@ -70,13 +70,13 @@ Code
 -   **Downloadable code**:
 
     -#  Click
-        [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp)
+        [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp)
         for the basic version (explained in this tutorial).
     -#  For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
         skin area) you can check the [improved
-        demo](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp)
+        demo](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp)
     -#  ...or you can always check out the classical
-        [camshiftdemo](https://github.com/Itseez/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
+        [camshiftdemo](https://github.com/opencv/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
         in samples.
 
 -   **Code at glance:**

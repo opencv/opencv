@@ -74,7 +74,7 @@ Code
     -   Applies the mask obtained on the original image and display it in a window.
 
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp
 
 Explanation
