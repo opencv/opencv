@@ -53,9 +53,28 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
-    _rvec.create(3, 1, CV_64F);
-    _tvec.create(3, 1, CV_64F);
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
+
+    Mat rvec, tvec;
+    if( flags != CV_ITERATIVE )
+        useExtrinsicGuess = false;
+
+    if( useExtrinsicGuess )
+    {
+        int rtype = _rvec.type(), ttype = _tvec.type();
+        Size rsize = _rvec.size(), tsize = _tvec.size();
+        CV_Assert( (rtype == CV_32F || rtype == CV_64F) &&
+                   (ttype == CV_32F || ttype == CV_64F) );
+        CV_Assert( (rsize == Size(1, 3) || rsize == Size(3, 1)) &&
+                   (tsize == Size(1, 3) || tsize == Size(3, 1)) );
+    }
+    else
+    {
+        _rvec.create(3, 1, CV_64F);
+        _tvec.create(3, 1, CV_64F);
+    }
+    rvec = _rvec.getMat();
+    tvec = _tvec.getMat();
 
     if (flags == CV_EPNP)
     {
@@ -63,7 +82,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         epnp PnP(cameraMatrix, opoints, undistortedPoints);
 
-        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        cv::Mat R;
         PnP.compute_pose(R, tvec);
         cv::Rodrigues(R, rvec);
         return true;
@@ -75,7 +94,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         p3p P3Psolver(cameraMatrix);
 
-        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        cv::Mat R;
         bool result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
         if (result)
             cv::Rodrigues(R, rvec);
@@ -85,7 +104,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     {
         CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-        CvMat c_rvec = _rvec.getMat(), c_tvec = _tvec.getMat();
+        CvMat c_rvec = rvec, c_tvec = tvec;
         cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
                                      c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
@@ -316,10 +335,26 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     CV_Assert(ipoints.depth() == CV_32F || ipoints.depth() == CV_64F);
     CV_Assert((ipoints.rows == 1 && ipoints.channels() == 2) || ipoints.cols*ipoints.channels() == 2);
 
-    _rvec.create(3, 1, CV_64FC1);
-    _tvec.create(3, 1, CV_64FC1);
-    Mat rvec = _rvec.getMat();
-    Mat tvec = _tvec.getMat();
+    Mat rvec, tvec;
+    if( flags != CV_ITERATIVE )
+        useExtrinsicGuess = false;
+
+    if( useExtrinsicGuess )
+    {
+        int rtype = _rvec.type(), ttype = _tvec.type();
+        Size rsize = _rvec.size(), tsize = _tvec.size();
+        CV_Assert( (rtype == CV_32F || rtype == CV_64F) &&
+                   (ttype == CV_32F || ttype == CV_64F) );
+        CV_Assert( (rsize == Size(1, 3) || rsize == Size(3, 1)) &&
+                   (tsize == Size(1, 3) || tsize == Size(3, 1)) );
+    }
+    else
+    {
+        _rvec.create(3, 1, CV_64F);
+        _tvec.create(3, 1, CV_64F);
+    }
+    rvec = _rvec.getMat();
+    tvec = _tvec.getMat();
 
     Mat objectPoints = opoints.reshape(3, 1), imagePoints = ipoints.reshape(2, 1);
 
@@ -360,7 +395,8 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                 Mat colInlierObjectPoints = inlierObjectPoints(Rect(i, 0, 1, 1));
                 objectPoints.col(index).copyTo(colInlierObjectPoints);
             }
-            solvePnP(inlierObjectPoints, inlierImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec, false, flags);
+            solvePnP(inlierObjectPoints, inlierImagePoints, params.camera.intrinsics, params.camera.distortion,
+                     localRvec, localTvec, params.useExtrinsicGuess, flags);
         }
         localRvec.copyTo(rvec);
         localTvec.copyTo(tvec);
