@@ -182,7 +182,7 @@ TEST(Core_InputOutput_Base64, valid)
             cvStartWriteStruct(*fs, "manydata", CV_NODE_SEQ);
             cvStartWriteStruct(*fs, 0, CV_NODE_SEQ | CV_NODE_FLOW);
             for (int i = 0; i < 10; i++)
-                cvWriteRawData(*fs, rawdata.data(), rawdata.size(), "i");
+                cvWriteRawData(*fs, rawdata.data(), static_cast<int>(rawdata.size()), "i");
             cvEndWriteStruct(*fs);
             cvWriteString(*fs, 0, str_out.c_str(), 1);
             cvEndWriteStruct(*fs);
@@ -211,7 +211,7 @@ TEST(Core_InputOutput_Base64, valid)
             cvWriteString(*fs, 0, str_out.c_str(), 1);
             cvStartWriteStruct(*fs, 0, CV_NODE_SEQ | CV_NODE_FLOW, "binary");
             for (int i = 0; i < 10; i++)
-                cvWriteRawData(*fs, rawdata.data(), rawdata.size(), "i");
+                cvWriteRawData(*fs, rawdata.data(), static_cast<int>(rawdata.size()), "i");
             cvEndWriteStruct(*fs);
             cvEndWriteStruct(*fs);
 

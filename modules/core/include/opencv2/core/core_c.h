@@ -2236,7 +2236,7 @@ and
 @param len Number of the array elements to write
 @param dt Specification of each array element, see @ref format_spec "format specification"
 */
-CVAPI(void) cvWriteRawDataBase64( CvFileStorage* fs, const void* _data,
+CVAPI(void) cvWriteRawDataBase64( CvFileStorage* fs, const void* src,
                                  int len, const char* dt );
 
 /** @brief Returns a unique pointer for a given name.
