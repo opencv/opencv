@@ -268,7 +268,7 @@ public:
 
         ptrdiff_t mapstep = src.cols + 2;
 
-#ifdef CV_SSE2
+#if CV_SSE2
         bool haveSSE2 = checkHardwareSupport(CPU_SSE2);
 #endif
 
@@ -568,14 +568,14 @@ public:
                 continue;
             }
 
-            if (!m[-1])				CANNY_PUSH(m - 1);
-            if (!m[1])				CANNY_PUSH(m + 1);
-            if (!m[-mapstep - 1])	CANNY_PUSH(m - mapstep - 1);
-            if (!m[-mapstep])		CANNY_PUSH(m - mapstep);
-            if (!m[-mapstep + 1])	CANNY_PUSH(m - mapstep + 1);
-            if (!m[mapstep - 1])	CANNY_PUSH(m + mapstep - 1);
-            if (!m[mapstep])		CANNY_PUSH(m + mapstep);
-            if (!m[mapstep + 1])	CANNY_PUSH(m + mapstep + 1);
+            if (!m[-1])             CANNY_PUSH(m - 1);
+            if (!m[1])              CANNY_PUSH(m + 1);
+            if (!m[-mapstep - 1])   CANNY_PUSH(m - mapstep - 1);
+            if (!m[-mapstep])       CANNY_PUSH(m - mapstep);
+            if (!m[-mapstep + 1])   CANNY_PUSH(m - mapstep + 1);
+            if (!m[mapstep - 1])    CANNY_PUSH(m + mapstep - 1);
+            if (!m[mapstep])        CANNY_PUSH(m + mapstep);
+            if (!m[mapstep + 1])    CANNY_PUSH(m + mapstep + 1);
         }
 
 		AutoLock lock(*mutex);
@@ -611,7 +611,7 @@ public:
         const uchar* pmap = map + mapstep + 1 + (ptrdiff_t)(mapstep * boundaries.start);
         uchar* pdst = dst.ptr() + (ptrdiff_t)(dst.step * boundaries.start);
 
-#ifdef CV_SSE2
+#if CV_SSE2
         bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
 #endif
 
@@ -766,13 +766,13 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         m = borderPeaksParallel.front();
         borderPeaksParallel.pop();
         if (!m[-1])             CANNY_PUSH_SERIAL(m - 1);
-        if (!m[1])				CANNY_PUSH_SERIAL(m + 1);
-        if (!m[-mapstep - 1])	CANNY_PUSH_SERIAL(m - mapstep - 1);
-        if (!m[-mapstep])		CANNY_PUSH_SERIAL(m - mapstep);
-        if (!m[-mapstep + 1])	CANNY_PUSH_SERIAL(m - mapstep + 1);
-        if (!m[mapstep - 1])	CANNY_PUSH_SERIAL(m + mapstep - 1);
-        if (!m[mapstep])		CANNY_PUSH_SERIAL(m + mapstep);
-        if (!m[mapstep + 1])	CANNY_PUSH_SERIAL(m + mapstep + 1);
+        if (!m[1])              CANNY_PUSH_SERIAL(m + 1);
+        if (!m[-mapstep - 1])   CANNY_PUSH_SERIAL(m - mapstep - 1);
+        if (!m[-mapstep])       CANNY_PUSH_SERIAL(m - mapstep);
+        if (!m[-mapstep + 1])   CANNY_PUSH_SERIAL(m - mapstep + 1);
+        if (!m[mapstep - 1])    CANNY_PUSH_SERIAL(m + mapstep - 1);
+        if (!m[mapstep])        CANNY_PUSH_SERIAL(m + mapstep);
+        if (!m[mapstep + 1])    CANNY_PUSH_SERIAL(m + mapstep + 1);
     }
 
     parallel_for_(Range(0, src.rows), finalPass(src, dst, map, mapstep), src.total()/(double)(1<<16));
