@@ -49,7 +49,7 @@ Y, Cr, and Cb cover the whole value range.
 @see cv::COLOR_BGR2YCrCb, cv::COLOR_RGB2YCrCb, cv::COLOR_YCrCb2BGR, cv::COLOR_YCrCb2RGB
 
 @anchor color_convert_rgb_hsv
-RGB \f$\leftrightarrow\f$ HSV
+RGB \f$\leftrightarrow\f$ HSV, HSV FULL
 -----------------------------
 In case of 8-bit and 16-bit images, R, G, and B are converted to the floating-point format and
 scaled to fit the 0 to 1 range.
@@ -68,7 +68,7 @@ The values are then converted to the destination data type:
 @see cv::COLOR_BGR2HSV, cv::COLOR_RGB2HSV, cv::COLOR_HSV2BGR, cv::COLOR_HSV2RGB
 
 @anchor color_convert_rgb_hls
-RGB \f$\leftrightarrow\f$ HLS
+RGB \f$\leftrightarrow\f$ HLS, HLS FULL
 -----------------------------
 In case of 8-bit and 16-bit images, R, G, and B are converted to the floating-point format and
 scaled to fit the 0 to 1 range.
