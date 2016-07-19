@@ -91,6 +91,34 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 }
 
 
+Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
+{
+    Stitcher stit = createDefault(try_use_gpu);
+    Ptr<Stitcher> stitcher = makePtr<Stitcher>(stit);
+
+    switch (mode)
+    {
+    case PANORAMA: // PANORAMA is the default
+        // already setup
+    break;
+
+    case SCANS:
+        stitcher->setWaveCorrection(false);
+        stitcher->setFeaturesMatcher(makePtr<detail::AffineBestOf2NearestMatcher>(try_use_gpu));
+        stitcher->setBundleAdjuster(makePtr<detail::NoBundleAdjuster>());
+        stitcher->setWarper(makePtr<AffineWarper>());
+        stitcher->setExposureCompensator(makePtr<detail::NoExposureCompensator>());
+    break;
+
+    default:
+        CV_Error(Error::StsBadArg, "Invalid stitching mode. Must be one of Stitcher::Mode");
+    break;
+    }
+
+    return stitcher;
+}
+
+
 Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images)
 {
     CV_INSTRUMENT_REGION()

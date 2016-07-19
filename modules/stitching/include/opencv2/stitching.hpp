@@ -110,6 +110,22 @@ public:
         ERR_HOMOGRAPHY_EST_FAIL = 2,
         ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
     };
+    enum Mode
+    {
+        /** Mode for creating photo panoramas. Expects images under perspective
+        transformation and projects resulting pano to sphere.
+
+        @sa detail::BestOf2NearestMatcher SphericalWarper
+        */
+        PANORAMA = 0,
+        /** Mode for composing scans. Expects images under affine transformation does
+        not compensate exposure by default.
+
+        @sa detail::AffineBestOf2NearestMatcher AffineWarper
+        */
+        SCANS = 1,
+
+    };
 
    // Stitcher() {}
     /** @brief Creates a stitcher with the default parameters.
@@ -118,6 +134,15 @@ public:
     @return Stitcher class instance.
      */
     static Stitcher createDefault(bool try_use_gpu = false);
+    /** @brief Creates a Stitcher configured in one of the stitching modes.
+
+    @param mode Scenario for stitcher operation. This is usually determined by source of images
+    to stitch and their transformation. Default parameters will be chosen for operation in given
+    scenario.
+    @param try_use_gpu Flag indicating whether GPU should be used whenever it's possible.
+    @return Stitcher class instance.
+     */
+    static Ptr<Stitcher> create(Mode mode = PANORAMA, bool try_use_gpu = false);
 
     CV_WRAP double registrationResol() const { return registr_resol_; }
     CV_WRAP void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
