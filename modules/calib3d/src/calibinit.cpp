@@ -76,6 +76,9 @@
 #include <stdarg.h>
 #include <vector>
 
+using namespace cv;
+using namespace std;
+
 //#define ENABLE_TRIM_COL_ROW
 
 //#define DEBUG_CHESSBOARD
@@ -88,12 +91,8 @@ static int PRINTF( const char* fmt, ... )
     return vprintf(fmt, args);
 }
 #else
-static int PRINTF( const char*, ... )
-{
-    return 0;
-}
+#define PRINTF(...)
 #endif
-
 
 //=====================================================================================
 // Implementation for the enhanced calibration object detection
@@ -155,10 +154,42 @@ struct CvCBQuad
 
 //=====================================================================================
 
-//static CvMat* debug_img = 0;
+#ifdef DEBUG_CHESSBOARD
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+static void SHOW(const std::string & name, Mat & img)
+{
+    imshow(name, img);
+    while ((uchar)waitKey(0) != 'q') {}
+}
+static void SHOW_QUADS(const std::string & name, const Mat & img_, CvCBQuad * quads, int quads_count)
+{
+    Mat img = img_.clone();
+    if (img.channels() == 1)
+        cvtColor(img, img, COLOR_GRAY2BGR);
+    for (int i = 0; i < quads_count; ++i)
+    {
+        CvCBQuad & quad = quads[i];
+        for (int j = 0; j < 4; ++j)
+        {
+            line(img, quad.corners[j]->pt, quad.corners[(j + 1) % 4]->pt, Scalar(0, 240, 0), 1, LINE_AA);
+        }
+    }
+    imshow(name, img);
+    while ((uchar)waitKey(0) != 'q') {}
+}
+#else
+#define SHOW(...)
+#define SHOW_QUADS(...)
+#endif
+
+//=====================================================================================
 
 static int icvGenerateQuads( CvCBQuad **quads, CvCBCorner **corners,
-                             CvMemStorage *storage, CvMat *image, int flags, int *max_quad_buf_size);
+                             CvMemStorage *storage, const Mat &image_, int flags, int *max_quad_buf_size);
+
+static bool processQuads(CvCBQuad *quads, int quad_count, CvSize pattern_size, int max_quad_buf_size,
+                         CvMemStorage * storage, CvCBCorner *corners, CvPoint2D32f *out_corners, int *out_corner_count, int & prev_sqr_size);
 
 /*static int
 icvGenerateQuadsEx( CvCBQuad **out_quads, CvCBCorner **out_corners,
@@ -195,203 +226,198 @@ static void icvRemoveQuadFromGroup(CvCBQuad **quads, int count, CvCBQuad *q0);
 
 static int icvCheckBoardMonotony( CvPoint2D32f* corners, CvSize pattern_size );
 
-int cvCheckChessboardBinary(IplImage* src, CvSize size);
-
 /***************************************************************************************************/
 //COMPUTE INTENSITY HISTOGRAM OF INPUT IMAGE
-static int icvGetIntensityHistogram( unsigned char* pucImage, int iSizeCols, int iSizeRows, std::vector<int>& piHist );
+static int icvGetIntensityHistogram( const Mat & img, std::vector<int>& piHist )
+{
+    // sum up all pixel in row direction and divide by number of columns
+    for ( int j=0; j<img.rows; j++ )
+    {
+        const uchar * row = img.ptr(j);
+        for ( int i=0; i<img.cols; i++ )
+        {
+            piHist[row[i]]++;
+        }
+    }
+    return 0;
+}
+/***************************************************************************************************/
 //SMOOTH HISTOGRAM USING WINDOW OF SIZE 2*iWidth+1
-static int icvSmoothHistogram( const std::vector<int>& piHist, std::vector<int>& piHistSmooth, int iWidth );
+static int icvSmoothHistogram( const std::vector<int>& piHist, std::vector<int>& piHistSmooth, int iWidth )
+{
+    int iIdx;
+    for ( int i=0; i<256; i++)
+    {
+        int iSmooth = 0;
+        for ( int ii=-iWidth; ii<=iWidth; ii++)
+        {
+            iIdx = i+ii;
+            if (iIdx > 0 && iIdx < 256)
+            {
+                iSmooth += piHist[iIdx];
+            }
+        }
+        piHistSmooth[i] = iSmooth/(2*iWidth+1);
+    }
+    return 0;
+}
+/***************************************************************************************************/
 //COMPUTE FAST HISTOGRAM GRADIENT
-static int icvGradientOfHistogram( const std::vector<int>& piHist, std::vector<int>& piHistGrad );
+static int icvGradientOfHistogram( const std::vector<int>& piHist, std::vector<int>& piHistGrad )
+{
+    piHistGrad[0] = 0;
+    for ( int i=1; i<255; i++)
+    {
+        piHistGrad[i] = piHist[i-1] - piHist[i+1];
+        if ( abs(piHistGrad[i]) < 100 )
+        {
+            if ( piHistGrad[i-1] == 0)
+                piHistGrad[i] = -100;
+            else
+                piHistGrad[i] = piHistGrad[i-1];
+        }
+    }
+    return 0;
+}
+/***************************************************************************************************/
 //PERFORM SMART IMAGE THRESHOLDING BASED ON ANALYSIS OF INTENSTY HISTOGRAM
-static bool icvBinarizationHistogramBased( unsigned char* pucImg, int iCols, int iRows );
-/***************************************************************************************************/
-int icvGetIntensityHistogram( unsigned char* pucImage, int iSizeCols, int iSizeRows, std::vector<int>& piHist )
+static bool icvBinarizationHistogramBased( Mat & img )
 {
-  int iVal;
+    CV_Assert(img.channels() == 1 && img.depth() == CV_8U);
+    int iCols = img.cols;
+    int iRows = img.rows;
+    int iMaxPix = iCols*iRows;
+    int iMaxPix1 = iMaxPix/100;
+    const int iNumBins = 256;
+    std::vector<int> piHistIntensity(iNumBins, 0);
+    std::vector<int> piHistSmooth(iNumBins, 0);
+    std::vector<int> piHistGrad(iNumBins, 0);
+    std::vector<int> piAccumSum(iNumBins, 0);
+    std::vector<int> piMaxPos(20, 0);
+    int iThresh = 0;
+    int iIdx;
+    int iWidth = 1;
 
-  // sum up all pixel in row direction and divide by number of columns
-  for ( int j=0; j<iSizeRows; j++ )
-  {
-    for ( int i=0; i<iSizeCols; i++ )
+    icvGetIntensityHistogram( img, piHistIntensity );
+
+    // get accumulated sum starting from bright
+    piAccumSum[iNumBins-1] = piHistIntensity[iNumBins-1];
+    for ( int i=iNumBins-2; i>=0; i-- )
     {
-      iVal = (int)pucImage[j*iSizeCols+i];
-      piHist[iVal]++;
-    }
-  }
-  return 0;
-}
-/***************************************************************************************************/
-int icvSmoothHistogram( const std::vector<int>& piHist, std::vector<int>& piHistSmooth, int iWidth )
-{
-  int iIdx;
-  for ( int i=0; i<256; i++)
-  {
-    int iSmooth = 0;
-    for ( int ii=-iWidth; ii<=iWidth; ii++)
-    {
-      iIdx = i+ii;
-      if (iIdx > 0 && iIdx < 256)
-      {
-        iSmooth += piHist[iIdx];
-      }
-    }
-    piHistSmooth[i] = iSmooth/(2*iWidth+1);
-  }
-  return 0;
-}
-/***************************************************************************************************/
-int icvGradientOfHistogram( const std::vector<int>& piHist, std::vector<int>& piHistGrad )
-{
-  piHistGrad[0] = 0;
-  for ( int i=1; i<255; i++)
-  {
-    piHistGrad[i] = piHist[i-1] - piHist[i+1];
-    if ( abs(piHistGrad[i]) < 100 )
-    {
-      if ( piHistGrad[i-1] == 0)
-        piHistGrad[i] = -100;
-      else
-        piHistGrad[i] = piHistGrad[i-1];
-    }
-  }
-  return 0;
-}
-/***************************************************************************************************/
-bool icvBinarizationHistogramBased( unsigned char* pucImg, int iCols, int iRows )
-{
-  int iMaxPix = iCols*iRows;
-  int iMaxPix1 = iMaxPix/100;
-  const int iNumBins = 256;
-  std::vector<int> piHistIntensity(iNumBins, 0);
-  std::vector<int> piHistSmooth(iNumBins, 0);
-  std::vector<int> piHistGrad(iNumBins, 0);
-  std::vector<int> piAccumSum(iNumBins, 0);
-  std::vector<int> piMaxPos(20, 0);
-  int iThresh = 0;
-  int iIdx;
-  int iWidth = 1;
-
-  icvGetIntensityHistogram( pucImg, iCols, iRows, piHistIntensity );
-
-  // get accumulated sum starting from bright
-  piAccumSum[iNumBins-1] = piHistIntensity[iNumBins-1];
-  for ( int i=iNumBins-2; i>=0; i-- )
-  {
-    piAccumSum[i] = piHistIntensity[i] + piAccumSum[i+1];
-  }
-
-  // first smooth the distribution
-  icvSmoothHistogram( piHistIntensity, piHistSmooth, iWidth );
-
-  // compute gradient
-  icvGradientOfHistogram( piHistSmooth, piHistGrad );
-
-  // check for zeros
-  int iCntMaxima = 0;
-  for ( int i=iNumBins-2; (i>2) && (iCntMaxima<20); i--)
-  {
-    if ( (piHistGrad[i-1] < 0) && (piHistGrad[i] > 0) )
-    {
-      piMaxPos[iCntMaxima] = i;
-      iCntMaxima++;
-    }
-  }
-
-  iIdx = 0;
-  int iSumAroundMax = 0;
-  for ( int i=0; i<iCntMaxima; i++ )
-  {
-    iIdx = piMaxPos[i];
-    iSumAroundMax = piHistSmooth[iIdx-1] + piHistSmooth[iIdx] + piHistSmooth[iIdx+1];
-    if ( iSumAroundMax < iMaxPix1 && iIdx < 64 )
-    {
-      for ( int j=i; j<iCntMaxima-1; j++ )
-      {
-        piMaxPos[j] = piMaxPos[j+1];
-      }
-      iCntMaxima--;
-      i--;
-    }
-  }
-  if ( iCntMaxima == 1)
-  {
-    iThresh = piMaxPos[0]/2;
-  }
-  else if ( iCntMaxima == 2)
-  {
-    iThresh = (piMaxPos[0] + piMaxPos[1])/2;
-  }
-  else // iCntMaxima >= 3
-  {
-    // CHECKING THRESHOLD FOR WHITE
-    int iIdxAccSum = 0, iAccum = 0;
-    for (int i=iNumBins-1; i>0; i--)
-    {
-      iAccum += piHistIntensity[i];
-      // iMaxPix/18 is about 5,5%, minimum required number of pixels required for white part of chessboard
-      if ( iAccum > (iMaxPix/18) )
-      {
-        iIdxAccSum = i;
-        break;
-      }
+        piAccumSum[i] = piHistIntensity[i] + piAccumSum[i+1];
     }
 
-    int iIdxBGMax = 0;
-    int iBrightMax = piMaxPos[0];
-    // printf("iBrightMax = %d\n", iBrightMax);
-    for ( int n=0; n<iCntMaxima-1; n++)
+    // first smooth the distribution
+    icvSmoothHistogram( piHistIntensity, piHistSmooth, iWidth );
+
+    // compute gradient
+    icvGradientOfHistogram( piHistSmooth, piHistGrad );
+
+    // check for zeros
+    int iCntMaxima = 0;
+    for ( int i=iNumBins-2; (i>2) && (iCntMaxima<20); i--)
     {
-      iIdxBGMax = n+1;
-      if ( piMaxPos[n] < iIdxAccSum )
-      {
-        break;
-      }
-      iBrightMax = piMaxPos[n];
+        if ( (piHistGrad[i-1] < 0) && (piHistGrad[i] > 0) )
+        {
+            piMaxPos[iCntMaxima] = i;
+            iCntMaxima++;
+        }
     }
 
-    // CHECKING THRESHOLD FOR BLACK
-    int iMaxVal = piHistIntensity[piMaxPos[iIdxBGMax]];
-
-    //IF TOO CLOSE TO 255, jump to next maximum
-    if ( piMaxPos[iIdxBGMax] >= 250 && iIdxBGMax < iCntMaxima )
+    iIdx = 0;
+    int iSumAroundMax = 0;
+    for ( int i=0; i<iCntMaxima; i++ )
     {
-      iIdxBGMax++;
-      iMaxVal = piHistIntensity[piMaxPos[iIdxBGMax]];
+        iIdx = piMaxPos[i];
+        iSumAroundMax = piHistSmooth[iIdx-1] + piHistSmooth[iIdx] + piHistSmooth[iIdx+1];
+        if ( iSumAroundMax < iMaxPix1 && iIdx < 64 )
+        {
+            for ( int j=i; j<iCntMaxima-1; j++ )
+            {
+                piMaxPos[j] = piMaxPos[j+1];
+            }
+            iCntMaxima--;
+            i--;
+        }
+    }
+    if ( iCntMaxima == 1)
+    {
+        iThresh = piMaxPos[0]/2;
+    }
+    else if ( iCntMaxima == 2)
+    {
+        iThresh = (piMaxPos[0] + piMaxPos[1])/2;
+    }
+    else // iCntMaxima >= 3
+    {
+        // CHECKING THRESHOLD FOR WHITE
+        int iIdxAccSum = 0, iAccum = 0;
+        for (int i=iNumBins-1; i>0; i--)
+        {
+            iAccum += piHistIntensity[i];
+            // iMaxPix/18 is about 5,5%, minimum required number of pixels required for white part of chessboard
+            if ( iAccum > (iMaxPix/18) )
+            {
+                iIdxAccSum = i;
+                break;
+            }
+        }
+
+        int iIdxBGMax = 0;
+        int iBrightMax = piMaxPos[0];
+        // printf("iBrightMax = %d\n", iBrightMax);
+        for ( int n=0; n<iCntMaxima-1; n++)
+        {
+            iIdxBGMax = n+1;
+            if ( piMaxPos[n] < iIdxAccSum )
+            {
+                break;
+            }
+            iBrightMax = piMaxPos[n];
+        }
+
+        // CHECKING THRESHOLD FOR BLACK
+        int iMaxVal = piHistIntensity[piMaxPos[iIdxBGMax]];
+
+        //IF TOO CLOSE TO 255, jump to next maximum
+        if ( piMaxPos[iIdxBGMax] >= 250 && iIdxBGMax < iCntMaxima )
+        {
+            iIdxBGMax++;
+            iMaxVal = piHistIntensity[piMaxPos[iIdxBGMax]];
+        }
+
+        for ( int n=iIdxBGMax + 1; n<iCntMaxima; n++)
+        {
+            if ( piHistIntensity[piMaxPos[n]] >= iMaxVal )
+            {
+                iMaxVal = piHistIntensity[piMaxPos[n]];
+                iIdxBGMax = n;
+            }
+        }
+
+        //SETTING THRESHOLD FOR BINARIZATION
+        int iDist2 = (iBrightMax - piMaxPos[iIdxBGMax])/2;
+        iThresh = iBrightMax - iDist2;
+        PRINTF("THRESHOLD SELECTED = %d, BRIGHTMAX = %d, DARKMAX = %d\n", iThresh, iBrightMax, piMaxPos[iIdxBGMax]);
     }
 
-    for ( int n=iIdxBGMax + 1; n<iCntMaxima; n++)
+
+    if ( iThresh > 0 )
     {
-      if ( piHistIntensity[piMaxPos[n]] >= iMaxVal )
-      {
-        iMaxVal = piHistIntensity[piMaxPos[n]];
-        iIdxBGMax = n;
-      }
+        for ( int jj=0; jj<iRows; jj++)
+        {
+            uchar * row = img.ptr(jj);
+            for ( int ii=0; ii<iCols; ii++)
+            {
+                if ( row[ii] < iThresh )
+                    row[ii] = 0;
+                else
+                    row[ii] = 255;
+            }
+        }
     }
 
-    //SETTING THRESHOLD FOR BINARIZATION
-    int iDist2 = (iBrightMax - piMaxPos[iIdxBGMax])/2;
-    iThresh = iBrightMax - iDist2;
-    PRINTF("THRESHOLD SELECTED = %d, BRIGHTMAX = %d, DARKMAX = %d\n", iThresh, iBrightMax, piMaxPos[iIdxBGMax]);
-  }
-
-
-  if ( iThresh > 0 )
-  {
-    for ( int jj=0; jj<iRows; jj++)
-    {
-      for ( int ii=0; ii<iCols; ii++)
-      {
-        if ( pucImg[jj*iCols+ii]< iThresh )
-          pucImg[jj*iCols+ii] = 0;
-        else
-          pucImg[jj*iCols+ii] = 255;
-      }
-    }
-  }
-
-  return true;
+    return true;
 }
 
 CV_IMPL
@@ -400,39 +426,24 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                              int flags )
 {
     int found = 0;
-    CvCBQuad *quads = 0, **quad_group = 0;
-    CvCBCorner *corners = 0, **corner_group = 0;
-    IplImage* cImgSeg = 0;
+    CvCBQuad *quads = 0;
+    CvCBCorner *corners = 0;
+
+    cv::Ptr<CvMemStorage> storage;
 
     try
     {
     int k = 0;
     const int min_dilations = 0;
     const int max_dilations = 7;
-    cv::Ptr<CvMat> norm_img, thresh_img;
-    cv::Ptr<CvMemStorage> storage;
-
-    CvMat stub, *img = (CvMat*)arr;
-    cImgSeg = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 1 );
-    memcpy( cImgSeg->imageData, cvPtr1D( img, 0), img->rows*img->cols );
-
-    CvMat stub2, *thresh_img_new;
-    thresh_img_new = cvGetMat( cImgSeg, &stub2, 0, 0 );
-
-    int expected_corners_num = (pattern_size.width/2+1)*(pattern_size.height/2+1);
-
-    int prev_sqr_size = 0;
 
     if( out_corner_count )
         *out_corner_count = 0;
 
-    int quad_count = 0, group_idx = 0, dilations = 0;
+    Mat img = cvarrToMat((CvMat*)arr).clone();
 
-    img = cvGetMat( img, &stub );
-    //debug_img = img;
-
-    if( CV_MAT_DEPTH( img->type ) != CV_8U || CV_MAT_CN( img->type ) == 2 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit grayscale or color images are supported" );
+    if( img.depth() != CV_8U || (img.channels() != 1 && img.channels() != 3) )
+       CV_Error( CV_StsUnsupportedFormat, "Only 8-bit grayscale or color images are supported" );
 
     if( pattern_size.width <= 2 || pattern_size.height <= 2 )
         CV_Error( CV_StsOutOfRange, "Both width and height of the pattern should have bigger than 2" );
@@ -440,273 +451,124 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     if( !out_corners )
         CV_Error( CV_StsNullPtr, "Null pointer to corners" );
 
-    storage.reset(cvCreateMemStorage(0));
-    thresh_img.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
-
-    if( CV_MAT_CN(img->type) != 1 || (flags & CV_CALIB_CB_NORMALIZE_IMAGE) )
+    if (img.channels() != 1)
     {
-        // equalize the input image histogram -
-        // that should make the contrast between "black" and "white" areas big enough
-        norm_img.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
-
-        if( CV_MAT_CN(img->type) != 1 )
-        {
-            cvCvtColor( img, norm_img, CV_BGR2GRAY );
-            img = norm_img;
-        }
-
-        if( flags & CV_CALIB_CB_NORMALIZE_IMAGE )
-        {
-            cvEqualizeHist( img, norm_img );
-            img = norm_img;
-        }
+        cvtColor(img, img, COLOR_BGR2GRAY);
     }
+
+
+    Mat thresh_img_new = img.clone();
+    icvBinarizationHistogramBased( thresh_img_new ); // process image in-place
+    SHOW("New binarization", thresh_img_new);
 
     if( flags & CV_CALIB_CB_FAST_CHECK)
     {
         //perform new method for checking chessboard using a binary image.
         //image is binarised using a threshold dependent on the image histogram
-        icvBinarizationHistogramBased( (unsigned char*) cImgSeg->imageData, cImgSeg->width, cImgSeg->height );
-        int check_chessboard_result = cvCheckChessboardBinary(cImgSeg, pattern_size);
-        if(check_chessboard_result <= 0) //fall back to the old method
+        if (checkChessboardBinary(thresh_img_new, pattern_size) <= 0) //fall back to the old method
         {
-            IplImage _img;
-            cvGetImage(img, &_img);
-            check_chessboard_result = cvCheckChessboard(&_img, pattern_size);
-            if(check_chessboard_result <= 0)
+            if (checkChessboard(img, pattern_size) <= 0)
             {
-                return 0;
+                return found;
             }
         }
     }
+
+    storage.reset(cvCreateMemStorage(0));
+
+    int prev_sqr_size = 0;
 
     // Try our standard "1" dilation, but if the pattern is not found, iterate the whole procedure with higher dilations.
     // This is necessary because some squares simply do not separate properly with a single dilation.  However,
     // we want to use the minimum number of dilations possible since dilations cause the squares to become smaller,
     // making it difficult to detect smaller squares.
-    for( dilations = min_dilations; dilations <= max_dilations; dilations++ )
+    for( int dilations = min_dilations; dilations <= max_dilations; dilations++ )
     {
-      if (found)
-        break;      // already found it
+        if (found)
+            break;      // already found it
 
-      cvFree(&quads);
-      cvFree(&corners);
+        //USE BINARY IMAGE COMPUTED USING icvBinarizationHistogramBased METHOD
+        dilate( thresh_img_new, thresh_img_new, Mat(), Point(-1, -1), 1 );
 
-      int max_quad_buf_size = 0;
-
-      //USE BINARY IMAGE COMPUTED USING icvBinarizationHistogramBased METHOD
-      cvDilate( thresh_img_new, thresh_img_new, 0, 1 );
-
-      // So we can find rectangles that go to the edge, we draw a white line around the image edge.
-      // Otherwise FindContours will miss those clipped rectangle contours.
-      // The border color will be the image mean, because otherwise we risk screwing up filters like cvSmooth()...
-      cvRectangle( thresh_img_new, cvPoint(0,0), cvPoint(thresh_img_new->cols-1, thresh_img_new->rows-1), CV_RGB(255,255,255), 3, 8);
-      quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img_new, flags, &max_quad_buf_size );
-      PRINTF("Quad count: %d/%d\n", quad_count, expected_corners_num);
-
-      if( quad_count <= 0 )
-      {
-        continue;
-      }
-
-      // Find quad's neighbors
-      icvFindQuadNeighbors( quads, quad_count );
-
-      // allocate extra for adding in icvOrderFoundQuads
-      cvFree(&quad_group);
-      cvFree(&corner_group);
-      quad_group = (CvCBQuad**)cvAlloc( sizeof(quad_group[0]) * max_quad_buf_size);
-      corner_group = (CvCBCorner**)cvAlloc( sizeof(corner_group[0]) * max_quad_buf_size * 4 );
-
-      for( group_idx = 0; ; group_idx++ )
-      {
-        int count = 0;
-        count = icvFindConnectedQuads( quads, quad_count, quad_group, group_idx, storage );
-
-        int icount = count;
-        if( count == 0 )
-            break;
-
-        // order the quad corners globally
-        // maybe delete or add some
-        PRINTF("Starting ordering of inner quads\n");
-        count = icvOrderFoundConnectedQuads(count, quad_group, &quad_count, &quads, &corners, pattern_size, max_quad_buf_size, storage );
-        PRINTF("Orig count: %d  After ordering: %d\n", icount, count);
-
-        if (count == 0)
-            continue; // haven't found inner quads
-
-        // If count is more than it should be, this will remove those quads
-        // which cause maximum deviation from a nice square pattern.
-        count = icvCleanFoundConnectedQuads( count, quad_group, pattern_size );
-        PRINTF("Connected group: %d  orig count: %d cleaned: %d\n", group_idx, icount, count);
-
-        count = icvCheckQuadGroup( quad_group, count, corner_group, pattern_size );
-        PRINTF("Connected group: %d  count: %d  cleaned: %d\n", group_idx, icount, count);
-
-        int n = count > 0 ? pattern_size.width * pattern_size.height : -count;
-        n = MIN( n, pattern_size.width * pattern_size.height );
-        float sum_dist = 0;
-        int total = 0;
-
-        for(int i = 0; i < n; i++ )
-        {
-          int ni = 0;
-          float avgi = corner_group[i]->meanDist(&ni);
-          sum_dist += avgi*ni;
-          total += ni;
-        }
-        prev_sqr_size = cvRound(sum_dist/MAX(total, 1));
-
-        if( count > 0 || (out_corner_count && -count > *out_corner_count) )
-        {
-          // copy corners to output array
-          for(int i = 0; i < n; i++ )
-              out_corners[i] = corner_group[i]->pt;
-
-          if( out_corner_count )
-              *out_corner_count = n;
-
-          if( count == pattern_size.width*pattern_size.height &&
-              icvCheckBoardMonotony( out_corners, pattern_size ))
-          {
-              found = 1;
-              break;
-          }
-        }
-      }
-    }//dilations
+        // So we can find rectangles that go to the edge, we draw a white line around the image edge.
+        // Otherwise FindContours will miss those clipped rectangle contours.
+        // The border color will be the image mean, because otherwise we risk screwing up filters like cvSmooth()...
+        rectangle( thresh_img_new, Point(0,0), Point(thresh_img_new.cols-1, thresh_img_new.rows-1), Scalar(255,255,255), 3, LINE_8);
+        int max_quad_buf_size = 0;
+        cvFree(&quads);
+        cvFree(&corners);
+        int quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img_new, flags, &max_quad_buf_size );
+        PRINTF("Quad count: %d/%d\n", quad_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
+        SHOW_QUADS("New quads", thresh_img_new, quads, quad_count);
+        if (processQuads(quads, quad_count, pattern_size, max_quad_buf_size, storage, corners, out_corners, out_corner_count, prev_sqr_size))
+            found = 1;
+    }
 
     PRINTF("Chessboard detection result 0: %d\n", found);
 
     // revert to old, slower, method if detection failed
     if (!found)
     {
-      PRINTF("Fallback to old algorithm\n");
-      // empiric threshold level
-      // thresholding performed here and not inside the cycle to save processing time
-      int thresh_level;
-      if ( !(flags & CV_CALIB_CB_ADAPTIVE_THRESH) )
-      {
-          double mean = cvAvg( img ).val[0];
-          thresh_level = cvRound( mean - 10 );
-          thresh_level = MAX( thresh_level, 10 );
-          cvThreshold( img, thresh_img, thresh_level, 255, CV_THRESH_BINARY );
-      }
-      for( k = 0; k < 6; k++ )
-      {
-        int max_quad_buf_size = 0;
-        for( dilations = min_dilations; dilations <= max_dilations; dilations++ )
+        if( flags & CV_CALIB_CB_NORMALIZE_IMAGE )
         {
-          if (found)
-            break;      // already found it
+            equalizeHist( img, img );
+        }
 
-          cvFree(&quads);
-          cvFree(&corners);
+        Mat thresh_img;
+        prev_sqr_size = 0;
 
-          // convert the input grayscale image to binary (black-n-white)
-          if( flags & CV_CALIB_CB_ADAPTIVE_THRESH )
-          {
-              int block_size = cvRound(prev_sqr_size == 0 ?
-                  MIN(img->cols,img->rows)*(k%2 == 0 ? 0.2 : 0.1): prev_sqr_size*2)|1;
-
-              // convert to binary
-              cvAdaptiveThreshold( img, thresh_img, 255,
-                  CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, block_size, (k/2)*5 );
-              if (dilations > 0)
-                  cvDilate( thresh_img, thresh_img, 0, dilations-1 );
-          }
-          //if flag CV_CALIB_CB_ADAPTIVE_THRESH is not set it doesn't make sense
-          //to iterate over k
-          else
-          {
-            k = 6;
-            cvDilate( thresh_img, thresh_img, 0, 1 );
-          }
-
-          // So we can find rectangles that go to the edge, we draw a white line around the image edge.
-          // Otherwise FindContours will miss those clipped rectangle contours.
-          // The border color will be the image mean, because otherwise we risk screwing up filters like cvSmooth()...
-          cvRectangle( thresh_img, cvPoint(0,0), cvPoint(thresh_img->cols-1,
-             thresh_img->rows-1), CV_RGB(255,255,255), 3, 8);
-
-          quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img, flags, &max_quad_buf_size);
-          PRINTF("Quad count: %d/%d\n", quad_count, expected_corners_num);
-
-          if( quad_count <= 0 )
-          {
-            continue;
-          }
-
-          // Find quad's neighbors
-          icvFindQuadNeighbors( quads, quad_count );
-
-          // allocate extra for adding in icvOrderFoundQuads
-          cvFree(&quad_group);
-          cvFree(&corner_group);
-          quad_group = (CvCBQuad**)cvAlloc( sizeof(quad_group[0]) * max_quad_buf_size);
-          corner_group = (CvCBCorner**)cvAlloc( sizeof(corner_group[0]) * max_quad_buf_size * 4 );
-
-          for( group_idx = 0; ; group_idx++ )
-          {
-            int count = 0;
-            count = icvFindConnectedQuads( quads, quad_count, quad_group, group_idx, storage );
-
-            int icount = count;
-            if( count == 0 )
-              break;
-
-            // order the quad corners globally
-            // maybe delete or add some
-            PRINTF("Starting ordering of inner quads\n");
-            count = icvOrderFoundConnectedQuads(count, quad_group, &quad_count, &quads, &corners, pattern_size, max_quad_buf_size, storage );
-
-            PRINTF("Orig count: %d  After ordering: %d\n", icount, count);
-
-            if (count == 0)
-              continue;       // haven't found inner quads
-
-
-            // If count is more than it should be, this will remove those quads
-            // which cause maximum deviation from a nice square pattern.
-            count = icvCleanFoundConnectedQuads( count, quad_group, pattern_size );
-            PRINTF("Connected group: %d  orig count: %d cleaned: %d\n", group_idx, icount, count);
-
-            count = icvCheckQuadGroup( quad_group, count, corner_group, pattern_size );
-            PRINTF("Connected group: %d  count: %d  cleaned: %d\n", group_idx, icount, count);
-
-            int n = count > 0 ? pattern_size.width * pattern_size.height : -count;
-            n = MIN( n, pattern_size.width * pattern_size.height );
-            float sum_dist = 0;
-            int total = 0;
-
-            for(int i = 0; i < n; i++ )
+        PRINTF("Fallback to old algorithm\n");
+        const bool useAdaptive = flags & CV_CALIB_CB_ADAPTIVE_THRESH;
+        if (!useAdaptive)
+        {
+            // empiric threshold level
+            // thresholding performed here and not inside the cycle to save processing time
+            double mean = cv::mean(img).val[0];
+            int thresh_level = MAX(cvRound( mean - 10 ), 10);
+            threshold( img, thresh_img, thresh_level, 255, THRESH_BINARY );
+        }
+        //if flag CV_CALIB_CB_ADAPTIVE_THRESH is not set it doesn't make sense to iterate over k
+        int max_k = useAdaptive ? 6 : 1;
+        for( k = 0; k < max_k; k++ )
+        {
+            for( int dilations = min_dilations; dilations <= max_dilations; dilations++ )
             {
-              int ni = 0;
-              float avgi = corner_group[i]->meanDist(&ni);
-              sum_dist += avgi*ni;
-              total += ni;
+                if (found)
+                    break;      // already found it
+
+                // convert the input grayscale image to binary (black-n-white)
+                if (useAdaptive)
+                {
+                    int block_size = cvRound(prev_sqr_size == 0
+                                             ? MIN(img.cols, img.rows) * (k % 2 == 0 ? 0.2 : 0.1)
+                                             : prev_sqr_size * 2);
+                    block_size = block_size | 1;
+                    // convert to binary
+                    adaptiveThreshold( img, thresh_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, block_size, (k/2)*5 );
+                    if (dilations > 0)
+                        dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), dilations-1 );
+
+                }
+                else
+                {
+                    dilate( thresh_img, thresh_img, Mat(), Point(-1, -1), 1 );
+                }
+                SHOW("Old binarization", thresh_img);
+
+                // So we can find rectangles that go to the edge, we draw a white line around the image edge.
+                // Otherwise FindContours will miss those clipped rectangle contours.
+                // The border color will be the image mean, because otherwise we risk screwing up filters like cvSmooth()...
+                rectangle( thresh_img, Point(0,0), Point(thresh_img.cols-1, thresh_img.rows-1), Scalar(255,255,255), 3, LINE_8);
+                int max_quad_buf_size = 0;
+                cvFree(&quads);
+                cvFree(&corners);
+                int quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img, flags, &max_quad_buf_size);
+                PRINTF("Quad count: %d/%d\n", quad_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
+                SHOW_QUADS("Old quads", thresh_img, quads, quad_count);
+                if (processQuads(quads, quad_count, pattern_size, max_quad_buf_size, storage, corners, out_corners, out_corner_count, prev_sqr_size))
+                    found = 1;
             }
-            prev_sqr_size = cvRound(sum_dist/MAX(total, 1));
-
-            if( count > 0 || (out_corner_count && -count > *out_corner_count) )
-            {
-              // copy corners to output array
-              for(int i = 0; i < n; i++ )
-                out_corners[i] = corner_group[i]->pt;
-
-              if( out_corner_count )
-                *out_corner_count = n;
-
-              if( count == pattern_size.width*pattern_size.height && icvCheckBoardMonotony( out_corners, pattern_size ))
-              {
-                found = 1;
-                break;
-              }
-            }
-          }
-        }//dilations
-      }// for k = 0 -> 6
+        }
     }
 
     PRINTF("Chessboard detection result 1: %d\n", found);
@@ -722,8 +584,8 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         const int BORDER = 8;
         for( k = 0; k < pattern_size.width*pattern_size.height; k++ )
         {
-            if( out_corners[k].x <= BORDER || out_corners[k].x > img->cols - BORDER ||
-                out_corners[k].y <= BORDER || out_corners[k].y > img->rows - BORDER )
+            if( out_corners[k].x <= BORDER || out_corners[k].x > img.cols - BORDER ||
+                out_corners[k].y <= BORDER || out_corners[k].y > img.rows - BORDER )
                 break;
         }
 
@@ -734,51 +596,35 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
     if( found )
     {
-      if ( pattern_size.height % 2 == 0 && pattern_size.width % 2 == 0 )
-      {
-        int last_row = (pattern_size.height-1)*pattern_size.width;
-        double dy0 = out_corners[last_row].y - out_corners[0].y;
-        if( dy0 < 0 )
+        if ( pattern_size.height % 2 == 0 && pattern_size.width % 2 == 0 )
         {
-          int n = pattern_size.width*pattern_size.height;
-          for(int i = 0; i < n/2; i++ )
-          {
-            CvPoint2D32f temp;
-            CV_SWAP(out_corners[i], out_corners[n-i-1], temp);
-          }
+            int last_row = (pattern_size.height-1)*pattern_size.width;
+            double dy0 = out_corners[last_row].y - out_corners[0].y;
+            if( dy0 < 0 )
+            {
+                int n = pattern_size.width*pattern_size.height;
+                for(int i = 0; i < n/2; i++ )
+                {
+                    CvPoint2D32f temp;
+                    CV_SWAP(out_corners[i], out_corners[n-i-1], temp);
+                }
+            }
         }
-      }
-      cv::Ptr<CvMat> gray;
-      if( CV_MAT_CN(img->type) != 1 )
-      {
-        gray.reset(cvCreateMat(img->rows, img->cols, CV_8UC1));
-        cvCvtColor(img, gray, CV_BGR2GRAY);
-      }
-      else
-      {
-        gray.reset(cvCloneMat(img));
-      }
-      int wsize = 2;
-      cvFindCornerSubPix( gray, out_corners, pattern_size.width*pattern_size.height,
-                          cvSize(wsize, wsize), cvSize(-1,-1),
-                          cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 15, 0.1));
+        int wsize = 2;
+        CvMat old_img(img);
+        cvFindCornerSubPix( &old_img, out_corners, pattern_size.width*pattern_size.height,
+                            cvSize(wsize, wsize), cvSize(-1,-1),
+                            cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 15, 0.1));
     }
     }
     catch(...)
     {
         cvFree(&quads);
         cvFree(&corners);
-        cvFree(&quad_group);
-        cvFree(&corner_group);
-        cvFree(&cImgSeg);
         throw;
     }
-
     cvFree(&quads);
     cvFree(&corners);
-    cvFree(&quad_group);
-    cvFree(&corner_group);
-    cvFree(&cImgSeg);
     return found;
 }
 
@@ -1866,8 +1712,9 @@ static void icvFindQuadNeighbors( CvCBQuad *quads, int quad_count )
 
 static int
 icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
-                  CvMemStorage *storage, CvMat *image, int flags, int *max_quad_buf_size )
+                  CvMemStorage *storage, const cv::Mat & image_, int flags, int *max_quad_buf_size )
 {
+    CvMat image_old(image_), *image = &image_old;
     int quad_count = 0;
     cv::Ptr<CvMemStorage> temp_storage;
 
@@ -2011,6 +1858,88 @@ icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
     return quad_count;
 }
 
+static bool processQuads(CvCBQuad *quads, int quad_count, CvSize pattern_size, int max_quad_buf_size,
+                         CvMemStorage * storage, CvCBCorner *corners, CvPoint2D32f *out_corners, int *out_corner_count, int & prev_sqr_size)
+{
+    if( quad_count <= 0 )
+        return false;
+
+    bool found = false;
+
+    // Find quad's neighbors
+    icvFindQuadNeighbors( quads, quad_count );
+
+    // allocate extra for adding in icvOrderFoundQuads
+    CvCBQuad **quad_group = 0;
+    CvCBCorner **corner_group = 0;
+
+    quad_group = (CvCBQuad**)cvAlloc( sizeof(quad_group[0]) * max_quad_buf_size);
+    corner_group = (CvCBCorner**)cvAlloc( sizeof(corner_group[0]) * max_quad_buf_size * 4 );
+
+    for( int group_idx = 0; ; group_idx++ )
+    {
+        int count = icvFindConnectedQuads( quads, quad_count, quad_group, group_idx, storage );
+
+        if( count == 0 )
+            break;
+
+        // order the quad corners globally
+        // maybe delete or add some
+        PRINTF("Starting ordering of inner quads (%d)\n", count);
+        count = icvOrderFoundConnectedQuads(count, quad_group, &quad_count, &quads, &corners,
+                                            pattern_size, max_quad_buf_size, storage );
+        PRINTF("Finished ordering of inner quads (%d)\n", count);
+
+        if (count == 0)
+            continue;       // haven't found inner quads
+
+        // If count is more than it should be, this will remove those quads
+        // which cause maximum deviation from a nice square pattern.
+        count = icvCleanFoundConnectedQuads( count, quad_group, pattern_size );
+        PRINTF("Connected group: %d, count: %d\n", group_idx, count);
+
+        count = icvCheckQuadGroup( quad_group, count, corner_group, pattern_size );
+        PRINTF("Connected group: %d, count: %d\n", group_idx, count);
+
+        int n = count > 0 ? pattern_size.width * pattern_size.height : -count;
+        n = MIN( n, pattern_size.width * pattern_size.height );
+        float sum_dist = 0;
+        int total = 0;
+
+        for(int i = 0; i < n; i++ )
+        {
+            int ni = 0;
+            float avgi = corner_group[i]->meanDist(&ni);
+            sum_dist += avgi*ni;
+            total += ni;
+        }
+        prev_sqr_size = cvRound(sum_dist/MAX(total, 1));
+
+        if( count > 0 || (out_corner_count && -count > *out_corner_count) )
+        {
+            // copy corners to output array
+            for(int i = 0; i < n; i++ )
+                out_corners[i] = corner_group[i]->pt;
+
+            if( out_corner_count )
+                *out_corner_count = n;
+
+            if( count == pattern_size.width*pattern_size.height
+                    && icvCheckBoardMonotony( out_corners, pattern_size ))
+            {
+                found = true;
+                break;
+            }
+        }
+    }
+
+    cvFree(&quad_group);
+    cvFree(&corner_group);
+
+    return found;
+}
+
+//==================================================================================================
 
 CV_IMPL void
 cvDrawChessboardCorners( CvArr* _image, CvSize pattern_size,

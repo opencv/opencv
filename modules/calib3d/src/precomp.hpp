@@ -117,4 +117,7 @@ template<typename T> inline int compressElems( T* ptr, const uchar* mask, int ms
 
 }
 
+int checkChessboard(const cv::Mat & img, const cv::Size & size);
+int checkChessboardBinary(const cv::Mat & img, const cv::Size & size);
+
 #endif
