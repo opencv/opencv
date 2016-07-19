@@ -1976,8 +1976,19 @@ CVAPI(void) cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,
 
 The function opens file storage for reading or writing data. In the latter case, a new file is
 created or an existing file is rewritten. The type of the read or written file is determined by the
-filename extension: .xml for XML and .yml or .yaml for YAML. The function returns a pointer to the
-CvFileStorage structure. If the file cannot be opened then the function returns NULL.
+filename extension: .xml for XML and .yml or .yaml for YAML.
+
+At the same time, it also supports adding parameters like "example.xml?base64".
+@code
+    CvFileStorage* fs = cvOpenFileStorage( "example.yml?base64", 0, CV_STORAGE_WRITE );
+@endcode
+it's exactly the same as
+@code
+    CvFileStorage* fs = cvOpenFileStorage( "example.yml", 0, CV_STORAGE_WRITE_BASE64 );
+@endcode
+
+The function returns a pointer to the CvFileStorage structure.
+If the file cannot be opened then the function returns NULL.
 @param filename Name of the file associated with the storage
 @param memstorage Memory storage used for temporary data and for
 :   storing dynamic structures, such as CvSeq or CvGraph . If it is NULL, a temporary memory
@@ -1985,6 +1996,7 @@ CvFileStorage structure. If the file cannot be opened then the function returns 
 @param flags Can be one of the following:
 > -   **CV_STORAGE_READ** the storage is open for reading
 > -   **CV_STORAGE_WRITE** the storage is open for writing
+      (use **CV_STORAGE_WRITE | CV_STORAGE_WRITE_BASE64** to write rawdata in Base64)
 @param encoding
  */
 CVAPI(CvFileStorage*)  cvOpenFileStorage( const char* filename, CvMemStorage* memstorage,
@@ -2162,7 +2174,7 @@ the file with multiple streams looks like this:
 @endcode
 The YAML file will look like this:
 @code{.yaml}
-    %YAML:1.0
+    %YAML 1.0
     # stream #1 data
     ...
     ---
@@ -2186,6 +2198,46 @@ to a sequence rather than a map.
  */
 CVAPI(void) cvWriteRawData( CvFileStorage* fs, const void* src,
                                 int len, const char* dt );
+
+/** @brief Writes multiple numbers in Base64.
+
+If either CV_STORAGE_WRITE_BASE64 or cv::FileStorage::WRITE_BASE64 is used,
+this function will be the same as cvWriteRawData. If neither, the main
+difference is that it outputs a sequence in Base64 encoding rather than
+in plain text.
+
+This function can only be used to write a sequence with a type "binary".
+
+Consider the following two examples where their output is the same:
+@code
+    std::vector<int> rawdata(10, 0x00010203);
+    // without the flag CV_STORAGE_WRITE_BASE64.
+    CvFileStorage* fs = cvOpenFileStorage( "example.yml", 0, CV_STORAGE_WRITE );
+    // both CV_NODE_SEQ and "binary" are necessary.
+    cvStartWriteStruct(fs, "rawdata", CV_NODE_SEQ | CV_NODE_FLOW, "binary");
+    cvWriteRawDataBase64(fs, rawdata.data(), rawdata.size(), "i");
+    cvEndWriteStruct(fs);
+    cvReleaseFileStorage( &fs );
+@endcode
+and
+@code
+    std::vector<int> rawdata(10, 0x00010203);
+    // with the flag CV_STORAGE_WRITE_BASE64.
+    CvFileStorage* fs = cvOpenFileStorage( "example.yml", 0, CV_STORAGE_WRITE_BASE64);
+    // parameter, typename "binary" could be omitted.
+    cvStartWriteStruct(fs, "rawdata", CV_NODE_SEQ | CV_NODE_FLOW);
+    cvWriteRawData(fs, rawdata.data(), rawdata.size(), "i");
+    cvEndWriteStruct(fs);
+    cvReleaseFileStorage( &fs );
+@endcode
+
+@param fs File storage
+@param src Pointer to the written array
+@param len Number of the array elements to write
+@param dt Specification of each array element, see @ref format_spec "format specification"
+*/
+CVAPI(void) cvWriteRawDataBase64( CvFileStorage* fs, const void* _data,
+                                 int len, const char* dt );
 
 /** @brief Returns a unique pointer for a given name.
 
