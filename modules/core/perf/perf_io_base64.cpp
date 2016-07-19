@@ -48,7 +48,7 @@ PERF_TEST_P(Size_Mat_StrType, fs_text,
 
     remove(file_name.c_str());
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 }
 
 PERF_TEST_P(Size_Mat_StrType, fs_base64,
@@ -83,5 +83,5 @@ PERF_TEST_P(Size_Mat_StrType, fs_base64,
     }
 
     remove(file_name.c_str());
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 }
