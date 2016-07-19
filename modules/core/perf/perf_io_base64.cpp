@@ -13,6 +13,7 @@ typedef TestBaseWithParam<Size_MatType_Str_t> Size_Mat_StrType;
 #define MAT_TYPES      CV_8UC1, CV_32FC1
 #define FILE_EXTENSION String(".xml"), String(".yml")
 
+
 PERF_TEST_P(Size_Mat_StrType, fs_text,
             testing::Combine(testing::Values(MAT_SIZES),
                              testing::Values(MAT_TYPES),
@@ -31,7 +32,7 @@ PERF_TEST_P(Size_Mat_StrType, fs_text,
     cv::String file_name = cv::tempfile(ext.c_str());
     cv::String key       = "test_mat";
 
-    TEST_CYCLE_MULTIRUN(4)
+    TEST_CYCLE_MULTIRUN(2)
     {
         {
             FileStorage fs(file_name, cv::FileStorage::WRITE);
@@ -47,7 +48,7 @@ PERF_TEST_P(Size_Mat_StrType, fs_text,
 
     remove(file_name.c_str());
 
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK(dst);
 }
 
 PERF_TEST_P(Size_Mat_StrType, fs_base64,
@@ -67,7 +68,7 @@ PERF_TEST_P(Size_Mat_StrType, fs_base64,
     cv::String key       = "test_mat";
 
     declare.in(src, WARMUP_RNG).out(dst);
-    TEST_CYCLE_MULTIRUN(4)
+    TEST_CYCLE_MULTIRUN(2)
     {
         {
             FileStorage fs(file_name, cv::FileStorage::WRITE_BASE64);
@@ -82,5 +83,5 @@ PERF_TEST_P(Size_Mat_StrType, fs_base64,
     }
 
     remove(file_name.c_str());
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK(dst);
 }
