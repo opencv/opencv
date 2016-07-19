@@ -187,12 +187,15 @@ namespace base64
 {
     class Base64Writer;
 
-    enum Base64State
+    namespace fs
     {
-        Uncertain,
-        NotUse,
-        InUse,
-    };
+        enum State
+        {
+            Uncertain,
+            NotUse,
+            InUse,
+        };
+    }
 }
 
 #define CV_XML_OPENING_TAG 1
@@ -254,7 +257,7 @@ typedef struct CvFileStorage
 
     base64::Base64Writer * base64_writer;
     bool is_default_using_base64;
-    base64::Base64State state_of_writing_base64;  /**< used in WriteRawData only */
+    base64::fs::State state_of_writing_base64;  /**< used in WriteRawData only */
 
     bool is_write_struct_delayed;
     char* delayed_struct_key;
@@ -1104,7 +1107,7 @@ static bool is_param_exist( const std::vector<std::string> & params, const std::
     return std::find(params.begin(), params.end(), param) != params.end();
 }
 
-static void switch_to_Base64_state( CvFileStorage* fs, base64::Base64State state )
+static void switch_to_Base64_state( CvFileStorage* fs, base64::fs::State state )
 {
     const char * err_unkonwn_state = "Unexpected error, unable to determine the Base64 state.";
     const char * err_unable_to_switch = "Unexpected error, unable to switch to this state.";
@@ -1112,30 +1115,30 @@ static void switch_to_Base64_state( CvFileStorage* fs, base64::Base64State state
     /* like a finite state machine */
     switch (fs->state_of_writing_base64)
     {
-    case base64::Base64State::Uncertain:
+    case base64::fs::Uncertain:
         switch (state)
         {
-        case base64::Base64State::InUse:
+        case base64::fs::InUse:
             CV_DbgAssert( fs->base64_writer == 0 );
             fs->base64_writer = new base64::Base64Writer( fs );
             break;
-        case base64::Base64State::Uncertain:
+        case base64::fs::Uncertain:
             break;
-        case base64::Base64State::NotUse:
+        case base64::fs::NotUse:
             break;
         default:
             CV_Error( CV_StsError, err_unkonwn_state );
             break;
         }
         break;
-    case base64::Base64State::InUse:
+    case base64::fs::InUse:
         switch (state)
         {
-        case base64::Base64State::InUse:
-        case base64::Base64State::NotUse:
+        case base64::fs::InUse:
+        case base64::fs::NotUse:
             CV_Error( CV_StsError, err_unable_to_switch );
             break;
-        case base64::Base64State::Uncertain:
+        case base64::fs::Uncertain:
             delete fs->base64_writer;
             fs->base64_writer = 0;
             break;
@@ -1144,14 +1147,14 @@ static void switch_to_Base64_state( CvFileStorage* fs, base64::Base64State state
             break;
         }
         break;
-    case base64::Base64State::NotUse:
+    case base64::fs::NotUse:
         switch (state)
         {
-        case base64::Base64State::InUse:
-        case base64::Base64State::NotUse:
+        case base64::fs::InUse:
+        case base64::fs::NotUse:
             CV_Error( CV_StsError, err_unable_to_switch );
             break;
-        case base64::Base64State::Uncertain:
+        case base64::fs::Uncertain:
             break;
         default:
             CV_Error( CV_StsError, err_unkonwn_state );
@@ -1200,16 +1203,16 @@ static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_typ
         if ( change_type_to_base64 )
         {
             fs->start_write_struct( fs, struct_key, struct_flags, "binary");
-            if ( fs->state_of_writing_base64 != base64::Base64State::Uncertain )
-                switch_to_Base64_state( fs, base64::Base64State::Uncertain );
-            switch_to_Base64_state( fs, base64::Base64State::InUse );
+            if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+                switch_to_Base64_state( fs, base64::fs::Uncertain );
+            switch_to_Base64_state( fs, base64::fs::InUse );
         }
         else
         {
             fs->start_write_struct( fs, struct_key, struct_flags, type_name);
-            if ( fs->state_of_writing_base64 != base64::Base64State::Uncertain )
-                switch_to_Base64_state( fs, base64::Base64State::Uncertain );
-            switch_to_Base64_state( fs, base64::Base64State::NotUse );
+            if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+                switch_to_Base64_state( fs, base64::fs::Uncertain );
+            switch_to_Base64_state( fs, base64::fs::NotUse );
         }
 
         delete struct_key;
@@ -1841,11 +1844,11 @@ static void
 icvYMLWrite( CvFileStorage* fs, const char* key, const char* data )
 {
     check_if_write_struct_is_delayed( fs );
-    if ( fs->state_of_writing_base64 == base64::Base64State::Uncertain )
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
     {
-        switch_to_Base64_state( fs, base64::Base64State::NotUse );
+        switch_to_Base64_state( fs, base64::fs::NotUse );
     }
-    else if ( fs->state_of_writing_base64 == base64::Base64State::InUse )
+    else if ( fs->state_of_writing_base64 == base64::fs::InUse )
     {
         CV_Error( CV_StsError, "At present, output Base64 data only." );
     }
@@ -2993,11 +2996,11 @@ static void
 icvXMLWriteScalar( CvFileStorage* fs, const char* key, const char* data, int len )
 {
     check_if_write_struct_is_delayed( fs );
-    if ( fs->state_of_writing_base64 == base64::Base64State::Uncertain )
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
     {
-        switch_to_Base64_state( fs, base64::Base64State::NotUse );
+        switch_to_Base64_state( fs, base64::fs::NotUse );
     }
-    else if ( fs->state_of_writing_base64 == base64::Base64State::InUse )
+    else if ( fs->state_of_writing_base64 == base64::fs::InUse )
     {
         CV_Error( CV_StsError, "Currently only Base64 data is allowed." );
     }
@@ -3334,7 +3337,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
 
         fs->base64_writer           = 0;
         fs->is_default_using_base64 = write_base64;
-        fs->state_of_writing_base64 = base64::Base64State::Uncertain;
+        fs->state_of_writing_base64 = base64::fs::Uncertain;
 
         fs->is_write_struct_delayed = false;
         fs->delayed_struct_key      = 0;
@@ -3516,10 +3519,10 @@ cvStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags,
 {
     CV_CHECK_OUTPUT_FILE_STORAGE(fs);
     check_if_write_struct_is_delayed( fs );
-    if ( fs->state_of_writing_base64 == base64::Base64State::NotUse )
-        switch_to_Base64_state( fs, base64::Base64State::Uncertain );
+    if ( fs->state_of_writing_base64 == base64::fs::NotUse )
+        switch_to_Base64_state( fs, base64::fs::Uncertain );
 
-    if ( fs->state_of_writing_base64 == base64::Base64State::Uncertain
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain
         &&
         CV_NODE_IS_SEQ(struct_flags)
         &&
@@ -3536,26 +3539,26 @@ cvStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags,
         /* Must output Base64 data */
         if ( !CV_NODE_IS_SEQ(struct_flags) )
             CV_Error( CV_StsBadArg, "must set 'struct_flags |= CV_NODE_SEQ' if using Base64.");
-        else if ( fs->state_of_writing_base64 != base64::Base64State::Uncertain )
+        else if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
             CV_Error( CV_StsError, "function \'cvStartWriteStruct\' calls cannot be nested if using Base64.");
 
         fs->start_write_struct( fs, key, struct_flags, type_name );
 
-        if ( fs->state_of_writing_base64 != base64::Base64State::Uncertain )
-            switch_to_Base64_state( fs, base64::Base64State::Uncertain );
-        switch_to_Base64_state( fs, base64::Base64State::InUse );
+        if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+            switch_to_Base64_state( fs, base64::fs::Uncertain );
+        switch_to_Base64_state( fs, base64::fs::InUse );
     }
     else
     {
         /* Won't output Base64 data */
-        if ( fs->state_of_writing_base64 == base64::Base64State::InUse )
+        if ( fs->state_of_writing_base64 == base64::fs::InUse )
             CV_Error( CV_StsError, "At the end of the output Base64, `cvEndWriteStruct` is needed.");
 
         fs->start_write_struct( fs, key, struct_flags, type_name );
 
-        if ( fs->state_of_writing_base64 != base64::Base64State::Uncertain )
-            switch_to_Base64_state( fs, base64::Base64State::Uncertain );
-        switch_to_Base64_state( fs, base64::Base64State::NotUse );
+        if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+            switch_to_Base64_state( fs, base64::fs::Uncertain );
+        switch_to_Base64_state( fs, base64::fs::NotUse );
     }
 }
 
@@ -3566,8 +3569,8 @@ cvEndWriteStruct( CvFileStorage* fs )
     CV_CHECK_OUTPUT_FILE_STORAGE(fs);
     check_if_write_struct_is_delayed( fs );
 
-    if ( fs->state_of_writing_base64 != base64::Base64State::Uncertain )
-        switch_to_Base64_state( fs, base64::Base64State::Uncertain );
+    if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+        switch_to_Base64_state( fs, base64::fs::Uncertain );
 
     fs->end_write_struct( fs );
 }
@@ -3747,14 +3750,14 @@ CV_IMPL void
 cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
 {
     if (fs->is_default_using_base64 ||
-        fs->state_of_writing_base64 == base64::Base64State::InUse )
+        fs->state_of_writing_base64 == base64::fs::InUse )
     {
         base64::cvWriteRawDataBase64( fs, _data, len, dt );
         return;
     }
-    else if ( fs->state_of_writing_base64 == base64::Base64State::Uncertain )
+    else if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
     {
-        switch_to_Base64_state( fs, base64::Base64State::NotUse );
+        switch_to_Base64_state( fs, base64::fs::NotUse );
     }
 
     const char* data0 = (const char*)_data;
@@ -7341,11 +7344,11 @@ void base64::cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int le
 
     check_if_write_struct_is_delayed( fs, true );
 
-    if ( fs->state_of_writing_base64 == base64::Base64State::Uncertain )
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
     {
-        switch_to_Base64_state( fs, base64::Base64State::InUse );
+        switch_to_Base64_state( fs, base64::fs::InUse );
     }
-    else if ( fs->state_of_writing_base64 != base64::Base64State::InUse )
+    else if ( fs->state_of_writing_base64 != base64::fs::InUse )
     {
         CV_Error( CV_StsError, "Base64 should not be used at present." );
     }
@@ -7391,18 +7394,6 @@ void base64::cvWriteMat_Base64(::CvFileStorage * fs, const char * name, ::cv::Ma
 /****************************************************************************
  * Interface
  ***************************************************************************/
-
-void cvWriteMatBase64(::CvFileStorage* fs, const char* name, const ::CvMat* mat)
-{
-    ::cv::Mat holder = ::cv::cvarrToMat(mat);
-    ::base64::cvWriteMat_Base64(fs, name, holder);
-}
-
-void cvWriteMatNDBase64(::CvFileStorage* fs, const char* name, const ::CvMatND* mat)
-{
-    ::cv::Mat holder = ::cv::cvarrToMat(mat);
-    ::base64::cvWriteMat_Base64(fs, name, holder);
-}
 
 CV_IMPL void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt)
 {
