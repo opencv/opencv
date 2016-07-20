@@ -444,6 +444,9 @@ Stitcher::Status Stitcher::matchImages()
     int64 t = getTickCount();
 #endif
 
+    std::vector<UMat> feature_find_imgs(imgs_.size());
+    std::vector<std::vector<Rect> > feature_find_rois(rois_.size());
+
     for (size_t i = 0; i < imgs_.size(); ++i)
     {
         full_img = imgs_[i];
@@ -472,17 +475,17 @@ Stitcher::Status Stitcher::matchImages()
         }
 
         if (rois_.empty())
-            (*features_finder_)(img, features_[i]);
+            feature_find_imgs[i] = img;
         else
         {
-            std::vector<Rect> rois(rois_[i].size());
+            feature_find_rois[i].resize(rois_[i].size());
             for (size_t j = 0; j < rois_[i].size(); ++j)
             {
                 Point tl(cvRound(rois_[i][j].x * work_scale_), cvRound(rois_[i][j].y * work_scale_));
                 Point br(cvRound(rois_[i][j].br().x * work_scale_), cvRound(rois_[i][j].br().y * work_scale_));
-                rois[j] = Rect(tl, br);
+                feature_find_rois[i][j] = Rect(tl, br);
             }
-            (*features_finder_)(img, features_[i], rois);
+            feature_find_imgs[i] = img;
         }
         features_[i].img_idx = (int)i;
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
@@ -491,10 +494,18 @@ Stitcher::Status Stitcher::matchImages()
         seam_est_imgs_[i] = img.clone();
     }
 
+    // find features possibly in parallel
+    if (rois_.empty())
+        (*features_finder_)(feature_find_imgs, features_);
+    else
+        (*features_finder_)(feature_find_imgs, features_, feature_find_rois);
+
     // Do it to save memory
     features_finder_->collectGarbage();
     full_img.release();
     img.release();
+    feature_find_imgs.clear();
+    feature_find_rois.clear();
 
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
