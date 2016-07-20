@@ -184,6 +184,13 @@ public:
     void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster)
         { bundle_adjuster_ = bundle_adjuster; }
 
+    /* TODO OpenCV ABI 4.x
+    Ptr<detail::Estimator> estimator() { return estimator_; }
+    const Ptr<detail::Estimator> estimator() const { return estimator_; }
+    void setEstimator(Ptr<detail::Estimator> estimator)
+        { estimator_ = estimator; }
+    */
+
     Ptr<WarperCreator> warper() { return warper_; }
     const Ptr<WarperCreator> warper() const { return warper_; }
     void setWarper(Ptr<WarperCreator> creator) { warper_ = creator; }
@@ -258,6 +265,9 @@ private:
     Ptr<detail::FeaturesMatcher> features_matcher_;
     cv::UMat matching_mask_;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
+    /* TODO OpenCV ABI 4.x
+    Ptr<detail::Estimator> estimator_;
+    */
     bool do_wave_correct_;
     detail::WaveCorrectKind wave_correct_kind_;
     Ptr<WarperCreator> warper_;

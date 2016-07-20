@@ -533,8 +533,16 @@ Stitcher::Status Stitcher::matchImages()
 
 Stitcher::Status Stitcher::estimateCameraParams()
 {
-    detail::HomographyBasedEstimator estimator;
-    if (!estimator(features_, pairwise_matches_, cameras_))
+    /* TODO OpenCV ABI 4.x
+    get rid of this dynamic_cast hack and use estimator_
+    */
+    Ptr<detail::Estimator> estimator;
+    if (dynamic_cast<detail::AffineBestOf2NearestMatcher*>(features_matcher_.get()))
+        estimator = makePtr<detail::AffineBasedEstimator>();
+    else
+        estimator = makePtr<detail::HomographyBasedEstimator>();
+
+    if (!(*estimator)(features_, pairwise_matches_, cameras_))
         return ERR_HOMOGRAPHY_EST_FAIL;
 
     for (size_t i = 0; i < cameras_.size(); ++i)
