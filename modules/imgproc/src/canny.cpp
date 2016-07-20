@@ -281,14 +281,13 @@ class parallelCanny : public ParallelLoopBody
 {
 
 public:
-    parallelCanny(const Mat& _src, uchar* _map, int _low, int _high, int _aperture_size, bool _L2gradient, std::queue<uchar*> *borderPeaksParallel) :
-        src(_src), map(_map), low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient), _borderPeaksParallel(borderPeaksParallel)
+    parallelCanny(const Mat& _src, uchar* _map, int _low, int _high, int _aperture_size, bool _L2gradient, std::queue<uchar*> *borderPeaksParallel, Mutex *mutex) :
+        src(_src), map(_map), low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient), _borderPeaksParallel(borderPeaksParallel), _mutex(mutex)
     {
-        mutex = new Mutex();
     }
 
-    ~parallelCanny() {
-        delete mutex;
+    ~parallelCanny()
+    {
     }
 
     parallelCanny& operator=(const parallelCanny&) { return *this; }
@@ -619,7 +618,7 @@ public:
             if (!m[mapstep+1])  CANNY_PUSH(m + mapstep + 1);
         }
 
-        AutoLock lock(*mutex);
+        AutoLock lock(*_mutex);
         while (!borderPeaksLocal.empty()) {
             _borderPeaksParallel->push(borderPeaksLocal.front());
             borderPeaksLocal.pop();
@@ -632,7 +631,7 @@ private:
     int low, high, aperture_size;
     bool L2gradient;
     std::queue<uchar*> *_borderPeaksParallel;
-    Mutex *mutex;
+    Mutex *_mutex;
 };
 
 class finalPass : public ParallelLoopBody
@@ -793,7 +792,8 @@ int high = cvFloor(high_thresh);
     }
 
     std::queue<uchar*> borderPeaksParallel;
-    parallel_for_(Range(0, src.rows), parallelCanny(src, map, low, high, aperture_size, L2gradient, &borderPeaksParallel), numOfThreads);
+    Mutex mutex;
+    parallel_for_(Range(0, src.rows), parallelCanny(src, map, low, high, aperture_size, L2gradient, &borderPeaksParallel, &mutex), numOfThreads);
 
 #define CANNY_PUSH_SERIAL(d)    *(d) = uchar(2), borderPeaksParallel.push(d)
 
