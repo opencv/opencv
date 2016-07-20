@@ -1910,3 +1910,21 @@ TEST(MinMaxLoc, regression_4955_nans)
     cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(NAN));
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
+
+TEST(Subtract, scalarc1_matc3)
+{
+    int scalar = 255;
+    cv::Mat srcImage(5, 5, CV_8UC3, cv::Scalar::all(5)), destImage;
+    cv::subtract(scalar, srcImage, destImage);
+
+    ASSERT_EQ(0, cv::norm(cv::Mat(5, 5, CV_8UC3, cv::Scalar::all(250)), destImage, cv::NORM_INF));
+}
+
+TEST(Subtract, scalarc4_matc4)
+{
+    cv::Scalar sc(255, 255, 255, 255);
+    cv::Mat srcImage(5, 5, CV_8UC4, cv::Scalar::all(5)), destImage;
+    cv::subtract(sc, srcImage, destImage);
+
+    ASSERT_EQ(0, cv::norm(cv::Mat(5, 5, CV_8UC4, cv::Scalar::all(250)), destImage, cv::NORM_INF));
+}
