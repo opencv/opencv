@@ -1107,12 +1107,13 @@ struct RGB5x52Gray
         v_fc = vdupq_n_u16(0xfc);
         #elif CV_SSE2
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-        v_b2y = _mm_set1_epi16(B2Y);
-        v_g2y = _mm_set1_epi16(G2Y);
-        v_r2y = _mm_set1_epi16(R2Y);
-        v_delta = _mm_set1_epi32(1 << (yuv_shift - 1));
-        v_f8 = _mm_set1_epi16(0xf8);
-        v_fc = _mm_set1_epi16(0xfc);
+        const __m128i v_b2y = _mm_set1_epi16(B2Y);
+        const __m128i v_g2y = _mm_set1_epi16(G2Y);
+        v_bg2y = _mm_unpacklo_epi16(v_b2y, v_g2y);
+        const __m128i v_r2y = _mm_set1_epi16(R2Y);
+        const __m128i v_one = _mm_set1_epi16(1);
+        v_rd2y = _mm_unpacklo_epi16(v_r2y, v_one);
+        v_delta = _mm_slli_epi16(v_one, yuv_shift - 1);
         #endif
     }
 
@@ -1141,37 +1142,30 @@ struct RGB5x52Gray
             #elif CV_SSE2
             if (haveSIMD)
             {
-                __m128i v_zero = _mm_setzero_si128();
-
                 for ( ; i <= n - 8; i += 8)
                 {
                     __m128i v_src = _mm_loadu_si128((__m128i const *)((ushort *)src + i));
-                    __m128i v_t0 = _mm_and_si128(_mm_slli_epi16(v_src, 3), v_f8),
-                            v_t1 = _mm_and_si128(_mm_srli_epi16(v_src, 3), v_fc),
-                            v_t2 = _mm_and_si128(_mm_srli_epi16(v_src, 8), v_f8);
+                    __m128i v_b = _mm_srli_epi16(_mm_slli_epi16(v_src, 11), 8),
+                            v_g = _mm_srli_epi16(_mm_slli_epi16(_mm_srli_epi16(v_src, 5), 10),8),
+                            v_r = _mm_slli_epi16(_mm_srli_epi16(v_src, 11), 3);
 
-                    __m128i v_mullo_b = _mm_mullo_epi16(v_t0, v_b2y);
-                    __m128i v_mullo_g = _mm_mullo_epi16(v_t1, v_g2y);
-                    __m128i v_mullo_r = _mm_mullo_epi16(v_t2, v_r2y);
-                    __m128i v_mulhi_b = _mm_mulhi_epi16(v_t0, v_b2y);
-                    __m128i v_mulhi_g = _mm_mulhi_epi16(v_t1, v_g2y);
-                    __m128i v_mulhi_r = _mm_mulhi_epi16(v_t2, v_r2y);
+                    __m128i v_bg_lo = _mm_unpacklo_epi16(v_b, v_g);
+                    __m128i v_rd_lo = _mm_unpacklo_epi16(v_r, v_delta);
+                    __m128i v_bg_hi = _mm_unpackhi_epi16(v_b, v_g);
+                    __m128i v_rd_hi = _mm_unpackhi_epi16(v_r, v_delta);
+                    v_bg_lo = _mm_madd_epi16(v_bg_lo, v_bg2y);
+                    v_rd_lo = _mm_madd_epi16(v_rd_lo, v_rd2y);
+                    v_bg_hi = _mm_madd_epi16(v_bg_hi, v_bg2y);
+                    v_rd_hi = _mm_madd_epi16(v_rd_hi, v_rd2y);
 
-                    __m128i v_dst0 = _mm_add_epi32(_mm_unpacklo_epi16(v_mullo_b, v_mulhi_b),
-                                                   _mm_unpacklo_epi16(v_mullo_g, v_mulhi_g));
-                    v_dst0 = _mm_add_epi32(_mm_add_epi32(v_dst0, v_delta),
-                                           _mm_unpacklo_epi16(v_mullo_r, v_mulhi_r));
+                    __m128i v_bgr_lo = _mm_add_epi32(v_bg_lo, v_rd_lo);
+                    __m128i v_bgr_hi = _mm_add_epi32(v_bg_hi, v_rd_hi);
+                    v_bgr_lo = _mm_srli_epi32(v_bgr_lo, yuv_shift);
+                    v_bgr_hi = _mm_srli_epi32(v_bgr_hi, yuv_shift);
 
-                    __m128i v_dst1 = _mm_add_epi32(_mm_unpackhi_epi16(v_mullo_b, v_mulhi_b),
-                                                   _mm_unpackhi_epi16(v_mullo_g, v_mulhi_g));
-                    v_dst1 = _mm_add_epi32(_mm_add_epi32(v_dst1, v_delta),
-                                           _mm_unpackhi_epi16(v_mullo_r, v_mulhi_r));
-
-                    v_dst0 = _mm_srli_epi32(v_dst0, yuv_shift);
-                    v_dst1 = _mm_srli_epi32(v_dst1, yuv_shift);
-
-                    __m128i v_dst = _mm_packs_epi32(v_dst0, v_dst1);
-                    _mm_storel_epi64((__m128i *)(dst + i), _mm_packus_epi16(v_dst, v_zero));
+                    __m128i v_dst = _mm_packs_epi32(v_bgr_lo, v_bgr_hi);
+                    v_dst = _mm_packus_epi16(v_dst, v_dst);
+                    _mm_storel_epi64((__m128i *)(dst + i), v_dst);
                 }
             }
             #endif
@@ -1205,37 +1199,30 @@ struct RGB5x52Gray
             #elif CV_SSE2
             if (haveSIMD)
             {
-                __m128i v_zero = _mm_setzero_si128();
-
                 for ( ; i <= n - 8; i += 8)
                 {
                     __m128i v_src = _mm_loadu_si128((__m128i const *)((ushort *)src + i));
-                    __m128i v_t0 = _mm_and_si128(_mm_slli_epi16(v_src, 3), v_f8),
-                            v_t1 = _mm_and_si128(_mm_srli_epi16(v_src, 2), v_f8),
-                            v_t2 = _mm_and_si128(_mm_srli_epi16(v_src, 7), v_f8);
+                    __m128i v_b = _mm_srli_epi16(_mm_slli_epi16(v_src, 11), 8),
+                            v_g = _mm_srli_epi16(_mm_slli_epi16(_mm_srli_epi16(v_src, 5), 11),8),
+                            v_r = _mm_srli_epi16(_mm_slli_epi16(_mm_srli_epi16(v_src, 10), 11),8);
 
-                    __m128i v_mullo_b = _mm_mullo_epi16(v_t0, v_b2y);
-                    __m128i v_mullo_g = _mm_mullo_epi16(v_t1, v_g2y);
-                    __m128i v_mullo_r = _mm_mullo_epi16(v_t2, v_r2y);
-                    __m128i v_mulhi_b = _mm_mulhi_epi16(v_t0, v_b2y);
-                    __m128i v_mulhi_g = _mm_mulhi_epi16(v_t1, v_g2y);
-                    __m128i v_mulhi_r = _mm_mulhi_epi16(v_t2, v_r2y);
+                    __m128i v_bg_lo = _mm_unpacklo_epi16(v_b, v_g);
+                    __m128i v_rd_lo = _mm_unpacklo_epi16(v_r, v_delta);
+                    __m128i v_bg_hi = _mm_unpackhi_epi16(v_b, v_g);
+                    __m128i v_rd_hi = _mm_unpackhi_epi16(v_r, v_delta);
+                    v_bg_lo = _mm_madd_epi16(v_bg_lo, v_bg2y);
+                    v_rd_lo = _mm_madd_epi16(v_rd_lo, v_rd2y);
+                    v_bg_hi = _mm_madd_epi16(v_bg_hi, v_bg2y);
+                    v_rd_hi = _mm_madd_epi16(v_rd_hi, v_rd2y);
 
-                    __m128i v_dst0 = _mm_add_epi32(_mm_unpacklo_epi16(v_mullo_b, v_mulhi_b),
-                                                   _mm_unpacklo_epi16(v_mullo_g, v_mulhi_g));
-                    v_dst0 = _mm_add_epi32(_mm_add_epi32(v_dst0, v_delta),
-                                           _mm_unpacklo_epi16(v_mullo_r, v_mulhi_r));
+                    __m128i v_bgr_lo = _mm_add_epi32(v_bg_lo, v_rd_lo);
+                    __m128i v_bgr_hi = _mm_add_epi32(v_bg_hi, v_rd_hi);
+                    v_bgr_lo = _mm_srli_epi32(v_bgr_lo, yuv_shift);
+                    v_bgr_hi = _mm_srli_epi32(v_bgr_hi, yuv_shift);
 
-                    __m128i v_dst1 = _mm_add_epi32(_mm_unpackhi_epi16(v_mullo_b, v_mulhi_b),
-                                                   _mm_unpackhi_epi16(v_mullo_g, v_mulhi_g));
-                    v_dst1 = _mm_add_epi32(_mm_add_epi32(v_dst1, v_delta),
-                                           _mm_unpackhi_epi16(v_mullo_r, v_mulhi_r));
-
-                    v_dst0 = _mm_srli_epi32(v_dst0, yuv_shift);
-                    v_dst1 = _mm_srli_epi32(v_dst1, yuv_shift);
-
-                    __m128i v_dst = _mm_packs_epi32(v_dst0, v_dst1);
-                    _mm_storel_epi64((__m128i *)(dst + i), _mm_packus_epi16(v_dst, v_zero));
+                    __m128i v_dst = _mm_packs_epi32(v_bgr_lo, v_bgr_hi);
+                    v_dst = _mm_packus_epi16(v_dst, v_dst);
+                    _mm_storel_epi64((__m128i *)(dst + i), v_dst);
                 }
             }
             #endif
@@ -1256,9 +1243,8 @@ struct RGB5x52Gray
     uint16x8_t v_f8, v_fc;
     #elif CV_SSE2
     bool haveSIMD;
-    __m128i v_b2y, v_g2y, v_r2y;
+    __m128i v_bg2y, v_rd2y;
     __m128i v_delta;
-    __m128i v_f8, v_fc;
     #endif
 };
 
