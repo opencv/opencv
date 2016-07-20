@@ -1538,3 +1538,11 @@ TEST(Mat, push_back_vector)
 
     ASSERT_EQ(6, result.rows);
 }
+
+TEST(Mat, regression_5917_clone_empty)
+{
+    Mat cloned;
+    Mat_<Point2f> source(5, 0);
+
+    ASSERT_NO_THROW(cloned = source.clone());
+}

@@ -706,7 +706,6 @@ protected:
 
             EXPECT_EQ(_em_in.rows   , _em_out.rows);
             EXPECT_EQ(_em_in.cols   , _em_out.cols);
-            EXPECT_EQ(_em_in.dims   , _em_out.dims);
             EXPECT_EQ(_em_in.depth(), _em_out.depth());
             EXPECT_TRUE(_em_in.empty());
 
