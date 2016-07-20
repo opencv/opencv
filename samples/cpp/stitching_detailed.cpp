@@ -56,9 +56,12 @@
 #include "opencv2/stitching/detail/matchers.hpp"
 #include "opencv2/stitching/detail/motion_estimators.hpp"
 #include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/util.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
+
+#define ENABLE_LOG 1
+#define LOG(msg) std::cout << msg
+#define LOGLN(msg) std::cout << msg << std::endl
 
 using namespace std;
 using namespace cv;
