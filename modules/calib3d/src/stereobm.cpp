@@ -317,7 +317,6 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
 }
 
 
-static int DISPARITY_SHIFT;
 static const int DISPARITY_SHIFT_16S = 4;
 static const int DISPARITY_SHIFT_32S = 8;
 
@@ -574,7 +573,7 @@ template <typename mType>
 static void
 findStereoCorrespondenceBM_( const Mat& left, const Mat& right,
                            Mat& disp, Mat& cost, const StereoBMParams& state,
-                           uchar* buf, int _dy0, int _dy1 )
+                           uchar* buf, int _dy0, int _dy1, const int disp_shift )
 {
 
     const int ALIGN = 16;
@@ -590,7 +589,7 @@ findStereoCorrespondenceBM_( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
-    mType FILTERED = (mType)((mindisp - 1) << DISPARITY_SHIFT);
+    mType FILTERED = (mType)((mindisp - 1) << disp_shift);
 
 #if CV_NEON
     CV_Assert (ndisp % 8 == 0);
@@ -850,7 +849,7 @@ findStereoCorrespondenceBM_( const Mat& left, const Mat& right,
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
                 dptr[y*dstep] = (mType)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15)
-                                 >> (DISPARITY_SHIFT_32S - DISPARITY_SHIFT));
+                                 >> (DISPARITY_SHIFT_32S - disp_shift));
                 costptr[y*coststep] = sad[mind];
             }
         }
@@ -862,15 +861,12 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                             Mat& disp, Mat& cost, const StereoBMParams& state,
                             uchar* buf, int _dy0, int _dy1 )
 {
-    if(disp.type() == CV_16S){
-        DISPARITY_SHIFT = DISPARITY_SHIFT_16S;
+    if(disp.type() == CV_16S)
         findStereoCorrespondenceBM_<short>(left, right, disp, cost, state,
-                                           buf, _dy0, _dy1 );
-    } else {
-        DISPARITY_SHIFT = DISPARITY_SHIFT_32S;
+                                           buf, _dy0, _dy1, DISPARITY_SHIFT_16S );
+     else
         findStereoCorrespondenceBM_<int>(left, right, disp, cost, state,
-                                         buf, _dy0, _dy1 );
-    }
+                                         buf, _dy0, _dy1, DISPARITY_SHIFT_32S );
 }
 
 #ifdef HAVE_OPENCL
