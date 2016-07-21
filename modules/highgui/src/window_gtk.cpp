@@ -1970,9 +1970,9 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 #if defined(GTK_VERSION3_4)
         // NOTE: in current implementation doesn't possible to put into callback function delta_x and delta_y separetely
         double delta = (event->scroll.delta_x + event->scroll.delta_y);
-        int orient   = (event->scroll.delta_y!=0) ? CV_EVENT_MOUSEHWHEEL : CV_EVENT_MOUSEWHEEL;
+        cv_event   = (event->scroll.delta_y!=0) ? CV_EVENT_MOUSEHWHEEL : CV_EVENT_MOUSEWHEEL;
 #else
-        int orient = CV_EVENT_MOUSEWHEEL;
+        cv_event = CV_EVENT_MOUSEWHEEL;
 #endif //GTK_VERSION3_4
 
         state    = event->scroll.state;
@@ -1982,15 +1982,14 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         case GDK_SCROLL_SMOOTH: flags |= (((int)delta << 16));
             break;
 #endif //GTK_VERSION3_4
-        case GDK_SCROLL_LEFT:  orient = CV_EVENT_MOUSEHWHEEL;
+        case GDK_SCROLL_LEFT:  cv_event = CV_EVENT_MOUSEHWHEEL;
         case GDK_SCROLL_UP:    flags |= ((-(int)1 << 16));
             break;
-        case GDK_SCROLL_RIGHT: orient = CV_EVENT_MOUSEHWHEEL;
+        case GDK_SCROLL_RIGHT: cv_event = CV_EVENT_MOUSEHWHEEL;
         case GDK_SCROLL_DOWN:  flags |= (((int)1 << 16));
             break;
         default: ;
         };
-        cv_event = orient;
     }
 
     if( cv_event >= 0 )
