@@ -1392,7 +1392,7 @@ TEST(Core_SparseMat, footprint)
 }
 
 
-// Can't fix without duty hacks or broken user code (PR #4159)
+// Can't fix without dirty hacks or broken user code (PR #4159)
 TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
@@ -1420,7 +1420,7 @@ TEST(Core_Mat_vector, copyTo_roi_column)
 
     Mat src_full(src_base);
     Mat src(src_full.col(0));
-#if 0 // Can't fix without duty hacks or broken user code (PR #4159)
+#if 0 // Can't fix without dirty hacks or broken user code (PR #4159)
     OutputArray _dst(dst1);
     {
         _dst.create(src.rows, src.cols, src.type());
@@ -1482,4 +1482,67 @@ TEST(Mat, regression_5991)
     EXPECT_EQ(sz[1], mat.size[1]);
     EXPECT_EQ(sz[2], mat.size[2]);
     EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+}
+
+#ifdef OPENCV_TEST_BIGDATA
+TEST(Mat, regression_6696_BigData_8Gb)
+{
+    int width = 60000;
+    int height = 10000;
+
+    Mat destImageBGR = Mat(height, width, CV_8UC3, Scalar(1, 2, 3, 0));
+    Mat destImageA = Mat(height, width, CV_8UC1, Scalar::all(4));
+
+    vector<Mat> planes;
+    split(destImageBGR, planes);
+    planes.push_back(destImageA);
+    merge(planes, destImageBGR);
+
+    EXPECT_EQ(1, destImageBGR.at<Vec4b>(0)[0]);
+    EXPECT_EQ(2, destImageBGR.at<Vec4b>(0)[1]);
+    EXPECT_EQ(3, destImageBGR.at<Vec4b>(0)[2]);
+    EXPECT_EQ(4, destImageBGR.at<Vec4b>(0)[3]);
+
+    EXPECT_EQ(1, destImageBGR.at<Vec4b>(height-1, width-1)[0]);
+    EXPECT_EQ(2, destImageBGR.at<Vec4b>(height-1, width-1)[1]);
+    EXPECT_EQ(3, destImageBGR.at<Vec4b>(height-1, width-1)[2]);
+    EXPECT_EQ(4, destImageBGR.at<Vec4b>(height-1, width-1)[3]);
+}
+#endif
+
+TEST(Reduce, regression_should_fail_bug_4594)
+{
+    cv::Mat src = cv::Mat::eye(4, 4, CV_8U);
+    std::vector<int> dst;
+
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MIN, CV_32S), cv::Exception);
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MAX, CV_32S), cv::Exception);
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
+}
+
+TEST(Mat, push_back_vector)
+{
+    cv::Mat result(1, 5, CV_32FC1);
+
+    std::vector<float> vec1(result.cols + 1);
+    std::vector<int> vec2(result.cols);
+
+    EXPECT_THROW(result.push_back(vec1), cv::Exception);
+    EXPECT_THROW(result.push_back(vec2), cv::Exception);
+
+    vec1.resize(result.cols);
+
+    for (int i = 0; i < 5; ++i)
+        result.push_back(cv::Mat(vec1).reshape(1, 1));
+
+    ASSERT_EQ(6, result.rows);
+}
+
+TEST(Mat, regression_5917_clone_empty)
+{
+    Mat cloned;
+    Mat_<Point2f> source(5, 0);
+
+    ASSERT_NO_THROW(cloned = source.clone());
 }

@@ -318,7 +318,19 @@ buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Dist
 
     ::cvflann::Matrix<ElementType> dataset((ElementType*)data.data, data.rows, data.cols);
     IndexType* _index = new IndexType(dataset, get_params(params), dist);
-    _index->buildIndex();
+
+    try
+    {
+        _index->buildIndex();
+    }
+    catch (...)
+    {
+        delete _index;
+        _index = NULL;
+
+        throw;
+    }
+
     index = _index;
 }
 

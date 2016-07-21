@@ -15,7 +15,7 @@ Source code
 -----------
 
 You can [download this from here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp) or
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp) or
 find it in the
 `samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp` of the
 OpenCV source code library.
@@ -140,7 +140,7 @@ An application idea would be to determine the geometrical orientation present in
 example, let us find out if a text is horizontal or not? Looking at some text you'll notice that the
 text lines sort of form also horizontal lines and the letters form sort of vertical lines. These two
 main components of a text snippet may be also seen in case of the Fourier transform. Let us use
-[this horizontal ](https://github.com/Itseez/opencv/tree/master/samples/data/imageTextN.png) and [this rotated](https://github.com/Itseez/opencv/tree/master/samples/data/imageTextR.png)
+[this horizontal ](https://github.com/opencv/opencv/tree/master/samples/data/imageTextN.png) and [this rotated](https://github.com/opencv/opencv/tree/master/samples/data/imageTextR.png)
 image about a text.
 
 In case of the horizontal text:

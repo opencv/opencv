@@ -614,7 +614,7 @@ public:
     Also, when a connected camera is multi-head (for example, a stereo camera or a Kinect device), the
     correct way of retrieving data from it is to call VideoCapture::grab first and then call
     VideoCapture::retrieve one or more times with different values of the channel parameter. See
-    <https://github.com/Itseez/opencv/tree/master/samples/cpp/openni_capture.cpp>
+    <https://github.com/opencv/opencv/tree/master/samples/cpp/openni_capture.cpp>
      */
     CV_WRAP virtual bool grab();
 

@@ -267,8 +267,8 @@ public:
     inline operator const T* () const { return (const T*)m_pBuffer;}
 private:
     // Disable copy operations
-    IppAutoBuffer(IppAutoBuffer &) {};
-    IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;};
+    IppAutoBuffer(IppAutoBuffer &) {}
+    IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;}
 
     T* m_pBuffer;
 };

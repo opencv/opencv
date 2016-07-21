@@ -8,8 +8,6 @@
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/highgui.hpp"
 
-#include "tick_meter.hpp"
-
 using namespace std;
 using namespace cv;
 

@@ -40,7 +40,7 @@ I'm assuming you already installed [xcode](https://developer.apple.com/xcode/),
 @code{.bash}
 cd ~/
 mkdir opt
-git clone https://github.com/Itseez/opencv.git
+git clone https://github.com/opencv/opencv.git
 cd opencv
 git checkout 2.4
 mkdir build

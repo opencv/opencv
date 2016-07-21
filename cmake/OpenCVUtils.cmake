@@ -128,6 +128,16 @@ function(ocv_include_directories)
   include_directories(BEFORE ${__add_before})
 endfunction()
 
+function(ocv_append_target_property target prop)
+  get_target_property(val ${target} ${prop})
+  if(val)
+    set(val "${val} ${ARGN}")
+    set_target_properties(${target} PROPERTIES ${prop} "${val}")
+  else()
+    set_target_properties(${target} PROPERTIES ${prop} "${ARGN}")
+  endif()
+endfunction()
+
 # adds include directories in such way that directories from the OpenCV source tree go first
 function(ocv_target_include_directories target)
   _ocv_fix_target(target)

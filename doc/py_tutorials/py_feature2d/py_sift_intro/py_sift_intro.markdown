@@ -104,7 +104,7 @@ greater than 0.8, they are rejected. It eliminaters around 90% of false matches 
 
 So this is a summary of SIFT algorithm. For more details and understanding, reading the original
 paper is highly recommended. Remember one thing, this algorithm is patented. So this algorithm is
-included in [the opencv contrib repo](https://github.com/Itseez/opencv_contrib)
+included in [the opencv contrib repo](https://github.com/opencv/opencv_contrib)
 
 SIFT in OpenCV
 --------------

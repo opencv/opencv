@@ -55,7 +55,7 @@
 #endif
 
 #ifdef HAVE_QT_OPENGL
-    #ifdef Q_WS_X11
+    #if defined Q_WS_X11 /* Qt4 */ || defined Q_OS_LINUX /* Qt5 */
         #include <GL/glx.h>
     #endif
 #endif

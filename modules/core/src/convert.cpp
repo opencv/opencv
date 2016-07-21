@@ -50,6 +50,7 @@
 #define CV_NEON 0
 #endif
 
+#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/cn) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
 
 /****************************************************************************************\
 *                                       split & merge                                    *
@@ -93,8 +94,8 @@ void cv::split(const Mat& src, Mat* mv)
     SplitFunc func = getSplitFunc(depth);
     CV_Assert( func != 0 );
 
-    int esz = (int)src.elemSize(), esz1 = (int)src.elemSize1();
-    int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
+    size_t esz = src.elemSize(), esz1 = src.elemSize1();
+    size_t blocksize0 = (BLOCK_SIZE + esz-1)/esz;
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -107,14 +108,15 @@ void cv::split(const Mat& src, Mat* mv)
     }
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
+    size_t total = it.size;
+    size_t blocksize = std::min((size_t)CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn), cn <= 4 ? total : std::min(total, blocksize0));
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        for( int j = 0; j < total; j += blocksize )
+        for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
-            func( ptrs[0], &ptrs[1], bsz, cn );
+            size_t bsz = std::min(total - j, blocksize);
+            func( ptrs[0], &ptrs[1], (int)bsz, cn );
 
             if( j + blocksize < total )
             {
@@ -241,8 +243,11 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         return;
     }
 
+    MergeFunc func = getMergeFunc(depth);
+    CV_Assert( func != 0 );
+
     size_t esz = dst.elemSize(), esz1 = dst.elemSize1();
-    int blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
+    size_t blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -252,15 +257,15 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         arrays[k+1] = &mv[k];
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
-    MergeFunc func = getMergeFunc(depth);
+    size_t total = (int)it.size;
+    size_t blocksize = std::min((size_t)CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn), cn <= 4 ? total : std::min(total, blocksize0));
 
     for( i = 0; i < it.nplanes; i++, ++it )
     {
-        for( int j = 0; j < total; j += blocksize )
+        for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
-            func( (const uchar**)&ptrs[1], ptrs[0], bsz, cn );
+            size_t bsz = std::min(total - j, blocksize);
+            func( (const uchar**)&ptrs[1], ptrs[0], (int)bsz, cn );
 
             if( j + blocksize < total )
             {
@@ -4356,6 +4361,315 @@ struct Cvt_SIMD<float, int>
 
 #endif
 
+#if !( ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) ) )
+// const numbers for floating points format
+const unsigned int kShiftSignificand    = 13;
+const unsigned int kMaskFp16Significand = 0x3ff;
+const unsigned int kBiasFp16Exponent    = 15;
+const unsigned int kBiasFp32Exponent    = 127;
+
+union fp32Int32
+{
+    int i;
+    float f;
+    struct _fp32Format
+    {
+        unsigned int significand : 23;
+        unsigned int exponent    : 8;
+        unsigned int sign        : 1;
+    } fmt;
+};
+#endif
+
+union fp16Int16
+{
+    short i;
+#if ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) )
+    __fp16 h;
+#endif
+    struct _fp16Format
+    {
+        unsigned int significand : 10;
+        unsigned int exponent    : 5;
+        unsigned int sign        : 1;
+    } fmt;
+};
+
+#if ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) )
+static float convertFp16SW(short fp16)
+{
+    // Fp16 -> Fp32
+    fp16Int16 a;
+    a.i = fp16;
+    return (float)a.h;
+}
+#else
+static float convertFp16SW(short fp16)
+{
+    // Fp16 -> Fp32
+    fp16Int16 b;
+    b.i = fp16;
+    int exponent    = b.fmt.exponent - kBiasFp16Exponent;
+    int significand = b.fmt.significand;
+
+    fp32Int32 a;
+    a.i = 0;
+    a.fmt.sign = b.fmt.sign; // sign bit
+    if( exponent == 16 )
+    {
+        // Inf or NaN
+        a.i = a.i | 0x7F800000;
+        if( significand != 0 )
+        {
+            // NaN
+#if defined(__x86_64__) || defined(_M_X64)
+            // 64bit
+            a.i = a.i | 0x7FC00000;
+#endif
+            a.fmt.significand = a.fmt.significand | (significand << kShiftSignificand);
+        }
+        return a.f;
+    }
+    else if ( exponent == -15 )
+    {
+        // subnormal in Fp16
+        if( significand == 0 )
+        {
+            // zero
+            return a.f;
+        }
+        else
+        {
+            int shift = -1;
+            while( ( significand & 0x400 ) == 0 )
+            {
+                significand = significand << 1;
+                shift++;
+            }
+            significand = significand & kMaskFp16Significand;
+            exponent -= shift;
+        }
+    }
+
+    a.fmt.exponent = (exponent+kBiasFp32Exponent);
+    a.fmt.significand = significand << kShiftSignificand;
+    return a.f;
+}
+#endif
+
+#if ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) )
+static short convertFp16SW(float fp32)
+{
+    // Fp32 -> Fp16
+    fp16Int16 a;
+    a.h = (__fp16)fp32;
+    return a.i;
+}
+#else
+static short convertFp16SW(float fp32)
+{
+    // Fp32 -> Fp16
+    fp32Int32 a;
+    a.f = fp32;
+    int exponent    = a.fmt.exponent - kBiasFp32Exponent;
+    int significand = a.fmt.significand;
+
+    fp16Int16 result;
+    result.i = 0;
+    unsigned int absolute = a.i & 0x7fffffff;
+    if( 0x477ff000 <= absolute )
+    {
+        // Inf in Fp16
+        result.i = result.i | 0x7C00;
+        if( exponent == 128 && significand != 0 )
+        {
+            // NaN
+            result.i = (short)( result.i | 0x200 | ( significand >> kShiftSignificand ) );
+        }
+    }
+    else if ( absolute < 0x33000001 )
+    {
+        // too small for fp16
+        result.i = 0;
+    }
+    else if ( absolute < 0x33c00000 )
+    {
+        result.i = 1;
+    }
+    else if ( absolute < 0x34200001 )
+    {
+        result.i = 2;
+    }
+    else if ( absolute < 0x387fe000 )
+    {
+        // subnormal in Fp16
+        int fp16Significand = significand | 0x800000;
+        int bitShift = (-exponent) - 1;
+        fp16Significand = fp16Significand >> bitShift;
+
+        // special cases to round up
+        bitShift = exponent + 24;
+        int threshold = ( ( 0x400000 >> bitShift ) | ( ( ( significand & ( 0x800000 >> bitShift ) ) >> ( 126 - a.fmt.exponent ) ) ^ 1 ) );
+        if( threshold <= ( significand & ( 0xffffff >> ( exponent + 25 ) ) ) )
+        {
+            fp16Significand++;
+        }
+        result.i = (short)fp16Significand;
+    }
+    else
+    {
+        // usual situation
+        // exponent
+        result.fmt.exponent = ( exponent + kBiasFp16Exponent );
+
+        // significand;
+        short fp16Significand = (short)(significand >> kShiftSignificand);
+        result.fmt.significand = fp16Significand;
+
+        // special cases to round up
+        short lsb10bitsFp32 = (significand & 0x1fff);
+        short threshold = 0x1000 + ( ( fp16Significand & 0x1 ) ? 0 : 1 );
+        if( threshold <= lsb10bitsFp32 )
+        {
+            result.i++;
+        }
+        else if ( fp16Significand == 0x3ff && exponent == -15)
+        {
+            result.i++;
+        }
+    }
+
+    // sign bit
+    result.fmt.sign = a.fmt.sign;
+    return result.i;
+}
+#endif
+
+// template for FP16 HW conversion function
+template<typename T, typename DT> static void
+cvtScaleHalf_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size)
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        int x = 0;
+
+        for ( ; x < size.width; x++ )
+        {
+        }
+    }
+}
+
+template<> void
+cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t dstep, Size size)
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    if( checkHardwareSupport(CV_FP16) )
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+
+            if ( ( (intptr_t)dst & 0xf ) == 0 && ( (intptr_t)src & 0xf ) == 0 )
+            {
+#if CV_FP16
+                for ( ; x <= size.width - 4; x += 4)
+                {
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
+                    __m128 v_src = _mm_load_ps(src + x);
+
+                    __m128i v_dst = _mm_cvtps_ph(v_src, 0);
+
+                    _mm_storel_epi64((__m128i *)(dst + x), v_dst);
+#elif defined __GNUC__ && (defined __arm__ || defined __aarch64__)
+                    float32x4_t v_src = *(float32x4_t*)(src + x);
+
+                    float16x4_t v_dst = vcvt_f16_f32(v_src);
+
+                    *(float16x4_t*)(dst + x) = v_dst;
+#else
+#error "Configuration error"
+#endif
+                }
+#endif
+            }
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+    else
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+}
+
+template<> void
+cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t dstep, Size size)
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    if( checkHardwareSupport(CV_FP16) )
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+
+            if ( ( (intptr_t)dst & 0xf ) == 0 && ( (intptr_t)src & 0xf ) == 0 && checkHardwareSupport(CV_CPU_FP16) )
+            {
+#if CV_FP16
+                for ( ; x <= size.width - 4; x += 4)
+                {
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
+                    __m128i v_src = _mm_loadl_epi64((__m128i*)(src+x));
+
+                    __m128 v_dst = _mm_cvtph_ps(v_src);
+
+                    _mm_store_ps((dst + x), v_dst);
+#elif defined __GNUC__ && (defined __arm__ || defined __aarch64__)
+                    float16x4_t v_src = *(float16x4_t*)(src + x);
+
+                    float32x4_t v_dst = vcvt_f32_f16(v_src);
+
+                    *(float32x4_t*)(dst + x) = v_dst;
+#else
+#error "Configuration error"
+#endif
+                }
+#endif
+            }
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+    else
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+}
+
 template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
@@ -4443,6 +4757,13 @@ static void cvtScaleAbs##suffix( const stype* src, size_t sstep, const uchar*, s
     tfunc(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
+#define DEF_CVT_SCALE_FP16_FUNC(suffix, stype, dtype) \
+static void cvtScaleHalf##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+dtype* dst, size_t dstep, Size size, double*) \
+{ \
+    cvtScaleHalf##_<stype,dtype>(src, sstep, dst, dstep, size); \
+}
+
 #define DEF_CVT_SCALE_FUNC(suffix, stype, dtype, wtype) \
 static void cvtScale##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 dtype* dst, size_t dstep, Size size, double* scale) \
@@ -4498,6 +4819,9 @@ DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float)
+
+DEF_CVT_SCALE_FP16_FUNC(32f16f, float, short)
+DEF_CVT_SCALE_FP16_FUNC(16f32f, short, float)
 
 DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float)
 DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float)
@@ -4618,6 +4942,17 @@ static BinaryFunc getCvtScaleAbsFunc(int depth)
     };
 
     return cvtScaleAbsTab[depth];
+}
+
+BinaryFunc getConvertFuncFp16(int ddepth)
+{
+    static BinaryFunc cvtTab[] =
+    {
+        0, 0, 0,
+        (BinaryFunc)(cvtScaleHalf32f16f), 0, (BinaryFunc)(cvtScaleHalf16f32f),
+        0, 0,
+    };
+    return cvtTab[CV_MAT_DEPTH(ddepth)];
 }
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth)
@@ -4801,6 +5136,47 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             func( ptrs[0], 0, 0, 0, ptrs[1], 0, sz, scale );
+    }
+}
+
+void cv::convertFp16( InputArray _src, OutputArray _dst)
+{
+    Mat src = _src.getMat();
+    int ddepth = 0;
+
+    switch( src.depth() )
+    {
+    case CV_32F:
+        ddepth = CV_16S;
+        break;
+    case CV_16S:
+        ddepth = CV_32F;
+        break;
+    default:
+        return;
+    }
+
+    int type = CV_MAKETYPE(ddepth, src.channels());
+    _dst.create( src.dims, src.size, type );
+    Mat dst = _dst.getMat();
+    BinaryFunc func = getConvertFuncFp16(ddepth);
+    int cn = src.channels();
+    CV_Assert( func != 0 );
+
+    if( src.dims <= 2 )
+    {
+        Size sz = getContinuousSize(src, dst, cn);
+        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, 0);
+    }
+    else
+    {
+        const Mat* arrays[] = {&src, &dst, 0};
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs);
+        Size sz((int)(it.size*cn), 1);
+
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func(ptrs[0], 1, 0, 0, ptrs[1], 1, sz, 0);
     }
 }
 
