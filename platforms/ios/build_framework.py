@@ -79,7 +79,6 @@ class Builder:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             self.buildOne(t[0], t[1], mainBD, cmake_flags)
-            self.mergeLibs(mainBD)
         self.makeFramework(outdir, dirs)
 
     def build(self, outdir):
@@ -109,12 +108,13 @@ class Builder:
     def getBuildCommand(self, arch, target):
         buildcmd = [
             "xcodebuild",
-            "IPHONEOS_DEPLOYMENT_TARGET=6.0",
+            "IPHONEOS_DEPLOYMENT_TARGET=8.4",
             "ARCHS=%s" % arch,
             "-sdk", target.lower(),
             "-configuration", "Release",
             "-parallelizeTargets",
-            "-jobs", "4"
+            "-jobs", "4",
+            "CODE_SIGN_IDENTITY=iPhone Developer: Evan Coleman"
         ]
         return buildcmd
 
@@ -139,52 +139,17 @@ class Builder:
         execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir)
         execute(["cmake", "-P", "cmake_install.cmake"], cwd = builddir)
 
-    def mergeLibs(self, builddir):
-        res = os.path.join(builddir, "lib", "Release", "libopencv_merged.a")
-        libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
-        libs3 = glob.glob(os.path.join(builddir, "install", "share", "OpenCV", "3rdparty", "lib", "*.a"))
-        print("Merging libraries:\n\t%s" % "\n\t".join(libs + libs3), file=sys.stderr)
-        execute(["libtool", "-static", "-o", res] + libs + libs3)
-
     def makeFramework(self, outdir, builddirs):
-        name = "opencv2"
-        libname = "libopencv_merged.a"
+        libnames = ["libopencv_world.dylib", "liblibjpeg.dylib", "liblibpng.dylib", "libzlib.dylib"]
 
-        # set the current dir to the dst root
-        framework_dir = os.path.join(outdir, "%s.framework" % name)
-        if os.path.isdir(framework_dir):
-            shutil.rmtree(framework_dir)
-        os.makedirs(framework_dir)
-
-        dstdir = os.path.join(framework_dir, "Versions", "A")
-
-        # copy headers from one of build folders
-        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(dstdir, "Headers"))
-
-        # make universal static lib
-        libs = [os.path.join(d, "lib", "Release", libname) for d in builddirs]
-        lipocmd = ["lipo", "-create"]
-        lipocmd.extend(libs)
-        lipocmd.extend(["-o", os.path.join(dstdir, name)])
-        print("Creating universal library from:\n\t%s" % "\n\t".join(libs), file=sys.stderr)
-        execute(lipocmd)
-
-        # copy Info.plist
-        resdir = os.path.join(dstdir, "Resources")
-        os.makedirs(resdir)
-        shutil.copyfile(self.getInfoPlist(builddirs), os.path.join(resdir, "Info.plist"))
-
-        # make symbolic links
-        links = [
-            (["A"], ["Versions", "Current"]),
-            (["Versions", "Current", "Headers"], ["Headers"]),
-            (["Versions", "Current", "Resources"], ["Resources"]),
-            (["Versions", "Current", name], [name])
-        ]
-        for l in links:
-            s = os.path.join(*l[0])
-            d = os.path.join(framework_dir, *l[1])
-            os.symlink(s, d)
+        # make universal dynamic lib
+        for libname in libnames:
+            libs = [os.path.join(d, "lib", "Release", libname) for d in builddirs]
+            lipocmd = ["lipo", "-create"]
+            lipocmd.extend(libs)
+            lipocmd.extend(["-o", os.path.join(outdir, libname)])
+            print("Creating universal library from:\n\t%s" % "\n\t".join(libs), file=sys.stderr)
+            execute(lipocmd)
 
 if __name__ == "__main__":
     folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
