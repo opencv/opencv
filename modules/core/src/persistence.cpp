@@ -1852,7 +1852,7 @@ icvYMLWriteString( CvFileStorage* fs, const char* key,
 
     if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
     {
-        int need_quote = quote || len == 0;
+        int need_quote = quote || len == 0 || str[0] == ' ';
         data = buf;
         *data++ = '\"';
         for( i = 0; i < len; i++ )
@@ -3909,8 +3909,6 @@ icvReadMat( CvFileStorage* fs, CvFileNode* node )
         mat = cvCreateMat( rows, cols, elem_type );
         cvReadRawData( fs, data, mat->data.ptr, dt );
     }
-    else if( rows == 0 && cols == 0 )
-        mat = cvCreateMatHeader( 0, 1, elem_type );
     else
         mat = cvCreateMatHeader( rows, cols, elem_type );
 

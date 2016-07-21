@@ -2280,7 +2280,9 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
 #endif
                 depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
 #if !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
-                depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
+                // See bug #4955: the function fails with SEGFAULT when the source matrix contains NANs
+                // IPPICV version is 9.0.1.
+                // depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
 #endif
                 0;
             CV_SUPPRESS_DEPRECATED_END

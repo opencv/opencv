@@ -643,7 +643,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         if (!muldiv)
         {
             Mat sc = psrc2->getMat();
-            depth2 = actualScalarDepth(sc.ptr<double>(), cn);
+            depth2 = actualScalarDepth(sc.ptr<double>(), sz2 == Size(1, 1) ? cn2 : cn);
             if( depth2 == CV_64F && (depth1 < CV_32S || depth1 == CV_32F) )
                 depth2 = CV_32F;
         }

@@ -54,13 +54,13 @@ namespace ocl {
 ////////////////////////////////////////////////////////
 // Canny
 
-IMPLEMENT_PARAM_CLASS(AppertureSize, int)
+IMPLEMENT_PARAM_CLASS(ApertureSize, int)
 IMPLEMENT_PARAM_CLASS(L2gradient, bool)
 IMPLEMENT_PARAM_CLASS(UseRoi, bool)
 
-PARAM_TEST_CASE(Canny, Channels, AppertureSize, L2gradient, UseRoi)
+PARAM_TEST_CASE(Canny, Channels, ApertureSize, L2gradient, UseRoi)
 {
-    int cn, apperture_size;
+    int cn, aperture_size;
     bool useL2gradient, use_roi;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -69,7 +69,7 @@ PARAM_TEST_CASE(Canny, Channels, AppertureSize, L2gradient, UseRoi)
     virtual void SetUp()
     {
         cn = GET_PARAM(0);
-        apperture_size = GET_PARAM(1);
+        aperture_size = GET_PARAM(1);
         useL2gradient = GET_PARAM(2);
         use_roi = GET_PARAM(3);
     }
@@ -105,8 +105,31 @@ OCL_TEST_P(Canny, Accuracy)
         eps = 12e-3;
 #endif
 
-    OCL_OFF(cv::Canny(src_roi, dst_roi, low_thresh, high_thresh, apperture_size, useL2gradient));
-    OCL_ON(cv::Canny(usrc_roi, udst_roi, low_thresh, high_thresh, apperture_size, useL2gradient));
+    OCL_OFF(cv::Canny(src_roi, dst_roi, low_thresh, high_thresh, aperture_size, useL2gradient));
+    OCL_ON(cv::Canny(usrc_roi, udst_roi, low_thresh, high_thresh, aperture_size, useL2gradient));
+
+    EXPECT_MAT_SIMILAR(dst_roi, udst_roi, eps);
+    EXPECT_MAT_SIMILAR(dst, udst, eps);
+}
+
+OCL_TEST_P(Canny, AccuracyCustomGradient)
+{
+    generateTestData();
+
+    const double low_thresh = 50.0, high_thresh = 100.0;
+    double eps = 1e-2;
+#ifdef ANDROID
+    if (cv::ocl::Device::getDefault().isNVidia())
+        eps = 12e-3;
+#endif
+
+    OCL_OFF(cv::Canny(src_roi, dst_roi, low_thresh, high_thresh, aperture_size, useL2gradient));
+    OCL_ON(
+        UMat dx, dy;
+        Sobel(usrc_roi, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
+        Sobel(usrc_roi, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+        cv::Canny(dx, dy, udst_roi, low_thresh, high_thresh, useL2gradient);
+    );
 
     EXPECT_MAT_SIMILAR(dst_roi, udst_roi, eps);
     EXPECT_MAT_SIMILAR(dst, udst, eps);
@@ -114,7 +137,7 @@ OCL_TEST_P(Canny, Accuracy)
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
                                 testing::Values(1, 3),
-                                testing::Values(AppertureSize(3), AppertureSize(5)),
+                                testing::Values(ApertureSize(3), ApertureSize(5)),
                                 testing::Values(L2gradient(false), L2gradient(true)),
                                 testing::Values(UseRoi(false), UseRoi(true))));
 

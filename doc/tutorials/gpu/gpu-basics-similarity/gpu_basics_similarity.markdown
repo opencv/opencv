@@ -24,7 +24,7 @@ The source code
 
 You may also find the source code and these video file in the
 `samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity` folder of the OpenCV
-source library or download it from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp).
+source library or download it from [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp).
 The full source code is quite long (due to the controlling of the application via the command line
 arguments and performance measurement). Therefore, to avoid cluttering up these sections with those
 you'll find here only the functions itself.

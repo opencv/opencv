@@ -1,11 +1,15 @@
 # This file is included from a subdirectory
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
+# try to use dynamic symbols linking with libpython.so
+set(OPENCV_FORCE_PYTHON_LIBS OFF CACHE BOOL "")
+string(REPLACE "-Wl,--no-undefined" "" CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
+
 ocv_add_module(${MODULE_NAME} BINDINGS)
 
 ocv_module_include_directories(
-    "${PYTHON_INCLUDE_PATH}"
-    ${PYTHON_NUMPY_INCLUDE_DIRS}
+    "${${PYTHON}_INCLUDE_PATH}"
+    ${${PYTHON}_NUMPY_INCLUDE_DIRS}
     "${PYTHON_SOURCE_DIR}/src2"
     )
 
@@ -25,11 +29,12 @@ foreach(m ${OPENCV_PYTHON_MODULES})
 endforeach(m)
 
 # header blacklist
-ocv_list_filterout(opencv_hdrs ".h$")
-ocv_list_filterout(opencv_hdrs "cuda")
-ocv_list_filterout(opencv_hdrs "cudev")
-ocv_list_filterout(opencv_hdrs "/hal/")
-ocv_list_filterout(opencv_hdrs "detection_based_tracker.hpp") # Conditional compilation
+ocv_list_filterout(opencv_hdrs "modules/.*.h$")
+ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda")
+ocv_list_filterout(opencv_hdrs "modules/cuda.*")
+ocv_list_filterout(opencv_hdrs "modules/cudev")
+ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
+ocv_list_filterout(opencv_hdrs "modules/.*/detection_based_tracker.hpp") # Conditional compilation
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -41,7 +46,7 @@ set(cv2_generated_hdrs
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt"
+   COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${PYTHON}"
    DEPENDS ${PYTHON_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${PYTHON_SOURCE_DIR}/src2/hdr_parser.py
    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
@@ -49,21 +54,28 @@ add_custom_command(
 
 ocv_add_library(${the_module} MODULE ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
 
-if(PYTHON_DEBUG_LIBRARIES AND NOT PYTHON_LIBRARIES MATCHES "optimized.*debug")
-  ocv_target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
-else()
-  if(APPLE)
-    set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+if(APPLE)
+  set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+elseif(WIN32 OR OPENCV_FORCE_PYTHON_LIBS)
+  if(${PYTHON}_DEBUG_LIBRARIES AND NOT ${PYTHON}_LIBRARIES MATCHES "optimized.*debug")
+    ocv_target_link_libraries(${the_module} debug ${${PYTHON}_DEBUG_LIBRARIES} optimized ${${PYTHON}_LIBRARIES})
   else()
-    ocv_target_link_libraries(${the_module} ${PYTHON_LIBRARIES})
+    ocv_target_link_libraries(${the_module} ${${PYTHON}_LIBRARIES})
   endif()
 endif()
 ocv_target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SO'))"
-                RESULT_VARIABLE PYTHON_CVPY_PROCESS
-                OUTPUT_VARIABLE CVPY_SUFFIX
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(DEFINED ${PYTHON}_CVPY_SUFFIX)
+  set(CVPY_SUFFIX "${${PYTHON}_CVPY_SUFFIX}")
+else()
+  execute_process(COMMAND ${${PYTHON}_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SO'))"
+                  RESULT_VARIABLE PYTHON_CVPY_PROCESS
+                  OUTPUT_VARIABLE CVPY_SUFFIX
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT PYTHON_CVPY_PROCESS EQUAL 0)
+    set(CVPY_SUFFIX ".so")
+  endif()
+endif()
 
 set_target_properties(${the_module} PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY  "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}"
@@ -95,7 +107,7 @@ if(MSVC AND NOT BUILD_SHARED_LIBS)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
 endif()
 
-if(MSVC AND NOT PYTHON_DEBUG_LIBRARIES)
+if(MSVC AND NOT ${PYTHON}_DEBUG_LIBRARIES)
   set(PYTHON_INSTALL_CONFIGURATIONS CONFIGURATIONS Release)
 else()
   set(PYTHON_INSTALL_CONFIGURATIONS "")
@@ -104,19 +116,22 @@ endif()
 if(WIN32)
   set(PYTHON_INSTALL_ARCHIVE "")
 else()
-  set(PYTHON_INSTALL_ARCHIVE ARCHIVE DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python)
+  set(PYTHON_INSTALL_ARCHIVE ARCHIVE DESTINATION ${${PYTHON}_PACKAGES_PATH} COMPONENT python)
 endif()
 
-if(NOT INSTALL_CREATE_DISTRIB)
+if(NOT INSTALL_CREATE_DISTRIB AND DEFINED ${PYTHON}_PACKAGES_PATH)
+  set(__dst "${${PYTHON}_PACKAGES_PATH}")
   install(TARGETS ${the_module} OPTIONAL
           ${PYTHON_INSTALL_CONFIGURATIONS}
-          RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
-          LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT python
+          RUNTIME DESTINATION "${__dst}" COMPONENT python
+          LIBRARY DESTINATION "${__dst}" COMPONENT python
           ${PYTHON_INSTALL_ARCHIVE}
           )
 else()
-  if(DEFINED PYTHON_VERSION_MAJOR)
-    set(__ver "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+  if(DEFINED ${PYTHON}_VERSION_MAJOR)
+    set(__ver "${${PYTHON}_VERSION_MAJOR}.${${PYTHON}_VERSION_MINOR}")
+  elseif(DEFINED ${PYTHON}_VERSION_STRING)
+    set(__ver "${${PYTHON}_VERSION_STRING}")
   else()
     set(__ver "unknown")
   endif()

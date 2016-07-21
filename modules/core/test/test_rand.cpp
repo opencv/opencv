@@ -365,3 +365,20 @@ TEST(Core_RNG_MT19937, regression)
         ASSERT_EQ(expected[i], actual[i]);
     }
 }
+
+
+TEST(Core_Rand, Regression_Stack_Corruption)
+{
+    int bufsz = 128; //enough for 14 doubles
+    AutoBuffer<uchar> buffer(bufsz);
+    size_t offset = 0;
+    cv::Mat_<cv::Point2d> x(2, 3, (cv::Point2d*)(buffer+offset)); offset += x.total()*x.elemSize();
+    double& param1 = *(double*)(buffer+offset); offset += sizeof(double);
+    double& param2 = *(double*)(buffer+offset); offset += sizeof(double);
+    param1 = -9; param2 = 2;
+
+    cv::theRNG().fill(x, cv::RNG::NORMAL, param1, param2);
+
+    ASSERT_EQ(param1, -9);
+    ASSERT_EQ(param2,  2);
+}
