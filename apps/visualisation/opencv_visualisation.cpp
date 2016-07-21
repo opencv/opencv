@@ -47,7 +47,7 @@ Software for visualising cascade classifier models trained by OpenCV and to get 
 understanding of the used features.
 
 USAGE:
-./visualise_models -model <model.xml> -image <ref.png> -data <output folder>
+./opencv_visualisation --model=<model.xml> --image=<ref.png> --data=<video output folder>
 
 LIMITS
 - Use an absolute path for the output folder to ensure the tool works
@@ -81,20 +81,23 @@ struct rect_data{
 
 int main( int argc, const char** argv )
 {
+    CommandLineParser parser(argc, argv,
+        "{ help h usage ? |      | show this message }"
+        "{ image i        |      | (required) path to reference image }"
+        "{ model m        |      | (required) path to cascade xml file }"
+        "{ data d         |      | (optional) path to video output folder }"
+    );
     // Read in the input arguments
-    string model = "";
-    string output_folder = "";
-    string image_ref = "";
-    for(int i = 1; i < argc; ++i )
-    {
-        if( !strcmp( argv[i], "-model" ) )
-        {
-            model = argv[++i];
-        }else if( !strcmp( argv[i], "-image" ) ){
-            image_ref = argv[++i];
-        }else if( !strcmp( argv[i], "-data" ) ){
-            output_folder = argv[++i];
-        }
+    if (parser.has("help")){
+        parser.printMessage();
+        return 0;
+    }
+    string model(parser.get<string>("model"));
+    string output_folder(parser.get<string>("data"));
+    string image_ref = (parser.get<string>("image"));
+    if (model.empty() || image_ref.empty()){
+        parser.printMessage();
+        return -1;
     }
 
     // Value for timing
@@ -106,8 +109,11 @@ int main( int argc, const char** argv )
 
     // Open the XML model
     FileStorage fs;
-    fs.open(model, FileStorage::READ);
-
+    bool model_ok = fs.open(model, FileStorage::READ);
+    if (!model_ok){
+        cerr << "the cascade file '" << model << "' could not be loaded." << endl;
+        return  -1;
+    }
     // Get a the required information
     // First decide which feature type we are using
     FileNode cascade = fs["cascade"];
@@ -129,6 +135,10 @@ int main( int argc, const char** argv )
     int resize_factor = 10;
     int resize_storage_factor = 10;
     Mat reference_image = imread(image_ref, IMREAD_GRAYSCALE );
+    if (reference_image.empty()){
+        cerr << "the reference image '" << image_ref << "'' could not be loaded." << endl;
+        return -1;
+    }
     Mat visualization;
     resize(reference_image, visualization, Size(reference_image.cols * resize_factor, reference_image.rows * resize_factor));
 

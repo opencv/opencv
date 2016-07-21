@@ -1110,6 +1110,10 @@ function(ocv_add_accuracy_tests)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
       endif()
 
+      if(OPENCV_TEST_BIGDATA)
+        ocv_append_target_property(${the_target} COMPILE_DEFINITIONS "OPENCV_TEST_BIGDATA=1")
+      endif()
+
       if(NOT BUILD_opencv_world)
         _ocv_add_precompiled_headers(${the_target})
       endif()

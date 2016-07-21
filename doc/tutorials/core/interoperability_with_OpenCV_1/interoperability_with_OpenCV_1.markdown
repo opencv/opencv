@@ -85,7 +85,7 @@ L = Mat(pI);
 A case study
 ------------
 
-Now that you have the basics done [here's](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
+Now that you have the basics done [here's](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
 an example that mixes the usage of the C interface with the C++ one. You will also find it in the
 sample directory of the OpenCV source code library at the
 `samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp` .
@@ -132,7 +132,7 @@ output:
 
 You may observe a runtime instance of this on the [YouTube
 here](https://www.youtube.com/watch?v=qckm-zvo31w) and you can [download the source code from here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp)
 or find it in the
 `samples/cpp/tutorial_code/core/interoperability_with_OpenCV_1/interoperability_with_OpenCV_1.cpp`
 of the OpenCV source code library.

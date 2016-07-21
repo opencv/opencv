@@ -111,6 +111,9 @@
 /* libpng/png.h needs to be included */
 #cmakedefine HAVE_LIBPNG_PNG_H
 
+/* GDCM DICOM codec */
+#cmakedefine HAVE_GDCM
+
 /* V4L/V4L2 capturing support via libv4l */
 #cmakedefine HAVE_LIBV4L
 
@@ -200,3 +203,6 @@
 
 /* Lapack */
 #cmakedefine HAVE_LAPACK
+
+/* FP16 */
+#cmakedefine HAVE_FP16

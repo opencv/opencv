@@ -3477,7 +3477,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 {
     Size ssize = _src.size();
 
-    CV_Assert( ssize.area() > 0 );
+    CV_Assert( ssize.width > 0 && ssize.height > 0 );
     CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
     if( dsize.area() == 0 )
     {
@@ -3498,10 +3498,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     _dst.create(dsize, src.type());
     Mat dst = _dst.getMat();
 
-    if (dsize == ssize) {
-      // Source and destination are of same size. Use simple copy.
-      src.copyTo(dst);
-      return;
+    if (dsize == ssize)
+    {
+        // Source and destination are of same size. Use simple copy.
+        src.copyTo(dst);
+        return;
     }
 
     hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
@@ -4616,14 +4617,14 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     size_t w = dsize.width;
     size_t h = dsize.height;
     String buildOptions;
-    unsigned mem_szie = 32;
+    unsigned mem_size = 32;
     if (flags & CV_WARP_INVERSE_MAP)
     {
         buildOptions = "-D InverseMap";
     }
     else
     {
-        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_szie);
+        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
     }
     String retval;
     ocl::Program p(ocl::imgproc::linearPolar_oclsrc, buildOptions, retval);
@@ -4661,7 +4662,7 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
 
     }
     size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
-    size_t localThreads[2] = { mem_szie , mem_szie };
+    size_t localThreads[2] = { mem_size , mem_size };
     k.run(2, globalThreads, localThreads, false);
     remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     return true;
@@ -4685,14 +4686,14 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     size_t w = dsize.width;
     size_t h = dsize.height;
     String buildOptions;
-    unsigned mem_szie = 32;
+    unsigned mem_size = 32;
     if (flags & CV_WARP_INVERSE_MAP)
     {
         buildOptions = "-D InverseMap";
     }
     else
     {
-        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_szie);
+        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
     }
     String retval;
     ocl::Program p(ocl::imgproc::logPolar_oclsrc, buildOptions, retval);
@@ -4730,9 +4731,9 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
         k.args(ocl_mapx, ocl_mapy, ascale, (float)M, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
 
 
-}
+    }
     size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
-    size_t localThreads[2] = { mem_szie , mem_szie };
+    size_t localThreads[2] = { mem_size , mem_size };
     k.run(2, globalThreads, localThreads, false);
     remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     return true;

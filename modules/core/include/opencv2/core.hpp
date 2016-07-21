@@ -524,6 +524,16 @@ For example:
 CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha = 1, double beta = 0);
 
+/** @brief Converts an array to half precision floating number.
+
+convertFp16 converts FP32 to FP16 or FP16 to FP32.  The input array has to have type of CV_32F or
+CV_16S to represent the bit depth.  If the input array is neither of them, it'll do nothing.
+
+@param src input array.
+@param dst output array.
+*/
+CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
+
 /** @brief Performs a look-up table transform of an array.
 
 The function LUT fills the output array with values from the look-up table. Indices of the entries
@@ -826,9 +836,9 @@ CV_EXPORTS void minMaxLoc(const SparseMat& a, double* minVal,
 The function reduce reduces the matrix to a vector by treating the matrix rows/columns as a set of
 1D vectors and performing the specified operation on the vectors until a single row/column is
 obtained. For example, the function can be used to compute horizontal and vertical projections of a
-raster image. In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element
-bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction
-modes.
+raster image. In case of REDUCE_MAX and REDUCE_MIN , the output image should have the same type as the source one.
+In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
+And multi-channel arrays are also supported in these two reduction modes.
 @param src input 2D matrix.
 @param dst output vector. Its size and type is defined by dim and dtype parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to
@@ -1433,14 +1443,11 @@ CV_EXPORTS_W void exp(InputArray src, OutputArray dst);
 
 /** @brief Calculates the natural logarithm of every array element.
 
-The function log calculates the natural logarithm of the absolute value
-of every element of the input array:
-\f[\texttt{dst} (I) =  \fork{\log |\texttt{src}(I)|}{if \(\texttt{src}(I) \ne 0\) }{\texttt{C}}{otherwise}\f]
+The function log calculates the natural logarithm of every element of the input array:
+\f[\texttt{dst} (I) =  \log (\texttt{src}(I)) \f]
 
-where C is a large negative number (about -700 in the current
-implementation). The maximum relative error is about 7e-6 for
-single-precision input and less than 1e-10 for double-precision input.
-Special values (NaN, Inf) are not handled.
+Output on zero, negative and special (NaN, Inf) values is undefined.
+
 @param src input array.
 @param dst output array of the same size and type as src .
 @sa exp, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
