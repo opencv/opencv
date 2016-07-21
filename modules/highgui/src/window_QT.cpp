@@ -2630,17 +2630,17 @@ void DefaultViewPort::resizeEvent(QResizeEvent* evnt)
 void DefaultViewPort::wheelEvent(QWheelEvent* evnt)
 {
     int delta = evnt->delta();
-    int cv_event = -1;
-    int flags = ((delta & 0xffff)<<16) | ((evnt->orientation() == Qt::Vertical) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL);
+    int cv_event = ((evnt->orientation() == Qt::Vertical) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL);
+    int flags = (delta & 0xffff)<<16;
     QPoint pt = evnt->pos();
 
-    icvmouseHandler(evnt, mouse_wheel, cv_event, flags);
-    icvmouseProcessing(QPoingF(pt), cv_event, flags);
+    icvmouseHandler((QMouseEvent*)evnt, mouse_wheel, cv_event, flags);
+    icvmouseProcessing(QPointF(pt), cv_event, flags);
 
     scaleView(delta / 240.0, pt);
     viewport()->update();
 
-    QWidget::mouseWheel(evnt);
+    QWidget::wheelEvent(evnt);
 }
 
 
@@ -2857,7 +2857,9 @@ void DefaultViewPort::icvmouseHandler(QMouseEvent *evnt, type_mouse_event catego
     Qt::KeyboardModifiers modifiers = evnt->modifiers();
     Qt::MouseButtons buttons = evnt->buttons();
 
-    flags = 0;
+    // This line gives excess flags flushing, with it you cannot predefine flags value.
+    // icvmouseHandler called with flags == 0 where it really need.
+    //flags = 0;
     if(modifiers & Qt::ShiftModifier)
         flags |= CV_EVENT_FLAG_SHIFTKEY;
     if(modifiers & Qt::ControlModifier)
@@ -2872,23 +2874,24 @@ void DefaultViewPort::icvmouseHandler(QMouseEvent *evnt, type_mouse_event catego
     if(buttons & Qt::MidButton)
         flags |= CV_EVENT_FLAG_MBUTTON;
 
-    cv_event = CV_EVENT_MOUSEMOVE;
-    switch(evnt->button())
-    {
-    case Qt::LeftButton:
-        cv_event = tableMouseButtons[category][0];
-        flags |= CV_EVENT_FLAG_LBUTTON;
-        break;
-    case Qt::RightButton:
-        cv_event = tableMouseButtons[category][1];
-        flags |= CV_EVENT_FLAG_RBUTTON;
-        break;
-    case Qt::MidButton:
-        cv_event = tableMouseButtons[category][2];
-        flags |= CV_EVENT_FLAG_MBUTTON;
-        break;
-    default:;
-    }
+    if (cv_event == -1)
+        switch(evnt->button())
+        {
+        case Qt::LeftButton:
+            cv_event = tableMouseButtons[category][0];
+            flags |= CV_EVENT_FLAG_LBUTTON;
+            break;
+        case Qt::RightButton:
+            cv_event = tableMouseButtons[category][1];
+            flags |= CV_EVENT_FLAG_RBUTTON;
+            break;
+        case Qt::MidButton:
+            cv_event = tableMouseButtons[category][2];
+            flags |= CV_EVENT_FLAG_MBUTTON;
+            break;
+        default:
+            cv_event = CV_EVENT_MOUSEMOVE;
+        }
 }
 
 
@@ -3191,6 +3194,22 @@ void OpenGlViewPort::paintGL()
         glDrawCallback(glDrawData);
 }
 
+void OpenGlViewPort::wheelEvent(QWheelEvent* evnt)
+{
+    int delta = evnt->delta();
+    int cv_event = ((evnt->orientation() == Qt::Vertical) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL);
+    int flags = (delta & 0xffff)<<16;
+    QPoint pt = evnt->pos();
+
+    icvmouseHandler((QMouseEvent*)evnt, mouse_wheel, cv_event, flags);
+    icvmouseProcessing(QPointF(pt), cv_event, flags);
+
+    scaleView(delta / 240.0, pt);
+    viewport()->update();
+
+    QWidget::wheelEvent(evnt);
+}
+
 void OpenGlViewPort::mousePressEvent(QMouseEvent* evnt)
 {
     int cv_event = -1, flags = 0;
@@ -3244,42 +3263,41 @@ void OpenGlViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event categor
     Qt::KeyboardModifiers modifiers = evnt->modifiers();
     Qt::MouseButtons buttons = evnt->buttons();
 
-    flags = 0;
-    if (modifiers & Qt::ShiftModifier)
+    // This line gives excess flags flushing, with it you cannot predefine flags value.
+    // icvmouseHandler called with flags == 0 where it really need.
+    //flags = 0;
+    if(modifiers & Qt::ShiftModifier)
         flags |= CV_EVENT_FLAG_SHIFTKEY;
-    if (modifiers & Qt::ControlModifier)
+    if(modifiers & Qt::ControlModifier)
         flags |= CV_EVENT_FLAG_CTRLKEY;
-    if (modifiers & Qt::AltModifier)
+    if(modifiers & Qt::AltModifier)
         flags |= CV_EVENT_FLAG_ALTKEY;
 
-    if (buttons & Qt::LeftButton)
+    if(buttons & Qt::LeftButton)
         flags |= CV_EVENT_FLAG_LBUTTON;
-    if (buttons & Qt::RightButton)
+    if(buttons & Qt::RightButton)
         flags |= CV_EVENT_FLAG_RBUTTON;
-    if (buttons & Qt::MidButton)
+    if(buttons & Qt::MidButton)
         flags |= CV_EVENT_FLAG_MBUTTON;
 
-    cv_event = CV_EVENT_MOUSEMOVE;
-    switch (evnt->button())
-    {
-    case Qt::LeftButton:
-        cv_event = tableMouseButtons[category][0];
-        flags |= CV_EVENT_FLAG_LBUTTON;
-        break;
-
-    case Qt::RightButton:
-        cv_event = tableMouseButtons[category][1];
-        flags |= CV_EVENT_FLAG_RBUTTON;
-        break;
-
-    case Qt::MidButton:
-        cv_event = tableMouseButtons[category][2];
-        flags |= CV_EVENT_FLAG_MBUTTON;
-        break;
-
-    default:
-        ;
-    }
+    if (cv_event == -1)
+        switch(evnt->button())
+        {
+        case Qt::LeftButton:
+            cv_event = tableMouseButtons[category][0];
+            flags |= CV_EVENT_FLAG_LBUTTON;
+            break;
+        case Qt::RightButton:
+            cv_event = tableMouseButtons[category][1];
+            flags |= CV_EVENT_FLAG_RBUTTON;
+            break;
+        case Qt::MidButton:
+            cv_event = tableMouseButtons[category][2];
+            flags |= CV_EVENT_FLAG_MBUTTON;
+            break;
+        default:
+            cv_event = CV_EVENT_MOUSEMOVE;
+        }
 }
 
 
