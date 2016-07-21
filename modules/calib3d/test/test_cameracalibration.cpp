@@ -1440,7 +1440,7 @@ void CV_StereoCalibrationCornerTest::run(int)
     // result as calibrating the downscaled images
     int cnz = countNonZero((cv::Mat(src_result - rsz_result) != 0)(
                                cv::Rect(src_result.cols / 3, src_result.rows / 3,
-                                        src_result.cols / 3.1, src_result.rows / 3.1)));
+                                        (int)(src_result.cols / 3.1), int(src_result.rows / 3.1))));
     if (cnz)
     {
         ts->printf( cvtest::TS::LOG, "The camera matrix is wrong for downscaled image\n");
