@@ -193,7 +193,7 @@ enum CpuFeatures {
 #    endif
 #    define CV_POPCNT 1
 #  endif
-#  if defined __F16C__ || (defined _MSC_VER && _MSC_VER >= 1700)
+#  if defined HAVE_FP16 && (defined __F16C__ || (defined _MSC_VER && _MSC_VER >= 1700))
 #    include <immintrin.h>
 #    define CV_FP16 1
 #  endif
@@ -219,7 +219,7 @@ enum CpuFeatures {
 
 #if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
 # include <Intrin.h>
-# include "arm_neon.h"
+# include <arm_neon.h>
 # define CV_NEON 1
 # define CPU_HAS_NEON_FEATURE (true)
 #elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
@@ -227,8 +227,12 @@ enum CpuFeatures {
 #  define CV_NEON 1
 #endif
 
-#if defined __GNUC__ && ((defined (__arm__) && (__ARM_FP & 0x2)) || defined(__aarch64__))
-#    define CV_FP16 1
+#if defined(__ARM_NEON__) || defined(__aarch64__)
+#  include <arm_neon.h>
+#endif
+
+#if defined HAVE_FP16 && defined __GNUC__
+#  define CV_FP16 1
 #endif
 
 #if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__

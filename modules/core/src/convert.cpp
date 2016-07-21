@@ -4591,6 +4591,8 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
                     float16x4_t v_dst = vcvt_f16_f32(v_src);
 
                     *(float16x4_t*)(dst + x) = v_dst;
+#else
+#error "Configuration error"
 #endif
                 }
 #endif
@@ -4643,6 +4645,8 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
                     float32x4_t v_dst = vcvt_f32_f16(v_src);
 
                     *(float32x4_t*)(dst + x) = v_dst;
+#else
+#error "Configuration error"
 #endif
                 }
 #endif
