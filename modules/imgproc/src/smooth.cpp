@@ -1750,7 +1750,7 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     if ((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn == 1 || cn == 3) &&
             sigma1 == sigma2 && ksize.width == ksize.height)
     {
-        if(sigma1 <= 0)
+        if(sigma1 == 0.0)
         {
             sigma1 = ((ksize.width-1)*0.5 - 1)*0.3 + 0.8;
             sigma2 = sigma1;
