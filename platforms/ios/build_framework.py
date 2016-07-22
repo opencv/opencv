@@ -141,7 +141,7 @@ class Builder:
 
     def makeFramework(self, outdir, builddirs):
         libnames = ["libopencv_world.dylib", "liblibjpeg.dylib", "liblibpng.dylib", "libzlib.dylib"]
-        outNames = ["opencv2.dylib", "libjpeg.dylib", "libpng.dylib", "zlib.dylib"]
+        outNames = ["libopencv2.dylib", "libjpeg.dylib", "libpng.dylib", "libzlib.dylib"]
 
         shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(outdir, "include"))
 
