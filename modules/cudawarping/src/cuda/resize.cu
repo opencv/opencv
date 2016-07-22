@@ -456,7 +456,7 @@ namespace cv { namespace cuda { namespace device
         };
 
         // change to linear if area interpolation upscaling
-        if (interpolation == 3 && (fx <= 1.f || fy <= 1.f))
+        if (interpolation == 3 && (fx > 1.f || fy > 1.f))
             interpolation = 1;
 
         funcs[interpolation](static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(srcWhole), yoff, xoff, static_cast< PtrStepSz<T> >(dst), fy, fx, stream);
