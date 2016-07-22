@@ -142,6 +142,8 @@ class Builder:
     def makeFramework(self, outdir, builddirs):
         libnames = ["libopencv_world.dylib", "liblibjpeg.dylib", "liblibpng.dylib", "libzlib.dylib"]
 
+        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(outdir, "Headers"))
+
         # make universal dynamic lib
         for libname in libnames:
             libs = [os.path.join(d, "lib", "Release", libname) for d in builddirs]
