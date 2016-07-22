@@ -1210,8 +1210,8 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
 
     matA.reset(cvCreateMat( 2*nimages, 2, CV_64F ));
     _b.reset(cvCreateMat( 2*nimages, 1, CV_64F ));
-    a[2] = (!imageSize.width) ? 0.5 : (imageSize.width - 1)*0.5;
-    a[5] = (!imageSize.height) ? 0.5 : (imageSize.height - 1)*0.5;
+    a[2] = (!imageSize.width) ? 0.5 : (imageSize.width)*0.5;
+    a[5] = (!imageSize.height) ? 0.5 : (imageSize.height)*0.5;
     _allH.reset(cvCreateMat( nimages, 9, CV_64F ));
 
     // extract vanishing points in order to obtain initial value for the focal length
@@ -2494,8 +2494,8 @@ void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCo
     {
         double cx0 = M[0][2];
         double cy0 = M[1][2];
-        double cx = (newImgSize.width-1)*0.5;
-        double cy = (newImgSize.height-1)*0.5;
+        double cx = (newImgSize.width)*0.5;
+        double cy = (newImgSize.height)*0.5;
 
         icvGetRectangles( cameraMatrix, distCoeffs, 0, cameraMatrix, imgSize, inner, outer );
         double s0 = std::max(std::max(std::max((double)cx/(cx0 - inner.x), (double)cy/(cy0 - inner.y)),
@@ -2529,14 +2529,14 @@ void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCo
         icvGetRectangles( cameraMatrix, distCoeffs, 0, 0, imgSize, inner, outer );
 
         // Projection mapping inner rectangle to viewport
-        double fx0 = (newImgSize.width  - 1) / inner.width;
-        double fy0 = (newImgSize.height - 1) / inner.height;
+        double fx0 = (newImgSize.width) / inner.width;
+        double fy0 = (newImgSize.height) / inner.height;
         double cx0 = -fx0 * inner.x;
         double cy0 = -fy0 * inner.y;
 
         // Projection mapping outer rectangle to viewport
-        double fx1 = (newImgSize.width  - 1) / outer.width;
-        double fy1 = (newImgSize.height - 1) / outer.height;
+        double fx1 = (newImgSize.width) / outer.width;
+        double fy1 = (newImgSize.height) / outer.height;
         double cx1 = -fx1 * outer.x;
         double cy1 = -fy1 * outer.y;
 
@@ -2600,8 +2600,8 @@ CV_IMPL int cvStereoRectifyUncalibrated(
     cvGEMM( &U, &W, 1, 0, 0, &W, CV_GEMM_A_T );
     cvMatMul( &W, &V, &F );
 
-    cx = cvRound( (imgSize.width-1)*0.5 );
-    cy = cvRound( (imgSize.height-1)*0.5 );
+    cx = cvRound( (imgSize.width)*0.5 );
+    cy = cvRound( (imgSize.height)*0.5 );
 
     cvZero( _H1 );
     cvZero( _H2 );
