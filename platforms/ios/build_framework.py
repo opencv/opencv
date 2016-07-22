@@ -35,12 +35,29 @@ def execute(cmd, cwd = None):
     if retcode != 0:
         raise Exception("Child returned:", retcode)
 
+
+def executeWithOutput(cmd, cwd = None):
+    print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
+    try:
+        output = check_output(cmd, cwd = cwd)
+    except CalledProcessError as grepexc:
+        raise Exception("Child returned:", grepexc.returncode)
+    return output
+
 def getXCodeMajor():
     ret = check_output(["xcodebuild", "-version"])
     m = re.match(r'XCode\s+(\d)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
     return 0
+
+def getLibPath(path, libname):
+    libs = executeWithOutput(["otool", "-L", path])
+    line = [line for line in libs.split('\n') if libname in line][0]
+    dirtypath = re.search(".*dylib", line, re.I)
+    if dirtypath:
+        return dirtypath.group(0).strip()
+    return ""
 
 class Builder:
     def __init__(self, opencv, contrib, targets):
@@ -141,18 +158,40 @@ class Builder:
 
     def makeFramework(self, outdir, builddirs):
         libnames = ["libopencv_world.dylib", "liblibjpeg.dylib", "liblibpng.dylib", "libzlib.dylib"]
-        outNames = ["libopencv2.dylib", "libjpeg.dylib", "libpng.dylib", "libzlib.dylib"]
+        outnames = ["libopencv2.dylib", "libjpeg.dylib", "libpng.dylib", "libzlib.dylib"]
 
-        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(outdir, "include"))
+        include_dir = os.path.join(outdir, "include")
+        if os.path.isdir(include_dir):
+            shutil.rmtree(include_dir)
+        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), include_dir)
 
         # make universal dynamic lib
         for idx, libname in enumerate(libnames):
             libs = [os.path.join(d, "lib", "Release", libname) for d in builddirs]
             lipocmd = ["lipo", "-create"]
             lipocmd.extend(libs)
-            lipocmd.extend(["-o", os.path.join(outdir, outNames[idx])])
+            outPath = os.path.join(outdir, outnames[idx])
+            lipocmd.extend(["-o", outPath])
             print("Creating universal library from:\n\t%s" % "\n\t".join(libs), file=sys.stderr)
             execute(lipocmd)
+
+        ocvpath = os.path.join(outdir, "libopencv2.dylib")
+        ljpegpath = os.path.join(outdir, "libjpeg.dylib")
+        lpngpath = os.path.join(outdir, "libpng.dylib")
+        lzlibpath = os.path.join(outdir, "libzlib.dylib")
+
+        oldljpegpath = getLibPath(ocvpath, "liblibjpeg.dylib")
+        oldlpngpath = getLibPath(ocvpath, "liblibpng.dylib")
+        oldlzlibpath = getLibPath(lpngpath, "libzlib.dylib")
+
+        execute(["install_name_tool", "-change", oldljpegpath, "@rpath/libjpeg.dylib", ocvpath])
+        execute(["install_name_tool", "-change", oldlpngpath, "@rpath/libpng.dylib", ocvpath])
+        execute(["install_name_tool", "-change", oldlzlibpath, "@rpath/libzlib.dylib", lpngpath])
+
+        execute(["install_name_tool", "-id", "@rpath/libopencv2.dylib", ocvpath])
+        execute(["install_name_tool", "-id", "@rpath/libjpeg.dylib", ljpegpath])
+        execute(["install_name_tool", "-id", "@rpath/libpng.dylib", lpngpath])
+        execute(["install_name_tool", "-id", "@rpath/libzlib.dylib", lzlibpath])
 
 if __name__ == "__main__":
     folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
