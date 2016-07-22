@@ -15,7 +15,7 @@ using std::tr1::get;
 
 typedef TestBaseWithParam<string> stitch;
 
-#ifdef HAVE_OPENCV_XFEATURES2D_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
+#ifdef HAVE_OPENCV_XFEATURES2D
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
 #define TEST_DETECTORS testing::Values<string>("orb")
@@ -90,11 +90,28 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stopTimer();
     }
 
-    Mat pano_small;
-    if (!pano.empty())
-        resize(pano, pano_small, Size(320, 240), 0, 0, INTER_AREA);
+    EXPECT_NEAR(pano.size().width, 1117, 50);
+    EXPECT_NEAR(pano.size().height, 642, 30);
 
-    SANITY_CHECK(pano_small, 5);
+    Mat pano_small;
+    resize(pano, pano_small, Size(320, 240), 0, 0, INTER_AREA);
+
+    // results from orb and surf are slightly different (but both of them are good). Regression data
+    // are for orb.
+    /* transformations are:
+    orb:
+    [0.99213386, 0.062509097, -351.83731;
+     -0.073042989, 1.0615162, -89.869858;
+     0.0005330033, -4.0937066e-05, 1]
+    surf:
+    [1.0034728, 0.022535477, -352.76849;
+     -0.080653802, 1.0742083, -89.602058;
+     0.0004876224, 0.00012311155, 1]
+    */
+    if (GetParam() == "orb")
+        SANITY_CHECK(pano_small, 5);
+    else
+        SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(stitch, affineS12, TEST_DETECTORS)
