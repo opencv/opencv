@@ -96,3 +96,34 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
 
     SANITY_CHECK(pano_small, 5);
 }
+
+PERF_TEST_P(stitch, affineS12, TEST_DETECTORS)
+{
+    Mat pano;
+
+    vector<Mat> imgs;
+    imgs.push_back( imread( getDataPath("stitching/s1.jpg") ) );
+    imgs.push_back( imread( getDataPath("stitching/s2.jpg") ) );
+
+    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
+            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
+            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
+
+    declare.time(30 * 20).iterations(20);
+
+    while(next())
+    {
+        Ptr<Stitcher> stitcher = Stitcher::create(Stitcher::SCANS, false);
+        stitcher->setFeaturesFinder(featuresFinder);
+        stitcher->setRegistrationResol(WORK_MEGAPIX);
+
+        startTimer();
+        stitcher->stitch(imgs, pano);
+        stopTimer();
+    }
+
+    EXPECT_NEAR(pano.size().width, 1815, 10);
+    EXPECT_NEAR(pano.size().height, 700, 5);
+
+    SANITY_CHECK_NOTHING();
+}
