@@ -383,6 +383,10 @@ void FeaturesFinder::operator ()(InputArrayOfArrays images, std::vector<ImageFea
 
 bool FeaturesFinder::isThreadSafe() const
 {
+    if (ocl::useOpenCL())
+    {
+        return false;
+    }
     if (dynamic_cast<const SurfFeaturesFinder*>(this))
     {
         return true;
