@@ -114,7 +114,7 @@ class Builder:
             "-configuration", "Release",
             "-parallelizeTargets",
             "-jobs", "4",
-            "CODE_SIGN_IDENTITY=iPhone Developer: Evan Coleman"
+            "CODE_SIGN_IDENTITY=iPhone Developer"
         ]
         return buildcmd
 
