@@ -141,15 +141,16 @@ class Builder:
 
     def makeFramework(self, outdir, builddirs):
         libnames = ["libopencv_world.dylib", "liblibjpeg.dylib", "liblibpng.dylib", "libzlib.dylib"]
+        outNames = ["opencv2.dylib", "libjpeg.dylib", "libpng.dylib", "zlib.dylib"]
 
-        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(outdir, "Headers"))
+        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(outdir, "include"))
 
         # make universal dynamic lib
-        for libname in libnames:
+        for idx, libname in enumerate(libnames):
             libs = [os.path.join(d, "lib", "Release", libname) for d in builddirs]
             lipocmd = ["lipo", "-create"]
             lipocmd.extend(libs)
-            lipocmd.extend(["-o", os.path.join(outdir, libname)])
+            lipocmd.extend(["-o", os.path.join(outdir, outNames[idx])])
             print("Creating universal library from:\n\t%s" % "\n\t".join(libs), file=sys.stderr)
             execute(lipocmd)
 
