@@ -234,7 +234,7 @@ static int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--estimator")
         {
             if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
-                matcher_type = argv[i + 1];
+                estimator_type = argv[i + 1];
             else
             {
                 cout << "Bad --estimator flag value\n";
@@ -540,9 +540,9 @@ int main(int argc, char* argv[])
 
     Ptr<Estimator> estimator;
     if (estimator_type == "affine")
-        estimator = makePtr<HomographyBasedEstimator>();
-    else
         estimator = makePtr<AffineBasedEstimator>();
+    else
+        estimator = makePtr<HomographyBasedEstimator>();
 
     vector<CameraParams> cameras;
     if (!(*estimator)(features, pairwise_matches, cameras))
@@ -556,7 +556,7 @@ int main(int argc, char* argv[])
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
-        LOGLN("Initial intrinsics #" << indices[i]+1 << ":\n" << cameras[i].K());
+        LOGLN("Initial intrinsics (K) #" << indices[i]+1 << ":\n" << cameras[i].K());
     }
 
     Ptr<detail::BundleAdjusterBase> adjuster;
@@ -587,7 +587,7 @@ int main(int argc, char* argv[])
     vector<double> focals;
     for (size_t i = 0; i < cameras.size(); ++i)
     {
-        LOGLN("Camera #" << indices[i]+1 << ":\n" << cameras[i].K());
+        LOGLN("Camera #" << indices[i]+1 << ":\nK:\n" << cameras[i].K() << "\nR:\n" << cameras[i].R);
         focals.push_back(cameras[i].focal);
     }
 
