@@ -186,6 +186,7 @@ class Builder:
 
         execute(["install_name_tool", "-change", oldljpegpath, "@rpath/libjpeg.dylib", ocvpath])
         execute(["install_name_tool", "-change", oldlpngpath, "@rpath/libpng.dylib", ocvpath])
+        execute(["install_name_tool", "-change", oldlzlibpath, "@rpath/libzlib.dylib", ocvpath])
         execute(["install_name_tool", "-change", oldlzlibpath, "@rpath/libzlib.dylib", lpngpath])
 
         execute(["install_name_tool", "-id", "@rpath/libopencv2.dylib", ocvpath])
