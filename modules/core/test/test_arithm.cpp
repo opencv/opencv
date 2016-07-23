@@ -1902,6 +1902,11 @@ TEST(Normalize, regression_5876_inplace_change_type)
     EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
 }
 
+#ifndef NAN
+#include <limits> // numeric_limits<T>::quiet_NaN()
+#define NAN std::numeric_limits<float>::quiet_NaN()
+#endif
+
 TEST(MinMaxLoc, regression_4955_nans)
 {
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
