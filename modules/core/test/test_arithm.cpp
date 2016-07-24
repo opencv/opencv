@@ -1,5 +1,9 @@
 #include "test_precomp.hpp"
 #include <cmath>
+#ifndef NAN
+#include <limits> // numeric_limits<T>::quiet_NaN()
+#define NAN std::numeric_limits<float>::quiet_NaN()
+#endif
 
 using namespace cv;
 using namespace std;
