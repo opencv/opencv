@@ -172,3 +172,118 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
 
     SANITY_CHECK_NOTHING();
 }
+
+PERF_TEST_P( match, affineBestOf2Nearest, TEST_DETECTORS)
+{
+    Mat img1, img1_full = imread( getDataPath("stitching/s1.jpg") );
+    Mat img2, img2_full = imread( getDataPath("stitching/s2.jpg") );
+    float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
+    float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
+    resize(img1_full, img1, Size(), scale1, scale1);
+    resize(img2_full, img2, Size(), scale2, scale2);
+
+    Ptr<detail::FeaturesFinder> finder;
+    Ptr<detail::FeaturesMatcher> matcher;
+    if (GetParam() == "surf")
+    {
+        finder = makePtr<detail::SurfFeaturesFinder>();
+        matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, SURF_MATCH_CONFIDENCE);
+    }
+    else if (GetParam() == "orb")
+    {
+        finder = makePtr<detail::OrbFeaturesFinder>();
+        matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, ORB_MATCH_CONFIDENCE);
+    }
+    else
+    {
+        FAIL() << "Unknown 2D features type: " << GetParam();
+    }
+
+    detail::ImageFeatures features1, features2;
+    (*finder)(img1, features1);
+    (*finder)(img2, features2);
+
+    detail::MatchesInfo pairwise_matches;
+
+    declare.in(features1.descriptors, features2.descriptors);
+
+    while(next())
+    {
+        cvflann::seed_random(42);//for predictive FlannBasedMatcher
+        startTimer();
+        (*matcher)(features1, features2, pairwise_matches);
+        stopTimer();
+        matcher->collectGarbage();
+    }
+
+    Mat& estimated_transform = pairwise_matches.H;
+    SANITY_CHECK(estimated_transform, .02, ERROR_RELATIVE);
+}
+
+PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
+                 TEST_DETECTORS,
+                 testing::Values(2, 4, 8))
+             )
+{
+    Mat img1, img1_full = imread( getDataPath("stitching/s1.jpg") );
+    Mat img2, img2_full = imread( getDataPath("stitching/s2.jpg") );
+    float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
+    float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
+    resize(img1_full, img1, Size(), scale1, scale1);
+    resize(img2_full, img2, Size(), scale2, scale2);
+
+    Ptr<detail::FeaturesFinder> finder;
+    Ptr<detail::FeaturesMatcher> matcher;
+    string detectorName = get<0>(GetParam());
+    int featuresVectorSize = get<1>(GetParam());
+    if (detectorName == "surf")
+    {
+        finder = makePtr<detail::SurfFeaturesFinder>();
+        matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, SURF_MATCH_CONFIDENCE);
+    }
+    else if (detectorName == "orb")
+    {
+        finder = makePtr<detail::OrbFeaturesFinder>();
+        matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, ORB_MATCH_CONFIDENCE);
+    }
+    else
+    {
+        FAIL() << "Unknown 2D features type: " << get<0>(GetParam());
+    }
+
+    detail::ImageFeatures features1, features2;
+    (*finder)(img1, features1);
+    (*finder)(img2, features2);
+    vector<detail::ImageFeatures> features;
+    vector<detail::MatchesInfo> pairwise_matches;
+    for(int i = 0; i < featuresVectorSize/2; i++)
+    {
+        features.push_back(features1);
+        features.push_back(features2);
+    }
+
+    declare.time(200);
+    while(next())
+    {
+        cvflann::seed_random(42);//for predictive FlannBasedMatcher
+        startTimer();
+        (*matcher)(features, pairwise_matches);
+        stopTimer();
+        matcher->collectGarbage();
+    }
+
+    size_t matches_count = 0;
+    for (size_t i = 0; i < pairwise_matches.size(); ++i)
+    {
+        if (pairwise_matches[i].src_img_idx < 0)
+            continue;
+
+        EXPECT_TRUE(pairwise_matches[i].matches.size() > 400);
+        EXPECT_FALSE(pairwise_matches[i].H.empty());
+        ++matches_count;
+    }
+
+    EXPECT_TRUE(matches_count > 0);
+
+    SANITY_CHECK_NOTHING();
+}
