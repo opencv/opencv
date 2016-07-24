@@ -101,8 +101,11 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
         matcher->collectGarbage();
     }
 
-    Mat& estimated_transform = pairwise_matches.H;
-    SANITY_CHECK(estimated_transform, .03, ERROR_RELATIVE);
+    Mat dist (pairwise_matches.H, Range::all(), Range(2, 3));
+    Mat R (pairwise_matches.H, Range::all(), Range(0, 2));
+    // separate transform matrix, use lower error on rotations
+    SANITY_CHECK(dist, .5, ERROR_ABSOLUTE);
+    SANITY_CHECK(R, .01, ERROR_ABSOLUTE);
 }
 
 PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
@@ -216,8 +219,17 @@ PERF_TEST_P( match, affineBestOf2Nearest, TEST_DETECTORS)
         matcher->collectGarbage();
     }
 
-    Mat& estimated_transform = pairwise_matches.H;
-    SANITY_CHECK(estimated_transform, .02, ERROR_RELATIVE);
+    // separate rotation and translation in transform matrix
+    Mat T (pairwise_matches.H, Range(0, 2), Range(2, 3));
+    Mat R (pairwise_matches.H, Range(0, 2), Range(0, 2));
+    Mat h (pairwise_matches.H, Range(2, 3), Range::all());
+    SANITY_CHECK(T, 5, ERROR_ABSOLUTE); // allow 5 pixels diff in translations
+    SANITY_CHECK(R, .01, ERROR_ABSOLUTE); // rotations must be more precise
+    // last row should be precisely (0, 0, 1) as it is just added for representation in homogeneous
+    // coordinates
+    EXPECT_DOUBLE_EQ(h.at<double>(0), 0.);
+    EXPECT_DOUBLE_EQ(h.at<double>(1), 0.);
+    EXPECT_DOUBLE_EQ(h.at<double>(2), 1.);
 }
 
 PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
