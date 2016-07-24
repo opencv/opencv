@@ -60,8 +60,8 @@ PERF_TEST_P(FeaturesFinderVec, SerialFeaturesFinder, NUMBER_IMAGES)
 
 PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
 {
-    Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
-    Mat img2, img2_full = imread( getDataPath("stitching/b2.png") );
+    Mat img1, img1_full = imread( getDataPath("stitching/boat1.jpg") );
+    Mat img2, img2_full = imread( getDataPath("stitching/boat2.jpg") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
     resize(img1_full, img1, Size(), scale1, scale1);
@@ -102,7 +102,7 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     }
 
     Mat& estimated_transform = pairwise_matches.H;
-    SANITY_CHECK(estimated_transform, .1, ERROR_RELATIVE);
+    SANITY_CHECK(estimated_transform, .03, ERROR_RELATIVE);
 }
 
 PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
@@ -110,8 +110,8 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
                  testing::Values(2, 4, 8))
              )
 {
-    Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
-    Mat img2, img2_full = imread( getDataPath("stitching/b2.png") );
+    Mat img1, img1_full = imread( getDataPath("stitching/boat1.jpg") );
+    Mat img2, img2_full = imread( getDataPath("stitching/boat2.jpg") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
     resize(img1_full, img1, Size(), scale1, scale1);
@@ -163,7 +163,7 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
         if (pairwise_matches[i].src_img_idx < 0)
             continue;
 
-        EXPECT_TRUE(pairwise_matches[i].matches.size() > 10);
+        EXPECT_TRUE(pairwise_matches[i].matches.size() > 100);
         EXPECT_FALSE(pairwise_matches[i].H.empty());
         ++matches_count;
     }
