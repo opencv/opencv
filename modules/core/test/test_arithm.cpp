@@ -1,4 +1,5 @@
 #include "test_precomp.hpp"
+#include <cmath>
 
 using namespace cv;
 using namespace std;
@@ -1901,11 +1902,6 @@ TEST(Normalize, regression_5876_inplace_change_type)
     normalize(m, m, 1, 0, NORM_MINMAX, CV_32F);
     EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
 }
-
-#ifndef NAN
-#include <limits> // numeric_limits<T>::quiet_NaN()
-#define NAN std::numeric_limits<float>::quiet_NaN()
-#endif
 
 TEST(MinMaxLoc, regression_4955_nans)
 {
