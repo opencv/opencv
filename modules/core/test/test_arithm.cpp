@@ -1,4 +1,5 @@
 #include "test_precomp.hpp"
+#include <cmath>
 
 using namespace cv;
 using namespace std;
