@@ -855,6 +855,8 @@ private:
 CV_EXPORTS void printCudaDeviceInfo(int device);
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
+CV_EXPORTS void convertFp16Cuda(InputArray _src, OutputArray _dst, Stream& stream = Stream::Null());
+
 //! @} cudacore_init
 
 }} // namespace cv { namespace cuda {
