@@ -668,6 +668,27 @@ template <typename T, typename D> struct saturate_cast_func : unary_function<T, 
     }
 };
 
+// Convert Fp16 dummy
+template <typename T, typename D> struct saturate_cast_fp16_func;
+
+// Convert Fp16 from Fp32
+template <> struct saturate_cast_fp16_func<float, short> : unary_function<float, short>
+{
+    __device__ __forceinline__ short operator ()(float v) const
+    {
+        return cast_fp16<float, short>(v);
+    }
+};
+
+// Convert Fp16 to Fp32
+template <> struct saturate_cast_fp16_func<short, float> : unary_function<short, float>
+{
+    __device__ __forceinline__ float operator ()(short v) const
+    {
+        return cast_fp16<short, float>(v);
+    }
+};
+
 // Threshold Functors
 
 template <typename T> struct ThreshBinaryFunc : unary_function<T, T>

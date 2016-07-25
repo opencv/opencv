@@ -49,6 +49,7 @@ using namespace cv::cudev;
 using namespace cvtest;
 
 typedef ::testing::Types<uchar, ushort, short, int, float> AllTypes;
+typedef ::testing::Types<short, float> Fp16Types;
 
 ////////////////////////////////////////////////////////////////////////////////
 // CvtTest
@@ -75,9 +76,75 @@ public:
     }
 };
 
+// dummy class
+template <typename T>
+class CvFp16Test : public ::testing::Test
+{
+public:
+    void test_gpumat()
+    {
+    }
+};
+
+template <>
+class CvFp16Test <short> : public ::testing::Test
+{
+public:
+    void test_gpumat()
+    {
+        const Size size = randomSize(100, 400);
+        const int type = DataType<float>::type;
+
+        Mat src = randomMat(size, type), dst, ref;
+
+        GpuMat_<float> g_src(src);
+        GpuMat g_dst;
+
+        // Fp32 -> Fp16
+        convertFp16Cuda(g_src, g_dst);
+        convertFp16Cuda(g_dst.clone(), g_dst);
+        // Fp16 -> Fp32
+        convertFp16(src, dst);
+        convertFp16(dst, ref);
+
+        g_dst.download(dst);
+        EXPECT_MAT_NEAR(dst, ref, 0.0);
+    }
+};
+
+template <>
+class CvFp16Test <float> : public ::testing::Test
+{
+public:
+    void test_gpumat()
+    {
+        const Size size = randomSize(100, 400);
+        const int type = DataType<float>::type;
+
+        Mat src = randomMat(size, type), dst, ref;
+
+        GpuMat_<float> g_src(src);
+        GpuMat g_dst;
+
+        // Fp32 -> Fp16
+        convertFp16Cuda(g_src, g_dst);
+        convertFp16(src, ref);
+
+        g_dst.download(dst);
+        EXPECT_MAT_NEAR(dst, ref, 0.0);
+    }
+};
+
 TYPED_TEST_CASE(CvtTest, AllTypes);
 
 TYPED_TEST(CvtTest, GpuMat)
 {
     CvtTest<TypeParam>::test_gpumat();
+}
+
+TYPED_TEST_CASE(CvFp16Test, Fp16Types);
+
+TYPED_TEST(CvFp16Test, GpuMat)
+{
+    CvFp16Test<TypeParam>::test_gpumat();
 }
