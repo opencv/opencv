@@ -143,6 +143,27 @@ OCL_TEST_F(PlaneWarperTest, Mat)
     }
 }
 
+typedef WarperTestBase AffineWarperTest;
+
+OCL_TEST_F(AffineWarperTest, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        Ptr<WarperCreator> creator = makePtr<AffineWarper>();
+        Ptr<detail::RotationWarper> warper = creator->create(1.0);
+
+        OCL_OFF(warper->buildMaps(src.size(), K, R, xmap, ymap));
+        OCL_ON(warper->buildMaps(usrc.size(), K, R, uxmap, uymap));
+
+        OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
+        OCL_ON(warper->warp(usrc, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
+
+        Near(1.5e-4);
+    }
+}
+
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
