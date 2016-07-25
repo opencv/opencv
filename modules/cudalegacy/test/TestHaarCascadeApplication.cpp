@@ -52,7 +52,8 @@ namespace
         ~FpuControl();
 
     private:
-    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) && !defined(__aarch64__)
+    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) &&
+        !defined(__aarch64__) && !defined(__powerpc64__)
         fpu_control_t fpu_oldcw, fpu_cw;
     #elif defined(_WIN32) && !defined(_WIN64)
         unsigned int fpu_oldcw, fpu_cw;
@@ -61,7 +62,8 @@ namespace
 
     FpuControl::FpuControl()
     {
-    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) && !defined(__aarch64__)
+    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) &&
+        !defined(__aarch64__) && !defined(__powerpc64__)
         _FPU_GETCW(fpu_oldcw);
         fpu_cw = (fpu_oldcw & ~_FPU_EXTENDED & ~_FPU_DOUBLE & ~_FPU_SINGLE) | _FPU_SINGLE;
         _FPU_SETCW(fpu_cw);
@@ -74,7 +76,8 @@ namespace
 
     FpuControl::~FpuControl()
     {
-    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) && !defined(__aarch64__)
+    #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) &&
+        !defined(__aarch64__) && !defined(__powerpc64__)
         _FPU_SETCW(fpu_oldcw);
     #elif defined(_WIN32) && !defined(_WIN64)
         _controlfp_s(&fpu_cw, fpu_oldcw, _MCW_PC);
