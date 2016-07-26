@@ -158,7 +158,7 @@ public:
           rvec(_rvec), tvec(_tvec) {}
 
     /* Pre: True */
-    /* Post: compute _model with given points an return number of found models */
+    /* Post: compute _model with given points and return number of found models */
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
