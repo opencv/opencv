@@ -48,6 +48,8 @@
 /**
   @defgroup videoio Media I/O
   @{
+    @defgroup videoio_flags_base Flags for video I/O
+    @defgroup videoio_flags_others Additional flags for video I/O API backends
     @defgroup videoio_c C API
     @defgroup videoio_ios iOS glue
     @defgroup videoio_winrt WinRT glue
@@ -65,6 +67,8 @@ namespace cv
 //! @addtogroup videoio
 //! @{
 
+//! @addtogroup videoio_flags_base
+//! @{
 /** @brief Capture API backends.
 
 Select preferred API for a capture object.
@@ -77,7 +81,8 @@ To enable/disable APIs, you have to:
      (e.g. <tt>-DWITH_MSMF=ON -DWITH_VFW=ON ... </tt>) or checking related switch in cmake-gui
   2. rebuild OpenCV itself
 */
-enum { CAP_ANY          = 0,            //!< Auto detect
+enum VideoCaptureAPIs {
+       CAP_ANY          = 0,            //!< Auto detect
        CAP_VFW          = 200,          //!< Video For Windows (platform native)
        CAP_V4L          = 200,          //!< V4L/V4L2 capturing support via libv4l
        CAP_V4L2         = CAP_V4L,      //!< Same as CAP_V4L
@@ -108,7 +113,8 @@ enum { CAP_ANY          = 0,            //!< Auto detect
      };
 
 //! generic properties (based on DC1394 properties)
-enum { CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
+enum VideoCaptureProperties {
+       CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
        CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next.
        CAP_PROP_POS_AVI_RATIO  =2, //!< Relative position of the video file: 0=start of the film, 1=end of the film.
        CAP_PROP_FRAME_WIDTH    =3, //!< Width of the frames in the video stream.
@@ -149,15 +155,27 @@ enum { CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in mi
        CAP_PROP_AUTOFOCUS     =39
      };
 
-
 //! @brief Generic camera output modes.
 //! @note Currently, these are supported through the libv4l interface only.
-enum { CAP_MODE_BGR  = 0, //!< BGR24 (default)
+enum VideoCaptureModes {
+       CAP_MODE_BGR  = 0, //!< BGR24 (default)
        CAP_MODE_RGB  = 1, //!< RGB24
        CAP_MODE_GRAY = 2, //!< Y8
        CAP_MODE_YUYV = 3  //!< YUYV
      };
 
+/** @brief Generic properties identifier for VideoWriter
+*/
+enum VideoWriterProperties {
+  VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
+  VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
+  VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
+};
+
+//! @} videoio_flags_base
+
+//! @addtogroup videoio_flags_others
+//! @{
 
 /** @brief DC1394 only
 
@@ -465,11 +483,6 @@ enum { CAP_INTELPERC_DEPTH_MAP              = 0, //!< Each pixel is a 16-bit int
        CAP_INTELPERC_IMAGE                  = 3
      };
 
-enum { VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
-       VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
-       VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
-     };
-
 /** @brief gPhoto2 properties
 
 if propertyId is less than 0 then work on widget with that __additive inversed__ camera setting ID
@@ -489,6 +502,8 @@ enum { CAP_PROP_GPHOTO2_PREVIEW           = 17001, //!< Capture only preview fro
      };
 
 //enum {
+
+//! @} videoio_flags_others
 
 class IVideoCapture;
 
