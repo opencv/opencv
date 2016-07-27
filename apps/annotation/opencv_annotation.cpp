@@ -224,28 +224,24 @@ vector<Rect> get_annotations(Mat input_image)
 
 int main( int argc, const char** argv )
 {
-    // If no arguments are given, then supply some information on how this tool works
-    if( argc == 1 ){
-        cout << "Usage: " << argv[0] << endl;
-        cout << " -images <folder_location> [example - /data/testimages/]" << endl;
-        cout << " -annotations <ouput_file> [example - /data/annotations.txt]" << endl;
-        cout << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
-        return -1;
-    }
-
+    // Use the cmdlineparser to process input arguments
+    CommandLineParser parser(argc, argv,
+        "{ help h usage ? |      | show this message }"
+        "{ images i       |      | (required) path to image folder [example - /data/testimages/] }"
+        "{ annotations a  |      | (required) path to annotations txt file [example - /data/annotations.txt] }"
+    );
     // Read in the input arguments
-    string image_folder;
-    string annotations_file;
-    for(int i = 1; i < argc; ++i )
-    {
-        if( !strcmp( argv[i], "-images" ) )
-        {
-            image_folder = argv[++i];
-        }
-        else if( !strcmp( argv[i], "-annotations" ) )
-        {
-            annotations_file = argv[++i];
-        }
+    if (parser.has("help")){
+        parser.printMessage();
+        cerr << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
+        return 0;
+    }
+    string image_folder(parser.get<string>("images"));
+    string annotations_file(parser.get<string>("annotations"));
+    if (image_folder.empty() || annotations_file.empty()){
+        parser.printMessage();
+        cerr << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
+        return -1;
     }
 
     // Check if the folder actually exists
