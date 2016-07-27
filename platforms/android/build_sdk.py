@@ -130,7 +130,7 @@ class Builder:
             "-DBUILD_ANDROID_EXAMPLES=ON",
             "-DINSTALL_ANDROID_EXAMPLES=ON",
             "-DANDROID_STL=gnustl_static",
-            "-DANDROID_NATIVE_API_LEVEL=8",
+            "-DANDROID_NATIVE_API_LEVEL=9",
             "-DANDROID_ABI='%s'" % abi.cmake_name,
             "-DWITH_TBB=ON",
             "-DANDROID_TOOLCHAIN_NAME=%s" % abi.toolchain

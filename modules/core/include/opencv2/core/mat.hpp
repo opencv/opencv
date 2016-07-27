@@ -3146,21 +3146,29 @@ The example below illustrates how you can compute a normalized and threshold 3D 
         }
 
         minProb *= image.rows*image.cols;
-        Mat plane;
-        NAryMatIterator it(&hist, &plane, 1);
+
+        // initialize iterator (the style is different from STL).
+        // after initialization the iterator will contain
+        // the number of slices or planes the iterator will go through.
+        // it simultaneously increments iterators for several matrices
+        // supplied as a null terminated list of pointers
+        const Mat* arrays[] = {&hist, 0};
+        Mat planes[1];
+        NAryMatIterator itNAry(arrays, planes, 1);
         double s = 0;
         // iterate through the matrix. on each iteration
-        // it.planes[*] (of type Mat) will be set to the current plane.
-        for(int p = 0; p < it.nplanes; p++, ++it)
+        // itNAry.planes[i] (of type Mat) will be set to the current plane
+        // of the i-th n-dim matrix passed to the iterator constructor.
+        for(int p = 0; p < itNAry.nplanes; p++, ++itNAry)
         {
-            threshold(it.planes[0], it.planes[0], minProb, 0, THRESH_TOZERO);
-            s += sum(it.planes[0])[0];
+            threshold(itNAry.planes[0], itNAry.planes[0], minProb, 0, THRESH_TOZERO);
+            s += sum(itNAry.planes[0])[0];
         }
 
         s = 1./s;
-        it = NAryMatIterator(&hist, &plane, 1);
-        for(int p = 0; p < it.nplanes; p++, ++it)
-            it.planes[0] *= s;
+        itNAry = NAryMatIterator(arrays, planes, 1);
+        for(int p = 0; p < itNAry.nplanes; p++, ++itNAry)
+            itNAry.planes[0] *= s;
     }
 @endcode
  */

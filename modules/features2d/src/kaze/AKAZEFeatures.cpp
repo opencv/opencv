@@ -342,14 +342,14 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<KeyPoint>& kpts)
 
             if (is_out == false) {
               if (is_repeated == false) {
-                point.pt.x *= ratio;
-                point.pt.y *= ratio;
+                point.pt.x = (float)(point.pt.x*ratio + .5*(ratio-1.0));
+                point.pt.y = (float)(point.pt.y*ratio + .5*(ratio-1.0));
                 kpts_aux.push_back(point);
                 npoints++;
               }
               else {
-                point.pt.x *= ratio;
-                point.pt.y *= ratio;
+                point.pt.x = (float)(point.pt.x*ratio + .5*(ratio-1.0));
+                point.pt.y = (float)(point.pt.y*ratio + .5*(ratio-1.0));
                 kpts_aux[id_repeated] = point;
               }
             } // if is_out
@@ -439,8 +439,8 @@ void AKAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint>& kpts)
         kpts[i].pt.x = x + dst(0);
       kpts[i].pt.y = y + dst(1);
       int power = fastpow(2, evolution_[kpts[i].class_id].octave);
-      kpts[i].pt.x *= power;
-      kpts[i].pt.y *= power;
+      kpts[i].pt.x = (float)(kpts[i].pt.x*power + .5*(power-1));
+      kpts[i].pt.y = (float)(kpts[i].pt.y*power + .5*(power-1));
       kpts[i].angle = 0.0;
 
       // In OpenCV the size of a keypoint its the diameter

@@ -1,11 +1,11 @@
-# Binary branch name: ffmpeg/master_20150703
-# Binaries were created for OpenCV: e379ea6ed60b0caad4d4e3eea096e9d850cb8c86
-set(FFMPEG_BINARIES_COMMIT "8aeefc4efe3215de89d8c7e114ae6f7a6091b8eb")
-set(FFMPEG_FILE_HASH_BIN32 "89c783eee1c47bfc733f08334ec2e31c")
-set(FFMPEG_FILE_HASH_BIN64 "35fe6ccdda6d7a04e9056b0d73b98e76")
-set(FFMPEG_FILE_HASH_CMAKE "8606f947a780071f8fcce8cbf39ceef5")
+# Binary branch name: ffmpeg/master_20160715
+# Binaries were created for OpenCV: 0e6aa189cb9a9642b0ae7983d301693516faad5d
+set(FFMPEG_BINARIES_COMMIT "7eef9080d3271c7547d303fa839a62e1124ff1e6")
+set(FFMPEG_FILE_HASH_BIN32 "3bb2a8388af90adf6c762210e696400d")
+set(FFMPEG_FILE_HASH_BIN64 "ebcfc963f0a94f7e83d58d60eaf23849")
+set(FFMPEG_FILE_HASH_CMAKE "f99941d10c1e87bf16b9055e8fc91ab2")
 
-set(FFMPEG_DOWNLOAD_URL ${OPENCV_FFMPEG_URL};$ENV{OPENCV_FFMPEG_URL};https://raw.githubusercontent.com/Itseez/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/)
+set(FFMPEG_DOWNLOAD_URL ${OPENCV_FFMPEG_URL};$ENV{OPENCV_FFMPEG_URL};https://raw.githubusercontent.com/opencv/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/)
 
 ocv_download(PACKAGE opencv_ffmpeg.dll
              HASH ${FFMPEG_FILE_HASH_BIN32}

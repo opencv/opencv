@@ -119,7 +119,7 @@ Or you can download latest source from OpenCV's github repo. (If you want to con
 choose this. It always keeps your OpenCV up-to-date). For that, you need to install **Git** first.
 @code{.sh}
 yum install git
-git clone https://github.com/Itseez/opencv.git
+git clone https://github.com/opencv/opencv.git
 @endcode
 It will create a folder OpenCV in home directory (or the directory you specify). The cloning may
 take some time depending upon your internet connection.

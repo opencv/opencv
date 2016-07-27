@@ -52,13 +52,23 @@
 #include <stdio.h>
 
 #if (GTK_MAJOR_VERSION == 3)
-  #define GTK_VERSION3
+  #define GTK_VERSION3 1
 #endif //GTK_MAJOR_VERSION >= 3
+#if (GTK_MAJOR_VERSION > 3 || (GTK_MAJOR_VERSION == 3 && GTK_MINOR_VERSION >= 4))
+  #define GTK_VERSION3_4 1
+#endif
 
 #ifdef HAVE_OPENGL
     #include <gtk/gtkgl.h>
     #include <GL/gl.h>
     #include <GL/glu.h>
+#endif
+
+#ifndef BIT_ALLIN
+    #define BIT_ALLIN(x,y) ( ((x)&(y)) == (y) )
+#endif
+#ifndef BIT_MAP
+    #define BIT_MAP(x,y,z) ( ((x)&(y)) ? (z) : 0 )
 #endif
 
 // TODO Fix the initial window size when flags=0.  Right now the initial window is by default
@@ -1006,6 +1016,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     CvWindow* window;
     int len;
+    int b_nautosize;
 
     cvInitSystem(1,(char**)&name);
     if( !name )
@@ -1066,6 +1077,8 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
                         G_CALLBACK(icvOnMouse), window );
     g_signal_connect( window->widget, "motion-notify-event",
                         G_CALLBACK(icvOnMouse), window );
+    g_signal_connect( window->widget, "scroll-event",
+                        G_CALLBACK(icvOnMouse), window );
     g_signal_connect( window->frame, "delete-event",
                         G_CALLBACK(icvOnClose), window );
 #if defined(GTK_VERSION3)
@@ -1076,7 +1089,12 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
                         G_CALLBACK(cvImageWidget_expose), window );
 #endif //GTK_VERSION3
 
-    gtk_widget_add_events (window->widget, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK) ;
+
+#if defined(GTK_VERSION3_4)
+    gtk_widget_add_events (window->widget, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK | GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK) ;
+#else
+    gtk_widget_add_events (window->widget, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK | GDK_SCROLL_MASK) ;
+#endif //GTK_VERSION3_4
 
     gtk_widget_show( window->frame );
     gtk_window_set_title( GTK_WINDOW(window->frame), name );
@@ -1085,11 +1103,11 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
         hg_windows->prev = window;
     hg_windows = window;
 
-    gtk_window_set_resizable( GTK_WINDOW(window->frame), (flags & CV_WINDOW_AUTOSIZE) == 0 );
-
+    b_nautosize = ((flags & CV_WINDOW_AUTOSIZE) == 0);
+    gtk_window_set_resizable( GTK_WINDOW(window->frame), b_nautosize );
 
     // allow window to be resized
-    if( (flags & CV_WINDOW_AUTOSIZE)==0 ){
+    if( b_nautosize ){
         GdkGeometry geometry;
         geometry.min_width = 50;
         geometry.min_height = 50;
@@ -1817,7 +1835,7 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
 {
     int code = 0;
 
-    if ( (event->state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK && (event->keyval == GDK_s || event->keyval == GDK_S))
+    if ( BIT_ALLIN(event->state, GDK_CONTROL_MASK) && (event->keyval == GDK_s || event->keyval == GDK_S))
     {
         try
         {
@@ -1901,7 +1919,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     CvWindow* window = (CvWindow*)user_data;
     CvPoint2D32f pt32f(-1., -1.);
     CvPoint pt(-1,-1);
-    int cv_event = -1, state = 0;
+    int cv_event = -1, state = 0, flags = 0;
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
     if( window->signature != CV_WINDOW_MAGIC_VAL ||
@@ -1947,12 +1965,40 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         }
         state = event_button->state;
     }
+    else if( event->type == GDK_SCROLL )
+    {
+#if defined(GTK_VERSION3_4)
+        // NOTE: in current implementation doesn't possible to put into callback function delta_x and delta_y separetely
+        double delta = (event->scroll.delta_x + event->scroll.delta_y);
+        cv_event   = (event->scroll.delta_y!=0) ? CV_EVENT_MOUSEHWHEEL : CV_EVENT_MOUSEWHEEL;
+#else
+        cv_event = CV_EVENT_MOUSEWHEEL;
+#endif //GTK_VERSION3_4
 
-    if( cv_event >= 0 ){
+        state    = event->scroll.state;
+
+        switch(event->scroll.direction) {
+#if defined(GTK_VERSION3_4)
+        case GDK_SCROLL_SMOOTH: flags |= (((int)delta << 16));
+            break;
+#endif //GTK_VERSION3_4
+        case GDK_SCROLL_LEFT:  cv_event = CV_EVENT_MOUSEHWHEEL;
+        case GDK_SCROLL_UP:    flags |= ((-(int)1 << 16));
+            break;
+        case GDK_SCROLL_RIGHT: cv_event = CV_EVENT_MOUSEHWHEEL;
+        case GDK_SCROLL_DOWN:  flags |= (((int)1 << 16));
+            break;
+        default: ;
+        };
+    }
+
+    if( cv_event >= 0 )
+    {
         // scale point if image is scaled
         if( (image_widget->flags & CV_WINDOW_AUTOSIZE)==0 &&
              image_widget->original_image &&
-             image_widget->scaled_image ){
+             image_widget->scaled_image )
+        {
             // image origin is not necessarily at (0,0)
 #if defined (GTK_VERSION3)
             int x0 = (gtk_widget_get_allocated_width(widget) - image_widget->scaled_image->cols)/2;
@@ -1966,25 +2012,27 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
             pt.y = cvFloor( ((pt32f.y-y0)*image_widget->original_image->rows)/
                                             image_widget->scaled_image->rows );
         }
-        else{
+        else
+        {
             pt = cvPointFrom32f( pt32f );
         }
 
 //        if((unsigned)pt.x < (unsigned)(image_widget->original_image->width) &&
 //           (unsigned)pt.y < (unsigned)(image_widget->original_image->height) )
         {
-            int flags = (state & GDK_SHIFT_MASK ? CV_EVENT_FLAG_SHIFTKEY : 0) |
-                (state & GDK_CONTROL_MASK ? CV_EVENT_FLAG_CTRLKEY : 0) |
-                (state & (GDK_MOD1_MASK|GDK_MOD2_MASK) ? CV_EVENT_FLAG_ALTKEY : 0) |
-                (state & GDK_BUTTON1_MASK ? CV_EVENT_FLAG_LBUTTON : 0) |
-                (state & GDK_BUTTON2_MASK ? CV_EVENT_FLAG_MBUTTON : 0) |
-                (state & GDK_BUTTON3_MASK ? CV_EVENT_FLAG_RBUTTON : 0);
+            flags |= BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
+                BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
+                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)   |
+                BIT_MAP(state, GDK_MOD2_MASK,    CV_EVENT_FLAG_ALTKEY)   |
+                BIT_MAP(state, GDK_BUTTON1_MASK, CV_EVENT_FLAG_LBUTTON)  |
+                BIT_MAP(state, GDK_BUTTON2_MASK, CV_EVENT_FLAG_MBUTTON)  |
+                BIT_MAP(state, GDK_BUTTON3_MASK, CV_EVENT_FLAG_RBUTTON);
             window->on_mouse( cv_event, pt.x, pt.y, flags, window->on_mouse_param );
         }
     }
 
-        return FALSE;
-    }
+    return FALSE;
+}
 
 
 static gboolean icvAlarm( gpointer user_data )

@@ -288,12 +288,12 @@ Command line arguments of opencv_traincascade application grouped by purposes:
     -   -minHitRate \<min_hit_rate\>
 
         Minimal desired hit rate for each stage of the classifier. Overall hit rate may be estimated
-        as (min_hit_rate\^number_of_stages).
+        as (min_hit_rate ^ number_of_stages), @cite Viola04 §4.1.
 
     -   -maxFalseAlarmRate \<max_false_alarm_rate\>
 
         Maximal desired false alarm rate for each stage of the classifier. Overall false alarm rate
-        may be estimated as (max_false_alarm_rate\^number_of_stages).
+        may be estimated as (max_false_alarm_rate ^ number_of_stages), @cite Viola04 §4.1.
 
     -   -weightTrimRate \<weight_trim_rate\>
 

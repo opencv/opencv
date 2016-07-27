@@ -839,9 +839,9 @@ void Mat::push_back(const Mat& elems)
     bool eq = size == elems.size;
     size.p[0] = r;
     if( !eq )
-        CV_Error(CV_StsUnmatchedSizes, "");
+        CV_Error(CV_StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
     if( type() != elems.type() )
-        CV_Error(CV_StsUnmatchedFormats, "");
+        CV_Error(CV_StsUnmatchedFormats, "Pushed vector type is not the same as matrix type");
 
     if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );

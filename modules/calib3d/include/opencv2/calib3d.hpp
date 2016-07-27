@@ -1782,15 +1782,16 @@ namespace fisheye
 //! @{
 
     enum{
-        CALIB_USE_INTRINSIC_GUESS   = 1,
-        CALIB_RECOMPUTE_EXTRINSIC   = 2,
-        CALIB_CHECK_COND            = 4,
-        CALIB_FIX_SKEW              = 8,
-        CALIB_FIX_K1                = 16,
-        CALIB_FIX_K2                = 32,
-        CALIB_FIX_K3                = 64,
-        CALIB_FIX_K4                = 128,
-        CALIB_FIX_INTRINSIC         = 256
+        CALIB_USE_INTRINSIC_GUESS   = 1 << 0,
+        CALIB_RECOMPUTE_EXTRINSIC   = 1 << 1,
+        CALIB_CHECK_COND            = 1 << 2,
+        CALIB_FIX_SKEW              = 1 << 3,
+        CALIB_FIX_K1                = 1 << 4,
+        CALIB_FIX_K2                = 1 << 5,
+        CALIB_FIX_K3                = 1 << 6,
+        CALIB_FIX_K4                = 1 << 7,
+        CALIB_FIX_INTRINSIC         = 1 << 8,
+        CALIB_FIX_PRINCIPAL_POINT   = 1 << 9
     };
 
     /** @brief Projects points using fisheye model
@@ -1940,8 +1941,10 @@ namespace fisheye
     of intrinsic optimization.
     -   **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
     -   **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
-    -   **fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay
-    zero.
+    -   **fisheye::CALIB_FIX_K1..fisheye::CALIB_FIX_K4** Selected distortion coefficients
+    are set to zeros and stay zero.
+    -   **fisheye::CALIB_FIX_PRINCIPAL_POINT** The principal point is not changed during the global
+optimization. It stays at the center or at a different location specified when CALIB_USE_INTRINSIC_GUESS is set too.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */
     CV_EXPORTS_W double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
