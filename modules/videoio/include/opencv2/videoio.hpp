@@ -75,7 +75,7 @@ To enable/disable APIs, you have to:
      (e.g. <tt>-DWITH_MSMF=ON -DWITH_VFW=ON ... </tt>) or checking related switch in cmake-gui
   2. rebuild OpenCV itself
 */
-enum  VideoCaptures {
+enum  VideoCapturesIds {
        CAP_ANY          = 0,            //!< Auto detect
        CAP_VFW          = 200,          //!< Video For Windows (platform native)
        CAP_V4L          = 200,          //!< V4L/V4L2 capturing support via libv4l
@@ -107,7 +107,7 @@ enum  VideoCaptures {
      };
 
 //! generic properties (based on DC1394 properties)
-enum  CaptureProperties {
+enum  CapturePropertiesIds {
        CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
        CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next.
        CAP_PROP_POS_AVI_RATIO  =2, //!< Relative position of the video file: 0=start of the film, 1=end of the film.
@@ -152,7 +152,7 @@ enum  CaptureProperties {
 
 //! @brief Generic camera output modes.
 //! @note Currently, these are supported through the libv4l interface only.
-enum  CaptureModes{
+enum  CaptureModesIds{
        CAP_MODE_BGR  = 0, //!< BGR24 (default)
        CAP_MODE_RGB  = 1, //!< RGB24
        CAP_MODE_GRAY = 2, //!< Y8
@@ -164,7 +164,7 @@ enum  CaptureModes{
 modes of the controlling registers (can be: auto, manual, auto single push, absolute Latter allowed with any other mode)
 every feature can have only one mode turned on at a time
 */
-enum  CaptureRegistersDcs{
+enum {
        CAP_PROP_DC1394_OFF                = -4, //!< turn the feature off (not controlled manually nor automatically).
        CAP_PROP_DC1394_MODE_MANUAL        = -3, //!< set automatically when a value of the feature is set by the user.
        CAP_PROP_DC1394_MODE_AUTO          = -2,
@@ -174,7 +174,7 @@ enum  CaptureRegistersDcs{
 
 
 //! OpenNI map generators
-enum OpenNIMaps{
+enum CaptureOpenNIMapIds{
        CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
        CAP_OPENNI_IMAGE_GENERATOR = 1 << 30,
        CAP_OPENNI_IR_GENERATOR    = 1 << 29,
@@ -182,7 +182,7 @@ enum OpenNIMaps{
      };
 
 //! Properties of cameras available through OpenNI interfaces
-enum OpenNICapProps{
+enum CaptureOpenNIPropertiesIds{
        CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
        CAP_PROP_OPENNI_FRAME_MAX_DEPTH   = 101, //!< In mm
        CAP_PROP_OPENNI_BASELINE          = 102, //!< In mm
@@ -201,7 +201,7 @@ enum OpenNICapProps{
      };
 
 //! OpenNI shortcuts
-enum OpenNICapShorts{
+enum CaptureOpenNIShortcutsIds{
        CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
        CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_OUTPUT_MODE,
        CAP_OPENNI_DEPTH_GENERATOR_PRESENT         = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
@@ -213,7 +213,7 @@ enum OpenNICapShorts{
      };
 
 //! OpenNI data given from depth generator
-enum OpenNICapDeps{
+enum CaptureOpenNIDepthIds{
        CAP_OPENNI_DEPTH_MAP         = 0, //!< Depth values in mm (CV_16UC1)
        CAP_OPENNI_POINT_CLOUD_MAP   = 1, //!< XYZ in meters (CV_32FC3)
        CAP_OPENNI_DISPARITY_MAP     = 2, //!< Disparity in pixels (CV_8UC1)
@@ -227,7 +227,7 @@ enum OpenNICapDeps{
      };
 
 //! Supported output modes of OpenNI image generator
-enum OpenNICapModes{
+enum CaptureOpenNIModeIds{
        CAP_OPENNI_VGA_30HZ  = 0,
        CAP_OPENNI_SXGA_15HZ = 1,
        CAP_OPENNI_SXGA_30HZ = 2,
@@ -237,12 +237,12 @@ enum OpenNICapModes{
 
 
 //! GStreamer
-enum GStreamer{ CAP_PROP_GSTREAMER_QUEUE_LENGTH = 200 //!< Default is 1
+enum { CAP_PROP_GSTREAMER_QUEUE_LENGTH = 200 //!< Default is 1
      };
 
 
 //! PVAPI
-enum PvapisCaptures{
+enum {
        CAP_PROP_PVAPI_MULTICASTIP           = 300, //!< IP for enable multicast master mode. 0 for disable multicast.
        CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE = 301, //!< FrameStartTriggerMode: Determines how a frame is initiated.
        CAP_PROP_PVAPI_DECIMATIONHORIZONTAL  = 302, //!< Horizontal sub-sampling of the image.
@@ -253,7 +253,7 @@ enum PvapisCaptures{
      };
 
 //! PVAPI: FrameStartTriggerMode
-enum PvapiFrameStartTriggerModes{
+enum {
        CAP_PVAPI_FSTRIGMODE_FREERUN     = 0,    //!< Freerun
        CAP_PVAPI_FSTRIGMODE_SYNCIN1     = 1,    //!< SyncIn1
        CAP_PVAPI_FSTRIGMODE_SYNCIN2     = 2,    //!< SyncIn2
@@ -262,7 +262,7 @@ enum PvapiFrameStartTriggerModes{
      };
 
 //! PVAPI: DecimationHorizontal, DecimationVertical
-enum PvapiDecimations{
+enum {
        CAP_PVAPI_DECIMATION_OFF       = 1,    //!< Off
        CAP_PVAPI_DECIMATION_2OUTOF4   = 2,    //!< 2 out of 4 decimation
        CAP_PVAPI_DECIMATION_2OUTOF8   = 4,    //!< 2 out of 8 decimation
@@ -270,7 +270,7 @@ enum PvapiDecimations{
      };
 
 //! PVAPI: PixelFormat
-enum PvapiPixelFormats{
+enum {
        CAP_PVAPI_PIXELFORMAT_MONO8    = 1,    //!< Mono8
        CAP_PVAPI_PIXELFORMAT_MONO16   = 2,    //!< Mono16
        CAP_PVAPI_PIXELFORMAT_BAYER8   = 3,    //!< Bayer8
@@ -282,7 +282,7 @@ enum PvapiPixelFormats{
      };
 
 //! Properties of cameras available through XIMEA SDK interface
-enum CaptureXimeas{
+enum {
        CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Change image resolution by binning or skipping.
        CAP_PROP_XI_DATA_FORMAT                                  = 401, //!< Output data format.
        CAP_PROP_XI_OFFSET_X                                     = 402, //!< Horizontal offset from the origin to the area of interest (in pixels).
@@ -437,7 +437,7 @@ enum CaptureXimeas{
 
 
 //! Properties of cameras available through AVFOUNDATION interface
-enum CaptureAvfoundations{
+enum {
        CAP_PROP_IOS_DEVICE_FOCUS        = 9001,
        CAP_PROP_IOS_DEVICE_EXPOSURE     = 9002,
        CAP_PROP_IOS_DEVICE_FLASH        = 9003,
@@ -448,7 +448,7 @@ enum CaptureAvfoundations{
 
 //! Properties of cameras available through Smartek Giganetix Ethernet Vision interface
 /* --- Vladimir Litvinenko (litvinenko.vladimir@gmail.com) --- */
-enum CatptureProperstisGiga{
+enum {
        CAP_PROP_GIGA_FRAME_OFFSET_X   = 10001,
        CAP_PROP_GIGA_FRAME_OFFSET_Y   = 10002,
        CAP_PROP_GIGA_FRAME_WIDTH_MAX  = 10003,
@@ -457,7 +457,7 @@ enum CatptureProperstisGiga{
        CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
      };
 
-enum CaptureIntelPerCs{
+enum {
        CAP_PROP_INTELPERC_PROFILE_COUNT               = 11001,
        CAP_PROP_INTELPERC_PROFILE_IDX                 = 11002,
        CAP_PROP_INTELPERC_DEPTH_LOW_CONFIDENCE_VALUE  = 11003,
@@ -468,20 +468,20 @@ enum CaptureIntelPerCs{
      };
 
 //! Intel PerC streams
-enum CaptureIntelPerCStreams{
+enum {
        CAP_INTELPERC_DEPTH_GENERATOR = 1 << 29,
        CAP_INTELPERC_IMAGE_GENERATOR = 1 << 28,
        CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR
      };
 
-enum CaptureIntelPerCPix{
+enum {
        CAP_INTELPERC_DEPTH_MAP              = 0, //!< Each pixel is a 16-bit integer. The value indicates the distance from an object to the camera's XY plane or the Cartesian depth.
        CAP_INTELPERC_UVDEPTH_MAP            = 1, //!< Each pixel contains two 32-bit floating point values in the range of 0-1, representing the mapping of depth coordinates to the color coordinates.
        CAP_INTELPERC_IR_MAP                 = 2, //!< Each pixel is a 16-bit integer. The value indicates the intensity of the reflected laser beam.
        CAP_INTELPERC_IMAGE                  = 3
      };
 
-enum VideoWriterProps{
+enum {
        VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
        VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
        VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
@@ -492,7 +492,7 @@ if propertyId is less than 0 then work on widget with that __additive inversed__
 Get IDs by using CAP_PROP_GPHOTO2_WIDGET_ENUMERATE.
 @see CvCaptureCAM_GPHOTO2 for more info
 */
-enum CaptureIDs{
+enum {
        CAP_PROP_GPHOTO2_PREVIEW           = 17001, //!< Capture only preview from liveview mode.
        CAP_PROP_GPHOTO2_WIDGET_ENUMERATE  = 17002, //!< Readonly, returns (const char *).
        CAP_PROP_GPHOTO2_RELOAD_CONFIG     = 17003, //!< Trigger, only by set. Reload camera settings.
@@ -647,52 +647,52 @@ public:
 
     /** @brief Sets a property in the VideoCapture.
     @param propId Property identifier. It can be one of the following:
-    -   cv::CaptureProperties::CAP_PROP_POS_MSEC @copydoc cv::CvaptureProperties::CAP_PROP_POS_MSEC
-    -   cv::CaptureProperties::CAP_PROP_POS_FRAMES @copydoc CvaptureProperties::CAP_PROP_POS_FRAMES
-    -   cv::CaptureProperties::CAP_PROP_POS_AVI_RATIO @copydoc cv::CvaptureProperties::CAP_PROP_POS_AVI_RATIO
-    -   cv::CaptureProperties::CAP_PROP_FRAME_WIDTH @copydoc cv::CvaptureProperties::CAP_PROP_FRAME_WIDTH
-    -   cv::CaptureProperties::CAP_PROP_FRAME_HEIGHT @copydoc cv::CvaptureProperties::CAP_PROP_FRAME_HEIGHT
-    -   cv::CaptureProperties::CAP_PROP_FPS @copydoc cv::CvaptureProperties::CAP_PROP_FPS
-    -   cv::CaptureProperties::CAP_PROP.CAP_PROP_FOURCC @copydoc cv::CvaptureProperties::CAP_PROP_FOURCC
-    -   cv::CaptureProperties::CAP_PROP_FRAME_COUNT @copydoc cv::CvaptureProperties::CAP_PROP_FRAME_COUNT
-    -   cv::CaptureProperties::CAP_PROP_FORMAT @copydoc cv::CvaptureProperties::CAP_PROP_FORMAT
-    -   cv::CaptureProperties::CAP_PROP_MODE @copydoc cv::CvaptureProperties::CAP_PROP_MODE
-    -   cv::CaptureProperties::CAP_PROP_BRIGHTNESS @copydoc cv::CvaptureProperties::CAP_PROP_BRIGHTNESS
-    -   cv::CaptureProperties::CAP_PROP_CONTRAST @copydoc cv::CvaptureProperties::CAP_PROP_CONTRAST
-    -   cv::CaptureProperties::CAP_PROP_SATURATION @copydoc cv::CvaptureProperties::CAP_PROP_SATURATION
-    -   cv::CaptureProperties::CAP_PROP_HUE @copydoc cv::CvaptureProperties.CAP_PROP_HUE
-    -   cv::CaptureProperties::CAP_PROP_GAIN @copydoc cv::CvaptureProperties::CAP_PROP_GAIN
-    -   cv::CaptureProperties::CAP_PROP_EXPOSURE @copydoc cv::CvaptureProperties::CAP_PROP_EXPOSURE
-    -   cv::CaptureProperties::CAP_PROP_CONVERT_RGB @copydoc cv::CvaptureProperties::CAP_PROP_CONVERT_RGB
-    -   cv::CaptureProperties::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CvaptureProperties::CAP_PROP_WHITE_BALANCE_BLUE_U
-    -   cv::CaptureProperties::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CaptureProperties::CAP_PROP_WHITE_BALANCE_RED_V
-    -   cv::CaptureProperties::CAP_PROP_RECTIFICATION @copydoc cv::CvaptureProperties::CAP_PROP_RECTIFICATION
+    -   cv::CapturePropertiesIds::CAP_PROP_POS_MSEC @copydoc cv::CvapturePropertiesIds::CAP_PROP_POS_MSEC
+    -   cv::CapturePropertiesIds::CAP_PROP_POS_FRAMES @copydoc CvapturePropertiesIds::CAP_PROP_POS_FRAMES
+    -   cv::CapturePropertiesIds::CAP_PROP_POS_AVI_RATIO @copydoc cv::CvapturePropertiesIds::CAP_PROP_POS_AVI_RATIO
+    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_WIDTH @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_WIDTH
+    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_HEIGHT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_HEIGHT
+    -   cv::CapturePropertiesIds::CAP_PROP_FPS @copydoc cv::CvapturePropertiesIds::CAP_PROP_FPS
+    -   cv::CapturePropertiesIds::CAP_PROP_FOURCC @copydoc cv::CvapturePropertiesIds::CAP_PROP_FOURCC
+    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_COUNT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_COUNT
+    -   cv::CapturePropertiesIds::CAP_PROP_FORMAT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FORMAT
+    -   cv::CapturePropertiesIds::CAP_PROP_MODE @copydoc cv::CvapturePropertiesIds::CAP_PROP_MODE
+    -   cv::CapturePropertiesIds::CAP_PROP_BRIGHTNESS @copydoc cv::CvapturePropertiesIds::CAP_PROP_BRIGHTNESS
+    -   cv::CapturePropertiesIds::CAP_PROP_CONTRAST @copydoc cv::CvapturePropertiesIds::CAP_PROP_CONTRAST
+    -   cv::CapturePropertiesIds::CAP_PROP_SATURATION @copydoc cv::CvapturePropertiesIds::CAP_PROP_SATURATION
+    -   cv::CapturePropertiesIds::CAP_PROP_HUE @copydoc cv::CvapturePropertiesIds.CAP_PROP_HUE
+    -   cv::CapturePropertiesIds::CAP_PROP_GAIN @copydoc cv::CvapturePropertiesIds::CAP_PROP_GAIN
+    -   cv::CapturePropertiesIds::CAP_PROP_EXPOSURE @copydoc cv::CvapturePropertiesIds::CAP_PROP_EXPOSURE
+    -   cv::CapturePropertiesIds::CAP_PROP_CONVERT_RGB @copydoc cv::CvapturePropertiesIds::CAP_PROP_CONVERT_RGB
+    -   cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CvapturePropertiesIds::CAP_PROP_WHITE_BALANCE_BLUE_U
+    -   cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_RED_V
+    -   cv::CapturePropertiesIds::CAP_PROP_RECTIFICATION @copydoc cv::CvapturePropertiesIds::CAP_PROP_RECTIFICATION
     @param value Value of the property.
      */
     CV_WRAP virtual bool set(int propId, double value);
 
     /** @brief Returns the specified VideoCapture property
     @param propId Property identifier. It can be one of the following:
-    -   cv::CaptureProperties::CAP_PROP_POS_MSEC @copydoc cv::CvaptureProperties::CAP_PROP_POS_MSEC
-    -   cv::CaptureProperties::CAP_PROP_POS_FRAMES @copydoc CvaptureProperties::CAP_PROP_POS_FRAMES
-    -   cv::CaptureProperties::CAP_PROP_POS_AVI_RATIO @copydoc cv::CvaptureProperties::CAP_PROP_POS_AVI_RATIO
-    -   cv::CaptureProperties::CAP_PROP_FRAME_WIDTH @copydoc cv::CvaptureProperties::CAP_PROP_FRAME_WIDTH
-    -   cv::CaptureProperties::CAP_PROP_FRAME_HEIGHT @copydoc cv::CvaptureProperties::CAP_PROP_FRAME_HEIGHT
-    -   cv::CaptureProperties::CAP_PROP_FPS @copydoc cv::CvaptureProperties::CAP_PROP_FPS
-    -   cv::CaptureProperties::CAP_PROP_FOURCC @copydoc cv::CvaptureProperties::CAP_PROP_FOURCC
-    -   cv::CaptureProperties::CAP_PROP_FRAME_COUNT @copydoc cv::CvaptureProperties::CAP_PROP_FRAME_COUNT
-    -   cv::CaptureProperties::CAP_PROP_FORMAT @copydoc cv::CvaptureProperties::CAP_PROP_FORMAT
-    -   cv::CaptureProperties::CAP_PROP_MODE @copydoc cv::CvaptureProperties::CAP_PROP_MODE
-    -   cv::CaptureProperties::CAP_PROP_BRIGHTNESS @copydoc cv::CvaptureProperties::CAP_PROP_BRIGHTNESS
-    -   cv::CaptureProperties::CAP_PROP_CONTRAST @copydoc cv::CvaptureProperties::CAP_PROP_CONTRAST
-    -   cv::CaptureProperties::CAP_PROP_SATURATION @copydoc cv::CvaptureProperties.CAP_PROP_SATURATION
-    -   cv::CaptureProperties::CAP_PROP_HUE @copydoc cv::CvaptureProperties::CAP_PROP_HUE
-    -   cv::CaptureProperties::CAP_PROP_GAIN @copydoc cv::CvaptureProperties::CAP_PROP_GAIN
-    -   cv::CaptureProperties::CAP_PROP_EXPOSURE @copydoc cv::CvaptureProperties::CAP_PROP_EXPOSURE
-    -   cv::CaptureProperties::CAP_PROP_CONVERT_RGB @copydoc cv::CvaptureProperties::CAP_PROP_CONVERT_RGB
-    -   cv::CaptureProperties::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CvaptureProperties::CAP_PROP_WHITE_BALANCE_BLUE_U
-    -   cv::CaptureProperties::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CvaptureProperties.CAP_PROP_WHITE_BALANCE_RED_V
-    -   cv::CaptureProperties::CAP_PROP_RECTIFICATION @copydoc cv::CvaptureProperties::CAP_PROP_RECTIFICATION
+    -   cv::CapturePropertiesIds::CAP_PROP_POS_MSEC @copydoc cv::CvapturePropertiesIds::CAP_PROP_POS_MSEC
+    -   cv::CapturePropertiesIds::CAP_PROP_POS_FRAMES @copydoc CvapturePropertiesIds::CAP_PROP_POS_FRAMES
+    -   cv::CapturePropertiesIds::CAP_PROP_POS_AVI_RATIO @copydoc cv::CvapturePropertiesIds::CAP_PROP_POS_AVI_RATIO
+    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_WIDTH @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_WIDTH
+    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_HEIGHT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_HEIGHT
+    -   cv::CapturePropertiesIds::CAP_PROP_FPS @copydoc cv::CvapturePropertiesIds::CAP_PROP_FPS
+    -   cv::CapturePropertiesIds::CAP_PROP_FOURCC @copydoc cv::CvapturePropertiesIds::CAP_PROP_FOURCC
+    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_COUNT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_COUNT
+    -   cv::CapturePropertiesIds::CAP_PROP_FORMAT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FORMAT
+    -   cv::CapturePropertiesIds::CAP_PROP_MODE @copydoc cv::CvapturePropertiesIds::CAP_PROP_MODE
+    -   cv::CapturePropertiesIds::CAP_PROP_BRIGHTNESS @copydoc cv::CvapturePropertiesIds::CAP_PROP_BRIGHTNESS
+    -   cv::CapturePropertiesIds::CAP_PROP_CONTRAST @copydoc cv::CvapturePropertiesIds::CAP_PROP_CONTRAST
+    -   cv::CapturePropertiesIds::CAP_PROP_SATURATION @copydoc cv::CvapturePropertiesIds::CAP_PROP_SATURATION
+    -   cv::CapturePropertiesIds::CAP_PROP_HUE @copydoc cv::CvapturePropertiesIds::CAP_PROP_HUE
+    -   cv::CapturePropertiesIds::CAP_PROP_GAIN @copydoc cv::CvapturePropertiesIds::CAP_PROP_GAIN
+    -   cv::CapturePropertiesIds::CAP_PROP_EXPOSURE @copydoc cv::CvapturePropertiesIds::CAP_PROP_EXPOSURE
+    -   cv::CapturePropertiesIds::CAP_PROP_CONVERT_RGB @copydoc cv::CvapturePropertiesIds::CAP_PROP_CONVERT_RGB
+    -   cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CvapturePropertiesIds::CAP_PROP_WHITE_BALANCE_BLUE_U
+    -   cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CvapturePropertiesIds::CAP_PROP_WHITE_BALANCE_RED_V
+    -   cv::CapturePropertiesIds::CAP_PROP_RECTIFICATION @copydoc cv::CvapturePropertiesIds::CAP_PROP_RECTIFICATION
     @note When querying a property that is not supported by the backend used by the VideoCapture
     class, value 0 is returned.
      */
