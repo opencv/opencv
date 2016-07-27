@@ -648,6 +648,120 @@ public:
     }
 };
 
+class Affine2DRefineCallback : public LMSolver::Callback
+{
+public:
+    Affine2DRefineCallback(InputArray _src, InputArray _dst)
+    {
+        src = _src.getMat();
+        dst = _dst.getMat();
+    }
+
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    {
+        int i, count = src.checkVector(2);
+        Mat param = _param.getMat();
+        _err.create(count*2, 1, CV_64F);
+        Mat err = _err.getMat(), J;
+        if( _Jac.needed())
+        {
+            _Jac.create(count*2, param.rows, CV_64F);
+            J = _Jac.getMat();
+            CV_Assert( J.isContinuous() && J.cols == 6 );
+        }
+
+        const Point2f* M = src.ptr<Point2f>();
+        const Point2f* m = dst.ptr<Point2f>();
+        const double* h = param.ptr<double>();
+        double* errptr = err.ptr<double>();
+        double* Jptr = J.data ? J.ptr<double>() : 0;
+
+        for( i = 0; i < count; i++ )
+        {
+            double Mx = M[i].x, My = M[i].y;
+            double xi = h[0]*Mx + h[1]*My + h[2];
+            double yi = h[3]*Mx + h[4]*My + h[5];
+            errptr[i*2] = xi - m[i].x;
+            errptr[i*2+1] = yi - m[i].y;
+
+            /*
+            Jacobian should be:
+                {x, y, 1, 0, 0, 0}
+                {0, 0, 0, x, y, 1}
+            */
+            if( Jptr )
+            {
+                Jptr[0] = Mx; Jptr[1] = My; Jptr[2] = 1.;
+                Jptr[3] = Jptr[4] = Jptr[5] = 0.;
+                Jptr[6] = Jptr[7] = Jptr[8] = 0.;
+                Jptr[9] = Mx; Jptr[10] = My; Jptr[11] = 1.;
+
+                Jptr += 6*2;
+            }
+        }
+
+        return true;
+    }
+
+    Mat src, dst;
+};
+
+class AffinePartial2DRefineCallback : public LMSolver::Callback
+{
+public:
+    AffinePartial2DRefineCallback(InputArray _src, InputArray _dst)
+    {
+        src = _src.getMat();
+        dst = _dst.getMat();
+    }
+
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    {
+        int i, count = src.checkVector(2);
+        Mat param = _param.getMat();
+        _err.create(count*2, 1, CV_64F);
+        Mat err = _err.getMat(), J;
+        if( _Jac.needed())
+        {
+            _Jac.create(count*2, param.rows, CV_64F);
+            J = _Jac.getMat();
+            CV_Assert( J.isContinuous() && J.cols == 4 );
+        }
+
+        const Point2f* M = src.ptr<Point2f>();
+        const Point2f* m = dst.ptr<Point2f>();
+        const double* h = param.ptr<double>();
+        double* errptr = err.ptr<double>();
+        double* Jptr = J.data ? J.ptr<double>() : 0;
+
+        for( i = 0; i < count; i++ )
+        {
+            double Mx = M[i].x, My = M[i].y;
+            double xi = h[0]*Mx - h[1]*My + h[2];
+            double yi = h[1]*Mx + h[0]*My + h[3];
+            errptr[i*2] = xi - m[i].x;
+            errptr[i*2+1] = yi - m[i].y;
+
+            /*
+            Jacobian should be:
+                {x, -y, 1, 0}
+                {y,  x, 0, 1}
+            */
+            if( Jptr )
+            {
+                Jptr[0] = Mx; Jptr[1] = -My; Jptr[2] = 1.; Jptr[3] = 0.;
+                Jptr[4] = My; Jptr[5] =  Mx; Jptr[6] = 0.; Jptr[7] = 1.;
+
+                Jptr += 4*2;
+            }
+        }
+
+        return true;
+    }
+
+    Mat src, dst;
+};
+
 }
 
 int cv::estimateAffine3D(InputArray _from, InputArray _to,
@@ -675,7 +789,7 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
 }
 
 int cv::estimateAffine2D(InputArray _from, InputArray _to,
-                         OutputArray _out, OutputArray _inliers,
+                         OutputArray _H, OutputArray _inliers,
                          double param1, double param2)
 {
     Mat from = _from.getMat(), to = _to.getMat();
@@ -683,7 +797,8 @@ int cv::estimateAffine2D(InputArray _from, InputArray _to,
 
     CV_Assert( count >= 0 && to.checkVector(2) == count );
 
-    Mat dFrom, dTo;
+    Mat dFrom, dTo, H, tempMask;
+
     from.convertTo(dFrom, CV_32F);
     to.convertTo(dTo, CV_32F);
     dFrom = dFrom.reshape(2, count);
@@ -693,19 +808,55 @@ int cv::estimateAffine2D(InputArray _from, InputArray _to,
     param1 = param1 <= 0 ? 3 : param1;
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
 
-    return createRANSACPointSetRegistrator(makePtr<Affine2DEstimatorCallback>(), 3, param1, param2)->run(dFrom, dTo, _out, _inliers);
+    // run RANSAC
+    bool result = false;
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<Affine2DEstimatorCallback>();
+    result = createRANSACPointSetRegistrator(cb, 3, param1, param2)->run(dFrom, dTo, H, tempMask);
+
+    if(result && count > 3)
+    {
+        // reorder to start with inliers
+        compressElems(dFrom.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
+        int inliers_count = compressElems(dTo.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
+        if(inliers_count > 0)
+        {
+            Mat src = dFrom.rowRange(0, inliers_count);
+            Mat dst = dTo.rowRange(0, inliers_count);
+            Mat Hvec = H.reshape(1, 6);
+            createLMSolver(makePtr<Affine2DRefineCallback>(src, dst), 10)->run(Hvec);
+        }
+    }
+
+    if(result)
+    {
+        if(_inliers.needed())
+            tempMask.copyTo(_inliers);
+        if(_H.needed())
+            H.copyTo(_H);
+    }
+    else
+    {
+        if(_inliers.needed())
+        {
+            tempMask = Mat::zeros(count, 1, CV_8U);
+            tempMask.copyTo(_inliers);
+        }
+    }
+
+    return result;
 }
 
 int cv::estimateAffinePartial2D(InputArray _from, InputArray _to,
-                         OutputArray _out, OutputArray _inliers,
+                         OutputArray _H, OutputArray _inliers,
                          double param1, double param2)
 {
     Mat from = _from.getMat(), to = _to.getMat();
-    int count = from.checkVector(2);
+    const int count = from.checkVector(2);
 
     CV_Assert( count >= 0 && to.checkVector(2) == count );
 
-    Mat dFrom, dTo;
+    Mat dFrom, dTo, H, tempMask;
+
     from.convertTo(dFrom, CV_32F);
     to.convertTo(dTo, CV_32F);
     dFrom = dFrom.reshape(2, count);
@@ -715,5 +866,53 @@ int cv::estimateAffinePartial2D(InputArray _from, InputArray _to,
     param1 = param1 <= 0 ? 3 : param1;
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
 
-    return createRANSACPointSetRegistrator(makePtr<AffinePartial2DEstimatorCallback>(), 2, param1, param2)->run(dFrom, dTo, _out, _inliers);
+    // run RANSAC
+    bool result = false;
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<AffinePartial2DEstimatorCallback>();
+    result = createRANSACPointSetRegistrator(cb, 2, param1, param2)->run(dFrom, dTo, H, tempMask);
+
+    if(result && count > 2)
+    {
+        // reorder to start with inliers
+        compressElems(dFrom.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
+        int inliers_count = compressElems(dTo.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
+        if(inliers_count > 0)
+        {
+            Mat src = dFrom.rowRange(0, inliers_count);
+            Mat dst = dTo.rowRange(0, inliers_count);
+            // H is
+            //     a -b tx
+            //     b  a ty
+            // Hvec model for LevMarq is
+            //     (a, b, tx, ty)
+            double *Hptr = H.ptr<double>();
+            double Hvec_buf[4] = {Hptr[0], Hptr[3], Hptr[2], Hptr[5]};
+            Mat Hvec (4, 1, CV_64F, Hvec_buf);
+            createLMSolver(makePtr<AffinePartial2DRefineCallback>(src, dst), 10)->run(Hvec);
+            // update H with refined parameters
+            Hptr[0] = Hptr[4] = Hvec_buf[0];
+            Hptr[1] = -Hvec_buf[1];
+            Hptr[2] = Hvec_buf[2];
+            Hptr[3] = Hvec_buf[1];
+            Hptr[5] = Hvec_buf[3];
+        }
+    }
+
+    if(result)
+    {
+        if(_inliers.needed())
+            tempMask.copyTo(_inliers);
+        if(_H.needed())
+            H.copyTo(_H);
+    }
+    else
+    {
+        if(_inliers.needed())
+        {
+            tempMask = Mat::zeros(count, 1, CV_8U);
+            tempMask.copyTo(_inliers);
+        }
+    }
+
+    return result;
 }
