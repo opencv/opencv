@@ -1096,14 +1096,14 @@ public:
         if( params.uniquenessRatio < 0 )
             CV_Error( Error::StsOutOfRange, "uniqueness ratio must be non-negative" );
 
-	int disp_shift;
-	if (dtype == CV_16SC1)
-		disp_shift = DISPARITY_SHIFT_16S;
-	else
-		disp_shift = DISPARITY_SHIFT_32S;
+        int disp_shift;
+        if (dtype == CV_16SC1)
+            disp_shift = DISPARITY_SHIFT_16S;
+        else
+            disp_shift = DISPARITY_SHIFT_32S;
 
 
-	int FILTERED = (params.minDisparity - 1) << disp_shift;
+        int FILTERED = (params.minDisparity - 1) << disp_shift;
 
 #ifdef HAVE_OPENCL
         if(ocl::useOpenCL() && disparr.isUMat() && params.textureThreshold == 0)
@@ -1116,7 +1116,7 @@ public:
                     if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
                         filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
                     if (dtype == CV_32F)
-			disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << disp_shift), 0);
+                        disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << disp_shift), 0);
                     CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
                 }
@@ -1145,7 +1145,7 @@ public:
 
         if( lofs >= width || rofs >= width || width1 < 1 )
         {
-	    disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << disp_shift) ) );
+            disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << disp_shift) ) );
             return;
         }
 
@@ -1201,7 +1201,7 @@ public:
             filterSpeckles(disp, FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
 
         if (disp0.data != disp.data)
-	    disp.convertTo(disp0, disp0.type(), 1./(1 << disp_shift), 0);
+            disp.convertTo(disp0, disp0.type(), 1./(1 << disp_shift), 0);
     }
 
     int getMinDisparity() const { return params.minDisparity; }
