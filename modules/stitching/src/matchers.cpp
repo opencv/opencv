@@ -867,9 +867,9 @@ void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const Im
 
         // Rerun motion estimation on inliers only
         if (full_affine_)
-            estimateAffine2D(src_points, dst_points, matches_info.H, matches_info.inliers_mask);
+            estimateAffine2D(src_points, dst_points, matches_info.H, noArray());
         else
-            estimateAffinePartial2D(src_points, dst_points, matches_info.H, matches_info.inliers_mask);
+            estimateAffinePartial2D(src_points, dst_points, matches_info.H, noArray());
     }
 
     // extend H to represent linear tranformation in homogeneous coordinates
