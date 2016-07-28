@@ -333,15 +333,12 @@ public:
     @param match_conf Match distances ration threshold
     @param num_matches_thresh1 Minimum number of matches required for the 2D affine transform
     estimation used in the inliers classification step
-    @param num_matches_thresh2 Minimum number of matches required for the 2D affine transform
-    re-estimation on inliers
 
     @sa cv::estimateAffine2D cv::estimateAffinePartial2D
      */
     AffineBestOf2NearestMatcher(bool full_affine = false, bool try_use_gpu = false,
-                                float match_conf = 0.3f, int num_matches_thresh1 = 6,
-                                int num_matches_thresh2 = 6) :
-        BestOf2NearestMatcher(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh2),
+                                float match_conf = 0.3f, int num_matches_thresh1 = 6) :
+        BestOf2NearestMatcher(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh1),
         full_affine_(full_affine) {}
 
 protected:

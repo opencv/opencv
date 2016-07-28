@@ -846,32 +846,6 @@ void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const Im
     /* should we remove matches between too close images? */
     // matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
 
-    // Check if we should try to refine motion
-    if (matches_info.num_inliers >= num_matches_thresh2_)
-    {
-        // Construct point-point correspondences for inliers only
-        src_points.create(1, matches_info.num_inliers, CV_32FC2);
-        dst_points.create(1, matches_info.num_inliers, CV_32FC2);
-        int inlier_idx = 0;
-        for (size_t i = 0; i < matches_info.matches.size(); ++i)
-        {
-            if (!matches_info.inliers_mask[i])
-                continue;
-
-            const DMatch& m = matches_info.matches[i];
-            src_points.at<Point2f>(0, inlier_idx) = features1.keypoints[m.queryIdx].pt;
-            dst_points.at<Point2f>(0, inlier_idx) = features2.keypoints[m.trainIdx].pt;
-
-            inlier_idx++;
-        }
-
-        // Rerun motion estimation on inliers only
-        if (full_affine_)
-            estimateAffine2D(src_points, dst_points, matches_info.H, noArray());
-        else
-            estimateAffinePartial2D(src_points, dst_points, matches_info.H, noArray());
-    }
-
     // extend H to represent linear tranformation in homogeneous coordinates
     matches_info.H.push_back(Mat::zeros(1, 3, CV_64F));
     matches_info.H.at<double>(2, 2) = 1;
