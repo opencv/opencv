@@ -75,7 +75,7 @@ To enable/disable APIs, you have to:
      (e.g. <tt>-DWITH_MSMF=ON -DWITH_VFW=ON ... </tt>) or checking related switch in cmake-gui
   2. rebuild OpenCV itself
 */
-enum  VideoCapturesIds {
+enum  VideoCaptureIds {
        CAP_ANY          = 0,            //!< Auto detect
        CAP_VFW          = 200,          //!< Video For Windows (platform native)
        CAP_V4L          = 200,          //!< V4L/V4L2 capturing support via libv4l
@@ -647,52 +647,52 @@ public:
 
     /** @brief Sets a property in the VideoCapture.
     @param propId Property identifier. It can be one of the following:
-    -   cv::CapturePropertiesIds::CAP_PROP_POS_MSEC @copydoc cv::CvapturePropertiesIds::CAP_PROP_POS_MSEC
-    -   cv::CapturePropertiesIds::CAP_PROP_POS_FRAMES @copydoc CvapturePropertiesIds::CAP_PROP_POS_FRAMES
-    -   cv::CapturePropertiesIds::CAP_PROP_POS_AVI_RATIO @copydoc cv::CvapturePropertiesIds::CAP_PROP_POS_AVI_RATIO
-    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_WIDTH @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_WIDTH
-    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_HEIGHT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_HEIGHT
-    -   cv::CapturePropertiesIds::CAP_PROP_FPS @copydoc cv::CvapturePropertiesIds::CAP_PROP_FPS
-    -   cv::CapturePropertiesIds::CAP_PROP_FOURCC @copydoc cv::CvapturePropertiesIds::CAP_PROP_FOURCC
-    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_COUNT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_COUNT
-    -   cv::CapturePropertiesIds::CAP_PROP_FORMAT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FORMAT
-    -   cv::CapturePropertiesIds::CAP_PROP_MODE @copydoc cv::CvapturePropertiesIds::CAP_PROP_MODE
-    -   cv::CapturePropertiesIds::CAP_PROP_BRIGHTNESS @copydoc cv::CvapturePropertiesIds::CAP_PROP_BRIGHTNESS
-    -   cv::CapturePropertiesIds::CAP_PROP_CONTRAST @copydoc cv::CvapturePropertiesIds::CAP_PROP_CONTRAST
-    -   cv::CapturePropertiesIds::CAP_PROP_SATURATION @copydoc cv::CvapturePropertiesIds::CAP_PROP_SATURATION
-    -   cv::CapturePropertiesIds::CAP_PROP_HUE @copydoc cv::CvapturePropertiesIds.CAP_PROP_HUE
-    -   cv::CapturePropertiesIds::CAP_PROP_GAIN @copydoc cv::CvapturePropertiesIds::CAP_PROP_GAIN
-    -   cv::CapturePropertiesIds::CAP_PROP_EXPOSURE @copydoc cv::CvapturePropertiesIds::CAP_PROP_EXPOSURE
-    -   cv::CapturePropertiesIds::CAP_PROP_CONVERT_RGB @copydoc cv::CvapturePropertiesIds::CAP_PROP_CONVERT_RGB
-    -   cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CvapturePropertiesIds::CAP_PROP_WHITE_BALANCE_BLUE_U
-    -   cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_RED_V
-    -   cv::CapturePropertiesIds::CAP_PROP_RECTIFICATION @copydoc cv::CvapturePropertiesIds::CAP_PROP_RECTIFICATION
+    -   cv::CAP_PROP_POS_MSEC @copydoc cv::CAP_PROP_POS_MSEC
+    -   cv::CAP_PROP_POS_FRAMES @copydoc CAP_PROP_POS_FRAMES
+    -   cv::CAP_PROP_POS_AVI_RATIO @copydoc cv::CAP_PROP_POS_AVI_RATIO
+    -   cv::CAP_PROP_FRAME_WIDTH @copydoc cv::CAP_PROP_FRAME_WIDTH
+    -   cv::CAP_PROP_FRAME_HEIGHT @copydoc cv::CAP_PROP_FRAME_HEIGHT
+    -   cv::CAP_PROP_FPS @copydoc cv::CAP_PROP_FPS
+    -   cv::CAP_PROP_FOURCC @copydoc cv::CAP_PROP_FOURCC
+    -   cv::CAP_PROP_FRAME_COUNT @copydoc cv::CAP_PROP_FRAME_COUNT
+    -   cv::CAP_PROP_FORMAT @copydoc cv::CAP_PROP_FORMAT
+    -   cv::CAP_PROP_MODE @copydoc cv::CAP_PROP_MODE
+    -   cv::CAP_PROP_BRIGHTNESS @copydoc cv::CAP_PROP_BRIGHTNESS
+    -   cv::CAP_PROP_CONTRAST @copydoc cv::CAP_PROP_CONTRAST
+    -   cv::CAP_PROP_SATURATION @copydoc cv::CAP_PROP_SATURATION
+    -   cv::CAP_PROP_HUE @copydoc cv::CAP_PROP_HUE
+    -   cv::CAP_PROP_GAIN @copydoc cv::CAP_PROP_GAIN
+    -   cv::CAP_PROP_EXPOSURE @copydoc cv::CAP_PROP_EXPOSURE
+    -   cv::CAP_PROP_CONVERT_RGB @copydoc cv::CAP_PROP_CONVERT_RGB
+    -   cv::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CAP_PROP_WHITE_BALANCE_BLUE_U
+    -   cv::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CAP_PROP_WHITE_BALANCE_RED_V
+    -   cv::CAP_PROP_RECTIFICATION @copydoc cv::CAP_PROP_RECTIFICATION
     @param value Value of the property.
      */
     CV_WRAP virtual bool set(int propId, double value);
 
     /** @brief Returns the specified VideoCapture property
     @param propId Property identifier. It can be one of the following:
-    -   cv::CapturePropertiesIds::CAP_PROP_POS_MSEC @copydoc cv::CvapturePropertiesIds::CAP_PROP_POS_MSEC
-    -   cv::CapturePropertiesIds::CAP_PROP_POS_FRAMES @copydoc CvapturePropertiesIds::CAP_PROP_POS_FRAMES
-    -   cv::CapturePropertiesIds::CAP_PROP_POS_AVI_RATIO @copydoc cv::CvapturePropertiesIds::CAP_PROP_POS_AVI_RATIO
-    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_WIDTH @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_WIDTH
-    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_HEIGHT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_HEIGHT
-    -   cv::CapturePropertiesIds::CAP_PROP_FPS @copydoc cv::CvapturePropertiesIds::CAP_PROP_FPS
-    -   cv::CapturePropertiesIds::CAP_PROP_FOURCC @copydoc cv::CvapturePropertiesIds::CAP_PROP_FOURCC
-    -   cv::CapturePropertiesIds::CAP_PROP_FRAME_COUNT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FRAME_COUNT
-    -   cv::CapturePropertiesIds::CAP_PROP_FORMAT @copydoc cv::CvapturePropertiesIds::CAP_PROP_FORMAT
-    -   cv::CapturePropertiesIds::CAP_PROP_MODE @copydoc cv::CvapturePropertiesIds::CAP_PROP_MODE
-    -   cv::CapturePropertiesIds::CAP_PROP_BRIGHTNESS @copydoc cv::CvapturePropertiesIds::CAP_PROP_BRIGHTNESS
-    -   cv::CapturePropertiesIds::CAP_PROP_CONTRAST @copydoc cv::CvapturePropertiesIds::CAP_PROP_CONTRAST
-    -   cv::CapturePropertiesIds::CAP_PROP_SATURATION @copydoc cv::CvapturePropertiesIds::CAP_PROP_SATURATION
-    -   cv::CapturePropertiesIds::CAP_PROP_HUE @copydoc cv::CvapturePropertiesIds::CAP_PROP_HUE
-    -   cv::CapturePropertiesIds::CAP_PROP_GAIN @copydoc cv::CvapturePropertiesIds::CAP_PROP_GAIN
-    -   cv::CapturePropertiesIds::CAP_PROP_EXPOSURE @copydoc cv::CvapturePropertiesIds::CAP_PROP_EXPOSURE
-    -   cv::CapturePropertiesIds::CAP_PROP_CONVERT_RGB @copydoc cv::CvapturePropertiesIds::CAP_PROP_CONVERT_RGB
-    -   cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CvapturePropertiesIds::CAP_PROP_WHITE_BALANCE_BLUE_U
-    -   cv::CapturePropertiesIds::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CvapturePropertiesIds::CAP_PROP_WHITE_BALANCE_RED_V
-    -   cv::CapturePropertiesIds::CAP_PROP_RECTIFICATION @copydoc cv::CvapturePropertiesIds::CAP_PROP_RECTIFICATION
+    -   cv::CAP_PROP_POS_MSEC @copydoc cv::CAP_PROP_POS_MSEC
+    -   cv::CAP_PROP_POS_FRAMES @copydoc CAP_PROP_POS_FRAMES
+    -   cv::CAP_PROP_POS_AVI_RATIO @copydoc cv::CAP_PROP_POS_AVI_RATIO
+    -   cv::CAP_PROP_FRAME_WIDTH @copydoc cv::CAP_PROP_FRAME_WIDTH
+    -   cv::CAP_PROP_FRAME_HEIGHT @copydoc cv::CAP_PROP_FRAME_HEIGHT
+    -   cv::CAP_PROP_FPS @copydoc cv::CAP_PROP_FPS
+    -   cv::CAP_PROP_FOURCC @copydoc cv::CAP_PROP_FOURCC
+    -   cv::CAP_PROP_FRAME_COUNT @copydoc cv::CAP_PROP_FRAME_COUNT
+    -   cv::CAP_PROP_FORMAT @copydoc cv::CAP_PROP_FORMAT
+    -   cv::CAP_PROP_MODE @copydoc cv::CAP_PROP_MODE
+    -   cv::CAP_PROP_BRIGHTNESS @copydoc cv::CAP_PROP_BRIGHTNESS
+    -   cv::CAP_PROP_CONTRAST @copydoc cv::CAP_PROP_CONTRAST
+    -   cv::CAP_PROP_SATURATION @copydoc cv::CAP_PROP_SATURATION
+    -   cv::CAP_PROP_HUE @copydoc cv::CAP_PROP_HUE
+    -   cv::CAP_PROP_GAIN @copydoc cv::CAP_PROP_GAIN
+    -   cv::CAP_PROP_EXPOSURE @copydoc cv::CAP_PROP_EXPOSURE
+    -   cv::CAP_PROP_CONVERT_RGB @copydoc cv::CAP_PROP_CONVERT_RGB
+    -   cv::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CAP_PROP_WHITE_BALANCE_BLUE_U
+    -   cv::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CAP_PROP_WHITE_BALANCE_RED_V
+    -   cv::CAP_PROP_RECTIFICATION @copydoc cv::CAP_PROP_RECTIFICATION
     @note When querying a property that is not supported by the backend used by the VideoCapture
     class, value 0 is returned.
      */
