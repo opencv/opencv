@@ -6,7 +6,7 @@ Introduction
 
 The work with a cascade classifier inlcudes two major stages: training and detection. Detection
 stage is described in a documentation of objdetect module of general OpenCV documentation.
-Documentation gives some basic information about cascade classifier. Current guide is describing how
+This documentation gives some basic information about cascade classifier. Current guide is describing how
 to train a cascade classifier: preparation of the training data and running the training application.
 
 ### Important notes
@@ -14,7 +14,7 @@ to train a cascade classifier: preparation of the training data and running the 
 There are two applications in OpenCV to train cascade classifier: opencv_haartraining and
 opencv_traincascade. opencv_traincascade is a newer version, written in C++ in accordance to
 OpenCV 2.x API. But the main difference between this two applications is that opencv_traincascade
-supports both Haar @cite Viola01 and @cite Liao2007 (Local Binary Patterns) features. LBP features
+supports both Haar @cite Viola01 and LBP (Local Binary Patterns) @cite Liao2007 features. LBP features
 are integer in contrast to Haar features, so both training and detection with LBP are several times
 faster then with Haar features. Regarding the LBP and Haar detection quality, it depends on
 training: the quality of training dataset first of all and training parameters too. It's possible to
@@ -152,7 +152,7 @@ Command line arguments:
     Height (in pixels) of the output samples.
 
 For following procedure is used to create a sample object instance: The source image is rotated
-randomly around all three axes. The chosen angle is limited my -max?angle. Then pixels having the
+randomly around all three axes. The chosen angle is limited by -maxxangle, -maxyangle and maxzangle. Then pixels having the
 intensity from [bg_color-bg_color_threshold; bg_color+bg_color_threshold] range are
 interpreted as transparent. White noise is added to the intensities of the foreground. If the -inv
 key is specified then foreground pixel intensities are inverted. If -randinv key is specified then
@@ -326,4 +326,4 @@ in cascade.xml file in the folder, which was passed as -data parameter. Other fi
 are created for the case of interrupted training, so you may delete them after completion of
 training.
 
-Training is finished and you can test you cascade classifier!
+Training is finished and you can test your cascade classifier!
