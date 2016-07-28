@@ -4568,7 +4568,7 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    if( checkHardwareSupport(CV_FP16) )
+    if( checkHardwareSupport(CV_CPU_FP16) )
     {
         for( ; size.height--; src += sstep, dst += dstep )
         {
@@ -4622,7 +4622,7 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    if( checkHardwareSupport(CV_FP16) )
+    if( checkHardwareSupport(CV_CPU_FP16) )
     {
         for( ; size.height--; src += sstep, dst += dstep )
         {
