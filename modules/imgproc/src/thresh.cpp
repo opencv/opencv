@@ -43,6 +43,23 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#if CV_NEON && defined(__aarch64__)
+#include <arm_neon.h>
+namespace cv {
+// Workaround with missing definitions of vreinterpretq_u64_f64/vreinterpretq_f64_u64
+template <typename T> static inline
+uint64x2_t vreinterpretq_u64_f64(T a)
+{
+    return (uint64x2_t) a;
+}
+template <typename T> static inline
+float64x2_t vreinterpretq_f64_u64(T a)
+{
+    return (float64x2_t) a;
+}
+} // namespace cv
+#endif
+
 namespace cv
 {
 

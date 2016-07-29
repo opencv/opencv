@@ -16,7 +16,7 @@ Source code
 -----------
 
 You can [download this from here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
 `samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code
 library.
 

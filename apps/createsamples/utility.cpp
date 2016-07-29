@@ -38,7 +38,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include <cstring>
 #include <ctime>
 
@@ -1308,7 +1307,7 @@ void cvCreateTestSamples( const char* infoname,
                           int invert, int maxintensitydev,
                           double maxxangle, double maxyangle, double maxzangle,
                           int showsamples,
-                          int winwidth, int winheight )
+                          int winwidth, int winheight, double maxscale )
 {
     CvSampleDistortionData data;
 
@@ -1337,7 +1336,6 @@ void cvCreateTestSamples( const char* infoname,
             int i;
             int x, y, width, height;
             float scale;
-            float maxscale;
             int inverse;
 
             if( showsamples )
@@ -1366,12 +1364,16 @@ void cvCreateTestSamples( const char* infoname,
             for( i = 0; i < count; i++ )
             {
                 icvGetNextFromBackgroundData( cvbgdata, cvbgreader );
-
-                maxscale = MIN( 0.7F * cvbgreader->src.cols / winwidth,
+                if( maxscale < 0.0 )
+                {
+                    maxscale = MIN( 0.7F * cvbgreader->src.cols / winwidth,
                                    0.7F * cvbgreader->src.rows / winheight );
+                }
+
                 if( maxscale < 1.0F ) continue;
 
-                scale = (maxscale - 1.0F) * rand() / RAND_MAX + 1.0F;
+                scale = ((float)maxscale - 1.0F) * rand() / RAND_MAX + 1.0F;
+
                 width = (int) (scale * winwidth);
                 height = (int) (scale * winheight);
                 x = (int) ((0.1+0.8 * rand()/RAND_MAX) * (cvbgreader->src.cols - width));

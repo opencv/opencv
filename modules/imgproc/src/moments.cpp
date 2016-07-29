@@ -345,37 +345,42 @@ struct MomentsInTile_SIMD<ushort, int, int64>
 
         if (useSIMD)
         {
-            __m128i vx_init0 = _mm_setr_epi32(0, 1, 2, 3), vx_init1 = _mm_setr_epi32(4, 5, 6, 7),
-                v_delta = _mm_set1_epi32(8), v_zero = _mm_setzero_si128(), v_x0 = v_zero,
-                v_x1 = v_zero, v_x2 = v_zero, v_x3 = v_zero, v_ix0 = vx_init0, v_ix1 = vx_init1;
+            __m128i v_delta = _mm_set1_epi32(4), v_zero = _mm_setzero_si128(), v_x0 = v_zero,
+                v_x1 = v_zero, v_x2 = v_zero, v_x3 = v_zero, v_ix0 = _mm_setr_epi32(0, 1, 2, 3);
 
-            for( ; x <= len - 8; x += 8 )
+            for( ; x <= len - 4; x += 4 )
             {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(ptr + x));
-                __m128i v_src0 = _mm_unpacklo_epi16(v_src, v_zero), v_src1 = _mm_unpackhi_epi16(v_src, v_zero);
+                __m128i v_src = _mm_loadl_epi64((const __m128i *)(ptr + x));
+                v_src = _mm_unpacklo_epi16(v_src, v_zero);
 
-                v_x0 = _mm_add_epi32(v_x0, _mm_add_epi32(v_src0, v_src1));
-                __m128i v_x1_0 = _mm_mullo_epi32(v_src0, v_ix0), v_x1_1 = _mm_mullo_epi32(v_src1, v_ix1);
-                v_x1 = _mm_add_epi32(v_x1, _mm_add_epi32(v_x1_0, v_x1_1));
+                v_x0 = _mm_add_epi32(v_x0, v_src);
+                v_x1 = _mm_add_epi32(v_x1, _mm_mullo_epi32(v_src, v_ix0));
 
-                __m128i v_2ix0 = _mm_mullo_epi32(v_ix0, v_ix0), v_2ix1 = _mm_mullo_epi32(v_ix1, v_ix1);
-                v_x2 = _mm_add_epi32(v_x2, _mm_add_epi32(_mm_mullo_epi32(v_2ix0, v_src0), _mm_mullo_epi32(v_2ix1, v_src1)));
+                __m128i v_ix1 = _mm_mullo_epi32(v_ix0, v_ix0);
+                v_x2 = _mm_add_epi32(v_x2, _mm_mullo_epi32(v_src, v_ix1));
 
-                __m128i t = _mm_add_epi32(_mm_mullo_epi32(v_2ix0, v_x1_0), _mm_mullo_epi32(v_2ix1, v_x1_1));
-                v_x3 = _mm_add_epi64(v_x3, _mm_add_epi64(_mm_unpacklo_epi32(t, v_zero), _mm_unpackhi_epi32(t, v_zero)));
+                v_ix1 = _mm_mullo_epi32(v_ix0, v_ix1);
+                v_src = _mm_mullo_epi32(v_src, v_ix1);
+                v_x3 = _mm_add_epi64(v_x3, _mm_add_epi64(_mm_unpacklo_epi32(v_src, v_zero), _mm_unpackhi_epi32(v_src, v_zero)));
 
                 v_ix0 = _mm_add_epi32(v_ix0, v_delta);
-                v_ix1 = _mm_add_epi32(v_ix1, v_delta);
             }
 
-            _mm_store_si128((__m128i*)buf, v_x0);
-            x0 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, v_x1);
-            x1 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, v_x2);
-            x2 = buf[0] + buf[1] + buf[2] + buf[3];
-
+            __m128i v_x01_lo = _mm_unpacklo_epi32(v_x0, v_x1);
+            __m128i v_x22_lo = _mm_unpacklo_epi32(v_x2, v_x2);
+            __m128i v_x01_hi = _mm_unpackhi_epi32(v_x0, v_x1);
+            __m128i v_x22_hi = _mm_unpackhi_epi32(v_x2, v_x2);
+            v_x01_lo = _mm_add_epi32(v_x01_lo, v_x01_hi);
+            v_x22_lo = _mm_add_epi32(v_x22_lo, v_x22_hi);
+            __m128i v_x0122_lo = _mm_unpacklo_epi64(v_x01_lo, v_x22_lo);
+            __m128i v_x0122_hi = _mm_unpackhi_epi64(v_x01_lo, v_x22_lo);
+            v_x0122_lo = _mm_add_epi32(v_x0122_lo, v_x0122_hi);
             _mm_store_si128((__m128i*)buf64, v_x3);
+            _mm_store_si128((__m128i*)buf, v_x0122_lo);
+
+            x0 = buf[0];
+            x1 = buf[1];
+            x2 = buf[2];
             x3 = buf64[0] + buf64[1];
         }
 

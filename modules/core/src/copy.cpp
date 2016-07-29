@@ -259,12 +259,6 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
-    if( empty() )
-    {
-        _dst.release();
-        return;
-    }
-
     if( _dst.isUMat() )
     {
         _dst.create( dims, size.p, type() );
