@@ -16,7 +16,7 @@ Code
 ----
 
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/TrackingMotion/cornerSubPix_Demo.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/TrackingMotion/cornerSubPix_Demo.cpp)
 @code{.cpp}
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
