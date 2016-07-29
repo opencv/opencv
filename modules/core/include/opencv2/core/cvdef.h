@@ -193,10 +193,6 @@ enum CpuFeatures {
 #    endif
 #    define CV_POPCNT 1
 #  endif
-#  if defined HAVE_FP16 && (defined __F16C__ || (defined _MSC_VER && _MSC_VER >= 1700))
-#    include <immintrin.h>
-#    define CV_FP16 1
-#  endif
 #  if defined __AVX__ || (defined _MSC_VER && _MSC_VER >= 1600 && 0)
 // MS Visual Studio 2010 (2012?) has no macro pre-defined to identify the use of /arch:AVX
 // See: http://connect.microsoft.com/VisualStudio/feedback/details/605858/arch-avx-should-define-a-predefined-macro-in-x64-and-set-a-unique-value-for-m-ix86-fp-in-win32
@@ -231,10 +227,6 @@ enum CpuFeatures {
 #  include <arm_neon.h>
 #endif
 
-#if defined HAVE_FP16 && defined __GNUC__
-#  define CV_FP16 1
-#endif
-
 #if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__
 #  define CV_VFP 1
 #endif
@@ -264,9 +256,6 @@ enum CpuFeatures {
 #endif
 #ifndef CV_SSE4_2
 #  define CV_SSE4_2 0
-#endif
-#ifndef CV_FP16
-#  define CV_FP16 0
 #endif
 #ifndef CV_AVX
 #  define CV_AVX 0
