@@ -38,7 +38,7 @@ static void two_ways_to_write_rawdata_in_base64()
         CvFileStorage* fs = cvOpenFileStorage( "example.xml", 0, CV_STORAGE_WRITE );
         // both CV_NODE_SEQ and "binary" are necessary.
         cvStartWriteStruct(fs, "rawdata", CV_NODE_SEQ | CV_NODE_FLOW, "binary");
-        cvWriteRawDataBase64(fs, rawdata.data(), rawdata.size(), "i");
+        cvWriteRawDataBase64(fs, rawdata.data(), static_cast<int>(rawdata.size()), "i");
         cvEndWriteStruct(fs);
         cvReleaseFileStorage( &fs );
         //! [without_base64_flag]
@@ -49,7 +49,7 @@ static void two_ways_to_write_rawdata_in_base64()
         CvFileStorage* fs = cvOpenFileStorage( "example.xml", 0, CV_STORAGE_WRITE_BASE64);
         // parameter, typename "binary" could be omitted.
         cvStartWriteStruct(fs, "rawdata", CV_NODE_SEQ | CV_NODE_FLOW);
-        cvWriteRawData(fs, rawdata.data(), rawdata.size(), "i");
+        cvWriteRawData(fs, rawdata.data(), static_cast<int>(rawdata.size()), "i");
         cvEndWriteStruct(fs);
         cvReleaseFileStorage( &fs );
         //! [with_write_base64_flag]
