@@ -1978,14 +1978,11 @@ The function opens file storage for reading or writing data. In the latter case,
 created or an existing file is rewritten. The type of the read or written file is determined by the
 filename extension: .xml for XML and .yml or .yaml for YAML.
 
-At the same time, it also supports adding parameters like "example.xml?base64".
-@code
-    CvFileStorage* fs = cvOpenFileStorage( "example.yml?base64", 0, CV_STORAGE_WRITE );
-@endcode
-it's exactly the same as
-@code
-    CvFileStorage* fs = cvOpenFileStorage( "example.yml", 0, CV_STORAGE_WRITE_BASE64 );
-@endcode
+At the same time, it also supports adding parameters like "example.xml?base64". The three ways
+are the same:
+@snippet samples/cpp/filestorage_base64.cpp suffix_in_file_name
+@snippet samples/cpp/filestorage_base64.cpp flag_write_base64
+@snippet samples/cpp/filestorage_base64.cpp flag_write_and_flag_base64
 
 The function returns a pointer to the CvFileStorage structure.
 If the file cannot be opened then the function returns NULL.
@@ -2209,27 +2206,9 @@ in plain text.
 This function can only be used to write a sequence with a type "binary".
 
 Consider the following two examples where their output is the same:
-@code
-    std::vector<int> rawdata(10, 0x00010203);
-    // without the flag CV_STORAGE_WRITE_BASE64.
-    CvFileStorage* fs = cvOpenFileStorage( "example.yml", 0, CV_STORAGE_WRITE );
-    // both CV_NODE_SEQ and "binary" are necessary.
-    cvStartWriteStruct(fs, "rawdata", CV_NODE_SEQ | CV_NODE_FLOW, "binary");
-    cvWriteRawDataBase64(fs, rawdata.data(), rawdata.size(), "i");
-    cvEndWriteStruct(fs);
-    cvReleaseFileStorage( &fs );
-@endcode
+@snippet samples/cpp/filestorage_base64.cpp without_base64_flag
 and
-@code
-    std::vector<int> rawdata(10, 0x00010203);
-    // with the flag CV_STORAGE_WRITE_BASE64.
-    CvFileStorage* fs = cvOpenFileStorage( "example.yml", 0, CV_STORAGE_WRITE_BASE64);
-    // parameter, typename "binary" could be omitted.
-    cvStartWriteStruct(fs, "rawdata", CV_NODE_SEQ | CV_NODE_FLOW);
-    cvWriteRawData(fs, rawdata.data(), rawdata.size(), "i");
-    cvEndWriteStruct(fs);
-    cvReleaseFileStorage( &fs );
-@endcode
+@snippet samples/cpp/filestorage_base64.cpp with_write_base64_flag
 
 @param fs File storage
 @param src Pointer to the written array

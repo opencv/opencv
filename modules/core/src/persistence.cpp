@@ -308,7 +308,6 @@ namespace base64
     template<>                      inline size_t binary_to(uchar const * cur, float   & val);
     template<typename _primitive_t> inline size_t binary_to(uchar const * cur, uchar   * val);
 
-    class MatToBinaryConvertor;
     class RawDataToBinaryConvertor;
 
     class BinaryToCvSeqConvertor;
@@ -363,8 +362,6 @@ namespace base64
     /* sample */
 
     void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt);
-
-    void cvWriteMat_Base64(::CvFileStorage * fs, const char * name, ::cv::Mat const & mat);
 }
 
 
@@ -2306,7 +2303,7 @@ static char* icvXMLParseBase64(CvFileStorage* fs, char* ptr, CvFileNode * node)
     }
 
     /* get all Base64 data */
-    std::string base64_buffer;
+    std::string base64_buffer; // not an efficient way.
     base64_buffer.reserve( 16U * 1024U * 1024U );
     while( beg < end )
     {
@@ -3715,13 +3712,13 @@ icvCalcStructSize( const char* dt, int initial_size )
     for ( const char * type = dt; *type != '\0'; type++ ) {
         switch ( *type )
         {
-        case 'u': { if (elem_max_size < sizeof(uchar))  elem_max_size = sizeof(uchar);  break; }
-        case 'c': { if (elem_max_size < sizeof(schar))  elem_max_size = sizeof(schar);  break; }
-        case 'w': { if (elem_max_size < sizeof(ushort)) elem_max_size = sizeof(ushort); break; }
-        case 's': { if (elem_max_size < sizeof(short))  elem_max_size = sizeof(short);  break; }
-        case 'i': { if (elem_max_size < sizeof(int))    elem_max_size = sizeof(int);    break; }
-        case 'f': { if (elem_max_size < sizeof(float))  elem_max_size = sizeof(float);  break; }
-        case 'd': { if (elem_max_size < sizeof(double)) elem_max_size = sizeof(double); break; }
+        case 'u': { elem_max_size = std::max( elem_max_size, sizeof(uchar ) ); break; }
+        case 'c': { elem_max_size = std::max( elem_max_size, sizeof(schar ) ); break; }
+        case 'w': { elem_max_size = std::max( elem_max_size, sizeof(ushort) ); break; }
+        case 's': { elem_max_size = std::max( elem_max_size, sizeof(short ) ); break; }
+        case 'i': { elem_max_size = std::max( elem_max_size, sizeof(int   ) ); break; }
+        case 'f': { elem_max_size = std::max( elem_max_size, sizeof(float ) ); break; }
+        case 'd': { elem_max_size = std::max( elem_max_size, sizeof(double) ); break; }
         default: break;
         }
     }
@@ -6869,111 +6866,6 @@ private:
     uchar * src_end;
 };
 
-class base64::MatToBinaryConvertor
-{
-public:
-
-    explicit MatToBinaryConvertor(const cv::Mat & src)
-        : y (0)
-        , y_max(0)
-        , x(0)
-        , x_max(0)
-    {
-        /* make sure each mat `mat.dims == 2` */
-        if (src.dims > 2) {
-            const cv::Mat * arrays[] = { &src, 0 };
-            cv::Mat plane;
-            cv::NAryMatIterator it(arrays, &plane, 1);
-
-            CV_Assert(it.nplanes > 0U); /* make sure mats not empty */
-            mats.reserve(it.nplanes);
-            for (size_t i = 0U; i < it.nplanes; ++i, ++it)
-                mats.push_back(*it.planes);
-        } else {
-            mats.push_back(src);
-        }
-
-        /* set all to beginning */
-        mat_iter  = mats.begin();
-        y_max     = (mat_iter)->rows;
-        x_max     = (mat_iter)->cols * (mat_iter)->elemSize();
-        row_begin = (mat_iter)->ptr(0);
-        step      = (mat_iter)->elemSize1();
-
-        /* choose a function */
-        switch ((mat_iter)->depth())
-        {
-        case CV_8U :
-        case CV_8S : { to_binary_func = to_binary<uchar> ; break; }
-        case CV_16U:
-        case CV_16S: { to_binary_func = to_binary<ushort>; break; }
-        case CV_32S: { to_binary_func = to_binary<uint>  ; break; }
-        case CV_32F: { to_binary_func = to_binary<float> ; break; }
-        case CV_64F: { to_binary_func = to_binary<double>; break; }
-        case CV_USRTYPE1:
-        default:     { CV_Assert(!"mat type is invalid"); break; }
-        };
-
-        /* check if empty */
-        if (mats.empty() || mats.front().empty() || mats.front().data == 0) {
-            mat_iter = mats.end();
-            CV_Assert(!(*this));
-        }
-
-    }
-
-    inline MatToBinaryConvertor & operator >> (uchar * & dst)
-    {
-        CV_DbgAssert(*this);
-
-        /* [1]copy to dst */
-        dst += to_binary_func(row_begin + x, dst);
-
-        /* [2]move to next */
-        x += step;
-        if (x >= x_max) {
-            /* when x arrive end, reset x and increase y */
-            x = 0U;
-            ++ y;
-            if (y >= y_max) {
-                /* when y arrive end, reset y and increase iter */
-                y = 0U;
-                ++ mat_iter;
-                if (mat_iter == mats.end()) {
-                    ;/* when iter arrive end, all done */
-                } else {
-                    /* usually x_max and y_max won't change */
-                    y_max     = (mat_iter)->rows;
-                    x_max     = (mat_iter)->cols * (mat_iter)->elemSize();
-                    row_begin = (mat_iter)->ptr(static_cast<int>(y));
-                }
-            } else
-                row_begin = (mat_iter)->ptr(static_cast<int>(y));
-        }
-
-        return *this;
-    }
-
-    inline operator bool() const
-    {
-        return mat_iter != mats.end();
-    }
-
-private:
-
-    size_t y;
-    size_t y_max;
-    size_t x;
-    size_t x_max;
-    std::vector<cv::Mat>::iterator mat_iter;
-    std::vector<cv::Mat> mats;
-
-    size_t step;
-    const uchar * row_begin;
-
-    typedef size_t(*to_binary_t)(const uchar *, uchar *);
-    to_binary_t to_binary_func;
-};
 
 class base64::RawDataToBinaryConvertor
 {
@@ -7354,41 +7246,6 @@ void base64::cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int le
     }
 
     fs->base64_writer->write(_data, len, dt);
-}
-
-void base64::cvWriteMat_Base64(::CvFileStorage * fs, const char * name, ::cv::Mat const & mat)
-{
-    char dt[4];
-    ::icvEncodeFormat(CV_MAT_TYPE(mat.type()), dt);
-
-    {    /* [1]output other attr */
-
-        if (mat.dims <= 2) {
-            ::cvStartWriteStruct(fs, name, CV_NODE_MAP, CV_TYPE_NAME_MAT);
-
-            ::cvWriteInt(fs, "rows", mat.rows );
-            ::cvWriteInt(fs, "cols", mat.cols );
-        } else {
-            ::cvStartWriteStruct(fs, name, CV_NODE_MAP, CV_TYPE_NAME_MATND);
-
-            ::cvStartWriteStruct(fs, "sizes", CV_NODE_SEQ | CV_NODE_FLOW);
-            ::cvWriteRawData(fs, mat.size.p, mat.dims, "i");
-            ::cvEndWriteStruct(fs);
-        }
-        ::cvWriteString(fs, "dt", ::icvEncodeFormat(CV_MAT_TYPE(mat.type()), dt ), 0 );
-    }
-
-    {    /* [2]deal with matrix's data */
-        MatToBinaryConvertor convertor(mat);
-
-        ::cvStartWriteStruct(fs, "data", CV_NODE_SEQ, "binary");
-        fs->base64_writer->write(convertor, dt);
-        ::cvEndWriteStruct(fs);
-    }
-
-    {    /* [3]output end */
-        ::cvEndWriteStruct(fs);
-    }
 }
 
 /****************************************************************************
