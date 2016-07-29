@@ -26,7 +26,11 @@ endif()
 #         Define the library target:
 # ----------------------------------------------------------------------------------
 
-add_library(${JPEG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
+if(APPLE_FRAMEWORK)
+  add_library(${JPEG_LIBRARY} SHARED ${lib_srcs} ${lib_hdrs})
+else()
+  add_library(${JPEG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
+endif()
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
@@ -54,6 +58,8 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${JPEG_LIBRARY} PROPERTIES FOLDER "3rdparty")
 endif()
 
-if(NOT BUILD_SHARED_LIBS)
+if(NOT BUILD_SHARED_LIBS AND NOT APPLE_FRAMEWORK)
   ocv_install_target(${JPEG_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+else(APPLE_FRAMEWORK)
+  ocv_install_target(${JPEG_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} LIBRARY DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()

@@ -116,7 +116,7 @@ if(APPLE)
   add_apple_compiler_options(the_module)
 endif()
 
-if(BUILD_SHARED_LIBS)
+if(BUILD_SHARED_LIBS OR APPLE_FRAMEWORK)
   add_definitions(-DIMGCODECS_EXPORTS)
 endif()
 

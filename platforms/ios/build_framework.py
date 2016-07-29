@@ -35,12 +35,29 @@ def execute(cmd, cwd = None):
     if retcode != 0:
         raise Exception("Child returned:", retcode)
 
+
+def executeWithOutput(cmd, cwd = None):
+    print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
+    try:
+        output = check_output(cmd, cwd = cwd)
+    except CalledProcessError as grepexc:
+        raise Exception("Child returned:", grepexc.returncode)
+    return output
+
 def getXCodeMajor():
     ret = check_output(["xcodebuild", "-version"])
     m = re.match(r'XCode\s+(\d)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
     return 0
+
+def getLibPath(path, libname):
+    libs = executeWithOutput(["otool", "-L", path])
+    line = [line for line in libs.split('\n') if libname in line][0]
+    dirtypath = re.search(".*dylib", line, re.I)
+    if dirtypath:
+        return dirtypath.group(0).strip()
+    return ""
 
 class Builder:
     def __init__(self, opencv, contrib, targets):
@@ -79,7 +96,6 @@ class Builder:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             self.buildOne(t[0], t[1], mainBD, cmake_flags)
-            self.mergeLibs(mainBD)
         self.makeFramework(outdir, dirs)
 
     def build(self, outdir):
@@ -109,12 +125,13 @@ class Builder:
     def getBuildCommand(self, arch, target):
         buildcmd = [
             "xcodebuild",
-            "IPHONEOS_DEPLOYMENT_TARGET=6.0",
+            "IPHONEOS_DEPLOYMENT_TARGET=8.4",
             "ARCHS=%s" % arch,
             "-sdk", target.lower(),
             "-configuration", "Release",
             "-parallelizeTargets",
-            "-jobs", "4"
+            "-jobs", "4",
+            "CODE_SIGN_IDENTITY=iPhone Developer"
         ]
         return buildcmd
 
@@ -139,52 +156,43 @@ class Builder:
         execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = builddir)
         execute(["cmake", "-P", "cmake_install.cmake"], cwd = builddir)
 
-    def mergeLibs(self, builddir):
-        res = os.path.join(builddir, "lib", "Release", "libopencv_merged.a")
-        libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
-        libs3 = glob.glob(os.path.join(builddir, "install", "share", "OpenCV", "3rdparty", "lib", "*.a"))
-        print("Merging libraries:\n\t%s" % "\n\t".join(libs + libs3), file=sys.stderr)
-        execute(["libtool", "-static", "-o", res] + libs + libs3)
-
     def makeFramework(self, outdir, builddirs):
-        name = "opencv2"
-        libname = "libopencv_merged.a"
+        libnames = ["libopencv_world.dylib", "liblibjpeg.dylib", "liblibpng.dylib", "libzlib.dylib"]
+        outnames = ["libopencv2.dylib", "libjpeg.dylib", "libpng.dylib", "libzlib.dylib"]
 
-        # set the current dir to the dst root
-        framework_dir = os.path.join(outdir, "%s.framework" % name)
-        if os.path.isdir(framework_dir):
-            shutil.rmtree(framework_dir)
-        os.makedirs(framework_dir)
+        include_dir = os.path.join(outdir, "include")
+        if os.path.isdir(include_dir):
+            shutil.rmtree(include_dir)
+        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), include_dir)
 
-        dstdir = os.path.join(framework_dir, "Versions", "A")
+        # make universal dynamic lib
+        for idx, libname in enumerate(libnames):
+            libs = [os.path.join(d, "lib", "Release", libname) for d in builddirs]
+            lipocmd = ["lipo", "-create"]
+            lipocmd.extend(libs)
+            outPath = os.path.join(outdir, outnames[idx])
+            lipocmd.extend(["-o", outPath])
+            print("Creating universal library from:\n\t%s" % "\n\t".join(libs), file=sys.stderr)
+            execute(lipocmd)
 
-        # copy headers from one of build folders
-        shutil.copytree(os.path.join(builddirs[0], "install", "include", "opencv2"), os.path.join(dstdir, "Headers"))
+        ocvpath = os.path.join(outdir, "libopencv2.dylib")
+        ljpegpath = os.path.join(outdir, "libjpeg.dylib")
+        lpngpath = os.path.join(outdir, "libpng.dylib")
+        lzlibpath = os.path.join(outdir, "libzlib.dylib")
 
-        # make universal static lib
-        libs = [os.path.join(d, "lib", "Release", libname) for d in builddirs]
-        lipocmd = ["lipo", "-create"]
-        lipocmd.extend(libs)
-        lipocmd.extend(["-o", os.path.join(dstdir, name)])
-        print("Creating universal library from:\n\t%s" % "\n\t".join(libs), file=sys.stderr)
-        execute(lipocmd)
+        oldljpegpath = getLibPath(ocvpath, "liblibjpeg.dylib")
+        oldlpngpath = getLibPath(ocvpath, "liblibpng.dylib")
+        oldlzlibpath = getLibPath(lpngpath, "libzlib.dylib")
 
-        # copy Info.plist
-        resdir = os.path.join(dstdir, "Resources")
-        os.makedirs(resdir)
-        shutil.copyfile(self.getInfoPlist(builddirs), os.path.join(resdir, "Info.plist"))
+        execute(["install_name_tool", "-change", oldljpegpath, "@rpath/libjpeg.dylib", ocvpath])
+        execute(["install_name_tool", "-change", oldlpngpath, "@rpath/libpng.dylib", ocvpath])
+        execute(["install_name_tool", "-change", oldlzlibpath, "@rpath/libzlib.dylib", ocvpath])
+        execute(["install_name_tool", "-change", oldlzlibpath, "@rpath/libzlib.dylib", lpngpath])
 
-        # make symbolic links
-        links = [
-            (["A"], ["Versions", "Current"]),
-            (["Versions", "Current", "Headers"], ["Headers"]),
-            (["Versions", "Current", "Resources"], ["Resources"]),
-            (["Versions", "Current", name], [name])
-        ]
-        for l in links:
-            s = os.path.join(*l[0])
-            d = os.path.join(framework_dir, *l[1])
-            os.symlink(s, d)
+        execute(["install_name_tool", "-id", "@rpath/libopencv2.dylib", ocvpath])
+        execute(["install_name_tool", "-id", "@rpath/libjpeg.dylib", ljpegpath])
+        execute(["install_name_tool", "-id", "@rpath/libpng.dylib", lpngpath])
+        execute(["install_name_tool", "-id", "@rpath/libzlib.dylib", lzlibpath])
 
 if __name__ == "__main__":
     folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
