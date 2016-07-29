@@ -67,19 +67,15 @@ Explanation
     char* window_name = "Laplace Demo";
     @endcode
 -#  Loads the source image:
-    @code{.cpp}
-    src = imread( argv[1] );
+    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp load
 
-    if( !src.data )
-      { return -1; }
-    @endcode
 -#  Apply a Gaussian blur to reduce noise:
     @code{.cpp}
     GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
     @endcode
 -#  Convert the image to grayscale using @ref cv::cvtColor
     @code{.cpp}
-    cvtColor( src, src_gray, COLOR_RGB2GRAY );
+    cvtColor( src, src_gray, COLOR_BGR2GRAY );
     @endcode
 -#  Apply the Laplacian operator to the grayscale image:
     @code{.cpp}

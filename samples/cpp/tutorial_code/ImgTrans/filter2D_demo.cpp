@@ -27,11 +27,12 @@ int main ( int, char** argv )
 
   int c;
 
-  /// Load an image
-  src = imread( argv[1], IMREAD_COLOR );
+  //![load]
+  src = imread( argv[1], IMREAD_COLOR ); // Load an image
 
   if( src.empty() )
     { return -1; }
+  //![load]
 
   /// Create window
   namedWindow( window_name, WINDOW_AUTOSIZE );

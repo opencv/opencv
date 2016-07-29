@@ -25,51 +25,14 @@ By varying \f$\alpha\f$ from \f$0 \rightarrow 1\f$ this operator can be used to 
 *cross-dissolve* between two images or videos, as seen in slide shows and film productions (cool,
 eh?)
 
-Code
-----
+Source Code
+-----------
 
-As usual, after the not-so-lengthy explanation, let's go to the code:
-@code{.cpp}
-#include <opencv2/opencv.hpp>
-#include <iostream>
+Download the source code from
+[here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/AddingImages/AddingImages.cpp).
 
-using namespace cv;
+@include cpp/tutorial_code/core/AddingImages/AddingImages.cpp
 
-int main( int argc, char** argv )
-{
- double alpha = 0.5; double beta; double input;
-
- Mat src1, src2, dst;
-
- /// Ask the user enter alpha
- std::cout<<" Simple Linear Blender "<<std::endl;
- std::cout<<"-----------------------"<<std::endl;
- std::cout<<"* Enter alpha [0-1]: ";
- std::cin>>input;
-
- /// We use the alpha provided by the user if it is between 0 and 1
- if( input >= 0.0 && input <= 1.0 )
-   { alpha = input; }
-
- /// Read image ( same size, same type )
- src1 = imread("../../images/LinuxLogo.jpg");
- src2 = imread("../../images/WindowsLogo.jpg");
-
- if( !src1.data ) { printf("Error loading src1 \n"); return -1; }
- if( !src2.data ) { printf("Error loading src2 \n"); return -1; }
-
- /// Create Windows
- namedWindow("Linear Blend", 1);
-
- beta = ( 1.0 - alpha );
- addWeighted( src1, alpha, src2, beta, 0.0, dst);
-
- imshow( "Linear Blend", dst );
-
- waitKey(0);
- return 0;
-}
-@endcode
 Explanation
 -----------
 
@@ -79,15 +42,15 @@ Explanation
 
     We need two source images (\f$f_{0}(x)\f$ and \f$f_{1}(x)\f$). So, we load them in the usual way:
     @code{.cpp}
-    src1 = imread("../../images/LinuxLogo.jpg");
-    src2 = imread("../../images/WindowsLogo.jpg");
+    src1 = imread("../data/LinuxLogo.jpg");
+    src2 = imread("../data/WindowsLogo.jpg");
     @endcode
     **warning**
 
     Since we are *adding* *src1* and *src2*, they both have to be of the same size (width and
     height) and type.
 
--#  Now we need to generate the `g(x)` image. For this, the function add_weighted:addWeighted  comes quite handy:
+-#  Now we need to generate the `g(x)` image. For this, the function @ref cv::addWeighted comes quite handy:
     @code{.cpp}
     beta = ( 1.0 - alpha );
     addWeighted( src1, alpha, src2, beta, 0.0, dst);

@@ -79,7 +79,7 @@ Let's check the general structure of the program:
     as an argument)
     @code{.cpp}
     /// Test image - Make sure it s divisible by 2^{n}
-    src = imread( "../images/chicky_512.jpg" );
+    src = imread( "../data/chicky_512.jpg" );
     if( !src.data )
       { printf(" No data! -- Exiting the program \n");
         return -1; }

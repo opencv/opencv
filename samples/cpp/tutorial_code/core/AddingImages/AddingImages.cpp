@@ -27,11 +27,11 @@ int main( void )
    std::cout<<"* Enter alpha [0-1]: ";
    std::cin>>input;
 
-   // We use the alpha provided by the user iff it is between 0 and 1
+   // We use the alpha provided by the user if it is between 0 and 1
    if( alpha >= 0 && alpha <= 1 )
      { alpha = input; }
 
-   /// Read image ( same size, same type )
+   /// Read images ( both have to be of the same size and type )
    src1 = imread("../data/LinuxLogo.jpg");
    src2 = imread("../data/WindowsLogo.jpg");
 
