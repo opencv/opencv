@@ -96,6 +96,10 @@ u = f_x*x' + c_x \\
 v = f_y*y' + c_y
 \end{array}\f]
 
+The following figure illustrates the pinhole camera model.
+
+![Pinhole camera model](pics/pinhole_camera_model.png)
+
 Real lenses usually have some distortion, mostly radial distortion and slight tangential distortion.
 So, the above model is extended as:
 
@@ -190,7 +194,7 @@ pattern (every view is described by several 3D-2D point correspondences).
 
     \f[x = Xc_1 \\ y = Xc_2 \\ z = Xc_3\f]
 
-    The pinehole projection coordinates of P is [a; b] where
+    The pinhole projection coordinates of P is [a; b] where
 
     \f[a = x / z \ and \ b = y / z \\ r^2 = a^2 + b^2 \\ \theta = atan(r)\f]
 
