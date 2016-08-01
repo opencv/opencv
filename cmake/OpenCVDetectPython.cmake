@@ -26,7 +26,7 @@ function(find_python preferred_version min_version library_env include_dir_env
          libs_found libs_version_string libraries library debug_libraries
          debug_library include_path include_dir include_dir2 packages_path
          numpy_include_dirs numpy_version)
-
+if(NOT ${found})
   ocv_check_environment_variables(${executable})
   if(${executable})
     set(PYTHON_EXECUTABLE "${${executable}}")
@@ -75,10 +75,10 @@ function(find_python preferred_version min_version library_env include_dir_env
 
     if(NOT ANDROID AND NOT APPLE_FRAMEWORK)
       ocv_check_environment_variables(${library_env} ${include_dir_env})
-      if(NOT ${${library_env}} EQUAL "")
+      if(NOT ${${library_env}} STREQUAL "")
           set(PYTHON_LIBRARY "${${library_env}}")
       endif()
-      if(NOT ${${include_dir_env}} EQUAL "")
+      if(NOT ${${include_dir_env}} STREQUAL "")
           set(PYTHON_INCLUDE_DIR "${${include_dir_env}}")
       endif()
 
@@ -162,10 +162,10 @@ function(find_python preferred_version min_version library_env include_dir_env
           message(STATUS "Cannot probe for Python/Numpy support (because we are cross-compiling OpenCV)")
           message(STATUS "If you want to enable Python/Numpy support, set the following variables:")
           message(STATUS "  PYTHON2_INCLUDE_PATH")
-          message(STATUS "  PYTHON2_LIBRARIES")
+          message(STATUS "  PYTHON2_LIBRARIES (optional on Unix-like systems)")
           message(STATUS "  PYTHON2_NUMPY_INCLUDE_DIRS")
           message(STATUS "  PYTHON3_INCLUDE_PATH")
-          message(STATUS "  PYTHON3_LIBRARIES")
+          message(STATUS "  PYTHON3_LIBRARIES (optional on Unix-like systems)")
           message(STATUS "  PYTHON3_NUMPY_INCLUDE_DIRS")
         else()
           # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
@@ -197,23 +197,24 @@ function(find_python preferred_version min_version library_env include_dir_env
   endif()
 
   # Export return values
-  set(${found} "${_found}" PARENT_SCOPE)
+  set(${found} "${_found}" CACHE INTERNAL "")
   set(${executable} "${_executable}" CACHE FILEPATH "Path to Python interpretor")
-  set(${version_string} "${_version_string}" PARENT_SCOPE)
-  set(${version_major} "${_version_major}" PARENT_SCOPE)
-  set(${version_minor} "${_version_minor}" PARENT_SCOPE)
-  set(${libs_found} "${_libs_found}" PARENT_SCOPE)
-  set(${libs_version_string} "${_libs_version_string}" PARENT_SCOPE)
-  set(${libraries} "${_libraries}" PARENT_SCOPE)
+  set(${version_string} "${_version_string}" CACHE INTERNAL "")
+  set(${version_major} "${_version_major}" CACHE INTERNAL "")
+  set(${version_minor} "${_version_minor}" CACHE INTERNAL "")
+  set(${libs_found} "${_libs_found}" CACHE INTERNAL "")
+  set(${libs_version_string} "${_libs_version_string}" CACHE INTERNAL "")
+  set(${libraries} "${_libraries}" CACHE INTERNAL "Python libraries")
   set(${library} "${_library}" CACHE FILEPATH "Path to Python library")
-  set(${debug_libraries} "${_debug_libraries}" PARENT_SCOPE)
+  set(${debug_libraries} "${_debug_libraries}" CACHE INTERNAL "")
   set(${debug_library} "${_debug_library}" CACHE FILEPATH "Path to Python debug")
-  set(${include_path} "${_include_path}" PARENT_SCOPE)
+  set(${include_path} "${_include_path}" CACHE INTERNAL "")
   set(${include_dir} "${_include_dir}" CACHE PATH "Python include dir")
   set(${include_dir2} "${_include_dir2}" CACHE PATH "Python include dir 2")
   set(${packages_path} "${_packages_path}" CACHE PATH "Where to install the python packages.")
   set(${numpy_include_dirs} ${_numpy_include_dirs} CACHE PATH "Path to numpy headers")
-  set(${numpy_version} "${_numpy_version}" PARENT_SCOPE)
+  set(${numpy_version} "${_numpy_version}" CACHE INTERNAL "")
+endif()
 endfunction(find_python)
 
 find_python(2.7 "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR

@@ -960,7 +960,7 @@ void LDA::save(const String& filename) const
 void LDA::load(const String& filename) {
     FileStorage fs(filename, FileStorage::READ);
     if (!fs.isOpened())
-       CV_Error(Error::StsError, "File can't be opened for writing!");
+       CV_Error(Error::StsError, "File can't be opened for reading!");
     this->load(fs);
     fs.release();
 }

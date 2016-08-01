@@ -2,6 +2,22 @@
 #  Detect other 3rd-party performance and math libraries
 # ----------------------------------------------------------------------------
 
+# --- Lapack ---
+if(WITH_LAPACK)
+  find_package(LAPACK)
+  if(LAPACK_FOUND)
+    find_path(LAPACKE_INCLUDE_DIR "lapacke.h")
+    if(LAPACKE_INCLUDE_DIR)
+      find_path(CBLAS_INCLUDE_DIR "cblas.h")
+      if(CBLAS_INCLUDE_DIR)
+        set(HAVE_LAPACK 1)
+        ocv_include_directories(${LAPACKE_INCLUDE_DIR} ${CBLAS_INCLUDE_DIR})
+        list(APPEND OPENCV_LINKER_LIBS ${LAPACK_LIBRARIES})
+      endif()
+    endif()
+  endif()
+endif()
+
 # --- TBB ---
 if(WITH_TBB)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")

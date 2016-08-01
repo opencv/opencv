@@ -19,13 +19,13 @@
      Online docs:   http://docs.opencv.org
      Q&A forum:     http://answers.opencv.org
      Issue tracker: http://code.opencv.org
-     GitHub:        https://github.com/Itseez/opencv/
+     GitHub:        https://github.com/opencv/opencv/
    ************************************************** */
 
-#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/calib3d.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <vector>
 #include <string>
@@ -50,13 +50,13 @@ static int print_help()
             "         matrix separately) stereo. \n"
             " Calibrate the cameras and display the\n"
             " rectified results along with the computed disparity images.   \n" << endl;
-    cout << "Usage:\n ./stereo_calib -w=<board_width default=9> -h=<board_height default=6> <image list XML/YML file default=../data/stereo_calib.xml>\n" << endl;
+    cout << "Usage:\n ./stereo_calib -w=<board_width default=9> -h=<board_height default=6> -s=<square_size default=1.0> <image list XML/YML file default=../data/stereo_calib.xml>\n" << endl;
     return 0;
 }
 
 
 static void
-StereoCalib(const vector<string>& imagelist, Size boardSize,bool displayCorners = false, bool useCalibrated=true, bool showRectified=true)
+StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, bool displayCorners = false, bool useCalibrated=true, bool showRectified=true)
 {
     if( imagelist.size() % 2 != 0 )
     {
@@ -65,7 +65,6 @@ StereoCalib(const vector<string>& imagelist, Size boardSize,bool displayCorners 
     }
 
     const int maxScale = 2;
-    const float squareSize = 1.f;  // Set this to your actual square size
     // ARRAY AND VECTOR STORAGE:
 
     vector<vector<Point2f> > imagePoints[2];
@@ -212,7 +211,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize,bool displayCorners 
     cout << "average epipolar err = " <<  err/npoints << endl;
 
     // save intrinsic parameters
-    FileStorage fs("../data/intrinsics.yml", FileStorage::WRITE);
+    FileStorage fs("intrinsics.yml", FileStorage::WRITE);
     if( fs.isOpened() )
     {
         fs << "M1" << cameraMatrix[0] << "D1" << distCoeffs[0] <<
@@ -348,13 +347,14 @@ int main(int argc, char** argv)
     Size boardSize;
     string imagelistfn;
     bool showRectified;
-    cv::CommandLineParser parser(argc, argv, "{w|9|}{h|6|}{nr||}{help||}{@input|../data/stereo_calib.xml|}");
+    cv::CommandLineParser parser(argc, argv, "{w|9|}{h|6|}{s|1.0|}{nr||}{help||}{@input|../data/stereo_calib.xml|}");
     if (parser.has("help"))
         return print_help();
     showRectified = !parser.has("nr");
     imagelistfn = parser.get<string>("@input");
     boardSize.width = parser.get<int>("w");
     boardSize.height = parser.get<int>("h");
+    float squareSize = parser.get<float>("s");
     if (!parser.check())
     {
         parser.printErrors();
@@ -368,6 +368,6 @@ int main(int argc, char** argv)
         return print_help();
     }
 
-    StereoCalib(imagelist, boardSize,false, true, showRectified);
+    StereoCalib(imagelist, boardSize, squareSize, false, true, showRectified);
     return 0;
 }

@@ -45,7 +45,7 @@ Two different methods are used to generate two foreground masks:
 -#  @ref cv::BackgroundSubtractorMOG2
 
 The results as well as the input data are shown on the screen.
-The source file can be downloaded [here ](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/video/bg_sub.cpp).
+The source file can be downloaded [here ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/video/bg_sub.cpp).
 
 @include samples/cpp/tutorial_code/video/bg_sub.cpp
 

@@ -54,5 +54,6 @@
 #include "grfmt_webp.hpp"
 #include "grfmt_hdr.hpp"
 #include "grfmt_gdal.hpp"
+#include "grfmt_gdcm.hpp"
 
 #endif/*_GRFMTS_H_*/

@@ -447,7 +447,26 @@ CV_EXPORTS void unregisterPageLocked(Mat& m);
 functions use the constant GPU memory, and next call may update the memory before the previous one
 has been finished. But calling different operations asynchronously is safe because each operation
 has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are
-also safe. :
+also safe.
+
+@note The Stream class is not thread-safe. Please use different Stream objects for different CPU threads.
+
+@code
+void thread1()
+{
+    cv::cuda::Stream stream1;
+    cv::cuda::func1(..., stream1);
+}
+
+void thread2()
+{
+    cv::cuda::Stream stream2;
+    cv::cuda::func2(..., stream2);
+}
+@endcode
+
+@note By default all CUDA routines are launched in Stream::Null() object, if the stream is not specified by user.
+In multi-threading environment the stream objects must be passed explicitly (see previous note).
  */
 class CV_EXPORTS Stream
 {

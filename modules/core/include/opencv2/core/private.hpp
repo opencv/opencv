@@ -71,6 +71,17 @@
 #  endif
 #endif
 
+#if defined HAVE_FP16 && (defined __F16C__ || (defined _MSC_VER && _MSC_VER >= 1700))
+#  include <immintrin.h>
+#  define CV_FP16 1
+#elif defined HAVE_FP16 && defined __GNUC__
+#  define CV_FP16 1
+#endif
+
+#ifndef CV_FP16
+#  define CV_FP16 0
+#endif
+
 //! @cond IGNORED
 
 namespace cv
@@ -221,6 +232,18 @@ static inline IppiSize ippiSize(const cv::Size & _size)
     return size;
 }
 
+static inline IppiPoint ippiPoint(const cv::Point & _point)
+{
+    IppiPoint point = { _point.x, _point.y };
+    return point;
+}
+
+static inline IppiPoint ippiPoint(int x, int y)
+{
+    IppiPoint point = { x, y };
+    return point;
+}
+
 static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
 {
     return borderTypeNI == cv::BORDER_CONSTANT ? ippBorderConst :
@@ -255,8 +278,8 @@ public:
     inline operator const T* () const { return (const T*)m_pBuffer;}
 private:
     // Disable copy operations
-    IppAutoBuffer(IppAutoBuffer &) {};
-    IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;};
+    IppAutoBuffer(IppAutoBuffer &) {}
+    IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;}
 
     T* m_pBuffer;
 };

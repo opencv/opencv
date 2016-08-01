@@ -411,7 +411,13 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             tempMask.copyTo(_mask);
     }
     else
+    {
         H.release();
+        if(_mask.needed() ) {
+            tempMask = Mat::zeros(npoints >= 0 ? npoints : 0, 1, CV_8U);
+            tempMask.copyTo(_mask);
+        }
+    }
 
     return H;
 }
@@ -1040,7 +1046,7 @@ void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
 }
 
 double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F) {
-    CV_Assert(_pt1.type() == CV_64F && _pt1.type() == CV_64F && _F.type() == CV_64F);
+    CV_Assert(_pt1.type() == CV_64F && _pt2.type() == CV_64F && _F.type() == CV_64F);
     CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
 
     Mat pt1(_pt1.getMat());

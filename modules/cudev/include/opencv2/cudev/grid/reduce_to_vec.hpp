@@ -182,7 +182,7 @@ __host__ void gridReduceToColumn_(const SrcPtr& src, GpuMat_<ResType>& dst, cons
 
     CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
 
-    dst.create(1, rows);
+    cuda::createContinuous(rows, 1, dst.type(), dst);
 
     grid_reduce_to_vec_detail::reduceToColumn<Reductor, Policy>(shrinkPtr(src),
                                                                 dst[0],
@@ -197,7 +197,7 @@ __host__ void gridReduceToColumn_(const SrcPtr& src, GpuMat_<ResType>& dst, Stre
     const int rows = getRows(src);
     const int cols = getCols(src);
 
-    dst.create(1, rows);
+    cuda::createContinuous(rows, 1, dst.type(), dst);
 
     grid_reduce_to_vec_detail::reduceToColumn<Reductor, Policy>(shrinkPtr(src),
                                                                 dst[0],

@@ -56,7 +56,7 @@ using namespace std;
 
 #define MESSAGE_ERROR_COUNT "Matrix of eigen values must have the same rows as source matrix and 1 column."
 #define MESSAGE_ERROR_SIZE "Source matrix and matrix of eigen vectors must have the same sizes."
-#define MESSAGE_ERROR_DIFF_1 "Accurasy of eigen values computing less than required."
+#define MESSAGE_ERROR_DIFF_1 "Accuracy of eigen values computing less than required."
 #define MESSAGE_ERROR_DIFF_2 "Accuracy of eigen vectors computing less than required."
 #define MESSAGE_ERROR_ORTHO "Matrix of eigen vectors is not orthogonal."
 #define MESSAGE_ERROR_ORDER "Eigen values are not sorted in ascending order."

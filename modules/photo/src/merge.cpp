@@ -85,7 +85,7 @@ public:
         CV_Assert(log_response.rows == LDR_SIZE && log_response.cols == 1 &&
                   log_response.channels() == channels);
 
-        Mat exp_values(times);
+        Mat exp_values(times.clone());
         log(exp_values, exp_values);
 
         result = Mat::zeros(size, CV_32FCC);
@@ -265,6 +265,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "contrast_weight" << wcon
            << "saturation_weight" << wsat

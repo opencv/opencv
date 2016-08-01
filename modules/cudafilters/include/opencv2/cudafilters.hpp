@@ -89,7 +89,7 @@ public:
 
 /** @brief Creates a normalized 2D box filter.
 
-@param srcType Input image type. Only CV_8UC1 and CV_8UC4 are supported for now.
+@param srcType Input image type. Only CV_8UC1, CV_8UC4 and CV_32FC1 are supported for now.
 @param dstType Output image type. Only the same type as src is supported for now.
 @param ksize Kernel size.
 @param anchor Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel
@@ -313,6 +313,18 @@ CV_EXPORTS Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, i
 CV_EXPORTS Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
 //! @}
+
+///////////////////////////// Median Filtering //////////////////////////////
+
+/** @brief Performs median filtering for each point of the source image.
+
+@param srcType type of of source image. Only CV_8UC1 images are supported for now.
+@param windowSize Size of the kernerl used for the filtering. Uses a (windowSize x windowSize) filter.
+@param partition Specifies the parallel granularity of the workload. This parameter should be used GPU experts when optimizing performance.
+
+Outputs an image that has been filtered using median-filtering formulation.
+ */
+CV_EXPORTS Ptr<Filter> createMedianFilter(int srcType, int windowSize, int partition=128);
 
 }} // namespace cv { namespace cuda {
 

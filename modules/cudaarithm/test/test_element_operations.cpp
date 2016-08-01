@@ -2532,11 +2532,12 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, AddWeighted, testing::Combine(
 CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
 #define ALL_THRESH_OPS testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV))
 
-PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, ThreshOp, UseRoi)
+PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, Channels, ThreshOp, UseRoi)
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
+    int channel;
     int threshOp;
     bool useRoi;
 
@@ -2545,8 +2546,9 @@ PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, ThreshOp, Us
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
         type = GET_PARAM(2);
-        threshOp = GET_PARAM(3);
-        useRoi = GET_PARAM(4);
+        channel = GET_PARAM(3);
+        threshOp = GET_PARAM(4);
+        useRoi = GET_PARAM(5);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -2554,7 +2556,7 @@ PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, ThreshOp, Us
 
 CUDA_TEST_P(Threshold, Accuracy)
 {
-    cv::Mat src = randomMat(size, type);
+    cv::Mat src = randomMat(size, CV_MAKE_TYPE(type, channel));
     double maxVal = randomDouble(20.0, 127.0);
     double thresh = randomDouble(0.0, maxVal);
 
@@ -2570,7 +2572,8 @@ CUDA_TEST_P(Threshold, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Threshold, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_16SC1), MatType(CV_32FC1)),
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16S), MatDepth(CV_32F)),
+    ALL_CHANNELS,
     ALL_THRESH_OPS,
     WHOLE_SUBMAT));
 

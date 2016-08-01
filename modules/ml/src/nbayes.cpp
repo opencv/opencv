@@ -342,6 +342,7 @@ public:
     {
         int nclasses = (int)cls_labels.total(), i;
 
+        writeFormat(fs);
         fs << "var_count" << (var_idx.empty() ? nallvars : (int)var_idx.total());
         fs << "var_all" << nallvars;
 

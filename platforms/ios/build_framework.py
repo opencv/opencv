@@ -126,7 +126,7 @@ class Builder:
         toolchain = self.getToolchain(arch, target)
         cmakecmd = self.getCMakeArgs(arch, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
-        if arch.startswith("armv"):
+        if arch.startswith("armv") or arch.startswith("arm64"):
             cmakecmd.append("-DENABLE_NEON=ON")
         cmakecmd.append(self.opencv)
         cmakecmd.extend(cmakeargs)

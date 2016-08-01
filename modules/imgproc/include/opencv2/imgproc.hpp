@@ -194,12 +194,30 @@ int main(int argc, const char *argv[])
 
 @see cv::ColormapTypes
 
+    @defgroup imgproc_subdiv2d Planar Subdivision
+
+The Subdiv2D class described in this section is used to perform various planar subdivision on
+a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
+using the Delaunay’s algorithm, which corresponds to the dual graph of the Voronoi diagram.
+In the figure below, the Delaunay’s triangulation is marked with black lines and the Voronoi
+diagram with red lines.
+
+![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
+
+The subdivisions can be used for the 3D piece-wise transformation of a plane, morphing, fast
+location of points on the plane, building special graphs (such as NNG,RNG), and so forth.
+
     @defgroup imgproc_hist Histograms
     @defgroup imgproc_shape Structural Analysis and Shape Descriptors
     @defgroup imgproc_motion Motion Analysis and Object Tracking
     @defgroup imgproc_feature Feature Detection
     @defgroup imgproc_object Object Detection
     @defgroup imgproc_c C API
+    @defgroup imgproc_hal Hardware Acceleration Layer
+    @{
+        @defgroup imgproc_hal_functions Functions
+        @defgroup imgproc_hal_interface Interface
+    @}
   @}
 */
 
@@ -874,16 +892,21 @@ public:
 };
 
 
+//! @addtogroup imgproc_subdiv2d
+//! @{
+
 class CV_EXPORTS_W Subdiv2D
 {
 public:
-    enum { PTLOC_ERROR        = -2,
-           PTLOC_OUTSIDE_RECT = -1,
-           PTLOC_INSIDE       = 0,
-           PTLOC_VERTEX       = 1,
-           PTLOC_ON_EDGE      = 2
+    /** Subdiv2D point location cases */
+    enum { PTLOC_ERROR        = -2, //!< Point location error
+           PTLOC_OUTSIDE_RECT = -1, //!< Point outside the subdivision bounding rect
+           PTLOC_INSIDE       = 0, //!< Point inside some facet
+           PTLOC_VERTEX       = 1, //!< Point coincides with one of the subdivision vertices
+           PTLOC_ON_EDGE      = 2  //!< Point on some edge
          };
 
+    /** Subdiv2D edge type navigation (see: getEdge()) */
     enum { NEXT_AROUND_ORG   = 0x00,
            NEXT_AROUND_DST   = 0x22,
            PREV_AROUND_ORG   = 0x11,
@@ -894,27 +917,182 @@ public:
            PREV_AROUND_RIGHT = 0x02
          };
 
+    /** creates an empty Subdiv2D object.
+    To create a new empty Delaunay subdivision you need to use the initDelaunay() function.
+     */
     CV_WRAP Subdiv2D();
+
+    /** @overload
+
+    @param rect – Rectangle that includes all of the 2D points that are to be added to the subdivision.
+
+    The function creates an empty Delaunay subdivision where 2D points can be added using the function
+    insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
+    error is raised.
+     */
     CV_WRAP Subdiv2D(Rect rect);
+
+    /** @brief Creates a new empty Delaunay subdivision
+
+    @param rect – Rectangle that includes all of the 2D points that are to be added to the subdivision.
+
+     */
     CV_WRAP void initDelaunay(Rect rect);
 
+    /** @brief Insert a single point into a Delaunay triangulation.
+
+    @param pt – Point to insert.
+
+    The function inserts a single point into a subdivision and modifies the subdivision topology
+    appropriately. If a point with the same coordinates exists already, no new point is added.
+    @returns the ID of the point.
+
+    @note If the point is outside of the triangulation specified rect a runtime error is raised.
+     */
     CV_WRAP int insert(Point2f pt);
+
+    /** @brief Insert multiple points into a Delaunay triangulation.
+
+    @param ptvec – Points to insert.
+
+    The function inserts a vector of points into a subdivision and modifies the subdivision topology
+    appropriately.
+     */
     CV_WRAP void insert(const std::vector<Point2f>& ptvec);
+
+    /** @brief Returns the location of a point within a Delaunay triangulation.
+
+    @param pt – Point to locate.
+    @param edge – Output edge that the point belongs to or is located to the right of it.
+    @param vertex – Optional output vertex the input point coincides with.
+
+    The function locates the input point within the subdivision and gives one of the triangle edges
+    or vertices.
+
+    @returns an integer which specify one of the following five cases for point location:
+    -  The point falls into some facet. The function returns PTLOC_INSIDE and edge will contain one of
+       edges of the facet.
+    -  The point falls onto the edge. The function returns PTLOC_ON_EDGE and edge will contain this edge.
+    -  The point coincides with one of the subdivision vertices. The function returns PTLOC_VERTEX and
+       vertex will contain a pointer to the vertex.
+    -  The point is outside the subdivision reference rectangle. The function returns PTLOC_OUTSIDE_RECT
+       and no pointers are filled.
+    -  One of input arguments is invalid. A runtime error is raised or, if silent or “parent” error
+       processing mode is selected, CV_PTLOC_ERROR is returnd.
+     */
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
+    /** @brief Finds the subdivision vertex closest to the given point.
+
+    @param pt – Input point.
+    @param nearestPt – Output subdivision vertex point.
+
+    The function is another function that locates the input point within the subdivision. It finds the
+    subdivision vertex that is the closest to the input point. It is not necessarily one of vertices
+    of the facet containing the input point, though the facet (located using locate() ) is used as a
+    starting point.
+
+    @returns vertex ID.
+     */
     CV_WRAP int findNearest(Point2f pt, CV_OUT Point2f* nearestPt = 0);
+
+    /** @brief Returns a list of all edges.
+
+    @param edgeList – Output vector.
+
+    The function gives each edge as a 4 numbers vector, where each two are one of the edge
+    vertices. i.e. org_x = v[0], org_y = v[1], dst_x = v[2], dst_y = v[3].
+     */
     CV_WRAP void getEdgeList(CV_OUT std::vector<Vec4f>& edgeList) const;
+
+    /** @brief Returns a list of all triangles.
+
+    @param triangleList – Output vector.
+
+    The function gives each triangle as a 6 numbers vector, where each two are one of the triangle
+    vertices. i.e. p1_x = v[0], p1_y = v[1], p2_x = v[2], p2_y = v[3], p3_x = v[4], p3_y = v[5].
+     */
     CV_WRAP void getTriangleList(CV_OUT std::vector<Vec6f>& triangleList) const;
+
+    /** @brief Returns a list of all Voroni facets.
+
+    @param idx – Vector of vertices IDs to consider. For all vertices you can pass empty vector.
+    @param facetList – Output vector of the Voroni facets.
+    @param facetCenters – Output vector of the Voroni facets center points.
+
+     */
     CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
                                      CV_OUT std::vector<Point2f>& facetCenters);
 
+    /** @brief Returns vertex location from vertex ID.
+
+    @param vertex – vertex ID.
+    @param firstEdge – Optional. The first edge ID which is connected to the vertex.
+    @returns vertex (x,y)
+
+     */
     CV_WRAP Point2f getVertex(int vertex, CV_OUT int* firstEdge = 0) const;
 
+    /** @brief Returns one of the edges related to the given edge.
+
+    @param edge – Subdivision edge ID.
+    @param nextEdgeType - Parameter specifying which of the related edges to return.
+    The following values are possible:
+    -   NEXT_AROUND_ORG next around the edge origin ( eOnext on the picture below if e is the input edge)
+    -   NEXT_AROUND_DST next around the edge vertex ( eDnext )
+    -   PREV_AROUND_ORG previous around the edge origin (reversed eRnext )
+    -   PREV_AROUND_DST previous around the edge destination (reversed eLnext )
+    -   NEXT_AROUND_LEFT next around the left facet ( eLnext )
+    -   NEXT_AROUND_RIGHT next around the right facet ( eRnext )
+    -   PREV_AROUND_LEFT previous around the left facet (reversed eOnext )
+    -   PREV_AROUND_RIGHT previous around the right facet (reversed eDnext )
+
+    ![sample output](pics/quadedge.png)
+
+    @returns edge ID related to the input edge.
+     */
     CV_WRAP int getEdge( int edge, int nextEdgeType ) const;
+
+    /** @brief Returns next edge around the edge origin.
+
+    @param edge – Subdivision edge ID.
+
+    @returns an integer which is next edge ID around the edge origin: eOnext on the
+    picture above if e is the input edge).
+     */
     CV_WRAP int nextEdge(int edge) const;
+
+    /** @brief Returns another edge of the same quad-edge.
+
+    @param edge – Subdivision edge ID.
+    @param rotate - Parameter specifying which of the edges of the same quad-edge as the input
+    one to return. The following values are possible:
+    -   0 - the input edge ( e on the picture below if e is the input edge)
+    -   1 - the rotated edge ( eRot )
+    -   2 - the reversed edge (reversed e (in green))
+    -   3 - the reversed rotated edge (reversed eRot (in green))
+
+    @returns one of the edges ID of the same quad-edge as the input edge.
+     */
     CV_WRAP int rotateEdge(int edge, int rotate) const;
     CV_WRAP int symEdge(int edge) const;
+
+    /** @brief Returns the edge origin.
+
+    @param edge – Subdivision edge ID.
+    @param orgpt – Output vertex location.
+
+    @returns vertex ID.
+     */
     CV_WRAP int edgeOrg(int edge, CV_OUT Point2f* orgpt = 0) const;
+
+    /** @brief Returns the edge destination.
+
+    @param edge – Subdivision edge ID.
+    @param dstpt – Output vertex location.
+
+    @returns vertex ID.
+     */
     CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt = 0) const;
 
 protected:
@@ -953,16 +1131,22 @@ protected:
         int pt[4];
     };
 
+    //! All of the vertices
     std::vector<Vertex> vtx;
+    //! All of the edges
     std::vector<QuadEdge> qedges;
     int freeQEdge;
     int freePoint;
     bool validGeometry;
 
     int recentEdge;
+    //! Top left corner of the bounding rect
     Point2f topLeft;
+    //! Bottom right corner of the bounding rect
     Point2f bottomRight;
 };
+
+//! @} imgproc_subdiv2d
 
 //! @addtogroup imgproc_feature
 //! @{
@@ -1480,6 +1664,19 @@ CV_EXPORTS_W void Canny( InputArray image, OutputArray edges,
                          double threshold1, double threshold2,
                          int apertureSize = 3, bool L2gradient = false );
 
+/** \overload
+
+Finds edges in an image using the Canny algorithm with custom image gradient.
+
+@param dx 16-bit x derivative of input image (CV_16SC1 or CV_16SC3).
+@param dy 16-bit y derivative of input image (same type as dx).
+@param edges,threshold1,threshold2,L2gradient See cv::Canny
+ */
+CV_EXPORTS_W void Canny( InputArray dx, InputArray dy,
+                         OutputArray edges,
+                         double threshold1, double threshold2,
+                         bool L2gradient = false );
+
 /** @brief Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 The function is similar to cornerEigenValsAndVecs but it calculates and stores only the minimal
@@ -1644,7 +1841,8 @@ with qualityLevel=B .
 @param image Input 8-bit or floating-point 32-bit, single-channel image.
 @param corners Output vector of detected corners.
 @param maxCorners Maximum number of corners to return. If there are more corners than are found,
-the strongest of them is returned.
+the strongest of them is returned. `maxCorners <= 0` implies that no limit on the maximum is set
+and all detected corners are returned.
 @param qualityLevel Parameter characterizing the minimal accepted quality of image corners. The
 parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue
 (see cornerMinEigenVal ) or the Harris function response (see cornerHarris ). The corners with the
@@ -2757,7 +2955,7 @@ An example for creating histograms of an image
 
 /** @brief Calculates a histogram of a set of arrays.
 
-The functions calcHist calculate the histogram of one or more arrays. The elements of a tuple used
+The function cv::calcHist calculates the histogram of one or more arrays. The elements of a tuple used
 to increment a histogram bin are taken from the corresponding input arrays at the same location. The
 sample below shows how to compute a 2D Hue-Saturation histogram for a color image. :
 @code
@@ -2818,7 +3016,7 @@ sample below shows how to compute a 2D Hue-Saturation histogram for a color imag
     }
 @endcode
 
-@param images Source arrays. They all should have the same depth, CV_8U or CV_32F , and the same
+@param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
 @param nimages Number of source images.
 @param channels List of the dims channels used to compute the histogram. The first array channels
@@ -2869,7 +3067,7 @@ CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
 
 /** @brief Calculates the back projection of a histogram.
 
-The functions calcBackProject calculate the back project of the histogram. That is, similarly to
+The function cv::calcBackProject calculates the back project of the histogram. That is, similarly to
 cv::calcHist , at each location (x, y) the function collects the values from the selected channels
 in the input images and finds the corresponding histogram bin. But instead of incrementing it, the
 function reads the bin value, scales it by scale , and stores in backProject(x,y) . In terms of
@@ -2890,7 +3088,7 @@ component.
 
 This is an approximate algorithm of the CamShift color object tracker.
 
-@param images Source arrays. They all should have the same depth, CV_8U or CV_32F , and the same
+@param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
 @param nimages Number of source images.
 @param channels The list of channels used to compute the back projection. The number of channels
@@ -2900,7 +3098,7 @@ images[0].channels() + images[1].channels()-1, and so on.
 @param hist Input histogram that can be dense or sparse.
 @param backProject Destination back projection array that is a single-channel array of the same
 size and depth as images[0] .
-@param ranges Array of arrays of the histogram bin boundaries in each dimension. See calcHist .
+@param ranges Array of arrays of the histogram bin boundaries in each dimension. See cv::calcHist .
 @param scale Optional scale factor for the output back projection.
 @param uniform Flag indicating whether the histogram is uniform or not (see above).
 
@@ -2925,7 +3123,7 @@ CV_EXPORTS_W void calcBackProject( InputArrayOfArrays images, const std::vector<
 
 /** @brief Compares two histograms.
 
-The function compare two dense or two sparse histograms using the specified method.
+The function cv::compareHist compares two dense or two sparse histograms using the specified method.
 
 The function returns \f$d(H_1, H_2)\f$ .
 
@@ -2973,10 +3171,12 @@ same object.
 
 @param signature1 First signature, a \f$\texttt{size1}\times \texttt{dims}+1\f$ floating-point matrix.
 Each row stores the point weight followed by the point coordinates. The matrix is allowed to have
-a single column (weights only) if the user-defined cost matrix is used.
+a single column (weights only) if the user-defined cost matrix is used. The weights must be
+non-negative and have at least one non-zero value.
 @param signature2 Second signature of the same format as signature1 , though the number of rows
 may be different. The total weights may be different. In this case an extra "dummy" point is added
-to either signature1 or signature2 .
+to either signature1 or signature2. The weights must be non-negative and have at least one non-zero
+value.
 @param distType Used metric. See cv::DistanceTypes.
 @param cost User-defined \f$\texttt{size1}\times \texttt{size2}\f$ cost matrix. Also, if a cost matrix
 is used, lower boundary lowerBound cannot be calculated because it needs a metric function.
@@ -3796,7 +3996,7 @@ enum ColormapTypes
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
-@param src The source image, grayscale or colored does not matter.
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
 @param dst The result is the colormapped source image. Note: Mat::create is called on dst.
 @param colormap The colormap to apply, see cv::ColormapTypes
  */
@@ -3947,8 +4147,8 @@ marker types are supported, see cv::MarkerTypes for more information.
 
 @param img Image.
 @param position The point where the crosshair is positioned.
-@param markerType The specific type of marker you want to use, see cv::MarkerTypes
 @param color Line color.
+@param markerType The specific type of marker you want to use, see cv::MarkerTypes
 @param thickness Line thickness.
 @param line_type Type of the line, see cv::LineTypes
 @param markerSize The length of the marker axis [default = 20 pixels]

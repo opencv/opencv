@@ -43,7 +43,7 @@ These videos above are long-obsolete and contain inaccurate information. Be care
 solutions described in those videos are no longer supported and may even break your install.
 
 If you are building your own libraries you can take the source files from our [Git
-repository](https://github.com/Itseez/opencv.git).
+repository](https://github.com/opencv/opencv.git).
 
 Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
@@ -114,7 +114,7 @@ libraries). If you do not need the support for some of these you can just freely
     you're doing -- it's OK.
     -#  Clone the repository to the selected directory. After clicking *Clone* button, a window will
         appear where you can select from what repository you want to download source files
-        (<https://github.com/Itseez/opencv.git>) and to what directory (`D:/OpenCV`).
+        (<https://github.com/opencv/opencv.git>) and to what directory (`D:/OpenCV`).
     -#  Push the OK button and be patient as the repository is quite a heavy download. It will take
         some time depending on your Internet connection.
 

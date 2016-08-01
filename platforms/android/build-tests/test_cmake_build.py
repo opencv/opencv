@@ -2,6 +2,9 @@
 
 import unittest
 import os, sys, subprocess, argparse, shutil, re
+import logging as log
+
+log.basicConfig(format='%(message)s', level=log.DEBUG)
 
 CMAKE_TEMPLATE='''\
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
@@ -83,10 +86,12 @@ class TestCmakeBuild(unittest.TestCase):
             "-DANDROID_TOOLCHAIN_NAME=%s" % self.toolchain,
             self.srcdir
         ]
+        log.info("Executing: %s" % cmd)
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "cmake failed")
 
         cmd = ["ninja"]
+        log.info("Executing: %s" % cmd)
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "make failed")
 

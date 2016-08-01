@@ -877,14 +877,11 @@ CUDA_TEST_P(Reduce, Cols)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::cuda::GpuMat dst = createMat(cv::Size(src.rows, 1), dst_type, useRoi);
+    cv::cuda::GpuMat dst;
     cv::cuda::reduce(loadMat(src, useRoi), dst, 1, reduceOp, dst_depth);
 
     cv::Mat dst_gold;
     cv::reduce(src, dst_gold, 1, reduceOp, dst_depth);
-    dst_gold.cols = dst_gold.rows;
-    dst_gold.rows = 1;
-    dst_gold.step = dst_gold.cols * dst_gold.elemSize();
 
     EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 0.0 : 0.02);
 }

@@ -76,7 +76,7 @@ Building OpenCV from source
 
 -#  Download OpenCV source. It can be from
     [Sourceforge](http://sourceforge.net/projects/opencvlibrary/) (for official release version) or
-    from [Github](https://github.com/Itseez/opencv) (for latest source).
+    from [Github](https://github.com/opencv/opencv) (for latest source).
 -#  Extract it to a folder, opencv and create a new folder build in it.
 -#  Open CMake-gui (*Start \> All Programs \> CMake-gui*)
 -#  Fill the fields as follows (see the image below):

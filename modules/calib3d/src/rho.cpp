@@ -44,7 +44,7 @@
  */
 
 /* Includes */
-#include <precomp.hpp>
+#include "precomp.hpp"
 #include <opencv2/core.hpp>
 #include <stdlib.h>
 #include <stdio.h>

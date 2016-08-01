@@ -158,7 +158,7 @@ public:
           rvec(_rvec), tvec(_tvec) {}
 
     /* Pre: True */
-    /* Post: compute _model with given points an return number of found models */
+    /* Post: compute _model with given points and return number of found models */
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
@@ -270,6 +270,8 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     {
         vector<Point3d> opoints_inliers;
         vector<Point2d> ipoints_inliers;
+        opoints = opoints.reshape(3);
+        ipoints = ipoints.reshape(2);
         opoints.convertTo(opoints_inliers, CV_64F);
         ipoints.convertTo(ipoints_inliers, CV_64F);
 

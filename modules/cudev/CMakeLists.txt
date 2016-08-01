@@ -17,6 +17,6 @@ ocv_set_module_sources(HEADERS ${lib_hdrs} SOURCES ${lib_srcs})
 
 ocv_create_module()
 
-if(BUILD_TESTS)
+if(BUILD_TESTS AND NOT BUILD_opencv_world)
   add_subdirectory(test)
 endif()

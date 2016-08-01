@@ -84,16 +84,14 @@ void TranslationBasedLocalOutlierRejector::process(
     Size ncells((frameSize.width + cellSize_.width - 1) / cellSize_.width,
                 (frameSize.height + cellSize_.height - 1) / cellSize_.height);
 
-    int cx, cy;
-
     // fill grid cells
 
     grid_.assign(ncells.area(), Cell());
 
     for (int i = 0; i < npoints; ++i)
     {
-        cx = std::min(cvRound(points0_[i].x / cellSize_.width), ncells.width - 1);
-        cy = std::min(cvRound(points0_[i].y / cellSize_.height), ncells.height - 1);
+        int cx = std::min(cvRound(points0_[i].x / cellSize_.width), ncells.width - 1);
+        int cy = std::min(cvRound(points0_[i].y / cellSize_.height), ncells.height - 1);
         grid_[cy * ncells.width + cx].push_back(i);
     }
 
@@ -101,19 +99,16 @@ void TranslationBasedLocalOutlierRejector::process(
 
     RNG rng(0);
     int niters = ransacParams_.niters();
-    int ninliers, ninliersMax;
     std::vector<int> inliers;
-    float dx, dy, dxBest, dyBest;
-    float x1, y1;
-    int idx;
 
     for (size_t ci = 0; ci < grid_.size(); ++ci)
     {
         // estimate translation model at the current cell using RANSAC
 
+        float x1, y1;
         const Cell &cell = grid_[ci];
-        ninliersMax = 0;
-        dxBest = dyBest = 0.f;
+        int ninliers, ninliersMax = 0;
+        float dxBest = 0.f, dyBest = 0.f;
 
         // find the best hypothesis
 
@@ -121,9 +116,9 @@ void TranslationBasedLocalOutlierRejector::process(
         {
             for (int iter = 0; iter < niters; ++iter)
             {
-                idx = cell[static_cast<unsigned>(rng) % cell.size()];
-                dx = points1_[idx].x - points0_[idx].x;
-                dy = points1_[idx].y - points0_[idx].y;
+                int idx = cell[static_cast<unsigned>(rng) % cell.size()];
+                float dx = points1_[idx].x - points0_[idx].x;
+                float dy = points1_[idx].y - points0_[idx].y;
 
                 ninliers = 0;
                 for (size_t i = 0; i < cell.size(); ++i)

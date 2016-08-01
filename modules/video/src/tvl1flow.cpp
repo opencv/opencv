@@ -89,6 +89,17 @@ namespace {
 class OpticalFlowDual_TVL1 : public DualTVL1OpticalFlow
 {
 public:
+
+    OpticalFlowDual_TVL1(double tau_, double lambda_, double theta_, int nscales_, int warps_,
+                         double epsilon_, int innerIterations_, int outerIterations_,
+                         double scaleStep_, double gamma_, int medianFiltering_,
+                         bool useInitialFlow_) :
+        tau(tau_), lambda(lambda_), theta(theta_), gamma(gamma_), nscales(nscales_),
+        warps(warps_), epsilon(epsilon_), innerIterations(innerIterations_),
+        outerIterations(outerIterations_), useInitialFlow(useInitialFlow_),
+        scaleStep(scaleStep_), medianFiltering(medianFiltering_)
+    {
+    }
     OpticalFlowDual_TVL1();
 
     void calc(InputArray I0, InputArray I1, InputOutputArray flow);
@@ -1449,4 +1460,14 @@ void OpticalFlowDual_TVL1::collectGarbage()
 Ptr<DualTVL1OpticalFlow> cv::createOptFlow_DualTVL1()
 {
     return makePtr<OpticalFlowDual_TVL1>();
+}
+
+Ptr<DualTVL1OpticalFlow> cv::DualTVL1OpticalFlow::create(
+    double tau, double lambda, double theta, int nscales, int warps,
+    double epsilon, int innerIterations, int outerIterations, double scaleStep,
+    double gamma, int medianFilter, bool useInitialFlow)
+{
+    return makePtr<OpticalFlowDual_TVL1>(tau, lambda, theta, nscales, warps,
+                                         epsilon, innerIterations, outerIterations,
+                                         scaleStep, gamma, medianFilter, useInitialFlow);
 }

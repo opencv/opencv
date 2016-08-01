@@ -3,7 +3,7 @@
 '''
 Feature-based image matching sample.
 
-Note, that you will need the https://github.com/Itseez/opencv_contrib repo for SIFT and SURF
+Note, that you will need the https://github.com/opencv/opencv_contrib repo for SIFT and SURF
 
 USAGE
   find_obj.py [--feature=<sift|surf|orb|akaze|brisk>[-flann]] [ <image1> <image2> ]
@@ -68,7 +68,7 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     p1 = np.float32([kp.pt for kp in mkp1])
     p2 = np.float32([kp.pt for kp in mkp2])
     kp_pairs = zip(mkp1, mkp2)
-    return p1, p2, kp_pairs
+    return p1, p2, list(kp_pairs)
 
 def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
     h1, w1 = img1.shape[:2]
@@ -119,7 +119,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
         if flags & cv2.EVENT_FLAG_LBUTTON:
             cur_vis = vis0.copy()
             r = 8
-            m = (anorm(p1 - (x, y)) < r) | (anorm(p2 - (x, y)) < r)
+            m = (anorm(np.array(p1) - (x, y)) < r) | (anorm(np.array(p2) - (x, y)) < r)
             idxs = np.where(m)[0]
             kp1s, kp2s = [], []
             for i in idxs:
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
-    feature_name = opts.get('--feature', 'sift')
+    feature_name = opts.get('--feature', 'brisk')
     try:
         fn1, fn2 = args
     except:

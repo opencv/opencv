@@ -428,6 +428,7 @@ __kernel void stage2_hysteresis(__global uchar *map_ptr, int map_step, int map_o
         int mod = l_counter % LOCAL_TOTAL;
         int pix_per_thr = l_counter / LOCAL_TOTAL + ((lid < mod) ? 1 : 0);
 
+        barrier(CLK_LOCAL_MEM_FENCE);
         for (int i = 0; i < pix_per_thr; ++i)
         {
             int index = atomic_dec(&l_counter) - 1;

@@ -3,9 +3,28 @@
 
 using namespace cv;
 
+namespace cvtest { namespace hal {
+
+template<typename T> static inline void EXPECT_COMPARE_EQ_(const T a, const T b);
+template<> inline void EXPECT_COMPARE_EQ_<float>(const float a, const float b)
+{
+    EXPECT_FLOAT_EQ( a, b );
+}
+
+template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b)
+{
+    EXPECT_DOUBLE_EQ( a, b );
+}
+
 template<typename R> struct TheTest
 {
     typedef typename R::lane_type LaneType;
+
+    template <typename T1, typename T2>
+    static inline void EXPECT_COMPARE_EQ(const T1 a, const T2 b)
+    {
+        EXPECT_COMPARE_EQ_<LaneType>((LaneType)a, (LaneType)b);
+    }
 
     TheTest & test_loadstore()
     {
@@ -50,8 +69,8 @@ template<typename R> struct TheTest
         EXPECT_EQ(d, res);
 
         // zero, all
-        Data<R> resZ = RegTrait<R>::zero();
-        Data<R> resV = RegTrait<R>::all(8);
+        Data<R> resZ = V_RegTrait128<LaneType>::zero();
+        Data<R> resV = V_RegTrait128<LaneType>::all(8);
         for (int i = 0; i < R::nlanes; ++i)
         {
             EXPECT_EQ((LaneType)0, resZ[i]);
@@ -116,7 +135,7 @@ template<typename R> struct TheTest
     // v_expand and v_load_expand
     TheTest & test_expand()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
+        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         Data<R> dataA;
         R a = dataA;
 
@@ -139,7 +158,7 @@ template<typename R> struct TheTest
 
     TheTest & test_expand_q()
     {
-        typedef typename RegTrait<R>::q_reg Rx4;
+        typedef typename V_RegTrait128<LaneType>::q_reg Rx4;
         Data<R> data;
         Data<Rx4> out = v_load_expand_q(data.d);
         const int n = Rx4::nlanes;
@@ -213,7 +232,7 @@ template<typename R> struct TheTest
 
     TheTest & test_mul_expand()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
+        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         Data<R> dataA, dataB(2);
         R a = dataA, b = dataB;
         Rx2 c, d;
@@ -276,7 +295,7 @@ template<typename R> struct TheTest
 
     TheTest & test_dot_prod()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
+        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         Data<R> dataA, dataB(2);
         R a = dataA, b = dataB;
 
@@ -316,9 +335,9 @@ template<typename R> struct TheTest
         Data<R> resB = v_sqrt(a), resC = v_invsqrt(a), resE = v_abs(d);
         for (int i = 0; i < R::nlanes; ++i)
         {
-            EXPECT_FLOAT_EQ((float)std::sqrt(dataA[i]), (float)resB[i]);
-            EXPECT_FLOAT_EQ(1/(float)std::sqrt(dataA[i]), (float)resC[i]);
-            EXPECT_FLOAT_EQ((float)abs(dataA[i]), (float)resE[i]);
+            EXPECT_COMPARE_EQ((float)std::sqrt(dataA[i]), (float)resB[i]);
+            EXPECT_COMPARE_EQ(1/(float)std::sqrt(dataA[i]), (float)resC[i]);
+            EXPECT_COMPARE_EQ((float)abs(dataA[i]), (float)resE[i]);
         }
 
         return *this;
@@ -342,7 +361,7 @@ template<typename R> struct TheTest
 
     TheTest & test_absdiff()
     {
-        typedef typename RegTrait<R>::u_reg Ru;
+        typedef typename V_RegTrait128<LaneType>::u_reg Ru;
         typedef typename Ru::lane_type u_type;
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
@@ -426,7 +445,7 @@ template<typename R> struct TheTest
     template <int s>
     TheTest & test_pack()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
+        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
         typedef typename Rx2::lane_type w_type;
         Data<Rx2> dataA, dataB;
         dataA += std::numeric_limits<LaneType>::is_signed ? -10 : 10;
@@ -461,8 +480,8 @@ template<typename R> struct TheTest
     template <int s>
     TheTest & test_pack_u()
     {
-        typedef typename RegTrait<R>::w_reg Rx2;
-        typedef typename RegTrait<Rx2>::int_reg Ri2;
+        typedef typename V_TypeTraits<LaneType>::w_type LaneType_w;
+        typedef typename V_RegTrait128<LaneType_w>::int_reg Ri2;
         typedef typename Ri2::lane_type w_type;
 
         Data<Ri2> dataA, dataB;
@@ -553,7 +572,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_math()
     {
-        typedef typename RegTrait<R>::int_reg Ri;
+        typedef typename V_RegTrait128<LaneType>::int_reg Ri;
         Data<R> data1, data2, data3;
         data1 *= 1.1;
         data2 += 10;
@@ -575,9 +594,9 @@ template<typename R> struct TheTest
             EXPECT_EQ(cvFloor(data1[i]), resD[i]);
             EXPECT_EQ(cvCeil(data1[i]), resE[i]);
 
-            EXPECT_DOUBLE_EQ(std::sqrt(data1[i]*data1[i] + data2[i]*data2[i]), resF[i]);
-            EXPECT_DOUBLE_EQ(data1[i]*data1[i] + data2[i]*data2[i], resG[i]);
-            EXPECT_DOUBLE_EQ(data1[i]*data2[i] + data3[i], resH[i]);
+            EXPECT_COMPARE_EQ(std::sqrt(data1[i]*data1[i] + data2[i]*data2[i]), resF[i]);
+            EXPECT_COMPARE_EQ(data1[i]*data1[i] + data2[i]*data2[i], resG[i]);
+            EXPECT_COMPARE_EQ(data1[i]*data2[i] + data3[i], resH[i]);
         }
 
         return *this;
@@ -862,3 +881,7 @@ TEST(hal_intrin, float64x2) {
         ;
 }
 #endif
+
+};
+
+};

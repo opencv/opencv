@@ -333,7 +333,7 @@ public:
         {
             for( int i = 0; i < _src.rows; i++ )
             {
-                const float* src = _src.ptr<float>(i);
+                const double* src = _src.ptr<double>(i);
                 double* dst = _dst.ptr<double>(i);
                 for( int j = 0; j < cols; j++ )
                     dst[j] = src[j]*w[j*2] + w[j*2+1];
@@ -432,8 +432,15 @@ public:
                     double* data = sums.ptr<double>(i);
                     for( j = 0; j < cols; j++ )
                     {
-                        double t = scale2*(1. - data[j])/(1. + data[j]);
-                        data[j] = t;
+                        if(!cvIsInf(data[j]))
+                        {
+                            double t = scale2*(1. - data[j])/(1. + data[j]);
+                            data[j] = t;
+                        }
+                        else
+                        {
+                            data[j] = -scale2;
+                        }
                     }
                 }
                 break;
@@ -1151,6 +1158,7 @@ public:
             return;
         int i, l_count = layer_count();
 
+        writeFormat(fs);
         fs << "layer_sizes" << layer_sizes;
 
         write_params( fs );
@@ -1317,6 +1325,18 @@ Ptr<ANN_MLP> ANN_MLP::create()
     return makePtr<ANN_MLPImpl>();
 }
 
-}}
+Ptr<ANN_MLP> ANN_MLP::load(const String& filepath)
+{
+    FileStorage fs;
+    fs.open(filepath, FileStorage::READ);
+
+    Ptr<ANN_MLP> ann = makePtr<ANN_MLPImpl>();
+
+    ((ANN_MLPImpl*)ann.get())->read(fs.getFirstTopLevelNode());
+    return ann;
+}
+
+
+    }}
 
 /* End of file. */

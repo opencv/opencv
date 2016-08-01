@@ -51,6 +51,14 @@ In this section you will learn about the image processing (manipulation) functio
 
     After so much processing, it is time to decide which pixels stay!
 
+-   @subpage tutorial_threshold_inRange
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Rishiraj Surti
+
+    Thresholding operations using inRange function.
+
 -   @subpage tutorial_filter_2d
 
     *Compatibility:* \> OpenCV 2.0

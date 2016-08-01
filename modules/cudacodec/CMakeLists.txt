@@ -15,7 +15,9 @@ set(extra_libs "")
 
 if(HAVE_NVCUVID)
   list(APPEND extra_libs ${CUDA_CUDA_LIBRARY} ${CUDA_nvcuvid_LIBRARY})
+endif()
 
+if(HAVE_NVCUVENC)
   if(WIN32)
     list(APPEND extra_libs ${CUDA_nvcuvenc_LIBRARY})
   endif()
