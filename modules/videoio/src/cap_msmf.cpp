@@ -2580,7 +2580,7 @@ bool videoDevice::setupDevice(unsigned int id)
 
 bool videoDevice::setupDevice(unsigned int w, unsigned int h, unsigned int idealFramerate)
 {
-    unsigned int id = findType(w * h, idealFramerate);
+    int id = findType(w * h, idealFramerate);
     if( id < 0 )
         return false;
 

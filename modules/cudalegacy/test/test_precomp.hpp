@@ -51,7 +51,7 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) && !defined(__aarch64__)
+#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) && !defined(__aarch64__) && !defined(__powerpc64__)
     #include <fpu_control.h>
 #endif
 

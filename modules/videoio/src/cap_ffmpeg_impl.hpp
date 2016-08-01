@@ -971,7 +971,8 @@ bool CvCapture_FFMPEG::grabFrame()
         {
             //picture_pts = picture->best_effort_timestamp;
             if( picture_pts == AV_NOPTS_VALUE_ )
-                picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
+                picture_pts = picture->pkt_pts != AV_NOPTS_VALUE_ && picture->pkt_pts != 0 ? picture->pkt_pts : picture->pkt_dts;
+
             frame_number++;
             valid = true;
         }
@@ -1134,11 +1135,7 @@ int CvCapture_FFMPEG::get_bitrate() const
 
 double CvCapture_FFMPEG::get_fps() const
 {
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
-    double fps = r2d(ic->streams[video_stream]->avg_frame_rate);
-#else
     double fps = r2d(ic->streams[video_stream]->r_frame_rate);
-#endif
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     if (fps < eps_zero)

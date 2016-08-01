@@ -524,6 +524,16 @@ For example:
 CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha = 1, double beta = 0);
 
+/** @brief Converts an array to half precision floating number.
+
+convertFp16 converts FP32 to FP16 or FP16 to FP32.  The input array has to have type of CV_32F or
+CV_16S to represent the bit depth.  If the input array is neither of them, it'll do nothing.
+
+@param src input array.
+@param dst output array.
+*/
+CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
+
 /** @brief Performs a look-up table transform of an array.
 
 The function LUT fills the output array with values from the look-up table. Indices of the entries
@@ -826,9 +836,9 @@ CV_EXPORTS void minMaxLoc(const SparseMat& a, double* minVal,
 The function reduce reduces the matrix to a vector by treating the matrix rows/columns as a set of
 1D vectors and performing the specified operation on the vectors until a single row/column is
 obtained. For example, the function can be used to compute horizontal and vertical projections of a
-raster image. In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element
-bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction
-modes.
+raster image. In case of REDUCE_MAX and REDUCE_MIN , the output image should have the same type as the source one.
+In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
+And multi-channel arrays are also supported in these two reduction modes.
 @param src input 2D matrix.
 @param dst output vector. Its size and type is defined by dim and dtype parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to
@@ -889,7 +899,7 @@ output arrays.
 
 The function cv::mixChannels provides an advanced mechanism for shuffling image channels.
 
-cv::split and cv::merge and some forms of cv::cvtColor are partial cases of cv::mixChannels .
+cv::split,cv::merge,cv::extractChannel,cv::insertChannel and some forms of cv::cvtColor are partial cases of cv::mixChannels.
 
 In the example below, the code splits a 4-channel BGRA image into a 3-channel BGR (with B and R
 channels swapped) and a separate alpha-channel image:
@@ -923,7 +933,7 @@ src[0].channels() + src[1].channels()-1, and so on, the same scheme is used for 
 channels; as a special case, when fromTo[k\*2] is negative, the corresponding output channel is
 filled with zero .
 @param npairs number of index pairs in `fromTo`.
-@sa cv::split, cv::merge, cv::cvtColor
+@sa split, merge, extractChannel, insertChannel, cvtColor
 */
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
@@ -961,13 +971,19 @@ filled with zero .
 CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                               const std::vector<int>& fromTo);
 
-/** @brief extracts a single channel from src (coi is 0-based index)
-@todo document
+/** @brief Extracts a single channel from src (coi is 0-based index)
+@param src input array
+@param dst output array
+@param coi index of channel to extract
+@sa mixChannels, split
 */
 CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
 
-/** @brief inserts a single channel to dst (coi is 0-based index)
-@todo document
+/** @brief Inserts a single channel to dst (coi is 0-based index)
+@param src input array
+@param dst output array
+@param coi index of channel for insertion
+@sa mixChannels, merge
 */
 CV_EXPORTS_W void insertChannel(InputArray src, InputOutputArray dst, int coi);
 
@@ -1427,14 +1443,11 @@ CV_EXPORTS_W void exp(InputArray src, OutputArray dst);
 
 /** @brief Calculates the natural logarithm of every array element.
 
-The function log calculates the natural logarithm of the absolute value
-of every element of the input array:
-\f[\texttt{dst} (I) =  \fork{\log |\texttt{src}(I)|}{if \(\texttt{src}(I) \ne 0\) }{\texttt{C}}{otherwise}\f]
+The function log calculates the natural logarithm of every element of the input array:
+\f[\texttt{dst} (I) =  \log (\texttt{src}(I)) \f]
 
-where C is a large negative number (about -700 in the current
-implementation). The maximum relative error is about 7e-6 for
-single-precision input and less than 1e-10 for double-precision input.
-Special values (NaN, Inf) are not handled.
+Output on zero, negative and special (NaN, Inf) values is undefined.
+
 @param src input array.
 @param dst output array of the same size and type as src .
 @sa exp, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
@@ -2324,11 +2337,11 @@ public:
     The operator performs %PCA of the supplied dataset. It is safe to reuse
     the same PCA structure for multiple datasets. That is, if the structure
     has been previously used with another dataset, the existing internal
-    data is reclaimed and the new eigenvalues, @ref eigenvectors , and @ref
+    data is reclaimed and the new @ref eigenvalues, @ref eigenvectors and @ref
     mean are allocated and computed.
 
-    The computed eigenvalues are sorted from the largest to the smallest and
-    the corresponding eigenvectors are stored as eigenvectors rows.
+    The computed @ref eigenvalues are sorted from the largest to the smallest and
+    the corresponding @ref eigenvectors are stored as eigenvectors rows.
 
     @param data input samples stored as the matrix rows or as the matrix
     columns.
@@ -2408,11 +2421,17 @@ public:
      */
     void backProject(InputArray vec, OutputArray result) const;
 
-    /** @brief write and load PCA matrix
+    /** @brief write PCA objects
 
-*/
-    void write(FileStorage& fs ) const;
-    void read(const FileNode& fs);
+    Writes @ref eigenvalues @ref eigenvectors and @ref mean to specified FileStorage
+     */
+    void write(FileStorage& fs) const;
+
+    /** @brief load PCA objects
+
+    Loads @ref eigenvalues @ref eigenvectors and @ref mean from specified FileNode
+     */
+    void read(const FileNode& fn);
 
     Mat eigenvectors; //!< eigenvectors of the covariation matrix
     Mat eigenvalues; //!< eigenvalues of the covariation matrix
@@ -3036,6 +3055,7 @@ public:
     {
         FileStorage fs(filename, FileStorage::READ);
         FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
+        if (fn.empty()) return Ptr<_Tp>();
         Ptr<_Tp> obj = _Tp::create();
         obj->read(fn);
         return !obj->empty() ? obj : Ptr<_Tp>();

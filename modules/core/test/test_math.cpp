@@ -2385,6 +2385,7 @@ TEST(Core_SolvePoly, regression_5599)
         prec = cv::solvePoly(coefs, r);
         EXPECT_LE(prec, 1e-6);
         EXPECT_EQ((long unsigned)4, r.total());
+        EXPECT_EQ(4u, r.total());
         //std::cout << "Preciseness = " << prec << std::endl;
         //std::cout << "roots:\n" << r << "\n" << std::endl;
         ASSERT_EQ(CV_32FC2, r.type());
@@ -2400,7 +2401,7 @@ TEST(Core_SolvePoly, regression_5599)
         double prec;
         prec = cv::solvePoly(coefs, r);
         EXPECT_LE(prec, 1e-6);
-        EXPECT_EQ(2, r.total());
+        EXPECT_EQ(2u, r.total());
         //std::cout << "Preciseness = " << prec << std::endl;
         //std::cout << "roots:\n" << r << "\n" << std::endl;
         ASSERT_EQ(CV_32FC2, r.type());
@@ -2411,8 +2412,9 @@ TEST(Core_SolvePoly, regression_5599)
 
 class Core_PhaseTest : public cvtest::BaseTest
 {
+    int t;
 public:
-    Core_PhaseTest() {}
+    Core_PhaseTest(int t_) : t(t_) {}
     ~Core_PhaseTest() {}
 protected:
     virtual void run(int)
@@ -2421,9 +2423,9 @@ protected:
         const int axisCount = 8;
         const int dim = theRNG().uniform(1,10);
         const float scale = theRNG().uniform(1.f, 100.f);
-        Mat x(axisCount + 1, dim, CV_32FC1),
-            y(axisCount + 1, dim, CV_32FC1);
-        Mat anglesInDegrees(axisCount + 1, dim, CV_32FC1);
+        Mat x(axisCount + 1, dim, t),
+            y(axisCount + 1, dim, t);
+        Mat anglesInDegrees(axisCount + 1, dim, t);
 
         // fill the data
         x.row(0).setTo(Scalar(0));
@@ -2696,8 +2698,8 @@ TEST(Core_SVD, accuracy) { Core_SVDTest test; test.safe_run(); }
 TEST(Core_SVBkSb, accuracy) { Core_SVBkSbTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
-TEST(Core_Phase, accuracy) { Core_PhaseTest test; test.safe_run(); }
-
+TEST(Core_Phase, accuracy32f) { Core_PhaseTest test(CV_32FC1); test.safe_run(); }
+TEST(Core_Phase, accuracy64f) { Core_PhaseTest test(CV_64FC1); test.safe_run(); }
 
 TEST(Core_SVD, flt)
 {

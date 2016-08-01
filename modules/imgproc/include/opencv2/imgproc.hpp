@@ -1664,6 +1664,19 @@ CV_EXPORTS_W void Canny( InputArray image, OutputArray edges,
                          double threshold1, double threshold2,
                          int apertureSize = 3, bool L2gradient = false );
 
+/** \overload
+
+Finds edges in an image using the Canny algorithm with custom image gradient.
+
+@param dx 16-bit x derivative of input image (CV_16SC1 or CV_16SC3).
+@param dy 16-bit y derivative of input image (same type as dx).
+@param edges,threshold1,threshold2,L2gradient See cv::Canny
+ */
+CV_EXPORTS_W void Canny( InputArray dx, InputArray dy,
+                         OutputArray edges,
+                         double threshold1, double threshold2,
+                         bool L2gradient = false );
+
 /** @brief Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 The function is similar to cornerEigenValsAndVecs but it calculates and stores only the minimal
@@ -1828,7 +1841,8 @@ with qualityLevel=B .
 @param image Input 8-bit or floating-point 32-bit, single-channel image.
 @param corners Output vector of detected corners.
 @param maxCorners Maximum number of corners to return. If there are more corners than are found,
-the strongest of them is returned.
+the strongest of them is returned. `maxCorners <= 0` implies that no limit on the maximum is set
+and all detected corners are returned.
 @param qualityLevel Parameter characterizing the minimal accepted quality of image corners. The
 parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue
 (see cornerMinEigenVal ) or the Harris function response (see cornerHarris ). The corners with the
@@ -2941,7 +2955,7 @@ An example for creating histograms of an image
 
 /** @brief Calculates a histogram of a set of arrays.
 
-The functions calcHist calculate the histogram of one or more arrays. The elements of a tuple used
+The function cv::calcHist calculates the histogram of one or more arrays. The elements of a tuple used
 to increment a histogram bin are taken from the corresponding input arrays at the same location. The
 sample below shows how to compute a 2D Hue-Saturation histogram for a color image. :
 @code
@@ -3002,7 +3016,7 @@ sample below shows how to compute a 2D Hue-Saturation histogram for a color imag
     }
 @endcode
 
-@param images Source arrays. They all should have the same depth, CV_8U or CV_32F , and the same
+@param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
 @param nimages Number of source images.
 @param channels List of the dims channels used to compute the histogram. The first array channels
@@ -3053,7 +3067,7 @@ CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
 
 /** @brief Calculates the back projection of a histogram.
 
-The functions calcBackProject calculate the back project of the histogram. That is, similarly to
+The function cv::calcBackProject calculates the back project of the histogram. That is, similarly to
 cv::calcHist , at each location (x, y) the function collects the values from the selected channels
 in the input images and finds the corresponding histogram bin. But instead of incrementing it, the
 function reads the bin value, scales it by scale , and stores in backProject(x,y) . In terms of
@@ -3074,7 +3088,7 @@ component.
 
 This is an approximate algorithm of the CamShift color object tracker.
 
-@param images Source arrays. They all should have the same depth, CV_8U or CV_32F , and the same
+@param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
 @param nimages Number of source images.
 @param channels The list of channels used to compute the back projection. The number of channels
@@ -3084,7 +3098,7 @@ images[0].channels() + images[1].channels()-1, and so on.
 @param hist Input histogram that can be dense or sparse.
 @param backProject Destination back projection array that is a single-channel array of the same
 size and depth as images[0] .
-@param ranges Array of arrays of the histogram bin boundaries in each dimension. See calcHist .
+@param ranges Array of arrays of the histogram bin boundaries in each dimension. See cv::calcHist .
 @param scale Optional scale factor for the output back projection.
 @param uniform Flag indicating whether the histogram is uniform or not (see above).
 
@@ -3109,7 +3123,7 @@ CV_EXPORTS_W void calcBackProject( InputArrayOfArrays images, const std::vector<
 
 /** @brief Compares two histograms.
 
-The function compare two dense or two sparse histograms using the specified method.
+The function cv::compareHist compares two dense or two sparse histograms using the specified method.
 
 The function returns \f$d(H_1, H_2)\f$ .
 
@@ -3157,10 +3171,12 @@ same object.
 
 @param signature1 First signature, a \f$\texttt{size1}\times \texttt{dims}+1\f$ floating-point matrix.
 Each row stores the point weight followed by the point coordinates. The matrix is allowed to have
-a single column (weights only) if the user-defined cost matrix is used.
+a single column (weights only) if the user-defined cost matrix is used. The weights must be
+non-negative and have at least one non-zero value.
 @param signature2 Second signature of the same format as signature1 , though the number of rows
 may be different. The total weights may be different. In this case an extra "dummy" point is added
-to either signature1 or signature2 .
+to either signature1 or signature2. The weights must be non-negative and have at least one non-zero
+value.
 @param distType Used metric. See cv::DistanceTypes.
 @param cost User-defined \f$\texttt{size1}\times \texttt{size2}\f$ cost matrix. Also, if a cost matrix
 is used, lower boundary lowerBound cannot be calculated because it needs a metric function.

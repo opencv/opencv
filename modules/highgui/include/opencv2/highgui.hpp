@@ -425,7 +425,7 @@ CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
 @param winname Name of the window.
 @param onMouse Mouse callback. See OpenCV samples, such as
-<https://github.com/Itseez/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
+<https://github.com/opencv/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
 use the callback.
 @param userdata The optional parameter passed to the callback.
  */
@@ -677,7 +677,7 @@ after the specified delay the original content of the window is restored.
 function is called before the previous overlay text timed out, the timer is restarted and the text
 is updated. If this value is zero, the text never disappears.
  */
-CV_EXPORTS void displayOverlay(const String& winname, const String& text, int delayms = 0);
+CV_EXPORTS_W void displayOverlay(const String& winname, const String& text, int delayms = 0);
 
 /** @brief Displays a text on the window statusbar during the specified period of time.
 
@@ -691,7 +691,7 @@ created with the CV_GUI_EXPANDED flags).
 the previous text timed out, the timer is restarted and the text is updated. If this value is
 zero, the text never disappears.
  */
-CV_EXPORTS void displayStatusBar(const String& winname, const String& text, int delayms = 0);
+CV_EXPORTS_W void displayStatusBar(const String& winname, const String& text, int delayms = 0);
 
 /** @brief Saves parameters of the specified window.
 

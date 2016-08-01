@@ -116,32 +116,32 @@ These operations allow to reorder or recombine elements in one or multiple vecto
 Element-wise binary and unary operations.
 
 - Arithmetics:
-@ref operator+(const v_reg &a, const v_reg &b) "+",
-@ref operator-(const v_reg &a, const v_reg &b) "-",
-@ref operator*(const v_reg &a, const v_reg &b) "*",
-@ref operator/(const v_reg &a, const v_reg &b) "/",
+@ref operator +(const v_reg &a, const v_reg &b) "+",
+@ref operator -(const v_reg &a, const v_reg &b) "-",
+@ref operator *(const v_reg &a, const v_reg &b) "*",
+@ref operator /(const v_reg &a, const v_reg &b) "/",
 @ref v_mul_expand
 
 - Non-saturating arithmetics: @ref v_add_wrap, @ref v_sub_wrap
 
 - Bitwise shifts:
-@ref operator<<(const v_reg &a, int s) "<<",
-@ref operator>>(const v_reg &a, int s) ">>",
+@ref operator <<(const v_reg &a, int s) "<<",
+@ref operator >>(const v_reg &a, int s) ">>",
 @ref v_shl, @ref v_shr
 
 - Bitwise logic:
-@ref operator&(const v_reg &a, const v_reg &b) "&",
-@ref operator|(const v_reg &a, const v_reg &b) "|",
-@ref operator^(const v_reg &a, const v_reg &b) "^",
-@ref operator~(const v_reg &a) "~"
+@ref operator &(const v_reg &a, const v_reg &b) "&",
+@ref operator |(const v_reg &a, const v_reg &b) "|",
+@ref operator ^(const v_reg &a, const v_reg &b) "^",
+@ref operator ~(const v_reg &a) "~"
 
 - Comparison:
-@ref operator>(const v_reg &a, const v_reg &b) ">",
-@ref operator>=(const v_reg &a, const v_reg &b) ">=",
-@ref operator<(const v_reg &a, const v_reg &b) "<",
-@ref operator<=(const v_reg &a, const v_reg &b) "<=",
-@ref operator==(const v_reg &a, const v_reg &b) "==",
-@ref operator!=(const v_reg &a, const v_reg &b) "!="
+@ref operator >(const v_reg &a, const v_reg &b) ">",
+@ref operator >=(const v_reg &a, const v_reg &b) ">=",
+@ref operator <(const v_reg &a, const v_reg &b) "<",
+@ref operator <=(const v_reg &a, const v_reg &b) "<=",
+@ref operator ==(const v_reg &a, const v_reg &b) "==",
+@ref operator !=(const v_reg &a, const v_reg &b) "!="
 
 - min/max: @ref v_min, @ref v_max
 

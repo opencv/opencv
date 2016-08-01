@@ -49,7 +49,7 @@ BRIEF in OpenCV
 Below code shows the computation of BRIEF descriptors with the help of CenSurE detector. (CenSurE
 detector is called STAR detector in OpenCV)
 
-note, that you need [opencv contrib](https://github.com/Itseez/opencv_contrib)) to use this.
+note, that you need [opencv contrib](https://github.com/opencv/opencv_contrib)) to use this.
 @code{.py}
 import numpy as np
 import cv2

@@ -333,7 +333,7 @@ public:
         {
             for( int i = 0; i < _src.rows; i++ )
             {
-                const float* src = _src.ptr<float>(i);
+                const double* src = _src.ptr<double>(i);
                 double* dst = _dst.ptr<double>(i);
                 for( int j = 0; j < cols; j++ )
                     dst[j] = src[j]*w[j*2] + w[j*2+1];

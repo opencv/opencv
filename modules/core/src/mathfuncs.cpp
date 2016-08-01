@@ -51,11 +51,6 @@ namespace cv
 
 typedef void (*MathFunc)(const void* src, void* dst, int len);
 
-static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
-static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
-static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
-static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
-
 #ifdef HAVE_OPENCL
 
 enum { OCL_OP_LOG=0, OCL_OP_EXP=1, OCL_OP_MAG=2, OCL_OP_PHASE_DEGREES=3, OCL_OP_PHASE_RADIANS=4 };
@@ -99,29 +94,6 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
 }
 
 #endif
-
-float fastAtan2( float y, float x )
-{
-    float ax = std::abs(x), ay = std::abs(y);
-    float a, c, c2;
-    if( ax >= ay )
-    {
-        c = ay/(ax + (float)DBL_EPSILON);
-        c2 = c*c;
-        a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
-    }
-    else
-    {
-        c = ax/(ay + (float)DBL_EPSILON);
-        c2 = c*c;
-        a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
-    }
-    if( x < 0 )
-        a = 180.f - a;
-    if( y < 0 )
-        a = 360.f - a;
-    return a;
-}
 
 /* ************************************************************************** *\
    Fast cube root by Ken Turkowski
@@ -202,7 +174,6 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     }
 }
 
-
 void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegrees )
 {
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
@@ -218,19 +189,8 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     const Mat* arrays[] = {&X, &Y, &Angle, 0};
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
-    cv::AutoBuffer<float> _buf;
-    float* buf[2] = {0, 0};
-    int j, k, total = (int)(it.size*cn), blockSize = total;
+    int j, total = (int)(it.size*cn), blockSize = total;
     size_t esz1 = X.elemSize1();
-
-    if( depth == CV_64F )
-    {
-        blockSize = std::min(blockSize, ((BLOCK_SIZE+cn-1)/cn)*cn);
-        _buf.allocate(blockSize*2);
-        buf[0] = _buf;
-        buf[1] = buf[0] + blockSize;
-    }
-
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -240,53 +200,13 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
             {
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *angle = (float*)ptrs[2];
-                hal::fastAtan2( y, x, angle, len, angleInDegrees );
+                hal::fastAtan32f( y, x, angle, len, angleInDegrees );
             }
             else
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[2];
-                k = 0;
-
-#if CV_SSE2
-                if (USE_SSE2)
-                {
-                    for ( ; k <= len - 4; k += 4)
-                    {
-                        __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
-                                                      _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
-                        __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
-                                                      _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
-
-                        _mm_storeu_ps(buf[0] + k, v_dst0);
-                        _mm_storeu_ps(buf[1] + k, v_dst1);
-                    }
-                }
-#endif
-
-                for( ; k < len; k++ )
-                {
-                    buf[0][k] = (float)x[k];
-                    buf[1][k] = (float)y[k];
-                }
-
-                hal::fastAtan2( buf[1], buf[0], buf[0], len, angleInDegrees );
-                k = 0;
-
-#if CV_SSE2
-                if (USE_SSE2)
-                {
-                    for ( ; k <= len - 4; k += 4)
-                    {
-                        __m128 v_src = _mm_loadu_ps(buf[0] + k);
-                        _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
-                        _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
-                    }
-                }
-#endif
-
-                for( ; k < len; k++ )
-                    angle[k] = buf[0][k];
+                hal::fastAtan64f(y, x, angle, len, angleInDegrees);
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -353,17 +273,8 @@ void cartToPolar( InputArray src1, InputArray src2,
     const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
     uchar* ptrs[4];
     NAryMatIterator it(arrays, ptrs);
-    cv::AutoBuffer<float> _buf;
-    float* buf[2] = {0, 0};
-    int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
+    int j, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
     size_t esz1 = X.elemSize1();
-
-    if( depth == CV_64F )
-    {
-        _buf.allocate(blockSize*2);
-        buf[0] = _buf;
-        buf[1] = buf[0] + blockSize;
-    }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
@@ -375,55 +286,14 @@ void cartToPolar( InputArray src1, InputArray src2,
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
                 hal::magnitude32f( x, y, mag, len );
-                hal::fastAtan2( y, x, angle, len, angleInDegrees );
+                hal::fastAtan32f( y, x, angle, len, angleInDegrees );
             }
             else
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[3];
-
                 hal::magnitude64f(x, y, (double*)ptrs[2], len);
-                k = 0;
-
-#if CV_SSE2
-                if (USE_SSE2)
-                {
-                    for ( ; k <= len - 4; k += 4)
-                    {
-                        __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
-                                                      _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
-                        __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
-                                                      _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
-
-                        _mm_storeu_ps(buf[0] + k, v_dst0);
-                        _mm_storeu_ps(buf[1] + k, v_dst1);
-                    }
-                }
-#endif
-
-                for( ; k < len; k++ )
-                {
-                    buf[0][k] = (float)x[k];
-                    buf[1][k] = (float)y[k];
-                }
-
-                hal::fastAtan2( buf[1], buf[0], buf[0], len, angleInDegrees );
-                k = 0;
-
-#if CV_SSE2
-                if (USE_SSE2)
-                {
-                    for ( ; k <= len - 4; k += 4)
-                    {
-                        __m128 v_src = _mm_loadu_ps(buf[0] + k);
-                        _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
-                        _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
-                    }
-                }
-#endif
-
-                for( ; k < len; k++ )
-                    angle[k] = buf[0][k];
+                hal::fastAtan64f(y, x, angle, len, angleInDegrees);
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;

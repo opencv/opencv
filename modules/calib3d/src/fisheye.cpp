@@ -406,7 +406,7 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
     map2.create( size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32F );
 
     CV_Assert((K.depth() == CV_32F || K.depth() == CV_64F) && (D.depth() == CV_32F || D.depth() == CV_64F));
-    CV_Assert((P.depth() == CV_32F || P.depth() == CV_64F) && (R.depth() == CV_32F || R.depth() == CV_64F));
+    CV_Assert((P.empty() || P.depth() == CV_32F || P.depth() == CV_64F) && (R.empty() || R.depth() == CV_32F || R.depth() == CV_64F));
     CV_Assert(K.size() == Size(3, 3) && (D.empty() || D.total() == 4));
     CV_Assert(R.empty() || R.size() == Size(3, 3) || R.total() * R.channels() == 3);
     CV_Assert(P.empty() || P.size() == Size(3, 3) || P.size() == Size(4, 3));
@@ -709,8 +709,8 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
     finalParam.isEstimate[0] = 1;
     finalParam.isEstimate[1] = 1;
-    finalParam.isEstimate[2] = 1;
-    finalParam.isEstimate[3] = 1;
+    finalParam.isEstimate[2] = flags & CALIB_FIX_PRINCIPAL_POINT ? 0 : 1;
+    finalParam.isEstimate[3] = flags & CALIB_FIX_PRINCIPAL_POINT ? 0 : 1;
     finalParam.isEstimate[4] = flags & CALIB_FIX_SKEW ? 0 : 1;
     finalParam.isEstimate[5] = flags & CALIB_FIX_K1 ? 0 : 1;
     finalParam.isEstimate[6] = flags & CALIB_FIX_K2 ? 0 : 1;
