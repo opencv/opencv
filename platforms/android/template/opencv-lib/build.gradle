@@ -40,7 +40,7 @@ model {
     }
     android.ndk {
         moduleName = "CVnative"
-		debuggable = true
+        debuggable = true
         abiFilters.addAll(['armeabi-v7a', 'arm64-v8a'])
         CFlags.add("-v")
         cppFlags.add("-v")
