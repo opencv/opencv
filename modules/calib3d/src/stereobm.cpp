@@ -317,7 +317,8 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
 }
 
 
-static const int DISPARITY_SHIFT = 4;
+static const int DISPARITY_SHIFT_16S = 4;
+static const int DISPARITY_SHIFT_32S = 8;
 
 #if CV_SSE2
 static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
@@ -337,7 +338,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
-    short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT);
+    short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT_16S);
 
     ushort *sad, *hsad0, *hsad, *hsad_sub;
     int *htext;
@@ -568,10 +569,11 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
 }
 #endif
 
+template <typename mType>
 static void
-findStereoCorrespondenceBM( const Mat& left, const Mat& right,
+findStereoCorrespondenceBM_( const Mat& left, const Mat& right,
                            Mat& disp, Mat& cost, const StereoBMParams& state,
-                           uchar* buf, int _dy0, int _dy1 )
+                           uchar* buf, int _dy0, int _dy1, const int disp_shift )
 {
 
     const int ALIGN = 16;
@@ -587,7 +589,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
-    short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT);
+    mType FILTERED = (mType)((mindisp - 1) << disp_shift);
 
 #if CV_NEON
     CV_Assert (ndisp % 8 == 0);
@@ -603,7 +605,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     const uchar* lptr0 = left.ptr() + lofs;
     const uchar* rptr0 = right.ptr() + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
-    short* dptr = disp.ptr<short>();
+    mType* dptr = disp.ptr<mType>();
     int sstep = (int)left.step;
     int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height+dy0+dy1)*ndisp;
@@ -846,11 +848,25 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                 sad[ndisp] = sad[ndisp-2];
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                dptr[y*dstep] = (mType)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15)
+                                 >> (DISPARITY_SHIFT_32S - disp_shift));
                 costptr[y*coststep] = sad[mind];
             }
         }
     }
+}
+
+static void
+findStereoCorrespondenceBM( const Mat& left, const Mat& right,
+                            Mat& disp, Mat& cost, const StereoBMParams& state,
+                            uchar* buf, int _dy0, int _dy1 )
+{
+    if(disp.type() == CV_16S)
+        findStereoCorrespondenceBM_<short>(left, right, disp, cost, state,
+                                           buf, _dy0, _dy1, DISPARITY_SHIFT_16S );
+     else
+        findStereoCorrespondenceBM_<int>(left, right, disp, cost, state,
+                                         buf, _dy0, _dy1, DISPARITY_SHIFT_32S );
 }
 
 #ifdef HAVE_OPENCL
@@ -1080,7 +1096,14 @@ public:
         if( params.uniquenessRatio < 0 )
             CV_Error( Error::StsOutOfRange, "uniqueness ratio must be non-negative" );
 
-        int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
+        int disp_shift;
+        if (dtype == CV_16SC1)
+            disp_shift = DISPARITY_SHIFT_16S;
+        else
+            disp_shift = DISPARITY_SHIFT_32S;
+
+
+        int FILTERED = (params.minDisparity - 1) << disp_shift;
 
 #ifdef HAVE_OPENCL
         if(ocl::useOpenCL() && disparr.isUMat() && params.textureThreshold == 0)
@@ -1093,7 +1116,7 @@ public:
                     if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
                         filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
                     if (dtype == CV_32F)
-                        disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << DISPARITY_SHIFT), 0);
+                        disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << disp_shift), 0);
                     CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
                 }
@@ -1122,14 +1145,14 @@ public:
 
         if( lofs >= width || rofs >= width || width1 < 1 )
         {
-            disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << DISPARITY_SHIFT) ) );
+            disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << disp_shift) ) );
             return;
         }
 
         Mat disp = disp0;
         if( dtype == CV_32F )
         {
-            dispbuf.create(disp0.size(), CV_16S);
+            dispbuf.create(disp0.size(), CV_32S);
             disp = dispbuf;
         }
 
@@ -1178,7 +1201,7 @@ public:
             filterSpeckles(disp, FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
 
         if (disp0.data != disp.data)
-            disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);
+            disp.convertTo(disp0, disp0.type(), 1./(1 << disp_shift), 0);
     }
 
     int getMinDisparity() const { return params.minDisparity; }
