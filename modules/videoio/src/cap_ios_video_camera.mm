@@ -100,6 +100,10 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 - (void)start;
 {
+    if (self.running == YES) {
+        return;
+    }
+
     recordingCountDown = 10;
     [super start];
 
@@ -118,6 +122,10 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 - (void)stop;
 {
+    if (self.running == NO) {
+        return;
+    }
+
     [super stop];
 
     self.videoDataOutput = nil;
