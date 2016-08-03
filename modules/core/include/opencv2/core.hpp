@@ -526,8 +526,9 @@ CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
 
 /** @brief Converts an array to half precision floating number.
 
-convertFp16 converts FP32 to FP16 or FP16 to FP32.  The input array has to have type of CV_32F or
-CV_16S to represent the bit depth.  If the input array is neither of them, it'll do nothing.
+This function converts FP32 (single precision floating point) from/to FP16 (half precision floating point).  The input array has to have type of CV_32F or
+CV_16S to represent the bit depth.  If the input array is neither of them, the function will raise an error.
+The format of half precision floating point is defined in IEEE 754-2008.
 
 @param src input array.
 @param dst output array.
