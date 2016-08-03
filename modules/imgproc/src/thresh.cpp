@@ -66,8 +66,6 @@ namespace cv
 static void
 thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
 {
-    int i, j, j_scalar = 0;
-    uchar tab[256];
     Size roi = _src.size();
     roi.width *= _src.channels();
     size_t src_step = _src.step;
@@ -142,59 +140,22 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     }
 #endif
 
-    switch( type )
-    {
-    case THRESH_BINARY:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = 0;
-        for( ; i < 256; i++ )
-            tab[i] = maxval;
-        break;
-    case THRESH_BINARY_INV:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = maxval;
-        for( ; i < 256; i++ )
-            tab[i] = 0;
-        break;
-    case THRESH_TRUNC:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = (uchar)i;
-        for( ; i < 256; i++ )
-            tab[i] = thresh;
-        break;
-    case THRESH_TOZERO:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = 0;
-        for( ; i < 256; i++ )
-            tab[i] = (uchar)i;
-        break;
-    case THRESH_TOZERO_INV:
-        for( i = 0; i <= thresh; i++ )
-            tab[i] = (uchar)i;
-        for( ; i < 256; i++ )
-            tab[i] = 0;
-        break;
-    default:
-        CV_Error( CV_StsBadArg, "Unknown threshold type" );
-    }
-
+    int j = 0;
+    const uchar* src = _src.ptr();
+    uchar* dst = _dst.ptr();
 #if CV_SSE2
-    if( checkHardwareSupport(CV_CPU_SSE2) )
+    if( (roi.width >= 8) && checkHardwareSupport(CV_CPU_SSE2) )
     {
         __m128i _x80 = _mm_set1_epi8('\x80');
         __m128i thresh_u = _mm_set1_epi8(thresh);
         __m128i thresh_s = _mm_set1_epi8(thresh ^ 0x80);
         __m128i maxval_ = _mm_set1_epi8(maxval);
-        j_scalar = roi.width & -8;
 
-        for( i = 0; i < roi.height; i++ )
+        switch( type )
         {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            switch( type )
+        case THRESH_BINARY:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
-            case THRESH_BINARY:
                 for( j = 0; j <= roi.width - 32; j += 32 )
                 {
                     __m128i v0, v1;
@@ -215,9 +176,12 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
                     v0 = _mm_and_si128( v0, maxval_ );
                     _mm_storel_epi64( (__m128i*)(dst + j), v0 );
                 }
-                break;
+            }
+            break;
 
-            case THRESH_BINARY_INV:
+        case THRESH_BINARY_INV:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
                 for( j = 0; j <= roi.width - 32; j += 32 )
                 {
                     __m128i v0, v1;
@@ -238,9 +202,12 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
                     v0 = _mm_andnot_si128( v0, maxval_ );
                     _mm_storel_epi64( (__m128i*)(dst + j), v0 );
                 }
-                break;
+            }
+            break;
 
-            case THRESH_TRUNC:
+        case THRESH_TRUNC:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
                 for( j = 0; j <= roi.width - 32; j += 32 )
                 {
                     __m128i v0, v1;
@@ -258,9 +225,12 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
                     v0 = _mm_subs_epu8( v0, _mm_subs_epu8( v0, thresh_u ));
                     _mm_storel_epi64( (__m128i*)(dst + j), v0 );
                 }
-                break;
+            }
+            break;
 
-            case THRESH_TOZERO:
+        case THRESH_TOZERO:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
                 for( j = 0; j <= roi.width - 32; j += 32 )
                 {
                     __m128i v0, v1;
@@ -278,9 +248,12 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
                     v0 = _mm_and_si128( v0, _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s ));
                     _mm_storel_epi64( (__m128i*)(dst + j), v0 );
                 }
-                break;
+            }
+            break;
 
-            case THRESH_TOZERO_INV:
+        case THRESH_TOZERO_INV:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
                 for( j = 0; j <= roi.width - 32; j += 32 )
                 {
                     __m128i v0, v1;
@@ -298,86 +271,110 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
                     v0 = _mm_andnot_si128( _mm_cmpgt_epi8(_mm_xor_si128(v0, _x80), thresh_s ), v0 );
                     _mm_storel_epi64( (__m128i*)(dst + j), v0 );
                 }
-                break;
             }
+            break;
         }
     }
 #elif CV_NEON
-    uint8x16_t v_thresh = vdupq_n_u8(thresh), v_maxval = vdupq_n_u8(maxval);
-
-    switch( type )
+    if( roi.width >= 16 )
     {
-    case THRESH_BINARY:
-        for( i = 0; i < roi.height; i++ )
+        uint8x16_t v_thresh = vdupq_n_u8(thresh), v_maxval = vdupq_n_u8(maxval);
+
+        switch( type )
         {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
-                vst1q_u8(dst + j_scalar, vandq_u8(vcgtq_u8(vld1q_u8(src + j_scalar), v_thresh), v_maxval));
-        }
-        break;
-
-    case THRESH_BINARY_INV:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
-                vst1q_u8(dst + j_scalar, vandq_u8(vcleq_u8(vld1q_u8(src + j_scalar), v_thresh), v_maxval));
-        }
-        break;
-
-    case THRESH_TRUNC:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
-                vst1q_u8(dst + j_scalar, vminq_u8(vld1q_u8(src + j_scalar), v_thresh));
-        }
-        break;
-
-    case THRESH_TOZERO:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        case THRESH_BINARY:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
-                uint8x16_t v_src = vld1q_u8(src + j_scalar), v_mask = vcgtq_u8(v_src, v_thresh);
-                vst1q_u8(dst + j_scalar, vandq_u8(v_mask, v_src));
+                for ( j = 0; j <= roi.width - 16; j += 16)
+                    vst1q_u8(dst + j, vandq_u8(vcgtq_u8(vld1q_u8(src + j), v_thresh), v_maxval));
             }
-        }
-        break;
+            break;
 
-    case THRESH_TOZERO_INV:
-        for( i = 0; i < roi.height; i++ )
-        {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
-
-            for ( j_scalar = 0; j_scalar <= roi.width - 16; j_scalar += 16)
+        case THRESH_BINARY_INV:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
-                uint8x16_t v_src = vld1q_u8(src + j_scalar), v_mask = vcleq_u8(v_src, v_thresh);
-                vst1q_u8(dst + j_scalar, vandq_u8(v_mask, v_src));
+                for ( j = 0; j <= roi.width - 16; j += 16)
+                    vst1q_u8(dst + j, vandq_u8(vcleq_u8(vld1q_u8(src + j), v_thresh), v_maxval));
             }
+            break;
+
+        case THRESH_TRUNC:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
+                for ( j = 0; j <= roi.width - 16; j += 16)
+                    vst1q_u8(dst + j, vminq_u8(vld1q_u8(src + j), v_thresh));
+            }
+            break;
+
+        case THRESH_TOZERO:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
+                for ( j = 0; j <= roi.width - 16; j += 16)
+                {
+                    uint8x16_t v_src = vld1q_u8(src + j), v_mask = vcgtq_u8(v_src, v_thresh);
+                    vst1q_u8(dst + j, vandq_u8(v_mask, v_src));
+                }
+            }
+            break;
+
+        case THRESH_TOZERO_INV:
+            for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
+                for ( j = 0; j <= roi.width - 16; j += 16)
+                {
+                    uint8x16_t v_src = vld1q_u8(src + j), v_mask = vcleq_u8(v_src, v_thresh);
+                    vst1q_u8(dst + j, vandq_u8(v_mask, v_src));
+                }
+            }
+            break;
         }
-        break;
-    default:
-        return CV_Error( CV_StsBadArg, "" );
     }
 #endif
 
+    int j_scalar = j;
     if( j_scalar < roi.width )
     {
-        for( i = 0; i < roi.height; i++ )
+        const int thresh_pivot = thresh + 1;
+        uchar tab[256];
+        switch( type )
         {
-            const uchar* src = _src.ptr() + src_step*i;
-            uchar* dst = _dst.ptr() + dst_step*i;
+        case THRESH_BINARY:
+            memset(tab, 0, thresh_pivot);
+            if (thresh_pivot < 256) {
+                memset(tab + thresh_pivot, maxval, 256 - thresh_pivot);
+            }
+            break;
+        case THRESH_BINARY_INV:
+            memset(tab, maxval, thresh_pivot);
+            if (thresh_pivot < 256) {
+                memset(tab + thresh_pivot, 0, 256 - thresh_pivot);
+            }
+            break;
+        case THRESH_TRUNC:
+            for( int i = 0; i <= thresh; i++ )
+                tab[i] = (uchar)i;
+            if (thresh_pivot < 256) {
+                memset(tab + thresh_pivot, thresh, 256 - thresh_pivot);
+            }
+            break;
+        case THRESH_TOZERO:
+            memset(tab, 0, thresh_pivot);
+            for( int i = thresh_pivot; i < 256; i++ )
+                tab[i] = (uchar)i;
+            break;
+        case THRESH_TOZERO_INV:
+            for( int i = 0; i <= thresh; i++ )
+                tab[i] = (uchar)i;
+            if (thresh_pivot < 256) {
+                memset(tab + thresh_pivot, 0, 256 - thresh_pivot);
+            }
+            break;
+        }
+
+        src = _src.ptr();
+        dst = _dst.ptr();
+        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        {
             j = j_scalar;
 #if CV_ENABLE_UNROLLED
             for( ; j <= roi.width - 4; j += 4 )
