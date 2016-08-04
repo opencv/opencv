@@ -164,6 +164,8 @@ endif()
 # OpenCV cmake options
 # ----------------------------------------------------------------------------
 
+OCV_OPTION(OPENCV_ENABLE_NONFREE "Enable non-free algorithms" OFF)
+
 # Optional 3rd party components
 # ===================================================
 OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
@@ -913,6 +915,11 @@ status("    To be built:"            OPENCV_MODULES_BUILD          THEN ${OPENCV
 status("    Disabled:"               OPENCV_MODULES_DISABLED_USER  THEN ${OPENCV_MODULES_DISABLED_USER_ST}  ELSE "-")
 status("    Disabled by dependency:" OPENCV_MODULES_DISABLED_AUTO  THEN ${OPENCV_MODULES_DISABLED_AUTO_ST}  ELSE "-")
 status("    Unavailable:"            OPENCV_MODULES_DISABLED_FORCE THEN ${OPENCV_MODULES_DISABLED_FORCE_ST} ELSE "-")
+
+if(OPENCV_ENABLE_NONFREE)
+  status("")
+  status("  Non-free algorithms are enabled")
+endif()
 
 # ========================== Android details ==========================
 if(ANDROID)
