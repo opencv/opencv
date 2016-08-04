@@ -1463,8 +1463,13 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     CV_Assert(!omc.empty() && omc.type() == CV_64FC3);
     CV_Assert(!Tc.empty() && Tc.type() == CV_64FC3);
 
-    Mat ex((int)(objectPoints.getMat(0).total() * objectPoints.total()), 1, CV_64FC2);
-
+    int total_ex = 0;
+    for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
+    {
+        total_ex += (int)objectPoints.getMat(image_idx).total();
+    }
+    Mat ex(total_ex, 1, CV_64FC2);
+    int insert_idx = 0;
     for (int image_idx = 0; image_idx < (int)objectPoints.total(); ++image_idx)
     {
         Mat image, object;
@@ -1478,7 +1483,8 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
         std::vector<Point2d> x;
         projectPoints(object, x, om, T, params, noArray());
         Mat ex_ = (imT ? image.t() : image) - Mat(x);
-        ex_.copyTo(ex.rowRange(ex_.rows * image_idx,  ex_.rows * (image_idx + 1)));
+        ex_.copyTo(ex.rowRange(insert_idx, insert_idx + ex_.rows));
+        insert_idx += ex_.rows;
     }
 
     meanStdDev(ex, noArray(), std_err);
