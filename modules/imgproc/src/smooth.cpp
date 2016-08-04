@@ -1734,6 +1734,9 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    int borderType )
 {
 #if IPP_VERSION_X100 >= 810
+    if ((borderType & BORDER_ISOLATED) == 0 && _src.isSubmatrix())
+        return false;
+
     int type = _src.type();
     Size size = _src.size();
 
