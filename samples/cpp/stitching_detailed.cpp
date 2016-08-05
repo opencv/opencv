@@ -93,7 +93,7 @@ static void printUsage()
         "  --conf_thresh <float>\n"
         "      Threshold for two images are from the same panorama confidence.\n"
         "      The default is 1.0.\n"
-        "  --ba (no|reproj|ray)\n"
+        "  --ba (no|reproj|ray|affine)\n"
         "      Bundle adjustment cost function. The default is ray.\n"
         "  --ba_refine_mask (mask)\n"
         "      Set refinement mask for bundle adjustment. It looks like 'x_xxx',\n"
@@ -556,12 +556,13 @@ int main(int argc, char* argv[])
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
-        LOGLN("Initial intrinsics (K) #" << indices[i]+1 << ":\n" << cameras[i].K());
+        LOGLN("Initial camera intrinsics #" << indices[i]+1 << ":\nK:\n" << cameras[i].K() << "\nR:\n" << cameras[i].R);
     }
 
     Ptr<detail::BundleAdjusterBase> adjuster;
     if (ba_cost_func == "reproj") adjuster = makePtr<detail::BundleAdjusterReproj>();
     else if (ba_cost_func == "ray") adjuster = makePtr<detail::BundleAdjusterRay>();
+    else if (ba_cost_func == "affine") adjuster = makePtr<detail::BundleAdjusterAffinePartial>();
     else if (ba_cost_func == "no") adjuster = makePtr<NoBundleAdjuster>();
     else
     {
