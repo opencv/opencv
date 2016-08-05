@@ -795,7 +795,7 @@ class ClassInfo(GeneralInfo):
             self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.jname, "")
 
     def __repr__(self):
-        return Template("CLASS $namespace.$classpath.$name : $base").substitute(**self.__dict__)
+        return Template("CLASS $namespace::$classpath.$name : $base").substitute(**self.__dict__)
 
     def getAllImports(self, module):
         return ["import %s;" % c for c in sorted(self.imports) if not c.startswith('org.opencv.'+module)]
@@ -1406,6 +1406,8 @@ class JavaWrapperGenerator(object):
             clazz = ci.jname
             cpp_code.write ( Template( \
 """
+${namespace}
+
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname ($argst);
 
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
@@ -1440,6 +1442,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         cvargs = ", ".join(cvargs), \
         default = default, \
         retval = retval, \
+	namespace = ('using namespace ' + ci.namespace.replace('.', '::') + ';') if ci.namespace else ''
     ) )
 
             # processing args with default values
@@ -1535,7 +1538,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         '''
         Check if class stores Ptr<T>* instead of T* in nativeObj field
         '''
-        return self.isWrapped(classname) and self.classes[classname].base
+	return False
 
     def smartWrap(self, name, fullname):
         '''
