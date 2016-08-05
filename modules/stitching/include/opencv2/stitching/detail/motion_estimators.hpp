@@ -271,6 +271,30 @@ private:
 };
 
 
+/** @brief Bundle adjuster that expects affine transformation with 4 DOF
+represented in homogeneous coordinates in R for each camera param. Implements
+camera parameters refinement algorithm which minimizes sum of the reprojection
+error squares
+
+It estimates all transformation parameters. Refinement mask is ignored.
+
+@sa AffineBasedEstimator AffineBestOf2NearestMatcher
+ */
+class CV_EXPORTS BundleAdjusterAffinePartial : public BundleAdjusterBase
+{
+public:
+    BundleAdjusterAffinePartial() : BundleAdjusterBase(4, 2) {}
+
+private:
+    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras);
+    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const;
+    void calcError(Mat &err);
+    void calcJacobian(Mat &jac);
+
+    Mat err1_, err2_;
+};
+
+
 enum WaveCorrectKind
 {
     WAVE_CORRECT_HORIZ,

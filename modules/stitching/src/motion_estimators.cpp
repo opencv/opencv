@@ -648,6 +648,135 @@ void BundleAdjusterRay::calcJacobian(Mat &jac)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void BundleAdjusterAffinePartial::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
+{
+    cam_params_.create(num_images_ * 4, 1, CV_64F);
+    for (size_t i = 0; i < num_images_; ++i)
+    {
+        CV_Assert(cameras[i].R.type() == CV_32F);
+        // cameras[i].R is
+        //     a -b tx
+        //     b  a ty
+        //     0  0 1. (optional)
+        // cam_params_ model for LevMarq is
+        //     (a, b, tx, ty)
+        cam_params_.at<double>(i * 4 + 0, 0) = cameras[i].R.at<float>(0, 0);
+        cam_params_.at<double>(i * 4 + 1, 0) = cameras[i].R.at<float>(1, 0);
+        cam_params_.at<double>(i * 4 + 2, 0) = cameras[i].R.at<float>(0, 2);
+        cam_params_.at<double>(i * 4 + 3, 0) = cameras[i].R.at<float>(1, 2);
+    }
+}
+
+
+void BundleAdjusterAffinePartial::obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const
+{
+    for (size_t i = 0; i < num_images_; ++i)
+    {
+        // cameras[i].R will be
+        //     a -b tx
+        //     b  a ty
+        //     0  0 1
+        // cam_params_ model for LevMarq is
+        //     (a, b, tx, ty)
+        const double *params = cam_params_.ptr<double>() + i * 4;
+        double transform_buf[9] =
+        {
+            params[0], -params[1], params[2],
+            params[1],  params[0], params[3],
+            0., 0., 1.
+        };
+        Mat transform(3, 3, CV_64F, transform_buf);
+        transform.convertTo(cameras[i].R, CV_32F);
+    }
+}
+
+
+void BundleAdjusterAffinePartial::calcError(Mat &err)
+{
+    err.create(total_num_matches_ * 2, 1, CV_64F);
+
+    size_t match_idx = 0;
+    for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
+    {
+        size_t i = edges_[edge_idx].first;
+        size_t j = edges_[edge_idx].second;
+
+        const ImageFeatures& features1 = features_[i];
+        const ImageFeatures& features2 = features_[j];
+        const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
+
+        const double *H1_ptr = cam_params_.ptr<double>() + i * 4;
+        double H1_buf[9] =
+        {
+            H1_ptr[0], -H1_ptr[1], H1_ptr[2],
+            H1_ptr[1],  H1_ptr[0], H1_ptr[3],
+            0., 0., 1.
+        };
+        Mat H1 (3, 3, CV_64F, H1_buf);
+        const double *H2_ptr = cam_params_.ptr<double>() + j * 4;
+        double H2_buf[9] =
+        {
+            H2_ptr[0], -H2_ptr[1], H2_ptr[2],
+            H2_ptr[1],  H2_ptr[0], H2_ptr[3],
+            0., 0., 1.
+        };
+        Mat H2 (3, 3, CV_64F, H2_buf);
+
+        // invert H1
+        Mat H1_aff (H1, Range(0, 2));
+        double H1_inv_buf[6];
+        Mat H1_inv (2, 3, CV_64F, H1_inv_buf);
+        invertAffineTransform(H1_aff, H1_inv);
+        H1_inv.copyTo(H1_aff);
+
+        Mat_<double> H = H1 * H2;
+
+        for (size_t k = 0; k < matches_info.matches.size(); ++k)
+        {
+            if (!matches_info.inliers_mask[k])
+                continue;
+
+            const DMatch& m = matches_info.matches[k];
+            const Point2f& p1 = features1.keypoints[m.queryIdx].pt;
+            const Point2f& p2 = features2.keypoints[m.trainIdx].pt;
+
+            double x = H(0,0)*p1.x + H(0,1)*p1.y + H(0,2);
+            double y = H(1,0)*p1.x + H(1,1)*p1.y + H(1,2);
+
+            err.at<double>(2 * match_idx + 0, 0) = p2.x - x;
+            err.at<double>(2 * match_idx + 1, 0) = p2.y - y;
+
+            ++match_idx;
+        }
+    }
+}
+
+
+void BundleAdjusterAffinePartial::calcJacobian(Mat &jac)
+{
+    jac.create(total_num_matches_ * 2, num_images_ * 4, CV_64F);
+
+    double val;
+    const double step = 1e-4;
+
+    for (int i = 0; i < num_images_; ++i)
+    {
+        for (int j = 0; j < 4; ++j)
+        {
+            val = cam_params_.at<double>(i * 4 + j, 0);
+            cam_params_.at<double>(i * 4 + j, 0) = val - step;
+            calcError(err1_);
+            cam_params_.at<double>(i * 4 + j, 0) = val + step;
+            calcError(err2_);
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 4 + j));
+            cam_params_.at<double>(i * 4 + j, 0) = val;
+        }
+    }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
 void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 {
     LOGLN("Wave correcting...");
