@@ -1176,13 +1176,13 @@ static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_typ
         std::string type_name;
         int struct_flags = fs->delayed_struct_flags;
 
-        if ( fs->delayed_struct_key != 0 && *fs->delayed_type_name != '\0' )
+        if ( fs->delayed_struct_key != 0 && *fs->delayed_struct_key != '\0' )
         {
             struct_key.assign(fs->delayed_struct_key);
         }
         if ( fs->delayed_type_name != 0 && *fs->delayed_type_name != '\0' )
         {
-            struct_key.assign(fs->delayed_type_name);
+            type_name.assign(fs->delayed_type_name);
         }
 
         /* reset */
@@ -1948,6 +1948,9 @@ icvYMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags,
     int parent_flags;
     char buf[CV_FS_MAX_LEN + 1024];
     const char* data = 0;
+
+    if ( type_name && *type_name == '\0' )
+        type_name = 0;
 
     struct_flags = (struct_flags & (CV_NODE_TYPE_MASK|CV_NODE_FLOW)) | CV_NODE_EMPTY;
     if( !CV_NODE_IS_COLLECTION(struct_flags))
@@ -2913,6 +2916,9 @@ icvXMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags,
     if( !CV_NODE_IS_COLLECTION(struct_flags))
         CV_Error( CV_StsBadArg,
         "Some collection type: CV_NODE_SEQ or CV_NODE_MAP must be specified" );
+
+    if ( type_name && *type_name == '\0' )
+        type_name = 0;
 
     if( type_name )
     {
