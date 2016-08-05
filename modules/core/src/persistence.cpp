@@ -1172,19 +1172,17 @@ static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_typ
     if ( fs->is_write_struct_delayed )
     {
         /* save data to prevent recursive call errors */
-        char * struct_key = 0;
-        char * type_name = 0;
+        std::string struct_key;
+        std::string type_name;
         int struct_flags = fs->delayed_struct_flags;
 
-        if ( fs->delayed_struct_key != 0 )
+        if ( fs->delayed_struct_key != 0 && *fs->delayed_type_name != '\0' )
         {
-            struct_key = new char[strlen(fs->delayed_struct_key) + 1U];
-            strcpy(struct_key, fs->delayed_struct_key);
+            struct_key.assign(fs->delayed_struct_key);
         }
-        if ( fs->delayed_type_name != 0 )
+        if ( fs->delayed_type_name != 0 && *fs->delayed_type_name != '\0' )
         {
-            type_name = new char[strlen(type_name) + 1U];
-            strcpy(type_name, fs->delayed_type_name);
+            struct_key.assign(fs->delayed_type_name);
         }
 
         /* reset */
@@ -1199,21 +1197,18 @@ static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_typ
         /* call */
         if ( change_type_to_base64 )
         {
-            fs->start_write_struct( fs, struct_key, struct_flags, "binary");
+            fs->start_write_struct( fs, struct_key.c_str(), struct_flags, "binary");
             if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
                 switch_to_Base64_state( fs, base64::fs::Uncertain );
             switch_to_Base64_state( fs, base64::fs::InUse );
         }
         else
         {
-            fs->start_write_struct( fs, struct_key, struct_flags, type_name);
+            fs->start_write_struct( fs, struct_key.c_str(), struct_flags, type_name.c_str());
             if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
                 switch_to_Base64_state( fs, base64::fs::Uncertain );
             switch_to_Base64_state( fs, base64::fs::NotUse );
         }
-
-        delete struct_key;
-        delete type_name;
     }
 }
 
@@ -1246,6 +1241,7 @@ static void make_write_struct_delayed(
     fs->is_write_struct_delayed = true;
 }
 
+static const size_t PARSER_BASE64_BUFFER_SIZE = 1024U * 1024U / 8U;
 
 /****************************************************************************************\
 *                                       YAML Parser                                      *
@@ -1348,7 +1344,7 @@ static char* icvYMLParseBase64(CvFileStorage* fs, char* ptr, int indent, CvFileN
 
     /* get all Base64 data */
     std::string base64_buffer;
-    base64_buffer.reserve( 16U * 1024U * 1024U );
+    base64_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
     while( beg < end )
     {
         base64_buffer.append( beg, end );
@@ -2304,7 +2300,7 @@ static char* icvXMLParseBase64(CvFileStorage* fs, char* ptr, CvFileNode * node)
 
     /* get all Base64 data */
     std::string base64_buffer; // not an efficient way.
-    base64_buffer.reserve( 16U * 1024U * 1024U );
+    base64_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
     while( beg < end )
     {
         base64_buffer.append( beg, end );
