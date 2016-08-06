@@ -104,8 +104,8 @@ Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
 
     case SCANS:
         stitcher->setWaveCorrection(false);
-        stitcher->setFeaturesMatcher(makePtr<detail::AffineBestOf2NearestMatcher>(try_use_gpu));
-        stitcher->setBundleAdjuster(makePtr<detail::NoBundleAdjuster>());
+        stitcher->setFeaturesMatcher(makePtr<detail::AffineBestOf2NearestMatcher>(false, try_use_gpu));
+        stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterAffinePartial>());
         stitcher->setWarper(makePtr<AffineWarper>());
         stitcher->setExposureCompensator(makePtr<detail::NoExposureCompensator>());
     break;
