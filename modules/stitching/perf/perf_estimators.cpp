@@ -36,7 +36,8 @@ PERF_TEST_P(bundleAdjuster, affinePartial, TEST_DETECTORS)
     Ptr<detail::Estimator> estimator = makePtr<detail::AffineBasedEstimator>();
     Ptr<detail::BundleAdjusterBase> bundle_adjuster = makePtr<detail::BundleAdjusterAffinePartial>();
 
-    std::vector<Mat> images {img1, img2};
+    std::vector<Mat> images;
+    images.push_back(img1), images.push_back(img2);
     std::vector<detail::ImageFeatures> features;
     std::vector<detail::MatchesInfo> pairwise_matches;
     std::vector<detail::CameraParams> cameras;

@@ -651,7 +651,7 @@ void BundleAdjusterRay::calcJacobian(Mat &jac)
 void BundleAdjusterAffinePartial::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
 {
     cam_params_.create(num_images_ * 4, 1, CV_64F);
-    for (size_t i = 0; i < num_images_; ++i)
+    for (size_t i = 0; i < static_cast<size_t>(num_images_); ++i)
     {
         CV_Assert(cameras[i].R.type() == CV_32F);
         // cameras[i].R is
@@ -660,17 +660,18 @@ void BundleAdjusterAffinePartial::setUpInitialCameraParams(const std::vector<Cam
         //     0  0 1. (optional)
         // cam_params_ model for LevMarq is
         //     (a, b, tx, ty)
-        cam_params_.at<double>(i * 4 + 0, 0) = cameras[i].R.at<float>(0, 0);
-        cam_params_.at<double>(i * 4 + 1, 0) = cameras[i].R.at<float>(1, 0);
-        cam_params_.at<double>(i * 4 + 2, 0) = cameras[i].R.at<float>(0, 2);
-        cam_params_.at<double>(i * 4 + 3, 0) = cameras[i].R.at<float>(1, 2);
+        double *params = cam_params_.ptr<double>() + i * 4;
+        params[0] = cameras[i].R.at<float>(0, 0);
+        params[1] = cameras[i].R.at<float>(1, 0);
+        params[2] = cameras[i].R.at<float>(0, 2);
+        params[3] = cameras[i].R.at<float>(1, 2);
     }
 }
 
 
 void BundleAdjusterAffinePartial::obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const
 {
-    for (size_t i = 0; i < num_images_; ++i)
+    for (size_t i = 0; i < static_cast<size_t>(num_images_); ++i)
     {
         // cameras[i].R will be
         //     a -b tx
@@ -695,7 +696,7 @@ void BundleAdjusterAffinePartial::calcError(Mat &err)
 {
     err.create(total_num_matches_ * 2, 1, CV_64F);
 
-    size_t match_idx = 0;
+    int match_idx = 0;
     for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
     {
         size_t i = edges_[edge_idx].first;
