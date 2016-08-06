@@ -390,7 +390,7 @@ public:
             int step = cols;
             for( i = 1; i < rows-1; i++ )
             {
-                Pixel* pptr = &pixbuf[i*step + 1];
+                Pixel* pptr = &pixbuf[i*step];
                 for( j = 1; j < cols-1; j++ )
                 {
                     pptr[j].val = 0;
