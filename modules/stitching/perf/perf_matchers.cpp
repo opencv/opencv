@@ -105,7 +105,7 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     Mat R (pairwise_matches.H, Range::all(), Range(0, 2));
     // separate transform matrix, use lower error on rotations
     SANITY_CHECK(dist, .5, ERROR_ABSOLUTE);
-    SANITY_CHECK(R, .01, ERROR_ABSOLUTE);
+    SANITY_CHECK(R, .015, ERROR_ABSOLUTE);
 }
 
 PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
