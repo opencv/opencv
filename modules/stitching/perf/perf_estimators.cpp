@@ -5,10 +5,10 @@
 using namespace std;
 using namespace cv;
 using namespace perf;
-using std::tr1::make_tuple;
+using std::tr1::tuple;
 using std::tr1::get;
 
-typedef TestBaseWithParam<string> bundleAdjuster;
+typedef TestBaseWithParam<tuple<string, string> > bundleAdjuster;
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 #define TEST_DETECTORS testing::Values("surf", "orb")
@@ -16,8 +16,9 @@ typedef TestBaseWithParam<string> bundleAdjuster;
 #define TEST_DETECTORS testing::Values<string>("orb")
 #endif
 #define WORK_MEGAPIX 0.6
+#define AFFINE_FUNCTIONS testing::Values("affinePartial", "affine")
 
-PERF_TEST_P(bundleAdjuster, affinePartial, TEST_DETECTORS)
+PERF_TEST_P(bundleAdjuster, affine, testing::Combine(TEST_DETECTORS, AFFINE_FUNCTIONS))
 {
     Mat img1, img1_full = imread(getDataPath("stitching/s1.jpg"));
     Mat img2, img2_full = imread(getDataPath("stitching/s2.jpg"));
@@ -26,15 +27,27 @@ PERF_TEST_P(bundleAdjuster, affinePartial, TEST_DETECTORS)
     resize(img1_full, img1, Size(), scale1, scale1);
     resize(img2_full, img2, Size(), scale2, scale2);
 
-    Ptr<detail::FeaturesFinder> finder;
-    if (GetParam() == "surf")
-        finder = makePtr<detail::SurfFeaturesFinder>();
-    else if (GetParam() == "orb")
-        finder = makePtr<detail::OrbFeaturesFinder>();
+    string detector = get<0>(GetParam());
+    string affine_fun = get<1>(GetParam());
 
-    Ptr<detail::FeaturesMatcher> matcher = makePtr<detail::AffineBestOf2NearestMatcher>();
+    Ptr<detail::FeaturesFinder> finder;
+    Ptr<detail::FeaturesMatcher> matcher;
+    Ptr<detail::BundleAdjusterBase> bundle_adjuster;
+    if (detector == "surf")
+        finder = makePtr<detail::SurfFeaturesFinder>();
+    else if (detector == "orb")
+        finder = makePtr<detail::OrbFeaturesFinder>();
+    if (affine_fun == "affinePartial")
+    {
+        matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false);
+        bundle_adjuster = makePtr<detail::BundleAdjusterAffinePartial>();
+    }
+    else if (affine_fun == "affine")
+    {
+        matcher = makePtr<detail::AffineBestOf2NearestMatcher>(true);
+        bundle_adjuster = makePtr<detail::BundleAdjusterAffine>();
+    }
     Ptr<detail::Estimator> estimator = makePtr<detail::AffineBasedEstimator>();
-    Ptr<detail::BundleAdjusterBase> bundle_adjuster = makePtr<detail::BundleAdjusterAffinePartial>();
 
     std::vector<Mat> images;
     images.push_back(img1), images.push_back(img2);
