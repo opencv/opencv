@@ -270,12 +270,20 @@ public:
             if( !history || (history->size != size && size > 0 &&
                 (gray_level != history->val || force)))
             {
-                CompHistory* h = hptr++;
-                h->parent_ = 0;
-                h->child_ = history;
-                h->next_ = 0;
-                if( history )
-                    history->parent_ = h;
+                CompHistory* h;
+
+                if (history && gray_level == history->val)
+                    h = history;
+                else
+                {
+                    h = hptr++;
+                    h->parent_ = 0;
+                    h->child_ = history;
+                    h->next_ = 0;
+                    if (history)
+                        history->parent_ = h;
+                }
+
                 h->val = gray_level;
                 h->size = size;
                 h->head = head;
@@ -283,7 +291,7 @@ public:
                 history = h;
                 h->var = FLT_MAX;
                 h->checked = true;
-                if( h->size >= wp.p.minArea )
+                if (h->size >= wp.p.minArea)
                 {
                     h->var = -1.f;
                     h->checked = false;
@@ -291,7 +299,7 @@ public:
                 }
             }
             gray_level = new_gray_level;
-            if( update && history )
+            if( update && history && gray_level != history->val )
                 history->updateTree(wp, 0, 0, final);
         }
 
@@ -299,14 +307,13 @@ public:
         void merge( ConnectedComp* comp1, ConnectedComp* comp2,
                     CompHistory*& hptr, WParams& wp )
         {
-            comp1->growHistory( hptr, wp, -1, false );
-            comp2->growHistory( hptr, wp, -1, false );
-
             if( comp1->size < comp2->size )
                 std::swap(comp1, comp2);
 
             if( comp2->size == 0 )
             {
+                // only grow comp1's history
+                comp1->growHistory(hptr, wp, -1, false);
                 gray_level = comp1->gray_level;
                 head = comp1->head;
                 tail = comp1->tail;
@@ -315,21 +322,35 @@ public:
                 return;
             }
 
-            CompHistory* h1 = comp1->history;
-            CompHistory* h2 = comp2->history;
+            comp1->growHistory( hptr, wp, -1, false );
+            comp2->growHistory( hptr, wp, -1, false );
 
-            gray_level = std::max(comp1->gray_level, comp2->gray_level);
+            if (comp1->gray_level < comp2->gray_level)
+                std::swap(comp1, comp2);
+
+            gray_level = comp1->gray_level;
             history = comp1->history;
             wp.pix0[comp1->tail].setNext(comp2->head);
 
             head = comp1->head;
             tail = comp2->tail;
             size = comp1->size + comp2->size;
-            bool keep_2nd = h2->size > wp.p.minArea;
-            growHistory( hptr, wp, -1, false, keep_2nd );
-            if( keep_2nd )
+
+            CompHistory *h1 = history->child_;
+            CompHistory *h2 = comp2->history;
+            if (h2->size > wp.p.minArea)
             {
-                h1->next_ = h2;
+                // the child_'s size should be the large one
+                if (h1 && h1->size > h2->size)
+                {
+                    h2->next_ = h1->next_;
+                    h1->next_ = h2;
+                }
+                else
+                {
+                    history->child_ = h2;
+                    h2->next_ = h1;
+                }
                 h2->parent_ = history;
             }
         }
