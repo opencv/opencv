@@ -105,7 +105,7 @@ fast = cv2.FastFeatureDetector_create()
 
 # find and draw the keypoints
 kp = fast.detect(img,None)
-img2 = cv2.drawKeypoints(img, kp, color=(255,0,0))
+img2 = cv2.drawKeypoints(img, kp, None, color=(255,0,0))
 
 # Print all default params
 print "Threshold: ", fast.getInt('threshold')
@@ -121,7 +121,7 @@ kp = fast.detect(img,None)
 
 print "Total Keypoints without nonmaxSuppression: ", len(kp)
 
-img3 = cv2.drawKeypoints(img, kp, color=(255,0,0))
+img3 = cv2.drawKeypoints(img, kp, None, color=(255,0,0))
 
 cv2.imwrite('fast_false.png',img3)
 @endcode
