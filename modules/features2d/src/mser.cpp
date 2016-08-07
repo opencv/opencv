@@ -211,7 +211,7 @@ public:
                         return;
                 }
             }
-            if( parent_ && parent_->var >= 0.f && var >= parent_->var )
+            if( var > 0.f && parent_ && parent_->var >= 0.f && var >= parent_->var )
                 return;
             int xmin = INT_MAX, ymin = INT_MAX, xmax = INT_MIN, ymax = INT_MIN, j = 0;
             wp.msers->push_back(vector<Point>());
