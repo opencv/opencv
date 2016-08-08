@@ -5019,7 +5019,7 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > _kernelY.total() && (size_t)_src.cols() > _kernelX.total(),
                ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
 
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
