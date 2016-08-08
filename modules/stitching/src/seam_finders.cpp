@@ -630,7 +630,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
         {
             double size1 = static_cast<double>(points[i].size()), size2 = static_cast<double>(points[j].size());
             double cx1 = cvRound(sum[i].x / size1), cy1 = cvRound(sum[i].y / size1);
-            double cx2 = cvRound(sum[j].x / size2), cy2 = cvRound(sum[j].y / size1);
+            double cx2 = cvRound(sum[j].x / size2), cy2 = cvRound(sum[j].y / size2);
 
             double dist = (cx1 - cx2) * (cx1 - cx2) + (cy1 - cy2) * (cy1 - cy2);
             if (dist > maxDist)
