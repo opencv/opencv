@@ -594,7 +594,7 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
     funcs[sdepth][ddepth](reshape(1), dst.reshape(1), alpha, beta, stream);
 }
 
-void cv::cuda::convertFp16Cuda(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::convertFp16(InputArray _src, OutputArray _dst, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
     int ddepth = 0;
