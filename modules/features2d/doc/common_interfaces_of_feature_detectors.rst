@@ -147,7 +147,7 @@ for example: ``"GridFAST"``, ``"PyramidSTAR"`` .
 .. note:: When using the SIFT and SURF detector types be sure to add the following lines to your code
 
      * Add an extra include: `#include <opencv2/nonfree/nonfree.hpp>`
-     * Add an initialisation function at the start of your code: `initModules_nonfree();`
+     * Add an initialisation function at the start of your code: `initModule_nonfree();`
 
 FastFeatureDetector
 -------------------
