@@ -62,6 +62,11 @@ to the following (when
     v = f_y*y' + c_y
     \end{array}
 
+The following figure illustrates the pinhole camera model.
+
+.. image:: pics/pinhole_camera_model.png
+    :align: center
+
 Real lenses usually have some distortion, mostly
 radial distortion and slight tangential distortion. So, the above model
 is extended as:
