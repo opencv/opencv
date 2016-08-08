@@ -1645,10 +1645,16 @@ public:
     /** @overload */
     const uchar* ptr(int i0=0) const;
 
-    /** @overload */
-    uchar* ptr(int i0, int i1);
-    /** @overload */
-    const uchar* ptr(int i0, int i1) const;
+    /** @overload
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
+    */
+    uchar* ptr(int row, int col);
+    /** @overload
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
+    */
+    const uchar* ptr(int row, int col) const;
 
     /** @overload */
     uchar* ptr(int i0, int i1, int i2);
@@ -1668,10 +1674,16 @@ public:
     template<typename _Tp> _Tp* ptr(int i0=0);
     /** @overload */
     template<typename _Tp> const _Tp* ptr(int i0=0) const;
-    /** @overload */
-    template<typename _Tp> _Tp* ptr(int i0, int i1);
-    /** @overload */
-    template<typename _Tp> const _Tp* ptr(int i0, int i1) const;
+    /** @overload
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
+    */
+    template<typename _Tp> _Tp* ptr(int row, int col);
+    /** @overload
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
+    */
+    template<typename _Tp> const _Tp* ptr(int row, int col) const;
     /** @overload */
     template<typename _Tp> _Tp* ptr(int i0, int i1, int i2);
     /** @overload */
@@ -1721,15 +1733,15 @@ public:
     */
     template<typename _Tp> const _Tp& at(int i0=0) const;
     /** @overload
-    @param i0 Index along the dimension 0
-    @param i1 Index along the dimension 1
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
     */
-    template<typename _Tp> _Tp& at(int i0, int i1);
+    template<typename _Tp> _Tp& at(int row, int col);
     /** @overload
-    @param i0 Index along the dimension 0
-    @param i1 Index along the dimension 1
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
     */
-    template<typename _Tp> const _Tp& at(int i0, int i1) const;
+    template<typename _Tp> const _Tp& at(int row, int col) const;
 
     /** @overload
     @param i0 Index along the dimension 0
@@ -2094,9 +2106,9 @@ public:
     //! returns read-only reference to the specified element (1D case)
     const _Tp& operator ()(int idx0) const;
     //! returns reference to the specified element (2D case)
-    _Tp& operator ()(int idx0, int idx1);
+    _Tp& operator ()(int row, int col);
     //! returns read-only reference to the specified element (2D case)
-    const _Tp& operator ()(int idx0, int idx1) const;
+    const _Tp& operator ()(int row, int col) const;
     //! returns reference to the specified element (3D case)
     _Tp& operator ()(int idx0, int idx1, int idx2);
     //! returns read-only reference to the specified element (3D case)
