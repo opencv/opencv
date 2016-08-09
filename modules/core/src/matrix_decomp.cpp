@@ -153,8 +153,12 @@ CholImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
         L[i*astep + i] = (_Tp)(1./std::sqrt(s));
     }
 
-    if( !b )
+    if (!b)
+    {
+        for( i = 0; i < m; i++ )
+             L[i*astep + i]=1/L[i*astep + i];
         return true;
+   }
 
     // LLt x = b
     // 1: L y = b
@@ -193,6 +197,8 @@ CholImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
             b[i*bstep + j] = (_Tp)(s*L[i*astep + i]);
         }
     }
+    for( i = 0; i < m; i++ )
+            L[i*astep + i]=1/L[i*astep + i];
 
     return true;
 }
