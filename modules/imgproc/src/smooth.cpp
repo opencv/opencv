@@ -1734,6 +1734,9 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    int borderType )
 {
 #if IPP_VERSION_X100 >= 810
+    if ((borderType & BORDER_ISOLATED) == 0 && _src.isSubmatrix())
+        return false;
+
     int type = _src.type();
     Size size = _src.size();
 
@@ -1850,7 +1853,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
 #endif
 
-    CV_IPP_RUN(true, ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
+    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);

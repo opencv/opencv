@@ -4545,6 +4545,16 @@ static short convertFp16SW(float fp32)
 }
 #endif
 
+#if CV_FP16 && (defined __GNUC__) && (defined __arm__ || defined __aarch64__)
+    #if 5 <= __GNUC__
+    static inline float16x4_t load_f16(const short* p) { return vld1_f16((const float16_t*)p); }
+    static inline void store_f16(short* p, float16x4_t v) { vst1_f16((float16_t*)p, v); }
+    #else
+    static inline float16x4_t load_f16(const short* p) { return (float16x4_t)vld1_s16(p); }
+    static inline void store_f16(short* p, float16x4_t v) { vst1_s16(p, (int16x4_t)v); }
+    #endif
+#endif
+
 // template for FP16 HW conversion function
 template<typename T, typename DT> static void
 cvtScaleHalf_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size);
@@ -4579,7 +4589,7 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
 
                     float16x4_t v_dst = vcvt_f16_f32(v_src);
 
-                    vst1_f16((float16_t*)(dst + x), v_dst);
+                    store_f16(dst + x, v_dst);
 #else
 #error "Configuration error"
 #endif
@@ -4631,7 +4641,7 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 
                     _mm_storeu_ps(dst + x, v_dst);
 #elif defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-                    float16x4_t v_src = vld1_f16((float16_t*)(src + x));
+                    float16x4_t v_src = load_f16(src+x);
 
                     float32x4_t v_dst = vcvt_f32_f16(v_src);
 
