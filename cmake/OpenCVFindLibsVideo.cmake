@@ -225,7 +225,7 @@ if(WITH_FFMPEG)
     if(HAVE_FFMPEG)
       # Find the bzip2 library because it is required on some systems
       FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2 libbz2.so.1)
-      if(NOT BUILD_SHARED_LIBS)
+      if(UNIX AND APPLE AND NOT BUILD_SHARED_LIBS)
           link_directories(${VIDEOIO_LIBRARY_DIRS})
       endif()
     else()
