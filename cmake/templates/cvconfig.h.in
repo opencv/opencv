@@ -204,5 +204,11 @@
 /* Lapack */
 #cmakedefine HAVE_LAPACK
 
+/* Lapack Generic */
+#cmakedefine HAVE_LAPACK_GENERIC
+
+/* Lapack MKL */
+#cmakedefine HAVE_LAPACK_MKL
+
 /* FP16 */
 #cmakedefine HAVE_FP16
