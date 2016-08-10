@@ -567,18 +567,14 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     diff0 = _mm_unpacklo_epi16(diff0, diff0); // It0 It0 It1 It1 ...
                     v00 = _mm_loadu_si128((const __m128i*)(dIptr)); // Ix0 Iy0 Ix1 Iy1 ...
                     v01 = _mm_loadu_si128((const __m128i*)(dIptr + 8));
-                    v10 = _mm_mullo_epi16(v00, diff0);
-                    v11 = _mm_mulhi_epi16(v00, diff0);
-                    v00 = _mm_unpacklo_epi16(v10, v11);
-                    v10 = _mm_unpackhi_epi16(v10, v11);
+                    v10 = _mm_unpacklo_epi16(v00, v01);
+                    v11 = _mm_unpackhi_epi16(v00, v01);
+                    v00 = _mm_unpacklo_epi16(diff0, diff1);
+                    v01 = _mm_unpackhi_epi16(diff0, diff1);
+                    v00 = _mm_madd_epi16(v00, v10);
+                    v11 = _mm_madd_epi16(v01, v11);
                     qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
-                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
-                    v10 = _mm_mullo_epi16(v01, diff1);
-                    v11 = _mm_mulhi_epi16(v01, diff1);
-                    v00 = _mm_unpacklo_epi16(v10, v11);
-                    v10 = _mm_unpackhi_epi16(v10, v11);
-                    qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
-                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
+                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v11));
                 }
 #endif
 
