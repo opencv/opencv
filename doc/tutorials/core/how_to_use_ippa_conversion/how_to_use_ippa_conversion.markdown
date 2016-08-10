@@ -16,7 +16,7 @@ Code
 
 You may also find the source code in the
 `samples/cpp/tutorial_code/core/ippasync/ippasync_sample.cpp` file of the OpenCV source library or
-download it from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/ippasync/ippasync_sample.cpp).
+download it from [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/ippasync/ippasync_sample.cpp).
 
 @include cpp/tutorial_code/core/ippasync/ippasync_sample.cpp
 

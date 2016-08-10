@@ -567,18 +567,14 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     diff0 = _mm_unpacklo_epi16(diff0, diff0); // It0 It0 It1 It1 ...
                     v00 = _mm_loadu_si128((const __m128i*)(dIptr)); // Ix0 Iy0 Ix1 Iy1 ...
                     v01 = _mm_loadu_si128((const __m128i*)(dIptr + 8));
-                    v10 = _mm_mullo_epi16(v00, diff0);
-                    v11 = _mm_mulhi_epi16(v00, diff0);
-                    v00 = _mm_unpacklo_epi16(v10, v11);
-                    v10 = _mm_unpackhi_epi16(v10, v11);
+                    v10 = _mm_unpacklo_epi16(v00, v01);
+                    v11 = _mm_unpackhi_epi16(v00, v01);
+                    v00 = _mm_unpacklo_epi16(diff0, diff1);
+                    v01 = _mm_unpackhi_epi16(diff0, diff1);
+                    v00 = _mm_madd_epi16(v00, v10);
+                    v11 = _mm_madd_epi16(v01, v11);
                     qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
-                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
-                    v10 = _mm_mullo_epi16(v01, diff1);
-                    v11 = _mm_mulhi_epi16(v01, diff1);
-                    v00 = _mm_unpacklo_epi16(v10, v11);
-                    v10 = _mm_unpackhi_epi16(v10, v11);
-                    qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
-                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
+                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v11));
                 }
 #endif
 
@@ -837,10 +833,11 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
     return maxLevel;
 }
 
-#ifdef HAVE_OPENCL
 namespace cv
 {
-    class PyrLKOpticalFlow
+namespace
+{
+    class SparsePyrLKOpticalFlowImpl : public SparsePyrLKOpticalFlow
     {
         struct dim3
         {
@@ -848,17 +845,40 @@ namespace cv
             dim3() : x(0), y(0), z(0) { }
         };
     public:
-        PyrLKOpticalFlow()
+        SparsePyrLKOpticalFlowImpl(Size winSize_ = Size(21,21),
+                         int maxLevel_ = 3,
+                         TermCriteria criteria_ = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
+                         int flags_ = 0,
+                         double minEigThreshold_ = 1e-4) :
+          winSize(winSize_), maxLevel(maxLevel_), criteria(criteria_), flags(flags_), minEigThreshold(minEigThreshold_)
+#ifdef HAVE_OPENCL
+          , iters(criteria_.maxCount), derivLambda(criteria_.epsilon), useInitialFlow(0 != (flags_ & OPTFLOW_LK_GET_MIN_EIGENVALS)), waveSize(0)
+#endif
         {
-            winSize = Size(21, 21);
-            maxLevel = 3;
-            iters = 30;
-            derivLambda = 0.5;
-            useInitialFlow = false;
-
-            waveSize = 0;
         }
 
+        virtual Size getWinSize() const {return winSize;}
+        virtual void setWinSize(Size winSize_){winSize = winSize_;}
+
+        virtual int getMaxLevel() const {return maxLevel;}
+        virtual void setMaxLevel(int maxLevel_){maxLevel = maxLevel_;}
+
+        virtual TermCriteria getTermCriteria() const {return criteria;}
+        virtual void setTermCriteria(TermCriteria& crit_){criteria=crit_;}
+
+        virtual int getFlags() const {return flags; }
+        virtual void setFlags(int flags_){flags=flags_;}
+
+        virtual double getMinEigThreshold() const {return minEigThreshold;}
+        virtual void setMinEigThreshold(double minEigThreshold_){minEigThreshold=minEigThreshold_;}
+
+        virtual void calc(InputArray prevImg, InputArray nextImg,
+                          InputArray prevPts, InputOutputArray nextPts,
+                          OutputArray status,
+                          OutputArray err = cv::noArray());
+
+    private:
+#ifdef HAVE_OPENCL
         bool checkParam()
         {
             iters = std::min(std::max(iters, 0), 100);
@@ -930,14 +950,17 @@ namespace cv
             }
             return true;
         }
+#endif
 
         Size winSize;
         int maxLevel;
+        TermCriteria criteria;
+        int flags;
+        double minEigThreshold;
+#ifdef HAVE_OPENCL
         int iters;
         double derivLambda;
         bool useInitialFlow;
-
-    private:
         int waveSize;
         bool initWaveSize()
         {
@@ -1017,15 +1040,11 @@ namespace cv
         {
             return (cv::ocl::Device::TYPE_CPU == cv::ocl::Device::getDefault().type());
         }
-    };
 
 
-    static bool ocl_calcOpticalFlowPyrLK(InputArray _prevImg, InputArray _nextImg,
-                                  InputArray _prevPts, InputOutputArray _nextPts,
-                                  OutputArray _status, OutputArray _err,
-                                  Size winSize, int maxLevel,
-                                  TermCriteria criteria,
-                                  int flags/*, double minEigThreshold*/ )
+    bool ocl_calcOpticalFlowPyrLK(InputArray _prevImg, InputArray _nextImg,
+                                         InputArray _prevPts, InputOutputArray _nextPts,
+                                         OutputArray _status, OutputArray _err)
     {
         if (0 != (OPTFLOW_LK_GET_MIN_EIGENVALS & flags))
             return false;
@@ -1045,7 +1064,6 @@ namespace cv
         if ((1 != _prevPts.size().height) && (1 != _prevPts.size().width))
             return false;
         size_t npoints = _prevPts.total();
-        bool useInitialFlow  = (0 != (flags & OPTFLOW_USE_INITIAL_FLOW));
         if (useInitialFlow)
         {
             if (_nextPts.empty() || _nextPts.type() != CV_32FC2 || (!_prevPts.isContinuous()))
@@ -1060,14 +1078,7 @@ namespace cv
             _nextPts.create(_prevPts.size(), _prevPts.type());
         }
 
-        PyrLKOpticalFlow opticalFlow;
-        opticalFlow.winSize     = winSize;
-        opticalFlow.maxLevel    = maxLevel;
-        opticalFlow.iters       = criteria.maxCount;
-        opticalFlow.derivLambda = criteria.epsilon;
-        opticalFlow.useInitialFlow  = useInitialFlow;
-
-        if (!opticalFlow.checkParam())
+        if (!checkParam())
             return false;
 
         UMat umatErr;
@@ -1082,28 +1093,19 @@ namespace cv
         _status.create((int)npoints, 1, CV_8UC1);
         UMat umatNextPts = _nextPts.getUMat();
         UMat umatStatus = _status.getUMat();
-        return opticalFlow.sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
+        return sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
     }
+#endif
 };
-#endif
 
-void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
+void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
-                           OutputArray _status, OutputArray _err,
-                           Size winSize, int maxLevel,
-                           TermCriteria criteria,
-                           int flags, double minEigThreshold )
+                           OutputArray _status, OutputArray _err)
 {
-#ifdef HAVE_OPENCL
-    bool use_opencl = ocl::useOpenCL() &&
-                      (_prevImg.isUMat() || _nextImg.isUMat()) &&
-                      ocl::Image2D::isFormatSupported(CV_32F, 1, false);
-    if ( use_opencl && ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, flags/*, minEigThreshold*/))
-    {
-        CV_IMPL_ADD(CV_IMPL_OCL);
-        return;
-    }
-#endif
+    CV_OCL_RUN(ocl::useOpenCL() &&
+               (_prevImg.isUMat() || _nextImg.isUMat()) &&
+               ocl::Image2D::isFormatSupported(CV_32F, 1, false),
+               ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
 
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;
@@ -1260,6 +1262,22 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                                                           winSize, criteria, level, maxLevel,
                                                           flags, (float)minEigThreshold));
     }
+}
+
+} // namespace
+} // namespace cv
+cv::Ptr<cv::SparsePyrLKOpticalFlow> cv::SparsePyrLKOpticalFlow::create(Size winSize, int maxLevel, TermCriteria crit, int flags, double minEigThreshold){
+    return makePtr<SparsePyrLKOpticalFlowImpl>(winSize,maxLevel,crit,flags,minEigThreshold);
+}
+void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
+                               InputArray _prevPts, InputOutputArray _nextPts,
+                               OutputArray _status, OutputArray _err,
+                               Size winSize, int maxLevel,
+                               TermCriteria criteria,
+                               int flags, double minEigThreshold )
+{
+    Ptr<cv::SparsePyrLKOpticalFlow> optflow = cv::SparsePyrLKOpticalFlow::create(winSize,maxLevel,criteria,flags,minEigThreshold);
+    optflow->calc(_prevImg,_nextImg,_prevPts,_nextPts,_status,_err);
 }
 
 namespace cv

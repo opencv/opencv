@@ -855,6 +855,15 @@ private:
 CV_EXPORTS void printCudaDeviceInfo(int device);
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
+/** @brief Converts an array to half precision floating number.
+
+@param _src input array.
+@param _dst output array.
+@param stream Stream for the asynchronous version.
+@sa convertFp16
+*/
+CV_EXPORTS void convertFp16(InputArray _src, OutputArray _dst, Stream& stream = Stream::Null());
+
 //! @} cudacore_init
 
 }} // namespace cv { namespace cuda {

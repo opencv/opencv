@@ -19,6 +19,10 @@ Theory
 Template matching is a technique for finding areas of an image that match (are similar) to a
 template image (patch).
 
+While the patch must be a rectangle it may be that not all of the
+rectangle is relevant.  In such a case, a mask can be used to isolate the portion of the patch
+that should be used to find the match.
+
 ### How does it work?
 
 -   We need two primary components:
@@ -50,6 +54,30 @@ template image (patch).
 
 -   In practice, we use the function @ref cv::minMaxLoc to locate the highest value (or lower,
     depending of the type of matching method) in the *R* matrix.
+
+### How does the mask work?
+- If masking is needed for the match, three components are required:
+
+    -#  **Source image (I):** The image in which we expect to find a match to the template image
+    -#  **Template image (T):** The patch image which will be compared to the template image
+    -#  **Mask image (M):** The mask, a grayscale image that masks the template
+
+
+-   Only two matching methods currently accept a mask: CV_TM_SQDIFF and CV_TM_CCORR_NORMED (see
+    below for explanation of all the matching methods available in opencv).
+
+
+-   The mask must have the same dimensions as the template
+
+
+-   The mask should have a CV_8U or CV_32F depth and the same number of channels
+    as the template image. In CV_8U case, the mask values are treated as binary,
+    i.e. zero and non-zero. In CV_32F case, the values should fall into [0..1]
+    range and the template pixels will be multiplied by the corresponding mask pixel
+    values. Since the input images in the sample have the CV_8UC3 type, the mask
+    is also read as color image.
+
+    ![](images/Template_Matching_Mask_Example.jpg)
 
 ### Which are the matching methods available in OpenCV?
 
@@ -88,15 +116,16 @@ Code
 ----
 
 -   **What does this program do?**
-    -   Loads an input image and a image patch (*template*)
+    -   Loads an input image, an image patch (*template*), and optionally a mask
     -   Perform a template matching procedure by using the OpenCV function @ref cv::matchTemplate
         with any of the 6 matching methods described before. The user can choose the method by
-        entering its selection in the Trackbar.
+        entering its selection in the Trackbar.  If a mask is supplied, it will only be used for
+        the methods that support masking
     -   Normalize the output of the matching procedure
     -   Localize the location with higher matching probability
     -   Draw a rectangle around the area corresponding to the highest match
 -   **Downloadable code**: Click
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp)
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 
@@ -113,10 +142,14 @@ Explanation
     int match_method;
     int max_Trackbar = 5;
     @endcode
--#  Load the source image and template:
+-#  Load the source image, template, and optionally, if supported for the matching method, a mask:
     @code{.cpp}
-    img = imread( argv[1], 1 );
-    templ = imread( argv[2], 1 );
+     bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
+  if (use_mask && method_accepts_mask)
+    { matchTemplate( img, templ, result, match_method, mask); }
+  else
+    { matchTemplate( img, templ, result, match_method); }
+
     @endcode
 -#  Create the windows to show the results:
     @code{.cpp}
@@ -150,10 +183,14 @@ Explanation
     @endcode
 -#  Perform the template matching operation:
     @code{.cpp}
-    matchTemplate( img, templ, result, match_method );
+    bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
+    if (use_mask && method_accepts_mask)
+        { matchTemplate( img, templ, result, match_method, mask); }
+    else
+        { matchTemplate( img, templ, result, match_method); }
     @endcode
-    the arguments are naturally the input image **I**, the template **T**, the result **R** and the
-    match_method (given by the Trackbar)
+    the arguments are naturally the input image **I**, the template **T**, the result **R**, the
+    match_method (given by the Trackbar), and optionally the mask image **M**
 
 -#  We normalize the results:
     @code{.cpp}

@@ -747,9 +747,6 @@ public:
                     }
                 }
                 while(*stopstring != ']');
-
-                if( stopstring[1] != '\0' && stopstring[1] != ',')
-                    CV_Error( CV_StsBadArg, errmsg );
             }
         }
 

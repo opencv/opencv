@@ -432,7 +432,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
                     vSum = vaddq_u16(vSum, vaddl_u8(vLane4.val[0], vLane4.val[1]));
                     vSum = vaddq_u16(vSum, vaddl_u8(vLane4.val[2], vLane4.val[3]));
 
-                    vst1_u8(dst_row + dj, areaDownsamplingDivision<opencv_like,4>(vSum));
+                    vst1_u8(dst_row + dj, (areaDownsamplingDivision<opencv_like,4>(vSum)));
                 }
 
                 for ( ; dj < dsize.width; ++dj, sj += 4)
@@ -706,7 +706,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
                     uint16x8_t v_sum = vcombine_u16(vadd_u16(vget_low_u16(v_sum0), vget_high_u16(v_sum0)),
                                                     vadd_u16(vget_low_u16(v_sum1), vget_high_u16(v_sum1)));
 
-                    vst1_u8(dst_row + dj, areaDownsamplingDivision<opencv_like,4>(v_sum));
+                    vst1_u8(dst_row + dj, (areaDownsamplingDivision<opencv_like,4>(v_sum)));
                 }
 
                 for (size_t dwidth = dsize.width << 2; dj < dwidth; dj += 4, sj += 16)

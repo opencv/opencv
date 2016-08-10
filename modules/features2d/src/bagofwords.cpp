@@ -91,11 +91,7 @@ Mat BOWKMeansTrainer::cluster() const
 {
     CV_Assert( !descriptors.empty() );
 
-    int descCount = 0;
-    for( size_t i = 0; i < descriptors.size(); i++ )
-        descCount += descriptors[i].rows;
-
-    Mat mergedDescriptors( descCount, descriptors[0].cols, descriptors[0].type() );
+    Mat mergedDescriptors( descriptorsCount(), descriptors[0].cols, descriptors[0].type() );
     for( size_t i = 0, start = 0; i < descriptors.size(); i++ )
     {
         Mat submut = mergedDescriptors.rowRange((int)start, (int)(start + descriptors[i].rows));

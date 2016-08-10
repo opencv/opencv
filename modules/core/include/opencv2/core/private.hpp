@@ -71,6 +71,17 @@
 #  endif
 #endif
 
+#if defined HAVE_FP16 && (defined __F16C__ || (defined _MSC_VER && _MSC_VER >= 1700))
+#  include <immintrin.h>
+#  define CV_FP16 1
+#elif defined HAVE_FP16 && defined __GNUC__
+#  define CV_FP16 1
+#endif
+
+#ifndef CV_FP16
+#  define CV_FP16 0
+#endif
+
 //! @cond IGNORED
 
 namespace cv

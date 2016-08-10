@@ -164,6 +164,8 @@ endif()
 # OpenCV cmake options
 # ----------------------------------------------------------------------------
 
+OCV_OPTION(OPENCV_ENABLE_NONFREE "Enable non-free algorithms" OFF)
+
 # Optional 3rd party components
 # ===================================================
 OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
@@ -191,6 +193,7 @@ OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_OPENNI2        "Include OpenNI2 support"                     OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_PNG            "Include PNG support"                         ON)
+OCV_OPTION(WITH_GDCM           "Include DICOM support"                       OFF)
 OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              OFF   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GIGEAPI        "Include Smartek GigE support"                OFF   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
@@ -221,7 +224,7 @@ OCV_OPTION(WITH_VA             "Include VA support"                          OFF
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID) )
-OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              ON   IF (UNIX AND NOT ANDROID) )
+OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              ON   IF (NOT ANDROID) )
 
 # OpenCV build components
 # ===================================================
@@ -913,6 +916,11 @@ status("    Disabled:"               OPENCV_MODULES_DISABLED_USER  THEN ${OPENCV
 status("    Disabled by dependency:" OPENCV_MODULES_DISABLED_AUTO  THEN ${OPENCV_MODULES_DISABLED_AUTO_ST}  ELSE "-")
 status("    Unavailable:"            OPENCV_MODULES_DISABLED_FORCE THEN ${OPENCV_MODULES_DISABLED_FORCE_ST} ELSE "-")
 
+if(OPENCV_ENABLE_NONFREE)
+  status("")
+  status("  Non-free algorithms are enabled")
+endif()
+
 # ========================== Android details ==========================
 if(ANDROID)
   status("")
@@ -1008,6 +1016,7 @@ if(WITH_PNG)
 else()
   status("    PNG:"        "NO")
 endif()
+
 if(WITH_TIFF)
   if(TIFF_VERSION_STRING AND TIFF_FOUND)
     status("    TIFF:"     "${TIFF_LIBRARY} (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
@@ -1032,6 +1041,12 @@ if( WITH_GDAL )
   status("    GDAL:"   GDAL_FOUND THEN "${GDAL_LIBRARY}" ELSE "NO")
 else()
   status("    GDAL:"     "NO")
+endif()
+
+if(WITH_GDCM)
+  status("    GDCM:"   GDCM_FOUND THEN "YES (ver ${GDCM_VERSION})" ELSE "NO")
+else()
+  status("    GDCM:"     "NO")
 endif()
 
 # ========================== VIDEO IO ==========================

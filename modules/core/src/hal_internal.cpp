@@ -46,9 +46,17 @@
 
 #ifdef HAVE_LAPACK
 
+#ifdef HAVE_LAPACK_MKL
+  #include <mkl_cblas.h>
+  #include <mkl_lapack.h>
+#endif
+
+#ifdef HAVE_LAPACK_GENERIC
+  #include <lapacke.h>
+  #include <cblas.h>
+#endif
+
 #include <cmath>
-#include <lapacke.h>
-#include <cblas.h>
 #include <algorithm>
 #include <typeinfo>
 #include <limits>
@@ -150,7 +158,7 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
 template <typename fptype> static inline int
 lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, bool* info)
 {
-    int lapackStatus;
+    int lapackStatus = 0;
     int lda = a_step / sizeof(fptype);
     char L[] = {'L', '\0'};
 
@@ -227,7 +235,7 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     else if(typeid(fptype) == typeid(double))
         dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&work1, &lwork, iworkBuf, info);
 
-    lwork = round(work1); //optimal buffer size
+    lwork = (int)round(work1); //optimal buffer size
     fptype* buffer = new fptype[lwork + 1];
 
     if(typeid(fptype) == typeid(float))

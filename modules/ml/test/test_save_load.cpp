@@ -65,11 +65,11 @@ int CV_SLMLTest::run_test_case( int testCaseIdx )
         {
             get_test_error( testCaseIdx, &test_resps1 );
             fname1 = tempfile(".yml.gz");
-            save( fname1.c_str() );
+            save( (fname1 + "?base64").c_str() );
             load( fname1.c_str() );
             get_test_error( testCaseIdx, &test_resps2 );
             fname2 = tempfile(".yml.gz");
-            save( fname2.c_str() );
+            save( (fname2 + "?base64").c_str() );
         }
         else
             ts->printf( cvtest::TS::LOG, "model can not be trained" );
@@ -280,7 +280,7 @@ TEST(DISABLED_ML_SVM, linear_save_load)
     svm1 = Algorithm::load<SVM>("SVM45_X_38-1.xml");
     svm2 = Algorithm::load<SVM>("SVM45_X_38-2.xml");
     string tname = tempfile("a.xml");
-    svm2->save(tname);
+    svm2->save(tname + "?base64");
     svm3 = Algorithm::load<SVM>(tname);
 
     ASSERT_EQ(svm1->getVarCount(), svm2->getVarCount());

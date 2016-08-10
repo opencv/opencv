@@ -49,13 +49,6 @@ understanding of the used features.
 USAGE:
 ./opencv_visualisation --model=<model.xml> --image=<ref.png> --data=<video output folder>
 
-LIMITS
-- Use an absolute path for the output folder to ensure the tool works
-- Only handles cascade classifier models
-- Handles stumps only for the moment
-- Needs a valid training/test sample window with the original model dimensions, passed as `ref.png`
-- Can handle HAAR and LBP features
-
 Created by: Puttemans Steven - April 2016
 *****************************************************************************************************/
 
@@ -79,6 +72,13 @@ struct rect_data{
     float weight;
 };
 
+static void printLimits(){
+    cerr << "Limits of the current interface:" << endl;
+    cerr << " - Only handles cascade classifier models, trained with the opencv_traincascade tool, containing stumps as decision trees [default settings]." << endl;
+    cerr << " - The image provided needs to be a sample window with the original model dimensions, passed to the --image parameter." << endl;
+    cerr << " - ONLY handles HAAR and LBP features." << endl;
+}
+
 int main( int argc, const char** argv )
 {
     CommandLineParser parser(argc, argv,
@@ -90,6 +90,7 @@ int main( int argc, const char** argv )
     // Read in the input arguments
     if (parser.has("help")){
         parser.printMessage();
+        printLimits();
         return 0;
     }
     string model(parser.get<string>("model"));
@@ -97,6 +98,7 @@ int main( int argc, const char** argv )
     string image_ref = (parser.get<string>("image"));
     if (model.empty() || image_ref.empty()){
         parser.printMessage();
+        printLimits();
         return -1;
     }
 

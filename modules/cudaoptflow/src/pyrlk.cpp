@@ -47,9 +47,9 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<SparsePyrLKOpticalFlow> cv::cuda::SparsePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<SparsePyrLKOpticalFlow>(); }
+Ptr<cv::cuda::SparsePyrLKOpticalFlow> cv::cuda::SparsePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<SparsePyrLKOpticalFlow>(); }
 
-Ptr<DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<DensePyrLKOpticalFlow>(); }
+Ptr<cv::cuda::DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size, int, int, bool) { throw_no_cuda(); return Ptr<DensePyrLKOpticalFlow>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -283,7 +283,7 @@ namespace
         vPyr[idx].copyTo(v, stream);
     }
 
-    class SparsePyrLKOpticalFlowImpl : public SparsePyrLKOpticalFlow, private PyrLKOpticalFlowBase
+    class SparsePyrLKOpticalFlowImpl : public cv::cuda::SparsePyrLKOpticalFlow, private PyrLKOpticalFlowBase
     {
     public:
         SparsePyrLKOpticalFlowImpl(Size winSize, int maxLevel, int iters, bool useInitialFlow) :
@@ -366,12 +366,12 @@ namespace
     };
 }
 
-Ptr<SparsePyrLKOpticalFlow> cv::cuda::SparsePyrLKOpticalFlow::create(Size winSize, int maxLevel, int iters, bool useInitialFlow)
+Ptr<cv::cuda::SparsePyrLKOpticalFlow> cv::cuda::SparsePyrLKOpticalFlow::create(Size winSize, int maxLevel, int iters, bool useInitialFlow)
 {
     return makePtr<SparsePyrLKOpticalFlowImpl>(winSize, maxLevel, iters, useInitialFlow);
 }
 
-Ptr<DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size winSize, int maxLevel, int iters, bool useInitialFlow)
+Ptr<cv::cuda::DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Size winSize, int maxLevel, int iters, bool useInitialFlow)
 {
     return makePtr<DensePyrLKOpticalFlowImpl>(winSize, maxLevel, iters, useInitialFlow);
 }

@@ -100,6 +100,10 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 - (void)start;
 {
+    if (self.running == YES) {
+        return;
+    }
+
     recordingCountDown = 10;
     [super start];
 
@@ -126,21 +130,24 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     }
 
     if (self.recordVideo == YES) {
-
-        if (self.recordAssetWriter.status == AVAssetWriterStatusWriting) {
-            [self.recordAssetWriter finishWriting];
-            NSLog(@"[Camera] recording stopped");
-        } else {
-            NSLog(@"[Camera] Recording Error: asset writer status is not writing");
+        if (self.recordAssetWriter) {
+            if (self.recordAssetWriter.status == AVAssetWriterStatusWriting) {
+                [self.recordAssetWriter finishWriting];
+                NSLog(@"[Camera] recording stopped");
+            } else {
+                NSLog(@"[Camera] Recording Error: asset writer status is not writing");
+            }
+            self.recordAssetWriter = nil;
         }
 
-        self.recordAssetWriter = nil;
         self.recordAssetWriterInput = nil;
         self.recordPixelBufferAdaptor = nil;
     }
 
-    [self.customPreviewLayer removeFromSuperlayer];
-    self.customPreviewLayer = nil;
+    if (self.customPreviewLayer) {
+        [self.customPreviewLayer removeFromSuperlayer];
+        self.customPreviewLayer = nil;
+    }
 }
 
 // TODO fix

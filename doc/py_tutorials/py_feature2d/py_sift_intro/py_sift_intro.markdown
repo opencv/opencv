@@ -104,7 +104,7 @@ greater than 0.8, they are rejected. It eliminaters around 90% of false matches 
 
 So this is a summary of SIFT algorithm. For more details and understanding, reading the original
 paper is highly recommended. Remember one thing, this algorithm is patented. So this algorithm is
-included in [the opencv contrib repo](https://github.com/Itseez/opencv_contrib)
+included in [the opencv contrib repo](https://github.com/opencv/opencv_contrib)
 
 SIFT in OpenCV
 --------------
@@ -122,7 +122,7 @@ gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 sift = cv2.xfeatures2d.SIFT_create()
 kp = sift.detect(gray,None)
 
-img=cv2.drawKeypoints(gray,kp)
+img=cv2.drawKeypoints(gray,kp,img)
 
 cv2.imwrite('sift_keypoints.jpg',img)
 @endcode
@@ -135,7 +135,7 @@ OpenCV also provides **cv2.drawKeyPoints()** function which draws the small circ
 of keypoints. If you pass a flag, **cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS** to it, it will
 draw a circle with size of keypoint and it will even show its orientation. See below example.
 @code{.py}
-img=cv2.drawKeypoints(gray,kp,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+img=cv2.drawKeypoints(gray,kp,img,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 cv2.imwrite('sift_keypoints.jpg',img)
 @endcode
 See the two results below:

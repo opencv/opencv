@@ -146,8 +146,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   elseif(X86 OR X86_64)
     add_extra_compiler_option(-mno-sse2)
   endif()
+  if(ARM)
+    add_extra_compiler_option("-mfp16-format=ieee")
+  endif(ARM)
   if(ENABLE_NEON)
-    add_extra_compiler_option("-mfpu=neon")
+    add_extra_compiler_option("-mfpu=neon-fp16")
   endif()
   if(ENABLE_VFPV3 AND NOT ENABLE_NEON)
     add_extra_compiler_option("-mfpu=vfpv3")
@@ -364,5 +367,20 @@ if(MSVC)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4324) # 'struct_name' : structure was padded due to __declspec(align())
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4275) # non dll-interface class 'std::exception' used as base for dll-interface class 'cv::Exception'
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4589) # Constructor of abstract class 'cv::ORB' ignores initializer for virtual base class 'cv::Algorithm'
+  endif()
+endif()
+
+if(NOT OPENCV_FP16_DISABLE)
+  try_compile(__VALID_FP16
+    "${OpenCV_BINARY_DIR}"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/fp16.cpp"
+    COMPILE_DEFINITIONS "-DCHECK_FP16"
+    OUTPUT_VARIABLE TRY_OUT
+    )
+  if(NOT __VALID_FP16)
+    message(STATUS "FP16: Compiler support is not available")
+  else()
+    message(STATUS "FP16: Compiler support is available")
+    set(HAVE_FP16 1)
   endif()
 endif()
