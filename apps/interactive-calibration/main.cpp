@@ -23,7 +23,7 @@ const std::string keys  =
         "{v        |         | Input from video file }"
         "{ci       | 0       | Default camera id }"
         "{flip     | false   | Vertical flip of input frames }"
-        "{t        | circles | Template for calibration (circles, chessboard, dualCircles, chAruco) }"
+        "{t        | circles | Template for calibration (circles, chessboard, dualCircles, charuco) }"
         "{sz       | 16.3    | Distance between two nearest centers of circles or squares on calibration board}"
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
