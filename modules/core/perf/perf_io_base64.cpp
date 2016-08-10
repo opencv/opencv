@@ -11,7 +11,7 @@ typedef TestBaseWithParam<Size_MatType_Str_t> Size_Mat_StrType;
 
 #define MAT_SIZES      ::perf::sz1080p/*, ::perf::sz4320p*/
 #define MAT_TYPES      CV_8UC1, CV_32FC1
-#define FILE_EXTENSION String(".xml"), String(".yml")
+#define FILE_EXTENSION String(".xml"), String(".yml"), String(".json")
 
 
 PERF_TEST_P(Size_Mat_StrType, fs_text,
