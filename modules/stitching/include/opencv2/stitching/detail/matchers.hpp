@@ -83,8 +83,26 @@ public:
     @sa detail::ImageFeatures, Rect_
     */
     void operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
+    /** @brief Finds features in the given images in parallel.
+
+    @param images Source images
+    @param features Found features for each image
+    @param rois Regions of interest for each image
+
+    @sa detail::ImageFeatures, Rect_
+    */
+    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
+                     const std::vector<std::vector<cv::Rect> > &rois);
+    /** @overload */
+    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features);
     /** @brief Frees unused memory allocated before if there is any. */
     virtual void collectGarbage() {}
+
+    /* TODO OpenCV ABI 4.x
+    reimplement this as public method similar to FeaturesMatcher and remove private function hack
+    @return True, if it's possible to use the same finder instance in parallel, false otherwise
+    bool isThreadSafe() const { return is_thread_safe_; }
+    */
 
 protected:
     /** @brief This method must implement features finding logic in order to make the wrappers
@@ -95,6 +113,10 @@ protected:
 
     @sa detail::ImageFeatures */
     virtual void find(InputArray image, ImageFeatures &features) = 0;
+    /** @brief uses dynamic_cast to determine thread-safety
+    @return True, if it's possible to use the same finder instance in parallel, false otherwise
+    */
+    bool isThreadSafe() const;
 };
 
 /** @brief SURF features finder.
@@ -130,7 +152,6 @@ private:
     Ptr<ORB> orb;
     Size grid_size;
 };
-
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
