@@ -1442,7 +1442,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         cvargs = ", ".join(cvargs), \
         default = default, \
         retval = retval, \
-	namespace = ('using namespace ' + ci.namespace.replace('.', '::') + ';') if ci.namespace else ''
+        namespace = ('using namespace ' + ci.namespace.replace('.', '::') + ';') if ci.namespace else ''
     ) )
 
             # processing args with default values
@@ -1538,7 +1538,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         '''
         Check if class stores Ptr<T>* instead of T* in nativeObj field
         '''
-	return False
+        return False
 
     def smartWrap(self, name, fullname):
         '''
