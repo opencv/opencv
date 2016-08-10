@@ -1669,6 +1669,8 @@ typedef struct CvFileStorage CvFileStorage;
 #define CV_STORAGE_FORMAT_AUTO   0
 #define CV_STORAGE_FORMAT_XML    8
 #define CV_STORAGE_FORMAT_YAML  16
+#define CV_STORAGE_BASE64       64
+#define CV_STORAGE_WRITE_BASE64  (CV_STORAGE_BASE64 | CV_STORAGE_WRITE)
 
 /** @brief List of attributes. :
 
