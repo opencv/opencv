@@ -4,6 +4,9 @@
 
 # --- Lapack ---
 if(WITH_LAPACK)
+  if(WIN32)
+    set(BLA_STATIC 1)
+  endif()
   find_package(LAPACK)
   if(LAPACK_FOUND)
     find_path(LAPACKE_INCLUDE_DIR "lapacke.h")
