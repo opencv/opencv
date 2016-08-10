@@ -88,6 +88,28 @@ struct CalcRotation
 };
 
 
+/**
+ * @brief Functor calculating final tranformation by chaining linear transformations
+ */
+struct CalcAffineTransform
+{
+    CalcAffineTransform(int _num_images,
+                      const std::vector<MatchesInfo> &_pairwise_matches,
+                      std::vector<CameraParams> &_cameras)
+    : num_images(_num_images), pairwise_matches(&_pairwise_matches[0]), cameras(&_cameras[0]) {}
+
+    void operator()(const GraphEdge &edge)
+    {
+        int pair_idx = edge.from * num_images + edge.to;
+        cameras[edge.to].R = cameras[edge.from].R * pairwise_matches[pair_idx].H;
+    }
+
+    int num_images;
+    const MatchesInfo *pairwise_matches;
+    CameraParams *cameras;
+};
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 void calcDeriv(const Mat &err1, const Mat &err2, double h, Mat res)
@@ -167,6 +189,30 @@ bool HomographyBasedEstimator::estimate(
     }
 
     LOGLN("Estimating rotations, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+bool AffineBasedEstimator::estimate(const std::vector<ImageFeatures> &features,
+                                    const std::vector<MatchesInfo> &pairwise_matches,
+                                    std::vector<CameraParams> &cameras)
+{
+    cameras.resize(features.size());
+    const int num_images = static_cast<int>(features.size());
+
+    // find maximum spaning tree on pairwise matches
+    cv::detail::Graph span_tree;
+    std::vector<int> span_tree_centers;
+    // uses number of inliers as weights
+    findMaxSpanningTree(num_images, pairwise_matches, span_tree,
+                      span_tree_centers);
+
+    // compute final transform by chaining H together
+    span_tree.walkBreadthFirst(
+            span_tree_centers[0],
+            CalcAffineTransform(num_images, pairwise_matches, cameras));
     return true;
 }
 
