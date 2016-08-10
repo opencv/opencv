@@ -703,8 +703,10 @@ cvReleaseFileStorage( CvFileStorage** p_fs )
         cvFree( &fs->buffer_start );
         cvReleaseMemStorage( &fs->memstorage );
 
-        if( fs->outbuf )
-            delete fs->outbuf;
+        delete fs->outbuf;
+        delete fs->base64_writer;
+        delete fs->delayed_struct_key;
+        delete fs->delayed_type_name;
 
         memset( fs, 0, sizeof(*fs) );
         cvFree( &fs );
@@ -1358,7 +1360,7 @@ static char* icvYMLParseBase64(CvFileStorage* fs, char* ptr, int indent, CvFileN
         std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
         base64::base64_decode(beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
         if ( !base64::read_base64_header(header, dt) || dt.empty() )
-            CV_PARSE_ERROR("Cannot parse dt in Base64 header");
+            CV_PARSE_ERROR("Invalid `dt` in Base64 header");
 
         beg += base64::ENCODED_HEADER_SIZE;
     }
@@ -2317,7 +2319,7 @@ static char* icvXMLParseBase64(CvFileStorage* fs, char* ptr, CvFileNode * node)
         std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
         base64::base64_decode(beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
         if ( !base64::read_base64_header(header, dt) || dt.empty() )
-            CV_PARSE_ERROR("Cannot parse dt in Base64 header");
+            CV_PARSE_ERROR("Invalid `dt` in Base64 header");
 
         beg += base64::ENCODED_HEADER_SIZE;
     }
@@ -3268,7 +3270,7 @@ icvJSONSkipSpaces( CvFileStorage* fs, char* ptr )
             else if ( *ptr == '*' )
             {
                 ptr++;
-                while ( true )
+                for (;;)
                 {
                     if ( *ptr == '\0' )
                     {
@@ -3294,7 +3296,7 @@ icvJSONSkipSpaces( CvFileStorage* fs, char* ptr )
             }
             else
             {
-                CV_PARSE_ERROR( "Unexpected character" );
+                CV_PARSE_ERROR( "Not supported escape character" );
             }
         } break;
         /* whitespace */
@@ -3356,11 +3358,11 @@ static char* icvJSONParseKey( CvFileStorage* fs, char* ptr, CvFileNode* map, CvF
         return 0;
 
     if( *ptr != ':' )
-        CV_PARSE_ERROR( "Missing \':\'" );
+        CV_PARSE_ERROR( "Missing \':\' between key and value" );
 
     /* [beg, end) */
     if( end <= beg )
-        CV_PARSE_ERROR( "An empty key" );
+        CV_PARSE_ERROR( "Key is empty" );
 
     if ( end - beg == 7u && memcmp(beg, "type_id", 7u) == 0 )
     {
@@ -3452,7 +3454,7 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
                     std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
                     base64::base64_decode(base64_beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
                     if ( !base64::read_base64_header(header, dt) || dt.empty() )
-                        CV_PARSE_ERROR("Cannot parse dt in Base64 header");
+                        CV_PARSE_ERROR("Invalid `dt` in Base64 header");
                 }
 
                 /* set base64_beg to beginning of base64 data */
@@ -3506,7 +3508,7 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
         {   /**************** normal string ****************/
             std::string string_buffer;
             string_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
-            
+
             ptr = beg;
             bool is_matching = false;
             while ( !is_matching )
@@ -3572,7 +3574,12 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
             else
                 ptr++;
 
-            node->data.str = cvMemStorageAllocString( fs->memstorage, string_buffer.c_str(), string_buffer.size() );
+            node->data.str = cvMemStorageAllocString
+            (
+                fs->memstorage,
+                string_buffer.c_str(),
+                static_cast<int>(string_buffer.size())
+            );
             node->tag = CV_NODE_STRING;
         }
     }
@@ -3641,7 +3648,7 @@ static char* icvJSONParseSeq( CvFileStorage* fs, char* ptr, CvFileNode* node )
     memset( node, 0, sizeof(*node) );
     icvFSCreateCollection( fs, CV_NODE_SEQ, node );
 
-    while ( true )
+    for (;;)
     {
         ptr = icvJSONSkipSpaces( fs, ptr );
         if ( ptr == 0 || fs->dummy_eof )
@@ -3689,7 +3696,7 @@ static char* icvJSONParseMap( CvFileStorage* fs, char* ptr, CvFileNode* node )
     memset( node, 0, sizeof(*node) );
     icvFSCreateCollection( fs, CV_NODE_MAP, node );
 
-    while ( true )
+    for ( ;; )
     {
         ptr = icvJSONSkipSpaces( fs, ptr );
         if ( ptr == 0 || fs->dummy_eof )
@@ -3957,7 +3964,7 @@ icvJSONEndWriteStruct( CvFileStorage* fs )
 
     if ( CV_NODE_IS_COLLECTION(struct_flags) )
     {
-        if ( !CV_NODE_IS_FLOW(struct_flags) ) 
+        if ( !CV_NODE_IS_FLOW(struct_flags) )
         {
             if ( fs->buffer <= fs->buffer_start + fs->space )
             {
@@ -4335,7 +4342,6 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         }
         else
         {
-            // TODO: JSON func
             if( !append )
                 icvPuts( fs, "{\n" );
             else
@@ -7818,8 +7824,6 @@ public:
 
         src_cur = src_beg;
         {
-            // TODO: better solutions.
-
             if ( file_storage->fmt == CV_STORAGE_FORMAT_JSON )
             {
                 ::icvPuts(file_storage, (const char*)base64_buffer.data());
