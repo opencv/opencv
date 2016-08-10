@@ -1976,7 +1976,7 @@ CVAPI(void) cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,
 
 The function opens file storage for reading or writing data. In the latter case, a new file is
 created or an existing file is rewritten. The type of the read or written file is determined by the
-filename extension: .xml for XML and .yml or .yaml for YAML.
+filename extension: .xml for XML, .yml or .yaml for YAML and .json for JSON.
 
 At the same time, it also supports adding parameters like "example.xml?base64". The three ways
 are the same:
@@ -2031,7 +2031,8 @@ One and only one of the two above flags must be specified
 @param type_name Optional parameter - the object type name. In
     case of XML it is written as a type_id attribute of the structure opening tag. In the case of
     YAML it is written after a colon following the structure name (see the example in
-    CvFileStorage description). Mainly it is used with user objects. When the storage is read, the
+    CvFileStorage description). In case of JSON it is written as a name/value pair.
+    Mainly it is used with user objects. When the storage is read, the
     encoded type name is used to determine the object type (see CvTypeInfo and cvFindType ).
 @param attributes This parameter is not used in the current implementation
  */
@@ -2499,7 +2500,7 @@ CVAPI(void) cvReadRawData( const CvFileStorage* fs, const CvFileNode* src,
 /** @brief Writes a file node to another file storage.
 
 The function writes a copy of a file node to file storage. Possible applications of the function are
-merging several file storages into one and conversion between XML and YAML formats.
+merging several file storages into one and conversion between XML, YAML and JSON formats.
 @param fs Destination file storage
 @param new_node_name New name of the file node in the destination file storage. To keep the
 existing name, use cvcvGetFileNodeName
