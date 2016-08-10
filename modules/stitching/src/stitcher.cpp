@@ -56,7 +56,7 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
     stitcher.setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
 
-#ifdef HAVE_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
     if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
 #ifdef HAVE_OPENCV_XFEATURES2D
@@ -549,7 +549,7 @@ Ptr<Stitcher> createStitcher(bool try_use_gpu)
     stitcher->setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
     stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
 
-    #ifdef HAVE_CUDA
+    #ifdef HAVE_OPENCV_CUDALEGACY
     if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
         #ifdef HAVE_OPENCV_NONFREE
@@ -561,20 +561,20 @@ Ptr<Stitcher> createStitcher(bool try_use_gpu)
         stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinderGpu>());
     }
     else
+    #endif
+    {
+        #ifdef HAVE_OPENCV_NONFREE
+        stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
+        #else
+        stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
         #endif
-        {
-            #ifdef HAVE_OPENCV_NONFREE
-            stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
-            #else
-            stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
-            #endif
-            stitcher->setWarper(makePtr<SphericalWarper>());
-            stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
-        }
+        stitcher->setWarper(makePtr<SphericalWarper>());
+        stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
+    }
 
-        stitcher->setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
-        stitcher->setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
+    stitcher->setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
+    stitcher->setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
 
-        return stitcher;
+    return stitcher;
 }
 } // namespace cv
