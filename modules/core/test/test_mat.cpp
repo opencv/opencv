@@ -1392,7 +1392,7 @@ TEST(Core_SparseMat, footprint)
 }
 
 
-// Can't fix without duty hacks or broken user code (PR #4159)
+// Can't fix without dirty hacks or broken user code (PR #4159)
 TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
@@ -1420,7 +1420,7 @@ TEST(Core_Mat_vector, copyTo_roi_column)
 
     Mat src_full(src_base);
     Mat src(src_full.col(0));
-#if 0 // Can't fix without duty hacks or broken user code (PR #4159)
+#if 0 // Can't fix without dirty hacks or broken user code (PR #4159)
     OutputArray _dst(dst1);
     {
         _dst.create(src.rows, src.cols, src.type());
@@ -1519,4 +1519,30 @@ TEST(Reduce, regression_should_fail_bug_4594)
     EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MAX, CV_32S), cv::Exception);
     EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
     EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
+}
+
+TEST(Mat, push_back_vector)
+{
+    cv::Mat result(1, 5, CV_32FC1);
+
+    std::vector<float> vec1(result.cols + 1);
+    std::vector<int> vec2(result.cols);
+
+    EXPECT_THROW(result.push_back(vec1), cv::Exception);
+    EXPECT_THROW(result.push_back(vec2), cv::Exception);
+
+    vec1.resize(result.cols);
+
+    for (int i = 0; i < 5; ++i)
+        result.push_back(cv::Mat(vec1).reshape(1, 1));
+
+    ASSERT_EQ(6, result.rows);
+}
+
+TEST(Mat, regression_5917_clone_empty)
+{
+    Mat cloned;
+    Mat_<Point2f> source(5, 0);
+
+    ASSERT_NO_THROW(cloned = source.clone());
 }

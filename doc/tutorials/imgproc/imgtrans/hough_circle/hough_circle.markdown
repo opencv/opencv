@@ -39,9 +39,9 @@ Code
     -   Applies the *Hough Circle Transform* to the blurred image .
     -   Display the detected circle in a window.
 
--#  The sample code that we will explain can be downloaded from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/houghcircles.cpp).
+-#  The sample code that we will explain can be downloaded from [here](https://github.com/opencv/opencv/tree/master/samples/cpp/houghcircles.cpp).
     A slightly fancier version (which shows trackbars for
-    changing the threshold values) can be found [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp).
+    changing the threshold values) can be found [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp).
     @include samples/cpp/houghcircles.cpp
 
 Explanation

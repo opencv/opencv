@@ -113,11 +113,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         if( img2.empty() )
         {
             ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename.c_str() );
-            if( max_idx == 1 )
-            {
-                code = cvtest::TS::FAIL_MISSING_TEST_DATA;
-                goto _exit_;
-            }
+            code = cvtest::TS::FAIL_MISSING_TEST_DATA;
             continue;
         }
 

@@ -93,6 +93,9 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<PngDecoder>() );
         encoders.push_back( makePtr<PngEncoder>() );
     #endif
+    #ifdef HAVE_GDCM
+        decoders.push_back( makePtr<DICOMDecoder>() );
+    #endif
     #ifdef HAVE_JASPER
         decoders.push_back( makePtr<Jpeg2KDecoder>() );
         encoders.push_back( makePtr<Jpeg2KEncoder>() );

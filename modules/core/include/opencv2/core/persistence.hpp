@@ -311,7 +311,10 @@ public:
         FORMAT_MASK = (7<<3), //!< mask for format flags
         FORMAT_AUTO = 0,      //!< flag, auto format
         FORMAT_XML  = (1<<3), //!< flag, XML format
-        FORMAT_YAML = (2<<3)  //!< flag, YAML format
+        FORMAT_YAML = (2<<3), //!< flag, YAML format
+
+        BASE64      = 64,     //!< flag, write rawdata in Base64 by default. (consider using WRITE_BASE64)
+        WRITE_BASE64 = BASE64 | WRITE, //!< flag, enable both WRITE and BASE64
     };
     enum
     {
@@ -354,7 +357,9 @@ public:
        Extension of the file (.xml or .yml/.yaml) determines its format (XML or YAML respectively).
         Also you can append .gz to work with compressed files, for example myHugeMatrix.xml.gz. If both
         FileStorage::WRITE and FileStorage::MEMORY flags are specified, source is used just to specify
-        the output file format (e.g. mydata.xml, .yml etc.).
+        the output file format (e.g. mydata.xml, .yml etc.). A file name can also contain parameters.
+        You can use this format, "*?base64" (e.g. "file.xml?base64"), as an alternative to
+        FileStorage::BASE64 flag. Note: it is case sensitive.
     @param flags Mode of operation. One of FileStorage::Mode
     @param encoding Encoding of the file. Note that UTF-16 XML encoding is not supported currently and
     you should use 8-bit encoding instead of it.

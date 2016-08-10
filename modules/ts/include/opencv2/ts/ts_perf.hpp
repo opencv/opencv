@@ -371,8 +371,8 @@ public:
 
     class PerfSkipTestException: public cv::Exception
     {
-        int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
     public:
+        int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
         PerfSkipTestException() : dummy(0) {}
     };
 

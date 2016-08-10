@@ -757,38 +757,36 @@ struct SumSqr_SIMD<uchar, int, int>
 
         int x = 0;
         __m128i v_zero = _mm_setzero_si128(), v_sum = v_zero, v_sqsum = v_zero;
+        const int len_16 = len & ~15;
 
-        for ( ; x <= len - 16; x += 16)
+        for ( ; x <= len_16 - 16; )
         {
-            __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
-            __m128i v_half = _mm_unpacklo_epi8(v_src, v_zero);
-
-            __m128i v_mullo = _mm_mullo_epi16(v_half, v_half);
-            __m128i v_mulhi = _mm_mulhi_epi16(v_half, v_half);
-            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_half, v_zero));
-            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_half, v_zero));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
-
-            v_half = _mm_unpackhi_epi8(v_src, v_zero);
-            v_mullo = _mm_mullo_epi16(v_half, v_half);
-            v_mulhi = _mm_mulhi_epi16(v_half, v_half);
-            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_half, v_zero));
-            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_half, v_zero));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
+            const int len_tmp = min(x + 2048, len_16);
+            __m128i v_sum_tmp = v_zero;
+            for ( ; x <= len_tmp - 16; x += 16)
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
+                __m128i v_half_0 = _mm_unpacklo_epi8(v_src, v_zero);
+                __m128i v_half_1 = _mm_unpackhi_epi8(v_src, v_zero);
+                v_sum_tmp = _mm_add_epi16(v_sum_tmp, _mm_add_epi16(v_half_0, v_half_1));
+                __m128i v_half_2 = _mm_unpacklo_epi16(v_half_0, v_half_1);
+                __m128i v_half_3 = _mm_unpackhi_epi16(v_half_0, v_half_1);
+                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_2, v_half_2));
+                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_3, v_half_3));
+            }
+            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_sum_tmp, v_zero));
+            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_sum_tmp, v_zero));
         }
 
         for ( ; x <= len - 8; x += 8)
         {
             __m128i v_src = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i const *)(src0 + x)), v_zero);
+            __m128i v_half_0 = _mm_unpackhi_epi64(v_src, v_src);
+            __m128i v_sum_tmp = _mm_add_epi16(v_src, v_half_0);
+            __m128i v_half_1 = _mm_unpacklo_epi16(v_src, v_half_0);
 
-            __m128i v_mullo = _mm_mullo_epi16(v_src, v_src);
-            __m128i v_mulhi = _mm_mulhi_epi16(v_src, v_src);
-            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_src, v_zero));
-            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_src, v_zero));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
+            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_sum_tmp, v_zero));
+            v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_1, v_half_1));
         }
 
         int CV_DECL_ALIGNED(16) ar[8];
@@ -816,38 +814,36 @@ struct SumSqr_SIMD<schar, int, int>
 
         int x = 0;
         __m128i v_zero = _mm_setzero_si128(), v_sum = v_zero, v_sqsum = v_zero;
+        const int len_16 = len & ~15;
 
-        for ( ; x <= len - 16; x += 16)
+        for ( ; x <= len_16 - 16; )
         {
-            __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
-            __m128i v_half = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src), 8);
-
-            __m128i v_mullo = _mm_mullo_epi16(v_half, v_half);
-            __m128i v_mulhi = _mm_mulhi_epi16(v_half, v_half);
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_half), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_half), 16));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
-
-            v_half = _mm_srai_epi16(_mm_unpackhi_epi8(v_zero, v_src), 8);
-            v_mullo = _mm_mullo_epi16(v_half, v_half);
-            v_mulhi = _mm_mulhi_epi16(v_half, v_half);
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_half), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_half), 16));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
+            const int len_tmp = min(x + 2048, len_16);
+            __m128i v_sum_tmp = v_zero;
+            for ( ; x <= len_tmp - 16; x += 16)
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
+                __m128i v_half_0 = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src), 8);
+                __m128i v_half_1 = _mm_srai_epi16(_mm_unpackhi_epi8(v_zero, v_src), 8);
+                v_sum_tmp = _mm_add_epi16(v_sum_tmp, _mm_add_epi16(v_half_0, v_half_1));
+                __m128i v_half_2 = _mm_unpacklo_epi16(v_half_0, v_half_1);
+                __m128i v_half_3 = _mm_unpackhi_epi16(v_half_0, v_half_1);
+                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_2, v_half_2));
+                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_3, v_half_3));
+            }
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_sum_tmp), 16));
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_sum_tmp), 16));
         }
 
         for ( ; x <= len - 8; x += 8)
         {
             __m128i v_src = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _mm_loadl_epi64((__m128i const *)(src0 + x))), 8);
+            __m128i v_half_0 = _mm_unpackhi_epi64(v_src, v_src);
+            __m128i v_sum_tmp = _mm_add_epi16(v_src, v_half_0);
+            __m128i v_half_1 = _mm_unpacklo_epi16(v_src, v_half_0);
 
-            __m128i v_mullo = _mm_mullo_epi16(v_src, v_src);
-            __m128i v_mulhi = _mm_mulhi_epi16(v_src, v_src);
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_sum_tmp), 16));
+            v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_1, v_half_1));
         }
 
         int CV_DECL_ALIGNED(16) ar[8];

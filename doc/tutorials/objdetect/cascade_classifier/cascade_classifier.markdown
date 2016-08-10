@@ -18,9 +18,9 @@ Code
 ----
 
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp)
+[here](https://github.com/opencv/tree/master/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp)
 . The second version (using LBP for face detection) can be [found
-here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/objectDetection/objectDetection2.cpp)
+here](https://github.com/opencv/tree/master/samples/cpp/tutorial_code/objectDetection/objectDetection2.cpp)
 @code{.cpp}
 #include "opencv2/objdetect.hpp"
 #include "opencv2/highgui.hpp"
