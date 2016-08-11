@@ -566,36 +566,9 @@ public:
 
     bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
     {
-        const float threshold = 0.996f;
         Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
-
-        for( int inp = 1; inp <= 2; inp++ )
-        {
-            int j, k, i = count - 1;
-            const Mat* msi = inp == 1 ? &ms1 : &ms2;
-            const Point2f* ptr = msi->ptr<Point2f>();
-
-            CV_Assert( count <= msi->rows );
-
-            // check that the i-th selected point does not belong
-            // to a line connecting some previously selected points
-            for(j = 0; j < i; ++j)
-            {
-                Point2f d1 = ptr[j] - ptr[i];
-                float n1 = d1.x*d1.x + d1.y*d1.y;
-
-                for(k = 0; k < j; ++k)
-                {
-                    Point2f d2 = ptr[k] - ptr[i];
-                    float denom = (d2.x*d2.x + d2.y*d2.y)*n1;
-                    float num = d1.x*d2.x + d1.y*d2.y;
-
-                    if( num*num > threshold*threshold*denom )
-                        return false;
-                }
-            }
-        }
-        return true;
+        // check colinearity and also check that points are too close
+        return !(haveCollinearPoints(ms1, count) || haveCollinearPoints(ms2, count));
     }
 };
 
