@@ -1020,12 +1020,11 @@ extractMSER_8uC3( const Mat& src,
 void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, vector<Rect>& bboxes )
 {
     Mat src = _src.getMat();
-    size_t npix = src.total();
 
     msers.clear();
     bboxes.clear();
 
-    if( npix == 0 )
+    if( src.rows < 3 || src.cols < 3 )
         return;
 
     Size size = src.size();
