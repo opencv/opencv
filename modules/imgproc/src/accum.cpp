@@ -964,13 +964,15 @@ struct AccSqr_SIMD<ushort, float>
             for ( ; x <= len - 8; x += 8)
             {
                 __m128i v_src = _mm_loadu_si128((const __m128i*)(src + x));
-                __m128i v_src0 = _mm_unpacklo_epi16(v_src, v_0);
-                __m128i v_src1 = _mm_unpackhi_epi16(v_src, v_0);
-                v_src0 = _mm_mullo_epi16(v_src0, v_src0);
-                v_src1 = _mm_mullo_epi16(v_src1, v_src1);
+                __m128i v_int0 = _mm_unpacklo_epi16(v_src, v_0);
+                __m128i v_int1 = _mm_unpackhi_epi16(v_src, v_0);
+                __m128 v_src0 = _mm_cvtepi32_ps(v_int0);
+                __m128 v_src1 = _mm_cvtepi32_ps(v_int1);
+                v_src0 = _mm_mul_ps(v_src0, v_src0);
+                v_src1 = _mm_mul_ps(v_src1, v_src1);
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), _mm_cvtepi32_ps(v_src0)));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), _mm_cvtepi32_ps(v_src1)));
+                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), v_src0));
+                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), v_src1));
             }
         }
 
