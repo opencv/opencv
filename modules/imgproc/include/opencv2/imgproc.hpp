@@ -284,9 +284,9 @@ enum InterpolationFlags{
     WARP_FILL_OUTLIERS   = 8,
     /** flag, inverse transformation
 
-    For example, polar transforms:
-    - flag is __not__ set: \f$dst( \phi , \rho ) = src(x,y)\f$
-    - flag is set: \f$dst(x,y) = src( \phi , \rho )\f$
+    For example, @ref cv::linearPolar or @ref cv::logPolar transforms:
+    - flag is __not__ set: \f$dst( \rho , \phi ) = src(x,y)\f$
+    - flag is set: \f$dst(x,y) = src( \rho , \phi )\f$
     */
     WARP_INVERSE_MAP     = 16
 };
@@ -2418,41 +2418,78 @@ CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
 An example using the cv::linearPolar and cv::logPolar operations
 */
 
-/** @brief Remaps an image to log-polar space.
+/** @brief Remaps an image to semilog-polar coordinates space.
 
-transforms the source image using the following transformation:
-\f[dst( \phi , \rho ) = src(x,y)\f]
+Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image"):
+\f[\begin{array}{l}
+  dst( \rho , \phi ) = src(x,y) \\
+  dst.size() \leftarrow src.size()
+\end{array}\f]
+
 where
-\f[\rho = M  \cdot \log{\sqrt{x^2 + y^2}} , \phi =atan(y/x)\f]
+\f[\begin{array}{l}
+  I = (dx,dy) = (x - center.x,y - center.y) \\
+  \rho = M \cdot log_e(\texttt{magnitude} (I)) ,\\
+  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg} \\
+\end{array}\f]
+
+and
+\f[\begin{array}{l}
+  M = src.cols / log_e(maxRadius) \\
+  Ky = src.rows / 360 \\
+\end{array}\f]
 
 The function emulates the human "foveal" vision and can be used for fast scale and
-rotation-invariant template matching, for object tracking and so forth. The function can not operate
-in-place.
-
+rotation-invariant template matching, for object tracking and so forth.
 @param src Source image
-@param dst Destination image
+@param dst Destination image. It will have same size and type as src.
 @param center The transformation center; where the output precision is maximal
-@param M Magnitude scale parameter.
+@param M Magnitude scale parameter. It determines the radius of the bounding circle to transform too.
 @param flags A combination of interpolation methods, see cv::InterpolationFlags
- */
+
+@note
+-   The function can not operate in-place.
+-   To calculate magnitude and angle in degrees @ref cv::cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+*/
 CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
                             Point2f center, double M, int flags );
 
-/** @brief Remaps an image to polar space.
+/** @brief Remaps an image to polar coordinates space.
 
-transforms the source image using the following transformation:
-\f[dst( \phi , \rho ) = src(x,y)\f]
+@anchor polar_remaps_reference_image
+![Polar remaps reference](pics/polar_remap_doc.png)
+
+Transform the source image using the following transformation:
+\f[\begin{array}{l}
+  dst( \rho , \phi ) = src(x,y) \\
+  dst.size() \leftarrow src.size()
+\end{array}\f]
+
 where
-\f[\rho = (src.width/maxRadius)  \cdot \sqrt{x^2 + y^2} , \phi =atan(y/x)\f]
+\f[\begin{array}{l}
+  I = (dx,dy) = (x - center.x,y - center.y) \\
+  \rho = Kx \cdot \texttt{magnitude} (I) ,\\
+  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg}
+\end{array}\f]
 
-The function can not operate in-place.
+and
+\f[\begin{array}{l}
+  Kx = src.cols / maxRadius \\
+  Ky = src.rows / 360
+\end{array}\f]
+
 
 @param src Source image
-@param dst Destination image
+@param dst Destination image. It will have same size and type as src.
 @param center The transformation center;
-@param maxRadius Inverse magnitude scale parameter
+@param maxRadius The radius of the bounding circle to transform. It determines the inverse magnitude scale parameter too.
 @param flags A combination of interpolation methods, see cv::InterpolationFlags
- */
+
+@note
+-   The function can not operate in-place.
+-   To calculate magnitude and angle in degrees @ref cv::cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+
+*/
 CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
                                Point2f center, double maxRadius, int flags );
 
