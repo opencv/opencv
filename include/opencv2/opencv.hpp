@@ -52,7 +52,6 @@
 #include "opencv2/core.hpp"
 
 // Then the optional modules are checked
-// REMARK: keep the includes ordened as the module order on the GitHub repo
 #ifdef HAVE_OPENCV_CALIB3D
 #include "opencv2/calib3d.hpp"
 #endif
@@ -100,6 +99,38 @@
 #endif
 #ifdef HAVE_OPENCV_VIZ
 #include "opencv2/viz.hpp"
+#endif
+
+// Finally CUDA specific entries are checked and added
+#ifdef HAVE_OPENCV_CUDAARITHM
+#include "opencv2/cudaarithm.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDABGSEGM
+#include "opencv2/cudabgsegm.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDACODEC
+#include "opencv2/cudacodec.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
+#include "opencv2/cudafeatures2d.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAFILTERS
+#include "opencv2/cudafilters.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#include "opencv2/cudaimgproc.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAOBJDETECT
+#include "opencv2/cudaobjdetect.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAOPTFLOW
+#include "opencv2/cudaoptflow.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDASTEREO
+#include "opencv2/cudastereo.hpp"
+#endif
+#ifdef HAVE_OPENCV_CUDAWARPING
+#include "opencv2/cudawarping.hpp"
 #endif
 
 #endif
