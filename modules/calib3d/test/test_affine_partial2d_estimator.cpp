@@ -109,9 +109,8 @@ bool CV_AffinePartial2D_EstTest::test2Points()
 
     transform(fpts.begin<Point2f>(), fpts.end<Point2f>(), tpts.begin<Point2f>(), WrapAff2D(aff));
 
-    Mat aff_est;
     vector<uchar> inliers;
-    estimateAffinePartial2D(fpts, tpts, aff_est, inliers);
+    Mat aff_est = estimateAffinePartial2D(fpts, tpts, inliers);
 
     const double thres = 1e-3;
     if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
@@ -156,11 +155,10 @@ bool CV_AffinePartial2D_EstTest::testNPoints()
     transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, bind2nd(plus<Point2f>(), shift_outl));
     transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, Noise(noise_level));
 
-    Mat aff_est;
     vector<uchar> outl;
-    int res = estimateAffinePartial2D(fpts, tpts, aff_est, outl);
+    Mat aff_est = estimateAffinePartial2D(fpts, tpts, outl);
 
-    if (!res)
+    if (aff_est.empty())
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
         return false;

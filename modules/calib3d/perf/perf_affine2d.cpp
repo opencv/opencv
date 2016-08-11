@@ -113,15 +113,14 @@ PERF_TEST_P( EstimateAffine, EstimateAffine2D, Combine(Values(100000, 5000, 100)
     std::transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, bind2nd(std::plus<Point2f>(), shift_outl));
     std::transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, Noise(noise_level));
 
-    Mat aff_est(2, 3, CV_64F);
+    Mat aff_est;
 
-    warmup(aff_est, WARMUP_WRITE);
     warmup(fpts, WARMUP_READ);
     warmup(tpts, WARMUP_READ);
 
     TEST_CYCLE()
     {
-        estimateAffine2D(fpts, tpts, aff_est, noArray(), 3, confidence);
+        aff_est = estimateAffine2D(fpts, tpts, noArray(), RANSAC, 3, 2000, confidence);
     }
 
     SANITY_CHECK(aff_est, .01, ERROR_RELATIVE);
@@ -150,7 +149,7 @@ PERF_TEST_P( EstimateAffine, EstimateAffinePartial2D, Combine(Values(100000, 500
     std::transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, bind2nd(std::plus<Point2f>(), shift_outl));
     std::transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, Noise(noise_level));
 
-    Mat aff_est(2, 3, CV_64F);
+    Mat aff_est;
 
     warmup(aff_est, WARMUP_WRITE);
     warmup(fpts, WARMUP_READ);
@@ -158,7 +157,7 @@ PERF_TEST_P( EstimateAffine, EstimateAffinePartial2D, Combine(Values(100000, 500
 
     TEST_CYCLE()
     {
-        estimateAffinePartial2D(fpts, tpts, aff_est, noArray(), 3, confidence);
+        aff_est = estimateAffinePartial2D(fpts, tpts, noArray(), RANSAC, 3, 2000, confidence);
     }
 
     SANITY_CHECK(aff_est, .01, ERROR_RELATIVE);

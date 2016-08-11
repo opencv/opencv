@@ -821,9 +821,9 @@ void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const Im
 
     // Find pair-wise motion
     if (full_affine_)
-        estimateAffine2D(src_points, dst_points, matches_info.H, matches_info.inliers_mask);
+        matches_info.H = estimateAffine2D(src_points, dst_points, matches_info.inliers_mask);
     else
-        estimateAffinePartial2D(src_points, dst_points, matches_info.H, matches_info.inliers_mask);
+        matches_info.H = estimateAffinePartial2D(src_points, dst_points, matches_info.inliers_mask);
 
     if (matches_info.H.empty()) {
         // could not find transformation

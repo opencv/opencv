@@ -735,11 +735,9 @@ public:
     Mat src, dst;
 };
 
-}
-
-int cv::estimateAffine3D(InputArray _from, InputArray _to,
-                         OutputArray _out, OutputArray _inliers,
-                         double param1, double param2)
+int estimateAffine3D(InputArray _from, InputArray _to,
+                     OutputArray _out, OutputArray _inliers,
+                     double param1, double param2)
 {
     CV_INSTRUMENT_REGION()
 
@@ -761,12 +759,14 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
 }
 
-int cv::estimateAffine2D(InputArray _from, InputArray _to,
-                         OutputArray _H, OutputArray _inliers,
-                         double param1, double param2)
+Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
+                     const int method, const double ransacReprojThreshold,
+                     const size_t maxIters, const double confidence,
+                     const size_t refineIters)
 {
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(2);
+    bool result = false;
 
     CV_Assert( count >= 0 && to.checkVector(2) == count );
 
@@ -777,16 +777,16 @@ int cv::estimateAffine2D(InputArray _from, InputArray _to,
     dFrom = dFrom.reshape(2, count);
     dTo = dTo.reshape(2, count);
 
-    const double epsilon = DBL_EPSILON;
-    param1 = param1 <= 0 ? 3 : param1;
-    param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
-
-    // run RANSAC
-    bool result = false;
+    // run robust method
     Ptr<PointSetRegistrator::Callback> cb = makePtr<Affine2DEstimatorCallback>();
-    result = createRANSACPointSetRegistrator(cb, 3, param1, param2)->run(dFrom, dTo, H, tempMask);
+    if( method == RANSAC )
+        result = createRANSACPointSetRegistrator(cb, 3, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(dFrom, dTo, H, tempMask);
+    else if( method == LMEDS )
+        result = createLMeDSPointSetRegistrator(cb, 3, confidence, static_cast<int>(maxIters))->run(dFrom, dTo, H, tempMask);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
-    if(result && count > 3)
+    if(result && count > 3 && refineIters)
     {
         // reorder to start with inliers
         compressElems(dFrom.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
@@ -796,7 +796,7 @@ int cv::estimateAffine2D(InputArray _from, InputArray _to,
             Mat src = dFrom.rowRange(0, inliers_count);
             Mat dst = dTo.rowRange(0, inliers_count);
             Mat Hvec = H.reshape(1, 6);
-            createLMSolver(makePtr<Affine2DRefineCallback>(src, dst), 10)->run(Hvec);
+            createLMSolver(makePtr<Affine2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
         }
     }
 
@@ -804,11 +804,10 @@ int cv::estimateAffine2D(InputArray _from, InputArray _to,
     {
         if(_inliers.needed())
             tempMask.copyTo(_inliers);
-        if(_H.needed())
-            H.copyTo(_H);
     }
     else
     {
+        H.release();
         if(_inliers.needed())
         {
             tempMask = Mat::zeros(count, 1, CV_8U);
@@ -816,15 +815,17 @@ int cv::estimateAffine2D(InputArray _from, InputArray _to,
         }
     }
 
-    return result;
+    return H;
 }
 
-int cv::estimateAffinePartial2D(InputArray _from, InputArray _to,
-                         OutputArray _H, OutputArray _inliers,
-                         double param1, double param2)
+Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inliers,
+                            const int method, const double ransacReprojThreshold,
+                            const size_t maxIters, const double confidence,
+                            const size_t refineIters)
 {
     Mat from = _from.getMat(), to = _to.getMat();
     const int count = from.checkVector(2);
+    bool result = false;
 
     CV_Assert( count >= 0 && to.checkVector(2) == count );
 
@@ -835,16 +836,16 @@ int cv::estimateAffinePartial2D(InputArray _from, InputArray _to,
     dFrom = dFrom.reshape(2, count);
     dTo = dTo.reshape(2, count);
 
-    const double epsilon = DBL_EPSILON;
-    param1 = param1 <= 0 ? 3 : param1;
-    param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
-
-    // run RANSAC
-    bool result = false;
+    // run robust estimation
     Ptr<PointSetRegistrator::Callback> cb = makePtr<AffinePartial2DEstimatorCallback>();
-    result = createRANSACPointSetRegistrator(cb, 2, param1, param2)->run(dFrom, dTo, H, tempMask);
+    if( method == RANSAC )
+        result = createRANSACPointSetRegistrator(cb, 2, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(dFrom, dTo, H, tempMask);
+    else if( method == LMEDS )
+        result = createLMeDSPointSetRegistrator(cb, 2, confidence, static_cast<int>(maxIters))->run(dFrom, dTo, H, tempMask);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
-    if(result && count > 2)
+    if(result && count > 2 && refineIters)
     {
         // reorder to start with inliers
         compressElems(dFrom.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
@@ -861,7 +862,7 @@ int cv::estimateAffinePartial2D(InputArray _from, InputArray _to,
             double *Hptr = H.ptr<double>();
             double Hvec_buf[4] = {Hptr[0], Hptr[3], Hptr[2], Hptr[5]};
             Mat Hvec (4, 1, CV_64F, Hvec_buf);
-            createLMSolver(makePtr<AffinePartial2DRefineCallback>(src, dst), 10)->run(Hvec);
+            createLMSolver(makePtr<AffinePartial2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
             // update H with refined parameters
             Hptr[0] = Hptr[4] = Hvec_buf[0];
             Hptr[1] = -Hvec_buf[1];
@@ -875,11 +876,10 @@ int cv::estimateAffinePartial2D(InputArray _from, InputArray _to,
     {
         if(_inliers.needed())
             tempMask.copyTo(_inliers);
-        if(_H.needed())
-            H.copyTo(_H);
     }
     else
     {
+        H.release();
         if(_inliers.needed())
         {
             tempMask = Mat::zeros(count, 1, CV_8U);
@@ -887,5 +887,7 @@ int cv::estimateAffinePartial2D(InputArray _from, InputArray _to,
         }
     }
 
-    return result;
+    return H;
 }
+
+} // namespace cv
