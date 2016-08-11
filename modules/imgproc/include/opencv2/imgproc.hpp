@@ -2421,7 +2421,7 @@ An example using the cv::linearPolar and cv::logPolar operations
 /** @brief Remaps an image to log-polar space.
 
 transforms the source image using the following transformation:
-\f[dst( \phi , \rho ) = src(x,y)\f]
+\f[dst( \rho , \phi ) = src(x,y)\f]
 where
 \f[\rho = M  \cdot \log{\sqrt{x^2 + y^2}} , \phi =atan(y/x)\f]
 
@@ -2441,7 +2441,7 @@ CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
 /** @brief Remaps an image to polar space.
 
 transforms the source image using the following transformation:
-\f[dst( \phi , \rho ) = src(x,y)\f]
+\f[dst( \rho , \phi ) = src(x,y)\f]
 where
 \f[\rho = (src.width/maxRadius)  \cdot \sqrt{x^2 + y^2} , \phi =atan(y/x)\f]
 
