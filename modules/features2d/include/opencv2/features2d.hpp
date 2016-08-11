@@ -355,7 +355,7 @@ public:
 
     /** @brief Detect %MSER regions
 
-    @param image input image (8UC1, 8UC3 or 8UC4)
+    @param image input image (8UC1, 8UC3 or 8UC4, must be greater or equal than 3x3)
     @param msers resulting list of point sets
     @param bboxes resulting bounding boxes
     */
