@@ -1303,10 +1303,10 @@ void setUseCollection(bool flag)
 namespace ipp
 {
 
-struct IPPInitSingelton
+struct IPPInitSingleton
 {
 public:
-    IPPInitSingelton()
+    IPPInitSingleton()
     {
         useIPP      = true;
         ippStatus   = 0;
@@ -1360,15 +1360,15 @@ public:
     int         ippFeatures;
 };
 
-static IPPInitSingelton& getIPPSingelton()
+static IPPInitSingleton& getIPPSingleton()
 {
-    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingelton, new IPPInitSingelton())
+    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingleton, new IPPInitSingleton())
 }
 
 int getIppFeatures()
 {
 #ifdef HAVE_IPP
-    return getIPPSingelton().ippFeatures;
+    return getIPPSingleton().ippFeatures;
 #else
     return 0;
 #endif
@@ -1376,20 +1376,20 @@ int getIppFeatures()
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
-    getIPPSingelton().ippStatus = status;
-    getIPPSingelton().funcname = _funcname;
-    getIPPSingelton().filename = _filename;
-    getIPPSingelton().linen = _line;
+    getIPPSingleton().ippStatus = status;
+    getIPPSingleton().funcname = _funcname;
+    getIPPSingleton().filename = _filename;
+    getIPPSingleton().linen = _line;
 }
 
 int getIppStatus()
 {
-    return getIPPSingelton().ippStatus;
+    return getIPPSingleton().ippStatus;
 }
 
 String getIppErrorLocation()
 {
-    return format("%s:%d %s", getIPPSingelton().filename ? getIPPSingelton().filename : "", getIPPSingelton().linen, getIPPSingelton().funcname ? getIPPSingelton().funcname : "");
+    return format("%s:%d %s", getIPPSingleton().filename ? getIPPSingleton().filename : "", getIPPSingleton().linen, getIPPSingleton().funcname ? getIPPSingleton().funcname : "");
 }
 
 bool useIPP()
@@ -1398,7 +1398,7 @@ bool useIPP()
     CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
-        data->useIPP = getIPPSingelton().useIPP;
+        data->useIPP = getIPPSingleton().useIPP;
     }
     return (data->useIPP > 0);
 #else
@@ -1410,7 +1410,7 @@ void setUseIPP(bool flag)
 {
     CoreTLSData* data = getCoreTlsData().get();
 #ifdef HAVE_IPP
-    data->useIPP = flag;
+    data->useIPP = (getIPPSingleton().useIPP)?flag:false;
 #else
     (void)flag;
     data->useIPP = false;
