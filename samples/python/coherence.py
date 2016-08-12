@@ -77,7 +77,7 @@ if __name__ == '__main__':
     cv2.imshow('src', src)
     update()
     while True:
-        ch = 0xFF & cv2.waitKey()
+        ch = cv2.waitKey()
         if ch == ord(' '):
             update()
         if ch == 27:
