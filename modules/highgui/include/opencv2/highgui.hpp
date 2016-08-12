@@ -109,7 +109,7 @@ It provides easy interface to:
 
             Mat img2,img3;
 
-            while( waitKey(33) != 27 )
+            while( waitChar(33) != 27 )
             {
                 img1.convertTo(img2,-1,1,value);
                 video >> img3;
@@ -337,6 +337,26 @@ If there are several HighGUI windows, any of them can be active.
 @param delay Delay in milliseconds. 0 is the special value that means "forever".
  */
 CV_EXPORTS_W int waitKey(int delay = 0);
+
+/** @brief Waits for a pressed key and returns the corresponding char value (ASCII) assigned.
+
+The function waitChar waits for a key event infinitely (when \f$\texttt{delay}\leq 0\f$ ) or for delay
+milliseconds, when it is positive. It returns the ASCII code of the pressed key as a char value. If no key was pressed before
+the specified time has elapsed, -1 (most systems) or 255 (if char == unsigned char) is returned depending on the system available.
+
+@note
+
+There is a minor issue for `char == unsigned char systems`. Return value or timeout could be mixed up with value of valid `'\0xFF'` symbol.
+However this is an extremely rare usecase, and is thus ignored for the moment.
+
+@note
+
+The function only works if there is at least one HighGUI window created and the window is active.
+If there are several HighGUI windows, any of them can be active.
+
+@param delay Delay in milliseconds. 0 is the special value that means "forever".
+ */
+CV_EXPORTS_W char waitChar(int delay = 0);
 
 /** @brief Displays an image in the specified window.
 

@@ -83,13 +83,13 @@ if __name__ == '__main__':
             cur_glitch = warp_flow(cur_glitch, flow)
             cv2.imshow('glitch', cur_glitch)
 
-        ch = 0xFF & cv2.waitKey(5)
+        ch = cv2.waitChar(5)
         if ch == 27:
             break
-        if ch == ord('1'):
+        if ch == '1':
             show_hsv = not show_hsv
             print('HSV flow visualization is', ['off', 'on'][show_hsv])
-        if ch == ord('2'):
+        if ch == '2':
             show_glitch = not show_glitch
             if show_glitch:
                 cur_glitch = img.copy()

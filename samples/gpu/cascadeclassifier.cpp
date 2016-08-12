@@ -279,7 +279,7 @@ int main(int argc, const char *argv[])
         displayState(frameDisp, helpScreen, useGPU, findLargestObject, filterRects, fps);
         imshow("result", frameDisp);
 
-        char key = (char)waitKey(5);
+        char key = waitChar(5);
         if (key == 27)
         {
             break;

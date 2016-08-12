@@ -188,7 +188,7 @@ int main( int argc, const char** argv )
         imshow( "CamShift Demo", image );
         imshow( "Histogram", histimg );
 
-        char c = (char)waitKey(10);
+        char c = waitChar(10);
         if( c == 27 )
             break;
         switch(c)

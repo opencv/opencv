@@ -86,11 +86,11 @@ if __name__ == "__main__":
 
             cv2.imshow("Kalman", img)
 
-            code = cv2.waitKey(100)
+            code = cv2.waitChar(100)
             if code != -1:
                 break
 
-        if (code % 0x100) in [27, ord('q'), ord('Q')]:
+        if code in [27, 'q', 'Q']:
             break
 
     cv2.destroyWindow("Kalman")

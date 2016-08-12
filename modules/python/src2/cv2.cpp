@@ -543,6 +543,12 @@ bool pyopencv_to(PyObject* obj, double& value, const char* name)
 }
 
 template<>
+PyObject* pyopencv_from(const char& value)
+{
+    return PyInt_FromLong(value);
+}
+
+template<>
 PyObject* pyopencv_from(const float& value)
 {
     return PyFloat_FromDouble(value);

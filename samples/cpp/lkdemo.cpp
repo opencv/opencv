@@ -131,7 +131,7 @@ int main( int argc, char** argv )
         needToInit = false;
         imshow("LK Demo", image);
 
-        char c = (char)waitKey(10);
+        char c = waitChar(10);
         if( c == 27 )
             break;
         switch( c )

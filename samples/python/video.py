@@ -217,10 +217,10 @@ if __name__ == '__main__':
             ret, img = cap.read()
             imgs.append(img)
             cv2.imshow('capture %d' % i, img)
-        ch = 0xFF & cv2.waitKey(1)
+        ch = cv2.waitChar(1)
         if ch == 27:
             break
-        if ch == ord(' '):
+        if ch == ' ':
             for i, img in enumerate(imgs):
                 fn = '%s/shot_%d_%03d.bmp' % (shotdir, i, shot_idx)
                 cv2.imwrite(fn, img)

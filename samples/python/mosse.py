@@ -176,12 +176,12 @@ class App:
             self.rect_sel.draw(vis)
 
             cv2.imshow('frame', vis)
-            ch = cv2.waitKey(10) & 0xFF
+            ch = cv2.waitChar(10)
             if ch == 27:
                 break
-            if ch == ord(' '):
+            if ch == ' ':
                 self.paused = not self.paused
-            if ch == ord('c'):
+            if ch == 'c':
                 self.trackers = []
 
 

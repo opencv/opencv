@@ -400,7 +400,7 @@ int main(int argc, char ** argv)
         }
 
         imshow(windowOriginal, frame);
-        switch (key = static_cast<char>(waitKey(30)))
+        switch (key = waitChar(30))
         {
             case 'k': // focus out
                 cap.set(CAP_PROP_ZOOM, 100);

@@ -395,7 +395,7 @@ void test_it( const Size & size )
         draw_locations( draw, locations, trained );
 
         imshow( "Video", draw );
-        key = (char)waitKey( 10 );
+        key = waitChar( 10 );
         if( 27 == key )
             end_of_process = true;
     }

@@ -95,7 +95,7 @@ int main(int argc, const char** argv)
         if(!bgimg.empty())
           imshow("mean background image", bgimg );
 
-        char k = (char)waitKey(30);
+        char k = waitChar(30);
         if( k == 27 ) break;
         if( k == ' ' )
         {

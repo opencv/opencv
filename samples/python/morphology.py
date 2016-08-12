@@ -79,15 +79,15 @@ if __name__ == '__main__':
     cv2.createTrackbar('iters', 'morphology', 1, 10, update)
     update()
     while True:
-        ch = 0xFF & cv2.waitKey()
+        ch = cv2.waitChar()
         if ch == 27:
             break
-        if ch == ord('1'):
+        if ch == '1':
             if PY3:
                 cur_mode = next(modes)
             else:
                 cur_mode = modes.next()
-        if ch == ord('2'):
+        if ch == '2':
             if PY3:
                 cur_str_mode = next(str_modes)
             else:

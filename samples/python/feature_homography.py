@@ -80,8 +80,8 @@ class App:
 
             self.rect_sel.draw(vis)
             cv2.imshow('plane', vis)
-            ch = cv2.waitKey(1)
-            if ch == ord(' '):
+            ch = cv2.waitChar(1)
+            if ch == ' ':
                 self.paused = not self.paused
             if ch == 27:
                 break

@@ -59,10 +59,10 @@ if __name__ == '__main__':
 
 
     while True:
-        ch = 0xFF & cv2.waitKey(50)
+        ch = cv2.waitChar(50)
         if ch == 27:
             break
-        if ch == ord('v'):
+        if ch == 'v':
             voronoi = not voronoi
             print('showing', ['distance', 'voronoi'][voronoi])
             update()

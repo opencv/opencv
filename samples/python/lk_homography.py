@@ -90,17 +90,17 @@ class App:
 
             cv2.imshow('lk_homography', vis)
 
-            ch = 0xFF & cv2.waitKey(1)
+            ch = cv2.waitChar(1)
             if ch == 27:
                 break
-            if ch == ord(' '):
+            if ch == ' ':
                 self.frame0 = frame.copy()
                 self.p0 = cv2.goodFeaturesToTrack(frame_gray, **feature_params)
                 if self.p0 is not None:
                     self.p1 = self.p0
                     self.gray0 = frame_gray
                     self.gray1 = frame_gray
-            if ch == ord('r'):
+            if ch == 'r':
                 self.use_ransac = not self.use_ransac
 
 

@@ -255,7 +255,7 @@ void App::run()
                 }
             }
 
-            handleKey((char)waitKey(3));
+            handleKey(waitChar(3));
         }
     }
 }

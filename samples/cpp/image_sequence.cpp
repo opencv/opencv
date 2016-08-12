@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 
         imshow("Image sequence | press ESC to close", image);
 
-        if(waitKey(500) == 27)
+        if( waitChar(500) == 27)
             break;
     }
 

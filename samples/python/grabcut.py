@@ -129,27 +129,27 @@ if __name__ == '__main__':
 
         cv2.imshow('output',output)
         cv2.imshow('input',img)
-        k = 0xFF & cv2.waitKey(1)
+        k = cv2.waitChar(1)
 
         # key bindings
         if k == 27:         # esc to exit
             break
-        elif k == ord('0'): # BG drawing
+        elif k == '0': # BG drawing
             print(" mark background regions with left mouse button \n")
             value = DRAW_BG
-        elif k == ord('1'): # FG drawing
+        elif k == '1': # FG drawing
             print(" mark foreground regions with left mouse button \n")
             value = DRAW_FG
-        elif k == ord('2'): # PR_BG drawing
+        elif k == '2': # PR_BG drawing
             value = DRAW_PR_BG
-        elif k == ord('3'): # PR_FG drawing
+        elif k == '3': # PR_FG drawing
             value = DRAW_PR_FG
-        elif k == ord('s'): # save image
+        elif k == 's': # save image
             bar = np.zeros((img.shape[0],5,3),np.uint8)
             res = np.hstack((img2,bar,img,bar,output))
             cv2.imwrite('grabcut_output.png',res)
             print(" Result saved as image \n")
-        elif k == ord('r'): # reset everything
+        elif k == 'r': # reset everything
             print("resetting \n")
             rect = (0,0,1,1)
             drawing = False
@@ -160,7 +160,7 @@ if __name__ == '__main__':
             img = img2.copy()
             mask = np.zeros(img.shape[:2],dtype = np.uint8) # mask initialized to PR_BG
             output = np.zeros(img.shape,np.uint8)           # output image to be shown
-        elif k == ord('n'): # segment the image
+        elif k == 'n': # segment the image
             print(""" For finer touchups, mark foreground and background after pressing keys 0-3
             and again press 'n' \n""")
             if (rect_or_mask == 0):         # grabcut with rect

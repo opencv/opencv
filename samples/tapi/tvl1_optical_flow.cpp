@@ -180,7 +180,7 @@ int main(int argc, const char* argv[])
                 imshow("tvl1 optical flow field", show_flow);
             }
 
-            char key = (char)waitKey(10);
+            char key = waitChar(10);
             if (key == 27)
                 break;
             else if (key == 'm' || key == 'M')
