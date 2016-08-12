@@ -25,9 +25,9 @@
  An upright subject is assumed. In situations where the cat's face might be
  sideways or upside down (e.g. the cat is rolling over), try various rotations
  of the input image.
- 
+
  CHANGELOG:
- 
+
  2016-08-06: Re-trained with more negative samples and more stages. False
    positives are much rarer now. If you tailored your code for the cascade's
    previous version, now you should re-adjust the arguments of
