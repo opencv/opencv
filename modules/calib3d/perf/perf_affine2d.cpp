@@ -52,30 +52,10 @@ using namespace perf;
 using namespace testing;
 using namespace cv;
 
-typedef tuple<int, double> AffineParams;
+CV_ENUM(Method, RANSAC, LMEDS)
+typedef tuple<int, double, Method, size_t> AffineParams;
 typedef TestBaseWithParam<AffineParams> EstimateAffine;
-
-struct Noise
-{
-    float l;
-    Noise(float level) : l(level) {}
-    Point2f operator()(const Point2f& p)
-    {
-        RNG& rng = theRNG();
-        return Point2f( p.x + l * (float)rng,  p.y + l * (float)rng );
-    }
-};
-
-struct WrapAff2D
-{
-    const double *F;
-    WrapAff2D(const Mat& aff) : F(aff.ptr<double>()) {}
-    Point2f operator()(const Point2f& p)
-    {
-        return Point2f( (float)(p.x * F[0] + p.y * F[1] + F[2]),
-                        (float)(p.x * F[3] + p.y * F[4] + F[5]) );
-    }
-};
+#define ESTIMATE_PARAMS Combine(Values(100000, 5000, 100), Values(0.99, 0.95, 0.9), Method::all(), Values(10, 0))
 
 static float rngIn(float from, float to) { return from + (to-from) * (float)theRNG(); }
 
@@ -89,78 +69,102 @@ static Mat rngPartialAffMat() {
     return Mat(2, 3, CV_64F, aff).clone();
 }
 
-PERF_TEST_P( EstimateAffine, EstimateAffine2D, Combine(Values(100000, 5000, 100), Values(0.99, 0.95, 0.9)) )
+PERF_TEST_P( EstimateAffine, EstimateAffine2D, ESTIMATE_PARAMS )
 {
     AffineParams params = GetParam();
     const int n = get<0>(params);
     const double confidence = get<1>(params);
+    const int method = get<2>(params);
+    const size_t refining = get<3>(params);
 
     Mat aff(2, 3, CV_64F);
-    cv::randu(aff, Scalar(-2), Scalar(2));
+    cv::randu(aff, -2., 2.);
 
-    // setting points that are no in the same line
-    const int m = 2*n/5;
-    const Point2f shift_outl = Point2f(15, 15);
+    // LMEDS can't handle more than 50% outliers (by design)
+    int m;
+    if (method == LMEDS)
+        m = 3*n/5;
+    else
+        m = 2*n/5;
+    const float shift_outl = 15.f;
     const float noise_level = 20.f;
 
     Mat fpts(1, n, CV_32FC2);
     Mat tpts(1, n, CV_32FC2);
 
-    cv::randu(fpts, Scalar::all(0), Scalar::all(100));
-    std::transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
+    randu(fpts, 0., 100.);
+    transform(fpts, tpts, aff);
 
-    /* adding noise*/
-    std::transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, bind2nd(std::plus<Point2f>(), shift_outl));
-    std::transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, Noise(noise_level));
+    /* adding noise to some points */
+    Mat outliers = tpts.colRange(m, n);
+    outliers.reshape(1) += shift_outl;
+
+    Mat noise (outliers.size(), outliers.type());
+    randu(noise, 0., noise_level);
+    outliers += noise;
 
     Mat aff_est;
+    vector<uchar> inliers (n);
 
+    warmup(inliers, WARMUP_WRITE);
     warmup(fpts, WARMUP_READ);
     warmup(tpts, WARMUP_READ);
 
     TEST_CYCLE()
     {
-        aff_est = estimateAffine2D(fpts, tpts, noArray(), RANSAC, 3, 2000, confidence);
+        aff_est = estimateAffine2D(fpts, tpts, inliers, method, 3, 2000, confidence, refining);
     }
 
-    SANITY_CHECK(aff_est, .01, ERROR_RELATIVE);
+    // we already have accuracy tests
+    SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P( EstimateAffine, EstimateAffinePartial2D, Combine(Values(100000, 5000, 100), Values(0.99, 0.95, 0.9)) )
+PERF_TEST_P( EstimateAffine, EstimateAffinePartial2D, ESTIMATE_PARAMS )
 {
     AffineParams params = GetParam();
     const int n = get<0>(params);
     const double confidence = get<1>(params);
+    const int method = get<2>(params);
+    const size_t refining = get<3>(params);
 
     Mat aff = rngPartialAffMat();
 
-    // setting points that are no in the same line
-    const int m = 2*n/5;
-    const Point2f shift_outl = Point2f(15, 15);
-    const float noise_level = 20.f;
+    int m;
+    // LMEDS can't handle more than 50% outliers (by design)
+    if (method == LMEDS)
+        m = 3*n/5;
+    else
+        m = 2*n/5;
+    const float shift_outl = 15.f;    const float noise_level = 20.f;
 
     Mat fpts(1, n, CV_32FC2);
     Mat tpts(1, n, CV_32FC2);
 
-    cv::randu(fpts, Scalar::all(0), Scalar::all(100));
-    std::transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
+    randu(fpts, 0., 100.);
+    transform(fpts, tpts, aff);
 
     /* adding noise*/
-    std::transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, bind2nd(std::plus<Point2f>(), shift_outl));
-    std::transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, Noise(noise_level));
+    Mat outliers = tpts.colRange(m, n);
+    outliers.reshape(1) += shift_outl;
+
+    Mat noise (outliers.size(), outliers.type());
+    randu(noise, 0., noise_level);
+    outliers += noise;
 
     Mat aff_est;
+    vector<uchar> inliers (n);
 
-    warmup(aff_est, WARMUP_WRITE);
+    warmup(inliers, WARMUP_WRITE);
     warmup(fpts, WARMUP_READ);
     warmup(tpts, WARMUP_READ);
 
     TEST_CYCLE()
     {
-        aff_est = estimateAffinePartial2D(fpts, tpts, noArray(), RANSAC, 3, 2000, confidence);
+        aff_est = estimateAffinePartial2D(fpts, tpts, inliers, method, 3, 2000, confidence, refining);
     }
 
-    SANITY_CHECK(aff_est, .01, ERROR_RELATIVE);
+    // we already have accuracy tests
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace cvtest
