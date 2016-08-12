@@ -93,6 +93,12 @@ TEST(Imgcodecs_imread, regression)
 #ifdef HAVE_JASPER
         "Rome.jp2",
 #endif
+#ifdef HAVE_GDCM
+        "DICOM-RGB-8.dcm",
+        "DICOM-MONO2-U8.dcm",
+        "DICOM-MONO2-16.dcm",
+        "DICOM-MONO2-U16.dcm",
+#endif
         "color_palette_alpha.png",
         "multipage.tif",
         "rle.hdr",
