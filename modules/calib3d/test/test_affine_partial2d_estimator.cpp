@@ -43,33 +43,13 @@
 
 using namespace cv;
 using namespace std;
+using namespace testing;
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <functional>
-#include <iterator>
-#include <limits>
+#include <vector>
 #include <numeric>
-#include <cmath>
 
-class CV_AffinePartial2D_EstTest : public cvtest::BaseTest
-{
-public:
-    CV_AffinePartial2D_EstTest();
-    ~CV_AffinePartial2D_EstTest();
-protected:
-    void run(int);
-
-    bool test2Points();
-    bool testNPoints();
-};
-
-CV_AffinePartial2D_EstTest::CV_AffinePartial2D_EstTest()
-{
-}
-CV_AffinePartial2D_EstTest::~CV_AffinePartial2D_EstTest() {}
-
+CV_ENUM(Method, RANSAC, LMEDS)
+typedef TestWithParam<Method> EstimateAffinePartial2D;
 
 static float rngIn(float from, float to) { return from + (to-from) * (float)theRNG(); }
 
@@ -85,18 +65,7 @@ static Mat rngPartialAffMat() {
     return Mat(2, 3, CV_64F, aff).clone();
 }
 
-struct WrapAff2D
-{
-    const double *F;
-    WrapAff2D(const Mat& aff) : F(aff.ptr<double>()) {}
-    Point2f operator()(const Point2f& p)
-    {
-        return Point2f( (float)(p.x * F[0] + p.y * F[1] + F[2]),
-                        (float)(p.x * F[3] + p.y * F[4] + F[5]) );
-    }
-};
-
-bool CV_AffinePartial2D_EstTest::test2Points()
+TEST_P(EstimateAffinePartial2D, test2Points)
 {
     Mat aff = rngPartialAffMat();
 
@@ -104,99 +73,60 @@ bool CV_AffinePartial2D_EstTest::test2Points()
     Mat fpts(1, 2, CV_32FC2);
     Mat tpts(1, 2, CV_32FC2);
 
-    fpts.ptr<Point2f>()[0] = Point2f( rngIn(1,2), rngIn(5,6) );
-    fpts.ptr<Point2f>()[1] = Point2f( rngIn(3,4), rngIn(3,4) );
+    fpts.at<Point2f>(0) = Point2f( rngIn(1,2), rngIn(5,6) );
+    fpts.at<Point2f>(1) = Point2f( rngIn(3,4), rngIn(3,4) );
 
-    transform(fpts.begin<Point2f>(), fpts.end<Point2f>(), tpts.begin<Point2f>(), WrapAff2D(aff));
+    transform(fpts, tpts, aff);
 
     vector<uchar> inliers;
-    Mat aff_est = estimateAffinePartial2D(fpts, tpts, inliers);
+    Mat aff_est = estimateAffinePartial2D(fpts, tpts, inliers, GetParam() /* method */);
 
-    const double thres = 1e-3;
-    if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
-    {
-        cout << "norm: " << cvtest::norm(aff_est, aff, NORM_INF) << endl;
-        cout << "aff est: " << aff_est << endl;
-        cout << "aff ref: " << aff << endl;
-        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-        return false;
-    }
-    return true;
+    EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-3);
+
+    // all must be inliers
+    EXPECT_EQ(countNonZero(inliers), 2);
 }
 
-struct Noise
-{
-    float l;
-    Noise(float level) : l(level) {}
-    Point2f operator()(const Point2f& p)
-    {
-        RNG& rng = theRNG();
-        return Point2f( p.x + l * (float)rng,  p.y + l * (float)rng );
-    }
-};
-
-bool CV_AffinePartial2D_EstTest::testNPoints()
+TEST_P(EstimateAffinePartial2D, testNPoints)
 {
     Mat aff = rngPartialAffMat();
 
-    // setting points that are no in the same line
+    const int method = GetParam();
     const int n = 100;
-    const int m = 2*n/5;
-    const Point2f shift_outl = Point2f(15, 15);
+    int m;
+    // LMEDS can't handle more than 50% outliers (by design)
+    if (method == LMEDS)
+        m = 3*n/5;
+    else
+        m = 2*n/5;
+    const float shift_outl = 15.f;
     const float noise_level = 20.f;
 
     Mat fpts(1, n, CV_32FC2);
     Mat tpts(1, n, CV_32FC2);
 
-    randu(fpts, Scalar::all(0), Scalar::all(100));
-    transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
+    randu(fpts, 0., 100.);
+    transform(fpts, tpts, aff);
 
-    /* adding noise*/
-    transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, bind2nd(plus<Point2f>(), shift_outl));
-    transform(tpts.ptr<Point2f>() + m, tpts.ptr<Point2f>() + n, tpts.ptr<Point2f>() + m, Noise(noise_level));
+    /* adding noise to some points */
+    Mat outliers = tpts.colRange(m, n);
+    outliers.reshape(1) += shift_outl;
 
-    vector<uchar> outl;
-    Mat aff_est = estimateAffinePartial2D(fpts, tpts, outl);
+    Mat noise (outliers.size(), outliers.type());
+    randu(noise, 0., noise_level);
+    outliers += noise;
 
-    if (aff_est.empty())
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-        return false;
-    }
+    vector<uchar> inliers;
+    Mat aff_est = estimateAffinePartial2D(fpts, tpts, inliers, method);
 
-    const double thres = 1e-4;
-    if (cvtest::norm(aff_est, aff, NORM_INF) > thres)
-    {
-        cout << "norm: " << cvtest::norm(aff_est, aff, NORM_INF) << endl;
-        cout << "aff est: " << aff_est << endl;
-        cout << "aff ref: " << aff << endl;
-        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-        return false;
-    }
+    EXPECT_FALSE(aff_est.empty());
 
-    bool outl_good = count(outl.begin(), outl.end(), 1) == m &&
-        m == accumulate(outl.begin(), outl.begin() + m, 0);
+    EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-4);
 
-    if (!outl_good)
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-        return false;
-    }
-    return true;
+    bool inliers_good = count(inliers.begin(), inliers.end(), 1) == m &&
+        m == accumulate(inliers.begin(), inliers.begin() + m, 0);
+
+    EXPECT_TRUE(inliers_good);
 }
 
-
-void CV_AffinePartial2D_EstTest::run( int /* start_from */)
-{
-    cvtest::DefaultRngAuto dra;
-
-    if (!test2Points())
-        return;
-
-    if (!testNPoints())
-        return;
-
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
-TEST(Calib3d_EstimateAffinePartial2D, accuracy) { CV_AffinePartial2D_EstTest test; test.safe_run(); }
+INSTANTIATE_TEST_CASE_P(Calib3d, EstimateAffinePartial2D, Method::all());
