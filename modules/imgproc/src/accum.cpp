@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -728,44 +729,54 @@ struct AccW_SIMD<double, double>
 };
 #endif
 
-#if CV_SSE2
+#if CV_SIMD128
 template <>
 struct Acc_SIMD<uchar, float>
 {
     int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
-        __m128i v_0 = _mm_setzero_si128();
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                __m128i v_src  = _mm_loadu_si128((const __m128i*)(src + x));
-                __m128i v_src0 = _mm_unpacklo_epi8(v_src, v_0);
-                __m128i v_src1 = _mm_unpackhi_epi8(v_src, v_0);
+                v_uint8x16 v_src  = v_load((const uchar*)(src + x));
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                _mm_storeu_ps(dst + x,  _mm_add_ps(_mm_loadu_ps(dst + x), _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src0, v_0))));
-                _mm_storeu_ps(dst + x + 4,  _mm_add_ps(_mm_loadu_ps(dst + x + 4), _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src0, v_0))));
-                _mm_storeu_ps(dst + x + 8,  _mm_add_ps(_mm_loadu_ps(dst + x + 8), _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src1, v_0))));
-                _mm_storeu_ps(dst + x + 12,  _mm_add_ps(_mm_loadu_ps(dst + x + 12), _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src1, v_0))));
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
         else if (cn == 1)
         {
-            __m128i v_255 = _mm_set1_epi8(-1);
+            v_uint8x16 v_0 = v_setall_u8(0);
 
             for ( ; x <= len - 16; x += 16)
             {
-                __m128i v_src = _mm_and_si128(_mm_loadu_si128((const __m128i*)(src + x)), _mm_xor_si128(v_255, _mm_cmpeq_epi8(_mm_loadu_si128((const __m128i*)(mask + x)), v_0)));
-                __m128i v_src0 = _mm_unpacklo_epi8(v_src, v_0);
-                __m128i v_src1 = _mm_unpackhi_epi8(v_src, v_0);
+                v_uint8x16 v_mask = v_load((const uchar*)(mask + x));
+                v_mask = ~(v_0 == v_mask);
+                v_uint8x16 v_src = v_load((const uchar*)(src + x));
+                v_src = v_src & v_mask;
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src0, v_0))));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src0, v_0))));
-                _mm_storeu_ps(dst + x + 8, _mm_add_ps(_mm_loadu_ps(dst + x + 8), _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src1, v_0))));
-                _mm_storeu_ps(dst + x + 12, _mm_add_ps(_mm_loadu_ps(dst + x + 12), _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src1, v_0))));
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
 
@@ -779,19 +790,17 @@ struct Acc_SIMD<ushort, float>
     int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
-        __m128i v_0 = _mm_setzero_si128();
-
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                __m128i v_src = _mm_loadu_si128((const __m128i*)(src + x));
-                __m128i v_src0 = _mm_unpacklo_epi16(v_src, v_0);
-                __m128i v_src1 = _mm_unpackhi_epi16(v_src, v_0);
+                v_uint16x8 v_src = v_load((const ushort*)(src + x));
+                v_uint32x4 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), _mm_cvtepi32_ps(v_src0)));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), _mm_cvtepi32_ps(v_src1)));
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src0)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src1)));
             }
         }
 
@@ -799,6 +808,7 @@ struct Acc_SIMD<ushort, float>
     }
 };
 
+#if CV_SSE2
 template <>
 struct Acc_SIMD<uchar, double>
 {
@@ -900,6 +910,7 @@ struct Acc_SIMD<ushort, double>
         return x;
     }
 };
+#endif
 
 template <>
 struct AccSqr_SIMD<uchar, float>
@@ -907,42 +918,50 @@ struct AccSqr_SIMD<uchar, float>
     int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
-        __m128i v_0 = _mm_setzero_si128();
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                __m128i v_src  = _mm_loadu_si128((const __m128i*)(src + x));
-                __m128i v_src0 = _mm_unpacklo_epi8(v_src, v_0);
-                __m128i v_src1 = _mm_unpackhi_epi8(v_src, v_0);
-                v_src0 = _mm_mullo_epi16(v_src0, v_src0);
-                v_src1 = _mm_mullo_epi16(v_src1, v_src1);
+                v_uint8x16 v_src  = v_load((const uchar*)(src + x));
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
 
-                _mm_storeu_ps(dst + x,  _mm_add_ps(_mm_loadu_ps(dst + x), _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src0, v_0))));
-                _mm_storeu_ps(dst + x + 4,  _mm_add_ps(_mm_loadu_ps(dst + x + 4), _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src0, v_0))));
-                _mm_storeu_ps(dst + x + 8,  _mm_add_ps(_mm_loadu_ps(dst + x + 8), _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src1, v_0))));
-                _mm_storeu_ps(dst + x + 12,  _mm_add_ps(_mm_loadu_ps(dst + x + 12), _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src1, v_0))));
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
         else if (cn == 1)
         {
-
-            __m128i v_255 = _mm_set1_epi8(-1);
+            v_uint8x16 v_0 = v_setall_u8(0);
             for ( ; x <= len - 16; x += 16)
             {
+                v_uint8x16 v_mask = v_load((const uchar*)(mask + x));
+                v_mask = ~(v_0 == v_mask);
+                v_uint8x16 v_src = v_load((const uchar*)(src + x));
+                v_src = v_src & v_mask;
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
 
-                __m128i v_src = _mm_and_si128(_mm_loadu_si128((const __m128i*)(src + x)), _mm_xor_si128(v_255, _mm_cmpeq_epi8(_mm_loadu_si128((const __m128i*)(mask + x)), v_0)));
-                __m128i v_src0 = _mm_unpacklo_epi8(v_src, v_0);
-                __m128i v_src1 = _mm_unpackhi_epi8(v_src, v_0);
-                v_src0 = _mm_mullo_epi16(v_src0, v_src0);
-                v_src1 = _mm_mullo_epi16(v_src1, v_src1);
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src0, v_0))));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src0, v_0))));
-                _mm_storeu_ps(dst + x + 8, _mm_add_ps(_mm_loadu_ps(dst + x + 8), _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src1, v_0))));
-                _mm_storeu_ps(dst + x + 12, _mm_add_ps(_mm_loadu_ps(dst + x + 12), _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src1, v_0))));
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
 
@@ -956,23 +975,24 @@ struct AccSqr_SIMD<ushort, float>
     int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
-        __m128i v_0 = _mm_setzero_si128();
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                __m128i v_src = _mm_loadu_si128((const __m128i*)(src + x));
-                __m128i v_int0 = _mm_unpacklo_epi16(v_src, v_0);
-                __m128i v_int1 = _mm_unpackhi_epi16(v_src, v_0);
-                __m128 v_src0 = _mm_cvtepi32_ps(v_int0);
-                __m128 v_src1 = _mm_cvtepi32_ps(v_int1);
-                v_src0 = _mm_mul_ps(v_src0, v_src0);
-                v_src1 = _mm_mul_ps(v_src1, v_src1);
+                v_uint16x8 v_src = v_load((const ushort*)(src + x));
+                v_uint32x4 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), v_src0));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), v_src1));
+                v_float32x4 v_float0, v_float1;
+                v_float0 = v_cvt_f32(v_reinterpret_as_s32(v_src0));
+                v_float1 = v_cvt_f32(v_reinterpret_as_s32(v_src1));
+                v_float0 = v_float0 * v_float0;
+                v_float1 = v_float1 * v_float1;
+
+                v_store(dst + x, v_load(dst + x) + v_float0);
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_float1);
             }
         }
 
@@ -980,6 +1000,7 @@ struct AccSqr_SIMD<ushort, float>
     }
 };
 
+#if CV_SSE2
 template <>
 struct AccSqr_SIMD<uchar, double>
 {
@@ -1070,6 +1091,7 @@ struct AccSqr_SIMD<ushort, double>
         return x;
     }
 };
+#endif
 
 template <>
 struct AccProd_SIMD<uchar, float>
@@ -1078,58 +1100,60 @@ struct AccProd_SIMD<uchar, float>
     {
         int x = 0;
 
-        __m128i v_0 = _mm_setzero_si128();
         len *= cn;
         if (!mask)
         {
             for ( ; x <= len - 16; x += 16)
             {
-                __m128i v_1src = _mm_loadu_si128((const __m128i*)(src1 + x));
-                __m128i v_2src = _mm_loadu_si128((const __m128i*)(src2 + x));
+                v_uint8x16 v_1src = v_load(src1 + x);
+                v_uint8x16 v_2src = v_load(src2 + x);
 
-                __m128i v_1src0 = _mm_unpacklo_epi8(v_1src, v_0);
-                __m128i v_1src1 = _mm_unpackhi_epi8(v_1src, v_0);
-                __m128i v_2src0 = _mm_unpacklo_epi8(v_2src, v_0);
-                __m128i v_2src1 = _mm_unpackhi_epi8(v_2src, v_0);
-                __m128i v_src0 = _mm_mullo_epi16(v_1src0, v_2src0);
-                __m128i v_src1 = _mm_mullo_epi16(v_1src1, v_2src1);
-                __m128 v_src00 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src0, v_0));
-                __m128 v_src01 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src0, v_0));
-                __m128 v_src10 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src1, v_0));
-                __m128 v_src11 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src1, v_0));
+                v_uint16x8 v_1src0, v_1src1, v_2src0, v_2src1;
+                v_expand(v_1src, v_1src0, v_1src1);
+                v_expand(v_2src, v_2src0, v_2src1);
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), v_src00));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), v_src01));
-                _mm_storeu_ps(dst + x + 8, _mm_add_ps(_mm_loadu_ps(dst + x + 8), v_src10));
-                _mm_storeu_ps(dst + x + 12, _mm_add_ps(_mm_loadu_ps(dst + x + 12), v_src11));
+                v_uint16x8 v_src0, v_src1;
+                v_src0 = v_1src0 * v_2src0;
+                v_src1 = v_1src1 * v_2src1;
+
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
         else if (cn == 1)
         {
-            __m128i v_255 = _mm_set1_epi8(-1);
+            v_uint8x16 v_0 = v_setzero_u8();
 
             for ( ; x <= len - 16; x += 16)
             {
-                __m128i v_mask = _mm_loadu_si128((const __m128i*)(mask + x));
-                v_mask = _mm_xor_si128(v_255, _mm_cmpeq_epi8(v_mask, v_0));
-                __m128i v_1src = _mm_and_si128(_mm_loadu_si128((const __m128i*)(src1 + x)), v_mask);
-                __m128i v_2src = _mm_and_si128(_mm_loadu_si128((const __m128i*)(src2 + x)), v_mask);
+                v_uint8x16 v_mask = v_load(mask + x);
+                v_mask = ~(v_0 == v_mask);
 
-                __m128i v_1src0 = _mm_unpacklo_epi8(v_1src, v_0);
-                __m128i v_1src1 = _mm_unpackhi_epi8(v_1src, v_0);
-                __m128i v_2src0 = _mm_unpacklo_epi8(v_2src, v_0);
-                __m128i v_2src1 = _mm_unpackhi_epi8(v_2src, v_0);
-                __m128i v_src0 = _mm_mullo_epi16(v_1src0, v_2src0);
-                __m128i v_src1 = _mm_mullo_epi16(v_1src1, v_2src1);
-                __m128 v_src00 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src0, v_0));
-                __m128 v_src01 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src0, v_0));
-                __m128 v_src10 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src1, v_0));
-                __m128 v_src11 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src1, v_0));
+                v_uint8x16 v_1src = v_load(src1 + x) & v_mask;
+                v_uint8x16 v_2src = v_load(src2 + x) & v_mask;
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), v_src00));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), v_src01));
-                _mm_storeu_ps(dst + x + 8, _mm_add_ps(_mm_loadu_ps(dst + x + 8), v_src10));
-                _mm_storeu_ps(dst + x + 12, _mm_add_ps(_mm_loadu_ps(dst + x + 12), v_src11));
+                v_uint16x8 v_1src0, v_1src1, v_2src0, v_2src1;
+                v_expand(v_1src, v_1src0, v_1src1);
+                v_expand(v_2src, v_2src0, v_2src1);
+
+                v_uint16x8 v_src0, v_src1;
+                v_src0 = v_1src0 * v_2src0;
+                v_src1 = v_1src1 * v_2src1;
+
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
 
@@ -1143,47 +1167,59 @@ struct AccProd_SIMD<ushort, float>
     int operator() (const ushort * src1, const ushort * src2, float * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
-        __m128i v_0 = _mm_setzero_si128();
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                __m128i v_1src = _mm_loadu_si128((const __m128i*)(src1 + x));
-                __m128i v_2src = _mm_loadu_si128((const __m128i*)(src2 + x));
-                __m128 v_1src0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_1src, v_0));
-                __m128 v_1src1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_1src, v_0));
-                __m128 v_2src0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_2src, v_0));
-                __m128 v_2src1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_2src, v_0));
-                __m128 v_src0 = _mm_mul_ps(v_1src0, v_2src0);
-                __m128 v_src1 = _mm_mul_ps(v_1src1, v_2src1);
+                v_uint16x8 v_1src = v_load(src1 + x);
+                v_uint16x8 v_2src = v_load(src2 + x);
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), v_src0));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), v_src1));
+                v_uint32x4 v_1src0, v_1src1, v_2src0, v_2src1;
+                v_expand(v_1src, v_1src0, v_1src1);
+                v_expand(v_2src, v_2src0, v_2src1);
+
+                v_float32x4 v_1float0 = v_cvt_f32(v_reinterpret_as_s32(v_1src0));
+                v_float32x4 v_1float1 = v_cvt_f32(v_reinterpret_as_s32(v_1src1));
+                v_float32x4 v_2float0 = v_cvt_f32(v_reinterpret_as_s32(v_2src0));
+                v_float32x4 v_2float1 = v_cvt_f32(v_reinterpret_as_s32(v_2src1));
+
+                v_float32x4 v_src0 = v_1float0 * v_2float0;
+                v_float32x4 v_src1 = v_1float1 * v_2float1;
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_src1);
             }
         }
         else if (cn == 1)
         {
-            __m128i v_65535 = _mm_set1_epi16(-1);
+            v_uint16x8 v_0 = v_setzero_u16();
 
             for ( ; x <= len - 8; x += 8)
             {
-                __m128i v_mask = _mm_loadl_epi64((const __m128i*)(mask + x));
-                __m128i v_mask0 = _mm_unpacklo_epi8(v_mask, v_0);
-                v_mask0 = _mm_xor_si128(v_65535, _mm_cmpeq_epi16(v_mask0, v_0));
+                v_uint8x16 v_mask = v_load_halves(mask + x, mask + x);
+                v_uint16x8 v_mask0, v_mask1;
+                v_expand(v_mask, v_mask0, v_mask1);
+                v_mask0 = ~(v_0 == v_mask0);
 
-                __m128i v_1src = _mm_and_si128(_mm_loadu_si128((const __m128i*)(src1 + x)), v_mask0);
-                __m128i v_2src = _mm_and_si128(_mm_loadu_si128((const __m128i*)(src2 + x)), v_mask0);
-                __m128 v_1src0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_1src, v_0));
-                __m128 v_1src1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_1src, v_0));
-                __m128 v_2src0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_2src, v_0));
-                __m128 v_2src1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_2src, v_0));
-                __m128 v_src0 = _mm_mul_ps(v_1src0, v_2src0);
-                __m128 v_src1 = _mm_mul_ps(v_1src1, v_2src1);
+                v_uint16x8 v_1src = v_load(src1 + x) & v_mask0;
+                v_uint16x8 v_2src = v_load(src2 + x) & v_mask0;
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(_mm_loadu_ps(dst + x), v_src0));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(_mm_loadu_ps(dst + x + 4), v_src1));
+                v_uint32x4 v_1src0, v_1src1, v_2src0, v_2src1;
+                v_expand(v_1src, v_1src0, v_1src1);
+                v_expand(v_2src, v_2src0, v_2src1);
+
+                v_float32x4 v_1float0 = v_cvt_f32(v_reinterpret_as_s32(v_1src0));
+                v_float32x4 v_1float1 = v_cvt_f32(v_reinterpret_as_s32(v_1src1));
+                v_float32x4 v_2float0 = v_cvt_f32(v_reinterpret_as_s32(v_2src0));
+                v_float32x4 v_2float1 = v_cvt_f32(v_reinterpret_as_s32(v_2src1));
+
+                v_float32x4 v_src0 = v_1float0 * v_2float0;
+                v_float32x4 v_src1 = v_1float1 * v_2float1;
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_src1);
             }
         }
 
@@ -1191,6 +1227,7 @@ struct AccProd_SIMD<ushort, float>
     }
 };
 
+#if CV_SSE2
 template <>
 struct AccProd_SIMD<uchar, double>
 {
@@ -1281,6 +1318,7 @@ struct AccProd_SIMD<ushort, double>
         return x;
     }
 };
+#endif
 
 template <>
 struct AccW_SIMD<uchar, float>
@@ -1288,37 +1326,37 @@ struct AccW_SIMD<uchar, float>
     int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
     {
         int x = 0;
-        __m128 v_alpha = _mm_set1_ps(alpha);
-        __m128 v_beta = _mm_set1_ps(1.0f - alpha);
-        __m128i v_0 = _mm_setzero_si128();
+        v_float32x4 v_alpha = v_setall_f32(alpha);
+        v_float32x4 v_beta = v_setall_f32(1.0f - alpha);
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                __m128i v_src = _mm_loadu_si128((const __m128i*)(src + x));
-                __m128i v_src0 = _mm_unpacklo_epi8(v_src, v_0);
-                __m128i v_src1 = _mm_unpackhi_epi8(v_src, v_0);
-                __m128 v_src00 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src0, v_0));
-                __m128 v_src01 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src0, v_0));
-                __m128 v_src10 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src1, v_0));
-                __m128 v_src11 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src1, v_0));
+                v_uint8x16 v_src = v_load(src + x);
 
-                __m128 v_dst00 = _mm_loadu_ps(dst + x);
-                __m128 v_dst01 = _mm_loadu_ps(dst + x + 4);
-                __m128 v_dst10 = _mm_loadu_ps(dst + x + 8);
-                __m128 v_dst11 = _mm_loadu_ps(dst + x + 12);
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                v_dst00 = _mm_add_ps(_mm_mul_ps(v_dst00, v_beta), _mm_mul_ps(v_src00, v_alpha));
-                v_dst01 = _mm_add_ps(_mm_mul_ps(v_dst01, v_beta), _mm_mul_ps(v_src01, v_alpha));
-                v_dst10 = _mm_add_ps(_mm_mul_ps(v_dst10, v_beta), _mm_mul_ps(v_src10, v_alpha));
-                v_dst11 = _mm_add_ps(_mm_mul_ps(v_dst11, v_beta), _mm_mul_ps(v_src11, v_alpha));
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
 
-                _mm_storeu_ps(dst + x, v_dst00);
-                _mm_storeu_ps(dst + x + 4, v_dst01);
-                _mm_storeu_ps(dst + x + 8, v_dst10);
-                _mm_storeu_ps(dst + x + 12, v_dst11);
+                v_float32x4 v_dst00 = v_load(dst + x);
+                v_float32x4 v_dst01 = v_load(dst + x + 4);
+                v_float32x4 v_dst10 = v_load(dst + x + 8);
+                v_float32x4 v_dst11 = v_load(dst + x + 12);
+
+                v_dst00 = (v_dst00 * v_beta) + (v_cvt_f32(v_reinterpret_as_s32(v_src00)) * v_alpha);
+                v_dst01 = (v_dst01 * v_beta) + (v_cvt_f32(v_reinterpret_as_s32(v_src01)) * v_alpha);
+                v_dst10 = (v_dst10 * v_beta) + (v_cvt_f32(v_reinterpret_as_s32(v_src10)) * v_alpha);
+                v_dst11 = (v_dst11 * v_beta) + (v_cvt_f32(v_reinterpret_as_s32(v_src11)) * v_alpha);
+
+                v_store(dst + x, v_dst00);
+                v_store(dst + x + 4, v_dst01);
+                v_store(dst + x + 8, v_dst10);
+                v_store(dst + x + 12, v_dst11);
             }
         }
 
@@ -1332,26 +1370,28 @@ struct AccW_SIMD<ushort, float>
     int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
     {
         int x = 0;
-        __m128 v_alpha = _mm_set1_ps(alpha);
-        __m128 v_beta = _mm_set1_ps(1.0f - alpha);
-        __m128i v_0 = _mm_setzero_si128();
+        v_float32x4 v_alpha = v_setall_f32(alpha);
+        v_float32x4 v_beta = v_setall_f32(1.0f - alpha);
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                __m128i v_src = _mm_loadu_si128((const __m128i*)(src + x));
-                __m128 v_src0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_0));
-                __m128 v_src1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_0));
-                v_src0 = _mm_mul_ps(v_src0, v_alpha);
-                v_src1 = _mm_mul_ps(v_src1, v_alpha);
+                v_uint16x8 v_src = v_load(src + x);
+                v_uint32x4 v_int0, v_int1;
+                v_expand(v_src, v_int0, v_int1);
 
-                __m128 v_dst0 = _mm_mul_ps(_mm_loadu_ps(dst + x), v_beta);
-                __m128 v_dst1 = _mm_mul_ps(_mm_loadu_ps(dst + x + 4), v_beta);
+                v_float32x4 v_src0 = v_cvt_f32(v_reinterpret_as_s32(v_int0));
+                v_float32x4 v_src1 = v_cvt_f32(v_reinterpret_as_s32(v_int1));
+                v_src0 = v_src0 * v_alpha;
+                v_src1 = v_src1 * v_alpha;
 
-                _mm_storeu_ps(dst + x, _mm_add_ps(v_dst0, v_src0));
-                _mm_storeu_ps(dst + x + 4, _mm_add_ps(v_dst1, v_src1));
+                v_float32x4 v_dst0 = v_load(dst + x) * v_beta;
+                v_float32x4 v_dst1 = v_load(dst + x + 4) * v_beta;
+
+                v_store(dst + x, v_dst0 + v_src0);
+                v_store(dst + x + 4, v_dst1 + v_src1);
             }
         }
 
@@ -1359,6 +1399,7 @@ struct AccW_SIMD<ushort, float>
     }
 };
 
+#if CV_SSE2
 template <>
 struct AccW_SIMD<uchar, double>
 {
@@ -1448,393 +1489,7 @@ struct AccW_SIMD<ushort, double>
     }
 };
 #endif //CV_SSE2
-
-#if CV_NEON
-
-template <>
-struct Acc_SIMD<uchar, float>
-{
-    int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 16; x += 16)
-            {
-                uint8x16_t v_src = vld1q_u8(src + x);
-                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
-            }
-        }
-        else if (cn == 1)
-        {
-            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
-
-            for ( ; x <= len - 16; x += 16)
-            {
-                uint8x16_t v_src = vandq_u8(vld1q_u8(src + x), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
-                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct Acc_SIMD<ushort, float>
-{
-    int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                uint16x8_t v_src = vld1q_u16(src + x);
-                uint32x4_t v_src0 = vmovl_u16(vget_low_u16(v_src)), v_src1 = vmovl_u16(vget_high_u16(v_src));
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct Acc_SIMD<float, float>
-{
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vld1q_f32(src + x)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vld1q_f32(src + x + 4)));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccSqr_SIMD<uchar, float>
-{
-    int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 16; x += 16)
-            {
-                uint8x16_t v_src = vld1q_u8(src + x);
-                uint8x8_t v_src_0 = vget_low_u8(v_src), v_src_1 = vget_high_u8(v_src);
-                uint16x8_t v_src0 = vmull_u8(v_src_0, v_src_0), v_src1 = vmull_u8(v_src_1, v_src_1);
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
-            }
-        }
-        else if (cn == 1)
-        {
-            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
-
-            for ( ; x <= len - 16; x += 16)
-            {
-                uint8x16_t v_src = vandq_u8(vld1q_u8(src + x), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
-                uint8x8_t v_src_0 = vget_low_u8(v_src), v_src_1 = vget_high_u8(v_src);
-                uint16x8_t v_src0 = vmull_u8(v_src_0, v_src_0), v_src1 = vmull_u8(v_src_1, v_src_1);
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccSqr_SIMD<ushort, float>
-{
-    int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                uint16x8_t v_src = vld1q_u16(src + x);
-                uint16x4_t v_src_0 = vget_low_u16(v_src), v_src_1 = vget_high_u16(v_src);
-                uint32x4_t v_src0 = vmull_u16(v_src_0, v_src_0), v_src1 = vmull_u16(v_src_1, v_src_1);
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
-            }
-        }
-        else if (cn == 1)
-        {
-            uint8x8_t v_255 = vdup_n_u8(255), v_0 = vdup_n_u8(0);
-
-            for ( ; x <= len - 8; x += 8)
-            {
-                uint8x8_t v_mask_src = veor_u8(v_255, vceq_u8(vld1_u8(mask + x), v_0));
-                uint8x8x2_t v_mask_zp = vzip_u8(v_mask_src, v_mask_src);
-                uint16x8_t v_mask = vreinterpretq_u16_u8(vcombine_u8(v_mask_zp.val[0], v_mask_zp.val[1])),
-                           v_src = vandq_u16(vld1q_u16(src + x), v_mask);
-
-                uint16x4_t v_src_0 = vget_low_u16(v_src), v_src_1 = vget_high_u16(v_src);
-                uint32x4_t v_src0 = vmull_u16(v_src_0, v_src_0), v_src1 = vmull_u16(v_src_1, v_src_1);
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccSqr_SIMD<float, float>
-{
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                float32x4_t v_src = vld1q_f32(src + x);
-                vst1q_f32(dst + x, vmlaq_f32(vld1q_f32(dst + x), v_src, v_src));
-
-                v_src = vld1q_f32(src + x + 4);
-                vst1q_f32(dst + x + 4, vmlaq_f32(vld1q_f32(dst + x + 4), v_src, v_src));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccProd_SIMD<uchar, float>
-{
-    int operator() (const uchar * src1, const uchar * src2, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 16; x += 16)
-            {
-                uint8x16_t v_1src = vld1q_u8(src1 + x), v_2src = vld1q_u8(src2 + x);
-                uint16x8_t v_src0 = vmull_u8(vget_low_u8(v_1src), vget_low_u8(v_2src)),
-                           v_src1 = vmull_u8(vget_high_u8(v_1src), vget_high_u8(v_2src));
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
-            }
-        }
-        else if (cn == 1)
-        {
-            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
-
-            for ( ; x <= len - 16; x += 16)
-            {
-                uint8x16_t v_mask = veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0));
-                uint8x16_t v_1src = vandq_u8(vld1q_u8(src1 + x), v_mask), v_2src = vandq_u8(vld1q_u8(src2 + x), v_mask);
-                uint16x8_t v_src0 = vmull_u8(vget_low_u8(v_1src), vget_low_u8(v_2src)),
-                           v_src1 = vmull_u8(vget_high_u8(v_1src), vget_high_u8(v_2src));
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccProd_SIMD<ushort, float>
-{
-    int operator() (const ushort * src1, const ushort * src2, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                uint16x8_t v_1src = vld1q_u16(src1 + x), v_2src = vld1q_u16(src2 + x);
-                uint32x4_t v_src0 = vmull_u16(vget_low_u16(v_1src), vget_low_u16(v_2src)),
-                           v_src1 = vmull_u16(vget_high_u16(v_1src), vget_high_u16(v_2src));
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
-            }
-        }
-        else if (cn == 1)
-        {
-            uint8x8_t v_255 = vdup_n_u8(255), v_0 = vdup_n_u8(0);
-
-            for ( ; x <= len - 8; x += 8)
-            {
-                uint8x8_t v_mask_src = veor_u8(v_255, vceq_u8(vld1_u8(mask + x), v_0));
-                uint8x8x2_t v_mask_zp = vzip_u8(v_mask_src, v_mask_src);
-                uint16x8_t v_mask = vreinterpretq_u16_u8(vcombine_u8(v_mask_zp.val[0], v_mask_zp.val[1])),
-                           v_1src = vandq_u16(vld1q_u16(src1 + x), v_mask),
-                           v_2src = vandq_u16(vld1q_u16(src2 + x), v_mask);
-
-                uint32x4_t v_src0 = vmull_u16(vget_low_u16(v_1src), vget_low_u16(v_2src)),
-                           v_src1 = vmull_u16(vget_high_u16(v_1src), vget_high_u16(v_2src));
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccProd_SIMD<float, float>
-{
-    int operator() (const float * src1, const float * src2, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                vst1q_f32(dst + x, vmlaq_f32(vld1q_f32(dst + x), vld1q_f32(src1 + x), vld1q_f32(src2 + x)));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vld1q_f32(dst + x + 4), vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4)));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccW_SIMD<uchar, float>
-{
-    int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
-    {
-        int x = 0;
-        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 16; x += 16)
-            {
-                uint8x16_t v_src = vld1q_u8(src + x);
-                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
-
-                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta),
-                                             vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0))), v_alpha));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta),
-                                             vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0))), v_alpha));
-                vst1q_f32(dst + x + 8, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 8), v_beta),
-                                                 vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))), v_alpha));
-                vst1q_f32(dst + x + 12, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 12), v_beta),
-                                                  vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))), v_alpha));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccW_SIMD<ushort, float>
-{
-    int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
-    {
-        int x = 0;
-        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                uint16x8_t v_src = vld1q_u16(src + x);
-                uint32x4_t v_src0 = vmovl_u16(vget_low_u16(v_src)), v_src1 = vmovl_u16(vget_high_u16(v_src));
-
-                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta), vcvtq_f32_u32(v_src0), v_alpha));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta), vcvtq_f32_u32(v_src1), v_alpha));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccW_SIMD<float, float>
-{
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
-    {
-        int x = 0;
-        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta), vld1q_f32(src + x), v_alpha));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta), vld1q_f32(src + x + 4), v_alpha));
-            }
-        }
-
-        return x;
-    }
-};
-
-#endif
+#endif //CV_SIMD128
 
 template<typename T, typename AT> void
 acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
