@@ -507,34 +507,58 @@ public:
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point2f* from = m1.ptr<Point2f>();
         const Point2f* to   = m2.ptr<Point2f>();
+        _model.create(2, 3, CV_64F);
+        Mat M_mat = _model.getMat();
+        double *M = M_mat.ptr<double>();
 
         // we need 3 points to estimate affine transform
-        const int N = 6;
-        double buf[N*N + N + N];
-        Mat A(N, N, CV_64F, &buf[0]);
-        Mat B(N, 1, CV_64F, &buf[0] + N*N);
-        Mat X(N, 1, CV_64F, &buf[0] + N*N + N);
-        double* Adata = A.ptr<double>();
-        double* Bdata = B.ptr<double>();
-        A = Scalar::all(0);
+        double x1 = from[0].x;
+        double y1 = from[0].y;
+        double x2 = from[1].x;
+        double y2 = from[1].y;
+        double x3 = from[2].x;
+        double y3 = from[2].y;
 
-        for( int i = 0; i < (N/2); i++ )
-        {
-            Bdata[i*2] = to[i].x;
-            Bdata[i*2+1] = to[i].y;
+        double X1 = to[0].x;
+        double Y1 = to[0].y;
+        double X2 = to[1].x;
+        double Y2 = to[1].y;
+        double X3 = to[2].x;
+        double Y3 = to[2].y;
 
-            double *aptr = Adata + i*2*N;
-            for(int k = 0; k < 2; ++k)
-            {
-                aptr[0] = from[i].x;
-                aptr[1] = from[i].y;
-                aptr[2] = 1.0;
-                aptr += N+3;
-            }
-        }
+        /*
+        We want to solve AX = B
 
-        solve(A, B, X, DECOMP_SVD);
-        X.reshape(1, 2).copyTo(_model);
+            | x1 y1  1  0  0  0 |
+            |  0  0  0 x1 y1  1 |
+            | x2 y2  1  0  0  0 |
+        A = |  0  0  0 x2 y2  1 |
+            | x3 y3  1  0  0  0 |
+            |  0  0  0 x3 y3  1 |
+        B = (X1, Y1, X2, Y2, X3, Y3).t()
+        X = (a, b, c, d, e, f).t()
+
+        As the estimate of (a, b, c) only depends on the Xi, and (d, e, f) only
+        depends on the Yi, we do the *trick* to solve each one analytically.
+
+        | X1 |   | x1 y1 1 |   | a |
+        | X2 | = | x2 y2 1 | * | b |
+        | X3 |   | x3 y3 1 |   | c |
+
+        | Y1 |   | x1 y1 1 |   | d |
+        | Y2 | = | x2 y2 1 | * | e |
+        | Y3 |   | x3 y3 1 |   | f |
+        */
+
+        double d = 1. / ( x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2) );
+
+        M[0] = d * ( X1*(y2-y3) + X2*(y3-y1) + X3*(y1-y2) );
+        M[1] = d * ( X1*(x3-x2) + X2*(x1-x3) + X3*(x2-x1) );
+        M[2] = d * ( X1*(x2*y3 - x3*y2) + X2*(x3*y1 - x1*y3) + X3*(x1*y2 - x2*y1) );
+
+        M[3] = d * ( Y1*(y2-y3) + Y2*(y3-y1) + Y3*(y1-y2) );
+        M[4] = d * ( Y1*(x3-x2) + Y2*(x1-x3) + Y3*(x2-x1) );
+        M[5] = d * ( Y1*(x2*y3 - x3*y2) + Y2*(x3*y1 - x1*y3) + Y3*(x1*y2 - x2*y1) );
         return 1;
     }
 
@@ -580,43 +604,44 @@ public:
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point2f* from = m1.ptr<Point2f>();
         const Point2f* to   = m2.ptr<Point2f>();
+        _model.create(2, 3, CV_64F);
+        Mat M_mat = _model.getMat();
+        double *M = M_mat.ptr<double>();
 
-        // for partial affine trasform we need only 2 points
-        const int N = 4;
-        double buf[N*N + N + N + 2*3];
-        Mat A(N, N, CV_64F, buf);
-        Mat B(N, 1, CV_64F, buf + N*N);
-        Mat X(N, 1, CV_64F, buf + N*N + N);
-        Mat M(2, 3, CV_64F, buf + N*N + N + N);
-        double* Adata = A.ptr<double>();
-        double* Bdata = B.ptr<double>();
-        double* Xdata = X.ptr<double>();
-        double* Mdata = M.ptr<double>();
-        A = Scalar::all(0);
+        // we need only 2 points to estimate transform
+        double x1 = from[0].x;
+        double y1 = from[0].y;
+        double x2 = from[1].x;
+        double y2 = from[1].y;
 
-        for( int i = 0; i < (N/2); i++ )
-        {
-            Bdata[i*2] = to[i].x;
-            Bdata[i*2+1] = to[i].y;
+        double X1 = to[0].x;
+        double Y1 = to[0].y;
+        double X2 = to[1].x;
+        double Y2 = to[1].y;
 
-            double *aptr = Adata + i*2*N;
-            aptr[0] = from[i].x;
-            aptr[1] = -from[i].y;
-            aptr[2] = 1.0;
-            aptr[4] = from[i].y;
-            aptr[5] = from[i].x;
-            aptr[7] = 1.0;
-        }
+        /*
+        we are solving AS = B
+            | x1 -y1 1 0 |
+            | y1  x1 0 1 |
+        A = | x2 -y2 1 0 |
+            | y2  x2 0 1 |
+        B = (X1, Y1, X2, Y2).t()
+        we solve that analytically
+        */
+        double d = 1./((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 
-        solve(A, B, X, DECOMP_SVD);
+        // solution vector
+        double S0 = d * ( (X1-X2)*(x1-x2) + (Y1-Y2)*(y1-y2) );
+        double S1 = d * ( (Y1-Y2)*(x1-x2) - (X1-X2)*(y1-y2) );
+        double S2 = d * ( (Y1-Y2)*(x1*y2 - x2*y1) - (X1*y2 - X2*y1)*(y1-y2) - (X1*x2 - X2*x1)*(x1-x2) );
+        double S3 = d * (-(X1-X2)*(x1*y2 - x2*y1) - (Y1*x2 - Y2*x1)*(x1-x2) - (Y1*y2 - Y2*y1)*(y1-y2) );
 
         // set model, rotation part is antisymmetric
-        Mdata[0] = Mdata[4] = Xdata[0];
-        Mdata[1] = -Xdata[1];
-        Mdata[2] = Xdata[2];
-        Mdata[3] = Xdata[1];
-        Mdata[5] = Xdata[3];
-        M.copyTo(_model);
+        M[0] = M[4] = S0;
+        M[1] = -S1;
+        M[2] = S2;
+        M[3] = S1;
+        M[5] = S3;
         return 1;
     }
 };
