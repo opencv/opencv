@@ -76,9 +76,40 @@ Certain detailed settings of @ref cv::Stitcher might not make sense. Especially
 you should not mix classes implementing affine model and classes implementing
 Homography model, as they work with different transformations.
 
-Binary
-------
+Try it out
+----------
 
 If you enabled building samples you can found binary under
 `build/bin/cpp-example-stitching`. This example is a console application, run it without
-arguments to see help.
+arguments to see help. `opencv_extra` provides some sample data for testing all available
+configurations.
+
+to try panorama mode run:
+```
+./cpp-example-stitching --mode panorama <path to opencv_extra>/testdata/stitching/boat*
+```
+![](images/boat.jpg)
+
+to try scans mode run (dataset from home-grade scanner):
+```
+./cpp-example-stitching --mode scans <path to opencv_extra>/testdata/stitching/newspaper*
+```
+![](images/newspaper.jpg)
+
+or (dataset from professional book scanner):
+```
+./cpp-example-stitching --mode scans <path to opencv_extra>/testdata/stitching/budapest*
+```
+![](images/budapest.jpg)
+
+@note
+Examples above expects POSIX platform, on windows you have to provide all files names explicitly
+(e.g. `boat1.jpg` `boat2.jpg`...) as windows command line does not support `*` expansion.
+
+See also
+--------
+
+If you want to study internals of the stitching pipeline or you want to experiment with detailed
+configuration see
+[stitching_detailed.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/stitching_detailed.cpp)
+in `opencv/samples/cpp` folder.
