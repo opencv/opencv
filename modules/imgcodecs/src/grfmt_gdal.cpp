@@ -559,7 +559,7 @@ bool GdalDecoder::checkSignature( const String& signature )const{
 
 
     // look for NITF
-    std::string str = signature.c_str();
+    std::string str(signature);
     if( str.substr(0,4).find("NITF") != std::string::npos ){
         return true;
     }
