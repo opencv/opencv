@@ -588,11 +588,12 @@ public:
         }
     }
 
-    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    bool checkSubset( InputArray _ms1, InputArray, int count ) const
     {
-        Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
+        Mat ms1 = _ms1.getMat();
         // check colinearity and also check that points are too close
-        return !(haveCollinearPoints(ms1, count) || haveCollinearPoints(ms2, count));
+        // only ms1 affects actual estimation stability
+        return !haveCollinearPoints(ms1, count);
     }
 };
 
@@ -792,51 +793,59 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(2);
     bool result = false;
+    Mat H;
 
     CV_Assert( count >= 0 && to.checkVector(2) == count );
 
-    Mat dFrom, dTo, H, tempMask;
+    if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
+    {
+        Mat tmp;
+        from.convertTo(tmp, CV_32FC2);
+        from = tmp;
+        to.convertTo(tmp, CV_32FC2);
+        to = tmp;
+    }
+    // convert to N x 1 vectors
+    from = from.reshape(2, count);
+    to = to.reshape(2, count);
 
-    from.convertTo(dFrom, CV_32F);
-    to.convertTo(dTo, CV_32F);
-    dFrom = dFrom.reshape(2, count);
-    dTo = dTo.reshape(2, count);
+    Mat inliers;
+    if(_inliers.needed())
+    {
+        _inliers.create(count, 1, CV_8U, -1, true);
+        inliers = _inliers.getMat();
+    }
 
     // run robust method
     Ptr<PointSetRegistrator::Callback> cb = makePtr<Affine2DEstimatorCallback>();
     if( method == RANSAC )
-        result = createRANSACPointSetRegistrator(cb, 3, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(dFrom, dTo, H, tempMask);
+        result = createRANSACPointSetRegistrator(cb, 3, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
     else if( method == LMEDS )
-        result = createLMeDSPointSetRegistrator(cb, 3, confidence, static_cast<int>(maxIters))->run(dFrom, dTo, H, tempMask);
+        result = createLMeDSPointSetRegistrator(cb, 3, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
     if(result && count > 3 && refineIters)
     {
         // reorder to start with inliers
-        compressElems(dFrom.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
-        int inliers_count = compressElems(dTo.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
+        compressElems(from.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
+        int inliers_count = compressElems(to.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
         if(inliers_count > 0)
         {
-            Mat src = dFrom.rowRange(0, inliers_count);
-            Mat dst = dTo.rowRange(0, inliers_count);
+            Mat src = from.rowRange(0, inliers_count);
+            Mat dst = to.rowRange(0, inliers_count);
             Mat Hvec = H.reshape(1, 6);
             createLMSolver(makePtr<Affine2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
         }
     }
 
-    if(result)
-    {
-        if(_inliers.needed())
-            tempMask.copyTo(_inliers);
-    }
-    else
+    if (!result)
     {
         H.release();
         if(_inliers.needed())
         {
-            tempMask = Mat::zeros(count, 1, CV_8U);
-            tempMask.copyTo(_inliers);
+            inliers = Mat::zeros(count, 1, CV_8U);
+            inliers.copyTo(_inliers);
         }
     }
 
@@ -851,34 +860,47 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     Mat from = _from.getMat(), to = _to.getMat();
     const int count = from.checkVector(2);
     bool result = false;
+    Mat H;
 
     CV_Assert( count >= 0 && to.checkVector(2) == count );
 
-    Mat dFrom, dTo, H, tempMask;
+    if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
+    {
+        Mat tmp;
+        from.convertTo(tmp, CV_32FC2);
+        from = tmp;
+        to.convertTo(tmp, CV_32FC2);
+        to = tmp;
+    }
+    // convert to N x 1 vectors
+    from = from.reshape(2, count);
+    to = to.reshape(2, count);
 
-    from.convertTo(dFrom, CV_32F);
-    to.convertTo(dTo, CV_32F);
-    dFrom = dFrom.reshape(2, count);
-    dTo = dTo.reshape(2, count);
+    Mat inliers;
+    if(_inliers.needed())
+    {
+        _inliers.create(count, 1, CV_8U, -1, true);
+        inliers = _inliers.getMat();
+    }
 
     // run robust estimation
     Ptr<PointSetRegistrator::Callback> cb = makePtr<AffinePartial2DEstimatorCallback>();
     if( method == RANSAC )
-        result = createRANSACPointSetRegistrator(cb, 2, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(dFrom, dTo, H, tempMask);
+        result = createRANSACPointSetRegistrator(cb, 2, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
     else if( method == LMEDS )
-        result = createLMeDSPointSetRegistrator(cb, 2, confidence, static_cast<int>(maxIters))->run(dFrom, dTo, H, tempMask);
+        result = createLMeDSPointSetRegistrator(cb, 2, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
     if(result && count > 2 && refineIters)
     {
         // reorder to start with inliers
-        compressElems(dFrom.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
-        int inliers_count = compressElems(dTo.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, count);
+        compressElems(from.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
+        int inliers_count = compressElems(to.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
         if(inliers_count > 0)
         {
-            Mat src = dFrom.rowRange(0, inliers_count);
-            Mat dst = dTo.rowRange(0, inliers_count);
+            Mat src = from.rowRange(0, inliers_count);
+            Mat dst = to.rowRange(0, inliers_count);
             // H is
             //     a -b tx
             //     b  a ty
@@ -897,18 +919,13 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
         }
     }
 
-    if(result)
-    {
-        if(_inliers.needed())
-            tempMask.copyTo(_inliers);
-    }
-    else
+    if (!result)
     {
         H.release();
         if(_inliers.needed())
         {
-            tempMask = Mat::zeros(count, 1, CV_8U);
-            tempMask.copyTo(_inliers);
+            inliers = Mat::zeros(count, 1, CV_8U);
+            inliers.copyTo(_inliers);
         }
     }
 
