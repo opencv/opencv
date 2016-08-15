@@ -1025,7 +1025,7 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
     bboxes.clear();
 
     if( src.rows < 3 || src.cols < 3 )
-        return;
+        CV_Error(Error::StsBadArg, "Input image is too small. Expected at least 3x3");
 
     Size size = src.size();
 
