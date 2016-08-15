@@ -354,6 +354,15 @@ typedef struct ImplData
 } ImplData;
 #endif
 
+#ifdef ENABLE_INSTRUMENTATION
+class InstumentData
+{
+public:
+    static ::cv::String treeToString();
+    static void         printTree();
+};
+#endif
+
 class CV_EXPORTS TestBase: public ::testing::Test
 {
 public:
@@ -382,7 +391,7 @@ protected:
     virtual void SetUp();
     virtual void TearDown();
 
-    void startTimer();
+    bool startTimer(); // bool is dummy for conditional loop
     void stopTimer();
     bool next();
 
@@ -406,6 +415,10 @@ protected:
 #ifdef CV_COLLECT_IMPL_DATA
     ImplData implConf;
 #endif
+#ifdef ENABLE_INSTRUMENTATION
+    InstumentData instrConf;
+#endif
+
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
     typedef std::vector<int64> TimeVector;
@@ -645,9 +658,9 @@ int main(int argc, char **argv)\
     CV_PERF_TEST_MAIN_INTERNALS(modulename, plain_only, __VA_ARGS__)\
 }
 
-#define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())
-#define TEST_CYCLE() for(; startTimer(), next(); stopTimer())
-#define TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; ++r)
+#define TEST_CYCLE_N(n) for(declare.iterations(n); next() && startTimer(); stopTimer())
+#define TEST_CYCLE() for(; next() && startTimer(); stopTimer())
+#define TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); next() && startTimer(); stopTimer()) for(int r = 0; r < runsNum; ++r)
 
 namespace perf
 {
