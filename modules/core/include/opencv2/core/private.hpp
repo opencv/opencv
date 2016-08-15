@@ -382,9 +382,15 @@ static struct __IppInitializer__ __ipp_initializer__;
         return __VA_ARGS__;                                                 \
     }
 #endif
-
+#define CV_IPP_RUN_FAST(func, ...)                                          \
+    if (cv::ipp::useIPP() && (func))                                        \
+    {                                                                       \
+        CV_IMPL_ADD(CV_IMPL_IPP);                                           \
+        return __VA_ARGS__;                                                 \
+    }
 #else
 #define CV_IPP_RUN_(condition, func, ...)
+#define CV_IPP_RUN_FAST(func, ...)
 #endif
 
 #define CV_IPP_RUN(condition, func, ...) CV_IPP_RUN_(condition, func, __VA_ARGS__)
