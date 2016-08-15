@@ -2977,4 +2977,23 @@ TEST(Core_Pow, special)
     }
 }
 
+TEST(Core_Cholesky, accuracy64f)
+{
+    const int n = 5;
+    Mat A(n, n, CV_64F), refA;
+    Mat mean(1, 1, CV_64F);
+    *mean.ptr<double>() = 10.0;
+    Mat dev(1, 1, CV_64F);
+    *dev.ptr<double>() = 10.0;
+    RNG rng(10);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    A = A*A.t();
+    A.copyTo(refA);
+    Cholesky(A.ptr<double>(), A.step, n, NULL, 0, 0);
+
+   for (int i = 0; i < A.rows; i++)
+       for (int j = i + 1; j < A.cols; j++)
+           A.at<double>(i, j) = 0.0;
+   EXPECT_TRUE(norm(refA - A*A.t()) < 10e-5);
+}
 /* End of file. */
