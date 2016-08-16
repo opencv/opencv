@@ -156,7 +156,7 @@ struct vxImage
     }
     ~vxImage()
     {
-        vxSwapImageHandle(img, NULL, NULL, 1);
+        vxErr::check(vxSwapImageHandle(img, NULL, NULL, 1));
         vxReleaseImage(&img);
     }
 };
@@ -165,16 +165,45 @@ struct vxImage
 // real code starts here
 // ...
 
-template <typename T>
-inline int ovx_hal_add(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h)
+#define OVX_BINARY_OP(hal_func, ovx_call, ...)                                                                                   \
+template <typename T>                                                                                                            \
+inline int ovx_hal_##hal_func(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h, __VA_ARGS__) \
+{                                                                                                                                \
+    try                                                                                                                          \
+    {                                                                                                                            \
+        vxContext * ctx = vxContext::getContext();                                                                               \
+        vxImage ia(*ctx, a, astep, w, h);                                                                                        \
+        vxImage ib(*ctx, b, bstep, w, h);                                                                                        \
+        vxImage ic(*ctx, c, cstep, w, h);                                                                                        \
+        ovx_call                                                                                                                 \
+    }                                                                                                                            \
+    catch (vxErr & e)                                                                                                            \
+    {                                                                                                                            \
+        e.print();                                                                                                               \
+        return CV_HAL_ERROR_UNKNOWN;                                                                                             \
+    }                                                                                                                            \
+    return CV_HAL_ERROR_OK;                                                                                                      \
+}
+
+OVX_BINARY_OP(add, {vxErr::check(vxuAdd(ctx->ctx, ia.img, ib.img, VX_CONVERT_POLICY_SATURATE, ic.img));})
+OVX_BINARY_OP(sub, {vxErr::check(vxuSubtract(ctx->ctx, ia.img, ib.img, VX_CONVERT_POLICY_SATURATE, ic.img));})
+
+OVX_BINARY_OP(absdiff, {vxErr::check(vxuAbsDiff(ctx->ctx, ia.img, ib.img, ic.img));})
+
+OVX_BINARY_OP(and, {vxErr::check(vxuAnd(ctx->ctx, ia.img, ib.img, ic.img));})
+OVX_BINARY_OP(or, {vxErr::check(vxuOr(ctx->ctx, ia.img, ib.img, ic.img));})
+OVX_BINARY_OP(xor, {vxErr::check(vxuXor(ctx->ctx, ia.img, ib.img, ic.img));})
+
+OVX_BINARY_OP(mul, {vxErr::check(vxuMultiply(ctx->ctx, ia.img, ib.img, (float)scale, VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_ZERO, ic.img));}, double scale)
+
+inline int ovx_hal_not(const uchar *a, size_t astep, uchar *c, size_t cstep, int w, int h)
 {
     try
     {
         vxContext * ctx = vxContext::getContext();
         vxImage ia(*ctx, a, astep, w, h);
-        vxImage ib(*ctx, b, bstep, w, h);
         vxImage ic(*ctx, c, cstep, w, h);
-        vxErr::check(vxuAdd(ctx->ctx, ia.img, ib.img, VX_CONVERT_POLICY_SATURATE, ic.img));
+        vxErr::check(vxuNot(ctx->ctx, ia.img, ic.img));
     }
     catch (vxErr & e)
     {
@@ -192,5 +221,28 @@ inline int ovx_hal_add(const T *a, size_t astep, const T *b, size_t bstep, T *c,
 #define cv_hal_add8u ovx_hal_add<uchar>
 #undef cv_hal_add16s
 #define cv_hal_add16s ovx_hal_add<short>
+#undef cv_hal_sub8u
+#define cv_hal_sub8u ovx_hal_sub<uchar>
+#undef cv_hal_sub16s
+#define cv_hal_sub16s ovx_hal_sub<short>
+
+#undef cv_hal_absdiff8u
+#define cv_hal_absdiff8u ovx_hal_absdiff<uchar>
+#undef cv_hal_absdiff16s
+#define cv_hal_absdiff16s ovx_hal_absdiff<short>
+
+#undef cv_hal_and8u
+#define cv_hal_and8u ovx_hal_and<uchar>
+#undef cv_hal_or8u
+#define cv_hal_or8u ovx_hal_or<uchar>
+#undef cv_hal_xor8u
+#define cv_hal_xor8u ovx_hal_xor<uchar>
+#undef cv_hal_not8u
+#define cv_hal_not8u ovx_hal_not
+
+#undef cv_hal_mul8u
+#define cv_hal_mul8u ovx_hal_mul<uchar>
+#undef cv_hal_mul16s
+#define cv_hal_mul16s ovx_hal_mul<short>
 
 #endif
