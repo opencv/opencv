@@ -890,6 +890,19 @@ TEST(Imgcodecs_Tiff, decode_multipage)
     CV_GrfmtReadTifMultiPage test; test.safe_run();
 }
 
+TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<uchar> buf;
+    EXPECT_NO_THROW(cv::imencode(".tiff", img, buf));
+
+    EXPECT_NO_THROW(cv::imdecode(buf, IMREAD_UNCHANGED));
+}
+
 #endif
 
 #ifdef HAVE_WEBP

@@ -514,8 +514,14 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     if( !decoder->readHeader() )
     {
-        if( !filename.empty() )
-            remove(filename.c_str());
+        decoder.release();
+        if ( !filename.empty() )
+        {
+            if ( remove(filename.c_str()) != 0 )
+            {
+                CV_Error( CV_StsError, "unable to remove temporary file" );
+            }
+        }
         return 0;
     }
 
@@ -556,8 +562,14 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     bool code = decoder->readData( *data );
-    if( !filename.empty() )
-        remove(filename.c_str());
+    decoder.release();
+    if ( !filename.empty() )
+    {
+        if ( remove(filename.c_str()) != 0 )
+        {
+            CV_Error( CV_StsError, "unable to remove temporary file" );
+        }
+    }
 
     if( !code )
     {
