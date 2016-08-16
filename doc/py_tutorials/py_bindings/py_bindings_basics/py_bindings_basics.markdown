@@ -142,5 +142,6 @@ public:
 So these are the major extension macros available in OpenCV. Typically, a developer has to put
 proper macros in their appropriate positions. Rest is done by generator scripts. Sometimes, there
 may be an exceptional cases where generator scripts cannot create the wrappers. Such functions need
-to be handled manually. But most of the time, a code written according to OpenCV coding guidelines
-will be automatically wrapped by generator scripts.
+to be handled manually, to do this write your own pyopencv_*.hpp extending headers and put them into
+misc/python subdirectory of your module. But most of the time, a code written according to OpenCV
+coding guidelines will be automatically wrapped by generator scripts.
