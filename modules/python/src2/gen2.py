@@ -30,7 +30,7 @@ gen_template_call_constructor = Template("""self->v.reset(new ${cname}${args})""
 gen_template_simple_call_constructor_prelude = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
         if(self) """)
 
-gen_template_simple_call_constructor = Template("""self->v = ${cname}${args}""")
+gen_template_simple_call_constructor = Template("""new (&(self->v)) ${cname}${args}""")
 
 gen_template_parse_args = Template("""const char* keywords[] = { $kw_list, NULL };
     if( PyArg_ParseTupleAndKeywords(args, kw, "$fmtspec", (char**)keywords, $parse_arglist)$code_cvt )""")
@@ -74,13 +74,14 @@ static PyTypeObject pyopencv_${name}_Type =
 
 static void pyopencv_${name}_dealloc(PyObject* self)
 {
+    ((pyopencv_${name}_t*)self)->v.${cname}::~${sname}();
     PyObject_Del(self);
 }
 
 template<> PyObject* pyopencv_from(const ${cname}& r)
 {
     pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-    m->v = r;
+    new (&m->v) ${cname}(r); //Copy constructor
     return (PyObject*)m;
 }
 
@@ -258,6 +259,7 @@ class ClassInfo(object):
     def __init__(self, name, decl=None):
         self.cname = name.replace(".", "::")
         self.name = self.wname = normalize_class_name(name)
+        self.sname = name[name.rfind('.') + 1:]
         self.ismap = False
         self.issimple = False
         self.isalgorithm = False
@@ -904,7 +906,7 @@ class PythonWrapperGenerator(object):
                     templ = gen_template_simple_type_decl
                 else:
                     templ = gen_template_type_decl
-                self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname,
+                self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname, sname=classinfo.sname,
                                       cname1=("cv::Algorithm" if classinfo.isalgorithm else classinfo.cname)))
 
         # register classes in the same order as they have been declared.

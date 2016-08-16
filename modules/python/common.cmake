@@ -24,8 +24,11 @@ foreach(m ${OPENCV_MODULES_BUILD})
 endforeach()
 
 set(opencv_hdrs "")
+set(opencv_userdef_hdrs "")
 foreach(m ${OPENCV_PYTHON_MODULES})
   list(APPEND opencv_hdrs ${OPENCV_MODULE_${m}_HEADERS})
+  file(GLOB userdef_hdrs ${OPENCV_MODULE_${m}_LOCATION}/misc/python/pyopencv*.hpp)
+  list(APPEND opencv_userdef_hdrs ${userdef_hdrs})
 endforeach(m)
 
 # header blacklist
@@ -52,7 +55,13 @@ add_custom_command(
    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
    DEPENDS ${opencv_hdrs})
 
-ocv_add_library(${the_module} MODULE ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs})
+set(cv2_custom_hdr "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_custom_headers.h")
+file(WRITE ${cv2_custom_hdr} "//user-defined headers\n")
+foreach(uh ${opencv_userdef_hdrs})
+    file(APPEND ${cv2_custom_hdr} "#include \"${uh}\"\n")
+endforeach(uh)
+
+ocv_add_library(${the_module} MODULE ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs} ${opencv_userdef_hdrs} ${cv2_custom_hdr})
 
 if(APPLE)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
