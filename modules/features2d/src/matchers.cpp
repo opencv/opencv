@@ -604,7 +604,7 @@ void DescriptorMatcher::checkMasks( InputArrayOfArrays _masks, int queryDescript
     int rows;
     if( isMaskSupported() && !masks.empty() )
     {
-        // Check masks
+        // check masks
         size_t imageCount = std::max(trainDescCollection.size(), utrainDescCollection.size() );
         CV_Assert( masks.size() == imageCount );
         for( size_t i = 0; i < imageCount; i++ )
