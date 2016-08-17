@@ -375,7 +375,7 @@ Mat& Mat::operator = (const Scalar& s)
 
     if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
         CV_IPP_CHECK()
         {
             if (dims <= 2 || isContinuous())
