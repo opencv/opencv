@@ -4540,7 +4540,6 @@ struct ReplacementFilter : public hal::Filter2D
 };
 
 #ifdef HAVE_IPP
-#if !HAVE_ICV
 typedef IppStatus(CV_STDCALL* ippiFilterBorder)(
     const void* pSrc, int srcStep, void* pDst, int dstStep,
     IppiSize dstRoiSize, IppiBorderType border, const void* borderValue,
@@ -4701,7 +4700,6 @@ struct IppFilter : public hal::Filter2D
         }
     }
 };
-#endif
 #endif
 
 struct DftFilter : public hal::Filter2D
@@ -4907,7 +4905,6 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
     }
 
 #ifdef HAVE_IPP
-#if !HAVE_ICV
     if (kernel_type == CV_32FC1) {
         IppFilter<CV_32F>* impl = new IppFilter<CV_32F>();
         if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
@@ -4929,7 +4926,6 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
         }
         delete impl;
     }
-#endif
 #endif
 
     if (DftFilter::isAppropriate(stype, dtype, kernel_width, kernel_height))

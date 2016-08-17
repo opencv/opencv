@@ -1783,7 +1783,6 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                     }
 
                     IppStatus status = ippStsErr;
-#if !HAVE_ICV
 #if IPP_VERSION_X100 > 900 // Buffer overflow may happen in IPP 9.0.0 and less
                     if (type == CV_8UC1)
                         IPP_FILTER_GAUSS_C1(8u)
@@ -1801,9 +1800,7 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                         IPP_FILTER_GAUSS_CN(16s, 3)
                     else if (type == CV_32FC3)
                         IPP_FILTER_GAUSS_CN(32f, 3)
-                    else
-#endif
-                    if (type == CV_32FC1)
+                    else if (type == CV_32FC1)
                         IPP_FILTER_GAUSS_C1(32f)
 
                     if(status >= 0)
@@ -3060,7 +3057,7 @@ private:
     float *space_weight, *color_weight;
 };
 
-#if defined (HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_DISABLE_BLOCK
+#if defined (HAVE_IPP) && IPP_DISABLE_BLOCK
 class IPPBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {

@@ -393,7 +393,7 @@ static ippiGeneralFunc ippiHLS2RGBTab[] =
     0, (ippiGeneralFunc)ippiHLSToRGB_32f_C3R, 0, 0
 };
 
-#if !defined(HAVE_IPP_ICV_ONLY) && IPP_DISABLE_BLOCK
+#if IPP_DISABLE_BLOCK
 static ippiGeneralFunc ippiRGBToLUVTab[] =
 {
     (ippiGeneralFunc)ippiRGBToLUV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToLUV_16u_C3R, 0,

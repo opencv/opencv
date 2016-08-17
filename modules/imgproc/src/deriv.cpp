@@ -359,7 +359,6 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             return true;
         }
 
-#if !defined(HAVE_IPP_ICV_ONLY)
         if ((dx == 2) && (dy == 0))
         {
 #if IPP_VERSION_X100 >= 900
@@ -397,7 +396,6 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
                 return false;
             return true;
         }
-#endif
     }
 
     if (src.type() == CV_32F && dst.type() == CV_32F)
@@ -445,7 +443,7 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             return true;
         }
 #endif
-#if !defined(HAVE_IPP_ICV_ONLY)
+
         if((dx == 2) && (dy == 0))
         {
 #if IPP_VERSION_X100 >= 900
@@ -488,7 +486,6 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
                 ippiMulC_32f_C1R(dst.ptr<Ipp32f>(), (int)dst.step, (Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
             return true;
         }
-#endif
     }
     return false;
 }
