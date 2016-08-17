@@ -1139,12 +1139,17 @@ void GuiReceiver::addButton(QString button_name, int button_type, int initial_bu
     {
         CvBar* lastbar = (CvBar*) global_control_panel->myLayout->itemAt(global_control_panel->myLayout->count() - 1);
 
-        if (lastbar->type == type_CvTrackbar) //if last bar is a trackbar, create a new buttonbar, else, attach to the current bar
+        // if last bar is a trackbar or the user requests a new buttonbar, create a new buttonbar
+        // else, attach to the current bar
+        if (lastbar->type == type_CvTrackbar || cv::QT_NEW_BUTTONBAR & button_type)
             b = CvWindow::createButtonBar(button_name); //the bar has the name of the first button attached to it
         else
             b = (CvButtonbar*) lastbar;
 
     }
+
+    // unset buttonbar flag
+    button_type = button_type & ~cv::QT_NEW_BUTTONBAR;
 
     b->addButton(button_name, (CvButtonCallback) on_change, userdata, button_type, initial_button_state);
 }
