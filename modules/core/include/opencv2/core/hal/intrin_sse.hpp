@@ -1374,6 +1374,18 @@ inline void v_load_deinterleave(const unsigned* ptr, v_uint32x4& a, v_uint32x4& 
     v_transpose4x4(u0, u1, u2, u3, a, b, c, d);
 }
 
+// 2-channel, float only
+inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b)
+{
+    const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1);
+
+    __m128 u0 = _mm_loadu_ps(ptr);       // a0 b0 a1 b1
+    __m128 u1 = _mm_loadu_ps((ptr + 4)); // a2 b2 a3 b3
+
+    a.val = _mm_shuffle_ps(u0, u1, mask_lo); // a0 a1 a2 a3
+    b.val = _mm_shuffle_ps(u0, u1, mask_hi); // b0 b1 ab b3
+}
+
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
                                 const v_uint8x16& c )
 {
@@ -1527,6 +1539,18 @@ inline void v_store_interleave(unsigned* ptr, const v_uint32x4& a, const v_uint3
     v_store(ptr + 4, t1);
     v_store(ptr + 8, t2);
     v_store(ptr + 12, t3);
+}
+
+// 2-channel, float only
+inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b)
+{
+    // a0 a1 a2 a3 ...
+    // b0 b1 b2 b3 ...
+    __m128 u0 = _mm_unpacklo_ps(a.val, b.val); // a0 b0 a1 b1
+    __m128 u1 = _mm_unpackhi_ps(a.val, b.val); // a2 b2 a3 b3
+
+    _mm_storeu_ps(ptr, u0);
+    _mm_storeu_ps((ptr + 4), u1);
 }
 
 #define OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(_Tpvec, _Tp, suffix, _Tpuvec, _Tpu, usuffix) \

@@ -132,6 +132,32 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    // float32x4 only
+    TheTest & test_interleave_2channel()
+    {
+        Data<R> data1, data2;
+        data2 += 20;
+
+        R a = data1, b = data2;
+
+        LaneType buf2[R::nlanes * 2];
+
+        v_store_interleave(buf2, a, b);
+
+        Data<R> z(0);
+        a = b = z;
+
+        v_load_deinterleave(buf2, a, b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            EXPECT_EQ(data1, Data<R>(a));
+            EXPECT_EQ(data2, Data<R>(b));
+        }
+
+        return *this;
+    }
+
     // v_expand and v_load_expand
     TheTest & test_expand()
     {
@@ -846,6 +872,7 @@ TEST(hal_intrin, float32x4) {
     TheTest<v_float32x4>()
         .test_loadstore()
         .test_interleave()
+        .test_interleave_2channel()
         .test_addsub()
         .test_mul()
         .test_div()
