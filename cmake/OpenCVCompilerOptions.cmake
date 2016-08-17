@@ -384,3 +384,7 @@ if(NOT OPENCV_FP16_DISABLE)
     set(HAVE_FP16 1)
   endif()
 endif()
+
+if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/usr/local/lib")
+  link_directories("/usr/local/lib")
+endif()
