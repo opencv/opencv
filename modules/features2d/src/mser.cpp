@@ -1020,13 +1020,12 @@ extractMSER_8uC3( const Mat& src,
 void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, vector<Rect>& bboxes )
 {
     Mat src = _src.getMat();
-    size_t npix = src.total();
 
     msers.clear();
     bboxes.clear();
 
-    if( npix == 0 )
-        return;
+    if( src.rows < 3 || src.cols < 3 )
+        CV_Error(Error::StsBadArg, "Input image is too small. Expected at least 3x3");
 
     Size size = src.size();
 
