@@ -1002,6 +1002,137 @@ template<> inline std::string CommandLineParser::get<std::string>(const String& 
 
 //! @endcond
 
+
+// Basic Node class for tree building
+template<class OBJECT>
+class CV_EXPORTS Node
+{
+public:
+    Node()
+    {
+        m_pParent  = 0;
+    }
+    Node(OBJECT& payload) : m_payload(payload)
+    {
+        m_pParent  = 0;
+    }
+    ~Node()
+    {
+        removeChilds();
+        if (m_pParent)
+        {
+            int idx = m_pParent->findChild(this);
+            if (idx >= 0)
+                m_pParent->m_childs.erase(m_pParent->m_childs.begin() + idx);
+        }
+    }
+
+    Node<OBJECT>* findChild(OBJECT& payload) const
+    {
+        for(int i = 0; i < this->m_childs.size(); i++)
+        {
+            if(this->m_childs[i]->m_payload == payload)
+                return this->m_childs[i];
+        }
+        return NULL;
+    }
+
+    int findChild(Node<OBJECT> *pNode) const
+    {
+        for (int i = 0; i < this->m_childs.size(); i++)
+        {
+            if(this->m_childs[i] == pNode)
+                return i;
+        }
+        return -1;
+    }
+
+    void addChild(Node<OBJECT> *pNode)
+    {
+        if(!pNode)
+            return;
+
+        CV_Assert(pNode->m_pParent == 0);
+        pNode->m_pParent = this;
+        this->m_childs.push_back(pNode);
+    }
+
+    void removeChilds()
+    {
+        for(int i = 0; i < m_childs.size(); i++)
+        {
+            m_childs[i]->m_pParent = 0; // avoid excessive parent vector trimming
+            delete m_childs[i];
+        }
+        m_childs.clear();
+    }
+
+public:
+    OBJECT                     m_payload;
+    Node<OBJECT>*              m_pParent;
+    std::vector<Node<OBJECT>*> m_childs;
+};
+
+// Instrumentation external interface
+namespace instr
+{
+enum
+{
+    TYPE_GENERAL = 0,   // OpenCV API function, e.g. exported function
+    TYPE_MARKER,        // Information marker
+    TYPE_WRAPPER,       // Wrapper function for implementation
+    TYPE_FUN,           // Simple function call
+};
+
+enum
+{
+    IMPL_PLAIN = 0,
+    IMPL_IPP,
+    IMPL_OPENCL,
+};
+
+enum
+{
+    FLAGS_MAPPING = 0x01,
+};
+
+enum
+{
+    COMMAND_RESET = 0x01,
+};
+
+class CV_EXPORTS NodeData
+{
+public:
+    NodeData(const char* funName = 0, const char* fileName = NULL, int lineNum = 0, int instrType = TYPE_GENERAL, int implType = IMPL_PLAIN);
+    NodeData(NodeData &ref);
+    ~NodeData();
+    NodeData& operator=(const NodeData&);
+
+    cv::String          m_funName;
+    int                 m_instrType;
+    int                 m_implType;
+    cv::String          m_fileName;
+    int                 m_lineNum;
+
+    bool                m_funError;
+    volatile int        m_counter;
+    bool                m_stopPoint;
+    uint64              m_ticksMean;
+
+};
+bool operator==(const NodeData& lhs, const NodeData& rhs);
+
+typedef Node<NodeData> InstrNode;
+
+CV_EXPORTS bool       useInstrumentation();
+CV_EXPORTS void       setUseInstrumentation(bool flag);
+CV_EXPORTS InstrNode* getTrace();
+CV_EXPORTS void       resetTrace();
+CV_EXPORTS void       setFlags(int modeFlags);
+CV_EXPORTS int        getFlags();
+};
+
 } //namespace cv
 
 #ifndef DISABLE_OPENCV_24_COMPATIBILITY

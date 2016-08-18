@@ -1300,6 +1300,210 @@ void setUseCollection(bool flag)
 }
 #endif
 
+namespace instr
+{
+bool useInstrumentation()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return getInstrumentStruct().useInstr;
+#else
+    return false;
+#endif
+}
+
+void setUseInstrumentation(bool flag)
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().useInstr = flag;
+#else
+    CV_UNUSED(flag);
+#endif
+}
+
+InstrNode* getTrace()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return &getInstrumentStruct().rootNode;
+#else
+    return NULL;
+#endif
+}
+
+void resetTrace()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().rootNode.removeChilds();
+    getInstrumentTLSStruct().pCurrentNode = &getInstrumentStruct().rootNode;
+#endif
+}
+
+void setFlags(int modeFlags)
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().enableMapping = (modeFlags & FLAGS_MAPPING);
+#else
+    CV_UNUSED(modeFlags);
+#endif
+}
+int getFlags()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    int flags = 0;
+    if(getInstrumentStruct().enableMapping)
+        flags |= FLAGS_MAPPING;
+    return flags;
+#else
+    return 0;
+#endif
+}
+
+NodeData::NodeData(const char* funName, const char* fileName, int lineNum, int instrType, int implType)
+{
+    m_instrType = TYPE_GENERAL;
+    m_implType  = IMPL_PLAIN;
+
+    m_funError  = false;
+    m_counter   = 0;
+    m_stopPoint = false;
+    m_ticksMean = 0;
+
+    m_funName     = funName;
+    m_instrType   = instrType;
+    m_implType    = implType;
+    m_fileName    = fileName;
+    m_lineNum     = lineNum;
+}
+NodeData::NodeData(NodeData &ref)
+{
+    *this = ref;
+}
+NodeData& NodeData::operator=(const NodeData &right)
+{
+    this->m_funName     = right.m_funName;
+    this->m_instrType   = right.m_instrType;
+    this->m_implType    = right.m_implType;
+    this->m_funError    = right.m_funError;
+    this->m_counter     = right.m_counter;
+    this->m_stopPoint   = right.m_stopPoint;
+    this->m_ticksMean   = right.m_ticksMean;
+    this->m_fileName    = right.m_fileName;
+    this->m_lineNum     = right.m_lineNum;
+
+    return *this;
+}
+NodeData::~NodeData()
+{
+}
+bool operator==(const NodeData& left, const NodeData& right)
+{
+    if(left.m_lineNum == right.m_lineNum && left.m_funName == right.m_funName && left.m_fileName == right.m_fileName)
+        return true;
+    return false;
+}
+
+#ifdef ENABLE_INSTRUMENTATION
+InstrStruct& getInstrumentStruct()
+{
+    static InstrStruct instr;
+    return instr;
+}
+
+InstrTLSStruct& getInstrumentTLSStruct()
+{
+    return *getInstrumentStruct().tlsStruct.get();
+}
+
+InstrNode* getCurrentNode()
+{
+    return getInstrumentTLSStruct().pCurrentNode;
+}
+
+IntrumentationRegion::IntrumentationRegion(const char* funName, const char* fileName, int lineNum, int instrType, int implType)
+{
+    m_disabled    = false;
+    m_regionTicks = 0;
+
+    InstrStruct *pStruct = &getInstrumentStruct();
+    if(pStruct->useInstr)
+    {
+        InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
+
+        // Disable in case of failure
+        if(!pTLS->pCurrentNode)
+        {
+            m_disabled = true;
+            return;
+        }
+
+        m_disabled = pTLS->pCurrentNode->m_payload.m_stopPoint;
+        if(m_disabled)
+            return;
+
+        NodeData payload(funName, fileName, lineNum, instrType, implType);
+        Node<NodeData>* pChild = NULL;
+
+        if(pStruct->enableMapping)
+        {
+            // Critical section
+            cv::AutoLock guard(pStruct->mutexCreate); // Guard from concurrent child creation
+            pChild = pTLS->pCurrentNode->findChild(payload);
+            if(!pChild)
+            {
+                pChild = new Node<NodeData>(payload);
+                pTLS->pCurrentNode->addChild(pChild);
+            }
+        }
+        else
+        {
+            pChild = pTLS->pCurrentNode->findChild(payload);
+            if(!pChild)
+            {
+                pTLS->pCurrentNode->m_payload.m_stopPoint = true;
+                return;
+            }
+        }
+        pTLS->pCurrentNode = pChild;
+
+        m_regionTicks = getTickCount();
+    }
+}
+
+IntrumentationRegion::~IntrumentationRegion()
+{
+    InstrStruct *pStruct = &getInstrumentStruct();
+    if(pStruct->useInstr)
+    {
+        if(!m_disabled)
+        {
+            InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
+            if(pTLS->pCurrentNode->m_payload.m_stopPoint)
+            {
+                pTLS->pCurrentNode->m_payload.m_stopPoint = false;
+            }
+            else
+            {
+                if(pTLS->pCurrentNode->m_payload.m_implType == cv::instr::IMPL_OPENCL &&
+                    pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_FUN)
+                    cv::ocl::finish();
+
+                uint64 ticks = (getTickCount() - m_regionTicks);
+                {
+                    cv::AutoLock guard(pStruct->mutexCount); // Concurrent ticks accumulation
+                    pTLS->pCurrentNode->m_payload.m_counter++;
+                    if(pTLS->pCurrentNode->m_payload.m_counter <= 1)
+                        pTLS->pCurrentNode->m_payload.m_ticksMean = ticks;
+                    else
+                        pTLS->pCurrentNode->m_payload.m_ticksMean = (pTLS->pCurrentNode->m_payload.m_ticksMean*(pTLS->pCurrentNode->m_payload.m_counter-1) + ticks)/pTLS->pCurrentNode->m_payload.m_counter;
+                }
+
+                pTLS->pCurrentNode = pTLS->pCurrentNode->m_pParent;
+            }
+        }
+    }
+}
+#endif
+}
+
 namespace ipp
 {
 

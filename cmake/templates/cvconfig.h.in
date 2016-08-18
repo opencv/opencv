@@ -212,3 +212,6 @@
 
 /* FP16 */
 #cmakedefine HAVE_FP16
+
+/* Library was compiled with functions instrumentation */
+#cmakedefine ENABLE_INSTRUMENTATION
