@@ -245,7 +245,7 @@ where src[i] and dst[i] are the i-th points in src and dst, respectively
 when fullAffine=false.
 
 @sa
-getAffineTransform, getPerspectiveTransform, findHomography
+estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
  */
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
@@ -306,7 +306,7 @@ sample image_alignment.cpp that demonstrates the use of the function. Note that 
 an exception if algorithm does not converges.
 
 @sa
-estimateRigidTransform, findHomography
+estimateAffine2D, estimateAffinePartial2D, findHomography
  */
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,

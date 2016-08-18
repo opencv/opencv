@@ -360,8 +360,9 @@ determined up to a scale. Thus, it is normalized so that \f$h_{33}=1\f$. Note th
 cannot be estimated, an empty one will be returned.
 
 @sa
-   getAffineTransform, getPerspectiveTransform, estimateRigidTransform, warpPerspective,
-    perspectiveTransform
+getAffineTransform, estimateAffine2D, estimateAffinePartial2D, getPerspectiveTransform, warpPerspective,
+perspectiveTransform
+
 
 @note
    -   A example on calculating a homography for image matching can be found at
@@ -1614,6 +1615,8 @@ Levenberg-Marquardt method to reduce the re-projection error even more.
 The RANSAC method can handle practically any ratio of outliers but need a threshold to
 distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
 correctly only when there are more than 50% of inliers.
+
+@sa estimateAffinePartial2D, getAffineTransform
 */
 CV_EXPORTS_W cv::Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
                                   int method = RANSAC, double ransacReprojThreshold = 3,
@@ -1660,6 +1663,8 @@ translations in \f$ x, y \f$ axes respectively.
 The RANSAC method can handle practically any ratio of outliers but need a threshold to
 distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
 correctly only when there are more than 50% of inliers.
+
+@sa estimateAffine2D, getAffineTransform
 */
 CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
                                   int method = RANSAC, double ransacReprojThreshold = 3,
