@@ -439,6 +439,89 @@ Then include this snippet into documentation:
 compatibility with the old rST documentation. But newly created samples should be included with the
 _snippet_ command, since this method is less affected by the changes in processed file.
 
+### Toggle buttons inclusion commands {#tutorial_documentation_toggle_buttons_commands_include}
+
+Toggle buttons are used to display the selected configuration (e.g. programming language, OS, IDE).
+
+To use the buttons in documentation, _add_toggle_ and _end_toggle_ commands are used.
+
+Example:
+@verbatim
+@add_toggle{Button Name}
+
+  text / code / doxygen commands / ... (Write .markdown like the rest of the file)
+
+@end_toggle
+@endverbatim
+
+For example using toggle buttons with text and [code](@ref tutorial_documentation_commands_include) snippets:
+
+@verbatim
+
+Buttons Example
+---------------
+
+@add_toggle{C++}
+
+   Text for C++ button
+   @snippet samples/cpp/tutorial_code/introduction/documentation/documentation.cpp hello_world
+
+@end_toggle
+
+@add_toggle{Python}
+
+   Text for Python button
+   @snippet samples/python/tutorial_code/introduction/documentation/documentation.py hello_world
+
+@end_toggle
+
+@add_toggle{Java}
+
+   Text for Java button
+   @snippet samples/java/tutorial_code/introduction/documentation/Documentation.java  hello_world
+
+@end_toggle
+@endverbatim
+
+Result looks like this:
+![Buttons with code example](buttons.png)
+<!--
+Due to a doxygen bug:
+https://bugzilla.gnome.org/show_bug.cgi?id=767171
+
+TODO when Doxygen 1.8.12 is released, we can have a dynamic example and not a static image if we:
+
+* remove the image buttons.png
+
+* replace the previous line ( ![Buttons with code example](buttons.png) ) with the following lines:
+
+Buttons Example
+---------------
+
+@add_toggle{C++}
+
+   Text for C++ button
+   @snippet samples/cpp/tutorial_code/introduction/documentation/documentation.cpp hello_world
+
+@end_toggle
+
+@add_toggle{Python}
+
+   Text for Python button
+   @snippet samples/python/tutorial_code/introduction/documentation/documentation.py hello_world
+
+@end_toggle
+
+@add_toggle{Java}
+
+   Text for Java button
+   @snippet samples/java/tutorial_code/introduction/documentation/Documentation.java hello_world
+
+@end_toggle
+-->
+
+As you can see, the buttons are added automatically under the previous heading in alphabetical order.
+
 ### Grouping commands {#tutorial_documentation_commands_group}
 
 All code entities should be put into named groups representing OpenCV modules and their internal
@@ -536,6 +619,8 @@ Write the tutorial {#tutorial_documentation_steps_tutorial}
 
     If you want to insert code blocks from this file into your tutorial, mark them with special doxygen comments (see [here](@ref tutorial_documentation_commands_include)).
 
+    If you want to write the tutorial in more than one programming language, use the toggle buttons for alternative comments and code (see [here](@ref tutorial_documentation_toggle_buttons_commands_include)).
+
 3.  Collect results  of the application work. It can be "before/after" images or some numbers
     representing performance or even a video.
 
@@ -552,11 +637,21 @@ Write the tutorial {#tutorial_documentation_steps_tutorial}
 
 5.  Modify your new page:
     -   Add page title and identifier, usually prefixed with <em>"tutorial_"</em> (see [here](@ref tutorial_documentation_md_page)).
+        You can add a link to the previous and next tutorial using the identifier
+        @verbatim
+@prev_tutorial{identifier}
+@next_tutorial{identifier}
+        @endverbatim
+        @warning Do **not** write the **hashtag (#)**, example: \n Incorrect: @verbatim @prev_tutorial{#tutorial_documentation} @endverbatim Correct: @verbatim @prev_tutorial{tutorial_documentation} @endverbatim
     -   Add brief description of your idea and tutorial goals.
     -   Describe your program and/or its interesting pieces.
     -   Describe your results, insert previously added images or other results.
 
-        To add a video use _htmlonly_, _endhtmlonly_ commands with raw html block inside:
+        To add a video use _youtube{Link}_ or _htmlonly_, _endhtmlonly_ commands with raw html block inside:
+        @verbatim
+@youtube{https://www.youtube.com/watch?v=ViPN810E0SU}
+        @endverbatim
+        Alternatively:
         @verbatim
 @htmlonly
 <div align="center">
@@ -574,7 +669,7 @@ Write the tutorial {#tutorial_documentation_steps_tutorial}
     <em>"table_of_content_*.markdown"</em> file with the needed table and place new record in it
     similar to existing ones.
     @verbatim
--   @subpage tutorial_windows_visual_studio_image_watch
+-   @subpage_info{tutorial_windows_visual_studio_image_watch}
 
     _Compatibility:_ \>= OpenCV 2.4
 

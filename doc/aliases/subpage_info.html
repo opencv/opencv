@@ -1,0 +1,35 @@
+<script type="text/javascript">
+/*
+  Gets info about the languages used
+  in a specific tutorial.
+*/
+//<![CDATA[
+(function() {
+    var $getSpan = $('span.newPageId').last();
+    var pageId = $getSpan.html();
+    var $addParagraph = $("<p class='Info'></p>");
+    $addParagraph.insertBefore($getSpan);
+    $.get(pageId + ".html").then(function(data) {
+        var $elements = $(data).find("div.newInnerHTML");
+        var arr = jQuery.makeArray($elements);
+        arr = arr.sort(myStringCompare);
+        var seen = {};
+        var str = "Languages:";
+        arr.forEach(function(e) {
+            var txt = e.innerHTML;
+            if (!seen[txt]) {
+                str += " " + txt + ",";
+                seen[txt] = true;
+            }
+        });
+        if (str.localeCompare("Languages:") != 0) {
+            // remove the last "," using substring
+            str = str.substring(0, str.length - 1);
+            // insert the paragraph with Languages info
+            $("<p class='startli'><em>" + str + "</em></p>").insertBefore($addParagraph);
+        }
+    });
+    $getSpan.remove();
+}());
+//]]>
+</script>
