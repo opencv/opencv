@@ -28,6 +28,8 @@ Here it is:
 
    #include <cv.h>
    #include <highgui.h>
+   #include <opencv2/imgproc/imgproc.hpp>
+   #include <stdio.h>
 
    using namespace cv;
 
