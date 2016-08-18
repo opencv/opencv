@@ -346,6 +346,8 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
 
 cv::RotatedRect cv::minAreaRect( InputArray _points )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat hull;
     Point2f out[3];
     RotatedRect box;
@@ -404,6 +406,8 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* /*storage*/ )
 
 void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
 {
+    CV_INSTRUMENT_REGION()
+
     _pts.create(4, 2, CV_32F);
     Mat pts = _pts.getMat();
     box.points(pts.ptr<Point2f>());

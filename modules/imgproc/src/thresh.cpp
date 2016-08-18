@@ -91,12 +91,12 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         switch( type )
         {
         case THRESH_TRUNC:
-            if (_src.data == _dst.data && ippiThreshold_GT_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh) >= 0)
+            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
             }
-            if (ippiThreshold_GT_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
+            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -104,12 +104,12 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
             setIppErrorStatus();
             break;
         case THRESH_TOZERO:
-            if (_src.data == _dst.data && ippiThreshold_LTVal_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
+            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
             }
-            if (ippiThreshold_LTVal_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
+            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh + 1, 0) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -117,12 +117,12 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
             setIppErrorStatus();
             break;
         case THRESH_TOZERO_INV:
-            if (_src.data == _dst.data && ippiThreshold_GTVal_8u_C1IR(_dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
+            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
             }
-            if (ippiThreshold_GTVal_8u_C1R(_src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
+            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -428,12 +428,12 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         switch( type )
         {
         case THRESH_TRUNC:
-            if (_src.data == _dst.data && ippiThreshold_GT_16s_C1IR(dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
+            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
             }
-            if (ippiThreshold_GT_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
+            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -441,12 +441,12 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             setIppErrorStatus();
             break;
         case THRESH_TOZERO:
-            if (_src.data == _dst.data && ippiThreshold_LTVal_16s_C1IR(dst, (int)dst_step*sizeof(dst[0]), sz, thresh + 1, 0) >= 0)
+            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh + 1, 0) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
             }
-            if (ippiThreshold_LTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+1, 0) >= 0)
+            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh + 1, 0) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -454,12 +454,12 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             setIppErrorStatus();
             break;
         case THRESH_TOZERO_INV:
-            if (_src.data == _dst.data && ippiThreshold_GTVal_16s_C1IR(dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
+            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
             }
-            if (ippiThreshold_GTVal_16s_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
+            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -689,7 +689,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         switch( type )
         {
         case THRESH_TRUNC:
-            if (0 <= ippiThreshold_GT_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
+            if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -697,7 +697,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             setIppErrorStatus();
             break;
         case THRESH_TOZERO:
-            if (0 <= ippiThreshold_LTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh+FLT_EPSILON, 0))
+            if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh + FLT_EPSILON, 0))
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -705,7 +705,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             setIppErrorStatus();
             break;
         case THRESH_TOZERO_INV:
-            if (0 <= ippiThreshold_GTVal_32f_C1R(src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
+            if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
@@ -1176,11 +1176,13 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
 #ifdef HAVE_IPP
 static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size size, unsigned char &thresh)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 810
     int ippStatus = -1;
     IppiSize srcSize = { size.width, size.height };
     CV_SUPPRESS_DEPRECATED_START
-    ippStatus = ippiComputeThreshold_Otsu_8u_C1R(_src, step, srcSize, &thresh);
+    ippStatus = CV_INSTRUMENT_FUN_IPP(ippiComputeThreshold_Otsu_8u_C1R, _src, step, srcSize, &thresh);
     CV_SUPPRESS_DEPRECATED_END
 
     if(ippStatus >= 0)
@@ -1464,6 +1466,8 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
 
@@ -1557,6 +1561,8 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
 void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
                             int method, int type, int blockSize, double delta )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     CV_Assert( src.type() == CV_8UC1 );
     CV_Assert( blockSize % 2 == 1 && blockSize > 1 );

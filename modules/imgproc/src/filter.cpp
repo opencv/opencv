@@ -379,6 +379,8 @@ int FilterEngine::proceed( const uchar* src, int srcstep, int count,
 
 void FilterEngine::apply(const Mat& src, Mat& dst, const Size & wsz, const Point & ofs)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( src.type() == srcType && dst.type() == dstType );
 
     int y = start(src, wsz, ofs);
@@ -1411,6 +1413,8 @@ private:
     mutable int bufsz;
     int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         int _ksize = kernel.rows + kernel.cols - 1;
         if ((1 != cn && 3 != cn) || width < _ksize*8)
             return 0;
@@ -1432,10 +1436,10 @@ private:
         float borderValue[] = {0.f, 0.f, 0.f};
         // here is the trick. IPP needs border type and extrapolates the row. We did it already.
         // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
-        if( (cn == 1 && ippiFilterRowBorderPipeline_32f_C1R(src, step, &dst, roisz, _kx, _ksize, 0,
-                                                            ippBorderRepl, borderValue[0], bufptr) < 0) ||
-            (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src, step, &dst, roisz, _kx, _ksize, 0,
-                                                            ippBorderRepl, borderValue, bufptr) < 0))
+        if( (cn == 1 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C1R,(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue[0], bufptr)) < 0) ||
+            (cn == 3 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C3R,(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue, bufptr)) < 0))
         {
             setIppErrorStatus();
             return 0;
@@ -4540,39 +4544,39 @@ struct ReplacementFilter : public hal::Filter2D
 };
 
 #ifdef HAVE_IPP
-typedef IppStatus(CV_STDCALL* ippiFilterBorder)(
+typedef IppStatus(CV_STDCALL* IppiFilterBorder)(
     const void* pSrc, int srcStep, void* pDst, int dstStep,
     IppiSize dstRoiSize, IppiBorderType border, const void* borderValue,
     const IppiFilterBorderSpec* pSpec, Ipp8u* pBuffer);
 
-static ippiFilterBorder getIppFunc(int stype)
+static IppiFilterBorder getIppFunc(int stype)
 {
     switch (stype)
     {
     case CV_8UC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C1R);
     case CV_8UC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C3R);
     case CV_8UC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C4R);
     case CV_16UC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C1R);
     case CV_16UC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C3R);
     case CV_16UC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C4R);
     case CV_16SC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C1R);
     case CV_16SC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C3R);
     case CV_16SC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C4R);
     case CV_32FC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C1R);
     case CV_32FC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C3R);
     case CV_32FC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C4R);
     default:
         return 0;
     }
@@ -4689,12 +4693,14 @@ struct IppFilter : public hal::Filter2D
 
     void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int, int, int, int)
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         if (dst_data == src_data)
             CV_Error(Error::StsBadArg, "Inplace IPP Filter2D is not supported");
-        ippiFilterBorder ippFunc = getIppFunc(src_type);
+        IppiFilterBorder ippiFilterBorder = getIppFunc(src_type);
         IppiSize dstRoiSize = { width, height };
         kernel_type borderValue[4] = { 0, 0, 0, 0 };
-        IppStatus status = ippFunc(src_data, (int)src_step, dst_data, (int)dst_step, dstRoiSize, ippBorderType, borderValue, spec, buffer);
+        IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiFilterBorder, src_data, (int)src_step, dst_data, (int)dst_step, dstRoiSize, ippBorderType, borderValue, spec, buffer);
         if (status >= 0) {
             CV_IMPL_ADD(CV_IMPL_IPP);
         }
@@ -4988,6 +4994,8 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor0,
                    double delta, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_filter2D(_src, _dst, ddepth, _kernel, anchor0, delta, borderType))
 
@@ -5015,6 +5023,8 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > _kernelY.total() && (size_t)_src.cols() > _kernelX.total(),
                ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
 

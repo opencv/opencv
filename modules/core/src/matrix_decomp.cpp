@@ -109,6 +109,8 @@ LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n, _Tp eps)
 
 int LU32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
+    CV_INSTRUMENT_REGION()
+
     int output;
     CALL_HAL_RET(LU32f, cv_hal_LU32f, output, A, astep, m, b, bstep, n)
     output = LUImpl(A, astep, m, b, bstep, n, FLT_EPSILON*10);
@@ -118,6 +120,8 @@ int LU32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 
 int LU64f(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
+    CV_INSTRUMENT_REGION()
+
     int output;
     CALL_HAL_RET(LU64f, cv_hal_LU64f, output, A, astep, m, b, bstep, n)
     output = LUImpl(A, astep, m, b, bstep, n, DBL_EPSILON*100);
@@ -205,6 +209,8 @@ CholImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
 
 bool Cholesky32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
+    CV_INSTRUMENT_REGION()
+
     bool output;
     CALL_HAL_RET(Cholesky32f, cv_hal_Cholesky32f, output, A, astep, m, b, bstep, n)
     return CholImpl(A, astep, m, b, bstep, n);
@@ -212,6 +218,8 @@ bool Cholesky32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 
 bool Cholesky64f(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
+    CV_INSTRUMENT_REGION()
+
     bool output;
     CALL_HAL_RET(Cholesky64f, cv_hal_Cholesky64f, output, A, astep, m, b, bstep, n)
     return CholImpl(A, astep, m, b, bstep, n);

@@ -226,6 +226,8 @@ public:
 
     virtual void operator()(const Range& range) const
     {
+        CV_INSTRUMENT_REGION_IPP();
+
         const void *yS = src_data + src_step * range.start;
         void *yD = dst_data + dst_step * range.start;
         if( !cvt(yS, static_cast<int>(src_step), yD, static_cast<int>(dst_step), width, range.end - range.start) )
@@ -278,19 +280,19 @@ bool CvtColorIPPLoopCopy(const uchar * src_data, size_t src_step, int src_type, 
 static IppStatus CV_STDCALL ippiSwapChannels_8u_C3C4Rf(const Ipp8u* pSrc, int srcStep, Ipp8u* pDst, int dstStep,
          IppiSize roiSize, const int *dstOrder)
 {
-    return ippiSwapChannels_8u_C3C4R(pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP8u);
+    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_8u_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP8u);
 }
 
 static IppStatus CV_STDCALL ippiSwapChannels_16u_C3C4Rf(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep,
          IppiSize roiSize, const int *dstOrder)
 {
-    return ippiSwapChannels_16u_C3C4R(pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP16u);
+    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_16u_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP16u);
 }
 
 static IppStatus CV_STDCALL ippiSwapChannels_32f_C3C4Rf(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep,
          IppiSize roiSize, const int *dstOrder)
 {
-    return ippiSwapChannels_32f_C3C4R(pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP32f);
+    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_32f_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP32f);
 }
 
 static ippiReorderFunc ippiSwapChannelsC3C4RTab[] =
@@ -409,18 +411,18 @@ static ippiGeneralFunc ippiLUVToRGBTab[] =
 
 struct IPPGeneralFunctor
 {
-    IPPGeneralFunctor(ippiGeneralFunc _func) : func(_func){}
+    IPPGeneralFunctor(ippiGeneralFunc _func) : ippiColorConvertGeneral(_func){}
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        return func ? func(src, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0 : false;
+        return ippiColorConvertGeneral ? CV_INSTRUMENT_FUN_IPP(ippiColorConvertGeneral, src, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0 : false;
     }
 private:
-    ippiGeneralFunc func;
+    ippiGeneralFunc ippiColorConvertGeneral;
 };
 
 struct IPPReorderFunctor
 {
-    IPPReorderFunctor(ippiReorderFunc _func, int _order0, int _order1, int _order2) : func(_func)
+    IPPReorderFunctor(ippiReorderFunc _func, int _order0, int _order1, int _order2) : ippiColorConvertReorder(_func)
     {
         order[0] = _order0;
         order[1] = _order1;
@@ -429,17 +431,17 @@ struct IPPReorderFunctor
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        return func ? func(src, srcStep, dst, dstStep, ippiSize(cols, rows), order) >= 0 : false;
+        return ippiColorConvertReorder ? CV_INSTRUMENT_FUN_IPP(ippiColorConvertReorder, src, srcStep, dst, dstStep, ippiSize(cols, rows), order) >= 0 : false;
     }
 private:
-    ippiReorderFunc func;
+    ippiReorderFunc ippiColorConvertReorder;
     int order[4];
 };
 
 struct IPPColor2GrayFunctor
 {
     IPPColor2GrayFunctor(ippiColor2GrayFunc _func) :
-        func(_func)
+        ippiColorToGray(_func)
     {
         coeffs[0] = 0.114f;
         coeffs[1] = 0.587f;
@@ -447,61 +449,61 @@ struct IPPColor2GrayFunctor
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        return func ? func(src, srcStep, dst, dstStep, ippiSize(cols, rows), coeffs) >= 0 : false;
+        return ippiColorToGray ? CV_INSTRUMENT_FUN_IPP(ippiColorToGray, src, srcStep, dst, dstStep, ippiSize(cols, rows), coeffs) >= 0 : false;
     }
 private:
-    ippiColor2GrayFunc func;
+    ippiColor2GrayFunc ippiColorToGray;
     Ipp32f coeffs[3];
 };
 
 struct IPPGray2BGRFunctor
 {
     IPPGray2BGRFunctor(ippiGeneralFunc _func) :
-        func(_func)
+        ippiGrayToBGR(_func)
     {
     }
 
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        if (func == 0)
+        if (ippiGrayToBGR == 0)
             return false;
 
         const void* srcarray[3] = { src, src, src };
-        return func(srcarray, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0;
+        return CV_INSTRUMENT_FUN_IPP(ippiGrayToBGR, srcarray, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0;
     }
 private:
-    ippiGeneralFunc func;
+    ippiGeneralFunc ippiGrayToBGR;
 };
 
 struct IPPGray2BGRAFunctor
 {
     IPPGray2BGRAFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _depth) :
-        func1(_func1), func2(_func2), depth(_depth)
+        ippiColorConvertGeneral(_func1), ippiColorConvertReorder(_func2), depth(_depth)
     {
     }
 
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        if (func1 == 0 || func2 == 0)
+        if (ippiColorConvertGeneral == 0 || ippiColorConvertReorder == 0)
             return false;
 
         const void* srcarray[3] = { src, src, src };
         Mat temp(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(srcarray, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
+        if(CV_INSTRUMENT_FUN_IPP(ippiColorConvertGeneral, srcarray, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
             return false;
         int order[4] = {0, 1, 2, 3};
-        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+        return CV_INSTRUMENT_FUN_IPP(ippiColorConvertReorder, temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
     }
 private:
-    ippiGeneralFunc func1;
-    ippiReorderFunc func2;
+    ippiGeneralFunc ippiColorConvertGeneral;
+    ippiReorderFunc ippiColorConvertReorder;
     int depth;
 };
 
 struct IPPReorderGeneralFunctor
 {
     IPPReorderGeneralFunctor(ippiReorderFunc _func1, ippiGeneralFunc _func2, int _order0, int _order1, int _order2, int _depth) :
-        func1(_func1), func2(_func2), depth(_depth)
+        ippiColorConvertReorder(_func1), ippiColorConvertGeneral(_func2), depth(_depth)
     {
         order[0] = _order0;
         order[1] = _order1;
@@ -510,18 +512,18 @@ struct IPPReorderGeneralFunctor
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        if (func1 == 0 || func2 == 0)
+        if (ippiColorConvertReorder == 0 || ippiColorConvertGeneral == 0)
             return false;
 
         Mat temp;
         temp.create(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(src, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows), order) < 0)
+        if(CV_INSTRUMENT_FUN_IPP(ippiColorConvertReorder, src, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows), order) < 0)
             return false;
-        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows)) >= 0;
+        return CV_INSTRUMENT_FUN_IPP(ippiColorConvertGeneral, temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows)) >= 0;
     }
 private:
-    ippiReorderFunc func1;
-    ippiGeneralFunc func2;
+    ippiReorderFunc ippiColorConvertReorder;
+    ippiGeneralFunc ippiColorConvertGeneral;
     int order[4];
     int depth;
 };
@@ -529,7 +531,7 @@ private:
 struct IPPGeneralReorderFunctor
 {
     IPPGeneralReorderFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _order0, int _order1, int _order2, int _depth) :
-        func1(_func1), func2(_func2), depth(_depth)
+        ippiColorConvertGeneral(_func1), ippiColorConvertReorder(_func2), depth(_depth)
     {
         order[0] = _order0;
         order[1] = _order1;
@@ -538,18 +540,18 @@ struct IPPGeneralReorderFunctor
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
-        if (func1 == 0 || func2 == 0)
+        if (ippiColorConvertGeneral == 0 || ippiColorConvertReorder == 0)
             return false;
 
         Mat temp;
         temp.create(rows, cols, CV_MAKETYPE(depth, 3));
-        if(func1(src, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
+        if(CV_INSTRUMENT_FUN_IPP(ippiColorConvertGeneral, src, srcStep, temp.ptr(), (int)temp.step[0], ippiSize(cols, rows)) < 0)
             return false;
-        return func2(temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+        return CV_INSTRUMENT_FUN_IPP(ippiColorConvertReorder, temp.ptr(), (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
     }
 private:
-    ippiGeneralFunc func1;
-    ippiReorderFunc func2;
+    ippiGeneralFunc ippiColorConvertGeneral;
+    ippiReorderFunc ippiColorConvertReorder;
     int order[4];
     int depth;
 };
@@ -7386,6 +7388,8 @@ void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, int dcn, bool swapBlue)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGRtoBGR, cv_hal_cvtBGRtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue);
 
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
@@ -7447,6 +7451,8 @@ void cvtBGRtoBGR5x5(const uchar * src_data, size_t src_step,
                     int width, int height,
                     int scn, bool swapBlue, int greenBits)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGRtoBGR5x5, cv_hal_cvtBGRtoBGR5x5, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, greenBits);
 
 #if defined(HAVE_IPP) && IPP_DISABLE_BLOCK // breaks OCL accuracy tests
@@ -7493,6 +7499,8 @@ void cvtBGR5x5toBGR(const uchar * src_data, size_t src_step,
                     int width, int height,
                     int dcn, bool swapBlue, int greenBits)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGR5x5toBGR, cv_hal_cvtBGR5x5toBGR, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, greenBits);
 
 #if defined(HAVE_IPP) && IPP_VERSION_X100 < 900
@@ -7539,6 +7547,8 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
                   int width, int height,
                   int depth, int scn, bool swapBlue)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGRtoGray, cv_hal_cvtBGRtoGray, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue);
 
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
@@ -7586,6 +7596,8 @@ void cvtGraytoBGR(const uchar * src_data, size_t src_step,
                   int width, int height,
                   int depth, int dcn)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtGraytoBGR, cv_hal_cvtGraytoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn);
 
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
@@ -7620,6 +7632,8 @@ void cvtBGR5x5toGray(const uchar * src_data, size_t src_step,
                      int width, int height,
                      int greenBits)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGR5x5toGray, cv_hal_cvtBGR5x5toGray, src_data, src_step, dst_data, dst_step, width, height, greenBits);
     CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB5x52Gray(greenBits));
 }
@@ -7630,6 +7644,8 @@ void cvtGraytoBGR5x5(const uchar * src_data, size_t src_step,
                      int width, int height,
                      int greenBits)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtGraytoBGR5x5, cv_hal_cvtGraytoBGR5x5, src_data, src_step, dst_data, dst_step, width, height, greenBits);
     CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB5x5(greenBits));
 }
@@ -7640,6 +7656,8 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue, bool isCbCr)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGRtoYUV, cv_hal_cvtBGRtoYUV, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isCbCr);
 
 #if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
@@ -7693,6 +7711,8 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue, bool isCbCr)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtYUVtoBGR, cv_hal_cvtYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isCbCr);
 
 
@@ -7747,6 +7767,8 @@ void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGRtoXYZ, cv_hal_cvtBGRtoXYZ, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue);
 
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
@@ -7793,6 +7815,8 @@ void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtXYZtoBGR, cv_hal_cvtXYZtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue);
 
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
@@ -7840,6 +7864,8 @@ void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue, bool isFullRange, bool isHSV)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGRtoHSV, cv_hal_cvtBGRtoHSV, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isFullRange, isHSV);
 
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
@@ -7925,6 +7951,8 @@ void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
                         int width, int height,
                         int depth, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtHSVtoBGR, cv_hal_cvtHSVtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isFullRange, isHSV);
 
 #if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
@@ -8014,6 +8042,8 @@ void cvtBGRtoLab(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue, bool isLab, bool srgb)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGRtoLab, cv_hal_cvtBGRtoLab, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isLab, srgb);
 
 #if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
@@ -8109,6 +8139,8 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue, bool isLab, bool srgb)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtLabtoBGR, cv_hal_cvtLabtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isLab, srgb);
 
 #if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
@@ -8202,6 +8234,8 @@ void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                 int dst_width, int dst_height,
                                 int dcn, bool swapBlue, int uIdx)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtTwoPlaneYUVtoBGR, cv_hal_cvtTwoPlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
     int blueIdx = swapBlue ? 2 : 0;
     const uchar* uv = src_data + src_step * static_cast<size_t>(dst_height);
@@ -8224,6 +8258,8 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                   int dst_width, int dst_height,
                                   int dcn, bool swapBlue, int uIdx)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
     const uchar* u = src_data + src_step * static_cast<size_t>(dst_height);
     const uchar* v = src_data + src_step * static_cast<size_t>(dst_height + dst_height/4) + (dst_width/2) * ((dst_height % 4)/2);
@@ -8249,6 +8285,8 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                            int width, int height,
                            int scn, bool swapBlue, int uIdx)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtBGRtoThreePlaneYUV, cv_hal_cvtBGRtoThreePlaneYUV, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx);
     int blueIdx = swapBlue ? 2 : 0;
     switch(blueIdx + uIdx*10)
@@ -8266,6 +8304,8 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          int width, int height,
                          int dcn, bool swapBlue, int uIdx, int ycn)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtOnePlaneYUVtoBGR, cv_hal_cvtOnePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, uIdx, ycn);
     int blueIdx = swapBlue ? 2 : 0;
     switch(dcn*1000 + blueIdx*100 + uIdx*10 + ycn)
@@ -8290,6 +8330,8 @@ void cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step,
                              uchar * dst_data, size_t dst_step,
                              int width, int height)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtRGBAtoMultipliedRGBA, cv_hal_cvtRGBAtoMultipliedRGBA, src_data, src_step, dst_data, dst_step, width, height);
 
 #ifdef HAVE_IPP
@@ -8308,6 +8350,8 @@ void cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step,
                              uchar * dst_data, size_t dst_step,
                              int width, int height)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(cvtMultipliedRGBAtoRGBA, cv_hal_cvtMultipliedRGBAtoRGBA, src_data, src_step, dst_data, dst_step, width, height);
     CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, mRGBA2RGBA<uchar>());
 }
@@ -8398,6 +8442,8 @@ inline bool isFullRange(int code)
 
 void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type();
     int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), uidx, gbits, ycn;
 
@@ -8596,8 +8642,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
                 dst = _dst.getMat();
 #ifdef HAVE_IPP
-                if (ippStsNoErr == ippiCopy_8u_C1R(src.data, (int)src.step, dst.data, (int)dst.step,
-                                                   ippiSize(dstSz.width, dstSz.height)))
+                if (CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R, src.data, (int)src.step, dst.data, (int)dst.step,
+                                                   ippiSize(dstSz.width, dstSz.height)) >= 0)
                     break;
 #endif
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);

@@ -1869,6 +1869,8 @@ namespace cv
 {
 static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
 
@@ -1876,28 +1878,28 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
 
     if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
     {
-        typedef IppStatus (CV_STDCALL * ippiAdd)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
-        typedef IppStatus (CV_STDCALL * ippiAddMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
+        typedef IppStatus (CV_STDCALL * IppiAdd)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
+        typedef IppStatus (CV_STDCALL * IppiAddMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
                                                     int srcDstStep, IppiSize roiSize);
-        ippiAdd ippFunc = 0;
-        ippiAddMask ippFuncMask = 0;
+        IppiAdd ippiAdd_I = 0;
+        IppiAddMask ippiAdd_IM = 0;
 
         if (mask.empty())
         {
             CV_SUPPRESS_DEPRECATED_START
-            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAdd)ippiAdd_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAdd)ippiAdd_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAdd)ippiAdd_32f_C1IR : 0;
+            ippiAdd_I = sdepth == CV_8U && ddepth == CV_32F ? (IppiAdd)ippiAdd_8u32f_C1IR :
+                sdepth == CV_16U && ddepth == CV_32F ? (IppiAdd)ippiAdd_16u32f_C1IR :
+                sdepth == CV_32F && ddepth == CV_32F ? (IppiAdd)ippiAdd_32f_C1IR : 0;
             CV_SUPPRESS_DEPRECATED_END
         }
         else if (scn == 1)
         {
-            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddMask)ippiAdd_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddMask)ippiAdd_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddMask)ippiAdd_32f_C1IMR : 0;
+            ippiAdd_IM = sdepth == CV_8U && ddepth == CV_32F ? (IppiAddMask)ippiAdd_8u32f_C1IMR :
+                sdepth == CV_16U && ddepth == CV_32F ? (IppiAddMask)ippiAdd_16u32f_C1IMR :
+                sdepth == CV_32F && ddepth == CV_32F ? (IppiAddMask)ippiAdd_32f_C1IMR : 0;
         }
 
-        if (ippFunc || ippFuncMask)
+        if (ippiAdd_I || ippiAdd_IM)
         {
             IppStatus status = ippStsErr;
 
@@ -1913,11 +1915,11 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
             }
             size.width *= scn;
 
-            if (ippFunc)
-                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-            else if(ippFuncMask)
-                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                                        dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            if (ippiAdd_I)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAdd_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            else if (ippiAdd_IM)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAdd_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return true;
@@ -1930,6 +1932,8 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
 
 void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
@@ -1963,6 +1967,8 @@ namespace cv
 {
 static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputArray _mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
 
@@ -1973,23 +1979,23 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
         typedef IppStatus (CV_STDCALL * ippiAddSquare)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
         typedef IppStatus (CV_STDCALL * ippiAddSquareMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
                                                             int srcDstStep, IppiSize roiSize);
-        ippiAddSquare ippFunc = 0;
-        ippiAddSquareMask ippFuncMask = 0;
+        ippiAddSquare ippiAddSquare_I = 0;
+        ippiAddSquareMask ippiAddSquare_IM = 0;
 
         if (mask.empty())
         {
-            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_8u32f_C1IR :
+            ippiAddSquare_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_8u32f_C1IR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_16u32f_C1IR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_32f_C1IR : 0;
         }
         else if (scn == 1)
         {
-            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_8u32f_C1IMR :
+            ippiAddSquare_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_8u32f_C1IMR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_16u32f_C1IMR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_32f_C1IMR : 0;
         }
 
-        if (ippFunc || ippFuncMask)
+        if (ippiAddSquare_I || ippiAddSquare_IM)
         {
             IppStatus status = ippStsErr;
 
@@ -2005,11 +2011,11 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
             }
             size.width *= scn;
 
-            if (ippFunc)
-                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-            else if(ippFuncMask)
-                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                                        dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            if (ippiAddSquare_I)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddSquare_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            else if (ippiAddSquare_IM)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddSquare_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return true;
@@ -2022,6 +2028,8 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
 
 void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
@@ -2055,6 +2063,8 @@ namespace cv
 static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
 
@@ -2066,23 +2076,23 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
                                                         int src2Step, Ipp32f * pSrcDst, int srcDstStep, IppiSize roiSize);
         typedef IppStatus (CV_STDCALL * ippiAddProductMask)(const void * pSrc1, int src1Step, const void * pSrc2, int src2Step,
                                                             const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst, int srcDstStep, IppiSize roiSize);
-        ippiAddProduct ippFunc = 0;
-        ippiAddProductMask ippFuncMask = 0;
+        ippiAddProduct ippiAddProduct_I = 0;
+        ippiAddProductMask ippiAddProduct_IM = 0;
 
         if (mask.empty())
         {
-            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_8u32f_C1IR :
+            ippiAddProduct_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_8u32f_C1IR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_16u32f_C1IR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_32f_C1IR : 0;
         }
         else if (scn == 1)
         {
-            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_8u32f_C1IMR :
+            ippiAddProduct_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_8u32f_C1IMR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_16u32f_C1IMR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_32f_C1IMR : 0;
         }
 
-        if (ippFunc || ippFuncMask)
+        if (ippiAddProduct_I || ippiAddProduct_IM)
         {
             IppStatus status = ippStsErr;
 
@@ -2099,12 +2109,12 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
             }
             size.width *= scn;
 
-            if (ippFunc)
-                status = ippFunc(src1.ptr(), src1step, src2.ptr(), src2step, dst.ptr<Ipp32f>(),
-                                    dststep, ippiSize(size.width, size.height));
-            else if(ippFuncMask)
-                status = ippFuncMask(src1.ptr(), src1step, src2.ptr(), src2step, mask.ptr<Ipp8u>(), maskstep,
-                                        dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            if (ippiAddProduct_I)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddProduct_I, src1.ptr(), src1step, src2.ptr(), src2step, dst.ptr<Ipp32f>(),
+                    dststep, ippiSize(size.width, size.height));
+            else if (ippiAddProduct_IM)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddProduct_IM, src1.ptr(), src1step, src2.ptr(), src2step, mask.ptr<Ipp8u>(), maskstep,
+                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return true;
@@ -2120,6 +2130,8 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
 void cv::accumulateProduct( InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
@@ -2154,6 +2166,8 @@ namespace cv
 static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
 
@@ -2166,23 +2180,23 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
         typedef IppStatus (CV_STDCALL * ippiAddWeightedMask)(const void * pSrc, int srcStep, const Ipp8u * pMask,
                                                                 int maskStep, Ipp32f * pSrcDst,
                                                                 int srcDstStep, IppiSize roiSize, Ipp32f alpha);
-        ippiAddWeighted ippFunc = 0;
-        ippiAddWeightedMask ippFuncMask = 0;
+        ippiAddWeighted ippiAddWeighted_I = 0;
+        ippiAddWeightedMask ippiAddWeighted_IM = 0;
 
         if (mask.empty())
         {
-            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_8u32f_C1IR :
+            ippiAddWeighted_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_8u32f_C1IR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_16u32f_C1IR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_32f_C1IR : 0;
         }
         else if (scn == 1)
         {
-            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_8u32f_C1IMR :
+            ippiAddWeighted_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_8u32f_C1IMR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_16u32f_C1IMR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_32f_C1IMR : 0;
         }
 
-        if (ippFunc || ippFuncMask)
+        if (ippiAddWeighted_I || ippiAddWeighted_IM)
         {
             IppStatus status = ippStsErr;
 
@@ -2198,11 +2212,11 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
             }
             size.width *= scn;
 
-            if (ippFunc)
-                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
-            else if(ippFuncMask)
-                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                                        dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
+            if (ippiAddWeighted_I)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddWeighted_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
+            else if (ippiAddWeighted_IM)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddWeighted_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
 
             if (status >= 0)
                 return true;
@@ -2216,6 +2230,8 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
 void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 

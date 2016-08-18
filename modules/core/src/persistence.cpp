@@ -5823,6 +5823,8 @@ FileStorage::~FileStorage()
 
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
 {
+    CV_INSTRUMENT_REGION()
+
     release();
     fs.reset(cvOpenFileStorage( filename.c_str(), 0, flags,
                                 !encoding.empty() ? encoding.c_str() : 0));
@@ -5860,6 +5862,8 @@ FileNode FileStorage::root(int streamidx) const
 
 FileStorage& operator << (FileStorage& fs, const String& str)
 {
+    CV_INSTRUMENT_REGION()
+
     enum { NAME_EXPECTED = FileStorage::NAME_EXPECTED,
         VALUE_EXPECTED = FileStorage::VALUE_EXPECTED,
         INSIDE_MAP = FileStorage::INSIDE_MAP };

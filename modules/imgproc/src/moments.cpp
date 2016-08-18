@@ -566,6 +566,8 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
 
 cv::Moments cv::moments( InputArray _src, bool binary )
 {
+    CV_INSTRUMENT_REGION()
+
     const int TILE_SIZE = 32;
     MomentsInTileFunc func = 0;
     uchar nzbuf[TILE_SIZE*TILE_SIZE];
@@ -609,7 +611,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 
                     if (ippFunc)
                     {
-                        if (ippFunc(mat.data, (int)mat.step, roi, moment) >= 0)
+                        if (CV_INSTRUMENT_FUN_IPP(ippFunc,(mat.data, (int)mat.step, roi, moment)) >= 0)
                         {
                             IppiPoint point = { 0, 0 };
                             ippiGetSpatialMoment_64f(moment, 0, 0, 0, point, &m.m00);
@@ -740,6 +742,8 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 
 void cv::HuMoments( const Moments& m, double hu[7] )
 {
+    CV_INSTRUMENT_REGION()
+
     double t0 = m.nu30 + m.nu12;
     double t1 = m.nu21 + m.nu03;
 
@@ -767,6 +771,8 @@ void cv::HuMoments( const Moments& m, double hu[7] )
 
 void cv::HuMoments( const Moments& m, OutputArray _hu )
 {
+    CV_INSTRUMENT_REGION()
+
     _hu.create(7, 1, CV_64F);
     Mat hu = _hu.getMat();
     CV_Assert( hu.isContinuous() );

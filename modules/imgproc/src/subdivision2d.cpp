@@ -275,6 +275,8 @@ void Subdiv2D::deletePoint(int vidx)
 
 int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 {
+    CV_INSTRUMENT_REGION()
+
     int vertex = 0;
 
     int i, maxEdges = (int)(qedges.size() * 4);
@@ -409,6 +411,8 @@ isPtInCircle3( Point2f pt, Point2f a, Point2f b, Point2f c)
 
 int Subdiv2D::insert(Point2f pt)
 {
+    CV_INSTRUMENT_REGION()
+
     int curr_point = 0, curr_edge = 0, deleted_edge = 0;
     int location = locate( pt, curr_edge, curr_point );
 
@@ -479,12 +483,16 @@ int Subdiv2D::insert(Point2f pt)
 
 void Subdiv2D::insert(const std::vector<Point2f>& ptvec)
 {
+    CV_INSTRUMENT_REGION()
+
     for( size_t i = 0; i < ptvec.size(); i++ )
         insert(ptvec[i]);
 }
 
 void Subdiv2D::initDelaunay( Rect rect )
 {
+    CV_INSTRUMENT_REGION()
+
     float big_coord = 3.f * MAX( rect.width, rect.height );
     float rx = (float)rect.x;
     float ry = (float)rect.y;
@@ -644,6 +652,8 @@ isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
 
 int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
 {
+    CV_INSTRUMENT_REGION()
+
     if( !validGeometry )
         calcVoronoi();
 

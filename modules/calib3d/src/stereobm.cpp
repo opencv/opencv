@@ -1061,6 +1061,8 @@ public:
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
     {
+        CV_INSTRUMENT_REGION()
+
         int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
         Size leftsize = leftarr.size();
 

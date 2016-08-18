@@ -1096,6 +1096,8 @@ private:
 void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
                                     InputOutputArray _flow0)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_flow0.isUMat() &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                calc_ocl(_prev0,_next0,_flow0))
@@ -1184,6 +1186,8 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
                                InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
                                int iterations, int poly_n, double poly_sigma, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     Ptr<cv::FarnebackOpticalFlow> optflow;
     optflow = makePtr<FarnebackOpticalFlowImpl>(levels,pyr_scale,false,winsize,iterations,poly_n,poly_sigma,flags);
     optflow->calc(_prev0,_next0,_flow0);

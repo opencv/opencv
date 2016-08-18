@@ -1367,6 +1367,8 @@ static bool ipp_boxfilter( InputArray _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if( ddepth < 0 )
         ddepth = sdepth;
@@ -1405,7 +1407,7 @@ static bool ipp_boxfilter( InputArray _src, OutputArray _dst, int ddepth,
                     Ipp8u * buffer = ippsMalloc_8u(bufSize); \
                     ippType borderValue[4] = { 0, 0, 0, 0 }; \
                     ippBorderType = ippBorderType == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl; \
-                    IppStatus status = ippiFilterBoxBorder_##flavor(src.ptr<ippType>(), (int)src.step, dst.ptr<ippType>(), \
+                    IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiFilterBoxBorder_##flavor, src.ptr<ippType>(), (int)src.step, dst.ptr<ippType>(), \
                                                                     (int)dst.step, roiSize, maskSize, \
                                                                     (IppiBorderType)ippBorderType, borderValue, buffer); \
                     ippsFree(buffer); \
@@ -1459,6 +1461,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
     Mat src = _src.getMat();
@@ -1507,6 +1511,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 void cv::blur( InputArray src, OutputArray dst,
            Size ksize, Point anchor, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     boxFilter( src, dst, -1, ksize, anchor, true, borderType );
 }
 
@@ -1589,6 +1595,8 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
                        Size ksize, Point anchor,
                        bool normalize, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     int srcType = _src.type(), sdepth = CV_MAT_DEPTH(srcType), cn = CV_MAT_CN(srcType);
     Size size = _src.size();
 
@@ -1733,6 +1741,8 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 810
     if ((borderType & BORDER_ISOLATED) == 0 && _src.isSubmatrix())
         return false;
@@ -1771,14 +1781,14 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #define IPP_FILTER_GAUSS_C1(ippfavor) \
                     { \
                         Ipp##ippfavor borderValues = 0; \
-                        status = ippiFilterGaussianBorder_##ippfavor##_C1R(src.ptr<Ipp##ippfavor>(), (int)src.step, \
+                        status = CV_INSTRUMENT_FUN_IPP(ippiFilterGaussianBorder_##ippfavor##_C1R, src.ptr<Ipp##ippfavor>(), (int)src.step, \
                                 dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
                     }
 
 #define IPP_FILTER_GAUSS_CN(ippfavor, ippcn) \
                     { \
                         Ipp##ippfavor borderValues[] = { 0, 0, 0 }; \
-                        status = ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R(src.ptr<Ipp##ippfavor>(), (int)src.step, \
+                        status = CV_INSTRUMENT_FUN_IPP(ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R, src.ptr<Ipp##ippfavor>(), (int)src.step, \
                                 dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
                     }
 
@@ -1825,6 +1835,8 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type();
     Size size = _src.size();
     _dst.create( size, type );
@@ -2768,6 +2780,8 @@ namespace cv
 {
 static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 810
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
@@ -2780,7 +2794,7 @@ static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
         ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
         { \
             Ipp8u * buffer = ippsMalloc_8u(bufSize); \
-            IppStatus status = ippiFilterMedianBorder_##flavor(src.ptr<ippType>(), (int)src.step, \
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_##flavor, src.ptr<ippType>(), (int)src.step, \
             dst.ptr<ippType>(), (int)dst.step, dstRoiSize, maskSize, \
             ippBorderRepl, (ippType)0, buffer); \
             ippsFree(buffer); \
@@ -2824,6 +2838,8 @@ static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
 
 void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( (ksize % 2 == 1) && (_src0.dims() <= 2 ));
 
     if( ksize <= 1 )
@@ -3070,6 +3086,8 @@ public:
 
       virtual void operator() (const Range& range) const
       {
+          CV_INSTRUMENT_REGION_IPP()
+
           int d = radius * 2 + 1;
           IppiSize kernel = {d, d};
           IppiSize roi={dst.cols, range.end - range.start};
@@ -3665,6 +3683,8 @@ void cv::bilateralFilter( InputArray _src, OutputArray _dst, int d,
                       double sigmaColor, double sigmaSpace,
                       int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     _dst.create( _src.size(), _src.type() );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
