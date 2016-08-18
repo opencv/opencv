@@ -166,10 +166,14 @@ int main( int argc, char* argv[] ){
     // load the image (note that we don't have the projection information.  You will
     // need to load that yourself or use the full GDAL driver.  The values are pre-defined
     // at the top of this file
+    //![load1]
     cv::Mat image = cv::imread(argv[1], cv::IMREAD_LOAD_GDAL | cv::IMREAD_COLOR );
+    //![load1]
 
+    //![load2]
     // load the dem model
     cv::Mat dem = cv::imread(argv[2], cv::IMREAD_LOAD_GDAL | cv::IMREAD_ANYDEPTH );
+    //![load2]
 
     // create our output products
     cv::Mat output_dem(   image.size(), CV_8UC3 );
