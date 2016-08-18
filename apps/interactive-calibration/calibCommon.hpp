@@ -23,7 +23,7 @@ namespace calib
     static const std::string consoleHelp = "Hot keys:\nesc - exit application\n"
                               "s - save current data to .xml file\n"
                               "r - delete last frame\n"
-                              "u - enable/disable applying undistortion"
+                              "u - enable/disable applying undistortion\n"
                               "d - delete all frames\n"
                               "v - switch visualization";
 
