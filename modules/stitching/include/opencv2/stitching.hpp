@@ -69,7 +69,29 @@ one can combine and use them separately.
 
 The implemented stitching pipeline is very similar to the one proposed in @cite BL07 .
 
-![image](StitchingPipeline.jpg)
+![stitching pipeline](StitchingPipeline.jpg)
+
+Camera models
+-------------
+
+There are currently 2 camera models implemented in stitching pipeline.
+
+- _Homography model_ expecting perspective transformations between images
+  implemented in @ref cv::detail::BestOf2NearestMatcher cv::detail::HomographyBasedEstimator
+  cv::detail::BundleAdjusterReproj cv::detail::BundleAdjusterRay
+- _Affine model_ expecting affine transformation with 6 DOF or 4 DOF implemented in
+  @ref cv::detail::AffineBestOf2NearestMatcher cv::detail::AffineBasedEstimator
+  cv::detail::BundleAdjusterAffine cv::detail::BundleAdjusterAffinePartial cv::AffineWarper
+
+Homography model is useful for creating photo panoramas captured by camera,
+while affine-based model can be used to stitch scans and object captured by
+specialized devices. Use @ref cv::Stitcher::create to get preconfigured pipeline for one
+of those models.
+
+@note
+Certain detailed settings of @ref cv::Stitcher might not make sense. Especially
+you should not mix classes implementing affine model and classes implementing
+Homography model, as they work with different transformations.
 
 @{
     @defgroup stitching_match Features Finding and Images Matching
