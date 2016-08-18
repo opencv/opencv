@@ -1096,11 +1096,6 @@ enum
     FLAGS_MAPPING = 0x01,
 };
 
-enum
-{
-    COMMAND_RESET = 0x01,
-};
-
 class CV_EXPORTS NodeData
 {
 public:

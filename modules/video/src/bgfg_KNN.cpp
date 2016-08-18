@@ -560,6 +560,8 @@ CV_INLINE void
 
 void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
 
@@ -598,6 +600,8 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
+    CV_INSTRUMENT_REGION()
+
     int nchannels = CV_MAT_CN(frameType);
     //CV_Assert( nchannels == 3 );
     Mat meanBackground(frameSize, CV_8UC3, Scalar::all(0));
