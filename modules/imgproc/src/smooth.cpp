@@ -94,78 +94,8 @@ struct RowSum :
             D[0] = s;
             for( i = 0; i < width; i += cn )
             {
-                s += S[i + ksz_cn] - S[i];
+                s += (ST)S[i + ksz_cn] - (ST)S[i];
                 D[i+cn] = s;
-            }
-        }
-    }
-};
-
-template<typename T>
-struct RowSum<T, float> :
-    public BaseRowFilter
-{
-    RowSum(int _ksize, int _anchor) :
-        BaseRowFilter()
-    {
-        ksize = _ksize;
-        anchor = _anchor;
-    }
-
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn)
-    {
-        const T* S = (const T*)src;
-        float* D = (float*)dst;
-        int i = 0, k, ksz_cn = ksize*cn;
-
-        width = (width - 1)*cn;
-        for (k = 0; k < cn; k++, S++, D++)
-        {
-            float s = 0;
-            for (i = 0; i < ksz_cn; i += cn)
-                s += S[i];
-            D[0] = s;
-            float s_prev = 0;
-            for (i = 0; i < width; i += cn)
-            {
-                s += S[i + ksz_cn];
-                s_prev += S[i];
-                D[i + cn] = s - s_prev;
-            }
-        }
-    }
-};
-
-template<typename T>
-struct RowSum<T, double> :
-    public BaseRowFilter
-{
-    RowSum(int _ksize, int _anchor) :
-        BaseRowFilter()
-    {
-        ksize = _ksize;
-        anchor = _anchor;
-    }
-
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn)
-    {
-        const T* S = (const T*)src;
-        double* D = (double*)dst;
-        int i = 0, k, ksz_cn = ksize*cn;
-
-        width = (width - 1)*cn;
-        for (k = 0; k < cn; k++, S++, D++)
-        {
-            double s = 0;
-            for (i = 0; i < ksz_cn; i += cn)
-                s += S[i];
-            D[0] = s;
-            double s_prev = 0;
-            for (i = 0; i < width; i += cn)
-            {
-                s += S[i + ksz_cn];
-                s_prev += S[i];
-                D[i + cn] = s - s_prev;
             }
         }
     }
