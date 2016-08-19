@@ -98,7 +98,29 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
             OCL_OFF(cv::cvtColor(src_roi, dst_roi, code, channelsOut));
             OCL_ON(cv::cvtColor(usrc_roi, udst_roi, code, channelsOut));
 
-            Near(threshold);
+            int h_limit = 256;
+            switch (code)
+            {
+            case COLOR_RGB2HLS: case COLOR_BGR2HLS:
+                h_limit = 180;
+            case COLOR_RGB2HLS_FULL: case COLOR_BGR2HLS_FULL:
+            {
+                ASSERT_EQ(dst_roi.type(), udst_roi.type());
+                ASSERT_EQ(dst_roi.size(), udst_roi.size());
+                Mat gold, actual;
+                dst_roi.convertTo(gold, CV_32FC3);
+                udst_roi.getMat(ACCESS_READ).convertTo(actual, CV_32FC3);
+                Mat absdiff1, absdiff2, absdiff3;
+                cv::absdiff(gold, actual, absdiff1);
+                cv::absdiff(gold, actual + h_limit, absdiff2);
+                cv::absdiff(gold, actual - h_limit, absdiff3);
+                Mat diff = cv::min(cv::min(absdiff1, absdiff2), absdiff3);
+                EXPECT_LE(cvtest::norm(diff, NORM_INF), threshold);
+                break;
+            }
+            default:
+                Near(threshold);
+            }
         }
     }
 };
