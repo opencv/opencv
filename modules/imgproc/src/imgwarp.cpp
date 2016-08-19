@@ -4740,7 +4740,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
 }
 #endif
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
 
 typedef IppStatus (CV_STDCALL * ippiRemap)(const void * pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
                                            const Ipp32f* pxMap, int xMapStep, const Ipp32f* pyMap, int yMapStep,
@@ -4848,7 +4848,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         if ((interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_NEAREST) &&

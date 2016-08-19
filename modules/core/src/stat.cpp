@@ -1299,7 +1299,6 @@ namespace cv {
 
 static bool ipp_countNonZero( Mat &src, int &res )
 {
-#if !defined HAVE_IPP_ICV_ONLY
     Ipp32s count = 0;
     IppStatus status = ippStsNoErr;
 
@@ -1323,9 +1322,6 @@ static bool ipp_countNonZero( Mat &src, int &res )
         res = ((Ipp32s)src.total() - count);
         return true;
     }
-#else
-    CV_UNUSED(src); CV_UNUSED(res);
-#endif
     return false;
 }
 }
@@ -2282,10 +2278,10 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
                 depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
 #endif
                 depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
-#if !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
+#if IPP_DISABLE_BLOCK && !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
                 // See bug #4955: the function fails with SEGFAULT when the source matrix contains NANs
                 // IPPICV version is 9.0.1.
-                // depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
+                depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
 #endif
                 0;
             CV_SUPPRESS_DEPRECATED_END

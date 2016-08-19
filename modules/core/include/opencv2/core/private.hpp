@@ -288,17 +288,6 @@ private:
 #define IPP_VERSION_X100 0
 #endif
 
-// There shoud be no API difference in OpenCV between ICV and IPP since 9.0
-#if (defined HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 900
-#undef HAVE_IPP_ICV_ONLY
-#endif
-
-#ifdef HAVE_IPP_ICV_ONLY
-#define HAVE_ICV 1
-#else
-#define HAVE_ICV 0
-#endif
-
 #if defined HAVE_IPP
 #if IPP_VERSION_X100 >= 900
 #define IPP_INITIALIZER(FEAT)                           \
