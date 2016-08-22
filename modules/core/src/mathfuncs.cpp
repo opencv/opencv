@@ -618,43 +618,6 @@ void polarToCart( InputArray src1, InputArray src2,
 *                                          E X P                                         *
 \****************************************************************************************/
 
-#ifdef HAVE_IPP
-static void Exp_32f_ipp(const float *x, float *y, int n)
-{
-    CV_IPP_CHECK()
-    {
-        if (0 <= ippsExp_32f_A21(x, y, n))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-    hal::exp32f(x, y, n);
-}
-
-static void Exp_64f_ipp(const double *x, double *y, int n)
-{
-    CV_IPP_CHECK()
-    {
-        if (0 <= ippsExp_64f_A50(x, y, n))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-    hal::exp64f(x, y, n);
-}
-
-#define Exp_32f Exp_32f_ipp
-#define Exp_64f Exp_64f_ipp
-#else
-#define Exp_32f hal::exp32f
-#define Exp_64f hal::exp64f
-#endif
-
-
 void exp( InputArray _src, OutputArray _dst )
 {
     int type = _src.type(), depth = _src.depth(), cn = _src.channels();
@@ -675,9 +638,9 @@ void exp( InputArray _src, OutputArray _dst )
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
-            Exp_32f((const float*)ptrs[0], (float*)ptrs[1], len);
+            hal::exp32f((const float*)ptrs[0], (float*)ptrs[1], len);
         else
-            Exp_64f((const double*)ptrs[0], (double*)ptrs[1], len);
+            hal::exp64f((const double*)ptrs[0], (double*)ptrs[1], len);
     }
 }
 
@@ -685,42 +648,6 @@ void exp( InputArray _src, OutputArray _dst )
 /****************************************************************************************\
 *                                          L O G                                         *
 \****************************************************************************************/
-
-#ifdef HAVE_IPP
-static void Log_32f_ipp(const float *x, float *y, int n)
-{
-    CV_IPP_CHECK()
-    {
-        if (0 <= ippsLn_32f_A21(x, y, n))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-    hal::log32f(x, y, n);
-}
-
-static void Log_64f_ipp(const double *x, double *y, int n)
-{
-    CV_IPP_CHECK()
-    {
-        if (0 <= ippsLn_64f_A50(x, y, n))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-    hal::log64f(x, y, n);
-}
-
-#define Log_32f Log_32f_ipp
-#define Log_64f Log_64f_ipp
-#else
-#define Log_32f hal::log32f
-#define Log_64f hal::log64f
-#endif
 
 void log( InputArray _src, OutputArray _dst )
 {
@@ -742,9 +669,9 @@ void log( InputArray _src, OutputArray _dst )
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
-            Log_32f( (const float*)ptrs[0], (float*)ptrs[1], len );
+            hal::log32f( (const float*)ptrs[0], (float*)ptrs[1], len );
         else
-            Log_64f( (const double*)ptrs[0], (double*)ptrs[1], len );
+            hal::log64f( (const double*)ptrs[0], (double*)ptrs[1], len );
     }
 }
 
@@ -1345,10 +1272,10 @@ void pow( InputArray _src, double power, OutputArray _dst )
                     if( x != x0 )
                         memcpy(x, x0, bsz*esz1);
 
-                    Log_32f(x, y, bsz);
+                    hal::log32f(x, y, bsz);
                     for( k = 0; k < bsz; k++ )
                         y[k] = (float)(y[k]*power);
-                    Exp_32f(y, y, bsz);
+                    hal::exp32f(y, y, bsz);
                     for( k = 0; k < bsz; k++ )
                     {
                         if( x0[k] <= 0 )
@@ -1372,10 +1299,10 @@ void pow( InputArray _src, double power, OutputArray _dst )
                     if( x != x0 )
                         memcpy(x, x0, bsz*esz1);
 
-                    Log_64f(x, y, bsz);
+                    hal::log64f(x, y, bsz);
                     for( k = 0; k < bsz; k++ )
                         y[k] *= power;
-                    Exp_64f(y, y, bsz);
+                    hal::exp64f(y, y, bsz);
 
                     for( k = 0; k < bsz; k++ )
                     {

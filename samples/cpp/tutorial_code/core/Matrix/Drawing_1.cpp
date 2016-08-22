@@ -23,6 +23,7 @@ void MyLine( Mat img, Point start, Point end );
  */
 int main( void ){
 
+  //![create_images]
   /// Windows names
   char atom_window[] = "Drawing 1: Atom";
   char rook_window[] = "Drawing 2: Rook";
@@ -30,10 +31,12 @@ int main( void ){
   /// Create black empty images
   Mat atom_image = Mat::zeros( w, w, CV_8UC3 );
   Mat rook_image = Mat::zeros( w, w, CV_8UC3 );
+  //![create_images]
 
   /// 1. Draw a simple atom:
   /// -----------------------
 
+  //![draw_atom]
   /// 1.a. Creating ellipses
   MyEllipse( atom_image, 90 );
   MyEllipse( atom_image, 0 );
@@ -42,26 +45,31 @@ int main( void ){
 
   /// 1.b. Creating circles
   MyFilledCircle( atom_image, Point( w/2, w/2) );
+  //![draw_atom]
 
   /// 2. Draw a rook
   /// ------------------
 
+  //![draw_rook]
   /// 2.a. Create a convex polygon
   MyPolygon( rook_image );
 
+  //![rectangle]
   /// 2.b. Creating rectangles
   rectangle( rook_image,
          Point( 0, 7*w/8 ),
          Point( w, w),
          Scalar( 0, 255, 255 ),
-         -1,
-         8 );
+         FILLED,
+         LINE_8 );
+  //![rectangle]
 
   /// 2.c. Create a few lines
   MyLine( rook_image, Point( 0, 15*w/16 ), Point( w, 15*w/16 ) );
   MyLine( rook_image, Point( w/4, 7*w/8 ), Point( w/4, w ) );
   MyLine( rook_image, Point( w/2, 7*w/8 ), Point( w/2, w ) );
   MyLine( rook_image, Point( 3*w/4, 7*w/8 ), Point( 3*w/4, w ) );
+  //![draw_rook]
 
   /// 3. Display your stuff!
   imshow( atom_window, atom_image );
@@ -75,6 +83,7 @@ int main( void ){
 
 /// Function Declaration
 
+//![myellipse]
 /**
  * @function MyEllipse
  * @brief Draw a fixed-size ellipse with different angles
@@ -94,31 +103,32 @@ void MyEllipse( Mat img, double angle )
        thickness,
        lineType );
 }
+//![myellipse]
 
+//![myfilledcircle]
 /**
  * @function MyFilledCircle
  * @brief Draw a fixed-size filled circle
  */
 void MyFilledCircle( Mat img, Point center )
 {
-  int thickness = -1;
-  int lineType = 8;
-
   circle( img,
       center,
       w/32,
       Scalar( 0, 0, 255 ),
-      thickness,
-      lineType );
+      FILLED,
+      LINE_8 );
 }
+//![myfilledcircle]
 
+//![mypolygon]
 /**
  * @function MyPolygon
- * @function Draw a simple concave polygon (rook)
+ * @brief Draw a simple concave polygon (rook)
  */
 void MyPolygon( Mat img )
 {
-  int lineType = 8;
+  int lineType = LINE_8;
 
   /** Create some points */
   Point rook_points[1][20];
@@ -149,11 +159,13 @@ void MyPolygon( Mat img )
   fillPoly( img,
         ppt,
         npt,
-            1,
+        1,
         Scalar( 255, 255, 255 ),
         lineType );
 }
+//![mypolygon]
 
+//![myline]
 /**
  * @function MyLine
  * @brief Draw a simple line
@@ -161,7 +173,7 @@ void MyPolygon( Mat img )
 void MyLine( Mat img, Point start, Point end )
 {
   int thickness = 2;
-  int lineType = 8;
+  int lineType = LINE_8;
   line( img,
     start,
     end,
@@ -169,3 +181,4 @@ void MyLine( Mat img, Point start, Point end )
     thickness,
     lineType );
 }
+//![myline]

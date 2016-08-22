@@ -16,7 +16,6 @@ using namespace cv;
  */
 int main( void )
 {
-
    double alpha = 0.5; double beta; double input;
 
    Mat src1, src2, dst;
@@ -27,26 +26,28 @@ int main( void )
    std::cout<<"* Enter alpha [0-1]: ";
    std::cin>>input;
 
-   // We use the alpha provided by the user iff it is between 0 and 1
+   // We use the alpha provided by the user if it is between 0 and 1
    if( alpha >= 0 && alpha <= 1 )
      { alpha = input; }
 
-   /// Read image ( same size, same type )
+   //![load]
+   /// Read images ( both have to be of the same size and type )
    src1 = imread("../data/LinuxLogo.jpg");
    src2 = imread("../data/WindowsLogo.jpg");
+   //![load]
 
    if( src1.empty() ) { std::cout<< "Error loading src1"<<std::endl; return -1; }
    if( src2.empty() ) { std::cout<< "Error loading src2"<<std::endl; return -1; }
 
-   /// Create Windows
-   namedWindow("Linear Blend", 1);
-
+   //![blend_images]
    beta = ( 1.0 - alpha );
    addWeighted( src1, alpha, src2, beta, 0.0, dst);
+   //![blend_images]
 
+   //![display]
    imshow( "Linear Blend", dst );
-
-
    waitKey(0);
+   //![display]
+
    return 0;
 }
