@@ -81,7 +81,7 @@ void normalizeLabels(Mat1i& imgLabels, int iNumLabels) {
 void CV_ConnectedComponentsTest::run( int /* start_from */)
 {
 
-    vector<int> ccltype = { CCL_WU, CCL_DEFAULT, CCL_GRANA };
+    int ccltype[] = { cv::CCL_WU, cv::CCL_DEFAULT, cv::CCL_GRANA };
 
     string exp_path = string(ts->get_data_path()) + "connectedcomponents/ccomp_exp.png";
     Mat exp = imread(exp_path, 0);
@@ -95,7 +95,7 @@ void CV_ConnectedComponentsTest::run( int /* start_from */)
 
     Mat bw = orig > 128;
 
-    for (uint cclt = 0; cclt < ccltype.size(); ++cclt)
+    for (uint cclt = 0; cclt < sizeof(ccltype)/sizeof(int); ++cclt)
     {
 
         Mat1i labelImage;
