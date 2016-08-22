@@ -1598,6 +1598,16 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
                                         OutputArrayOfArrays translations,
                                         OutputArrayOfArrays normals);
 
+/** @brief Filters homography decompositions with additional information.
+*/
+CV_EXPORTS_W std::vector<int> filterHomographyDecompSolutionsByPointNormals(
+	const std::vector<Mat>& rotations,
+	const std::vector<Mat>& translations,
+	const std::vector<Mat>& normals,
+	const std::vector<Point2f>& prevRectifiedPoints,
+	const std::vector<Point2f>& currRectifiedPoints,
+	const std::vector<uchar>& mask);
+
 /** @brief The base class for stereo correspondence algorithms.
  */
 class CV_EXPORTS_W StereoMatcher : public Algorithm
