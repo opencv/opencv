@@ -2994,6 +2994,51 @@ TEST(Core_Cholesky, accuracy64f)
    for (int i = 0; i < A.rows; i++)
        for (int j = i + 1; j < A.cols; j++)
            A.at<double>(i, j) = 0.0;
-   EXPECT_TRUE(norm(refA - A*A.t()) < 10e-5);
+   EXPECT_LE(norm(refA, A*A.t(), CV_RELATIVE_L2), FLT_EPSILON);
 }
+
+TEST(Core_QR_Solver, accuracy64f)
+{
+    int m = 20, n = 18;
+    Mat A(m, m, CV_64F);
+    Mat B(m, n, CV_64F);
+    Mat mean(1, 1, CV_64F);
+    *mean.ptr<double>() = 10.0;
+    Mat dev(1, 1, CV_64F);
+    *dev.ptr<double>() = 10.0;
+    RNG rng(10);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+    A = A*A.t();
+    Mat solutionQR;
+
+    //solve system with square matrix
+    solve(A, B, solutionQR, DECOMP_QR);
+    EXPECT_LE(norm(A*solutionQR, B, CV_RELATIVE_L2), FLT_EPSILON);
+
+    A = Mat(m, n, CV_64F);
+    B = Mat(m, n, CV_64F);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+
+    //solve normal system
+    solve(A, B, solutionQR, DECOMP_QR | DECOMP_NORMAL);
+    EXPECT_LE(norm(A.t()*(A*solutionQR), A.t()*B, CV_RELATIVE_L2), FLT_EPSILON);
+
+    //solve overdeterminated system as a least squares problem
+    Mat solutionSVD;
+    solve(A, B, solutionQR, DECOMP_QR);
+    solve(A, B, solutionSVD, DECOMP_SVD);
+    EXPECT_LE(norm(solutionQR, solutionSVD, CV_RELATIVE_L2), FLT_EPSILON);
+
+    //solve system with singular matrix
+    A = Mat(10, 10, CV_64F);
+    B = Mat(10, 1, CV_64F);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+    for (int i = 0; i < A.cols; i++)
+      A.at<double>(0, i) = A.at<double>(1, i);
+    ASSERT_FALSE(solve(A, B, solutionQR, DECOMP_QR));
+}
+
 /* End of file. */
