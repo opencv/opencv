@@ -54,19 +54,17 @@ namespace cv
 		const vector<Point2f>& afterRectifiedPoints,
 		const Mat& mask)
 	{
-		using namespace std;
-
 		vector<int> prevPointBehindCameraCount, currPointBehindCameraCount;
-		for (int solutionIdx = 0; solutionIdx < rotations.size(); solutionIdx++)
+		for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
 		{
 			prevPointBehindCameraCount.push_back(0);
 			currPointBehindCameraCount.push_back(0);
 		}
 
-		for (int pointIdx = 0; pointIdx < beforeRectifiedPoints.size(); pointIdx++) {
+		for (int pointIdx = 0; (size_t)pointIdx < beforeRectifiedPoints.size(); pointIdx++) {
 			if (mask.at<bool>(pointIdx))
 			{
-				for (int solutionIdx = 0; solutionIdx < rotations.size(); solutionIdx++)
+				for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
 				{
 					Mat tempAddMat = Mat(1, 1, CV_64F, double(1));
 
@@ -92,7 +90,7 @@ namespace cv
 
 		vector<int> possibleSolutions;
 
-		for (int solutionIdx = 0; solutionIdx < rotations.size(); solutionIdx++)
+		for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
 		{
 			if (prevPointBehindCameraCount[solutionIdx] == 0 && currPointBehindCameraCount[solutionIdx] == 0)
 			{
