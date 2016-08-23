@@ -264,11 +264,11 @@ Remaps an image to polar space.
 
     :param src: Source image
 
-    :param dst: Destination image
+    :param dst: Destination image. It will have same size and type as src.
 
     :param center: The transformation center;
 
-    :param maxRadius: Inverse magnitude scale parameter. See below
+    :param maxRadius: The radius of the bounding circle to transform. It determines the inverse magnitude scale parameter too. See below
 
     :param flags: A combination of interpolation methods and the following optional flags:
 
@@ -283,7 +283,7 @@ The function ``cvLinearPolar`` transforms the source image using the following t
 
         .. math::
 
-            dst( \phi , \rho ) = src(x,y)
+            dst( \rho , \phi ) = src(x,y)
 
 
   *
@@ -291,19 +291,33 @@ The function ``cvLinearPolar`` transforms the source image using the following t
 
         .. math::
 
-            dst(x,y) = src( \phi , \rho )
+            dst(x,y) = src( \rho , \phi )
 
 
 where
 
     .. math::
 
-        \rho = (src.width/maxRadius)  \cdot \sqrt{x^2 + y^2} , \phi =atan(y/x)
+        \begin{array}{l}
+        I = (dx,dy) = (x - center.x,y - center.y) \\
+        \rho = Kx \cdot \texttt{magnitude} (I) ,\\
+        \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg}
+        \end{array}
 
+and
 
-The function can not operate in-place.
+    .. math::
+
+        \begin{array}{l}
+        Kx = src.cols / maxRadius \\
+        Ky = src.rows / 360
+        \end{array}
 
 .. note::
+
+   * The function can not operate in-place.
+
+   * To calculate magnitude and angle in degrees :ocv:func:`cvCartToPolar` is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
 
    * An example using the LinearPolar operation can be found at opencv_source_code/samples/c/polar_transforms.c
 
@@ -319,11 +333,11 @@ Remaps an image to log-polar space.
 
     :param src: Source image
 
-    :param dst: Destination image
+    :param dst: Destination image. It will have same size and type as src.
 
     :param center: The transformation center; where the output precision is maximal
 
-    :param M: Magnitude scale parameter. See below
+    :param M: Magnitude scale parameter. It determines the radius of the bounding circle to transform too. See below
 
     :param flags: A combination of interpolation methods and the following optional flags:
 
@@ -338,7 +352,7 @@ The function ``cvLogPolar`` transforms the source image using the following tran
 
         .. math::
 
-            dst( \phi , \rho ) = src(x,y)
+            dst( \rho , \phi ) = src(x, y)
 
 
   *
@@ -346,19 +360,35 @@ The function ``cvLogPolar`` transforms the source image using the following tran
 
         .. math::
 
-            dst(x,y) = src( \phi , \rho )
+            dst(x,y) = src( \rho , \phi )
 
 
 where
 
     .. math::
 
-        \rho = M  \cdot \log{\sqrt{x^2 + y^2}} , \phi =atan(y/x)
+        \begin{array}{l}
+        I = (dx,dy) = (x - center.x,y - center.y) \\
+        \rho = M \cdot log_e(\texttt{magnitude} (I)) ,\\
+        \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg}
+        \end{array}
 
+and
 
-The function emulates the human "foveal" vision and can be used for fast scale and rotation-invariant template matching, for object tracking and so forth. The function can not operate in-place.
+    .. math::
+
+        \begin{array}{l}
+        M = src.cols / log_e(maxRadius) \\
+        Ky = src.rows / 360
+        \end{array}
+
+The function emulates the human "foveal" vision and can be used for fast scale and rotation-invariant template matching, for object tracking and so forth.
 
 .. note::
+
+   * The function can not operate in-place.
+
+   * To calculate magnitude and angle in degrees :ocv:func:`cvCartToPolar` is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
 
    * An example using the geometric logpolar operation in 4 applications can be found at opencv_source_code/samples/cpp/logpolar_bsm.cpp
 
