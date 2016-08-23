@@ -927,7 +927,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         } else if (mMode == CV_CAP_MODE_GRAY) {
             cvtCode = CV_YUV2GRAY_UYVY;
         } else if (mMode == CV_CAP_MODE_YUYV) {
-            cvtCode = 0;    // Copy
+            cvtCode = -1;    // Copy
         } else {
             CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
             CVBufferRelease(mGrabbedPixels);
@@ -976,7 +976,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     mDeviceImage->imageSize = int(rowBytes*height);
 
     // Convert the device image into the output image.
-    if (cvtCode == 0) {
+    if (cvtCode == -1) {
         // Copy.
         cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
     } else {
@@ -1213,7 +1213,7 @@ CvVideoWriter_AVFoundation_Mac::CvVideoWriter_AVFoundation_Mac(const char* filen
 
 
     if(mMovieWriter.status == AVAssetWriterStatusFailed){
-        NSLog(@"%@", [mMovieWriter.error localizedDescription]);
+        NSLog(@"AVF: AVAssetWriter status: %@", [mMovieWriter.error localizedDescription]);
         // TODO: error handling, cleanup. Throw execption?
         // return;
     }
@@ -1239,15 +1239,25 @@ CvVideoWriter_AVFoundation_Mac::~CvVideoWriter_AVFoundation_Mac() {
 
 }
 
+static void releaseCallback( void *releaseRefCon, const void * ) {
+    CFRelease((CFDataRef)releaseRefCon);
+}
+
 bool CvVideoWriter_AVFoundation_Mac::writeFrame(const IplImage* iplimage) {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     // writer status check
-    if (![mMovieWriterInput isReadyForMoreMediaData] || mMovieWriter.status !=  AVAssetWriterStatusWriting ) {
-        NSLog(@"[mMovieWriterInput isReadyForMoreMediaData] Not ready for media data or ...");
+    if (mMovieWriter.status !=  AVAssetWriterStatusWriting ) {
         NSLog(@"mMovieWriter.status: %d. Error: %@", (int)mMovieWriter.status, [mMovieWriter.error localizedDescription]);
         [localpool drain];
         return false;
+    }
+
+    // Make writeFrame() a blocking call.
+    while (![mMovieWriterInput isReadyForMoreMediaData]) {
+        fprintf(stderr, "OpenCV: AVF: waiting to write video data.\n");
+        // Sleep 1 msec.
+        usleep(1000);
     }
 
     BOOL success = FALSE;
@@ -1283,8 +1293,8 @@ bool CvVideoWriter_AVFoundation_Mac::writeFrame(const IplImage* iplimage) {
             kCVPixelFormatType_32BGRA,
             (void*)CFDataGetBytePtr(cfData),
             CGImageGetBytesPerRow(cgImage),
-            NULL,
-            0,
+            &releaseCallback,
+            (void *)cfData,
             NULL,
             &pixelBuffer);
     if(status == kCVReturnSuccess){
@@ -1293,7 +1303,6 @@ bool CvVideoWriter_AVFoundation_Mac::writeFrame(const IplImage* iplimage) {
     }
 
     //cleanup
-    CFRelease(cfData);
     CVPixelBufferRelease(pixelBuffer);
     CGImageRelease(cgImage);
     CGDataProviderRelease(provider);
