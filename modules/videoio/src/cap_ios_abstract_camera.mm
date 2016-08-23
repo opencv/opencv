@@ -170,7 +170,7 @@
     }
     running = YES;
 
-    // TOOD update image size data before actually starting (needed for recording)
+    // TODO: update image size data before actually starting (needed for recording)
     [self updateSize];
 
     if (cameraAvailable) {
