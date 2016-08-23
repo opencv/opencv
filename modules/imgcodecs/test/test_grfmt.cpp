@@ -94,10 +94,10 @@ TEST(Imgcodecs_imread, regression)
         "Rome.jp2",
 #endif
 #ifdef HAVE_GDCM
-        "DICOM-RGB-8.dcm",
-        "DICOM-MONO2-U8.dcm",
-        "DICOM-MONO2-16.dcm",
-        "DICOM-MONO2-U16.dcm",
+        "int16-mono1.dcm",
+        "uint8-mono2.dcm",
+        "uint16-mono2.dcm",
+        "uint8-rgb.dcm",
 #endif
         "color_palette_alpha.png",
         "multipage.tif",
@@ -117,9 +117,9 @@ TEST(Imgcodecs_imread, regression)
         ASSERT_TRUE(imread_compare(path, IMREAD_COLOR));
         ASSERT_TRUE(imread_compare(path, IMREAD_ANYDEPTH));
         ASSERT_TRUE(imread_compare(path, IMREAD_ANYCOLOR));
-        if (path.substr(path.length() - 3) != "hdr")
+        if (path.substr(path.length() - 3) != "hdr" && path.substr(path.length() - 3) != "dcm")
         {
-            // GDAL does not support hdr
+            // GDAL does not support hdr nor dcm
             ASSERT_TRUE(imread_compare(path, IMREAD_LOAD_GDAL));
         }
     }
