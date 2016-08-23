@@ -1598,15 +1598,28 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
                                         OutputArrayOfArrays translations,
                                         OutputArrayOfArrays normals);
 
-/** @brief Filters homography decompositions with additional information.
+/** @brief Filters homography decompositions based on additional information.
+
+@param rotations Vector of rotation matrices.
+@param normals Vector of plane normal matrices.
+@param beforeRectifiedPoints Vector of (rectified) visible reference points before the homography is applied
+@param afterRectifiedPoints Vector of (rectified) visible reference points after the homography is applied
+@param mask Mat representing the mask for the inliers as given by the findHomography function
+
+This function is intended to filter the output of the decomposeHomographyMat based on additional
+information as described in @cite Malis . The summary of the method: the decomposeHomographyMat function
+returns 2 unique solutions and their "opposites" for a total of 4 solutions. If we have access to the
+sets of points visible in the camera frame before and after the homography transformation is applied,
+we can determine which are the true potential solutions and which are the opposites by verifying which
+homographies are consistent with all visible reference points being in front of the camera.
+
 */
 CV_EXPORTS_W std::vector<int> filterHomographyDecompSolutionsByPointNormals(
 	const std::vector<Mat>& rotations,
-	const std::vector<Mat>& translations,
 	const std::vector<Mat>& normals,
-	const std::vector<Point2f>& prevRectifiedPoints,
-	const std::vector<Point2f>& currRectifiedPoints,
-	const std::vector<uchar>& mask);
+	const std::vector<Point2f>& beforeRectifiedPoints,
+	const std::vector<Point2f>& afterRectifiedPoints,
+	const Mat& mask);
 
 /** @brief The base class for stereo correspondence algorithms.
  */

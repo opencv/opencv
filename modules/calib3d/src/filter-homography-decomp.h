@@ -51,11 +51,10 @@ namespace cv
 {
 	vector<int> filterHomographyDecompSolutionsByPointNormals(
 		const vector<Mat>& rotations,
-		const vector<Mat>& translations,
 		const vector<Mat>& normals,
-		const vector<Point2f>& prevRectifiedPoints,
-		const vector<Point2f>& currRectifiedPoints,
-		const vector<uchar>& mask);
+		const vector<Point2f>& beforeRectifiedPoints,
+		const vector<Point2f>& afterRectifiedPoints,
+		const Mat& mask);
 }
 
 #endif

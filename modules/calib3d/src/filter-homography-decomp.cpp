@@ -49,11 +49,10 @@ namespace cv
 {
 	vector<int> filterHomographyDecompSolutionsByPointNormals(
 		const vector<Mat>& rotations,
-		const vector<Mat>& translations,
 		const vector<Mat>& normals,
-		const vector<Point2f>& prevRectifiedPoints,
-		const vector<Point2f>& currRectifiedPoints,
-		const vector<uchar>& mask)
+		const vector<Point2f>& beforeRectifiedPoints,
+		const vector<Point2f>& afterRectifiedPoints,
+		const Mat& mask)
 	{
 		using namespace std;
 
@@ -64,18 +63,18 @@ namespace cv
 			currPointBehindCameraCount.push_back(0);
 		}
 
-		for (int pointIdx = 0; pointIdx < prevRectifiedPoints.size(); pointIdx++) {
-			if (mask.at(pointIdx) != 0)
+		for (int pointIdx = 0; pointIdx < beforeRectifiedPoints.size(); pointIdx++) {
+			if (mask.at<bool>(pointIdx))
 			{
 				for (int solutionIdx = 0; solutionIdx < rotations.size(); solutionIdx++)
 				{
 					Mat tempAddMat = Mat(1, 1, CV_64F, double(1));
 
-					Mat tempPrevPointMat = Mat(prevRectifiedPoints.at(pointIdx));
+					Mat tempPrevPointMat = Mat(beforeRectifiedPoints.at(pointIdx));
 					tempPrevPointMat.convertTo(tempPrevPointMat, CV_64F);
 					tempPrevPointMat.push_back(tempAddMat);
 
-					Mat tempCurrPointMat = Mat(currRectifiedPoints.at(pointIdx));
+					Mat tempCurrPointMat = Mat(afterRectifiedPoints.at(pointIdx));
 					tempCurrPointMat.convertTo(tempCurrPointMat, CV_64F);
 					tempCurrPointMat.push_back(tempAddMat);
 
