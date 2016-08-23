@@ -61,10 +61,12 @@
 #include <typeinfo>
 #include <limits>
 #include <complex>
+#include <vector>
 
 #define HAL_GEMM_SMALL_COMPLEX_MATRIX_THRESH 100
 #define HAL_GEMM_SMALL_MATRIX_THRESH 100
 #define HAL_SVD_SMALL_MATRIX_THRESH 25
+#define HAL_QR_SMALL_MATRIX_THRESH 30
 #define HAL_LU_SMALL_MATRIX_THRESH 100
 #define HAL_CHOLESKY_SMALL_MATRIX_THRESH 100
 
@@ -256,6 +258,106 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
 
     delete[] iworkBuf;
     delete[] buffer;
+    return CV_HAL_ERROR_OK;
+}
+
+template <typename fptype> static inline int
+lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_step, fptype* dst, int* info)
+{
+    int lda = a_step / sizeof(fptype);
+    char mode[] = { 'N', '\0' };
+    if(m < n)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    std::vector<fptype> tmpAMemHolder;
+    fptype* tmpA;
+    int ldtmpA;
+    if (m == n)
+    {
+        transpose_square_inplace(a, lda, m);
+        tmpA = a;
+        ldtmpA = lda;
+    }
+    else
+    {
+        tmpAMemHolder.resize(m*n);
+        tmpA = &tmpAMemHolder.front();
+        ldtmpA = m;
+        transpose(a, lda, tmpA, m, m, n);
+    }
+
+    int lwork = -1;
+    fptype work1 = 0.;
+
+    if (b)
+    {
+        if (k == 1 && b_step == sizeof(fptype))
+        {
+            if (typeid(fptype) == typeid(float))
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
+            else if (typeid(fptype) == typeid(double))
+                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
+
+            lwork = (int)round(work1); //optimal buffer size
+            std::vector<fptype> workBufMemHolder(lwork + 1);
+            fptype* buffer = &workBufMemHolder.front();
+
+            if (typeid(fptype) == typeid(float))
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
+            else if (typeid(fptype) == typeid(double))
+                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)buffer, &lwork, info);
+        }
+        else
+        {
+            std::vector<fptype> tmpBMemHolder(m*k);
+            fptype* tmpB = &tmpBMemHolder.front();
+            int ldb = b_step / sizeof(fptype);
+            transpose(b, ldb, tmpB, m, m, k);
+
+            if (typeid(fptype) == typeid(float))
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
+            else if (typeid(fptype) == typeid(double))
+                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
+
+            lwork = (int)round(work1); //optimal buffer size
+            std::vector<fptype> workBufMemHolder(lwork + 1);
+            fptype* buffer = &workBufMemHolder.front();
+
+            if (typeid(fptype) == typeid(float))
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
+            else if (typeid(fptype) == typeid(double))
+                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)buffer, &lwork, info);
+
+            transpose(tmpB, m, b, ldb, k, m);
+        }
+    }
+    else
+    {
+        if (typeid(fptype) == typeid(float))
+            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, info);
+        else if (typeid(fptype) == typeid(double))
+            dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, info);
+
+        lwork = (int)round(work1); //optimal buffer size
+        std::vector<fptype> workBufMemHolder(lwork + 1);
+        fptype* buffer = &workBufMemHolder.front();
+
+        if (typeid(fptype) == typeid(float))
+            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)buffer, &lwork, info);
+        else if (typeid(fptype) == typeid(double))
+            dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, info);
+    }
+
+    if (m == n)
+        transpose_square_inplace(a, lda, m);
+    else
+        transpose(tmpA, m, a, lda, n, m);
+
+    if (*info != 0)
+        *info = 0;
+    else
+        *info = 1;
+
     return CV_HAL_ERROR_OK;
 }
 
@@ -457,6 +559,20 @@ int lapack_SVD64f(double* a, size_t a_step, double *w, double* u, size_t u_step,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     int info;
     return lapack_SVD(a, a_step, w, u, u_step, vt, v_step, m, n, flags, &info);
+}
+
+int lapack_QR32f(float* src1, size_t src1_step, int m, int n, int k, float* src2, size_t src2_step, float* dst, int* info)
+{
+    if (m < HAL_QR_SMALL_MATRIX_THRESH)
+      return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return lapack_QR(src1, src1_step, m, n, k, src2, src2_step, dst, info);
+}
+
+int lapack_QR64f(double* src1, size_t src1_step, int m, int n, int k, double* src2, size_t src2_step, double* dst, int* info)
+{
+    if (m < HAL_QR_SMALL_MATRIX_THRESH)
+      return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return lapack_QR(src1, src1_step, m, n, k, src2, src2_step, dst, info);
 }
 
 int lapack_gemm32f(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,

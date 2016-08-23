@@ -1238,9 +1238,6 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
         return result;
     }
 
-    if( method == DECOMP_QR )
-        method = DECOMP_SVD;
-
     int m = src.rows, m_ = m, n = src.cols, nb = _src2.cols;
     size_t esz = CV_ELEM_SIZE(type), bufsize = 0;
     size_t vstep = alignSize(n*esz, 16);
@@ -1268,7 +1265,6 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
     if( is_normal )
         bufsize += n*nb*esz;
-
     if( method == DECOMP_SVD || method == DECOMP_EIG )
         bufsize += n*5*esz + n*vstep + nb*sizeof(double) + 32;
 
@@ -1320,6 +1316,28 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
             result = hal::Cholesky32f(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb);
         else
             result = hal::Cholesky64f(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb);
+    }
+    else if( method == DECOMP_QR )
+    {
+        Mat rhsMat;
+        if( is_normal || m == n )
+        {
+            src2.copyTo(dst);
+            rhsMat = dst;
+        }
+        else
+        {
+            rhsMat = Mat(m, nb, type);
+            src2.copyTo(rhsMat);
+        }
+
+        if( type == CV_32F )
+            result = hal::QR32f(a.ptr<float>(), a.step, a.rows, a.cols, rhsMat.cols, rhsMat.ptr<float>(), rhsMat.step, NULL) != 0;
+        else
+            result = hal::QR64f(a.ptr<double>(), a.step, a.rows, a.cols, rhsMat.cols, rhsMat.ptr<double>(), rhsMat.step, NULL) != 0;
+
+        if (rhsMat.rows != dst.rows)
+            rhsMat.rowRange(0, dst.rows).copyTo(dst);
     }
     else
     {

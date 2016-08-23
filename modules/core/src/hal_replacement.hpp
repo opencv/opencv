@@ -634,6 +634,27 @@ inline int hal_ni_SVD32f(float* src, size_t src_step, float* w, float* u, size_t
 inline int hal_ni_SVD64f(double* src, size_t src_step, double* w, double* u, size_t u_step, double* vt, size_t vt_step, int m, int n, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
+/**
+Performs QR decomposition of \f$M\times N\f$(\f$M>N\f$) matrix \f$A = Q*R\f$ and solves matrix equation \f$A*X=B\f$.
+@param src1 pointer to input matrix \f$A\f$ stored in row major order. After finish of work src1 contains upper triangular \f$N\times N\f$ matrix \f$R\f$.
+Lower triangle of src1 will be filled with vectors of elementary reflectors. See @cite VandLec and Lapack's DGEQRF documentation for details.
+@param src1_step number of bytes between two consequent rows of matrix \f$A\f$.
+@param m number fo rows in matrix \f$A\f$.
+@param n number of columns in matrix \f$A\f$.
+@param k number of right-hand vectors in \f$M\times K\f$ matrix \f$B\f$.
+@param src2 pointer to \f$M\times K\f$ matrix \f$B\f$ which is the right-hand side of system \f$A*X=B\f$. \f$B\f$ stored in row major order.
+If src2 is null pointer only QR decomposition will be performed. Otherwise system will be solved and src1 will be used as temporary buffer, so
+after finish of work src2 contains solution \f$X\f$ of system \f$A*X=B\f$.
+@param src2_step number of bytes between two consequent rows of matrix \f$B\f$.
+@param dst pointer to continiuos \f$N\times 1\f$ array for scalar factors of elementary reflectors. See @cite VandLec for details.
+@param info indicates success of decomposition. If *info is zero decomposition failed.
+*/
+//! @addtogroup core_hal_interface_decomp_qr QR matrix decomposition
+//! @{
+inline int hal_ni_QR32f(float* src1, size_t src1_step, int m, int n, int k, float* src2, size_t src2_step, float* dst, int* info) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_QR64f(double* src1, size_t src1_step, int m, int n, int k, double* src2, size_t src2_step, double* dst, int* info) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
 
 
 //! @cond IGNORED
@@ -643,6 +664,8 @@ inline int hal_ni_SVD64f(double* src, size_t src_step, double* w, double* u, siz
 #define cv_hal_Cholesky64f hal_ni_Cholesky64f
 #define cv_hal_SVD32f hal_ni_SVD32f
 #define cv_hal_SVD64f hal_ni_SVD64f
+#define cv_hal_QR32f hal_ni_QR32f
+#define cv_hal_QR64f hal_ni_QR64f
 //! @endcond
 
 
