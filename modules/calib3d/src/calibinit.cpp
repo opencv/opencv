@@ -2120,6 +2120,8 @@ cvDrawChessboardCorners( CvArr* _image, CvSize pattern_size,
 bool cv::findChessboardCorners( InputArray _image, Size patternSize,
                             OutputArray corners, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     int count = patternSize.area()*2;
     std::vector<Point2f> tmpcorners(count+1);
     Mat image = _image.getMat(); CvMat c_image = image;
@@ -2149,6 +2151,8 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
                             InputArray _corners,
                             bool patternWasFound )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat corners = _corners.getMat();
     if( corners.empty() )
         return;
@@ -2162,6 +2166,8 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
 bool cv::findCirclesGrid( InputArray _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector )
 {
+    CV_INSTRUMENT_REGION()
+
     bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID) ? true : false;
     bool isSymmetricGrid  = (flags & CALIB_CB_SYMMETRIC_GRID ) ? true : false;
     CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);

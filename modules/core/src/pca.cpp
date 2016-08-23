@@ -351,6 +351,8 @@ Mat PCA::backProject(InputArray data) const
 void cv::PCACompute(InputArray data, InputOutputArray mean,
                     OutputArray eigenvectors, int maxComponents)
 {
+    CV_INSTRUMENT_REGION()
+
     PCA pca;
     pca(data, mean, 0, maxComponents);
     pca.mean.copyTo(mean);
@@ -360,6 +362,8 @@ void cv::PCACompute(InputArray data, InputOutputArray mean,
 void cv::PCACompute(InputArray data, InputOutputArray mean,
                     OutputArray eigenvectors, double retainedVariance)
 {
+    CV_INSTRUMENT_REGION()
+
     PCA pca;
     pca(data, mean, 0, retainedVariance);
     pca.mean.copyTo(mean);
@@ -369,6 +373,8 @@ void cv::PCACompute(InputArray data, InputOutputArray mean,
 void cv::PCAProject(InputArray data, InputArray mean,
                     InputArray eigenvectors, OutputArray result)
 {
+    CV_INSTRUMENT_REGION()
+
     PCA pca;
     pca.mean = mean.getMat();
     pca.eigenvectors = eigenvectors.getMat();
@@ -378,6 +384,8 @@ void cv::PCAProject(InputArray data, InputArray mean,
 void cv::PCABackProject(InputArray data, InputArray mean,
                     InputArray eigenvectors, OutputArray result)
 {
+    CV_INSTRUMENT_REGION()
+
     PCA pca;
     pca.mean = mean.getMat();
     pca.eigenvectors = eigenvectors.getMat();

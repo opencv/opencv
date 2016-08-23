@@ -618,6 +618,8 @@ cv::DetectionBasedTracker::~DetectionBasedTracker()
 
 void DetectionBasedTracker::process(const Mat& imageGray)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(imageGray.type()==CV_8UC1);
 
     if ( separateDetectionWork && !separateDetectionWork->isWorking() ) {

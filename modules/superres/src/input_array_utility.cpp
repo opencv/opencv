@@ -235,6 +235,8 @@ namespace
 
 Mat cv::superres::convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1)
 {
+    CV_INSTRUMENT_REGION()
+
     if (src.type() == type)
         return src;
 
@@ -260,6 +262,8 @@ Mat cv::superres::convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1)
 
 UMat cv::superres::convertToType(const UMat& src, int type, UMat& buf0, UMat& buf1)
 {
+    CV_INSTRUMENT_REGION()
+
     if (src.type() == type)
         return src;
 

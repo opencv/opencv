@@ -836,6 +836,8 @@ void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
 
 void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
+    CV_INSTRUMENT_REGION()
+
     bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
 
     if( needToInitialize )
@@ -874,6 +876,8 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 template <typename T, int CN>
 void BackgroundSubtractorMOG2Impl::getBackgroundImage_intern(OutputArray backgroundImage) const
 {
+    CV_INSTRUMENT_REGION()
+
     Mat meanBackground(frameSize, frameType, Scalar::all(0));
     int firstGaussianIdx = 0;
     const GMM* gmm = bgmodel.ptr<GMM>();

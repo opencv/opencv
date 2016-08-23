@@ -93,12 +93,16 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 
 Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images)
 {
+    CV_INSTRUMENT_REGION()
+
     return estimateTransform(images, std::vector<std::vector<Rect> >());
 }
 
 
 Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois)
 {
+    CV_INSTRUMENT_REGION()
+
     images.getUMatVector(imgs_);
     rois_ = rois;
 
@@ -117,12 +121,16 @@ Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const st
 
 Stitcher::Status Stitcher::composePanorama(OutputArray pano)
 {
+    CV_INSTRUMENT_REGION()
+
     return composePanorama(std::vector<UMat>(), pano);
 }
 
 
 Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArray pano)
 {
+    CV_INSTRUMENT_REGION()
+
     LOGLN("Warping images (auxiliary)... ");
 
     std::vector<UMat> imgs;
@@ -365,6 +373,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
 Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 {
+    CV_INSTRUMENT_REGION()
+
     Status status = estimateTransform(images);
     if (status != OK)
         return status;
@@ -374,6 +384,8 @@ Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 
 Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
 {
+    CV_INSTRUMENT_REGION()
+
     Status status = estimateTransform(images, rois);
     if (status != OK)
         return status;
@@ -539,6 +551,8 @@ Stitcher::Status Stitcher::estimateCameraParams()
 
 Ptr<Stitcher> createStitcher(bool try_use_gpu)
 {
+    CV_INSTRUMENT_REGION()
+
     Ptr<Stitcher> stitcher = makePtr<Stitcher>();
     stitcher->setRegistrationResol(0.6);
     stitcher->setSeamEstimationResol(0.1);

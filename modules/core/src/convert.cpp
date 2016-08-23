@@ -84,6 +84,8 @@ static MergeFunc getMergeFunc(int depth)
 
 void cv::split(const Mat& src, Mat* mv)
 {
+    CV_INSTRUMENT_REGION()
+
     int k, depth = src.depth(), cn = src.channels();
     if( cn == 1 )
     {
@@ -176,6 +178,8 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 
 void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
                ocl_split(_m, _mv))
 
@@ -201,6 +205,8 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( mv && n > 0 );
 
     int depth = mv[0].depth();
@@ -345,6 +351,8 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_mv.isUMatVector() && _dst.isUMat(),
                ocl_merge(_mv, _dst))
 
@@ -439,6 +447,8 @@ static MixChannelsFunc getMixchFunc(int depth)
 
 void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
+    CV_INSTRUMENT_REGION()
+
     if( npairs == 0 )
         return;
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
@@ -615,6 +625,8 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
+    CV_INSTRUMENT_REGION()
+
     if (npairs == 0 || fromTo == NULL)
         return;
 
@@ -644,6 +656,8 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                      const std::vector<int>& fromTo)
 {
+    CV_INSTRUMENT_REGION()
+
     if (fromTo.empty())
         return;
 
@@ -672,6 +686,8 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( 0 <= coi && coi < cn );
     int ch[] = { coi, 0 };
@@ -693,6 +709,8 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 
 void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
     CV_Assert( _src.sameSize(_dst) && sdepth == ddepth );
@@ -4777,7 +4795,7 @@ dtype* dst, size_t dstep, Size size, double* scale) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    CV_IPP_RUN(src && dst, ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0)\
+    CV_IPP_RUN(src && dst, CV_INSTRUMENT_FUN_IPP(ippiConvert_##ippFavor, src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
     cvt_(src, sstep, dst, dstep, size); \
 }
 
@@ -4785,7 +4803,7 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    CV_IPP_RUN(src && dst, ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0)\
+    CV_IPP_RUN(src && dst, CV_INSTRUMENT_FUN_IPP(ippiConvert_##ippFavor, src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
     cvt_(src, sstep, dst, dstep, size); \
 }
 #else
@@ -5112,6 +5130,8 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_convertScaleAbs(_src, _dst, alpha, beta))
 
@@ -5142,6 +5162,8 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
 
 void cv::convertFp16( InputArray _src, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     int ddepth = 0;
 
@@ -5184,6 +5206,8 @@ void cv::convertFp16( InputArray _src, OutputArray _dst)
 
 void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
+    CV_INSTRUMENT_REGION()
+
     bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
 
     if( _type < 0 )
@@ -5408,7 +5432,7 @@ public:
         CV_DbgAssert(lutcn == 3 || lutcn == 4);
         if (lutcn == 3)
         {
-            IppStatus status = ippiCopy_8u_C3P3R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C3P3R, lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -5418,7 +5442,7 @@ public:
         }
         else if (lutcn == 4)
         {
-            IppStatus status = ippiCopy_8u_C4P4R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C4P4R, lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -5451,7 +5475,7 @@ public:
 
         if (lutcn == 3)
         {
-            if (ippiLUTPalette_8u_C3R(
+            if (CV_INSTRUMENT_FUN_IPP(ippiLUTPalette_8u_C3R,
                     src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
             {
@@ -5461,7 +5485,7 @@ public:
         }
         else if (lutcn == 4)
         {
-            if (ippiLUTPalette_8u_C4R(
+            if (CV_INSTRUMENT_FUN_IPP(ippiLUTPalette_8u_C4R,
                     src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
             {
@@ -5480,6 +5504,8 @@ private:
 
 static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int lutcn = lut.channels();
 
     if(src.dims > 2)
@@ -5565,6 +5591,8 @@ private:
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int cn = _src.channels(), depth = _src.depth();
     int lutcn = _lut.channels();
 
@@ -5712,6 +5740,8 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
                     int norm_type, int rtype, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     double scale = 1, shift = 0;
     if( norm_type == CV_MINMAX )
     {
