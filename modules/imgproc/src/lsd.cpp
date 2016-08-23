@@ -412,6 +412,8 @@ LineSegmentDetectorImpl::LineSegmentDetectorImpl(int _refine, double _scale, dou
 void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
                 OutputArray _width, OutputArray _prec, OutputArray _nfa)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat_<double> img = _image.getMat();
     CV_Assert(!img.empty() && img.channels() == 1);
 
@@ -1154,6 +1156,8 @@ inline bool LineSegmentDetectorImpl::isAligned(const int& address, const double&
 
 void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray lines)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(!_image.empty() && (_image.channels() == 1 || _image.channels() == 3));
 
     Mat gray;
@@ -1191,6 +1195,8 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
 
 int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image)
 {
+    CV_INSTRUMENT_REGION()
+
     Size sz = size;
     if (_image.needed() && _image.size() != size) sz = _image.size();
     CV_Assert(sz.area());

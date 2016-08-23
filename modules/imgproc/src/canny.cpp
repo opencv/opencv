@@ -66,6 +66,8 @@ static void CannyImpl(Mat& dx_, Mat& dy_, Mat& _dst, double low_thresh, double h
 template <bool useCustomDeriv>
 static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst, float low, float high)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if USE_IPP_CANNY
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
@@ -98,13 +100,13 @@ static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst,
     if (!useCustomDeriv)
     {
         Mat _dx(_src.rows, _src.cols, CV_16S);
-        if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
+        if( CV_INSTRUMENT_FUN_IPP(ippiFilterSobelNegVertBorder_8u16s_C1R, _src.ptr(), (int)_src.step,
                         _dx.ptr<short>(), (int)_dx.step, roi,
                         ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
             return false;
 
         Mat _dy(_src.rows, _src.cols, CV_16S);
-        if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
+        if( CV_INSTRUMENT_FUN_IPP(ippiFilterSobelHorizBorder_8u16s_C1R, _src.ptr(), (int)_src.step,
                         _dy.ptr<short>(), (int)_dy.step, roi,
                         ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
             return false;
@@ -118,7 +120,7 @@ static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst,
         dy = dy_;
     }
 
-    if( ippiCanny_16s8u_C1R(dx.ptr<short>(), (int)dx.step,
+    if( CV_INSTRUMENT_FUN_IPP(ippiCanny_16s8u_C1R, dx.ptr<short>(), (int)dx.step,
                                dy.ptr<short>(), (int)dy.step,
                               _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
         return false;
@@ -718,6 +720,8 @@ void Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 int aperture_size, bool L2gradient )
 {
+    CV_INSTRUMENT_REGION()
+
     const int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     const Size size = _src.size();
 

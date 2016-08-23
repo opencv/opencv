@@ -130,6 +130,8 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
                   const size_t srcofs[], const size_t srcstep[],
                   const size_t dstofs[], const size_t dststep[], bool /*sync*/) const
 {
+    CV_INSTRUMENT_REGION()
+
     if(!usrc || !udst)
         return;
     int isz[CV_MAX_DIM];
@@ -1056,6 +1058,8 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
 
 void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 {
+    CV_INSTRUMENT_REGION()
+
     int i, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn <= 4);
     switch(depth)
@@ -2802,6 +2806,8 @@ InputOutputArray noArray() { return _none; }
 
 void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     if( nsrc == 0 || !src )
     {
         _dst.release();
@@ -2829,12 +2835,16 @@ void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 
 void cv::hconcat(InputArray src1, InputArray src2, OutputArray dst)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src[] = {src1.getMat(), src2.getMat()};
     hconcat(src, 2, dst);
 }
 
 void cv::hconcat(InputArray _src, OutputArray dst)
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<Mat> src;
     _src.getMatVector(src);
     hconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
@@ -2842,6 +2852,8 @@ void cv::hconcat(InputArray _src, OutputArray dst)
 
 void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     if( nsrc == 0 || !src )
     {
         _dst.release();
@@ -2869,12 +2881,16 @@ void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 
 void cv::vconcat(InputArray src1, InputArray src2, OutputArray dst)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src[] = {src1.getMat(), src2.getMat()};
     vconcat(src, 2, dst);
 }
 
 void cv::vconcat(InputArray _src, OutputArray dst)
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<Mat> src;
     _src.getMatVector(src);
     vconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
@@ -2924,6 +2940,8 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 
 void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _m.dims() <= 2 );
 
     CV_OCL_RUN(_m.isUMat(),
@@ -2969,6 +2987,8 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 
 cv::Scalar cv::trace( InputArray _m )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat m = _m.getMat();
     CV_Assert( m.dims <= 2 );
     int i, type = m.type();
@@ -3170,62 +3190,64 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 #ifdef HAVE_IPP
 static bool ipp_transpose( Mat &src, Mat &dst )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int type = src.type();
-    typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
-    typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
-    ippiTranspose ippFunc = 0;
-    ippiTransposeI ippFuncI = 0;
+    typedef IppStatus (CV_STDCALL * IppiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
+    typedef IppStatus (CV_STDCALL * IppiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
+    IppiTranspose ippiTranspose = 0;
+    IppiTransposeI ippiTranspose_I = 0;
 
     if (dst.data == src.data && dst.cols == dst.rows)
     {
         CV_SUPPRESS_DEPRECATED_START
-        ippFuncI =
-            type == CV_8UC1 ? (ippiTransposeI)ippiTranspose_8u_C1IR :
-            type == CV_8UC3 ? (ippiTransposeI)ippiTranspose_8u_C3IR :
-            type == CV_8UC4 ? (ippiTransposeI)ippiTranspose_8u_C4IR :
-            type == CV_16UC1 ? (ippiTransposeI)ippiTranspose_16u_C1IR :
-            type == CV_16UC3 ? (ippiTransposeI)ippiTranspose_16u_C3IR :
-            type == CV_16UC4 ? (ippiTransposeI)ippiTranspose_16u_C4IR :
-            type == CV_16SC1 ? (ippiTransposeI)ippiTranspose_16s_C1IR :
-            type == CV_16SC3 ? (ippiTransposeI)ippiTranspose_16s_C3IR :
-            type == CV_16SC4 ? (ippiTransposeI)ippiTranspose_16s_C4IR :
-            type == CV_32SC1 ? (ippiTransposeI)ippiTranspose_32s_C1IR :
-            type == CV_32SC3 ? (ippiTransposeI)ippiTranspose_32s_C3IR :
-            type == CV_32SC4 ? (ippiTransposeI)ippiTranspose_32s_C4IR :
-            type == CV_32FC1 ? (ippiTransposeI)ippiTranspose_32f_C1IR :
-            type == CV_32FC3 ? (ippiTransposeI)ippiTranspose_32f_C3IR :
-            type == CV_32FC4 ? (ippiTransposeI)ippiTranspose_32f_C4IR : 0;
+        ippiTranspose_I =
+            type == CV_8UC1 ? (IppiTransposeI)ippiTranspose_8u_C1IR :
+            type == CV_8UC3 ? (IppiTransposeI)ippiTranspose_8u_C3IR :
+            type == CV_8UC4 ? (IppiTransposeI)ippiTranspose_8u_C4IR :
+            type == CV_16UC1 ? (IppiTransposeI)ippiTranspose_16u_C1IR :
+            type == CV_16UC3 ? (IppiTransposeI)ippiTranspose_16u_C3IR :
+            type == CV_16UC4 ? (IppiTransposeI)ippiTranspose_16u_C4IR :
+            type == CV_16SC1 ? (IppiTransposeI)ippiTranspose_16s_C1IR :
+            type == CV_16SC3 ? (IppiTransposeI)ippiTranspose_16s_C3IR :
+            type == CV_16SC4 ? (IppiTransposeI)ippiTranspose_16s_C4IR :
+            type == CV_32SC1 ? (IppiTransposeI)ippiTranspose_32s_C1IR :
+            type == CV_32SC3 ? (IppiTransposeI)ippiTranspose_32s_C3IR :
+            type == CV_32SC4 ? (IppiTransposeI)ippiTranspose_32s_C4IR :
+            type == CV_32FC1 ? (IppiTransposeI)ippiTranspose_32f_C1IR :
+            type == CV_32FC3 ? (IppiTransposeI)ippiTranspose_32f_C3IR :
+            type == CV_32FC4 ? (IppiTransposeI)ippiTranspose_32f_C4IR : 0;
         CV_SUPPRESS_DEPRECATED_END
     }
     else
     {
-        ippFunc =
-            type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :
-            type == CV_8UC3 ? (ippiTranspose)ippiTranspose_8u_C3R :
-            type == CV_8UC4 ? (ippiTranspose)ippiTranspose_8u_C4R :
-            type == CV_16UC1 ? (ippiTranspose)ippiTranspose_16u_C1R :
-            type == CV_16UC3 ? (ippiTranspose)ippiTranspose_16u_C3R :
-            type == CV_16UC4 ? (ippiTranspose)ippiTranspose_16u_C4R :
-            type == CV_16SC1 ? (ippiTranspose)ippiTranspose_16s_C1R :
-            type == CV_16SC3 ? (ippiTranspose)ippiTranspose_16s_C3R :
-            type == CV_16SC4 ? (ippiTranspose)ippiTranspose_16s_C4R :
-            type == CV_32SC1 ? (ippiTranspose)ippiTranspose_32s_C1R :
-            type == CV_32SC3 ? (ippiTranspose)ippiTranspose_32s_C3R :
-            type == CV_32SC4 ? (ippiTranspose)ippiTranspose_32s_C4R :
-            type == CV_32FC1 ? (ippiTranspose)ippiTranspose_32f_C1R :
-            type == CV_32FC3 ? (ippiTranspose)ippiTranspose_32f_C3R :
-            type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
+        ippiTranspose =
+            type == CV_8UC1 ? (IppiTranspose)ippiTranspose_8u_C1R :
+            type == CV_8UC3 ? (IppiTranspose)ippiTranspose_8u_C3R :
+            type == CV_8UC4 ? (IppiTranspose)ippiTranspose_8u_C4R :
+            type == CV_16UC1 ? (IppiTranspose)ippiTranspose_16u_C1R :
+            type == CV_16UC3 ? (IppiTranspose)ippiTranspose_16u_C3R :
+            type == CV_16UC4 ? (IppiTranspose)ippiTranspose_16u_C4R :
+            type == CV_16SC1 ? (IppiTranspose)ippiTranspose_16s_C1R :
+            type == CV_16SC3 ? (IppiTranspose)ippiTranspose_16s_C3R :
+            type == CV_16SC4 ? (IppiTranspose)ippiTranspose_16s_C4R :
+            type == CV_32SC1 ? (IppiTranspose)ippiTranspose_32s_C1R :
+            type == CV_32SC3 ? (IppiTranspose)ippiTranspose_32s_C3R :
+            type == CV_32SC4 ? (IppiTranspose)ippiTranspose_32s_C4R :
+            type == CV_32FC1 ? (IppiTranspose)ippiTranspose_32f_C1R :
+            type == CV_32FC3 ? (IppiTranspose)ippiTranspose_32f_C3R :
+            type == CV_32FC4 ? (IppiTranspose)ippiTranspose_32f_C4R : 0;
     }
 
     IppiSize roiSize = { src.cols, src.rows };
-    if (ippFunc != 0)
+    if (ippiTranspose != 0)
     {
-        if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
+        if (CV_INSTRUMENT_FUN_IPP(ippiTranspose, src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
             return true;
     }
-    else if (ippFuncI != 0)
+    else if (ippiTranspose_I != 0)
     {
-        if (ippFuncI(dst.ptr(), (int)dst.step, roiSize) >= 0)
+        if (CV_INSTRUMENT_FUN_IPP(ippiTranspose_I, dst.ptr(), (int)dst.step, roiSize) >= 0)
             return true;
     }
     return false;
@@ -3237,6 +3259,8 @@ static bool ipp_transpose( Mat &src, Mat &dst )
 
 void cv::transpose( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), esz = CV_ELEM_SIZE(type);
     CV_Assert( _src.dims() <= 2 && esz <= 32 );
 
@@ -3261,7 +3285,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
-    CV_IPP_RUN(true, ipp_transpose(src, dst))
+    CV_IPP_RUN_FAST(ipp_transpose(src, dst))
 
     if( dst.data == src.data )
     {
@@ -3283,6 +3307,8 @@ void cv::transpose( InputArray _src, OutputArray _dst )
 
 void cv::completeSymm( InputOutputArray _m, bool LtoR )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat m = _m.getMat();
     size_t step = m.step, esz = m.elemSize();
     CV_Assert( m.dims <= 2 && m.rows == m.cols );
@@ -3458,43 +3484,43 @@ static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat
 
     IppiSize roisize = { srcmat.size().width, 1 };
 
-    typedef IppStatus (CV_STDCALL * ippiSum)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum);
-    typedef IppStatus (CV_STDCALL * ippiSumHint)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum, IppHintAlgorithm hint);
-    ippiSum ippFunc = 0;
-    ippiSumHint ippFuncHint = 0;
+    typedef IppStatus (CV_STDCALL * IppiSum)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum);
+    typedef IppStatus (CV_STDCALL * IppiSumHint)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum, IppHintAlgorithm hint);
+    IppiSum ippiSum = 0;
+    IppiSumHint ippiSumHint = 0;
 
     if(ddepth == CV_64F)
     {
-        ippFunc =
-            stype == CV_8UC1 ? (ippiSum)ippiSum_8u_C1R :
-            stype == CV_8UC3 ? (ippiSum)ippiSum_8u_C3R :
-            stype == CV_8UC4 ? (ippiSum)ippiSum_8u_C4R :
-            stype == CV_16UC1 ? (ippiSum)ippiSum_16u_C1R :
-            stype == CV_16UC3 ? (ippiSum)ippiSum_16u_C3R :
-            stype == CV_16UC4 ? (ippiSum)ippiSum_16u_C4R :
-            stype == CV_16SC1 ? (ippiSum)ippiSum_16s_C1R :
-            stype == CV_16SC3 ? (ippiSum)ippiSum_16s_C3R :
-            stype == CV_16SC4 ? (ippiSum)ippiSum_16s_C4R : 0;
-        ippFuncHint =
-            stype == CV_32FC1 ? (ippiSumHint)ippiSum_32f_C1R :
-            stype == CV_32FC3 ? (ippiSumHint)ippiSum_32f_C3R :
-            stype == CV_32FC4 ? (ippiSumHint)ippiSum_32f_C4R : 0;
+        ippiSum =
+            stype == CV_8UC1 ? (IppiSum)ippiSum_8u_C1R :
+            stype == CV_8UC3 ? (IppiSum)ippiSum_8u_C3R :
+            stype == CV_8UC4 ? (IppiSum)ippiSum_8u_C4R :
+            stype == CV_16UC1 ? (IppiSum)ippiSum_16u_C1R :
+            stype == CV_16UC3 ? (IppiSum)ippiSum_16u_C3R :
+            stype == CV_16UC4 ? (IppiSum)ippiSum_16u_C4R :
+            stype == CV_16SC1 ? (IppiSum)ippiSum_16s_C1R :
+            stype == CV_16SC3 ? (IppiSum)ippiSum_16s_C3R :
+            stype == CV_16SC4 ? (IppiSum)ippiSum_16s_C4R : 0;
+        ippiSumHint =
+            stype == CV_32FC1 ? (IppiSumHint)ippiSum_32f_C1R :
+            stype == CV_32FC3 ? (IppiSumHint)ippiSum_32f_C3R :
+            stype == CV_32FC4 ? (IppiSumHint)ippiSum_32f_C4R : 0;
     }
 
-    if(ippFunc)
+    if(ippiSum)
     {
         for(int y = 0; y < srcmat.size().height; y++)
         {
-            if(ippFunc(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippiSum, srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
                 return false;
         }
         return true;
     }
-    else if(ippFuncHint)
+    else if(ippiSumHint)
     {
         for(int y = 0; y < srcmat.size().height; y++)
         {
-            if(ippFuncHint(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippiSumHint, srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
                 return false;
         }
         return true;
@@ -3505,7 +3531,7 @@ static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat
 
 static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
-    CV_IPP_RUN(true, ipp_reduceSumC_8u16u16s32f_64f(srcmat, dstmat));
+    CV_IPP_RUN_FAST(ipp_reduceSumC_8u16u16s32f_64f(srcmat, dstmat));
 
     cv::ReduceFunc func = 0;
 
@@ -3555,7 +3581,7 @@ static inline bool ipp_reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& 
         IppiSize roisize = ippiSize(srcmat.size().width, 1);\
         for(int y = 0; y < srcmat.size().height; y++)\
         {\
-            if(ippi##optype##_##favor##_C1R(srcmat.ptr<IppType>(y), sstep, roisize, dstmat.ptr<IppType>(y)) < 0)\
+            if(CV_INSTRUMENT_FUN_IPP(ippi##optype##_##favor##_C1R, srcmat.ptr<IppType>(y), sstep, roisize, dstmat.ptr<IppType>(y)) < 0)\
                 return false;\
         }\
         return true;\
@@ -3564,7 +3590,7 @@ static inline bool ipp_reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& 
 } \
 static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
 { \
-    CV_IPP_RUN(true, ipp_reduce##optype##C##favor(srcmat, dstmat)); \
+    CV_IPP_RUN_FAST(ipp_reduce##optype##C##favor(srcmat, dstmat)); \
     cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat, dstmat); \
 }
 #endif
@@ -3704,6 +3730,8 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
 void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _src.dims() <= 2 );
     int op0 = op;
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
@@ -3948,7 +3976,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
         }
 
 #ifdef USE_IPP_SORT
-        if (!ippSortFunc || ippSortFunc(ptr, len) < 0)
+        if (!ippSortFunc || CV_INSTRUMENT_FUN_IPP(ippSortFunc, ptr, len) < 0)
 #endif
         {
 #ifdef USE_IPP_SORT
@@ -3959,7 +3987,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
             if( sortDescending )
             {
 #ifdef USE_IPP_SORT
-                if (!ippFlipFunc || ippFlipFunc(ptr, len) < 0)
+                if (!ippFlipFunc || CV_INSTRUMENT_FUN_IPP(ippFlipFunc, ptr, len) < 0)
 #endif
                 {
 #ifdef USE_IPP_SORT
@@ -4120,6 +4148,8 @@ typedef void (*SortFunc)(const Mat& src, Mat& dst, int flags);
 
 void cv::sort( InputArray _src, OutputArray _dst, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     static SortFunc tab[] =
     {
         sort_<uchar>, sort_<schar>, sort_<ushort>, sort_<short>,
@@ -4135,6 +4165,8 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
 
 void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     static SortFunc tab[] =
     {
         sortIdx_<uchar>, sortIdx_<schar>, sortIdx_<ushort>, sortIdx_<short>,
@@ -5341,6 +5373,8 @@ SparseMatConstIterator& SparseMatConstIterator::operator ++()
 
 double norm( const SparseMat& src, int normType )
 {
+    CV_INSTRUMENT_REGION()
+
     SparseMatConstIterator it = src.begin();
 
     size_t i, N = src.nzcount();
@@ -5390,6 +5424,8 @@ double norm( const SparseMat& src, int normType )
 
 void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _minidx, int* _maxidx )
 {
+    CV_INSTRUMENT_REGION()
+
     SparseMatConstIterator it = src.begin();
     size_t i, N = src.nzcount(), d = src.hdr ? src.hdr->dims : 0;
     int type = src.type();
@@ -5453,6 +5489,8 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
 
 void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
 {
+    CV_INSTRUMENT_REGION()
+
     double scale = 1;
     if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )
     {

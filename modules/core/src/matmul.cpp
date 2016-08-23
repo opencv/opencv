@@ -868,6 +868,8 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 static void gemmImpl( Mat A, Mat B, double alpha,
            Mat C, double beta, Mat D, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     const int block_lin_size = 128;
     const int block_size = block_lin_size * block_lin_size;
 
@@ -2082,6 +2084,8 @@ static TransformFunc getDiagTransformFunc(int depth)
 
 void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows;
     CV_Assert( scn == m.cols || scn + 1 == m.cols );
@@ -2260,6 +2264,8 @@ perspectiveTransform_64f(const double* src, double* dst, const double* m, int le
 
 void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mtx )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows-1;
     CV_Assert( scn + 1 == m.cols );
@@ -2454,6 +2460,8 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
 
 void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( type == _src2.type() );
 
@@ -2499,6 +2507,8 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
 
 void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int flags, int ctype )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( data && nsamples > 0 );
     Size size = data[0].size();
     int sz = size.width * size.height, esz = (int)data[0].elemSize();
@@ -2539,6 +2549,8 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
 
 void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mean, int flags, int ctype )
 {
+    CV_INSTRUMENT_REGION()
+
     if(_src.kind() == _InputArray::STD_VECTOR_MAT)
     {
         std::vector<cv::Mat> src;
@@ -2626,6 +2638,8 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
 
 double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat v1 = _v1.getMat(), v2 = _v2.getMat(), icovar = _icovar.getMat();
     int type = v1.type(), depth = v1.depth();
     Size sz = v1.size();
@@ -2916,6 +2930,8 @@ typedef void (*MulTransposedFunc)(const Mat& src, Mat& dst, const Mat& delta, do
 void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
                         InputArray _delta, double scale, int dtype )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat(), delta = _delta.getMat();
     const int gemm_level = 100; // boundary above which GEMM is faster.
     int stype = src.type();
@@ -3059,9 +3075,9 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 #if ARITHM_USE_IPP && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
-        if (0 <= ippiDotProd_8u64f_C1R(src1, (int)(len*sizeof(src1[0])),
+        if (0 <= CV_INSTRUMENT_FUN_IPP(ippiDotProd_8u64f_C1R, (src1, (int)(len*sizeof(src1[0])),
                                        src2, (int)(len*sizeof(src2[0])),
-                                       ippiSize(len, 1), &r))
+                                       ippiSize(len, 1), &r)))
         {
             CV_IMPL_ADD(CV_IMPL_IPP);
             return r;
@@ -3258,7 +3274,7 @@ static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
     CV_IPP_CHECK()
     {
         double r = 0;
-        if (0 <= ippiDotProd_16u64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        if (0 <= CV_INSTRUMENT_FUN_IPP(ippiDotProd_16u64f_C1R, src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
         {
             CV_IMPL_ADD(CV_IMPL_IPP);
             return r;
@@ -3275,7 +3291,7 @@ static double dotProd_16s(const short* src1, const short* src2, int len)
     CV_IPP_CHECK()
     {
         double r = 0;
-        if (0 <= ippiDotProd_16s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        if (0 <= CV_INSTRUMENT_FUN_IPP(ippiDotProd_16s64f_C1R, src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
         {
             CV_IMPL_ADD(CV_IMPL_IPP);
             return r;
@@ -3292,7 +3308,7 @@ static double dotProd_32s(const int* src1, const int* src2, int len)
     CV_IPP_CHECK()
     {
         double r = 0;
-        if (0 <= ippiDotProd_32s64f_C1R(src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
+        if (0 <= CV_INSTRUMENT_FUN_IPP(ippiDotProd_32s64f_C1R, src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
         {
             CV_IMPL_ADD(CV_IMPL_IPP);
             return r;
@@ -3311,7 +3327,7 @@ static double dotProd_32f(const float* src1, const float* src2, int len)
 #if (ARITHM_USE_IPP == 1)
     CV_IPP_CHECK()
     {
-        if (0 <= ippsDotProd_32f64f(src1, src2, len, &r))
+        if (0 <= CV_INSTRUMENT_FUN_IPP(ippsDotProd_32f64f, src1, src2, len, &r))
         {
             CV_IMPL_ADD(CV_IMPL_IPP);
             return r;
@@ -3349,7 +3365,7 @@ static double dotProd_64f(const double* src1, const double* src2, int len)
     CV_IPP_CHECK()
     {
         double r = 0;
-        if (0 <= ippsDotProd_64f(src1, src2, len, &r))
+        if (0 <= CV_INSTRUMENT_FUN_IPP(ippsDotProd_64f, src1, src2, len, &r))
         {
             CV_IMPL_ADD(CV_IMPL_IPP);
             return r;
@@ -3378,6 +3394,8 @@ static DotProdFunc getDotProdFunc(int depth)
 
 double Mat::dot(InputArray _mat) const
 {
+    CV_INSTRUMENT_REGION()
+
     Mat mat = _mat.getMat();
     int cn = channels();
     DotProdFunc func = getDotProdFunc(depth());

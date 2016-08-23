@@ -390,6 +390,8 @@ OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
 
 void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray _flow)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_flow.isUMat() &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                calc_ocl(_I0, _I1, _flow))

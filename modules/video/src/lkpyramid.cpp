@@ -223,6 +223,8 @@ typedef float itemtype;
 
 void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 {
+    CV_INSTRUMENT_REGION()
+
     Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
     const Mat& I = *prevImg;
     const Mat& J = *nextImg;
@@ -740,6 +742,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Size winSize, int maxLevel, bool withDerivatives,
                                 int pyrBorder, int derivBorder, bool tryReuseInputImage)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
     CV_Assert(img.depth() == CV_8U && winSize.width > 2 && winSize.height > 2 );
     int pyrstep = withDerivatives ? 2 : 1;
@@ -1102,6 +1106,8 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
                            OutputArray _status, OutputArray _err)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(ocl::useOpenCL() &&
                (_prevImg.isUMat() || _nextImg.isUMat()) &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
@@ -1371,6 +1377,8 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
 cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
 
     const int COUNT = 15;
