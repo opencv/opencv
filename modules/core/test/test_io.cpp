@@ -91,9 +91,10 @@ protected:
             {-1000000, 1000000}, {-10, 10}, {-10, 10}};
         RNG& rng = ts->get_rng();
         RNG rng0;
-        test_case_count = 4;
         int progress = 0;
         MemStorage storage(cvCreateMemStorage(0));
+        const char * suffixs[3] = {".yml", ".xml", ".json" };
+        test_case_count = 6;
 
         for( int idx = 0; idx < test_case_count; idx++ )
         {
@@ -102,8 +103,8 @@ protected:
 
             cvClearMemStorage(storage);
 
-            bool mem = (idx % 4) >= 2;
-            string filename = tempfile(idx % 2 ? ".yml" : ".xml");
+            bool mem = (idx % test_case_count) >= (test_case_count >> 1);
+            string filename = tempfile(suffixs[idx % (test_case_count >> 1)]);
 
             FileStorage fs(filename, FileStorage::WRITE + (mem ? FileStorage::MEMORY : 0));
 
@@ -430,82 +431,91 @@ public:
 protected:
     void run(int)
     {
-        try
-        {
-            string fname = cv::tempfile(".xml");
-            vector<int> mi, mi2, mi3, mi4;
-            vector<Mat> mv, mv2, mv3, mv4;
-            vector<UserDefinedType> vudt, vudt2, vudt3, vudt4;
-            Mat m(10, 9, CV_32F);
-            Mat empty;
-            UserDefinedType udt = { 8, 3.3f };
-            randu(m, 0, 1);
-            mi3.push_back(5);
-            mv3.push_back(m);
-            vudt3.push_back(udt);
-            Point_<float> p1(1.1f, 2.2f), op1;
-            Point3i p2(3, 4, 5), op2;
-            Size s1(6, 7), os1;
-            Complex<int> c1(9, 10), oc1;
-            Rect r1(11, 12, 13, 14), or1;
-            Vec<int, 5> v1(15, 16, 17, 18, 19), ov1;
-            Scalar sc1(20.0, 21.1, 22.2, 23.3), osc1;
-            Range g1(7, 8), og1;
+        const char * suffix[3] = {
+            ".yml",
+            ".xml",
+            ".json"
+        };
 
-            FileStorage fs(fname, FileStorage::WRITE);
-            fs << "mi" << mi;
-            fs << "mv" << mv;
-            fs << "mi3" << mi3;
-            fs << "mv3" << mv3;
-            fs << "vudt" << vudt;
-            fs << "vudt3" << vudt3;
-            fs << "empty" << empty;
-            fs << "p1" << p1;
-            fs << "p2" << p2;
-            fs << "s1" << s1;
-            fs << "c1" << c1;
-            fs << "r1" << r1;
-            fs << "v1" << v1;
-            fs << "sc1" << sc1;
-            fs << "g1" << g1;
-            fs.release();
-
-            fs.open(fname, FileStorage::READ);
-            fs["mi"] >> mi2;
-            fs["mv"] >> mv2;
-            fs["mi3"] >> mi4;
-            fs["mv3"] >> mv4;
-            fs["vudt"] >> vudt2;
-            fs["vudt3"] >> vudt4;
-            fs["empty"] >> empty;
-            fs["p1"] >> op1;
-            fs["p2"] >> op2;
-            fs["s1"] >> os1;
-            fs["c1"] >> oc1;
-            fs["r1"] >> or1;
-            fs["v1"] >> ov1;
-            fs["sc1"] >> osc1;
-            fs["g1"] >> og1;
-            CV_Assert( mi2.empty() );
-            CV_Assert( mv2.empty() );
-            CV_Assert( cvtest::norm(Mat(mi3), Mat(mi4), CV_C) == 0 );
-            CV_Assert( mv4.size() == 1 );
-            double n = cvtest::norm(mv3[0], mv4[0], CV_C);
-            CV_Assert( vudt2.empty() );
-            CV_Assert( vudt3 == vudt4 );
-            CV_Assert( n == 0 );
-            CV_Assert( op1 == p1 );
-            CV_Assert( op2 == p2 );
-            CV_Assert( os1 == s1 );
-            CV_Assert( oc1 == c1 );
-            CV_Assert( or1 == r1 );
-            CV_Assert( ov1 == v1 );
-            CV_Assert( osc1 == sc1 );
-            CV_Assert( og1 == g1 );
-        }
-        catch(...)
+        for ( size_t i = 0u; i < 3u; i++ )
         {
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+            try
+            {
+                string fname = cv::tempfile(suffix[i]);
+                vector<int> mi, mi2, mi3, mi4;
+                vector<Mat> mv, mv2, mv3, mv4;
+                vector<UserDefinedType> vudt, vudt2, vudt3, vudt4;
+                Mat m(10, 9, CV_32F);
+                Mat empty;
+                UserDefinedType udt = { 8, 3.3f };
+                randu(m, 0, 1);
+                mi3.push_back(5);
+                mv3.push_back(m);
+                vudt3.push_back(udt);
+                Point_<float> p1(1.1f, 2.2f), op1;
+                Point3i p2(3, 4, 5), op2;
+                Size s1(6, 7), os1;
+                Complex<int> c1(9, 10), oc1;
+                Rect r1(11, 12, 13, 14), or1;
+                Vec<int, 5> v1(15, 16, 17, 18, 19), ov1;
+                Scalar sc1(20.0, 21.1, 22.2, 23.3), osc1;
+                Range g1(7, 8), og1;
+
+                FileStorage fs(fname, FileStorage::WRITE);
+                fs << "mi" << mi;
+                fs << "mv" << mv;
+                fs << "mi3" << mi3;
+                fs << "mv3" << mv3;
+                fs << "vudt" << vudt;
+                fs << "vudt3" << vudt3;
+                fs << "empty" << empty;
+                fs << "p1" << p1;
+                fs << "p2" << p2;
+                fs << "s1" << s1;
+                fs << "c1" << c1;
+                fs << "r1" << r1;
+                fs << "v1" << v1;
+                fs << "sc1" << sc1;
+                fs << "g1" << g1;
+                fs.release();
+
+                fs.open(fname, FileStorage::READ);
+                fs["mi"] >> mi2;
+                fs["mv"] >> mv2;
+                fs["mi3"] >> mi4;
+                fs["mv3"] >> mv4;
+                fs["vudt"] >> vudt2;
+                fs["vudt3"] >> vudt4;
+                fs["empty"] >> empty;
+                fs["p1"] >> op1;
+                fs["p2"] >> op2;
+                fs["s1"] >> os1;
+                fs["c1"] >> oc1;
+                fs["r1"] >> or1;
+                fs["v1"] >> ov1;
+                fs["sc1"] >> osc1;
+                fs["g1"] >> og1;
+                CV_Assert( mi2.empty() );
+                CV_Assert( mv2.empty() );
+                CV_Assert( cvtest::norm(Mat(mi3), Mat(mi4), CV_C) == 0 );
+                CV_Assert( mv4.size() == 1 );
+                double n = cvtest::norm(mv3[0], mv4[0], CV_C);
+                CV_Assert( vudt2.empty() );
+                CV_Assert( vudt3 == vudt4 );
+                CV_Assert( n == 0 );
+                CV_Assert( op1 == p1 );
+                CV_Assert( op2 == p2 );
+                CV_Assert( os1 == s1 );
+                CV_Assert( oc1 == c1 );
+                CV_Assert( or1 == r1 );
+                CV_Assert( ov1 == v1 );
+                CV_Assert( osc1 == sc1 );
+                CV_Assert( og1 == g1 );
+            }
+            catch(...)
+            {
+                ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+            }
         }
     }
 };
@@ -618,6 +628,7 @@ TEST(Core_InputOutput, filestorage_base64_basic)
     char const * filenames[] = {
         "core_io_base64_basic_test.yml",
         "core_io_base64_basic_test.xml",
+        "core_io_base64_basic_test.json",
         0
     };
 
@@ -631,6 +642,8 @@ TEST(Core_InputOutput, filestorage_base64_basic)
         cv::Mat _2d_out, _2d_in;
         cv::Mat _nd_out, _nd_in;
         cv::Mat _rd_out(64, 64, CV_64FC1), _rd_in;
+
+        bool no_type_id = true;
 
         {   /* init */
 
@@ -692,6 +705,12 @@ TEST(Core_InputOutput, filestorage_base64_basic)
             fs["normal_nd_mat"] >> _nd_in;
             fs["random_mat"]    >> _rd_in;
 
+            if ( !fs["empty_2d_mat"]["type_id"].empty() ||
+                !fs["normal_2d_mat"]["type_id"].empty() ||
+                !fs["normal_nd_mat"]["type_id"].empty() ||
+                !fs[   "random_mat"]["type_id"].empty() )
+                no_type_id = false;
+
             /* raw data */
             std::vector<data_t>(1000).swap(rawdata);
             cvReadRawData(*fs, fs["rawdata"].node, rawdata.data(), data_t::signature());
@@ -710,6 +729,8 @@ TEST(Core_InputOutput, filestorage_base64_basic)
             //EXPECT_EQ(rawdata[i].d2, 0.2);
             //EXPECT_EQ(rawdata[i].i4, i);
         }
+
+        EXPECT_TRUE(no_type_id);
 
         EXPECT_EQ(_em_in.rows   , _em_out.rows);
         EXPECT_EQ(_em_in.cols   , _em_out.cols);
@@ -745,15 +766,19 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
     char const * filenames[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
+        "core_io_base64_other_test.json",
         "core_io_base64_other_test.yml?base64",
         "core_io_base64_other_test.xml?base64",
+        "core_io_base64_other_test.json?base64",
         0
     };
     char const * real_name[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
+        "core_io_base64_other_test.json",
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
+        "core_io_base64_other_test.json",
         0
     };
 
@@ -829,6 +854,7 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
     char const * filenames[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
+        "core_io_base64_other_test.json",
         0
     };
 
@@ -876,4 +902,29 @@ TEST(Core_InputOutput, filestorage_yml_vec2i)
     EXPECT_EQ(vec(1), ovec(1));
 
     remove(file_name.c_str());
+}
+
+TEST(Core_InputOutput, filestorage_json_comment)
+{
+    String mem_str =
+        "{ /* comment */\n"
+        "  \"key\": \"value\"\n"
+        "  /************\n"
+        "   * multiline comment\n"
+        "   ************/\n"
+        "  // 233\n"
+        "  // \n"
+        "}\n"
+        ;
+
+    String str;
+
+    EXPECT_NO_THROW(
+    {
+        cv::FileStorage fs(mem_str, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+        fs["key"] >> str;
+        fs.release();
+    });
+
+    EXPECT_EQ(str, String("value"));
 }
