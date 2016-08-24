@@ -3286,7 +3286,10 @@ icvJSONSkipSpaces( CvFileStorage* fs, char* ptr )
                             if ( !ptr ) { is_eof = true; break; }
                         }
                         if ( *ptr == '/' )
+                        {
+                            ptr++;
                             break;
+                        }
                     }
                     else
                     {
