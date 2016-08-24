@@ -643,6 +643,8 @@ TEST(Core_InputOutput, filestorage_base64_basic)
         cv::Mat _nd_out, _nd_in;
         cv::Mat _rd_out(64, 64, CV_64FC1), _rd_in;
 
+        bool no_type_id = true;
+
         {   /* init */
 
             /* a normal mat */
@@ -703,6 +705,12 @@ TEST(Core_InputOutput, filestorage_base64_basic)
             fs["normal_nd_mat"] >> _nd_in;
             fs["random_mat"]    >> _rd_in;
 
+            if ( !fs["empty_2d_mat"]["type_id"].empty() ||
+                !fs["normal_2d_mat"]["type_id"].empty() ||
+                !fs["normal_nd_mat"]["type_id"].empty() ||
+                !fs[   "random_mat"]["type_id"].empty() )
+                no_type_id = false;
+
             /* raw data */
             std::vector<data_t>(1000).swap(rawdata);
             cvReadRawData(*fs, fs["rawdata"].node, rawdata.data(), data_t::signature());
@@ -721,6 +729,8 @@ TEST(Core_InputOutput, filestorage_base64_basic)
             //EXPECT_EQ(rawdata[i].d2, 0.2);
             //EXPECT_EQ(rawdata[i].i4, i);
         }
+
+        EXPECT_TRUE(no_type_id);
 
         EXPECT_EQ(_em_in.rows   , _em_out.rows);
         EXPECT_EQ(_em_in.cols   , _em_out.cols);
@@ -892,4 +902,29 @@ TEST(Core_InputOutput, filestorage_yml_vec2i)
     EXPECT_EQ(vec(1), ovec(1));
 
     remove(file_name.c_str());
+}
+
+TEST(Core_InputOutput, filestorage_json_comment)
+{
+    String mem_str =
+        "{ /* comment */\n"
+        "  \"key\": \"value\"\n"
+        "  /************\n"
+        "   * multiline comment\n"
+        "   ************/\n"
+        "  // 233\n"
+        "  // \n"
+        "}\n"
+        ;
+
+    String str;
+
+    EXPECT_NO_THROW(
+    {
+        cv::FileStorage fs(mem_str, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+        fs["key"] >> str;
+        fs.release();
+    });
+
+    EXPECT_EQ(str, String("value"));
 }
