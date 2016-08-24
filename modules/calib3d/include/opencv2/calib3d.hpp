@@ -1615,11 +1615,11 @@ homographies are consistent with all visible reference points being in front of 
 
 */
 CV_EXPORTS_W std::vector<int> filterHomographyDecompSolutionsByPointNormals(
-	const std::vector<Mat>& rotations,
-	const std::vector<Mat>& normals,
-	const std::vector<Point2f>& beforeRectifiedPoints,
-	const std::vector<Point2f>& afterRectifiedPoints,
-	const Mat& mask);
+    const std::vector<Mat>& rotations,
+    const std::vector<Mat>& normals,
+    const std::vector<Point2f>& beforeRectifiedPoints,
+    const std::vector<Point2f>& afterRectifiedPoints,
+    const Mat& mask);
 
 /** @brief The base class for stereo correspondence algorithms.
  */

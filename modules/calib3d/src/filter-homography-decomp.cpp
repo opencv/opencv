@@ -47,58 +47,58 @@ using namespace std;
 
 namespace cv
 {
-	vector<int> filterHomographyDecompSolutionsByPointNormals(
-		const vector<Mat>& rotations,
-		const vector<Mat>& normals,
-		const vector<Point2f>& beforeRectifiedPoints,
-		const vector<Point2f>& afterRectifiedPoints,
-		const Mat& mask)
-	{
-		vector<int> prevPointBehindCameraCount, currPointBehindCameraCount;
-		for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
-		{
-			prevPointBehindCameraCount.push_back(0);
-			currPointBehindCameraCount.push_back(0);
-		}
+    vector<int> filterHomographyDecompSolutionsByPointNormals(
+        const vector<Mat>& rotations,
+        const vector<Mat>& normals,
+        const vector<Point2f>& beforeRectifiedPoints,
+        const vector<Point2f>& afterRectifiedPoints,
+        const Mat& mask)
+    {
+        vector<int> prevPointBehindCameraCount, currPointBehindCameraCount;
+        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
+        {
+            prevPointBehindCameraCount.push_back(0);
+            currPointBehindCameraCount.push_back(0);
+        }
 
-		for (int pointIdx = 0; (size_t)pointIdx < beforeRectifiedPoints.size(); pointIdx++) {
-			if (mask.at<bool>(pointIdx))
-			{
-				for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
-				{
-					Mat tempAddMat = Mat(1, 1, CV_64F, double(1));
+        for (int pointIdx = 0; (size_t)pointIdx < beforeRectifiedPoints.size(); pointIdx++) {
+            if (mask.at<bool>(pointIdx))
+            {
+                for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
+                {
+                    Mat tempAddMat = Mat(1, 1, CV_64F, double(1));
 
-					Mat tempPrevPointMat = Mat(beforeRectifiedPoints.at(pointIdx));
-					tempPrevPointMat.convertTo(tempPrevPointMat, CV_64F);
-					tempPrevPointMat.push_back(tempAddMat);
+                    Mat tempPrevPointMat = Mat(beforeRectifiedPoints.at(pointIdx));
+                    tempPrevPointMat.convertTo(tempPrevPointMat, CV_64F);
+                    tempPrevPointMat.push_back(tempAddMat);
 
-					Mat tempCurrPointMat = Mat(afterRectifiedPoints.at(pointIdx));
-					tempCurrPointMat.convertTo(tempCurrPointMat, CV_64F);
-					tempCurrPointMat.push_back(tempAddMat);
+                    Mat tempCurrPointMat = Mat(afterRectifiedPoints.at(pointIdx));
+                    tempCurrPointMat.convertTo(tempCurrPointMat, CV_64F);
+                    tempCurrPointMat.push_back(tempAddMat);
 
-					double prevNormDot = tempPrevPointMat.dot(normals.at(solutionIdx));
-					double currNormDot = tempCurrPointMat.dot(rotations.at(solutionIdx) * normals.at(solutionIdx));
+                    double prevNormDot = tempPrevPointMat.dot(normals.at(solutionIdx));
+                    double currNormDot = tempCurrPointMat.dot(rotations.at(solutionIdx) * normals.at(solutionIdx));
 
-					if (prevNormDot <= 0)
-						prevPointBehindCameraCount[solutionIdx]++;
+                    if (prevNormDot <= 0)
+                        prevPointBehindCameraCount[solutionIdx]++;
 
-					if (currNormDot <= 0)
-						currPointBehindCameraCount[solutionIdx]++;
-				}
-			}
-		}
+                    if (currNormDot <= 0)
+                        currPointBehindCameraCount[solutionIdx]++;
+                }
+            }
+        }
 
-		vector<int> possibleSolutions;
+        vector<int> possibleSolutions;
 
-		for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
-		{
-			if (prevPointBehindCameraCount[solutionIdx] == 0 && currPointBehindCameraCount[solutionIdx] == 0)
-			{
-				possibleSolutions.push_back(solutionIdx);
-			}
-		}
+        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
+        {
+            if (prevPointBehindCameraCount[solutionIdx] == 0 && currPointBehindCameraCount[solutionIdx] == 0)
+            {
+                possibleSolutions.push_back(solutionIdx);
+            }
+        }
 
-		return possibleSolutions;
-	}
+        return possibleSolutions;
+    }
 
 }
