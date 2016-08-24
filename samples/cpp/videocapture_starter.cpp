@@ -1,14 +1,13 @@
-/*
-* starter_video.cpp
+/**
+* @file videocapture_starter.cpp
+* @brief A starter sample for using OpenCV VideoCapture with capture devices, video files or image sequences
+* easy as CV_PI right?
 *
 *  Created on: Nov 23, 2010
 *      Author: Ethan Rublee
 *
 *  Modified on: April 17, 2013
 *      Author: Kevin Hughes
-*
-* A starter sample for using OpenCV VideoCapture with capture devices, video files or image sequences
-* easy as CV_PI right?
 */
 
 #include <opencv2/imgcodecs.hpp>
