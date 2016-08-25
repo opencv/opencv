@@ -4385,39 +4385,13 @@ const unsigned int kShiftSignificand    = 13;
 const unsigned int kMaskFp16Significand = 0x3ff;
 const unsigned int kBiasFp16Exponent    = 15;
 const unsigned int kBiasFp32Exponent    = 127;
-
-union fp32Int32
-{
-    int i;
-    float f;
-    struct _fp32Format
-    {
-        unsigned int significand : 23;
-        unsigned int exponent    : 8;
-        unsigned int sign        : 1;
-    } fmt;
-};
 #endif
-
-union fp16Int16
-{
-    short i;
-#if ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) )
-    __fp16 h;
-#endif
-    struct _fp16Format
-    {
-        unsigned int significand : 10;
-        unsigned int exponent    : 5;
-        unsigned int sign        : 1;
-    } fmt;
-};
 
 #if ( defined (__arm__) || defined (__aarch64__) ) && ( defined (__GNUC__) && ( ( ( 4 <= __GNUC__ ) && ( 7 <= __GNUC__ ) ) || ( 5 <= __GNUC__ ) ) )
 static float convertFp16SW(short fp16)
 {
     // Fp16 -> Fp32
-    fp16Int16 a;
+    Cv16suf a;
     a.i = fp16;
     return (float)a.h;
 }
@@ -4425,12 +4399,12 @@ static float convertFp16SW(short fp16)
 static float convertFp16SW(short fp16)
 {
     // Fp16 -> Fp32
-    fp16Int16 b;
+    Cv16suf b;
     b.i = fp16;
     int exponent    = b.fmt.exponent - kBiasFp16Exponent;
     int significand = b.fmt.significand;
 
-    fp32Int32 a;
+    Cv32suf a;
     a.i = 0;
     a.fmt.sign = b.fmt.sign; // sign bit
     if( exponent == 16 )
@@ -4479,7 +4453,7 @@ static float convertFp16SW(short fp16)
 static short convertFp16SW(float fp32)
 {
     // Fp32 -> Fp16
-    fp16Int16 a;
+    Cv16suf a;
     a.h = (__fp16)fp32;
     return a.i;
 }
@@ -4487,12 +4461,12 @@ static short convertFp16SW(float fp32)
 static short convertFp16SW(float fp32)
 {
     // Fp32 -> Fp16
-    fp32Int32 a;
+    Cv32suf a;
     a.f = fp32;
     int exponent    = a.fmt.exponent - kBiasFp32Exponent;
     int significand = a.fmt.significand;
 
-    fp16Int16 result;
+    Cv16suf result;
     result.i = 0;
     unsigned int absolute = a.i & 0x7fffffff;
     if( 0x477ff000 <= absolute )
