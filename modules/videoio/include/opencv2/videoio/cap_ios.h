@@ -64,8 +64,8 @@
     int imageHeight;
 }
 
-@property (nonatomic, retain) AVCaptureSession* captureSession;
-@property (nonatomic, retain) AVCaptureConnection* videoCaptureConnection;
+@property (nonatomic, strong) AVCaptureSession* captureSession;
+@property (nonatomic, strong) AVCaptureConnection* videoCaptureConnection;
 
 @property (nonatomic, readonly) BOOL running;
 @property (nonatomic, readonly) BOOL captureSessionLoaded;
@@ -80,7 +80,7 @@
 @property (nonatomic, assign) int imageWidth;
 @property (nonatomic, assign) int imageHeight;
 
-@property (nonatomic, retain) UIView* parentView;
+@property (nonatomic, strong) UIView* parentView;
 
 - (void)start;
 - (void)stop;
@@ -138,9 +138,9 @@
 
 @property (nonatomic, assign) BOOL recordVideo;
 @property (nonatomic, assign) BOOL rotateVideo;
-@property (nonatomic, retain) AVAssetWriterInput* recordAssetWriterInput;
-@property (nonatomic, retain) AVAssetWriterInputPixelBufferAdaptor* recordPixelBufferAdaptor;
-@property (nonatomic, retain) AVAssetWriter* recordAssetWriter;
+@property (nonatomic, strong) AVAssetWriterInput* recordAssetWriterInput;
+@property (nonatomic, strong) AVAssetWriterInputPixelBufferAdaptor* recordPixelBufferAdaptor;
+@property (nonatomic, strong) AVAssetWriter* recordAssetWriter;
 
 - (void)adjustLayoutToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation;
 - (void)layoutPreviewLayer;

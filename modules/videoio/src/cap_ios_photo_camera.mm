@@ -37,7 +37,7 @@
 
 @interface CvPhotoCamera ()
 
-@property (nonatomic, retain) AVCaptureStillImageOutput* stillImageOutput;
+@property (nonatomic, strong) AVCaptureStillImageOutput* stillImageOutput;
 
 @end
 
