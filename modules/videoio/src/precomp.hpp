@@ -66,7 +66,7 @@
         #ifdef HAVE_MSMF
             #define _WIN32_WINNT 0x0600 // Windows Vista
         #else
-            #define _WIN32_WINNT 0x0500 // Windows 2000
+            #define _WIN32_WINNT 0x0501 // Windows XP
         #endif
     #endif
 
