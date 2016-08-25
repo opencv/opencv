@@ -609,22 +609,32 @@ void DescriptorMatcher::checkMasks( InputArrayOfArrays _masks, int queryDescript
 {
     std::vector<Mat> masks;
     _masks.getMatVector(masks);
-
+    int rows;
     if( isMaskSupported() && !masks.empty() )
     {
         // Check masks
         size_t imageCount = std::max(trainDescCollection.size(), utrainDescCollection.size() );
         CV_Assert( masks.size() == imageCount );
         for( size_t i = 0; i < imageCount; i++ )
-        {
-            if( !masks[i].empty() && (!trainDescCollection[i].empty() || !utrainDescCollection[i].empty() ) )
-            {
-                int rows = trainDescCollection[i].empty() ? utrainDescCollection[i].rows : trainDescCollection[i].rows;
+        { 
+            if(!masks[i].empty()){
+        	  if(!trainDescCollection[i].empty() || !utrainDescCollection[i].empty())
+        	  { 
+                    rows = trainDescCollection[i].rows;
                     CV_Assert( masks[i].rows == queryDescriptorsCount &&
-                        (masks[i].cols == rows || masks[i].cols == rows) &&
-                        masks[i].type() == CV_8UC1 );
-            }
-        }
+        	                          (masks[i].cols == rows || masks[i].rows == rows) &&
+        	                           masks[i].type() == CV_8UC1 );
+                   }
+        	  else
+        	  { 
+                    rows = utrainDescCollection[i].rows;
+        	    CV_Assert( masks[i].rows == queryDescriptorsCount &&
+        	                          (masks[i].cols == rows || masks[i].rows == rows) &&
+        	                          masks[i].type() == CV_8UC1 ); 
+        	 }
+        	  
+              }  
+         }
     }
 }
 
