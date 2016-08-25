@@ -33,6 +33,11 @@ if(ENABLE_NEON)
   add_definitions(-DPNG_ARM_NEON_OPT=2)
 endif()
 
+if(ENABLE_SSE)
+  list(APPEND lib_srcs contrib/intel/intel_init.c contrib/intel/filter_sse2_intrinsics.c)
+  add_definitions(-DPNG_INTEL_SSE)
+endif()
+
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------
