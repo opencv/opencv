@@ -44,8 +44,12 @@
 #define __OPENCV_HIGHGUI_HPP__
 
 #include "opencv2/core.hpp"
+#ifdef HAVE_OPENCV_IMGCODECS
 #include "opencv2/imgcodecs.hpp"
+#endif
+#ifdef HAVE_OPENCV_VIDEOIO
 #include "opencv2/videoio.hpp"
+#endif
 
 /**
 @defgroup highgui High-level GUI
