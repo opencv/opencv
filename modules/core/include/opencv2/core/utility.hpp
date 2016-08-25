@@ -1076,7 +1076,10 @@ public:
 // Instrumentation external interface
 namespace instr
 {
-enum
+
+#if !defined OPENCV_ABI_CHECK
+
+enum TYPE
 {
     TYPE_GENERAL = 0,   // OpenCV API function, e.g. exported function
     TYPE_MARKER,        // Information marker
@@ -1084,48 +1087,60 @@ enum
     TYPE_FUN,           // Simple function call
 };
 
-enum
+enum IMPL
 {
     IMPL_PLAIN = 0,
     IMPL_IPP,
     IMPL_OPENCL,
 };
 
-enum
-{
-    FLAGS_MAPPING = 0x01,
-};
-
 class CV_EXPORTS NodeData
 {
 public:
-    NodeData(const char* funName = 0, const char* fileName = NULL, int lineNum = 0, int instrType = TYPE_GENERAL, int implType = IMPL_PLAIN);
+    NodeData(const char* funName = 0, const char* fileName = NULL, int lineNum = 0, cv::instr::TYPE instrType = TYPE_GENERAL, cv::instr::IMPL implType = IMPL_PLAIN);
     NodeData(NodeData &ref);
     ~NodeData();
     NodeData& operator=(const NodeData&);
 
     cv::String          m_funName;
-    int                 m_instrType;
-    int                 m_implType;
-    cv::String          m_fileName;
+    cv::instr::TYPE     m_instrType;
+    cv::instr::IMPL     m_implType;
+    const char*         m_fileName;
     int                 m_lineNum;
 
-    bool                m_funError;
     volatile int        m_counter;
-    bool                m_stopPoint;
-    uint64              m_ticksMean;
+    volatile uint64     m_ticksTotal;
 
+    // No synchronization
+    double getTotalMs() const { return (double)m_ticksTotal * 1000. / cv::getTickFrequency(); }
+    // No synchronization
+    double getMeanMs() const { return (double)m_ticksTotal * 1000. / (m_counter * cv::getTickFrequency()); }
+
+    bool                m_funError;
+    bool                m_stopPoint;
 };
 bool operator==(const NodeData& lhs, const NodeData& rhs);
 
 typedef Node<NodeData> InstrNode;
 
+CV_EXPORTS InstrNode* getTrace();
+
+#endif // !defined OPENCV_ABI_CHECK
+
+
 CV_EXPORTS bool       useInstrumentation();
 CV_EXPORTS void       setUseInstrumentation(bool flag);
-CV_EXPORTS InstrNode* getTrace();
 CV_EXPORTS void       resetTrace();
-CV_EXPORTS void       setFlags(int modeFlags);
-CV_EXPORTS int        getFlags();
+
+enum FLAGS
+{
+    FLAGS_NONE = 0,
+    FLAGS_MAPPING = 1 << 0,
+};
+
+CV_EXPORTS void       setFlags(FLAGS modeFlags);
+static inline void    setFlags(int modeFlags) { setFlags((FLAGS)modeFlags); }
+CV_EXPORTS FLAGS      getFlags();
 }
 
 } //namespace cv
