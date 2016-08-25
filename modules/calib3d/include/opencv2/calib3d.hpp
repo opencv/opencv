@@ -1605,13 +1605,15 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
 @param beforeRectifiedPoints Vector of (rectified) visible reference points before the homography is applied
 @param afterRectifiedPoints Vector of (rectified) visible reference points after the homography is applied
 @param mask Mat representing the mask for the inliers as given by the findHomography function
+@return indices Vector of int indices representing the viable solution set after filtering
 
 This function is intended to filter the output of the decomposeHomographyMat based on additional
 information as described in @cite Malis . The summary of the method: the decomposeHomographyMat function
 returns 2 unique solutions and their "opposites" for a total of 4 solutions. If we have access to the
 sets of points visible in the camera frame before and after the homography transformation is applied,
 we can determine which are the true potential solutions and which are the opposites by verifying which
-homographies are consistent with all visible reference points being in front of the camera.
+homographies are consistent with all visible reference points being in front of the camera. The inputs
+are left unchanged; the filtered solution set is returned as indices into the existing one.
 
 */
 CV_EXPORTS_W std::vector<int> filterHomographyDecompSolutionsByPointNormals(
