@@ -502,12 +502,12 @@ CV_EXPORTS InstrNode* getCurrentNode();
             auto status = ((FUN)(__VA_ARGS__));\
             if(ERROR_COND){\
                 ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-                CV_INSTRUMENT_MARK_META(IMPL, ##FUN - BadExit);\
+                CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
             }\
             return status;\
         }catch(...){\
             ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-            CV_INSTRUMENT_MARK_META(IMPL, ##FUN - BadExit);\
+            CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
             throw;\
         }\
     }else{\
@@ -523,7 +523,7 @@ CV_EXPORTS InstrNode* getCurrentNode();
             (FUN)(__VA_ARGS__);\
         }catch(...){\
             ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-            CV_INSTRUMENT_MARK_META(IMPL, ##FUN - BadExit);\
+            CV_INSTRUMENT_MARK_META(IMPL, #FUN "- BadExit");\
             throw;\
         }\
     }else{\
@@ -531,7 +531,7 @@ CV_EXPORTS InstrNode* getCurrentNode();
     }\
 }())
 // Instrumentation information marker
-#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(#NAME, __FILE__, __LINE__, ::cv::instr::TYPE_MARKER, IMPL);}
+#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, ::cv::instr::TYPE_MARKER, IMPL);}
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro
