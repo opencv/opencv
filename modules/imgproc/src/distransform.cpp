@@ -827,7 +827,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
         if( labelType == CV_DIST_LABEL_CCOMP )
         {
             Mat zpix = src == 0;
-            connectedComponents(zpix, labels, 8, CV_32S);
+            connectedComponents(zpix, labels, 8, CV_32S, CCL_WU);
         }
         else
         {
