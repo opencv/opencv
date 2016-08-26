@@ -320,7 +320,7 @@ mask values are ignored.
 @param maxIters The maximum number of RANSAC iterations, 2000 is the maximum it can be.
 @param confidence Confidence level, between 0 and 1.
 
-The functions find and return the perspective transformation \f$H\f$ between the source and the
+The function finds and returns the perspective transformation \f$H\f$ between the source and the
 destination planes:
 
 \f[s_i  \vecthree{x'_i}{y'_i}{1} \sim H  \vecthree{x_i}{y_i}{1}\f]
