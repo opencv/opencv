@@ -47,52 +47,54 @@ using namespace std;
 
 namespace cv
 {
-    vector<int> filterHomographyDecompSolutionsByPointNormals(
-        const vector<Mat>& rotations,
-        const vector<Mat>& normals,
-        const vector<Point2f>& beforeRectifiedPoints,
-        const vector<Point2f>& afterRectifiedPoints,
-        const Mat& mask)
+    Mat filterHomographyDecompSolutionsByPointNormals(InputArrayOfArrays rotations,
+                                                      InputArrayOfArrays normals,
+                                                      InputArray _beforeRectifiedPoints,
+                                                      InputArray _afterRectifiedPoints,
+                                                      InputArray _pointsMask)
     {
-        vector<int> prevPointBehindCameraCount, currPointBehindCameraCount;
-        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
+        CV_Assert(_beforeRectifiedPoints.type() == CV_32FC2 && _afterRectifiedPoints.type() == CV_32FC2 && (_pointsMask.empty() || _pointsMask.type() == CV_8U));
+
+        Mat beforeRectifiedPoints = _beforeRectifiedPoints.getMat(), afterRectifiedPoints = _afterRectifiedPoints.getMat(), pointsMask = _pointsMask.getMat();
+
+        vector<bool> solutionValid;
+        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size().area(); solutionIdx++)
         {
-            prevPointBehindCameraCount.push_back(0);
-            currPointBehindCameraCount.push_back(0);
+            solutionValid.push_back(true);
         }
 
-        for (int pointIdx = 0; (size_t)pointIdx < beforeRectifiedPoints.size(); pointIdx++) {
-            if (mask.at<bool>(pointIdx))
-            {
-                for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
+        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size().area(); solutionIdx++)
+        {
+            for (int pointIdx = 0; (size_t)pointIdx < beforeRectifiedPoints.size().area(); pointIdx++) {
+                if (pointsMask.empty() || pointsMask.at<bool>(pointIdx))
                 {
                     Mat tempAddMat = Mat(1, 1, CV_64F, double(1));
 
-                    Mat tempPrevPointMat = Mat(beforeRectifiedPoints.at(pointIdx));
+                    Mat tempPrevPointMat = Mat(beforeRectifiedPoints.at<Point2f>(pointIdx));
                     tempPrevPointMat.convertTo(tempPrevPointMat, CV_64F);
                     tempPrevPointMat.push_back(tempAddMat);
 
-                    Mat tempCurrPointMat = Mat(afterRectifiedPoints.at(pointIdx));
+                    Mat tempCurrPointMat = Mat(afterRectifiedPoints.at<Point2f>(pointIdx));
                     tempCurrPointMat.convertTo(tempCurrPointMat, CV_64F);
                     tempCurrPointMat.push_back(tempAddMat);
 
-                    double prevNormDot = tempPrevPointMat.dot(normals.at(solutionIdx));
-                    double currNormDot = tempCurrPointMat.dot(rotations.at(solutionIdx) * normals.at(solutionIdx));
+                    double prevNormDot = tempPrevPointMat.dot(normals.getMat(solutionIdx));
+                    double currNormDot = tempCurrPointMat.dot(rotations.getMat(solutionIdx) * normals.getMat(solutionIdx));
 
-                    if (prevNormDot <= 0)
-                        prevPointBehindCameraCount[solutionIdx]++;
-
-                    if (currNormDot <= 0)
-                        currPointBehindCameraCount[solutionIdx]++;
+                    if (prevNormDot <= 0 || currNormDot <= 0)
+                    {
+                        solutionValid[solutionIdx] = false;
+                        break;
+                    }
                 }
             }
         }
 
-        vector<int> possibleSolutions;
+        Mat possibleSolutions;
 
-        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size(); solutionIdx++)
+        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size().area(); solutionIdx++)
         {
-            if (prevPointBehindCameraCount[solutionIdx] == 0 && currPointBehindCameraCount[solutionIdx] == 0)
+            if (solutionValid[solutionIdx])
             {
                 possibleSolutions.push_back(solutionIdx);
             }
