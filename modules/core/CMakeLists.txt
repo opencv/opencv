@@ -22,8 +22,10 @@ endif()
 file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
 file(GLOB lib_cuda_hdrs_detail "include/opencv2/${name}/cuda/detail/*.hpp" "include/opencv2/${name}/cuda/detail/*.h")
 
-source_group("Cuda Headers"         FILES ${lib_cuda_hdrs})
-source_group("Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
+source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
+source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
+
+source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc")
 
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
                         HEADERS ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
