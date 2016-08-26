@@ -10,8 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2016, OpenCV Foundation, all rights reserved.
+//
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -41,31 +41,28 @@
 //M*/
 
 #include "precomp.hpp"
-#include "filter-homography-decomp.h"
 
 using namespace std;
 
 namespace cv
 {
-    Mat filterHomographyDecompSolutionsByPointNormals(InputArrayOfArrays rotations,
-                                                      InputArrayOfArrays normals,
-                                                      InputArray _beforeRectifiedPoints,
-                                                      InputArray _afterRectifiedPoints,
-                                                      InputArray _pointsMask)
+    Mat filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays rotations,
+												 InputArrayOfArrays normals,
+												 InputArray _beforeRectifiedPoints,
+												 InputArray _afterRectifiedPoints,
+												 InputArray _pointsMask)
     {
         CV_Assert(_beforeRectifiedPoints.type() == CV_32FC2 && _afterRectifiedPoints.type() == CV_32FC2 && (_pointsMask.empty() || _pointsMask.type() == CV_8U));
 
         Mat beforeRectifiedPoints = _beforeRectifiedPoints.getMat(), afterRectifiedPoints = _afterRectifiedPoints.getMat(), pointsMask = _pointsMask.getMat();
 
-        vector<bool> solutionValid;
-        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size().area(); solutionIdx++)
-        {
-            solutionValid.push_back(true);
-        }
+		Mat possibleSolutions;
 
-        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size().area(); solutionIdx++)
+        for (int solutionIdx = 0; solutionIdx < rotations.size().area(); solutionIdx++)
         {
-            for (int pointIdx = 0; (size_t)pointIdx < beforeRectifiedPoints.size().area(); pointIdx++) {
+			bool solutionValid = true;
+
+            for (int pointIdx = 0; pointIdx < beforeRectifiedPoints.size().area(); pointIdx++) {
                 if (pointsMask.empty() || pointsMask.at<bool>(pointIdx))
                 {
                     Mat tempAddMat = Mat(1, 1, CV_64F, double(1));
@@ -83,21 +80,15 @@ namespace cv
 
                     if (prevNormDot <= 0 || currNormDot <= 0)
                     {
-                        solutionValid[solutionIdx] = false;
+                        solutionValid = false;
                         break;
                     }
                 }
             }
-        }
-
-        Mat possibleSolutions;
-
-        for (int solutionIdx = 0; (size_t)solutionIdx < rotations.size().area(); solutionIdx++)
-        {
-            if (solutionValid[solutionIdx])
-            {
-                possibleSolutions.push_back(solutionIdx);
-            }
+			if (solutionValid)
+			{
+				possibleSolutions.push_back(solutionIdx);
+			}
         }
 
         return possibleSolutions;

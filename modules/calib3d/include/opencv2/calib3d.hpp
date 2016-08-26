@@ -1604,7 +1604,7 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
 @param normals Vector of plane normal matrices.
 @param beforeRectifiedPoints Vector of (rectified) visible reference points before the homography is applied
 @param afterRectifiedPoints Vector of (rectified) visible reference points after the homography is applied
-@param mask Mat representing the mask for the inliers as given by the findHomography function
+@param pointsMask Mat representing the mask for the inliers as given by the findHomography function
 @return indices Vector of int indices representing the viable solution set after filtering
 
 This function is intended to filter the output of the decomposeHomographyMat based on additional
@@ -1616,11 +1616,11 @@ homographies are consistent with all visible reference points being in front of 
 are left unchanged; the filtered solution set is returned as indices into the existing one.
 
 */
-CV_EXPORTS_W Mat filterHomographyDecompSolutionsByPointNormals(InputArrayOfArrays rotations,
-                                                               InputArrayOfArrays normals,
-                                                               InputArray beforeRectifiedPoints,
-                                                               InputArray afterRectifiedPoints,
-                                                               InputArray pointsMask = noArray());
+CV_EXPORTS_W Mat filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays rotations,
+                                                          InputArrayOfArrays normals,
+                                                          InputArray beforePoints,
+                                                          InputArray afterPoints,
+                                                          InputArray pointsMask = noArray());
 
 /** @brief The base class for stereo correspondence algorithms.
  */
