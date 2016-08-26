@@ -49,8 +49,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 - (void)createVideoFileOutput;
 
 
-@property (nonatomic, retain) CALayer *customPreviewLayer;
-@property (nonatomic, retain) AVCaptureVideoDataOutput *videoDataOutput;
+@property (nonatomic, strong) CALayer *customPreviewLayer;
+@property (nonatomic, strong) AVCaptureVideoDataOutput *videoDataOutput;
 
 @end
 
