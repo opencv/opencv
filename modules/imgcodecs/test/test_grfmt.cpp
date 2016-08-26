@@ -117,7 +117,8 @@ TEST(Imgcodecs_imread, regression)
         ASSERT_TRUE(imread_compare(path, IMREAD_COLOR));
         ASSERT_TRUE(imread_compare(path, IMREAD_ANYDEPTH));
         ASSERT_TRUE(imread_compare(path, IMREAD_ANYCOLOR));
-        if (path.substr(path.length() - 3) != "hdr" && path.substr(path.length() - 3) != "dcm")
+        const string ext = path.substr( path.length() - 3 );
+        if ( ext != "hdr" && ext != "dcm" )
         {
             // GDAL does not support hdr nor dcm
             ASSERT_TRUE(imread_compare(path, IMREAD_LOAD_GDAL));
