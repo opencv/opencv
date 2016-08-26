@@ -1602,8 +1602,8 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
 
 @param rotations Vector of rotation matrices.
 @param normals Vector of plane normal matrices.
-@param beforeRectifiedPoints Vector of (rectified) visible reference points before the homography is applied
-@param afterRectifiedPoints Vector of (rectified) visible reference points after the homography is applied
+@param beforePoints Vector of (rectified) visible reference points before the homography is applied
+@param afterPoints Vector of (rectified) visible reference points after the homography is applied
 @param pointsMask Mat representing the mask for the inliers as given by the findHomography function
 @return indices Vector of int indices representing the viable solution set after filtering
 
