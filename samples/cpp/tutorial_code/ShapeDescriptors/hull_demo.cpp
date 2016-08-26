@@ -49,7 +49,6 @@ int main( int, char** argv )
  */
 void thresh_callback(int, void* )
 {
-  Mat src_copy = src.clone();
   Mat threshold_output;
   vector<vector<Point> > contours;
   vector<Vec4i> hierarchy;
