@@ -37,7 +37,7 @@
 
 @interface CvAbstractCamera ()
 
-@property (nonatomic, retain) AVCaptureVideoPreviewLayer* captureVideoPreviewLayer;
+@property (nonatomic, strong) AVCaptureVideoPreviewLayer* captureVideoPreviewLayer;
 
 - (void)deviceOrientationDidChange:(NSNotification*)notification;
 - (void)startCaptureSession;
