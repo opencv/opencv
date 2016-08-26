@@ -999,6 +999,7 @@ public:
 void TrainData::getNames(std::vector<String>& names) const
 {
     const TrainDataImpl* impl = dynamic_cast<const TrainDataImpl*>(this);
+    CV_Assert(impl != 0);
     size_t n = impl->nameMap.size();
     TrainDataImpl::MapType::const_iterator it = impl->nameMap.begin(),
                                            it_end = impl->nameMap.end();
@@ -1015,7 +1016,9 @@ void TrainData::getNames(std::vector<String>& names) const
 
 Mat TrainData::getVarSymbolFlags() const
 {
-    return dynamic_cast<const TrainDataImpl*>(this)->varSymbolFlags;
+    const TrainDataImpl* impl = dynamic_cast<const TrainDataImpl*>(this);
+    CV_Assert(impl != 0);
+    return impl->varSymbolFlags;
 }
 
 Ptr<TrainData> TrainData::loadFromCSV(const String& filename,
