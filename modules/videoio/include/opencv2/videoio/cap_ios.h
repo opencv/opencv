@@ -133,7 +133,7 @@
 
 }
 
-@property (nonatomic, assign) id<CvVideoCameraDelegate> delegate;
+@property (nonatomic, weak) id<CvVideoCameraDelegate> delegate;
 @property (nonatomic, assign) BOOL grayscaleMode;
 
 @property (nonatomic, assign) BOOL recordVideo;
@@ -167,7 +167,7 @@
     AVCaptureStillImageOutput *stillImageOutput;
 }
 
-@property (nonatomic, assign) id<CvPhotoCameraDelegate> delegate;
+@property (nonatomic, weak) id<CvPhotoCameraDelegate> delegate;
 
 - (void)takePicture;
 
