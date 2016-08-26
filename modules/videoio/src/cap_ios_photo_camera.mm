@@ -106,9 +106,7 @@
                  cameraAvailable = YES;
 
                  NSLog(@"CvPhotoCamera captured image");
-                 if (self.delegate) {
-                     [self.delegate photoCamera:self capturedImage:newImage];
-                 }
+                 [self.delegate photoCamera:self capturedImage:newImage];
 
                  [self.captureSession startRunning];
              });
