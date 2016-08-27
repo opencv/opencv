@@ -286,7 +286,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 - (void)createVideoDataOutput;
 {
     // Make a video data output
-    self.videoDataOutput = [AVCaptureVideoDataOutput new];
+    AVCaptureVideoDataOutput *output = [AVCaptureVideoDataOutput new];
+    self.videoDataOutput = output;
+    [output release];
 
     // In grayscale mode we want YUV (YpCbCr 4:2:0) so we can directly access the graylevel intensity values (Y component)
     // In color mode we, BGRA format is used
@@ -376,10 +378,12 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
     int pixelBufferFormat = (self.grayscaleMode == YES) ? kCVPixelFormatType_420YpCbCr8BiPlanarFullRange : kCVPixelFormatType_32BGRA;
 
-    self.recordPixelBufferAdaptor =
+    AVAssetWriterInputPixelBufferAdaptor *adaptor =
                [[AVAssetWriterInputPixelBufferAdaptor alloc]
                     initWithAssetWriterInput:self.recordAssetWriterInput
                     sourcePixelBufferAttributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt:pixelBufferFormat], kCVPixelBufferPixelFormatTypeKey, nil]];
+    self.recordPixelBufferAdaptor = adaptor;
+    [adaptor release];
 
     NSError* error = nil;
     NSLog(@"Create AVAssetWriter with url: %@", [self videoFileURL]);
@@ -420,7 +424,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
                              nil];
     CVPixelBufferRef pxbuffer = NULL;
     CVReturn status = CVPixelBufferCreate(kCFAllocatorDefault, frameSize.width,
-                                          frameSize.height,  kCVPixelFormatType_32ARGB, (CFDictionaryRef) CFBridgingRetain(options),
+                                          frameSize.height,  kCVPixelFormatType_32ARGB, (CFDictionaryRef)options,
                                           &pxbuffer);
     NSParameterAssert(status == kCVReturnSuccess && pxbuffer != NULL);
 
@@ -554,6 +558,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
             CGDataProviderRelease(provider);
         }
 
+        CGColorSpaceRelease(colorSpace);
 
         // render buffer
         dispatch_sync(dispatch_get_main_queue(), ^{
@@ -592,8 +597,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
         // cleanup
         CGImageRelease(dstImage);
 
-        CGColorSpaceRelease(colorSpace);
-
         CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
     }
 }
@@ -620,13 +623,14 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     if ([library videoAtPathIsCompatibleWithSavedPhotosAlbum:[self videoFileURL]]) {
         [library writeVideoAtPathToSavedPhotosAlbum:[self videoFileURL]
                                     completionBlock:^(NSURL *assetURL, NSError *error){ (void)assetURL; (void)error; }];
+        [library release];
     }
 }
 
 
 - (NSURL *)videoFileURL;
 {
-    NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
+    NSString *outputPath = [NSString stringWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
     NSURL *outputURL = [NSURL fileURLWithPath:outputPath];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     if ([fileManager fileExistsAtPath:outputPath]) {
@@ -640,7 +644,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 - (NSString *)videoFileString;
 {
     NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
-    return outputPath;
+    return [outputPath autorelease];
 }
 
 @end
