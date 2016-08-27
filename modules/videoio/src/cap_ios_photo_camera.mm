@@ -73,7 +73,7 @@
      {
          if (error == nil && imageSampleBuffer != NULL)
          {
-             // TODO check
+             // TODO: check
              //			 NSNumber* imageOrientation = [UIImage cgImageOrientationForUIDeviceOrientation:currentDeviceOrientation];
              //			 CMSetAttachment(imageSampleBuffer, kCGImagePropertyOrientation, imageOrientation, 1);
 

@@ -217,7 +217,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 }
 
-// TODO fix
+// TODO: fix
 - (void)layoutPreviewLayer;
 {
     NSLog(@"layout preview layer");
