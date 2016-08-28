@@ -379,13 +379,13 @@
 - (void)createCaptureOutput;
 {
     [NSException raise:NSInternalInconsistencyException
-                format:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)];
+                format:@"You must override %s in a subclass", __FUNCTION__];
 }
 
 - (void)createCustomVideoPreview;
 {
     [NSException raise:NSInternalInconsistencyException
-                format:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)];
+                format:@"You must override %s in a subclass", __FUNCTION__];
 }
 
 - (void)updateOrientation;
