@@ -333,7 +333,7 @@
                     device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
                     [device unlockForConfiguration];
                 } else {
-                    NSLog(@"unable to lock device for autofocos configuration %@", [error localizedDescription]);
+                    NSLog(@"unable to lock device for autofocus configuration %@", [error localizedDescription]);
                 }
             }
             [self.captureSession addInput:input];
