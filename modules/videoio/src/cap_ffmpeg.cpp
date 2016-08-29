@@ -65,9 +65,11 @@ static cv::Mutex _icvInitFFMPEG_mutex;
 static const HMODULE cv_GetCurrentModule()
 {
     HMODULE h = 0;
+#if _WIN32_WINNT >= 0x0501
     ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
         reinterpret_cast<LPCTSTR>(cv_GetCurrentModule),
         &h);
+#endif
     return h;
 }
 #endif
@@ -98,22 +100,16 @@ private:
     icvInitFFMPEG()
     {
     #if defined WIN32 || defined _WIN32
+        const wchar_t* module_name_ = L"opencv_ffmpeg"
+            CVAUX_STRW(CV_MAJOR_VERSION) CVAUX_STRW(CV_MINOR_VERSION) CVAUX_STRW(CV_SUBMINOR_VERSION)
+        #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
+            L"_64"
+        #endif
+            L".dll";
     # ifdef WINRT
-        const wchar_t* module_name = L"opencv_ffmpeg"
-            CVAUX_STRW(CV_MAJOR_VERSION) CVAUX_STRW(CV_MINOR_VERSION) CVAUX_STRW(CV_SUBMINOR_VERSION)
-        #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
-            L"_64"
-        #endif
-            L".dll";
-
-        icvFFOpenCV = LoadPackagedLibrary( module_name, 0 );
+        icvFFOpenCV = LoadPackagedLibrary( module_name_, 0 );
     # else
-        const std::wstring module_name = L"opencv_ffmpeg"
-            CVAUX_STRW(CV_MAJOR_VERSION) CVAUX_STRW(CV_MINOR_VERSION) CVAUX_STRW(CV_SUBMINOR_VERSION)
-        #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
-            L"_64"
-        #endif
-            L".dll";
+        const std::wstring module_name(module_name_);
 
         const wchar_t* ffmpeg_env_path = _wgetenv(L"OPENCV_FFMPEG_DLL_DIR");
         std::wstring module_path =
