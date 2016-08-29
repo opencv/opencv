@@ -93,6 +93,12 @@ TEST(Imgcodecs_imread, regression)
 #ifdef HAVE_JASPER
         "Rome.jp2",
 #endif
+#ifdef HAVE_GDCM
+        "int16-mono1.dcm",
+        "uint8-mono2.dcm",
+        "uint16-mono2.dcm",
+        "uint8-rgb.dcm",
+#endif
         "color_palette_alpha.png",
         "multipage.tif",
         "rle.hdr",
@@ -111,9 +117,10 @@ TEST(Imgcodecs_imread, regression)
         ASSERT_TRUE(imread_compare(path, IMREAD_COLOR));
         ASSERT_TRUE(imread_compare(path, IMREAD_ANYDEPTH));
         ASSERT_TRUE(imread_compare(path, IMREAD_ANYCOLOR));
-        if (path.substr(path.length() - 3) != "hdr")
+        const string ext = path.substr( path.length() - 3 );
+        if ( ext != "hdr" && ext != "dcm" )
         {
-            // GDAL does not support hdr
+            // GDAL does not support hdr nor dcm
             ASSERT_TRUE(imread_compare(path, IMREAD_LOAD_GDAL));
         }
     }
