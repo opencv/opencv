@@ -466,12 +466,16 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
             V4L2_PIX_FMT_SN9C10X,
             V4L2_PIX_FMT_SBGGR8,
             V4L2_PIX_FMT_SGBRG8,
-            V4L2_PIX_FMT_RGB24
+            V4L2_PIX_FMT_RGB24,
+            V4L2_PIX_FMT_Y16
     };
 
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
         capture->palette = try_order[i];
         if (try_palette_v4l2(capture)) {
+            if (capture->palette == V4L2_PIX_FMT_Y16) {
+                capture->convert_rgb = false;
+            }
             return 0;
         }
     }
@@ -558,6 +562,7 @@ static int v4l2_num_channels(__u32 palette) {
     case V4L2_PIX_FMT_YVU420:
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
+    case V4L2_PIX_FMT_Y16:
         return 1;
     case V4L2_PIX_FMT_YUYV:
     case V4L2_PIX_FMT_UYVY:
@@ -589,8 +594,14 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
     }
 
     /* Set up Image data */
-    cvInitImageHeader(&capture->frame, size, IPL_DEPTH_8U, channels);
+    switch(capture->palette) {
+    case V4L2_PIX_FMT_Y16:
+        cvInitImageHeader(&capture->frame, size, IPL_DEPTH_16U, channels);
+        break;
+    default:
+        cvInitImageHeader(&capture->frame, size, IPL_DEPTH_8U, channels);
 
+    }
     /* Allocate space for pixelformat we convert to.
      * If we do not convert frame is just points to the buffer
      */
@@ -1545,6 +1556,11 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
                 capture->form.fmt.pix.height,
                 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
                 (unsigned char*)capture->frame.imageData);
+        break;
+    case V4L2_PIX_FMT_Y16:
+        memcpy((char *)capture->frame.imageData,
+               (char *)capture->buffers[capture->bufferIndex].start,
+               capture->frame.imageSize);
         break;
     }
 
