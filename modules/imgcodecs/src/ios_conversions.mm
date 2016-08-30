@@ -100,7 +100,7 @@ void UIImageToMat(const UIImage* image,
     CGFloat cols = image.size.width, rows = image.size.height;
     CGContextRef contextRef;
     CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedLast;
-    if (CGColorSpaceGetModel(colorSpace) == 0)
+    if (CGColorSpaceGetModel(colorSpace) == kCGColorSpaceModelMonochrome)
     {
         m.create(rows, cols, CV_8UC1); // 8 bits per component, 1 channel
         bitmapInfo = kCGImageAlphaNone;
