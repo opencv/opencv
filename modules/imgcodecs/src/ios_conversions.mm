@@ -52,9 +52,6 @@ void UIImageToMat(const UIImage* image, cv::Mat& m, bool alphaExist);
 
 UIImage* MatToUIImage(const cv::Mat& image) {
 
-    NSData *data = [NSData dataWithBytes:image.data
-                                  length:image.elemSize()*image.total()];
-
     CGColorSpaceRef colorSpace;
 
     if (image.elemSize() == 1) {
@@ -63,8 +60,7 @@ UIImage* MatToUIImage(const cv::Mat& image) {
         colorSpace = CGColorSpaceCreateDeviceRGB();
     }
 
-    CGDataProviderRef provider =
-            CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
+    CGDataProviderRef provider = CGDataProviderCreateWithData(NULL, image.data, image.elemSize()*image.total(), NULL);
 
     // Preserve alpha transparency, if exists
     bool alpha = image.channels() == 4;
