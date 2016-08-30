@@ -1587,9 +1587,19 @@ inline v_float64x2 v_cvt_f64(const v_int32x4& a)
     return v_float64x2(_mm_cvtepi32_pd(a.val));
 }
 
+inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
+{
+    return v_float64x2(_mm_cvtepi32_pd(_mm_srli_si128(a.val,8)));
+}
+
 inline v_float64x2 v_cvt_f64(const v_float32x4& a)
 {
     return v_float64x2(_mm_cvtps_pd(a.val));
+}
+
+inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
+{
+    return v_float64x2(_mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(a.val),8))));
 }
 
 //! @endcond
