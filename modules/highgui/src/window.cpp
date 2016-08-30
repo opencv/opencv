@@ -198,6 +198,11 @@ int cv::waitKeyCode(int delay)
     return cvWaitKey(delay);
 }
 
+int cv::waitKey(int delay)
+{
+    return cv::waitKeyCode(delay);
+}
+
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)

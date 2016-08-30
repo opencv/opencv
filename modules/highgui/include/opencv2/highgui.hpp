@@ -347,6 +347,9 @@ If there are several HighGUI windows, any of them can be active.
 
 @param delay Delay in milliseconds. 0 is the special value that means "forever".
  */
+#if defined __OPENCV_BUILD
+CV_EXPORTS_W int waitKey(int delay = 0);
+#else
 CV_EXPORTS_W inline int waitKey(int delay = 0)
 {
 #ifdef OPENCV_LEGACY_WAITKEY
@@ -356,6 +359,9 @@ CV_EXPORTS_W inline int waitKey(int delay = 0)
     return k <= 0 ? k : (k & 0xff);
 #endif
 }
+#endif
+
+#undef CV_EXPORTS_INLINE
 
 /** @brief Displays an image in the specified window.
 
