@@ -809,6 +809,12 @@ OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(float32x4, f32)
 
 #define OPENCV_HAL_IMPL_NEON_INTERLEAVED(_Tpvec, _Tp, suffix) \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b) \
+{ \
+    _Tpvec##x2_t v = vld2q_##suffix(ptr); \
+    a.val = v.val[0]; \
+    b.val = v.val[1]; \
+} \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, v_##_Tpvec& c) \
 { \
     _Tpvec##x3_t v = vld3q_##suffix(ptr); \
@@ -824,6 +830,13 @@ inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, \
     b.val = v.val[1]; \
     c.val = v.val[2]; \
     d.val = v.val[3]; \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b) \
+{ \
+    _Tpvec##x2_t v; \
+    v.val[0] = a.val; \
+    v.val[1] = b.val; \
+    vst2q_##suffix(ptr, v); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, const v_##_Tpvec& c) \
 { \
