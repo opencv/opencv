@@ -225,43 +225,49 @@ int GenericIndex<Distance>::radiusSearch(const Mat& query, Mat& indices, Mat& di
  * @deprecated Use GenericIndex class instead
  */
 template <typename T>
-class
-#ifndef _MSC_VER
- FLANN_DEPRECATED
-#endif
- Index_ {
+class Index_ {
 public:
         typedef typename L2<T>::ElementType ElementType;
         typedef typename L2<T>::ResultType DistanceType;
 
+    FLANN_DEPRECATED
     Index_(const Mat& features, const ::cvflann::IndexParams& params);
 
+    FLANN_DEPRECATED
     ~Index_();
 
+    FLANN_DEPRECATED
     void knnSearch(const vector<ElementType>& query, vector<int>& indices, vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
+    FLANN_DEPRECATED
     void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& params);
 
+    FLANN_DEPRECATED
     int radiusSearch(const vector<ElementType>& query, vector<int>& indices, vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
+    FLANN_DEPRECATED
     int radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& params);
 
+    FLANN_DEPRECATED
     void save(std::string filename)
         {
             if (nnIndex_L1) nnIndex_L1->save(filename);
             if (nnIndex_L2) nnIndex_L2->save(filename);
         }
 
+    FLANN_DEPRECATED
     int veclen() const
     {
             if (nnIndex_L1) return nnIndex_L1->veclen();
             if (nnIndex_L2) return nnIndex_L2->veclen();
         }
 
+    FLANN_DEPRECATED
     int size() const
     {
             if (nnIndex_L1) return nnIndex_L1->size();
             if (nnIndex_L2) return nnIndex_L2->size();
         }
 
+        FLANN_DEPRECATED
         ::cvflann::IndexParams getParameters()
         {
             if (nnIndex_L1) return nnIndex_L1->getParameters();
@@ -269,7 +275,8 @@ public:
 
         }
 
-        FLANN_DEPRECATED const ::cvflann::IndexParams* getIndexParameters()
+        FLANN_DEPRECATED
+        const ::cvflann::IndexParams* getIndexParameters()
         {
             if (nnIndex_L1) return nnIndex_L1->getIndexParameters();
             if (nnIndex_L2) return nnIndex_L2->getIndexParameters();
@@ -281,10 +288,6 @@ private:
         ::cvflann::Index< L1<ElementType> >* nnIndex_L1;
 };
 
-#ifdef _MSC_VER
-template <typename T>
-class FLANN_DEPRECATED Index_;
-#endif
 
 template <typename T>
 Index_<T>::Index_(const Mat& dataset, const ::cvflann::IndexParams& params)

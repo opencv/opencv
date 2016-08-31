@@ -380,12 +380,11 @@ static void icvInitCapture_V4L() {
       deviceHandle = open(deviceName, O_RDONLY);
       if (deviceHandle != -1) {
          /* This device does indeed exist - add it to the total so far */
-    // add indexList
-    indexList|=(1 << CameraNumber);
-        numCameras++;
-    }
-    if (deviceHandle != -1)
-      close(deviceHandle);
+         // add indexList
+         indexList|=(1 << CameraNumber);
+         numCameras++;
+         close(deviceHandle);
+      }
       /* Set up to test the next /dev/video source in line */
       CameraNumber++;
    } /* End while */

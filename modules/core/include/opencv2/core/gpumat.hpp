@@ -277,10 +277,9 @@ namespace cv { namespace gpu
         template <typename _Tp> operator PtrStep<_Tp>() const;
 
         // Deprecated function
-        __CV_GPU_DEPR_BEFORE__ template <typename _Tp> operator DevMem2D_<_Tp>() const __CV_GPU_DEPR_AFTER__;
-        __CV_GPU_DEPR_BEFORE__ template <typename _Tp> operator PtrStep_<_Tp>() const __CV_GPU_DEPR_AFTER__;
-        #undef __CV_GPU_DEPR_BEFORE__
-        #undef __CV_GPU_DEPR_AFTER__
+        template <typename _Tp> CV_GPU_DEPRECATED operator DevMem2D_<_Tp>() const;
+        template <typename _Tp> CV_GPU_DEPRECATED operator PtrStep_<_Tp>() const;
+        #undef CV_GPU_DEPRECATED
 
         /*! includes several bit-fields:
         - the magic signature
