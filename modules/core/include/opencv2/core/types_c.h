@@ -43,6 +43,15 @@
 #ifndef __OPENCV_CORE_TYPES_H__
 #define __OPENCV_CORE_TYPES_H__
 
+#if defined(__GNUC__) && !defined(COMPILER_ICC)
+# define CV_ATTR_UNUSED __attribute__((unused))
+# define CV_ATTR_USED __attribute__((used))
+#else
+# define CV_ATTR_UNUSED
+# define CV_ATTR_USED
+#endif
+
+
 #if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER
 #  if _MSC_VER > 1300
 #    define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio 2005 warnings */
