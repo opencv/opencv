@@ -583,6 +583,38 @@ inline int hal_ni_cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_ste
 #define cv_hal_cvtMultipliedRGBAtoRGBA hal_ni_cvtMultipliedRGBAtoRGBA
 //! @endcond
 
+/**
+   @brief Calculate integral image
+   @param depth,sdepth,sqdepth Depths of source image, sum image and square sum image
+   @param src_data,src_step Source image
+   @param sum_data,sum_step Sum image
+   @param sqsum_data,sqsum_step Square sum image
+   @param tilted_data,tilted_step Tilted sum image
+   @param width,height Source image dimensions
+   @param cn Number of channels
+   @note Following combinations of image depths are used:
+   Source | Sum | Square sum
+   -------|-----|-----------
+   CV_8U | CV_32S | CV_64F
+   CV_8U | CV_32S | CV_32F
+   CV_8U | CV_32S | CV_32S
+   CV_8U | CV_32F | CV_64F
+   CV_8U | CV_32F | CV_32F
+   CV_8U | CV_64F | CV_64F
+   CV_16U | CV_64F | CV_64F
+   CV_16S | CV_64F | CV_64F
+   CV_32F | CV_32F | CV_64F
+   CV_32F | CV_32F | CV_32F
+   CV_32F | CV_64F | CV_64F
+   CV_64F | CV_64F | CV_64F
+   @sa cv::integral
+*/
+inline int hal_ni_integral(int depth, int sdepth, int sqdepth, const uchar * src_data, size_t src_step, uchar * sum_data, size_t sum_step, uchar * sqsum_data, size_t sqsum_step, uchar * tilted_data, size_t tilted_step, int width, int height, int cn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_integral hal_ni_integral
+//! @endcond
+
 //! @}
 
 #if defined __GNUC__
