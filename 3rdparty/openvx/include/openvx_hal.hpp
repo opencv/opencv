@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <opencv2/core/saturate.hpp>
 
 //==================================================================================================
 // utility
@@ -312,7 +313,7 @@ inline int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int a
     return CV_HAL_ERROR_OK;
 }
 
-inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[6], int interpolation, int, const double*)
+inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
     try
     {
@@ -323,8 +324,19 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
         if (!(atype == CV_8UC1 || atype == CV_8SC1))
             vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad input type").check();
 
-        // It make sense to check border mode as well, but it's impossible to set border mode for immediate OpenVX calls
-        // So the only supported modes should be UNDEFINED(there is no such for HAL) and probably ISOLATED
+        vx_border_t border;
+        switch (borderType)
+        {
+        case CV_HAL_BORDER_CONSTANT:
+            border.mode = VX_BORDER_CONSTANT;
+            border.constant_value.U8 = borderValue[0];
+            break;
+        case CV_HAL_BORDER_REPLICATE:
+            border.mode = VX_BORDER_REPLICATE;
+            break;
+        default:
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
 
         int mode;
         if (interpolation == CV_HAL_INTER_LINEAR)
@@ -336,8 +348,20 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
         else
             vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad interpolation mode").check();
 
-        vxMatrix mtx(*ctx, std::vector<float>(M, M + 6).data(), 2, 3);
+        std::vector<float> data;
+        data.reserve(6);
+        for (int j = 0; j < 3; ++j)
+            for (int i = 0; i < 2; ++i)
+                data.push_back(M[i*3+j]);
+
+        vxMatrix mtx(*ctx, data.data(), 2, 3);
+        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+        //since OpenVX standart says nothing about thread-safety for now
+        vx_border_t prevBorder;
+        vxErr::check(vxQueryContext(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+        vxErr::check(vxSetContextAttribute(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border)));
         vxErr::check(vxuWarpAffine(ctx->ctx, ia.img, mtx.mtx, mode, ib.img));
+        vxErr::check(vxSetContextAttribute(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
     }
     catch (vxErr & e)
     {
@@ -347,7 +371,7 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
     return CV_HAL_ERROR_OK;
 }
 
-inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int, const double*)
+inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
     try
     {
@@ -358,8 +382,19 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
         if (!(atype == CV_8UC1 || atype == CV_8SC1))
             vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad input type").check();
 
-        // It make sense to check border mode as well, but it's impossible to set border mode for immediate OpenVX calls
-        // So the only supported modes should be UNDEFINED(there is no such for HAL) and probably ISOLATED
+        vx_border_t border;
+        switch (borderType)
+        {
+        case CV_HAL_BORDER_CONSTANT:
+            border.mode = VX_BORDER_CONSTANT;
+            border.constant_value.U8 = borderValue[0];
+            break;
+        case CV_HAL_BORDER_REPLICATE:
+            border.mode = VX_BORDER_REPLICATE;
+            break;
+        default:
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
 
         int mode;
         if (interpolation == CV_HAL_INTER_LINEAR)
@@ -371,8 +406,20 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
         else
             vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad interpolation mode").check();
 
-        vxMatrix mtx(*ctx, std::vector<float>(M, M + 9).data(), 3, 3);
-        vxErr::check(vxuWarpAffine(ctx->ctx, ia.img, mtx.mtx, mode, ib.img));
+        std::vector<float> data;
+        data.reserve(9);
+        for (int j = 0; j < 3; ++j)
+            for (int i = 0; i < 3; ++i)
+                data.push_back(M[i * 3 + j]);
+
+        vxMatrix mtx(*ctx, data.data(), 3, 3);
+        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+        //since OpenVX standart says nothing about thread-safety for now
+        vx_border_t prevBorder;
+        vxErr::check(vxQueryContext(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+        vxErr::check(vxSetContextAttribute(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border)));
+        vxErr::check(vxuWarpPerspective(ctx->ctx, ia.img, mtx.mtx, mode, ib.img));
+        vxErr::check(vxSetContextAttribute(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
     }
     catch (vxErr & e)
     {
@@ -387,9 +434,10 @@ struct cvhalFilter2D;
 struct FilterCtx
 {
     vxConvolution cnv;
+    vx_border_t border;
     int dst_type;
-    FilterCtx(vxContext &ctx, const short *data, int w, int h, int _dst_type) :
-        cnv(ctx, data, w, h), dst_type(_dst_type) {}
+    FilterCtx(vxContext &ctx, const short *data, int w, int h, int _dst_type, vx_border_t & _border) :
+        cnv(ctx, data, w, h), dst_type(_dst_type), border(_border) {}
 };
 
 inline int ovx_hal_filterInit(cvhalFilter2D **filter_context, uchar *kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
@@ -400,8 +448,19 @@ inline int ovx_hal_filterInit(cvhalFilter2D **filter_context, uchar *kernel_data
         kernel_width % 2 == 0 || kernel_height % 2 == 0 || anchor_x != kernel_width / 2 || anchor_y != kernel_height / 2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    // It make sense to check border mode as well, but it's impossible to set border mode for immediate OpenVX calls
-    // So the only supported modes should be UNDEFINED(there is no such for HAL) and probably ISOLATED
+    vx_border_t border;
+    switch (borderType)
+    {
+    case CV_HAL_BORDER_CONSTANT:
+        border.mode = VX_BORDER_CONSTANT;
+        border.constant_value.U8 = 0;
+        break;
+    case CV_HAL_BORDER_REPLICATE:
+        border.mode = VX_BORDER_REPLICATE;
+        break;
+    default:
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
 
     vxContext * ctx = vxContext::getContext();
 
@@ -436,7 +495,7 @@ inline int ovx_hal_filterInit(cvhalFilter2D **filter_context, uchar *kernel_data
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    FilterCtx* cnv = new FilterCtx(*ctx, data.data(), kernel_width, kernel_height, dst_type);
+    FilterCtx* cnv = new FilterCtx(*ctx, data.data(), kernel_width, kernel_height, dst_type, border);
     if (!cnv)
         return CV_HAL_ERROR_UNKNOWN;
 
@@ -462,14 +521,17 @@ inline int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep,
     try
     {
         FilterCtx* cnv = (FilterCtx*)filter_context;
-        if(cnv)
-            vxErr::check(cnv->cnv.cnv);
-        else
+        if(!cnv)
             vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad HAL context").check();
 
         vxContext * ctx = vxContext::getContext();
         vxImage ia(*ctx, a, astep, w, h);
 
+        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+        //since OpenVX standart says nothing about thread-safety for now
+        vx_border_t prevBorder;
+        vxErr::check(vxQueryContext(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+        vxErr::check(vxSetContextAttribute(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &(cnv->border), sizeof(cnv->border)));
         if (cnv->dst_type == CV_16SC1)
         {
             vxImage ib(*ctx, (short*)b, bstep, w, h);
@@ -480,6 +542,160 @@ inline int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep,
             vxImage ib(*ctx, b, bstep, w, h);
             vxErr::check(vxuConvolve(ctx->ctx, ia.img, cnv->cnv.cnv, ib.img));
         }
+        vxErr::check(vxSetContextAttribute(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
+struct MorphCtx
+{
+    vxMatrix mask;
+    int operation;
+    vx_border_t border;
+    MorphCtx(vxContext &ctx, const uchar *data, int w, int h, int _operation, vx_border_t & _border) :
+        mask(ctx, data, w, h), operation(_operation), border(_border) {}
+};
+
+inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int src_type, int dst_type, int max_width, int max_height,
+                             int kernel_type, uchar *kernel_data, size_t kernel_step, int kernel_width, int kernel_height, int anchor_x, int anchor_y,
+                             int borderType, const double borderValue[4], int iterations, bool allowSubmatrix, bool allowInplace)
+{
+    if (!filter_context || !kernel_data || allowSubmatrix || allowInplace || iterations != 1 ||
+        src_type != CV_8UC1 || dst_type != CV_8UC1 ||
+        kernel_width % 2 == 0 || kernel_height % 2 == 0 || anchor_x != kernel_width / 2 || anchor_y != kernel_height / 2)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    vx_border_t border;
+    switch (borderType)
+    {
+    case CV_HAL_BORDER_CONSTANT:
+        border.mode = VX_BORDER_CONSTANT;
+        if (borderValue[0] == DBL_MAX && borderValue[1] == DBL_MAX && borderValue[2] == DBL_MAX && borderValue[3] == DBL_MAX)
+        {
+            if (operation == MORPH_ERODE)
+                border.constant_value.U8 = UCHAR_MAX;
+            else
+                border.constant_value.U8 = 0;
+        }
+        else
+        {
+            border.constant_value.U8 = cv::saturate_cast<uchar>(borderValue[0]);
+        }
+        break;
+    case CV_HAL_BORDER_REPLICATE:
+        border.mode = VX_BORDER_REPLICATE;
+        break;
+    default:
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    vxContext * ctx = vxContext::getContext();
+
+    std::vector<uchar> kernel_mat;
+    kernel_mat.resize(kernel_width * kernel_height);
+    switch (CV_MAT_DEPTH(kernel_type))
+    {
+    case CV_8U:
+    case CV_8S:
+        for (int j = 0; j < kernel_height; ++j)
+        {
+            uchar * kernel_row = kernel_data + j * kernel_step;
+            for (int i = 0; i < kernel_height; ++i)
+                kernel_mat.push_back(kernel_row[i] ? 255 : 0);
+        }
+        break;
+    case CV_16U:
+    case CV_16S:
+        for (int j = 0; j < kernel_height; ++j)
+        {
+            short * kernel_row = (short*)(kernel_data + j * kernel_step);
+            for (int i = 0; i < kernel_height; ++i)
+                kernel_mat.push_back(kernel_row[i] ? 255 : 0);
+        }
+        break;
+    case CV_32S:
+        for (int j = 0; j < kernel_height; ++j)
+        {
+            int * kernel_row = (int*)(kernel_data + j * kernel_step);
+            for (int i = 0; i < kernel_height; ++i)
+                kernel_mat.push_back(kernel_row[i] ? 255 : 0);
+        }
+        break;
+    case CV_32F:
+        for (int j = 0; j < kernel_height; ++j)
+        {
+            float * kernel_row = (float*)(kernel_data + j * kernel_step);
+            for (int i = 0; i < kernel_height; ++i)
+                kernel_mat.push_back(kernel_row[i] ? 255 : 0);
+        }
+        break;
+    case CV_64F:
+        for (int j = 0; j < kernel_height; ++j)
+        {
+            double * kernel_row = (double*)(kernel_data + j * kernel_step);
+            for (int i = 0; i < kernel_height; ++i)
+                kernel_mat.push_back(kernel_row[i] ? 255 : 0);
+        }
+        break;
+    default:
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    MorphCtx* mat;
+    switch (operation)
+    {
+    case MORPH_ERODE:
+        mat = new MorphCtx(*ctx, kernel_mat.data(), kernel_width, kernel_height, VX_NONLINEAR_FILTER_MIN, border);
+    case MORPH_DILATE:
+        mat = new MorphCtx(*ctx, kernel_mat.data(), kernel_width, kernel_height, VX_NONLINEAR_FILTER_MAX, border);
+        break;
+    default:
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+    if (!mat)
+        return CV_HAL_ERROR_UNKNOWN;
+
+    *filter_context = (cvhalFilter2D*)(mat);
+    return CV_HAL_ERROR_OK;
+}
+
+inline int ovx_hal_morphFree(cvhalFilter2D *filter_context)
+{
+    if (filter_context)
+    {
+        delete (MorphCtx*)filter_context;
+        return CV_HAL_ERROR_OK;
+    }
+    else
+    {
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+}
+
+inline int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *b, size_t bstep, int w, int h, int src_full_width, int src_full_height, int src_roi_x, int src_roi_y, int dst_full_width, int dst_full_height, int dst_roi_x, int dst_roi_y)
+{
+    try
+    {
+        MorphCtx* mat = (MorphCtx*)filter_context;
+        if (!mat)
+            vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad HAL context").check();
+
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, a, astep, w, h);
+        vxImage ib(*ctx, b, bstep, w, h);
+
+        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+        //since OpenVX standart says nothing about thread-safety for now
+        vx_border_t prevBorder;
+        vxErr::check(vxQueryContext(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+        vxErr::check(vxSetContextAttribute(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &(mat->border), sizeof(mat->border)));
+        vxErr::check(vxuNonLinearFilter(ctx->ctx, mat->operation, ia.img, mat->mask.mtx, ib.img));
+        vxErr::check(vxSetContextAttribute(ctx->ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
     }
     catch (vxErr & e)
     {
@@ -538,6 +754,13 @@ inline int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep,
 #define cv_hal_filter ovx_hal_filter
 #undef cv_hal_filterFree
 #define cv_hal_filterFree ovx_hal_filterFree
+
+#undef cv_hal_morphInit
+#define cv_hal_morphInit ovx_hal_morphInit
+#undef cv_hal_morph
+#define cv_hal_morph ovx_hal_morph
+#undef cv_hal_morphFree
+#define cv_hal_morphFree ovx_hal_morphFree
 
 #endif
 
