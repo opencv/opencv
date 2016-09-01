@@ -234,6 +234,15 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
 
             err = (cI2.x - cI.x) * (cI2.x - cI.x) + (cI2.y - cI.y) * (cI2.y - cI.y);
             cI = cI2;
+
+            /* if new point is too far from initial, it means poor convergence. */
+            if (fabs(cI.x - cT.x) > win.width || fabs(cI.y - cT.y) > win.height)
+            {
+                cI = cT;
+                break;
+            }
+            cI.x = std::max(0.0f, std::min((float)size.width, cI.x));
+            cI.y = std::max(0.0f, std::min((float)size.height, cI.y));
         }
         while( ++iter < max_iters && err > eps );
 
