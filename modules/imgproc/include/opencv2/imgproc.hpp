@@ -2953,20 +2953,23 @@ The function is similar to cv::undistort and cv::initUndistortRectifyMap but it 
 sparse set of points instead of a raster image. Also the function performs a reverse transformation
 to projectPoints. In case of a 3D object, it does not reconstruct its 3D coordinates, but for a
 planar object, it does, up to a translation vector, if the proper R is specified.
-@code
-    // (u,v) is the input point, (u', v') is the output point
-    // camera_matrix=[fx 0 cx; 0 fy cy; 0 0 1]
-    // P=[fx' 0 cx' tx; 0 fy' cy' ty; 0 0 1 tz]
-    x" = (u - cx)/fx
-    y" = (v - cy)/fy
-    (x',y') = undistort(x",y",dist_coeffs)
-    [X,Y,W]T = R*[x' y' 1]T
-    x = X/W, y = Y/W
-    // only performed if P=[fx' 0 cx' [tx]; 0 fy' cy' [ty]; 0 0 1 [tz]] is specified
-    u' = x*fx' + cx'
-    v' = y*fy' + cy',
-@endcode
-where cv::undistort is an approximate iterative algorithm that estimates the normalized original
+
+For each observed point coordinate \f$(u, v)\f$ the function computes:
+\f[
+\begin{array}{l}
+x^{"}  \leftarrow (u - c_x)/f_x  \\
+y^{"}  \leftarrow (v - c_y)/f_y  \\
+(x',y') = undistort(x^{"},y^{"}, \texttt{distCoeffs}) \\
+{[X\,Y\,W]} ^T  \leftarrow R*[x' \, y' \, 1]^T  \\
+x  \leftarrow X/W  \\
+y  \leftarrow Y/W  \\
+\text{only performed if P is specified:} \\
+u'  \leftarrow x {f'}_x + {c'}_x  \\
+v'  \leftarrow y {f'}_y + {c'}_y
+\end{array}
+\f]
+
+where *undistort* is an approximate iterative algorithm that estimates the normalized original
 point coordinates out of the normalized distorted point coordinates ("normalized" means that the
 coordinates do not depend on the camera matrix).
 
@@ -2981,7 +2984,7 @@ transformation. If matrix P is identity or omitted, dst will contain normalized 
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param R Rectification transformation in the object space (3x3 matrix). R1 or R2 computed by
 cv::stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
-@param P New camera matrix (3x3) or new projection matrix (3x4). P1 or P2 computed by
+@param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by
 cv::stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used.
  */
 CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
