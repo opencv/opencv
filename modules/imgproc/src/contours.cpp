@@ -1048,7 +1048,7 @@ cvFindNextContour( CvContourScanner scanner )
                     goto _next_contour;
                 } else if (haveSSE2) {
 
-                    __m128i v_prev = _mm_set1_epi8(prev);
+                    __m128i v_prev = _mm_set1_epi8((char)prev);
                     int v_size = width - 32;
 
                     for (; x <= v_size; x += 32) {
