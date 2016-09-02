@@ -94,7 +94,7 @@ struct RowSum :
             D[0] = s;
             for( i = 0; i < width; i += cn )
             {
-                s += S[i + ksz_cn] - S[i];
+                s += (ST)S[i + ksz_cn] - (ST)S[i];
                 D[i+cn] = s;
             }
         }
