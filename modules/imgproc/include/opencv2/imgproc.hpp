@@ -2296,13 +2296,13 @@ The function converts a pair of maps for remap from one representation to anothe
 options ( (map1.type(), map2.type()) \f$\rightarrow\f$ (dstmap1.type(), dstmap2.type()) ) are
 supported:
 
-- \f$\texttt{(CV\_32FC1, CV\_32FC1)} \rightarrow \texttt{(CV\_16SC2, CV\_16UC1)}\f$. This is the
+- \f$\texttt{(CV_32FC1, CV_32FC1)} \rightarrow \texttt{(CV_16SC2, CV_16UC1)}\f$. This is the
 most frequently used conversion operation, in which the original floating-point maps (see remap )
 are converted to a more compact and much faster fixed-point representation. The first output array
 contains the rounded coordinates and the second array (created only when nninterpolation=false )
 contains indices in the interpolation tables.
 
-- \f$\texttt{(CV\_32FC2)} \rightarrow \texttt{(CV\_16SC2, CV\_16UC1)}\f$. The same as above but
+- \f$\texttt{(CV_32FC2)} \rightarrow \texttt{(CV_16SC2, CV_16UC1)}\f$. The same as above but
 the original maps are stored in one 2-channel matrix.
 
 - Reverse conversion. Obviously, the reconstructed floating-point maps will not be exactly the same
@@ -2352,7 +2352,7 @@ CV_EXPORTS Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[]
 
 The function calculates the \f$2 \times 3\f$ matrix of an affine transform so that:
 
-\f[\begin{bmatrix} x'_i \\ y'_i \end{bmatrix} = \texttt{map\_matrix} \cdot \begin{bmatrix} x_i \\ y_i \\ 1 \end{bmatrix}\f]
+\f[\begin{bmatrix} x'_i \\ y'_i \end{bmatrix} = \texttt{map_matrix} \cdot \begin{bmatrix} x_i \\ y_i \\ 1 \end{bmatrix}\f]
 
 where
 
@@ -2382,7 +2382,7 @@ CV_EXPORTS_W void invertAffineTransform( InputArray M, OutputArray iM );
 
 The function calculates the \f$3 \times 3\f$ matrix of a perspective transform so that:
 
-\f[\begin{bmatrix} t_i x'_i \\ t_i y'_i \\ t_i \end{bmatrix} = \texttt{map\_matrix} \cdot \begin{bmatrix} x_i \\ y_i \\ 1 \end{bmatrix}\f]
+\f[\begin{bmatrix} t_i x'_i \\ t_i y'_i \\ t_i \end{bmatrix} = \texttt{map_matrix} \cdot \begin{bmatrix} x_i \\ y_i \\ 1 \end{bmatrix}\f]
 
 where
 
