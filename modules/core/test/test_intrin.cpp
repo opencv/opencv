@@ -652,11 +652,17 @@ template<typename R> struct TheTest
         dataA *= 1.1;
         R a = dataA;
         Rt b = v_cvt_f64(a);
+        Rt c = v_cvt_f64_high(a);
         Data<Rt> resB = b;
+        Data<Rt> resC = c;
         int n = std::min<int>(Rt::nlanes, R::nlanes);
         for (int i = 0; i < n; ++i)
         {
             EXPECT_EQ((typename Rt::lane_type)dataA[i], resB[i]);
+        }
+        for (int i = 0; i < n; ++i)
+        {
+            EXPECT_EQ((typename Rt::lane_type)dataA[i+n], resC[i]);
         }
 #endif
         return *this;
