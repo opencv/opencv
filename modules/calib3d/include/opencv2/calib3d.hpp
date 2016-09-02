@@ -1616,11 +1616,12 @@ homographies are consistent with all visible reference points being in front of 
 are left unchanged; the filtered solution set is returned as indices into the existing one.
 
 */
-CV_EXPORTS_W Mat filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays rotations,
-                                                          InputArrayOfArrays normals,
-                                                          InputArray beforePoints,
-                                                          InputArray afterPoints,
-                                                          InputArray pointsMask = noArray());
+CV_EXPORTS_W void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays rotations,
+                                                           InputArrayOfArrays normals,
+                                                           InputArray beforePoints,
+                                                           InputArray afterPoints,
+                                                           OutputArray possibleSolutions,
+                                                           InputArray pointsMask = noArray());
 
 /** @brief The base class for stereo correspondence algorithms.
  */

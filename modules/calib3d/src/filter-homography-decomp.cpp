@@ -46,16 +46,17 @@ using namespace std;
 
 namespace cv
 {
-    Mat filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays rotations,
+    void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays rotations,
                                                  InputArrayOfArrays normals,
                                                  InputArray _beforeRectifiedPoints,
                                                  InputArray _afterRectifiedPoints,
+                                                 OutputArray _possibleSolutions,
                                                  InputArray _pointsMask)
     {
         CV_Assert(_beforeRectifiedPoints.type() == CV_32FC2 && _afterRectifiedPoints.type() == CV_32FC2 && (_pointsMask.empty() || _pointsMask.type() == CV_8U));
 
         Mat beforeRectifiedPoints = _beforeRectifiedPoints.getMat(), afterRectifiedPoints = _afterRectifiedPoints.getMat(), pointsMask = _pointsMask.getMat();
-
+        
         Mat possibleSolutions;
 
         for (int solutionIdx = 0; solutionIdx < rotations.size().area(); solutionIdx++)
@@ -91,7 +92,9 @@ namespace cv
             }
         }
 
-        return possibleSolutions;
+        possibleSolutions.copyTo(_possibleSolutions);
+
+        return;
     }
 
 }
