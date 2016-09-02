@@ -55,7 +55,7 @@ inline unsigned int trailingZeros(unsigned int value) {
     return _tzcnt_u32(value);
 #elif defined(_GCC)
     return __builtin_ctz(value);
-#elif defined(__INTEL_COMPILER)
+//#elif defined(__INTEL_COMPILER)
     //return _bit_scan_reverse(value);
 #else
     static const int MultiplyDeBruijnBitPosition[32] = {
