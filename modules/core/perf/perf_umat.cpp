@@ -13,7 +13,6 @@ using namespace ::testing;
 using std::tr1::tuple;
 using std::tr1::get;
 
-namespace {
 
 struct OpenCLState
 {
@@ -64,5 +63,3 @@ OCL_PERF_TEST_P(UMatTest, CustomPtr, Combine(Values(sz1080p, sz2160p), Bool(), :
 
     SANITY_CHECK_NOTHING();
 }
-
-} // namespace cvtest
