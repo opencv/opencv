@@ -1126,7 +1126,7 @@ CV_EXPORTS InstrNode* getTrace();
 CV_EXPORTS void       resetTrace();
 CV_EXPORTS void       setFlags(int modeFlags);
 CV_EXPORTS int        getFlags();
-};
+}
 
 } //namespace cv
 
