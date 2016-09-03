@@ -2587,6 +2587,11 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
     Mat src = _src.getMat();
     CV_Assert( src.type() == CV_8UC1 );
     int n = countNonZero(src);
+    if (n == 0)
+    {
+        _idx.release();
+        return;
+    }
     if( _idx.kind() == _InputArray::MAT && !_idx.getMatRef().isContinuous() )
         _idx.release();
     _idx.create(n, 1, CV_32SC2);
