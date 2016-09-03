@@ -600,9 +600,8 @@ _canny_push_sse:
 
                         }
 
-                        if (k < src.cols && _mag[k] < low) {
+                        if (prev_flag && ((k < j+16) || (k < src.cols && _mag[k] <= high)))
                             prev_flag = 0;
-                        }
                     }
                 }
             }
@@ -1184,9 +1183,8 @@ ocv_canny_push_sse:
 
                     }
 
-                    if (k < cols && _mag[k] < low) {
+                    if (prev_flag && ((k < j+16) || (k < cols && _mag[k] <= high)))
                         prev_flag = 0;
-                    }
                 }
             }
         }
