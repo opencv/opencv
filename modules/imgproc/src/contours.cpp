@@ -52,11 +52,17 @@ static const CvPoint icvCodeDeltas[8] =
 
 inline unsigned int trailingZeros(unsigned int value) {
 #if defined(_MSC_VER)
+#if (_MSC_VER < 1500)
+    return _BitScanForward(value);
+#else
     return _tzcnt_u32(value);
-#elif defined(_GCC)
+#endif
+#elif defined(__GNUC__) || defined(__GNUG__)
     return __builtin_ctz(value);
-//#elif defined(__INTEL_COMPILER)
-    //return _bit_scan_reverse(value);
+//#elif defined(__ICC) || defined(__INTEL_COMPILER)
+//    return _bit_scan_forward(value);
+//#elif defined(__clang__)
+//    return llvm.cttz.i32(value, true);
 #else
     static const int MultiplyDeBruijnBitPosition[32] = {
         0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
@@ -1052,8 +1058,8 @@ cvFindNextContour( CvContourScanner scanner )
                     int v_size = width - 32;
 
                     for (; x <= v_size; x += 32) {
-                        __m128i v_p1 = _mm_loadu_si128((__m128i*)(img + x));
-                        __m128i v_p2 = _mm_loadu_si128((__m128i*)(img + x + 16));
+                        __m128i v_p1 = _mm_loadu_si128((const __m128i*)(img + x));
+                        __m128i v_p2 = _mm_loadu_si128((const __m128i*)(img + x + 16));
 
                         __m128i v_cmp1 = _mm_cmpeq_epi8(v_p1, v_prev);
                         __m128i v_cmp2 = _mm_cmpeq_epi8(v_p2, v_prev);
@@ -1350,18 +1356,18 @@ inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j) {
 #endif
 #if CV_SSE2
     if (haveSSE2) {
-        __m128i sseZero = _mm_setzero_si128();
-        int sizeSse = img_size.width - 32;
+        __m128i v_zero = _mm_setzero_si128();
+        int v_size = img_size.width - 32;
 
-        for (; j <= sizeSse; j += 32) {
-            __m128i sseP1 = _mm_loadu_si128((__m128i*)(src_data + j));
-            __m128i sseP2 = _mm_loadu_si128((__m128i*)(src_data + j + 16));
+        for (; j <= v_size; j += 32) {
+            __m128i v_p1 = _mm_loadu_si128((const __m128i*)(src_data + j));
+            __m128i v_p2 = _mm_loadu_si128((const __m128i*)(src_data + j + 16));
 
-            __m128i sseCmp1 = _mm_cmpeq_epi8(sseP1, sseZero);
-            __m128i sseCmp2 = _mm_cmpeq_epi8(sseP2, sseZero);
+            __m128i v_cmp1 = _mm_cmpeq_epi8(v_p1, v_zero);
+            __m128i v_cmp2 = _mm_cmpeq_epi8(v_p2, v_zero);
 
-            unsigned int mask1 = _mm_movemask_epi8(sseCmp1);
-            unsigned int mask2 = _mm_movemask_epi8(sseCmp2);
+            unsigned int mask1 = _mm_movemask_epi8(v_cmp1);
+            unsigned int mask2 = _mm_movemask_epi8(v_cmp2);
 
             mask1 ^= 0x0000ffff;
             mask2 ^= 0x0000ffff;
@@ -1378,9 +1384,9 @@ inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j) {
         }
 
         if (j <= img_size.width - 16) {
-            __m128i sseP = _mm_loadu_si128((__m128i*)(src_data + j));
+            __m128i v_p = _mm_loadu_si128((const __m128i*)(src_data + j));
 
-            unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(sseP, sseZero)) ^ 0x0000ffff;
+            unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_zero)) ^ 0x0000ffff;
 
             if (mask) {
                 j += trailingZeros(mask);
@@ -1401,40 +1407,40 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j, bool hav
 inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j) {
 #endif
 #if CV_SSE2
-    if (!src_data[j]) {
-        return j;
+    if (j < img_size.width && !src_data[j]) {
+        return j - 1;
     } else if (haveSSE2) {
-        __m128i sseZero = _mm_setzero_si128();
-        int sizeSse = img_size.width - 32;
+        __m128i v_zero = _mm_setzero_si128();
+        int v_size = img_size.width - 32;
 
-        for (; j <= sizeSse; j += 32) {
-            __m128i sseP1 = _mm_loadu_si128((__m128i*)(src_data + j));
-            __m128i sseP2 = _mm_loadu_si128((__m128i*)(src_data + j + 16));
+        for (; j <= v_size; j += 32) {
+            __m128i v_p1 = _mm_loadu_si128((const __m128i*)(src_data + j));
+            __m128i v_p2 = _mm_loadu_si128((const __m128i*)(src_data + j + 16));
 
-            __m128i sseCmp1 = _mm_cmpeq_epi8(sseP1, sseZero);
-            __m128i sseCmp2 = _mm_cmpeq_epi8(sseP2, sseZero);
+            __m128i v_cmp1 = _mm_cmpeq_epi8(v_p1, v_zero);
+            __m128i v_cmp2 = _mm_cmpeq_epi8(v_p2, v_zero);
 
-            unsigned int mask1 = _mm_movemask_epi8(sseCmp1);
-            unsigned int mask2 = _mm_movemask_epi8(sseCmp2);
+            unsigned int mask1 = _mm_movemask_epi8(v_cmp1);
+            unsigned int mask2 = _mm_movemask_epi8(v_cmp2);
 
             if (mask1) {
-                j += trailingZeros(mask1);
+                j += (trailingZeros(mask1) - 1);
                 return j;
             }
 
             if (mask2) {
-                j += trailingZeros(mask2 << 16);
+                j += trailingZeros(mask2 << 15);
                 return j;
             }
         }
 
         if (j <= img_size.width - 16) {
-            __m128i sseP = _mm_loadu_si128((__m128i*)(src_data + j));
+            __m128i v_p = _mm_loadu_si128((const __m128i*)(src_data + j));
 
-            unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(sseP, sseZero));
+            unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_zero));
 
             if (mask) {
-                j += trailingZeros(mask);
+                j += (trailingZeros(mask) - 1);
                 return j;
             }
             j += 16;
@@ -1443,7 +1449,8 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j) {
 #endif
     for (; j < img_size.width && src_data[j]; ++j)
         ;
-    return j;
+
+    return j - 1;
 }
 
 static int
@@ -1545,11 +1552,11 @@ icvFindContoursInInterval( const CvArr* src,
         tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         tmp_prev = tmp_prev->next;
 #if CV_SSE2
-        j = findEndContourPoint(src_data, img_size, j, haveSSE2);
+        j = findEndContourPoint(src_data, img_size, j+1, haveSSE2);
 #else
-        j = findEndContourPoint(src_data, img_size, j);
+        j = findEndContourPoint(src_data, img_size, j+1);
 #endif
-        tmp.pt.x = j-1;
+        tmp.pt.x = j;
         CV_WRITE_SEQ_ELEM( tmp, writer );
         tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         tmp_prev->link = tmp_prev->next;
@@ -1583,11 +1590,11 @@ icvFindContoursInInterval( const CvArr* src,
             tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
             tmp_prev = tmp_prev->next;
 #if CV_SSE2
-            j = findEndContourPoint(src_data, img_size, j, haveSSE2);
+            j = findEndContourPoint(src_data, img_size, j+1, haveSSE2);
 #else
-            j = findEndContourPoint(src_data, img_size, j);
+            j = findEndContourPoint(src_data, img_size, j+1);
 #endif
-            tmp.pt.x = j-1;
+            tmp.pt.x = j;
             CV_WRITE_SEQ_ELEM( tmp, writer );
             tmp_prev = tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         }//j
