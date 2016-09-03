@@ -1408,7 +1408,7 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j) {
 #endif
 #if CV_SSE2
     if (j < img_size.width && !src_data[j]) {
-        return j - 1;
+        return j;
     } else if (haveSSE2) {
         __m128i v_zero = _mm_setzero_si128();
         int v_size = img_size.width - 32;
@@ -1424,12 +1424,12 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j) {
             unsigned int mask2 = _mm_movemask_epi8(v_cmp2);
 
             if (mask1) {
-                j += (trailingZeros(mask1) - 1);
+                j += trailingZeros(mask1);
                 return j;
             }
 
             if (mask2) {
-                j += trailingZeros(mask2 << 15);
+                j += trailingZeros(mask2 << 16);
                 return j;
             }
         }
@@ -1440,7 +1440,7 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j) {
             unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_zero));
 
             if (mask) {
-                j += (trailingZeros(mask) - 1);
+                j += trailingZeros(mask);
                 return j;
             }
             j += 16;
@@ -1450,7 +1450,7 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j) {
     for (; j < img_size.width && src_data[j]; ++j)
         ;
 
-    return j - 1;
+    return j;
 }
 
 static int
@@ -1556,7 +1556,7 @@ icvFindContoursInInterval( const CvArr* src,
 #else
         j = findEndContourPoint(src_data, img_size, j+1);
 #endif
-        tmp.pt.x = j;
+        tmp.pt.x = j - 1;
         CV_WRITE_SEQ_ELEM( tmp, writer );
         tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         tmp_prev->link = tmp_prev->next;
@@ -1594,7 +1594,7 @@ icvFindContoursInInterval( const CvArr* src,
 #else
             j = findEndContourPoint(src_data, img_size, j+1);
 #endif
-            tmp.pt.x = j;
+            tmp.pt.x = j - 1;
             CV_WRITE_SEQ_ELEM( tmp, writer );
             tmp_prev = tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         }//j
