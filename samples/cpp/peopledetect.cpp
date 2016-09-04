@@ -1,27 +1,23 @@
+#include <iostream>
+#include <stdexcept>
 #include <opencv2/objdetect.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-#include <iostream>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/video.hpp>
+#include <opencv2/videoio.hpp>
 
 using namespace cv;
 using namespace std;
 
 
-static void help()
-{
-    cout << "\nThis program demonstrates the use of the HoG descriptor using\n"
-            "  HOGDescriptor::hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());\n"
-            "Usage:\n"
-            "./peopledetect --i=<image_filename> | --d=<image_directory>\n\n"
-            "During execution:\n\tHit q or ESC key to quit.\n"
-            "\tUsing OpenCV version " << CV_VERSION << "\n" << endl;
-}
-
 const char* keys =
 {
-    "{help h||}"
-    "{image i| ../data/basketball2.png|input image name}"
-    "{directory d||images directory}"
+    "{ help h      |                     | print help message }"
+    "{ image i     |                     | specify input image}"
+    "{ camera c    |                     | enable camera capturing }"
+    "{ video v     | ../data/768x576.avi | use video as input }"
+    "{ directory d |                     | images directory}"
 };
 
 static void detectAndDraw(const HOGDescriptor &hog, Mat &img)
@@ -69,7 +65,12 @@ int main(int argc, char** argv)
 
     if (parser.has("help"))
     {
-        help();
+        cout << "\nThis program demonstrates the use of the HoG descriptor using\n"
+            " HOGDescriptor::hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());\n";
+        parser.printMessage();
+        cout << "During execution:\n\tHit q or ESC key to quit.\n"
+            "\tUsing OpenCV version " << CV_VERSION << "\n"
+            "Note: camera device number must be different from -1.\n" << endl;
         return 0;
     }
 
@@ -78,6 +79,8 @@ int main(int argc, char** argv)
     namedWindow("people detector", 1);
 
     string pattern_glob = "";
+    string video_filename = "../data/768x576.avi";
+    int camera_id = -1;
     if (parser.has("directory"))
     {
         pattern_glob = parser.get<string>("directory");
@@ -86,26 +89,85 @@ int main(int argc, char** argv)
     {
         pattern_glob = parser.get<string>("image");
     }
-
-    if (!pattern_glob.empty())
+    else if (parser.has("camera"))
     {
+        camera_id = parser.get<int>("camera");
+    }
+    else if (parser.has("video"))
+    {
+        video_filename = parser.get<string>("video");
+    }
+
+    if (!pattern_glob.empty() || camera_id != -1 || !video_filename.empty())
+    {
+        //Read from input image files
         vector<String> filenames;
-        String folder(pattern_glob);
-        glob(folder, filenames);
+        //Read from video file
+        VideoCapture vc;
+        Mat frame;
 
-        for (vector<String>::const_iterator it = filenames.begin(); it != filenames.end(); ++it)
+        if (!pattern_glob.empty())
         {
-            cout << "\nRead: " << *it << endl;
-            // Read current image
-            Mat current_image = imread(*it);
+            String folder(pattern_glob);
+            glob(folder, filenames);
+        }
+        else if (camera_id != -1)
+        {
+            vc.open(camera_id);
+            if (!vc.isOpened())
+            {
+                stringstream msg;
+                msg << "can't open camera: " << camera_id;
+                throw runtime_error(msg.str());
+            }
+        }
+        else
+        {
+            vc.open(video_filename.c_str());
+            if (!vc.isOpened())
+                throw runtime_error(string("can't open video file: " + video_filename));
+        }
 
-            if (current_image.empty())
-                continue;
+        vector<String>::const_iterator it_image = filenames.begin();
 
-            detectAndDraw(hog, current_image);
+        for (;;)
+        {
+            if (!pattern_glob.empty())
+            {
+                bool read_image_ok = false;
+                for (; it_image != filenames.end(); ++it_image)
+                {
+                    cout << "\nRead: " << *it_image << endl;
+                    // Read current image
+                    frame = imread(*it_image);
 
-            imshow("people detector", current_image);
-            int c = waitKey(0) & 255;
+                    if (!frame.empty())
+                    {
+                        ++it_image;
+                        read_image_ok = true;
+                        break;
+                    }
+                }
+
+                //No more valid images
+                if (!read_image_ok)
+                {
+                    //Release the image in order to exit the while loop
+                    frame.release();
+                }
+            }
+            else
+            {
+                vc >> frame;
+            }
+
+            if (frame.empty())
+                break;
+
+            detectAndDraw(hog, frame);
+
+            imshow("people detector", frame);
+            int c = waitKey( vc.isOpened() ? 30 : 0 ) & 255;
             if ( c == 'q' || c == 'Q' || c == 27)
                 break;
         }
