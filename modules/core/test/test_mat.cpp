@@ -919,6 +919,12 @@ TEST(Core_Mat, copyNx1ToVector)
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
 }
 
+TEST(Core_InputArray, empty)
+{
+    vector<vector<Point> > data;
+    ASSERT_TRUE(_InputArray(data).empty());
+}
+
 TEST(Core_SVD, orthogonality)
 {
     for (int i = 0; i < 2; i++)
