@@ -1998,6 +1998,9 @@ bool _InputArray::isContinuous(int i) const
         return vv[i].isContinuous();
     }
 
+    if( k == CUDA_GPU_MAT )
+      return i < 0 ? ((const cuda::GpuMat*)obj)->isContinuous() : true;
+
     CV_Error(CV_StsNotImplemented, "Unknown/unsupported array type");
     return false;
 }
