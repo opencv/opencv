@@ -525,9 +525,88 @@ public:
 #define CANNY_SHIFT 15
             const int TG22 = (int)(0.4142135623730950488016887242097*(1 << CANNY_SHIFT) + 0.5);
 
-            int prev_flag = 0;
-            bool canny_push = false;
-            for (int j = 0; j < src.cols; j++)
+            int prev_flag = 0, j = 0;
+#if CV_SSE2
+            if (checkHardwareSupport(CPU_SSE2))
+            {
+                __m128i v_low = _mm_set1_epi32(low), v_one = _mm_set1_epi8(1);
+
+                for (; j <= src.cols - 16; j += 16)
+                {
+                    __m128i v_m1 = _mm_loadu_si128((const __m128i*)(_mag + j));
+                    __m128i v_m2 = _mm_loadu_si128((const __m128i*)(_mag + j + 4));
+                    __m128i v_m3 = _mm_loadu_si128((const __m128i*)(_mag + j + 8));
+                    __m128i v_m4 = _mm_loadu_si128((const __m128i*)(_mag + j + 12));
+
+                    _mm_storeu_si128((__m128i*)(_map + j), v_one);
+
+                    __m128i v_cmp1 = _mm_cmpgt_epi32(v_m1, v_low);
+                    __m128i v_cmp2 = _mm_cmpgt_epi32(v_m2, v_low);
+                    __m128i v_cmp3 = _mm_cmpgt_epi32(v_m3, v_low);
+                    __m128i v_cmp4 = _mm_cmpgt_epi32(v_m4, v_low);
+
+                    v_cmp1 = _mm_packs_epi32(v_cmp1, v_cmp2);
+                    v_cmp2 = _mm_packs_epi32(v_cmp3, v_cmp4);
+
+                    v_cmp1 = _mm_packs_epi16(v_cmp1, v_cmp2);
+                    unsigned int mask = _mm_movemask_epi8(v_cmp1);
+
+                    if (mask)
+                    {
+                        int m, k = j;
+
+                        for (; mask; ++k, mask >>= 1)
+                        {
+                            if (mask & 0x00000001)
+                            {
+                                m = _mag[k];
+                                int xs = _x[k];
+                                int ys = _y[k];
+                                int x = std::abs(xs);
+                                int y = std::abs(ys) << CANNY_SHIFT;
+
+                                int tg22x = x * TG22;
+
+                                if (y < tg22x)
+                                {
+                                    if (m > _mag[k - 1] && m >= _mag[k + 1]) goto _canny_push_sse;
+                                }
+                                else
+                                {
+                                    int tg67x = tg22x + (x << (CANNY_SHIFT + 1));
+                                    if (y > tg67x)
+                                    {
+                                        if (m > _mag[k + magstep2] && m >= _mag[k + magstep1]) goto _canny_push_sse;
+                                    } else
+                                    {
+                                        int s = (xs ^ ys) < 0 ? -1 : 1;
+                                        if (m > _mag[k + magstep2 - s] && m > _mag[k + magstep1 + s]) goto _canny_push_sse;
+                                    }
+                                }
+                            }
+
+                            prev_flag = 0;
+                            continue;
+
+_canny_push_sse:
+                            // _map[k-mapstep] is short-circuited at the start because previous thread is
+                            // responsible for initializing it.
+                            if (m > high && !prev_flag  && (i <= boundaries.start + 1 || _map[k - mapstep] != 2))
+                            {
+                                CANNY_PUSH(_map + k);
+                                prev_flag = 1;
+                            } else
+                                _map[k] = 0;
+
+                        }
+
+                        if (prev_flag && ((k < j+16) || (k < src.cols && _mag[k] <= high)))
+                            prev_flag = 0;
+                    }
+                }
+            }
+#endif
+            for (; j < src.cols; j++)
             {
                 int m = _mag[j];
 
@@ -542,42 +621,37 @@ public:
 
                     if (y < tg22x)
                     {
-                        if (m > _mag[j-1] && m >= _mag[j+1]) canny_push = true;
+                        if (m > _mag[j-1] && m >= _mag[j+1]) goto _canny_push;
                     }
                     else
                     {
                         int tg67x = tg22x + (x << (CANNY_SHIFT+1));
                         if (y > tg67x)
                         {
-                            if (m > _mag[j+magstep2] && m >= _mag[j+magstep1]) canny_push = true;
+                            if (m > _mag[j+magstep2] && m >= _mag[j+magstep1]) goto _canny_push;
                         }
                         else
                         {
                             int s = (xs ^ ys) < 0 ? -1 : 1;
-                            if (m > _mag[j+magstep2-s] && m > _mag[j+magstep1+s]) canny_push = true;
+                            if (m > _mag[j+magstep2-s] && m > _mag[j+magstep1+s]) goto _canny_push;
                         }
                     }
                 }
-                if (!canny_push)
+
+                prev_flag = 0;
+                _map[j] = uchar(1);
+                continue;
+
+_canny_push:
+                // _map[j-mapstep] is short-circuited at the start because previous thread is
+                // responsible for initializing it.
+                if (!prev_flag && m > high && (i <= boundaries.start+1 || _map[j-mapstep] != 2) )
                 {
-                    prev_flag = 0;
-                    _map[j] = uchar(1);
-                    continue;
+                    CANNY_PUSH(_map + j);
+                    prev_flag = 1;
                 }
                 else
-                {
-                    // _map[j-mapstep] is short-circuited at the start because previous thread is
-                    // responsible for initializing it.
-                    if (!prev_flag && m > high && (i <= boundaries.start+1 || _map[j-mapstep] != 2) )
-                    {
-                        CANNY_PUSH(_map + j);
-                        prev_flag = 1;
-                    }
-                    else
-                        _map[j] = 0;
-
-                    canny_push = false;
-                }
+                    _map[j] = 0;
             }
 
             // scroll the ring buffer
@@ -640,8 +714,8 @@ class finalPass : public ParallelLoopBody
 {
 
 public:
-    finalPass(const Mat & _src, Mat &_dst, uchar *_map, ptrdiff_t _mapstep) :
-        src(_src), dst(_dst), map(_map), mapstep(_mapstep) {}
+    finalPass(uchar *_map, Mat &_dst, ptrdiff_t _mapstep) :
+        map(_map), dst(_dst), mapstep(_mapstep) {}
 
     ~finalPass() {}
 
@@ -664,7 +738,7 @@ public:
             if(haveSSE2) {
                 const __m128i v_zero = _mm_setzero_si128();
 
-                for(; j <= src.cols - 32; j += 32) {
+                for(; j <= dst.cols - 32; j += 32) {
                     __m128i v_pmap1 = _mm_loadu_si128((const __m128i*)(pmap + j));
                     __m128i v_pmap2 = _mm_loadu_si128((const __m128i*)(pmap + j + 16));
 
@@ -688,7 +762,7 @@ public:
                     _mm_storeu_si128((__m128i*)(pdst + j + 16), v_pmap2);
                 }
 
-                for(; j <= src.cols - 16; j += 16) {
+                for(; j <= dst.cols - 16; j += 16) {
                     __m128i v_pmap = _mm_loadu_si128((const __m128i*)(pmap + j));
 
                     __m128i v_pmaplo = _mm_unpacklo_epi8(v_pmap, v_zero);
@@ -704,15 +778,14 @@ public:
                 }
             }
 #endif
-            for (; j < src.cols; j++)
+            for (; j < dst.cols; j++)
                 pdst[j] = (uchar)-(pmap[j] >> 1);
         }
     }
 
 private:
-    const Mat &src;
-    Mat &dst;
     uchar *map;
+    Mat &dst;
     ptrdiff_t mapstep;
 };
 
@@ -817,7 +890,7 @@ int high = cvFloor(high_thresh);
     if (!m[mapstep+1])  CANNY_PUSH_SERIAL(m + mapstep + 1);
 }
 
-    parallel_for_(Range(0, src.rows), finalPass(src, dst, map, mapstep), src.total()/(double)(1<<16));
+    parallel_for_(Range(0, dst.rows), finalPass(map, dst, mapstep), dst.total()/(double)(1<<16));
 }
 
 void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
@@ -1032,12 +1105,92 @@ static void CannyImpl(Mat& dx, Mat& dy, Mat& dst,
             stack_top = stack_bottom + sz;
         }
 
-        int prev_flag = 0;
-        for (int j = 0; j < cols; j++)
-        {
-            #define CANNY_SHIFT 15
-            const int TG22 = (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5);
+#define CANNY_SHIFT 15
+        const int TG22 = (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5);
 
+        int prev_flag = 0, j = 0;
+#if CV_SSE2
+        if (checkHardwareSupport(CPU_SSE2))
+        {
+            __m128i v_low = _mm_set1_epi32(low), v_one = _mm_set1_epi8(1);
+
+            for (; j <= cols - 16; j += 16)
+            {
+                __m128i v_m1 = _mm_loadu_si128((const __m128i*)(_mag + j));
+                __m128i v_m2 = _mm_loadu_si128((const __m128i*)(_mag + j + 4));
+                __m128i v_m3 = _mm_loadu_si128((const __m128i*)(_mag + j + 8));
+                __m128i v_m4 = _mm_loadu_si128((const __m128i*)(_mag + j + 12));
+
+                _mm_storeu_si128((__m128i*)(_map + j), v_one);
+
+                __m128i v_cmp1 = _mm_cmpgt_epi32(v_m1, v_low);
+                __m128i v_cmp2 = _mm_cmpgt_epi32(v_m2, v_low);
+                __m128i v_cmp3 = _mm_cmpgt_epi32(v_m3, v_low);
+                __m128i v_cmp4 = _mm_cmpgt_epi32(v_m4, v_low);
+
+                v_cmp1 = _mm_packs_epi32(v_cmp1, v_cmp2);
+                v_cmp2 = _mm_packs_epi32(v_cmp3, v_cmp4);
+
+                v_cmp1 = _mm_packs_epi16(v_cmp1, v_cmp2);
+                unsigned int mask = _mm_movemask_epi8(v_cmp1);
+
+                if (mask)
+                {
+                    int m, k = j;
+
+                    for (; mask; ++k, mask >>= 1)
+                    {
+                        if (mask & 0x00000001)
+                        {
+                            m = _mag[k];
+                            int xs = _x[k];
+                            int ys = _y[k];
+                            int x = std::abs(xs);
+                            int y = std::abs(ys) << CANNY_SHIFT;
+
+                            int tg22x = x * TG22;
+
+                            if (y < tg22x)
+                            {
+                                if (m > _mag[k - 1] && m >= _mag[k + 1]) goto ocv_canny_push_sse;
+                            }
+                            else
+                            {
+                                int tg67x = tg22x + (x << (CANNY_SHIFT + 1));
+                                if (y > tg67x)
+                                {
+                                    if (m > _mag[k + magstep2] && m >= _mag[k + magstep1]) goto ocv_canny_push_sse;
+                                } else
+                                {
+                                    int s = (xs ^ ys) < 0 ? -1 : 1;
+                                    if (m > _mag[k + magstep2 - s] && m > _mag[k + magstep1 + s]) goto ocv_canny_push_sse;
+                                }
+                            }
+                        }
+
+                        prev_flag = 0;
+                        continue;
+
+ocv_canny_push_sse:
+                        // _map[k-mapstep] is short-circuited at the start because previous thread is
+                        // responsible for initializing it.
+                        if (!prev_flag && m > high && _map[k-mapstep] != 2)
+                        {
+                            CANNY_PUSH(_map + k);
+                            prev_flag = 1;
+                        } else
+                            _map[k] = 0;
+
+                    }
+
+                    if (prev_flag && ((k < j+16) || (k < cols && _mag[k] <= high)))
+                        prev_flag = 0;
+                }
+            }
+        }
+#endif
+        for (; j < cols; j++)
+        {
             int m = _mag[j];
 
             if (m > low)
@@ -1112,14 +1265,7 @@ __ocv_canny_push:
         if (!m[mapstep+1])  CANNY_PUSH(m + mapstep + 1);
     }
 
-    // the final pass, form the final image
-    const uchar* pmap = map + mapstep + 1;
-    uchar* pdst = dst.ptr();
-    for (int i = 0; i < rows; i++, pmap += mapstep, pdst += dst.step)
-    {
-        for (int j = 0; j < cols; j++)
-            pdst[j] = (uchar)-(pmap[j] >> 1);
-    }
+    parallel_for_(Range(0, dst.rows), finalPass(map, dst, mapstep), dst.total()/(double)(1<<16));
 }
 
 } // namespace cv
