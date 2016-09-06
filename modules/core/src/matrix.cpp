@@ -1392,10 +1392,10 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
-        size_t i, n = v.size();
+        size_t n = v.size();
         umv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             umv[i] = v[i].getUMat(accessFlags);
         return;
     }
@@ -1403,10 +1403,10 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
-        size_t i, n = v.size();
+        size_t n = v.size();
         umv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             umv[i] = v[i];
         return;
     }
