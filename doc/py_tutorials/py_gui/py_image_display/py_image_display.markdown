@@ -36,7 +36,7 @@ img = cv2.imread('messi5.jpg',0)
 
 **warning**
 
-Even if the image path is wrong, it won't throw any error, but print img will give you None
+Even if the image path is wrong, it won't throw any error, but `print img` will give you `None`
 
 ### Display an image
 
