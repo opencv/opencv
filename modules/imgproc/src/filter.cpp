@@ -4823,13 +4823,13 @@ struct ReplacementSepFilter : public hal::SepFilter2D
     bool isInitialized;
     ReplacementSepFilter() : ctx(0), isInitialized(false) {}
     bool init(int stype, int dtype, int ktype,
-              uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-              uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+              uchar * kernelx_data, int kernelx_len,
+              uchar * kernely_data, int kernely_len,
               int anchor_x, int anchor_y, double delta, int borderType)
     {
         int res = cv_hal_sepFilterInit(&ctx, stype, dtype, ktype,
-                                       kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                                       kernely_data, kernely_step, kernely_width, kernely_height,
+                                       kernelx_data, kernelx_len,
+                                       kernely_data, kernely_len,
                                        anchor_x, anchor_y, delta, borderType);
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
@@ -4862,14 +4862,14 @@ struct OcvSepFilter : public hal::SepFilter2D
     int src_type;
     int dst_type;
     bool init(int stype, int dtype, int ktype,
-              uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-              uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+              uchar * kernelx_data, int kernelx_len,
+              uchar * kernely_data, int kernely_len,
               int anchor_x, int anchor_y, double delta, int borderType)
     {
         src_type = stype;
         dst_type = dtype;
-        Mat kernelX(Size(kernelx_width, kernelx_height), ktype, kernelx_data, kernelx_step);
-        Mat kernelY(Size(kernely_width, kernely_height), ktype, kernely_data, kernely_step);
+        Mat kernelX(Size(kernelx_len, 1), ktype, kernelx_data);
+        Mat kernelY(Size(kernely_len, 1), ktype, kernely_data);
 
         f = createSeparableLinearFilter( stype, dtype, kernelX, kernelY,
                                          Point(anchor_x, anchor_y),
@@ -4958,15 +4958,15 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
 //---------------------------------------------------------------
 
 Ptr<SepFilter2D> SepFilter2D::create(int stype, int dtype, int ktype,
-                                     uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-                                     uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+                                     uchar * kernelx_data, int kernelx_len,
+                                     uchar * kernely_data, int kernely_len,
                                      int anchor_x, int anchor_y, double delta, int borderType)
 {
     {
         ReplacementSepFilter * impl = new ReplacementSepFilter();
         if (impl->init(stype, dtype, ktype,
-                       kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                       kernely_data, kernely_step, kernely_width, kernely_height,
+                       kernelx_data, kernelx_len,
+                       kernely_data, kernely_len,
                        anchor_x, anchor_y, delta, borderType))
         {
             return Ptr<hal::SepFilter2D>(impl);
@@ -4976,8 +4976,8 @@ Ptr<SepFilter2D> SepFilter2D::create(int stype, int dtype, int ktype,
     {
         OcvSepFilter * impl = new OcvSepFilter();
         impl->init(stype, dtype, ktype,
-                   kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                   kernely_data, kernely_step, kernely_width, kernely_height,
+                   kernelx_data, kernelx_len,
+                   kernely_data, kernely_len,
                    anchor_x, anchor_y, delta, borderType);
         return Ptr<hal::SepFilter2D>(impl);
     }
@@ -5041,11 +5041,15 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     if( (borderType & BORDER_ISOLATED) == 0 )
         src.locateROI( wsz, ofs );
 
-    CV_Assert(kernelX.type() == kernelY.type());
+    CV_Assert( kernelX.type() == kernelY.type() &&
+               (kernelX.cols == 1 || kernelX.rows == 1) &&
+               (kernelY.cols == 1 || kernelY.rows == 1) );
 
+    Mat contKernelX = kernelX.isContinuous() ? kernelX : kernelX.clone();
+    Mat contKernelY = kernelY.isContinuous() ? kernelY : kernelY.clone();
     Ptr<hal::SepFilter2D> c = hal::SepFilter2D::create(src.type(), dst.type(), kernelX.type(),
-                                                       kernelX.data, kernelX.step, kernelX.cols, kernelX.rows,
-                                                       kernelY.data, kernelY.step, kernelY.cols, kernelY.rows,
+                                                       contKernelX.data, kernelX.cols + kernelX.rows - 1,
+                                                       contKernelY.data, kernelY.cols + kernelY.rows - 1,
                                                        anchor.x, anchor.y, delta, borderType & ~BORDER_ISOLATED);
     c->apply(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
 }
