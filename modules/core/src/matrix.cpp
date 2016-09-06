@@ -4954,9 +4954,9 @@ void SparseMat::copyTo( SparseMat& m ) const
     }
     m.create( hdr->dims, hdr->size, type() );
     SparseMatConstIterator from = begin();
-    size_t i, N = nzcount(), esz = elemSize();
+    size_t N = nzcount(), esz = elemSize();
 
-    for( i = 0; i < N; i++, ++from )
+    for( size_t i = 0; i < N; i++, ++from )
     {
         const Node* n = from.node();
         uchar* to = m.newNode(n->idx, n->hashval);
