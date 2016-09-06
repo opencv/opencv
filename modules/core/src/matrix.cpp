@@ -1289,10 +1289,10 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == MAT )
     {
         const Mat& m = *(const Mat*)obj;
-        int i, n = (int)m.size[0];
+        int n = (int)m.size[0];
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( int i = 0; i < n; i++ )
             mv[i] = m.dims == 2 ? Mat(1, m.cols, m.type(), (void*)m.ptr(i)) :
                 Mat(m.dims-1, &m.size[1], m.type(), (void*)m.ptr(i), &m.step[1]);
         return;
@@ -1301,20 +1301,20 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == EXPR )
     {
         Mat m = *(const MatExpr*)obj;
-        int i, n = m.size[0];
+        int n = m.size[0];
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( int i = 0; i < n; i++ )
             mv[i] = m.row(i);
         return;
     }
 
     if( k == MATX )
     {
-        size_t i, n = sz.height, esz = CV_ELEM_SIZE(flags);
+        size_t n = sz.height, esz = CV_ELEM_SIZE(flags);
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             mv[i] = Mat(1, sz.width, CV_MAT_TYPE(flags), (uchar*)obj + esz*sz.width*i);
         return;
     }
@@ -1323,11 +1323,11 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     {
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
 
-        size_t i, n = v.size(), esz = CV_ELEM_SIZE(flags);
+        size_t n = v.size(), esz = CV_ELEM_SIZE(flags);
         int t = CV_MAT_DEPTH(flags), cn = CV_MAT_CN(flags);
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             mv[i] = Mat(1, cn, t, (void*)(&v[0] + esz*i));
         return;
     }
@@ -1341,11 +1341,11 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == STD_VECTOR_VECTOR )
     {
         const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        int i, n = (int)vv.size();
+        int n = (int)vv.size();
         int t = CV_MAT_TYPE(flags);
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( int i = 0; i < n; i++ )
         {
             const std::vector<uchar>& v = vv[i];
             mv[i] = Mat(size(i), t, (void*)&v[0]);
@@ -1356,10 +1356,10 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
-        size_t i, n = v.size();
+        size_t n = v.size();
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             mv[i] = v[i];
         return;
     }
@@ -1367,10 +1367,10 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
-        size_t i, n = v.size();
+        size_t n = v.size();
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             mv[i] = v[i].getMat(accessFlags);
         return;
     }
