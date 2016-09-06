@@ -3413,7 +3413,7 @@ reduceC_( const Mat& srcmat, Mat& dstmat )
 {
     typedef typename Op::rtype WT;
     Size size = srcmat.size();
-    int i, k, cn = srcmat.channels();
+    int cn = srcmat.channels();
     size.width *= cn;
     Op op;
 
@@ -3422,13 +3422,14 @@ reduceC_( const Mat& srcmat, Mat& dstmat )
         const T* src = srcmat.ptr<T>(y);
         ST* dst = dstmat.ptr<ST>(y);
         if( size.width == cn )
-            for( k = 0; k < cn; k++ )
+            for( int k = 0; k < cn; k++ )
                 dst[k] = src[k];
         else
         {
-            for( k = 0; k < cn; k++ )
+            for( int k = 0; k < cn; k++ )
             {
                 WT a0 = src[k], a1 = src[k+cn];
+                int i;
                 for( i = 2*cn; i <= size.width - 4*cn; i += 4*cn )
                 {
                     a0 = op(a0, (WT)src[i+k]);
