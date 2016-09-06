@@ -5001,12 +5001,12 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
         m.create( hdr->dims, hdr->size, rtype );
 
     SparseMatConstIterator from = begin();
-    size_t i, N = nzcount();
+    size_t N = nzcount();
 
     if( alpha == 1 )
     {
         ConvertData cvtfunc = getConvertElem(type(), rtype);
-        for( i = 0; i < N; i++, ++from )
+        for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
             uchar* to = hdr == m.hdr ? from.ptr : m.newNode(n->idx, n->hashval);
@@ -5016,7 +5016,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     else
     {
         ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
-        for( i = 0; i < N; i++, ++from )
+        for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
             uchar* to = hdr == m.hdr ? from.ptr : m.newNode(n->idx, n->hashval);
@@ -5038,12 +5038,12 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
     m = Scalar(beta);
 
     SparseMatConstIterator from = begin();
-    size_t i, N = nzcount();
+    size_t N = nzcount();
 
     if( alpha == 1 && beta == 0 )
     {
         ConvertData cvtfunc = getConvertElem(type(), rtype);
-        for( i = 0; i < N; i++, ++from )
+        for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
             uchar* to = m.ptr(n->idx);
@@ -5053,7 +5053,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
     else
     {
         ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
-        for( i = 0; i < N; i++, ++from )
+        for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
             uchar* to = m.ptr(n->idx);
