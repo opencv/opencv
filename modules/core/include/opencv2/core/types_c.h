@@ -318,7 +318,7 @@ enum {
     int res; \
     float temp; \
     (void)temp; \
-    asm(_asm_string : [res] "=r" (res), [temp] "=w" (temp) : [value] "w" (_value)); \
+    __asm__(_asm_string : [res] "=r" (res), [temp] "=w" (temp) : [value] "w" (_value)); \
     return res;
 // 2. version for double
 #ifdef __clang__
