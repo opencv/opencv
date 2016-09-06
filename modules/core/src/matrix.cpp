@@ -155,9 +155,9 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
     const Mat* arrays[] = { &src, &dst };
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs, 2);
-    size_t j, planesz = it.size;
+    size_t planesz = it.size;
 
-    for( j = 0; j < it.nplanes; j++, ++it )
+    for( size_t j = 0; j < it.nplanes; j++, ++it )
         memcpy(ptrs[1], ptrs[0], planesz);
 }
 
