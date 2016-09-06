@@ -3931,7 +3931,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     T* bptr;
-    int i, j, n, len;
+    int n, len;
     bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
     bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
@@ -3956,7 +3956,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
     }
 #endif
 
-    for( i = 0; i < n; i++ )
+    for( int i = 0; i < n; i++ )
     {
         T* ptr = bptr;
         if( sortRows )
@@ -3971,7 +3971,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
         }
         else
         {
-            for( j = 0; j < len; j++ )
+            for( int j = 0; j < len; j++ )
                 ptr[j] = src.ptr<T>(j)[i];
         }
 
@@ -3993,7 +3993,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 #ifdef USE_IPP_SORT
                     setIppErrorStatus();
 #endif
-                    for( j = 0; j < len/2; j++ )
+                    for( int j = 0; j < len/2; j++ )
                         std::swap(ptr[j], ptr[len-1-j]);
                 }
 #ifdef USE_IPP_SORT
@@ -4012,7 +4012,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 #endif
 
         if( !sortRows )
-            for( j = 0; j < len; j++ )
+            for( int j = 0; j < len; j++ )
                 dst.ptr<T>(j)[i] = ptr[j];
     }
 }
