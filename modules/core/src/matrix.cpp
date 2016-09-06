@@ -2948,7 +2948,7 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
                ocl_setIdentity(_m, s))
 
     Mat m = _m.getMat();
-    int i, j, rows = m.rows, cols = m.cols, type = m.type();
+    int rows = m.rows, cols = m.cols, type = m.type();
 
     if( type == CV_32FC1 )
     {
@@ -2956,9 +2956,9 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
         float val = (float)s[0];
         size_t step = m.step/sizeof(data[0]);
 
-        for( i = 0; i < rows; i++, data += step )
+        for( int i = 0; i < rows; i++, data += step )
         {
-            for( j = 0; j < cols; j++ )
+            for( int j = 0; j < cols; j++ )
                 data[j] = 0;
             if( i < cols )
                 data[i] = val;
@@ -2970,9 +2970,9 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
         double val = s[0];
         size_t step = m.step/sizeof(data[0]);
 
-        for( i = 0; i < rows; i++, data += step )
+        for( int i = 0; i < rows; i++, data += step )
         {
-            for( j = 0; j < cols; j++ )
+            for( int j = 0; j < cols; j++ )
                 data[j] = j == i ? val : 0;
         }
     }
