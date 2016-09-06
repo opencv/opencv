@@ -5230,13 +5230,13 @@ void SparseMat::resizeHashTab(size_t newsize)
     if((newsize & (newsize-1)) != 0)
         newsize = (size_t)1 << cvCeil(std::log((double)newsize)/CV_LOG2);
 
-    size_t i, hsize = hdr->hashtab.size();
+    size_t hsize = hdr->hashtab.size();
     std::vector<size_t> _newh(newsize);
     size_t* newh = &_newh[0];
-    for( i = 0; i < newsize; i++ )
+    for( size_t i = 0; i < newsize; i++ )
         newh[i] = 0;
     uchar* pool = &hdr->pool[0];
-    for( i = 0; i < hsize; i++ )
+    for( size_t i = 0; i < hsize; i++ )
     {
         size_t nidx = hdr->hashtab[i];
         while( nidx )
