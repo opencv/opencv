@@ -44,6 +44,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 using namespace cv;
 using namespace std;
@@ -315,6 +316,7 @@ string ext_from_int(int ext)
 #ifdef HAVE_TIFF
     if (ext == 3) return ".tiff";
 #endif
+    if (ext == 4) return ".pam";
     return "";
 }
 
@@ -330,7 +332,7 @@ public:
 
             for (int k = 1; k <= 5; ++k)
             {
-                for (int ext = 0; ext < 4; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
+                for (int ext = 0; ext < 5; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
                 {
                     if(ext_from_int(ext).empty())
                         continue;
@@ -1036,4 +1038,28 @@ TEST(Imgcodecs_Hdr, regression)
         minMaxLoc(abs(img_rle - written_img), &min, &max);
         ASSERT_FALSE(max > DBL_EPSILON);
     }
+}
+
+TEST(Imgcodecs_Pam, readwrite)
+{
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "readwrite/";
+    string filepath = folder + "lena.pam";
+
+    cv::Mat img = cv::imread(filepath);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_PAM_TUPLETYPE);
+    params.push_back(IMWRITE_PAM_FORMAT_RGB);
+
+    string writefile = cv::tempfile(".pam");
+    EXPECT_NO_THROW(cv::imwrite(writefile, img, params));
+    cv::Mat reread = cv::imread(writefile);
+
+    string writefile_no_param = cv::tempfile(".pam");
+    EXPECT_NO_THROW(cv::imwrite(writefile_no_param, img));
+    cv::Mat reread_no_param = cv::imread(writefile_no_param);
+
+    EXPECT_EQ(0, cvtest::norm(reread, reread_no_param, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(img, reread, NORM_INF));
 }
