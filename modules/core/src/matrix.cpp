@@ -579,8 +579,8 @@ static Mat cvMatNDToMat(const CvMatND* m, bool copyData)
     int _sizes[CV_MAX_DIM];
     size_t _steps[CV_MAX_DIM];
 
-    int i, d = m->dims;
-    for( i = 0; i < d; i++ )
+    int d = m->dims;
+    for( int i = 0; i < d; i++ )
     {
         _sizes[i] = m->dim[i].size;
         _steps[i] = m->dim[i].step;
