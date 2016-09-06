@@ -4915,13 +4915,13 @@ SparseMat::SparseMat(const Mat& m)
 
 void SparseMat::create(int d, const int* _sizes, int _type)
 {
-    int i;
     CV_Assert( _sizes && 0 < d && d <= CV_MAX_DIM );
-    for( i = 0; i < d; i++ )
+    for( int i = 0; i < d; i++ )
         CV_Assert( _sizes[i] > 0 );
     _type = CV_MAT_TYPE(_type);
     if( hdr && _type == type() && hdr->dims == d && hdr->refcount == 1 )
     {
+        int i;
         for( i = 0; i < d; i++ )
             if( _sizes[i] != hdr->size[i] )
                 break;
@@ -4934,7 +4934,7 @@ void SparseMat::create(int d, const int* _sizes, int _type)
     int _sizes_backup[CV_MAX_DIM]; // #5991
     if (_sizes == hdr->size)
     {
-        for(i = 0; i < d; i++ )
+        for(int i = 0; i < d; i++ )
             _sizes_backup[i] = _sizes[i];
         _sizes = _sizes_backup;
     }
