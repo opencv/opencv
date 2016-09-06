@@ -4697,7 +4697,7 @@ void MatConstIterator::seek(ptrdiff_t ofs, bool relative)
 
 void MatConstIterator::seek(const int* _idx, bool relative)
 {
-    int i, d = m->dims;
+    int d = m->dims;
     ptrdiff_t ofs = 0;
     if( !_idx )
         ;
@@ -4705,7 +4705,7 @@ void MatConstIterator::seek(const int* _idx, bool relative)
         ofs = _idx[0]*m->size[1] + _idx[1];
     else
     {
-        for( i = 0; i < d; i++ )
+        for( int i = 0; i < d; i++ )
             ofs = ofs*m->size[i] + _idx[i];
     }
     seek(ofs, relative);
