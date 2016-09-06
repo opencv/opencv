@@ -4053,14 +4053,12 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     AutoBuffer<int> ibuf;
-    T* bptr;
-    int* _iptr;
-    int i, j, n, len;
     bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
     bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
 
     CV_Assert( src.data != dst.data );
 
+    int n, len;
     if( sortRows )
         n = src.rows, len = src.cols;
     else
@@ -4069,8 +4067,8 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         buf.allocate(len);
         ibuf.allocate(len);
     }
-    bptr = (T*)buf;
-    _iptr = (int*)ibuf;
+    T* bptr = (T*)buf;
+    int* _iptr = (int*)ibuf;
 
 #if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
     int depth = src.depth();
@@ -4083,7 +4081,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
     }
 #endif
 
-    for( i = 0; i < n; i++ )
+    for( int i = 0; i < n; i++ )
     {
         T* ptr = bptr;
         int* iptr = _iptr;
@@ -4095,10 +4093,10 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         }
         else
         {
-            for( j = 0; j < len; j++ )
+            for( int j = 0; j < len; j++ )
                 ptr[j] = src.ptr<T>(j)[i];
         }
-        for( j = 0; j < len; j++ )
+        for( int j = 0; j < len; j++ )
             iptr[j] = j;
 
 #if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
@@ -4118,7 +4116,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
                     setIppErrorStatus();
 #endif
-                    for( j = 0; j < len/2; j++ )
+                    for( int j = 0; j < len/2; j++ )
                         std::swap(iptr[j], iptr[len-1-j]);
                 }
 #if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
@@ -4137,7 +4135,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #endif
 
         if( !sortRows )
-            for( j = 0; j < len; j++ )
+            for( int j = 0; j < len; j++ )
                 dst.ptr<int>(j)[i] = iptr[j];
     }
 }
