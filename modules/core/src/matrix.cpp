@@ -3081,12 +3081,11 @@ transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
 template<typename T> static void
 transposeI_( uchar* data, size_t step, int n )
 {
-    int i, j;
-    for( i = 0; i < n; i++ )
+    for( int i = 0; i < n; i++ )
     {
         T* row = (T*)(data + step*i);
         uchar* data1 = data + i*sizeof(T);
-        for( j = i+1; j < n; j++ )
+        for( int j = i+1; j < n; j++ )
             std::swap( row[j], *(T*)(data1 + step*j) );
     }
 }
