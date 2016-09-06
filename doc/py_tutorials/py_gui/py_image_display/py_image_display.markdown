@@ -36,7 +36,7 @@ img = cv2.imread('messi5.jpg',0)
 
 **warning**
 
-Even if the image path is wrong, it won't throw any error, but print img will give you None
+Even if the image path is wrong, it won't throw any error, but `print img` will give you `None`
 
 ### Display an image
 
@@ -109,8 +109,8 @@ elif k == ord('s'): # wait for 's' key to save and exit
 
 **warning**
 
-If you are using a 64-bit machine, you will have to modify k = cv2.waitKey(0) line as follows :
-k = cv2.waitKey(0) & 0xFF
+If you are using a 64-bit machine, you will have to modify `k = cv2.waitKey(0)` line as follows :
+`k = cv2.waitKey(0) & 0xFF`
 
 Using Matplotlib
 ----------------
