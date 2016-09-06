@@ -108,9 +108,9 @@ void MatAllocator::upload(UMatData* u, const void* srcptr, int dims, const size_
     {
         CV_Assert( sz[i] <= (size_t)INT_MAX );
         if( sz[i] == 0 )
-        return;
+            return;
         if( dstofs )
-        dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+            dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
         isz[i] = (int)sz[i];
     }
 
@@ -120,9 +120,9 @@ void MatAllocator::upload(UMatData* u, const void* srcptr, int dims, const size_
     const Mat* arrays[] = { &src, &dst };
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs, 2);
-    size_t j, planesz = it.size;
+    size_t planesz = it.size;
 
-    for( j = 0; j < it.nplanes; j++, ++it )
+    for( size_t j = 0; j < it.nplanes; j++, ++it )
         memcpy(ptrs[1], ptrs[0], planesz);
 }
 
