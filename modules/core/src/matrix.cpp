@@ -2862,8 +2862,7 @@ void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
     }
 
     int totalRows = 0, rows = 0;
-    size_t i;
-    for( i = 0; i < nsrc; i++ )
+    for( size_t i = 0; i < nsrc; i++ )
     {
         CV_Assert(src[i].dims <= 2 &&
                   src[i].cols == src[0].cols &&
@@ -2872,7 +2871,7 @@ void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
     }
     _dst.create( totalRows, src[0].cols, src[0].type());
     Mat dst = _dst.getMat();
-    for( i = 0; i < nsrc; i++ )
+    for( size_t i = 0; i < nsrc; i++ )
     {
         Mat dpart(dst, Rect(0, rows, src[i].cols, src[i].rows));
         src[i].copyTo(dpart);
