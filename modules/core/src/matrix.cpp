@@ -4972,9 +4972,9 @@ void SparseMat::copyTo( Mat& m ) const
     m = Scalar(0);
 
     SparseMatConstIterator from = begin();
-    size_t i, N = nzcount(), esz = elemSize();
+    size_t N = nzcount(), esz = elemSize();
 
-    for( i = 0; i < N; i++, ++from )
+    for( size_t i = 0; i < N; i++, ++from )
     {
         const Node* n = from.node();
         copyElem( from.ptr, (ndims > 1 ? m.ptr(n->idx) : m.ptr(n->idx[0])), esz);
