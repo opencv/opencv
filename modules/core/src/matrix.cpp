@@ -2991,7 +2991,7 @@ cv::Scalar cv::trace( InputArray _m )
 
     Mat m = _m.getMat();
     CV_Assert( m.dims <= 2 );
-    int i, type = m.type();
+    int type = m.type();
     int nm = std::min(m.rows, m.cols);
 
     if( type == CV_32FC1 )
@@ -2999,7 +2999,7 @@ cv::Scalar cv::trace( InputArray _m )
         const float* ptr = m.ptr<float>();
         size_t step = m.step/sizeof(ptr[0]) + 1;
         double _s = 0;
-        for( i = 0; i < nm; i++ )
+        for( int i = 0; i < nm; i++ )
             _s += ptr[i*step];
         return _s;
     }
@@ -3009,7 +3009,7 @@ cv::Scalar cv::trace( InputArray _m )
         const double* ptr = m.ptr<double>();
         size_t step = m.step/sizeof(ptr[0]) + 1;
         double _s = 0;
-        for( i = 0; i < nm; i++ )
+        for( int i = 0; i < nm; i++ )
             _s += ptr[i*step];
         return _s;
     }
