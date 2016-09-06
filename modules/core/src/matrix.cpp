@@ -301,8 +301,7 @@ static inline void setSize( Mat& m, int _dims, const int* _sz,
         return;
 
     size_t esz = CV_ELEM_SIZE(m.flags), esz1 = CV_ELEM_SIZE1(m.flags), total = esz;
-    int i;
-    for( i = _dims-1; i >= 0; i-- )
+    for( int i = _dims-1; i >= 0; i-- )
     {
         int s = _sz[i];
         CV_Assert( s >= 0 );
