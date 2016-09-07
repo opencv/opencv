@@ -328,7 +328,10 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
         get_target_property(_sources ${_targetName} SOURCES)
         foreach(src ${_sources})
-          if(NOT "${src}" MATCHES "\\.mm$")
+          if(NOT "${src}" MATCHES "\\.mm$"
+               AND NOT "${src}" MATCHES "\\.h$" AND NOT "${src}" MATCHES "\\.hpp$" # header files
+               AND NOT "${src}" MATCHES "^\$" # CMake generator expressions
+          )
             get_source_file_property(oldProps "${src}" COMPILE_FLAGS)
             if(NOT oldProps)
               set(newProperties "/Yu\"${_input}\" /FI\"${_input}\"")
