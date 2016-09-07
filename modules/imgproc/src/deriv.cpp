@@ -307,7 +307,7 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
 {
     CV_INSTRUMENT_REGION_IPP()
 
-    if ((borderType != BORDER_REPLICATE) || ((3 != ksize) && (5 != ksize)))
+    if (((borderType & ~BORDER_ISOLATED) != BORDER_REPLICATE) || ((3 != ksize) && (5 != ksize)))
         return false;
     if (fabs(delta) > FLT_EPSILON)
         return false;
@@ -317,6 +317,10 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
     int bufSize = 0;
     cv::AutoBuffer<char> buffer;
     Mat src = _src.getMat(), dst = _dst.getMat();
+
+    if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
+        return false;
+
     if ( ddepth < 0 )
         ddepth = src.depth();
 
