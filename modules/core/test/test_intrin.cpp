@@ -1,3 +1,4 @@
+#include "test_precomp.hpp"
 #include "test_intrin_utils.hpp"
 #include <climits>
 
@@ -710,6 +711,49 @@ template<typename R> struct TheTest
         return *this;
     }
 
+#if CV_FP16
+    TheTest & test_loadstore_fp16()
+    {
+        AlignedData<R> data;
+        AlignedData<R> out;
+
+        // check if addresses are aligned and unaligned respectively
+        EXPECT_EQ((size_t)0, (size_t)&data.a.d % 16);
+        EXPECT_NE((size_t)0, (size_t)&data.u.d % 16);
+        EXPECT_EQ((size_t)0, (size_t)&out.a.d % 16);
+        EXPECT_NE((size_t)0, (size_t)&out.u.d % 16);
+
+        // check some initialization methods
+        R r1 = data.u;
+        R r2 = v_load_f16(data.a.d);
+        R r3(r2);
+        EXPECT_EQ(data.u[0], r1.get0());
+        EXPECT_EQ(data.a[0], r2.get0());
+        EXPECT_EQ(data.a[0], r3.get0());
+
+        // check some store methods
+        out.a.clear();
+        v_store_f16(out.a.d, r1);
+        EXPECT_EQ(data.a, out.a);
+
+        return *this;
+    }
+
+    TheTest & test_float_cvt_fp16()
+    {
+        AlignedData<v_float32x4> data;
+
+        // check conversion
+        v_float32x4 r1 = v_load(data.a.d);
+        v_float16x4 r2 = v_cvt_f16(r1);
+        v_float32x4 r3 = v_cvt_f32(r2);
+        EXPECT_EQ(0x3c00, r2.get0());
+        EXPECT_EQ(r3.get0(), r1.get0());
+
+        return *this;
+    }
+#endif
+
 };
 
 
@@ -911,6 +955,15 @@ TEST(hal_intrin, float64x2) {
         .test_unpack()
         .test_float_math()
         .test_float_cvt32()
+        ;
+}
+#endif
+
+#if CV_FP16
+TEST(hal_intrin, float16x4) {
+    TheTest<v_float16x4>()
+        .test_loadstore_fp16()
+        .test_float_cvt_fp16()
         ;
 }
 #endif
