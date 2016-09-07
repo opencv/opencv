@@ -35,7 +35,7 @@ int main(int, char**)
     Mat state(2, 1, CV_32F); /* (phi, delta_phi) */
     Mat processNoise(2, 1, CV_32F);
     Mat measurement = Mat::zeros(1, 1, CV_32F);
-    char code = (char)-1;
+    char code = 0;
 
     for(;;)
     {
@@ -89,7 +89,7 @@ int main(int, char**)
             state = KF.transitionMatrix*state + processNoise;
 
             imshow( "Kalman", img );
-            code = (char)waitKey(100);
+            code = waitChar(100);
 
             if( code > 0 )
                 break;

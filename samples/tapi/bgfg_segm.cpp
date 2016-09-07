@@ -105,7 +105,7 @@ int main(int argc, const char** argv)
         imshow("foreground mask", fgmask);
         imshow("foreground image", fgimg);
 
-        char key = (char)waitKey(30);
+        char key = waitChar(30);
 
         switch (key)
         {

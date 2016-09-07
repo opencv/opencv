@@ -56,19 +56,19 @@ class App:
 
     def run(self):
         while cv2.getWindowProperty('img', 0) != -1 or cv2.getWindowProperty('watershed', 0) != -1:
-            ch = 0xFF & cv2.waitKey(50)
+            ch = cv2.waitChar(50)
             if ch == 27:
                 break
-            if ch >= ord('1') and ch <= ord('7'):
-                self.cur_marker = ch - ord('0')
+            if ch >= '1' and ch <= '7':
+                self.cur_marker = ch - '0'
                 print('marker: ', self.cur_marker)
-            if ch == ord(' ') or (self.sketch.dirty and self.auto_update):
+            if ch == ' ' or (self.sketch.dirty and self.auto_update):
                 self.watershed()
                 self.sketch.dirty = False
-            if ch in [ord('a'), ord('A')]:
+            if ch in ['a', 'A']:
                 self.auto_update = not self.auto_update
                 print('auto_update if', ['off', 'on'][self.auto_update])
-            if ch in [ord('r'), ord('R')]:
+            if ch in ['r', 'R']:
                 self.markers[:] = 0
                 self.markers_vis[:] = self.img
                 self.sketch.show()

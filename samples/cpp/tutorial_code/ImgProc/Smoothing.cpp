@@ -95,7 +95,7 @@ int display_caption( const char* caption )
            FONT_HERSHEY_COMPLEX, 1, Scalar(255, 255, 255) );
 
   imshow( window_name, dst );
-  int c = waitKey( DELAY_CAPTION );
+  char c = waitChar( DELAY_CAPTION );
   if( c >= 0 ) { return -1; }
   return 0;
 }
@@ -106,7 +106,7 @@ int display_caption( const char* caption )
 int display_dst( int delay )
 {
   imshow( window_name, dst );
-  int c = waitKey ( delay );
+  char c = waitChar( delay );
   if( c >= 0 ) { return -1; }
   return 0;
 }

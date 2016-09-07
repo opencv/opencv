@@ -84,29 +84,29 @@ if __name__ == '__main__':
 
     cv2.imshow('image',im)
     while True:
-        k = cv2.waitKey(0)&0xFF
-        if k == ord('a'):
+        k = cv2.waitChar(0)
+        if k == 'a':
             curve = hist_curve(im)
             cv2.imshow('histogram',curve)
             cv2.imshow('image',im)
             print('a')
-        elif k == ord('b'):
+        elif k == 'b':
             print('b')
             lines = hist_lines(im)
             cv2.imshow('histogram',lines)
             cv2.imshow('image',gray)
-        elif k == ord('c'):
+        elif k == 'c':
             print('c')
             equ = cv2.equalizeHist(gray)
             lines = hist_lines(equ)
             cv2.imshow('histogram',lines)
             cv2.imshow('image',equ)
-        elif k == ord('d'):
+        elif k == 'd':
             print('d')
             curve = hist_curve(gray)
             cv2.imshow('histogram',curve)
             cv2.imshow('image',gray)
-        elif k == ord('e'):
+        elif k == 'e':
             print('e')
             norm = cv2.normalize(gray, gray, alpha = 0,beta = 255,norm_type = cv2.NORM_MINMAX)
             lines = hist_lines(norm)

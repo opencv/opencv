@@ -68,7 +68,7 @@ int main( int /*argc*/, char** /*argv*/ )
 
         imshow("clusters", img);
 
-        char key = (char)waitKey();
+        char key = waitChar();
         if( key == 27 || key == 'q' || key == 'Q' ) // 'ESC'
             break;
     }

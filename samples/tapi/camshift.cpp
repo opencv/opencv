@@ -193,7 +193,7 @@ int main(int argc, const char ** argv)
         if (showHist)
             cv::imshow("Histogram", histimg);
 
-        char c = (char)cv::waitKey(10);
+        char c = cv::waitChar(10);
         if (c == 27)
             break;
 

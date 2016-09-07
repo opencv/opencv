@@ -58,7 +58,7 @@ void run()
         if (!quietMode)
         {
             imshow("stabilizedFrame", stabilizedFrame);
-            char key = static_cast<char>(waitKey(3));
+            char key = waitChar(3);
             if (key == 27) { cout << endl; break; }
         }
     }

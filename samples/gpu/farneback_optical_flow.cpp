@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 
         imshow("flow", image);
 
-        char ch = (char)waitKey(3);
+        char ch = waitChar(3);
         if (ch == 27)
             running = false;
         else if (ch == 'm' || ch == 'M')

@@ -81,7 +81,7 @@ int App::run()
         OpenClose();
         ErodeDilate();
 
-        char c = (char) waitKey();
+        char c = waitChar();
 
         switch (c)
         {

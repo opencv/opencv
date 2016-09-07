@@ -348,7 +348,7 @@ int main(int argc, const char** argv)
         imshow(wndTitle, frameDisp);
 
         //handle input
-        switch (cv::waitKey(3))
+        switch (cv::waitChar(3))
         {
         case ' ':
             bUseGPU = !bUseGPU;

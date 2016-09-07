@@ -122,9 +122,9 @@ if __name__ == '__main__':
     update(None)
 
     while True:
-        ch = cv2.waitKey() & 0xFF
+        ch = cv2.waitChar()
         if ch == 27:
             break
-        if ch == ord(' '):
+        if ch == ' ':
             defocus = not defocus
             update(None)

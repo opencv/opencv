@@ -122,7 +122,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
                 double sf = 640./MAX(img.rows, img.cols);
                 resize(cimg, cimg1, Size(), sf, sf);
                 imshow("corners", cimg1);
-                char c = (char)waitKey(500);
+                char c = waitChar(500);
                 if( c == 27 || c == 'q' || c == 'Q' ) //Allow ESC to quit
                     exit(-1);
             }
@@ -320,7 +320,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
             for( j = 0; j < canvas.cols; j += 16 )
                 line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
         imshow("rectified", canvas);
-        char c = (char)waitKey();
+        char c = waitChar();
         if( c == 27 || c == 'q' || c == 'Q' )
             break;
     }

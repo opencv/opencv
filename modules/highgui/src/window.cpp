@@ -198,6 +198,15 @@ int cv::waitKey(int delay)
     return cvWaitKey(delay);
 }
 
+char cv::waitChar(int delay){
+#if CHAR_MIN==SCHAR_MIN
+    int intKey = cv::waitKey(delay) & 0xFF;
+    return (char)(intKey & 0x80 ? intKey - 0x100 : intKey);
+#else
+    return (char)(cv::waitKey(delay) & 0xff);
+#endif
+}
+
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)

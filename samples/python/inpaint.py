@@ -41,13 +41,13 @@ if __name__ == '__main__':
     sketch = Sketcher('img', [img_mark, mark], lambda : ((255, 255, 255), 255))
 
     while True:
-        ch = 0xFF & cv2.waitKey()
+        ch = cv2.waitChar()
         if ch == 27:
             break
-        if ch == ord(' '):
+        if ch == ' ':
             res = cv2.inpaint(img_mark, mark, 3, cv2.INPAINT_TELEA)
             cv2.imshow('inpaint', res)
-        if ch == ord('r'):
+        if ch == 'r':
             img_mark[:] = img
             mark[:] = 0
             sketch.show()

@@ -182,7 +182,7 @@ int main(int argc, const char* argv[])
                 drawArrows(frameCopy, pts, nextPts, status, Scalar(255, 0, 0));
                 imshow("PyrLK [Sparse]", frameCopy);
             }
-            char key = (char)waitKey(10);
+            char key = waitChar(10);
 
             if (key == 27)
                 break;

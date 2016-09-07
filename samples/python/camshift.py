@@ -110,10 +110,10 @@ class App(object):
 
             cv2.imshow('camshift', vis)
 
-            ch = 0xFF & cv2.waitKey(5)
+            ch = cv2.waitChar(5)
             if ch == 27:
                 break
-            if ch == ord('b'):
+            if ch == 'b':
                 self.show_backproj = not self.show_backproj
         cv2.destroyAllWindows()
 

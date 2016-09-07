@@ -66,14 +66,14 @@ if __name__ == '__main__':
     cv2.createTrackbar('hi', 'floodfill', 20, 255, update)
 
     while True:
-        ch = 0xFF & cv2.waitKey()
+        ch = cv2.waitChar()
         if ch == 27:
             break
-        if ch == ord('f'):
+        if ch == 'f':
             fixed_range = not fixed_range
             print('using %s range' % ('floating', 'fixed')[fixed_range])
             update()
-        if ch == ord('c'):
+        if ch == 'c':
             connectivity = 12-connectivity
             print('connectivity =', connectivity)
             update()

@@ -71,7 +71,7 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        char c = (char)waitKey();
+        char c = waitChar();
 
         if( c == 27 )
             break;

@@ -72,7 +72,7 @@ int main( int /*argc*/, char** /*argv*/ )
 
         imshow( "Rectangle, triangle & circle", img );
 
-        char key = (char)waitKey();
+        char key = waitChar();
         if( key == 27 || key == 'q' || key == 'Q' ) // 'ESC'
             break;
     }

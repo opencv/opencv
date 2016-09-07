@@ -94,7 +94,7 @@ int main(int argc, char** argv)
 
         imshow("CLAHE", outframe);
 
-        char key = (char)waitKey(3);
+        char key = waitChar(3);
         if(key == 'o')
             imwrite(outfile, outframe);
         else if(key == 27)

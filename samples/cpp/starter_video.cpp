@@ -50,7 +50,7 @@ namespace {
                 break;
 
             imshow(window_name, frame);
-            char key = (char)waitKey(30); //delay N millis, usually long enough to display and capture input
+            char key = waitChar(30); //delay N millis, usually long enough to display and capture input
 
             switch (key) {
             case 'q':

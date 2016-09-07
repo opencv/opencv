@@ -50,7 +50,7 @@ int main()
 
         imshow("Result", d_res);
 
-        char key = static_cast<char>(waitKey());
+        char key = waitChar();
 
         if (key == 27)
             break;
