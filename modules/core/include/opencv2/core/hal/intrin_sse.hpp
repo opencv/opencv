@@ -252,6 +252,26 @@ struct v_float64x2
     __m128d val;
 };
 
+#if defined(HAVE_FP16)
+struct v_float16x4
+{
+    typedef short lane_type;
+    enum { nlanes = 4 };
+
+    v_float16x4() {}
+    explicit v_float16x4(__m128i v) : val(v) {}
+    v_float16x4(short v0, short v1, short v2, short v3)
+    {
+        val = _mm_setr_epi16(v0, v1, v2, v3, 0, 0, 0, 0);
+    }
+    short get0() const
+    {
+        return (short)_mm_cvtsi128_si32(val);
+    }
+    __m128i val;
+};
+#endif
+
 #define OPENCV_HAL_IMPL_SSE_INITVEC(_Tpvec, _Tp, suffix, zsuffix, ssuffix, _Tps, cast) \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(_mm_setzero_##zsuffix()); } \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(_mm_set1_##ssuffix((_Tps)v)); } \
@@ -1021,6 +1041,13 @@ inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
 OPENCV_HAL_IMPL_SSE_LOADSTORE_FLT_OP(v_float32x4, float, ps)
 OPENCV_HAL_IMPL_SSE_LOADSTORE_FLT_OP(v_float64x2, double, pd)
 
+#if defined(HAVE_FP16)
+inline v_float16x4 v_load_f16(const short* ptr)
+{ return v_float16x4(_mm_loadl_epi64((const __m128i*)ptr)); }
+inline void v_store_f16(short* ptr, v_float16x4& a)
+{ _mm_storel_epi64((__m128i*)ptr, a.val); }
+#endif
+
 #define OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(_Tpvec, scalartype, func, scalar_func) \
 inline scalartype v_reduce_##func(const _Tpvec& a) \
 { \
@@ -1625,6 +1652,18 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 {
     return v_float64x2(_mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(a.val),8))));
 }
+
+#if defined(HAVE_FP16)
+inline v_float32x4 v_cvt_f32(const v_float16x4& a)
+{
+    return v_float32x4(_mm_cvtph_ps(a.val));
+}
+
+inline v_float16x4 v_cvt_f16(const v_float32x4& a)
+{
+    return v_float16x4(_mm_cvtps_ph(a.val, 0));
+}
+#endif
 
 //! @endcond
 

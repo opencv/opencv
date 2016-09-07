@@ -275,6 +275,39 @@ struct v_float64x2
 };
 #endif
 
+#if defined (HAVE_FP16)
+// Workaround for old comiplers
+template <typename T> static inline int16x4_t vreinterpret_s16_f16(T a)
+{ return (int16x4_t)a; }
+template <typename T> static inline float16x4_t vreinterpret_f16_s16(T a)
+{ return (float16x4_t)a; }
+template <typename T> static inline float16x4_t vld1_f16(const T* ptr)
+{ return vreinterpret_f16_s16(vld1_s16((const short*)ptr)); }
+template <typename T> static inline void vst1_f16(T* ptr, float16x4_t a)
+{ vst1_s16((short*)ptr, vreinterpret_s16_f16(a)); }
+static inline short vget_lane_f16(float16x4_t a, int b)
+{ return vget_lane_s16(vreinterpret_s16_f16(a), b); }
+
+struct v_float16x4
+{
+    typedef short lane_type;
+    enum { nlanes = 4 };
+
+    v_float16x4() {}
+    explicit v_float16x4(float16x4_t v) : val(v) {}
+    v_float16x4(short v0, short v1, short v2, short v3)
+    {
+        short v[] = {v0, v1, v2, v3};
+        val = vld1_f16(v);
+    }
+    short get0() const
+    {
+        return vget_lane_f16(val, 0);
+    }
+    float16x4_t val;
+};
+#endif
+
 #define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, suffix) \
 inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
 inline v_##_Tpv v_setall_##suffix(_Tp v) { return v_##_Tpv(vdupq_n_##suffix(v)); } \
@@ -734,6 +767,14 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
 #endif
 
+#if defined (HAVE_FP16)
+// Workaround for old comiplers
+inline v_float16x4 v_load_f16(const short* ptr)
+{ return v_float16x4(vld1_f16(ptr)); }
+inline void v_store_f16(short* ptr, v_float16x4& a)
+{ vst1_f16(ptr, a.val); }
+#endif
+
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(_Tpvec, scalartype, func, scalar_func) \
 inline scalartype v_reduce_##func(const _Tpvec& a) \
 { \
@@ -1146,7 +1187,17 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 }
 #endif
 
+#if defined (HAVE_FP16)
+inline v_float32x4 v_cvt_f32(const v_float16x4& a)
+{
+    return v_float32x4(vcvt_f32_f16(a.val));
+}
 
+inline v_float16x4 v_cvt_f16(const v_float32x4& a)
+{
+    return v_float16x4(vcvt_f16_f32(a.val));
+}
+#endif
 
 //! @endcond
 

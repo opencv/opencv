@@ -4537,16 +4537,6 @@ static short convertFp16SW(float fp32)
 }
 #endif
 
-#if CV_FP16 && (defined __GNUC__) && (defined __arm__ || defined __aarch64__)
-    #if 5 <= __GNUC__
-    static inline float16x4_t load_f16(const short* p) { return vld1_f16((const float16_t*)p); }
-    static inline void store_f16(short* p, float16x4_t v) { vst1_f16((float16_t*)p, v); }
-    #else
-    static inline float16x4_t load_f16(const short* p) { return (float16x4_t)vld1_s16(p); }
-    static inline void store_f16(short* p, float16x4_t v) { vst1_s16(p, (int16x4_t)v); }
-    #endif
-#endif
-
 // template for FP16 HW conversion function
 template<typename T, typename DT> static void
 cvtScaleHalf_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size);
@@ -4570,21 +4560,11 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
 #if CV_FP16
                 for ( ; x <= size.width - 4; x += 4)
                 {
-#if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
-                    __m128 v_src = _mm_loadu_ps(src + x);
+                    v_float32x4 v_src = v_load(src + x);
 
-                    __m128i v_dst = _mm_cvtps_ph(v_src, 0);
+                    v_float16x4 v_dst = v_cvt_f16(v_src);
 
-                    _mm_storel_epi64((__m128i *)(dst + x), v_dst);
-#elif defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-                    float32x4_t v_src = vld1q_f32(src + x);
-
-                    float16x4_t v_dst = vcvt_f16_f32(v_src);
-
-                    store_f16(dst + x, v_dst);
-#else
-#error "Configuration error"
-#endif
+                    v_store_f16(dst + x, v_dst);
                 }
 #endif
             }
@@ -4626,21 +4606,11 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 #if CV_FP16
                 for ( ; x <= size.width - 4; x += 4)
                 {
-#if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
-                    __m128i v_src = _mm_loadl_epi64((__m128i*)(src+x));
+                    v_float16x4 v_src = v_load_f16(src + x);
 
-                    __m128 v_dst = _mm_cvtph_ps(v_src);
+                    v_float32x4 v_dst = v_cvt_f32(v_src);
 
-                    _mm_storeu_ps(dst + x, v_dst);
-#elif defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-                    float16x4_t v_src = load_f16(src+x);
-
-                    float32x4_t v_dst = vcvt_f32_f16(v_src);
-
-                    vst1q_f32(dst + x, v_dst);
-#else
-#error "Configuration error"
-#endif
+                    v_store(dst + x, v_dst);
                 }
 #endif
             }
