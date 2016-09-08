@@ -846,7 +846,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 #ifdef HAVE_OPENCL
     if (opencl_ON)
     {
-        CV_OCL_RUN(opencl_ON, ocl_apply(_image, _fgmask, learningRate))
+        CV_OCL_RUN(_image.isUMat(), ocl_apply(_image, _fgmask, learningRate))
 
         opencl_ON = false;
         initialize(_image.size(), _image.type());
