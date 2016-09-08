@@ -1260,7 +1260,7 @@ CvSeq;
 /** @brief Set
   Order is not preserved. There can be gaps between sequence elements.
   After the element has been inserted it stays in the same place all the time.
-  The MSB(most-significant or sign bit) of the first field (flags) is 0 iff the element exists.
+  The MSB(most-significant or sign bit) of the first field (flags) is 0 if the element exists.
 */
 #define CV_SET_ELEM_FIELDS(elem_type)   \
     int  flags;                         \

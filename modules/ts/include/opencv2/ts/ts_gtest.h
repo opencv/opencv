@@ -434,7 +434,7 @@
 #  include <android/api-level.h>  // NOLINT
 #endif
 
-// Defines this to true iff Google Test can use POSIX regular expressions.
+// Defines this to true if Google Test can use POSIX regular expressions.
 #ifndef GTEST_HAS_POSIX_RE
 # if GTEST_OS_LINUX_ANDROID
 // On Android, <regex.h> is only available starting with Froyo.
@@ -483,7 +483,7 @@
 #  endif  // _HAS_EXCEPTIONS
 #  define GTEST_HAS_EXCEPTIONS _HAS_EXCEPTIONS
 # elif defined(__GNUC__) && __EXCEPTIONS
-// gcc defines __EXCEPTIONS to 1 iff exceptions are enabled.
+// gcc defines __EXCEPTIONS to 1 if exceptions are enabled.
 #  define GTEST_HAS_EXCEPTIONS 1
 # elif defined(__SUNPRO_CC)
 // Sun Pro CC supports exceptions.  However, there is no compile-time way of
@@ -491,7 +491,7 @@
 // they are enabled unless the user tells us otherwise.
 #  define GTEST_HAS_EXCEPTIONS 1
 # elif defined(__IBMCPP__) && __EXCEPTIONS
-// xlC defines __EXCEPTIONS to 1 iff exceptions are enabled.
+// xlC defines __EXCEPTIONS to 1 if exceptions are enabled.
 #  define GTEST_HAS_EXCEPTIONS 1
 # elif defined(__HP_aCC)
 // Exception handling is in effect by default in HP aCC compiler. It has to
@@ -549,13 +549,13 @@
 
 # ifdef _MSC_VER
 
-#  ifdef _CPPRTTI  // MSVC defines this macro iff RTTI is enabled.
+#  ifdef _CPPRTTI  // MSVC defines this macro if RTTI is enabled.
 #   define GTEST_HAS_RTTI 1
 #  else
 #   define GTEST_HAS_RTTI 0
 #  endif
 
-// Starting with version 4.3.2, gcc defines __GXX_RTTI iff RTTI is enabled.
+// Starting with version 4.3.2, gcc defines __GXX_RTTI if RTTI is enabled.
 # elif defined(__GNUC__) && (GTEST_GCC_VER_ >= 40302)
 
 #  ifdef __GXX_RTTI
@@ -825,7 +825,7 @@ struct AddRef<T&> { typedef T& type; };  // NOLINT
 template <int k> class Get;
 
 // A helper for implementing tuple_element<k, T>.  kIndexValid is true
-// iff k < the number of fields in tuple type T.
+// if k < the number of fields in tuple type T.
 template <bool kIndexValid, int kIndex, class Tuple>
 struct TupleElement;
 
@@ -2102,9 +2102,9 @@ class GTEST_API_ RE {
   // Returns the string representation of the regex.
   const char* pattern() const { return pattern_; }
 
-  // FullMatch(str, re) returns true iff regular expression re matches
+  // FullMatch(str, re) returns true if regular expression re matches
   // the entire str.
-  // PartialMatch(str, re) returns true iff regular expression re
+  // PartialMatch(str, re) returns true if regular expression re
   // matches a substring of str (including str itself).
   //
   // TODO(wan@google.com): make FullMatch() and PartialMatch() work
@@ -2466,7 +2466,7 @@ class ThreadWithParam : public ThreadWithParamBase {
   // When non-NULL, used to block execution until the controller thread
   // notifies.
   Notification* const thread_can_start_;
-  bool finished_;  // true iff we know that the thread function has finished.
+  bool finished_;  // true if we know that the thread function has finished.
   pthread_t thread_;  // The native thread object.
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(ThreadWithParam);
@@ -3466,7 +3466,7 @@ class GTEST_API_ String {
   static const char* Utf16ToAnsi(LPCWSTR utf16_str);
 #endif
 
-  // Compares two C strings.  Returns true iff they have the same content.
+  // Compares two C strings.  Returns true if they have the same content.
   //
   // Unlike strcmp(), this function can handle NULL argument(s).  A
   // NULL C string is considered different to any non-NULL C string,
@@ -3479,7 +3479,7 @@ class GTEST_API_ String {
   // returned.
   static std::string ShowWideCString(const wchar_t* wide_c_str);
 
-  // Compares two wide C strings.  Returns true iff they have the same
+  // Compares two wide C strings.  Returns true if they have the same
   // content.
   //
   // Unlike wcscmp(), this function can handle NULL argument(s).  A
@@ -3487,7 +3487,7 @@ class GTEST_API_ String {
   // including the empty string.
   static bool WideCStringEquals(const wchar_t* lhs, const wchar_t* rhs);
 
-  // Compares two C strings, ignoring case.  Returns true iff they
+  // Compares two C strings, ignoring case.  Returns true if they
   // have the same content.
   //
   // Unlike strcasecmp(), this function can handle NULL argument(s).
@@ -3496,7 +3496,7 @@ class GTEST_API_ String {
   static bool CaseInsensitiveCStringEquals(const char* lhs,
                                            const char* rhs);
 
-  // Compares two wide C strings, ignoring case.  Returns true iff they
+  // Compares two wide C strings, ignoring case.  Returns true if they
   // have the same content.
   //
   // Unlike wcscasecmp(), this function can handle NULL argument(s).
@@ -3511,7 +3511,7 @@ class GTEST_API_ String {
   static bool CaseInsensitiveWideCStringEquals(const wchar_t* lhs,
                                                const wchar_t* rhs);
 
-  // Returns true iff the given string ends with the given suffix, ignoring
+  // Returns true if the given string ends with the given suffix, ignoring
   // case. Any string is considered to end with an empty suffix.
   static bool EndsWithCaseInsensitive(
       const std::string& str, const std::string& suffix);
@@ -3645,7 +3645,7 @@ class GTEST_API_ FilePath {
                                          const FilePath& base_name,
                                          const char* extension);
 
-  // Returns true iff the path is "".
+  // Returns true if the path is "".
   bool IsEmpty() const { return pathname_.empty(); }
 
   // If input name has a trailing separator character, removes it and returns
@@ -3832,7 +3832,7 @@ std::string GetTypeName() {
 
 #if GTEST_HAS_TYPED_TEST || GTEST_HAS_TYPED_TEST_P
 
-// AssertyTypeEq<T1, T2>::type is defined iff T1 and T2 are the same
+// AssertyTypeEq<T1, T2>::type is defined if T1 and T2 are the same
 // type.  This can be used as a compile-time assertion to ensure that
 // two types are equal.
 
@@ -7204,7 +7204,7 @@ class GTEST_API_ ScopedTrace {
 //   expected_value:      "5"
 //   actual_value:        "6"
 //
-// The ignoring_case parameter is true iff the assertion is a
+// The ignoring_case parameter is true if the assertion is a
 // *_STRCASEEQ*.  When it's true, the string " (ignoring case)" will
 // be inserted into the message.
 GTEST_API_ AssertionResult EqFailure(const char* expected_expression,
@@ -7333,14 +7333,14 @@ class FloatingPoint {
   // Returns the sign bit of this number.
   Bits sign_bit() const { return kSignBitMask & u_.bits_; }
 
-  // Returns true iff this is NAN (not a number).
+  // Returns true if this is NAN (not a number).
   bool is_nan() const {
     // It's a NAN if the exponent bits are all ones and the fraction
     // bits are not entirely zeros.
     return (exponent_bits() == kExponentBitMask) && (fraction_bits() != 0);
   }
 
-  // Returns true iff this number is at most kMaxUlps ULP's away from
+  // Returns true if this number is at most kMaxUlps ULP's away from
   // rhs.  In particular, this function:
   //
   //   - returns false if either number is (or both are) NAN.
@@ -7712,7 +7712,7 @@ class GTEST_API_ Random {
 };
 
 // Defining a variable of type CompileAssertTypesEqual<T1, T2> will cause a
-// compiler error iff T1 and T2 are different types.
+// compiler error if T1 and T2 are different types.
 template <typename T1, typename T2>
 struct CompileAssertTypesEqual;
 
@@ -7794,7 +7794,7 @@ struct AddReference<T&> { typedef T& type; };  // NOLINT
     GTEST_ADD_REFERENCE_(const GTEST_REMOVE_REFERENCE_(T))
 
 // ImplicitlyConvertible<From, To>::value is a compile-time bool
-// constant that's true iff type From can be implicitly converted to
+// constant that's true if type From can be implicitly converted to
 // type To.
 template <typename From, typename To>
 class ImplicitlyConvertible {
@@ -7847,7 +7847,7 @@ template <typename From, typename To>
 const bool ImplicitlyConvertible<From, To>::value;
 
 // IsAProtocolMessage<T>::value is a compile-time bool constant that's
-// true iff T is type ProtocolMessage, proto2::Message, or a subclass
+// true if T is type ProtocolMessage, proto2::Message, or a subclass
 // of those.
 template <typename T>
 struct IsAProtocolMessage
@@ -8487,7 +8487,7 @@ InternalRunDeathTestFlag* ParseInternalRunDeathTestFlag();
 // This macro is used for implementing macros such as
 // EXPECT_DEATH_IF_SUPPORTED and ASSERT_DEATH_IF_SUPPORTED on systems where
 // death tests are not supported. Those macros must compile on such systems
-// iff EXPECT_DEATH and ASSERT_DEATH compile with the same parameters on
+// if EXPECT_DEATH and ASSERT_DEATH compile with the same parameters on
 // systems that support death tests. This allows one to write such a macro
 // on a system that does not support death tests and be sure that it will
 // compile on a death-test supporting system.
@@ -8497,7 +8497,7 @@ InternalRunDeathTestFlag* ParseInternalRunDeathTestFlag();
 //                for program termination. This macro has to make sure this
 //                statement is compiled but not executed, to ensure that
 //                EXPECT_DEATH_IF_SUPPORTED compiles with a certain
-//                parameter iff EXPECT_DEATH compiles with it.
+//                parameter if EXPECT_DEATH compiles with it.
 //   regex     -  A regex that a macro such as EXPECT_DEATH would use to test
 //                the output of statement.  This parameter has to be
 //                compiled but not evaluated by this macro, to ensure that
@@ -17191,16 +17191,16 @@ class GTEST_API_ TestPartResult {
   // Gets the message associated with the test part.
   const char* message() const { return message_.c_str(); }
 
-  // Returns true iff the test part passed.
+  // Returns true if the test part passed.
   bool passed() const { return type_ == kSuccess; }
 
-  // Returns true iff the test part failed.
+  // Returns true if the test part failed.
   bool failed() const { return type_ != kSuccess; }
 
-  // Returns true iff the test part non-fatally failed.
+  // Returns true if the test part non-fatally failed.
   bool nonfatally_failed() const { return type_ == kNonFatalFailure; }
 
-  // Returns true iff the test part fatally failed.
+  // Returns true if the test part fatally failed.
   bool fatally_failed() const { return type_ == kFatalFailure; }
 
  private:
@@ -17738,7 +17738,7 @@ class GTEST_API_ AssertionResult {
   // Used in the EXPECT_TRUE/FALSE(bool_expression).
   explicit AssertionResult(bool success) : success_(success) {}
 
-  // Returns true iff the assertion succeeded.
+  // Returns true if the assertion succeeded.
   operator bool() const { return success_; }  // NOLINT
 
   // Returns the assertion's negation. Used with EXPECT/ASSERT_FALSE.
@@ -17849,13 +17849,13 @@ class GTEST_API_ Test {
   // class.
   static void TearDownTestCase() {}
 
-  // Returns true iff the current test has a fatal failure.
+  // Returns true if the current test has a fatal failure.
   static bool HasFatalFailure();
 
-  // Returns true iff the current test has a non-fatal failure.
+  // Returns true if the current test has a non-fatal failure.
   static bool HasNonfatalFailure();
 
-  // Returns true iff the current test has a (either fatal or
+  // Returns true if the current test has a (either fatal or
   // non-fatal) failure.
   static bool HasFailure() { return HasFatalFailure() || HasNonfatalFailure(); }
 
@@ -17886,7 +17886,7 @@ class GTEST_API_ Test {
   virtual void TearDown();
 
  private:
-  // Returns true iff the current test has the same fixture class as
+  // Returns true if the current test has the same fixture class as
   // the first test in the current test case.
   static bool HasSameFixtureClass();
 
@@ -17989,16 +17989,16 @@ class GTEST_API_ TestResult {
   // Returns the number of the test properties.
   int test_property_count() const;
 
-  // Returns true iff the test passed (i.e. no test part failed).
+  // Returns true if the test passed (i.e. no test part failed).
   bool Passed() const { return !Failed(); }
 
-  // Returns true iff the test failed.
+  // Returns true if the test failed.
   bool Failed() const;
 
-  // Returns true iff the test fatally failed.
+  // Returns true if the test fatally failed.
   bool HasFatalFailure() const;
 
-  // Returns true iff the test has a non-fatal failure.
+  // Returns true if the test has a non-fatal failure.
   bool HasNonfatalFailure() const;
 
   // Returns the elapsed time, in milliseconds.
@@ -18141,7 +18141,7 @@ class GTEST_API_ TestInfo {
   // contains the character 'A' or starts with "Foo.".
   bool should_run() const { return should_run_; }
 
-  // Returns true iff this test will appear in the XML report.
+  // Returns true if this test will appear in the XML report.
   bool is_reportable() const {
     // For now, the XML report includes all tests matching the filter.
     // In the future, we may trim tests that are excluded because of
@@ -18203,8 +18203,8 @@ class GTEST_API_ TestInfo {
   // value-parameterized test.
   const internal::scoped_ptr<const ::std::string> value_param_;
   const internal::TypeId fixture_class_id_;   // ID of the test fixture class
-  bool should_run_;                 // True iff this test should run
-  bool is_disabled_;                // True iff this test is disabled
+  bool should_run_;                 // True if this test should run
+  bool is_disabled_;                // True if this test is disabled
   bool matches_filter_;             // True if this test matches the
                                     // user-specified filter.
   internal::TestFactoryBase* const factory_;  // The factory that creates
@@ -18276,10 +18276,10 @@ class GTEST_API_ TestCase {
   // Gets the number of all tests in this test case.
   int total_test_count() const;
 
-  // Returns true iff the test case passed.
+  // Returns true if the test case passed.
   bool Passed() const { return !Failed(); }
 
-  // Returns true iff the test case failed.
+  // Returns true if the test case failed.
   bool Failed() const { return failed_test_count() > 0; }
 
   // Returns the elapsed time, in milliseconds.
@@ -18335,28 +18335,28 @@ class GTEST_API_ TestCase {
   // needed for catching exceptions thrown from TearDownTestCase().
   void RunTearDownTestCase() { (*tear_down_tc_)(); }
 
-  // Returns true iff test passed.
+  // Returns true if test passed.
   static bool TestPassed(const TestInfo* test_info) {
     return test_info->should_run() && test_info->result()->Passed();
   }
 
-  // Returns true iff test failed.
+  // Returns true if test failed.
   static bool TestFailed(const TestInfo* test_info) {
     return test_info->should_run() && test_info->result()->Failed();
   }
 
-  // Returns true iff the test is disabled and will be reported in the XML
+  // Returns true if the test is disabled and will be reported in the XML
   // report.
   static bool TestReportableDisabled(const TestInfo* test_info) {
     return test_info->is_reportable() && test_info->is_disabled_;
   }
 
-  // Returns true iff test is disabled.
+  // Returns true if test is disabled.
   static bool TestDisabled(const TestInfo* test_info) {
     return test_info->is_disabled_;
   }
 
-  // Returns true iff this test will appear in the XML report.
+  // Returns true if this test will appear in the XML report.
   static bool TestReportable(const TestInfo* test_info) {
     return test_info->is_reportable();
   }
@@ -18388,7 +18388,7 @@ class GTEST_API_ TestCase {
   Test::SetUpTestCaseFunc set_up_tc_;
   // Pointer to the function that tears down the test case.
   Test::TearDownTestCaseFunc tear_down_tc_;
-  // True iff any test in this test case should run.
+  // True if any test in this test case should run.
   bool should_run_;
   // Elapsed time, in milliseconds.
   TimeInMillis elapsed_time_;
@@ -18675,10 +18675,10 @@ class GTEST_API_ UnitTest {
   // Gets the elapsed time, in milliseconds.
   TimeInMillis elapsed_time() const;
 
-  // Returns true iff the unit test passed (i.e. all test cases passed).
+  // Returns true if the unit test passed (i.e. all test cases passed).
   bool Passed() const;
 
-  // Returns true iff the unit test failed (i.e. some test case failed
+  // Returns true if the unit test failed (i.e. some test case failed
   // or something outside of all tests failed).
   bool Failed() const;
 
@@ -18946,7 +18946,7 @@ GTEST_API_ AssertionResult CmpHelperEQ(const char* expected_expression,
                                        BiggestInt actual);
 
 // The helper class for {ASSERT|EXPECT}_EQ.  The template argument
-// lhs_is_null_literal is true iff the first argument to ASSERT_EQ()
+// lhs_is_null_literal is true if the first argument to ASSERT_EQ()
 // is a null pointer literal.  The following default implementation is
 // for lhs_is_null_literal being false.
 template <bool lhs_is_null_literal>
@@ -20006,7 +20006,7 @@ GTEST_API_ AssertionResult DoubleLE(const char* expr1, const char* expr2,
     __FILE__, __LINE__, ::testing::Message() << (message))
 
 // Compile-time assertion for type equality.
-// StaticAssertTypeEq<type1, type2>() compiles iff type1 and type2 are
+// StaticAssertTypeEq<type1, type2>() compiles if type1 and type2 are
 // the same type.  The value it returns is not interesting.
 //
 // Instead of making StaticAssertTypeEq a class template, we make it a
