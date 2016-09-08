@@ -8,6 +8,8 @@
 
 #include <string>
 #include <vector>
+
+#include <algorithm>
 #include <opencv2/core/saturate.hpp>
 
 //==================================================================================================
@@ -168,7 +170,7 @@ struct vxImage
         addr.dim_x = w;
         addr.dim_y = h;
         addr.stride_x = sizeof(T);
-        addr.stride_y = step;
+        addr.stride_y = (vx_int32)step;
         addr.scale_x = VX_SCALE_UNITY;
         addr.scale_y = VX_SCALE_UNITY;
         addr.step_x = 1;
@@ -193,7 +195,7 @@ struct vxMatrix
     {
         mtx = vxCreateMatrix(ctx.ctx, VX_Traits<T>::DataType, w, h);
         vxErr::check(mtx);
-        vxErr::check(vxCopyMatrix(mtx, data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+        vxErr::check(vxCopyMatrix(mtx, const_cast<T*>(data), VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
     }
     ~vxMatrix()
     {
@@ -209,7 +211,7 @@ struct vxConvolution
     {
         cnv = vxCreateConvolution(ctx.ctx, w, h);
         vxErr::check(cnv);
-        vxErr::check(vxCopyConvolutionCoefficients(cnv, (void*)data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+        vxErr::check(vxCopyConvolutionCoefficients(cnv, const_cast<short*>(data), VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
     }
     ~vxConvolution()
     {
@@ -221,24 +223,24 @@ struct vxConvolution
 // real code starts here
 // ...
 
-#define OVX_BINARY_OP(hal_func, ovx_call, ...)                                                                                   \
-template <typename T>                                                                                                            \
-inline int ovx_hal_##hal_func(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h, __VA_ARGS__) \
-{                                                                                                                                \
-    try                                                                                                                          \
-    {                                                                                                                            \
-        vxContext * ctx = vxContext::getContext();                                                                               \
-        vxImage ia(*ctx, a, astep, w, h);                                                                                        \
-        vxImage ib(*ctx, b, bstep, w, h);                                                                                        \
-        vxImage ic(*ctx, c, cstep, w, h);                                                                                        \
-        ovx_call                                                                                                                 \
-    }                                                                                                                            \
-    catch (vxErr & e)                                                                                                            \
-    {                                                                                                                            \
-        e.print();                                                                                                               \
-        return CV_HAL_ERROR_UNKNOWN;                                                                                             \
-    }                                                                                                                            \
-    return CV_HAL_ERROR_OK;                                                                                                      \
+#define OVX_BINARY_OP(hal_func, ovx_call)                                                                           \
+template <typename T>                                                                                               \
+inline int ovx_hal_##hal_func(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h) \
+{                                                                                                                   \
+    try                                                                                                             \
+    {                                                                                                               \
+        vxContext * ctx = vxContext::getContext();                                                                  \
+        vxImage ia(*ctx, a, astep, w, h);                                                                           \
+        vxImage ib(*ctx, b, bstep, w, h);                                                                           \
+        vxImage ic(*ctx, c, cstep, w, h);                                                                           \
+        ovx_call                                                                                                    \
+    }                                                                                                               \
+    catch (vxErr & e)                                                                                               \
+    {                                                                                                               \
+        e.print();                                                                                                  \
+        return CV_HAL_ERROR_UNKNOWN;                                                                                \
+    }                                                                                                               \
+    return CV_HAL_ERROR_OK;                                                                                         \
 }
 
 OVX_BINARY_OP(add, {vxErr::check(vxuAdd(ctx->ctx, ia.img, ib.img, VX_CONVERT_POLICY_SATURATE, ic.img));})
@@ -250,7 +252,24 @@ OVX_BINARY_OP(and, {vxErr::check(vxuAnd(ctx->ctx, ia.img, ib.img, ic.img));})
 OVX_BINARY_OP(or, {vxErr::check(vxuOr(ctx->ctx, ia.img, ib.img, ic.img));})
 OVX_BINARY_OP(xor, {vxErr::check(vxuXor(ctx->ctx, ia.img, ib.img, ic.img));})
 
-OVX_BINARY_OP(mul, {vxErr::check(vxuMultiply(ctx->ctx, ia.img, ib.img, (float)scale, VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_ZERO, ic.img));}, double scale)
+template <typename T>
+inline int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h, double scale)
+{
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, a, astep, w, h);
+        vxImage ib(*ctx, b, bstep, w, h);
+        vxImage ic(*ctx, c, cstep, w, h);
+        vxErr::check(vxuMultiply(ctx->ctx, ia.img, ib.img, (float)scale, VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_ZERO, ic.img));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
 
 inline int ovx_hal_not(const uchar *a, size_t astep, uchar *c, size_t cstep, int w, int h)
 {
@@ -291,7 +310,7 @@ inline int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int a
              (bw - 0.5) / inv_scale_x - 0.5 < aw && (bh - 0.5) / inv_scale_y - 0.5 < ah &&
              (bw + 0.5) / inv_scale_x + 0.5 >= aw && (bh + 0.5) / inv_scale_y + 0.5 >= ah &&
              std::abs(bw / inv_scale_x - aw) < 0.1 && std::abs(bh / inv_scale_y - ah) < 0.1 ))
-            vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad scale").check();
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         int mode;
         if (interpolation == CV_HAL_INTER_LINEAR)
@@ -301,7 +320,7 @@ inline int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int a
         else if (interpolation == CV_HAL_INTER_NEAREST)
             mode = VX_INTERPOLATION_NEAREST_NEIGHBOR;
         else
-            vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad interpolation mode").check();
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         vxErr::check( vxuScaleImage(ctx->ctx, ia.img, ib.img, mode));
     }
@@ -322,7 +341,7 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
         vxImage ib(*ctx, b, bstep, bw, bh);
 
         if (!(atype == CV_8UC1 || atype == CV_8SC1))
-            vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad input type").check();
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         vx_border_t border;
         switch (borderType)
@@ -346,7 +365,7 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
         else if (interpolation == CV_HAL_INTER_NEAREST)
             mode = VX_INTERPOLATION_NEAREST_NEIGHBOR;
         else
-            vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad interpolation mode").check();
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         std::vector<float> data;
         data.reserve(6);
@@ -380,7 +399,7 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
         vxImage ib(*ctx, b, bstep, bw, bh);
 
         if (!(atype == CV_8UC1 || atype == CV_8SC1))
-            vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad input type").check();
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         vx_border_t border;
         switch (borderType)
@@ -404,7 +423,7 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
         else if (interpolation == CV_HAL_INTER_NEAREST)
             mode = VX_INTERPOLATION_NEAREST_NEIGHBOR;
         else
-            vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad interpolation mode").check();
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         std::vector<float> data;
         data.reserve(9);
