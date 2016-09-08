@@ -767,7 +767,7 @@ static void printShift(cv::instr::InstrNode *pNode, cv::instr::InstrNode* pRoot)
 static double calcLocalWeight(cv::instr::InstrNode *pNode)
 {
     if(pNode->m_pParent && pNode->m_pParent->m_pParent)
-        return ((double)pNode->m_payload.m_ticksMean*100/pNode->m_pParent->m_payload.m_ticksMean);
+        return ((double)pNode->m_payload.m_ticksTotal*100/pNode->m_pParent->m_payload.m_ticksTotal);
     else
         return 100;
 }
@@ -779,7 +779,7 @@ static double calcGlobalWeight(cv::instr::InstrNode *pNode)
     while(globNode->m_pParent && globNode->m_pParent->m_pParent)
         globNode = globNode->m_pParent;
 
-    return ((double)pNode->m_payload.m_ticksMean*100/(double)globNode->m_payload.m_ticksMean);
+    return ((double)pNode->m_payload.m_ticksTotal*100/(double)globNode->m_payload.m_ticksTotal);
 }
 
 static void printNodeRec(cv::instr::InstrNode *pNode, cv::instr::InstrNode *pRoot)
@@ -811,7 +811,7 @@ static void printNodeRec(cv::instr::InstrNode *pNode, cv::instr::InstrNode *pRoo
     if(pNode->m_pParent)
     {
         printf(" - C:%d", pNode->m_payload.m_counter);
-        printf(" T:%.4fms", (double)pNode->m_payload.m_ticksMean/cv::getTickFrequency()*1000);
+        printf(" T:%.4fms", pNode->m_payload.getMeanMs());
         if(pNode->m_pParent->m_pParent)
             printf(" L:%.0f%% G:%.0f%%", calcLocalWeight(pNode), calcGlobalWeight(pNode));
     }
@@ -886,12 +886,15 @@ static cv::String nodeToString(cv::instr::InstrNode *pNode)
     return string;
 }
 
-static uint64 getNodeTimeRec(cv::instr::InstrNode *pNode, int type, int impl)
+static uint64 getNodeTimeRec(cv::instr::InstrNode *pNode, cv::instr::TYPE type, cv::instr::IMPL impl)
 {
     uint64 ticks = 0;
 
-    if(pNode->m_pParent && pNode->m_payload.m_instrType == type && pNode->m_payload.m_implType == impl)
-        ticks = pNode->m_payload.m_ticksMean;
+    if (pNode->m_pParent && (type < 0 || pNode->m_payload.m_instrType == type) && pNode->m_payload.m_implType == impl)
+    {
+        ticks = pNode->m_payload.m_ticksTotal;
+        return ticks;
+    }
 
     for(size_t i = 0; i < pNode->m_childs.size(); i++)
         ticks += getNodeTimeRec(pNode->m_childs[i], type, impl);
@@ -899,7 +902,7 @@ static uint64 getNodeTimeRec(cv::instr::InstrNode *pNode, int type, int impl)
     return ticks;
 }
 
-static uint64 getImplTime(int impl)
+static uint64 getImplTime(cv::instr::IMPL impl)
 {
     uint64 ticks = 0;
     cv::instr::InstrNode *pRoot = cv::instr::getTrace();
@@ -915,7 +918,7 @@ static uint64 getTotalTime()
     cv::instr::InstrNode *pRoot = cv::instr::getTrace();
 
     for(size_t i = 0; i < pRoot->m_childs.size(); i++)
-        ticks += pRoot->m_childs[i]->m_payload.m_ticksMean;
+        ticks += pRoot->m_childs[i]->m_payload.m_ticksTotal;
 
     return ticks;
 }
