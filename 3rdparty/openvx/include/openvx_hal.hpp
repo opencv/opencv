@@ -179,6 +179,92 @@ struct vxImage
         img = vxCreateImageFromHandle(ctx.ctx, VX_Traits<T>::ImgType, &addr, ptrs, VX_MEMORY_TYPE_HOST);
         vxErr::check(img);
     }
+    vxImage(vxContext &ctx, int imgType, const uchar *data, size_t step, int w, int h)
+    {
+        if (h == 1)
+            step = w;
+        vx_imagepatch_addressing_t addr[4];
+        void *ptrs[4];
+        switch (imgType)
+        {
+        case VX_DF_IMAGE_U8:
+        case VX_DF_IMAGE_U16:
+        case VX_DF_IMAGE_S16:
+        case VX_DF_IMAGE_U32:
+        case VX_DF_IMAGE_S32:
+        case VX_DF_IMAGE_RGB:
+        case VX_DF_IMAGE_RGBX:
+        case VX_DF_IMAGE_UYVY:
+        case VX_DF_IMAGE_YUYV:
+            addr[0].dim_x = w;
+            addr[0].dim_y = h;
+            addr[0].stride_x = imgType == VX_DF_IMAGE_U8 ? 1 :
+                imgType == VX_DF_IMAGE_RGB ? 3 :
+                (imgType == VX_DF_IMAGE_U16 || imgType == VX_DF_IMAGE_S16) ? 2 : 4;
+            addr[0].stride_y = (vx_int32)step;
+            addr[0].scale_x = VX_SCALE_UNITY;
+            addr[0].scale_y = VX_SCALE_UNITY;
+            addr[0].step_x = (imgType == VX_DF_IMAGE_UYVY || imgType == VX_DF_IMAGE_YUYV) ? 2 : 1;
+            addr[0].step_y = 1;
+            ptrs[0] = (void*)data;
+            break;
+        case VX_DF_IMAGE_NV12:
+        case VX_DF_IMAGE_NV21:
+            addr[0].dim_x = w;
+            addr[0].dim_y = h;
+            addr[0].stride_x = 1;
+            addr[0].stride_y = (vx_int32)step;
+            addr[0].scale_x = VX_SCALE_UNITY;
+            addr[0].scale_y = VX_SCALE_UNITY;
+            addr[0].step_x = 1;
+            addr[0].step_y = 1;
+            ptrs[0] = (void*)data;
+            addr[1].dim_x = (w + 1) / 2;
+            addr[1].dim_y = (h + 1) / 2;
+            addr[1].stride_x = 2;
+            addr[1].stride_y = (vx_int32)step;
+            addr[1].scale_x = VX_SCALE_UNITY;
+            addr[1].scale_y = VX_SCALE_UNITY;
+            addr[1].step_x = 2;
+            addr[1].step_y = 2;
+            ptrs[1] = (void*)(data + h * step);
+            break;
+        case VX_DF_IMAGE_IYUV:
+        case VX_DF_IMAGE_YUV4:
+            addr[0].dim_x = w;
+            addr[0].dim_y = h;
+            addr[0].stride_x = 1;
+            addr[0].stride_y = (vx_int32)step;
+            addr[0].scale_x = VX_SCALE_UNITY;
+            addr[0].scale_y = VX_SCALE_UNITY;
+            addr[0].step_x = 1;
+            addr[0].step_y = 1;
+            ptrs[0] = (void*)data;
+            addr[1].dim_x = imgType == VX_DF_IMAGE_YUV4 ? w : (w + 1) / 2;
+            addr[1].dim_y = imgType == VX_DF_IMAGE_YUV4 ? h : (h + 1) / 2;
+            addr[1].stride_x = 1;
+            addr[1].stride_y = (vx_int32)step;
+            addr[1].scale_x = VX_SCALE_UNITY;
+            addr[1].scale_y = VX_SCALE_UNITY;
+            addr[1].step_x = imgType == VX_DF_IMAGE_YUV4 ? 1 : 2;
+            addr[1].step_y = imgType == VX_DF_IMAGE_YUV4 ? 1 : 2;
+            ptrs[1] = (void*)(data + h * step);
+            addr[2].dim_x = addr[1].dim_x;
+            addr[2].dim_y = addr[1].dim_y;
+            addr[2].stride_x = 1;
+            addr[2].stride_y = (vx_int32)step;
+            addr[2].scale_x = VX_SCALE_UNITY;
+            addr[2].scale_y = VX_SCALE_UNITY;
+            addr[2].step_x = addr[1].step_x;
+            addr[2].step_y = addr[1].step_y;
+            ptrs[2] = (void*)(data + (h + addr[1].dim_y) * step);
+            break;
+        default:
+            vxErr(VX_ERROR_INVALID_PARAMETERS, "Bad image format").check();
+        }
+        img = vxCreateImageFromHandle(ctx.ctx, imgType, addr, ptrs, VX_MEMORY_TYPE_HOST);
+        vxErr::check(img);
+    }
     ~vxImage()
     {
         vxErr::check(vxSwapImageHandle(img, NULL, NULL, 1));
@@ -288,6 +374,30 @@ inline int ovx_hal_not(const uchar *a, size_t astep, uchar *c, size_t cstep, int
     return CV_HAL_ERROR_OK;
 }
 
+inline int ovx_hal_merge8u(const uchar **src_data, uchar *dst_data, int len, int cn)
+{
+    if (cn != 3 && cn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, src_data[0], len, len, 1);
+        vxImage ib(*ctx, src_data[1], len, len, 1);
+        vxImage ic(*ctx, src_data[2], len, len, 1);
+        vxImage id(*ctx, cn == 4 ? VX_DF_IMAGE_RGBX : VX_DF_IMAGE_RGB, dst_data, len, len, 1);
+        vxErr::check(vxuChannelCombine(ctx->ctx, ia.img, ib.img, ic.img,
+                                       cn == 4 ? vxImage(*ctx, src_data[3], len, len, 1).img : NULL,
+                                       id.img));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
+
 #if defined OPENCV_IMGPROC_HAL_INTERFACE_H
 #define CV_HAL_INTER_NEAREST 0
 #define CV_HAL_INTER_LINEAR 1
@@ -348,7 +458,7 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
         {
         case CV_HAL_BORDER_CONSTANT:
             border.mode = VX_BORDER_CONSTANT;
-            border.constant_value.U8 = borderValue[0];
+            border.constant_value.U8 = (vx_uint8)(borderValue[0]);
             break;
         case CV_HAL_BORDER_REPLICATE:
             border.mode = VX_BORDER_REPLICATE;
@@ -371,7 +481,7 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
         data.reserve(6);
         for (int j = 0; j < 3; ++j)
             for (int i = 0; i < 2; ++i)
-                data.push_back(M[i*3+j]);
+                data.push_back((float)(M[i*3+j]));
 
         vxMatrix mtx(*ctx, data.data(), 2, 3);
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
@@ -406,7 +516,7 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
         {
         case CV_HAL_BORDER_CONSTANT:
             border.mode = VX_BORDER_CONSTANT;
-            border.constant_value.U8 = borderValue[0];
+            border.constant_value.U8 = (vx_uint8)(borderValue[0]);
             break;
         case CV_HAL_BORDER_REPLICATE:
             border.mode = VX_BORDER_REPLICATE;
@@ -429,7 +539,7 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
         data.reserve(9);
         for (int j = 0; j < 3; ++j)
             for (int i = 0; i < 3; ++i)
-                data.push_back(M[i * 3 + j]);
+                data.push_back((float)(M[i * 3 + j]));
 
         vxMatrix mtx(*ctx, data.data(), 3, 3);
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
@@ -460,7 +570,7 @@ struct FilterCtx
 };
 
 inline int ovx_hal_filterInit(cvhalFilter2D **filter_context, uchar *kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
-    int max_width, int max_height, int src_type, int dst_type, int borderType, double delta, int anchor_x, int anchor_y, bool allowSubmatrix, bool allowInplace)
+    int , int , int src_type, int dst_type, int borderType, double delta, int anchor_x, int anchor_y, bool allowSubmatrix, bool allowInplace)
 {
     if (!filter_context || !kernel_data || allowSubmatrix || allowInplace || delta != 0 ||
         src_type != CV_8UC1 || (dst_type != CV_8UC1 && dst_type != CV_16SC1) ||
@@ -535,7 +645,7 @@ inline int ovx_hal_filterFree(cvhalFilter2D *filter_context)
     }
 }
 
-inline int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *b, size_t bstep, int w, int h, int full_w, int full_h, int offset_x, int offset_y)
+inline int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *b, size_t bstep, int w, int h, int , int , int , int )
 {
     try
     {
@@ -571,6 +681,58 @@ inline int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep,
     return CV_HAL_ERROR_OK;
 }
 
+inline int ovx_hal_sepFilterInit(cvhalFilter2D **filter_context, int src_type, int dst_type,
+                                 int kernel_type, uchar *kernelx_data, int kernelx_length, uchar *kernely_data, int kernely_length,
+                                 int anchor_x, int anchor_y, double delta, int borderType)
+{
+    if (!filter_context || !kernelx_data || !kernely_data || delta != 0 ||
+        src_type != CV_8UC1 || (dst_type != CV_8UC1 && dst_type != CV_16SC1) ||
+        kernelx_length % 2 == 0 || kernely_length % 2 == 0 || anchor_x != kernelx_length / 2 || anchor_y != kernely_length / 2)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    vx_border_t border;
+    switch (borderType)
+    {
+    case CV_HAL_BORDER_CONSTANT:
+        border.mode = VX_BORDER_CONSTANT;
+        border.constant_value.U8 = 0;
+        break;
+    case CV_HAL_BORDER_REPLICATE:
+        border.mode = VX_BORDER_REPLICATE;
+        break;
+    default:
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    vxContext * ctx = vxContext::getContext();
+
+    //At the moment OpenVX doesn't support separable filters natively so combine kernels to generic convolution
+    std::vector<short> data;
+    data.reserve(kernelx_length*kernely_length);
+    switch (kernel_type)
+    {
+    case CV_8UC1:
+        for (int j = 0; j < kernely_length; ++j)
+            for (int i = 0; i < kernelx_length; ++i)
+                data.push_back((short)(kernely_data[j]) * kernelx_data[i]);
+        break;
+    case CV_8SC1:
+        for (int j = 0; j < kernely_length; ++j)
+            for (int i = 0; i < kernelx_length; ++i)
+                data.push_back((short)(((schar*)kernely_data)[j]) * ((schar*)kernelx_data)[i]);
+        break;
+    default:
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    FilterCtx* cnv = new FilterCtx(*ctx, data.data(), kernelx_length, kernely_length, dst_type, border);
+    if (!cnv)
+        return CV_HAL_ERROR_UNKNOWN;
+
+    *filter_context = (cvhalFilter2D*)(cnv);
+    return CV_HAL_ERROR_OK;
+}
+
 struct MorphCtx
 {
     vxMatrix mask;
@@ -580,7 +742,7 @@ struct MorphCtx
         mask(ctx, data, w, h), operation(_operation), border(_border) {}
 };
 
-inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int src_type, int dst_type, int max_width, int max_height,
+inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int src_type, int dst_type, int , int ,
                              int kernel_type, uchar *kernel_data, size_t kernel_step, int kernel_width, int kernel_height, int anchor_x, int anchor_y,
                              int borderType, const double borderValue[4], int iterations, bool allowSubmatrix, bool allowInplace)
 {
@@ -696,7 +858,7 @@ inline int ovx_hal_morphFree(cvhalFilter2D *filter_context)
     }
 }
 
-inline int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *b, size_t bstep, int w, int h, int src_full_width, int src_full_height, int src_roi_x, int src_roi_y, int dst_full_width, int dst_full_height, int dst_roi_x, int dst_roi_y)
+inline int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *b, size_t bstep, int w, int h, int , int , int , int , int , int , int , int )
 {
     try
     {
@@ -758,6 +920,9 @@ inline int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, 
 #undef cv_hal_mul16s
 #define cv_hal_mul16s ovx_hal_mul<short>
 
+#undef cv_hal_merge8u
+#define cv_hal_merge8u ovx_hal_merge8u
+
 #if defined OPENCV_IMGPROC_HAL_INTERFACE_H
 
 #undef cv_hal_resize
@@ -773,6 +938,13 @@ inline int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, 
 #define cv_hal_filter ovx_hal_filter
 #undef cv_hal_filterFree
 #define cv_hal_filterFree ovx_hal_filterFree
+
+#undef cv_hal_sepFilterInit
+#define cv_hal_sepFilterInit ovx_hal_sepFilterInit
+#undef cv_hal_sepFilter
+#define cv_hal_sepFilter ovx_hal_filter
+#undef cv_hal_sepFilterFree
+#define cv_hal_sepFilterFree ovx_hal_filterFree
 
 #undef cv_hal_morphInit
 #define cv_hal_morphInit ovx_hal_morphInit
