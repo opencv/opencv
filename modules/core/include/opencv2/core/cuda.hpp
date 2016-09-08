@@ -246,7 +246,7 @@ public:
     //! moves/resizes the current GpuMat ROI inside the parent GpuMat
     GpuMat& adjustROI(int dtop, int dbottom, int dleft, int dright);
 
-    //! returns true iff the GpuMat data is continuous
+    //! returns true if the GpuMat data is continuous
     //! (i.e. when there are no gaps between successive rows)
     bool isContinuous() const;
 

@@ -556,7 +556,7 @@ write_frame_header (j_compress_ptr cinfo)
        ci++, compptr++) {
     prec += emit_dqt(cinfo, compptr->quant_tbl_no);
   }
-  /* now prec is nonzero iff there are any 16-bit quant tables. */
+  /* now prec is nonzero if there are any 16-bit quant tables. */
 
   /* Check for a non-baseline specification.
    * Note we assume that Huffman table numbers won't be changed later.
