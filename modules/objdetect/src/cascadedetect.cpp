@@ -1249,9 +1249,8 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
          !isOldFormatCascade() &&
          maskGenerator.empty() &&
          !outputRejectLevels;
-#endif
 
-    /*if( use_ocl )
+    if( use_ocl && ocl::Device::getDefault().isIntel() )
     {
         if (_image.channels() > 1)
             cvtColor(_image, ugrayImage, COLOR_BGR2GRAY);
@@ -1261,7 +1260,8 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
             _image.copyTo(ugrayImage);
         gray = ugrayImage;
     }
-    else*/
+    else
+#endif
     {
         if (_image.channels() > 1)
             cvtColor(_image, grayImage, COLOR_BGR2GRAY);
