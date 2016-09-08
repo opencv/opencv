@@ -1582,6 +1582,10 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     }
 #endif
 
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
+    st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
+#endif
+
     return st;
 }
 
