@@ -55,6 +55,8 @@ int lapack_Cholesky32f(float* a, size_t a_step, int m, float* b, size_t b_step, 
 int lapack_Cholesky64f(double* a, size_t a_step, int m, double* b, size_t b_step, int n, bool* info);
 int lapack_SVD32f(float* a, size_t a_step, float* w, float* u, size_t u_step, float* vt, size_t v_step, int m, int n, int flags);
 int lapack_SVD64f(double* a, size_t a_step, double* w, double* u, size_t u_step, double* vt, size_t v_step, int m, int n, int flags);
+int lapack_QR32f(float* src1, size_t src1_step, int m, int n, int k, float* src2, size_t src2_step, float* dst, int* info);
+int lapack_QR64f(double* src1, size_t src1_step, int m, int n, int k, double* src2, size_t src2_step, double* dst, int* info);
 int lapack_gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
                    float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
                    int m, int n, int k, int flags);
@@ -82,6 +84,11 @@ int lapack_gemm64fc(const double* src1, size_t src1_step, const double* src2, si
 #define cv_hal_SVD32f lapack_SVD32f
 #undef cv_hal_SVD64f
 #define cv_hal_SVD64f lapack_SVD64f
+
+#undef cv_hal_QR32f
+#define cv_hal_QR32f lapack_QR32f
+#undef cv_hal_QR64f
+#define cv_hal_QR64f lapack_QR64f
 
 #undef cv_hal_gemm32f
 #define cv_hal_gemm32f lapack_gemm32f
