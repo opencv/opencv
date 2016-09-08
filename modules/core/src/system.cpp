@@ -1337,7 +1337,7 @@ void resetTrace()
 #endif
 }
 
-void setFlags(int modeFlags)
+void setFlags(FLAGS modeFlags)
 {
 #ifdef ENABLE_INSTRUMENTATION
     getInstrumentStruct().enableMapping = (modeFlags & FLAGS_MAPPING);
@@ -1345,33 +1345,34 @@ void setFlags(int modeFlags)
     CV_UNUSED(modeFlags);
 #endif
 }
-int getFlags()
+FLAGS getFlags()
 {
 #ifdef ENABLE_INSTRUMENTATION
     int flags = 0;
     if(getInstrumentStruct().enableMapping)
         flags |= FLAGS_MAPPING;
-    return flags;
+    return (FLAGS)flags;
 #else
-    return 0;
+    return (FLAGS)0;
 #endif
 }
 
-NodeData::NodeData(const char* funName, const char* fileName, int lineNum, int instrType, int implType)
+NodeData::NodeData(const char* funName, const char* fileName, int lineNum, cv::instr::TYPE instrType, cv::instr::IMPL implType)
 {
     m_instrType = TYPE_GENERAL;
     m_implType  = IMPL_PLAIN;
-
-    m_funError  = false;
-    m_counter   = 0;
-    m_stopPoint = false;
-    m_ticksMean = 0;
 
     m_funName     = funName;
     m_instrType   = instrType;
     m_implType    = implType;
     m_fileName    = fileName;
     m_lineNum     = lineNum;
+
+    m_counter = 0;
+    m_ticksTotal = 0;
+
+    m_funError = false;
+    m_stopPoint = false;
 }
 NodeData::NodeData(NodeData &ref)
 {
@@ -1382,13 +1383,12 @@ NodeData& NodeData::operator=(const NodeData &right)
     this->m_funName     = right.m_funName;
     this->m_instrType   = right.m_instrType;
     this->m_implType    = right.m_implType;
-    this->m_funError    = right.m_funError;
-    this->m_counter     = right.m_counter;
-    this->m_stopPoint   = right.m_stopPoint;
-    this->m_ticksMean   = right.m_ticksMean;
     this->m_fileName    = right.m_fileName;
     this->m_lineNum     = right.m_lineNum;
-
+    this->m_counter     = right.m_counter;
+    this->m_ticksTotal  = right.m_ticksTotal;
+    this->m_funError    = right.m_funError;
+    this->m_stopPoint   = right.m_stopPoint;
     return *this;
 }
 NodeData::~NodeData()
@@ -1418,7 +1418,7 @@ InstrNode* getCurrentNode()
     return getInstrumentTLSStruct().pCurrentNode;
 }
 
-IntrumentationRegion::IntrumentationRegion(const char* funName, const char* fileName, int lineNum, int instrType, int implType)
+IntrumentationRegion::IntrumentationRegion(const char* funName, const char* fileName, int lineNum, TYPE instrType, IMPL implType)
 {
     m_disabled    = false;
     m_regionTicks = 0;
@@ -1482,18 +1482,18 @@ IntrumentationRegion::~IntrumentationRegion()
             }
             else
             {
-                if(pTLS->pCurrentNode->m_payload.m_implType == cv::instr::IMPL_OPENCL &&
-                    pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_FUN)
-                    cv::ocl::finish();
+                if (pTLS->pCurrentNode->m_payload.m_implType == cv::instr::IMPL_OPENCL &&
+                    (pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_FUN ||
+                        pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_WRAPPER))
+                {
+                    cv::ocl::finish(); // TODO Support "async" OpenCL instrumentation
+                }
 
                 uint64 ticks = (getTickCount() - m_regionTicks);
                 {
                     cv::AutoLock guard(pStruct->mutexCount); // Concurrent ticks accumulation
                     pTLS->pCurrentNode->m_payload.m_counter++;
-                    if(pTLS->pCurrentNode->m_payload.m_counter <= 1)
-                        pTLS->pCurrentNode->m_payload.m_ticksMean = ticks;
-                    else
-                        pTLS->pCurrentNode->m_payload.m_ticksMean = (pTLS->pCurrentNode->m_payload.m_ticksMean*(pTLS->pCurrentNode->m_payload.m_counter-1) + ticks)/pTLS->pCurrentNode->m_payload.m_counter;
+                    pTLS->pCurrentNode->m_payload.m_ticksTotal += ticks;
                 }
 
                 pTLS->pCurrentNode = pTLS->pCurrentNode->m_pParent;
