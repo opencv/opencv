@@ -688,7 +688,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
                         At[i*astep + k] = t;
                         asum += std::abs(t);
                     }
-                    asum = asum ? 1/asum : 0;
+                    asum = asum > eps * 100 ? 1 / asum : 0;
                     for( k = 0; k < m; k++ )
                         At[i*astep + k] *= asum;
                 }
@@ -1560,18 +1560,18 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
         JacobiSVD(temp_a.ptr<double>(), temp_u.step, temp_w.ptr<double>(),
               temp_v.ptr<double>(), temp_v.step, m, n, compute_uv ? urows : 0);
     }
-    temp_w.copyTo(_w);
+    if(_w.needed()) temp_w.copyTo(_w);
     if( compute_uv )
     {
         if( !at )
         {
-            transpose(temp_u, _u);
-            temp_v.copyTo(_vt);
+            if(_u.needed()) transpose(temp_u, _u);
+            if(_vt.needed()) temp_v.copyTo(_vt);
         }
         else
         {
-            transpose(temp_v, _u);
-            temp_u.copyTo(_vt);
+            if(_u.needed()) transpose(temp_v, _u);
+            if(_vt.needed()) temp_u.copyTo(_vt);
         }
     }
 }

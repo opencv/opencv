@@ -1810,3 +1810,13 @@ TEST(MinMaxLoc, Mat_IntMax_Without_Mask)
     ASSERT_EQ(Point(0, 0), minLoc);
     ASSERT_EQ(Point(0, 0), maxLoc);
 }
+
+
+TEST(Core_FindNonZero, singular)
+{
+    Mat img(10, 10, CV_8U, Scalar::all(0));
+    vector<Point> pts, pts2(10);
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+}
