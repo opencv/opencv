@@ -73,25 +73,25 @@ struct MSERParams
 static String Legende(MSERParams &pAct)
 {
     String s="";
-    String inf = static_cast<ostringstream*>(&(ostringstream() << pAct.minArea))->str();
-    String sup = static_cast<ostringstream*>(&(ostringstream() << pAct.maxArea))->str();
+    String inf = (ostringstream() << pAct.minArea).str();
+    String sup = (ostringstream() << pAct.maxArea).str();
     s = " Area[" + inf + "," + sup + "]";
 
-    inf = static_cast<ostringstream*>(&(ostringstream() << pAct.delta))->str();
+    inf = (ostringstream() << pAct.delta).str();
     s += " del. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << pAct.maxVariation))->str();
+    inf = (ostringstream() << pAct.maxVariation).str();
     s += " var. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.minDiversity))->str();
+    inf = (ostringstream() << (int)pAct.minDiversity).str();
     s += " div. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.pass2Only))->str();
+    inf = (ostringstream() << (int)pAct.pass2Only).str();
     s += " pas. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.maxEvolution))->str();
+    inf = (ostringstream() << (int)pAct.maxEvolution).str();
     s += "RGb-> evo. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.areaThreshold))->str();
+    inf = (ostringstream() << (int)pAct.areaThreshold).str();
     s += " are. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.minMargin))->str();
+    inf = (ostringstream() << (int)pAct.minMargin).str();
     s += " mar. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.edgeBlurSize))->str();
+    inf = (ostringstream() << (int)pAct.edgeBlurSize).str();
     s += " siz. [" + inf + "]";
     return s;
 }
