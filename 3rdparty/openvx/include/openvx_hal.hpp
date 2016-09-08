@@ -886,6 +886,106 @@ inline int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, 
     return CV_HAL_ERROR_OK;
 }
 
+inline int ovx_hal_cvtBGRtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int depth, int acn, int bcn, bool swapBlue)
+{
+    if (depth != CV_8U || swapBlue || acn == bcn || (acn != 3 && acn != 4) || (bcn != 3 && bcn != 4))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, a, astep, w, h);
+        vxImage ib(*ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxErr::check(vxuColorConvert(ctx->ctx, ia.img, ib.img));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
+inline int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx)
+{
+    if (!swapBlue || (bcn != 3 && bcn != 4))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, a, astep, w, h);
+        vxImage ib(*ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxErr::check(vxuColorConvert(ctx->ctx, ia.img, ib.img));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
+inline int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx)
+{
+    if (!swapBlue || (bcn != 3 && bcn != 4) || uIdx)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, VX_DF_IMAGE_IYUV, a, astep, w, h);
+        vxImage ib(*ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxErr::check(vxuColorConvert(ctx->ctx, ia.img, ib.img));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
+inline int ovx_hal_cvtBGRtoThreePlaneYUV(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int acn, bool swapBlue, int uIdx)
+{
+    if (!swapBlue || (acn != 3 && acn != 4) || uIdx)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, a, astep, w, h);
+        vxImage ib(*ctx, VX_DF_IMAGE_IYUV, b, bstep, w, h);
+        vxErr::check(vxuColorConvert(ctx->ctx, ia.img, ib.img));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
+inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx, int ycn)
+{
+    if (!swapBlue || (bcn != 3 && bcn != 4) || uIdx)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, ycn ? VX_DF_IMAGE_UYVY : VX_DF_IMAGE_YUYV, a, astep, w, h);
+        vxImage ib(*ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxErr::check(vxuColorConvert(ctx->ctx, ia.img, ib.img));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
 #endif
 
 //==================================================================================================
@@ -952,6 +1052,17 @@ inline int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, 
 #define cv_hal_morph ovx_hal_morph
 #undef cv_hal_morphFree
 #define cv_hal_morphFree ovx_hal_morphFree
+
+#undef cv_hal_cvtBGRtoBGR
+#define cv_hal_cvtBGRtoBGR ovx_hal_cvtBGRtoBGR
+#undef cv_hal_cvtTwoPlaneYUVtoBGR
+#define cv_hal_cvtTwoPlaneYUVtoBGR ovx_hal_cvtTwoPlaneYUVtoBGR
+#undef cv_hal_cvtThreePlaneYUVtoBGR
+#define cv_hal_cvtThreePlaneYUVtoBGR ovx_hal_cvtThreePlaneYUVtoBGR
+#undef cv_hal_cvtBGRtoThreePlaneYUV
+#define cv_hal_cvtBGRtoThreePlaneYUV ovx_hal_cvtBGRtoThreePlaneYUV
+#undef cv_hal_cvtOnePlaneYUVtoBGR
+#define cv_hal_cvtOnePlaneYUVtoBGR ovx_hal_cvtOnePlaneYUVtoBGR
 
 #endif
 
