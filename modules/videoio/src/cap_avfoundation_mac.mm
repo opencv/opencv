@@ -171,18 +171,18 @@ private:
 
 /*****************************************************************************
  *
- * CvVideoWriter_AVFoundation_Mac Declaration.
+ * CvVideoWriter_AVFoundation Declaration.
  *
- * CvVideoWriter_AVFoundation_Mac is the instantiation of a video output class.
+ * CvVideoWriter_AVFoundation is the instantiation of a video output class.
  *
  *****************************************************************************/
 
-class CvVideoWriter_AVFoundation_Mac : public CvVideoWriter {
+class CvVideoWriter_AVFoundation : public CvVideoWriter {
     public:
-        CvVideoWriter_AVFoundation_Mac(const char* filename, int fourcc,
+        CvVideoWriter_AVFoundation(const char* filename, int fourcc,
                 double fps, CvSize frame_size,
                 int is_color=1);
-        ~CvVideoWriter_AVFoundation_Mac();
+        ~CvVideoWriter_AVFoundation();
         bool writeFrame(const IplImage* image);
     private:
         IplImage* argbimage;
@@ -203,7 +203,7 @@ class CvVideoWriter_AVFoundation_Mac : public CvVideoWriter {
 /****************** Implementation of interface functions ********************/
 
 
-CvCapture* cvCreateFileCapture_AVFoundation_Mac(const char* filename) {
+CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
     CvCaptureFile *retval = new CvCaptureFile(filename);
 
     if(retval->didStart())
@@ -212,17 +212,17 @@ CvCapture* cvCreateFileCapture_AVFoundation_Mac(const char* filename) {
     return NULL;
 }
 
-CvCapture* cvCreateCameraCapture_AVFoundation_Mac(int index ) {
+CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
     CvCapture* retval = new CvCaptureCAM(index);
     if (!((CvCaptureCAM *)retval)->didStart())
         cvReleaseCapture(&retval);
     return retval;
 }
 
-CvVideoWriter* cvCreateVideoWriter_AVFoundation_Mac(const char* filename, int fourcc,
+CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc,
                                      double fps, CvSize frame_size,
                                      int is_color) {
-    return new CvVideoWriter_AVFoundation_Mac(filename, fourcc, fps, frame_size,is_color);
+    return new CvVideoWriter_AVFoundation(filename, fourcc, fps, frame_size,is_color);
 }
 
 /********************** Implementation of Classes ****************************/
@@ -1087,14 +1087,14 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
 
 /*****************************************************************************
  *
- * CvVideoWriter_AVFoundation_Mac Implementation.
+ * CvVideoWriter_AVFoundation Implementation.
  *
- * CvVideoWriter_AVFoundation_Mac is the instantiation of a video output class.
+ * CvVideoWriter_AVFoundation is the instantiation of a video output class.
  *
  *****************************************************************************/
 
 
-CvVideoWriter_AVFoundation_Mac::CvVideoWriter_AVFoundation_Mac(const char* filename, int fourcc,
+CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int fourcc,
         double fps, CvSize frame_size,
         int is_color) {
 
@@ -1222,7 +1222,7 @@ CvVideoWriter_AVFoundation_Mac::CvVideoWriter_AVFoundation_Mac(const char* filen
 }
 
 
-CvVideoWriter_AVFoundation_Mac::~CvVideoWriter_AVFoundation_Mac() {
+CvVideoWriter_AVFoundation::~CvVideoWriter_AVFoundation() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     [mMovieWriterInput markAsFinished];
@@ -1243,7 +1243,7 @@ static void releaseCallback( void *releaseRefCon, const void * ) {
     CFRelease((CFDataRef)releaseRefCon);
 }
 
-bool CvVideoWriter_AVFoundation_Mac::writeFrame(const IplImage* iplimage) {
+bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     // writer status check
