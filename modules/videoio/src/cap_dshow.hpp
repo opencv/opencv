@@ -24,6 +24,7 @@ class VideoCapture_DShow : public IVideoCapture
 {
 public:
     VideoCapture_DShow(int index);
+    VideoCapture_DShow(int index, int width, int height);
     virtual ~VideoCapture_DShow();
 
     virtual double getProperty(int propIdx) const;
@@ -34,6 +35,7 @@ public:
     virtual int getCaptureDomain();
     virtual bool isOpened() const;
 protected:
+    void open(int index, int width, int height);
     void open(int index);
     void close();
 
