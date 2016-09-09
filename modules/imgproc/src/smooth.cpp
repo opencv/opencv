@@ -1583,7 +1583,7 @@ cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ks
 }
 
 // TODO: IPP performance regression
-#if 0 && defined(HAVE_IPP)
+#if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
 namespace cv
 {
 static bool ipp_boxfilter( InputArray _src, OutputArray _dst, int ddepth,
@@ -1706,10 +1706,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         return;
 #endif
 
-#if 0
-#ifdef HAVE_IPP
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
     int ippBorderType = borderType & ~BORDER_ISOLATED;
-#endif
     Point ocvAnchor, ippAnchor;
     ocvAnchor.x = anchor.x < 0 ? ksize.width / 2 : anchor.x;
     ocvAnchor.y = anchor.y < 0 ? ksize.height / 2 : anchor.y;
