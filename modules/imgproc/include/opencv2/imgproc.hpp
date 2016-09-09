@@ -3570,11 +3570,14 @@ results are returned in the structure cv::Moments.
 
 @param array Raster image (single-channel, 8-bit or floating-point 2D array) or an array (
 \f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f ).
-Note: For Python users, note that the numpy type for the input array should be either np.int32 or
-np.float32, or in general of type CV_32S or CV_32F.
 @param binaryImage If it is true, all non-zero image pixels are treated as 1's. The parameter is
 used for images only.
 @returns moments.
+
+@note Only applicable to contour moments calculations: For Python users, note that the numpy
+type for the input array should be either np.int32 or np.float32, or in general of type CV_32S or CV_32F.
+Thus, np.float will not work in this case, as it is the same as np.float64 and does not satisfy the
+Point2f type check.
 
 @sa  contourArea, arcLength
  */
