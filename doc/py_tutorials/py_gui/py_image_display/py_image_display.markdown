@@ -109,8 +109,8 @@ elif k == ord('s'): # wait for 's' key to save and exit
 
 **warning**
 
-If you are using a 64-bit machine, you will have to modify k = cv2.waitKey(0) line as follows :
-k = cv2.waitKey(0) & 0xFF
+If you are using a 64-bit machine, you will have to modify `k = cv2.waitKey(0)` line as follows :
+`k = cv2.waitKey(0) & 0xFF`
 
 Using Matplotlib
 ----------------
