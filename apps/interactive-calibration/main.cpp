@@ -12,7 +12,6 @@
 #include "calibCommon.hpp"
 #include "calibPipeline.hpp"
 #include "frameProcessor.hpp"
-#include "cvCalibrationFork.hpp"
 #include "calibController.hpp"
 #include "parametersController.hpp"
 #include "rotationConverters.hpp"
@@ -106,7 +105,7 @@ int main(int argc, char** argv)
     if(!parser.has("v")) globalData->imageSize = capParams.cameraResolution;
 
     int calibrationFlags = 0;
-    if(intParams.fastSolving) calibrationFlags |= CALIB_USE_QR;
+    if(intParams.fastSolving) calibrationFlags |= cv::CALIB_USE_QR;
     cv::Ptr<calibController> controller(new calibController(globalData, calibrationFlags,
                                                          parser.get<bool>("ft"), capParams.minFramesNum));
     cv::Ptr<calibDataController> dataController(new calibDataController(globalData, capParams.maxFramesNum,
@@ -131,11 +130,16 @@ int main(int argc, char** argv)
     cv::namedWindow(mainWindowName);
     cv::moveWindow(mainWindowName, 10, 10);
 #ifdef HAVE_QT
-    cv::createButton("Delete last frame", deleteButton, &dataController, cv::QT_PUSH_BUTTON);
-    cv::createButton("Delete all frames", deleteAllButton, &dataController, cv::QT_PUSH_BUTTON);
-    cv::createButton("Undistort", undistortButton, &showProcessor, cv::QT_CHECKBOX, false);
-    cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController, cv::QT_PUSH_BUTTON);
-    cv::createButton("Switch visualisation mode", switchVisualizationModeButton, &showProcessor, cv::QT_PUSH_BUTTON);
+    cv::createButton("Delete last frame", deleteButton, &dataController,
+                     cv::QT_PUSH_BUTTON | cv::QT_NEW_BUTTONBAR);
+    cv::createButton("Delete all frames", deleteAllButton, &dataController,
+                     cv::QT_PUSH_BUTTON | cv::QT_NEW_BUTTONBAR);
+    cv::createButton("Undistort", undistortButton, &showProcessor,
+                     cv::QT_CHECKBOX | cv::QT_NEW_BUTTONBAR, false);
+    cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController,
+                     cv::QT_PUSH_BUTTON | cv::QT_NEW_BUTTONBAR);
+    cv::createButton("Switch visualisation mode", switchVisualizationModeButton, &showProcessor,
+                     cv::QT_PUSH_BUTTON | cv::QT_NEW_BUTTONBAR);
 #endif //HAVE_QT
     try {
         bool pipelineFinished = false;
@@ -156,10 +160,10 @@ int main(int argc, char** argv)
 
                 if(capParams.board != chAruco) {
                     globalData->totalAvgErr =
-                            cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
+                            cv::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
                                                     globalData->imageSize, globalData->cameraMatrix,
                                                     globalData->distCoeffs, cv::noArray(), cv::noArray(),
-                                                    globalData->stdDeviations, globalData->perViewErrors,
+                                                    globalData->stdDeviations, cv::noArray(), globalData->perViewErrors,
                                                     calibrationFlags, solverTermCrit);
                 }
                 else {
@@ -169,10 +173,10 @@ int main(int argc, char** argv)
                                 cv::aruco::CharucoBoard::create(capParams.boardSize.width, capParams.boardSize.height,
                                                                 capParams.charucoSquareLenght, capParams.charucoMarkerSize, dictionary);
                     globalData->totalAvgErr =
-                            cvfork::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds,
+                            cv::aruco::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds,
                                                            charucoboard, globalData->imageSize,
                                                            globalData->cameraMatrix, globalData->distCoeffs,
-                                                           cv::noArray(), cv::noArray(), globalData->stdDeviations,
+                                                           cv::noArray(), cv::noArray(), globalData->stdDeviations, cv::noArray(),
                                                            globalData->perViewErrors, calibrationFlags, solverTermCrit);
                 }
                 dataController->updateUndistortMap();

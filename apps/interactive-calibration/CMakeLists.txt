@@ -5,15 +5,6 @@ if(NOT OCV_DEPENDENCIES_FOUND)
   return()
 endif()
 
-find_package(LAPACK)
-if(LAPACK_FOUND)
-  find_file(LAPACK_HEADER "lapacke.h")
-  if(LAPACK_HEADER)
-    add_definitions(-DUSE_LAPACK)
-    link_libraries(${LAPACK_LIBRARIES})
-  endif()
-endif()
-
 project(interactive-calibration)
 set(the_target opencv_interactive-calibration)
 
