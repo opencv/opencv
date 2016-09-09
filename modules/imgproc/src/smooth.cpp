@@ -581,7 +581,7 @@ public BaseColumnFilter
                 {
                     int s0 = SUM[i] + Sp[i];
                     D[i] = (uchar)((s0 + dd)*ds >> 16);
-                    SUM[i] = s0 - Sm[i];
+                    SUM[i] = (ushort)(s0 - Sm[i]);
                 }
             }
             else
@@ -591,13 +591,13 @@ public BaseColumnFilter
                 {
                     int s0 = SUM[i] + Sp[i];
                     D[i] = saturate_cast<uchar>(s0);
-                    SUM[i] = s0 - Sm[i];
+                    SUM[i] = (ushort)(s0 - Sm[i]);
                 }
             }
             dst += dststep;
         }
     }
-    
+
     double scale;
     int sumCount;
     int divDelta;
