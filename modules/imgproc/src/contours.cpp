@@ -1002,7 +1002,7 @@ cvFindNextContour( CvContourScanner scanner )
         CV_Error( CV_StsNullPtr, "" );
 
 #if CV_SSE2
-    bool haveSSE2 = cv::checkHardwareSupport(CPU_SSE2);
+    bool haveSIMD = cv::checkHardwareSupport(CPU_SSE2);
 #endif
 
     icvEndProcessContour( scanner );
@@ -1052,7 +1052,7 @@ cvFindNextContour( CvContourScanner scanner )
 #if CV_SSE2
                 if ((p = img[x]) != prev) {
                     goto _next_contour;
-                } else if (haveSSE2) {
+                } else if (haveSIMD) {
 
                     __m128i v_prev = _mm_set1_epi8((char)prev);
                     int v_size = width - 32;
@@ -1337,7 +1337,6 @@ cvEndFindContours( CvContourScanner * _scanner )
 #define ICV_SINGLE                  0
 #define ICV_CONNECTING_ABOVE        1
 #define ICV_CONNECTING_BELOW        -1
-//#define ICV_IS_COMPONENT_POINT(val) ((val) != 0)
 
 #define CV_GET_WRITTEN_ELEM( writer ) ((writer).ptr - (writer).seq->elem_size)
 
@@ -1349,13 +1348,9 @@ typedef  struct CvLinkedRunPoint
 }
 CvLinkedRunPoint;
 
+inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j, bool haveSIMD) {
 #if CV_SSE2
-inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j, bool haveSSE2) {
-#else
-inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j) {
-#endif
-#if CV_SSE2
-    if (haveSSE2) {
+    if (haveSIMD) {
         __m128i v_zero = _mm_setzero_si128();
         int v_size = img_size.width - 32;
 
@@ -1401,15 +1396,11 @@ inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j) {
     return j;
 }
 
-#if CV_SSE2
-inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j, bool haveSSE2) {
-#else
-inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j) {
-#endif
+inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j, bool haveSIMD) {
 #if CV_SSE2
     if (j < img_size.width && !src_data[j]) {
         return j;
-    } else if (haveSSE2) {
+    } else if (haveSIMD) {
         __m128i v_zero = _mm_setzero_si128();
         int v_size = img_size.width - 32;
 
@@ -1505,7 +1496,7 @@ icvFindContoursInInterval( const CvArr* src,
     if( contourHeaderSize < (int)sizeof(CvContour))
         CV_Error( CV_StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
 #if CV_SSE2
-    bool haveSSE2 = cv::checkHardwareSupport(CPU_SSE2);
+    bool haveSIMD = cv::checkHardwareSupport(CPU_SSE2);
 #endif
     storage00.reset(cvCreateChildMemStorage(storage));
     storage01.reset(cvCreateChildMemStorage(storage));
@@ -1539,11 +1530,8 @@ icvFindContoursInInterval( const CvArr* src,
     tmp_prev = upper_line;
     for( j = 0; j < img_size.width; )
     {
-#if CV_SSE2
-        j = findStartContourPoint(src_data, img_size, j, haveSSE2);
-#else
-        j = findStartContourPoint(src_data, img_size, j);
-#endif
+        j = findStartContourPoint(src_data, img_size, j, haveSIMD);
+
         if( j == img_size.width )
             break;
 
@@ -1551,11 +1539,9 @@ icvFindContoursInInterval( const CvArr* src,
         CV_WRITE_SEQ_ELEM( tmp, writer );
         tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         tmp_prev = tmp_prev->next;
-#if CV_SSE2
-        j = findEndContourPoint(src_data, img_size, j+1, haveSSE2);
-#else
-        j = findEndContourPoint(src_data, img_size, j+1);
-#endif
+
+        j = findEndContourPoint(src_data, img_size, j+1, haveSIMD);
+
         tmp.pt.x = j - 1;
         CV_WRITE_SEQ_ELEM( tmp, writer );
         tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
@@ -1578,22 +1564,17 @@ icvFindContoursInInterval( const CvArr* src,
         all_total = runs->total;
         for( j = 0; j < img_size.width; )
         {
-#if CV_SSE2
-            j = findStartContourPoint(src_data, img_size, j, haveSSE2);
-#else
-            j = findStartContourPoint(src_data, img_size, j);
-#endif
+            j = findStartContourPoint(src_data, img_size, j, haveSIMD);
+
             if( j == img_size.width ) break;
 
             tmp.pt.x = j;
             CV_WRITE_SEQ_ELEM( tmp, writer );
             tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
             tmp_prev = tmp_prev->next;
-#if CV_SSE2
-            j = findEndContourPoint(src_data, img_size, j+1, haveSSE2);
-#else
-            j = findEndContourPoint(src_data, img_size, j+1);
-#endif
+
+            j = findEndContourPoint(src_data, img_size, j+1, haveSIMD);
+
             tmp.pt.x = j - 1;
             CV_WRITE_SEQ_ELEM( tmp, writer );
             tmp_prev = tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
