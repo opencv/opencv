@@ -1390,6 +1390,8 @@ inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j, bool h
             j += 16;
         }
     }
+#else
+    CV_UNUSED(haveSIMD);
 #endif
     for (; j < img_size.width && !src_data[j]; ++j)
         ;
@@ -1437,6 +1439,8 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j, bool hav
             j += 16;
         }
     }
+#else
+    CV_UNUSED(haveSIMD);
 #endif
     for (; j < img_size.width && src_data[j]; ++j)
         ;
@@ -1466,6 +1470,7 @@ icvFindContoursInInterval( const CvArr* src,
     int  lower_total;
     int  upper_total;
     int  all_total;
+    bool haveSIMD = false;
 
     CvSeq*  runs;
     CvLinkedRunPoint  tmp;
@@ -1496,7 +1501,7 @@ icvFindContoursInInterval( const CvArr* src,
     if( contourHeaderSize < (int)sizeof(CvContour))
         CV_Error( CV_StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
 #if CV_SSE2
-    bool haveSIMD = cv::checkHardwareSupport(CPU_SSE2);
+    haveSIMD = cv::checkHardwareSupport(CPU_SSE2);
 #endif
     storage00.reset(cvCreateChildMemStorage(storage));
     storage01.reset(cvCreateChildMemStorage(storage));
@@ -1540,7 +1545,7 @@ icvFindContoursInInterval( const CvArr* src,
         tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         tmp_prev = tmp_prev->next;
 
-        j = findEndContourPoint(src_data, img_size, j+1, haveSIMD);
+        j = findEndContourPoint(src_data, img_size, j + 1, haveSIMD);
 
         tmp.pt.x = j - 1;
         CV_WRITE_SEQ_ELEM( tmp, writer );
@@ -1573,7 +1578,7 @@ icvFindContoursInInterval( const CvArr* src,
             tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
             tmp_prev = tmp_prev->next;
 
-            j = findEndContourPoint(src_data, img_size, j+1, haveSIMD);
+            j = findEndContourPoint(src_data, img_size, j + 1, haveSIMD);
 
             tmp.pt.x = j - 1;
             CV_WRITE_SEQ_ELEM( tmp, writer );
