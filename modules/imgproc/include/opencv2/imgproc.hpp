@@ -3574,10 +3574,8 @@ results are returned in the structure cv::Moments.
 used for images only.
 @returns moments.
 
-@note Only applicable to contour moments calculations: For Python users, note that the numpy
-type for the input array should be either np.int32 or np.float32, or in general of type CV_32S or CV_32F.
-Thus, np.float will not work in this case, as it is the same as np.float64 and does not satisfy the
-Point2f type check.
+@note Only applicable to contour moments calculations from Python bindings: Note that the numpy
+type for the input array should be either np.int32 or np.float32.
 
 @sa  contourArea, arcLength
  */
