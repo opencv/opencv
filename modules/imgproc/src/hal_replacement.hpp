@@ -263,7 +263,7 @@ inline int hal_ni_resize(int src_type, const uchar *src_data, size_t src_step, i
    @param dst_step destination image step
    @param dst_width destination image width
    @param dst_height destination image height
-   @param M 3x2 matrix with transform coefficients
+   @param M 2x3 matrix with transform coefficients
    @param interpolation interpolation mode (CV_HAL_INTER_NEAREST, ...)
    @param borderType border processing mode (CV_HAL_BORDER_REFLECT, ...)
    @param borderValue values to use for CV_HAL_BORDER_CONSTANT mode
