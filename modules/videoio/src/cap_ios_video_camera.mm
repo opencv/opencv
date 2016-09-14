@@ -61,11 +61,12 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
 
 @implementation CvVideoCamera
+{
+    id<CvVideoCameraDelegate> _delegate;
+}
 
 
 
-
-@synthesize delegate;
 @synthesize grayscaleMode;
 
 @synthesize customPreviewLayer;
@@ -78,7 +79,13 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 @synthesize recordPixelBufferAdaptor;
 @synthesize recordAssetWriter;
 
+- (void)setDelegate:(id<CvVideoCameraDelegate>)newDelegate {
+    _delegate = newDelegate;
+}
 
+- (id<CvVideoCameraDelegate>)delegate {
+    return _delegate;
+}
 
 #pragma mark - Constructors
 
@@ -450,7 +457,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 {
     (void)captureOutput;
     (void)connection;
-    if (self.delegate) {
+    auto strongDelegate = self.delegate;
+    if (strongDelegate) {
 
         // convert from Core Media to Core Video
         CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
@@ -492,8 +500,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 
         CGImage* dstImage;
 
-        if ([self.delegate respondsToSelector:@selector(processImage:)]) {
-            [self.delegate processImage:image];
+        if ([strongDelegate respondsToSelector:@selector(processImage:)]) {
+            [strongDelegate processImage:image];
         }
 
         // check if matrix data pointer or dimensions were changed by the delegate
