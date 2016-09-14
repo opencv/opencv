@@ -323,7 +323,7 @@
             NSError* error = nil;
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
             if (!input) {
-                NSLog(@"error creating input %@", [error localizedDescription]);
+                NSLog(@"error creating input %@", [error description]);
             }
 
             // support for autofocus
@@ -333,7 +333,7 @@
                     device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
                     [device unlockForConfiguration];
                 } else {
-                    NSLog(@"unable to lock device for autofocos configuration %@", [error localizedDescription]);
+                    NSLog(@"unable to lock device for autofocus configuration %@", [error description]);
                 }
             }
             [self.captureSession addInput:input];
@@ -379,13 +379,13 @@
 - (void)createCaptureOutput;
 {
     [NSException raise:NSInternalInconsistencyException
-                format:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)];
+                format:@"You must override %s in a subclass", __FUNCTION__];
 }
 
 - (void)createCustomVideoPreview;
 {
     [NSException raise:NSInternalInconsistencyException
-                format:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)];
+                format:@"You must override %s in a subclass", __FUNCTION__];
 }
 
 - (void)updateOrientation;
@@ -436,7 +436,7 @@
             device.focusMode = AVCaptureFocusModeLocked;
             [device unlockForConfiguration];
         } else {
-            NSLog(@"unable to lock device for locked focus configuration %@", [error localizedDescription]);
+            NSLog(@"unable to lock device for locked focus configuration %@", [error description]);
         }
     }
 }
@@ -450,7 +450,7 @@
             device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
             [device unlockForConfiguration];
         } else {
-            NSLog(@"unable to lock device for autofocus configuration %@", [error localizedDescription]);
+            NSLog(@"unable to lock device for autofocus configuration %@", [error description]);
         }
     }
 }
@@ -464,7 +464,7 @@
             device.exposureMode = AVCaptureExposureModeLocked;
             [device unlockForConfiguration];
         } else {
-            NSLog(@"unable to lock device for locked exposure configuration %@", [error localizedDescription]);
+            NSLog(@"unable to lock device for locked exposure configuration %@", [error description]);
         }
     }
 }
@@ -478,7 +478,7 @@
             device.exposureMode = AVCaptureExposureModeContinuousAutoExposure;
             [device unlockForConfiguration];
         } else {
-            NSLog(@"unable to lock device for autoexposure configuration %@", [error localizedDescription]);
+            NSLog(@"unable to lock device for autoexposure configuration %@", [error description]);
         }
     }
 }
@@ -492,7 +492,7 @@
             device.whiteBalanceMode = AVCaptureWhiteBalanceModeLocked;
             [device unlockForConfiguration];
         } else {
-            NSLog(@"unable to lock device for locked white balance configuration %@", [error localizedDescription]);
+            NSLog(@"unable to lock device for locked white balance configuration %@", [error description]);
         }
     }
 }
@@ -506,7 +506,7 @@
             device.whiteBalanceMode = AVCaptureWhiteBalanceModeContinuousAutoWhiteBalance;
             [device unlockForConfiguration];
         } else {
-            NSLog(@"unable to lock device for auto white balance configuration %@", [error localizedDescription]);
+            NSLog(@"unable to lock device for auto white balance configuration %@", [error description]);
         }
     }
 }
