@@ -319,7 +319,7 @@ CV_INLINE void
     {
         m_nNextShortUpdate[pixel] = (uchar)( rand() % m_nShortUpdate );
     };
-};
+}
 
 CV_INLINE int
         _cvCheckPixelBackgroundNP(long pixel,
@@ -436,7 +436,7 @@ CV_INLINE int
         };
     }
     return 0;
-};
+}
 
 CV_INLINE void
         icvUpdatePixelBackgroundNP(const Mat& _src, Mat& _dst,
@@ -554,7 +554,7 @@ CV_INLINE void
             i++;
         }
     }
-};
+}
 
 
 

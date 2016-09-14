@@ -495,8 +495,8 @@ void Mat::forEach_impl(const Functor& operation) {
     {
     public:
         PixelOperationWrapper(Mat_<_Tp>* const frame, const Functor& _operation)
-            : mat(frame), op(_operation) {};
-        virtual ~PixelOperationWrapper(){};
+            : mat(frame), op(_operation) {}
+        virtual ~PixelOperationWrapper(){}
         // ! Overloaded virtual operator
         // convert range call to row call.
         virtual void operator()(const Range &range) const {
@@ -525,7 +525,7 @@ void Mat::forEach_impl(const Functor& operation) {
                     this->rowCall(&idx[0], COLS, DIMS);
                 }
             }
-        };
+        }
     private:
         Mat_<_Tp>* const mat;
         const Functor op;
@@ -562,12 +562,12 @@ void Mat::forEach_impl(const Functor& operation) {
                 op(*pixel++, static_cast<const int*>(idx));
                 idx[1]++;
             }
-        };
+        }
         PixelOperationWrapper& operator=(const PixelOperationWrapper &) {
             CV_Assert(false);
             // We can not remove this implementation because Visual Studio warning C4822.
             return *this;
-        };
+        }
     };
 
     parallel_for_(cv::Range(0, LINES), PixelOperationWrapper(reinterpret_cast<Mat_<_Tp>*>(this), operation));
@@ -650,8 +650,8 @@ private:
     virtual void  deleteDataInstance(void* pData) const {delete (T*)pData;} // Wrapper to release data by template
 
     // Disable TLS copy operations
-    TLSData(TLSData &) {};
-    TLSData& operator =(const TLSData &) {return *this;};
+    TLSData(TLSData &) {}
+    TLSData& operator =(const TLSData &) {return *this;}
 };
 
 /** @brief Designed for command line parsing
