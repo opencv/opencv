@@ -59,10 +59,10 @@ inline unsigned int trailingZeros(unsigned int value) {
 #endif
 #elif defined(__GNUC__) || defined(__GNUG__)
     return __builtin_ctz(value);
-//#elif defined(__ICC) || defined(__INTEL_COMPILER)
-//    return _bit_scan_forward(value);
-//#elif defined(__clang__)
-//    return llvm.cttz.i32(value, true);
+#elif defined(__ICC) || defined(__INTEL_COMPILER)
+    return _bit_scan_forward(value);
+#elif defined(__clang__)
+    return llvm.cttz.i32(value, true);
 #else
     static const int MultiplyDeBruijnBitPosition[32] = {
         0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
