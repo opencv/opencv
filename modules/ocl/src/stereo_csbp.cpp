@@ -76,11 +76,11 @@ namespace cv
             /////////////////////////////////init_data_cost//////////////////////////////////
             //////////////////////////////////////////////////////////////////////////////////
             static void init_data_cost_caller(const oclMat &left, const oclMat &right, oclMat &temp,
-                StereoConstantSpaceBP &rthis,
+                StereoConstantSpaceBP *pThis,
                 int msg_step, int h, int w, int level)
             {
                 Context  *clCxt = left.clCxt;
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
                 int channels = left.oclchannels();
 
                 string kernelName = get_kernel_name("init_data_cost_", data_type);
@@ -104,12 +104,12 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 5, sizeof(cl_int),  (void *)&level));
                 openCLSafeCall(clSetKernelArg(kernel, 6, sizeof(cl_int),  (void *)&channels));
                 openCLSafeCall(clSetKernelArg(kernel, 7, sizeof(cl_int),  (void *)&msg_step));
-                openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_float), (void *)&rthis.data_weight));
-                openCLSafeCall(clSetKernelArg(kernel, 9, sizeof(cl_float), (void *)&rthis.max_data_term));
+                openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_float), (void *)&pThis->data_weight));
+                openCLSafeCall(clSetKernelArg(kernel, 9, sizeof(cl_float), (void *)&pThis->max_data_term));
                 openCLSafeCall(clSetKernelArg(kernel, 10, sizeof(cl_int), (void *)&cdisp_step1));
-                openCLSafeCall(clSetKernelArg(kernel, 11, sizeof(cl_int), (void *)&rthis.min_disp_th));
+                openCLSafeCall(clSetKernelArg(kernel, 11, sizeof(cl_int), (void *)&pThis->min_disp_th));
                 openCLSafeCall(clSetKernelArg(kernel, 12, sizeof(cl_int), (void *)&left.step));
-                openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_int), (void *)&rthis.ndisp));
+                openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_int), (void *)&pThis->ndisp));
                 openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
@@ -118,12 +118,12 @@ namespace cv
             }
 
             static void init_data_cost_reduce_caller(const oclMat &left, const oclMat &right, oclMat &temp,
-                StereoConstantSpaceBP &rthis,
+                StereoConstantSpaceBP *pThis,
                 int msg_step, int h, int w, int level)
             {
 
                 Context  *clCxt = left.clCxt;
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
                 int channels = left.oclchannels();
                 int win_size = (int)std::pow(2.f, level);
 
@@ -135,7 +135,7 @@ namespace cv
                 //size_t blockSize = threadsNum;
                 size_t localThreads[3]  = {(size_t)win_size, 1, (size_t)threadsNum / win_size};
                 size_t globalThreads[3] = { w *localThreads[0],
-                    h * divUp(rthis.ndisp, localThreads[2]) *localThreads[1], 1 * localThreads[2]
+                    h * divUp(pThis->ndisp, localThreads[2]) *localThreads[1], 1 * localThreads[2]
                 };
 
                 int local_mem_size = threadsNum * sizeof(float);
@@ -153,11 +153,11 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 7,  sizeof(cl_int),  (void *)&h));
                 openCLSafeCall(clSetKernelArg(kernel, 8,  sizeof(cl_int),  (void *)&win_size));
                 openCLSafeCall(clSetKernelArg(kernel, 9,  sizeof(cl_int),  (void *)&channels));
-                openCLSafeCall(clSetKernelArg(kernel, 10, sizeof(cl_int),  (void *)&rthis.ndisp));
+                openCLSafeCall(clSetKernelArg(kernel, 10, sizeof(cl_int),  (void *)&pThis->ndisp));
                 openCLSafeCall(clSetKernelArg(kernel, 11, sizeof(cl_int),  (void *)&left.step));
-                openCLSafeCall(clSetKernelArg(kernel, 12, sizeof(cl_float), (void *)&rthis.data_weight));
-                openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_float), (void *)&rthis.max_data_term));
-                openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_int),  (void *)&rthis.min_disp_th));
+                openCLSafeCall(clSetKernelArg(kernel, 12, sizeof(cl_float), (void *)&pThis->data_weight));
+                openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_float), (void *)&pThis->max_data_term));
+                openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_int),  (void *)&pThis->min_disp_th));
                 openCLSafeCall(clSetKernelArg(kernel, 15, sizeof(cl_int),  (void *)&cdisp_step1));
                 openCLSafeCall(clSetKernelArg(kernel, 16, sizeof(cl_int),  (void *)&msg_step));
                 openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 3, NULL,
@@ -167,11 +167,11 @@ namespace cv
             }
 
             static void get_first_initial_local_caller(uchar *data_cost_selected, uchar *disp_selected_pyr,
-                oclMat &temp, StereoConstantSpaceBP &rthis,
+                oclMat &temp, StereoConstantSpaceBP *pThis,
                 int h, int w, int nr_plane, int msg_step)
             {
                 Context  *clCxt = temp.clCxt;
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
 
                 string kernelName = get_kernel_name("get_first_k_initial_local_", data_type);
 
@@ -191,7 +191,7 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 5, sizeof(cl_int), (void *)&nr_plane));
                 openCLSafeCall(clSetKernelArg(kernel, 6, sizeof(cl_int), (void *)&msg_step));
                 openCLSafeCall(clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&disp_step));
-                openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_int), (void *)&rthis.ndisp));
+                openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_int), (void *)&pThis->ndisp));
                 openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
@@ -199,11 +199,11 @@ namespace cv
                 openCLSafeCall(clReleaseKernel(kernel));
             }
             static void get_first_initial_global_caller(uchar *data_cost_selected, uchar *disp_selected_pyr,
-                oclMat &temp, StereoConstantSpaceBP &rthis,
+                oclMat &temp, StereoConstantSpaceBP *pThis,
                 int h, int w, int nr_plane, int msg_step)
             {
                 Context  *clCxt = temp.clCxt;
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
 
                 string kernelName = get_kernel_name("get_first_k_initial_global_", data_type);
 
@@ -226,7 +226,7 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 5, sizeof(cl_int), (void *)&nr_plane));
                 openCLSafeCall(clSetKernelArg(kernel, 6, sizeof(cl_int), (void *)&msg_step));
                 openCLSafeCall(clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&disp_step));
-                openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_int), (void *)&rthis.ndisp));
+                openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_int), (void *)&pThis->ndisp));
                 openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
@@ -234,23 +234,23 @@ namespace cv
                 openCLSafeCall(clReleaseKernel(kernel));
             }
 
-            static void init_data_cost(const oclMat &left, const oclMat &right, oclMat &temp, StereoConstantSpaceBP &rthis,
+            static void init_data_cost(const oclMat &left, const oclMat &right, oclMat &temp, StereoConstantSpaceBP *pThis,
                 uchar *disp_selected_pyr, uchar *data_cost_selected,
                 size_t msg_step, int h, int w, int level, int nr_plane)
             {
 
                 if(level <= 1)
-                    init_data_cost_caller(left, right, temp, rthis, msg_step, h, w, level);
+                    init_data_cost_caller(left, right, temp, pThis, msg_step, h, w, level);
                 else
-                    init_data_cost_reduce_caller(left, right, temp, rthis, msg_step, h, w, level);
+                    init_data_cost_reduce_caller(left, right, temp, pThis, msg_step, h, w, level);
 
-                if(rthis.use_local_init_data_cost == true)
+                if(pThis->use_local_init_data_cost == true)
                 {
-                    get_first_initial_local_caller(data_cost_selected, disp_selected_pyr, temp, rthis, h, w, nr_plane, msg_step);
+                    get_first_initial_local_caller(data_cost_selected, disp_selected_pyr, temp, pThis, h, w, nr_plane, msg_step);
                 }
                 else
                 {
-                    get_first_initial_global_caller(data_cost_selected, disp_selected_pyr, temp, rthis, h, w,
+                    get_first_initial_global_caller(data_cost_selected, disp_selected_pyr, temp, pThis, h, w,
                         nr_plane, msg_step);
                 }
             }
@@ -259,13 +259,13 @@ namespace cv
             ///////////////////////////////////compute_data_cost//////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////////////////////////
             static void compute_data_cost_caller(uchar *disp_selected_pyr, uchar *data_cost,
-                StereoConstantSpaceBP &rthis, int msg_step1,
+                StereoConstantSpaceBP *pThis, int msg_step1,
                 int msg_step2, const oclMat &left, const oclMat &right, int h,
                 int w, int h2, int level, int nr_plane)
             {
                 Context  *clCxt = left.clCxt;
                 int channels = left.oclchannels();
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
 
                 string kernelName = get_kernel_name("compute_data_cost_", data_type);
 
@@ -290,10 +290,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 10, sizeof(cl_int),  (void *)&msg_step2));
                 openCLSafeCall(clSetKernelArg(kernel, 11, sizeof(cl_int),  (void *)&disp_step1));
                 openCLSafeCall(clSetKernelArg(kernel, 12, sizeof(cl_int),  (void *)&disp_step2));
-                openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_float), (void *)&rthis.data_weight));
-                openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_float), (void *)&rthis.max_data_term));
+                openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_float), (void *)&pThis->data_weight));
+                openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_float), (void *)&pThis->max_data_term));
                 openCLSafeCall(clSetKernelArg(kernel, 15, sizeof(cl_int),  (void *)&left.step));
-                openCLSafeCall(clSetKernelArg(kernel, 16, sizeof(cl_int),  (void *)&rthis.min_disp_th));
+                openCLSafeCall(clSetKernelArg(kernel, 16, sizeof(cl_int),  (void *)&pThis->min_disp_th));
                 openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
@@ -301,12 +301,12 @@ namespace cv
                 openCLSafeCall(clReleaseKernel(kernel));
             }
             static void compute_data_cost_reduce_caller(uchar *disp_selected_pyr, uchar *data_cost,
-                StereoConstantSpaceBP &rthis, int msg_step1,
+                StereoConstantSpaceBP *pThis, int msg_step1,
                 int msg_step2, const oclMat &left, const oclMat &right, int h,
                 int w, int h2, int level, int nr_plane)
             {
                 Context  *clCxt = left.clCxt;
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
                 int channels = left.oclchannels();
                 int win_size = (int)std::pow(2.f, level);
 
@@ -341,25 +341,25 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_int),  (void *)&msg_step2));
                 openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_int),  (void *)&disp_step1));
                 openCLSafeCall(clSetKernelArg(kernel, 15, sizeof(cl_int),  (void *)&disp_step2));
-                openCLSafeCall(clSetKernelArg(kernel, 16, sizeof(cl_float), (void *)&rthis.data_weight));
-                openCLSafeCall(clSetKernelArg(kernel, 17, sizeof(cl_float), (void *)&rthis.max_data_term));
+                openCLSafeCall(clSetKernelArg(kernel, 16, sizeof(cl_float), (void *)&pThis->data_weight));
+                openCLSafeCall(clSetKernelArg(kernel, 17, sizeof(cl_float), (void *)&pThis->max_data_term));
                 openCLSafeCall(clSetKernelArg(kernel, 18, sizeof(cl_int),  (void *)&left.step));
-                openCLSafeCall(clSetKernelArg(kernel, 19, sizeof(cl_int),  (void *)&rthis.min_disp_th));
+                openCLSafeCall(clSetKernelArg(kernel, 19, sizeof(cl_int),  (void *)&pThis->min_disp_th));
                 openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 3, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
                 clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
-            static void compute_data_cost(uchar *disp_selected_pyr, uchar *data_cost, StereoConstantSpaceBP &rthis,
+            static void compute_data_cost(uchar *disp_selected_pyr, uchar *data_cost, StereoConstantSpaceBP *pThis,
                 int msg_step1, int msg_step2, const oclMat &left, const oclMat &right, int h, int w,
                 int h2, int level, int nr_plane)
             {
                 if(level <= 1)
-                    compute_data_cost_caller(disp_selected_pyr, data_cost, rthis, msg_step1, msg_step2,
+                    compute_data_cost_caller(disp_selected_pyr, data_cost, pThis, msg_step1, msg_step2,
                     left, right, h, w, h2, level, nr_plane);
                 else
-                    compute_data_cost_reduce_caller(disp_selected_pyr, data_cost, rthis,  msg_step1, msg_step2,
+                    compute_data_cost_reduce_caller(disp_selected_pyr, data_cost, pThis,  msg_step1, msg_step2,
                     left, right, h, w, h2, level, nr_plane);
             }
             ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -368,12 +368,12 @@ namespace cv
             static void init_message(uchar *u_new, uchar *d_new, uchar *l_new, uchar *r_new,
                 uchar *u_cur, uchar *d_cur, uchar *l_cur, uchar *r_cur,
                 uchar *disp_selected_pyr_new, uchar *disp_selected_pyr_cur,
-                uchar *data_cost_selected, uchar *data_cost, oclMat &temp, StereoConstantSpaceBP rthis,
+                uchar *data_cost_selected, uchar *data_cost, oclMat &temp, StereoConstantSpaceBP *pThis,
                 size_t msg_step1, size_t msg_step2, int h, int w, int nr_plane,
                 int h2, int w2, int nr_plane2)
             {
                 Context  *clCxt = temp.clCxt;
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
 
                 string kernelName = get_kernel_name("init_message_", data_type);
 
@@ -419,11 +419,11 @@ namespace cv
             ///////////////////////////calc_all_iterations////////////////////////////////////////////////
             //////////////////////////////////////////////////////////////////////////////////////////////
             static void calc_all_iterations_caller(uchar *u, uchar *d, uchar *l, uchar *r, uchar *data_cost_selected,
-                uchar *disp_selected_pyr, oclMat &temp, StereoConstantSpaceBP rthis,
+                uchar *disp_selected_pyr, oclMat &temp, StereoConstantSpaceBP *pThis,
                 int msg_step, int h, int w, int nr_plane, int i)
             {
                 Context  *clCxt = temp.clCxt;
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
 
                 string kernelName = get_kernel_name("compute_message_", data_type);
 
@@ -447,10 +447,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 8,  sizeof(cl_int),  (void *)&w));
                 openCLSafeCall(clSetKernelArg(kernel, 9,  sizeof(cl_int),  (void *)&nr_plane));
                 openCLSafeCall(clSetKernelArg(kernel, 10, sizeof(cl_int),  (void *)&i));
-                openCLSafeCall(clSetKernelArg(kernel, 11, sizeof(cl_float), (void *)&rthis.max_disc_term));
+                openCLSafeCall(clSetKernelArg(kernel, 11, sizeof(cl_float), (void *)&pThis->max_disc_term));
                 openCLSafeCall(clSetKernelArg(kernel, 12, sizeof(cl_int),  (void *)&disp_step));
                 openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_int),  (void *)&msg_step));
-                openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_float), (void *)&rthis.disc_single_jump));
+                openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_float), (void *)&pThis->disc_single_jump));
                 openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
@@ -458,11 +458,11 @@ namespace cv
                 openCLSafeCall(clReleaseKernel(kernel));
             }
             static void calc_all_iterations(uchar *u, uchar *d, uchar *l, uchar *r, uchar *data_cost_selected,
-                uchar *disp_selected_pyr, oclMat &temp, StereoConstantSpaceBP rthis,
+                uchar *disp_selected_pyr, oclMat &temp, StereoConstantSpaceBP *pThis,
                 int msg_step, int h, int w, int nr_plane)
             {
-                for(int t = 0; t < rthis.iters; t++)
-                    calc_all_iterations_caller(u, d, l, r, data_cost_selected, disp_selected_pyr, temp, rthis,
+                for(int t = 0; t < pThis->iters; t++)
+                    calc_all_iterations_caller(u, d, l, r, data_cost_selected, disp_selected_pyr, temp, pThis,
                     msg_step, h, w, nr_plane, t & 1);
             }
 
@@ -470,11 +470,11 @@ namespace cv
             //////////////////////////compute_disp////////////////////////////////////////////////////////
             /////////////////////////////////////////////////////////////////////////////////////////////
             static void compute_disp(uchar *u, uchar *d, uchar *l, uchar *r, uchar *data_cost_selected,
-                uchar *disp_selected_pyr, StereoConstantSpaceBP &rthis, size_t msg_step,
+                uchar *disp_selected_pyr, StereoConstantSpaceBP *pThis, size_t msg_step,
                 oclMat &disp, int nr_plane)
             {
                 Context  *clCxt = disp.clCxt;
-                int data_type = rthis.msg_type;
+                int data_type = pThis->msg_type;
 
                 string kernelName = get_kernel_name("compute_disp_", data_type);
 
@@ -550,20 +550,20 @@ cv::ocl::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp_, int iters_, in
     : ndisp(ndisp_), iters(iters_), levels(levels_), nr_plane(nr_plane_),
     max_data_term(max_data_term_), data_weight(data_weight_),
     max_disc_term(max_disc_term_), disc_single_jump(disc_single_jump_), min_disp_th(min_disp_th_),
-    msg_type(msg_type_), use_local_init_data_cost(true)
+    msg_type(msg_type_), use_local_init_data_cost(TRUE)
 {
     CV_Assert(msg_type_ == CV_32F || msg_type_ == CV_16S);
 }
 
 template<class T>
-static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2], oclMat l[2], oclMat r[2],
+static void csbp_operator(StereoConstantSpaceBP *pThis, oclMat u[2], oclMat d[2], oclMat l[2], oclMat r[2],
     oclMat disp_selected_pyr[2], oclMat &data_cost, oclMat &data_cost_selected,
     oclMat &temp, oclMat &out, const oclMat &left, const oclMat &right, oclMat &disp)
 {
-    CV_DbgAssert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels && 0 < rthis.nr_plane
+    CV_DbgAssert(0 < pThis->ndisp && 0 < pThis->iters && 0 < pThis->levels && 0 < pThis->nr_plane
         && left.rows == right.rows && left.cols == right.cols && left.type() == right.type());
 
-    CV_Assert(rthis.levels <= 8 && (left.type() == CV_8UC1 || left.type() == CV_8UC3));
+    CV_Assert(pThis->levels <= 8 && (left.type() == CV_8UC1 || left.type() == CV_8UC3));
 
     const Scalar zero = Scalar::all(0);
 
@@ -571,8 +571,8 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
     int rows = left.rows;
     int cols = left.cols;
 
-    rthis.levels = min(rthis.levels, int(log((double)rthis.ndisp) / log(2.0)));
-    int levels = rthis.levels;
+    pThis->levels = min(pThis->levels, int(log((double)pThis->ndisp) / log(2.0)));
+    int levels = pThis->levels;
 
     AutoBuffer<int> buf(levels * 4);
 
@@ -583,7 +583,7 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
 
     cols_pyr[0] = cols;
     rows_pyr[0] = rows;
-    nr_plane_pyr[0] = rthis.nr_plane;
+    nr_plane_pyr[0] = pThis->nr_plane;
 
     const int n = 64;
     step_pyr[0] = alignSize(cols * sizeof(T), n) / sizeof(T);
@@ -617,16 +617,16 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
     data_cost_selected.create(msg_size, DataType<T>::type);
 
     Size temp_size = data_cost_size;
-    if (data_cost_size.width * data_cost_size.height < step_pyr[0] * rows_pyr[levels - 1] * rthis.ndisp)
-        temp_size = Size(step_pyr[0], rows_pyr[levels - 1] * rthis.ndisp);
+    if (data_cost_size.width * data_cost_size.height < step_pyr[0] * rows_pyr[levels - 1] * pThis->ndisp)
+        temp_size = Size(step_pyr[0], rows_pyr[levels - 1] * pThis->ndisp);
 
     temp.create(temp_size, DataType<T>::type);
     temp = zero;
 
     ///////////////////////////////// Compute////////////////////////////////////////////////
 
-    //csbp::load_constants(rthis.ndisp, rthis.max_data_term, rthis.data_weight,
-    //   rthis.max_disc_term, rthis.disc_single_jump, rthis.min_disp_th, left, right, temp);
+    //csbp::load_constants(pThis->ndisp, pThis->max_data_term, pThis->data_weight,
+    //   pThis->max_disc_term, pThis->disc_single_jump, pThis->min_disp_th, left, right, temp);
 
     l[0] = zero;
     d[0] = zero;
@@ -650,14 +650,14 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
     {
         if (i == levels - 1)
         {
-            cv::ocl::stereoCSBP::init_data_cost(left, right, temp, rthis, disp_selected_pyr[cur_idx].data,
+            cv::ocl::stereoCSBP::init_data_cost(left, right, temp, pThis, disp_selected_pyr[cur_idx].data,
                 data_cost_selected.data, step_pyr[0], rows_pyr[i], cols_pyr[i],
                 i, nr_plane_pyr[i]);
         }
         else
         {
             cv::ocl::stereoCSBP::compute_data_cost(
-                disp_selected_pyr[cur_idx].data, data_cost.data, rthis, step_pyr[0],
+                disp_selected_pyr[cur_idx].data, data_cost.data, pThis, step_pyr[0],
                 step_pyr[0], left, right, rows_pyr[i], cols_pyr[i], rows_pyr[i + 1], i,
                 nr_plane_pyr[i + 1]);
 
@@ -666,14 +666,14 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
             cv::ocl::stereoCSBP::init_message(u[new_idx].data, d[new_idx].data, l[new_idx].data, r[new_idx].data,
                 u[cur_idx].data, d[cur_idx].data, l[cur_idx].data, r[cur_idx].data,
                 disp_selected_pyr[new_idx].data, disp_selected_pyr[cur_idx].data,
-                data_cost_selected.data, data_cost.data, temp, rthis, step_pyr[0],
+                data_cost_selected.data, data_cost.data, temp, pThis, step_pyr[0],
                 step_pyr[0], rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], rows_pyr[i + 1],
                 cols_pyr[i + 1], nr_plane_pyr[i + 1]);
             cur_idx = new_idx;
         }
         cv::ocl::stereoCSBP::calc_all_iterations(u[cur_idx].data, d[cur_idx].data, l[cur_idx].data, r[cur_idx].data,
             data_cost_selected.data, disp_selected_pyr[cur_idx].data, temp,
-            rthis, step_pyr[0], rows_pyr[i], cols_pyr[i], nr_plane_pyr[i]);
+            pThis, step_pyr[0], rows_pyr[i], cols_pyr[i], nr_plane_pyr[i]);
     }
 
     if (disp.empty())
@@ -683,23 +683,21 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
     out = zero;
 
     stereoCSBP::compute_disp(u[cur_idx].data, d[cur_idx].data, l[cur_idx].data, r[cur_idx].data,
-        data_cost_selected.data, disp_selected_pyr[cur_idx].data, rthis, step_pyr[0],
+        data_cost_selected.data, disp_selected_pyr[cur_idx].data, pThis, step_pyr[0],
         out, nr_plane_pyr[0]);
     if (disp.type() != CV_16S)
         out.convertTo(disp, disp.type());
 }
 
 
-typedef void (*csbp_operator_t)(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2], oclMat l[2], oclMat r[2],
-    oclMat disp_selected_pyr[2], oclMat &data_cost, oclMat &data_cost_selected,
-    oclMat &temp, oclMat &out, const oclMat &left, const oclMat &right, oclMat &disp);
-
-const static csbp_operator_t operators[] = {0, 0, 0, csbp_operator<short>, 0, csbp_operator<float>, 0, 0};
-
 void cv::ocl::StereoConstantSpaceBP::operator()(const oclMat &left, const oclMat &right, oclMat &disp)
 {
 
     CV_Assert(msg_type == CV_32F || msg_type == CV_16S);
-    operators[msg_type](*this, u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out,
-        left, right, disp);
+    if (msg_type == CV_16S)
+        csbp_operator<short>(this, u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out,
+            left, right, disp);
+    else
+        csbp_operator<float>(this, u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out,
+            left, right, disp);
 }
