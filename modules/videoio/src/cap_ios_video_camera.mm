@@ -190,7 +190,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
                 break; // leave the layer in its last known orientation
         }
 
-        switch (defaultAVCaptureVideoOrientation) {
+        switch (self.defaultAVCaptureVideoOrientation) {
             case AVCaptureVideoOrientationLandscapeRight:
                 rotation_angle += 180;
                 break;
@@ -256,7 +256,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
                 break; // leave the layer in its last known orientation
         }
 
-        switch (defaultAVCaptureVideoOrientation) {
+        switch (self.defaultAVCaptureVideoOrientation) {
             case AVCaptureVideoOrientationLandscapeRight:
                 rotation_angle += 180;
                 break;
