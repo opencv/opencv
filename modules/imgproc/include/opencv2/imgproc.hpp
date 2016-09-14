@@ -3577,6 +3577,9 @@ results are returned in the structure cv::Moments.
 used for images only.
 @returns moments.
 
+@note Only applicable to contour moments calculations from Python bindings: Note that the numpy
+type for the input array should be either np.int32 or np.float32.
+
 @sa  contourArea, arcLength
  */
 CV_EXPORTS_W Moments moments( InputArray array, bool binaryImage = false );
