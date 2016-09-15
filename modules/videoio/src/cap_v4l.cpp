@@ -453,6 +453,10 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, const char *deviceName)
 }
 
 static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
+    //in case palette is already set and works, no need to setup.
+    if(capture->palette != 0 and try_palette_v4l2(capture)){
+        return 0;
+    }
     __u32 try_order[] = {
             V4L2_PIX_FMT_BGR24,
             V4L2_PIX_FMT_YVU420,
@@ -473,9 +477,6 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
         capture->palette = try_order[i];
         if (try_palette_v4l2(capture)) {
-            if (capture->palette == V4L2_PIX_FMT_Y16) {
-                capture->convert_rgb = false;
-            }
             return 0;
         }
     }
@@ -578,6 +579,7 @@ static int v4l2_num_channels(__u32 palette) {
 static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
     CvSize size(capture->form.fmt.pix.width, capture->form.fmt.pix.height);
     int channels = 3;
+    int depth = IPL_DEPTH_8U;
 
     if (!capture->convert_rgb) {
         channels = v4l2_num_channels(capture->palette);
@@ -590,18 +592,17 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
         case V4L2_PIX_FMT_YVU420:
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
+        case V4L2_PIX_FMT_Y16:
+            if(!capture->convert_rgb){
+                depth = IPL_DEPTH_16U;
+            }
+            break;
         }
     }
 
     /* Set up Image data */
-    switch(capture->palette) {
-    case V4L2_PIX_FMT_Y16:
-        cvInitImageHeader(&capture->frame, size, IPL_DEPTH_16U, channels);
-        break;
-    default:
-        cvInitImageHeader(&capture->frame, size, IPL_DEPTH_8U, channels);
+    cvInitImageHeader(&capture->frame, size, depth, channels);
 
-    }
     /* Allocate space for pixelformat we convert to.
      * If we do not convert frame is just points to the buffer
      */
@@ -1100,6 +1101,15 @@ uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
     cvtColor(Mat(height, width, CV_8UC2, src), Mat(height, width, CV_8UC3, dst),
              COLOR_YUV2BGR_UYVY);
 }
+
+static inline void
+y16_to_rgb24 (int width, int height, unsigned char* src, unsigned char* dst)
+{
+    Mat gray8;
+    Mat(height, width, CV_16UC1, src).convertTo(gray8, CV_8U, 0.00390625);
+    cvtColor(gray8,Mat(height, width, CV_8UC3, dst),COLOR_GRAY2BGR);
+}
+
 #ifdef HAVE_JPEG
 
 /* convert from mjpeg to rgb24 */
@@ -1558,9 +1568,16 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
                 (unsigned char*)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_Y16:
-        memcpy((char *)capture->frame.imageData,
-               (char *)capture->buffers[capture->bufferIndex].start,
-               capture->frame.imageSize);
+        if(capture->convert_rgb){
+            y16_to_rgb24(capture->form.fmt.pix.width,
+                         capture->form.fmt.pix.height,
+                         (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                         (unsigned char*)capture->frame.imageData);
+        }else{
+            memcpy((char *)capture->frame.imageData,
+                   (char *)capture->buffers[capture->bufferIndex].start,
+                   capture->frame.imageSize);
+        }
         break;
     }
 
@@ -1779,6 +1796,20 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
         possible = v4l2_num_channels(capture->palette);
         capture->convert_rgb = bool(value) && possible;
         retval = possible || !bool(value);
+        break;
+    case CV_CAP_PROP_FOURCC:
+        {
+            __u32 old_palette = capture->palette;
+            __u32 new_palette = static_cast<__u32>(value);
+            capture->palette = new_palette;
+            if (v4l2_reset(capture)) {
+                retval = true;
+            } else {
+                capture->palette = old_palette;
+                v4l2_reset(capture);
+                retval = false;
+            }
+        }
         break;
     default:
         retval = icvSetControl(capture, property_id, value);
