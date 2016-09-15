@@ -340,6 +340,12 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         if (apiPreference) break;
 #endif
 
+#ifdef HAVE_OPENNI2
+    case CV_CAP_OPENNI2:
+        TRY_OPEN(result, cvCreateFileCapture_OpenNI2 (filename))
+        if (apiPreference) break;
+#endif
+
     case CV_CAP_IMAGES:
         TRY_OPEN(result, cvCreateFileCapture_Images (filename))
     }

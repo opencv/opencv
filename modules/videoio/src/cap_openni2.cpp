@@ -1086,7 +1086,7 @@ CvCapture* cvCreateCameraCapture_OpenNI2( int index )
     return 0;
 }
 
-CvCapture* cvCreateFileCapture_OpenNI( const char* filename )
+CvCapture* cvCreateFileCapture_OpenNI2( const char* filename )
 {
     CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( filename );
 
