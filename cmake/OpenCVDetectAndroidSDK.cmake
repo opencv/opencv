@@ -274,6 +274,17 @@ macro(add_android_project target path)
     file(GLOB_RECURSE android_proj_jni_files "${path}/jni/*.c" "${path}/jni/*.h" "${path}/jni/*.cpp" "${path}/jni/*.hpp")
     ocv_list_filterout(android_proj_jni_files "\\\\.svn")
 
+    foreach(lib "opencv_java")
+      get_property(f TARGET ${lib} PROPERTY LOCATION)
+      get_filename_component(f_name ${f} NAME)
+      add_custom_command(
+        OUTPUT "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f_name}"
+        COMMAND ${CMAKE_COMMAND} -E copy "${f}" "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f_name}"
+        DEPENDS "${lib}" VERBATIM
+        COMMENT "Embedding ${f}")
+        list(APPEND android_proj_file_deps "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f_name}")
+    endforeach()
+
     if(android_proj_jni_files AND EXISTS ${path}/jni/Android.mk AND NOT DEFINED JNI_LIB_NAME)
       # find local module name in Android.mk file to build native lib
       file(STRINGS "${path}/jni/Android.mk" JNI_LIB_NAME REGEX "LOCAL_MODULE[ ]*:=[ ]*.*" )
@@ -307,6 +318,7 @@ macro(add_android_project target path)
       # copy opencv_java, tbb if it is shared and dynamicuda if present if FORCE_EMBED_OPENCV flag is set
       if(android_proj_FORCE_EMBED_OPENCV)
         set(native_deps ${android_proj_NATIVE_DEPS})
+        list(REMOVE_ITEM native_deps "opencv_java")
         # filter out gpu module as it is always static library on Android
         list(REMOVE_ITEM native_deps "opencv_gpu")
         if(ENABLE_DYNAMIC_CUDA)
