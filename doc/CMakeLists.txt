@@ -40,9 +40,7 @@ endif(HAVE_DOC_GENERATOR)
 
 # ========= Sphinx docs =========
 if(BUILD_DOCS AND HAVE_SPHINX)
-  if(NOT INSTALL_CREATE_DISTRIB)
-    list(APPEND DOC_LIST "${OpenCV_SOURCE_DIR}/doc/haartraining.htm")
-  endif()
+  list(APPEND DOC_LIST "${OpenCV_SOURCE_DIR}/doc/haartraining.htm")
 
   # build lists of documentation files and generate table of contents for reference manual
   set(DOC_FAKE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/fake-root")

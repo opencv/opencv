@@ -110,6 +110,10 @@ else
     OPENCV_INSTALL_MODULES:=on
 endif
 
+ifeq ($(OPENCV_INSTALL_MODULES),)
+    OPENCV_INSTALL_MODULES:=on
+endif
+
 define add_opencv_module
     include $(CLEAR_VARS)
     LOCAL_MODULE:=opencv_$1

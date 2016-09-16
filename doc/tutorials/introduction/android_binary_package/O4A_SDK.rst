@@ -48,11 +48,7 @@ The structure of package contents looks as follows:
 
 ::
 
-    OpenCV-2.4.11-android-sdk
-    |_ apk
-    |   |_ OpenCV_2.4.11_binary_pack_armv7a.apk
-    |   |_ OpenCV_2.4.11_Manager_2.20_XXX.apk
-    |
+    OpenCV-2.4.13-android-sdk
     |_ doc
     |_ samples
     |_ sdk
