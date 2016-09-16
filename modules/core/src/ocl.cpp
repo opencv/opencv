@@ -45,7 +45,9 @@
 #include <string>
 #include <sstream>
 #include <iostream> // std::cerr
+#if !(defined _MSC_VER) || (defined _MSC_VER && _MSC_VER > 1700)
 #include <inttypes.h>
+#endif
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
 #define CV_OPENCL_SHOW_RUN_ERRORS       0
