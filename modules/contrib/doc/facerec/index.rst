@@ -5,10 +5,6 @@ OpenCV 2.4 now comes with the very new :ocv:class:`FaceRecognizer` class for fac
 
 These documents are the help I have wished for, when I was working myself into face recognition. I hope you also think the new :ocv:class:`FaceRecognizer` is a useful addition to OpenCV.
 
-Please issue any feature requests and/or bugs on the official OpenCV bug tracker at:
-
-  * http://code.opencv.org/projects/opencv/issues
-
 Contents
 ========
 
