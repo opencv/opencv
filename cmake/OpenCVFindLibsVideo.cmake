@@ -302,19 +302,18 @@ if(WIN32)
   endif()
 endif(WIN32)
 
-# --- Apple AV Foundation ---
-if(WITH_AVFOUNDATION)
-  set(HAVE_AVFOUNDATION YES)
-endif()
-
-# --- QuickTime ---
-if (NOT IOS)
-  if(WITH_QUICKTIME)
-    set(HAVE_QUICKTIME YES)
-  elseif(APPLE AND CMAKE_COMPILER_IS_CLANGCXX)
-    set(HAVE_QTKIT YES)
+if(APPLE)
+  if(WITH_AVFOUNDATION)
+    set(HAVE_AVFOUNDATION YES)
   endif()
-endif()
+  if(NOT IOS)
+    if(WITH_QUICKTIME)
+      set(HAVE_QUICKTIME YES)
+    elseif(WITH_QTKIT)
+      set(HAVE_QTKIT YES)
+    endif()
+  endif()
+endif(APPLE)
 
 # --- Intel Perceptual Computing SDK ---
 if(WITH_INTELPERC)
