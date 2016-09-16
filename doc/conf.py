@@ -315,7 +315,7 @@ extlinks = {
 
             # 'opencv_group' : ('http://answers.opencv.org/%s', None),
             'opencv_qa' : ('http://answers.opencv.org/%s', None),
-            'how_to_contribute' : ('http://code.opencv.org/projects/opencv/wiki/How_to_contribute/%s', None),
+            'how_to_contribute' : ('https://github.com/opencv/opencv/wiki/How_to_contribute/%s', None),
 
             'cvt_color' : ('http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html?highlight=cvtcolor#cvtcolor%s', None),
             'imread' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=imread#imread%s', None),
