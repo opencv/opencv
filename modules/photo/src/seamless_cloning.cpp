@@ -86,8 +86,6 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     int lenx = maxx - minx;
     int leny = maxy - miny;
 
-    Mat patch = Mat::zeros(Size(leny, lenx), CV_8UC3);
-
     int minxd = p.y - lenx/2;
     int maxxd = p.y + lenx/2;
     int minyd = p.x - leny/2;
