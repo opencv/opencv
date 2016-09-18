@@ -474,7 +474,6 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     std::vector<RegionPoint> reg(img_width * img_height);
 
     // Search for line segments
-    unsigned int ls_count = 0;
     for(size_t i = 0, list_size = list.size(); i < list_size; ++i)
     {
         unsigned int adx = list[i].p.x + list[i].p.y * img_width;
@@ -505,7 +504,6 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
                 }
             }
             // Found new line
-            ++ls_count;
 
             // Add the offset
             rec.x1 += 0.5; rec.y1 += 0.5;
@@ -524,13 +522,6 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
             if(w_needed) widths.push_back(rec.width);
             if(p_needed) precisions.push_back(rec.p);
             if(n_needed && doRefine >= LSD_REFINE_ADV) nfas.push_back(log_nfa);
-
-
-            // //Add the linesID to the region on the image
-            // for(unsigned int el = 0; el < reg_size; el++)
-            // {
-            //     region.data[reg[i].x + reg[i].y * width] = ls_count;
-            // }
         }
     }
 }
