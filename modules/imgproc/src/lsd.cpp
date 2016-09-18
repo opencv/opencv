@@ -230,8 +230,8 @@ public:
 
 private:
     Mat image;
-    Mat_<double> scaled_image;
-    double *scaled_image_data;
+    Mat scaled_image;
+    uchar *scaled_image_data;
     Mat_<double> angles;     // in rads
     double *angles_data;
     Mat_<double> modgrad;
@@ -414,11 +414,8 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
 {
     CV_INSTRUMENT_REGION()
 
-    Mat_<double> img = _image.getMat();
-    CV_Assert(!img.empty() && img.channels() == 1);
-
-    // Convert image to double
-    img.convertTo(image, CV_64FC1);
+    image = _image.getMat();
+    CV_Assert(!image.empty() && image.type() == CV_8UC1);
 
     std::vector<Vec4f> lines;
     std::vector<double> w, p, n;
@@ -536,7 +533,7 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
 
     angles_data = angles.ptr<double>(0);
     modgrad_data = modgrad.ptr<double>(0);
-    scaled_image_data = scaled_image.ptr<double>(0);
+    scaled_image_data = scaled_image.ptr<uchar>(0);
 
     img_width = scaled_image.cols;
     img_height = scaled_image.rows;
@@ -555,11 +552,11 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
     {
         for(int addr = y * img_width, addr_end = addr + img_width - 1; addr < addr_end; ++addr)
         {
-            double DA = scaled_image_data[addr + img_width + 1] - scaled_image_data[addr];
-            double BC = scaled_image_data[addr + 1] - scaled_image_data[addr + img_width];
-            double gx = DA + BC;    // gradient x component
-            double gy = DA - BC;    // gradient y component
-            double norm = std::sqrt((gx * gx + gy * gy) / 4); // gradient norm
+            int DA = scaled_image_data[addr + img_width + 1] - scaled_image_data[addr];
+            int BC = scaled_image_data[addr + 1] - scaled_image_data[addr + img_width];
+            int gx = DA + BC;    // gradient x component
+            int gy = DA - BC;    // gradient y component
+            double norm = std::sqrt((gx * gx + gy * gy) / 4.0); // gradient norm
 
             modgrad_data[addr] = norm;    // store gradient
 
