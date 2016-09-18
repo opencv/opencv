@@ -231,11 +231,8 @@ public:
 private:
     Mat image;
     Mat scaled_image;
-    uchar *scaled_image_data;
     Mat_<double> angles;     // in rads
-    double *angles_data;
     Mat_<double> modgrad;
-    double *modgrad_data;
     Mat_<uchar> used;
 
     int img_width;
@@ -383,7 +380,7 @@ private:
  * Is the point at place 'address' aligned to angle theta, up to precision 'prec'?
  * @return      Whether the point is aligned.
  */
-    bool isAligned(const int& address, const double& theta, const double& prec) const;
+    bool isAligned(int x, int y, const double& theta, const double& prec) const;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -473,8 +470,8 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     // Search for line segments
     for(size_t i = 0, list_size = list.size(); i < list_size; ++i)
     {
-        unsigned int adx = list[i].p.x + list[i].p.y * img_width;
-        if((used.ptr()[adx] == NOTUSED) && (angles_data[adx] != NOTDEF))
+        const Point2i& point = list[i].p;
+        if((used.at<uchar>(point) == NOTUSED) && (angles.at<double>(point) != NOTDEF))
         {
             int reg_size;
             double reg_angle;
@@ -531,10 +528,6 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
     angles = Mat_<double>(scaled_image.size());
     modgrad = Mat_<double>(scaled_image.size());
 
-    angles_data = angles.ptr<double>(0);
-    modgrad_data = modgrad.ptr<double>(0);
-    scaled_image_data = scaled_image.ptr<uchar>(0);
-
     img_width = scaled_image.cols;
     img_height = scaled_image.rows;
 
@@ -543,30 +536,30 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
     angles.col(img_width - 1).setTo(NOTDEF);
 
     // Computing gradient for remaining pixels
-    CV_Assert(scaled_image.isContinuous() &&
-              modgrad.isContinuous() &&
-              angles.isContinuous());   // Accessing image data linearly
-
     double max_grad = -1;
     for(int y = 0; y < img_height - 1; ++y)
     {
-        for(int addr = y * img_width, addr_end = addr + img_width - 1; addr < addr_end; ++addr)
+        const uchar* scaled_image_row = scaled_image.ptr<uchar>(y);
+        const uchar* next_scaled_image_row = scaled_image.ptr<uchar>(y+1);
+        double* angles_row = angles.ptr<double>(y);
+        double* modgrad_row = modgrad.ptr<double>(y);
+        for(int x = 0; x < img_width-1; ++x)
         {
-            int DA = scaled_image_data[addr + img_width + 1] - scaled_image_data[addr];
-            int BC = scaled_image_data[addr + 1] - scaled_image_data[addr + img_width];
+            int DA = next_scaled_image_row[x + 1] - scaled_image_row[x];
+            int BC = scaled_image_row[x + 1] - next_scaled_image_row[x];
             int gx = DA + BC;    // gradient x component
             int gy = DA - BC;    // gradient y component
             double norm = std::sqrt((gx * gx + gy * gy) / 4.0); // gradient norm
 
-            modgrad_data[addr] = norm;    // store gradient
+            modgrad_row[x] = norm;    // store gradient
 
             if (norm <= threshold)  // norm too small, gradient no defined
             {
-                angles_data[addr] = NOTDEF;
+                angles_row[x] = NOTDEF;
             }
             else
             {
-                angles_data[addr] = fastAtan2(float(gx), float(-gy)) * DEG_TO_RADS;  // gradient angle computation
+                angles_row[x] = fastAtan2(float(gx), float(-gy)) * DEG_TO_RADS;  // gradient angle computation
                 if (norm > max_grad) { max_grad = norm; }
             }
 
@@ -582,11 +575,11 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
 
     for(int y = 0; y < img_height - 1; ++y)
     {
-        const double* norm = modgrad_data + y * img_width;
-        for(int x = 0; x < img_width - 1; ++x, ++norm)
+        const double* modgrad_row = modgrad.ptr<double>(y);
+        for(int x = 0; x < img_width - 1; ++x)
         {
             // Store the point in the right bin according to its norm
-            int i = int((*norm) * bin_coef);
+            int i = int(modgrad_row[x] * bin_coef);
             if(!range_e[i])
             {
                 range_e[i] = range_s[i] = &list[count];
@@ -629,11 +622,10 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
     reg_size = 1;
     reg[0].x = s.x;
     reg[0].y = s.y;
-    int addr = s.x + s.y * img_width;
-    reg[0].used = used.ptr() + addr;
-    reg_angle = angles_data[addr];
+    reg[0].used = &used.at<uchar>(s);
+    reg_angle = angles.at<double>(s);
     reg[0].angle = reg_angle;
-    reg[0].modgrad = modgrad_data[addr];
+    reg[0].modgrad = modgrad.at<double>(s);
 
     float sumdx = float(std::cos(reg_angle));
     float sumdy = float(std::sin(reg_angle));
@@ -647,20 +639,23 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
         int yy_min = std::max(rpoint.y - 1, 0), yy_max = std::min(rpoint.y + 1, img_height - 1);
         for(int yy = yy_min; yy <= yy_max; ++yy)
         {
-            int c_addr = xx_min + yy * img_width;
-            for(int xx = xx_min; xx <= xx_max; ++xx, ++c_addr)
+            uchar* used_row = used.ptr<uchar>(yy);
+            const double* angles_row = angles.ptr<double>(yy);
+            const double* modgrad_row = modgrad.ptr<double>(yy);
+            for(int xx = xx_min; xx <= xx_max; ++xx)
             {
-                if((used.ptr()[c_addr] != USED) &&
-                   (isAligned(c_addr, reg_angle, prec)))
+                uchar& is_used = used_row[xx];
+                if(is_used != USED &&
+                   (isAligned(xx, yy, reg_angle, prec)))
                 {
+                    const double& angle = angles_row[xx];
                     // Add point
-                    used.ptr()[c_addr] = USED;
+                    is_used = USED;
                     RegionPoint& region_point = reg[reg_size];
                     region_point.x = xx;
                     region_point.y = yy;
-                    region_point.used = &(used.ptr()[c_addr]);
-                    region_point.modgrad = modgrad_data[c_addr];
-                    const double& angle = angles_data[c_addr];
+                    region_point.used = &is_used;
+                    region_point.modgrad = modgrad_row[xx];
                     region_point.angle = angle;
                     ++reg_size;
 
@@ -1063,13 +1058,12 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     {
         if (y < 0 || y >= img_height) continue;
 
-        int adx = y * img_width + int(left_x);
-        for(int x = int(left_x); x <= int(right_x); ++x, ++adx)
+        for(int x = int(left_x); x <= int(right_x); ++x)
         {
             if (x < 0 || x >= img_width) continue;
 
             ++total_pts;
-            if(isAligned(adx, rec.theta, rec.prec))
+            if(isAligned(x, y, rec.theta, rec.prec))
             {
                 ++alg_pts;
             }
@@ -1123,10 +1117,10 @@ double LineSegmentDetectorImpl::nfa(const int& n, const int& k, const double& p)
     return -log10(bin_tail) - LOG_NT;
 }
 
-inline bool LineSegmentDetectorImpl::isAligned(const int& address, const double& theta, const double& prec) const
+inline bool LineSegmentDetectorImpl::isAligned(int x, int y, const double& theta, const double& prec) const
 {
-    if(address < 0) { return false; }
-    const double& a = angles_data[address];
+    if(x < 0 || y < 0 || x >= angles.cols || y >= angles.rows) { return false; }
+    const double& a = angles.at<double>(y, x);
     if(a == NOTDEF) { return false; }
 
     // It is assumed that 'theta' and 'a' are in the range [-pi,pi]
