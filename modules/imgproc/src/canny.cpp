@@ -69,6 +69,9 @@ static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst,
     CV_INSTRUMENT_REGION_IPP()
 
 #if USE_IPP_CANNY
+    if (!useCustomDeriv && _src.isSubmatrix())
+        return false; // IPP Sobel doesn't support transparent ROI border
+
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
