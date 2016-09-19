@@ -155,7 +155,9 @@ private:
     uint8_t  *mOutImagedata;
     IplImage *mOutImage;
     size_t    currSize;
+/*
     int       mMode;
+*/
     int       mFormat;
 
     bool setupReadingAt(CMTime position);
@@ -677,7 +679,9 @@ CvCaptureFile::CvCaptureFile(const char* filename) {
     mOutImage = NULL;
     mOutImagedata = NULL;
     currSize = 0;
+/*
     mMode = CV_CAP_MODE_BGR;
+*/
     mFormat = CV_8UC3;
     mCurrentSampleBuffer = NULL;
     mGrabbedPixels = NULL;
@@ -741,12 +745,15 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
 
     // Capture in a pixel format that can be converted efficiently to the output mode.
     OSType pixelFormat;
+/*
     if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
+*/
         // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's CV_YUV2BGR_YV12)
         // kCVPixelFormatType_32ABGR is reportedly faster on OS X, but OpenCV doesn't have a CV_ABGR2BGR conversion.
         // kCVPixelFormatType_24RGB is significanly slower than kCVPixelFormatType_32BGRA.
         pixelFormat = kCVPixelFormatType_32BGRA;
         mFormat = CV_8UC3;
+/*
     } else if (mMode == CV_CAP_MODE_GRAY) {
         // For CV_CAP_MODE_GRAY, read frames as 420v (faster than 420f or 422 -- at least for H.264 files)
         pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
@@ -759,6 +766,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
         fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mMode);
         return false;
     }
+*/
 
     NSDictionary *settings =
         @{
@@ -848,8 +856,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
 
      // Output image paramaters.
      int outChannels;
+/*
      if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
+*/
          outChannels = 3;
+/*
      } else if (mMode == CV_CAP_MODE_GRAY) {
          outChannels = 1;
      } else if (mMode == CV_CAP_MODE_YUYV) {
@@ -861,6 +872,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
          mGrabbedPixels = NULL;
          return 0;
      }
+*/
 
      if ( currSize != width*outChannels*height ) {
          currSize = width*outChannels*height;
@@ -888,8 +900,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     if ( pixelFormat == kCVPixelFormatType_32BGRA ) {
         deviceChannels = 4;
 
+/*
         if (mMode == CV_CAP_MODE_BGR) {
+*/
             cvtCode = CV_BGRA2BGR;
+/*
         } else if (mMode == CV_CAP_MODE_RGB) {
             cvtCode = CV_BGRA2RGB;
         } else if (mMode == CV_CAP_MODE_GRAY) {
@@ -901,11 +916,15 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
             fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
             return 0;
         }
+*/
     } else if ( pixelFormat == kCVPixelFormatType_24RGB ) {
         deviceChannels = 3;
 
+/*
         if (mMode == CV_CAP_MODE_BGR) {
+*/
             cvtCode = CV_RGB2BGR;
+/*
         } else if (mMode == CV_CAP_MODE_RGB) {
             cvtCode = 0;
         } else if (mMode == CV_CAP_MODE_GRAY) {
@@ -917,11 +936,15 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
             fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
             return 0;
         }
+*/
     } else if ( pixelFormat == kCVPixelFormatType_422YpCbCr8 ) {    // 422 (2vuy, UYVY)
         deviceChannels = 2;
 
+/*
         if (mMode == CV_CAP_MODE_BGR) {
+*/
             cvtCode = CV_YUV2BGR_UYVY;
+/*
         } else if (mMode == CV_CAP_MODE_RGB) {
             cvtCode = CV_YUV2RGB_UYVY;
         } else if (mMode == CV_CAP_MODE_GRAY) {
@@ -935,6 +958,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
             fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
             return 0;
         }
+*/
     } else if ( pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange ||   // 420v
                 pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ) {   // 420f
         // cvCvtColor(CV_YUV2GRAY_420) is expecting a single buffer with both the Y plane and the CrCb planes.
@@ -942,8 +966,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         height = height * 3 / 2;
         deviceChannels = 1;
 
+/*
         if (mMode == CV_CAP_MODE_BGR) {
+*/
             cvtCode = CV_YUV2BGR_YV12;
+/*
         } else if (mMode == CV_CAP_MODE_RGB) {
             cvtCode = CV_YUV2RGB_YV12;
         } else if (mMode == CV_CAP_MODE_GRAY) {
@@ -955,6 +982,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
             fprintf(stderr, "OpenCV: unsupported pixel conversion mode\n");
             return 0;
         }
+*/
     } else {
         fprintf(stderr, "OpenCV: unsupported pixel format 0x%08X\n", pixelFormat);
         CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
@@ -1020,8 +1048,10 @@ double CvCaptureFile::getProperty(int property_id) const{
             return round((t.value * mAssetTrack.nominalFrameRate) / double(t.timescale));
         case CV_CAP_PROP_FORMAT:
             return mFormat;
+/*
         case CV_CAP_PROP_MODE:
             return mMode;
+*/
         default:
             break;
     }
@@ -1054,6 +1084,7 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
             setupReadingAt(t);
             retval = true;
             break;
+/*
         case CV_CAP_PROP_MODE:
             int mode;
             mode = cvRound(value);
@@ -1076,6 +1107,7 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
                 }
             }
             break;
+*/
         default:
             break;
     }
