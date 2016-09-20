@@ -267,6 +267,8 @@ private:
         struct coorlist* next;
     };
 
+    std::vector<coorlist> list;
+
     struct rect
     {
         double x1, y1, x2, y2;    // first and second point of the line segment
@@ -306,7 +308,7 @@ private:
  * @param list      Return: Vector of coordinate points that are pseudo ordered by magnitude.
  *                  Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
  */
-    void ll_angle(const double& threshold, const unsigned int& n_bins, std::vector<coorlist>& list);
+    void ll_angle(const double& threshold, const unsigned int& n_bins);
 
 /**
  * Grow a region starting from point s with a defined precision,
@@ -438,7 +440,6 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     const double p = ANG_TH / 180;
     const double rho = QUANT / sin(prec);    // gradient magnitude threshold
 
-    std::vector<coorlist> list;
     if(SCALE != 1)
     {
         Mat gaussian_img;
@@ -449,12 +450,12 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
         GaussianBlur(image, gaussian_img, ksize, sigma);
         // Scale image to needed size
         resize(gaussian_img, scaled_image, Size(), SCALE, SCALE);
-        ll_angle(rho, N_BINS, list);
+        ll_angle(rho, N_BINS);
     }
     else
     {
         scaled_image = image;
-        ll_angle(rho, N_BINS, list);
+        ll_angle(rho, N_BINS);
     }
 
     LOG_NT = 5 * (log10(double(img_width)) + log10(double(img_height))) / 2 + log10(11.0);
@@ -518,8 +519,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
 }
 
 void LineSegmentDetectorImpl::ll_angle(const double& threshold,
-                                   const unsigned int& n_bins,
-                                   std::vector<coorlist>& list)
+                                   const unsigned int& n_bins)
 {
     //Initialize data
     angles = Mat_<double>(scaled_image.size());
@@ -564,7 +564,7 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
     }
 
     // Compute histogram of gradient values
-    list = std::vector<coorlist>(img_width * img_height);
+    list.resize(img_width * img_height);
     std::vector<coorlist*> range_s(n_bins);
     std::vector<coorlist*> range_e(n_bins);
     unsigned int count = 0;
