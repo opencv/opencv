@@ -314,31 +314,29 @@ private:
  *
  * @param s         Starting point for the region.
  * @param reg       Return: Vector of points, that are part of the region
- * @param reg_size  Return: The size of the region.
  * @param reg_angle Return: The mean angle of the region.
  * @param prec      The precision by which each region angle should be aligned to the mean.
  */
     void region_grow(const Point2i& s, std::vector<RegionPoint>& reg,
-                     int& reg_size, double& reg_angle, const double& prec);
+                     double& reg_angle, const double& prec);
 
 /**
  * Finds the bounding rotated rectangle of a region.
  *
  * @param reg       The region of points, from which the rectangle to be constructed from.
- * @param reg_size  The number of points in the region.
  * @param reg_angle The mean angle of the region.
  * @param prec      The precision by which points were found.
  * @param p         Probability of a point with angle within 'prec'.
  * @param rec       Return: The generated rectangle.
  */
-    void region2rect(const std::vector<RegionPoint>& reg, const int reg_size, const double reg_angle,
+    void region2rect(const std::vector<RegionPoint>& reg, const double reg_angle,
                      const double prec, const double p, rect& rec) const;
 
 /**
  * Compute region's angle as the principal inertia axis of the region.
  * @return          Regions angle.
  */
-    double get_theta(const std::vector<RegionPoint>& reg, const int& reg_size, const double& x,
+    double get_theta(const std::vector<RegionPoint>& reg, const double& x,
                      const double& y, const double& reg_angle, const double& prec) const;
 
 /**
@@ -347,14 +345,14 @@ private:
  * estimated angle tolerance. If this fails to produce a rectangle with the right density of region points,
  * 'reduce_region_radius' is called to try to satisfy this condition.
  */
-    bool refine(std::vector<RegionPoint>& reg, int& reg_size, double reg_angle,
+    bool refine(std::vector<RegionPoint>& reg, double reg_angle,
                 const double prec, double p, rect& rec, const double& density_th);
 
 /**
  * Reduce the region size, by elimination the points far from the starting point, until that leads to
  * rectangle with the right density of region points or to discard the region if too small.
  */
-    bool reduce_region_radius(std::vector<RegionPoint>& reg, int& reg_size, double reg_angle,
+    bool reduce_region_radius(std::vector<RegionPoint>& reg, double reg_angle,
                 const double prec, double p, rect& rec, double density, const double& density_th);
 
 /**
@@ -460,12 +458,12 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     }
 
     LOG_NT = 5 * (log10(double(img_width)) + log10(double(img_height))) / 2 + log10(11.0);
-    const int min_reg_size = int(-LOG_NT/log10(p)); // minimal number of points in region that can give a meaningful event
+    const size_t min_reg_size = size_t(-LOG_NT/log10(p)); // minimal number of points in region that can give a meaningful event
 
     // // Initialize region only when needed
     // Mat region = Mat::zeros(scaled_image.size(), CV_8UC1);
     used = Mat_<uchar>::zeros(scaled_image.size()); // zeros = NOTUSED
-    std::vector<RegionPoint> reg(img_width * img_height);
+    std::vector<RegionPoint> reg;
 
     // Search for line segments
     for(size_t i = 0, list_size = list.size(); i < list_size; ++i)
@@ -473,22 +471,21 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
         const Point2i& point = list[i].p;
         if((used.at<uchar>(point) == NOTUSED) && (angles.at<double>(point) != NOTDEF))
         {
-            int reg_size;
             double reg_angle;
-            region_grow(list[i].p, reg, reg_size, reg_angle, prec);
+            region_grow(list[i].p, reg, reg_angle, prec);
 
             // Ignore small regions
-            if(reg_size < min_reg_size) { continue; }
+            if(reg.size() < min_reg_size) { continue; }
 
             // Construct rectangular approximation for the region
             rect rec;
-            region2rect(reg, reg_size, reg_angle, prec, p, rec);
+            region2rect(reg, reg_angle, prec, p, rec);
 
             double log_nfa = -1;
             if(doRefine > LSD_REFINE_NONE)
             {
                 // At least REFINE_STANDARD lvl.
-                if(!refine(reg, reg_size, reg_angle, prec, p, rec, DENSITY_TH)) { continue; }
+                if(!refine(reg, reg_angle, prec, p, rec, DENSITY_TH)) { continue; }
 
                 if(doRefine >= LSD_REFINE_ADV)
                 {
@@ -616,23 +613,26 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
 }
 
 void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPoint>& reg,
-                                      int& reg_size, double& reg_angle, const double& prec)
+                                      double& reg_angle, const double& prec)
 {
+    reg.clear();
+
     // Point to this region
-    reg_size = 1;
-    reg[0].x = s.x;
-    reg[0].y = s.y;
-    reg[0].used = &used.at<uchar>(s);
+    RegionPoint seed;
+    seed.x = s.x;
+    seed.y = s.y;
+    seed.used = &used.at<uchar>(s);
     reg_angle = angles.at<double>(s);
-    reg[0].angle = reg_angle;
-    reg[0].modgrad = modgrad.at<double>(s);
+    seed.angle = reg_angle;
+    seed.modgrad = modgrad.at<double>(s);
+    reg.push_back(seed);
 
     float sumdx = float(std::cos(reg_angle));
     float sumdy = float(std::sin(reg_angle));
-    *reg[0].used = USED;
+    *seed.used = USED;
 
     //Try neighboring regions
-    for(int i = 0; i < reg_size; ++i)
+    for (size_t i = 0;i<reg.size();i++)
     {
         const RegionPoint& rpoint = reg[i];
         int xx_min = std::max(rpoint.x - 1, 0), xx_max = std::min(rpoint.x + 1, img_width - 1);
@@ -651,13 +651,13 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
                     const double& angle = angles_row[xx];
                     // Add point
                     is_used = USED;
-                    RegionPoint& region_point = reg[reg_size];
+                    RegionPoint region_point;
                     region_point.x = xx;
                     region_point.y = yy;
                     region_point.used = &is_used;
                     region_point.modgrad = modgrad_row[xx];
                     region_point.angle = angle;
-                    ++reg_size;
+                    reg.push_back(region_point);
 
                     // Update region's angle
                     sumdx += cos(float(angle));
@@ -670,11 +670,11 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
     }
 }
 
-void LineSegmentDetectorImpl::region2rect(const std::vector<RegionPoint>& reg, const int reg_size,
+void LineSegmentDetectorImpl::region2rect(const std::vector<RegionPoint>& reg,
                                       const double reg_angle, const double prec, const double p, rect& rec) const
 {
     double x = 0, y = 0, sum = 0;
-    for(int i = 0; i < reg_size; ++i)
+    for(size_t i = 0; i < reg.size(); ++i)
     {
         const RegionPoint& pnt = reg[i];
         const double& weight = pnt.modgrad;
@@ -689,14 +689,14 @@ void LineSegmentDetectorImpl::region2rect(const std::vector<RegionPoint>& reg, c
     x /= sum;
     y /= sum;
 
-    double theta = get_theta(reg, reg_size, x, y, reg_angle, prec);
+    double theta = get_theta(reg, x, y, reg_angle, prec);
 
     // Find length and width
     double dx = cos(theta);
     double dy = sin(theta);
     double l_min = 0, l_max = 0, w_min = 0, w_max = 0;
 
-    for(int i = 0; i < reg_size; ++i)
+    for(size_t i = 0; i < reg.size(); ++i)
     {
         double regdx = double(reg[i].x) - x;
         double regdy = double(reg[i].y) - y;
@@ -728,7 +728,7 @@ void LineSegmentDetectorImpl::region2rect(const std::vector<RegionPoint>& reg, c
     if(rec.width < 1.0) rec.width = 1.0;
 }
 
-double LineSegmentDetectorImpl::get_theta(const std::vector<RegionPoint>& reg, const int& reg_size, const double& x,
+double LineSegmentDetectorImpl::get_theta(const std::vector<RegionPoint>& reg, const double& x,
                                       const double& y, const double& reg_angle, const double& prec) const
 {
     double Ixx = 0.0;
@@ -736,7 +736,7 @@ double LineSegmentDetectorImpl::get_theta(const std::vector<RegionPoint>& reg, c
     double Ixy = 0.0;
 
     // Compute inertia matrix
-    for(int i = 0; i < reg_size; ++i)
+    for(size_t i = 0; i < reg.size(); ++i)
     {
         const double& regx = reg[i].x;
         const double& regy = reg[i].y;
@@ -766,10 +766,10 @@ double LineSegmentDetectorImpl::get_theta(const std::vector<RegionPoint>& reg, c
     return theta;
 }
 
-bool LineSegmentDetectorImpl::refine(std::vector<RegionPoint>& reg, int& reg_size, double reg_angle,
+bool LineSegmentDetectorImpl::refine(std::vector<RegionPoint>& reg, double reg_angle,
                                  const double prec, double p, rect& rec, const double& density_th)
 {
-    double density = double(reg_size) / (dist(rec.x1, rec.y1, rec.x2, rec.y2) * rec.width);
+    double density = double(reg.size()) / (dist(rec.x1, rec.y1, rec.x2, rec.y2) * rec.width);
 
     if (density >= density_th) { return true; }
 
@@ -780,7 +780,7 @@ bool LineSegmentDetectorImpl::refine(std::vector<RegionPoint>& reg, int& reg_siz
     double sum = 0, s_sum = 0;
     int n = 0;
 
-    for (int i = 0; i < reg_size; ++i)
+    for (size_t i = 0; i < reg.size(); ++i)
     {
         *(reg[i].used) = NOTUSED;
         if (dist(xc, yc, reg[i].x, reg[i].y) < rec.width)
@@ -797,16 +797,16 @@ bool LineSegmentDetectorImpl::refine(std::vector<RegionPoint>& reg, int& reg_siz
     double tau = 2.0 * sqrt((s_sum - 2.0 * mean_angle * sum) / double(n) + mean_angle * mean_angle);
 
     // Try new region
-    region_grow(Point(reg[0].x, reg[0].y), reg, reg_size, reg_angle, tau);
+    region_grow(Point(reg[0].x, reg[0].y), reg, reg_angle, tau);
 
-    if (reg_size < 2) { return false; }
+    if (reg.size() < 2) { return false; }
 
-    region2rect(reg, reg_size, reg_angle, prec, p, rec);
-    density = double(reg_size) / (dist(rec.x1, rec.y1, rec.x2, rec.y2) * rec.width);
+    region2rect(reg, reg_angle, prec, p, rec);
+    density = double(reg.size()) / (dist(rec.x1, rec.y1, rec.x2, rec.y2) * rec.width);
 
     if (density < density_th)
     {
-        return reduce_region_radius(reg, reg_size, reg_angle, prec, p, rec, density, density_th);
+        return reduce_region_radius(reg, reg_angle, prec, p, rec, density, density_th);
     }
     else
     {
@@ -814,7 +814,7 @@ bool LineSegmentDetectorImpl::refine(std::vector<RegionPoint>& reg, int& reg_siz
     }
 }
 
-bool LineSegmentDetectorImpl::reduce_region_radius(std::vector<RegionPoint>& reg, int& reg_size, double reg_angle,
+bool LineSegmentDetectorImpl::reduce_region_radius(std::vector<RegionPoint>& reg, double reg_angle,
                 const double prec, double p, rect& rec, double density, const double& density_th)
 {
     // Compute region's radius
@@ -828,25 +828,25 @@ bool LineSegmentDetectorImpl::reduce_region_radius(std::vector<RegionPoint>& reg
     {
         radSq *= 0.75*0.75; // Reduce region's radius to 75% of its value
         // Remove points from the region and update 'used' map
-        for(int i = 0; i < reg_size; ++i)
+        for (size_t i = 0; i < reg.size(); ++i)
         {
             if(distSq(xc, yc, double(reg[i].x), double(reg[i].y)) > radSq)
             {
                 // Remove point from the region
                 *(reg[i].used) = NOTUSED;
-                std::swap(reg[i], reg[reg_size - 1]);
-                --reg_size;
+                std::swap(reg[i], reg[reg.size() - 1]);
+                reg.pop_back();
                 --i; // To avoid skipping one point
             }
         }
 
-        if(reg_size < 2) { return false; }
+        if(reg.size() < 2) { return false; }
 
         // Re-compute rectangle
-        region2rect(reg, reg_size ,reg_angle, prec, p, rec);
+        region2rect(reg ,reg_angle, prec, p, rec);
 
         // Re-compute region points density
-        density = double(reg_size) /
+        density = double(reg.size()) /
                   (dist(rec.x1, rec.y1, rec.x2, rec.y2) * rec.width);
     }
 
