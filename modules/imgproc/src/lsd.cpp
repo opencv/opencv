@@ -964,7 +964,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     double dyhw = rec.dy * half_width;
     double dxhw = rec.dx * half_width;
 
-    std::vector<edge> ordered_x(4);
+    edge ordered_x[4];
     edge* min_y = &ordered_x[0];
     edge* max_y = &ordered_x[0]; // Will be used for loop range
 
@@ -973,7 +973,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     ordered_x[2].p.x = int(rec.x2 + dyhw); ordered_x[2].p.y = int(rec.y2 - dxhw); ordered_x[2].taken = false;
     ordered_x[3].p.x = int(rec.x1 + dyhw); ordered_x[3].p.y = int(rec.y1 - dxhw); ordered_x[3].taken = false;
 
-    std::sort(ordered_x.begin(), ordered_x.end(), AsmallerB_XoverY);
+    std::sort(ordered_x, ordered_x + 4, AsmallerB_XoverY);
 
     // Find min y. And mark as taken. find max y.
     for(unsigned int i = 1; i < 4; ++i)
