@@ -6072,11 +6072,6 @@ struct Luv2RGB_b
         v_scale = vdupq_n_f32(255.f);
         v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
         #elif CV_SSE2
-        v_scale_inv = _mm_set1_ps(100.f/255.f);
-        v_coeff1 = _mm_set1_ps(1.388235294117647f);
-        v_coeff2 = _mm_set1_ps(1.027450980392157f);
-        v_134 = _mm_set1_ps(134.f);
-        v_140 = _mm_set1_ps(140.f);
         v_scale = _mm_set1_ps(255.f);
         v_zero = _mm_setzero_si128();
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
@@ -6086,6 +6081,7 @@ struct Luv2RGB_b
     #if CV_SSE2
     // 16s x 8
     void process(__m128i v_l, __m128i v_u, __m128i v_v,
+                 __m128 v_coeffs, __m128 v_res,
                  float * buf) const
     {
         __m128 v_l0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_l, v_zero));
@@ -6096,15 +6092,26 @@ struct Luv2RGB_b
         __m128 v_u1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_u, v_zero));
         __m128 v_v1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_v, v_zero));
 
-        v_l0 = _mm_mul_ps(v_l0, v_scale_inv);
-        v_l1 = _mm_mul_ps(v_l1, v_scale_inv);
+        v_l0 = _mm_mul_ps(v_l0, v_coeffs);
+        v_u1 = _mm_mul_ps(v_u1, v_coeffs);
+        v_l0 = _mm_sub_ps(v_l0, v_res);
+        v_u1 = _mm_sub_ps(v_u1, v_res);
 
-        v_u0 = _mm_sub_ps(_mm_mul_ps(v_u0, v_coeff1), v_134);
-        v_u1 = _mm_sub_ps(_mm_mul_ps(v_u1, v_coeff1), v_134);
-        v_v0 = _mm_sub_ps(_mm_mul_ps(v_v0, v_coeff2), v_140);
-        v_v1 = _mm_sub_ps(_mm_mul_ps(v_v1, v_coeff2), v_140);
+        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
+        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x49));
 
-        _mm_interleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+        v_l1 = _mm_mul_ps(v_l1, v_coeffs);
+        v_v0 = _mm_mul_ps(v_v0, v_coeffs);
+        v_l1 = _mm_sub_ps(v_l1, v_res);
+        v_v0 = _mm_sub_ps(v_v0, v_res);
+
+        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
+        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x49));
+
+        v_u0 = _mm_mul_ps(v_u0, v_coeffs);
+        v_v1 = _mm_mul_ps(v_v1, v_coeffs);
+        v_u0 = _mm_sub_ps(v_u0, v_res);
+        v_v1 = _mm_sub_ps(v_v1, v_res);
 
         _mm_store_ps(buf, v_l0);
         _mm_store_ps(buf + 4, v_l1);
@@ -6120,6 +6127,11 @@ struct Luv2RGB_b
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
+
+        #if CV_SSE2
+        __m128 v_coeffs = _mm_set_ps(100.f/255.f, 1.027450980392157f, 1.388235294117647f, 100.f/255.f);
+        __m128 v_res = _mm_set_ps(0.f, 140.f, 134.f, 0.f);
+        #endif
 
         for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
         {
@@ -6148,36 +6160,16 @@ struct Luv2RGB_b
             #elif CV_SSE2
             if (haveSIMD)
             {
-                for ( ; j <= (dn - 32) * 3; j += 96)
+                for ( ; j <= (dn - 8) * 3; j += 24)
                 {
-                    __m128i v_r0 = _mm_loadu_si128((__m128i const *)(src + j));
-                    __m128i v_r1 = _mm_loadu_si128((__m128i const *)(src + j + 16));
-                    __m128i v_g0 = _mm_loadu_si128((__m128i const *)(src + j + 32));
-                    __m128i v_g1 = _mm_loadu_si128((__m128i const *)(src + j + 48));
-                    __m128i v_b0 = _mm_loadu_si128((__m128i const *)(src + j + 64));
-                    __m128i v_b1 = _mm_loadu_si128((__m128i const *)(src + j + 80));
+                    __m128i v_src0 = _mm_loadu_si128((__m128i const *)(src + j));
+                    __m128i v_src1 = _mm_loadl_epi64((__m128i const *)(src + j + 16));
 
-                    _mm_deinterleave_epi8(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
-
-                    process(_mm_unpacklo_epi8(v_r0, v_zero),
-                            _mm_unpacklo_epi8(v_g0, v_zero),
-                            _mm_unpacklo_epi8(v_b0, v_zero),
+                    process(_mm_unpacklo_epi8(v_src0, v_zero),
+                            _mm_unpackhi_epi8(v_src0, v_zero),
+                            _mm_unpacklo_epi8(v_src1, v_zero),
+                            v_coeffs, v_res,
                             buf + j);
-
-                    process(_mm_unpackhi_epi8(v_r0, v_zero),
-                            _mm_unpackhi_epi8(v_g0, v_zero),
-                            _mm_unpackhi_epi8(v_b0, v_zero),
-                            buf + j + 24);
-
-                    process(_mm_unpacklo_epi8(v_r1, v_zero),
-                            _mm_unpacklo_epi8(v_g1, v_zero),
-                            _mm_unpacklo_epi8(v_b1, v_zero),
-                            buf + j + 48);
-
-                    process(_mm_unpackhi_epi8(v_r1, v_zero),
-                            _mm_unpackhi_epi8(v_g1, v_zero),
-                            _mm_unpackhi_epi8(v_b1, v_zero),
-                            buf + j + 72);
                 }
             }
             #endif
@@ -6261,7 +6253,7 @@ struct Luv2RGB_b
     float32x4_t v_scale, v_scale_inv, v_coeff1, v_coeff2, v_134, v_140;
     uint8x8_t v_alpha;
     #elif CV_SSE2
-    __m128 v_scale, v_scale_inv, v_coeff1, v_coeff2, v_134, v_140;
+    __m128 v_scale;
     __m128i v_zero;
     bool haveSIMD;
     #endif
