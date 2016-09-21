@@ -428,10 +428,7 @@ double cv::kmeans( InputArray _data, int K,
                 }
             }
 
-            if( ++iter == MAX(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon )
-                break;
-
-            // assign labels
+            //assign labels
             Mat dists(1, N, CV_64F);
             double* dist = dists.ptr<double>(0);
             parallel_for_(Range(0, N),
@@ -441,6 +438,8 @@ double cv::kmeans( InputArray _data, int K,
             {
                 compactness += dist[i];
             }
+             if( ++iter == MAX(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon )
+                break;
         }
 
         if( compactness < best_compactness )
