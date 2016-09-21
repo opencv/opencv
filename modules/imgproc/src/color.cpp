@@ -1549,7 +1549,7 @@ struct RGB2Gray<ushort>
 
             for ( ; i <= n - 8; i += 8, src += scn * 8)
             {
-                __m128i v_src[2];
+                __m128i v_src[3];
                 v_src[0] = _mm_loadu_si128((__m128i const *)(src));
                 v_src[1] = _mm_loadu_si128((__m128i const *)(src + 8));
                 v_src[2] = _mm_loadu_si128((__m128i const *)(src + 16));
