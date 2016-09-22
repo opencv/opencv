@@ -1304,20 +1304,18 @@ TEST(UMat, testTempObjects_UMat)
     ASSERT_EQ(0, countNonZero(uDiff));
 }
 
-// Disabled due to failure in VS 2015:
-//  C++11 is enabled by default ==>
-//  destructors have implicit 'noexcept(true)' specifier ==>
-//  throwing exception from destructor is not handled correctly
-#if defined(_MSC_VER) && _MSC_VER >= 1900 /* MSVC 14 */
-TEST(UMat, DISABLED_testTempObjects_Mat)
-#else
 TEST(UMat, testTempObjects_Mat)
-#endif
 {
     Mat m(10, 10, CV_8UC1, Scalar(1));
     {
         Mat m2;
-        ASSERT_ANY_THROW(m2 = m.getUMat(ACCESS_RW).getMat(ACCESS_RW));
+        ASSERT_ANY_THROW({
+          // Below is unwrapped version of this invalid expression:
+          // m2 = m.getUMat(ACCESS_RW).getMat(ACCESS_RW)
+          UMat u = m.getUMat(ACCESS_RW);
+          m2 = u.getMat(ACCESS_RW);
+          u.release();
+        });
     }
 }
 
