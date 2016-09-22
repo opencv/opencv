@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef OPENCV_CUDA_WARP_REDUCE_HPP__
-#define OPENCV_CUDA_WARP_REDUCE_HPP__
+#ifndef OPENCV_CUDA_WARP_REDUCE_HPP
+#define OPENCV_CUDA_WARP_REDUCE_HPP
 
 /** @file
  * @deprecated Use @ref cudev instead.
@@ -73,4 +73,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif /* OPENCV_CUDA_WARP_REDUCE_HPP__ */
+#endif /* OPENCV_CUDA_WARP_REDUCE_HPP */

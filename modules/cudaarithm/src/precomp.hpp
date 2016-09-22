@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef OPENCV_PRECOMP_H__
+#define OPENCV_PRECOMP_H__
 
 #include <limits>
 
@@ -60,4 +60,4 @@
 #  include <cufft.h>
 #endif
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif /* OPENCV_PRECOMP_H__ */

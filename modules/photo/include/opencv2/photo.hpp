@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_HPP__
-#define __OPENCV_PHOTO_HPP__
+#ifndef OPENCV_PHOTO_HPP
+#define OPENCV_PHOTO_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"

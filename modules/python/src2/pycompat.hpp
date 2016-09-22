@@ -41,8 +41,8 @@
 //M*/
 
 // Defines for Python 2/3 compatibility.
-#ifndef __PYCOMPAT_HPP__
-#define __PYCOMPAT_HPP__
+#ifndef __PYCOMPAT_HPP
+#define __PYCOMPAT_HPP
 
 #if PY_MAJOR_VERSION >= 3
 // Python3 treats all ints as longs, PyInt_X functions have been removed.

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef OPENCV_PRECOMP_H__
+#define OPENCV_PRECOMP_H__
 
 #include "opencv2/features2d.hpp"
 #include "opencv2/imgproc.hpp"

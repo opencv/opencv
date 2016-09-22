@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OPENCL_HPP__
-#define __OPENCV_OPENCL_HPP__
+#ifndef OPENCV_OPENCL_HPP
+#define OPENCV_OPENCL_HPP
 
 #include "opencv2/core.hpp"
 
@@ -736,7 +736,7 @@ protected:
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
 
-#ifdef __OPENCV_BUILD
+#ifdef OPENCV_BUILD
 namespace internal {
 
 CV_EXPORTS bool isPerformanceCheckBypassed();

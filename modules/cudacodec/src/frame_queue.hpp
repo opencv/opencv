@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __FRAME_QUEUE_HPP__
-#define __FRAME_QUEUE_HPP__
+#ifndef __FRAME_QUEUE_HPP
+#define __FRAME_QUEUE_HPP
 
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.cuda.hpp"
@@ -95,4 +95,4 @@ private:
 
 }}}
 
-#endif // __FRAME_QUEUE_HPP__
+#endif // __FRAME_QUEUE_HPP

@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __VIDEO_PARSER_HPP__
-#define __VIDEO_PARSER_HPP__
+#ifndef __VIDEO_PARSER_HPP
+#define __VIDEO_PARSER_HPP
 
 #include <nvcuvid.h>
 
@@ -92,4 +92,4 @@ private:
 
 }}}
 
-#endif // __VIDEO_PARSER_HPP__
+#endif // __VIDEO_PARSER_HPP

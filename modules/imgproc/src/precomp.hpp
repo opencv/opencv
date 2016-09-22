@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef OPENCV_PRECOMP_H__
+#define OPENCV_PRECOMP_H__
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/core/utility.hpp"
@@ -97,4 +97,4 @@ extern const float icv8x32fSqrTab[];
 
 #include "opencv2/core/sse_utils.hpp"
 
-#endif /*__OPENCV_CV_INTERNAL_H_*/
+#endif /*OPENCV_CV_INTERNAL_H_*/

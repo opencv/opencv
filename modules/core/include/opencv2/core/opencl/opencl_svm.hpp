@@ -1,12 +1,12 @@
 /* See LICENSE file in the root OpenCV directory */
 
-#ifndef __OPENCV_CORE_OPENCL_SVM_HPP__
-#define __OPENCV_CORE_OPENCL_SVM_HPP__
+#ifndef OPENCV_CORE_OPENCL_SVM_HPP
+#define OPENCV_CORE_OPENCL_SVM_HPP
 
 //
 // Internal usage only (binary compatibility is not guaranteed)
 //
-#ifndef __OPENCV_BUILD
+#ifndef OPENCV_BUILD
 #error Internal header file
 #endif
 
@@ -77,5 +77,5 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags);
 }}} //namespace cv::ocl::svm
 #endif
 
-#endif // __OPENCV_CORE_OPENCL_SVM_HPP__
+#endif // OPENCV_CORE_OPENCL_SVM_HPP
 /* End of file. */

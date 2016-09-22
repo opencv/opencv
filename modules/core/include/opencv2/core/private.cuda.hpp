@@ -41,10 +41,10 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_PRIVATE_CUDA_HPP__
-#define __OPENCV_CORE_PRIVATE_CUDA_HPP__
+#ifndef OPENCV_CORE_PRIVATE_CUDA_HPP
+#define OPENCV_CORE_PRIVATE_CUDA_HPP
 
-#ifndef __OPENCV_BUILD
+#ifndef OPENCV_BUILD
 #  error this is a private header which should not be used from outside of the OpenCV library
 #endif
 
@@ -169,4 +169,4 @@ namespace cv { namespace cuda
 
 //! @endcond
 
-#endif // __OPENCV_CORE_CUDA_PRIVATE_HPP__
+#endif // OPENCV_CORE_CUDA_PRIVATE_HPP

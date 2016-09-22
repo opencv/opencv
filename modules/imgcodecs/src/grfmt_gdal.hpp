@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __GRFMT_GDAL_HPP__
-#define __GRFMT_GDAL_HPP__
+#ifndef __GRFMT_GDAL_HPP
+#define __GRFMT_GDAL_HPP
 
 /// OpenCV FMT Base Type
 #include "grfmt_base.hpp"
@@ -163,4 +163,4 @@ class GdalDecoder : public BaseImageDecoder{
 
 #endif/*HAVE_GDAL*/
 
-#endif/*__GRFMT_GDAL_HPP__*/
+#endif/*__GRFMT_GDAL_HPP*/

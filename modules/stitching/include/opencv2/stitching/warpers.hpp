@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_WARPER_CREATORS_HPP__
-#define __OPENCV_STITCHING_WARPER_CREATORS_HPP__
+#ifndef OPENCV_STITCHING_WARPER_CREATORS_HPP
+#define OPENCV_STITCHING_WARPER_CREATORS_HPP
 
 #include "opencv2/stitching/detail/warpers.hpp"
 
@@ -180,4 +180,4 @@ public:
 
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_WARPER_CREATORS_HPP__
+#endif // OPENCV_STITCHING_WARPER_CREATORS_HPP

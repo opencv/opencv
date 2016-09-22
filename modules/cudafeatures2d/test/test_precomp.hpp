@@ -48,8 +48,8 @@
 #  endif
 #endif
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+#ifndef OPENCV_TEST_PRECOMP_HPP
+#define OPENCV_TEST_PRECOMP_HPP
 
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/cuda_test.hpp"

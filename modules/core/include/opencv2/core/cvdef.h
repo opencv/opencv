@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CVDEF_H__
-#define __OPENCV_CORE_CVDEF_H__
+#ifndef OPENCV_CORE_CVDEF_H__
+#define OPENCV_CORE_CVDEF_H__
 
 //! @addtogroup core_utils
 //! @{
@@ -321,7 +321,7 @@ Cv64suf;
 
 #define OPENCV_ABI_COMPATIBILITY 300
 
-#ifdef __OPENCV_BUILD
+#ifdef OPENCV_BUILD
 #  define DISABLE_OPENCV_24_COMPATIBILITY
 #endif
 
@@ -451,4 +451,4 @@ Cv64suf;
 
 //! @}
 
-#endif // __OPENCV_CORE_CVDEF_H__
+#endif // OPENCV_CORE_CVDEF_H__

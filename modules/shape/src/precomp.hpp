@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef OPENCV_PRECOMP_H__
+#define OPENCV_PRECOMP_H__
 
 #include <vector>
 #include <cmath>

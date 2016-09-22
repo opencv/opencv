@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __RING_BUFFER_HPP__
-#define __RING_BUFFER_HPP__
+#ifndef __RING_BUFFER_HPP
+#define __RING_BUFFER_HPP
 
 #include "precomp.hpp"
 
@@ -76,4 +76,4 @@ namespace cv
     }
 }
 
-#endif // __RING_BUFFER_HPP__
+#endif // __RING_BUFFER_HPP

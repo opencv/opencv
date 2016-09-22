@@ -5,8 +5,8 @@
 // Copyright (C) 2015, Itseez, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef __OPENCV_CORE_VA_INTEL_HPP__
-#define __OPENCV_CORE_VA_INTEL_HPP__
+#ifndef OPENCV_CORE_VA_INTEL_HPP
+#define OPENCV_CORE_VA_INTEL_HPP
 
 #ifndef __cplusplus
 #  error va_intel.hpp header must be compiled as C++
@@ -74,4 +74,4 @@ CV_EXPORTS void convertFromVASurface(VADisplay display, VASurfaceID surface, Siz
 
 }} // namespace cv::va_intel
 
-#endif /* __OPENCV_CORE_VA_INTEL_HPP__ */
+#endif /* OPENCV_CORE_VA_INTEL_HPP */

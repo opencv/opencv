@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __FGD_BGFG_COMMON_HPP__
-#define __FGD_BGFG_COMMON_HPP__
+#ifndef __FGD_BGFG_COMMON_HPP
+#define __FGD_BGFG_COMMON_HPP
 
 #include "opencv2/core/cuda_types.hpp"
 
@@ -186,4 +186,4 @@ namespace fgd
                                    cudaStream_t stream);
 }
 
-#endif // __FGD_BGFG_COMMON_HPP__
+#endif // __FGD_BGFG_COMMON_HPP

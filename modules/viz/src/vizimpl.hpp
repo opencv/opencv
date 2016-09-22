@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_VIZ3D_IMPL_HPP__
-#define __OPENCV_VIZ_VIZ3D_IMPL_HPP__
+#ifndef OPENCV_VIZ_VIZ3D_IMPL_HPP
+#define OPENCV_VIZ_VIZ3D_IMPL_HPP
 
 struct cv::viz::Viz3d::VizImpl
 {

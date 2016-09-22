@@ -1,5 +1,5 @@
-#ifndef __FEATURES2D_CONVERTERS_HPP__
-#define __FEATURES2D_CONVERTERS_HPP__
+#ifndef __FEATURES2D_CONVERTERS_HPP
+#define __FEATURES2D_CONVERTERS_HPP
 
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"

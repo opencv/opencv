@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __FFMPEG_VIDEO_SOURCE_HPP__
-#define __FFMPEG_VIDEO_SOURCE_HPP__
+#ifndef __FFMPEG_VIDEO_SOURCE_HPP
+#define __FFMPEG_VIDEO_SOURCE_HPP
 
 #include "opencv2/cudacodec.hpp"
 
@@ -68,4 +68,4 @@ private:
 
 }}}
 
-#endif // __FFMPEG_VIDEO_SOURCE_HPP__
+#endif // __FFMPEG_VIDEO_SOURCE_HPP

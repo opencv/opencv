@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef OPENCV_PRECOMP_H__
+#define OPENCV_PRECOMP_H__
 
 #include "opencv2/cudawarping.hpp"
 
 #include "opencv2/core/private.cuda.hpp"
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif /* OPENCV_PRECOMP_H__ */

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_VEC_DISTANCE_DETAIL_HPP__
-#define __OPENCV_CUDA_VEC_DISTANCE_DETAIL_HPP__
+#ifndef OPENCV_CUDA_VEC_DISTANCE_DETAIL_HPP
+#define OPENCV_CUDA_VEC_DISTANCE_DETAIL_HPP
 
 #include "../datamov_utils.hpp"
 
@@ -118,4 +118,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // __OPENCV_CUDA_VEC_DISTANCE_DETAIL_HPP__
+#endif // OPENCV_CUDA_VEC_DISTANCE_DETAIL_HPP

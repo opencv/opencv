@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CALIB3D_HPP__
-#define __OPENCV_CALIB3D_HPP__
+#ifndef OPENCV_CALIB3D_HPP
+#define OPENCV_CALIB3D_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"

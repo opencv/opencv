@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_DEVICE_WARP_HPP__
-#define __OPENCV_CUDA_DEVICE_WARP_HPP__
+#ifndef OPENCV_CUDA_DEVICE_WARP_HPP
+#define OPENCV_CUDA_DEVICE_WARP_HPP
 
 /** @file
  * @deprecated Use @ref cudev instead.
@@ -136,4 +136,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif /* __OPENCV_CUDA_DEVICE_WARP_HPP__ */
+#endif /* OPENCV_CUDA_DEVICE_WARP_HPP */

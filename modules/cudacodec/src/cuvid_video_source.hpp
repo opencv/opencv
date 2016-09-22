@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __CUVID_VIDEO_SOURCE_HPP__
-#define __CUVID_VIDEO_SOURCE_HPP__
+#ifndef __CUVID_VIDEO_SOURCE_HPP
+#define __CUVID_VIDEO_SOURCE_HPP
 
 #include <nvcuvid.h>
 
@@ -84,4 +84,4 @@ private:
 
 }}}
 
-#endif // __CUVID_VIDEO_SOURCE_HPP__
+#endif // __CUVID_VIDEO_SOURCE_HPP

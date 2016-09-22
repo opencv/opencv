@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OLD_CV_H__
-#define __OPENCV_OLD_CV_H__
+#ifndef OPENCV_OLD_CV_H__
+#define OPENCV_OLD_CV_H__
 
 #if defined(_MSC_VER)
     #define CV_DO_PRAGMA(x) __pragma(x)
@@ -70,4 +70,4 @@
 #define CV_IMPL extern "C"
 #endif //CV_IMPL
 
-#endif // __OPENCV_OLD_CV_H_
+#endif // OPENCV_OLD_CV_H_

@@ -43,8 +43,8 @@ The references are:
 */
 
 
-#ifndef __OPENCV_FEATURES_2D_AGAST_HPP__
-#define __OPENCV_FEATURES_2D_AGAST_HPP__
+#ifndef OPENCV_FEATURES_2D_AGAST_HPP
+#define OPENCV_FEATURES_2D_AGAST_HPP
 
 #ifdef __cplusplus
 

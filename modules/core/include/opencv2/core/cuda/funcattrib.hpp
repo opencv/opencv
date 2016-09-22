@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_
-#define __OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_
+#ifndef OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_
+#define OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_
 
 #include <cstdio>
 
@@ -76,4 +76,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif  /* __OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_ */
+#endif  /* OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_ */

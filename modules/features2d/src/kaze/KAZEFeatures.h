@@ -7,8 +7,8 @@
  * @author Pablo F. Alcantarilla
  */
 
-#ifndef __OPENCV_FEATURES_2D_KAZE_FEATURES_H__
-#define __OPENCV_FEATURES_2D_KAZE_FEATURES_H__
+#ifndef OPENCV_FEATURES_2D_KAZE_FEATURES_H__
+#define OPENCV_FEATURES_2D_KAZE_FEATURES_H__
 
 /* ************************************************************************* */
 // Includes

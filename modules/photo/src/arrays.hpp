@@ -41,8 +41,8 @@
 
 #include "opencv2/core/base.hpp"
 
-#ifndef __OPENCV_DENOISING_ARRAYS_HPP__
-#define __OPENCV_DENOISING_ARRAYS_HPP__
+#ifndef OPENCV_DENOISING_ARRAYS_HPP
+#define OPENCV_DENOISING_ARRAYS_HPP
 
 namespace cv
 {

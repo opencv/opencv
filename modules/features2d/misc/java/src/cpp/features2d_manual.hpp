@@ -1,5 +1,5 @@
-#ifndef __OPENCV_FEATURES_2D_MANUAL_HPP__
-#define __OPENCV_FEATURES_2D_MANUAL_HPP__
+#ifndef OPENCV_FEATURES_2D_MANUAL_HPP
+#define OPENCV_FEATURES_2D_MANUAL_HPP
 
 #include "opencv2/opencv_modules.hpp"
 
@@ -420,4 +420,4 @@ CV_EXPORTS_AS(drawMatches2) void drawMatches( const Mat& img1, const std::vector
 
 #endif // HAVE_OPENCV_FEATURES2D
 
-#endif // __OPENCV_FEATURES_2D_MANUAL_HPP__
+#endif // OPENCV_FEATURES_2D_MANUAL_HPP

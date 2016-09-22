@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __THREAD_WRAPPERS_HPP__
-#define __THREAD_WRAPPERS_HPP__
+#ifndef __THREAD_WRAPPERS_HPP
+#define __THREAD_WRAPPERS_HPP
 
 #include "opencv2/core.hpp"
 
@@ -67,4 +67,4 @@ private:
 
 }}}
 
-#endif // __THREAD_WRAPPERS_HPP__
+#endif // __THREAD_WRAPPERS_HPP

@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef CV_SEAMLESS_CLONING_HPP___
-#define CV_SEAMLESS_CLONING_HPP___
+#ifndef CV_SEAMLESS_CLONING_HPP_
+#define CV_SEAMLESS_CLONING_HPP_
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"

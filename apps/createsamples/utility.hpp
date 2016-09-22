@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __CREATESAMPLES_UTILITY_HPP__
-#define __CREATESAMPLES_UTILITY_HPP__
+#ifndef __CREATESAMPLES_UTILITY_HPP
+#define __CREATESAMPLES_UTILITY_HPP
 
 #define CV_VERBOSE  1
 
@@ -121,4 +121,4 @@ int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilena
  */
 void cvShowVecSamples( const char* filename, int winwidth, int winheight, double scale );
 
-#endif //__CREATESAMPLES_UTILITY_HPP__
+#endif //__CREATESAMPLES_UTILITY_HPP
