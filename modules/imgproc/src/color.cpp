@@ -4502,7 +4502,7 @@ struct HSV2RGB_b
 
     #if CV_SSE2
     void process(__m128i v_r, __m128i v_g, __m128i v_b,
-                 __m128 v_coeffs,
+                 const __m128& v_coeffs_,
                  float * buf) const
     {
         __m128 v_r0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_r, v_zero));
@@ -4512,6 +4512,8 @@ struct HSV2RGB_b
         __m128 v_r1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_r, v_zero));
         __m128 v_g1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_g, v_zero));
         __m128 v_b1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_b, v_zero));
+
+        __m128 v_coeffs = v_coeffs_;
 
         v_r0 = _mm_mul_ps(v_r0, v_coeffs);
         v_g1 = _mm_mul_ps(v_g1, v_coeffs);
@@ -4979,7 +4981,7 @@ struct HLS2RGB_b
 
     #if CV_SSE2
     void process(__m128i v_r, __m128i v_g, __m128i v_b,
-                 __m128 v_coeffs,
+                 const __m128& v_coeffs_,
                  float * buf) const
     {
         __m128 v_r0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_r, v_zero));
@@ -4989,6 +4991,8 @@ struct HLS2RGB_b
         __m128 v_r1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_r, v_zero));
         __m128 v_g1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_g, v_zero));
         __m128 v_b1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_b, v_zero));
+
+        __m128 v_coeffs = v_coeffs_;
 
         v_r0 = _mm_mul_ps(v_r0, v_coeffs);
         v_g1 = _mm_mul_ps(v_g1, v_coeffs);
@@ -5468,7 +5472,7 @@ struct Lab2RGB_b
     #if CV_SSE2
     // 16s x 8
     void process(__m128i v_r, __m128i v_g, __m128i v_b,
-                 __m128 v_coeffs, __m128 v_res,
+                 const __m128& v_coeffs_, const __m128& v_res_,
                  float * buf) const
     {
         __m128 v_r0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_r, v_zero));
@@ -5478,6 +5482,9 @@ struct Lab2RGB_b
         __m128 v_r1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_r, v_zero));
         __m128 v_g1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_g, v_zero));
         __m128 v_b1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_b, v_zero));
+
+        __m128 v_coeffs = v_coeffs_;
+        __m128 v_res = v_res_;
 
         v_r0 = _mm_sub_ps(_mm_mul_ps(v_r0, v_coeffs), v_res);
         v_g1 = _mm_sub_ps(_mm_mul_ps(v_g1, v_coeffs), v_res);
@@ -6001,7 +6008,7 @@ struct Luv2RGB_b
     #if CV_SSE2
     // 16s x 8
     void process(__m128i v_l, __m128i v_u, __m128i v_v,
-                 __m128 v_coeffs, __m128 v_res,
+                 const __m128& v_coeffs_, const __m128& v_res_,
                  float * buf) const
     {
         __m128 v_l0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_l, v_zero));
@@ -6011,6 +6018,9 @@ struct Luv2RGB_b
         __m128 v_l1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_l, v_zero));
         __m128 v_u1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_u, v_zero));
         __m128 v_v1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_v, v_zero));
+
+        __m128 v_coeffs = v_coeffs_;
+        __m128 v_res = v_res_;
 
         v_l0 = _mm_mul_ps(v_l0, v_coeffs);
         v_u1 = _mm_mul_ps(v_u1, v_coeffs);
