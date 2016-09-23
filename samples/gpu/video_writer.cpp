@@ -39,7 +39,7 @@ int main(int argc, const char* argv[])
 
     std::vector<double> cpu_times;
     std::vector<double> gpu_times;
-    TickMeter tm;
+    cv::TickMeter tm;
 
     for (int i = 1;; ++i)
     {
