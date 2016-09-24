@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include <iostream>
 
 #ifdef _MSC_VER
 #pragma warning( disable: 4701 ) // variable eventually not initialized
@@ -1345,8 +1346,8 @@ public:
 
     void operator()(const cv::Range &boundaries) const
     {
-        //if(isUMat)
-        //{
+        if(isUMat)
+        {
             if(boundaries.start > 0 && boundaries.end < boundaries.size())
                 return;
 
@@ -1355,17 +1356,14 @@ public:
 
             if (boundaries.end == boundaries.size())
                 Sobel(src, dy, CV_16SC1, 0, 1, kernelSz, 1, 0, BORDER_REPLICATE);
-        //}
-        //else
-        //{
-        //    for(int i = boundaries.start; i < boundaries.end; ++i)
-        //    {
-        //        Sobel(src.rowRange(Range(boundaries.start, boundaries.end)), dx.rowRange(Range(boundaries.start, boundaries.end)),
-        //              CV_16SC1, 1, 0, kernelSz, 1, 0, BORDER_REPLICATE);
-        //        Sobel(src.rowRange(Range(boundaries.start, boundaries.end)), dy.rowRange(Range(boundaries.start, boundaries.end)),
-        //              CV_16SC1, 0, 1, kernelSz, 1, 0, BORDER_REPLICATE);
-        //    }
-        //}
+        }
+        else
+        {
+            Sobel(src.rowRange(Range(boundaries.start, boundaries.end)), dx.rowRange(Range(boundaries.start, boundaries.end)),
+                  CV_16SC1, 1, 0, kernelSz, 1, 0, BORDER_REPLICATE);
+            Sobel(src.rowRange(Range(boundaries.start, boundaries.end)), dy.rowRange(Range(boundaries.start, boundaries.end)),
+                  CV_16SC1, 0, 1, kernelSz, 1, 0,BORDER_REPLICATE);
+        }
     }
 
 private:
@@ -1492,7 +1490,7 @@ _next_step:
                     continue;
 
                 Point pt = Point(x % edges.cols, y + x / edges.cols);
-                nzLocal.push_back(pt);
+                nzLocal.push_back(pt);;
 
                 sx = cvRound((vx * idp) * 1024 / mag);
                 sy = cvRound((vy * idp) * 1024 / mag);
@@ -1608,6 +1606,11 @@ private:
 #endif
     mutable Mutex _lock;
 };
+
+//#ifdef CV_SSE2
+//#undef CV_SSE2
+//#define CV_SSE2 0
+//#endif
 
 class HoughCirclesFindCentersInvoker : public ParallelLoopBody
 {
@@ -1966,26 +1969,28 @@ private:
     mutable Mutex _lock;
 };
 
+//#ifdef CV_SSE2
+//#undef CV_SSE2
+//#define CV_SSE2 1
+//#endif
+
 static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float dp, float minDist,
                                  int minRadius, int maxRadius, int cannyThreshold,
                                  int accThreshold, int circlesMax )
 {
-    Mat edges, accum;
-    UMat dx, dy;
+    Mat accum;
+    UMat edges, dx, dy;
 
     MemStorage storage(cvCreateMemStorage(0));
     Seq<Point> nz(storage);
     int numberOfThreads = 1;
     int numThreads = max(1, min(getNumThreads(), getNumberOfCPUs()));
 
-//    parallel_for_(Range(0, _image.rows()),
-//        HoughCirclesSobelInvoker(_image, dx, dy, 3),
-//        2);
+    parallel_for_(Range(0, _image.rows()),
+        HoughCirclesSobelInvoker(_image, dx, dy, 3),
+        numThreads);
 
-    Sobel(_image, dx, CV_16SC1, 1, 0, 3, 1, 0, BORDER_REPLICATE);
-    Sobel(_image, dy, CV_16SC1, 0, 1, 3, 1, 0, BORDER_REPLICATE);
-    Canny(_image, edges, max(1, cannyThreshold / 2), cannyThreshold, 3, false);
-    //Canny(dx, dy, std::max(1, cannyThreshold / 2), cannyThreshold, false);
+    Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
     // More than 1, max 2 threads as long as no thread safe container exists, otherwise adding accum at the end has a huge overhead
     // 1 Thread overhead is 0, 2 Threads if (maxRadius - minRadius) is great and cost is more than add accum
@@ -1993,8 +1998,8 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
         numberOfThreads = max(1, min(numThreads, 2));
 
     parallel_for_(Range(0, edges.rows),
-        HoughCirclesAccumInvoker(edges, dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ), accum, nz, minRadius, maxRadius, dp),
-                  1);
+        HoughCirclesAccumInvoker(edges.getMat(ACCESS_READ), dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ), accum, nz, minRadius, maxRadius, dp),
+                  numberOfThreads);
 
     if(nz.empty())
         return;
@@ -2053,7 +2058,7 @@ void HoughCircles( InputArray _image, OutputArray _circles,
                    double param1, double param2,
                    int minRadius, int maxRadius, int maxCircles )
 {
-    //CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION()
 
     CV_Assert(!_image.empty() && _image.type() == CV_8UC1 && (_image.isMat() || _image.isUMat()));
     CV_Assert(_circles.isMat() || _circles.isVector());
