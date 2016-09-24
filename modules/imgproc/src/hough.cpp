@@ -1313,10 +1313,10 @@ inline unsigned int trailingZeros(unsigned int value) {
 #endif
 #elif defined(__GNUC__) || defined(__GNUG__)
     return __builtin_ctz(value);
-    //#elif defined(__ICC) || defined(__INTEL_COMPILER)
-    //    return _bit_scan_forward(value);
-    //#elif defined(__clang__)
-    //    return llvm.cttz.i32(value, true);
+#elif defined(__ICC) || defined(__INTEL_COMPILER)
+    return _bit_scan_forward(value);
+#elif defined(__clang__)
+    return llvm.cttz.i32(value, true);
 #else
     static const int MultiplyDeBruijnBitPosition[32] = {
         0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
@@ -1574,19 +1574,18 @@ _next_step:
             accum = accumLocal;
         else
         {
+            std::vector<Point> tmp;
+            nzLocal.copyTo(tmp);
+
             AutoLock alock(_lock);
             if(accum.empty())
             {
                 accum = accumLocal;
-                std::vector<Point> tmp;
-                nzLocal.copyTo(tmp);
                 nz.push_back(&tmp[0], tmp.size());
             }
             else
             {
                 add(accum, accumLocal, accum);
-                std::vector<Point> tmp;
-                nzLocal.copyTo(tmp);
                 nz.push_back(&tmp[0], tmp.size());
             }
         }
@@ -1663,6 +1662,7 @@ public:
         {
                 std::vector<int> tmp;
                 centersLocal.copyTo(tmp);
+
                 AutoLock alock(_lock);
                 centers.push_back(&tmp[0], tmp.size());
         }
@@ -1978,19 +1978,19 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
     int numberOfThreads = 1;
     int numThreads = max(1, min(getNumThreads(), getNumberOfCPUs()));
 
-    parallel_for_(Range(0, _image.rows()),
-        HoughCirclesSobelInvoker(_image, dx, dy, 3),
-        2);
+//    parallel_for_(Range(0, _image.rows()),
+//        HoughCirclesSobelInvoker(_image, dx, dy, 3),
+//        2);
 
-    //Sobel(_image, dx, CV_16SC1, 1, 0, 3, 1, 0, BORDER_REPLICATE);
-    //Sobel(_image, dy, CV_16SC1, 0, 1, 3, 1, 0, BORDER_REPLICATE);
-    Canny(_image, edges, max(1, cannyThreshold / 2), cannyThreshold, 3, true);
+    Sobel(_image, dx, CV_16SC1, 1, 0, 3, 1, 0, BORDER_REPLICATE);
+    Sobel(_image, dy, CV_16SC1, 0, 1, 3, 1, 0, BORDER_REPLICATE);
+    Canny(_image, edges, max(1, cannyThreshold / 2), cannyThreshold, 3, false);
     //Canny(dx, dy, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
     // More than 1, max 2 threads as long as no thread safe container exists, otherwise adding accum at the end has a huge overhead
     // 1 Thread overhead is 0, 2 Threads if (maxRadius - minRadius) is great and cost is more than add accum
-    //if((maxRadius - minRadius) > 64)
-    //    numberOfThreads = max(1, min(numThreads, 2));
+    if((maxRadius - minRadius) > 64)
+        numberOfThreads = max(1, min(numThreads, 2));
 
     parallel_for_(Range(0, edges.rows),
         HoughCirclesAccumInvoker(edges, dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ), accum, nz, minRadius, maxRadius, dp),
@@ -2003,7 +2003,6 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
 
     numberOfThreads = (numThreads > 1) ? ((accum.rows - 4) / 4) : 1;
 
-    // Because of copy overhead number of threads is maximal number of cpu cores
     parallel_for_(Range(1, accum.rows - 3),
         HoughCirclesFindCentersInvoker(accum, centers, accThreshold),
         numberOfThreads);
