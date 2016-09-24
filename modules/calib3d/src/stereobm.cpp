@@ -525,28 +525,27 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
             if( uniquenessRatio > 0 )
             {
                 int thresh = minsad + (minsad * uniquenessRatio/100);
-                __m128i thresh8 = _mm_set1_epi16((short)(thresh + 1));
-                __m128i d1 = _mm_set1_epi16((short)(mind-1)), d2 = _mm_set1_epi16((short)(mind+1));
-                __m128i dd_16 = _mm_add_epi16(dd_8, dd_8);
-                d8 = _mm_sub_epi16(d0_8, dd_16);
+                __m128i thresh4 = _mm_set1_epi32(thresh + 1);
+                __m128i d1 = _mm_set1_epi32(mind-1), d2 = _mm_set1_epi32(mind+1);
+                __m128i dd_4 = _mm_set1_epi32(4);
+                __m128i d4 = _mm_set_epi32(3,2,1,0);
+                __m128i z = _mm_setzero_si128();
 
-                for( d = 0; d < ndisp; d += 16 )
+                for( d = 0; d < ndisp; d += 8 )
                 {
-                    __m128i usad8 = _mm_load_si128((__m128i*)(sad + d));
-                    __m128i vsad8 = _mm_load_si128((__m128i*)(sad + d + 8));
-                    mask = _mm_cmpgt_epi16( thresh8, _mm_min_epi16(usad8,vsad8));
-                    d8 = _mm_add_epi16(d8, dd_16);
-                    if( !_mm_movemask_epi8(mask) )
-                        continue;
-                    mask = _mm_cmpgt_epi16( thresh8, usad8);
-                    mask = _mm_and_si128(mask, _mm_or_si128(_mm_cmpgt_epi16(d1,d8), _mm_cmpgt_epi16(d8,d2)));
+                    __m128i usad4 = _mm_loadu_si128((__m128i*)(sad + d));
+                    __m128i vsad4 = _mm_unpackhi_epi16(usad4, z);
+                    usad4 = _mm_unpacklo_epi16(usad4, z);
+                    mask = _mm_cmpgt_epi32( thresh4, usad4);
+                    mask = _mm_and_si128(mask, _mm_or_si128(_mm_cmpgt_epi32(d1,d4), _mm_cmpgt_epi32(d4,d2)));
                     if( _mm_movemask_epi8(mask) )
                         break;
-                    __m128i t8 = _mm_add_epi16(d8, dd_8);
-                    mask = _mm_cmpgt_epi16( thresh8, vsad8);
-                    mask = _mm_and_si128(mask, _mm_or_si128(_mm_cmpgt_epi16(d1,t8), _mm_cmpgt_epi16(t8,d2)));
+                    d4 = _mm_add_epi16(d4, dd_4);
+                    mask = _mm_cmpgt_epi32( thresh4, vsad4);
+                    mask = _mm_and_si128(mask, _mm_or_si128(_mm_cmpgt_epi32(d1,d4), _mm_cmpgt_epi32(d4,d2)));
                     if( _mm_movemask_epi8(mask) )
                         break;
+                    d4 = _mm_add_epi16(d4, dd_4);
                 }
                 if( d < ndisp )
                 {
