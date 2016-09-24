@@ -1404,7 +1404,7 @@ public:
 
     void operator()(const cv::Range &boundaries) const
     {
-        Mat accumLocal = Mat(cvCeil(edges.cols*idp) + 2, cvCeil(edges.rows*idp) + 2, CV_32SC1, Scalar::all(0));
+        Mat accumLocal = Mat(arows + 2, acols + 2, CV_32SC1, Scalar::all(0));
         int *adataLocal = accumLocal.ptr<int>();
         MemStorage storage;
         Seq<Point> nzLocal;
@@ -1607,19 +1607,14 @@ private:
     mutable Mutex _lock;
 };
 
-//#ifdef CV_SSE2
-//#undef CV_SSE2
-//#define CV_SSE2 0
-//#endif
-
 class HoughCirclesFindCentersInvoker : public ParallelLoopBody
 {
 public:
     HoughCirclesFindCentersInvoker(const Mat &_accum, Seq<int> &_centers, int _accThreshold) :
         accum(_accum), centers(_centers), accThreshold(_accThreshold)
     {
-        acols = accum.cols - 2;
-        arows = accum.rows - 2;
+        acols = accum.cols;
+        arows = accum.rows;
         adata = accum.ptr<int>();
         centers.clear();
     }
@@ -1650,13 +1645,13 @@ public:
         for(int y = startRow; y < endRow; ++y )
         {
             int x = 1;
-            int base = y*(acols+2) + x;
+            int base = y * acols + x;
 
             for(; x < acols - 1; ++x, ++base )
             {
                 if( adata[base] > accThreshold &&
                         adata[base] > adata[base-1] && adata[base] > adata[base+1] &&
-                        adata[base] > adata[base-acols-2] && adata[base] > adata[base+acols+2] )
+                        adata[base] > adata[base-acols] && adata[base] > adata[base+acols] )
                     centersLocal.push_back(base);
             }
         }
@@ -1969,11 +1964,6 @@ private:
     mutable Mutex _lock;
 };
 
-//#ifdef CV_SSE2
-//#undef CV_SSE2
-//#define CV_SSE2 1
-//#endif
-
 static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float dp, float minDist,
                                  int minRadius, int maxRadius, int cannyThreshold,
                                  int accThreshold, int circlesMax )
@@ -2008,7 +1998,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float 
 
     numberOfThreads = (numThreads > 1) ? ((accum.rows - 4) / 4) : 1;
 
-    parallel_for_(Range(1, accum.rows - 3),
+    parallel_for_(Range(1, accum.rows - 1),
         HoughCirclesFindCentersInvoker(accum, centers, accThreshold),
         numberOfThreads);
 
