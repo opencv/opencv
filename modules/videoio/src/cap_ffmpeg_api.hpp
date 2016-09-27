@@ -1,5 +1,5 @@
-#ifndef __OPENCV_FFMPEG_H__
-#define __OPENCV_FFMPEG_H__
+#ifndef OPENCV_FFMPEG_H
+#define OPENCV_FFMPEG_H
 
 #ifdef __cplusplus
 extern "C"

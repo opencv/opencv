@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_PRECOMP_H__
-#define __OPENCV_STITCHING_PRECOMP_H__
+#ifndef OPENCV_STITCHING_PRECOMP_H
+#define OPENCV_STITCHING_PRECOMP_H
 
 #include "opencv2/opencv_modules.hpp"
 

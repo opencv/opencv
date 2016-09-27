@@ -48,8 +48,8 @@
 #  endif
 #endif
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+#ifndef OPENCV_TEST_PRECOMP_HPP
+#define OPENCV_TEST_PRECOMP_HPP
 
 #if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__) && !defined(__aarch64__)
     #include <fpu_control.h>

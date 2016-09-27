@@ -6,8 +6,8 @@
 #  endif
 #endif
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+#ifndef OPENCV_TEST_PRECOMP_HPP
+#define OPENCV_TEST_PRECOMP_HPP
 
 #include <iostream>
 #include <string>

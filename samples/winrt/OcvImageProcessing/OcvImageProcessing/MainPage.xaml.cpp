@@ -42,7 +42,7 @@ MainPage::MainPage()
 {
     InitializeComponent();
 
-#ifdef __OPENCV_IMGCODECS_HPP__
+#ifdef OPENCV_IMGCODECS_HPP
 
     // Image loading OpenCV way ... way more simple
     cv::Mat image = cv::imread("Assets/Lena.png");

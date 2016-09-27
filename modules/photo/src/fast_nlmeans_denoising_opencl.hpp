@@ -6,8 +6,8 @@
 // Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
-#ifndef __OPENCV_FAST_NLMEANS_DENOISING_OPENCL_HPP__
-#define __OPENCV_FAST_NLMEANS_DENOISING_OPENCL_HPP__
+#ifndef OPENCV_FAST_NLMEANS_DENOISING_OPENCL_HPP
+#define OPENCV_FAST_NLMEANS_DENOISING_OPENCL_HPP
 
 #include "opencl_kernels_photo.hpp"
 

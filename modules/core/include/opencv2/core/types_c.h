@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_TYPES_H__
-#define __OPENCV_CORE_TYPES_H__
+#ifndef OPENCV_CORE_TYPES_H
+#define OPENCV_CORE_TYPES_H
 
 #ifdef HAVE_IPL
 #  ifndef __IPL_H__
@@ -1829,6 +1829,6 @@ CvModuleInfo;
 
 /** @} */
 
-#endif /*__OPENCV_CORE_TYPES_H__*/
+#endif /*OPENCV_CORE_TYPES_H*/
 
 /* End of file. */

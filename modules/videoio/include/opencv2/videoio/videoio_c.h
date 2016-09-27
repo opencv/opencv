@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOIO_H__
-#define __OPENCV_VIDEOIO_H__
+#ifndef OPENCV_VIDEOIO_H
+#define OPENCV_VIDEOIO_H
 
 #include "opencv2/core/core_c.h"
 
@@ -545,4 +545,4 @@ CVAPI(void) cvReleaseVideoWriter( CvVideoWriter** writer );
 }
 #endif
 
-#endif //__OPENCV_VIDEOIO_H__
+#endif //OPENCV_VIDEOIO_H

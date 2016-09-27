@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_PRIVATE_HPP__
-#define __OPENCV_CORE_PRIVATE_HPP__
+#ifndef OPENCV_CORE_PRIVATE_HPP
+#define OPENCV_CORE_PRIVATE_HPP
 
 #ifndef __OPENCV_BUILD
 #  error this is a private header which should not be used from outside of the OpenCV library
@@ -434,4 +434,4 @@ CV_EXPORTS void setUseTegra(bool flag);
 
 //! @endcond
 
-#endif // __OPENCV_CORE_PRIVATE_HPP__
+#endif // OPENCV_CORE_PRIVATE_HPP

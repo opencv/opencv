@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
-#define __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
+#ifndef OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP
+#define OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda.hpp"
@@ -62,4 +62,4 @@ namespace cv
     }
 }
 
-#endif // __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
+#endif // OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP

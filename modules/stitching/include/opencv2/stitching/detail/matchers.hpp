@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_MATCHERS_HPP__
-#define __OPENCV_STITCHING_MATCHERS_HPP__
+#ifndef OPENCV_STITCHING_MATCHERS_HPP
+#define OPENCV_STITCHING_MATCHERS_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -272,4 +272,4 @@ protected:
 } // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_MATCHERS_HPP__
+#endif // OPENCV_STITCHING_MATCHERS_HPP

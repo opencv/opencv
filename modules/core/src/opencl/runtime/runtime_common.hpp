@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_OCL_RUNTIME_COMMON_HPP__
-#define __OPENCV_CORE_OCL_RUNTIME_COMMON_HPP__
+#ifndef _OPENCV_CORE_OCL_RUNTIME_COMMON_HPP
+#define _OPENCV_CORE_OCL_RUNTIME_COMMON_HPP
 
 namespace cv { namespace ocl { namespace runtime {
 
@@ -54,4 +54,4 @@ struct DynamicFnEntry
 
 using namespace cv::ocl::runtime;
 
-#endif // __OPENCV_CORE_OCL_RUNTIME_COMMON_HPP__
+#endif // _OPENCV_CORE_OCL_RUNTIME_COMMON_HPP

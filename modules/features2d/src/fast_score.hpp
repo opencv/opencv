@@ -41,8 +41,8 @@ The references are:
    E. Rosten, R. Porter and T. Drummond, PAMI, 2009
 */
 
-#ifndef __OPENCV_FEATURES_2D_FAST_HPP__
-#define __OPENCV_FEATURES_2D_FAST_HPP__
+#ifndef OPENCV_FEATURES_2D_FAST_HPP
+#define OPENCV_FEATURES_2D_FAST_HPP
 
 #ifdef __cplusplus
 

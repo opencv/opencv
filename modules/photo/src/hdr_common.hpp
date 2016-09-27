@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HDR_COMMON_HPP__
-#define __OPENCV_HDR_COMMON_HPP__
+#ifndef OPENCV_HDR_COMMON_HPP
+#define OPENCV_HDR_COMMON_HPP
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"

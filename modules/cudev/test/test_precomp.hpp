@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+#ifndef OPENCV_TEST_PRECOMP_HPP
+#define OPENCV_TEST_PRECOMP_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"

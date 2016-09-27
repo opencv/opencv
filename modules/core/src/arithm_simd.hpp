@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_ARITHM_SIMD_HPP__
-#define __OPENCV_ARITHM_SIMD_HPP__
+#ifndef OPENCV_ARITHM_SIMD_HPP
+#define OPENCV_ARITHM_SIMD_HPP
 
 namespace cv {
 
@@ -2022,4 +2022,4 @@ struct AddWeighted_SIMD<short, float>
 
 }
 
-#endif // __OPENCV_ARITHM_SIMD_HPP__
+#endif // OPENCV_ARITHM_SIMD_HPP

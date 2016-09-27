@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_CLP_HPP__
-#define __OPENCV_VIDEOSTAB_CLP_HPP__
+#ifndef OPENCV_VIDEOSTAB_CLP_HPP
+#define OPENCV_VIDEOSTAB_CLP_HPP
 
 #ifdef HAVE_CLP
 #  define COIN_BIG_INDEX 0

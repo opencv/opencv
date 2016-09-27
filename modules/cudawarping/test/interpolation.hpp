@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_TEST_INTERPOLATION_HPP__
-#define __OPENCV_TEST_INTERPOLATION_HPP__
+#ifndef OPENCV_TEST_INTERPOLATION_HPP
+#define OPENCV_TEST_INTERPOLATION_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
@@ -128,4 +128,4 @@ template <typename T> struct CubicInterpolator
     }
 };
 
-#endif // __OPENCV_TEST_INTERPOLATION_HPP__
+#endif // OPENCV_TEST_INTERPOLATION_HPP

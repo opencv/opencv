@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_HPP__
-#define __OPENCV_PRECOMP_HPP__
+#ifndef OPENCV_PRECOMP_HPP
+#define OPENCV_PRECOMP_HPP
 
 #include <stdexcept>
 #include <iostream>

@@ -37,8 +37,8 @@
 //the use of this software, even if advised of the possibility of such damage.
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
-#ifndef __OPENCV_HIGHGUI_QT_H__
-#define __OPENCV_HIGHGUI_QT_H__
+#ifndef OPENCV_HIGHGUI_QT_H
+#define OPENCV_HIGHGUI_QT_H
 
 #include "precomp.hpp"
 

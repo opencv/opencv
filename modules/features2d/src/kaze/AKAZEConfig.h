@@ -5,8 +5,8 @@
  * @author Pablo F. Alcantarilla, Jesus Nuevo
  */
 
-#ifndef __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
-#define __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
+#ifndef OPENCV_FEATURES_2D_AKAZE_CONFIG_H
+#define OPENCV_FEATURES_2D_AKAZE_CONFIG_H
 
 namespace cv
 {

@@ -5,8 +5,8 @@
  * @author Pablo F. Alcantarilla
  */
 
-#ifndef __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
-#define __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
+#ifndef OPENCV_FEATURES_2D_AKAZE_CONFIG_H
+#define OPENCV_FEATURES_2D_AKAZE_CONFIG_H
 
 // OpenCV Includes
 #include "../precomp.hpp"

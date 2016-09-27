@@ -6,8 +6,8 @@
  * @author Pablo F. Alcantarilla, Jesus Nuevo
  */
 
-#ifndef __OPENCV_FEATURES_2D_AKAZE_FEATURES_H__
-#define __OPENCV_FEATURES_2D_AKAZE_FEATURES_H__
+#ifndef OPENCV_FEATURES_2D_AKAZE_FEATURES_H
+#define OPENCV_FEATURES_2D_AKAZE_FEATURES_H
 
 /* ************************************************************************* */
 // Includes

@@ -44,8 +44,8 @@
  */
 
 /* Include Guards */
-#ifndef __OPENCV_RHO_H__
-#define __OPENCV_RHO_H__
+#ifndef OPENCV_RHO_H
+#define OPENCV_RHO_H
 
 
 

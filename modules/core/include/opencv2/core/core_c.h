@@ -42,8 +42,8 @@
 //M*/
 
 
-#ifndef __OPENCV_CORE_C_H__
-#define __OPENCV_CORE_C_H__
+#ifndef OPENCV_CORE_C_H
+#define OPENCV_CORE_C_H
 
 #include "opencv2/core/types_c.h"
 

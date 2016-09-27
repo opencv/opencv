@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_ARITHM_CORE_HPP__
-#define __OPENCV_ARITHM_CORE_HPP__
+#ifndef OPENCV_ARITHM_CORE_HPP
+#define OPENCV_ARITHM_CORE_HPP
 
 #include "arithm_simd.hpp"
 
@@ -604,4 +604,4 @@ addWeighted_( const T* src1, size_t step1, const T* src2, size_t step2,
 } // cv::
 
 
-#endif // __OPENCV_ARITHM_CORE_HPP__
+#endif // OPENCV_ARITHM_CORE_HPP

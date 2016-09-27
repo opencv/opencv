@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_INTERACTOR_STYLE_H__
-#define __OPENCV_VIZ_INTERACTOR_STYLE_H__
+#ifndef OPENCV_VIZ_INTERACTOR_STYLE_H
+#define OPENCV_VIZ_INTERACTOR_STYLE_H
 
 #include <vtkInteractorStyle.h>
 

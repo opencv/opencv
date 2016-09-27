@@ -8,8 +8,8 @@
  * @author Pablo F. Alcantarilla
  */
 
-#ifndef __OPENCV_FEATURES_2D_NLDIFFUSION_FUNCTIONS_H__
-#define __OPENCV_FEATURES_2D_NLDIFFUSION_FUNCTIONS_H__
+#ifndef OPENCV_FEATURES_2D_NLDIFFUSION_FUNCTIONS_H
+#define OPENCV_FEATURES_2D_NLDIFFUSION_FUNCTIONS_H
 
 /* ************************************************************************* */
 // Declaration of functions

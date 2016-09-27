@@ -38,8 +38,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_ML_PRECOMP_HPP__
-#define __OPENCV_ML_PRECOMP_HPP__
+#ifndef OPENCV_ML_PRECOMP_HPP
+#define OPENCV_ML_PRECOMP_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/ml.hpp"
@@ -380,4 +380,4 @@ namespace ml
 
 }}
 
-#endif /* __OPENCV_ML_PRECOMP_HPP__ */
+#endif /* OPENCV_ML_PRECOMP_HPP */

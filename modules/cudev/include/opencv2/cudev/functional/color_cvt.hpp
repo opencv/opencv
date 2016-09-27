@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_FUNCTIONAL_COLOR_CVT_HPP__
-#define __OPENCV_CUDEV_FUNCTIONAL_COLOR_CVT_HPP__
+#ifndef OPENCV_CUDEV_FUNCTIONAL_COLOR_CVT_HPP
+#define OPENCV_CUDEV_FUNCTIONAL_COLOR_CVT_HPP
 
 #include "../common.hpp"
 #include "detail/color_cvt.hpp"

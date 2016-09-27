@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_TRACKING_HPP__
-#define __OPENCV_TRACKING_HPP__
+#ifndef OPENCV_TRACKING_HPP
+#define OPENCV_TRACKING_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"

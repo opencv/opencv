@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_PRECOMP_HPP__
-#define __OPENCV_VIZ_PRECOMP_HPP__
+#ifndef OPENCV_VIZ_PRECOMP_HPP
+#define OPENCV_VIZ_PRECOMP_HPP
 
 #include <map>
 #include <ctime>
