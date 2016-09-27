@@ -777,8 +777,13 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
 
     vxContext * ctx = vxContext::getContext();
 
+    vx_size maxKernelDim;
+    vxErr::check(vxQueryContext(ctx->ctx, VX_CONTEXT_NONLINEAR_MAX_DIMENSION, &maxKernelDim, sizeof(maxKernelDim)));
+    if (kernel_width > maxKernelDim || kernel_height > maxKernelDim)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     std::vector<uchar> kernel_mat;
-    kernel_mat.resize(kernel_width * kernel_height);
+    kernel_mat.reserve(kernel_width * kernel_height);
     switch (CV_MAT_DEPTH(kernel_type))
     {
     case CV_8U:
@@ -786,7 +791,7 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
         for (int j = 0; j < kernel_height; ++j)
         {
             uchar * kernel_row = kernel_data + j * kernel_step;
-            for (int i = 0; i < kernel_height; ++i)
+            for (int i = 0; i < kernel_width; ++i)
                 kernel_mat.push_back(kernel_row[i] ? 255 : 0);
         }
         break;
@@ -795,7 +800,7 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
         for (int j = 0; j < kernel_height; ++j)
         {
             short * kernel_row = (short*)(kernel_data + j * kernel_step);
-            for (int i = 0; i < kernel_height; ++i)
+            for (int i = 0; i < kernel_width; ++i)
                 kernel_mat.push_back(kernel_row[i] ? 255 : 0);
         }
         break;
@@ -803,7 +808,7 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
         for (int j = 0; j < kernel_height; ++j)
         {
             int * kernel_row = (int*)(kernel_data + j * kernel_step);
-            for (int i = 0; i < kernel_height; ++i)
+            for (int i = 0; i < kernel_width; ++i)
                 kernel_mat.push_back(kernel_row[i] ? 255 : 0);
         }
         break;
@@ -811,7 +816,7 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
         for (int j = 0; j < kernel_height; ++j)
         {
             float * kernel_row = (float*)(kernel_data + j * kernel_step);
-            for (int i = 0; i < kernel_height; ++i)
+            for (int i = 0; i < kernel_width; ++i)
                 kernel_mat.push_back(kernel_row[i] ? 255 : 0);
         }
         break;
@@ -819,7 +824,7 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
         for (int j = 0; j < kernel_height; ++j)
         {
             double * kernel_row = (double*)(kernel_data + j * kernel_step);
-            for (int i = 0; i < kernel_height; ++i)
+            for (int i = 0; i < kernel_width; ++i)
                 kernel_mat.push_back(kernel_row[i] ? 255 : 0);
         }
         break;
@@ -832,6 +837,7 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
     {
     case MORPH_ERODE:
         mat = new MorphCtx(*ctx, kernel_mat.data(), kernel_width, kernel_height, VX_NONLINEAR_FILTER_MIN, border);
+        break;
     case MORPH_DILATE:
         mat = new MorphCtx(*ctx, kernel_mat.data(), kernel_width, kernel_height, VX_NONLINEAR_FILTER_MAX, border);
         break;
