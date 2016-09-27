@@ -343,11 +343,23 @@ inline int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c,
 {
     try
     {
+        int rounding_policy = VX_ROUND_POLICY_TO_ZERO;
+        if (scale != 0x0.01010102)
+        {
+          int exp = 0;
+          double significand = frexp(scale, &exp);
+          if((significand != 0.5) || (exp > 1) || (exp < -14))
+              return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+        else
+        {
+            rounding_policy = VX_ROUND_POLICY_TO_NEAREST_EVEN;// That's the only rounding that MUST be supported for 1/255 scale
+        }
         vxContext * ctx = vxContext::getContext();
         vxImage ia(*ctx, a, astep, w, h);
         vxImage ib(*ctx, b, bstep, w, h);
         vxImage ic(*ctx, c, cstep, w, h);
-        vxErr::check(vxuMultiply(ctx->ctx, ia.img, ib.img, (float)scale, VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_ZERO, ic.img));
+        vxErr::check(vxuMultiply(ctx->ctx, ia.img, ib.img, (float)scale, VX_CONVERT_POLICY_SATURATE, rounding_policy, ic.img));
     }
     catch (vxErr & e)
     {
