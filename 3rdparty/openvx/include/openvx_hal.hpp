@@ -399,13 +399,6 @@ inline int ovx_hal_merge8u(const uchar **src_data, uchar *dst_data, int len, int
 
 
 #if defined OPENCV_IMGPROC_HAL_INTERFACE_H
-#define CV_HAL_INTER_NEAREST 0
-#define CV_HAL_INTER_LINEAR 1
-#define CV_HAL_INTER_CUBIC 2
-#define CV_HAL_INTER_AREA 3
-#define CV_HAL_INTER_LANCZOS4 4
-#define MORPH_ERODE 0
-#define MORPH_DILATE 1
 
 inline int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, double inv_scale_x, double inv_scale_y, int interpolation)
 {
