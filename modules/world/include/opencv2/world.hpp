@@ -40,8 +40,13 @@
 //
 //M*/
 
+<<<<<<< HEAD
 #ifndef OPENCV_WORLD_HPP
 #define OPENCV_WORLD_HPP
+=======
+#ifndefOPENCV_WORLD_HPP
+#defineOPENCV_WORLD_HPP
+>>>>>>> cdd4f4720cf9c7994d7854bbc47cf58e0607cdd5
 
 #include "opencv2/core.hpp"
 
