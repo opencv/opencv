@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_WORLD_HPP__
-#define __OPENCV_WORLD_HPP__
+#ifndefOPENCV_WORLD_HPP
+#defineOPENCV_WORLD_HPP
 
 #include "opencv2/core.hpp"
 

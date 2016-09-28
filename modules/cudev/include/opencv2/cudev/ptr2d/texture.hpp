@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_TEXTURE_HPP__
-#define __OPENCV_CUDEV_PTR2D_TEXTURE_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_TEXTURE_HPP
+#define OPENCV_CUDEV_PTR2D_TEXTURE_HPP
 
 #include <cstring>
 #include "../common.hpp"

@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_WIDGET_ACCESSOR_HPP__
-#define __OPENCV_VIZ_WIDGET_ACCESSOR_HPP__
+#ifndef OPENCV_VIZ_WIDGET_ACCESSOR_HPP
+#define OPENCV_VIZ_WIDGET_ACCESSOR_HPP
 
 #include <opencv2/core/cvdef.h>
 #include <vtkSmartPointer.h>

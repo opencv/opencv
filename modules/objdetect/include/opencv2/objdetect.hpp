@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OBJDETECT_HPP__
-#define __OPENCV_OBJDETECT_HPP__
+#ifndef OPENCV_OBJDETECT_HPP
+#define OPENCV_OBJDETECT_HPP
 
 #include "opencv2/core.hpp"
 

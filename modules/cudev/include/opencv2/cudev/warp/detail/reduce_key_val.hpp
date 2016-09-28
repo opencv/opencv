@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_WARP_REDUCE_KEY_VAL_DETAIL_HPP__
-#define __OPENCV_CUDEV_WARP_REDUCE_KEY_VAL_DETAIL_HPP__
+#ifndef OPENCV_CUDEV_WARP_REDUCE_KEY_VAL_DETAIL_HPP
+#define OPENCV_CUDEV_WARP_REDUCE_KEY_VAL_DETAIL_HPP
 
 #include "../../common.hpp"
 #include "../../util/tuple.hpp"

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_CUDA_HPP__
-#define __OPENCV_PHOTO_CUDA_HPP__
+#ifndef OPENCV_PHOTO_CUDA_HPP
+#define OPENCV_PHOTO_CUDA_HPP
 
 #include "opencv2/core/cuda.hpp"
 
@@ -129,4 +129,4 @@ CV_EXPORTS void fastNlMeansDenoisingColored(InputArray src, OutputArray dst,
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_PHOTO_CUDA_HPP__ */
+#endif /* OPENCV_PHOTO_CUDA_HPP */
