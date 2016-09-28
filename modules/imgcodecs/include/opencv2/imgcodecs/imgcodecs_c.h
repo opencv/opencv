@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_IMGCODECS_H__
-#define __OPENCV_IMGCODECS_H__
+#ifndef OPENCV_IMGCODECS_H
+#define OPENCV_IMGCODECS_H
 
 #include "opencv2/core/core_c.h"
 
@@ -134,4 +134,4 @@ CVAPI(int) cvHaveImageWriter(const char* filename);
 }
 #endif
 
-#endif // __OPENCV_IMGCODECS_H__
+#endif // OPENCV_IMGCODECS_H

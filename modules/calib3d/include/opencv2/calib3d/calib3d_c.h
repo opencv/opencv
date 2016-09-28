@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CALIB3D_C_H__
-#define __OPENCV_CALIB3D_C_H__
+#ifndef OPENCV_CALIB3D_C_H
+#define OPENCV_CALIB3D_C_H
 
 #include "opencv2/core/core_c.h"
 
@@ -423,4 +423,4 @@ public:
 
 #endif
 
-#endif /* __OPENCV_CALIB3D_C_H__ */
+#endif /* OPENCV_CALIB3D_C_H */

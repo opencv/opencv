@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_ALL_HPP__
-#define __OPENCV_ALL_HPP__
+#ifndef OPENCV_ALL_HPP
+#define OPENCV_ALL_HPP
 
 #include "opencv2/opencv_modules.hpp"
 
