@@ -293,7 +293,7 @@ CV_EXPORTS void lshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream
 
 @sa min
  */
-CV_EXPORTS void min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS void (min)(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes the per-element maximum of two matrices (or a matrix and a scalar).
 
@@ -304,7 +304,7 @@ CV_EXPORTS void min(InputArray src1, InputArray src2, OutputArray dst, Stream& s
 
 @sa max
  */
-CV_EXPORTS void max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS void (max)(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes the weighted sum of two arrays.
 
