@@ -260,7 +260,7 @@ __kernel void stage1_with_sobel(__global const uchar *src, int src_step, int src
 #ifdef L2GRAD
 #define dist(x, y) ((int)(x) * (x) + (int)(y) * (y))
 #else
-#define dist(x, y) (abs(x) + abs(y))
+#define dist(x, y) (abs((int)(x)) + abs((int)(y)))
 #endif
 
 __constant int prev[4][2] = {

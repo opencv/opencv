@@ -1,8 +1,8 @@
 
 /* pngtrans.c - transforms the data in a row (used by both readers and writers)
  *
- * Last changed in libpng 1.6.18 [July 23, 2015]
- * Copyright (c) 1998-2015 Glenn Randers-Pehrson
+ * Last changed in libpng 1.6.24 [August 4, 2016]
+ * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -172,13 +172,14 @@ png_set_filler(png_structrp png_ptr, png_uint_32 filler, int filler_loc)
                    * size!
                    */
                   png_app_error(png_ptr,
-                     "png_set_filler is invalid for low bit depth gray output");
+                      "png_set_filler is invalid for"
+                      " low bit depth gray output");
                   return;
                }
 
             default:
                png_app_error(png_ptr,
-                  "png_set_filler: inappropriate color type");
+                   "png_set_filler: inappropriate color type");
                return;
          }
 #     else
@@ -797,7 +798,7 @@ png_set_user_transform_info(png_structrp png_ptr, png_voidp
       (png_ptr->flags & PNG_FLAG_ROW_INIT) != 0)
    {
       png_app_error(png_ptr,
-            "info change after png_start_read_image or png_read_update_info");
+          "info change after png_start_read_image or png_read_update_info");
       return;
    }
 #endif

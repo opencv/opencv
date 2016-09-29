@@ -46,11 +46,19 @@
 #include "opencv2/core.hpp"
 
 /**
-  @defgroup videoio Media I/O
+  @defgroup videoio Video I/O
+
+  @brief Read and write video or images sequence with OpenCV
+
+  ### See also:
+  - @ref videoio_overview
+  - Tutorials: @ref tutorial_table_of_content_videoio
   @{
-    @defgroup videoio_c C API
-    @defgroup videoio_ios iOS glue
-    @defgroup videoio_winrt WinRT glue
+    @defgroup videoio_flags_base Flags for video I/O
+    @defgroup videoio_flags_others Additional flags for video I/O API backends
+    @defgroup videoio_c C API for video I/O
+    @defgroup videoio_ios iOS glue for video I/O
+    @defgroup videoio_winrt WinRT glue for video I/O
   @}
 */
 
@@ -65,19 +73,20 @@ namespace cv
 //! @addtogroup videoio
 //! @{
 
-/** @brief Capture API backends.
+//! @addtogroup videoio_flags_base
+//! @{
+
+
+/** @brief %VideoCapture API backends identifier.
 
 Select preferred API for a capture object.
-To be used in the constructor VideoCapture::VideoCapture or VideoCapture::open
+To be used in the VideoCapture::VideoCapture() constructor or VideoCapture::open()
 
-@note Backends are available only if they have been built with your OpenCV binaries.<br>
-Check in <tt>cvconfig.h</tt> to know which APIs are currently available (e.g. <tt>HAVE_MSMF, HAVE_VFW, HAVE_LIBV4L</tt>).
-To enable/disable APIs, you have to:
-  1. re-configure OpenCV using the appropriates CMake switches
-     (e.g. <tt>-DWITH_MSMF=ON -DWITH_VFW=ON ... </tt>) or checking related switch in cmake-gui
-  2. rebuild OpenCV itself
+@note Backends are available only if they have been built with your OpenCV binaries.
+See @ref videoio_overview for more information.
 */
-enum { CAP_ANY          = 0,            //!< Auto detect
+enum VideoCaptureAPIs {
+       CAP_ANY          = 0,            //!< Auto detect == 0
        CAP_VFW          = 200,          //!< Video For Windows (platform native)
        CAP_V4L          = 200,          //!< V4L/V4L2 capturing support via libv4l
        CAP_V4L2         = CAP_V4L,      //!< Same as CAP_V4L
@@ -103,12 +112,15 @@ enum { CAP_ANY          = 0,            //!< Auto detect
        CAP_OPENNI2_ASUS = 1610,         //!< OpenNI2 (for Asus Xtion and Occipital Structure sensors)
        CAP_GPHOTO2      = 1700,         //!< gPhoto2 connection
        CAP_GSTREAMER    = 1800,         //!< GStreamer
-       CAP_FFMPEG       = 1900,         //!< FFMPEG
+       CAP_FFMPEG       = 1900,         //!< Open and record video file or stream using the FFMPEG library
        CAP_IMAGES       = 2000          //!< OpenCV Image Sequence (e.g. img_%02d.jpg)
      };
 
-//! generic properties (based on DC1394 properties)
-enum { CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
+/** @brief %VideoCapture generic properties identifier.
+ @sa videoio_flags_others, VideoCapture::get(), VideoCapture::set()
+*/
+enum VideoCaptureProperties {
+       CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
        CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next.
        CAP_PROP_POS_AVI_RATIO  =2, //!< Relative position of the video file: 0=start of the film, 1=end of the film.
        CAP_PROP_FRAME_WIDTH    =3, //!< Width of the frames in the video stream.
@@ -144,24 +156,42 @@ enum { CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in mi
        CAP_PROP_TILT          =34,
        CAP_PROP_ROLL          =35,
        CAP_PROP_IRIS          =36,
-       CAP_PROP_SETTINGS      =37,
+       CAP_PROP_SETTINGS      =37, //! Pop up video/camera filter dialog (note: only supported by DSHOW backend currently. Property value is ignored)
        CAP_PROP_BUFFERSIZE    =38,
        CAP_PROP_AUTOFOCUS     =39
      };
 
 
-//! @brief Generic camera output modes.
-//! @note Currently, these are supported through the libv4l interface only.
-enum { CAP_MODE_BGR  = 0, //!< BGR24 (default)
+/** @brief Generic camera output modes identifier.
+@note Currently, these are supported through the libv4l backend only.
+*/
+enum VideoCaptureModes {
+       CAP_MODE_BGR  = 0, //!< BGR24 (default)
        CAP_MODE_RGB  = 1, //!< RGB24
        CAP_MODE_GRAY = 2, //!< Y8
        CAP_MODE_YUYV = 3  //!< YUYV
      };
 
+/** @brief %VideoWriter generic properties identifier.
+ @sa VideoWriter::get(), VideoWriter::set()
+*/
+enum VideoWriterProperties {
+  VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
+  VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
+  VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
+};
 
-/** @brief DC1394 only
+//! @} videoio_flags_base
 
-modes of the controlling registers (can be: auto, manual, auto single push, absolute Latter allowed with any other mode)
+//! @addtogroup videoio_flags_others
+//! @{
+
+/** @name IEEE 1394 drivers
+    @{
+*/
+
+/** @brief Modes of the IEEE 1394 controlling registers
+(can be: auto, manual, auto single push, absolute Latter allowed with any other mode)
 every feature can have only one mode turned on at a time
 */
 enum { CAP_PROP_DC1394_OFF                = -4, //!< turn the feature off (not controlled manually nor automatically).
@@ -171,6 +201,11 @@ enum { CAP_PROP_DC1394_OFF                = -4, //!< turn the feature off (not c
        CAP_PROP_DC1394_MAX                = 31
      };
 
+//! @} IEEE 1394 drivers
+
+/** @name OpenNI (for Kinect)
+    @{
+*/
 
 //! OpenNI map generators
 enum { CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
@@ -179,7 +214,7 @@ enum { CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
        CAP_OPENNI_GENERATORS_MASK = CAP_OPENNI_DEPTH_GENERATOR + CAP_OPENNI_IMAGE_GENERATOR + CAP_OPENNI_IR_GENERATOR
      };
 
-//! Properties of cameras available through OpenNI interfaces
+//! Properties of cameras available through OpenNI backend
 enum { CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
        CAP_PROP_OPENNI_FRAME_MAX_DEPTH   = 101, //!< In mm
        CAP_PROP_OPENNI_BASELINE          = 102, //!< In mm
@@ -229,11 +264,20 @@ enum { CAP_OPENNI_VGA_30HZ  = 0,
        CAP_OPENNI_QVGA_60HZ = 4
      };
 
+//! @} OpenNI
 
-//! GStreamer
+/** @name GStreamer
+    @{
+*/
+
 enum { CAP_PROP_GSTREAMER_QUEUE_LENGTH = 200 //!< Default is 1
      };
 
+//! @} GStreamer
+
+/** @name PvAPI, Prosilica GigE SDK
+    @{
+*/
 
 //! PVAPI
 enum { CAP_PROP_PVAPI_MULTICASTIP           = 300, //!< IP for enable multicast master mode. 0 for disable multicast.
@@ -271,7 +315,13 @@ enum { CAP_PVAPI_PIXELFORMAT_MONO8    = 1,    //!< Mono8
        CAP_PVAPI_PIXELFORMAT_BGRA32   = 8,    //!< Bgra32
      };
 
-//! Properties of cameras available through XIMEA SDK interface
+//! @} PvAPI
+
+/** @name XIMEA Camera API
+    @{
+*/
+
+//! Properties of cameras available through XIMEA SDK backend
 enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Change image resolution by binning or skipping.
        CAP_PROP_XI_DATA_FORMAT                                  = 401, //!< Output data format.
        CAP_PROP_XI_OFFSET_X                                     = 402, //!< Horizontal offset from the origin to the area of interest (in pixels).
@@ -374,8 +424,8 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Chan
        CAP_PROP_XI_LENS_FOCAL_LENGTH                            = 516, //!< Lens focal distance in mm.
        CAP_PROP_XI_LENS_FEATURE_SELECTOR                        = 517, //!< Selects the current feature which is accessible by XI_PRM_LENS_FEATURE.
        CAP_PROP_XI_LENS_FEATURE                                 = 518, //!< Allows access to lens feature value currently selected by XI_PRM_LENS_FEATURE_SELECTOR.
-       CAP_PROP_XI_DEVICE_MODEL_ID                              = 521, //!< Return device model id.
-       CAP_PROP_XI_DEVICE_SN                                    = 522, //!< Return device serial number.
+       CAP_PROP_XI_DEVICE_MODEL_ID                              = 521, //!< Returns device model id.
+       CAP_PROP_XI_DEVICE_SN                                    = 522, //!< Returns device serial number.
        CAP_PROP_XI_IMAGE_DATA_FORMAT_RGB32_ALPHA                = 529, //!< The alpha channel of RGB32 output image format.
        CAP_PROP_XI_IMAGE_PAYLOAD_SIZE                           = 530, //!< Buffer size in bytes sufficient for output image returned by xiGetImage.
        CAP_PROP_XI_TRANSPORT_PIXEL_FORMAT                       = 531, //!< Current format of pixels on transport layer.
@@ -386,7 +436,7 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Chan
        CAP_PROP_XI_COUNTER_SELECTOR                             = 536, //!< Select counter.
        CAP_PROP_XI_COUNTER_VALUE                                = 537, //!< Counter status.
        CAP_PROP_XI_ACQ_TIMING_MODE                              = 538, //!< Type of sensor frames timing.
-       CAP_PROP_XI_AVAILABLE_BANDWIDTH                          = 539, //!< Calculate and return available interface bandwidth(int Megabits).
+       CAP_PROP_XI_AVAILABLE_BANDWIDTH                          = 539, //!< Calculate and returns available interface bandwidth(int Megabits).
        CAP_PROP_XI_BUFFER_POLICY                                = 540, //!< Data move policy.
        CAP_PROP_XI_LUT_EN                                       = 541, //!< Activates LUT.
        CAP_PROP_XI_LUT_INDEX                                    = 542, //!< Control the index (offset) of the coefficient to access in the LUT.
@@ -424,8 +474,14 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Chan
        CAP_PROP_XI_SENSOR_FEATURE_VALUE                         = 586, //!< Allows access to sensor feature value currently selected by XI_PRM_SENSOR_FEATURE_SELECTOR.
      };
 
+//! @} XIMEA
 
-//! Properties of cameras available through AVFOUNDATION interface
+/** @name AVFoundation framework for iOS
+    OS X Lion will have the same API
+    @{
+*/
+
+//! Properties of cameras available through AVFOUNDATION backend
 enum { CAP_PROP_IOS_DEVICE_FOCUS        = 9001,
        CAP_PROP_IOS_DEVICE_EXPOSURE     = 9002,
        CAP_PROP_IOS_DEVICE_FLASH        = 9003,
@@ -433,8 +489,11 @@ enum { CAP_PROP_IOS_DEVICE_FOCUS        = 9001,
        CAP_PROP_IOS_DEVICE_TORCH        = 9005
      };
 
+/** @name Smartek Giganetix GigEVisionSDK
+    @{
+*/
 
-//! Properties of cameras available through Smartek Giganetix Ethernet Vision interface
+//! Properties of cameras available through Smartek Giganetix Ethernet Vision backend
 /* --- Vladimir Litvinenko (litvinenko.vladimir@gmail.com) --- */
 enum { CAP_PROP_GIGA_FRAME_OFFSET_X   = 10001,
        CAP_PROP_GIGA_FRAME_OFFSET_Y   = 10002,
@@ -444,6 +503,11 @@ enum { CAP_PROP_GIGA_FRAME_OFFSET_X   = 10001,
        CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
      };
 
+//! @} Smartek
+
+/** @name Intel Perceptual Computing SDK
+    @{
+*/
 enum { CAP_PROP_INTELPERC_PROFILE_COUNT               = 11001,
        CAP_PROP_INTELPERC_PROFILE_IDX                 = 11002,
        CAP_PROP_INTELPERC_DEPTH_LOW_CONFIDENCE_VALUE  = 11003,
@@ -453,7 +517,7 @@ enum { CAP_PROP_INTELPERC_PROFILE_COUNT               = 11001,
        CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_VERT     = 11007
      };
 
-//! Intel PerC streams
+//! Intel Perceptual Streams
 enum { CAP_INTELPERC_DEPTH_GENERATOR = 1 << 29,
        CAP_INTELPERC_IMAGE_GENERATOR = 1 << 28,
        CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR
@@ -465,14 +529,15 @@ enum { CAP_INTELPERC_DEPTH_MAP              = 0, //!< Each pixel is a 16-bit int
        CAP_INTELPERC_IMAGE                  = 3
      };
 
-enum { VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
-       VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
-       VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
-     };
+//! @} Intel Perceptual
+
+/** @name gPhoto2 connection
+    @{
+*/
 
 /** @brief gPhoto2 properties
 
-if propertyId is less than 0 then work on widget with that __additive inversed__ camera setting ID
+If `propertyId` is less than 0 then work on widget with that __additive inversed__ camera setting ID
 Get IDs by using CAP_PROP_GPHOTO2_WIDGET_ENUMERATE.
 @see CvCaptureCAM_GPHOTO2 for more info
 */
@@ -488,112 +553,112 @@ enum { CAP_PROP_GPHOTO2_PREVIEW           = 17001, //!< Capture only preview fro
        CAP_PROP_VIEWFINDER                = 17010  //!< Enter liveview mode.
      };
 
-//enum {
+//! @} gPhoto2
+
+//! @} videoio_flags_others
+
 
 class IVideoCapture;
 
-/** @brief Class for video capturing from video files, image sequences or cameras. The class provides C++ API
-for capturing video from cameras or for reading video files and image sequences. Here is how the
-class can be used: :
-@code
-    #include "opencv2/opencv.hpp"
+/** @brief Class for video capturing from video files, image sequences or cameras.
 
-    using namespace cv;
+The class provides C++ API for capturing video from cameras or for reading video files and image sequences.
 
-    int main(int, char**)
-    {
-        VideoCapture cap(0); // open the default camera
-        if(!cap.isOpened())  // check if we succeeded
-            return -1;
+Here is how the class can be used:
+@include samples/cpp/videocapture_basic.cpp
 
-        Mat edges;
-        namedWindow("edges",1);
-        for(;;)
-        {
-            Mat frame;
-            cap >> frame; // get a new frame from camera
-            cvtColor(frame, edges, COLOR_BGR2GRAY);
-            GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
-            Canny(edges, edges, 0, 30, 3);
-            imshow("edges", edges);
-            if(waitKey(30) >= 0) break;
-        }
-        // the camera will be deinitialized automatically in VideoCapture destructor
-        return 0;
-    }
-@endcode
-@note In C API the black-box structure CvCapture is used instead of VideoCapture.
-
+@note In @ref videoio_c "C API" the black-box structure `CvCapture` is used instead of %VideoCapture.
 @note
--   A basic sample on using the VideoCapture interface can be found at
-    opencv_source_code/samples/cpp/starter_video.cpp
--   Another basic video processing sample can be found at
-    opencv_source_code/samples/cpp/video_dmtx.cpp
--   (Python) A basic sample on using the VideoCapture interface can be found at
-    opencv_source_code/samples/python/video.py
--   (Python) Another basic video processing sample can be found at
-    opencv_source_code/samples/python/video_dmtx.py
+-   (C++) A basic sample on using the %VideoCapture interface can be found at
+    `OPENCV_SOURCE_CODE/samples/cpp/videocapture_starter.cpp`
+-   (Python) A basic sample on using the %VideoCapture interface can be found at
+    `OPENCV_SOURCE_CODE/samples/python/video.py`
 -   (Python) A multi threaded video processing sample can be found at
-    opencv_source_code/samples/python/video_threaded.py
+    `OPENCV_SOURCE_CODE/samples/python/video_threaded.py`
+-   (Python) %VideoCapture sample showcasing some features of the Video4Linux2 backend
+    `OPENCV_SOURCE_CODE/samples/python/video_v4l2.py`
  */
 class CV_EXPORTS_W VideoCapture
 {
 public:
-    /** @brief
-    @note In C API, when you finished working with video, release CvCapture structure with
+    /** @brief Default constructor
+    @note In @ref videoio_c "C API", when you finished working with video, release CvCapture structure with
     cvReleaseCapture(), or use Ptr\<CvCapture\> that calls cvReleaseCapture() automatically in the
     destructor.
      */
     CV_WRAP VideoCapture();
 
     /** @overload
-    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
-    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+    @brief  Open video file or a capturing device or a IP video stream for video capturing
+
+    Same as VideoCapture(const String& filename, int apiPreference) but using default Capture API backends
     */
     CV_WRAP VideoCapture(const String& filename);
 
     /** @overload
-    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
-    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+    @brief  Open video file or a capturing device or a IP video stream for video capturing with API Preference
 
-    @param apiPreference preferred Capture API to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES
+    @param filename it can be:
+    - name of video file (eg. `video.avi`)
+    - or image sequence (eg. `img_%02d.jpg`, which will read samples like `img_00.jpg, img_01.jpg, img_02.jpg, ...`)
+    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
+      Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
+      documentation of source stream to know the right URL.
+    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
+    @sa The list of supported API backends cv::VideoCaptureAPIs
     */
     CV_WRAP VideoCapture(const String& filename, int apiPreference);
 
     /** @overload
-    @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
-    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + cv::CAP_MSMF
+    @brief  Open a camera for video capturing
+
+    @param index camera_id + domain_offset (CAP_*) id of the video capturing device to open. To open default camera using default backend just pass 0.
+    Use a `domain_offset` to enforce a specific reader implementation if multiple are available like cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
+    e.g. to open Camera 1 using the MS Media Foundation API use `index = 1 + cv::CAP_MSMF`
+
+    @sa The list of supported API backends cv::VideoCaptureAPIs
     */
     CV_WRAP VideoCapture(int index);
 
+    /** @brief Default destructor
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+    */
     virtual ~VideoCapture();
 
-    /** @brief Open video file or a capturing device for video capturing
+    /** @brief  Open video file or a capturing device or a IP video stream for video capturing
 
-    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
-    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+    @overload
 
-    The methods first call VideoCapture::release to close the already opened file or camera.
+    Parameters are same as the constructor VideoCapture(const String& filename)
+    @return `true` if the file has been successfully opened
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
      */
     CV_WRAP virtual bool open(const String& filename);
 
-    /** @overload
-    @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
-    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + cv::CAP_MSMF
+    /** @brief  Open a camera for video capturing
+
+    @overload
+
+    Parameters are same as the constructor VideoCapture(int index)
+    @return `true` if the camera has been successfully opened.
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index);
 
     /** @brief Returns true if video capturing has been initialized already.
 
-    If the previous call to VideoCapture constructor or VideoCapture::open succeeded, the method returns
+    If the previous call to VideoCapture constructor or VideoCapture::open() succeeded, the method returns
     true.
      */
     CV_WRAP virtual bool isOpened() const;
 
     /** @brief Closes video file or capturing device.
 
-    The methods are automatically called by subsequent VideoCapture::open and by VideoCapture
+    The method is automatically called by subsequent VideoCapture::open and by VideoCapture
     destructor.
 
     The C function also deallocates memory and clears \*capture pointer.
@@ -602,7 +667,9 @@ public:
 
     /** @brief Grabs the next frame from video file or capturing device.
 
-    The methods/functions grab the next frame from video file or camera and return true (non-zero) in
+    @return `true` (non-zero) in the case of success.
+
+    The method/function grabs the next frame from video file or camera and returns true (non-zero) in
     the case of success.
 
     The primary use of the function is in multi-camera environments, especially when the cameras do not
@@ -612,34 +679,52 @@ public:
     from different cameras will be closer in time.
 
     Also, when a connected camera is multi-head (for example, a stereo camera or a Kinect device), the
-    correct way of retrieving data from it is to call VideoCapture::grab first and then call
-    VideoCapture::retrieve one or more times with different values of the channel parameter. See
-    <https://github.com/opencv/opencv/tree/master/samples/cpp/openni_capture.cpp>
+    correct way of retrieving data from it is to call VideoCapture::grab() first and then call
+    VideoCapture::retrieve() one or more times with different values of the channel parameter.
+
+    @ref tutorial_kinect_openni
      */
     CV_WRAP virtual bool grab();
 
     /** @brief Decodes and returns the grabbed video frame.
 
-    The methods/functions decode and return the just grabbed frame. If no frames has been grabbed
-    (camera has been disconnected, or there are no more frames in video file), the methods return false
-    and the functions return NULL pointer.
+    @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
+    @param flag it could be a frame index or a driver specific flag
+    @return `false` if no frames has been grabbed
 
-    @note OpenCV 1.x functions cvRetrieveFrame and cv.RetrieveFrame return image stored inside the video
+    The method decodes and returns the just grabbed frame. If no frames has been grabbed
+    (camera has been disconnected, or there are no more frames in video file), the method returns false
+    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @sa read()
+
+    @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
     :ocvcvCloneImage and then do whatever you want with the copy.
      */
     CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
+
+    /** @brief Stream operator to read the next video frame.
+    @sa read()
+    */
     virtual VideoCapture& operator >> (CV_OUT Mat& image);
+
+    /** @overload
+    @sa read()
+    */
     virtual VideoCapture& operator >> (CV_OUT UMat& image);
 
     /** @brief Grabs, decodes and returns the next video frame.
 
-    The methods/functions combine VideoCapture::grab and VideoCapture::retrieve in one call. This is the
-    most convenient method for reading video files or capturing data from decode and return the just
-    grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more
-    frames in video file), the methods return false and the functions return NULL pointer.
+    @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
+    @return `false` if no frames has been grabbed
 
-    @note OpenCV 1.x functions cvRetrieveFrame and cv.RetrieveFrame return image stored inside the video
+    The method/function combines VideoCapture::grab() and VideoCapture::retrieve() in one call. This is the
+    most convenient method for reading video files or capturing data from decode and returns the just
+    grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more
+    frames in video file), the method returns false and the function returns empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
     :ocvcvCloneImage and then do whatever you want with the copy.
      */
@@ -647,70 +732,43 @@ public:
 
     /** @brief Sets a property in the VideoCapture.
 
-    @param propId Property identifier. It can be one of the following:
-    -   cv::CAP_PROP_POS_MSEC @copydoc cv::CAP_PROP_POS_MSEC
-    -   cv::CAP_PROP_POS_FRAMES @copydoc CAP_PROP_POS_FRAMES
-    -   cv::CAP_PROP_POS_AVI_RATIO @copydoc cv::CAP_PROP_POS_AVI_RATIO
-    -   cv::CAP_PROP_FRAME_WIDTH @copydoc cv::CAP_PROP_FRAME_WIDTH
-    -   cv::CAP_PROP_FRAME_HEIGHT @copydoc cv::CAP_PROP_FRAME_HEIGHT
-    -   cv::CAP_PROP_FPS @copydoc cv::CAP_PROP_FPS
-    -   cv::CAP_PROP_FOURCC @copydoc cv::CAP_PROP_FOURCC
-    -   cv::CAP_PROP_FRAME_COUNT @copydoc cv::CAP_PROP_FRAME_COUNT
-    -   cv::CAP_PROP_FORMAT @copydoc cv::CAP_PROP_FORMAT
-    -   cv::CAP_PROP_MODE @copydoc cv::CAP_PROP_MODE
-    -   cv::CAP_PROP_BRIGHTNESS @copydoc cv::CAP_PROP_BRIGHTNESS
-    -   cv::CAP_PROP_CONTRAST @copydoc cv::CAP_PROP_CONTRAST
-    -   cv::CAP_PROP_SATURATION @copydoc cv::CAP_PROP_SATURATION
-    -   cv::CAP_PROP_HUE @copydoc cv::CAP_PROP_HUE
-    -   cv::CAP_PROP_GAIN @copydoc cv::CAP_PROP_GAIN
-    -   cv::CAP_PROP_EXPOSURE @copydoc cv::CAP_PROP_EXPOSURE
-    -   cv::CAP_PROP_CONVERT_RGB @copydoc cv::CAP_PROP_CONVERT_RGB
-    -   cv::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CAP_PROP_WHITE_BALANCE_BLUE_U
-    -   cv::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CAP_PROP_WHITE_BALANCE_RED_V
-    -   cv::CAP_PROP_RECTIFICATION @copydoc cv::CAP_PROP_RECTIFICATION
+    @param propId Property identifier from cv::VideoCaptureProperties (eg. cv::CAP_PROP_POS_MSEC, cv::CAP_PROP_POS_FRAMES, ...)
+    or one from @ref videoio_flags_others
     @param value Value of the property.
+    @return `true` if the property is supported by backend used by the VideoCapture instance.
+    @note Even if it returns `true` this doesn't ensure that the property
+    value has been accepted by the capture device. See note in VideoCapture::get()
      */
     CV_WRAP virtual bool set(int propId, double value);
 
     /** @brief Returns the specified VideoCapture property
 
-    @param propId Property identifier. It can be one of the following:
-    -   cv::CAP_PROP_POS_MSEC @copydoc cv::CAP_PROP_POS_MSEC
-    -   cv::CAP_PROP_POS_FRAMES @copydoc CAP_PROP_POS_FRAMES
-    -   cv::CAP_PROP_POS_AVI_RATIO @copydoc cv::CAP_PROP_POS_AVI_RATIO
-    -   cv::CAP_PROP_FRAME_WIDTH @copydoc cv::CAP_PROP_FRAME_WIDTH
-    -   cv::CAP_PROP_FRAME_HEIGHT @copydoc cv::CAP_PROP_FRAME_HEIGHT
-    -   cv::CAP_PROP_FPS @copydoc cv::CAP_PROP_FPS
-    -   cv::CAP_PROP_FOURCC @copydoc cv::CAP_PROP_FOURCC
-    -   cv::CAP_PROP_FRAME_COUNT @copydoc cv::CAP_PROP_FRAME_COUNT
-    -   cv::CAP_PROP_FORMAT @copydoc cv::CAP_PROP_FORMAT
-    -   cv::CAP_PROP_MODE @copydoc cv::CAP_PROP_MODE
-    -   cv::CAP_PROP_BRIGHTNESS @copydoc cv::CAP_PROP_BRIGHTNESS
-    -   cv::CAP_PROP_CONTRAST @copydoc cv::CAP_PROP_CONTRAST
-    -   cv::CAP_PROP_SATURATION @copydoc cv::CAP_PROP_SATURATION
-    -   cv::CAP_PROP_HUE @copydoc cv::CAP_PROP_HUE
-    -   cv::CAP_PROP_GAIN @copydoc cv::CAP_PROP_GAIN
-    -   cv::CAP_PROP_EXPOSURE @copydoc cv::CAP_PROP_EXPOSURE
-    -   cv::CAP_PROP_CONVERT_RGB @copydoc cv::CAP_PROP_CONVERT_RGB
-    -   cv::CAP_PROP_WHITE_BALANCE_BLUE_U @copydoc cv::CAP_PROP_WHITE_BALANCE_BLUE_U
-    -   cv::CAP_PROP_WHITE_BALANCE_RED_V @copydoc cv::CAP_PROP_WHITE_BALANCE_RED_V
-    -   cv::CAP_PROP_RECTIFICATION @copydoc cv::CAP_PROP_RECTIFICATION
+    @param propId Property identifier from cv::VideoCaptureProperties (eg. cv::CAP_PROP_POS_MSEC, cv::CAP_PROP_POS_FRAMES, ...)
+    or one from @ref videoio_flags_others
+    @return Value for the specified property. Value 0 is returned when querying a property that is
+    not supported by the backend used by the VideoCapture instance.
 
-    @note When querying a property that is not supported by the backend used by the VideoCapture
-    class, value 0 is returned.
-     */
+    @note Reading / writing properties involves many layers. Some unexpected result might happens
+    along this chain.
+    @code {.txt}
+    `VideoCapture -> API Backend -> Operating System -> Device Driver -> Device Hardware`
+    @endcode
+    The returned value might be different from what really used by the device or it could be encoded
+    using device dependant rules (eg. steps or percentage). Effective behaviour depends from device
+    driver and API Backend
+
+    */
     CV_WRAP virtual double get(int propId) const;
 
-    /** @overload
+    /** @brief Open video file or a capturing device or a IP video stream for video capturing with API Preference
 
-    @param filename name of the opened video file (eg. video.avi) or image sequence (eg.
-    img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
+    @overload
 
-    @param apiPreference preferred Capture API to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES
+    Parameters are same as the constructor VideoCapture(const String& filename, int apiPreference)
+    @return `true` if the file has been successfully opened
 
-    The methods first call VideoCapture::release to close the already opened file or camera.
-     */
+    The method first calls VideoCapture::release to close the already opened file or camera.
+    */
     CV_WRAP virtual bool open(const String& filename, int apiPreference);
 
 protected:
@@ -721,14 +779,21 @@ protected:
 class IVideoWriter;
 
 /** @brief Video writer class.
+
+The class provides C++ API for writing video files or image sequences.
+
+Here is how the class can be used:
+@include samples/cpp/videowriter_basic.cpp
  */
 class CV_EXPORTS_W VideoWriter
 {
 public:
-    /** @brief VideoWriter constructors
+    /** @brief Default constructors
 
-    The constructors/functions initialize video writers. On Linux FFMPEG is used to write videos; on
-    Windows FFMPEG or VFW is used; on MacOSX QTKit is used.
+    The constructors/functions initialize video writers.
+    -   On Linux FFMPEG is used to write videos;
+    -   On Windows FFMPEG or VFW is used;
+    -   On MacOSX QTKit is used.
      */
     CV_WRAP VideoWriter();
 
@@ -744,16 +809,31 @@ public:
     @param frameSize Size of the video frames.
     @param isColor If it is not zero, the encoder will expect and encode color frames, otherwise it
     will work with grayscale frames (the flag is currently supported on Windows only).
+
+    @b Tips:
+    - With some backends `fourcc=-1` pops up the codec selection dialog from the system.
+    - To save image sequence use a proper filename (eg. `img_%02d.jpg`) and `fourcc=0`
+      OR `fps=0`. Use uncompressed image format (eg. `img_%02d.BMP`) to save raw frames.
+    - Most codecs are lossy. If you want lossless video file you need to use a lossless codecs
+      (eg. FFMPEG FFV1, Huffman HFYU, Lagarith LAGS, etc...)
+    - If FFMPEG is enabled, using `codec=0; fps=0;` you can create an uncompressed (raw) video file.
     */
     CV_WRAP VideoWriter(const String& filename, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
 
+    /** @brief Default destructor
+
+    The method first calls VideoWriter::release to close the already opened file.
+    */
     virtual ~VideoWriter();
 
     /** @brief Initializes or reinitializes video writer.
 
     The method opens video writer. Parameters are the same as in the constructor
     VideoWriter::VideoWriter.
+    @return `true` if video writer has been successfully initialized
+
+    The method first calls VideoWriter::release to close the already opened file.
      */
     CV_WRAP virtual bool open(const String& filename, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
@@ -764,43 +844,48 @@ public:
 
     /** @brief Closes the video writer.
 
-    The methods are automatically called by subsequent VideoWriter::open and by the VideoWriter
+    The method is automatically called by subsequent VideoWriter::open and by the VideoWriter
     destructor.
      */
     CV_WRAP virtual void release();
+
+    /** @brief Stream operator to write the next video frame.
+    @sa write
+    */
     virtual VideoWriter& operator << (const Mat& image);
 
     /** @brief Writes the next video frame
 
     @param image The written frame
 
-    The functions/methods write the specified image to video file. It must have the same size as has
+    The function/method writes the specified image to video file. It must have the same size as has
     been specified when opening the video writer.
      */
     CV_WRAP virtual void write(const Mat& image);
 
     /** @brief Sets a property in the VideoWriter.
 
-     @param propId Property identifier. It can be one of the following:
-     -   cv::VIDEOWRITER_PROP_QUALITY @copydoc cv::VIDEOWRITER_PROP_QUALITY
-     -   cv::VIDEOWRITER_PROP_NSTRIPES @copydoc cv::VIDEOWRITER_PROP_NSTRIPES
+     @param propId Property identifier from cv::VideoWriterProperties (eg. cv::VIDEOWRITER_PROP_QUALITY)
+     or one of @ref videoio_flags_others
+
      @param value Value of the property.
+     @return  `true` if the property is supported by the backend used by the VideoWriter instance.
      */
     CV_WRAP virtual bool set(int propId, double value);
 
     /** @brief Returns the specified VideoWriter property
 
-     @param propId Property identifier. It can be one of the following:
-     -   cv::VIDEOWRITER_PROP_QUALITY @copydoc cv::VIDEOWRITER_PROP_QUALITY
-     -   cv::VIDEOWRITER_PROP_FRAMEBYTES @copydoc VIDEOWRITER_PROP_FRAMEBYTES
-     -   cv::VIDEOWRITER_PROP_NSTRIPES @copydoc cv::VIDEOWRITER_PROP_NSTRIPES
+     @param propId Property identifier from cv::VideoWriterProperties (eg. cv::VIDEOWRITER_PROP_QUALITY)
+     or one of @ref videoio_flags_others
 
-     @note When querying a property that is not supported by the backend used by the VideoWriter
-     class, value 0 is returned.
+     @return Value for the specified property. Value 0 is returned when querying a property that is
+     not supported by the backend used by the VideoWriter instance.
      */
     CV_WRAP virtual double get(int propId) const;
 
     /** @brief Concatenates 4 chars to a fourcc code
+
+    @return a fourcc code
 
     This static method constructs the fourcc code of the codec to be used in the constructor
     VideoWriter::VideoWriter or VideoWriter::open.

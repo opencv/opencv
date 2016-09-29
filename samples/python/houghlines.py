@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     else:    # HoughLines
         lines = cv2.HoughLines(dst, 1, math.pi/180.0, 50, np.array([]), 0, 0)
-        if lines != None:
+        if lines is not None:
             a,b,c = lines.shape
             for i in range(a):
                 rho = lines[i][0][0]

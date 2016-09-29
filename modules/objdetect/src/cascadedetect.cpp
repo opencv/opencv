@@ -59,6 +59,8 @@ template<typename _Tp> void copyVectorToUMat(const std::vector<_Tp>& v, UMat& um
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps,
                      std::vector<int>* weights, std::vector<double>* levelWeights)
 {
+    CV_INSTRUMENT_REGION()
+
     if( groupThreshold <= 0 || rectList.empty() )
     {
         if( weights )
@@ -359,23 +361,31 @@ static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detect
 
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps)
 {
+    CV_INSTRUMENT_REGION()
+
     groupRectangles(rectList, groupThreshold, eps, 0, 0);
 }
 
 void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& weights, int groupThreshold, double eps)
 {
+    CV_INSTRUMENT_REGION()
+
     groupRectangles(rectList, groupThreshold, eps, &weights, 0);
 }
 //used for cascade detection algorithm for ROC-curve calculating
 void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& rejectLevels,
                      std::vector<double>& levelWeights, int groupThreshold, double eps)
 {
+    CV_INSTRUMENT_REGION()
+
     groupRectangles(rectList, groupThreshold, eps, &rejectLevels, &levelWeights);
 }
 //can be used for HOG detection algorithm only
 void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights,
                                std::vector<double>& foundScales, double detectThreshold, Size winDetSize)
 {
+    CV_INSTRUMENT_REGION()
+
     groupRectangles_meanshift(rectList, detectThreshold, &foundWeights, foundScales, winDetSize);
 }
 
@@ -1217,6 +1227,8 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
                                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                                     bool outputRejectLevels )
 {
+    CV_INSTRUMENT_REGION()
+
     Size imgsz = _image.size();
 
     Mat grayImage;
@@ -1320,6 +1332,8 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           int flags, Size minObjectSize, Size maxObjectSize,
                                           bool outputRejectLevels )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( scaleFactor > 1 && _image.depth() == CV_8U );
 
     if( empty() )
@@ -1352,6 +1366,8 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize)
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<int> fakeLevels;
     std::vector<double> fakeWeights;
     detectMultiScale( _image, objects, fakeLevels, fakeWeights, scaleFactor,
@@ -1363,6 +1379,8 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           int minNeighbors, int flags, Size minObjectSize,
                                           Size maxObjectSize )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat image = _image.getMat();
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
 
@@ -1636,6 +1654,8 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       Size minSize,
                       Size maxSize )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, scaleFactor, minNeighbors, flags, minSize, maxSize);
     clipObjects(image.size(), objects, 0, 0);
@@ -1648,6 +1668,8 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       int minNeighbors, int flags,
                       Size minSize, Size maxSize )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, numDetections,
                          scaleFactor, minNeighbors, flags, minSize, maxSize);
@@ -1663,6 +1685,8 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       Size minSize, Size maxSize,
                       bool outputRejectLevels )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, rejectLevels, levelWeights,
                          scaleFactor, minNeighbors, flags,

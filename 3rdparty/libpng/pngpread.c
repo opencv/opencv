@@ -1,8 +1,8 @@
 
 /* pngpread.c - read a png file in push mode
  *
- * Last changed in libpng 1.6.18 [July 23, 2015]
- * Copyright (c) 1998-2015 Glenn Randers-Pehrson
+ * Last changed in libpng 1.6.24 [August 4, 2016]
+ * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -77,11 +77,11 @@ png_process_data_pause(png_structrp png_ptr, int save)
 png_uint_32 PNGAPI
 png_process_data_skip(png_structrp png_ptr)
 {
-  /* TODO: Deprecate and remove this API.
-   * Somewhere the implementation of this seems to have been lost,
-   * or abandoned.  It was only to support some internal back-door access
-   * to png_struct) in libpng-1.4.x.
-   */
+/* TODO: Deprecate and remove this API.
+ * Somewhere the implementation of this seems to have been lost,
+ * or abandoned.  It was only to support some internal back-door access
+ * to png_struct) in libpng-1.4.x.
+ */
    png_app_warning(png_ptr,
 "png_process_data_skip is not implemented in any current version of libpng");
    return 0;
@@ -133,7 +133,7 @@ png_process_some_data(png_structrp png_ptr, png_inforp info_ptr)
 void /* PRIVATE */
 png_push_read_sig(png_structrp png_ptr, png_inforp info_ptr)
 {
-   png_size_t num_checked = png_ptr->sig_bytes, /* SAFE, does not exceed 8 */ 
+   png_size_t num_checked = png_ptr->sig_bytes, /* SAFE, does not exceed 8 */
        num_to_check = 8 - num_checked;
 
    if (png_ptr->buffer_size < num_to_check)
@@ -210,12 +210,14 @@ png_push_read_chunk(png_structrp png_ptr, png_inforp info_ptr)
           (png_ptr->mode & PNG_HAVE_PLTE) == 0)
          png_error(png_ptr, "Missing PLTE before IDAT");
 
-      png_ptr->mode |= PNG_HAVE_IDAT;
       png_ptr->process_mode = PNG_READ_IDAT_MODE;
 
-      if ((png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) == 0)
-         if (png_ptr->push_length == 0)
-            return;
+      if ((png_ptr->mode & PNG_HAVE_IDAT) != 0)
+         if ((png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) == 0)
+            if (png_ptr->push_length == 0)
+               return;
+
+      png_ptr->mode |= PNG_HAVE_IDAT;
 
       if ((png_ptr->mode & PNG_AFTER_IDAT) != 0)
          png_benign_error(png_ptr, "Too many IDATs found");
@@ -408,7 +410,7 @@ png_push_read_chunk(png_structrp png_ptr, png_inforp info_ptr)
    {
       PNG_PUSH_SAVE_BUFFER_IF_FULL
       png_handle_unknown(png_ptr, info_ptr, png_ptr->push_length,
-         PNG_HANDLE_CHUNK_AS_DEFAULT);
+          PNG_HANDLE_CHUNK_AS_DEFAULT);
    }
 
    png_ptr->mode &= ~PNG_HAVE_CHUNK_HEADER;
@@ -499,7 +501,10 @@ png_push_save_buffer(png_structrp png_ptr)
          png_error(png_ptr, "Insufficient memory for save_buffer");
       }
 
-      memcpy(png_ptr->save_buffer, old_buffer, png_ptr->save_buffer_size);
+      if (old_buffer)
+         memcpy(png_ptr->save_buffer, old_buffer, png_ptr->save_buffer_size);
+      else if (png_ptr->save_buffer_size)
+         png_error(png_ptr, "save_buffer error");
       png_free(png_ptr, old_buffer);
       png_ptr->save_buffer_max = new_max;
    }
@@ -516,7 +521,7 @@ png_push_save_buffer(png_structrp png_ptr)
 
 void /* PRIVATE */
 png_push_restore_buffer(png_structrp png_ptr, png_bytep buffer,
-   png_size_t buffer_length)
+    png_size_t buffer_length)
 {
    png_ptr->current_buffer = buffer;
    png_ptr->current_buffer_size = buffer_length;
@@ -619,7 +624,7 @@ png_push_read_IDAT(png_structrp png_ptr)
 
 void /* PRIVATE */
 png_process_IDAT_data(png_structrp png_ptr, png_bytep buffer,
-   png_size_t buffer_length)
+    png_size_t buffer_length)
 {
    /* The caller checks for a non-zero buffer length. */
    if (!(buffer_length > 0) || buffer == NULL)
@@ -662,7 +667,7 @@ png_process_IDAT_data(png_structrp png_ptr, png_bytep buffer,
        * change the current behavior (see comments in inflate.c
        * for why this doesn't happen at present with zlib 1.2.5).
        */
-      ret = inflate(&png_ptr->zstream, Z_SYNC_FLUSH);
+      ret = PNG_INFLATE(png_ptr, Z_SYNC_FLUSH);
 
       /* Check for any failure before proceeding. */
       if (ret != Z_OK && ret != Z_STREAM_END)
@@ -777,7 +782,7 @@ png_push_process_row(png_structrp png_ptr)
    {
       if (png_ptr->pass < 6)
          png_do_read_interlace(&row_info, png_ptr->row_buf + 1, png_ptr->pass,
-            png_ptr->transformations);
+             png_ptr->transformations);
 
       switch (png_ptr->pass)
       {
@@ -1039,7 +1044,7 @@ png_push_have_row(png_structrp png_ptr, png_bytep row)
 {
    if (png_ptr->row_fn != NULL)
       (*(png_ptr->row_fn))(png_ptr, row, png_ptr->row_number,
-         (int)png_ptr->pass);
+          (int)png_ptr->pass);
 }
 
 #ifdef PNG_READ_INTERLACING_SUPPORTED

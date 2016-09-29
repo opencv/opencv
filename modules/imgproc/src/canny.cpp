@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include <queue>
 
 #ifdef _MSC_VER
 #pragma warning( disable: 4127 ) // conditional expression is constant
@@ -65,7 +66,12 @@ static void CannyImpl(Mat& dx_, Mat& dy_, Mat& _dst, double low_thresh, double h
 template <bool useCustomDeriv>
 static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst, float low, float high)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if USE_IPP_CANNY
+    if (!useCustomDeriv && _src.isSubmatrix())
+        return false; // IPP Sobel doesn't support transparent ROI border
+
     int size = 0, size1 = 0;
     IppiSize roi = { _src.cols, _src.rows };
 
@@ -97,13 +103,13 @@ static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst,
     if (!useCustomDeriv)
     {
         Mat _dx(_src.rows, _src.cols, CV_16S);
-        if( ippiFilterSobelNegVertBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
+        if( CV_INSTRUMENT_FUN_IPP(ippiFilterSobelNegVertBorder_8u16s_C1R, _src.ptr(), (int)_src.step,
                         _dx.ptr<short>(), (int)_dx.step, roi,
                         ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
             return false;
 
         Mat _dy(_src.rows, _src.cols, CV_16S);
-        if( ippiFilterSobelHorizBorder_8u16s_C1R(_src.ptr(), (int)_src.step,
+        if( CV_INSTRUMENT_FUN_IPP(ippiFilterSobelHorizBorder_8u16s_C1R, _src.ptr(), (int)_src.step,
                         _dy.ptr<short>(), (int)_dy.step, roi,
                         ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
             return false;
@@ -117,7 +123,7 @@ static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst,
         dy = dy_;
     }
 
-    if( ippiCanny_16s8u_C1R(dx.ptr<short>(), (int)dx.step,
+    if( CV_INSTRUMENT_FUN_IPP(ippiCanny_16s8u_C1R, dx.ptr<short>(), (int)dx.step,
                                dy.ptr<short>(), (int)dy.step,
                               _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
         return false;
@@ -276,25 +282,22 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
 
 #endif
 
-#ifdef HAVE_TBB
-
-// Queue with peaks that will processed serially.
-static tbb::concurrent_queue<uchar*> borderPeaks;
-
-class tbbCanny
+class parallelCanny : public ParallelLoopBody
 {
-public:
-    tbbCanny(const Range _boundaries, const Mat& _src, uchar* _map, int _low,
-            int _high, int _aperture_size, bool _L2gradient)
-        : boundaries(_boundaries), src(_src), map(_map), low(_low), high(_high),
-          aperture_size(_aperture_size), L2gradient(_L2gradient)
-    {}
 
-    // This parallel version of Canny algorithm splits the src image in threadsNumber horizontal slices.
-    // The first row of each slice contains the last row of the previous slice and
-    // the last row of each slice contains the first row of the next slice
-    // so that each slice is independent and no mutexes are required.
-    void operator()() const
+public:
+    parallelCanny(const Mat& _src, uchar* _map, int _low, int _high, int _aperture_size, bool _L2gradient, std::queue<uchar*> *borderPeaksParallel) :
+        src(_src), map(_map), low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient), _borderPeaksParallel(borderPeaksParallel)
+    {
+    }
+
+    ~parallelCanny()
+    {
+    }
+
+    parallelCanny& operator=(const parallelCanny&) { return *this; }
+
+    void operator()(const Range &boundaries) const
     {
 #if CV_SSE2
         bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
@@ -303,13 +306,19 @@ public:
         const int type = src.type(), cn = CV_MAT_CN(type);
 
         Mat dx, dy;
+        std::queue<uchar*> borderPeaksLocal;
 
         ptrdiff_t mapstep = src.cols + 2;
 
         // In sobel transform we calculate ksize2 extra lines for the first and last rows of each slice
         // because IPPDerivSobel expects only isolated ROIs, in contrast with the opencv version which
         // uses the pixels outside of the ROI to form a border.
-        uchar ksize2 = aperture_size / 2;
+        int ksize2 = aperture_size / 2;
+        // If Scharr filter: aperture_size is 3 and ksize2 is 1
+        if(aperture_size == -1)
+        {
+            ksize2 = 1;
+        }
 
         if (boundaries.start == 0 && boundaries.end == src.rows)
         {
@@ -408,14 +417,20 @@ public:
                     {
                         __m128i v_dx = _mm_loadu_si128((const __m128i *)(_dx + j));
                         __m128i v_dy = _mm_loadu_si128((const __m128i *)(_dy + j));
-                        v_dx = _mm_max_epi16(v_dx, _mm_sub_epi16(v_zero, v_dx));
-                        v_dy = _mm_max_epi16(v_dy, _mm_sub_epi16(v_zero, v_dy));
 
-                        __m128i v_norm = _mm_add_epi32(_mm_unpacklo_epi16(v_dx, v_zero), _mm_unpacklo_epi16(v_dy, v_zero));
-                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm);
+                        __m128i v_dx_abs = _mm_max_epi16(v_dx, _mm_sub_epi16(v_zero, v_dx));
+                        __m128i v_dy_abs = _mm_max_epi16(v_dy, _mm_sub_epi16(v_zero, v_dy));
 
-                        v_norm = _mm_add_epi32(_mm_unpackhi_epi16(v_dx, v_zero), _mm_unpackhi_epi16(v_dy, v_zero));
-                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm);
+                        __m128i v_dx_ml = _mm_unpacklo_epi16(v_dx_abs, v_zero);
+                        __m128i v_dy_ml = _mm_unpacklo_epi16(v_dy_abs, v_zero);
+                        __m128i v_dx_mh = _mm_unpackhi_epi16(v_dx_abs, v_zero);
+                        __m128i v_dy_mh = _mm_unpackhi_epi16(v_dy_abs, v_zero);
+
+                        __m128i v_norm_ml = _mm_add_epi32(v_dx_ml, v_dy_ml);
+                        __m128i v_norm_mh = _mm_add_epi32(v_dx_mh, v_dy_mh);
+
+                        _mm_storeu_si128((__m128i *)(_norm + j), v_norm_ml);
+                        _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm_mh);
                     }
                 }
 #elif CV_NEON
@@ -444,8 +459,10 @@ public:
 
                         __m128i v_dx_dy_ml = _mm_unpacklo_epi16(v_dx, v_dy);
                         __m128i v_dx_dy_mh = _mm_unpackhi_epi16(v_dx, v_dy);
+
                         __m128i v_norm_ml = _mm_madd_epi16(v_dx_dy_ml, v_dx_dy_ml);
                         __m128i v_norm_mh = _mm_madd_epi16(v_dx_dy_mh, v_dx_dy_mh);
+
                         _mm_storeu_si128((__m128i *)(_norm + j), v_norm_ml);
                         _mm_storeu_si128((__m128i *)(_norm + j + 4), v_norm_mh);
                     }
@@ -508,13 +525,92 @@ public:
 #define CANNY_PUSH(d)    *(d) = uchar(2), *stack_top++ = (d)
 #define CANNY_POP(d)     (d) = *--stack_top
 
-            int prev_flag = 0;
-            bool canny_push = false;
-            for (int j = 0; j < src.cols; j++)
-            {
-                #define CANNY_SHIFT 15
-                const int TG22 = (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5);
+#define CANNY_SHIFT 15
+            const int TG22 = (int)(0.4142135623730950488016887242097*(1 << CANNY_SHIFT) + 0.5);
 
+            int prev_flag = 0, j = 0;
+#if CV_SSE2
+            if (checkHardwareSupport(CPU_SSE2))
+            {
+                __m128i v_low = _mm_set1_epi32(low), v_one = _mm_set1_epi8(1);
+
+                for (; j <= src.cols - 16; j += 16)
+                {
+                    __m128i v_m1 = _mm_loadu_si128((const __m128i*)(_mag + j));
+                    __m128i v_m2 = _mm_loadu_si128((const __m128i*)(_mag + j + 4));
+                    __m128i v_m3 = _mm_loadu_si128((const __m128i*)(_mag + j + 8));
+                    __m128i v_m4 = _mm_loadu_si128((const __m128i*)(_mag + j + 12));
+
+                    _mm_storeu_si128((__m128i*)(_map + j), v_one);
+
+                    __m128i v_cmp1 = _mm_cmpgt_epi32(v_m1, v_low);
+                    __m128i v_cmp2 = _mm_cmpgt_epi32(v_m2, v_low);
+                    __m128i v_cmp3 = _mm_cmpgt_epi32(v_m3, v_low);
+                    __m128i v_cmp4 = _mm_cmpgt_epi32(v_m4, v_low);
+
+                    v_cmp1 = _mm_packs_epi32(v_cmp1, v_cmp2);
+                    v_cmp2 = _mm_packs_epi32(v_cmp3, v_cmp4);
+
+                    v_cmp1 = _mm_packs_epi16(v_cmp1, v_cmp2);
+                    unsigned int mask = _mm_movemask_epi8(v_cmp1);
+
+                    if (mask)
+                    {
+                        int m, k = j;
+
+                        for (; mask; ++k, mask >>= 1)
+                        {
+                            if (mask & 0x00000001)
+                            {
+                                m = _mag[k];
+                                int xs = _x[k];
+                                int ys = _y[k];
+                                int x = std::abs(xs);
+                                int y = std::abs(ys) << CANNY_SHIFT;
+
+                                int tg22x = x * TG22;
+
+                                if (y < tg22x)
+                                {
+                                    if (m > _mag[k - 1] && m >= _mag[k + 1]) goto _canny_push_sse;
+                                }
+                                else
+                                {
+                                    int tg67x = tg22x + (x << (CANNY_SHIFT + 1));
+                                    if (y > tg67x)
+                                    {
+                                        if (m > _mag[k + magstep2] && m >= _mag[k + magstep1]) goto _canny_push_sse;
+                                    } else
+                                    {
+                                        int s = (xs ^ ys) < 0 ? -1 : 1;
+                                        if (m > _mag[k + magstep2 - s] && m > _mag[k + magstep1 + s]) goto _canny_push_sse;
+                                    }
+                                }
+                            }
+
+                            prev_flag = 0;
+                            continue;
+
+_canny_push_sse:
+                            // _map[k-mapstep] is short-circuited at the start because previous thread is
+                            // responsible for initializing it.
+                            if (m > high && !prev_flag  && (i <= boundaries.start + 1 || _map[k - mapstep] != 2))
+                            {
+                                CANNY_PUSH(_map + k);
+                                prev_flag = 1;
+                            } else
+                                _map[k] = 0;
+
+                        }
+
+                        if (prev_flag && ((k < j+16) || (k < src.cols && _mag[k] <= high)))
+                            prev_flag = 0;
+                    }
+                }
+            }
+#endif
+            for (; j < src.cols; j++)
+            {
                 int m = _mag[j];
 
                 if (m > low)
@@ -528,42 +624,37 @@ public:
 
                     if (y < tg22x)
                     {
-                        if (m > _mag[j-1] && m >= _mag[j+1]) canny_push = true;
+                        if (m > _mag[j-1] && m >= _mag[j+1]) goto _canny_push;
                     }
                     else
                     {
                         int tg67x = tg22x + (x << (CANNY_SHIFT+1));
                         if (y > tg67x)
                         {
-                            if (m > _mag[j+magstep2] && m >= _mag[j+magstep1]) canny_push = true;
+                            if (m > _mag[j+magstep2] && m >= _mag[j+magstep1]) goto _canny_push;
                         }
                         else
                         {
                             int s = (xs ^ ys) < 0 ? -1 : 1;
-                            if (m > _mag[j+magstep2-s] && m > _mag[j+magstep1+s]) canny_push = true;
+                            if (m > _mag[j+magstep2-s] && m > _mag[j+magstep1+s]) goto _canny_push;
                         }
                     }
                 }
-                if (!canny_push)
+
+                prev_flag = 0;
+                _map[j] = uchar(1);
+                continue;
+
+_canny_push:
+                // _map[j-mapstep] is short-circuited at the start because previous thread is
+                // responsible for initializing it.
+                if (!prev_flag && m > high && (i <= boundaries.start+1 || _map[j-mapstep] != 2) )
                 {
-                    prev_flag = 0;
-                    _map[j] = uchar(1);
-                    continue;
+                    CANNY_PUSH(_map + j);
+                    prev_flag = 1;
                 }
                 else
-                {
-                    // _map[j-mapstep] is short-circuited at the start because previous thread is
-                    // responsible for initializing it.
-                    if (!prev_flag && m > high && (i <= boundaries.start+1 || _map[j-mapstep] != 2) )
-                    {
-                        CANNY_PUSH(_map + j);
-                        prev_flag = 1;
-                    }
-                    else
-                        _map[j] = 0;
-
-                    canny_push = false;
-                }
+                    _map[j] = 0;
             }
 
             // scroll the ring buffer
@@ -592,7 +683,7 @@ public:
             // slice in a queue to be serially processed later.
             if ( (m < map + (boundaries.start + 2) * mapstep) || (m >= map + boundaries.end * mapstep) )
             {
-                borderPeaks.push(m);
+                borderPeaksLocal.push(m);
                 continue;
             }
 
@@ -605,24 +696,108 @@ public:
             if (!m[mapstep])    CANNY_PUSH(m + mapstep);
             if (!m[mapstep+1])  CANNY_PUSH(m + mapstep + 1);
         }
+
+        AutoLock lock(mutex);
+        while (!borderPeaksLocal.empty()) {
+            _borderPeaksParallel->push(borderPeaksLocal.front());
+            borderPeaksLocal.pop();
+        }
     }
 
 private:
-    const Range boundaries;
     const Mat& src;
     uchar* map;
-    int low;
-    int high;
-    int aperture_size;
+    int low, high, aperture_size;
     bool L2gradient;
+    std::queue<uchar*> *_borderPeaksParallel;
+    mutable Mutex mutex;
 };
 
+class finalPass : public ParallelLoopBody
+{
+
+public:
+    finalPass(uchar *_map, Mat &_dst, ptrdiff_t _mapstep) :
+        map(_map), dst(_dst), mapstep(_mapstep) {}
+
+    ~finalPass() {}
+
+    finalPass& operator=(const finalPass&) {return *this;}
+
+    void operator()(const Range &boundaries) const
+    {
+        // the final pass, form the final image
+        const uchar* pmap = map + mapstep + 1 + (ptrdiff_t)(mapstep * boundaries.start);
+        uchar* pdst = dst.ptr() + (ptrdiff_t)(dst.step * boundaries.start);
+
+#if CV_SSE2
+        bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
 #endif
+
+        for (int i = boundaries.start; i < boundaries.end; i++, pmap += mapstep, pdst += dst.step)
+        {
+            int j = 0;
+#if CV_SSE2
+            if(haveSSE2) {
+                const __m128i v_zero = _mm_setzero_si128();
+
+                for(; j <= dst.cols - 32; j += 32) {
+                    __m128i v_pmap1 = _mm_loadu_si128((const __m128i*)(pmap + j));
+                    __m128i v_pmap2 = _mm_loadu_si128((const __m128i*)(pmap + j + 16));
+
+                    __m128i v_pmaplo1 = _mm_unpacklo_epi8(v_pmap1, v_zero);
+                    __m128i v_pmaphi1 = _mm_unpackhi_epi8(v_pmap1, v_zero);
+                    __m128i v_pmaplo2 = _mm_unpacklo_epi8(v_pmap2, v_zero);
+                    __m128i v_pmaphi2 = _mm_unpackhi_epi8(v_pmap2, v_zero);
+
+                    v_pmaplo1 = _mm_srli_epi16(v_pmaplo1, 1);
+                    v_pmaphi1 = _mm_srli_epi16(v_pmaphi1, 1);
+                    v_pmaplo2 = _mm_srli_epi16(v_pmaplo2, 1);
+                    v_pmaphi2 = _mm_srli_epi16(v_pmaphi2, 1);
+
+                    v_pmap1 = _mm_packus_epi16(v_pmaplo1, v_pmaphi1);
+                    v_pmap2 = _mm_packus_epi16(v_pmaplo2, v_pmaphi2);
+
+                    v_pmap1 = _mm_sub_epi8(v_zero, v_pmap1);
+                    v_pmap2 = _mm_sub_epi8(v_zero, v_pmap2);
+
+                    _mm_storeu_si128((__m128i*)(pdst + j), v_pmap1);
+                    _mm_storeu_si128((__m128i*)(pdst + j + 16), v_pmap2);
+                }
+
+                for(; j <= dst.cols - 16; j += 16) {
+                    __m128i v_pmap = _mm_loadu_si128((const __m128i*)(pmap + j));
+
+                    __m128i v_pmaplo = _mm_unpacklo_epi8(v_pmap, v_zero);
+                    __m128i v_pmaphi = _mm_unpackhi_epi8(v_pmap, v_zero);
+
+                    v_pmaplo = _mm_srli_epi16(v_pmaplo, 1);
+                    v_pmaphi = _mm_srli_epi16(v_pmaphi, 1);
+
+                    v_pmap = _mm_packus_epi16(v_pmaplo, v_pmaphi);
+                    v_pmap = _mm_sub_epi8(v_zero, v_pmap);
+
+                    _mm_storeu_si128((__m128i*)(pdst + j), v_pmap);
+                }
+            }
+#endif
+            for (; j < dst.cols; j++)
+                pdst[j] = (uchar)-(pmap[j] >> 1);
+        }
+    }
+
+private:
+    uchar *map;
+    Mat &dst;
+    ptrdiff_t mapstep;
+};
 
 void Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 int aperture_size, bool L2gradient )
 {
+    CV_INSTRUMENT_REGION()
+
     const int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     const Size size = _src.size();
 
@@ -654,8 +829,6 @@ void Canny( InputArray _src, OutputArray _dst,
 
     CV_IPP_RUN(USE_IPP_CANNY && (aperture_size == 3 && !L2gradient && 1 == cn), ippCanny<false>(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh))
 
-#ifdef HAVE_TBB
-
 if (L2gradient)
 {
     low_thresh = std::min(32767.0, low_thresh);
@@ -667,44 +840,49 @@ if (L2gradient)
 int low = cvFloor(low_thresh);
 int high = cvFloor(high_thresh);
 
-ptrdiff_t mapstep = src.cols + 2;
-AutoBuffer<uchar> buffer((src.cols+2)*(src.rows+2));
+    ptrdiff_t mapstep = src.cols + 2;
+    AutoBuffer<uchar> buffer((src.cols+2)*(src.rows+2) + cn * mapstep * 3 * sizeof(int));
 
-uchar* map = (uchar*)buffer;
-memset(map, 1, mapstep);
-memset(map + mapstep*(src.rows + 1), 1, mapstep);
+    int* mag_buf[3];
+    mag_buf[0] = (int*)(uchar*)buffer;
+    mag_buf[1] = mag_buf[0] + mapstep*cn;
+    mag_buf[2] = mag_buf[1] + mapstep*cn;
+    memset(mag_buf[0], 0, /* cn* */mapstep*sizeof(int));
 
-int threadsNumber = tbb::task_scheduler_init::default_num_threads();
-int grainSize = src.rows / threadsNumber;
+    uchar *map = (uchar*)(mag_buf[2] + mapstep*cn);
+    memset(map, 1, mapstep);
+    memset(map + mapstep*(src.rows + 1), 1, mapstep);
 
-// Make a fallback for pictures with too few rows.
-uchar ksize2 = aperture_size / 2;
-int minGrainSize = 1 + ksize2;
-int maxGrainSize = src.rows - 2 - 2*ksize2;
-if ( !( minGrainSize <= grainSize && grainSize <= maxGrainSize ) )
-{
-    threadsNumber = 1;
-    grainSize = src.rows;
-}
+    // Minimum number of threads should be 1, maximum should not exceed number of CPU's, because of overhead
+    int numOfThreads = std::max(1, std::min(getNumThreads(), getNumberOfCPUs()));
 
-tbb::task_group g;
+    // Make a fallback for pictures with too few rows.
+    int grainSize = src.rows / numOfThreads;
+    int ksize2 = aperture_size / 2;
+    // If Scharr filter: aperture size is 3, ksize2 is 1
+    if(aperture_size == -1)
+    {
+        ksize2 = 1;
+    }
 
-for (int i = 0; i < threadsNumber; ++i)
-{
-    if (i < threadsNumber - 1)
-        g.run(tbbCanny(Range(i * grainSize, (i + 1) * grainSize), src, map, low, high, aperture_size, L2gradient));
-    else
-        g.run(tbbCanny(Range(i * grainSize, src.rows), src, map, low, high, aperture_size, L2gradient));
-}
+    int minGrainSize = 2 * (ksize2 + 1);
+    if (grainSize < minGrainSize)
+    {
+        numOfThreads = std::max(1, src.rows / minGrainSize);
+    }
 
-g.wait();
+    std::queue<uchar*> borderPeaksParallel;
 
-#define CANNY_PUSH_SERIAL(d)    *(d) = uchar(2), borderPeaks.push(d)
+    parallel_for_(Range(0, src.rows), parallelCanny(src, map, low, high, aperture_size, L2gradient, &borderPeaksParallel), numOfThreads);
 
-// now track the edges (hysteresis thresholding)
-uchar* m;
-while (borderPeaks.try_pop(m))
-{
+#define CANNY_PUSH_SERIAL(d)    *(d) = uchar(2), borderPeaksParallel.push(d)
+
+    // now track the edges (hysteresis thresholding)
+    uchar* m;
+    while (!borderPeaksParallel.empty())
+    {
+        m = borderPeaksParallel.front();
+        borderPeaksParallel.pop();
     if (!m[-1])         CANNY_PUSH_SERIAL(m - 1);
     if (!m[1])          CANNY_PUSH_SERIAL(m + 1);
     if (!m[-mapstep-1]) CANNY_PUSH_SERIAL(m - mapstep - 1);
@@ -715,24 +893,7 @@ while (borderPeaks.try_pop(m))
     if (!m[mapstep+1])  CANNY_PUSH_SERIAL(m + mapstep + 1);
 }
 
-// the final pass, form the final image
-const uchar* pmap = map + mapstep + 1;
-uchar* pdst = dst.ptr();
-for (int i = 0; i < src.rows; i++, pmap += mapstep, pdst += dst.step)
-{
-    for (int j = 0; j < src.cols; j++)
-        pdst[j] = (uchar)-(pmap[j] >> 1);
-}
-
-#else
-    Mat dx(src.rows, src.cols, CV_16SC(cn));
-    Mat dy(src.rows, src.cols, CV_16SC(cn));
-
-    Sobel(src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
-    Sobel(src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
-
-    CannyImpl(dx, dy, dst, low_thresh, high_thresh, L2gradient);
-#endif
+    parallel_for_(Range(0, dst.rows), finalPass(map, dst, mapstep), dst.total()/(double)(1<<16));
 }
 
 void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
@@ -947,12 +1108,92 @@ static void CannyImpl(Mat& dx, Mat& dy, Mat& dst,
             stack_top = stack_bottom + sz;
         }
 
-        int prev_flag = 0;
-        for (int j = 0; j < cols; j++)
-        {
-            #define CANNY_SHIFT 15
-            const int TG22 = (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5);
+#define CANNY_SHIFT 15
+        const int TG22 = (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5);
 
+        int prev_flag = 0, j = 0;
+#if CV_SSE2
+        if (checkHardwareSupport(CPU_SSE2))
+        {
+            __m128i v_low = _mm_set1_epi32(low), v_one = _mm_set1_epi8(1);
+
+            for (; j <= cols - 16; j += 16)
+            {
+                __m128i v_m1 = _mm_loadu_si128((const __m128i*)(_mag + j));
+                __m128i v_m2 = _mm_loadu_si128((const __m128i*)(_mag + j + 4));
+                __m128i v_m3 = _mm_loadu_si128((const __m128i*)(_mag + j + 8));
+                __m128i v_m4 = _mm_loadu_si128((const __m128i*)(_mag + j + 12));
+
+                _mm_storeu_si128((__m128i*)(_map + j), v_one);
+
+                __m128i v_cmp1 = _mm_cmpgt_epi32(v_m1, v_low);
+                __m128i v_cmp2 = _mm_cmpgt_epi32(v_m2, v_low);
+                __m128i v_cmp3 = _mm_cmpgt_epi32(v_m3, v_low);
+                __m128i v_cmp4 = _mm_cmpgt_epi32(v_m4, v_low);
+
+                v_cmp1 = _mm_packs_epi32(v_cmp1, v_cmp2);
+                v_cmp2 = _mm_packs_epi32(v_cmp3, v_cmp4);
+
+                v_cmp1 = _mm_packs_epi16(v_cmp1, v_cmp2);
+                unsigned int mask = _mm_movemask_epi8(v_cmp1);
+
+                if (mask)
+                {
+                    int m, k = j;
+
+                    for (; mask; ++k, mask >>= 1)
+                    {
+                        if (mask & 0x00000001)
+                        {
+                            m = _mag[k];
+                            int xs = _x[k];
+                            int ys = _y[k];
+                            int x = std::abs(xs);
+                            int y = std::abs(ys) << CANNY_SHIFT;
+
+                            int tg22x = x * TG22;
+
+                            if (y < tg22x)
+                            {
+                                if (m > _mag[k - 1] && m >= _mag[k + 1]) goto ocv_canny_push_sse;
+                            }
+                            else
+                            {
+                                int tg67x = tg22x + (x << (CANNY_SHIFT + 1));
+                                if (y > tg67x)
+                                {
+                                    if (m > _mag[k + magstep2] && m >= _mag[k + magstep1]) goto ocv_canny_push_sse;
+                                } else
+                                {
+                                    int s = (xs ^ ys) < 0 ? -1 : 1;
+                                    if (m > _mag[k + magstep2 - s] && m > _mag[k + magstep1 + s]) goto ocv_canny_push_sse;
+                                }
+                            }
+                        }
+
+                        prev_flag = 0;
+                        continue;
+
+ocv_canny_push_sse:
+                        // _map[k-mapstep] is short-circuited at the start because previous thread is
+                        // responsible for initializing it.
+                        if (!prev_flag && m > high && _map[k-mapstep] != 2)
+                        {
+                            CANNY_PUSH(_map + k);
+                            prev_flag = 1;
+                        } else
+                            _map[k] = 0;
+
+                    }
+
+                    if (prev_flag && ((k < j+16) || (k < cols && _mag[k] <= high)))
+                        prev_flag = 0;
+                }
+            }
+        }
+#endif
+        for (; j < cols; j++)
+        {
             int m = _mag[j];
 
             if (m > low)
@@ -1027,14 +1268,7 @@ __ocv_canny_push:
         if (!m[mapstep+1])  CANNY_PUSH(m + mapstep + 1);
     }
 
-    // the final pass, form the final image
-    const uchar* pmap = map + mapstep + 1;
-    uchar* pdst = dst.ptr();
-    for (int i = 0; i < rows; i++, pmap += mapstep, pdst += dst.step)
-    {
-        for (int j = 0; j < cols; j++)
-            pdst[j] = (uchar)-(pmap[j] >> 1);
-    }
+    parallel_for_(Range(0, dst.rows), finalPass(map, dst, mapstep), dst.total()/(double)(1<<16));
 }
 
 } // namespace cv

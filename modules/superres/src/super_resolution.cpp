@@ -61,6 +61,8 @@ void cv::superres::SuperResolution::setInput(const Ptr<FrameSource>& frameSource
 
 void cv::superres::SuperResolution::nextFrame(OutputArray frame)
 {
+    CV_INSTRUMENT_REGION()
+
     isUmat_ = frame.isUMat();
 
     if (firstCall_)

@@ -343,6 +343,8 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                             int method, double ransacReprojThreshold, OutputArray _mask,
                             const int maxIters, const double confidence)
 {
+    CV_INSTRUMENT_REGION()
+
     const double defaultRANSACReprojThreshold = 3;
     bool result = false;
 
@@ -714,6 +716,8 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
                                 int method, double param1, double param2,
                                 OutputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
     Mat m1, m2, F;
     int npoints = -1;
@@ -783,6 +787,8 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
 void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
                                     InputArray _Fmat, OutputArray _lines )
 {
+    CV_INSTRUMENT_REGION()
+
     double f[9];
     Mat tempF(3, 3, CV_64F, f);
     Mat points = _points.getMat(), F = _Fmat.getMat();
@@ -856,6 +862,8 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
 
 void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     if( !src.isContinuous() )
         src = src.clone();
@@ -955,6 +963,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 
 void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     if( !src.isContinuous() )
         src = src.clone();
@@ -1036,6 +1046,8 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
 
 void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), dtype = _dst.type();
     CV_Assert( _dst.fixedType() );
 
@@ -1045,7 +1057,10 @@ void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
         convertPointsToHomogeneous(_src, _dst);
 }
 
-double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F) {
+double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F)
+{
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(_pt1.type() == CV_64F && _pt2.type() == CV_64F && _F.type() == CV_64F);
     CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
 

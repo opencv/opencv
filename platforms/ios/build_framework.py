@@ -197,6 +197,10 @@ if __name__ == "__main__":
     b = Builder(args.opencv, args.contrib,
         [
             ("armv7", "iPhoneOS"),
+            ("arm64", "iPhoneOS"),
+        ] if os.environ.get('BUILD_PRECOMMIT', None) else
+        [
+            ("armv7", "iPhoneOS"),
             ("armv7s", "iPhoneOS"),
             ("arm64", "iPhoneOS"),
             ("i386", "iPhoneSimulator"),

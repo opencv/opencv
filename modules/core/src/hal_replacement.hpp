@@ -582,11 +582,11 @@ Performs \f$LU\f$ decomposition of square matrix \f$A=P*L*U\f$ (where \f$P\f$ is
 Function returns the \f$sign\f$ of permutation \f$P\f$ via parameter info.
 @param src1 pointer to input matrix \f$A\f$ stored in row major order. After finish of work src1 contains at least \f$U\f$ part of \f$LU\f$
 decomposition which is appropriate for determainant calculation: \f$det(A)=sign*\prod_{j=1}^{M}a_{jj}\f$.
-@param src1_step number of bytes each matrix \f$A\f$ row occupies.
+@param src1_step number of bytes between two consequent rows of matrix \f$A\f$.
 @param m size of square matrix \f$A\f$.
 @param src2 pointer to \f$M\times N\f$ matrix \f$B\f$ which is the right-hand side of system \f$A*X=B\f$. \f$B\f$ stored in row major order.
 If src2 is null pointer only \f$LU\f$ decomposition will be performed. After finish of work src2 contains solution \f$X\f$ of system \f$A*X=B\f$.
-@param src2_step number of bytes each matrix \f$B\f$ row occupies.
+@param src2_step number of bytes between two consequent rows of matrix \f$B\f$.
 @param n number of right-hand vectors in \f$M\times N\f$ matrix \f$B\f$.
 @param info indicates success of decomposition. If *info is equals to zero decomposition failed, othervise *info is equals to \f$sign\f$.
  */
@@ -599,11 +599,11 @@ inline int hal_ni_LU64f(double* src1, size_t src1_step, int m, double* src2, siz
 /**
 Performs Cholesky decomposition of matrix \f$A = L*L^T\f$ and solves matrix equation \f$A*X=B\f$.
 @param src1 pointer to input matrix \f$A\f$ stored in row major order. After finish of work src1 contains lower triangular matrix \f$L\f$.
-@param src1_step number of bytes each matrix \f$A\f$ row occupies.
+@param src1_step number of bytes between two consequent rows of matrix \f$A\f$.
 @param m size of square matrix \f$A\f$.
 @param src2 pointer to \f$M\times N\f$ matrix \f$B\f$ which is the right-hand side of system \f$A*X=B\f$. B stored in row major order.
 If src2 is null pointer only Cholesky decomposition will be performed. After finish of work src2 contains solution \f$X\f$ of system \f$A*X=B\f$.
-@param src2_step number of bytes each matrix \f$B\f$ row occupies.
+@param src2_step number of bytes between two consequent rows of matrix \f$B\f$.
 @param n number of right-hand vectors in \f$M\times N\f$ matrix \f$B\f$.
 @param info indicates success of decomposition. If *info is false decomposition failed.
  */
@@ -618,12 +618,12 @@ inline int hal_ni_Cholesky64f(double* src1, size_t src1_step, int m, double* src
 Performs singular value decomposition of \f$M\times N\f$(\f$M>N\f$) matrix \f$A = U*\Sigma*V^T\f$.
 @param src pointer to input \f$M\times N\f$ matrix \f$A\f$ stored in column major order.
 After finish of work src will be filled with rows of \f$U\f$ or not modified (depends of flag CV_HAL_SVD_MODIFY_A).
-@param src_step number of bytes each matrix \f$A\f$ column occupies.
+@param src_step number of bytes between two consequent columns of matrix \f$A\f$.
 @param w pointer to array for singular values of matrix \f$A\f$ (i. e. first \f$N\f$ diagonal elements of matrix \f$\Sigma\f$).
 @param u pointer to output \f$M\times N\f$ or \f$M\times M\f$ matrix \f$U\f$ (size depends of flags). Pointer must be valid if flag CV_HAL_SVD_MODIFY_A not used.
-@param u_step number of bytes each matrix \f$U\f$ row occupies.
+@param u_step number of bytes between two consequent rows of matrix \f$U\f$.
 @param vt pointer to array for \f$N\times N\f$ matrix \f$V^T\f$.
-@param vt_step number of bytes each matrix \f$V^T\f$ row occupies.
+@param vt_step number of bytes between two consequent rows of matrix \f$V^T\f$.
 @param m number fo rows in matrix \f$A\f$.
 @param n number of columns in matrix \f$A\f$.
 @param flags algorithm options (combination of CV_HAL_SVD_FULL_UV, ...).
@@ -632,6 +632,27 @@ After finish of work src will be filled with rows of \f$U\f$ or not modified (de
 //! @{
 inline int hal_ni_SVD32f(float* src, size_t src_step, float* w, float* u, size_t u_step, float* vt, size_t vt_step, int m, int n, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_SVD64f(double* src, size_t src_step, double* w, double* u, size_t u_step, double* vt, size_t vt_step, int m, int n, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+/**
+Performs QR decomposition of \f$M\times N\f$(\f$M>N\f$) matrix \f$A = Q*R\f$ and solves matrix equation \f$A*X=B\f$.
+@param src1 pointer to input matrix \f$A\f$ stored in row major order. After finish of work src1 contains upper triangular \f$N\times N\f$ matrix \f$R\f$.
+Lower triangle of src1 will be filled with vectors of elementary reflectors. See @cite VandLec and Lapack's DGEQRF documentation for details.
+@param src1_step number of bytes between two consequent rows of matrix \f$A\f$.
+@param m number fo rows in matrix \f$A\f$.
+@param n number of columns in matrix \f$A\f$.
+@param k number of right-hand vectors in \f$M\times K\f$ matrix \f$B\f$.
+@param src2 pointer to \f$M\times K\f$ matrix \f$B\f$ which is the right-hand side of system \f$A*X=B\f$. \f$B\f$ stored in row major order.
+If src2 is null pointer only QR decomposition will be performed. Otherwise system will be solved and src1 will be used as temporary buffer, so
+after finish of work src2 contains solution \f$X\f$ of system \f$A*X=B\f$.
+@param src2_step number of bytes between two consequent rows of matrix \f$B\f$.
+@param dst pointer to continiuos \f$N\times 1\f$ array for scalar factors of elementary reflectors. See @cite VandLec for details.
+@param info indicates success of decomposition. If *info is zero decomposition failed.
+*/
+//! @addtogroup core_hal_interface_decomp_qr QR matrix decomposition
+//! @{
+inline int hal_ni_QR32f(float* src1, size_t src1_step, int m, int n, int k, float* src2, size_t src2_step, float* dst, int* info) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_QR64f(double* src1, size_t src1_step, int m, int n, int k, double* src2, size_t src2_step, double* dst, int* info) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 
@@ -643,6 +664,8 @@ inline int hal_ni_SVD64f(double* src, size_t src_step, double* w, double* u, siz
 #define cv_hal_Cholesky64f hal_ni_Cholesky64f
 #define cv_hal_SVD32f hal_ni_SVD32f
 #define cv_hal_SVD64f hal_ni_SVD64f
+#define cv_hal_QR32f hal_ni_QR32f
+#define cv_hal_QR64f hal_ni_QR64f
 //! @endcond
 
 
@@ -651,15 +674,15 @@ The function performs generalized matrix multiplication similar to the gemm func
 \f$D = \alpha*AB+\beta*C\f$
 
 @param src1 pointer to input \f$M\times N\f$ matrix \f$A\f$ or \f$A^T\f$ stored in row major order.
-@param src1_step number of bytes each matrix \f$A\f$ or \f$A^T\f$ row occupies.
+@param src1_step number of bytes between two consequent rows of matrix \f$A\f$ or \f$A^T\f$.
 @param src2 pointer to input \f$N\times K\f$ matrix \f$B\f$ or \f$B^T\f$ stored in row major order.
-@param src2_step number of bytes each matrix \f$B\f$ or \f$B^T\f$ row occupies.
+@param src2_step number of bytes between two consequent rows of matrix \f$B\f$ or \f$B^T\f$.
 @param alpha \f$\alpha\f$ multiplier before \f$AB\f$
 @param src3 pointer to input \f$M\times K\f$ matrix \f$C\f$ or \f$C^T\f$ stored in row major order.
-@param src3_step number of bytes each matrix \f$C\f$ or \f$C^T\f$ row occupies.
+@param src3_step number of bytes between two consequent rows of matrix \f$C\f$ or \f$C^T\f$.
 @param beta \f$\beta\f$ multiplier before \f$C\f$
 @param dst pointer to input \f$M\times K\f$ matrix \f$D\f$ stored in row major order.
-@param dst_step number of bytes each matrix \f$D\f$ row occupies.
+@param dst_step number of bytes between two consequent rows of matrix \f$D\f$.
 @param m number of rows in matrix \f$A\f$ or \f$A^T\f$, equals to number of rows in matrix \f$D\f$
 @param n number of columns in matrix \f$A\f$ or \f$A^T\f$
 @param k number of columns in matrix \f$B\f$ or \f$B^T\f$, equals to number of columns in matrix \f$D\f$

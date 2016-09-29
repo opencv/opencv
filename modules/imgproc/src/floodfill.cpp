@@ -459,6 +459,8 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
                   Point seedPoint, Scalar newVal, Rect* rect,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     ConnectedComp comp;
     std::vector<FFillSegment> buffer;
 
@@ -629,6 +631,8 @@ int cv::floodFill( InputOutputArray _image, Point seedPoint,
                   Scalar newVal, Rect* rect,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     return floodFill(_image, Mat(), seedPoint, newVal, rect, loDiff, upDiff, flags);
 }
 

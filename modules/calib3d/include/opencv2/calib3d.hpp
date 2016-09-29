@@ -263,6 +263,7 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_FIX_S1_S2_S3_S4     = 0x10000,
        CALIB_TILTED_MODEL        = 0x40000,
        CALIB_FIX_TAUX_TAUY       = 0x80000,
+       CALIB_USE_QR              = 0x100000, //!< use QR instead of SVD decomposition for solving. Faster but potentially less precise
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
@@ -320,7 +321,7 @@ mask values are ignored.
 @param maxIters The maximum number of RANSAC iterations, 2000 is the maximum it can be.
 @param confidence Confidence level, between 0 and 1.
 
-The functions find and return the perspective transformation \f$H\f$ between the source and the
+The function finds and returns the perspective transformation \f$H\f$ between the source and the
 destination planes:
 
 \f[s_i  \vecthree{x'_i}{y'_i}{1} \sim H  \vecthree{x_i}{y_i}{1}\f]

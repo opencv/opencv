@@ -379,6 +379,8 @@ int FilterEngine::proceed( const uchar* src, int srcstep, int count,
 
 void FilterEngine::apply(const Mat& src, Mat& dst, const Size & wsz, const Point & ofs)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( src.type() == srcType && dst.type() == dstType );
 
     int y = start(src, wsz, ofs);
@@ -1411,6 +1413,8 @@ private:
     mutable int bufsz;
     int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         int _ksize = kernel.rows + kernel.cols - 1;
         if ((1 != cn && 3 != cn) || width < _ksize*8)
             return 0;
@@ -1432,10 +1436,10 @@ private:
         float borderValue[] = {0.f, 0.f, 0.f};
         // here is the trick. IPP needs border type and extrapolates the row. We did it already.
         // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
-        if( (cn == 1 && ippiFilterRowBorderPipeline_32f_C1R(src, step, &dst, roisz, _kx, _ksize, 0,
-                                                            ippBorderRepl, borderValue[0], bufptr) < 0) ||
-            (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src, step, &dst, roisz, _kx, _ksize, 0,
-                                                            ippBorderRepl, borderValue, bufptr) < 0))
+        if( (cn == 1 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C1R,(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue[0], bufptr)) < 0) ||
+            (cn == 3 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C3R,(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue, bufptr)) < 0))
         {
             setIppErrorStatus();
             return 0;
@@ -4540,40 +4544,39 @@ struct ReplacementFilter : public hal::Filter2D
 };
 
 #ifdef HAVE_IPP
-#if !HAVE_ICV
-typedef IppStatus(CV_STDCALL* ippiFilterBorder)(
+typedef IppStatus(CV_STDCALL* IppiFilterBorder)(
     const void* pSrc, int srcStep, void* pDst, int dstStep,
     IppiSize dstRoiSize, IppiBorderType border, const void* borderValue,
     const IppiFilterBorderSpec* pSpec, Ipp8u* pBuffer);
 
-static ippiFilterBorder getIppFunc(int stype)
+static IppiFilterBorder getIppFunc(int stype)
 {
     switch (stype)
     {
     case CV_8UC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C1R);
     case CV_8UC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C3R);
     case CV_8UC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C4R);
     case CV_16UC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C1R);
     case CV_16UC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C3R);
     case CV_16UC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C4R);
     case CV_16SC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C1R);
     case CV_16SC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C3R);
     case CV_16SC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C4R);
     case CV_32FC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C1R);
     case CV_32FC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C3R);
     case CV_32FC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C4R);
     default:
         return 0;
     }
@@ -4690,18 +4693,19 @@ struct IppFilter : public hal::Filter2D
 
     void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int, int, int, int)
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         if (dst_data == src_data)
             CV_Error(Error::StsBadArg, "Inplace IPP Filter2D is not supported");
-        ippiFilterBorder ippFunc = getIppFunc(src_type);
+        IppiFilterBorder ippiFilterBorder = getIppFunc(src_type);
         IppiSize dstRoiSize = { width, height };
         kernel_type borderValue[4] = { 0, 0, 0, 0 };
-        IppStatus status = ippFunc(src_data, (int)src_step, dst_data, (int)dst_step, dstRoiSize, ippBorderType, borderValue, spec, buffer);
+        IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiFilterBorder, src_data, (int)src_step, dst_data, (int)dst_step, dstRoiSize, ippBorderType, borderValue, spec, buffer);
         if (status >= 0) {
             CV_IMPL_ADD(CV_IMPL_IPP);
         }
     }
 };
-#endif
 #endif
 
 struct DftFilter : public hal::Filter2D
@@ -4819,13 +4823,13 @@ struct ReplacementSepFilter : public hal::SepFilter2D
     bool isInitialized;
     ReplacementSepFilter() : ctx(0), isInitialized(false) {}
     bool init(int stype, int dtype, int ktype,
-              uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-              uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+              uchar * kernelx_data, int kernelx_len,
+              uchar * kernely_data, int kernely_len,
               int anchor_x, int anchor_y, double delta, int borderType)
     {
         int res = cv_hal_sepFilterInit(&ctx, stype, dtype, ktype,
-                                       kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                                       kernely_data, kernely_step, kernely_width, kernely_height,
+                                       kernelx_data, kernelx_len,
+                                       kernely_data, kernely_len,
                                        anchor_x, anchor_y, delta, borderType);
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
@@ -4858,14 +4862,14 @@ struct OcvSepFilter : public hal::SepFilter2D
     int src_type;
     int dst_type;
     bool init(int stype, int dtype, int ktype,
-              uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-              uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+              uchar * kernelx_data, int kernelx_len,
+              uchar * kernely_data, int kernely_len,
               int anchor_x, int anchor_y, double delta, int borderType)
     {
         src_type = stype;
         dst_type = dtype;
-        Mat kernelX(Size(kernelx_width, kernelx_height), ktype, kernelx_data, kernelx_step);
-        Mat kernelY(Size(kernely_width, kernely_height), ktype, kernely_data, kernely_step);
+        Mat kernelX(Size(kernelx_len, 1), ktype, kernelx_data);
+        Mat kernelY(Size(kernely_len, 1), ktype, kernely_data);
 
         f = createSeparableLinearFilter( stype, dtype, kernelX, kernelY,
                                          Point(anchor_x, anchor_y),
@@ -4907,7 +4911,6 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
     }
 
 #ifdef HAVE_IPP
-#if !HAVE_ICV
     if (kernel_type == CV_32FC1) {
         IppFilter<CV_32F>* impl = new IppFilter<CV_32F>();
         if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
@@ -4929,7 +4932,6 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
         }
         delete impl;
     }
-#endif
 #endif
 
     if (DftFilter::isAppropriate(stype, dtype, kernel_width, kernel_height))
@@ -4956,15 +4958,15 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
 //---------------------------------------------------------------
 
 Ptr<SepFilter2D> SepFilter2D::create(int stype, int dtype, int ktype,
-                                     uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-                                     uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+                                     uchar * kernelx_data, int kernelx_len,
+                                     uchar * kernely_data, int kernely_len,
                                      int anchor_x, int anchor_y, double delta, int borderType)
 {
     {
         ReplacementSepFilter * impl = new ReplacementSepFilter();
         if (impl->init(stype, dtype, ktype,
-                       kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                       kernely_data, kernely_step, kernely_width, kernely_height,
+                       kernelx_data, kernelx_len,
+                       kernely_data, kernely_len,
                        anchor_x, anchor_y, delta, borderType))
         {
             return Ptr<hal::SepFilter2D>(impl);
@@ -4974,8 +4976,8 @@ Ptr<SepFilter2D> SepFilter2D::create(int stype, int dtype, int ktype,
     {
         OcvSepFilter * impl = new OcvSepFilter();
         impl->init(stype, dtype, ktype,
-                   kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                   kernely_data, kernely_step, kernely_width, kernely_height,
+                   kernelx_data, kernelx_len,
+                   kernely_data, kernely_len,
                    anchor_x, anchor_y, delta, borderType);
         return Ptr<hal::SepFilter2D>(impl);
     }
@@ -4992,6 +4994,8 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor0,
                    double delta, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_filter2D(_src, _dst, ddepth, _kernel, anchor0, delta, borderType))
 
@@ -5019,7 +5023,9 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > _kernelY.total() && (size_t)_src.cols() > _kernelX.total(),
                ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
 
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
@@ -5035,11 +5041,15 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     if( (borderType & BORDER_ISOLATED) == 0 )
         src.locateROI( wsz, ofs );
 
-    CV_Assert(kernelX.type() == kernelY.type());
+    CV_Assert( kernelX.type() == kernelY.type() &&
+               (kernelX.cols == 1 || kernelX.rows == 1) &&
+               (kernelY.cols == 1 || kernelY.rows == 1) );
 
+    Mat contKernelX = kernelX.isContinuous() ? kernelX : kernelX.clone();
+    Mat contKernelY = kernelY.isContinuous() ? kernelY : kernelY.clone();
     Ptr<hal::SepFilter2D> c = hal::SepFilter2D::create(src.type(), dst.type(), kernelX.type(),
-                                                       kernelX.data, kernelX.step, kernelX.cols, kernelX.rows,
-                                                       kernelY.data, kernelY.step, kernelY.cols, kernelY.rows,
+                                                       contKernelX.data, kernelX.cols + kernelX.rows - 1,
+                                                       contKernelY.data, kernelY.cols + kernelY.rows - 1,
                                                        anchor.x, anchor.y, delta, borderType & ~BORDER_ISOLATED);
     c->apply(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
 }

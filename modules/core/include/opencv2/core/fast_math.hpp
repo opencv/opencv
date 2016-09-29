@@ -71,6 +71,7 @@
     #define ARM_ROUND(_value, _asm_string) \
         int res; \
         float temp; \
+        (void)temp; \
         asm(_asm_string : [res] "=r" (res), [temp] "=w" (temp) : [value] "w" (_value)); \
         return res
     // 2. version for double

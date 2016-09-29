@@ -63,6 +63,8 @@ size_t KeyPoint::hash() const
 void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f,
                        const std::vector<int>& keypointIndexes)
 {
+    CV_INSTRUMENT_REGION()
+
     if( keypointIndexes.empty() )
     {
         points2f.resize( keypoints.size() );
@@ -89,6 +91,8 @@ void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point
 void KeyPoint::convert( const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints,
                         float size, float response, int octave, int class_id )
 {
+    CV_INSTRUMENT_REGION()
+
     keypoints.resize(points2f.size());
     for( size_t i = 0; i < points2f.size(); i++ )
         keypoints[i] = KeyPoint(points2f[i], size, -1, response, octave, class_id);
