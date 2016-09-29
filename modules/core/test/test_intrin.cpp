@@ -1,3 +1,4 @@
+#include "test_precomp.hpp"
 #include "test_intrin_utils.hpp"
 #include <climits>
 
@@ -127,6 +128,32 @@ template<typename R> struct TheTest
             EXPECT_EQ(data2, Data<R>(e));
             EXPECT_EQ(data3, Data<R>(f));
             EXPECT_EQ(data4, Data<R>(g));
+        }
+
+        return *this;
+    }
+
+    // float32x4 only
+    TheTest & test_interleave_2channel()
+    {
+        Data<R> data1, data2;
+        data2 += 20;
+
+        R a = data1, b = data2;
+
+        LaneType buf2[R::nlanes * 2];
+
+        v_store_interleave(buf2, a, b);
+
+        Data<R> z(0);
+        a = b = z;
+
+        v_load_deinterleave(buf2, a, b);
+
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            EXPECT_EQ(data1, Data<R>(a));
+            EXPECT_EQ(data2, Data<R>(b));
         }
 
         return *this;
@@ -626,11 +653,17 @@ template<typename R> struct TheTest
         dataA *= 1.1;
         R a = dataA;
         Rt b = v_cvt_f64(a);
+        Rt c = v_cvt_f64_high(a);
         Data<Rt> resB = b;
+        Data<Rt> resC = c;
         int n = std::min<int>(Rt::nlanes, R::nlanes);
         for (int i = 0; i < n; ++i)
         {
             EXPECT_EQ((typename Rt::lane_type)dataA[i], resB[i]);
+        }
+        for (int i = 0; i < n; ++i)
+        {
+            EXPECT_EQ((typename Rt::lane_type)dataA[i+n], resC[i]);
         }
 #endif
         return *this;
@@ -676,6 +709,57 @@ template<typename R> struct TheTest
             EXPECT_EQ(dataD[i], res[i][3]);
         }
         return *this;
+    }
+
+    TheTest & test_loadstore_fp16()
+    {
+#if CV_FP16
+        AlignedData<R> data;
+        AlignedData<R> out;
+
+        if(checkHardwareSupport(CV_CPU_FP16))
+        {
+            // check if addresses are aligned and unaligned respectively
+            EXPECT_EQ((size_t)0, (size_t)&data.a.d % 16);
+            EXPECT_NE((size_t)0, (size_t)&data.u.d % 16);
+            EXPECT_EQ((size_t)0, (size_t)&out.a.d % 16);
+            EXPECT_NE((size_t)0, (size_t)&out.u.d % 16);
+
+            // check some initialization methods
+            R r1 = data.u;
+            R r2 = v_load_f16(data.a.d);
+            R r3(r2);
+            EXPECT_EQ(data.u[0], r1.get0());
+            EXPECT_EQ(data.a[0], r2.get0());
+            EXPECT_EQ(data.a[0], r3.get0());
+
+            // check some store methods
+            out.a.clear();
+            v_store_f16(out.a.d, r1);
+            EXPECT_EQ(data.a, out.a);
+        }
+
+        return *this;
+#endif
+    }
+
+    TheTest & test_float_cvt_fp16()
+    {
+#if CV_FP16
+        AlignedData<v_float32x4> data;
+
+        if(checkHardwareSupport(CV_CPU_FP16))
+        {
+            // check conversion
+            v_float32x4 r1 = v_load(data.a.d);
+            v_float16x4 r2 = v_cvt_f16(r1);
+            v_float32x4 r3 = v_cvt_f32(r2);
+            EXPECT_EQ(0x3c00, r2.get0());
+            EXPECT_EQ(r3.get0(), r1.get0());
+        }
+
+        return *this;
+#endif
     }
 
 };
@@ -846,6 +930,7 @@ TEST(hal_intrin, float32x4) {
     TheTest<v_float32x4>()
         .test_loadstore()
         .test_interleave()
+        .test_interleave_2channel()
         .test_addsub()
         .test_mul()
         .test_div()
@@ -878,6 +963,15 @@ TEST(hal_intrin, float64x2) {
         .test_unpack()
         .test_float_math()
         .test_float_cvt32()
+        ;
+}
+#endif
+
+#if CV_FP16
+TEST(hal_intrin, float16x4) {
+    TheTest<v_float16x4>()
+        .test_loadstore_fp16()
+        .test_float_cvt_fp16()
         ;
 }
 #endif

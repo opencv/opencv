@@ -223,6 +223,8 @@ typedef float itemtype;
 
 void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 {
+    CV_INSTRUMENT_REGION()
+
     Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
     const Mat& I = *prevImg;
     const Mat& J = *nextImg;
@@ -294,7 +296,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
 #if CV_NEON
 
-        int CV_DECL_ALIGNED(16) nA11[] = {0, 0, 0, 0}, nA12[] = {0, 0, 0, 0}, nA22[] = {0, 0, 0, 0};
+        float CV_DECL_ALIGNED(16) nA11[] = { 0, 0, 0, 0 }, nA12[] = { 0, 0, 0, 0 }, nA22[] = { 0, 0, 0, 0 };
         const int shifter1 = -(W_BITS - 5); //negative so it shifts right
         const int shifter2 = -(W_BITS);
 
@@ -406,19 +408,19 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 q6 = vaddq_s32(q6, q8);
 
                 q7 = vmull_s16(d4d5.val[0], d28);
-                int32x4_t nq0 = vmull_s16(d4d5.val[1], d28);
+                int32x4_t q14 = vmull_s16(d4d5.val[1], d28);
                 q8 = vmull_s16(d6d7.val[0], d29);
                 int32x4_t q15 = vmull_s16(d6d7.val[1], d29);
 
                 q7 = vaddq_s32(q7, q8);
-                nq0 = vaddq_s32(nq0, q15);
+                q14 = vaddq_s32(q14, q15);
 
                 q4 = vaddq_s32(q4, q7);
-                q6 = vaddq_s32(q6, nq0);
+                q6 = vaddq_s32(q6, q14);
 
-                int32x4_t nq1 = vld1q_s32(nA12);
-                int32x4_t nq2 = vld1q_s32(nA22);
-                nq0 = vld1q_s32(nA11);
+                float32x4_t nq0 = vld1q_f32(nA11);
+                float32x4_t nq1 = vld1q_f32(nA12);
+                float32x4_t nq2 = vld1q_f32(nA22);
 
                 q4 = vqrshlq_s32(q4, q12);
                 q6 = vqrshlq_s32(q6, q12);
@@ -427,13 +429,13 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 q8 = vmulq_s32(q4, q6);
                 q15 = vmulq_s32(q6, q6);
 
-                nq0 = vaddq_s32(nq0, q7);
-                nq1 = vaddq_s32(nq1, q8);
-                nq2 = vaddq_s32(nq2, q15);
+                nq0 = vaddq_f32(nq0, vreinterpretq_f32_s32(q7));
+                nq1 = vaddq_f32(nq1, vreinterpretq_f32_s32(q8));
+                nq2 = vaddq_f32(nq2, vreinterpretq_f32_s32(q15));
 
-                vst1q_s32(nA11, nq0);
-                vst1q_s32(nA12, nq1);
-                vst1q_s32(nA22, nq2);
+                vst1q_f32(nA11, nq0);
+                vst1q_f32(nA12, nq1);
+                vst1q_f32(nA22, nq2);
 
                 int16x4_t d8 = vmovn_s32(q4);
                 int16x4_t d12 = vmovn_s32(q6);
@@ -474,9 +476,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 #endif
 
 #if CV_NEON
-        iA11 += (float)(nA11[0] + nA11[1] + nA11[2] + nA11[3]);
-        iA12 += (float)(nA12[0] + nA12[1] + nA12[2] + nA12[3]);
-        iA22 += (float)(nA22[0] + nA22[1] + nA22[2] + nA22[3]);
+        iA11 += nA11[0] + nA11[1] + nA11[2] + nA11[3];
+        iA12 += nA12[0] + nA12[1] + nA12[2] + nA12[3];
+        iA22 += nA22[0] + nA22[1] + nA22[2] + nA22[3];
 #endif
 
         A11 = iA11*FLT_SCALE;
@@ -530,7 +532,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 #endif
 
 #if CV_NEON
-            int CV_DECL_ALIGNED(16) nB1[] = {0,0,0,0}, nB2[] = {0,0,0,0};
+            float CV_DECL_ALIGNED(16) nB1[] = { 0,0,0,0 }, nB2[] = { 0,0,0,0 };
 
             const int16x4_t d26_2 = vdup_n_s16((int16_t)iw00);
             const int16x4_t d27_2 = vdup_n_s16((int16_t)iw01);
@@ -567,18 +569,14 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     diff0 = _mm_unpacklo_epi16(diff0, diff0); // It0 It0 It1 It1 ...
                     v00 = _mm_loadu_si128((const __m128i*)(dIptr)); // Ix0 Iy0 Ix1 Iy1 ...
                     v01 = _mm_loadu_si128((const __m128i*)(dIptr + 8));
-                    v10 = _mm_mullo_epi16(v00, diff0);
-                    v11 = _mm_mulhi_epi16(v00, diff0);
-                    v00 = _mm_unpacklo_epi16(v10, v11);
-                    v10 = _mm_unpackhi_epi16(v10, v11);
+                    v10 = _mm_unpacklo_epi16(v00, v01);
+                    v11 = _mm_unpackhi_epi16(v00, v01);
+                    v00 = _mm_unpacklo_epi16(diff0, diff1);
+                    v01 = _mm_unpackhi_epi16(diff0, diff1);
+                    v00 = _mm_madd_epi16(v00, v10);
+                    v11 = _mm_madd_epi16(v01, v11);
                     qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
-                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
-                    v10 = _mm_mullo_epi16(v01, diff1);
-                    v11 = _mm_mulhi_epi16(v01, diff1);
-                    v00 = _mm_unpacklo_epi16(v10, v11);
-                    v10 = _mm_unpackhi_epi16(v10, v11);
-                    qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
-                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
+                    qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v11));
                 }
 #endif
 
@@ -625,8 +623,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     nq5 = vqrshlq_s32(nq5, q11);
 
                     int16x8x2_t q0q1 = vld2q_s16(dIptr);
-                    nq11 = vld1q_s32(nB1);
-                    int32x4_t nq15 = vld1q_s32(nB2);
+                    float32x4_t nB1v = vld1q_f32(nB1);
+                    float32x4_t nB2v = vld1q_f32(nB2);
 
                     nq4 = vsubq_s32(nq4, nq6);
                     nq5 = vsubq_s32(nq5, nq8);
@@ -646,11 +644,11 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     nq9 = vaddq_s32(nq9, nq10);
                     nq4 = vaddq_s32(nq4, nq5);
 
-                    nq11 = vaddq_s32(nq11, nq9);
-                    nq15 = vaddq_s32(nq15, nq4);
+                    nB1v = vaddq_f32(nB1v, vreinterpretq_f32_s32(nq9));
+                    nB2v = vaddq_f32(nB2v, vreinterpretq_f32_s32(nq4));
 
-                    vst1q_s32(nB1, nq11);
-                    vst1q_s32(nB2, nq15);
+                    vst1q_f32(nB1, nB1v);
+                    vst1q_f32(nB2, nB2v);
                 }
 #endif
 
@@ -744,6 +742,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Size winSize, int maxLevel, bool withDerivatives,
                                 int pyrBorder, int derivBorder, bool tryReuseInputImage)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
     CV_Assert(img.depth() == CV_8U && winSize.width > 2 && winSize.height > 2 );
     int pyrstep = withDerivatives ? 2 : 1;
@@ -1106,6 +1106,8 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
                            OutputArray _status, OutputArray _err)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(ocl::useOpenCL() &&
                (_prevImg.isUMat() || _nextImg.isUMat()) &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
@@ -1375,6 +1377,8 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
 cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
 
     const int COUNT = 15;

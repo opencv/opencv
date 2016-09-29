@@ -56,7 +56,7 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
     stitcher.setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
 
-#ifdef HAVE_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
     if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
 #ifdef HAVE_OPENCV_XFEATURES2D
@@ -93,12 +93,16 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 
 Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images)
 {
+    CV_INSTRUMENT_REGION()
+
     return estimateTransform(images, std::vector<std::vector<Rect> >());
 }
 
 
 Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois)
 {
+    CV_INSTRUMENT_REGION()
+
     images.getUMatVector(imgs_);
     rois_ = rois;
 
@@ -117,12 +121,16 @@ Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const st
 
 Stitcher::Status Stitcher::composePanorama(OutputArray pano)
 {
+    CV_INSTRUMENT_REGION()
+
     return composePanorama(std::vector<UMat>(), pano);
 }
 
 
 Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArray pano)
 {
+    CV_INSTRUMENT_REGION()
+
     LOGLN("Warping images (auxiliary)... ");
 
     std::vector<UMat> imgs;
@@ -184,7 +192,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         K(1,1) *= (float)seam_work_aspect_;
         K(1,2) *= (float)seam_work_aspect_;
 
-        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_CONSTANT, images_warped[i]);
+        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
         w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
@@ -290,7 +298,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         int64 pt = getTickCount();
 #endif
         // Warp the current image
-        w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_CONSTANT, img_warped);
+        w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
         LOGLN(" warp the current image: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
         pt = getTickCount();
@@ -365,6 +373,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
 Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 {
+    CV_INSTRUMENT_REGION()
+
     Status status = estimateTransform(images);
     if (status != OK)
         return status;
@@ -374,6 +384,8 @@ Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 
 Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
 {
+    CV_INSTRUMENT_REGION()
+
     Status status = estimateTransform(images, rois);
     if (status != OK)
         return status;
@@ -539,6 +551,8 @@ Stitcher::Status Stitcher::estimateCameraParams()
 
 Ptr<Stitcher> createStitcher(bool try_use_gpu)
 {
+    CV_INSTRUMENT_REGION()
+
     Ptr<Stitcher> stitcher = makePtr<Stitcher>();
     stitcher->setRegistrationResol(0.6);
     stitcher->setSeamEstimationResol(0.1);
@@ -549,7 +563,7 @@ Ptr<Stitcher> createStitcher(bool try_use_gpu)
     stitcher->setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
     stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
 
-    #ifdef HAVE_CUDA
+    #ifdef HAVE_OPENCV_CUDALEGACY
     if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
         #ifdef HAVE_OPENCV_NONFREE
@@ -561,20 +575,20 @@ Ptr<Stitcher> createStitcher(bool try_use_gpu)
         stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinderGpu>());
     }
     else
+    #endif
+    {
+        #ifdef HAVE_OPENCV_NONFREE
+        stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
+        #else
+        stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
         #endif
-        {
-            #ifdef HAVE_OPENCV_NONFREE
-            stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
-            #else
-            stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
-            #endif
-            stitcher->setWarper(makePtr<SphericalWarper>());
-            stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
-        }
+        stitcher->setWarper(makePtr<SphericalWarper>());
+        stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
+    }
 
-        stitcher->setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
-        stitcher->setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
+    stitcher->setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
+    stitcher->setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
 
-        return stitcher;
+    return stitcher;
 }
 } // namespace cv

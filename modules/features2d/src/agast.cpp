@@ -7940,6 +7940,8 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 
 void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
+    CV_INSTRUMENT_REGION()
+
     AGAST(_img, keypoints, threshold, nonmax_suppression, AgastFeatureDetector::OAST_9_16);
 }
 
@@ -7952,6 +7954,8 @@ public:
 
     void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
     {
+        CV_INSTRUMENT_REGION()
+
         Mat mask = _mask.getMat(), grayImage;
         UMat ugrayImage;
         _InputArray gray = _image;
@@ -8007,6 +8011,7 @@ Ptr<AgastFeatureDetector> AgastFeatureDetector::create( int threshold, bool nonm
 
 void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
+    CV_INSTRUMENT_REGION()
 
     std::vector<KeyPoint> kpts;
 

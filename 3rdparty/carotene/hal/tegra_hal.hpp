@@ -1178,12 +1178,12 @@ struct SepFilterCtx
     CAROTENE_NS::BORDER_MODE border;
 };
 inline int TEGRA_SEPFILTERINIT(cvhalFilter2D **context, int src_type, int dst_type, int kernel_type,
-                               uchar *kernelx_data, size_t             , int kernelx_width, int kernelx_height,
-                               uchar *kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+                               uchar *kernelx_data, int kernelx_length,
+                               uchar *kernely_data, int kernely_length,
                                int anchor_x, int anchor_y, double delta, int borderType)
 {
     if(!context || !kernelx_data || !kernely_data || src_type != CV_8UC1 || dst_type != CV_16SC1 ||
-       !(kernelx_width == 3 && kernelx_height == 1) || !(kernely_width == 1 && kernely_height == 3) ||
+       kernelx_length != 3 || kernely_length != 3 ||
        delta != 0 || anchor_x != 1 || anchor_y != 1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
@@ -1225,24 +1225,24 @@ inline int TEGRA_SEPFILTERINIT(cvhalFilter2D **context, int src_type, int dst_ty
         ctx->kernelx_data[1]=kernelx_data[1];
         ctx->kernelx_data[2]=kernelx_data[2];
         ctx->kernely_data[0]=kernely_data[0];
-        ctx->kernely_data[1]=kernely_data[kernely_step];
-        ctx->kernely_data[2]=kernely_data[2*kernely_step];
+        ctx->kernely_data[1]=kernely_data[1];
+        ctx->kernely_data[2]=kernely_data[2];
         break;
     case CV_8SC1:
         ctx->kernelx_data[0]=((char*)kernelx_data)[0];
         ctx->kernelx_data[1]=((char*)kernelx_data)[1];
         ctx->kernelx_data[2]=((char*)kernelx_data)[2];
         ctx->kernely_data[0]=((char*)kernely_data)[0];
-        ctx->kernely_data[1]=((char*)(kernely_data+kernely_step))[0];
-        ctx->kernely_data[2]=((char*)(kernely_data+2*kernely_step))[0];
+        ctx->kernely_data[1]=((char*)kernely_data)[1];
+        ctx->kernely_data[2]=((char*)kernely_data)[2];
         break;
     case CV_16UC1:
         ctx->kernelx_data[0]=((int16_t*)kernelx_data)[0];
         ctx->kernelx_data[1]=((int16_t*)kernelx_data)[1];
         ctx->kernelx_data[2]=((int16_t*)kernelx_data)[2];
         ctx->kernely_data[0]=((int16_t*)kernely_data)[0];
-        ctx->kernely_data[1]=((int16_t*)(kernely_data+kernely_step))[0];
-        ctx->kernely_data[2]=((int16_t*)(kernely_data+2*kernely_step))[0];
+        ctx->kernely_data[1]=((int16_t*)kernely_data)[1];
+        ctx->kernely_data[2]=((int16_t*)kernely_data)[2];
     default:
         delete ctx;
         return CV_HAL_ERROR_NOT_IMPLEMENTED;

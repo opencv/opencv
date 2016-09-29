@@ -30,10 +30,8 @@ struct CV_EXPORTS Filter2D
 struct CV_EXPORTS SepFilter2D
 {
     static Ptr<hal::SepFilter2D> create(int stype, int dtype, int ktype,
-                                        uchar * kernelx_data, size_t kernelx_step,
-                                        int kernelx_width, int kernelx_height,
-                                        uchar * kernely_data, size_t kernely_step,
-                                        int kernely_width, int kernely_height,
+                                        uchar * kernelx_data, int kernelx_len,
+                                        uchar * kernely_data, int kernely_len,
                                         int anchor_x, int anchor_y,
                                         double delta, int borderType);
     virtual void apply(uchar * src_data, size_t src_step,

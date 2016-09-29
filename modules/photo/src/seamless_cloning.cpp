@@ -49,6 +49,8 @@ using namespace cv;
 
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
+    CV_INSTRUMENT_REGION()
+
     const Mat src  = _src.getMat();
     const Mat dest = _dst.getMat();
     const Mat mask = _mask.getMat();
@@ -116,6 +118,8 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
 
 void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float r, float g, float b)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();
     _dst.create(src.size(), src.type());
@@ -142,6 +146,8 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
 
 void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float a, float b)
 {
+    CV_INSTRUMENT_REGION()
+
 
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();
@@ -169,6 +175,8 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
 void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
                            float low_threshold, float high_threshold, int kernel_size)
 {
+    CV_INSTRUMENT_REGION()
+
 
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();

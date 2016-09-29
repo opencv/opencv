@@ -198,7 +198,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 
 #include <stdarg.h>
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__
+#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -1300,13 +1300,217 @@ void setUseCollection(bool flag)
 }
 #endif
 
+namespace instr
+{
+bool useInstrumentation()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return getInstrumentStruct().useInstr;
+#else
+    return false;
+#endif
+}
+
+void setUseInstrumentation(bool flag)
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().useInstr = flag;
+#else
+    CV_UNUSED(flag);
+#endif
+}
+
+InstrNode* getTrace()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return &getInstrumentStruct().rootNode;
+#else
+    return NULL;
+#endif
+}
+
+void resetTrace()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().rootNode.removeChilds();
+    getInstrumentTLSStruct().pCurrentNode = &getInstrumentStruct().rootNode;
+#endif
+}
+
+void setFlags(FLAGS modeFlags)
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().enableMapping = (modeFlags & FLAGS_MAPPING);
+#else
+    CV_UNUSED(modeFlags);
+#endif
+}
+FLAGS getFlags()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    int flags = 0;
+    if(getInstrumentStruct().enableMapping)
+        flags |= FLAGS_MAPPING;
+    return (FLAGS)flags;
+#else
+    return (FLAGS)0;
+#endif
+}
+
+NodeData::NodeData(const char* funName, const char* fileName, int lineNum, cv::instr::TYPE instrType, cv::instr::IMPL implType)
+{
+    m_instrType = TYPE_GENERAL;
+    m_implType  = IMPL_PLAIN;
+
+    m_funName     = funName;
+    m_instrType   = instrType;
+    m_implType    = implType;
+    m_fileName    = fileName;
+    m_lineNum     = lineNum;
+
+    m_counter = 0;
+    m_ticksTotal = 0;
+
+    m_funError = false;
+    m_stopPoint = false;
+}
+NodeData::NodeData(NodeData &ref)
+{
+    *this = ref;
+}
+NodeData& NodeData::operator=(const NodeData &right)
+{
+    this->m_funName     = right.m_funName;
+    this->m_instrType   = right.m_instrType;
+    this->m_implType    = right.m_implType;
+    this->m_fileName    = right.m_fileName;
+    this->m_lineNum     = right.m_lineNum;
+    this->m_counter     = right.m_counter;
+    this->m_ticksTotal  = right.m_ticksTotal;
+    this->m_funError    = right.m_funError;
+    this->m_stopPoint   = right.m_stopPoint;
+    return *this;
+}
+NodeData::~NodeData()
+{
+}
+bool operator==(const NodeData& left, const NodeData& right)
+{
+    if(left.m_lineNum == right.m_lineNum && left.m_funName == right.m_funName && left.m_fileName == right.m_fileName)
+        return true;
+    return false;
+}
+
+#ifdef ENABLE_INSTRUMENTATION
+InstrStruct& getInstrumentStruct()
+{
+    static InstrStruct instr;
+    return instr;
+}
+
+InstrTLSStruct& getInstrumentTLSStruct()
+{
+    return *getInstrumentStruct().tlsStruct.get();
+}
+
+InstrNode* getCurrentNode()
+{
+    return getInstrumentTLSStruct().pCurrentNode;
+}
+
+IntrumentationRegion::IntrumentationRegion(const char* funName, const char* fileName, int lineNum, TYPE instrType, IMPL implType)
+{
+    m_disabled    = false;
+    m_regionTicks = 0;
+
+    InstrStruct *pStruct = &getInstrumentStruct();
+    if(pStruct->useInstr)
+    {
+        InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
+
+        // Disable in case of failure
+        if(!pTLS->pCurrentNode)
+        {
+            m_disabled = true;
+            return;
+        }
+
+        m_disabled = pTLS->pCurrentNode->m_payload.m_stopPoint;
+        if(m_disabled)
+            return;
+
+        NodeData payload(funName, fileName, lineNum, instrType, implType);
+        Node<NodeData>* pChild = NULL;
+
+        if(pStruct->enableMapping)
+        {
+            // Critical section
+            cv::AutoLock guard(pStruct->mutexCreate); // Guard from concurrent child creation
+            pChild = pTLS->pCurrentNode->findChild(payload);
+            if(!pChild)
+            {
+                pChild = new Node<NodeData>(payload);
+                pTLS->pCurrentNode->addChild(pChild);
+            }
+        }
+        else
+        {
+            pChild = pTLS->pCurrentNode->findChild(payload);
+            if(!pChild)
+            {
+                pTLS->pCurrentNode->m_payload.m_stopPoint = true;
+                return;
+            }
+        }
+        pTLS->pCurrentNode = pChild;
+
+        m_regionTicks = getTickCount();
+    }
+}
+
+IntrumentationRegion::~IntrumentationRegion()
+{
+    InstrStruct *pStruct = &getInstrumentStruct();
+    if(pStruct->useInstr)
+    {
+        if(!m_disabled)
+        {
+            InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
+            if(pTLS->pCurrentNode->m_payload.m_stopPoint)
+            {
+                pTLS->pCurrentNode->m_payload.m_stopPoint = false;
+            }
+            else
+            {
+                if (pTLS->pCurrentNode->m_payload.m_implType == cv::instr::IMPL_OPENCL &&
+                    (pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_FUN ||
+                        pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_WRAPPER))
+                {
+                    cv::ocl::finish(); // TODO Support "async" OpenCL instrumentation
+                }
+
+                uint64 ticks = (getTickCount() - m_regionTicks);
+                {
+                    cv::AutoLock guard(pStruct->mutexCount); // Concurrent ticks accumulation
+                    pTLS->pCurrentNode->m_payload.m_counter++;
+                    pTLS->pCurrentNode->m_payload.m_ticksTotal += ticks;
+                }
+
+                pTLS->pCurrentNode = pTLS->pCurrentNode->m_pParent;
+            }
+        }
+    }
+}
+#endif
+}
+
 namespace ipp
 {
 
-struct IPPInitSingelton
+struct IPPInitSingleton
 {
 public:
-    IPPInitSingelton()
+    IPPInitSingleton()
     {
         useIPP      = true;
         ippStatus   = 0;
@@ -1360,15 +1564,15 @@ public:
     int         ippFeatures;
 };
 
-static IPPInitSingelton& getIPPSingelton()
+static IPPInitSingleton& getIPPSingleton()
 {
-    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingelton, new IPPInitSingelton())
+    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingleton, new IPPInitSingleton())
 }
 
 int getIppFeatures()
 {
 #ifdef HAVE_IPP
-    return getIPPSingelton().ippFeatures;
+    return getIPPSingleton().ippFeatures;
 #else
     return 0;
 #endif
@@ -1376,20 +1580,20 @@ int getIppFeatures()
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
-    getIPPSingelton().ippStatus = status;
-    getIPPSingelton().funcname = _funcname;
-    getIPPSingelton().filename = _filename;
-    getIPPSingelton().linen = _line;
+    getIPPSingleton().ippStatus = status;
+    getIPPSingleton().funcname = _funcname;
+    getIPPSingleton().filename = _filename;
+    getIPPSingleton().linen = _line;
 }
 
 int getIppStatus()
 {
-    return getIPPSingelton().ippStatus;
+    return getIPPSingleton().ippStatus;
 }
 
 String getIppErrorLocation()
 {
-    return format("%s:%d %s", getIPPSingelton().filename ? getIPPSingelton().filename : "", getIPPSingelton().linen, getIPPSingelton().funcname ? getIPPSingelton().funcname : "");
+    return format("%s:%d %s", getIPPSingleton().filename ? getIPPSingleton().filename : "", getIPPSingleton().linen, getIPPSingleton().funcname ? getIPPSingleton().funcname : "");
 }
 
 bool useIPP()
@@ -1398,7 +1602,7 @@ bool useIPP()
     CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
-        data->useIPP = getIPPSingelton().useIPP;
+        data->useIPP = getIPPSingleton().useIPP;
     }
     return (data->useIPP > 0);
 #else
@@ -1410,7 +1614,7 @@ void setUseIPP(bool flag)
 {
     CoreTLSData* data = getCoreTlsData().get();
 #ifdef HAVE_IPP
-    data->useIPP = flag;
+    data->useIPP = (getIPPSingleton().useIPP)?flag:false;
 #else
     (void)flag;
     data->useIPP = false;

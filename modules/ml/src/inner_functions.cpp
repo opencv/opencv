@@ -116,35 +116,12 @@ static void Cholesky( const Mat& A, Mat& S )
 {
     CV_Assert(A.type() == CV_32F);
 
-    int dim = A.rows;
-    S.create(dim, dim, CV_32F);
-
-    int i, j, k;
-
-    for( i = 0; i < dim; i++ )
-    {
-        for( j = 0; j < i; j++ )
-            S.at<float>(i,j) = 0.f;
-
-        float sum = 0.f;
-        for( k = 0; k < i; k++ )
-        {
-            float val = S.at<float>(k,i);
-            sum += val*val;
-        }
-
-        S.at<float>(i,i) = std::sqrt(std::max(A.at<float>(i,i) - sum, 0.f));
-        float ival = 1.f/S.at<float>(i, i);
-
-        for( j = i + 1; j < dim; j++ )
-        {
-            sum = 0;
-            for( k = 0; k < i; k++ )
-                sum += S.at<float>(k, i) * S.at<float>(k, j);
-
-            S.at<float>(i, j) = (A.at<float>(i, j) - sum)*ival;
-        }
-    }
+    S = A.clone();
+    cv::Cholesky ((float*)S.ptr(),S.step, S.rows,NULL, 0, 0);
+    S = S.t();
+    for (int i=1;i<S.rows;i++)
+        for (int j=0;j<i;j++)
+            S.at<float>(i,j)=0;
 }
 
 /* Generates <sample> from multivariate normal distribution, where <mean> - is an

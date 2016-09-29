@@ -25,6 +25,8 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCXX)
   if(X86 OR ARMEABI_V6 OR (MIPS AND ANDROID_COMPILER_VERSION VERSION_LESS "4.6"))
     list(APPEND TEGRA_COMPILER_FLAGS -fweb -fwrapv -frename-registers -fsched-stalled-insns-dep=100 -fsched-stalled-insns=2)
+  elseif(CMAKE_COMPILER_IS_CLANGCXX)
+    list(APPEND TEGRA_COMPILER_FLAGS -fwrapv)
   else()
     list(APPEND TEGRA_COMPILER_FLAGS -fweb -fwrapv -frename-registers -fsched2-use-superblocks -fsched2-use-traces
                                      -fsched-stalled-insns-dep=100 -fsched-stalled-insns=2)

@@ -220,6 +220,7 @@ public:
         samples.release();
         missing.release();
         varType.release();
+        varSymbolFlags.release();
         responses.release();
         sampleIdx.release();
         trainSampleIdx.release();
@@ -522,6 +523,7 @@ public:
         std::vector<float> allresponses;
         std::vector<float> rowvals;
         std::vector<uchar> vtypes, rowtypes;
+        std::vector<uchar> vsymbolflags;
         bool haveMissed = false;
         char* buf = &_buf[0];
 
@@ -583,6 +585,9 @@ public:
                 }
                 else
                     vtypes = rowtypes;
+                vsymbolflags.resize(nvars);
+                for( i = 0; i < nvars; i++ )
+                    vsymbolflags[i] = (uchar)(rowtypes[i] == VAR_CATEGORICAL);
 
                 ridx0 = ridx0 >= 0 ? ridx0 : ridx0 == -1 ? nvars - 1 : -1;
                 ridx1 = ridx1 >= 0 ? ridx1 : ridx0 >= 0 ? ridx0+1 : -1;
@@ -598,6 +603,11 @@ public:
             {
                 CV_Assert( (!varTypesSet && vtypes[i] == rowtypes[i]) ||
                            (varTypesSet && (vtypes[i] == rowtypes[i] || rowtypes[i] == VAR_ORDERED)) );
+                uchar sflag = (uchar)(rowtypes[i] == VAR_CATEGORICAL);
+                if( vsymbolflags[i] == VAR_MISSED )
+                    vsymbolflags[i] = sflag;
+                else
+                    CV_Assert(vsymbolflags[i] == sflag || rowtypes[i] == VAR_MISSED);
             }
 
             if( ridx0 >= 0 )
@@ -657,7 +667,10 @@ public:
         }
         bool ok = !samples.empty();
         if(ok)
+        {
             std::swap(tempNameMap, nameMap);
+            Mat(vsymbolflags).copyTo(varSymbolFlags);
+        }
         return ok;
     }
 
@@ -976,12 +989,37 @@ public:
 
     FILE* file;
     int layout;
-    Mat samples, missing, varType, varIdx, responses, missingSubst;
+    Mat samples, missing, varType, varIdx, varSymbolFlags, responses, missingSubst;
     Mat sampleIdx, trainSampleIdx, testSampleIdx;
     Mat sampleWeights, catMap, catOfs;
     Mat normCatResponses, classLabels, classCounters;
     MapType nameMap;
 };
+
+void TrainData::getNames(std::vector<String>& names) const
+{
+    const TrainDataImpl* impl = dynamic_cast<const TrainDataImpl*>(this);
+    CV_Assert(impl != 0);
+    size_t n = impl->nameMap.size();
+    TrainDataImpl::MapType::const_iterator it = impl->nameMap.begin(),
+                                           it_end = impl->nameMap.end();
+    names.resize(n+1);
+    names[0] = "?";
+    for( ; it != it_end; ++it )
+    {
+        String s = it->first;
+        int label = it->second;
+        CV_Assert( label > 0 && label <= (int)n );
+        names[label] = s;
+    }
+}
+
+Mat TrainData::getVarSymbolFlags() const
+{
+    const TrainDataImpl* impl = dynamic_cast<const TrainDataImpl*>(this);
+    CV_Assert(impl != 0);
+    return impl->varSymbolFlags;
+}
 
 Ptr<TrainData> TrainData::loadFromCSV(const String& filename,
                                       int headerLines,

@@ -190,6 +190,7 @@ public:
     CV_WRAP virtual Mat getTestSampleWeights() const = 0;
     CV_WRAP virtual Mat getVarIdx() const = 0;
     CV_WRAP virtual Mat getVarType() const = 0;
+    CV_WRAP Mat getVarSymbolFlags() const;
     CV_WRAP virtual int getResponseType() const = 0;
     CV_WRAP virtual Mat getTrainSampleIdx() const = 0;
     CV_WRAP virtual Mat getTestSampleIdx() const = 0;
@@ -226,6 +227,9 @@ public:
 
     /** @brief Returns matrix of test samples */
     CV_WRAP Mat getTestSamples() const;
+
+    /** @brief Returns vector of symbolic names captured in loadFromCSV() */
+    CV_WRAP void getNames(std::vector<String>& names) const;
 
     CV_WRAP static Mat getSubVector(const Mat& vec, const Mat& idx);
 

@@ -355,7 +355,7 @@ public:
 
     /** @brief Detect %MSER regions
 
-    @param image input image (8UC1, 8UC3 or 8UC4)
+    @param image input image (8UC1, 8UC3 or 8UC4, must be greater or equal than 3x3)
     @param msers resulting list of point sets
     @param bboxes resulting bounding boxes
     */
@@ -1022,7 +1022,7 @@ protected:
 
 /** @brief Flann-based descriptor matcher.
 
-This matcher trains flann::Index_ on a train descriptor collection and calls its nearest search
+This matcher trains cv::flann::Index on a train descriptor collection and calls its nearest search
 methods to find the best matches. So, this matcher may be faster when matching a large train
 collection than the brute force matcher. FlannBasedMatcher does not support masking permissible
 matches of descriptor sets because flann::Index does not support this. :

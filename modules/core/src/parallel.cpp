@@ -149,13 +149,25 @@ namespace
     public:
         ParallelLoopBodyWrapper(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes)
         {
+
             body = &_body;
             wholeRange = _r;
             double len = wholeRange.end - wholeRange.start;
             nstripes = cvRound(_nstripes <= 0 ? len : MIN(MAX(_nstripes, 1.), len));
+
+#ifdef ENABLE_INSTRUMENTATION
+            pThreadRoot = cv::instr::getInstrumentTLSStruct().pCurrentNode;
+#endif
         }
         void operator()(const cv::Range& sr) const
         {
+#ifdef ENABLE_INSTRUMENTATION
+            {
+                cv::instr::InstrTLSStruct *pInstrTLS = &cv::instr::getInstrumentTLSStruct();
+                pInstrTLS->pCurrentNode = pThreadRoot; // Initialize TLS node for thread
+            }
+#endif
+
             cv::Range r;
             r.start = (int)(wholeRange.start +
                             ((uint64)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
@@ -169,6 +181,9 @@ namespace
         const cv::ParallelLoopBody* body;
         cv::Range wholeRange;
         int nstripes;
+#ifdef ENABLE_INSTRUMENTATION
+        cv::instr::InstrNode *pThreadRoot;
+#endif
     };
 
 #if defined HAVE_TBB
@@ -252,6 +267,8 @@ static SchedPtr pplScheduler;
 
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
+    CV_INSTRUMENT_REGION()
+
 #ifdef CV_PARALLEL_FRAMEWORK
 
     if(numThreads != 0)
@@ -504,7 +521,7 @@ int cv::getNumberOfCPUs(void)
 {
 #if defined WIN32 || defined _WIN32
     SYSTEM_INFO sysinfo;
-#if defined(_M_ARM) || defined(_M_X64) || defined(WINRT)
+#if (defined(_M_ARM) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );
 #else
     GetSystemInfo( &sysinfo );

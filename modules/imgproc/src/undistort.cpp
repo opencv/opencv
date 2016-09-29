@@ -182,6 +182,8 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
 void cv::undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
                     InputArray _distCoeffs, InputArray _newCameraMatrix )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
 

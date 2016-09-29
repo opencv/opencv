@@ -44,8 +44,6 @@
 
 using namespace std;
 
-#undef HAVE_IPP
-
 namespace {
 
 static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
@@ -205,12 +203,16 @@ namespace cv { namespace hal {
 
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(fastAtan32f, cv_hal_fastAtan32f, Y, X, angle, len, angleInDegrees);
     atanImpl<float>(Y, X, angle, len, angleInDegrees);
 }
 
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(fastAtan64f, cv_hal_fastAtan64f, Y, X, angle, len, angleInDegrees);
     atanImpl<double>(Y, X, angle, len, angleInDegrees);
 }
@@ -218,24 +220,17 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
 // deprecated
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
+    CV_INSTRUMENT_REGION()
+
     fastAtan32f(Y, X, angle, len, angleInDegrees);
 }
 
 void magnitude32f(const float* x, const float* y, float* mag, int len)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(magnitude32f, cv_hal_magnitude32f, x, y, mag, len);
-#if defined HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        IppStatus status = ippsMagnitude_32f(x, y, mag, len);
-        if (status >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0);
 
     int i = 0;
 
@@ -260,19 +255,10 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
 
 void magnitude64f(const double* x, const double* y, double* mag, int len)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(magnitude64f, cv_hal_magnitude64f, x, y, mag, len);
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        IppStatus status = ippsMagnitude_64f(x, y, mag, len);
-        if (status >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64f, x, y, mag, len) >= 0);
 
     int i = 0;
 
@@ -298,18 +284,10 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
 
 void invSqrt32f(const float* src, float* dst, int len)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(invSqrt32f, cv_hal_invSqrt32f, src, dst, len);
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsInvSqrt_32f_A21, src, dst, len) >= 0);
 
     int i = 0;
 
@@ -330,7 +308,11 @@ void invSqrt32f(const float* src, float* dst, int len)
 
 void invSqrt64f(const double* src, double* dst, int len)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(invSqrt64f, cv_hal_invSqrt64f, src, dst, len);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsInvSqrt_64f_A50, src, dst, len) >= 0);
+
     int i = 0;
 
 #if CV_SSE2
@@ -346,18 +328,10 @@ void invSqrt64f(const double* src, double* dst, int len)
 
 void sqrt32f(const float* src, float* dst, int len)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(sqrt32f, cv_hal_sqrt32f, src, dst, len);
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        if (ippsSqrt_32f_A21(src, dst, len) >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsSqrt_32f_A21, src, dst, len) >= 0);
 
     int i = 0;
 
@@ -378,18 +352,10 @@ void sqrt32f(const float* src, float* dst, int len)
 
 void sqrt64f(const double* src, double* dst, int len)
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(sqrt64f, cv_hal_sqrt64f, src, dst, len);
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        if (ippsSqrt_64f_A50(src, dst, len) >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsSqrt_64f_A50, src, dst, len) >= 0);
 
     int i = 0;
 
@@ -510,7 +476,11 @@ static const double exp_max_val = 3000.*(1 << EXPTAB_SCALE); // log10(DBL_MAX) <
 
 void exp32f( const float *_x, float *y, int n )
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(exp32f, cv_hal_exp32f, _x, y, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_32f_A21, _x, y, n) >= 0);
+
     static const float
     A4 = (float)(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
     A3 = (float)(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
@@ -710,7 +680,11 @@ void exp32f( const float *_x, float *y, int n )
 
 void exp64f( const double *_x, double *y, int n )
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(exp64f, cv_hal_exp64f, _x, y, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_64f_A50, _x, y, n) >= 0);
+
     static const double
     A5 = .99999999999999999998285227504999 / EXPPOLY_32F_A0,
     A4 = .69314718055994546743029643825322 / EXPPOLY_32F_A0,
@@ -1155,7 +1129,11 @@ static const double ln_2 = 0.69314718055994530941723212145818;
 
 void log32f( const float *_x, float *y, int n )
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(log32f, cv_hal_log32f, _x, y, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_32f_A21, _x, y, n) >= 0);
+
     static const float shift[] = { 0, -1.f/512 };
     static const float
     A0 = 0.3333333333333333333333333f,
@@ -1300,7 +1278,11 @@ void log32f( const float *_x, float *y, int n )
 
 void log64f( const double *x, double *y, int n )
 {
+    CV_INSTRUMENT_REGION()
+
     CALL_HAL(log64f, cv_hal_log64f, x, y, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_64f_A50, x, y, n) >= 0);
+
     static const double shift[] = { 0, -1./512 };
     static const double
     A7 = 1.0,

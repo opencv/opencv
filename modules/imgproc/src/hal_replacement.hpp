@@ -140,20 +140,16 @@ inline int hal_ni_filterFree(cvhalFilter2D *context) { return CV_HAL_ERROR_NOT_I
    @param dst_type destination image type
    @param kernel_type kernels type
    @param kernelx_data pointer to x-kernel data
-   @param kernelx_step x-kernel step
-   @param kernelx_width x-kernel width
-   @param kernelx_height x-kernel height
+   @param kernelx_length x-kernel vector length
    @param kernely_data pointer to y-kernel data
-   @param kernely_step y-kernel step
-   @param kernely_width y-kernel width
-   @param kernely_height y-kernel height
+   @param kernely_length y-kernel vector length
    @param anchor_x relative X position of center point within the kernel
    @param anchor_y relative Y position of center point within the kernel
    @param delta added to pixel values
    @param borderType border processing mode (CV_HAL_BORDER_REFLECT, ...)
    @sa cv::sepFilter2D, cv::hal::SepFilter2D
  */
-inline int hal_ni_sepFilterInit(cvhalFilter2D **context, int src_type, int dst_type, int kernel_type, uchar *kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height, uchar *kernely_data, size_t kernely_step, int kernely_width, int kernely_height, int anchor_x, int anchor_y, double delta, int borderType) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_sepFilterInit(cvhalFilter2D **context, int src_type, int dst_type, int kernel_type, uchar *kernelx_data, int kernelx_length, uchar *kernely_data, int kernely_length, int anchor_x, int anchor_y, double delta, int borderType) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
    @brief hal_sepFilter
    @param context pointer to user-defined context
@@ -267,7 +263,7 @@ inline int hal_ni_resize(int src_type, const uchar *src_data, size_t src_step, i
    @param dst_step destination image step
    @param dst_width destination image width
    @param dst_height destination image height
-   @param M 3x2 matrix with transform coefficients
+   @param M 2x3 matrix with transform coefficients
    @param interpolation interpolation mode (CV_HAL_INTER_NEAREST, ...)
    @param borderType border processing mode (CV_HAL_BORDER_REFLECT, ...)
    @param borderValue values to use for CV_HAL_BORDER_CONSTANT mode

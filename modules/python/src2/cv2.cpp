@@ -111,19 +111,6 @@ typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 
-#ifdef HAVE_OPENCV_FEATURES2D
-typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
-#endif
-
-#ifdef HAVE_OPENCV_FLANN
-typedef cvflann::flann_distance_t cvflann_flann_distance_t;
-typedef cvflann::flann_algorithm_t cvflann_flann_algorithm_t;
-#endif
-
-#ifdef HAVE_OPENCV_STITCHING
-typedef Stitcher::Status Status;
-#endif
-
 static PyObject* failmsgp(const char *fmt, ...)
 {
   char str[1000];
@@ -469,14 +456,6 @@ PyObject* pyopencv_from(const bool& value)
     return PyBool_FromLong(value);
 }
 
-#ifdef HAVE_OPENCV_STITCHING
-template<>
-PyObject* pyopencv_from(const Status& value)
-{
-    return PyInt_FromLong(value);
-}
-#endif
-
 template<>
 bool pyopencv_to(PyObject* obj, bool& value, const char* name)
 {
@@ -511,20 +490,6 @@ PyObject* pyopencv_from(const int& value)
 {
     return PyInt_FromLong(value);
 }
-
-#ifdef HAVE_OPENCV_FLANN
-template<>
-PyObject* pyopencv_from(const cvflann_flann_algorithm_t& value)
-{
-    return PyInt_FromLong(int(value));
-}
-
-template<>
-PyObject* pyopencv_from(const cvflann_flann_distance_t& value)
-{
-    return PyInt_FromLong(int(value));
-}
-#endif
 
 template<>
 bool pyopencv_to(PyObject* obj, int& value, const char* name)
@@ -1094,62 +1059,6 @@ PyObject* pyopencv_from(const Moments& m)
                          "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
 }
 
-#ifdef HAVE_OPENCV_FLANN
-template<>
-bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
-{
-    (void)name;
-    bool ok = true;
-    PyObject* key = NULL;
-    PyObject* item = NULL;
-    Py_ssize_t pos = 0;
-
-    if(PyDict_Check(o)) {
-        while(PyDict_Next(o, &pos, &key, &item)) {
-            if( !PyString_Check(key) ) {
-                ok = false;
-                break;
-            }
-
-            String k = PyString_AsString(key);
-            if( PyString_Check(item) )
-            {
-                const char* value = PyString_AsString(item);
-                p.setString(k, value);
-            }
-            else if( !!PyBool_Check(item) )
-                p.setBool(k, item == Py_True);
-            else if( PyInt_Check(item) )
-            {
-                int value = (int)PyInt_AsLong(item);
-                if( strcmp(k.c_str(), "algorithm") == 0 )
-                    p.setAlgorithm(value);
-                else
-                    p.setInt(k, value);
-            }
-            else if( PyFloat_Check(item) )
-            {
-                double value = PyFloat_AsDouble(item);
-                p.setDouble(k, value);
-            }
-            else
-            {
-                ok = false;
-                break;
-            }
-        }
-    }
-
-    return ok && !PyErr_Occurred();
-}
-
-template<>
-bool pyopencv_to(PyObject* obj, cv::flann::SearchParams & value, const char * name)
-{
-    return pyopencv_to<cv::flann::IndexParams>(obj, value, name);
-}
-#endif
-
 template <typename T>
 bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
 {
@@ -1157,45 +1066,7 @@ bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
     return pyopencv_to(o, *p, name);
 }
 
-#ifdef HAVE_OPENCV_FLANN
-template<>
-bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char *name)
-{
-    int d = (int)dist;
-    bool ok = pyopencv_to(o, d, name);
-    dist = (cvflann::flann_distance_t)d;
-    return ok;
-}
-#endif
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// TODO: REMOVE used only by ml wrapper
-
-template<>
-bool pyopencv_to(PyObject *obj, CvTermCriteria& dst, const char *name)
-{
-    (void)name;
-    if(!obj)
-        return true;
-    return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.max_iter, &dst.epsilon) > 0;
-}
-
-template<>
-bool pyopencv_to(PyObject* obj, CvSlice& r, const char* name)
-{
-    (void)name;
-    if(!obj || obj == Py_None)
-        return true;
-    if(PyObject_Size(obj) == 0)
-    {
-        r = CV_WHOLE_SEQ;
-        return true;
-    }
-    return PyArg_ParseTuple(obj, "ii", &r.start_index, &r.end_index) > 0;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "pyopencv_custom_headers.h"
 
 static void OnMouse(int event, int x, int y, int flags, void* param)
 {

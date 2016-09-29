@@ -594,6 +594,8 @@ static void fitLine3D( Point3f * points, int count, int dist,
 void cv::fitLine( InputArray _points, OutputArray _line, int distType,
                  double param, double reps, double aeps )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat points = _points.getMat();
 
     float linebuf[6]={0.f};
