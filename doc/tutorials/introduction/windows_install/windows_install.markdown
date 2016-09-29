@@ -83,9 +83,8 @@ of them, you need to download and install them on your system.
     more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
 -   [OpenEXR](http://www.openexr.com/downloads.html) source files are required for the library to work with this high dynamic range (HDR)
     image file format.
--   The [OpenNI Framework](http://www.openni.org/) contains a set of open source APIs that provide support for natural
-    interaction with devices via methods such as voice command recognition, hand gestures and body
-    motion tracking.
+-   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures and body
+    motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
 -   [Miktex]( http://miktex.org/2.9/setup) is the best [TEX](https://secure.wikimedia.org/wikipedia/en/wiki/TeX) implementation on
     the Windows OS. It is required to build the *OpenCV documentation*.
 -   [Sphinx](http://sphinx.pocoo.org/) is a python documentation generator and is the tool that will actually create the
