@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_SHAPE_HPP__
-#define __OPENCV_SHAPE_HPP__
+#ifndef OPENCV_SHAPE_HPP
+#define OPENCV_SHAPE_HPP
 
 #include "opencv2/shape/emdL1.hpp"
 #include "opencv2/shape/shape_transformer.hpp"

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_FAST_MARCHING_HPP__
-#define __OPENCV_VIDEOSTAB_FAST_MARCHING_HPP__
+#ifndef _OPENCV_VIDEOSTAB_FAST_MARCHING_HPP_
+#define _OPENCV_VIDEOSTAB_FAST_MARCHING_HPP_
 
 #include <cmath>
 #include <queue>

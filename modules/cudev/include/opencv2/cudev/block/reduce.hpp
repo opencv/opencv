@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_BLOCK_REDUCE_HPP__
-#define __OPENCV_CUDEV_BLOCK_REDUCE_HPP__
+#ifndef OPENCV_CUDEV_BLOCK_REDUCE_HPP
+#define OPENCV_CUDEV_BLOCK_REDUCE_HPP
 
 #include "../common.hpp"
 #include "../util/tuple.hpp"

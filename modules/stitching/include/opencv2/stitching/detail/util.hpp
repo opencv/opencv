@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_UTIL_HPP__
-#define __OPENCV_STITCHING_UTIL_HPP__
+#ifndef OPENCV_STITCHING_UTIL_HPP
+#define OPENCV_STITCHING_UTIL_HPP
 
 #include <list>
 #include "opencv2/core.hpp"
@@ -118,4 +118,4 @@ CV_EXPORTS int& stitchingLogLevel();
 
 #include "util_inl.hpp"
 
-#endif // __OPENCV_STITCHING_UTIL_HPP__
+#endif // OPENCV_STITCHING_UTIL_HPP

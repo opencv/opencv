@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_MAT_HPP__
-#define __OPENCV_CORE_MAT_HPP__
+#ifndef _OPENCV_CORE_MAT_HPP
+#define _OPENCV_CORE_MAT_HPP
 
 #ifndef __cplusplus
 #  error mat.hpp header must be compiled as C++
@@ -3459,4 +3459,4 @@ CV_EXPORTS MatExpr abs(const MatExpr& e);
 
 #include "opencv2/core/mat.inl.hpp"
 
-#endif // __OPENCV_CORE_MAT_HPP__
+#endif // _OPENCV_CORE_MAT_HPP
