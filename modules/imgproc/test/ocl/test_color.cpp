@@ -355,8 +355,8 @@ struct CvtColor_YUV2RGB_420 :
         Size roiSize = randomSize(1, MAX_VALUE);
         roiSize.width *= 2;
         roiSize.height *= 3;
-        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, roiSize, srcBorder, srcType, 2, 100);
+        Border srcBorder = randomBorder(16, use_roi ? 236 : 16);
+        randomSubMat(src, src_roi, roiSize, srcBorder, srcType, 16, 236);
 
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, dstType, 5, 16);
@@ -366,22 +366,22 @@ struct CvtColor_YUV2RGB_420 :
     }
 };
 
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_NV12) { performTest(1, 4, CVTCODE(YUV2RGBA_NV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_NV12) { performTest(1, 4, CVTCODE(YUV2BGRA_NV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_NV12) { performTest(1, 3, CVTCODE(YUV2RGB_NV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_NV12) { performTest(1, 3, CVTCODE(YUV2BGR_NV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_NV21) { performTest(1, 4, CVTCODE(YUV2RGBA_NV21)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_NV21) { performTest(1, 4, CVTCODE(YUV2BGRA_NV21)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_NV21) { performTest(1, 3, CVTCODE(YUV2RGB_NV21)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_NV21) { performTest(1, 3, CVTCODE(YUV2BGR_NV21)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_NV12) { performTest(1, 4, CVTCODE(YUV2RGBA_NV12), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_NV12) { performTest(1, 4, CVTCODE(YUV2BGRA_NV12), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_NV12) { performTest(1, 3, CVTCODE(YUV2RGB_NV12), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_NV12) { performTest(1, 3, CVTCODE(YUV2BGR_NV12), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_NV21) { performTest(1, 4, CVTCODE(YUV2RGBA_NV21), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_NV21) { performTest(1, 4, CVTCODE(YUV2BGRA_NV21), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_NV21) { performTest(1, 3, CVTCODE(YUV2RGB_NV21), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_NV21) { performTest(1, 3, CVTCODE(YUV2BGR_NV21), 3); }
 OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_YV12) { performTest(1, 4, CVTCODE(YUV2RGBA_YV12)); }
 OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_YV12) { performTest(1, 4, CVTCODE(YUV2BGRA_YV12)); }
 OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_YV12) { performTest(1, 3, CVTCODE(YUV2RGB_YV12)); }
 OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_YV12) { performTest(1, 3, CVTCODE(YUV2BGR_YV12)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_IYUV) { performTest(1, 4, CVTCODE(YUV2RGBA_IYUV)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_IYUV) { performTest(1, 4, CVTCODE(YUV2BGRA_IYUV)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_IYUV) { performTest(1, 3, CVTCODE(YUV2RGB_IYUV)); }
-OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_IYUV) { performTest(1, 3, CVTCODE(YUV2BGR_IYUV)); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGBA_IYUV) { performTest(1, 4, CVTCODE(YUV2RGBA_IYUV), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGRA_IYUV) { performTest(1, 4, CVTCODE(YUV2BGRA_IYUV), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2RGB_IYUV) { performTest(1, 3, CVTCODE(YUV2RGB_IYUV), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2BGR_IYUV) { performTest(1, 3, CVTCODE(YUV2BGR_IYUV), 3); }
 OCL_TEST_P(CvtColor_YUV2RGB_420, YUV2GRAY_420) { performTest(1, 1, CVTCODE(YUV2GRAY_420)); }
 
 // RGBA -> YUV420
@@ -431,8 +431,8 @@ struct CvtColor_YUV2RGB_422 :
         Size roiSize = randomSize(1, MAX_VALUE);
         roiSize.width *= 2;
 
-        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, roiSize, srcBorder, srcType, 2, 100);
+        Border srcBorder = randomBorder(16, use_roi ? 236 : 16);
+        randomSubMat(src, src_roi, roiSize, srcBorder, srcType, 16, 236);
 
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, dstType, 5, 16);
@@ -442,18 +442,18 @@ struct CvtColor_YUV2RGB_422 :
     }
 };
 
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGB_UYVY) { performTest(2, 3, CVTCODE(YUV2RGB_UYVY)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGR_UYVY) { performTest(2, 3, CVTCODE(YUV2BGR_UYVY)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGBA_UYVY) { performTest(2, 4, CVTCODE(YUV2RGBA_UYVY)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGRA_UYVY) { performTest(2, 4, CVTCODE(YUV2BGRA_UYVY)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGB_YUY2) { performTest(2, 3, CVTCODE(YUV2RGB_YUY2)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGR_YUY2) { performTest(2, 3, CVTCODE(YUV2BGR_YUY2)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGBA_YUY2) { performTest(2, 4, CVTCODE(YUV2RGBA_YUY2)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGRA_YUY2) { performTest(2, 4, CVTCODE(YUV2BGRA_YUY2)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGB_YVYU) { performTest(2, 3, CVTCODE(YUV2RGB_YVYU)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGR_YVYU) { performTest(2, 3, CVTCODE(YUV2BGR_YVYU)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGBA_YVYU) { performTest(2, 4, CVTCODE(YUV2RGBA_YVYU)); }
-OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGRA_YVYU) { performTest(2, 4, CVTCODE(YUV2BGRA_YVYU)); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGB_UYVY) { performTest(2, 3, CVTCODE(YUV2RGB_UYVY), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGR_UYVY) { performTest(2, 3, CVTCODE(YUV2BGR_UYVY), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGBA_UYVY) { performTest(2, 4, CVTCODE(YUV2RGBA_UYVY), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGRA_UYVY) { performTest(2, 4, CVTCODE(YUV2BGRA_UYVY), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGB_YUY2) { performTest(2, 3, CVTCODE(YUV2RGB_YUY2), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGR_YUY2) { performTest(2, 3, CVTCODE(YUV2BGR_YUY2), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGBA_YUY2) { performTest(2, 4, CVTCODE(YUV2RGBA_YUY2), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGRA_YUY2) { performTest(2, 4, CVTCODE(YUV2BGRA_YUY2), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGB_YVYU) { performTest(2, 3, CVTCODE(YUV2RGB_YVYU), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGR_YVYU) { performTest(2, 3, CVTCODE(YUV2BGR_YVYU), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGBA_YVYU) { performTest(2, 4, CVTCODE(YUV2RGBA_YVYU), 3); }
+OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGRA_YVYU) { performTest(2, 4, CVTCODE(YUV2BGRA_YVYU), 3); }
 
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor8u,

@@ -9,7 +9,7 @@ using namespace std;
 typedef Vec3b YUV;
 typedef Vec3b RGB;
 
-int countOfDifferencies(const Mat& gold, const Mat& result, int maxAllowedDifference = 1)
+int countOfDifferencies(const Mat& gold, const Mat& result, int maxAllowedDifference = 3)
 {
     Mat diff;
     absdiff(gold, result, diff);
@@ -648,7 +648,7 @@ TEST_P(Imgproc_ColorYUV, accuracy)
         Mat dst = Mat(dstSize.height, dstSize.width * dcn, CV_8UC1).reshape(dcn);
         Mat gold(dstSize, CV_8UC(dcn));
 
-        random.fill(src, RNG::UNIFORM, 0, 256);
+        random.fill(src, RNG::UNIFORM, 16, 236);
 
         if(cvt.rgbWriter_)
             referenceYUV2RGB<YUV2RGB_Converter>  (src, gold, cvt.yuvReader_, cvt.rgbWriter_);
@@ -691,7 +691,7 @@ TEST_P(Imgproc_ColorYUV, roi_accuracy)
         Mat dst_full(dstSize.height  + roi_offset_left + roi_offset_right, dstSize.width + roi_offset_top + roi_offset_bottom, CV_8UC(dcn), Scalar::all(0));
         Mat gold_full(dst_full.size(), CV_8UC(dcn), Scalar::all(0));
 
-        random.fill(src_full, RNG::UNIFORM, 0, 256);
+        random.fill(src_full, RNG::UNIFORM, 16, 236);
 
         Mat src = src_full(Range(roi_offset_top, roi_offset_top + srcSize.height), Range(roi_offset_left, roi_offset_left + srcSize.width));
         Mat dst = dst_full(Range(roi_offset_left, roi_offset_left + dstSize.height), Range(roi_offset_top, roi_offset_top + dstSize.width));
