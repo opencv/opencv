@@ -1347,7 +1347,7 @@ class JavaWrapperGenerator(object):
                 ret = "return (jlong) new %s(_retval_);" % self.fullTypeName(fi.ctype)
             elif fi.ctype.startswith('Ptr_'):
                 c_prologue.append("typedef Ptr<%s> %s;" % (self.fullTypeName(fi.ctype[4:]), fi.ctype))
-                ret = "%(ctype)s* curval = new %(ctype)s(_retval_);return (jlong)curval->get();" % { 'ctype':fi.ctype }
+                ret = "return (jlong)(new %(ctype)s(_retval_));" % { 'ctype':fi.ctype }
             elif self.isWrapped(ret_type): # pointer to wrapped class:
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
@@ -1538,7 +1538,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         '''
         Check if class stores Ptr<T>* instead of T* in nativeObj field
         '''
-        return False
+        return self.isWrapped(classname)
 
     def smartWrap(self, name, fullname):
         '''
