@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_TEST_UTILITY_HPP__
-#define __OPENCV_CUDA_TEST_UTILITY_HPP__
+#ifndef OPENCV_CUDA_TEST_UTILITY_HPP
+#define OPENCV_CUDA_TEST_UTILITY_HPP
 
 #include <stdexcept>
 #include "cvconfig.h"
@@ -363,4 +363,4 @@ namespace cv { namespace cuda
 #endif // HAVE_CUDA
 
 
-#endif // __OPENCV_CUDA_TEST_UTILITY_HPP__
+#endif // OPENCV_CUDA_TEST_UTILITY_HPP

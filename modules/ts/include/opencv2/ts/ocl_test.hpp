@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_TS_OCL_TEST_HPP__
-#define __OPENCV_TS_OCL_TEST_HPP__
+#ifndef OPENCV_TS_OCL_TEST_HPP
+#define OPENCV_TS_OCL_TEST_HPP
 
 #include "opencv2/opencv_modules.hpp"
 
@@ -364,4 +364,4 @@ CV_ENUM(BorderType, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WR
 
 } } // namespace cvtest::ocl
 
-#endif // __OPENCV_TS_OCL_TEST_HPP__
+#endif // OPENCV_TS_OCL_TEST_HPP

@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_OPERATIONS_HPP__
-#define __OPENCV_CORE_OPERATIONS_HPP__
+#ifndef OPENCV_CORE_OPERATIONS_HPP
+#define OPENCV_CORE_OPERATIONS_HPP
 
 #ifndef __cplusplus
 #  error operations.hpp header must be compiled as C++

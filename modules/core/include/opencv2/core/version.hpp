@@ -47,8 +47,8 @@
   Usefull to test in user programs
 */
 
-#ifndef __OPENCV_VERSION_HPP__
-#define __OPENCV_VERSION_HPP__
+#ifndef OPENCV_VERSION_HPP
+#define OPENCV_VERSION_HPP
 
 #define CV_VERSION_MAJOR    3
 #define CV_VERSION_MINOR    1

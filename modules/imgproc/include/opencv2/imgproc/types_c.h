@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_IMGPROC_TYPES_C_H__
-#define __OPENCV_IMGPROC_TYPES_C_H__
+#ifndef OPENCV_IMGPROC_TYPES_C_H
+#define OPENCV_IMGPROC_TYPES_C_H
 
 #include "opencv2/core/core_c.h"
 

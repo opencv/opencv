@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_TYPES_HPP__
-#define __OPENCV_CORE_TYPES_HPP__
+#ifndef OPENCV_CORE_TYPES_HPP
+#define OPENCV_CORE_TYPES_HPP
 
 #ifndef __cplusplus
 #  error types.hpp header must be compiled as C++
@@ -2237,4 +2237,4 @@ TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
 
 } // cv
 
-#endif //__OPENCV_CORE_TYPES_HPP__
+#endif //OPENCV_CORE_TYPES_HPP

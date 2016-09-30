@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HIGHGUI_HPP__
-#define __OPENCV_HIGHGUI_HPP__
+#ifndef OPENCV_HIGHGUI_HPP
+#define OPENCV_HIGHGUI_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"

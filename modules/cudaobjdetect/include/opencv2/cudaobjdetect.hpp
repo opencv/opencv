@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDAOBJDETECT_HPP__
-#define __OPENCV_CUDAOBJDETECT_HPP__
+#ifndef OPENCV_CUDAOBJDETECT_HPP
+#define OPENCV_CUDAOBJDETECT_HPP
 
 #ifndef __cplusplus
 #  error cudaobjdetect.hpp header must be compiled as C++
@@ -285,4 +285,4 @@ public:
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_CUDAOBJDETECT_HPP__ */
+#endif /* OPENCV_CUDAOBJDETECT_HPP */

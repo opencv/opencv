@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_HPP__
-#define __OPENCV_CUDEV_HPP__
+#ifndef OPENCV_CUDEV_HPP
+#define OPENCV_CUDEV_HPP
 
 #include "cudev/common.hpp"
 

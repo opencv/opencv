@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OPTIM_HPP__
-#define __OPENCV_OPTIM_HPP__
+#ifndef OPENCV_OPTIM_HPP
+#define OPENCV_OPTIM_HPP
 
 #include "opencv2/core.hpp"
 
