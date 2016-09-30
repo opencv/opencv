@@ -1271,7 +1271,7 @@ Morphological gradient:
 
     \texttt{dst} = \mathrm{blackhat} ( \texttt{src} , \texttt{element} )= \mathrm{close} ( \texttt{src} , \texttt{element} )- \texttt{src}
 
-"Hit and Miss": Only supported for CV_8UC1 binary images. Tutorial can be found in this page: http://opencv-code.com/tutorials/hit-or-miss-transform-in-opencv/
+"Hit and Miss": Only supported for CV_8UC1 binary images. Tutorial can be found in this page: https://web.archive.org/web/20160316070407/http://opencv-code.com/tutorials/hit-or-miss-transform-in-opencv/
 
 Any of the operations can be done in-place. In case of multi-channel images, each channel is processed independently.
 
