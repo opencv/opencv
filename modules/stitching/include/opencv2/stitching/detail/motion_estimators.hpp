@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_MOTION_ESTIMATORS_HPP__
-#define __OPENCV_STITCHING_MOTION_ESTIMATORS_HPP__
+#ifndef OPENCV_STITCHING_MOTION_ESTIMATORS_HPP
+#define OPENCV_STITCHING_MOTION_ESTIMATORS_HPP
 
 #include "opencv2/core.hpp"
 #include "matchers.hpp"
@@ -271,4 +271,4 @@ void CV_EXPORTS findMaxSpanningTree(
 } // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_MOTION_ESTIMATORS_HPP__
+#endif // OPENCV_STITCHING_MOTION_ESTIMATORS_HPP

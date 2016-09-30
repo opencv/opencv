@@ -5,8 +5,8 @@
 // Copyright (C) 2014, Intel, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef __OPENCV_TS_EXT_HPP__
-#define __OPENCV_TS_EXT_HPP__
+#ifndef OPENCV_TS_EXT_HPP
+#define OPENCV_TS_EXT_HPP
 
 void checkIppStatus();
 
@@ -89,4 +89,4 @@ void checkIppStatus();
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
-#endif  // __OPENCV_TS_EXT_HPP__
+#endif  // OPENCV_TS_EXT_HPP

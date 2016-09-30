@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CVSTDINL_HPP__
-#define __OPENCV_CORE_CVSTDINL_HPP__
+#ifndef OPENCV_CORE_CVSTDINL_HPP
+#define OPENCV_CORE_CVSTDINL_HPP
 
 #ifndef OPENCV_NOSTL
 #  include <complex>
@@ -264,4 +264,4 @@ std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
 
 //! @endcond
 
-#endif // __OPENCV_CORE_CVSTDINL_HPP__
+#endif // OPENCV_CORE_CVSTDINL_HPP

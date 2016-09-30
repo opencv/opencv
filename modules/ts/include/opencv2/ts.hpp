@@ -1,5 +1,5 @@
-#ifndef __OPENCV_GTESTCV_HPP__
-#define __OPENCV_GTESTCV_HPP__
+#ifndef OPENCV_GTESTCV_HPP
+#define OPENCV_GTESTCV_HPP
 
 #include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list

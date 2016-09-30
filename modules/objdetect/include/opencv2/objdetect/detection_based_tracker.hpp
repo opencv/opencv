@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OBJDETECT_DBT_HPP__
-#define __OPENCV_OBJDETECT_DBT_HPP__
+#ifndef OPENCV_OBJDETECT_DBT_HPP
+#define OPENCV_OBJDETECT_DBT_HPP
 
 // After this condition removal update blacklist for bindings: modules/python/common.cmake
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__) || \

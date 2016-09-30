@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_SUPERRES_HPP__
-#define __OPENCV_SUPERRES_HPP__
+#ifndef OPENCV_SUPERRES_HPP
+#define OPENCV_SUPERRES_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/superres/optical_flow.hpp"
@@ -204,4 +204,4 @@ namespace cv
     }
 }
 
-#endif // __OPENCV_SUPERRES_HPP__
+#endif // OPENCV_SUPERRES_HPP
