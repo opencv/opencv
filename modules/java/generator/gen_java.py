@@ -808,7 +808,7 @@ class ClassInfo(GeneralInfo):
             self.imports.add("java.util.ArrayList")
             self.addImports(ctype.replace('vector_vector', 'vector'))
         elif ctype.startswith('Feature2D'):
-            self.imports.add("org.opencv.features2d.Feature2D")            
+            self.imports.add("org.opencv.features2d.Feature2D")
         elif ctype.startswith('vector'):
             self.imports.add("org.opencv.core.Mat")
             self.imports.add('java.util.ArrayList')
