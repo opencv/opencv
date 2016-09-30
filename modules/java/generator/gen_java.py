@@ -807,6 +807,8 @@ class ClassInfo(GeneralInfo):
             self.imports.add("java.util.List")
             self.imports.add("java.util.ArrayList")
             self.addImports(ctype.replace('vector_vector', 'vector'))
+        elif ctype.startswith('Feature2D'):
+            self.imports.add("org.opencv.features2d.Feature2D")            
         elif ctype.startswith('vector'):
             self.imports.add("org.opencv.core.Mat")
             self.imports.add('java.util.ArrayList')
@@ -1347,7 +1349,7 @@ class JavaWrapperGenerator(object):
                 ret = "return (jlong) new %s(_retval_);" % self.fullTypeName(fi.ctype)
             elif fi.ctype.startswith('Ptr_'):
                 c_prologue.append("typedef Ptr<%s> %s;" % (self.fullTypeName(fi.ctype[4:]), fi.ctype))
-                ret = "%(ctype)s* curval = new %(ctype)s(_retval_);return (jlong)curval->get();" % { 'ctype':fi.ctype }
+                ret = "%(ctype)s* curval = new %(ctype)s(_retval_);return (jlong)curval;" % { 'ctype':fi.ctype }
             elif self.isWrapped(ret_type): # pointer to wrapped class:
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
