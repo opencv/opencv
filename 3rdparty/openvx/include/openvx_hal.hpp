@@ -479,11 +479,15 @@ inline int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int a
 
         int mode;
         if (interpolation == CV_HAL_INTER_LINEAR)
+        {
             mode = VX_INTERPOLATION_BILINEAR;
+            if (inv_scale_x > 1 || inv_scale_y > 1)
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
         else if (interpolation == CV_HAL_INTER_AREA)
-            mode = VX_INTERPOLATION_AREA;
+            return CV_HAL_ERROR_NOT_IMPLEMENTED; //mode = VX_INTERPOLATION_AREA;
         else if (interpolation == CV_HAL_INTER_NEAREST)
-            mode = VX_INTERPOLATION_NEAREST_NEIGHBOR;
+            return CV_HAL_ERROR_NOT_IMPLEMENTED; //mode = VX_INTERPOLATION_NEAREST_NEIGHBOR;
         else
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
