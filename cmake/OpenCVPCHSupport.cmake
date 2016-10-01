@@ -291,6 +291,14 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
 
     ADD_PRECOMPILED_HEADER_TO_TARGET(${_targetName} ${_input}  ${_output} ${_dowarn})
 
+
+    GET_TARGET_PROPERTY(oldProps ${_targetName} COMPILE_FLAGS)
+    if (oldProps MATCHES NOTFOUND)
+        SET(oldProps "")
+    endif()
+    SET(newProperties "${oldProps} -include \"${CMAKE_CURRENT_BINARY_DIR}/${_name}\"")
+    SET_TARGET_PROPERTIES(${_targetName} PROPERTIES COMPILE_FLAGS "${newProperties}")
+
 ENDMACRO(ADD_PRECOMPILED_HEADER)
 
 
