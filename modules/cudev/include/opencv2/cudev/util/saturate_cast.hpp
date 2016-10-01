@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP__
-#define __OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP__
+#ifndef OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP
+#define OPENCV_CUDEV_UTIL_SATURATE_CAST_HPP
 
 #include "../common.hpp"
 

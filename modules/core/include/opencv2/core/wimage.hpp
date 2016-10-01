@@ -39,8 +39,8 @@
 /////////////////////////////////////////////////////////////////////////////////
 //M*/
 
-#ifndef __OPENCV_CORE_WIMAGE_HPP__
-#define __OPENCV_CORE_WIMAGE_HPP__
+#ifndef OPENCV_CORE_WIMAGE_HPP
+#define OPENCV_CORE_WIMAGE_HPP
 
 #include "opencv2/core/core_c.h"
 

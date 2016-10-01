@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_BLENDERS_HPP__
-#define __OPENCV_STITCHING_BLENDERS_HPP__
+#ifndef OPENCV_STITCHING_BLENDERS_HPP
+#define OPENCV_STITCHING_BLENDERS_HPP
 
 #if defined(NO)
 #  warning Detected Apple 'NO' macro definition, it can cause build conflicts. Please, include this header before any Apple headers.
@@ -164,4 +164,4 @@ void CV_EXPORTS restoreImageFromLaplacePyrGpu(std::vector<UMat>& pyr);
 } // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_BLENDERS_HPP__
+#endif // OPENCV_STITCHING_BLENDERS_HPP

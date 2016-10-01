@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_WARPERS_INL_HPP__
-#define __OPENCV_STITCHING_WARPERS_INL_HPP__
+#ifndef OPENCV_STITCHING_WARPERS_INL_HPP
+#define OPENCV_STITCHING_WARPERS_INL_HPP
 
 #include "opencv2/core.hpp"
 #include "warpers.hpp" // Make your IDE see declarations
@@ -771,4 +771,4 @@ void PlanePortraitProjector::mapBackward(float u0, float v0, float &x, float &y)
 
 //! @endcond
 
-#endif // __OPENCV_STITCHING_WARPERS_INL_HPP__
+#endif // OPENCV_STITCHING_WARPERS_INL_HPP

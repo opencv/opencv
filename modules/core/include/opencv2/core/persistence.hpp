@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_PERSISTENCE_HPP__
-#define __OPENCV_CORE_PERSISTENCE_HPP__
+#ifndef OPENCV_CORE_PERSISTENCE_HPP
+#define OPENCV_CORE_PERSISTENCE_HPP
 
 #ifndef __cplusplus
 #  error persistence.hpp header must be compiled as C++
@@ -1261,4 +1261,4 @@ CV_EXPORTS void cvWriteMatND_Base64(::CvFileStorage* fs, const char* name, const
 
 } // cv
 
-#endif // __OPENCV_CORE_PERSISTENCE_HPP__
+#endif // OPENCV_CORE_PERSISTENCE_HPP

@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_INTRIN_CPP_HPP__
-#define __OPENCV_HAL_INTRIN_CPP_HPP__
+#ifndef OPENCV_HAL_INTRIN_CPP_HPP
+#define OPENCV_HAL_INTRIN_CPP_HPP
 
 #include <limits>
 #include <cstring>

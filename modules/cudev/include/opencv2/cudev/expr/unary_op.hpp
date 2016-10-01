@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_UNARY_OP_HPP__
-#define __OPENCV_CUDEV_EXPR_UNARY_OP_HPP__
+#ifndef OPENCV_CUDEV_EXPR_UNARY_OP_HPP
+#define OPENCV_CUDEV_EXPR_UNARY_OP_HPP
 
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"

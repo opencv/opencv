@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_HPP__
-#define __OPENCV_VIDEOSTAB_HPP__
+#ifndef OPENCV_VIDEOSTAB_HPP
+#define OPENCV_VIDEOSTAB_HPP
 
 /**
   @defgroup videostab Video Stabilization

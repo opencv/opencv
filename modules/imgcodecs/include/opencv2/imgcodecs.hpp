@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_IMGCODECS_HPP__
-#define __OPENCV_IMGCODECS_HPP__
+#ifndef OPENCV_IMGCODECS_HPP
+#define OPENCV_IMGCODECS_HPP
 
 #include "opencv2/core.hpp"
 
@@ -275,4 +275,4 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
 
 } // cv
 
-#endif //__OPENCV_IMGCODECS_HPP__
+#endif //OPENCV_IMGCODECS_HPP

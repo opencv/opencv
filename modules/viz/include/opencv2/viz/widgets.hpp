@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_WIDGETS_HPP__
-#define __OPENCV_VIZ_WIDGETS_HPP__
+#ifndef OPENCV_VIZ_WIDGETS_HPP
+#define OPENCV_VIZ_WIDGETS_HPP
 
 #include <opencv2/viz/types.hpp>
 
