@@ -795,7 +795,7 @@ class ClassInfo(GeneralInfo):
             self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.jname, "")
 
     def __repr__(self):
-        return Template("CLASS $namespace.$classpath.$name : $base").substitute(**self.__dict__)
+        return Template("CLASS $namespace::$classpath.$name : $base").substitute(**self.__dict__)
 
     def getAllImports(self, module):
         return ["import %s;" % c for c in sorted(self.imports) if not c.startswith('org.opencv.'+module)]
@@ -1347,7 +1347,7 @@ class JavaWrapperGenerator(object):
                 ret = "return (jlong) new %s(_retval_);" % self.fullTypeName(fi.ctype)
             elif fi.ctype.startswith('Ptr_'):
                 c_prologue.append("typedef Ptr<%s> %s;" % (self.fullTypeName(fi.ctype[4:]), fi.ctype))
-                ret = "%(ctype)s* curval = new %(ctype)s(_retval_);return (jlong)curval->get();" % { 'ctype':fi.ctype }
+                ret = "return (jlong)(new %(ctype)s(_retval_));" % { 'ctype':fi.ctype }
             elif self.isWrapped(ret_type): # pointer to wrapped class:
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
@@ -1406,6 +1406,8 @@ class JavaWrapperGenerator(object):
             clazz = ci.jname
             cpp_code.write ( Template( \
 """
+${namespace}
+
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname ($argst);
 
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
@@ -1440,6 +1442,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         cvargs = ", ".join(cvargs), \
         default = default, \
         retval = retval, \
+        namespace = ('using namespace ' + ci.namespace.replace('.', '::') + ';') if ci.namespace else ''
     ) )
 
             # processing args with default values
@@ -1535,7 +1538,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         '''
         Check if class stores Ptr<T>* instead of T* in nativeObj field
         '''
-        return self.isWrapped(classname) and self.classes[classname].base
+        return self.isWrapped(classname)
 
     def smartWrap(self, name, fullname):
         '''
