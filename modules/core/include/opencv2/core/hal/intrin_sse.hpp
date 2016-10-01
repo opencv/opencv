@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_SSE_HPP__
-#define __OPENCV_HAL_SSE_HPP__
+#ifndef OPENCV_HAL_SSE_HPP
+#define OPENCV_HAL_SSE_HPP
 
 #include <algorithm>
 

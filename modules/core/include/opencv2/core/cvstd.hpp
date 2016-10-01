@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CVSTD_HPP__
-#define __OPENCV_CORE_CVSTD_HPP__
+#ifndef OPENCV_CORE_CVSTD_HPP
+#define OPENCV_CORE_CVSTD_HPP
 
 #ifndef __cplusplus
 #  error cvstd.hpp header must be compiled as C++
@@ -1063,4 +1063,4 @@ namespace cv
 
 #include "opencv2/core/ptr.inl.hpp"
 
-#endif //__OPENCV_CORE_CVSTD_HPP__
+#endif //OPENCV_CORE_CVSTD_HPP

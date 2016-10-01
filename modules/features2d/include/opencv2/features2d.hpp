@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_FEATURES_2D_HPP__
-#define __OPENCV_FEATURES_2D_HPP__
+#ifndef OPENCV_FEATURES_2D_HPP
+#define OPENCV_FEATURES_2D_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/flann/miniflann.hpp"

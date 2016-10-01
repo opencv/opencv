@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_AFFINE3_HPP__
-#define __OPENCV_CORE_AFFINE3_HPP__
+#ifndef OPENCV_CORE_AFFINE3_HPP
+#define OPENCV_CORE_AFFINE3_HPP
 
 #ifdef __cplusplus
 
@@ -514,4 +514,4 @@ cv::Affine3<T>::operator Eigen::Transform<T, 3, Eigen::Affine>() const
 
 #endif /* __cplusplus */
 
-#endif /* __OPENCV_CORE_AFFINE3_HPP__ */
+#endif /* OPENCV_CORE_AFFINE3_HPP */

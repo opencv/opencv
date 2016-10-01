@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_TRAITS_HPP__
-#define __OPENCV_CORE_TRAITS_HPP__
+#ifndef OPENCV_CORE_TRAITS_HPP
+#define OPENCV_CORE_TRAITS_HPP
 
 #include "opencv2/core/cvdef.h"
 
@@ -323,4 +323,4 @@ template<> class TypeDepth<CV_64F>
 
 } // cv
 
-#endif // __OPENCV_CORE_TRAITS_HPP__
+#endif // OPENCV_CORE_TRAITS_HPP

@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_UTILITY_H__
-#define __OPENCV_CORE_UTILITY_H__
+#ifndef OPENCV_CORE_UTILITY_H
+#define OPENCV_CORE_UTILITY_H
 
 #ifndef __cplusplus
 #  error utility.hpp header must be compiled as C++
@@ -1149,4 +1149,4 @@ CV_EXPORTS FLAGS      getFlags();
 #include "opencv2/core/core_c.h"
 #endif
 
-#endif //__OPENCV_CORE_UTILITY_H__
+#endif //OPENCV_CORE_UTILITY_H

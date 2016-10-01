@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_HPP__
-#define __OPENCV_CORE_HPP__
+#ifndef OPENCV_CORE_HPP
+#define OPENCV_CORE_HPP
 
 #ifndef __cplusplus
 #  error core.hpp header must be compiled as C++
@@ -3197,4 +3197,4 @@ template<> struct ParamType<uchar>
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/optim.hpp"
 
-#endif /*__OPENCV_CORE_HPP__*/
+#endif /*OPENCV_CORE_HPP*/

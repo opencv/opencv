@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CVDEF_H__
-#define __OPENCV_CORE_CVDEF_H__
+#ifndef OPENCV_CORE_CVDEF_H
+#define OPENCV_CORE_CVDEF_H
 
 //! @addtogroup core_utils
 //! @{
@@ -483,4 +483,4 @@ Cv64suf;
 
 //! @}
 
-#endif // __OPENCV_CORE_CVDEF_H__
+#endif // OPENCV_CORE_CVDEF_H

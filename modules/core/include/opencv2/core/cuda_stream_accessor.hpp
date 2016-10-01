@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CUDA_STREAM_ACCESSOR_HPP__
-#define __OPENCV_CORE_CUDA_STREAM_ACCESSOR_HPP__
+#ifndef OPENCV_CORE_CUDA_STREAM_ACCESSOR_HPP
+#define OPENCV_CORE_CUDA_STREAM_ACCESSOR_HPP
 
 #ifndef __cplusplus
 #  error cuda_stream_accessor.hpp header must be compiled as C++
@@ -83,4 +83,4 @@ namespace cv
     }
 }
 
-#endif /* __OPENCV_CORE_CUDA_STREAM_ACCESSOR_HPP__ */
+#endif /* OPENCV_CORE_CUDA_STREAM_ACCESSOR_HPP */

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_WARPERS_HPP__
-#define __OPENCV_STITCHING_WARPERS_HPP__
+#ifndef OPENCV_STITCHING_WARPERS_HPP
+#define OPENCV_STITCHING_WARPERS_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda.hpp"
@@ -585,4 +585,4 @@ protected:
 
 #include "warpers_inl.hpp"
 
-#endif // __OPENCV_STITCHING_WARPERS_HPP__
+#endif // OPENCV_STITCHING_WARPERS_HPP
