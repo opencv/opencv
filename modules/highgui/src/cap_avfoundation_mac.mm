@@ -95,7 +95,7 @@ public:
     ~CvCaptureCAM();
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id) const;
+    virtual double getProperty(int property_id);
     virtual bool setProperty(int property_id, double value);
     virtual int didStart();
 
@@ -138,7 +138,7 @@ public:
     ~CvCaptureFile();
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id) const;
+    virtual double getProperty(int property_id);
     virtual bool setProperty(int property_id, double value);
     virtual int didStart();
 
@@ -411,7 +411,7 @@ void CvCaptureCAM::setWidthHeight() {
 }
 
 
-double CvCaptureCAM::getProperty(int property_id) const{
+double CvCaptureCAM::getProperty(int property_id) {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
     CMFormatDescriptionRef format = mCaptureDevice.activeFormat.formatDescription;
@@ -1024,7 +1024,7 @@ IplImage* CvCaptureFile::retrieveFrame(int) {
     return retrieveFramePixelBuffer();
 }
 
-double CvCaptureFile::getProperty(int property_id) const{
+double CvCaptureFile::getProperty(int property_id) {
     if (mAsset == nil) return 0;
 
     CMTime t;
