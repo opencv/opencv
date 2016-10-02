@@ -36,9 +36,10 @@ if __name__ == "__main__":
     parser.add_argument('out', metavar='OUTDIR', help='folder to put built framework')
     parser.add_argument('--opencv', metavar='DIR', default=folder, help='folder with opencv repository (default is "../.." relative to script location)')
     parser.add_argument('--contrib', metavar='DIR', default=None, help='folder with opencv_contrib repository (default is "None" - build only main framework)')
+    parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     args = parser.parse_args()
 
-    b = OSXBuilder(args.opencv, args.contrib,
+    b = OSXBuilder(args.opencv, args.contrib, args.without,
         [
             ("x86_64", "MacOSX")
         ])

@@ -43,7 +43,7 @@ def getXCodeMajor():
     return 0
 
 class Builder:
-    def __init__(self, opencv, contrib, targets):
+    def __init__(self, opencv, contrib, exclude, targets):
         self.opencv = os.path.abspath(opencv)
         self.contrib = None
         if contrib:
@@ -52,6 +52,7 @@ class Builder:
                 self.contrib = os.path.abspath(modpath)
             else:
                 print("Note: contrib repository is bad - modules subfolder not found", file=sys.stderr)
+        self.exclude = exclude
         self.targets = targets
 
     def getBD(self, parent, t):
@@ -104,6 +105,11 @@ class Builder:
             "-DCMAKE_INSTALL_PREFIX=install",
             "-DCMAKE_BUILD_TYPE=Release",
         ]
+
+        if len(self.exclude) > 0:
+            args += ["-DBUILD_opencv_world=OFF"]
+            args += ("-DBUILD_opencv_%s=OFF" % m for m in self.exclude)
+
         return args
 
     def getBuildCommand(self, arch, target):
@@ -192,9 +198,10 @@ if __name__ == "__main__":
     parser.add_argument('out', metavar='OUTDIR', help='folder to put built framework')
     parser.add_argument('--opencv', metavar='DIR', default=folder, help='folder with opencv repository (default is "../.." relative to script location)')
     parser.add_argument('--contrib', metavar='DIR', default=None, help='folder with opencv_contrib repository (default is "None" - build only main framework)')
+    parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     args = parser.parse_args()
 
-    b = Builder(args.opencv, args.contrib,
+    b = Builder(args.opencv, args.contrib, args.without,
         [
             ("armv7", "iPhoneOS"),
             ("arm64", "iPhoneOS"),
