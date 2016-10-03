@@ -202,4 +202,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // OPENCV_CUDA_UTILITY_HPP
+#endif // OPENCV_CUDA_REDUCE_HPP

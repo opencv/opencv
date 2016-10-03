@@ -169,4 +169,4 @@ namespace cv { namespace cuda
 
 //! @endcond
 
-#endif // OPENCV_CORE_CUDA_PRIVATE_HPP
+#endif // OPENCV_CORE_PRIVATE_CUDA_HPP

@@ -328,4 +328,4 @@ CV_EXPORTS Ptr<Filter> createMedianFilter(int srcType, int windowSize, int parti
 
 }} // namespace cv { namespace cuda {
 
-#endif /*OPENCV_CUDAFILTERS_HPP */
+#endif /* OPENCV_CUDAFILTERS_HPP */

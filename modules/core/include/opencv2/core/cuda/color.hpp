@@ -306,4 +306,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // OPENCV_CUDA_BORDER_INTERPOLATE_HPP
+#endif // OPENCV_CUDA_COLOR_HPP
