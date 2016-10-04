@@ -90,25 +90,25 @@ struct RowSum :
         {
             for( i = 0; i < width + cn; i++ )
             {
-                D[i] = (ST)(S[i] + S[i+cn] + S[i+cn*2]);
+                D[i] = (ST)S[i] + (ST)S[i+cn] + (ST)S[i+cn*2];
             }
         }
         else if( ksize == 5 )
         {
             for( i = 0; i < width + cn; i++ )
             {
-                D[i] = (ST)(S[i] + S[i+cn] + S[i+cn*2] + S[i + cn*3] + S[i + cn*4]);
+                D[i] = (ST)S[i] + (ST)S[i+cn] + (ST)S[i+cn*2] + (ST)S[i + cn*3] + (ST)S[i + cn*4];
             }
         }
         else if( cn == 1 )
         {
             ST s = 0;
             for( i = 0; i < ksz_cn; i++ )
-                s += S[i];
+                s += (ST)S[i];
             D[0] = s;
             for( i = 0; i < width; i++ )
             {
-                s += S[i + ksz_cn] - S[i];
+                s += (ST)S[i + ksz_cn] - (ST)S[i];
                 D[i+1] = s;
             }
         }
@@ -117,18 +117,18 @@ struct RowSum :
             ST s0 = 0, s1 = 0, s2 = 0;
             for( i = 0; i < ksz_cn; i += 3 )
             {
-                s0 += S[i];
-                s1 += S[i+1];
-                s2 += S[i+2];
+                s0 += (ST)S[i];
+                s1 += (ST)S[i+1];
+                s2 += (ST)S[i+2];
             }
             D[0] = s0;
             D[1] = s1;
             D[2] = s2;
             for( i = 0; i < width; i += 3 )
             {
-                s0 += S[i + ksz_cn] - S[i];
-                s1 += S[i + ksz_cn + 1] - S[i + 1];
-                s2 += S[i + ksz_cn + 2] - S[i + 2];
+                s0 += (ST)S[i + ksz_cn] - (ST)S[i];
+                s1 += (ST)S[i + ksz_cn + 1] - (ST)S[i + 1];
+                s2 += (ST)S[i + ksz_cn + 2] - (ST)S[i + 2];
                 D[i+3] = s0;
                 D[i+4] = s1;
                 D[i+5] = s2;
@@ -139,10 +139,10 @@ struct RowSum :
             ST s0 = 0, s1 = 0, s2 = 0, s3 = 0;
             for( i = 0; i < ksz_cn; i += 4 )
             {
-                s0 += S[i];
-                s1 += S[i+1];
-                s2 += S[i+2];
-                s3 += S[i+3];
+                s0 += (ST)S[i];
+                s1 += (ST)S[i+1];
+                s2 += (ST)S[i+2];
+                s3 += (ST)S[i+3];
             }
             D[0] = s0;
             D[1] = s1;
@@ -150,10 +150,10 @@ struct RowSum :
             D[3] = s3;
             for( i = 0; i < width; i += 4 )
             {
-                s0 += S[i + ksz_cn] - S[i];
-                s1 += S[i + ksz_cn + 1] - S[i + 1];
-                s2 += S[i + ksz_cn + 2] - S[i + 2];
-                s3 += S[i + ksz_cn + 3] - S[i + 3];
+                s0 += (ST)S[i + ksz_cn] - (ST)S[i];
+                s1 += (ST)S[i + ksz_cn + 1] - (ST)S[i + 1];
+                s2 += (ST)S[i + ksz_cn + 2] - (ST)S[i + 2];
+                s3 += (ST)S[i + ksz_cn + 3] - (ST)S[i + 3];
                 D[i+4] = s0;
                 D[i+5] = s1;
                 D[i+6] = s2;
@@ -165,11 +165,11 @@ struct RowSum :
             {
                 ST s = 0;
                 for( i = 0; i < ksz_cn; i += cn )
-                    s += S[i];
+                    s += (ST)S[i];
                 D[0] = s;
                 for( i = 0; i < width; i += cn )
                 {
-                    s += S[i + ksz_cn] - S[i];
+                    s += (ST)S[i + ksz_cn] - (ST)S[i];
                     D[i+cn] = s;
                 }
             }
@@ -292,7 +292,6 @@ struct ColumnSum<int, uchar> :
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i;
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
@@ -316,7 +315,7 @@ struct ColumnSum<int, uchar> :
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -351,7 +350,7 @@ struct ColumnSum<int, uchar> :
             uchar* D = (uchar*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -406,7 +405,7 @@ struct ColumnSum<int, uchar> :
             }
             else
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -478,7 +477,7 @@ public BaseColumnFilter
         if( scale != 1 )
         {
             int d = cvRound(1./scale);
-            double scalef = (1 << 16)/d;
+            double scalef = ((double)(1 << 16))/d;
             divScale = cvFloor(scalef);
             scalef -= divScale;
             divDelta = d/2;
@@ -493,9 +492,10 @@ public BaseColumnFilter
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i, ds = divScale, dd = divDelta;
+        const int ds = divScale;
+        const int dd = divDelta;
         ushort* SUM;
-        bool haveScale = scale != 1;
+        const bool haveScale = scale != 1;
 
 #if CV_SSE2
         bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
@@ -516,7 +516,7 @@ public BaseColumnFilter
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const ushort* Sp = (const ushort*)src[0];
-                i = 0;
+                int i = 0;
 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -551,7 +551,7 @@ public BaseColumnFilter
             uchar* D = (uchar*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
     #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -586,7 +586,7 @@ public BaseColumnFilter
             }
             else
             {
-                i = 0;
+                int i = 0;
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -804,7 +804,6 @@ struct ColumnSum<int, ushort> :
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i;
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
@@ -828,7 +827,7 @@ struct ColumnSum<int, ushort> :
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -863,7 +862,7 @@ struct ColumnSum<int, ushort> :
             ushort* D = (ushort*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -913,8 +912,8 @@ struct ColumnSum<int, ushort> :
             }
             else
             {
-                i = 0;
-                #if  CV_SSE2
+                int i = 0;
+                #if CV_SSE2
                 if(haveSSE2)
                 {
                     const __m128i delta0 = _mm_set1_epi32(0x8000);
@@ -982,7 +981,6 @@ struct ColumnSum<int, int> :
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i;
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
@@ -1006,7 +1004,7 @@ struct ColumnSum<int, int> :
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -1041,7 +1039,7 @@ struct ColumnSum<int, int> :
             int* D = (int*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -1083,7 +1081,7 @@ struct ColumnSum<int, int> :
             }
             else
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -1144,7 +1142,6 @@ struct ColumnSum<int, float> :
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i;
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
@@ -1168,7 +1165,7 @@ struct ColumnSum<int, float> :
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -1204,7 +1201,7 @@ struct ColumnSum<int, float> :
             float* D = (float*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
 
                 #if CV_SSE2
                 if(haveSSE2)
@@ -1248,7 +1245,7 @@ struct ColumnSum<int, float> :
             }
             else
             {
-                i = 0;
+                int i = 0;
 
                 #if CV_SSE2
                 if(haveSSE2)
