@@ -121,6 +121,9 @@ function(ocv_include_directories)
         OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}"
         OR (OPENCV_EXTRA_MODULES_PATH AND "${__abs_dir}" MATCHES "^${OPENCV_EXTRA_MODULES_PATH}"))
       list(APPEND __add_before "${dir}")
+    elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+           dir MATCHES "/usr/include$")
+      # workaround for GCC 6.x bug
     else()
       include_directories(AFTER SYSTEM "${dir}")
     endif()
@@ -142,6 +145,10 @@ endfunction()
 function(ocv_target_include_directories target)
   _ocv_fix_target(target)
   set(__params "")
+  if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+      ";${ARGN};" MATCHES "/usr/include;")
+    return() # workaround for GCC 6.x bug
+  endif()
   foreach(dir ${ARGN})
     get_filename_component(__abs_dir "${dir}" ABSOLUTE)
     if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}"
