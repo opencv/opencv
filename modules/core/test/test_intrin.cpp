@@ -277,6 +277,24 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_abs()
+    {
+        typedef typename V_RegTrait128<LaneType>::u_reg Ru;
+        typedef typename Ru::lane_type u_type;
+        Data<R> dataA, dataB(10);
+        R a = dataA, b = dataB;
+        a = a - b;
+
+        Data<Ru> resC = v_abs(a);
+
+        for (int i = 0; i < Ru::nlanes; ++i)
+        {
+            EXPECT_EQ((u_type)std::abs(dataA[i] - dataB[i]), resC[i]);
+        }
+
+        return *this;
+    }
+
     template <int s>
     TheTest & test_shift()
     {
@@ -799,6 +817,7 @@ TEST(hal_intrin, int8x16) {
         .test_logic()
         .test_min_max()
         .test_absdiff()
+        .test_abs()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
         .test_unpack()
@@ -847,6 +866,7 @@ TEST(hal_intrin, int16x8) {
         .test_logic()
         .test_min_max()
         .test_absdiff()
+        .test_abs()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
         .test_unpack()
@@ -886,6 +906,7 @@ TEST(hal_intrin, int32x4) {
         .test_expand()
         .test_addsub()
         .test_mul()
+        .test_abs()
         .test_cmp()
         .test_shift<1>().test_shift<8>()
         .test_logic()
