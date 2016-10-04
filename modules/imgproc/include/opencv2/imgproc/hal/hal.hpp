@@ -175,6 +175,13 @@ CV_EXPORTS void cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step,
                                         uchar * dst_data, size_t dst_step,
                                         int width, int height);
 
+CV_EXPORTS void integral(int depth, int sdepth, int sqdepth,
+                         const uchar* src, size_t srcstep,
+                         uchar* sum, size_t sumstep,
+                         uchar* sqsum, size_t sqsumstep,
+                         uchar* tilted, size_t tstep,
+                         int width, int height, int cn);
+
 //! @}
 
 }}
