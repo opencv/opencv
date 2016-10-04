@@ -246,7 +246,7 @@ enum MorphTypes{
     MORPH_BLACKHAT = 6, //!< "black hat"
                         //!< \f[\texttt{dst} = \mathrm{blackhat} ( \texttt{src} , \texttt{element} )= \mathrm{close} ( \texttt{src} , \texttt{element} )- \texttt{src}\f]
     MORPH_HITMISS  = 7  //!< "hit and miss"
-                        //!<   .- Only supported for CV_8UC1 binary images. Tutorial can be found in [this page](http://opencv-code.com/tutorials/hit-or-miss-transform-in-opencv/)
+                        //!<   .- Only supported for CV_8UC1 binary images. Tutorial can be found in [this page](https://web.archive.org/web/20160316070407/http://opencv-code.com/tutorials/hit-or-miss-transform-in-opencv/)
 };
 
 //! shape of the structuring element
