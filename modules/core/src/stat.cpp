@@ -4075,6 +4075,16 @@ static const uchar popCountTable4[] =
     1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
+#if CV_AVX2
+static inline int _mm256_extract_epi32_(__m256i reg, const int i)
+{
+    CV_DECL_ALIGNED(32) int reg_data[8];
+    CV_DbgAssert(0 <= i && i < 8);
+    _mm256_store_si256((__m256i*)reg_data, reg);
+    return reg_data[i];
+}
+#endif
+
 int normHamming(const uchar* a, int n)
 {
     int i = 0;
@@ -4112,7 +4122,7 @@ int normHamming(const uchar* a, int n)
             _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
         }
         _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
-        result = _mm256_extract_epi32(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
+        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
 #endif
         for( ; i <= n - 4; i += 4 )
@@ -4165,7 +4175,7 @@ int normHamming(const uchar* a, const uchar* b, int n)
             _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
         }
         _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
-        result = _mm256_extract_epi32(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
+        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
 #endif
         for( ; i <= n - 4; i += 4 )
