@@ -1041,7 +1041,8 @@ class JavaWrapperGenerator(object):
         self.clear()
         self.module = module
         self.Module = module.capitalize()
-        parser = hdr_parser.CppHeaderParser()
+        # TODO: support UMat versions of declarations (implement UMat-wrapper for Java)
+        parser = hdr_parser.CppHeaderParser(generate_umat_decls=False)
 
         self.add_class( ['class ' + self.Module, '', [], []] ) # [ 'class/struct cname', ':bases', [modlist] [props] ]
 
