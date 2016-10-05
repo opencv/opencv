@@ -392,7 +392,8 @@ class ArgInfo(object):
         self.py_outputarg = False
 
     def isbig(self):
-        return self.tp == "Mat" or self.tp == "vector_Mat"# or self.tp.startswith("vector")
+        return self.tp == "Mat" or self.tp == "vector_Mat"\
+               or self.tp == "UMat" or self.tp == "vector_UMat" # or self.tp.startswith("vector")
 
     def crepr(self):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
@@ -634,6 +635,10 @@ class FuncInfo(object):
                 defval = a.defval
                 if not defval:
                     defval = amapping[2]
+                else:
+                    if "UMat" in tp:
+                        if "Mat" in defval and "UMat" not in defval:
+                            defval = defval.replace("Mat", "UMat")
                 # "tp arg = tp();" is equivalent to "tp arg;" in the case of complex types
                 if defval == tp + "()" and amapping[1] == "O":
                     defval = ""
@@ -856,7 +861,7 @@ class PythonWrapperGenerator(object):
 
     def gen(self, srcfiles, output_path):
         self.clear()
-        self.parser = hdr_parser.CppHeaderParser()
+        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True)
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
