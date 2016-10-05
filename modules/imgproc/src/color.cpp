@@ -5917,6 +5917,26 @@ struct RGB2Luv_b
                 if (jr)
                     src -= jr, j -= jr;
             }
+            else if (scn == 4 && haveSIMD)
+            {
+                for ( ; j <= (dn * 3 - 12); j += 12, src += 16)
+                {
+                    __m128i v_src = _mm_loadu_si128((__m128i const *)src);
+
+                    __m128i v_src_lo = _mm_unpacklo_epi8(v_src, v_zero);
+                    __m128i v_src_hi = _mm_unpackhi_epi8(v_src, v_zero);
+                    _mm_storeu_ps(buf + j, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src_lo, v_zero)), v_scale_inv));
+                    _mm_storeu_ps(buf + j + 3, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src_lo, v_zero)), v_scale_inv));
+                    _mm_storeu_ps(buf + j + 6, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src_hi, v_zero)), v_scale_inv));
+                    float tmp = buf[j + 8];
+                    _mm_storeu_ps(buf + j + 8, _mm_mul_ps(_mm_cvtepi32_ps(_mm_shuffle_epi32(_mm_unpackhi_epi16(v_src_hi, v_zero), 0x90)), v_scale_inv));
+                    buf[j + 8] = tmp;
+                }
+
+                int jr = j % 3;
+                if (jr)
+                    src -= jr, j -= jr;
+            }
             #endif
             for( ; j < dn*3; j += 3, src += scn )
             {
