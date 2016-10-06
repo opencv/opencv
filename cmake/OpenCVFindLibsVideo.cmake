@@ -118,21 +118,20 @@ if(WITH_GIGEAPI)
             PATHS /usr/local /var /opt /usr ENV ProgramFiles ENV ProgramW6432
             PATH_SUFFIXES include "Smartek Vision Technologies/GigEVisionSDK/gige_cpp" "GigEVisionSDK/gige_cpp" "GigEVisionSDK/gige_c"
             DOC "The path to Smartek GigEVisionSDK header")
-  FIND_LIBRARY(GIGEAPI_LIBRARIES NAMES GigEVisionSDK)
+  FIND_LIBRARY(GIGEAPI_LIBRARIES GigEVisionSDK)
   if(GIGEAPI_LIBRARIES AND GIGEAPI_INCLUDE_PATH)
     set(HAVE_GIGE_API TRUE)
   endif()
 endif(WITH_GIGEAPI)
 
 # --- Aravis SDK ---
-#ocv_clear_vars(HAVE_ARAVIS_API)
+ocv_clear_vars(HAVE_ARAVIS_API)
 if(WITH_ARAVIS)
   find_path(ARAVIS_INCLUDE_PATH "arv.h"
             PATHS /usr/local /var /opt /usr ENV ProgramFiles ENV ProgramW6432
             PATH_SUFFIXES include "aravis-0.6"
-            DOC "The path to Aravis SDK header")
-  FIND_LIBRARY(ARAVIS_LIBRARIES NAMES libaravis-0.6)
-	MESSAGE( STATUS "Checking ARAVIS:         " ${ARAVIS_INCLUDE_PATH} )
+            DOC "The path to Aravis SDK headers")
+  find_library(ARAVIS_LIBRARIES "aravis-0.6")
   if(ARAVIS_LIBRARIES AND ARAVIS_INCLUDE_PATH)
     set(HAVE_ARAVIS_API TRUE)
   endif()
