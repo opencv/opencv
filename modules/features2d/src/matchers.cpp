@@ -692,8 +692,13 @@ bool DescriptorMatcher::isMaskedOut( InputArrayOfArrays _masks, int queryIdx )
 
 BFMatcher::BFMatcher( int _normType, bool _crossCheck )
 {
-    normType = _normType;
-    crossCheck = _crossCheck;
+      normType = _normType;
+      crossCheck = _crossCheck;
+}
+
+Ptr<BFMatcher> BFMatcher::create( int _normType, bool _crossCheck )  
+{
+    return makePtr<BFMatcher>(_normType, _crossCheck);
 }
 
 Ptr<DescriptorMatcher> BFMatcher::clone( bool emptyTrainData ) const
@@ -1040,6 +1045,11 @@ FlannBasedMatcher::FlannBasedMatcher( const Ptr<flann::IndexParams>& _indexParam
 {
     CV_Assert( _indexParams );
     CV_Assert( _searchParams );
+}
+
+Ptr<FlannBasedMatcher> FlannBasedMatcher::create() 
+{    
+    return makePtr<FlannBasedMatcher>();
 }
 
 void FlannBasedMatcher::add( InputArrayOfArrays _descriptors )
