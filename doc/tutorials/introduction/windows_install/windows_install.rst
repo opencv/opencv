@@ -70,8 +70,12 @@ Building the OpenCV library from scratch requires a couple of tools installed be
 .. _CUDA_Toolkit: http://developer.nvidia.com/cuda-downloads
 .. |OpenEXR| replace:: OpenEXR
 .. _OpenEXR: http://www.openexr.com/downloads.html
-.. |OpenNI_Framework| replace:: OpenNI Framework
-.. _OpenNI_Framework: http://www.openni.org/
+.. |OpenNI_prebuilt| replace:: OpenNI prebuilt binaries
+.. _OpenNI_prebuilt: http://structure.io/openni
+.. |OpenNI_github| replace:: OpenNI Github
+.. _OpenNI_github: https://github.com/OpenNI/OpenNI
+.. |OpenNI2_github| replace:: OpenNI2 Github
+.. _OpenNI2_github: https://github.com/OpenNI/OpenNI2
 .. |Miktex| replace:: Miktex
 .. _Miktex: http://miktex.org/2.9/setup
 .. |Sphinx| replace:: Sphinx
@@ -105,7 +109,7 @@ OpenCV may come in multiple flavors. There is a "core" section that will work on
 
    + |OpenEXR|_ source files are required for the library to work with this high dynamic range (HDR) image file format.
 
-   + The |OpenNI_Framework|_ contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures and body motion tracking.
+   + The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures and body motion tracking. |OpenNI_prebuilt|_ , |OpenNI_github|_ code and |OpenNI2_github|_ code is available.
 
    + |Miktex|_ is the best `TEX <https://secure.wikimedia.org/wikipedia/en/wiki/TeX>`_ implementation on the Windows OS. It is required to build the *OpenCV documentation*.
 
@@ -172,7 +176,7 @@ Building the library
 
    #) Same as above with |OpenEXR|_.
 
-   #) For the |OpenNI_Framework|_ you need to install both the `development build <http://www.openni.org/downloadfiles/opennimodules/openni-binaries/21-stable>`_ and the `PrimeSensor Module <http://www.openni.org/downloadfiles/opennimodules/openni-compliant-hardware-binaries/32-stable>`_.
+   #) For the |OpenNI_prebuilt|_ you need to install both the `development build <http://www.openni.org/downloadfiles/opennimodules/openni-binaries/21-stable>`_ and the `PrimeSensor Module <http://www.openni.org/downloadfiles/opennimodules/openni-compliant-hardware-binaries/32-stable>`_.
 
    #) For the CUDA you need again two modules: the latest |CUDA_Toolkit|_ and the *CUDA Tools SDK*. Download and install both of them with a *complete* option by using the 32 or 64 bit setups according to your OS.
 
