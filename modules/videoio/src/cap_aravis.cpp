@@ -77,7 +77,7 @@ public:
         close();
     }
 
-    virtual bool open( int index );
+    virtual bool open(int);
     virtual void close();
     virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
@@ -89,6 +89,7 @@ public:
     }
 
 protected:
+	bool create(int);
 	bool init();
 	
     void stopCapture();
@@ -144,12 +145,20 @@ bool CvCaptureCAM_Aravis::getDeviceNameById(int id, std::string &device)
 	return false;
 }
 
+bool CvCaptureCAM_Aravis::create( int index )
+{
+	std::string deviceName;
+	if(!getDeviceNameById(index, deviceName))
+		return false;
+
+	return NULL != (Device.camera = arv_camera_new(deviceName.c_str()));
+}
+
 bool CvCaptureCAM_Aravis::init() 
 {
 	// Create a new stream object. Open stream on Device.
-	Device.stream = arv_camera_create_stream(Device.camera, NULL, NULL);
-
-	if(Device.stream) {
+	if( (Device.stream = arv_camera_create_stream(Device.camera, NULL, NULL)) ) {
+		
 		g_object_set(Device.stream,
 			// ARV_GV_STREAM_SOCKET_BUFFER_FIXED : socket buffer is set to a given fixed value.
 			// ARV_GV_STREAM_SOCKET_BUFFER_AUTO: socket buffer is set with respect to the payload size.
@@ -212,30 +221,20 @@ bool CvCaptureCAM_Aravis::init()
 // Initialize camera input
 bool CvCaptureCAM_Aravis::open( int index )
 {
-	std::string deviceName;
-
-	if(!getDeviceNameById(index, deviceName))
-		return false;
-
-std::cout << deviceName << std::endl;
-	Device.camera = arv_camera_new(deviceName.c_str());
-	if(Device.camera) {
-std::cout << "camera defined" << std::endl;		
-		// init communication
-		init();
-std::cout << "camera initialized" << std::endl;				
+	if( create( index) ) {
 		// fetch basic properties
 		Device.payload = arv_camera_get_payload (Device.camera);
-std::cout << Device.payload << std::endl;						
 		arv_camera_get_sensor_size(Device.camera, &Device.mWidth, &Device.mHeight);
-std::cout << Device.mWidth << 'x' << Device.mHeight << std::endl;						
 
 		arv_camera_get_exposure_time_bounds (Device.camera, &Device.exposureMin, &Device.exposureMax);
-std::cout << Device.exposureMin << " - " << Device.exposureMax << std::endl;								
 		arv_camera_get_gain_bounds (Device.camera, &Device.gainMin, &Device.gainMax);
-std::cout << Device.gainMin << " - " << Device.gainMax << std::endl;			
 
 		arv_camera_set_pixel_format(Device.camera, ARV_PIXEL_FORMAT_MONO_8);
+		
+		// init communication
+		init();
+		
+		return startCapture();
 	}
 	return false;
 }
@@ -246,12 +245,11 @@ bool CvCaptureCAM_Aravis::grabFrame()
 	if(arv_buffer != NULL) {
 		if(arv_buffer_get_status(arv_buffer) == ARV_BUFFER_STATUS_SUCCESS) {
 			size_t buffer_size;
-			Device.framebuffer = (IplImage*) arv_buffer_get_data (arv_buffer, &buffer_size);
-			 
-			return true;
+			Device.framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 		}
+		arv_stream_push_buffer(Device.stream, arv_buffer);
+		return true;
 	}
-	
 	Device.framebuffer = NULL;
 	return false;
 }
@@ -262,13 +260,15 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
 		IplImage src;
 		cvInitImageHeader( &src, cvSize( Device.mWidth, Device.mHeight ),
 						   IPL_DEPTH_8U, 1, IPL_ORIGIN_TL, 4 );
+
 		cvSetData( &src, Device.framebuffer, src.widthStep );
 		if( !frame || frame->width != src.width || frame->height != src.height ) {
 			cvReleaseImage( &frame );
 			frame = cvCreateImage( cvGetSize(&src), 8, 1 );
-			
-			return frame;
-		}
+		} 
+		cvCopy(&src, frame);
+		
+		return frame;
 	}
 	return NULL;
 }
@@ -326,8 +326,6 @@ void CvCaptureCAM_Aravis::stopCapture()
 	Device.stream = NULL;
 
 	g_object_unref(Device.camera);
-	
-std::cout << "camera stopped" << std::endl;			
 }
 
 bool CvCaptureCAM_Aravis::startCapture()
@@ -335,8 +333,6 @@ bool CvCaptureCAM_Aravis::startCapture()
 	arv_camera_set_acquisition_mode(Device.camera, ARV_ACQUISITION_MODE_CONTINUOUS);
     arv_device_set_string_feature_value(arv_camera_get_device (Device.camera), "TriggerMode" , "Off");
     arv_camera_start_acquisition(Device.camera);
-std::cout << "camera started" << std::endl;		
-    
     
     return true;
 }
