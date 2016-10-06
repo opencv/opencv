@@ -1377,9 +1377,6 @@ class JavaWrapperGenerator(object):
                 if not fi.ctype: # c-tor
                     retval = fi.fullClass(isCPP=True) + "* _retval_ = "
                     cvname = "new " + fi.fullClass(isCPP=True)
-                    
-                    logging.info("retval = %s, cvname=%s, fullclass=%s" % (retval, cvname, fi.fullClass(isCPP=True)))
-                    
                 elif fi.static:
                     cvname = fi.fullName(isCPP=True)
                 else:
