@@ -58,7 +58,7 @@ protected:
     void run(int)
     {
         vector<int> finalSolutions;
-        
+
         filterHomographyDecompByVisibleRefpoints(_rotations, _normals, _prevRectifiedPoints, _currRectifiedPoints, finalSolutions, _mask);
 
         //there should be at least 2 solution
