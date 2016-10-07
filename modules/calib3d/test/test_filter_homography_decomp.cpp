@@ -117,7 +117,7 @@ private:
 			}
 		};
 
-		double normalsArray[4][3]{
+		double normalsArray[4][3] = {
 			{
 				-0.023560516110791116,
 				0.085818414407956692,
@@ -1190,10 +1190,9 @@ private:
 
 		_validSolutions.swap(validSolutions);
 
-		_rotations = {};
+		vector<Mat> rotations;
 
-		_normals = {};
-
+		vector<Mat> normals;
 
 		for (size_t i = 0; i < (sizeof(rotationsArray) / sizeof(*rotationsArray)); i++) {
 			Mat tempRotMat = Mat(Matx33d(
@@ -1214,9 +1213,12 @@ private:
 				normalsArray[i][2]
 			));
 
-			_rotations.push_back(tempRotMat);
-			_normals.push_back(tempNormMat);
+			rotations.push_back(tempRotMat);
+			normals.push_back(tempNormMat);
 		}
+
+		_rotations.swap(rotations);
+		_normals.swap(normals);
 
         _mask = Mat(514, 1, CV_8U, maskArray).clone();
     }
