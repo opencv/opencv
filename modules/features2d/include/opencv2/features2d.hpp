@@ -1003,13 +1003,11 @@ public:
     pairs. Such technique usually produces best results with minimal number of outliers when there are
     enough matches. This is alternative to the ratio test, used by D. Lowe in SIFT paper.
      */
-    BFMatcher( int normType=NORM_L2, bool crossCheck=false );
+    CV_WRAP BFMatcher( int normType=NORM_L2, bool crossCheck=false );
     virtual ~BFMatcher() {}
 
     virtual bool isMaskSupported() const { return true; }
-    
-    CV_WRAP static Ptr<BFMatcher> create( int normType=NORM_L2, bool crossCheck=false );
-    
+
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
 protected:
     virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
@@ -1032,7 +1030,7 @@ matches of descriptor sets because flann::Index does not support this. :
 class CV_EXPORTS_W FlannBasedMatcher : public DescriptorMatcher
 {
 public:
-    FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
+    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
                        const Ptr<flann::SearchParams>& searchParams=makePtr<flann::SearchParams>() );
 
     virtual void add( InputArrayOfArrays descriptors );
@@ -1045,9 +1043,7 @@ public:
 
     virtual void train();
     virtual bool isMaskSupported() const;
-    
-    CV_WRAP static Ptr<FlannBasedMatcher> create();
-    
+
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
 protected:
     static void convertToDMatches( const DescriptorCollection& descriptors,
