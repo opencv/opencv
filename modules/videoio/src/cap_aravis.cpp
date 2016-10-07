@@ -97,38 +97,43 @@ protected:
     
     bool getDeviceNameById(int id, std::string &device);
 
-    typedef struct
-    {
-		ArvCamera       *camera;                // Camera to control.
-		ArvStream       *stream;                // Object for video stream reception.
-		void			*framebuffer;			// 
-		unsigned int    payload;                // Width x height.
-		
-		int             mWidth;                 // Camera sensor's width.
-		int             mHeight;                // Camera sensor's height.
-		double          gainMin;                // Camera minimum gain.
-		double          gainMax;                // Camera maximum gain.
-		double          exposureMin;            // Camera's minimum exposure time.
-		double          exposureMax;            // Camera's maximum exposure time.
-    } tCamera;
+	ArvCamera       *camera;                // Camera to control.
+	ArvStream       *stream;                // Object for video stream reception.
+	void			*framebuffer;			// 
+	unsigned int    payload;                // Width x height x Pixel width.
+	
+	int             widthMin;               // Camera sensor minium width.
+	int             widthMax;               // Camera sensor maximum width.
+	int             heightMin;              // Camera sensor minium height.
+	int             heightMax;              // Camera sensor maximum height.
+	double          fpsMin;     	        // Camera minium fps.
+	double          fpsMax; 	            // Camera maximum fps.
+	double          gainMin;                // Camera minimum gain.
+	double          gainMax;                // Camera maximum gain.
+	double          exposureMin;            // Camera's minimum exposure time.
+	double          exposureMax;            // Camera's maximum exposure time.
+	
+	int 			num_buffers;			// number of payload transmission buffers
     
     IplImage *frame;
-	tCamera Device;
 };
 
 
 CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
 {
+    camera = NULL;
+    stream = NULL;
+    framebuffer = NULL;
+    num_buffers = 50;
+    
     frame = NULL;
-    memset(&this->Device, 0, sizeof(this->Device));
 }
 
 void CvCaptureCAM_Aravis::close()
 {
-    // Stop the acquisition & free the camera
     stopCapture();
 }
-#include <iostream>
+
 bool CvCaptureCAM_Aravis::getDeviceNameById(int id, std::string &device)
 {
 	arv_update_device_list();
@@ -151,66 +156,23 @@ bool CvCaptureCAM_Aravis::create( int index )
 	if(!getDeviceNameById(index, deviceName))
 		return false;
 
-	return NULL != (Device.camera = arv_camera_new(deviceName.c_str()));
+	return NULL != (camera = arv_camera_new(deviceName.c_str()));
 }
 
 bool CvCaptureCAM_Aravis::init() 
 {
-	// Create a new stream object. Open stream on Device.
-	if( (Device.stream = arv_camera_create_stream(Device.camera, NULL, NULL)) ) {
-		
-		g_object_set(Device.stream,
-			// ARV_GV_STREAM_SOCKET_BUFFER_FIXED : socket buffer is set to a given fixed value.
-			// ARV_GV_STREAM_SOCKET_BUFFER_AUTO: socket buffer is set with respect to the payload size.
+	if( (stream = arv_camera_create_stream(camera, NULL, NULL)) ) {
+		g_object_set(stream,
 			"socket-buffer", ARV_GV_STREAM_SOCKET_BUFFER_AUTO,
-			// Socket buffer size, in bytes.
-			// Allowed values: >= G_MAXULONG
-			// Default value: 0
 			"socket-buffer-size", 0, NULL);
-
-		// # packet-resend : Enables or disables the packet resend mechanism
-
-		// If packet resend is disabled and a packet has been lost during transmission,
-		// the grab result for the returned buffer holding the image will indicate that
-		// the grab failed and the image will be incomplete.
-		//
-		// If packet resend is enabled and a packet has been lost during transmission,
-		// a request is sent to the Device. If the camera still has the packet in its
-		// buffer, it will resend the packet. If there are several lost packets in a
-		// row, the resend requests will be combined.
-
-		g_object_set(Device.stream,
-			// ARV_GV_STREAM_PACKET_RESEND_NEVER: never request a packet resend
-			// ARV_GV_STREAM_PACKET_RESEND_ALWAYS: request a packet resend if a packet was missing
-			// Default value: ARV_GV_STREAM_PACKET_RESEND_ALWAYS
+		g_object_set(stream,
 			"packet-resend", ARV_GV_STREAM_PACKET_RESEND_NEVER, NULL);
+		g_object_set(stream,
+			"packet-timeout", (unsigned)40000,
+			"frame-retention", (unsigned) 200000, NULL);
 
-		// # packet-timeout
-
-		// The Packet Timeout parameter defines how long (in milliseconds) we will wait for
-		// the next expected packet before it initiates a resend request.
-
-		// Packet timeout, in µs.
-		// Allowed values: [1000,10000000]
-		// Default value: 40000
-		
-		// The Frame Retention parameter sets the timeout (in milliseconds) for the
-		// frame retention timer. Whenever detection of the leader is made for a frame,
-		// the frame retention timer starts. The timer resets after each packet in the
-		// frame is received and will timeout after the last packet is received. If the
-		// timer times out at any time before the last packet is received, the buffer for
-		// the frame will be released and will be indicated as an unsuccessful grab.
-
-		// Packet retention, in µs.
-		// Allowed values: [1000,10000000]
-		// Default value: 200000			
-		g_object_set(Device.stream,
-			"packet-timeout",/* (unsigned) arv_option_packet_timeout * 1000*/(unsigned)40000,
-			"frame-retention", /*(unsigned) arv_option_frame_retention * 1000*/(unsigned) 200000,NULL);
-
-		// Push 50 buffer in the stream input buffer queue.
-		for (int i = 0; i < 50; i++)
-			arv_stream_push_buffer(Device.stream, arv_buffer_new(Device.payload, NULL));
+		for (int i = 0; i < num_buffers; i++)
+			arv_stream_push_buffer(stream, arv_buffer_new(payload, NULL));
 
 		return true;
 	}
@@ -223,13 +185,15 @@ bool CvCaptureCAM_Aravis::open( int index )
 {
 	if( create( index) ) {
 		// fetch basic properties
-		Device.payload = arv_camera_get_payload (Device.camera);
-		arv_camera_get_sensor_size(Device.camera, &Device.mWidth, &Device.mHeight);
+		payload = arv_camera_get_payload (camera);
+		arv_camera_get_width_bounds(camera, &widthMin, &widthMax);
+		arv_camera_get_height_bounds(camera, &heightMin, &heightMax);
+		arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax);
+		arv_camera_get_gain_bounds (camera, &gainMin, &gainMax);
+		arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax);
 
-		arv_camera_get_exposure_time_bounds (Device.camera, &Device.exposureMin, &Device.exposureMax);
-		arv_camera_get_gain_bounds (Device.camera, &Device.gainMin, &Device.gainMax);
-
-		arv_camera_set_pixel_format(Device.camera, ARV_PIXEL_FORMAT_MONO_8);
+		// enforce mono 8 format
+		arv_camera_set_pixel_format(camera, ARV_PIXEL_FORMAT_MONO_8);
 		
 		// init communication
 		init();
@@ -241,27 +205,27 @@ bool CvCaptureCAM_Aravis::open( int index )
 
 bool CvCaptureCAM_Aravis::grabFrame()
 {
-	ArvBuffer *arv_buffer = arv_stream_timeout_pop_buffer(Device.stream, 2000000); //us
+	ArvBuffer *arv_buffer = arv_stream_timeout_pop_buffer(stream, 2000000); //us
 	if(arv_buffer != NULL) {
 		if(arv_buffer_get_status(arv_buffer) == ARV_BUFFER_STATUS_SUCCESS) {
 			size_t buffer_size;
-			Device.framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
+			framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 		}
-		arv_stream_push_buffer(Device.stream, arv_buffer);
+		arv_stream_push_buffer(stream, arv_buffer);
 		return true;
 	}
-	Device.framebuffer = NULL;
+	framebuffer = NULL;
 	return false;
 }
 
 IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
 {
-	if(Device.framebuffer) {
+	if(framebuffer) {
 		IplImage src;
-		cvInitImageHeader( &src, cvSize( Device.mWidth, Device.mHeight ),
+		cvInitImageHeader( &src, cvSize( widthMax, heightMax ),
 						   IPL_DEPTH_8U, 1, IPL_ORIGIN_TL, 4 );
 
-		cvSetData( &src, Device.framebuffer, src.widthStep );
+		cvSetData( &src, framebuffer, src.widthStep );
 		if( !frame || frame->width != src.width || frame->height != src.height ) {
 			cvReleaseImage( &frame );
 			frame = cvCreateImage( cvGetSize(&src), 8, 1 );
@@ -277,20 +241,13 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
 {
 	switch ( property_id ) {
 		case CV_CAP_PROP_EXPOSURE:
-			return arv_camera_get_exposure_time(Device.camera);
+			return arv_camera_get_exposure_time(camera);
         
 		case CV_CAP_PROP_FPS:
-			return arv_camera_get_frame_rate(Device.camera);
+			return arv_camera_get_frame_rate(camera);
 
 		case CV_CAP_PROP_GAIN:
-			return arv_camera_get_gain(Device.camera);
-			
-		case CV_CAP_PROP_PVAPI_PIXELFORMAT:
-			int pixFormat = arv_camera_get_pixel_format(Device.camera);
-			if (pixFormat == ARV_PIXEL_FORMAT_MONO_8)
-				return 1.0;
-			else if (pixFormat == ARV_PIXEL_FORMAT_MONO_12)
-				return 2.0;
+			return arv_camera_get_gain(camera);
     }
     return -1.0;
 }
@@ -299,20 +256,15 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 {
 	switch ( property_id ) {
 		case CV_CAP_PROP_EXPOSURE:
-			arv_camera_set_exposure_time(Device.camera, value);
+			arv_camera_set_exposure_time(camera, value);
 			break;
         
 		case CV_CAP_PROP_FPS:
-			arv_camera_set_frame_rate(Device.camera, value);
+			arv_camera_set_frame_rate(camera, value);
 			break;
 
 		case CV_CAP_PROP_GAIN:
-			arv_camera_set_gain(Device.camera, value);
-			break;
-			
-		case CV_CAP_PROP_PVAPI_PIXELFORMAT:
-			if (value==1) arv_camera_set_pixel_format(Device.camera, ARV_PIXEL_FORMAT_MONO_8);
-			else if (value==2) arv_camera_set_pixel_format(Device.camera, ARV_PIXEL_FORMAT_MONO_12);
+			arv_camera_set_gain(camera, value);
 			break;
     }
     return -1.0 != getProperty( property_id );
@@ -320,19 +272,19 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 
 void CvCaptureCAM_Aravis::stopCapture()
 {
-	arv_camera_stop_acquisition(Device.camera);
+	arv_camera_stop_acquisition(camera);
 	
-	g_object_unref(Device.stream);
-	Device.stream = NULL;
+	g_object_unref(stream);
+	stream = NULL;
 
-	g_object_unref(Device.camera);
+	g_object_unref(camera);
 }
 
 bool CvCaptureCAM_Aravis::startCapture()
 {
-	arv_camera_set_acquisition_mode(Device.camera, ARV_ACQUISITION_MODE_CONTINUOUS);
-    arv_device_set_string_feature_value(arv_camera_get_device (Device.camera), "TriggerMode" , "Off");
-    arv_camera_start_acquisition(Device.camera);
+	arv_camera_set_acquisition_mode(camera, ARV_ACQUISITION_MODE_CONTINUOUS);
+    arv_device_set_string_feature_value(arv_camera_get_device (camera), "TriggerMode" , "Off");
+    arv_camera_start_acquisition(camera);
     
     return true;
 }
