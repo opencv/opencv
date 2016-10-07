@@ -1,0 +1,63 @@
+From 57be99ff186815989c50e7cbbef8b8948b4e4a99 Mon Sep 17 00:00:00 2001
+From: Graham Fyffe <fyffe@google.com>
+Date: Thu, 6 Oct 2016 18:01:34 -0700
+Subject: [PATCH] Added getLeadingEdgeList function to Subdiv2D
+
+---
+ modules/imgproc/include/opencv2/imgproc.hpp |  8 ++++++++
+ modules/imgproc/src/subdivision2d.cpp       | 20 ++++++++++++++++++++
+ 2 files changed, 28 insertions(+)
+
+diff --git a/modules/imgproc/include/opencv2/imgproc.hpp b/modules/imgproc/include/opencv2/imgproc.hpp
+index 30fa8c1..7a4e141 100644
+--- a/modules/imgproc/include/opencv2/imgproc.hpp
++++ b/modules/imgproc/include/opencv2/imgproc.hpp
+@@ -1012,6 +1012,14 @@ public:
+      */
+     CV_WRAP void getEdgeList(CV_OUT std::vector<Vec4f>& edgeList) const;
+ 
++    /** @brief Returns a list of the leading edge ID connected to each triangle.
++
++    @param leadingEdgeList – Output vector.
++
++    The function gives one edge ID for each triangle.
++     */
++    CV_WRAP void getLeadingEdgeList(CV_OUT std::vector<int>& leadingEdgeList) const;
++
+     /** @brief Returns a list of all triangles.
+ 
+     @param triangleList – Output vector.
+diff --git a/modules/imgproc/src/subdivision2d.cpp b/modules/imgproc/src/subdivision2d.cpp
+index 5917dbd..93c8b4c 100644
+--- a/modules/imgproc/src/subdivision2d.cpp
++++ b/modules/imgproc/src/subdivision2d.cpp
+@@ -733,6 +733,26 @@ void Subdiv2D::getEdgeList(std::vector<Vec4f>& edgeList) const
+     }
+ }
+ 
++void Subdiv2D::getLeadingEdgeList(std::vector<int>& leadingEdgeList) const
++{
++    leadingEdgeList.clear();
++    int i, total = (int)(qedges.size()*4);
++    std::vector<bool> edgemask(total, false);
++
++    for( i = 4; i < total; i += 2 )
++    {
++        if( edgemask[i] )
++            continue;
++        int edge = i;
++        edgemask[edge] = true;
++        edge = getEdge(edge, NEXT_AROUND_LEFT);
++        edgemask[edge] = true;
++        edge = getEdge(edge, NEXT_AROUND_LEFT);
++        edgemask[edge] = true;
++        leadingEdgeList.push_back(i);
++    }
++}
++
+ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
+ {
+     triangleList.clear();
+-- 
+2.8.0.rc3.226.g39d4020
+
