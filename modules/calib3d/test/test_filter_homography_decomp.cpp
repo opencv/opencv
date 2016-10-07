@@ -70,7 +70,7 @@ private:
 
     void buildTestDataSet()
     {
-		vector<vector<double>> rotationsVector {
+		double rotationsArray[4][9] = {
 			{
 				0.98811084196540500,
 				-0.15276633082836735,
@@ -117,7 +117,7 @@ private:
 			}
 		};
 
-		vector<vector<double>> normalsVector {
+		double normalsArray[4][3]{
 			{
 				-0.023560516110791116,
 				0.085818414407956692,
@@ -140,9 +140,9 @@ private:
 			}
 		};
 
-		vector<uint8_t> maskVector { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		uint8_t maskArray[514] = { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-		vector<Point2f> currRectifiedPoints{
+		Point2f currRectifiedPointArr[514] = {
 			Point2f((float)-0.565732896, (float)-0.321162999),
 			Point2f((float)-0.416198403, (float)-0.299646467),
 			Point2f((float)-0.408354312, (float)-0.290387660),
@@ -659,9 +659,11 @@ private:
 			Point2f((float)-0.438308835, (float)0.164682120)
 		};
 
+		vector<Point2f> currRectifiedPoints(currRectifiedPointArr, currRectifiedPointArr + sizeof(currRectifiedPointArr) / sizeof(currRectifiedPointArr[0]));
+
 		_currRectifiedPoints.swap(currRectifiedPoints);
 
-		vector<Point2f> prevRectifiedPoints{
+		Point2f prevRectifiedPointArr[514] = {
 			Point2f((float)-0.599324584, (float)-0.381164283),
 			Point2f((float)-0.387985110, (float)-0.385367423),
 			Point2f((float)-0.371437579, (float)-0.371891201),
@@ -1178,64 +1180,50 @@ private:
 			Point2f((float)-0.0954068601, (float)-0.0968973264)
 		};
 
+		vector<Point2f> prevRectifiedPoints(prevRectifiedPointArr, prevRectifiedPointArr + sizeof(prevRectifiedPointArr) / sizeof(prevRectifiedPointArr[0]));
+
 		_prevRectifiedPoints.swap(prevRectifiedPoints);
 
-		vector<int> validSolutions { 0, 2 };
-		
+		int validSolutionArr[2] = { 0, 2 };
+
+		vector<int> validSolutions(validSolutionArr, validSolutionArr + sizeof(validSolutionArr) / sizeof(validSolutionArr[0]));
+
 		_validSolutions.swap(validSolutions);
 
 		_rotations = {};
 
 		_normals = {};
 
-		for (size_t i = 0; i < rotationsVector.size(); i++) {
+
+		for (size_t i = 0; i < (sizeof(rotationsArray) / sizeof(*rotationsArray)); i++) {
 			Mat tempRotMat = Mat(Matx33d(
-				rotationsVector.at(i).at(0),
-				rotationsVector.at(i).at(1), 
-				rotationsVector.at(i).at(2), 
-				rotationsVector.at(i).at(3), 
-				rotationsVector.at(i).at(4), 
-				rotationsVector.at(i).at(5), 
-				rotationsVector.at(i).at(6), 
-				rotationsVector.at(i).at(7), 
-				rotationsVector.at(i).at(8)
+				rotationsArray[i][0],
+				rotationsArray[i][1],
+				rotationsArray[i][2],
+				rotationsArray[i][3],
+				rotationsArray[i][4],
+				rotationsArray[i][5],
+				rotationsArray[i][6],
+				rotationsArray[i][7],
+				rotationsArray[i][8]
 			));
 
 			Mat tempNormMat = Mat(Matx31d(
-				normalsVector.at(i).at(0),
-				normalsVector.at(i).at(1),
-				normalsVector.at(i).at(2)
+				normalsArray[i][0],
+				normalsArray[i][1],
+				normalsArray[i][2]
 			));
 
 			_rotations.push_back(tempRotMat);
 			_normals.push_back(tempNormMat);
 		}
 
-        _mask = Mat(maskVector);
+        _mask = Mat(514, 1, CV_8U, maskArray).clone();
     }
 
     bool isValidResult(vector<int> solutions)
     {
-        //return (solutions == _validSolutions);
-        
-        bool valid = solutions.size() == _validSolutions.size();
-
-        for (size_t i = 0; i < solutions.size() && valid; i++)
-        {
-            valid = solutions.at(i) == _validSolutions.at(i);
-        }
-
-        if (!valid)
-        {
-            cout << "solutions(" << solutions.size() << "):" << endl;
-            copy(solutions.begin(), solutions.end(), std::ostream_iterator<int>(std::cout, " "));
-            cout << endl << "validSolutions(" << _validSolutions.size() << "):" << endl;
-            copy(_validSolutions.begin(), _validSolutions.end(), std::ostream_iterator<int>(std::cout, " "));
-            cout << endl;
-        }
-
-        return valid;
-        
+        return (solutions == _validSolutions);
     }
 
     vector<int> _validSolutions;
