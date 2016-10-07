@@ -116,6 +116,8 @@ enum
 
     CV_CAP_GIGANETIX = 1300,  // Smartek Giganetix GigEVisionSDK
 
+    CV_CAP_ARAVIS = 1400,  	 // Aravis GigE SDK
+
     CV_CAP_INTELPERC = 1500, // Intel Perceptual Computing
 
     CV_CAP_OPENNI2 = 1600,   // OpenNI2 (for Kinect)
