@@ -118,7 +118,7 @@ if(WITH_GIGEAPI)
             PATHS /usr/local /var /opt /usr ENV ProgramFiles ENV ProgramW6432
             PATH_SUFFIXES include "Smartek Vision Technologies/GigEVisionSDK/gige_cpp" "GigEVisionSDK/gige_cpp" "GigEVisionSDK/gige_c"
             DOC "The path to Smartek GigEVisionSDK header")
-  FIND_LIBRARY(GIGEAPI_LIBRARIES GigEVisionSDK)
+  FIND_LIBRARY(GIGEAPI_LIBRARIES NAMES GigEVisionSDK)
   if(GIGEAPI_LIBRARIES AND GIGEAPI_INCLUDE_PATH)
     set(HAVE_GIGE_API TRUE)
   endif()
