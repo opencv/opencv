@@ -696,7 +696,7 @@ BFMatcher::BFMatcher( int _normType, bool _crossCheck )
     crossCheck = _crossCheck;
 }
 
-Ptr<BFMatcher> BFMatcher::create(int _normType, bool _crossCheck ) 
+Ptr<BFMatcher> BFMatcher::create(int _normType, bool _crossCheck )
 {
     return makePtr<BFMatcher>(_normType, _crossCheck);
 }
@@ -1038,8 +1038,8 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatche
 
 Ptr<DescriptorMatcher> DescriptorMatcher::create(int matcherType)
 {
-    
-    
+
+
     String name;
 
     switch(matcherType)
@@ -1068,7 +1068,7 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create(int matcherType)
     }
 
     return DescriptorMatcher::create(name);
-        
+
 }
 
 
@@ -1082,7 +1082,7 @@ FlannBasedMatcher::FlannBasedMatcher( const Ptr<flann::IndexParams>& _indexParam
     CV_Assert( _searchParams );
 }
 
-Ptr<FlannBasedMatcher> FlannBasedMatcher::create() 
+Ptr<FlannBasedMatcher> FlannBasedMatcher::create()
 {
     return makePtr<FlannBasedMatcher>();
 }
