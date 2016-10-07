@@ -166,7 +166,7 @@ private:
         }                                                                               \
     private: int val_;                                                                  \
     };                                                                                  \
-    inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
+    static inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
 #define CV_FLAGS(class_name, ...)                                                       \
     namespace {                                                                         \
@@ -195,7 +195,7 @@ private:
         }                                                                               \
     private: int val_;                                                                  \
     };                                                                                  \
-    inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
+    static inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
 CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTYPE1)
 

@@ -8,4 +8,4 @@ ocv_define_module(ocl opencv_core opencv_imgproc opencv_features2d opencv_objdet
 if(TARGET opencv_test_ocl)
   target_link_libraries(opencv_test_ocl "${OPENCL_LIBRARIES}")
 endif()
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Woverloaded-virtual -Wunused-private-field)

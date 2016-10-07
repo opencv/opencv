@@ -46,6 +46,12 @@
 
 #ifdef __cplusplus
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
+#endif
+
+
 #include <map>
 #include <string>
 #include <iostream>
@@ -2140,6 +2146,10 @@ template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
 CV_EXPORTS bool initModule_ml(void);
 
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #endif // __cplusplus
 #endif // __OPENCV_ML_HPP__

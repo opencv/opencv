@@ -10,6 +10,8 @@ project(traincascade)
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
 ocv_include_modules(${OPENCV_TRAINCASCADE_DEPS})
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Woverloaded-virtual)
+
 set(traincascade_files traincascade.cpp
   cascadeclassifier.cpp cascadeclassifier.h
   boost.cpp boost.h features.cpp traincascade_features.h

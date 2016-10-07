@@ -118,7 +118,6 @@ private:
     int height;
     int settingWidth;
     int settingHeight;
-    OSType mInputPixelFormat;
 
     int started;
 };
@@ -165,7 +164,6 @@ private:
 
     CMTime mFrameTimestamp;
     size_t mFrameNum;
-    OSType mInputPixelFormat;
 
     int started;
 };
