@@ -14,7 +14,7 @@ class_ignore_list = (
     #core
     "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
     #features2d
-    "SimpleBlobDetector", "FlannBasedMatcher", "DescriptorMatcher"
+    "SimpleBlobDetector"
 )
 
 const_ignore_list = (
