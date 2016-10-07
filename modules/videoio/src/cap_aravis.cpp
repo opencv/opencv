@@ -100,6 +100,7 @@ protected:
 	ArvCamera       *camera;                // Camera to control.
 	ArvStream       *stream;                // Object for video stream reception.
 	void			*framebuffer;			// 
+
 	unsigned int    payload;                // Width x height x Pixel width.
 	
 	int             widthMin;               // Camera sensor minium width.
@@ -124,6 +125,12 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     camera = NULL;
     stream = NULL;
     framebuffer = NULL;
+    
+    payload = 0;
+    
+    widthMin = widthMax = heightMin = heightMax = 0;
+    fpsMin = fpsMax = gainMin = gainMax = exposureMin = exposureMax = 0;
+
     num_buffers = 50;
     
     frame = NULL;
@@ -191,7 +198,7 @@ bool CvCaptureCAM_Aravis::open( int index )
 		arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax);
 		arv_camera_get_gain_bounds (camera, &gainMin, &gainMax);
 		arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax);
-
+		
 		// enforce mono 8 format
 		arv_camera_set_pixel_format(camera, ARV_PIXEL_FORMAT_MONO_8);
 		
