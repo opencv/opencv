@@ -97,8 +97,10 @@ static String Legende(MSERParams &pAct)
 }
 
 
+#ifdef HAVE_OPENGL
 const int win_width = 800;
 const int win_height = 640;
+#endif
 bool    rotateEnable=true;
 bool    keyPressed=false;
 
