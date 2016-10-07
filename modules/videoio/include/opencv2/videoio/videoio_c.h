@@ -115,7 +115,7 @@ enum
     CV_CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
 
     CV_CAP_GIGANETIX = 1300,  // Smartek Giganetix GigEVisionSDK
-    
+
     CV_CAP_ARAVIS = 1400,  	 // Aravis GigE SDK
 
     CV_CAP_INTELPERC = 1500, // Intel Perceptual Computing
