@@ -273,6 +273,12 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #endif
     }
 
+#ifdef HAVE_ARAVIS_API
+    case CV_CAP_ARAVIS:
+        TRY_OPEN(capture, cvCreateCameraCapture_Aravis(index))
+        if (pref) break;
+#endif
+
     return capture;
 }
 
