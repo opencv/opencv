@@ -99,7 +99,7 @@ OCL_TEST_P(Canny, Accuracy)
     generateTestData();
 
     const double low_thresh = 50.0, high_thresh = 100.0;
-    double eps = 12e-3;
+    double eps = 0.03;
 
     OCL_OFF(cv::Canny(src_roi, dst_roi, low_thresh, high_thresh, aperture_size, useL2gradient));
     OCL_ON(cv::Canny(usrc_roi, udst_roi, low_thresh, high_thresh, aperture_size, useL2gradient));
@@ -113,7 +113,7 @@ OCL_TEST_P(Canny, AccuracyCustomGradient)
     generateTestData();
 
     const double low_thresh = 50.0, high_thresh = 100.0;
-    double eps = 12e-3;
+    double eps = 0.03;
 
     OCL_OFF(cv::Canny(src_roi, dst_roi, low_thresh, high_thresh, aperture_size, useL2gradient));
     OCL_ON(

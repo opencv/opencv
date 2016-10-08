@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_HPP__
-#define __OPENCV_HAL_HPP__
+#ifndef OPENCV_HAL_HPP
+#define OPENCV_HAL_HPP
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
@@ -247,4 +247,4 @@ CV_EXPORTS void invSqrt(const double* src, double* dst, int len);
 
 }} //cv::hal
 
-#endif //__OPENCV_HAL_HPP__
+#endif //OPENCV_HAL_HPP

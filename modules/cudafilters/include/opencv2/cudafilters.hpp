@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDAFILTERS_HPP__
-#define __OPENCV_CUDAFILTERS_HPP__
+#ifndef OPENCV_CUDAFILTERS_HPP
+#define OPENCV_CUDAFILTERS_HPP
 
 #ifndef __cplusplus
 #  error cudafilters.hpp header must be compiled as C++
@@ -328,4 +328,4 @@ CV_EXPORTS Ptr<Filter> createMedianFilter(int srcType, int windowSize, int parti
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_CUDAFILTERS_HPP__ */
+#endif /* OPENCV_CUDAFILTERS_HPP */

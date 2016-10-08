@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZCORE_HPP__
-#define __OPENCV_VIZCORE_HPP__
+#ifndef OPENCV_VIZCORE_HPP
+#define OPENCV_VIZCORE_HPP
 
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
@@ -173,4 +173,4 @@ namespace cv
     } /* namespace viz */
 } /* namespace cv */
 
-#endif /* __OPENCV_VIZCORE_HPP__ */
+#endif /* OPENCV_VIZCORE_HPP */

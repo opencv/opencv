@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_STITCHER_HPP__
-#define __OPENCV_STITCHING_STITCHER_HPP__
+#ifndef OPENCV_STITCHING_STITCHER_HPP
+#define OPENCV_STITCHING_STITCHER_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -254,4 +254,4 @@ CV_EXPORTS_W Ptr<Stitcher> createStitcher(bool try_use_gpu = false);
 
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_STITCHER_HPP__
+#endif // OPENCV_STITCHING_STITCHER_HPP

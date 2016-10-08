@@ -111,16 +111,29 @@ macro(_ocv_fix_target target_var)
   endif()
 endmacro()
 
+function(ocv_is_opencv_directory result_var dir)
+  get_filename_component(__abs_dir "${dir}" ABSOLUTE)
+  if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}"
+      OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}"
+      OR (OPENCV_EXTRA_MODULES_PATH AND "${__abs_dir}" MATCHES "^${OPENCV_EXTRA_MODULES_PATH}"))
+    set(${result_var} 1 PARENT_SCOPE)
+  else()
+    set(${result_var} 0 PARENT_SCOPE)
+  endif()
+endfunction()
+
+
 # adds include directories in such way that directories from the OpenCV source tree go first
 function(ocv_include_directories)
   ocv_debug_message("ocv_include_directories( ${ARGN} )")
   set(__add_before "")
   foreach(dir ${ARGN})
-    get_filename_component(__abs_dir "${dir}" ABSOLUTE)
-    if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}"
-        OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}"
-        OR (OPENCV_EXTRA_MODULES_PATH AND "${__abs_dir}" MATCHES "^${OPENCV_EXTRA_MODULES_PATH}"))
+    ocv_is_opencv_directory(__is_opencv_dir "${dir}")
+    if(__is_opencv_dir)
       list(APPEND __add_before "${dir}")
+    elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+           dir MATCHES "/usr/include$")
+      # workaround for GCC 6.x bug
     else()
       include_directories(AFTER SYSTEM "${dir}")
     endif()
@@ -142,11 +155,14 @@ endfunction()
 function(ocv_target_include_directories target)
   _ocv_fix_target(target)
   set(__params "")
+  if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+      ";${ARGN};" MATCHES "/usr/include;")
+    return() # workaround for GCC 6.x bug
+  endif()
   foreach(dir ${ARGN})
     get_filename_component(__abs_dir "${dir}" ABSOLUTE)
-    if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}"
-        OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}"
-        OR (OPENCV_EXTRA_MODULES_PATH AND "${__abs_dir}" MATCHES "^${OPENCV_EXTRA_MODULES_PATH}"))
+    ocv_is_opencv_directory(__is_opencv_dir "${dir}")
+    if(__is_opencv_dir)
       list(APPEND __params "${__abs_dir}")
     else()
       list(APPEND __params "${dir}")

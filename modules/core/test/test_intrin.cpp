@@ -277,6 +277,24 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_abs()
+    {
+        typedef typename V_RegTrait128<LaneType>::u_reg Ru;
+        typedef typename Ru::lane_type u_type;
+        Data<R> dataA, dataB(10);
+        R a = dataA, b = dataB;
+        a = a - b;
+
+        Data<Ru> resC = v_abs(a);
+
+        for (int i = 0; i < Ru::nlanes; ++i)
+        {
+            EXPECT_EQ((u_type)std::abs(dataA[i] - dataB[i]), resC[i]);
+        }
+
+        return *this;
+    }
+
     template <int s>
     TheTest & test_shift()
     {
@@ -711,48 +729,56 @@ template<typename R> struct TheTest
         return *this;
     }
 
-#if CV_FP16
     TheTest & test_loadstore_fp16()
     {
+#if CV_FP16
         AlignedData<R> data;
         AlignedData<R> out;
 
-        // check if addresses are aligned and unaligned respectively
-        EXPECT_EQ((size_t)0, (size_t)&data.a.d % 16);
-        EXPECT_NE((size_t)0, (size_t)&data.u.d % 16);
-        EXPECT_EQ((size_t)0, (size_t)&out.a.d % 16);
-        EXPECT_NE((size_t)0, (size_t)&out.u.d % 16);
+        if(checkHardwareSupport(CV_CPU_FP16))
+        {
+            // check if addresses are aligned and unaligned respectively
+            EXPECT_EQ((size_t)0, (size_t)&data.a.d % 16);
+            EXPECT_NE((size_t)0, (size_t)&data.u.d % 16);
+            EXPECT_EQ((size_t)0, (size_t)&out.a.d % 16);
+            EXPECT_NE((size_t)0, (size_t)&out.u.d % 16);
 
-        // check some initialization methods
-        R r1 = data.u;
-        R r2 = v_load_f16(data.a.d);
-        R r3(r2);
-        EXPECT_EQ(data.u[0], r1.get0());
-        EXPECT_EQ(data.a[0], r2.get0());
-        EXPECT_EQ(data.a[0], r3.get0());
+            // check some initialization methods
+            R r1 = data.u;
+            R r2 = v_load_f16(data.a.d);
+            R r3(r2);
+            EXPECT_EQ(data.u[0], r1.get0());
+            EXPECT_EQ(data.a[0], r2.get0());
+            EXPECT_EQ(data.a[0], r3.get0());
 
-        // check some store methods
-        out.a.clear();
-        v_store_f16(out.a.d, r1);
-        EXPECT_EQ(data.a, out.a);
+            // check some store methods
+            out.a.clear();
+            v_store_f16(out.a.d, r1);
+            EXPECT_EQ(data.a, out.a);
+        }
 
         return *this;
+#endif
     }
 
     TheTest & test_float_cvt_fp16()
     {
+#if CV_FP16
         AlignedData<v_float32x4> data;
 
-        // check conversion
-        v_float32x4 r1 = v_load(data.a.d);
-        v_float16x4 r2 = v_cvt_f16(r1);
-        v_float32x4 r3 = v_cvt_f32(r2);
-        EXPECT_EQ(0x3c00, r2.get0());
-        EXPECT_EQ(r3.get0(), r1.get0());
+        if(checkHardwareSupport(CV_CPU_FP16))
+        {
+            // check conversion
+            v_float32x4 r1 = v_load(data.a.d);
+            v_float16x4 r2 = v_cvt_f16(r1);
+            v_float32x4 r3 = v_cvt_f32(r2);
+            EXPECT_EQ(0x3c00, r2.get0());
+            EXPECT_EQ(r3.get0(), r1.get0());
+        }
 
         return *this;
-    }
 #endif
+    }
 
 };
 
@@ -791,6 +817,7 @@ TEST(hal_intrin, int8x16) {
         .test_logic()
         .test_min_max()
         .test_absdiff()
+        .test_abs()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
         .test_unpack()
@@ -839,6 +866,7 @@ TEST(hal_intrin, int16x8) {
         .test_logic()
         .test_min_max()
         .test_absdiff()
+        .test_abs()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
         .test_unpack()
@@ -878,6 +906,7 @@ TEST(hal_intrin, int32x4) {
         .test_expand()
         .test_addsub()
         .test_mul()
+        .test_abs()
         .test_cmp()
         .test_shift<1>().test_shift<8>()
         .test_logic()

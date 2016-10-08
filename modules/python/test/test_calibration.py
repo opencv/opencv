@@ -57,7 +57,7 @@ class calibration_test(NewOpenCVTests):
 
         eps = 0.01
         normCamEps = 10.0
-        normDistEps = 0.001
+        normDistEps = 0.05
 
         cameraMatrixTest = [[ 532.80992189,    0.,          342.4952186 ],
          [   0.,         532.93346422,  233.8879292 ],

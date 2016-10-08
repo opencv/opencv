@@ -4075,6 +4075,16 @@ static const uchar popCountTable4[] =
     1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
+#if CV_AVX2
+static inline int _mm256_extract_epi32_(__m256i reg, const int i)
+{
+    CV_DECL_ALIGNED(32) int reg_data[8];
+    CV_DbgAssert(0 <= i && i < 8);
+    _mm256_store_si256((__m256i*)reg_data, reg);
+    return reg_data[i];
+}
+#endif
+
 int normHamming(const uchar* a, int n)
 {
     int i = 0;
@@ -4092,6 +4102,27 @@ int normHamming(const uchar* a, int n)
         uint64x2_t bitSet2 = vpaddlq_u32 (bits);
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    }
+#elif CV_AVX2
+    {
+        __m256i _r0 = _mm256_setzero_si256();
+        __m256i _0 = _mm256_setzero_si256();
+        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
+        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
+
+        for(; i <= n - 32; i+= 32)
+        {
+            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
+
+            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_a0, _popcnt_mask));
+            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
+                             _mm256_and_si256(_mm256_srli_epi16(_a0, 4), _popcnt_mask));
+
+            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
+        }
+        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
+        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
 #endif
         for( ; i <= n - 4; i += 4 )
@@ -4121,6 +4152,30 @@ int normHamming(const uchar* a, const uchar* b, int n)
         uint64x2_t bitSet2 = vpaddlq_u32 (bits);
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    }
+#elif CV_AVX2
+    {
+        __m256i _r0 = _mm256_setzero_si256();
+        __m256i _0 = _mm256_setzero_si256();
+        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
+        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
+
+        for(; i <= n - 32; i+= 32)
+        {
+            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
+            __m256i _b0 = _mm256_loadu_si256((const __m256i*)(b + i));
+
+            __m256i _xor = _mm256_xor_si256(_a0, _b0);
+
+            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_xor, _popcnt_mask));
+            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
+                             _mm256_and_si256(_mm256_srli_epi16(_xor, 4), _popcnt_mask));
+
+            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
+        }
+        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
+        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
 #endif
         for( ; i <= n - 4; i += 4 )

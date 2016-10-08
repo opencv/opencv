@@ -1,5 +1,5 @@
-#ifndef __OPENCV_TS_PERF_HPP__
-#define __OPENCV_TS_PERF_HPP__
+#ifndef OPENCV_TS_PERF_HPP
+#define OPENCV_TS_PERF_HPP
 
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
@@ -704,4 +704,4 @@ struct CV_EXPORTS KeypointGreater :
 void CV_EXPORTS sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors);
 } //namespace perf
 
-#endif //__OPENCV_TS_PERF_HPP__
+#endif //OPENCV_TS_PERF_HPP

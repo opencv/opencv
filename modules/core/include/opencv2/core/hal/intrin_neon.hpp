@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_INTRIN_NEON_HPP__
-#define __OPENCV_HAL_INTRIN_NEON_HPP__
+#ifndef OPENCV_HAL_INTRIN_NEON_HPP
+#define OPENCV_HAL_INTRIN_NEON_HPP
 
 #include <algorithm>
 
@@ -548,6 +548,13 @@ inline v_float32x4 v_invsqrt(const v_float32x4& x)
     return v_float32x4(e);
 }
 #endif
+
+#define OPENCV_HAL_IMPL_NEON_ABS(_Tpuvec, _Tpsvec, usuffix, ssuffix) \
+inline _Tpuvec v_abs(const _Tpsvec& a) { return v_reinterpret_as_##usuffix(_Tpsvec(vabsq_##ssuffix(a.val))); }
+
+OPENCV_HAL_IMPL_NEON_ABS(v_uint8x16, v_int8x16, u8, s8)
+OPENCV_HAL_IMPL_NEON_ABS(v_uint16x8, v_int16x8, u16, s16)
+OPENCV_HAL_IMPL_NEON_ABS(v_uint32x4, v_int32x4, u32, s32)
 
 inline v_float32x4 v_abs(v_float32x4 x)
 { return v_float32x4(vabsq_f32(x.val)); }

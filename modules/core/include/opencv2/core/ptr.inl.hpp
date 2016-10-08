@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_PTR_INL_HPP__
-#define __OPENCV_CORE_PTR_INL_HPP__
+#ifndef OPENCV_CORE_PTR_INL_HPP
+#define OPENCV_CORE_PTR_INL_HPP
 
 #include <algorithm>
 
@@ -376,4 +376,4 @@ Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5&
 
 //! @endcond
 
-#endif // __OPENCV_CORE_PTR_INL_HPP__
+#endif // OPENCV_CORE_PTR_INL_HPP

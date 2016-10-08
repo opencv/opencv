@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CALIB3D_HPP__
-#define __OPENCV_CALIB3D_HPP__
+#ifndef OPENCV_CALIB3D_HPP
+#define OPENCV_CALIB3D_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -388,7 +388,7 @@ and a rotation matrix.
 
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles in
 degrees (as the return value) that could be used in OpenGL. Note, there is always more than one
-sequence of rotations about the three principle axes that results in the same orientation of an
+sequence of rotations about the three principal axes that results in the same orientation of an
 object, eg. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angules
 are only one of the possible solutions.
  */
@@ -414,7 +414,7 @@ matrix and the position of a camera.
 
 It optionally returns three rotation matrices, one for each axis, and three Euler angles that could
 be used in OpenGL. Note, there is always more than one sequence of rotations about the three
-principle axes that results in the same orientation of an object, eg. see @cite Slabaugh . Returned
+principal axes that results in the same orientation of an object, eg. see @cite Slabaugh . Returned
 tree rotation matrices and corresponding three Euler angules are only one of the possible solutions.
 
 The function is based on RQDecomp3x3 .
@@ -1304,8 +1304,8 @@ CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
 be floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
 @param focal focal length of the camera. Note that this function assumes that points1 and points2
-are feature points from cameras with same focal length and principle point.
-@param pp principle point of the camera.
+are feature points from cameras with same focal length and principal point.
+@param pp principal point of the camera.
 @param method Method for computing a fundamental matrix.
 -   **RANSAC** for the RANSAC algorithm.
 -   **LMEDS** for the LMedS algorithm.
@@ -1403,8 +1403,8 @@ floating-point (single or double precision).
 @param R Recovered relative rotation.
 @param t Recoverd relative translation.
 @param focal Focal length of the camera. Note that this function assumes that points1 and points2
-are feature points from cameras with same focal length and principle point.
-@param pp Principle point of the camera.
+are feature points from cameras with same focal length and principal point.
+@param pp principal point of the camera.
 @param mask Input/output mask for inliers in points1 and points2.
 :   If it is not empty, then it marks inliers in points1 and points2 for then given essential
 matrix E. Only these inliers will be used to recover pose. In the output mask only inliers

@@ -2,6 +2,7 @@
 #define OPENCV_OPENVX_HAL_HPP_INCLUDED
 
 #include "opencv2/core/hal/interface.h"
+#include "opencv2/imgproc/hal/interface.h"
 
 #include "VX/vx.h"
 #include "VX/vxu.h"
@@ -10,7 +11,18 @@
 #include <vector>
 
 #include <algorithm>
-#include <opencv2/core/saturate.hpp>
+#include <cfloat>
+#include <climits>
+#include <cmath>
+
+#if VX_VERSION == VX_VERSION_1_0
+
+#define VX_MEMORY_TYPE_HOST VX_IMPORT_TYPE_HOST
+#define VX_INTERPOLATION_BILINEAR VX_INTERPOLATION_TYPE_BILINEAR
+#define VX_INTERPOLATION_AREA VX_INTERPOLATION_TYPE_AREA
+#define VX_INTERPOLATION_NEAREST_NEIGHBOR VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR
+
+#endif
 
 //==================================================================================================
 // utility
@@ -267,7 +279,9 @@ struct vxImage
     }
     ~vxImage()
     {
+#if VX_VERSION > VX_VERSION_1_0
         vxErr::check(vxSwapImageHandle(img, NULL, NULL, 1));
+#endif
         vxReleaseImage(&img);
     }
 };
@@ -289,6 +303,8 @@ struct vxMatrix
     }
 };
 
+#if VX_VERSION > VX_VERSION_1_0
+
 struct vxConvolution
 {
     vx_convolution cnv;
@@ -304,6 +320,8 @@ struct vxConvolution
         vxReleaseConvolution(&cnv);
     }
 };
+
+#endif
 
 //==================================================================================================
 // real code starts here
@@ -341,13 +359,32 @@ OVX_BINARY_OP(xor, {vxErr::check(vxuXor(ctx->ctx, ia.img, ib.img, ic.img));})
 template <typename T>
 inline int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h, double scale)
 {
+#ifdef _MSC_VER
+    const float MAGIC_SCALE = 0x0.01010102;
+#else
+    const float MAGIC_SCALE = 0x1.010102p-8;
+#endif
     try
     {
+        int rounding_policy = VX_ROUND_POLICY_TO_ZERO;
+        float fscale = (float)scale;
+        if (fabs(fscale - MAGIC_SCALE) > FLT_EPSILON)
+        {
+          int exp = 0;
+          double significand = frexp(fscale, &exp);
+          if((significand != 0.5) || (exp > 1) || (exp < -14))
+              return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+        else
+        {
+            fscale = MAGIC_SCALE;
+            rounding_policy = VX_ROUND_POLICY_TO_NEAREST_EVEN;// That's the only rounding that MUST be supported for 1/255 scale
+        }
         vxContext * ctx = vxContext::getContext();
         vxImage ia(*ctx, a, astep, w, h);
         vxImage ib(*ctx, b, bstep, w, h);
         vxImage ic(*ctx, c, cstep, w, h);
-        vxErr::check(vxuMultiply(ctx->ctx, ia.img, ib.img, (float)scale, VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_ZERO, ic.img));
+        vxErr::check(vxuMultiply(ctx->ctx, ia.img, ib.img, fscale, VX_CONVERT_POLICY_SATURATE, rounding_policy, ic.img));
     }
     catch (vxErr & e)
     {
@@ -397,16 +434,6 @@ inline int ovx_hal_merge8u(const uchar **src_data, uchar *dst_data, int len, int
     return CV_HAL_ERROR_OK;
 }
 
-
-#if defined OPENCV_IMGPROC_HAL_INTERFACE_H
-#define CV_HAL_INTER_NEAREST 0
-#define CV_HAL_INTER_LINEAR 1
-#define CV_HAL_INTER_CUBIC 2
-#define CV_HAL_INTER_AREA 3
-#define CV_HAL_INTER_LANCZOS4 4
-#define MORPH_ERODE 0
-#define MORPH_DILATE 1
-
 inline int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, double inv_scale_x, double inv_scale_y, int interpolation)
 {
     try
@@ -441,6 +468,8 @@ inline int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int a
     }
     return CV_HAL_ERROR_OK;
 }
+
+#if VX_VERSION > VX_VERSION_1_0
 
 inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
@@ -563,8 +592,8 @@ struct cvhalFilter2D;
 struct FilterCtx
 {
     vxConvolution cnv;
-    vx_border_t border;
     int dst_type;
+    vx_border_t border;
     FilterCtx(vxContext &ctx, const short *data, int w, int h, int _dst_type, vx_border_t & _border) :
         cnv(ctx, data, w, h), dst_type(_dst_type), border(_border) {}
 };
@@ -765,7 +794,8 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
         }
         else
         {
-            border.constant_value.U8 = cv::saturate_cast<uchar>(borderValue[0]);
+            int rounded = round(borderValue[0]);
+            border.constant_value.U8 = (uchar)((unsigned)rounded <= UCHAR_MAX ? rounded : rounded > 0 ? UCHAR_MAX : 0);
         }
         break;
     case CV_HAL_BORDER_REPLICATE:
@@ -886,6 +916,8 @@ inline int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, 
     return CV_HAL_ERROR_OK;
 }
 
+#endif // 1.0 guard
+
 inline int ovx_hal_cvtBGRtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int depth, int acn, int bcn, bool swapBlue)
 {
     if (depth != CV_8U || swapBlue || acn == bcn || (acn != 3 && acn != 4) || (bcn != 3 && bcn != 4))
@@ -986,8 +1018,6 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
     return CV_HAL_ERROR_OK;
 }
 
-#endif
-
 //==================================================================================================
 // functions redefinition
 // ...
@@ -1023,10 +1053,11 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 #undef cv_hal_merge8u
 #define cv_hal_merge8u ovx_hal_merge8u
 
-#if defined OPENCV_IMGPROC_HAL_INTERFACE_H
-
 #undef cv_hal_resize
 #define cv_hal_resize ovx_hal_resize
+
+#if VX_VERSION > VX_VERSION_1_0
+
 #undef cv_hal_warpAffine
 #define cv_hal_warpAffine ovx_hal_warpAffine
 #undef cv_hal_warpPerspective
@@ -1053,6 +1084,8 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 #undef cv_hal_morphFree
 #define cv_hal_morphFree ovx_hal_morphFree
 
+#endif // 1.0 guard
+
 #undef cv_hal_cvtBGRtoBGR
 #define cv_hal_cvtBGRtoBGR ovx_hal_cvtBGRtoBGR
 #undef cv_hal_cvtTwoPlaneYUVtoBGR
@@ -1063,7 +1096,5 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 #define cv_hal_cvtBGRtoThreePlaneYUV ovx_hal_cvtBGRtoThreePlaneYUV
 #undef cv_hal_cvtOnePlaneYUVtoBGR
 #define cv_hal_cvtOnePlaneYUVtoBGR ovx_hal_cvtOnePlaneYUVtoBGR
-
-#endif
 
 #endif

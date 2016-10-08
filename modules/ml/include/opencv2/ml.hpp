@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_ML_HPP__
-#define __OPENCV_ML_HPP__
+#ifndef OPENCV_ML_HPP
+#define OPENCV_ML_HPP
 
 #ifdef __cplusplus
 #  include "opencv2/core.hpp"
@@ -289,7 +289,7 @@ public:
         <number_of_variables_in_responses>`, containing types of each input and output variable. See
         ml::VariableTypes.
      */
-    CV_WRAP static Ptr<cv::ml::TrainData> create(InputArray samples, int layout, InputArray responses,
+    CV_WRAP static Ptr<TrainData> create(InputArray samples, int layout, InputArray responses,
                                  InputArray varIdx=noArray(), InputArray sampleIdx=noArray(),
                                  InputArray sampleWeights=noArray(), InputArray varType=noArray());
 };
@@ -324,7 +324,7 @@ public:
     @param flags optional flags, depending on the model. Some of the models can be updated with the
         new training samples, not completely overwritten (such as NormalBayesClassifier or ANN_MLP).
      */
-    CV_WRAP virtual bool train( const Ptr<cv::ml::TrainData>& trainData, int flags=0 );
+    CV_WRAP virtual bool train( const Ptr<TrainData>& trainData, int flags=0 );
 
     /** @brief Trains the statistical model
 
@@ -347,7 +347,7 @@ public:
     The method uses StatModel::predict to compute the error. For regression models the error is
     computed as RMS, for classifiers - as a percent of missclassified samples (0%-100%).
      */
-    CV_WRAP virtual float calcError( const Ptr<cv::ml::TrainData>& data, bool test, OutputArray resp ) const;
+    CV_WRAP virtual float calcError( const Ptr<TrainData>& data, bool test, OutputArray resp ) const;
 
     /** @brief Predicts response(s) for the provided sample(s)
 
@@ -361,7 +361,7 @@ public:
 
     The class must implement static `create()` method with no parameters or with all default parameter values
     */
-    template<typename _Tp> static Ptr<_Tp> train(const Ptr<cv::ml::TrainData>& data, int flags=0)
+    template<typename _Tp> static Ptr<_Tp> train(const Ptr<TrainData>& data, int flags=0)
     {
         Ptr<_Tp> model = _Tp::create();
         return !model.empty() && model->train(data, flags) ? model : Ptr<_Tp>();
@@ -671,7 +671,7 @@ public:
     regression (SVM::EPS_SVR or SVM::NU_SVR). If it is SVM::ONE_CLASS, no optimization is made and
     the usual %SVM with parameters specified in params is executed.
      */
-    virtual bool trainAuto( const Ptr<cv::ml::TrainData>& data, int kFold = 10,
+    virtual bool trainAuto( const Ptr<TrainData>& data, int kFold = 10,
                     ParamGrid Cgrid = SVM::getDefaultGrid(SVM::C),
                     ParamGrid gammaGrid  = SVM::getDefaultGrid(SVM::GAMMA),
                     ParamGrid pGrid      = SVM::getDefaultGrid(SVM::P),
@@ -1685,6 +1685,6 @@ CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int
 }
 
 #endif // __cplusplus
-#endif // __OPENCV_ML_HPP__
+#endif // OPENCV_ML_HPP
 
 /* End of file. */

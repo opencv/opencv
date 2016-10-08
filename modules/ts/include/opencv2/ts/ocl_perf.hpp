@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_TS_OCL_PERF_HPP__
-#define __OPENCV_TS_OCL_PERF_HPP__
+#ifndef OPENCV_TS_OCL_PERF_HPP
+#define OPENCV_TS_OCL_PERF_HPP
 
 #include "ocl_test.hpp"
 #include "ts_perf.hpp"
@@ -128,4 +128,4 @@ using namespace perf;
 } // namespace cvtest::ocl
 } // namespace cvtest
 
-#endif // __OPENCV_TS_OCL_PERF_HPP__
+#endif // OPENCV_TS_OCL_PERF_HPP

@@ -42,8 +42,8 @@
 //M*/
 
 
-#ifndef __OPENCV_CORE_EIGEN_HPP__
-#define __OPENCV_CORE_EIGEN_HPP__
+#ifndef OPENCV_CORE_EIGEN_HPP
+#define OPENCV_CORE_EIGEN_HPP
 
 #include "opencv2/core.hpp"
 

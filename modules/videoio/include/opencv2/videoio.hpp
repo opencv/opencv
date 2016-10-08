@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOIO_HPP__
-#define __OPENCV_VIDEOIO_HPP__
+#ifndef OPENCV_VIDEOIO_HPP
+#define OPENCV_VIDEOIO_HPP
 
 #include "opencv2/core.hpp"
 
@@ -907,4 +907,4 @@ template<> CV_EXPORTS void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWri
 
 } // cv
 
-#endif //__OPENCV_VIDEOIO_HPP__
+#endif //OPENCV_VIDEOIO_HPP

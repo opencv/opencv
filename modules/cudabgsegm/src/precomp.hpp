@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef OPENCV_PRECOMP_H
+#define OPENCV_PRECOMP_H
 
 #include <limits>
 
@@ -51,4 +51,4 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#endif /* __OPENCV_PRECOMP_H__ */
+#endif /* OPENCV_PRECOMP_H */
