@@ -854,7 +854,7 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double srn, double stn, double min_theta, double max_theta )
 {
-    //CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION()
 
     CV_OCL_RUN(srn == 0 && stn == 0 && _image.isUMat() && _lines.isUMat(),
                ocl_HoughLines(_image, _lines, rho, theta, threshold, min_theta, max_theta));
@@ -875,7 +875,7 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double minLineLength, double maxGap )
 {
-    //CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION()
 
     CV_OCL_RUN(_image.isUMat() && _lines.isUMat(),
                ocl_HoughLinesP(_image, _lines, rho, theta, threshold, minLineLength, maxGap));
@@ -1931,9 +1931,10 @@ namespace cv
         Sobel(_image, dy, CV_16S, 0, 1, 3, 1, 0, BORDER_REPLICATE);
         Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
-        // More than 1, max 2 threads as long as no thread safe container exists, otherwise adding accum at the end has a huge overhead
+        // Max 2 threads as long as no thread safe container exists, otherwise adding accum at the end has a huge overhead
         // 1 Thread overhead is 0, 2 Threads if (maxRadius - minRadius) is great and cost is more than add accum
-        numberOfThreads = std::max(1, std::min(numThreads, 1 + (maxRadius - minRadius) / 64));
+        if(maxRadius - minRadius > 32)
+            numberOfThreads = std::max(1, std::min(numThreads, 2));
 
         parallel_for_(Range(0, edges.rows),
             HoughCirclesAccumInvoker(edges.getMat(ACCESS_READ), dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ), accum, nz, minRadius, maxRadius, dp),
@@ -1944,6 +1945,8 @@ namespace cv
 
         Seq<int> centers(storage);
 
+        // 4 rows when multi threaded because there is a bit overhead
+        // and on the other side there are some row ranges where centers are concentrated
         numberOfThreads = (numThreads > 1) ? ((accum.rows - 2) / 4) : 1;
 
         parallel_for_(Range(1, accum.rows - 1),
