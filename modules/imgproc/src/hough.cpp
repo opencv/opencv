@@ -1584,10 +1584,10 @@ namespace cv
     class HoughCircleEstimateRadiusInvoker : public ParallelLoopBody
     {
     public:
-        HoughCircleEstimateRadiusInvoker(const Seq<Point> &_nz, Seq<int> &_centers, Seq<Vec3f> &_circles, int* _adata,
+        HoughCircleEstimateRadiusInvoker(const Seq<Point> &_nz, Seq<int> &_centers, Seq<Vec3f> &_circles,
                                          int _acols, int _circlesMax, int _accThreshold, int _minRadius, int _maxRadius,
                                          float _minDist, float _dp) :
-            nz(_nz), centers(_centers), circles(_circles), adata(_adata), acols(_acols), circlesMax(_circlesMax), accThreshold(_accThreshold),
+            nz(_nz), centers(_centers), circles(_circles), acols(_acols), circlesMax(_circlesMax), accThreshold(_accThreshold),
             minRadius(_minRadius), maxRadius(_maxRadius), minDist(_minDist), dr(_dp)
         {
             minRadius2 = (float)minRadius * minRadius;
@@ -1896,7 +1896,6 @@ namespace cv
         const Seq<Point> &nz;
         Seq<int> &centers;
         Seq<Vec3f> &circles;
-        int *adata;
         int acols, circlesMax, accThreshold, minRadius, maxRadius;
         float minDist, dr;
 
@@ -1953,7 +1952,7 @@ namespace cv
             HoughCirclesFindCentersInvoker(accum, centers, accThreshold),
             numberOfThreads);
 
-        int centerCnt = centers.size();
+        int centerCnt = (int)centers.size();
         if(centerCnt == 0)
             return;
 
@@ -1982,11 +1981,11 @@ namespace cv
                         goto _skip;
                 }
 
-                circles.push_back(Vec3f(x, y, 0));
+                circles.push_back(Vec3f((x + 0.5f) * dp, (y + 0.5f) * dp, 0));
                 _skip: ;
             }
 
-            _circles.create(1, circles.size(), CV_32FC3, -1, true);
+            _circles.create(1, (int)circles.size(), CV_32FC3, -1, true);
             Mat circ = _circles.getMat();
             cvCvtSeqToArray(circles.seq, circ.ptr());
             return;
@@ -1996,13 +1995,13 @@ namespace cv
 
         // One loop iteration per thread if multithreaded.
         parallel_for_(Range(0, centerCnt),
-                      HoughCircleEstimateRadiusInvoker(nz, centers, circles, accum.ptr<int>(), accum.cols, maxCircles,
+                      HoughCircleEstimateRadiusInvoker(nz, centers, circles, accum.cols, maxCircles,
                                                        accThreshold, minRadius, maxRadius, minDist, dp),
                       numberOfThreads);
 
         if (!circles.empty())
         {
-            _circles.create(1, circles.size(), CV_32FC3, -1, true);
+            _circles.create(1, (int)circles.size(), CV_32FC3, -1, true);
             Mat circ = _circles.getMat();
             cvCvtSeqToArray(circles.seq, circ.ptr());
         } else

@@ -2057,6 +2057,7 @@ false circles may be detected. Circles, corresponding to the larger accumulator 
 returned first.
 @param minRadius Minimum circle radius.
 @param maxRadius Maximum circle radius.
+@param maxCircles Maximum number of circles.
 
 @sa fitEllipse, minEnclosingCircle
  */
