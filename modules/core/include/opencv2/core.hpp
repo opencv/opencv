@@ -300,19 +300,19 @@ function does not copy src itself but simply constructs the border, for example:
 @endcode
 @note When the source image is a part (ROI) of a bigger image, the function will try to use the
 pixels outside of the ROI to form a border. To disable this feature and always do extrapolation, as
-if src was not a ROI, use borderType | BORDER_ISOLATED.
+if src was not a ROI, use borderType | cv::BORDER_ISOLATED.
 
 @param src Source image.
 @param dst Destination image of the same type as src and the size Size(src.cols+left+right,
 src.rows+top+bottom) .
-@param top
-@param bottom
-@param left
-@param right Parameter specifying how many pixels in each direction from the source image rectangle
+@param top Top padding size. Parameter specifying how many pixels in each direction from the source image rectangle
 to extrapolate. For example, top=1, bottom=1, left=1, right=1 mean that 1 pixel-wide border needs
 to be built.
-@param borderType Border type. See borderInterpolate for details.
-@param value Border value if borderType==BORDER_CONSTANT .
+@param bottom Bottom padding size.
+@param left Left padding size.
+@param right Right padding size.
+@param borderType Border type. See cv::borderInterpolate for details.
+@param value Border value if borderType==cv::BORDER_CONSTANT .
 
 @sa  borderInterpolate
 */
