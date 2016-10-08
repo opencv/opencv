@@ -1394,24 +1394,17 @@ namespace cv
                 {
 #if CV_SIMD128
                     if(haveSIMD) {
-                        v_float32x4 v_zero = v_setzero_f32();
-//                        __m128i v_zero = _mm_setzero_si128();
+                        v_uint8x16 v_zero = v_setzero_u8();
 
                         for(; x <= numCols - 32; x += 32) {
-                            v_int8x16 v_edge1 = v_load(edgeData);
-                            v_int8x16 v_edge2 = v_load(edgeData + 16);
-//                            __m128i v_edge1 = _mm_loadu_si128((const __m128i*)(edgeData + x));
-//                            __m128i v_edge2 = _mm_loadu_si128((const __m128i*)(edgeData + x + 16));
+                            v_uint8x16 v_edge1 = v_load(edgeData + x);
+                            v_uint8x16 v_edge2 = v_load(edgeData + x + 16);
 
-                            v_int8x16 v_cmp1 = v_edge1 == v_zero;
-                            v_int8x16 v_cmp2 = v_edge2 == v_zero;
-//                            __m128i v_cmp1 = _mm_cmpeq_epi8(v_edge1, v_zero);
-//                            __m128i v_cmp2 = _mm_cmpeq_epi8(v_edge2, v_zero);
+                            v_uint8x16 v_cmp1 = (v_edge1 == v_zero);
+                            v_uint8x16 v_cmp2 = (v_edge2 == v_zero);
 
-                            unsigned int mask1 = v_signmask(cmp1);
-                            unsigned int mask2 = v_signmask(cmp2);
-//                            unsigned int mask1 = _mm_movemask_epi8(v_cmp1);
-//                            unsigned int mask2 = _mm_movemask_epi8(v_cmp2);
+                            unsigned int mask1 = v_signmask(v_cmp1);
+                            unsigned int mask2 = v_signmask(v_cmp2);
 
                             mask1 ^= 0x0000ffff;
                             mask2 ^= 0x0000ffff;
@@ -1610,7 +1603,7 @@ namespace cv
             mc.reserve(64);
             loopIdx = std::vector<bool>(centerSz + 1, false);
 #if CV_SSE2
-            haveSIMD = checkHardwareSupport(CPU_SSE2) // || checkHardwareSupport(CPU_NEON);
+            haveSIMD = checkHardwareSupport(CPU_SSE2); // || checkHardwareSupport(CPU_NEON);
             if(haveSIMD)
             {
 //                v_minRadius2 = v_setall_f32(minRadius2);
@@ -1669,51 +1662,56 @@ namespace cv
 #if CV_SSE2
                 if(haveSIMD)
                 {
-//                    v_float32x4 v_curCenter = (v_float32x4)v_setall_f64(*(double*)&curCenter);
+//                    v_float32x4 v_curCenterX = v_setall_f32(curCenter.x);
+//                    v_float32x4 v_curCenterY = v_setall_f32(curCenter.y);
                     __m128 v_curCenter = _mm_castsi128_ps(_mm_loadl_epi64((const __m128i*)&curCenter));
                     v_curCenter = _mm_shuffle_ps(v_curCenter, v_curCenter, _MM_SHUFFLE(1, 0, 1, 0));
 
                     for(; j <= nzSz - 4; j += 4)
                     {
+                        // nz storage block has to be a multiple of 8! not good...
+//                        v_float32x4 v_nzX, v_nzY;
+//                        v_load_deinterleave((const float*)&nz[j], v_nzX, v_nzY);
                         // nz storage block has to be a multiple of 4
-//                        v_int32x4 v_nz1 = v_load(&nz[j]);
-//                        v_int32x4 v_nz2 = v_load(&nz[j + 2]);
                         __m128i v_nz1 = _mm_loadu_si128((const __m128i*)&nz[j]);
                         __m128i v_nz2 = _mm_loadu_si128((const __m128i*)&nz[j + 2]);
 
-//                        v_float32x4 v_tmp1 = v_cvt_f32(v_nz1);
-//                        v_float32x4 v_tmp2 = v_cvt_f32(v_nz2);
+//                        v_float32x4 v_x = v_cvt_f32(v_reinterpret_as_s32(v_nzX));
+//                        v_float32x4 v_y = v_cvt_f32(v_reinterpret_as_s32(v_nzY));
                         __m128 v_tmp1 = _mm_cvtepi32_ps(v_nz1);
                         __m128 v_tmp2 = _mm_cvtepi32_ps(v_nz2);
 
-//                        v_tmp1 = v_tmp1 - v_curCenter;
-//                        v_tmp2 = v_tmp2 - v_curCenter;
+//                        v_x = v_x - v_curCenterX;
+//                        v_y = v_y - v_curCenterY;
                         v_tmp1 = _mm_sub_ps(v_tmp1, v_curCenter);
                         v_tmp2 = _mm_sub_ps(v_tmp2, v_curCenter);
 
-                        // no shuffle or unpacklo/hi found...
+                        // no shuffle found...
                         __m128 v_x = _mm_shuffle_ps(v_tmp1, v_tmp2, _MM_SHUFFLE(2, 0, 2, 0));
                         __m128 v_y = _mm_shuffle_ps(v_tmp1, v_tmp2, _MM_SHUFFLE(3, 1, 3, 1));
 
-//                        v_tmp1 = (v_x * v_x) + (v_y * v_y);
+//                        v_x = (v_x * v_x) + (v_y * v_y);
                         v_tmp1 = _mm_add_ps(_mm_mul_ps(v_x, v_x), _mm_mul_ps(v_y, v_y));
 
-//                        v_tmp2 = (v_minRadius2 <= v_tmp1) & (v_tmp1 <= v_maxRadius2);
+//                        v_y = (v_minRadius2 <= v_x) & (v_x <= v_maxRadius2);
                         v_tmp2 = _mm_and_ps(_mm_cmple_ps(v_minRadius2, v_tmp1), _mm_cmple_ps(v_tmp1, v_maxRadius2));
 
-//                        unsigned int mask = v_signmask(v_tmp2);
+//                        unsigned int mask = v_signmask(v_y);
                         unsigned int mask = _mm_movemask_epi8(_mm_castps_si128(v_tmp2));
 
                         if(mask)
                         {
                             if(mask == 0x0000ffff)
                             {
+//                                v_store(ddata + k, v_x);
                                 _mm_storeu_ps((ddata + k), v_tmp1);
                                 k += 4;
                                 continue;
                             }
                             else if((mask & 0x000000ff) == 0x000000ff)
                             {
+//                                v_store_low(ddata + k, v_x);
+//                                v_x = v_reinterpret_as_f32( v_reinterpret_as_u8(v_x) >> 8);
                                 _mm_storel_pd((double*)(ddata + k), _mm_castps_pd(v_tmp1));
                                 v_tmp1 = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_tmp1), 8));
                                 k += 2;
@@ -1721,6 +1719,7 @@ namespace cv
                             }
                             else if((mask & 0x0000ff00) == 0x0000ff00)
                             {
+//                                v_store_high(ddata + k, v_x);
                                 _mm_storeh_pd((double*)(ddata + k), _mm_castps_pd(v_tmp1));
                                 k += 2;
                                 mask ^= 0x0000ff00;
@@ -1730,9 +1729,11 @@ namespace cv
                             {
                                 if(mask & 0x00000001)
                                 {
+//                                    ddata[k] = v_x.get0();
                                     ddata[k] = _mm_cvtss_f32(v_tmp1);
                                     ++k;
                                 }
+//                                v_x = v_reinterpret_as_f32( v_reinterpret_as_s8(v_x) >> 4);
                                 v_tmp1 = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_tmp1), 4));
                                 mask >>= 4;
                             }
