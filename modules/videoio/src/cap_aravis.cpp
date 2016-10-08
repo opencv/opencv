@@ -49,6 +49,9 @@
 
 #include <arv.h>
 
+#define BETWEEN(a,b,c) ((a) < (b) ? (b) : ((a) > (c) ? (c) : (a) ))
+#define AUTO_MODE -1
+
 /********************* Capturing video from camera via Aravis *********************/
 
 class CvCaptureCAM_Aravis : public CvCapture
@@ -98,6 +101,11 @@ protected:
     double          exposureMax;            // Camera's maximum exposure time.
 
     int             num_buffers;            // number of payload transmission buffers
+    
+    ArvPixelFormat  pixelFormat;            // current pixel format
+
+    double          exposure;               // current value of exposuretime, or -1 for autoexposure
+    double          gain;                   // current value of gain, or -1 for autogain
 
     IplImage *frame;
 };
@@ -115,6 +123,7 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     fpsMin = fpsMax = gainMin = gainMax = exposureMin = exposureMax = 0;
 
     num_buffers = 50;
+    pixelFormat = ARV_PIXEL_FORMAT_MONO_8;
 
     frame = NULL;
 }
@@ -158,7 +167,7 @@ bool CvCaptureCAM_Aravis::init()
         g_object_set(stream,
             "packet-resend", ARV_GV_STREAM_PACKET_RESEND_NEVER, NULL);
         g_object_set(stream,
-            "packet-timeout", (unsigned)40000,
+            "packet-timeout", (unsigned) 40000,
             "frame-retention", (unsigned) 200000, NULL);
 
         for (int i = 0; i < num_buffers; i++)
@@ -182,8 +191,11 @@ bool CvCaptureCAM_Aravis::open( int index )
         arv_camera_get_gain_bounds (camera, &gainMin, &gainMax);
         arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax);
 
-        // enforce mono 8 format
-        arv_camera_set_pixel_format(camera, ARV_PIXEL_FORMAT_MONO_8);
+        // set initial exposure values
+        arv_camera_set_pixel_format(camera, pixelFormat);
+        arv_camera_set_exposure_time(camera, exposureMin);
+        arv_camera_set_gain(camera, gainMin);
+        arv_camera_set_frame_rate(camera, 30);
 
         // init communication
         init();
@@ -211,14 +223,20 @@ bool CvCaptureCAM_Aravis::grabFrame()
 IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
 {
     if(framebuffer) {
+        //  Supports for 2 types of data:
+        //      video/x-raw, format=GRAY8       -> 8bit, 1 channel
+        //      video/x-raw, format=GRAY16_LE   -> 12bit, 1 channel
         IplImage src;
         cvInitImageHeader( &src, cvSize( widthMax, heightMax ),
-                           IPL_DEPTH_8U, 1, IPL_ORIGIN_TL, 4 );
+                           pixelFormat == ARV_PIXEL_FORMAT_MONO_8 ? IPL_DEPTH_8U : IPL_DEPTH_16U,
+                           1 /* channels */, IPL_ORIGIN_TL, 4 );
 
         cvSetData( &src, framebuffer, src.widthStep );
         if( !frame || frame->width != src.width || frame->height != src.height ) {
             cvReleaseImage( &frame );
-            frame = cvCreateImage( cvGetSize(&src), 8, 1 );
+            frame = cvCreateImage( cvGetSize(&src),
+                        pixelFormat == ARV_PIXEL_FORMAT_MONO_8 ? IPL_DEPTH_8U : IPL_DEPTH_16U,
+                        1 /* channels */ );
         }
         cvCopy(&src, frame);
 
@@ -231,13 +249,31 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
 {
     switch ( property_id ) {
         case CV_CAP_PROP_EXPOSURE:
-            return arv_camera_get_exposure_time(camera);
+            /* exposure time in seconds, like 1/100 s */
+            return arv_camera_get_exposure_time(camera) / 1e6;
 
         case CV_CAP_PROP_FPS:
             return arv_camera_get_frame_rate(camera);
 
         case CV_CAP_PROP_GAIN:
             return arv_camera_get_gain(camera);
+
+        case CV_CAP_PROP_ARAVIS_PIXELFORMAT:
+            {
+                ArvPixelFormat currFormat = arv_camera_get_pixel_format(camera);
+                switch( currFormat ) {
+                    case ARV_PIXEL_FORMAT_MONO_8:
+                        return CV_CAP_MODE_GRAY8;
+                    case ARV_PIXEL_FORMAT_MONO_12:
+                        return CV_CAP_MODE_GRAY12;
+                    /*
+                    case ARV_PIXEL_FORMAT_MONO_10:
+                    case ARV_PIXEL_FORMAT_MONO_16:
+                    case ARV_PIXEL_FORMAT_YUV_422_PACKED:
+                    case ARV_PIXEL_FORMAT_RGB_8_PACKED:
+                    */
+                }
+            }
     }
     return -1.0;
 }
@@ -246,18 +282,55 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 {
     switch ( property_id ) {
         case CV_CAP_PROP_EXPOSURE:
-            arv_camera_set_exposure_time(camera, value);
+            /* exposure time in seconds, like 1/100 s */
+            if(value == AUTO_MODE) {
+                /* auto exposure */
+                exposure = AUTO_MODE;
+            } else {
+                value *= 1e6; // -> from s to us
+                arv_camera_set_exposure_time(camera, exposure = BETWEEN(value, exposureMin, exposureMax));
+            }
             break;
 
         case CV_CAP_PROP_FPS:
-            arv_camera_set_frame_rate(camera, value);
+            arv_camera_set_frame_rate(camera, BETWEEN(value, fpsMin, fpsMax));
             break;
 
         case CV_CAP_PROP_GAIN:
-            arv_camera_set_gain(camera, value);
+             if(value == AUTO_MODE) {
+                /* auto gain */
+                gain = AUTO_MODE;
+            } else {
+                arv_camera_set_gain(camera, gain = BETWEEN(value, gainMin, gainMax));
+            }
             break;
+
+        case CV_CAP_PROP_ARAVIS_PIXELFORMAT:
+            {
+                ArvPixelFormat newFormat = pixelFormat;
+                switch((int)value) {
+                    case CV_CAP_MODE_GRAY8:
+                        newFormat = ARV_PIXEL_FORMAT_MONO_8;
+                        break;
+                    case CV_CAP_MODE_GRAY12:
+                        newFormat = ARV_PIXEL_FORMAT_MONO_12;
+                        break;
+                }
+                if(newFormat != pixelFormat) {
+                    arv_camera_stop_acquisition(camera);
+                    
+                    arv_camera_set_pixel_format(camera, pixelFormat = newFormat);
+                    
+                    arv_camera_start_acquisition(camera);
+                }
+            }
+            break;
+
+        default:
+            return false;
     }
-    return -1.0 != getProperty( property_id );
+
+    return true;
 }
 
 void CvCaptureCAM_Aravis::stopCapture()

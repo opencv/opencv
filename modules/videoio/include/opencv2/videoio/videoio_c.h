@@ -409,6 +409,9 @@ enum
     CV_CAP_PROP_XI_SENSOR_FEATURE_SELECTOR                      = 585, // Selects the current feature which is accessible by XI_PRM_SENSOR_FEATURE_VALUE.
     CV_CAP_PROP_XI_SENSOR_FEATURE_VALUE                         = 586, // Allows access to sensor feature value currently selected by XI_PRM_SENSOR_FEATURE_SELECTOR.
 
+    // ARAVIS
+    CV_CAP_PROP_ARAVIS_PIXELFORMAT = 1001, // Pixel format
+
     // Properties for Android cameras
     CV_CAP_PROP_ANDROID_FLASH_MODE = 8001,
     CV_CAP_PROP_ANDROID_FOCUS_MODE = 8002,
@@ -486,6 +489,13 @@ enum
     CV_CAP_OPENNI_SXGA_30HZ    = 2,
     CV_CAP_OPENNI_QVGA_30HZ    = 3,
     CV_CAP_OPENNI_QVGA_60HZ    = 4
+};
+
+// Supported output modes of Aravis image generator
+enum
+{
+    CV_CAP_MODE_GRAY8 = 0,      // Y8 (default)
+    CV_CAP_MODE_GRAY12 = 1      // Y12
 };
 
 enum
