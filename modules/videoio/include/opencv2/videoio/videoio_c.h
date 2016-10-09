@@ -116,15 +116,15 @@ enum
 
     CV_CAP_GIGANETIX = 1300,  // Smartek Giganetix GigEVisionSDK
 
-    CV_CAP_ARAVIS = 1400,    // Aravis GigE SDK
-
     CV_CAP_INTELPERC = 1500, // Intel Perceptual Computing
 
     CV_CAP_OPENNI2 = 1600,   // OpenNI2 (for Kinect)
     CV_CAP_GPHOTO2 = 1700,
     CV_CAP_GSTREAMER = 1800, // GStreamer
     CV_CAP_FFMPEG = 1900,    // FFMPEG
-    CV_CAP_IMAGES = 2000     // OpenCV Image Sequence (e.g. img_%02d.jpg)
+    CV_CAP_IMAGES = 2000,    // OpenCV Image Sequence (e.g. img_%02d.jpg)
+
+    CV_CAP_ARAVIS = 2100     // Aravis GigE SDK
 };
 
 /** @brief start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*)
@@ -409,8 +409,6 @@ enum
     CV_CAP_PROP_XI_SENSOR_FEATURE_SELECTOR                      = 585, // Selects the current feature which is accessible by XI_PRM_SENSOR_FEATURE_VALUE.
     CV_CAP_PROP_XI_SENSOR_FEATURE_VALUE                         = 586, // Allows access to sensor feature value currently selected by XI_PRM_SENSOR_FEATURE_SELECTOR.
 
-    // ARAVIS
-    CV_CAP_PROP_ARAVIS_PIXELFORMAT = 1001, // Pixel format
 
     // Properties for Android cameras
     CV_CAP_PROP_ANDROID_FLASH_MODE = 8001,
@@ -489,13 +487,6 @@ enum
     CV_CAP_OPENNI_SXGA_30HZ    = 2,
     CV_CAP_OPENNI_QVGA_30HZ    = 3,
     CV_CAP_OPENNI_QVGA_60HZ    = 4
-};
-
-// Supported output modes of Aravis image generator
-enum
-{
-    CV_CAP_MODE_GRAY8 = 0,      // Y8 (default)
-    CV_CAP_MODE_GRAY12 = 1      // Y12
 };
 
 enum
