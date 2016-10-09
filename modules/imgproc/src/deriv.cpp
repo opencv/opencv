@@ -539,7 +539,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-    CV_IPP_RUN(true, ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
+    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
@@ -578,7 +578,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-    CV_IPP_RUN(true, IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType));
+    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
