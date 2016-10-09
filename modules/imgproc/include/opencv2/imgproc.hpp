@@ -1989,6 +1989,12 @@ CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
                                double rho, double theta, int threshold,
                                double minLineLength = 0, double maxLineGap = 0 );
 
+/** @overload */
+CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
+                               int method, double dp, double minDist,
+                               double param1 = 100, double param2 = 100,
+                               int minRadius = 0, int maxRadius = 0);
+
 /** @example houghcircles.cpp
 An example using the Hough circle detector
 */
@@ -2057,14 +2063,18 @@ false circles may be detected. Circles, corresponding to the larger accumulator 
 returned first.
 @param minRadius Minimum circle radius.
 @param maxRadius Maximum circle radius.
-@param maxCircles Maximum number of circles.
+@param maxCircles Maximum number of circles. In case of 0 a sorted list of found centers with radius 0 is returned.
+If it is negative the maximum number is set to INT_MAX.
+@param param3 Third method-specific parameter. In case of CV_HOUGH_GRADIENT , it is the kernel size of Sobel filter.
+It must be -1, 3, 5 or 7.
 
 @sa fitEllipse, minEnclosingCircle
  */
-CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
+CV_EXPORTS_AS(HoughCircles2) void HoughCircles( InputArray image, OutputArray circles,
                                int method, double dp, double minDist,
-                               double param1 = 100, double param2 = 100,
-                               int minRadius = 0, int maxRadius = 0, int maxCircles = -1 );
+                               double param1, double param2,
+                               int minRadius, int maxRadius,
+                                int maxCircles, double param3 = 3);
 
 //! @} imgproc_feature
 

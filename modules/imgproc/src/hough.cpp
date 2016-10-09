@@ -1339,6 +1339,7 @@ namespace cv
     {
         return left.idx > right.idx;
     }
+
     class HoughCirclesAccumInvoker : public ParallelLoopBody
     {
     public:
@@ -1916,8 +1917,10 @@ namespace cv
 
     static void HoughCirclesGradient(InputArray _image, OutputArray _circles, float dp, float minDist,
                                      int minRadius, int maxRadius, int cannyThreshold,
-                                     int accThreshold, int maxCircles )
+                                     int accThreshold, int maxCircles, int kernelSize )
     {
+        CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
+
         Mat accum;
         UMat edges, dx, dy;
 
@@ -1926,17 +1929,18 @@ namespace cv
         int numberOfThreads = 1;
         int numThreads = std::max(1, std::min(getNumThreads(), getNumberOfCPUs()));
 
-        Sobel(_image, dx, CV_16S, 1, 0, 3, 1, 0, BORDER_REPLICATE);
-        Sobel(_image, dy, CV_16S, 0, 1, 3, 1, 0, BORDER_REPLICATE);
+        Sobel(_image, dx, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
+        Sobel(_image, dy, CV_16S, 0, 1, kernelSize, 1, 0, BORDER_REPLICATE);
         Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
         // Max 2 threads as long as no thread safe container exists, otherwise adding accum at the end has a huge overhead
-        // 1 Thread overhead is 0, 2 Threads if (maxRadius - minRadius) is great and cost is more than add accum
+        // 1 Thread overhead is 0, 2 Threads if (maxRadius - minRadius) is large and cost is more than add accum
         if(maxRadius - minRadius > 32)
             numberOfThreads = std::max(1, std::min(numThreads, 2));
 
         parallel_for_(Range(0, edges.rows),
-            HoughCirclesAccumInvoker(edges.getMat(ACCESS_READ), dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ), accum, nz, minRadius, maxRadius, dp),
+                      HoughCirclesAccumInvoker(edges.getMat(ACCESS_READ), dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ),
+                                               accum, nz, minRadius, maxRadius, dp),
                       numberOfThreads);
 
         if(nz.empty())
@@ -1944,13 +1948,13 @@ namespace cv
 
         Seq<int> centers(storage);
 
-        // 4 rows when multi threaded because there is a bit overhead
+        // 4 rows when multithreaded because there is a bit overhead
         // and on the other side there are some row ranges where centers are concentrated
         numberOfThreads = (numThreads > 1) ? ((accum.rows - 2) / 4) : 1;
 
         parallel_for_(Range(1, accum.rows - 1),
-            HoughCirclesFindCentersInvoker(accum, centers, accThreshold),
-            numberOfThreads);
+                      HoughCirclesFindCentersInvoker(accum, centers, accThreshold),
+                      numberOfThreads);
 
         int centerCnt = (int)centers.size();
         if(centerCnt == 0)
@@ -2011,7 +2015,8 @@ namespace cv
     void HoughCircles( InputArray _image, OutputArray _circles,
                        int method, double dp, double minDist,
                        double param1, double param2,
-                       int minRadius, int maxRadius, int maxCircles )
+                       int minRadius, int maxRadius,
+                       int maxCircles, double param3 )
     {
         CV_INSTRUMENT_REGION()
 
@@ -2023,6 +2028,7 @@ namespace cv
 
         int cannyThresh = cvRound(param1);
         int accThresh = cvRound(param2);
+        int kernelSize = cvRound(param3);
 
         minRadius = std::max(0, minRadius);
 
@@ -2039,11 +2045,19 @@ namespace cv
         case CV_HOUGH_GRADIENT:
             HoughCirclesGradient(_image, _circles, (float)dp, (float)minDist,
                                  minRadius, maxRadius, cannyThresh,
-                                 accThresh, maxCircles);
+                                 accThresh, maxCircles, kernelSize);
             break;
         default:
             CV_Error( CV_StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );
         }
+    }
+
+    void HoughCircles( InputArray _image, OutputArray _circles,
+                       int method, double dp, double minDist,
+                       double param1, double param2,
+                       int minRadius, int maxRadius )
+    {
+        HoughCircles(_image, _circles, method, dp, minDist, param1, param2, minRadius, maxRadius, -1, 3);
     }
 }
 
