@@ -44,6 +44,14 @@ Morphological Operations
 
 The background (bright) dilates around the black regions of the letter.
 
+To better grasp the idea and avoid possible confusion, in this another example we have inverted the original
+image such as the object in white is now the letter. We have performed two dilatations with a rectangular
+structuring element of size `3x3`.
+
+![Left image: original image inverted, right image: resulting dilatation](images/Morphology_1_Tutorial_Theory_Dilatation_2.png)
+
+The dilatation makes the object in white bigger.
+
 ### Erosion
 
 -   This operation is the sister of dilation. What this does is to compute a local minimum over the
@@ -55,6 +63,13 @@ The background (bright) dilates around the black regions of the letter.
     background, apparently), get thinner, whereas the dark zones (the "writing") gets bigger.
 
     ![](images/Morphology_1_Tutorial_Theory_Erosion.png)
+
+In the same manner, the corresponding image resulting of the erosion operation on the inverted original image (two erosions
+with a rectangular structuring element of size `3x3`):
+
+![Left image: original image inverted, right image: resulting erosion](images/Morphology_1_Tutorial_Theory_Erosion_2.png)
+
+The erosion makes the object in white smaller.
 
 Code
 ----
