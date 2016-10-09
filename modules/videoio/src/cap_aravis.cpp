@@ -117,6 +117,7 @@ protected:
     ArvPixelFormat  pixelFormat;            // current pixel format
     int             width;                  // current width of frame
     int             height;                 // current height of image
+    double          fps;                    // current fps
     double          exposure;               // current value of exposure time
     double          gain;                   // current value of gain
 
@@ -217,6 +218,7 @@ bool CvCaptureCAM_Aravis::open( int index )
         pixelFormat = arv_camera_get_pixel_format(camera);
         exposure = arv_camera_get_exposure_time(camera);
         gain = arv_camera_get_gain(camera);
+        fps = arv_camera_get_frame_rate(camera);
 
         return startCapture();
     }
@@ -226,15 +228,16 @@ bool CvCaptureCAM_Aravis::open( int index )
 bool CvCaptureCAM_Aravis::grabFrame()
 {
     ArvBuffer *arv_buffer = NULL;
+    int max_tries = 10;
     int tries = 0;
-    for(; tries < 10; tries ++) {
+    for(; tries < max_tries; tries ++) {
         arv_buffer = arv_stream_timeout_pop_buffer (stream, 200000);
         if (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
             arv_stream_push_buffer (stream, arv_buffer);
         } else break;
     }
 
-    if (tries == 10)
+    if (tries == max_tries)
         return false;
 
     size_t buffer_size;
@@ -331,7 +334,7 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 
         case CV_CAP_PROP_FPS:
             if(fpsAvailable) {
-                arv_camera_set_frame_rate(camera, BETWEEN(value, fpsMin, fpsMax));
+                arv_camera_set_frame_rate(camera, fps = BETWEEN(value, fpsMin, fpsMax));
                 break;
             } else return false;
 
@@ -369,7 +372,7 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 
 void CvCaptureCAM_Aravis::stopCapture()
 {
-    arv_camera_abort_acquisition(camera);
+    arv_camera_stop_acquisition(camera);
 
     g_object_unref(stream);
     stream = NULL;
