@@ -118,6 +118,10 @@ v = f_y*y'' + c_y
 tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
 coefficients. Higher-order coefficients are not considered in OpenCV.
 
+The next figure shows two common types of radial distortion: barrel distortion (typically \f$ k_1 > 0 \f$ and pincushion distortion (typically \f$ k_1 < 0 \f$).
+
+![](pics/distortion_examples.png)
+
 In some cases the image sensor may be tilted in order to focus an oblique plane in front of the
 camera (Scheimpfug condition). This can be useful for particle image velocimetry (PIV) or
 triangulation with a laser fan. The tilt causes a perspective distortion of \f$x''\f$ and
