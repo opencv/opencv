@@ -206,32 +206,33 @@ enum OPENCL_FN_SVM_ID
     OPENCL_FN_clEnqueueSVMUnmap,
 };
 
+opencl_fn4(OPENCL_FN_clSVMAlloc, void*, (cl_context p1, cl_svm_mem_flags p2, size_t p3, unsigned int p4))
 void* (CL_API_CALL *clSVMAlloc)(cl_context context, cl_svm_mem_flags flags, size_t size, unsigned int alignment) =
-        opencl_fn4<OPENCL_FN_clSVMAlloc, void*, cl_context, cl_svm_mem_flags, size_t, unsigned int>::switch_fn;
+        OPENCL_FN_clSVMAlloc_switch_fn;
 static const struct DynamicFnEntry _clSVMAlloc_definition = { "clSVMAlloc", (void**)&clSVMAlloc};
+opencl_fn2(OPENCL_FN_clSVMFree, void, (cl_context p1, void* p2))
 void (CL_API_CALL *clSVMFree)(cl_context context, void* svm_pointer) =
-        opencl_fn2<OPENCL_FN_clSVMFree, void, cl_context, void*>::switch_fn;
+        OPENCL_FN_clSVMFree_switch_fn;
 static const struct DynamicFnEntry _clSVMFree_definition = { "clSVMFree", (void**)&clSVMFree};
+opencl_fn3(OPENCL_FN_clSetKernelArgSVMPointer, cl_int, (cl_kernel p1, cl_uint p2, const void* p3))
 cl_int (CL_API_CALL *clSetKernelArgSVMPointer)(cl_kernel kernel, cl_uint arg_index, const void* arg_value) =
-        opencl_fn3<OPENCL_FN_clSetKernelArgSVMPointer, cl_int, cl_kernel, cl_uint, const void*>::switch_fn;
+        OPENCL_FN_clSetKernelArgSVMPointer_switch_fn;
 static const struct DynamicFnEntry _clSetKernelArgSVMPointer_definition = { "clSetKernelArgSVMPointer", (void**)&clSetKernelArgSVMPointer};
-//void* (CL_API_CALL *clSetKernelExecInfo)(cl_kernel kernel, cl_kernel_exec_info param_name, size_t param_value_size, const void* param_value) =
-//        opencl_fn4<OPENCL_FN_clSetKernelExecInfo, void*, cl_kernel, cl_kernel_exec_info, size_t, const void*>::switch_fn;
-//static const struct DynamicFnEntry _clSetKernelExecInfo_definition = { "clSetKernelExecInfo", (void**)&clSetKernelExecInfo};
-//cl_int (CL_API_CALL *clEnqueueSVMFree)(...) =
-//        opencl_fn8<OPENCL_FN_clEnqueueSVMFree, cl_int, ...>::switch_fn;
-//static const struct DynamicFnEntry _clEnqueueSVMFree_definition = { "clEnqueueSVMFree", (void**)&clEnqueueSVMFree};
+opencl_fn8(OPENCL_FN_clEnqueueSVMMemcpy, cl_int, (cl_command_queue p1, cl_bool p2, void* p3, const void* p4, size_t p5, cl_uint p6, const cl_event* p7, cl_event* p8))
 cl_int (CL_API_CALL *clEnqueueSVMMemcpy)(cl_command_queue command_queue, cl_bool blocking_copy, void* dst_ptr, const void* src_ptr, size_t size, cl_uint num_events_in_wait_list, const cl_event* event_wait_list, cl_event* event) =
-        opencl_fn8<OPENCL_FN_clEnqueueSVMMemcpy, cl_int, cl_command_queue, cl_bool, void*, const void*, size_t, cl_uint, const cl_event*, cl_event*>::switch_fn;
+        OPENCL_FN_clEnqueueSVMMemcpy_switch_fn;
 static const struct DynamicFnEntry _clEnqueueSVMMemcpy_definition = { "clEnqueueSVMMemcpy", (void**)&clEnqueueSVMMemcpy};
+opencl_fn8(OPENCL_FN_clEnqueueSVMMemFill, cl_int, (cl_command_queue p1, void* p2, const void* p3, size_t p4, size_t p5, cl_uint p6, const cl_event* p7, cl_event* p8))
 cl_int (CL_API_CALL *clEnqueueSVMMemFill)(cl_command_queue command_queue, void* svm_ptr, const void* pattern, size_t pattern_size, size_t size, cl_uint num_events_in_wait_list, const cl_event* event_wait_list, cl_event* event) =
-        opencl_fn8<OPENCL_FN_clEnqueueSVMMemFill, cl_int, cl_command_queue, void*, const void*, size_t, size_t, cl_uint, const cl_event*, cl_event*>::switch_fn;
+        OPENCL_FN_clEnqueueSVMMemFill_switch_fn;
 static const struct DynamicFnEntry _clEnqueueSVMMemFill_definition = { "clEnqueueSVMMemFill", (void**)&clEnqueueSVMMemFill};
+opencl_fn8(OPENCL_FN_clEnqueueSVMMap, cl_int, (cl_command_queue p1, cl_bool p2, cl_map_flags p3, void* p4, size_t p5, cl_uint p6, const cl_event* p7, cl_event* p8))
 cl_int (CL_API_CALL *clEnqueueSVMMap)(cl_command_queue command_queue, cl_bool blocking_map, cl_map_flags map_flags, void* svm_ptr, size_t size, cl_uint num_events_in_wait_list, const cl_event* event_wait_list, cl_event* event) =
-        opencl_fn8<OPENCL_FN_clEnqueueSVMMap, cl_int, cl_command_queue, cl_bool, cl_map_flags, void*, size_t, cl_uint, const cl_event*, cl_event*>::switch_fn;
+        OPENCL_FN_clEnqueueSVMMap_switch_fn;
 static const struct DynamicFnEntry _clEnqueueSVMMap_definition = { "clEnqueueSVMMap", (void**)&clEnqueueSVMMap};
+opencl_fn5(OPENCL_FN_clEnqueueSVMUnmap, cl_int, (cl_command_queue p1, void* p2, cl_uint p3, const cl_event* p4, cl_event* p5))
 cl_int (CL_API_CALL *clEnqueueSVMUnmap)(cl_command_queue command_queue, void* svm_ptr, cl_uint num_events_in_wait_list, const cl_event* event_wait_list, cl_event* event) =
-        opencl_fn5<OPENCL_FN_clEnqueueSVMUnmap, cl_int, cl_command_queue, void*, cl_uint, const cl_event*, cl_event*>::switch_fn;
+        OPENCL_FN_clEnqueueSVMUnmap_switch_fn;
 static const struct DynamicFnEntry _clEnqueueSVMUnmap_definition = { "clEnqueueSVMUnmap", (void**)&clEnqueueSVMUnmap};
 
 static const struct DynamicFnEntry* opencl_svm_fn_list[] = {
