@@ -122,7 +122,9 @@ enum
     CV_CAP_GPHOTO2 = 1700,
     CV_CAP_GSTREAMER = 1800, // GStreamer
     CV_CAP_FFMPEG = 1900,    // FFMPEG
-    CV_CAP_IMAGES = 2000     // OpenCV Image Sequence (e.g. img_%02d.jpg)
+    CV_CAP_IMAGES = 2000,    // OpenCV Image Sequence (e.g. img_%02d.jpg)
+
+    CV_CAP_ARAVIS = 2100     // Aravis GigE SDK
 };
 
 /** @brief start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*)
@@ -406,6 +408,7 @@ enum
     CV_CAP_PROP_XI_FFS_ACCESS_KEY                               = 583, // Setting of key enables file operations on some cameras.
     CV_CAP_PROP_XI_SENSOR_FEATURE_SELECTOR                      = 585, // Selects the current feature which is accessible by XI_PRM_SENSOR_FEATURE_VALUE.
     CV_CAP_PROP_XI_SENSOR_FEATURE_VALUE                         = 586, // Allows access to sensor feature value currently selected by XI_PRM_SENSOR_FEATURE_SELECTOR.
+
 
     // Properties for Android cameras
     CV_CAP_PROP_ANDROID_FLASH_MODE = 8001,
