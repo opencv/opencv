@@ -128,6 +128,49 @@ private:
     std::vector<UMat> gain_maps_;
 };
 
+/** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image
+channels in HSV color space.
+ */
+class CV_EXPORTS ChannelsCompensator : public ExposureCompensator
+{
+public:
+    enum ColorSpace { COLOR_BGR, COLOR_HSV };
+    enum Channels { BGR, SV };
+
+    ChannelsCompensator(Channels channels=BGR);
+    void feed(const std::vector<Point> &corners, const std::vector<UMat> &images_,
+              const std::vector<std::pair<UMat,uchar> > &masks);
+    void apply(int index, Point corner, InputOutputArray image, InputArray mask);
+    std::vector<Vec3f> gains() const;
+
+private:
+    void setUsedColorSpace(ColorSpace cs) { color_space = cs; }
+    void setUsedChannels(Vec3b channels) { used_channels = channels; }
+    void setUsedChannels(bool c1, bool c2, bool c3) { setUsedChannels(Vec3b(c1, c2, c3)); }
+    std::vector< Mat_<double> > gains_;
+    ColorSpace color_space;
+    Vec3b used_channels;
+};
+
+/** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image block
+channels.
+ */
+class CV_EXPORTS BlocksChannelsCompensator : public ExposureCompensator
+{
+public:
+    BlocksChannelsCompensator(ChannelsCompensator::Channels channels,
+                              int bl_width = 32, int bl_height = 32)
+            : channels_comp(channels), bl_width_(bl_width), bl_height_(bl_height) {}
+    void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+              const std::vector<std::pair<UMat,uchar> > &masks);
+    void apply(int index, Point corner, InputOutputArray image, InputArray mask);
+
+private:
+    ChannelsCompensator::Channels channels_comp;
+    int bl_width_, bl_height_;
+    std::vector< Mat_<Vec3f> > gains_maps_;
+};
+
 //! @}
 
 } // namespace detail
