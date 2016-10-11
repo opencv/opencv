@@ -306,8 +306,8 @@ cvStartFindContours( void* _img, CvMemStorage* storage,
                                           scanner->cinfo_storage );
     }
 
-    assert(step >= 0);
-    assert(size.height >= 1);
+    CV_Assert(step >= 0);
+    CV_Assert(size.height >= 1);
 
     /* make zero borders */
     int esz = CV_ELEM_SIZE(mat->type);
@@ -1008,7 +1008,7 @@ cvFindNextContour( CvContourScanner scanner )
     bool haveSIMD = cv::checkHardwareSupport(CPU_SSE2);
 #endif
 
-    assert(scanner->img_step >= 0);
+    CV_Assert(scanner->img_step >= 0);
 
     icvEndProcessContour( scanner );
 
