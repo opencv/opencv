@@ -1425,6 +1425,15 @@ inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b
     b.val = _mm_shuffle_ps(u0, u1, mask_hi); // b0 b1 ab b3
 }
 
+inline void v_store_interleave( short* ptr, const v_int16x8& a, const v_int16x8& b )
+{
+    __m128i t0, t1;
+    t0 = _mm_unpacklo_epi16(a.val, b.val);
+    t1 = _mm_unpackhi_epi16(a.val, b.val);
+    _mm_storeu_si128((__m128i*)(ptr), t0);
+    _mm_storeu_si128((__m128i*)(ptr + 8), t1);
+}
+
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
                                 const v_uint8x16& c )
 {
