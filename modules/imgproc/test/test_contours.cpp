@@ -78,7 +78,7 @@ CV_FindContourTest::CV_FindContourTest()
 {
     int i;
 
-    test_case_count    = 300;
+    test_case_count    = 10;
     min_blob_size      = 1;
     max_blob_size      = 50;
     max_log_blob_count = 10;
