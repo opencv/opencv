@@ -45,13 +45,23 @@ namespace cv
 
 enum { XY_SHIFT = 16, XY_ONE = 1 << XY_SHIFT, DRAWING_STORAGE_BLOCK = (1<<12) - 256 };
 
+static const int MAX_THICKNESS = 32767;
+
+#if SIZE_MAX <= 0xffffffff
+// 32-bit system: don't bother to use long long - we anyway cannot handle huge images
+typedef int XCoordinate;
+#else
+// 64-bit system: in order to correctly handle really large images, use an appropriate data type
+typedef long long XCoordinate;
+#endif
+
 struct PolyEdge
 {
     PolyEdge() : y0(0), y1(0), x(0), dx(0), next(0) {}
     //PolyEdge(int _y0, int _y1, int _x, int _dx) : y0(_y0), y1(_y1), x(_x), dx(_dx) {}
 
     int y0, y1;
-    int x, dx;
+    XCoordinate x, dx;
     PolyEdge *next;
 };
 
@@ -1185,6 +1195,10 @@ FillConvexPoly( Mat& img, const Point* v, int npts, const void* color, int line_
     while( ++y <= ymax );
 }
 
+bool fitsInInt32(XCoordinate x)
+{
+    return x >= std::numeric_limits<int>::min() && x <= std::numeric_limits<int>::max();
+}
 
 /******** Arbitrary polygon **********/
 
@@ -1193,52 +1207,60 @@ CollectPolyEdges( Mat& img, const Point* v, int count, vector<PolyEdge>& edges,
                   const void* color, int line_type, int shift, Point offset )
 {
     int i, delta = offset.y + (shift ? 1 << (shift - 1) : 0);
-    Point pt0 = v[count-1], pt1;
-    pt0.x = (pt0.x + offset.x) << (XY_SHIFT - shift);
-    pt0.y = (pt0.y + delta) >> shift;
+    XCoordinate pt0x = v[count - 1].x, pt1x;
+    int pt0y = v[count - 1].y, pt1y;
+
+    pt0x = (pt0x + offset.x) << (XY_SHIFT - shift);
+    pt0y = (pt0y + delta) >> shift;
 
     edges.reserve( edges.size() + count );
 
-    for( i = 0; i < count; i++, pt0 = pt1 )
+    for( i = 0; i < count; i++, pt0x = pt1x, pt0y = pt1y )
     {
         Point t0, t1;
         PolyEdge edge;
 
-        pt1 = v[i];
-        pt1.x = (pt1.x + offset.x) << (XY_SHIFT - shift);
-        pt1.y = (pt1.y + delta) >> shift;
+        pt1x = (static_cast<XCoordinate>(v[i].x) + offset.x) << (XY_SHIFT - shift);
+        pt1y = (v[i].y + delta) >> shift;
 
         if( line_type < CV_AA )
         {
-            t0.y = pt0.y; t1.y = pt1.y;
-            t0.x = (pt0.x + (XY_ONE >> 1)) >> XY_SHIFT;
-            t1.x = (pt1.x + (XY_ONE >> 1)) >> XY_SHIFT;
+            t0.y = pt0y; t1.y = pt1y;
+            CV_Assert(fitsInInt32((pt0x + (XY_ONE >> 1)) >> XY_SHIFT));
+            CV_Assert(fitsInInt32((pt1x + (XY_ONE >> 1)) >> XY_SHIFT));
+            t0.x = static_cast<int>((pt0x + (XY_ONE >> 1)) >> XY_SHIFT);
+            t1.x = static_cast<int>((pt1x + (XY_ONE >> 1)) >> XY_SHIFT);
             Line( img, t0, t1, color, line_type );
         }
         else
         {
-            t0.x = pt0.x; t1.x = pt1.x;
-            t0.y = pt0.y << XY_SHIFT;
-            t1.y = pt1.y << XY_SHIFT;
+            CV_Assert(fitsInInt32(pt0x));
+            CV_Assert(fitsInInt32(pt1x));
+            t0.x = static_cast<int>(pt0x);
+            t1.x = static_cast<int>(pt1x);
+            CV_Assert(fitsInInt32(static_cast<long long>(pt0y) << XY_SHIFT));
+            CV_Assert(fitsInInt32(static_cast<long long>(pt1y) << XY_SHIFT));
+            t0.y = pt0y << XY_SHIFT;
+            t1.y = pt1y << XY_SHIFT;
             LineAA( img, t0, t1, color );
         }
 
-        if( pt0.y == pt1.y )
+        if( pt0y == pt1y )
             continue;
 
-        if( pt0.y < pt1.y )
+        if( pt0y < pt1y )
         {
-            edge.y0 = pt0.y;
-            edge.y1 = pt1.y;
-            edge.x = pt0.x;
+            edge.y0 = pt0y;
+            edge.y1 = pt1y;
+            edge.x = pt0x;
         }
         else
         {
-            edge.y0 = pt1.y;
-            edge.y1 = pt0.y;
-            edge.x = pt1.x;
+            edge.y0 = pt1y;
+            edge.y1 = pt0y;
+            edge.x = pt1x;
         }
-        edge.dx = (pt1.x - pt0.x) / (pt1.y - pt0.y);
+        edge.dx = (pt1x - pt0x) / (pt1y - pt0y);
         edges.push_back(edge);
     }
 }
@@ -1261,7 +1283,10 @@ FillEdgeCollection( Mat& img, vector<PolyEdge>& edges, const void* color )
     int i, y, total = (int)edges.size();
     Size size = img.size();
     PolyEdge* e;
-    int y_max = INT_MIN, x_max = INT_MIN, y_min = INT_MAX, x_min = INT_MAX;
+    int y_max = std::numeric_limits<int>::min();
+    int y_min = std::numeric_limits<int>::max();
+    XCoordinate x_max = std::numeric_limits<XCoordinate>::min();
+    XCoordinate x_min = std::numeric_limits<XCoordinate>::max();
     int pix_size = (int)img.elemSize();
 
     if( total < 2 )
@@ -1272,8 +1297,8 @@ FillEdgeCollection( Mat& img, vector<PolyEdge>& edges, const void* color )
         PolyEdge& e1 = edges[i];
         assert( e1.y0 < e1.y1 );
         // Determine x-coordinate of the end of the edge.
-        // (This is not necessary x-coordinate of any vertex in the array.)
-        int x1 = e1.x + (e1.y1 - e1.y0) * e1.dx;
+        // (This is not necessarily x-coordinate of any vertex in the array.)
+        XCoordinate x1 = e1.x + (e1.y1 - e1.y0) * e1.dx;
         y_min = std::min( y_min, e1.y0 );
         y_max = std::max( y_max, e1.y1 );
         x_min = std::min( x_min, e1.x );
@@ -1282,7 +1307,7 @@ FillEdgeCollection( Mat& img, vector<PolyEdge>& edges, const void* color )
         x_max = std::max( x_max, x1 );
     }
 
-    if( y_max < 0 || y_min >= size.height || x_max < 0 || x_min >= (size.width<<XY_SHIFT) )
+    if( y_max < 0 || y_min >= size.height || x_max < 0 || x_min >= (static_cast<XCoordinate>(size.width) << XY_SHIFT) )
         return;
 
     std::sort( edges.begin(), edges.end(), CmpEdges() );
@@ -1296,7 +1321,9 @@ FillEdgeCollection( Mat& img, vector<PolyEdge>& edges, const void* color )
     e = &edges[i];
     y_max = MIN( y_max, size.height );
 
-    for( y = e->y0; y < y_max; y++ )
+    CV_Assert(fitsInInt32(e->y0));
+
+    for( y = static_cast<int>(e->y0); y < y_max; y++ )
     {
         PolyEdge *last, *prelast, *keep_prelast;
         int sort_flag = 0;
@@ -1338,15 +1365,12 @@ FillEdgeCollection( Mat& img, vector<PolyEdge>& edges, const void* color )
                 {
                     // convert x's from fixed-point to image coordinates
                     uchar *timg = img.data + y * img.step;
-                    int x1 = keep_prelast->x;
-                    int x2 = prelast->x;
+                    XCoordinate x1 = keep_prelast->x;
+                    XCoordinate x2 = prelast->x;
 
                     if( x1 > x2 )
                     {
-                        int t = x1;
-
-                        x1 = x2;
-                        x2 = t;
+                        std::swap(x1, x2);
                     }
 
                     x1 = (x1 + XY_ONE - 1) >> XY_SHIFT;
