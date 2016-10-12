@@ -996,7 +996,7 @@ class JavaWrapperGenerator(object):
         type_dict["Ptr_"+name] = \
             { "j_type" : name,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "Ptr<"+name+">(("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "jni_name" : "Ptr<"+classinfo.fullName(isCPP=True)+">(("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
