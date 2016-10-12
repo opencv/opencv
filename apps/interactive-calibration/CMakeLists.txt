@@ -1,4 +1,4 @@
-set(OPENCV_INTERACTIVECALIBRATION_DEPS opencv_core opencv_aruco opencv_highgui opencv_calib3d opencv_videoio)
+set(OPENCV_INTERACTIVECALIBRATION_DEPS opencv_core opencv_imgproc opencv_features2d opencv_aruco opencv_highgui opencv_calib3d opencv_videoio)
 ocv_check_dependencies(${OPENCV_INTERACTIVECALIBRATION_DEPS})
 
 if(NOT OCV_DEPENDENCIES_FOUND)
