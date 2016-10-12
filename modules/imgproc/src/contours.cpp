@@ -284,10 +284,13 @@ cvStartFindContours( void* _img, CvMemStorage* storage,
                                           scanner->cinfo_storage );
     }
 
+    CV_Assert(step >= 0);
+    CV_Assert(size.height >= 1);
+
     /* make zero borders */
     int esz = CV_ELEM_SIZE(mat->type);
     memset( img, 0, size.width*esz );
-    memset( img + step * (size.height - 1), 0, size.width*esz );
+    memset( img + static_cast<size_t>(step) * (size.height - 1), 0, size.width*esz );
 
     img += step;
     for( int y = 1; y < size.height - 1; y++, img += step )
@@ -989,6 +992,8 @@ cvFindNextContour( CvContourScanner scanner )
 {
     if( !scanner )
         CV_Error( CV_StsNullPtr, "" );
+    CV_Assert(scanner->img_step >= 0);
+
     icvEndProcessContour( scanner );
 
     /* initialize local state */
@@ -1063,7 +1068,7 @@ cvFindNextContour( CvContourScanner scanner )
                     is_hole = 1;
                 }
 
-                if( mode == 0 && (is_hole || img0[lnbd.y * step + lnbd.x] > 0) )
+                if( mode == 0 && (is_hole || img0[lnbd.y * static_cast<size_t>(step) + lnbd.x] > 0) )
                     goto resume_scan;
 
                 origin.y = y;
@@ -1077,8 +1082,8 @@ cvFindNextContour( CvContourScanner scanner )
                 else
                 {
                     int lval = (img0_i ?
-                        img0_i[lnbd.y * step_i + lnbd.x] :
-                        (int)img0[lnbd.y * step + lnbd.x]) & 0x7f;
+                        img0_i[lnbd.y * static_cast<size_t>(step_i) + lnbd.x] :
+                        (int)img0[lnbd.y * static_cast<size_t>(step) + lnbd.x]) & 0x7f;
                     _CvContourInfo *cur = scanner->cinfo_table[lval];
 
                     /* find the first bounding contour */
@@ -1090,11 +1095,11 @@ cvFindNextContour( CvContourScanner scanner )
                             if( par_info )
                             {
                                 if( (img0_i &&
-                                     icvTraceContour_32s( img0_i + par_info->origin.y * step_i +
+                                     icvTraceContour_32s( img0_i + par_info->origin.y * static_cast<size_t>(step_i) +
                                                           par_info->origin.x, step_i, img_i + lnbd.x,
                                                           par_info->is_hole ) > 0) ||
                                     (!img0_i &&
-                                     icvTraceContour( img0 + par_info->origin.y * step +
+                                     icvTraceContour( img0 + par_info->origin.y * static_cast<size_t>(step) +
                                                       par_info->origin.x, step, img + lnbd.x,
                                                       par_info->is_hole ) > 0) )
                                     break;
