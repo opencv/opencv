@@ -71,6 +71,16 @@ protected:
     IplImage* img[NUM_IMG];
     CvMemStorage* storage;
     CvSeq *contours, *contours2, *chain;
+
+    static const bool useVeryWideImages =
+#if SIZE_MAX <= 0xffffffff
+        // 32-bit: don't even try the very wide images
+        false
+#else
+        // 64-bit: test with very wide images
+        true
+#endif
+        ;
 };
 
 
@@ -78,13 +88,13 @@ CV_FindContourTest::CV_FindContourTest()
 {
     int i;
 
-    test_case_count    = 10;
+    test_case_count    = useVeryWideImages ? 10 : 300;
     min_blob_size      = 1;
     max_blob_size      = 50;
     max_log_blob_count = 10;
 
-    min_log_img_width  = 17;
-    max_log_img_width  = 17;
+    min_log_img_width  = useVeryWideImages ? 17 : 3;
+    max_log_img_width  = useVeryWideImages ? 17 : 10;
 
     min_log_img_height = 3;
     max_log_img_height = 10;
@@ -139,8 +149,8 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
 
     max_log_blob_count = cvtest::clipInt( max_log_blob_count, 1, 10 );
 
-    min_log_img_width  = cvtest::clipInt( min_log_img_width, 1, 17 );
-    min_log_img_width  = cvtest::clipInt( max_log_img_width, 1, 17 );
+    min_log_img_width  = cvtest::clipInt( min_log_img_width, 1, useVeryWideImages ? 17 : 10 );
+    min_log_img_width  = cvtest::clipInt( max_log_img_width, 1, useVeryWideImages ? 17 : 10 );
     min_log_img_height = cvtest::clipInt( min_log_img_height, 1, 10 );
     min_log_img_height = cvtest::clipInt( max_log_img_height, 1, 10 );
 
