@@ -45,8 +45,6 @@ namespace cv
 
 enum { XY_SHIFT = 16, XY_ONE = 1 << XY_SHIFT, DRAWING_STORAGE_BLOCK = (1<<12) - 256 };
 
-static const int MAX_THICKNESS = 32767;
-
 #if SIZE_MAX <= 0xffffffff
 // 32-bit system: don't bother to use long long - we anyway cannot handle huge images
 typedef int XCoordinate;
