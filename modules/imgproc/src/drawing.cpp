@@ -1203,7 +1203,7 @@ FillConvexPoly( Mat& img, const Point* v, int npts, const void* color, int line_
     while( ++y <= ymax );
 }
 
-bool fitsInInt32(XCoordinate x)
+static inline bool fitsInInt32(XCoordinate x)
 {
     return x >= std::numeric_limits<int>::min() && x <= std::numeric_limits<int>::max();
 }
