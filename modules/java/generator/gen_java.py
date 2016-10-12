@@ -14,7 +14,7 @@ class_ignore_list = (
     #core
     "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
     #features2d
-    "SimpleBlobDetector", "FlannBasedMatcher", "DescriptorMatcher"
+    "SimpleBlobDetector"
 )
 
 const_ignore_list = (
@@ -1155,6 +1155,7 @@ class JavaWrapperGenerator(object):
 
         # java args
         args = fi.args[:] # copy
+        j_signatures=[]
         suffix_counter = int(ci.methods_suffixes.get(fi.jname, -1))
         while True:
             suffix_counter += 1
@@ -1233,6 +1234,25 @@ class JavaWrapperGenerator(object):
                                 i += 1
                             j_epilogue.append( "if("+a.name+"!=null){ " + "; ".join(set_vals) + "; } ")
 
+            # calculate java method signature to check for uniqueness
+            j_args = []
+            for a in args:
+                if not a.ctype: #hidden
+                    continue
+                jt = type_dict[a.ctype]["j_type"]
+                if a.out and a.ctype in ('bool', 'int', 'long', 'float', 'double'):
+                    jt += '[]'
+                j_args.append( jt + ' ' + a.name )
+            j_signature = type_dict[fi.ctype]["j_type"] + " " + \
+                fi.jname + "(" + ", ".join(j_args) + ")"
+            logging.info("java: " + j_signature)
+
+            if(j_signature in j_signatures):
+                if args:
+                    pop(args)
+                    continue
+                else:
+                    break
 
             # java part:
             # private java NATIVE method decl
@@ -1296,15 +1316,6 @@ class JavaWrapperGenerator(object):
             static = "static"
             if fi.classname:
                 static = fi.static
-
-            j_args = []
-            for a in args:
-                if not a.ctype: #hidden
-                    continue
-                jt = type_dict[a.ctype]["j_type"]
-                if a.out and a.ctype in ('bool', 'int', 'long', 'float', 'double'):
-                    jt += '[]'
-                j_args.append( jt + ' ' + a.name )
 
             j_code.write( Template(\
 """    public $static $j_type $j_name($j_args)
@@ -1447,6 +1458,9 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         retval = retval, \
         namespace = ('using namespace ' + ci.namespace.replace('.', '::') + ';') if ci.namespace else ''
     ) )
+
+            # adding method signature to dictionarry
+            j_signatures.append(j_signature)
 
             # processing args with default values
             if not args or not args[-1].defval:

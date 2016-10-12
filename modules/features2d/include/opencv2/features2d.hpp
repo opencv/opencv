@@ -771,6 +771,15 @@ an image set.
 class CV_EXPORTS_W DescriptorMatcher : public Algorithm
 {
 public:
+   enum
+    {
+        FLANNBASED            = 1,
+        BRUTEFORCE            = 2,
+        BRUTEFORCE_L1         = 3,
+        BRUTEFORCE_HAMMING    = 4,
+        BRUTEFORCE_HAMMINGLUT = 5,
+        BRUTEFORCE_SL2        = 6
+    };
     virtual ~DescriptorMatcher();
 
     /** @brief Adds descriptors to train a CPU(trainDescCollectionis) or GPU(utrainDescCollectionis) descriptor
@@ -868,7 +877,7 @@ public:
     query descriptor and the training descriptor is equal or smaller than maxDistance. Found matches are
     returned in the distance increasing order.
      */
-    void radiusMatch( InputArray queryDescriptors, InputArray trainDescriptors,
+    CV_WRAP void radiusMatch( InputArray queryDescriptors, InputArray trainDescriptors,
                       std::vector<std::vector<DMatch> >& matches, float maxDistance,
                       InputArray mask=noArray(), bool compactResult=false ) const;
 
@@ -909,6 +918,18 @@ public:
     void radiusMatch( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
                       InputArrayOfArrays masks=noArray(), bool compactResult=false );
 
+
+    CV_WRAP void write( const String& fileName ) const
+    {
+        FileStorage fs(fileName, FileStorage::WRITE);
+        write(fs);
+    }
+
+    CV_WRAP void read( const String& fileName )
+    {
+        FileStorage fs(fileName, FileStorage::READ);
+        read(fs.root());
+    }
     // Reads matcher object from a file node
     virtual void read( const FileNode& );
     // Writes matcher object to a file storage
@@ -920,7 +941,7 @@ public:
     that is, copies both parameters and train data. If emptyTrainData is true, the method creates an
     object copy with the current parameters but with empty train data.
      */
-    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
+    CV_WRAP virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
     /** @brief Creates a descriptor matcher of a given type with the default parameters (using default
     constructor).
@@ -934,6 +955,9 @@ public:
     -   `FlannBased`
      */
     CV_WRAP static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
+
+    CV_WRAP static Ptr<DescriptorMatcher> create( int matcherType );
+
 protected:
     /**
      * Class to work with descriptors from several images as with one merged matrix.
@@ -990,8 +1014,17 @@ sets.
 class CV_EXPORTS_W BFMatcher : public DescriptorMatcher
 {
 public:
-    /** @brief Brute-force matcher constructor.
+    /** @brief Brute-force matcher constructor (obsolete). Please use BFMatcher.create()
+     *
+     *
+    */
+    CV_WRAP BFMatcher( int normType=NORM_L2, bool crossCheck=false );
 
+    virtual ~BFMatcher() {}
+
+    virtual bool isMaskSupported() const { return true; }
+
+    /* @brief Brute-force matcher create method.
     @param normType One of NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2. L1 and L2 norms are
     preferable choices for SIFT and SURF descriptors, NORM_HAMMING should be used with ORB, BRISK and
     BRIEF, NORM_HAMMING2 should be used with ORB when WTA_K==3 or 4 (see ORB::ORB constructor
@@ -1003,10 +1036,7 @@ public:
     pairs. Such technique usually produces best results with minimal number of outliers when there are
     enough matches. This is alternative to the ratio test, used by D. Lowe in SIFT paper.
      */
-    CV_WRAP BFMatcher( int normType=NORM_L2, bool crossCheck=false );
-    virtual ~BFMatcher() {}
-
-    virtual bool isMaskSupported() const { return true; }
+    CV_WRAP static Ptr<BFMatcher> create( int normType=NORM_L2, bool crossCheck=false ) ;
 
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
 protected:
@@ -1043,6 +1073,8 @@ public:
 
     virtual void train();
     virtual bool isMaskSupported() const;
+
+    CV_WRAP static Ptr<FlannBasedMatcher> create();
 
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const;
 protected:
