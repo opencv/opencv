@@ -89,7 +89,7 @@ public:
 
     //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS BRISK AKAZE Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
     //not supported: SimpleBlob, Dense
-    CV_WRAP static javaFeatureDetector* create( int detectorType )
+    CV_WRAP static Ptr<javaFeatureDetector> create( int detectorType )
     {
         //String name;
         if (detectorType > DYNAMICDETECTOR)
@@ -156,7 +156,7 @@ public:
             break;
         }
 
-        return new javaFeatureDetector(fd);
+        return makePtr<javaFeatureDetector>(fd);
     }
 
     CV_WRAP void write( const String& fileName ) const
@@ -171,9 +171,10 @@ public:
         wrapped->read(fs.root());
     }
 
-private:
     javaFeatureDetector(Ptr<FeatureDetector> _wrapped) : wrapped(_wrapped)
     {}
+
+private:
 
     Ptr<FeatureDetector> wrapped;
 };
@@ -222,7 +223,7 @@ public:
 
     //supported SIFT, SURF, ORB, BRIEF, BRISK, FREAK, AKAZE, Opponent(XXXX)
     //not supported: Calonder
-    CV_WRAP static javaDescriptorExtractor* create( int extractorType )
+    CV_WRAP static Ptr<javaDescriptorExtractor> create( int extractorType )
     {
         //String name;
 
@@ -261,7 +262,7 @@ public:
             break;
         }
 
-        return new javaDescriptorExtractor(de);
+        return makePtr<javaDescriptorExtractor>(de);
     }
 
     CV_WRAP void write( const String& fileName ) const
@@ -276,9 +277,10 @@ public:
         wrapped->read(fs.root());
     }
 
-private:
     javaDescriptorExtractor(Ptr<DescriptorExtractor> _wrapped) : wrapped(_wrapped)
     {}
+
+private:
 
     Ptr<DescriptorExtractor> wrapped;
 };

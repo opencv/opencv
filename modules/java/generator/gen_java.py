@@ -994,7 +994,7 @@ class JavaWrapperGenerator(object):
         if classinfo.base:
             classinfo.addImports(classinfo.base)
         type_dict["Ptr_"+name] = \
-            { "j_type" : name,
+            { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
               "jni_name" : "Ptr<"+classinfo.fullName(isCPP=True)+">(("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
