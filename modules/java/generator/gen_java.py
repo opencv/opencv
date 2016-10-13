@@ -1039,7 +1039,7 @@ class JavaWrapperGenerator(object):
         f.write(buf)
         f.close()
 
-    def gen(self, srcfiles, module, output_path):
+    def gen(self, srcfiles, module, output_path, common_headers):
         self.clear()
         self.module = module
         self.Module = module.capitalize()
@@ -1050,6 +1050,9 @@ class JavaWrapperGenerator(object):
 
         # scan the headers and build more descriptive maps of classes, consts, functions
         includes = [];
+        for hdr in common_headers:
+            logging.info("\n===== Common header : %s =====", hdr)
+            includes.append('#include "' + hdr + '"')
         for hdr in srcfiles:
             decls = parser.parse(hdr)
             self.namespaces = parser.namespaces
@@ -1057,6 +1060,8 @@ class JavaWrapperGenerator(object):
             logging.info("Namespaces: %s", parser.namespaces)
             if decls:
                 includes.append('#include "' + hdr + '"')
+            else:
+                logging.info("Ignore header: %s", hdr)
             for decl in decls:
                 logging.info("\n--- Incoming ---\n%s", pformat(decl, 4))
                 name = decl[0]
@@ -1582,10 +1587,15 @@ if __name__ == "__main__":
     import hdr_parser
     module = sys.argv[2]
     srcfiles = sys.argv[3:]
+    common_headers = []
+    if '--common' in srcfiles:
+        pos = srcfiles.index('--common')
+        common_headers = srcfiles[pos+1:]
+        srcfiles = srcfiles[:pos]
     logging.basicConfig(filename='%s/%s.log' % (dstdir, module), format=None, filemode='w', level=logging.INFO)
     handler = logging.StreamHandler()
     handler.setLevel(logging.WARNING)
     logging.getLogger().addHandler(handler)
     #print("Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles))
     generator = JavaWrapperGenerator()
-    generator.gen(srcfiles, module, dstdir)
+    generator.gen(srcfiles, module, dstdir, common_headers)
