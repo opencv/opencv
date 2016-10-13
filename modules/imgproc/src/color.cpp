@@ -105,6 +105,39 @@
 
 namespace cv
 {
+//constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
+const float B2YF = 0.114f;
+const float G2YF = 0.587f;
+const float R2YF = 0.299f;
+//to YCbCr
+const float YCBF = 0.564f; // == 1/2/(1-B2YF)
+const float YCRF = 0.713f; // == 1/2/(1-R2YF)
+const int YCBI = 9241;  // == YCBF*16384
+const int YCRI = 11682; // == YCRF*16384
+//to YUV
+const float B2UF = 0.492f;
+const float R2VF = 0.877f;
+const int B2UI = 8061;  // == B2UF*16384
+const int R2VI = 14369; // == R2VF*16384
+//from YUV
+const float U2BF = 2.032f;
+const float U2GF = -0.395f;
+const float V2GF = -0.581f;
+const float V2RF = 1.140f;
+const int U2BI = 33292;
+const int U2GI = -6472;
+const int V2GI = -9519;
+const int V2RI = 18678;
+//from YCrCb
+const float CB2BF = 1.773f;
+const float CB2GF = -0.344f;
+const float CR2GF = -0.714f;
+const float CR2RF = 1.403f;
+const int CB2BI = 29049;
+const int CB2GI = -5636;
+const int CR2GI = -11698;
+const int CR2RI = 22987;
+
 
 // computes cubic spline coefficients for a function: (xi=i, yi=f[i]), i=0..n
 template<typename _Tp> static void splineBuild(const _Tp* f, int n, _Tp* tab)
@@ -443,9 +476,9 @@ struct IPPColor2GrayFunctor
     IPPColor2GrayFunctor(ippiColor2GrayFunc _func) :
         ippiColorToGray(_func)
     {
-        coeffs[0] = 0.114f;
-        coeffs[1] = 0.587f;
-        coeffs[2] = 0.299f;
+        coeffs[0] = B2YF;
+        coeffs[1] = G2YF;
+        coeffs[2] = R2YF;
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
@@ -1087,9 +1120,9 @@ enum
 {
     yuv_shift = 14,
     xyz_shift = 12,
-    R2Y = 4899,
-    G2Y = 9617,
-    B2Y = 1868,
+    R2Y = 4899, // == R2YF*16384
+    G2Y = 9617, // == G2YF*16384
+    B2Y = 1868, // == B2YF*16384
     BLOCK_SIZE = 256
 };
 
@@ -1257,7 +1290,7 @@ template<typename _Tp> struct RGB2Gray
 
     RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
+        static const float coeffs0[] = { R2YF, G2YF, B2YF };
         memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
@@ -1404,7 +1437,7 @@ struct RGB2Gray<float>
 
     RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
+        static const float coeffs0[] = { R2YF, G2YF, B2YF };
         memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
@@ -1594,7 +1627,7 @@ struct RGB2Gray<float>
 
     RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
+        static const float coeffs0[] = { R2YF, G2YF, B2YF };
         memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
@@ -1718,7 +1751,7 @@ template<typename _Tp> struct RGB2YCrCb_f
 
     RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) : srccn(_srccn), blueIdx(_blueIdx)
     {
-        static const float coeffs0[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
+        static const float coeffs0[] = {R2YF, G2YF, B2YF, YCRF, YCBF};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
@@ -1751,7 +1784,7 @@ struct RGB2YCrCb_f<float>
     RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) :
         srccn(_srccn), blueIdx(_blueIdx)
     {
-        static const float coeffs0[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
+        static const float coeffs0[] = {R2YF, G2YF, B2YF, YCRF, YCBF};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
         if(blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
@@ -1816,7 +1849,7 @@ struct RGB2YCrCb_f<float>
     RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) :
         srccn(_srccn), blueIdx(_blueIdx)
     {
-        static const float coeffs0[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
+        static const float coeffs0[] = {R2YF, G2YF, B2YF, YCRF, YCBF};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
@@ -1912,7 +1945,7 @@ template<typename _Tp> struct RGB2YCrCb_i
     RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
         : srccn(_srccn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
+        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
@@ -1946,7 +1979,7 @@ struct RGB2YCrCb_i<uchar>
     RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
         : srccn(_srccn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
+        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
@@ -2040,7 +2073,7 @@ struct RGB2YCrCb_i<ushort>
     RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
         : srccn(_srccn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
+        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
@@ -2163,7 +2196,7 @@ struct RGB2YCrCb_i<uchar>
     RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
         : srccn(_srccn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
+        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
@@ -2323,7 +2356,7 @@ struct RGB2YCrCb_i<ushort>
     RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
         : srccn(_srccn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
+        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
@@ -2453,7 +2486,7 @@ template<typename _Tp> struct YCrCb2RGB_f
     YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
         : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const float coeffs0[] = {1.403f, -0.714f, -0.344f, 1.773f};
+        static const float coeffs0[] = {CR2RF, CR2GF, CB2GF, CB2BF};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
@@ -2491,7 +2524,7 @@ struct YCrCb2RGB_f<float>
     YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
         : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const float coeffs0[] = {1.403f, -0.714f, -0.344f, 1.773f};
+        static const float coeffs0[] = {CR2RF, CR2GF, CB2GF, CB2BF};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_f32(coeffs[0]);
@@ -2564,7 +2597,7 @@ struct YCrCb2RGB_f<float>
     YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
         : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const float coeffs0[] = {1.403f, -0.714f, -0.344f, 1.773f};
+        static const float coeffs0[] = {CR2RF, CR2GF, CB2GF, CB2BF};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
 
         v_c0 = _mm_set1_ps(coeffs[0]);
@@ -2675,7 +2708,7 @@ template<typename _Tp> struct YCrCb2RGB_i
     YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
         : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {22987, -11698, -5636, 29049};
+        static const int coeffs0[] = {CR2RI, CR2GI, CB2GI, CB2BI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
     }
 
@@ -2716,7 +2749,7 @@ struct YCrCb2RGB_i<uchar>
     YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
         : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {22987, -11698, -5636, 29049};
+        static const int coeffs0[] = {CR2RI, CR2GI, CB2GI, CB2BI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_s32(coeffs[0]);
@@ -2821,7 +2854,7 @@ struct YCrCb2RGB_i<ushort>
     YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
         : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {22987, -11698, -5636, 29049};
+        static const int coeffs0[] = {CR2RI, CR2GI, CB2GI, CB2BI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_s32(coeffs[0]);
@@ -2963,7 +2996,7 @@ struct YCrCb2RGB_i<uchar>
     YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
         : dstcn(_dstcn), blueIdx(_blueIdx)
     {
-        static const int coeffs0[] = {22987, -11698, -5636, 29049};
+        static const int coeffs0[] = {CR2RI, CR2GI, CB2GI, CB2BI};
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
 
         v_c0 = _mm_set1_epi16((short)coeffs[0]);
@@ -2977,7 +3010,8 @@ struct YCrCb2RGB_i<uchar>
         uchar alpha = ColorChannel<uchar>::max();
         v_alpha = _mm_set1_epi8(*(char *)&alpha);
 
-        useSSE = coeffs[0] <= std::numeric_limits<short>::max();
+        int maxc = max(max(coeffs[0], coeffs[1]), max(coeffs[2], coeffs[3]));
+        useSSE = maxc <= std::numeric_limits<short>::max();
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
     }
 
@@ -7044,7 +7078,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_RGB2YUV:
     {
         CV_Assert(scn == 3 || scn == 4);
-        bidx = code == COLOR_RGB2YUV ? 0 : 2;
+        bidx = code == COLOR_RGB2YUV ? 2 : 0;
         dcn = 3;
         k.create("RGB2YUV", ocl::imgproc::cvtcolor_oclsrc,
                  opts + format("-D dcn=3 -D bidx=%d", bidx));
@@ -7053,9 +7087,9 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_YUV2BGR:
     case COLOR_YUV2RGB:
     {
-        if(dcn < 0) dcn = 3;
+        if(dcn <= 0) dcn = 3;
         CV_Assert(dcn == 3 || dcn == 4);
-        bidx = code == COLOR_YUV2RGB ? 0 : 2;
+        bidx = code == COLOR_YUV2RGB ? 2 : 0;
         k.create("YUV2RGB", ocl::imgproc::cvtcolor_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
         break;
@@ -7910,8 +7944,8 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-    static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
+    static const float yuv_f[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
+    static const int yuv_i[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
     const float* coeffs_f = isCbCr ? 0 : yuv_f;
     const int* coeffs_i = isCbCr ? 0 : yuv_i;
     int blueIdx = swapBlue ? 2 : 0;
@@ -7966,8 +8000,8 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
-    static const int yuv_i[] = { 33292, -6472, -9519, 18678 };
+    static const float yuv_f[] = {V2RF, V2GF, U2GF, U2BF};
+    static const int yuv_i[] = { V2RI, V2GI, U2GI, U2BI };
     const float* coeffs_f = isCbCr ? 0 : yuv_f;
     const int* coeffs_i = isCbCr ? 0 : yuv_i;
     int blueIdx = swapBlue ? 2 : 0;
