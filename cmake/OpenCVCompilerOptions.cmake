@@ -336,7 +336,7 @@ if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_OPENCV_GCC_VERSION_NUM GREATER 399)
   add_extra_compiler_option(-fvisibility-inlines-hidden)
 endif()
 
-if(NOT OPENCV_FP16_DISABLE)
+if(NOT OPENCV_FP16_DISABLE AND NOT IOS)
   if(ARM AND ENABLE_NEON)
     set(FP16_OPTION "-mfpu=neon-fp16")
   elseif((X86 OR X86_64) AND NOT MSVC AND ENABLE_AVX)
