@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/calib3d.hpp"
+#include <inttypes.h>
 
 using namespace cv;
 using namespace std;
