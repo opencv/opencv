@@ -783,6 +783,7 @@ class ClassInfo(GeneralInfo):
         self.imports = set()
         self.props= []
         self.jname = self.name
+        self.smart = None # True if class stores Ptr<T>* instead of T* in nativeObj field
         self.j_code = None # java code stream
         self.jn_code = None # jni code stream
         self.cpp_code = None # cpp code stream
@@ -1392,10 +1393,10 @@ class JavaWrapperGenerator(object):
                 elif fi.static:
                     cvname = fi.fullName(isCPP=True)
                 else:
-                    cvname = ("me->" if  not self.isSmartClass(fi.classname) else "(*me)->") + name
+                    cvname = ("me->" if  not self.isSmartClass(ci) else "(*me)->") + name
                     c_prologue.append(\
                         "%(cls)s* me = (%(cls)s*) self; //TODO: check for NULL" \
-                            % { "cls" : self.smartWrap(fi.classname, fi.fullClass(isCPP=True))} \
+                            % { "cls" : self.smartWrap(ci, fi.fullClass(isCPP=True))} \
                     )
             cvargs = []
             for a in args:
@@ -1541,7 +1542,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
     delete (%(cls)s*) self;
 }
 
-""" % {"module" : module.replace('_', '_1'), "cls" : self.smartWrap(ci.name, ci.fullName(isCPP=True)), "j_cls" : ci.jname.replace('_', '_1')}
+""" % {"module" : module.replace('_', '_1'), "cls" : self.smartWrap(ci, ci.fullName(isCPP=True)), "j_cls" : ci.jname.replace('_', '_1')}
             )
 
     def getClass(self, classname):
@@ -1551,17 +1552,31 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         name = classname or self.Module
         return name in self.classes
 
-    def isSmartClass(self, classname):
+    def isSmartClass(self, ci):
         '''
         Check if class stores Ptr<T>* instead of T* in nativeObj field
         '''
-        return self.isWrapped(classname)
+        if ci.smart != None:
+            return ci.smart
 
-    def smartWrap(self, name, fullname):
+        # if parents are smart (we hope) then children are!
+        # if not we believe the class is smart if it has "create" method
+        ci.smart = False
+        if ci.base:
+            ci.smart = True
+        else:
+            for fi in ci.methods:
+                if fi.name == "create":
+                    ci.smart = True
+                    break
+
+        return ci.smart
+
+    def smartWrap(self, ci, fullname):
         '''
         Wraps fullname with Ptr<> if needed
         '''
-        if self.isSmartClass(name):
+        if self.isSmartClass(ci):
             return "Ptr<" + fullname + ">"
         return fullname
 
