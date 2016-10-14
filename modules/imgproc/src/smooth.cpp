@@ -1295,6 +1295,52 @@ struct ColumnSum<int, float> :
 
 #ifdef HAVE_OPENCL
 
+static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth,
+                                   Size ksize, Point anchor, bool normalize, bool sqr = false )
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    if (anchor.x < 0)
+        anchor.x = ksize.width / 2;
+    if (anchor.y < 0)
+        anchor.y = ksize.height / 2;
+
+    if ( dev.isIntel() && !sqr && !((type == CV_8UC1) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0) &&
+         (anchor.x == 1) && (anchor.y == 1) &&
+         (ksize.width == 3) && (ksize.height == 3)) )
+        return false;
+
+    float alpha = 1.0f / (ksize.height * ksize.width);
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    String opts = format(normalize ? " -D NORMALIZE" : "");
+    ocl::Kernel kernel("boxFilter3x3_8UC1_cols16_rows2", cv::ocl::imgproc::boxFilter3x3_oclsrc, opts);
+    if (kernel.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    UMat dst = _dst.getUMat();
+
+    int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::WriteOnly(dst));
+    if (normalize)
+        idxArg = kernel.set(idxArg, (float)alpha);
+
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+}
+
 #define DIVUP(total, grain) ((total + grain - 1) / (grain))
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
@@ -1682,6 +1728,9 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 bool normalize, int borderType )
 {
     CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_dst.isUMat() && borderType == BORDER_CONSTANT && !_src.isSubmatrix(),
+               ocl_boxFilter3x3_8UC1(_src, _dst, ddepth, ksize, anchor, normalize))
 
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
