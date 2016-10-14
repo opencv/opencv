@@ -149,6 +149,7 @@ protected:
     double          gain;                   // current value of gain
 
     IplImage        *frame;                 // local frame copy
+    uint64_t        framesCnt;              // number of retrieved frames
 };
 
 
@@ -164,7 +165,7 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     fpsMin = fpsMax = gainMin = gainMax = exposureMin = exposureMax = 0;
     controlExposure = false;
     targetGrey = 0;
-
+    framesCnt = 0;
 
     num_buffers = 50;
     frame = NULL;
@@ -254,26 +255,30 @@ bool CvCaptureCAM_Aravis::open( int index )
 
 bool CvCaptureCAM_Aravis::grabFrame()
 {
-    ArvBuffer *arv_buffer = NULL;
-    int max_tries = 10;
-    int tries = 0;
-    for(; tries < max_tries; tries ++) {
-        arv_buffer = arv_stream_timeout_pop_buffer (stream, 200000);
-        if (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
-            arv_stream_push_buffer (stream, arv_buffer);
-        } else break;
+    // remove content of previous frame
+    framebuffer = NULL;
+
+    if(stream) {
+        ArvBuffer *arv_buffer = NULL;
+        int max_tries = 10;
+        int tries = 0;
+        for(; tries < max_tries; tries ++) {
+            arv_buffer = arv_stream_timeout_pop_buffer (stream, 200000);
+            if (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
+                arv_stream_push_buffer (stream, arv_buffer);
+            } else break;
+        }
+        if (tries < max_tries) {
+            size_t buffer_size;
+            framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
+
+            arv_buffer_get_image_region (arv_buffer, NULL, NULL, &width, &height);
+
+            arv_stream_push_buffer(stream, arv_buffer);
+            return true;
+        }
     }
-
-    if (tries == max_tries)
-        return false;
-
-    size_t buffer_size;
-    framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
-
-    arv_buffer_get_image_region (arv_buffer, NULL, NULL, &width, &height);
-
-    arv_stream_push_buffer(stream, arv_buffer);
-    return true;
+    return false;
 }
 
 IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
@@ -306,9 +311,13 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
             }
             cvCopy(&src, frame);
 
-            if(controlExposure)
+            if(controlExposure && !(framesCnt % 2)) {
+                // control exposure every second frame
+                // i.e. skip frame taken with previous exposure setup
                 autoExposureControl(frame);
+            }
 
+            framesCnt++;
             return frame;
         }
     }
@@ -330,9 +339,10 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
     double brightness = cv::mean(m)[image->nChannels > 1 ? 1 : 0];
     if(brightness < 1) brightness = 1;
 
+    // mid point - 100 % means no change
     static const double dmid = 100;
 
-    // distance from optimal value
+    // distance from optimal value as a percentage
     double d = (targetGrey * dmid) / brightness;
 
     // if change of value requires intervention
@@ -358,8 +368,8 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
             double nee = ( exposure * d ) / dmid;
             ne = BETWEEN( nee, exposureMin, maxe);
 
-            if(abs(exposure - ne) > 5) {
-                // piority 2 - control of exposure time
+            if(abs(exposure - ne) > 2) {
+                // priority 2 - control of exposure time
                 arv_camera_set_exposure_time(camera, (exposure = ne) );
 
                 return;
@@ -431,7 +441,7 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 {
     switch(property_id) {
         case CV_CAP_PROP_AUTO_EXPOSURE:
-            if( exposureAvailable || gainAvailable) {
+            if(exposureAvailable || gainAvailable) {
                 if( (controlExposure = (bool)(int)value) ) {
                     exposure = exposureAvailable ? arv_camera_get_exposure_time(camera) : 0;
                     gain = gainAvailable ? arv_camera_get_gain(camera) : 0;
