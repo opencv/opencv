@@ -111,6 +111,7 @@ typedef std::vector<std::vector<Point> > vector_vector_Point;
 typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
+typedef std::vector<std::vector<KeyPoint> > vector_vector_KeyPoint;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {
