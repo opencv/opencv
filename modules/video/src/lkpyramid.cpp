@@ -384,9 +384,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 q8 = vmulq_s32(q4, q6);
                 q15 = vmulq_s32(q6, q6);
 
-                nq0 = vaddq_f32(nq0, vreinterpretq_f32_s32(q7));
-                nq1 = vaddq_f32(nq1, vreinterpretq_f32_s32(q8));
-                nq2 = vaddq_f32(nq2, vreinterpretq_f32_s32(q15));
+                nq0 = vaddq_f32(nq0, vcvtq_f32_s32(q7));
+                nq1 = vaddq_f32(nq1, vcvtq_f32_s32(q8));
+                nq2 = vaddq_f32(nq2, vcvtq_f32_s32(q15));
 
                 vst1q_f32(nA11, nq0);
                 vst1q_f32(nA12, nq1);
@@ -599,8 +599,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     nq9 = vaddq_s32(nq9, nq10);
                     nq4 = vaddq_s32(nq4, nq5);
 
-                    nB1v = vaddq_f32(nB1v, vreinterpretq_f32_s32(nq9));
-                    nB2v = vaddq_f32(nB2v, vreinterpretq_f32_s32(nq4));
+                    nB1v = vaddq_f32(nB1v, vcvtq_f32_s32(nq9));
+                    nB2v = vaddq_f32(nB2v, vcvtq_f32_s32(nq4));
 
                     vst1q_f32(nB1, nB1v);
                     vst1q_f32(nB2, nB2v);
