@@ -153,8 +153,8 @@ public:
     @param masks Masks for each input image specifying where to look for keypoints (optional).
     masks[i] is a mask for images[i].
     */
-    virtual void detect( InputArrayOfArrays images,
-                         std::vector<std::vector<KeyPoint> >& keypoints,
+    CV_WRAP virtual void detect( InputArrayOfArrays images,
+                         CV_OUT std::vector<std::vector<KeyPoint> >& keypoints,
                          InputArrayOfArrays masks=noArray() );
 
     /** @brief Computes the descriptors for a set of keypoints detected in an image (first variant) or image set
@@ -182,8 +182,8 @@ public:
     descriptors computed for a keypoints[i]. Row j is the keypoints (or keypoints[i]) is the
     descriptor for keypoint j-th keypoint.
     */
-    virtual void compute( InputArrayOfArrays images,
-                          std::vector<std::vector<KeyPoint> >& keypoints,
+    CV_WRAP virtual void compute( InputArrayOfArrays images,
+                          CV_OUT CV_IN_OUT std::vector<std::vector<KeyPoint> >& keypoints,
                           OutputArrayOfArrays descriptors );
 
     /** Detects keypoints and computes the descriptors */
@@ -195,6 +195,14 @@ public:
     CV_WRAP virtual int descriptorSize() const;
     CV_WRAP virtual int descriptorType() const;
     CV_WRAP virtual int defaultNorm() const;
+
+    CV_WRAP void write( const String& fileName ) const;
+
+    CV_WRAP void read( const String& fileName );
+
+    virtual void write( FileStorage&) const;
+
+    virtual void read( const FileNode&);
 
     //! Return true if detector object is empty
     CV_WRAP virtual bool empty() const;
@@ -878,7 +886,7 @@ public:
     returned in the distance increasing order.
      */
     CV_WRAP void radiusMatch( InputArray queryDescriptors, InputArray trainDescriptors,
-                      std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                      CV_OUT std::vector<std::vector<DMatch> >& matches, float maxDistance,
                       InputArray mask=noArray(), bool compactResult=false ) const;
 
     /** @overload
@@ -915,7 +923,7 @@ public:
     false, the matches vector has the same size as queryDescriptors rows. If compactResult is true,
     the matches vector does not contain matches for fully masked-out query descriptors.
     */
-    void radiusMatch( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+    CV_WRAP void radiusMatch( InputArray queryDescriptors, CV_OUT std::vector<std::vector<DMatch> >& matches, float maxDistance,
                       InputArrayOfArrays masks=noArray(), bool compactResult=false );
 
 
