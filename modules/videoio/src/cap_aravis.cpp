@@ -181,7 +181,7 @@ bool CvCaptureCAM_Aravis::getDeviceNameById(int id, std::string &device)
 {
     arv_update_device_list();
 
-    if(id > 0 && id < arv_get_n_devices()){
+    if((id >= 0) && (id < (int)arv_get_n_devices())) {
         device = arv_get_device_id(id);
         return true;
     }
@@ -311,7 +311,7 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
             }
             cvCopy(&src, frame);
 
-            if(controlExposure && !(framesCnt % 2)) {
+            if(controlExposure && (framesCnt & 1)) {
                 // control exposure every second frame
                 // i.e. skip frame taken with previous exposure setup
                 autoExposureControl(frame);
