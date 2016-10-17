@@ -4,11 +4,10 @@ package org.opencv.test;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
+import java.lang.reflect.Method;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -32,6 +31,9 @@ public class OpenCVTestCase extends TestCase {
     public static final boolean passNYI = true;
 
     protected static boolean isTestCaseEnabled = true;
+
+    protected static final String XFEATURES2D_PACKAGE_NAME = "org.opencv.xfeatures2d.";
+    protected static final String ALGORITHM_FACTORY_NAME = "create";
 
     protected static final int matSize = 10;
     protected static final double EPS = 0.001;
@@ -491,4 +493,90 @@ public class OpenCVTestCase extends TestCase {
         }
     }
 
+    protected <T> T createAlgorythmInstance(String cname, String factoryName, Class cParams[], Object oValues[]) {
+        T algorithm = null;
+
+        assertFalse("Class name should not be empty", "".equals(cname));
+
+        String message="";
+        int step=0;
+        try {
+            Class algClass = getClassForName(cname);
+            step=1;
+            Method factory = null;
+
+            if(cParams!=null && cParams.length>0) {
+                step=2;
+                if(!"".equals(factoryName)) {
+                    step=3;
+                    factory = algClass.getDeclaredMethod(factoryName, cParams);
+                    algorithm = (T) factory.invoke(null, oValues);
+                    step=4;
+                }
+                else {
+                    step=5;
+                    algorithm = (T) algClass.getConstructor(cParams).newInstance(oValues);
+                    step=6;
+                }
+            }
+            else {
+                step=7;
+                if(!"".equals(factoryName)) {
+                    step=8;
+                    factory = algClass.getDeclaredMethod(factoryName);
+                    algorithm = (T) factory.invoke(null);
+                    step=9;
+                }
+                else {
+                    step=10;
+                    algorithm = (T) algClass.getConstructor().newInstance();
+                    step=11;
+                }
+            }
+        }
+        catch(Exception ex) {
+            message = TAG + " :: " + "could not instantiate " + cname + "! step " + step;
+        }
+
+        assertTrue(message, algorithm!=null);
+
+        return algorithm;
+    }
+
+    protected <T> void setProperty(T algorythm, String propertyName, String propertyType, Object propertyValue) {
+        String message = "";
+        try {
+            String smethod = "set" + propertyName.substring(0,1).toUpperCase() + propertyName.substring(1);
+    //        System.out.println("Setting field " + p.getPname() + "/" + smethod + "/" + p.getValue());
+            Method setter = algorythm.getClass().getMethod(smethod, getClassForName(propertyType));
+            setter.invoke(algorythm, propertyValue);
+        }
+        catch(Exception ex) {
+            message = "Error when setting property [" + propertyName + "]: " + ex.getMessage();
+        }
+
+        assertTrue(message, "".equals(message));
+    }
+
+    protected Class getClassForName(String sclass) throws ClassNotFoundException{
+        if("int".equals(sclass))
+            return Integer.TYPE;
+        else if("long".equals(sclass))
+            return Long.TYPE;
+        else if("double".equals(sclass))
+            return Double.TYPE;
+        else if("float".equals(sclass))
+            return Float.TYPE;
+        else if("boolean".equals(sclass))
+            return Boolean.TYPE;
+        else if("char".equals(sclass))
+            return Character.TYPE;
+        else if("byte".equals(sclass))
+            return Byte.TYPE;
+        else if("short".equals(sclass))
+            return Short.TYPE;
+        else
+            return Class.forName(sclass);
+
+    }
 }
