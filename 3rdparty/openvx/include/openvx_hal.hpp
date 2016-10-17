@@ -225,6 +225,26 @@ struct vxImage
         void *ptrs[] = { (void*)data };
         img = vxCreateImageFromHandle(ctx.ctx, VX_Traits<T>::ImgType, &addr, ptrs, VX_MEMORY_TYPE_HOST);
         vxErr::check(img);
+        swapMemory = true;
+    }
+    template <typename T>
+    vxImage(vxContext &ctx, T value, int w, int h)
+    {
+#if VX_VERSION > VX_VERSION_1_0
+        vx_pixel_value_t pixel;
+        switch ((int)(VX_Traits<T>::DataType))
+        {
+        case VX_TYPE_UINT8:pixel.U8 = value; break;
+        case VX_TYPE_UINT16:pixel.U16 = value; break;
+        case VX_TYPE_INT16:pixel.S16 = value; break;
+        default:vxErr(VX_ERROR_INVALID_PARAMETERS, "uniform image creation").check();
+        }
+        img = vxCreateUniformImage(ctx.ctx, w, h, VX_Traits<T>::ImgType, &pixel);
+#else
+        img = vxCreateUniformImage(ctx.ctx, w, h, VX_Traits<T>::ImgType, &value);
+#endif
+        vxErr::check(img);
+        swapMemory = false;
     }
     vxImage(vxContext &ctx, int imgType, const uchar *data, size_t step, int w, int h)
     {
@@ -295,14 +315,18 @@ struct vxImage
         }
         img = vxCreateImageFromHandle(ctx.ctx, imgType, addr, ptrs, VX_MEMORY_TYPE_HOST);
         vxErr::check(img);
+        swapMemory = true;
     }
     ~vxImage()
     {
 #if VX_VERSION > VX_VERSION_1_0
-        vxErr::check(vxSwapImageHandle(img, NULL, NULL, 1));
+        if (swapMemory)
+            vxErr::check(vxSwapImageHandle(img, NULL, NULL, 1));
 #endif
         vxReleaseImage(&img);
     }
+private:
+    bool swapMemory;
 };
 
 struct vxMatrix
@@ -999,6 +1023,30 @@ inline int ovx_hal_cvtBGRtoBGR(const uchar * a, size_t astep, uchar * b, size_t 
     return CV_HAL_ERROR_OK;
 }
 
+inline int ovx_hal_cvtGraytoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int depth, int bcn)
+{
+    if(dimTooBig(w) || dimTooBig(h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if (depth != CV_8U || (bcn != 3 && bcn != 4))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, a, astep, w, h);
+        vxImage ib(*ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxErr::check(vxuChannelCombine(ctx->ctx, ia.img, ia.img, ia.img,
+            bcn == 4 ? vxImage(*ctx, uchar(255), w, h).img : NULL,
+            ib.img));
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
 inline int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx)
 {
     if(dimTooBig(w) || dimTooBig(h))
@@ -1183,6 +1231,8 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 
 #undef cv_hal_cvtBGRtoBGR
 #define cv_hal_cvtBGRtoBGR ovx_hal_cvtBGRtoBGR
+#undef cv_hal_cvtGraytoBGR
+#define cv_hal_cvtGraytoBGR ovx_hal_cvtGraytoBGR
 #undef cv_hal_cvtTwoPlaneYUVtoBGR
 #define cv_hal_cvtTwoPlaneYUVtoBGR ovx_hal_cvtTwoPlaneYUVtoBGR
 #undef cv_hal_cvtThreePlaneYUVtoBGR
