@@ -53,6 +53,12 @@
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
 
+
+#if defined(Status)
+#  warning Detected X11 'Status' macro definition, it can cause build conflicts. Please, include this header before any X11 headers.
+#endif
+
+
 /**
 @defgroup stitching Images stitching
 
