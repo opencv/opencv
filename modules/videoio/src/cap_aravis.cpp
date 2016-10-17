@@ -65,6 +65,7 @@
 //      CAP_PROP_GAIN(g), g >=0 or -1 for automatic control if CAP_PROP_AUTO_EXPOSURE is true
 //      CAP_PROP_FPS(f)
 //      CAP_PROP_FOURCC(type)
+//      CV_CAP_PROP_BUFFERSIZE(n)
 //
 //  Supported types of data:
 //      video/x-raw, fourcc:'GREY'  -> 8bit, 1 channel
@@ -433,6 +434,16 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                         return MODE_Y12;
                 }
             }
+            break;
+
+        case CV_CAP_PROP_BUFFERSIZE:
+            if(stream) {
+                int in, out;
+                arv_stream_get_n_buffers(stream, &in, &out);
+                // return number of available buffers in Aravis output queue
+                return out;
+            }
+            break;
     }
     return -1.0;
 }
@@ -494,6 +505,18 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 }
             }
             break;
+
+        case CV_CAP_PROP_BUFFERSIZE:
+            {
+                int x = (int)value;
+                if((x > 0) && (x != num_buffers)) {
+                    stopCapture();
+                    num_buffers = x;
+                    startCapture();
+                }
+            }
+            break;
+
 
         default:
             return false;
