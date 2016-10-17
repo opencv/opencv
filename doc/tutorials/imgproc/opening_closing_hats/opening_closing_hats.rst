@@ -31,7 +31,7 @@ In the previous tutorial we covered two basic Morphology operations:
    * Erosion
    * Dilation.
 
-Based on these two we can effectuate more sophisticated transformations to our images. Here we discuss briefly 05 operations offered by OpenCV:
+Based on these two we can effectuate more sophisticated transformations to our images. Here we discuss briefly 5 operations offered by OpenCV:
 
 Opening
 ---------
@@ -50,6 +50,12 @@ Opening
      :alt: Opening
      :align: center
 
+For the sake of clarity, we have performed the opening operation (:math:`7x7` rectangular structuring element) on the same original image but inverted such as the object in white is now the letter.
+
+  .. image:: images/Morphology_2_Tutorial_Theory_Opening_2.png
+     :alt: Left image: original image inverted, right image: resulting opening
+     :align: center
+
 Closing
 ---------
 
@@ -65,6 +71,11 @@ Closing
      :alt: Closing example
      :align: center
 
+On the inverted image, we have performed the closing operation (:math:`7x7` rectangular structuring element):
+
+  .. image:: images/Morphology_2_Tutorial_Theory_Closing_2.png
+     :alt: Left image: original image inverted, right image: resulting closing
+     :align: center
 
 Morphological Gradient
 ------------------------
