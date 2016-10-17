@@ -60,12 +60,17 @@
 // Basic usage: VideoCapture cap(CAP_ARAVIS + <camera id>);
 //
 // Supported properties:
+//  read/write
 //      CAP_PROP_AUTO_EXPOSURE(0|1)
 //      CAP_PROP_EXPOSURE(t), t in seconds
 //      CAP_PROP_GAIN(g), g >=0 or -1 for automatic control if CAP_PROP_AUTO_EXPOSURE is true
 //      CAP_PROP_FPS(f)
 //      CAP_PROP_FOURCC(type)
-//      CV_CAP_PROP_BUFFERSIZE(n)
+//      CAP_PROP_BUFFERSIZE(n)
+//  read only:
+//      CAP_PROP_POS_MSEC
+//      CAP_PROP_FRAME_WIDTH
+//      CAP_PROP_FRAME_HEIGHT
 //
 //  Supported types of data:
 //      video/x-raw, fourcc:'GREY'  -> 8bit, 1 channel
@@ -77,7 +82,7 @@
 #define MODE_Y800   CV_FOURCC_MACRO('Y','8','0','0')
 #define MODE_Y12    CV_FOURCC_MACRO('Y','1','2',' ')
 
-#define BETWEEN(a,b,c) ((a) < (b) ? (b) : ((a) > (c) ? (c) : (a) ))
+#define LIMIT(a,b,c) (cv::max(cv::min((a),(c)),(b)))
 
 /********************* Capturing video from camera via Aravis *********************/
 
@@ -142,15 +147,22 @@ protected:
 
     int             num_buffers;            // number of payload transmission buffers
 
-    ArvPixelFormat  pixelFormat;            // current pixel format
-    int             width;                  // current width of frame
-    int             height;                 // current height of image
-    double          fps;                    // current fps
+    ArvPixelFormat  pixelFormat;            // pixel format
+
+    int             xoffset;                // current frame region x offset
+    int             yoffset;                // current frame region y offset
+    int             width;                  // current frame width of frame
+    int             height;                 // current frame height of image
+
+    double          fps;                    // current value of fps
     double          exposure;               // current value of exposure time
     double          gain;                   // current value of gain
+    double          midGrey;                // current value of mid grey (brightness)
+
+    unsigned        frameID;                // current frame id
+    unsigned        prevFrameID;
 
     IplImage        *frame;                 // local frame copy
-    uint64_t        framesCnt;              // number of retrieved frames
 };
 
 
@@ -163,10 +175,11 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     payload = 0;
 
     widthMin = widthMax = heightMin = heightMax = 0;
+    xoffset = yoffset = width = height = 0;
     fpsMin = fpsMax = gainMin = gainMax = exposureMin = exposureMax = 0;
     controlExposure = false;
     targetGrey = 0;
-    framesCnt = 0;
+    frameID = prevFrameID = 0;
 
     num_buffers = 50;
     frame = NULL;
@@ -273,7 +286,11 @@ bool CvCaptureCAM_Aravis::grabFrame()
             size_t buffer_size;
             framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 
-            arv_buffer_get_image_region (arv_buffer, NULL, NULL, &width, &height);
+            // retieve image size properites
+            arv_buffer_get_image_region (arv_buffer, &xoffset, &yoffset, &width, &height);
+
+            // retieve image ID set by camera
+            frameID = arv_buffer_get_frame_id(arv_buffer);
 
             arv_stream_push_buffer(stream, arv_buffer);
             return true;
@@ -312,13 +329,12 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
             }
             cvCopy(&src, frame);
 
-            if(controlExposure && (framesCnt & 1)) {
+            if(controlExposure && ((frameID - prevFrameID) > 1)) {
                 // control exposure every second frame
                 // i.e. skip frame taken with previous exposure setup
                 autoExposureControl(frame);
             }
 
-            framesCnt++;
             return frame;
         }
     }
@@ -345,18 +361,21 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
 
     // distance from optimal value as a percentage
     double d = (targetGrey * dmid) / brightness;
+    if(d >= dmid) d = ( d + (dmid * 2) ) / 3;
+
+    prevFrameID = frameID;
+    midGrey = brightness;
+
+    double maxe = 1e6 / fps;
+    double ne = LIMIT( ( exposure * d ) / dmid, exposureMin, maxe);
 
     // if change of value requires intervention
     if(fabs(d-dmid) > 5) {
-        if(d >= dmid) d = ( d + (dmid * 2) ) / 3;
-
-        double ng = 0, ne = 0, maxe = 1e6 / fps;
-        double ev = log( d / dmid ) / log(2);
+        double ev, ng;
 
         if(gainAvailable && autoGain) {
-            // depending on device single gain step may equal to 1 or 1/3 EV
-            double ngg = gain + ev;
-            ng = BETWEEN( ngg, gainMin, gainMax);
+            ev = log( d / dmid ) / log(2);
+            ng = LIMIT( gain + ev, gainMin, gainMax);
 
             if( ng < gain ) {
                 // piority 1 - reduce gain
@@ -366,13 +385,9 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
         }
 
         if(exposureAvailable) {
-            double nee = ( exposure * d ) / dmid;
-            ne = BETWEEN( nee, exposureMin, maxe);
-
             if(abs(exposure - ne) > 2) {
                 // priority 2 - control of exposure time
                 arv_camera_set_exposure_time(camera, (exposure = ne) );
-
                 return;
             }
         }
@@ -380,21 +395,23 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
         if(gainAvailable && autoGain) {
             if(exposureAvailable) {
                 // exposure at maximum - increase gain if possible
-                if(ng > gain && ne >= maxe) {
-                    if(ng < gainMax) {
-                        arv_camera_set_gain(camera, (gain = ng));
-                    }
+                if(ng > gain && ng < gainMax && ne >= maxe) {
+                    arv_camera_set_gain(camera, (gain = ng));
                     return;
                 }
-
-                // if gain can be reduced - do it
-                if(gain > gainMin && exposure < maxe) {
-                    exposure = BETWEEN( ne * 1.05, exposureMin, maxe);
-                    arv_camera_set_exposure_time(camera, exposure );
-                }
             } else {
+                // priority 3 - increase gain
                 arv_camera_set_gain(camera, (gain = ng));
+                return;
             }
+        }
+    }
+
+    // if gain can be reduced - do it
+    if(gainAvailable && autoGain && exposureAvailable) {
+        if(gain > gainMin && exposure < maxe) {
+            exposure = LIMIT( ne * 1.05, exposureMin, maxe);
+            arv_camera_set_exposure_time(camera, exposure );
         }
     }
 }
@@ -402,6 +419,15 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
 double CvCaptureCAM_Aravis::getProperty( int property_id ) const
 {
     switch(property_id) {
+        case CV_CAP_PROP_POS_MSEC:
+            return (double)frameID/fps;
+
+        case CV_CAP_PROP_FRAME_WIDTH:
+            return width;
+
+        case CV_CAP_PROP_FRAME_HEIGHT:
+            return height;
+
         case CV_CAP_PROP_AUTO_EXPOSURE:
             return (controlExposure ? 1 : 0);
 
@@ -465,13 +491,13 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 /* exposure time in seconds, like 1/100 s */
                 value *= 1e6; // -> from s to us
 
-                arv_camera_set_exposure_time(camera, exposure = BETWEEN(value, exposureMin, exposureMax));
+                arv_camera_set_exposure_time(camera, exposure = LIMIT(value, exposureMin, exposureMax));
                 break;
             } else return false;
 
         case CV_CAP_PROP_FPS:
             if(fpsAvailable) {
-                arv_camera_set_frame_rate(camera, fps = BETWEEN(value, fpsMin, fpsMax));
+                arv_camera_set_frame_rate(camera, fps = LIMIT(value, fpsMin, fpsMax));
                 break;
             } else return false;
 
@@ -480,7 +506,7 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 if ( (autoGain = (-1 == value) ) )
                     break;
 
-                arv_camera_set_gain(camera, gain = BETWEEN(value, gainMin, gainMax));
+                arv_camera_set_gain(camera, gain = LIMIT(value, gainMin, gainMax));
                 break;
             } else return false;
 
