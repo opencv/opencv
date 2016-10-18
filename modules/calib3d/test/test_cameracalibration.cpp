@@ -1701,7 +1701,7 @@ void CV_StereoCalibrationTest::run( int )
         const float minCoord = -300.0f;
         const float maxCoord = 300.0f;
         const float minDisparity = 0.1f;
-        const float maxDisparity = 600.0f;
+        const float maxDisparity = 60.0f;
         const int pointsCount = 500;
         const float requiredAccuracy = 1e-3f;
         RNG& rng = ts->get_rng();
