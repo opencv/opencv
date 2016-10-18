@@ -1849,7 +1849,7 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
      if (capture->deviceHandle != -1)
        close(capture->deviceHandle);
 
-     if (capture->frame.imageData)
+     if (capture->frame_allocated && capture->frame.imageData)
          cvFree(&capture->frame.imageData);
 
      capture->deviceName.clear(); // flag that the capture is closed
