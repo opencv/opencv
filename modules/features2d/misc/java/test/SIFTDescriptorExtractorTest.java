@@ -29,7 +29,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        extractor = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"SIFT", ALGORITHM_FACTORY_NAME, null, null);
+        extractor = createClassInstance(XFEATURES2D+"SIFT", DEFAULT_FACTORY, null, null);
         keypoint = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
         matSize = 100;
         truth = new Mat(1, 128, CvType.CV_32FC1) {
@@ -99,8 +99,8 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-//        String truth = "%YAML 1.0\n---\nname: \"Feature2D.SIFT\"\ncontrastThreshold: 4.0000000000000001e-02\nedgeThreshold: 10.\nnFeatures: 0\nnOctaveLayers: 3\nsigma: 1.6000000000000001e+00\n";
-        String truth = "%YAML 1.0\n---\n";
+//        String truth = "%YAML:1.0\n---\nname: \"Feature2D.SIFT\"\ncontrastThreshold: 4.0000000000000001e-02\nedgeThreshold: 10.\nnFeatures: 0\nnOctaveLayers: 3\nsigma: 1.6000000000000001e+00\n";
+        String truth = "%YAML:1.0\n---\n";
         String actual = readFile(filename);
         actual = actual.replaceAll("e([+-])0(\\d\\d)", "e$1$2"); // NOTE: workaround for different platforms double representation
         assertEquals(truth, actual);

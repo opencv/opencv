@@ -27,7 +27,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        extractor = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"BriefDescriptorExtractor", ALGORITHM_FACTORY_NAME, null, null);
+        extractor = createClassInstance(XFEATURES2D+"BriefDescriptorExtractor", DEFAULT_FACTORY, null, null);
         matSize = 100;
     }
 
@@ -74,7 +74,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
     public void testRead() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML 1.0\n---\ndescriptorSize: 64\n");
+        writeFile(filename, "%YAML:1.0\n---\ndescriptorSize: 64\n");
 
         extractor.read(filename);
 
@@ -95,7 +95,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "%YAML 1.0\n---\ndescriptorSize: 32\n";
+        String truth = "%YAML:1.0\n---\ndescriptorSize: 32\n";
         assertEquals(truth, readFile(filename));
     }
 

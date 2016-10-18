@@ -46,7 +46,7 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
         Mat descriptors = new Mat();
 
         FeatureDetector detector = FeatureDetector.create(FeatureDetector.FAST);
-        Feature2D extractor = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"BriefDescriptorExtractor", ALGORITHM_FACTORY_NAME, null, null);
+        Feature2D extractor = createClassInstance(XFEATURES2D+"BriefDescriptorExtractor", DEFAULT_FACTORY, null, null);
 
         detector.detect(img, keypoints);
         extractor.compute(img, keypoints, descriptors);
@@ -235,7 +235,7 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
 
     public void testRead() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML 1.0\n---\n");
+        writeFile(filename, "%YAML:1.0\n---\n");
 
         matcher.read(filename);
         assertTrue(true);// BruteforceMatcher has no settings
@@ -250,7 +250,7 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
 
         matcher.write(filename);
 
-        String truth = "%YAML 1.0\n---\n";
+        String truth = "%YAML:1.0\n---\n";
         assertEquals(truth, readFile(filename));
     }
 
