@@ -1878,13 +1878,14 @@ void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
 
     CV_Assert(_contours.empty() || (_contours.channels() == 2 && _contours.depth() == CV_32S));
 
-    Mat image = _image.getMat();
+    Mat image;
+    copyMakeBorder(_image, image, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(0));
     MemStorage storage(cvCreateMemStorage());
     CvMat _cimage = image;
     CvSeq* _ccontours = 0;
     if( _hierarchy.needed() )
         _hierarchy.clear();
-    cvFindContours(&_cimage, storage, &_ccontours, sizeof(CvContour), mode, method, offset);
+    cvFindContours(&_cimage, storage, &_ccontours, sizeof(CvContour), mode, method, offset + Point(-1, -1));
     if( !_ccontours )
     {
         _contours.clear();
