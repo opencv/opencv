@@ -82,7 +82,7 @@
 #define MODE_Y800   CV_FOURCC_MACRO('Y','8','0','0')
 #define MODE_Y12    CV_FOURCC_MACRO('Y','1','2',' ')
 
-#define LIMIT(a,b,c) (cv::max(cv::min((a),(c)),(b)))
+#define CLIP(a,b,c) (cv::max(cv::min((a),(c)),(b)))
 
 /********************* Capturing video from camera via Aravis *********************/
 
@@ -367,7 +367,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
     midGrey = brightness;
 
     double maxe = 1e6 / fps;
-    double ne = LIMIT( ( exposure * d ) / dmid, exposureMin, maxe);
+    double ne = CLIP( ( exposure * d ) / dmid, exposureMin, maxe);
 
     // if change of value requires intervention
     if(fabs(d-dmid) > 5) {
@@ -375,7 +375,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
 
         if(gainAvailable && autoGain) {
             ev = log( d / dmid ) / log(2);
-            ng = LIMIT( gain + ev, gainMin, gainMax);
+            ng = CLIP( gain + ev, gainMin, gainMax);
 
             if( ng < gain ) {
                 // piority 1 - reduce gain
@@ -410,7 +410,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
     // if gain can be reduced - do it
     if(gainAvailable && autoGain && exposureAvailable) {
         if(gain > gainMin && exposure < maxe) {
-            exposure = LIMIT( ne * 1.05, exposureMin, maxe);
+            exposure = CLIP( ne * 1.05, exposureMin, maxe);
             arv_camera_set_exposure_time(camera, exposure );
         }
     }
@@ -491,13 +491,13 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 /* exposure time in seconds, like 1/100 s */
                 value *= 1e6; // -> from s to us
 
-                arv_camera_set_exposure_time(camera, exposure = LIMIT(value, exposureMin, exposureMax));
+                arv_camera_set_exposure_time(camera, exposure = CLIP(value, exposureMin, exposureMax));
                 break;
             } else return false;
 
         case CV_CAP_PROP_FPS:
             if(fpsAvailable) {
-                arv_camera_set_frame_rate(camera, fps = LIMIT(value, fpsMin, fpsMax));
+                arv_camera_set_frame_rate(camera, fps = CLIP(value, fpsMin, fpsMax));
                 break;
             } else return false;
 
@@ -506,7 +506,7 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 if ( (autoGain = (-1 == value) ) )
                     break;
 
-                arv_camera_set_gain(camera, gain = LIMIT(value, gainMin, gainMax));
+                arv_camera_set_gain(camera, gain = CLIP(value, gainMin, gainMax));
                 break;
             } else return false;
 
