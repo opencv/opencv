@@ -53,7 +53,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        detector = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"SURF", ALGORITHM_FACTORY_NAME, null, null);
+        detector = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
         matSize = 100;
         truth = new KeyPoint[] {
                 new KeyPoint(55.775578f, 55.775578f, 16, 80.245735f, 8617.8633f, 0, -1),
@@ -143,7 +143,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         detector.detect(cross, keypoints1);
 
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML 1.0\n---\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
+        writeFile(filename, "%YAML:1.0\n---\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
         detector.read(filename);
 
         MatOfKeyPoint keypoints2 = new MatOfKeyPoint();
@@ -167,8 +167,8 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-//        String truth = "%YAML 1.0\n---\nname: \"Feature2D.SURF\"\nextended: 0\nhessianThreshold: 100.\nnOctaveLayers: 3\nnOctaves: 4\nupright: 0\n";
-        String truth = "%YAML 1.0\n---\n";
+//        String truth = "%YAML:1.0\n---\nname: \"Feature2D.SURF\"\nextended: 0\nhessianThreshold: 100.\nnOctaveLayers: 3\nnOctaves: 4\nupright: 0\n";
+        String truth = "%YAML:1.0\n---\n";
         assertEquals(truth, readFile(filename));
     }
 

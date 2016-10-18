@@ -43,7 +43,7 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
 
     protected void setUp() throws Exception {
         super.setUp();
-        detector = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"StarDetector", ALGORITHM_FACTORY_NAME, null, null);
+        detector = createClassInstance(XFEATURES2D+"StarDetector", DEFAULT_FACTORY, null, null);
         matSize = 200;
         truth = new KeyPoint[] {
                 new KeyPoint( 95,  80, 22, -1, 31.5957f, 0, -1),
@@ -101,7 +101,7 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
         detector.detect(img, keypoints1);
 
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML 1.0\n---\nmaxSize: 45\nresponseThreshold: 150\nlineThresholdProjected: 10\nlineThresholdBinarized: 8\nsuppressNonmaxSize: 5\n");
+        writeFile(filename, "%YAML:1.0\n---\nmaxSize: 45\nresponseThreshold: 150\nlineThresholdProjected: 10\nlineThresholdBinarized: 8\nsuppressNonmaxSize: 5\n");
         detector.read(filename);
 
         MatOfKeyPoint keypoints2 = new MatOfKeyPoint();
@@ -125,8 +125,8 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-//        String truth = "%YAML 1.0\n---\nname: \"Feature2D.STAR\"\nlineThresholdBinarized: 8\nlineThresholdProjected: 10\nmaxSize: 45\nresponseThreshold: 30\nsuppressNonmaxSize: 5\n";
-        String truth = "%YAML 1.0\n---\n";
+//        String truth = "%YAML:1.0\n---\nname: \"Feature2D.STAR\"\nlineThresholdBinarized: 8\nlineThresholdProjected: 10\nmaxSize: 45\nresponseThreshold: 30\nsuppressNonmaxSize: 5\n";
+        String truth = "%YAML:1.0\n---\n";
         assertEquals(truth, readFile(filename));
     }
 

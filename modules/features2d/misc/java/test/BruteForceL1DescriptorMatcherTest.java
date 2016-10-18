@@ -36,8 +36,8 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
         MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat descriptors = new Mat();
 
-        Feature2D detector = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"SURF", ALGORITHM_FACTORY_NAME, null, null);
-        Feature2D extractor = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"SURF", ALGORITHM_FACTORY_NAME, null, null);
+        Feature2D detector = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
+        Feature2D extractor = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
 
         setProperty(detector, "extended", "boolean", true);
         setProperty(detector, "hessianThreshold", "double", 8000);
@@ -64,7 +64,7 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
         MatOfKeyPoint keypoints = new MatOfKeyPoint(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
         Mat descriptors = new Mat();
 
-        Feature2D extractor = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"SURF", ALGORITHM_FACTORY_NAME, null, null);
+        Feature2D extractor = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
 
         extractor.compute(img, keypoints, descriptors);
 
@@ -246,7 +246,7 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
 
     public void testRead() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML 1.0\n---\n");
+        writeFile(filename, "%YAML:1.0\n---\n");
 
         matcher.read(filename);
         assertTrue(true);// BruteforceMatcher has no settings
@@ -261,7 +261,7 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
 
         matcher.write(filename);
 
-        String truth = "%YAML 1.0\n---\n";
+        String truth = "%YAML:1.0\n---\n";
         assertEquals(truth, readFile(filename));
     }
 

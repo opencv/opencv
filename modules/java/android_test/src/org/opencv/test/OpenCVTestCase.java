@@ -34,8 +34,8 @@ public class OpenCVTestCase extends TestCase {
 
     protected static boolean isTestCaseEnabled = true;
 
-    protected static final String XFEATURES2D_PACKAGE_NAME = "org.opencv.xfeatures2d.";
-    protected static final String ALGORITHM_FACTORY_NAME = "create";
+    protected static final String XFEATURES2D = "org.opencv.xfeatures2d.";
+    protected static final String DEFAULT_FACTORY = "create";
 
     protected static final int matSize = 10;
     protected static final double EPS = 0.001;
@@ -467,63 +467,50 @@ public class OpenCVTestCase extends TestCase {
         }
     }
 
-    protected <T> T createAlgorythmInstance(String cname, String factoryName, Class cParams[], Object oValues[]) {
-        T algorithm = null;
+    protected <T> T createClassInstance(String cname, String factoryName, Class cParams[], Object oValues[]) {
+        T instance = null;
 
         assertFalse("Class name should not be empty", "".equals(cname));
 
         String message="";
-        int step=0;
         try {
             Class algClass = getClassForName(cname);
-            step=1;
             Method factory = null;
 
             if(cParams!=null && cParams.length>0) {
-                step=2;
                 if(!"".equals(factoryName)) {
-                    step=3;
                     factory = algClass.getDeclaredMethod(factoryName, cParams);
-                    algorithm = (T) factory.invoke(null, oValues);
-                    step=4;
+                    instance = (T) factory.invoke(null, oValues);
                 }
                 else {
-                    step=5;
-                    algorithm = (T) algClass.getConstructor(cParams).newInstance(oValues);
-                    step=6;
+                    instance = (T) algClass.getConstructor(cParams).newInstance(oValues);
                 }
             }
             else {
-                step=7;
                 if(!"".equals(factoryName)) {
-                    step=8;
                     factory = algClass.getDeclaredMethod(factoryName);
-                    algorithm = (T) factory.invoke(null);
-                    step=9;
+                    instance = (T) factory.invoke(null);
                 }
                 else {
-                    step=10;
-                    algorithm = (T) algClass.getConstructor().newInstance();
-                    step=11;
+                    instance = (T) algClass.getConstructor().newInstance();
                 }
             }
         }
         catch(Exception ex) {
-            message = TAG + " :: " + "could not instantiate " + cname + "! step " + step;
+            message = TAG + " :: " + "could not instantiate " + cname + "! Exception: " + ex.getMessage();
         }
 
-        assertTrue(message, algorithm!=null);
+        assertTrue(message, instance!=null);
 
-        return algorithm;
+        return instance;
     }
 
-    protected <T> void setProperty(T algorythm, String propertyName, String propertyType, Object propertyValue) {
+    protected <T> void setProperty(T instance, String propertyName, String propertyType, Object propertyValue) {
         String message = "";
         try {
             String smethod = "set" + propertyName.substring(0,1).toUpperCase() + propertyName.substring(1);
-    //        System.out.println("Setting field " + p.getPname() + "/" + smethod + "/" + p.getValue());
-            Method setter = algorythm.getClass().getMethod(smethod, getClassForName(propertyType));
-            setter.invoke(algorythm, propertyValue);
+            Method setter = instance.getClass().getMethod(smethod, getClassForName(propertyType));
+            setter.invoke(instance, propertyValue);
         }
         catch(Exception ex) {
             message = "Error when setting property [" + propertyName + "]: " + ex.getMessage();

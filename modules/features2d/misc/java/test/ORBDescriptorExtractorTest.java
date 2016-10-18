@@ -83,7 +83,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
         Mat descriptors = new Mat();
 
 //        String filename = OpenCVTestRunner.getTempFileName("yml");
-//        writeFile(filename, "%YAML 1.0\n---\nscaleFactor: 1.1\nnLevels: 3\nfirstLevel: 0\nedgeThreshold: 31\npatchSize: 31\n");
+//        writeFile(filename, "%YAML:1.0\n---\nscaleFactor: 1.1\nnLevels: 3\nfirstLevel: 0\nedgeThreshold: 31\npatchSize: 31\n");
 //        extractor.read(filename);
         extractor = ORB.create(500, 1.1f, 3, 31, 0, 2, ORB.HARRIS_SCORE, 31, 20);
 
@@ -115,8 +115,8 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-//        String truth = "%YAML 1.0\n---\nname: \"Feature2D.ORB\"\nWTA_K: 2\nedgeThreshold: 31\nfirstLevel: 0\nnFeatures: 500\nnLevels: 8\npatchSize: 31\nscaleFactor: 1.2000000476837158e+00\nscoreType: 0\n";
-        String truth = "%YAML 1.0\n---\n";
+//        String truth = "%YAML:1.0\n---\nname: \"Feature2D.ORB\"\nWTA_K: 2\nedgeThreshold: 31\nfirstLevel: 0\nnFeatures: 500\nnLevels: 8\npatchSize: 31\nscaleFactor: 1.2000000476837158e+00\nscoreType: 0\n";
+        String truth = "%YAML:1.0\n---\n";
         String actual = readFile(filename);
         actual = actual.replaceAll("e\\+000", "e+00"); // NOTE: workaround for different platforms double representation
         assertEquals(truth, actual);

@@ -30,7 +30,7 @@ public class SURFDescriptorExtractorTest extends OpenCVTestCase {
 
         Class[] cParams = {double.class, int.class, int.class, boolean.class, boolean.class};
         Object[] oValues = {100, 2, 4, true, false};
-        extractor = createAlgorythmInstance(XFEATURES2D_PACKAGE_NAME+"SURF", ALGORITHM_FACTORY_NAME, cParams, oValues);
+        extractor = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, cParams, oValues);
 
         matSize = 100;
     }
@@ -89,7 +89,7 @@ public class SURFDescriptorExtractorTest extends OpenCVTestCase {
 
     public void testRead() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML 1.0\n---\nnOctaves: 4\nnOctaveLayers: 2\nextended: 1\nupright: 0\n");
+        writeFile(filename, "%YAML:1.0\n---\nnOctaves: 4\nnOctaveLayers: 2\nextended: 1\nupright: 0\n");
 
         extractor.read(filename);
 
@@ -111,8 +111,8 @@ public class SURFDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-//        String truth = "%YAML 1.0\n---\nname: \"Feature2D.SURF\"\nextended: 1\nhessianThreshold: 100.\nnOctaveLayers: 2\nnOctaves: 4\nupright: 0\n";
-        String truth = "%YAML 1.0\n---\n";
+//        String truth = "%YAML:1.0\n---\nname: \"Feature2D.SURF\"\nextended: 1\nhessianThreshold: 100.\nnOctaveLayers: 2\nnOctaves: 4\nupright: 0\n";
+        String truth = "%YAML:1.0\n---\n";
         assertEquals(truth, readFile(filename));
     }
 
