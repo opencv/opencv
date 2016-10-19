@@ -193,9 +193,21 @@ OCL_PERF_TEST_P(DivFixture, Divide,
     UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     declare.in(src1, src2, WARMUP_RNG).out(dst);
 
+    // remove zeros from src2
+    {
+        Mat m2 = src2.getMat(ACCESS_RW);
+        Mat zero_mask = m2 == 0;
+        Mat fix;
+        zero_mask.convertTo(fix, type); // 0 or 255
+        cv::add(m2, fix, m2);
+    }
+
     OCL_TEST_CYCLE() cv::divide(src1, src2, dst);
 
-    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    if (CV_MAT_DEPTH(type) >= CV_32F)
+        SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    else
+        SANITY_CHECK(dst, 1);
 }
 
 ///////////// Absdiff ////////////////////////
@@ -983,7 +995,7 @@ OCL_PERF_TEST_P(ConvertScaleAbsFixture, ConvertScaleAbs,
 
     OCL_TEST_CYCLE() cv::convertScaleAbs(src, dst, 0.5, 2);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1); // CV_8U
 }
 
 ///////////// PatchNaNs ////////////////////////
