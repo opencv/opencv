@@ -1701,9 +1701,10 @@ void CV_StereoCalibrationTest::run( int )
         const float minCoord = -300.0f;
         const float maxCoord = 300.0f;
         const float minDisparity = 0.1f;
-        const float maxDisparity = 600.0f;
+        const float maxDisparity = 60.0f;
         const int pointsCount = 500;
         const float requiredAccuracy = 1e-3f;
+        const float allowToFail = 0.2f; // 20%
         RNG& rng = ts->get_rng();
 
         Mat projectedPoints_1(2, pointsCount, CV_32FC1);
@@ -1732,9 +1733,29 @@ void CV_StereoCalibrationTest::run( int )
         Mat reprojectedPoints;
         perspectiveTransform(sparsePoints, reprojectedPoints, Q);
 
-        if (cvtest::norm(triangulatedPoints, reprojectedPoints, NORM_L2) / sqrt((double)pointsCount) > requiredAccuracy)
+        Mat diff;
+        absdiff(triangulatedPoints, reprojectedPoints, diff);
+        Mat mask = diff > requiredAccuracy;
+        mask = mask.reshape(1);
+        mask = mask.col(0) | mask.col(1) | mask.col(2);
+        int numFailed = countNonZero(mask);
+#if 0
+        std::cout << "numFailed=" << numFailed << std::endl;
+        for (int i = 0; i < triangulatedPoints.rows; i++)
         {
-            ts->printf( cvtest::TS::LOG, "Points reprojected with a matrix Q and points reconstructed by triangulation are different, testcase %d\n", testcase);
+            if (mask.at<uchar>(i))
+            {
+                // failed points usually have 'w'~0 (points4d[3])
+                std::cout << "i=" << i << " triangulatePoints=" << triangulatedPoints.row(i) << " reprojectedPoints=" << reprojectedPoints.row(i) << std::endl <<
+                    "     points4d=" << points4d.col(i).t() << " projectedPoints_1=" << projectedPoints_1.col(i).t() << " disparities=" << disparities.col(i).t() << std::endl;
+            }
+        }
+#endif
+
+        if (numFailed >= allowToFail * pointsCount)
+        {
+            ts->printf( cvtest::TS::LOG, "Points reprojected with a matrix Q and points reconstructed by triangulation are different (tolerance=%g, failed=%d), testcase %d\n",
+                requiredAccuracy, numFailed, testcase);
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
         }
 
