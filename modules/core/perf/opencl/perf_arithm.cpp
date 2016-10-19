@@ -91,7 +91,10 @@ OCL_PERF_TEST_P(ExpFixture, Exp, ::testing::Combine(
 
     OCL_TEST_CYCLE() cv::exp(src, dst);
 
-    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    if (CV_MAT_DEPTH(type) >= CV_32F)
+        SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
+    else
+        SANITY_CHECK(dst, 1);
 }
 
 ///////////// Log ////////////////////////
@@ -113,7 +116,10 @@ OCL_PERF_TEST_P(LogFixture, Log, ::testing::Combine(
 
     OCL_TEST_CYCLE() cv::log(src, dst);
 
-    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    if (CV_MAT_DEPTH(type) >= CV_32F)
+        SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
+    else
+        SANITY_CHECK(dst, 1);
 }
 
 ///////////// Add ////////////////////////
@@ -672,7 +678,10 @@ OCL_PERF_TEST_P(SqrtFixture, Sqrt, ::testing::Combine(
 
     OCL_TEST_CYCLE() cv::sqrt(src, dst);
 
-    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    if (CV_MAT_DEPTH(type) >= CV_32F)
+        SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
+    else
+        SANITY_CHECK(dst, 1);
 }
 
 ///////////// SetIdentity ////////////////////////
