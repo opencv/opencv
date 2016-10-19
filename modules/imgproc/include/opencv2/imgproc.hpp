@@ -3732,21 +3732,17 @@ CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labe
 /** @brief Finds contours in a binary image.
 
 The function retrieves contours from the binary image using the algorithm @cite Suzuki85 . The contours
-are a useful tool for shape analysis and object detection and recognition. See squares.c in the
+are a useful tool for shape analysis and object detection and recognition. See squares.cpp in the
 OpenCV sample directory.
 
-@note Source image is modified by this function. Also, the function does not take into account
-1-pixel border of the image (it's filled with 0's and used for neighbor analysis in the algorithm),
-therefore the contours touching the image border will be clipped.
-
 @param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
-pixels remain 0's, so the image is treated as binary . You can use compare , inRange , threshold ,
-adaptiveThreshold , Canny , and others to create a binary image out of a grayscale or color one.
-The function modifies the image while extracting the contours. If mode equals to RETR_CCOMP
-or RETR_FLOODFILL, the input can also be a 32-bit integer image of labels (CV_32SC1).
-@param contours Detected contours. Each contour is stored as a vector of points.
-@param hierarchy Optional output vector, containing information about the image topology. It has
-as many elements as the number of contours. For each i-th contour contours[i] , the elements
+pixels remain 0's, so the image is treated as binary . You can use cv::compare, cv::inRange, cv::threshold ,
+cv::adaptiveThreshold, cv::Canny, and others to create a binary image out of a grayscale or color one.
+If mode equals to cv::RETR_CCOMP or cv::RETR_FLOODFILL, the input can also be a 32-bit integer image of labels (CV_32SC1).
+@param contours Detected contours. Each contour is stored as a vector of points (e.g.
+std::vector<std::vector<cv::Point> >).
+@param hierarchy Optional output vector (e.g. std::vector<cv::Vec4i>), containing information about the image topology. It has
+as many elements as the number of contours. For each i-th contour contours[i], the elements
 hierarchy[i][0] , hiearchy[i][1] , hiearchy[i][2] , and hiearchy[i][3] are set to 0-based indices
 in contours of the next and previous contours at the same hierarchical level, the first child
 contour and the parent contour, respectively. If for the contour i there are no next, previous,
