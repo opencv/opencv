@@ -85,7 +85,7 @@ class TestSuite(object):
         return set(res)
 
     def isTest(self, fullpath):
-        if fullpath in ['java', 'python2', 'python3']:
+        if fullpath in ['java', 'python', 'python2', 'python3']:
             return self.options.mode == 'test'
         if not os.path.isfile(fullpath):
             return False
@@ -117,7 +117,7 @@ class TestSuite(object):
             cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % self.cache.build_type, "buildAndTest"]
             ret = execute(cmd, cwd = self.cache.java_test_binary_dir + "/.build")
             return None, ret
-        elif path in ['python2', 'python3']:
+        elif path in ['python', 'python2', 'python3']:
             executable = os.getenv('OPENCV_PYTHON_BINARY', None)
             if executable is None:
                 executable = path
@@ -164,7 +164,7 @@ class TestSuite(object):
             more_args = []
             exe = self.getTest(test)
 
-            if exe in ["java", "python2", "python3"]:
+            if exe in ["java", "python", "python2", "python3"]:
                 logname = None
             else:
                 userlog = [a for a in args if a.startswith("--gtest_output=")]
