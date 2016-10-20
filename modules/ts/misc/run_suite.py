@@ -85,8 +85,8 @@ class TestSuite(object):
         return set(res)
 
     def isTest(self, fullpath):
-        if fullpath == "java":
-            return True
+        if fullpath in ['java', 'python2', 'python3']:
+            return self.options.mode == 'test'
         if not os.path.isfile(fullpath):
             return False
         if self.cache.getOS() == "nt" and not fullpath.endswith(".exe"):
@@ -102,12 +102,36 @@ class TestSuite(object):
             return res + cmd
         return cmd
 
+    def tryCommand(self, cmd):
+        try:
+            if 0 == execute(cmd, cwd = workingDir):
+                return True
+        except:
+            pass
+        return False
+
     def runTest(self, path, logfile, workingDir, args = []):
         args = args[:]
         exe = os.path.abspath(path)
         if path == "java":
             cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % self.cache.build_type, "buildAndTest"]
             ret = execute(cmd, cwd = self.cache.java_test_binary_dir + "/.build")
+            return None, ret
+        elif path in ['python2', 'python3']:
+            executable = os.getenv('OPENCV_PYTHON_BINARY', None)
+            if executable is None:
+                executable = path
+                if not self.tryCommand([executable, '--version']):
+                    executable = 'python'
+            cmd = [executable, self.cache.opencv_home + '/modules/python/test/test.py', '--repo', self.cache.opencv_home, '-v'] + args
+            module_suffix = '' if not 'Visual Studio' in self.cache.cmake_generator else '/' + self.cache.build_type
+            env = {}
+            env['PYTHONPATH'] = self.cache.opencv_build + '/lib' + module_suffix + os.pathsep + os.getenv('PYTHONPATH', '')
+            if self.cache.getOS() == 'nt':
+                env['PATH'] = self.cache.opencv_build + '/bin' + module_suffix + os.pathsep + os.getenv('PATH', '')
+            else:
+                env['LD_LIBRARY_PATH'] = self.cache.opencv_build + '/bin' + os.pathsep + os.getenv('LD_LIBRARY_PATH', '')
+            ret = execute(cmd, cwd = workingDir, env = env)
             return None, ret
         else:
             if isColorEnabled(args):
@@ -140,12 +164,15 @@ class TestSuite(object):
             more_args = []
             exe = self.getTest(test)
 
-            userlog = [a for a in args if a.startswith("--gtest_output=")]
-            if len(userlog) == 0:
-                logname = self.getLogName(exe, date)
-                more_args.append("--gtest_output=xml:" + logname)
+            if exe in ["java", "python2", "python3"]:
+                logname = None
             else:
-                logname = userlog[0][userlog[0].find(":")+1:]
+                userlog = [a for a in args if a.startswith("--gtest_output=")]
+                if len(userlog) == 0:
+                    logname = self.getLogName(exe, date)
+                    more_args.append("--gtest_output=xml:" + logname)
+                else:
+                    logname = userlog[0][userlog[0].find(":")+1:]
 
             log.debug("Running the test: %s (%s) ==> %s in %s", exe, args + more_args, logname, workingDir)
             if self.options.dry_run:
