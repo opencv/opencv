@@ -175,6 +175,7 @@ parse_patterns = (
     {'name': "cuda_library",             'default': None,       'pattern': re.compile(r"^CUDA_CUDA_LIBRARY:FILEPATH=(.+)$")},
     {'name': "cuda_version",             'default': None,       'pattern': re.compile(r"^CUDA_VERSION:STRING=(.+)$")},
     {'name': "core_dependencies",        'default': None,       'pattern': re.compile(r"^opencv_core_LIB_DEPENDS:STATIC=(.+)$")},
+    {'name': "python",                   'default': None,       'pattern': re.compile(r"^BUILD_opencv_python:BOOL=(.*)$")},
     {'name': "python2",                  'default': None,       'pattern': re.compile(r"^BUILD_opencv_python2:BOOL=(.*)$")},
     {'name': "python3",                  'default': None,       'pattern': re.compile(r"^BUILD_opencv_python3:BOOL=(.*)$")},
 )
@@ -253,6 +254,8 @@ class CMakeCache:
             files = glob.glob(os.path.join(d, mask))
             if not self.getOS() == "android" and self.withJava():
                 files.append("java")
+            if self.withPython():
+                files.append("python")
             if self.withPython2():
                 files.append("python2")
             if self.withPython3():
@@ -261,13 +264,16 @@ class CMakeCache:
         return []
 
     def isMainModule(self, name):
-        return name in self.main_modules + ['python2', 'python3']
+        return name in self.main_modules + ['python', 'python2', 'python3']
 
     def withCuda(self):
         return self.cuda_version and self.with_cuda == "ON" and self.cuda_library and not self.cuda_library.endswith("-NOTFOUND")
 
     def withJava(self):
         return self.ant_executable and self.java_test_binary_dir
+
+    def withPython(self):
+        return self.python == 'ON'
 
     def withPython2(self):
         return self.python2 == 'ON'
