@@ -50,6 +50,13 @@
 #include <vtkObjectFactory.h>
 #include <vtkSmartPointer.h>
 
+namespace cv { namespace viz {
+    vtkSmartPointer<vtkRenderWindowInteractor> vtkCocoaRenderWindowInteractorNew();
+}} // namespace
+
+#if ((VTK_MAJOR_VERSION < 6) || ((VTK_MAJOR_VERSION == 6) && (VTK_MINOR_VERSION < 2)))
+
+
 //----------------------------------------------------------------------------
 @interface vtkCocoaServerFix : NSObject
 {
@@ -175,8 +182,6 @@ namespace cv { namespace viz
     };
 
     vtkStandardNewMacro (vtkCocoaRenderWindowInteractorFix)
-
-    vtkSmartPointer<vtkRenderWindowInteractor> vtkCocoaRenderWindowInteractorNew();
 }}
 
 void cv::viz::vtkCocoaRenderWindowInteractorFix::Start ()
@@ -209,3 +214,13 @@ vtkSmartPointer<vtkRenderWindowInteractor> cv::viz::vtkCocoaRenderWindowInteract
 {
     return vtkSmartPointer<vtkCocoaRenderWindowInteractorFix>::New();
 }
+
+
+#else
+
+vtkSmartPointer<vtkRenderWindowInteractor> cv::viz::vtkCocoaRenderWindowInteractorNew()
+{
+    return vtkSmartPointer<vtkCocoaRenderWindowInteractor>::New();
+}
+
+#endif
