@@ -24,7 +24,7 @@ using namespace std;
  * @function help
  * @brief Display instructions to use this tutorial program
  */
-void help()
+static void help()
 {
     cout
     << "--------------------------------------------------------------------------"   << endl
