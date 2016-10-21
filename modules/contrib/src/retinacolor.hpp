@@ -289,12 +289,12 @@ namespace cv
                 :outputFrame(bufferToProcess), inputFrame(inputImg), imageGradient(imageGrad), nbColumns(nbCols) {};
 
             virtual void operator()( const Range& r ) const {
-                register float* outputPTR=outputFrame+r.start*nbColumns;
-                register const float* inputPTR=inputFrame+r.start*nbColumns;
-                register const float *imageGradientPTR= imageGradient+r.start*nbColumns;
+                float* outputPTR=outputFrame+r.start*nbColumns;
+                const float* inputPTR=inputFrame+r.start*nbColumns;
+                const float *imageGradientPTR= imageGradient+r.start*nbColumns;
                 for (int IDrow=r.start; IDrow!=r.end; ++IDrow)
                 {
-                    register float result=0;
+                    float result=0;
                     for (unsigned int index=0; index<nbColumns; ++index)
                     {
                         result = *(inputPTR++) + (*imageGradientPTR++)* result;
@@ -320,9 +320,9 @@ namespace cv
                 const float* gradOffset= imageGradient+nbColumns*nbRows-nbColumns;
                 for (int IDcolumn=r.start; IDcolumn!=r.end; ++IDcolumn)
                 {
-                    register float result=0;
-                    register float *outputPTR=offset+IDcolumn;
-                    register const float *imageGradientPTR=gradOffset+IDcolumn;
+                    float result=0;
+                    float *outputPTR=offset+IDcolumn;
+                    const float *imageGradientPTR=gradOffset+IDcolumn;
                     for (unsigned int index=0; index<nbRows; ++index)
                     {
                         result = *(outputPTR) + *(imageGradientPTR) * result;

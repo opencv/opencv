@@ -238,7 +238,7 @@ void RetinaColor::_initColorSampling()
     _spatiotemporalLPfilter(&_RGBmosaic[0]+_filterOutput.getNBpixels(), &_colorLocalDensity[0]+_filterOutput.getNBpixels());
     _spatiotemporalLPfilter(&_RGBmosaic[0]+_filterOutput.getDoubleNBpixels(), &_colorLocalDensity[0]+_filterOutput.getDoubleNBpixels());
     unsigned int maxNBpixels=3*_filterOutput.getNBpixels();
-    register float *colorLocalDensityPTR=&_colorLocalDensity[0];
+    float *colorLocalDensityPTR=&_colorLocalDensity[0];
     for (unsigned int i=0;i<maxNBpixels;++i, ++colorLocalDensityPTR)
         *colorLocalDensityPTR=1.f/ *colorLocalDensityPTR;
 
@@ -257,8 +257,8 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
     // -> first set demultiplexed frame to 0
     _demultiplexedTempBuffer=0;
     // -> demultiplex process
-    register unsigned int *colorSamplingPRT=&_colorSampling[0];
-    register const float *multiplexedColorFramePtr=get_data(multiplexedColorFrame);
+    unsigned int *colorSamplingPRT=&_colorSampling[0];
+    const float *multiplexedColorFramePtr=get_data(multiplexedColorFrame);
     for (unsigned int indexa=0; indexa<_filterOutput.getNBpixels() ; ++indexa)
         _demultiplexedTempBuffer[*(colorSamplingPRT++)]=*(multiplexedColorFramePtr++);
 
@@ -279,9 +279,9 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
     }*/
 
     // normalize by the photoreceptors local density and retrieve the local luminance
-    register float *chrominancePTR= &_chrominance[0];
-    register float *colorLocalDensityPTR= &_colorLocalDensity[0];
-    register float *luminance= &(*_luminance)[0];
+    float *chrominancePTR= &_chrominance[0];
+    float *colorLocalDensityPTR= &_colorLocalDensity[0];
+    float *luminance= &(*_luminance)[0];
     if (!adaptiveFiltering)// compute the gradient on the luminance
     {
         if (_samplingMethod==RETINA_COLOR_RANDOM)
@@ -325,7 +325,7 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
 
     }else
     {
-        register const float *multiplexedColorFramePTR= get_data(multiplexedColorFrame);
+        const float *multiplexedColorFramePTR= get_data(multiplexedColorFrame);
         for (unsigned int indexc=0; indexc<_filterOutput.getNBpixels() ; ++indexc, ++chrominancePTR, ++colorLocalDensityPTR, ++luminance, ++multiplexedColorFramePTR)
         {
             // normalize by photoreceptors density
@@ -408,8 +408,8 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
 void RetinaColor::runColorMultiplexing(const std::valarray<float> &demultiplexedInputFrame, std::valarray<float> &multiplexedFrame)
 {
     // multiply each color layer by its bayer mask
-    register unsigned int *colorSamplingPTR= &_colorSampling[0];
-    register float *multiplexedFramePTR= &multiplexedFrame[0];
+    unsigned int *colorSamplingPTR= &_colorSampling[0];
+    float *multiplexedFramePTR= &multiplexedFrame[0];
     for (unsigned int indexp=0; indexp<_filterOutput.getNBpixels(); ++indexp)
         *(multiplexedFramePTR++)=demultiplexedInputFrame[*(colorSamplingPTR++)];
 }
@@ -436,8 +436,8 @@ void RetinaColor::clipRGBOutput_0_maxInputValue(float *inputOutputBuffer, const 
 #ifdef MAKE_PARALLEL // call the TemplateBuffer TBB clipping method
         cv::parallel_for_(cv::Range(0,_filterOutput.getNBpixels()*3), Parallel_clipBufferValues<float>(inputOutputBuffer, 0,  maxInputValue));
 #else
-    register float *inputOutputBufferPTR=inputOutputBuffer;
-    for (register unsigned int jf = 0; jf < _filterOutput.getNBpixels()*3; ++jf, ++inputOutputBufferPTR)
+    float *inputOutputBufferPTR=inputOutputBuffer;
+    for (unsigned int jf = 0; jf < _filterOutput.getNBpixels()*3; ++jf, ++inputOutputBufferPTR)
     {
         if (*inputOutputBufferPTR>maxInputValue)
             *inputOutputBufferPTR=maxInputValue;
@@ -583,12 +583,12 @@ void RetinaColor::_adaptiveHorizontalCausalFilter_addInput(const float *inputFra
 #ifdef MAKE_PARALLEL
         cv::parallel_for_(cv::Range(IDrowStart,IDrowEnd), Parallel_adaptiveHorizontalCausalFilter_addInput(inputFrame, outputFrame, &_imageGradient[0], _filterOutput.getNBcolumns()));
 #else
-    register float* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
-    register const float* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
-    register const float *imageGradientPTR= &_imageGradient[0]+IDrowStart*_filterOutput.getNBcolumns();
+    float* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
+    const float* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
+    const float *imageGradientPTR= &_imageGradient[0]+IDrowStart*_filterOutput.getNBcolumns();
     for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
     {
-        register float result=0;
+        float result=0;
         for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
         {
             //std::cout<<(*imageGradientPTR)<<" ";
@@ -612,9 +612,9 @@ void RetinaColor::_adaptiveVerticalAnticausalFilter_multGain(float *outputFrame,
 
     for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
     {
-        register float result=0;
-        register float *outputPTR=outputOffset+IDcolumn;
-        register float *imageGradientPTR=gradOffset+IDcolumn;
+        float result=0;
+        float *outputPTR=outputOffset+IDcolumn;
+        float *imageGradientPTR=gradOffset+IDcolumn;
         for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
         {
             result = *(outputPTR) + (*(imageGradientPTR)) * result;
