@@ -229,6 +229,86 @@ OCL_TEST_P(GaussianBlurTest, Mat)
     }
 }
 
+PARAM_TEST_CASE(GaussianBlur3x3_cols16_rows2_Base, MatType,
+                int, // kernel size
+                Size, // dx, dy
+                BorderType, // border type
+                double, // optional parameter
+                bool, // roi or not
+                int)  // width multiplier
+{
+    int type, borderType, ksize;
+    Size size;
+    double param;
+    bool useRoi;
+    int widthMultiple;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        ksize = GET_PARAM(1);
+        size = GET_PARAM(2);
+        borderType = GET_PARAM(3);
+        param = GET_PARAM(4);
+        useRoi = GET_PARAM(5);
+        widthMultiple = GET_PARAM(6);
+    }
+
+    void random_roi()
+    {
+        size = Size(3, 3);
+
+        Size roiSize = randomSize(size.width, MAX_VALUE, size.height, MAX_VALUE);
+        roiSize.width = std::max(size.width + 13, roiSize.width & (~0xf));
+        roiSize.height = std::max(size.height + 1, roiSize.height & (~0x1));
+
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, 5, 256);
+
+        Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -60, 70);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+    }
+
+    void Near()
+    {
+        Near(1, false);
+    }
+
+    void Near(double threshold, bool relative)
+    {
+        if (relative)
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
+        else
+            OCL_EXPECT_MATS_NEAR(dst, threshold);
+    }
+};
+
+typedef GaussianBlur3x3_cols16_rows2_Base GaussianBlur3x3_cols16_rows2;
+
+OCL_TEST_P(GaussianBlur3x3_cols16_rows2, Mat)
+{
+    Size kernelSize(ksize, ksize);
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        double sigma1 = rng.uniform(0.1, 1.0);
+        double sigma2 = j % 2 == 0 ? sigma1 : rng.uniform(0.1, 1.0);
+
+        OCL_OFF(cv::GaussianBlur(src_roi, dst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
+        OCL_ON(cv::GaussianBlur(usrc_roi, udst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
+
+        Near(CV_MAT_DEPTH(type) >= CV_32F ? 1e-3 : 4, CV_MAT_DEPTH(type) >= CV_32F);
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Erode
 
@@ -484,6 +564,15 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, ScharrTest, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
                             FILTER_TYPES,
                             Values(3, 5), // kernel size
+                            Values(Size(0, 0)), // not used
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(0.0), // not used
+                            Bool(),
+                            Values(1))); // not used
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur3x3_cols16_rows2, Combine(
+                            Values((MatType)CV_8UC1),
+                            Values(3), // kernel size
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(0.0), // not used
