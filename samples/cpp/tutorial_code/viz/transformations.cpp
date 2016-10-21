@@ -15,7 +15,7 @@ using namespace std;
  * @function help
  * @brief Display instructions to use this tutorial program
  */
-void help()
+static void help()
 {
     cout
     << "--------------------------------------------------------------------------"   << endl
@@ -31,7 +31,7 @@ void help()
  * @function cvcloud_load
  * @brief load bunny.ply
  */
-Mat cvcloud_load()
+static Mat cvcloud_load()
 {
     Mat cloud(1, 1889, CV_32FC3);
     ifstream ifs("bunny.ply");
