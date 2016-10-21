@@ -195,7 +195,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-
+    exposure_comp_->feed(corners, images_warped_f, masks_warped);
     // Find seams
     exposure_comp_->feed(corners, images_warped, masks_warped);
     seam_finder_->find(images_warped_f, corners, masks_warped);
