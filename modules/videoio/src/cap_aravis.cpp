@@ -282,7 +282,7 @@ bool CvCaptureCAM_Aravis::grabFrame()
                 arv_stream_push_buffer (stream, arv_buffer);
             } else break;
         }
-        if (tries < max_tries) {
+        if(arv_buffer != NULL && tries < max_tries) {
             size_t buffer_size;
             framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 
@@ -371,7 +371,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
 
     // if change of value requires intervention
     if(fabs(d-dmid) > 5) {
-        double ev, ng;
+        double ev, ng = 0;
 
         if(gainAvailable && autoGain) {
             ev = log( d / dmid ) / log(2);
