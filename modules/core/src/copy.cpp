@@ -813,6 +813,48 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
+bool ocl_rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    switch (rotateMode)
+    {
+    case ROTATE_90:
+        flip(_src.getUMat().t(), _dst, 1);
+        break;
+    case ROTATE_180:
+        flip(_src, _dst, -1);
+        break;
+    case ROTATE_270:
+        flip(_src.getUMat().t(), _dst, 0);
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+
+void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    CV_Assert(_src.dims() <= 2);
+    Size size = _src.size();
+    
+    CV_OCL_RUN(_dst.isUMat(), ocl_rotate(_src, _dst, rotateMode))
+
+    switch (rotateMode)
+    {
+    case ROTATE_90:
+        flip(_src.getMat().t(), _dst, 1);
+        break;
+    case ROTATE_180:
+        flip(_src, _dst, -1);
+        break;
+    case ROTATE_270:
+        flip(_src.getMat().t(), _dst, 0);
+        break;
+    default:
+        break;
+    }
+}
+
 #if defined HAVE_OPENCL && !defined __APPLE__
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
