@@ -1175,6 +1175,7 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
 #define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
 static const double ln_2 = 0.69314718055994530941723212145818;
 
+#pragma optimize("", off)
 void log32f( const float *_x, float *y, int n )
 {
     static const float shift[] = { 0, -1.f/512 };
@@ -1503,6 +1504,7 @@ void log64f( const double *x, double *y, int n )
         y[i] = y0;
     }
 }
+#pragma optimize("", on)
 
 //=============================================================================
 // for compatibility with 3.0
