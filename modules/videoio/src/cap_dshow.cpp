@@ -204,6 +204,7 @@ DEFINE_GUID(IID_ICreateDevEnum,0x29840822,0x5b84,0x11d0,0xbd,0x3b,0x00,0xa0,0xc9
 DEFINE_GUID(IID_IGraphBuilder,0x56a868a9,0x0ad4,0x11ce,0xb0,0x3a,0x00,0x20,0xaf,0x0b,0xa7,0x70);
 DEFINE_GUID(IID_IMPEG2PIDMap,0xafb6c2a1,0x2c41,0x11d3,0x8a,0x60,0x00,0x00,0xf8,0x1e,0x0e,0x4a);
 DEFINE_GUID(IID_IMediaControl,0x56a868b1,0x0ad4,0x11ce,0xb0,0x3a,0x00,0x20,0xaf,0x0b,0xa7,0x70);
+DEFINE_GUID(IID_IMediaEventEx, 0x56a868c0,0x0ad4,0x11ce,0xb0,0x3a,0x00,0x20,0xaf,0x0b,0xa7,0x70);
 DEFINE_GUID(IID_IMediaFilter,0x56a86899,0x0ad4,0x11ce,0xb0,0x3a,0x00,0x20,0xaf,0x0b,0xa7,0x70);
 DEFINE_GUID(IID_ISampleGrabber,0x6b652fff,0x11fe,0x4fce,0x92,0xad,0x02,0x66,0xb5,0xd7,0xc7,0x8f);
 DEFINE_GUID(LOOK_UPSTREAM_ONLY,0xac798be0,0x98e3,0x11d1,0xb3,0xf1,0x00,0xaa,0x00,0x37,0x61,0xc5);
@@ -572,6 +573,8 @@ class videoInput{
         // mapping from OpenCV CV_CAP_PROP to videoinput/dshow properties
         int getVideoPropertyFromCV(int cv_property);
         int getCameraPropertyFromCV(int cv_property);
+
+        bool isDeviceDisconnected(int deviceID);
 
     private:
         void setPhyCon(int deviceID, int conn);
@@ -2309,6 +2312,27 @@ int videoInput::getCameraPropertyFromCV(int cv_property){
     return -1;
 }
 
+bool videoInput::isDeviceDisconnected(int deviceNumber)
+{
+    if (!isDeviceSetup(deviceNumber)) return true;
+    long evCode;
+    LONG_PTR param1, param2;
+    bool disconnected = false;
+
+    while (S_OK == VDList[deviceNumber]->pMediaEvent->GetEvent(&evCode, &param1, &param2, 0))
+    {
+        DebugPrintOut("Event: Code: %#04x Params: %d, %d\n", evCode, param1, param2);
+
+        VDList[deviceNumber]->pMediaEvent->FreeEventParams(evCode, param1, param2);
+        if (evCode == EC_DEVICE_LOST)
+        {
+           DebugPrintOut("ERROR: Device disconnected\n");
+           disconnected = true;
+        }
+    }
+    return disconnected;
+}
+
 void videoInput::getCameraPropertyAsString(int prop, char * propertyAsString){
 
     char tmpStr[16];
@@ -2447,13 +2471,15 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
     VD->pAmMediaType->subtype     = mediatype;
 
     //buffer size
-    if (mediatype == MEDIASUBTYPE_RGB24)
-    {
-        VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight*3;
+    if (mediatype == MEDIASUBTYPE_RGB24){
+        VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight * 3;
     }
-    else
-    {
-        // For compressed data, the value can be zero.
+    else if ((mediatype == MEDIASUBTYPE_YUY2) || (mediatype == MEDIASUBTYPE_YVYU) ||
+        (mediatype == MEDIASUBTYPE_UYVY)){
+
+        VD->pAmMediaType->lSampleSize = attemptWidth*attemptHeight * 2;
+    }
+    else{
         VD->pAmMediaType->lSampleSize = 0;
     }
 
@@ -2505,6 +2531,16 @@ int videoInput::start(int deviceID, videoDevice *VD){
     if (FAILED(hr))
     {
         DebugPrintOut("ERROR - Could not add the graph builder!\n");
+        stopDevice(deviceID);
+        return hr;
+    }
+
+    //MEDIA EVENT//
+    //Used to obtain event when capture device is disconnected
+    hr = VD->pGraph->QueryInterface(IID_IMediaEventEx, (void**)&VD->pMediaEvent);
+    if (FAILED(hr))
+    {
+        DebugPrintOut("ERROR - Could not create media event object\n");
         stopDevice(deviceID);
         return hr;
     }
@@ -3307,7 +3343,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 
 bool VideoCapture_DShow::grabFrame()
 {
-    return true;
+    return !g_VI.isDeviceDisconnected(m_index);
 }
 bool VideoCapture_DShow::retrieveFrame(int, OutputArray frame)
 {

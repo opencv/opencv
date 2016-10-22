@@ -759,14 +759,50 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                     }
                     else
                     {
-                        for( d = 0; d < D; d++ )
+                    #if CV_SSE2
+                        if( useSIMD )
                         {
-                            int Sval = Sp[d];
-                            if( Sval < minS )
-                            {
-                                minS = Sval;
-                                bestDisp = d;
-                            }
+                             __m128i _minS = _mm_set1_epi16(MAX_COST), _bestDisp = _mm_set1_epi16(-1);
+                             __m128i _d8 = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7), _8 = _mm_set1_epi16(8);
+
+                             for( d = 0; d < D; d+= 8 )
+                             {
+                                 __m128i L0 = _mm_load_si128((const __m128i*)( Sp + d ));
+                                 __m128i mask = _mm_cmplt_epi16( L0, _minS );
+                                 _minS = _mm_min_epi16( L0, _minS );
+                                 _bestDisp = _mm_xor_si128(_bestDisp, _mm_and_si128(_mm_xor_si128( _bestDisp, _d8), mask));
+                                 _d8 = _mm_adds_epi16(_d8, _8 );
+                             }
+                             short CV_DECL_ALIGNED(16) bestDispBuf[8];
+                             _mm_store_si128((__m128i*)bestDispBuf, _bestDisp);
+                             short CV_DECL_ALIGNED(16) minSBuf[8];
+                             _mm_store_si128((__m128i*)minSBuf, _minS );
+
+                             for( int i = 0; i < 8; i++ )
+                             {
+                                 int Sval = minSBuf[ i ];
+                                 if( Sval <= minS )
+                                 {
+                                     if( ( Sval < minS ) || ( bestDispBuf[i] < bestDisp ) )
+                                     {
+                                         bestDisp = bestDispBuf[i];
+                                     }
+                                     minS = Sval;
+                                 }
+                             }
+                        }
+                        else
+                    #endif
+                        {
+                           for( d = 0; d < D; d++ )
+                           {
+                               int Sval = Sp[d];
+                               if( Sval < minS )
+                               {
+                                   minS = Sval;
+                                   bestDisp = d;
+                               }
+                           }
                         }
                     }
 
@@ -1458,6 +1494,8 @@ public:
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
     {
+        CV_INSTRUMENT_REGION()
+
         Mat left = leftarr.getMat(), right = rightarr.getMat();
         CV_Assert( left.size() == right.size() && left.type() == right.type() &&
                    left.depth() == CV_8U );
@@ -1692,6 +1730,8 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
 #ifdef HAVE_IPP
 static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int maxDiff)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 810
     int type = img.type();
     Ipp32s bufsize = 0;
@@ -1709,12 +1749,12 @@ static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int max
 
     if (type == CV_8UC1)
     {
-        status = ippiMarkSpeckles_8u_C1IR(img.ptr<Ipp8u>(), (int)img.step, roisize,
+        status = CV_INSTRUMENT_FUN_IPP(ippiMarkSpeckles_8u_C1IR, img.ptr<Ipp8u>(), (int)img.step, roisize,
                                             (Ipp8u)newVal, maxSpeckleSize, (Ipp8u)maxDiff, ippiNormL1, pBuffer);
     }
     else
     {
-        status = ippiMarkSpeckles_16s_C1IR(img.ptr<Ipp16s>(), (int)img.step, roisize,
+        status = CV_INSTRUMENT_FUN_IPP(ippiMarkSpeckles_16s_C1IR, img.ptr<Ipp16s>(), (int)img.step, roisize,
                                             (Ipp16s)newVal, maxSpeckleSize, (Ipp16s)maxDiff, ippiNormL1, pBuffer);
     }
     if(pBuffer) ippFree(pBuffer);
@@ -1733,6 +1773,8 @@ static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int max
 void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSize,
                          double _maxDiff, InputOutputArray __buf )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
     int type = img.type();
     Mat temp, &_buf = __buf.needed() ? __buf.getMatRef() : temp;
@@ -1751,6 +1793,8 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
 void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDisparity,
                             int numberOfDisparities, int disp12MaxDiff )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat disp = _disp.getMat(), cost = _cost.getMat();
     int cols = disp.cols, rows = disp.rows;
     int minD = minDisparity, maxD = minDisparity + numberOfDisparities;

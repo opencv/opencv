@@ -96,7 +96,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
-#if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         IppiSize srcSize = { width, height };
@@ -109,7 +109,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
         lines.resize(ipp_linesMax);
         IppStatus ok = ippiHoughLineGetSize_8u_C1R(srcSize, delta, ipp_linesMax, &bufferSize);
         Ipp8u* buffer = ippsMalloc_8u(bufferSize);
-        if (ok >= 0) ok = ippiHoughLine_Region_8u32f_C1R(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer);
+        if (ok >= 0) {ok = CV_INSTRUMENT_FUN_IPP(ippiHoughLine_Region_8u32f_C1R,(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer))};
         ippsFree(buffer);
         if (ok >= 0)
         {
@@ -429,7 +429,7 @@ HoughLinesProbabilistic( Mat& image,
     int numangle = cvRound(CV_PI / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
-#if defined HAVE_IPP && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         IppiSize srcSize = { width, height };
@@ -443,7 +443,7 @@ HoughLinesProbabilistic( Mat& image,
         Ipp8u* buffer = ippsMalloc_8u(bufferSize);
         pSpec = (IppiHoughProbSpec*) malloc(specSize);
         if (ok >= 0) ok = ippiHoughProbLineInit_8u32f_C1R(srcSize, delta, ippAlgHintNone, pSpec);
-        if (ok >= 0) ok = ippiHoughProbLine_8u32f_C1R(image.data, image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec);
+        if (ok >= 0) {ok = CV_INSTRUMENT_FUN_IPP(ippiHoughProbLine_8u32f_C1R,(image.data, image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec))};
 
         free(pSpec);
         ippsFree(buffer);
@@ -850,6 +850,8 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
                     double rho, double theta, int threshold,
                     double srn, double stn, double min_theta, double max_theta )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(srn == 0 && stn == 0 && _image.isUMat() && _lines.isUMat(),
                ocl_HoughLines(_image, _lines, rho, theta, threshold, min_theta, max_theta));
 
@@ -869,6 +871,8 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double minLineLength, double maxGap )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_image.isUMat() && _lines.isUMat(),
                ocl_HoughLinesP(_image, _lines, rho, theta, threshold, minLineLength, maxGap));
 
@@ -1322,6 +1326,8 @@ void cv::HoughCircles( InputArray _image, OutputArray _circles,
                        double param1, double param2,
                        int minRadius, int maxRadius )
 {
+    CV_INSTRUMENT_REGION()
+
     Ptr<CvMemStorage> storage(cvCreateMemStorage(STORAGE_SIZE));
     Mat image = _image.getMat();
     CvMat c_image = image;

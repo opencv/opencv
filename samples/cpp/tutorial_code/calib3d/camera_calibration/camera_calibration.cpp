@@ -1,7 +1,8 @@
 #include <iostream>
 #include <sstream>
-#include <time.h>
-#include <stdio.h>
+#include <string>
+#include <ctime>
+#include <cstdio>
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
@@ -11,17 +12,13 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 
-#ifndef _CRT_SECURE_NO_WARNINGS
-# define _CRT_SECURE_NO_WARNINGS
-#endif
-
 using namespace cv;
 using namespace std;
 
 static void help()
 {
     cout <<  "This is a camera calibration sample." << endl
-         <<  "Usage: calibration configurationFile"  << endl
+         <<  "Usage: camera_calibration [configuration_file -- default ./default.xml]"  << endl
          <<  "Near the sample file you'll find the configuration file, which has detailed help of "
              "how to edit it.  It may be any OpenCV supported file format XML/YAML." << endl;
 }
@@ -73,6 +70,12 @@ public:
         node["Show_UndistortedImage"] >> showUndistorsed;
         node["Input"] >> input;
         node["Input_Delay"] >> delay;
+        node["Fix_K1"] >> fixK1;
+        node["Fix_K2"] >> fixK2;
+        node["Fix_K3"] >> fixK3;
+        node["Fix_K4"] >> fixK4;
+        node["Fix_K5"] >> fixK5;
+
         validate();
     }
     void validate()
@@ -127,16 +130,23 @@ public:
             goodInput = false;
         }
 
-        flag = CALIB_FIX_K4 | CALIB_FIX_K5;
+        flag = 0;
         if(calibFixPrincipalPoint) flag |= CALIB_FIX_PRINCIPAL_POINT;
         if(calibZeroTangentDist)   flag |= CALIB_ZERO_TANGENT_DIST;
         if(aspectRatio)            flag |= CALIB_FIX_ASPECT_RATIO;
+        if(fixK1)                  flag |= CALIB_FIX_K1;
+        if(fixK2)                  flag |= CALIB_FIX_K2;
+        if(fixK3)                  flag |= CALIB_FIX_K3;
+        if(fixK4)                  flag |= CALIB_FIX_K4;
+        if(fixK5)                  flag |= CALIB_FIX_K5;
 
         if (useFisheye) {
             // the fisheye model has its own enum, so overwrite the flags
-            flag = fisheye::CALIB_FIX_SKEW | fisheye::CALIB_RECOMPUTE_EXTRINSIC |
-                   // fisheye::CALIB_FIX_K1 |
-                   fisheye::CALIB_FIX_K2 | fisheye::CALIB_FIX_K3 | fisheye::CALIB_FIX_K4;
+            flag = fisheye::CALIB_FIX_SKEW | fisheye::CALIB_RECOMPUTE_EXTRINSIC;
+            if(fixK1)                  flag |= fisheye::CALIB_FIX_K1;
+            if(fixK2)                  flag |= fisheye::CALIB_FIX_K2;
+            if(fixK3)                  flag |= fisheye::CALIB_FIX_K3;
+            if(fixK4)                  flag |= fisheye::CALIB_FIX_K4;
         }
 
         calibrationPattern = NOT_EXISTING;
@@ -196,6 +206,11 @@ public:
     bool showUndistorsed;        // Show undistorted images after calibration
     string input;                // The input ->
     bool useFisheye;             // use fisheye camera model for calibration
+    bool fixK1;                  // fix K1 distortion coefficient
+    bool fixK2;                  // fix K2 distortion coefficient
+    bool fixK3;                  // fix K3 distortion coefficient
+    bool fixK4;                  // fix K4 distortion coefficient
+    bool fixK5;                  // fix K5 distortion coefficient
 
     int cameraID;
     vector<string> imageList;
@@ -369,7 +384,10 @@ int main(int argc, char* argv[])
         if( mode == CALIBRATED && s.showUndistorsed )
         {
             Mat temp = view.clone();
-            undistort(temp, view, cameraMatrix, distCoeffs);
+            if (s.useFisheye)
+              cv::fisheye::undistortImage(temp, view, cameraMatrix, distCoeffs);
+            else
+              undistort(temp, view, cameraMatrix, distCoeffs);
         }
         //! [output_undistorted]
         //------------------------------ Show image and check for input commands -------------------
@@ -415,7 +433,7 @@ int main(int argc, char* argv[])
 
         for(size_t i = 0; i < s.imageList.size(); i++ )
         {
-            view = imread(s.imageList[i], 1);
+            view = imread(s.imageList[i], IMREAD_COLOR);
             if(view.empty())
                 continue;
             remap(view, rview, map1, map2, INTER_LINEAR);
@@ -567,25 +585,31 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
 
     if (s.flag)
     {
+        std::stringstream flagsStringStream;
         if (s.useFisheye)
         {
-            sprintf(buf, "flags:%s%s%s%s%s%s",
-                     s.flag & fisheye::CALIB_FIX_SKEW ? " +fix_skew" : "",
-                     s.flag & fisheye::CALIB_FIX_K1 ? " +fix_k1" : "",
-                     s.flag & fisheye::CALIB_FIX_K2 ? " +fix_k2" : "",
-                     s.flag & fisheye::CALIB_FIX_K3 ? " +fix_k3" : "",
-                     s.flag & fisheye::CALIB_FIX_K4 ? " +fix_k4" : "",
-                     s.flag & fisheye::CALIB_RECOMPUTE_EXTRINSIC ? " +recompute_extrinsic" : "");
+            flagsStringStream << "flags:"
+                << (s.flag & fisheye::CALIB_FIX_SKEW ? " +fix_skew" : "")
+                << (s.flag & fisheye::CALIB_FIX_K1 ? " +fix_k1" : "")
+                << (s.flag & fisheye::CALIB_FIX_K2 ? " +fix_k2" : "")
+                << (s.flag & fisheye::CALIB_FIX_K3 ? " +fix_k3" : "")
+                << (s.flag & fisheye::CALIB_FIX_K4 ? " +fix_k4" : "")
+                << (s.flag & fisheye::CALIB_RECOMPUTE_EXTRINSIC ? " +recompute_extrinsic" : "");
         }
         else
         {
-            sprintf(buf, "flags:%s%s%s%s",
-                     s.flag & CALIB_USE_INTRINSIC_GUESS ? " +use_intrinsic_guess" : "",
-                     s.flag & CALIB_FIX_ASPECT_RATIO ? " +fix_aspectRatio" : "",
-                     s.flag & CALIB_FIX_PRINCIPAL_POINT ? " +fix_principal_point" : "",
-                     s.flag & CALIB_ZERO_TANGENT_DIST ? " +zero_tangent_dist" : "");
+            flagsStringStream << "flags:"
+                << (s.flag & CALIB_USE_INTRINSIC_GUESS ? " +use_intrinsic_guess" : "")
+                << (s.flag & CALIB_FIX_ASPECT_RATIO ? " +fix_aspectRatio" : "")
+                << (s.flag & CALIB_FIX_PRINCIPAL_POINT ? " +fix_principal_point" : "")
+                << (s.flag & CALIB_ZERO_TANGENT_DIST ? " +zero_tangent_dist" : "")
+                << (s.flag & CALIB_FIX_K1 ? " +fix_k1" : "")
+                << (s.flag & CALIB_FIX_K2 ? " +fix_k2" : "")
+                << (s.flag & CALIB_FIX_K3 ? " +fix_k3" : "")
+                << (s.flag & CALIB_FIX_K4 ? " +fix_k4" : "")
+                << (s.flag & CALIB_FIX_K5 ? " +fix_k5" : "");
         }
-        cvWriteComment(*fs, buf, 0);
+        fs.writeComment(flagsStringStream.str());
     }
 
     fs << "flags" << s.flag;
@@ -602,19 +626,33 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
     if(s.writeExtrinsics && !rvecs.empty() && !tvecs.empty() )
     {
         CV_Assert(rvecs[0].type() == tvecs[0].type());
-        Mat bigmat((int)rvecs.size(), 6, rvecs[0].type());
+        Mat bigmat((int)rvecs.size(), 6, CV_MAKETYPE(rvecs[0].type(), 1));
+        bool needReshapeR = rvecs[0].depth() != 1 ? true : false;
+        bool needReshapeT = tvecs[0].depth() != 1 ? true : false;
+
         for( size_t i = 0; i < rvecs.size(); i++ )
         {
             Mat r = bigmat(Range(int(i), int(i+1)), Range(0,3));
             Mat t = bigmat(Range(int(i), int(i+1)), Range(3,6));
 
-            CV_Assert(rvecs[i].rows == 3 && rvecs[i].cols == 1);
-            CV_Assert(tvecs[i].rows == 3 && tvecs[i].cols == 1);
-            //*.t() is MatExpr (not Mat) so we can use assignment operator
-            r = rvecs[i].t();
-            t = tvecs[i].t();
+            if(needReshapeR)
+                rvecs[i].reshape(1, 1).copyTo(r);
+            else
+            {
+                //*.t() is MatExpr (not Mat) so we can use assignment operator
+                CV_Assert(rvecs[i].rows == 3 && rvecs[i].cols == 1);
+                r = rvecs[i].t();
+            }
+
+            if(needReshapeT)
+                tvecs[i].reshape(1, 1).copyTo(t);
+            else
+            {
+                CV_Assert(tvecs[i].rows == 3 && tvecs[i].cols == 1);
+                t = tvecs[i].t();
+            }
         }
-        //cvWriteComment( *fs, "a set of 6-tuples (rotation vector + translation vector) for each view", 0 );
+        fs.writeComment("a set of 6-tuples (rotation vector + translation vector) for each view");
         fs << "extrinsic_parameters" << bigmat;
     }
 

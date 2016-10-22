@@ -69,6 +69,8 @@ namespace cv
     template <int channels, typename Type>
     bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size, ippiSetFunc func)
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         Type values[channels];
         for( int i = 0; i < channels; i++ )
             values[i] = saturate_cast<Type>(value[i]);
@@ -77,16 +79,18 @@ namespace cv
 
     static bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, int depth)
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         if( channels == 1 )
         {
             switch( depth )
             {
             case CV_8U:
-                return ippiSet_8u_C1R(saturate_cast<Ipp8u>(value[0]), (Ipp8u *)dataPointer, step, size) >= 0;
+                return CV_INSTRUMENT_FUN_IPP(ippiSet_8u_C1R,(saturate_cast<Ipp8u>(value[0]), (Ipp8u *)dataPointer, step, size)) >= 0;
             case CV_16U:
-                return ippiSet_16u_C1R(saturate_cast<Ipp16u>(value[0]), (Ipp16u *)dataPointer, step, size) >= 0;
+                return CV_INSTRUMENT_FUN_IPP(ippiSet_16u_C1R,(saturate_cast<Ipp16u>(value[0]), (Ipp16u *)dataPointer, step, size)) >= 0;
             case CV_32F:
-                return ippiSet_32f_C1R(saturate_cast<Ipp32f>(value[0]), (Ipp32f *)dataPointer, step, size) >= 0;
+                return CV_INSTRUMENT_FUN_IPP(ippiSet_32f_C1R,(saturate_cast<Ipp32f>(value[0]), (Ipp32f *)dataPointer, step, size)) >= 0;
             }
         }
         else
@@ -2712,7 +2716,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
 #define CHECK_IPP_STATUS(STATUS) if (STATUS < 0) { *ok = false; return; }
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN) \
-    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \
+    ippiResize = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \
     CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
@@ -2720,7 +2724,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(TYPE, CN) \
     if (mode == (int)ippCubic) { *ok = false; return; } \
-    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \
+    ippiResize = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \
     CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
@@ -2729,7 +2733,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     getSrcOffsetFunc =  (ippiResizeGetSrcOffset) ippiResizeGetSrcOffset_##TYPE;
 
 #define SET_IPP_RESIZE_CUBIC_FUNC_PTR(TYPE, CN) \
-    func = (ippiResizeFunc)ippiResizeCubic_##TYPE##_##CN##R; \
+    ippiResize = (ippiResizeFunc)ippiResizeCubic_##TYPE##_##CN##R; \
     CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
@@ -2752,7 +2756,7 @@ public:
     IPPresizeInvoker(const Mat & _src, Mat & _dst, double _inv_scale_x, double _inv_scale_y, int _mode, bool *_ok) :
         ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x),
         inv_scale_y(_inv_scale_y), pSpec(NULL), mode(_mode),
-        func(NULL), getBufferSizeFunc(NULL), getSrcOffsetFunc(NULL), ok(_ok)
+        ippiResize(NULL), getBufferSizeFunc(NULL), getSrcOffsetFunc(NULL), ok(_ok)
     {
         *ok = true;
         IppiSize srcSize, dstSize;
@@ -2791,6 +2795,8 @@ public:
 
     virtual void operator() (const Range& range) const
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         if (*ok == false)
             return;
 
@@ -2812,7 +2818,7 @@ public:
         AutoBuffer<uchar> buf(bufsize + 64);
         uchar* bufptr = alignPtr((uchar*)buf, 32);
 
-        if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
+        if( CV_INSTRUMENT_FUN_IPP(ippiResize, pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr) < 0 )
             *ok = false;
         else
         {
@@ -2827,7 +2833,7 @@ private:
     void *pSpec;
     AutoBuffer<uchar> specBuf;
     int mode;
-    ippiResizeFunc func;
+    ippiResizeFunc ippiResize;
     ippiResizeGetBufferSize getBufferSizeFunc;
     ippiResizeGetSrcOffset getSrcOffsetFunc;
     bool *ok;
@@ -3095,6 +3101,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 static bool ipp_resize_mt(Mat & src, Mat & dst,
                           double inv_scale_x, double inv_scale_y, int interpolation)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int mode = -1;
     if (interpolation == INTER_LINEAR && src.rows >= 2 && src.cols >= 2)
         mode = ippLinear;
@@ -3123,6 +3131,8 @@ void resize(int src_type,
             uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
             double inv_scale_x, double inv_scale_y, int interpolation)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert((dst_width * dst_height > 0) || (inv_scale_x > 0 && inv_scale_y > 0));
     if (inv_scale_x < DBL_EPSILON || inv_scale_y < DBL_EPSILON)
     {
@@ -3475,9 +3485,11 @@ void resize(int src_type,
 void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
+    CV_INSTRUMENT_REGION()
+
     Size ssize = _src.size();
 
-    CV_Assert( ssize.area() > 0 );
+    CV_Assert( ssize.width > 0 && ssize.height > 0 );
     CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
     if( dsize.area() == 0 )
     {
@@ -3498,10 +3510,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     _dst.create(dsize, src.type());
     Mat dst = _dst.getMat();
 
-    if (dsize == ssize) {
-      // Source and destination are of same size. Use simple copy.
-      src.copyTo(dst);
-      return;
+    if (dsize == ssize)
+    {
+        // Source and destination are of same size. Use simple copy.
+        src.copyTo(dst);
+        return;
     }
 
     hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
@@ -4616,14 +4629,14 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     size_t w = dsize.width;
     size_t h = dsize.height;
     String buildOptions;
-    unsigned mem_szie = 32;
+    unsigned mem_size = 32;
     if (flags & CV_WARP_INVERSE_MAP)
     {
         buildOptions = "-D InverseMap";
     }
     else
     {
-        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_szie);
+        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
     }
     String retval;
     ocl::Program p(ocl::imgproc::linearPolar_oclsrc, buildOptions, retval);
@@ -4661,7 +4674,7 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
 
     }
     size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
-    size_t localThreads[2] = { mem_szie , mem_szie };
+    size_t localThreads[2] = { mem_size , mem_size };
     k.run(2, globalThreads, localThreads, false);
     remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     return true;
@@ -4685,14 +4698,14 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     size_t w = dsize.width;
     size_t h = dsize.height;
     String buildOptions;
-    unsigned mem_szie = 32;
+    unsigned mem_size = 32;
     if (flags & CV_WARP_INVERSE_MAP)
     {
         buildOptions = "-D InverseMap";
     }
     else
     {
-        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_szie);
+        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
     }
     String retval;
     ocl::Program p(ocl::imgproc::logPolar_oclsrc, buildOptions, retval);
@@ -4730,16 +4743,16 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
         k.args(ocl_mapx, ocl_mapy, ascale, (float)M, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
 
 
-}
+    }
     size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
-    size_t localThreads[2] = { mem_szie , mem_szie };
+    size_t localThreads[2] = { mem_size , mem_size };
     k.run(2, globalThreads, localThreads, false);
     remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     return true;
 }
 #endif
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
 
 typedef IppStatus (CV_STDCALL * ippiRemap)(const void * pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
                                            const Ipp32f* pxMap, int xMapStep, const Ipp32f* pyMap, int yMapStep,
@@ -4759,6 +4772,8 @@ public:
 
     virtual void operator() (const Range & range) const
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         IppiRect srcRoiRect = { 0, 0, src.cols, src.rows };
         Mat dstRoi = dst.rowRange(range);
         IppiSize dstRoiSize = ippiSize(dstRoi.size());
@@ -4771,9 +4786,9 @@ public:
             return;
         }
 
-        if (ippFunc(src.ptr(), ippiSize(src.size()), (int)src.step, srcRoiRect,
+        if (CV_INSTRUMENT_FUN_PTR_CALL_IPP(ippFunc,(src.ptr(), ippiSize(src.size()), (int)src.step, srcRoiRect,
                     map1.ptr<Ipp32f>(), (int)map1.step, map2.ptr<Ipp32f>(), (int)map2.step,
-                    dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, ippInterpolation) < 0)
+                    dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, ippInterpolation)) < 0)
             *ok = false;
         else
         {
@@ -4797,6 +4812,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
                 InputArray _map1, InputArray _map2,
                 int interpolation, int borderType, const Scalar& borderValue )
 {
+    CV_INSTRUMENT_REGION()
+
     static RemapNNFunc nn_tab[] =
     {
         remapNearest<uchar>, remapNearest<schar>, remapNearest<ushort>, remapNearest<short>,
@@ -4847,7 +4864,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         if ((interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_NEAREST) &&
@@ -4939,6 +4956,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                       OutputArray _dstmap1, OutputArray _dstmap2,
                       int dstm1type, bool nninterpolate )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat map1 = _map1.getMat(), map2 = _map2.getMat(), dstmap1, dstmap2;
     Size size = map1.size();
     const Mat *m1 = &map1, *m2 = &map2;
@@ -5588,6 +5607,8 @@ public:
 
     virtual void operator() (const Range& range) const
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         IppiSize srcsize = { src.cols, src.rows };
         IppiRect srcroi = { 0, 0, src.cols, src.rows };
         IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
@@ -5604,8 +5625,8 @@ public:
         }
 
         // Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
-        IppStatus status = func( src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(),
-                                (int)dst.step[0], dstroi, coeffs, mode );
+        IppStatus status = CV_INSTRUMENT_FUN_PTR_CALL_IPP(func,( src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(),
+                                (int)dst.step[0], dstroi, coeffs, mode ));
         if( status < 0)
             *ok = false;
         else
@@ -5767,6 +5788,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
                                  borderValue, OCL_OP_AFFINE))
@@ -6229,6 +6252,8 @@ public:
 
     virtual void operator() (const Range& range) const
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         IppiSize srcsize = {src.cols, src.rows};
         IppiRect srcroi = {0, 0, src.cols, src.rows};
         IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
@@ -6245,7 +6270,7 @@ public:
             }
         }
 
-        IppStatus status = func(src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(), (int)dst.step[0], dstroi, coeffs, mode);
+        IppStatus status = CV_INSTRUMENT_FUN_PTR_CALL_IPP(func,(src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(), (int)dst.step[0], dstroi, coeffs, mode));
         if (status != ippStsNoErr)
             *ok = false;
         else
@@ -6289,6 +6314,8 @@ void warpPerspectve(int src_type,
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                           Size dsize, int flags, int borderType, const Scalar& borderValue )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _src.total() > 0 );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
@@ -6380,6 +6407,8 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
 cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
 {
+    CV_INSTRUMENT_REGION()
+
     angle *= CV_PI/180;
     double alpha = cos(angle)*scale;
     double beta = sin(angle)*scale;
@@ -6423,6 +6452,8 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
  */
 cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.ptr());
     double a[8][8], b[8];
     Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
@@ -6777,6 +6808,8 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
 void cv::logPolar( InputArray _src, OutputArray _dst,
                    Point2f center, double M, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_src.isUMat() && _dst.isUMat(),
         ocl_logPolar(_src, _dst, center, M, flags));
     Mat src_with_border; // don't scope this variable (it holds image data)
@@ -6986,6 +7019,8 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
 void cv::linearPolar( InputArray _src, OutputArray _dst,
                       Point2f center, double maxRadius, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_src.isUMat() && _dst.isUMat(),
         ocl_linearPolar(_src, _dst, center, maxRadius, flags));
     Mat src_with_border; // don't scope this variable (it holds image data)

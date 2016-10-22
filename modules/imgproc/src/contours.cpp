@@ -50,6 +50,27 @@
 static const CvPoint icvCodeDeltas[8] =
     { CvPoint(1, 0), CvPoint(1, -1), CvPoint(0, -1), CvPoint(-1, -1), CvPoint(-1, 0), CvPoint(-1, 1), CvPoint(0, 1), CvPoint(1, 1) };
 
+inline unsigned int trailingZeros(unsigned int value) {
+#if defined(_MSC_VER)
+#if (_MSC_VER < 1500)
+    return _BitScanForward(value);
+#else
+    return _tzcnt_u32(value);
+#endif
+#elif defined(__GNUC__) || defined(__GNUG__)
+    return __builtin_ctz(value);
+#elif defined(__ICC) || defined(__INTEL_COMPILER)
+    return _bit_scan_forward(value);
+#elif defined(__clang__)
+    return llvm.cttz.i32(value, true);
+#else
+    static const int MultiplyDeBruijnBitPosition[32] = {
+        0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
+        31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
+    return MultiplyDeBruijnBitPosition[((uint32_t)((value & -value) * 0x077CB531U)) >> 27];
+#endif
+}
+
 CV_IMPL void
 cvStartReadChainPoints( CvChain * chain, CvChainPtReader * reader )
 {
@@ -285,10 +306,13 @@ cvStartFindContours( void* _img, CvMemStorage* storage,
                                           scanner->cinfo_storage );
     }
 
+    CV_Assert(step >= 0);
+    CV_Assert(size.height >= 1);
+
     /* make zero borders */
     int esz = CV_ELEM_SIZE(mat->type);
     memset( img, 0, size.width*esz );
-    memset( img + step * (size.height - 1), 0, size.width*esz );
+    memset( img + static_cast<size_t>(step) * (size.height - 1), 0, size.width*esz );
 
     img += step;
     for( int y = 1; y < size.height - 1; y++, img += step )
@@ -527,10 +551,8 @@ icvFetchContour( schar                  *ptr,
     {
         s = (s - 1) & 7;
         i1 = i0 + deltas[s];
-        if( *i1 != 0 )
-            break;
     }
-    while( s != s_end );
+    while( *i1 == 0 && s != s_end );
 
     if( s == s_end )            /* single pixel domain */
     {
@@ -631,10 +653,8 @@ icvTraceContour( schar *ptr, int step, schar *stop_ptr, int is_hole )
     {
         s = (s - 1) & 7;
         i1 = i0 + deltas[s];
-        if( *i1 != 0 )
-            break;
     }
-    while( s != s_end );
+    while( *i1 == 0 && s != s_end );
 
     i3 = i0;
 
@@ -644,7 +664,6 @@ icvTraceContour( schar *ptr, int step, schar *stop_ptr, int is_hole )
         /* follow border */
         for( ;; )
         {
-            s_end = s;
 
             for( ;; )
             {
@@ -702,10 +721,8 @@ icvFetchContourEx( schar*               ptr,
     {
         s = (s - 1) & 7;
         i1 = i0 + deltas[s];
-        if( *i1 != 0 )
-            break;
     }
-    while( s != s_end );
+    while( *i1 == 0 && s != s_end );
 
     if( s == s_end )            /* single pixel domain */
     {
@@ -817,10 +834,8 @@ icvTraceContour_32s( int *ptr, int step, int *stop_ptr, int is_hole )
     {
         s = (s - 1) & 7;
         i1 = i0 + deltas[s];
-        if( (*i1 & value_mask) == ccomp_val )
-            break;
     }
-    while( s != s_end );
+    while( (*i1 & value_mask) != ccomp_val && s != s_end );
 
     i3 = i0;
 
@@ -892,10 +907,8 @@ icvFetchContourEx_32s( int*                 ptr,
     {
         s = (s - 1) & 7;
         i1 = i0 + deltas[s];
-        if( (*i1 & value_mask) == ccomp_val )
-            break;
     }
-    while( s != s_end );
+    while( (*i1 & value_mask) != ccomp_val && s != s_end );
 
     if( s == s_end )            /* single pixel domain */
     {
@@ -990,6 +1003,13 @@ cvFindNextContour( CvContourScanner scanner )
 {
     if( !scanner )
         CV_Error( CV_StsNullPtr, "" );
+
+#if CV_SSE2
+    bool haveSIMD = cv::checkHardwareSupport(CPU_SSE2);
+#endif
+
+    CV_Assert(scanner->img_step >= 0);
+
     icvEndProcessContour( scanner );
 
     /* initialize local state */
@@ -1034,13 +1054,60 @@ cvFindNextContour( CvContourScanner scanner )
             }
             else
             {
+#if CV_SSE2
+                if ((p = img[x]) != prev) {
+                    goto _next_contour;
+                } else if (haveSIMD) {
+
+                    __m128i v_prev = _mm_set1_epi8((char)prev);
+                    int v_size = width - 32;
+
+                    for (; x <= v_size; x += 32) {
+                        __m128i v_p1 = _mm_loadu_si128((const __m128i*)(img + x));
+                        __m128i v_p2 = _mm_loadu_si128((const __m128i*)(img + x + 16));
+
+                        __m128i v_cmp1 = _mm_cmpeq_epi8(v_p1, v_prev);
+                        __m128i v_cmp2 = _mm_cmpeq_epi8(v_p2, v_prev);
+
+                        unsigned int mask1 = _mm_movemask_epi8(v_cmp1);
+                        unsigned int mask2 = _mm_movemask_epi8(v_cmp2);
+
+                        mask1 ^= 0x0000ffff;
+                        mask2 ^= 0x0000ffff;
+
+                        if (mask1) {
+                            p = img[(x += trailingZeros(mask1))];
+                            goto _next_contour;
+                        }
+
+                        if (mask2) {
+                            p = img[(x += trailingZeros(mask2 << 16))];
+                            goto _next_contour;
+                        }
+                    }
+
+                    if(x <= width - 16) {
+                        __m128i v_p = _mm_loadu_si128((__m128i*)(img + x));
+
+                        unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_prev)) ^ 0x0000ffff;
+
+                        if (mask) {
+                            p = img[(x += trailingZeros(mask))];
+                            goto _next_contour;
+                        }
+                        x += 16;
+                    }
+                }
+#endif
                 for( ; x < width && (p = img[x]) == prev; x++ )
                     ;
             }
 
             if( x >= width )
                 break;
-
+#if CV_SSE2
+        _next_contour:
+#endif
             {
                 _CvContourInfo *par_info = 0;
                 _CvContourInfo *l_cinfo = 0;
@@ -1064,7 +1131,7 @@ cvFindNextContour( CvContourScanner scanner )
                     is_hole = 1;
                 }
 
-                if( mode == 0 && (is_hole || img0[lnbd.y * step + lnbd.x] > 0) )
+                if( mode == 0 && (is_hole || img0[lnbd.y * static_cast<size_t>(step) + lnbd.x] > 0) )
                     goto resume_scan;
 
                 origin.y = y;
@@ -1078,8 +1145,8 @@ cvFindNextContour( CvContourScanner scanner )
                 else
                 {
                     int lval = (img0_i ?
-                        img0_i[lnbd.y * step_i + lnbd.x] :
-                        (int)img0[lnbd.y * step + lnbd.x]) & 0x7f;
+                        img0_i[lnbd.y * static_cast<size_t>(step_i) + lnbd.x] :
+                        (int)img0[lnbd.y * static_cast<size_t>(step) + lnbd.x]) & 0x7f;
                     _CvContourInfo *cur = scanner->cinfo_table[lval];
 
                     /* find the first bounding contour */
@@ -1091,11 +1158,11 @@ cvFindNextContour( CvContourScanner scanner )
                             if( par_info )
                             {
                                 if( (img0_i &&
-                                     icvTraceContour_32s( img0_i + par_info->origin.y * step_i +
+                                     icvTraceContour_32s( img0_i + par_info->origin.y * static_cast<size_t>(step_i) +
                                                           par_info->origin.x, step_i, img_i + lnbd.x,
                                                           par_info->is_hole ) > 0) ||
                                     (!img0_i &&
-                                     icvTraceContour( img0 + par_info->origin.y * step +
+                                     icvTraceContour( img0 + par_info->origin.y * static_cast<size_t>(step) +
                                                       par_info->origin.x, step, img + lnbd.x,
                                                       par_info->is_hole ) > 0) )
                                     break;
@@ -1275,7 +1342,6 @@ cvEndFindContours( CvContourScanner * _scanner )
 #define ICV_SINGLE                  0
 #define ICV_CONNECTING_ABOVE        1
 #define ICV_CONNECTING_BELOW        -1
-#define ICV_IS_COMPONENT_POINT(val) ((val) != 0)
 
 #define CV_GET_WRITTEN_ELEM( writer ) ((writer).ptr - (writer).seq->elem_size)
 
@@ -1287,6 +1353,105 @@ typedef  struct CvLinkedRunPoint
 }
 CvLinkedRunPoint;
 
+inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j, bool haveSIMD) {
+#if CV_SSE2
+    if (haveSIMD) {
+        __m128i v_zero = _mm_setzero_si128();
+        int v_size = img_size.width - 32;
+
+        for (; j <= v_size; j += 32) {
+            __m128i v_p1 = _mm_loadu_si128((const __m128i*)(src_data + j));
+            __m128i v_p2 = _mm_loadu_si128((const __m128i*)(src_data + j + 16));
+
+            __m128i v_cmp1 = _mm_cmpeq_epi8(v_p1, v_zero);
+            __m128i v_cmp2 = _mm_cmpeq_epi8(v_p2, v_zero);
+
+            unsigned int mask1 = _mm_movemask_epi8(v_cmp1);
+            unsigned int mask2 = _mm_movemask_epi8(v_cmp2);
+
+            mask1 ^= 0x0000ffff;
+            mask2 ^= 0x0000ffff;
+
+            if (mask1) {
+                j += trailingZeros(mask1);
+                return j;
+            }
+
+            if (mask2) {
+                j += trailingZeros(mask2 << 16);
+                return j;
+            }
+        }
+
+        if (j <= img_size.width - 16) {
+            __m128i v_p = _mm_loadu_si128((const __m128i*)(src_data + j));
+
+            unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_zero)) ^ 0x0000ffff;
+
+            if (mask) {
+                j += trailingZeros(mask);
+                return j;
+            }
+            j += 16;
+        }
+    }
+#else
+    CV_UNUSED(haveSIMD);
+#endif
+    for (; j < img_size.width && !src_data[j]; ++j)
+        ;
+    return j;
+}
+
+inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j, bool haveSIMD) {
+#if CV_SSE2
+    if (j < img_size.width && !src_data[j]) {
+        return j;
+    } else if (haveSIMD) {
+        __m128i v_zero = _mm_setzero_si128();
+        int v_size = img_size.width - 32;
+
+        for (; j <= v_size; j += 32) {
+            __m128i v_p1 = _mm_loadu_si128((const __m128i*)(src_data + j));
+            __m128i v_p2 = _mm_loadu_si128((const __m128i*)(src_data + j + 16));
+
+            __m128i v_cmp1 = _mm_cmpeq_epi8(v_p1, v_zero);
+            __m128i v_cmp2 = _mm_cmpeq_epi8(v_p2, v_zero);
+
+            unsigned int mask1 = _mm_movemask_epi8(v_cmp1);
+            unsigned int mask2 = _mm_movemask_epi8(v_cmp2);
+
+            if (mask1) {
+                j += trailingZeros(mask1);
+                return j;
+            }
+
+            if (mask2) {
+                j += trailingZeros(mask2 << 16);
+                return j;
+            }
+        }
+
+        if (j <= img_size.width - 16) {
+            __m128i v_p = _mm_loadu_si128((const __m128i*)(src_data + j));
+
+            unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_zero));
+
+            if (mask) {
+                j += trailingZeros(mask);
+                return j;
+            }
+            j += 16;
+        }
+    }
+#else
+    CV_UNUSED(haveSIMD);
+#endif
+    for (; j < img_size.width && src_data[j]; ++j)
+        ;
+
+    return j;
+}
 
 static int
 icvFindContoursInInterval( const CvArr* src,
@@ -1310,6 +1475,7 @@ icvFindContoursInInterval( const CvArr* src,
     int  lower_total;
     int  upper_total;
     int  all_total;
+    bool haveSIMD = false;
 
     CvSeq*  runs;
     CvLinkedRunPoint  tmp;
@@ -1339,7 +1505,9 @@ icvFindContoursInInterval( const CvArr* src,
 
     if( contourHeaderSize < (int)sizeof(CvContour))
         CV_Error( CV_StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
-
+#if CV_SSE2
+    haveSIMD = cv::checkHardwareSupport(CPU_SSE2);
+#endif
     storage00.reset(cvCreateChildMemStorage(storage));
     storage01.reset(cvCreateChildMemStorage(storage));
 
@@ -1372,8 +1540,8 @@ icvFindContoursInInterval( const CvArr* src,
     tmp_prev = upper_line;
     for( j = 0; j < img_size.width; )
     {
-        for( ; j < img_size.width && !ICV_IS_COMPONENT_POINT(src_data[j]); j++ )
-            ;
+        j = findStartContourPoint(src_data, img_size, j, haveSIMD);
+
         if( j == img_size.width )
             break;
 
@@ -1382,10 +1550,9 @@ icvFindContoursInInterval( const CvArr* src,
         tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         tmp_prev = tmp_prev->next;
 
-        for( ; j < img_size.width && ICV_IS_COMPONENT_POINT(src_data[j]); j++ )
-            ;
+        j = findEndContourPoint(src_data, img_size, j + 1, haveSIMD);
 
-        tmp.pt.x = j-1;
+        tmp.pt.x = j - 1;
         CV_WRITE_SEQ_ELEM( tmp, writer );
         tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         tmp_prev->link = tmp_prev->next;
@@ -1407,8 +1574,8 @@ icvFindContoursInInterval( const CvArr* src,
         all_total = runs->total;
         for( j = 0; j < img_size.width; )
         {
-            for( ; j < img_size.width && !ICV_IS_COMPONENT_POINT(src_data[j]); j++ )
-                ;
+            j = findStartContourPoint(src_data, img_size, j, haveSIMD);
+
             if( j == img_size.width ) break;
 
             tmp.pt.x = j;
@@ -1416,10 +1583,9 @@ icvFindContoursInInterval( const CvArr* src,
             tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
             tmp_prev = tmp_prev->next;
 
-            for( ; j < img_size.width && ICV_IS_COMPONENT_POINT(src_data[j]); j++ )
-                ;
+            j = findEndContourPoint(src_data, img_size, j + 1, haveSIMD);
 
-            tmp.pt.x = j-1;
+            tmp.pt.x = j - 1;
             CV_WRITE_SEQ_ELEM( tmp, writer );
             tmp_prev = tmp_prev->next = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
         }//j
@@ -1704,6 +1870,8 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
 void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
+    CV_INSTRUMENT_REGION()
+
     // Sanity check: output must be of type vector<vector<Point>>
     CV_Assert((_contours.kind() == _InputArray::STD_VECTOR_VECTOR || _contours.kind() == _InputArray::STD_VECTOR_MAT ||
                 _contours.kind() == _InputArray::STD_VECTOR_UMAT));
@@ -1757,6 +1925,8 @@ void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
 void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                        int mode, int method, Point offset)
 {
+    CV_INSTRUMENT_REGION()
+
     findContours(_image, _contours, noArray(), mode, method, offset);
 }
 

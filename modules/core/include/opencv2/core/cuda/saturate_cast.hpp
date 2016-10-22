@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SATURATE_CAST_HPP__
-#define __OPENCV_CUDA_SATURATE_CAST_HPP__
+#ifndef OPENCV_CUDA_SATURATE_CAST_HPP
+#define OPENCV_CUDA_SATURATE_CAST_HPP
 
 #include "common.hpp"
 
@@ -289,4 +289,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif /* __OPENCV_CUDA_SATURATE_CAST_HPP__ */
+#endif /* OPENCV_CUDA_SATURATE_CAST_HPP */

@@ -1275,6 +1275,8 @@ CV_IMPL int
 cvRunHaarClassifierCascade( const CvHaarClassifierCascade* _cascade,
                             CvPoint pt, int start_stage )
 {
+    CV_INSTRUMENT_REGION()
+
     double stage_sum;
     return cvRunHaarClassifierCascadeSum(_cascade, pt, stage_sum, start_stage);
 }
@@ -1308,6 +1310,8 @@ public:
 
     void operator()( const Range& range ) const
     {
+        CV_INSTRUMENT_REGION()
+
         Size winSize0 = cascade->orig_window_size;
         Size winSize(cvRound(winSize0.width*factor), cvRound(winSize0.height*factor));
         int y1 = range.start*stripSize, y2 = std::min(range.end*stripSize, sum1.rows - 1 - winSize0.height);
@@ -1322,10 +1326,10 @@ public:
         if(CV_IPP_CHECK_COND && cascade->hid_cascade->ipp_stages )
         {
             IppiRect iequRect = {equRect.x, equRect.y, equRect.width, equRect.height};
-            ippiRectStdDev_32f_C1R(sum1.ptr<float>(y1), (int)sum1.step,
+            CV_INSTRUMENT_FUN_IPP(ippiRectStdDev_32f_C1R, sum1.ptr<float>(y1), (int)sum1.step,
                                    sqsum1.ptr<double>(y1), (int)sqsum1.step,
                                    norm1->ptr<float>(y1), (int)norm1->step,
-                                   ippiSize(ssz.width, ssz.height), iequRect );
+                                   ippiSize(ssz.width, ssz.height), iequRect);
 
             int positive = (ssz.width/ystep)*((ssz.height + ystep-1)/ystep);
 
@@ -1344,7 +1348,7 @@ public:
 
             for( int j = 0; j < cascade->count; j++ )
             {
-                if( ippiApplyHaarClassifier_32f_C1R(
+                if (CV_INSTRUMENT_FUN_IPP(ippiApplyHaarClassifier_32f_C1R,
                             sum1.ptr<float>(y1), (int)sum1.step,
                             norm1->ptr<float>(y1), (int)norm1->step,
                             mask1->ptr<uchar>(y1), (int)mask1->step,
@@ -1441,6 +1445,8 @@ public:
 
     void operator()( const Range& range ) const
     {
+        CV_INSTRUMENT_REGION()
+
         int iy, startY = range.start, endY = range.end;
         const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
         const int *pq0 = pq[0], *pq1 = pq[1], *pq2 = pq[2], *pq3 = pq[3];
@@ -1500,6 +1506,8 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                      double scaleFactor, int minNeighbors, int flags,
                      CvSize minSize, CvSize maxSize, bool outputRejectLevels )
 {
+    CV_INSTRUMENT_REGION()
+
     const double GROUP_EPS = 0.2;
     CvMat stub, *img = (CvMat*)_img;
     cv::Ptr<CvMat> temp, sum, tilted, sqsum, normImg, sumcanny, imgSmall;

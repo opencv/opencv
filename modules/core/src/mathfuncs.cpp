@@ -51,11 +51,6 @@ namespace cv
 
 typedef void (*MathFunc)(const void* src, void* dst, int len);
 
-static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
-static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
-static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
-static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
-
 #ifdef HAVE_OPENCL
 
 enum { OCL_OP_LOG=0, OCL_OP_EXP=1, OCL_OP_MAG=2, OCL_OP_PHASE_DEGREES=3, OCL_OP_PHASE_RADIANS=4 };
@@ -100,35 +95,14 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
 #endif
 
-float fastAtan2( float y, float x )
-{
-    float ax = std::abs(x), ay = std::abs(y);
-    float a, c, c2;
-    if( ax >= ay )
-    {
-        c = ay/(ax + (float)DBL_EPSILON);
-        c2 = c*c;
-        a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
-    }
-    else
-    {
-        c = ax/(ay + (float)DBL_EPSILON);
-        c2 = c*c;
-        a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
-    }
-    if( x < 0 )
-        a = 180.f - a;
-    if( y < 0 )
-        a = 360.f - a;
-    return a;
-}
-
 /* ************************************************************************** *\
    Fast cube root by Ken Turkowski
    (http://www.worldserver.com/turk/computergraphics/papers.html)
 \* ************************************************************************** */
 float  cubeRoot( float value )
 {
+    CV_INSTRUMENT_REGION()
+
     float fr;
     Cv32suf v, m;
     int ix, s;
@@ -170,6 +144,8 @@ float  cubeRoot( float value )
 
 void magnitude( InputArray src1, InputArray src2, OutputArray dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
     CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
 
@@ -202,9 +178,10 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     }
 }
 
-
 void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegrees )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
     CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
 
@@ -218,19 +195,8 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     const Mat* arrays[] = {&X, &Y, &Angle, 0};
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
-    cv::AutoBuffer<float> _buf;
-    float* buf[2] = {0, 0};
-    int j, k, total = (int)(it.size*cn), blockSize = total;
+    int j, total = (int)(it.size*cn), blockSize = total;
     size_t esz1 = X.elemSize1();
-
-    if( depth == CV_64F )
-    {
-        blockSize = std::min(blockSize, ((BLOCK_SIZE+cn-1)/cn)*cn);
-        _buf.allocate(blockSize*2);
-        buf[0] = _buf;
-        buf[1] = buf[0] + blockSize;
-    }
-
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -240,53 +206,13 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
             {
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *angle = (float*)ptrs[2];
-                hal::fastAtan2( y, x, angle, len, angleInDegrees );
+                hal::fastAtan32f( y, x, angle, len, angleInDegrees );
             }
             else
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[2];
-                k = 0;
-
-#if CV_SSE2
-                if (USE_SSE2)
-                {
-                    for ( ; k <= len - 4; k += 4)
-                    {
-                        __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
-                                                      _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
-                        __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
-                                                      _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
-
-                        _mm_storeu_ps(buf[0] + k, v_dst0);
-                        _mm_storeu_ps(buf[1] + k, v_dst1);
-                    }
-                }
-#endif
-
-                for( ; k < len; k++ )
-                {
-                    buf[0][k] = (float)x[k];
-                    buf[1][k] = (float)y[k];
-                }
-
-                hal::fastAtan2( buf[1], buf[0], buf[0], len, angleInDegrees );
-                k = 0;
-
-#if CV_SSE2
-                if (USE_SSE2)
-                {
-                    for ( ; k <= len - 4; k += 4)
-                    {
-                        __m128 v_src = _mm_loadu_ps(buf[0] + k);
-                        _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
-                        _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
-                    }
-                }
-#endif
-
-                for( ; k < len; k++ )
-                    angle[k] = buf[0][k];
+                hal::fastAtan64f(y, x, angle, len, angleInDegrees);
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -340,6 +266,8 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
 void cartToPolar( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(dst1.isUMat() && dst2.isUMat(),
             ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
 
@@ -353,17 +281,8 @@ void cartToPolar( InputArray src1, InputArray src2,
     const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
     uchar* ptrs[4];
     NAryMatIterator it(arrays, ptrs);
-    cv::AutoBuffer<float> _buf;
-    float* buf[2] = {0, 0};
-    int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
+    int j, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
     size_t esz1 = X.elemSize1();
-
-    if( depth == CV_64F )
-    {
-        _buf.allocate(blockSize*2);
-        buf[0] = _buf;
-        buf[1] = buf[0] + blockSize;
-    }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
@@ -375,55 +294,14 @@ void cartToPolar( InputArray src1, InputArray src2,
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
                 hal::magnitude32f( x, y, mag, len );
-                hal::fastAtan2( y, x, angle, len, angleInDegrees );
+                hal::fastAtan32f( y, x, angle, len, angleInDegrees );
             }
             else
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[3];
-
                 hal::magnitude64f(x, y, (double*)ptrs[2], len);
-                k = 0;
-
-#if CV_SSE2
-                if (USE_SSE2)
-                {
-                    for ( ; k <= len - 4; k += 4)
-                    {
-                        __m128 v_dst0 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(x + k)),
-                                                      _mm_cvtpd_ps(_mm_loadu_pd(x + k + 2)));
-                        __m128 v_dst1 = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(y + k)),
-                                                      _mm_cvtpd_ps(_mm_loadu_pd(y + k + 2)));
-
-                        _mm_storeu_ps(buf[0] + k, v_dst0);
-                        _mm_storeu_ps(buf[1] + k, v_dst1);
-                    }
-                }
-#endif
-
-                for( ; k < len; k++ )
-                {
-                    buf[0][k] = (float)x[k];
-                    buf[1][k] = (float)y[k];
-                }
-
-                hal::fastAtan2( buf[1], buf[0], buf[0], len, angleInDegrees );
-                k = 0;
-
-#if CV_SSE2
-                if (USE_SSE2)
-                {
-                    for ( ; k <= len - 4; k += 4)
-                    {
-                        __m128 v_src = _mm_loadu_ps(buf[0] + k);
-                        _mm_storeu_pd(angle + k, _mm_cvtps_pd(v_src));
-                        _mm_storeu_pd(angle + k + 2, _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8))));
-                    }
-                }
-#endif
-
-                for( ; k < len; k++ )
-                    angle[k] = buf[0][k];
+                hal::fastAtan64f(y, x, angle, len, angleInDegrees);
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -622,6 +500,8 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
 void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
 
@@ -639,14 +519,14 @@ void polarToCart( InputArray src1, InputArray src2,
     {
         if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
         {
-            typedef IppStatus (CV_STDCALL * ippsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
+            typedef IppStatus (CV_STDCALL * IppsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
                                                              void * pDstRe, void * pDstIm, int len);
-            ippsPolarToCart ippFunc =
-            depth == CV_32F ? (ippsPolarToCart)ippsPolarToCart_32f :
-            depth == CV_64F ? (ippsPolarToCart)ippsPolarToCart_64f : 0;
-            CV_Assert(ippFunc != 0);
+            IppsPolarToCart ippsPolarToCart =
+            depth == CV_32F ? (IppsPolarToCart)ippsPolarToCart_32f :
+            depth == CV_64F ? (IppsPolarToCart)ippsPolarToCart_64f : 0;
+            CV_Assert(ippsPolarToCart != 0);
 
-            IppStatus status = ippFunc(Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippsPolarToCart, Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
             if (status >= 0)
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
@@ -748,45 +628,10 @@ void polarToCart( InputArray src1, InputArray src2,
 *                                          E X P                                         *
 \****************************************************************************************/
 
-#ifdef HAVE_IPP
-static void Exp_32f_ipp(const float *x, float *y, int n)
-{
-    CV_IPP_CHECK()
-    {
-        if (0 <= ippsExp_32f_A21(x, y, n))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-    hal::exp32f(x, y, n);
-}
-
-static void Exp_64f_ipp(const double *x, double *y, int n)
-{
-    CV_IPP_CHECK()
-    {
-        if (0 <= ippsExp_64f_A50(x, y, n))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-    hal::exp64f(x, y, n);
-}
-
-#define Exp_32f Exp_32f_ipp
-#define Exp_64f Exp_64f_ipp
-#else
-#define Exp_32f hal::exp32f
-#define Exp_64f hal::exp64f
-#endif
-
-
 void exp( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = _src.depth(), cn = _src.channels();
     CV_Assert( depth == CV_32F || depth == CV_64F );
 
@@ -805,9 +650,9 @@ void exp( InputArray _src, OutputArray _dst )
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
-            Exp_32f((const float*)ptrs[0], (float*)ptrs[1], len);
+            hal::exp32f((const float*)ptrs[0], (float*)ptrs[1], len);
         else
-            Exp_64f((const double*)ptrs[0], (double*)ptrs[1], len);
+            hal::exp64f((const double*)ptrs[0], (double*)ptrs[1], len);
     }
 }
 
@@ -816,44 +661,10 @@ void exp( InputArray _src, OutputArray _dst )
 *                                          L O G                                         *
 \****************************************************************************************/
 
-#ifdef HAVE_IPP
-static void Log_32f_ipp(const float *x, float *y, int n)
-{
-    CV_IPP_CHECK()
-    {
-        if (0 <= ippsLn_32f_A21(x, y, n))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-    hal::log32f(x, y, n);
-}
-
-static void Log_64f_ipp(const double *x, double *y, int n)
-{
-    CV_IPP_CHECK()
-    {
-        if (0 <= ippsLn_64f_A50(x, y, n))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-    hal::log64f(x, y, n);
-}
-
-#define Log_32f Log_32f_ipp
-#define Log_64f Log_64f_ipp
-#else
-#define Log_32f hal::log32f
-#define Log_64f hal::log64f
-#endif
-
 void log( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = _src.depth(), cn = _src.channels();
     CV_Assert( depth == CV_32F || depth == CV_64F );
 
@@ -872,9 +683,9 @@ void log( InputArray _src, OutputArray _dst )
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
-            Log_32f( (const float*)ptrs[0], (float*)ptrs[1], len );
+            hal::log32f( (const float*)ptrs[0], (float*)ptrs[1], len );
         else
-            Log_64f( (const double*)ptrs[0], (double*)ptrs[1], len );
+            hal::log64f( (const double*)ptrs[0], (double*)ptrs[1], len );
     }
 }
 
@@ -1363,6 +1174,8 @@ static void Sqrt_64f(const double* src, double* dst, int n) { hal::sqrt64f(src, 
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
     bool is_ipower = fabs(ipower - power) < DBL_EPSILON;
@@ -1448,12 +1261,12 @@ void pow( InputArray _src, double power, OutputArray _dst )
             {
                 int bsz = std::min(len - j, blockSize);
 
-            #if defined(HAVE_IPP)
+#if defined(HAVE_IPP)
                 CV_IPP_CHECK()
                 {
                     IppStatus status = depth == CV_32F ?
-                    ippsPowx_32f_A21((const float*)ptrs[0], (float)power, (float*)ptrs[1], bsz) :
-                    ippsPowx_64f_A50((const double*)ptrs[0], (double)power, (double*)ptrs[1], bsz);
+                    CV_INSTRUMENT_FUN_IPP(ippsPowx_32f_A21, (const float*)ptrs[0], (float)power, (float*)ptrs[1], bsz) :
+                    CV_INSTRUMENT_FUN_IPP(ippsPowx_64f_A50, (const double*)ptrs[0], (double)power, (double*)ptrs[1], bsz);
 
                     if (status >= 0)
                     {
@@ -1464,7 +1277,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
                     }
                     setIppErrorStatus();
                 }
-            #endif
+#endif
 
                 if( depth == CV_32F )
                 {
@@ -1475,10 +1288,10 @@ void pow( InputArray _src, double power, OutputArray _dst )
                     if( x != x0 )
                         memcpy(x, x0, bsz*esz1);
 
-                    Log_32f(x, y, bsz);
+                    hal::log32f(x, y, bsz);
                     for( k = 0; k < bsz; k++ )
                         y[k] = (float)(y[k]*power);
-                    Exp_32f(y, y, bsz);
+                    hal::exp32f(y, y, bsz);
                     for( k = 0; k < bsz; k++ )
                     {
                         if( x0[k] <= 0 )
@@ -1502,10 +1315,10 @@ void pow( InputArray _src, double power, OutputArray _dst )
                     if( x != x0 )
                         memcpy(x, x0, bsz*esz1);
 
-                    Log_64f(x, y, bsz);
+                    hal::log64f(x, y, bsz);
                     for( k = 0; k < bsz; k++ )
                         y[k] *= power;
-                    Exp_64f(y, y, bsz);
+                    hal::exp64f(y, y, bsz);
 
                     for( k = 0; k < bsz; k++ )
                     {
@@ -1530,6 +1343,8 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
 void sqrt(InputArray a, OutputArray b)
 {
+    CV_INSTRUMENT_REGION()
+
     cv::pow(a, 0.5, b);
 }
 
@@ -1615,6 +1430,8 @@ check_range_function check_range_functions[] =
 
 bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double maxVal)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
 
     if ( src.dims > 2 )
@@ -1752,6 +1569,8 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
 
 void patchNaNs( InputOutputArray _a, double _val )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _a.depth() == CV_32F );
 
     CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
@@ -1917,6 +1736,8 @@ CV_IMPL int cvCheckArr( const CvArr* arr, int flags,
 
 int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 {
+    CV_INSTRUMENT_REGION()
+
     const int n0 = 3;
     Mat coeffs = _coeffs.getMat();
     int ctype = coeffs.type();
@@ -2062,6 +1883,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
    http://en.wikipedia.org/wiki/Durand%E2%80%93Kerner_method */
 double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 {
+    CV_INSTRUMENT_REGION()
+
     typedef Complex<double> C;
 
     double maxDiff = 0;

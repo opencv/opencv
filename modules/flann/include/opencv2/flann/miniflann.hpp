@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef _OPENCV_MINIFLANN_HPP_
-#define _OPENCV_MINIFLANN_HPP_
+#ifndef OPENCV_MINIFLANN_HPP
+#define OPENCV_MINIFLANN_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/flann/defines.h"

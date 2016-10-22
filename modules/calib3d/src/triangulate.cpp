@@ -393,6 +393,8 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
                             InputArray _projPoints1, InputArray _projPoints2,
                             OutputArray _points4D )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat matr1 = _projMatr1.getMat(), matr2 = _projMatr2.getMat();
     Mat points1 = _projPoints1.getMat(), points2 = _projPoints2.getMat();
 
@@ -414,6 +416,8 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
 void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2,
                          OutputArray _newPoints1, OutputArray _newPoints2 )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat F = _F.getMat();
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
 

@@ -22,7 +22,7 @@ libraries. The following modules are available:
 -   **objdetect** - detection of objects and instances of the predefined classes (for example,
     faces, eyes, mugs, people, cars, and so on).
 -   **highgui** - an easy-to-use interface to simple UI capabilities.
--   **videoio** - an easy-to-use interface to video capturing and video codecs.
+-   @ref videoio - an easy-to-use interface to video capturing and video codecs.
 -   **gpu** - GPU-accelerated algorithms from different OpenCV modules.
 -   ... some other helper modules, such as FLANN and Google test wrappers, Python bindings, and
     others.

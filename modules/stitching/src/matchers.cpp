@@ -144,6 +144,8 @@ private:
 
 void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(features1.descriptors.type() == features2.descriptors.type());
     CV_Assert(features2.descriptors.depth() == CV_8U || features2.descriptors.depth() == CV_32F);
 
@@ -212,6 +214,8 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
+    CV_INSTRUMENT_REGION()
+
     matches_info.matches.clear();
 
     ensureSizeIsEnough(features1.descriptors.size(), features1.descriptors.type(), descriptors1_);
@@ -458,6 +462,27 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
     }
 }
 
+AKAZEFeaturesFinder::AKAZEFeaturesFinder(int descriptor_type,
+                                         int descriptor_size,
+                                         int descriptor_channels,
+                                         float threshold,
+                                         int nOctaves,
+                                         int nOctaveLayers,
+                                         int diffusivity)
+{
+    akaze = AKAZE::create(descriptor_type, descriptor_size, descriptor_channels,
+                          threshold, nOctaves, nOctaveLayers, diffusivity);
+}
+
+void AKAZEFeaturesFinder::find(InputArray image, detail::ImageFeatures &features)
+{
+    CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
+    Mat descriptors;
+    UMat uimage = image.getUMat();
+    akaze->detectAndCompute(uimage, UMat(), features.keypoints, descriptors);
+    features.descriptors = descriptors.getUMat(ACCESS_READ);
+}
+
 #ifdef HAVE_OPENCV_XFEATURES2D
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
                                              int num_octaves_descr, int num_layers_descr)
@@ -581,6 +606,8 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
 void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
                                   MatchesInfo &matches_info)
 {
+    CV_INSTRUMENT_REGION()
+
     (*impl_)(features1, features2, matches_info);
 
     // Check if it makes sense to find homography

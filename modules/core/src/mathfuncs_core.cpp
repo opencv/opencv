@@ -42,180 +42,199 @@
 
 #include "precomp.hpp"
 
-#undef HAVE_IPP
+using namespace std;
 
-namespace cv { namespace hal {
+namespace {
 
-///////////////////////////////////// ATAN2 ////////////////////////////////////
 static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
 static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
 static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
 static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
 
-void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
-{
-    int i = 0;
-    float scale = angleInDegrees ? 1 : (float)(CV_PI/180);
+using namespace cv;
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::FastAtan2_32f(Y, X, angle, len, scale))
-        return;
+#if CV_SIMD128
+
+template <typename T>
+struct v_atan
+{
+    typedef V_RegTrait128<T> Trait;
+    typedef typename Trait::reg VT; // vector type
+    enum { WorkWidth = VT::nlanes * 2 };
+
+    v_atan(const T & scale)
+        : s(Trait::all(scale))
+    {
+        eps = Trait::all(DBL_EPSILON);
+        z = Trait::zero();
+        p7 = Trait::all(atan2_p7);
+        p5 = Trait::all(atan2_p5);
+        p3 = Trait::all(atan2_p3);
+        p1 = Trait::all(atan2_p1);
+        val90 = Trait::all(90.f);
+        val180 = Trait::all(180.f);
+        val360 = Trait::all(360.f);
+    }
+
+    inline int operator()(int len, const T * Y, const T * X, T * angle)
+    {
+        int i = 0;
+        const int c = VT::nlanes;
+        for ( ; i <= len - c * 2; i += c * 2)
+        {
+            VT x1 = v_load(X + i);
+            VT x2 = v_load(X + i + c);
+            VT y1 = v_load(Y + i);
+            VT y2 = v_load(Y + i + c);
+            v_store(&angle[i], s * one(x1, y1));
+            v_store(&angle[i + c], s * one(x2, y2));
+        }
+        return i;
+    }
+
+private:
+    inline VT one(VT & x, VT & y)
+    {
+        VT ax = v_abs(x);
+        VT ay = v_abs(y);
+        VT c = v_min(ax, ay) / (v_max(ax, ay) + eps);
+        VT cc = c * c;
+        VT a = (((p7 * cc + p5) * cc + p3) * cc + p1) * c;
+        a = v_select(ax >= ay, a, val90 - a);
+        a = v_select(x < z, val180 - a, a);
+        a = v_select(y < z, val360 - a, a);
+        return a;
+    }
+
+private:
+    VT eps;
+    VT z;
+    VT p7;
+    VT p5;
+    VT p3;
+    VT p1;
+    VT val90;
+    VT val180;
+    VT val360;
+    VT s;
+};
+
+#if !CV_SIMD128_64F
+
+// emulation
+template <>
+struct v_atan<double>
+{
+    v_atan(double scale) : impl(static_cast<float>(scale)) {}
+    inline int operator()(int len, const double * Y, const double * X, double * angle)
+    {
+        int i = 0;
+        const int c = v_atan<float>::WorkWidth;
+        float bufY[c];
+        float bufX[c];
+        float bufA[c];
+        for ( ; i <= len - c ; i += c)
+        {
+            for (int j = 0; j < c; ++j)
+            {
+                bufY[j] = static_cast<float>(Y[i + j]);
+                bufX[j] = static_cast<float>(X[i + j]);
+            }
+            impl(c, bufY, bufX, bufA);
+            for (int j = 0; j < c; ++j)
+            {
+                angle[i + j] = bufA[j];
+            }
+        }
+        return i;
+    }
+private:
+    v_atan<float> impl;
+};
 #endif
 
-#if CV_AVX2
-    Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
-    __m256 eps = _mm256_set1_ps((float)DBL_EPSILON), absmask = _mm256_set1_ps(iabsmask.f);
-    __m256 _90 = _mm256_set1_ps(90.f),  _180 = _mm256_set1_ps(180.f), _360 = _mm256_set1_ps(360.f);
-    __m256 z = _mm256_setzero_ps(),   scale4 = _mm256_set1_ps(scale);
-    __m256 p1 = _mm256_set1_ps(atan2_p1), p3 = _mm256_set1_ps(atan2_p3);
-    __m256 p5 = _mm256_set1_ps(atan2_p5), p7 = _mm256_set1_ps(atan2_p7);
+#endif
 
-    for (; i <= len - 8; i += 8)
+template <typename T>
+static inline T atanImpl(T y, T x)
+{
+    T ax = std::abs(x), ay = std::abs(y);
+    T a, c, c2;
+    if( ax >= ay )
     {
-        __m256 x = _mm256_loadu_ps(X + i), y = _mm256_loadu_ps(Y + i);
-        __m256 ax = _mm256_and_ps(x, absmask), ay = _mm256_and_ps(y, absmask);
-
-        __m256 mask = _mm256_cmp_ps(ax, ay, _CMP_LT_OQ);
-        __m256 tmin = _mm256_min_ps(ax, ay), tmax = _mm256_max_ps(ax, ay);
-        __m256 c = _mm256_div_ps(tmin, _mm256_add_ps(tmax, eps));
-        __m256 c2 = _mm256_mul_ps(c, c);
-        __m256 a = _mm256_mul_ps(c2, p7);
-        a = _mm256_mul_ps(_mm256_add_ps(a, p5), c2);
-        a = _mm256_mul_ps(_mm256_add_ps(a, p3), c2);
-        a = _mm256_mul_ps(_mm256_add_ps(a, p1), c);
-
-        __m256 b = _mm256_sub_ps(_90, a);
-        a = _mm256_xor_ps(a, _mm256_and_ps(_mm256_xor_ps(a, b), mask));
-
-        b = _mm256_sub_ps(_180, a);
-        mask = _mm256_cmp_ps(x, z, _CMP_LT_OQ);
-        a = _mm256_xor_ps(a, _mm256_and_ps(_mm256_xor_ps(a, b), mask));
-
-        b = _mm256_sub_ps(_360, a);
-        mask = _mm256_cmp_ps(y, z, _CMP_LT_OQ);
-        a = _mm256_xor_ps(a, _mm256_and_ps(_mm256_xor_ps(a, b), mask));
-
-        a = _mm256_mul_ps(a, scale4);
-        _mm256_storeu_ps(angle + i, a);
+        c = ay/(ax + static_cast<T>(DBL_EPSILON));
+        c2 = c*c;
+        a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
     }
-#elif CV_SSE2
-    Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
-    __m128 eps = _mm_set1_ps((float)DBL_EPSILON), absmask = _mm_set1_ps(iabsmask.f);
-    __m128 _90 = _mm_set1_ps(90.f), _180 = _mm_set1_ps(180.f), _360 = _mm_set1_ps(360.f);
-    __m128 z = _mm_setzero_ps(), scale4 = _mm_set1_ps(scale);
-    __m128 p1 = _mm_set1_ps(atan2_p1), p3 = _mm_set1_ps(atan2_p3);
-    __m128 p5 = _mm_set1_ps(atan2_p5), p7 = _mm_set1_ps(atan2_p7);
-
-    for( ; i <= len - 4; i += 4 )
+    else
     {
-        __m128 x = _mm_loadu_ps(X + i), y = _mm_loadu_ps(Y + i);
-        __m128 ax = _mm_and_ps(x, absmask), ay = _mm_and_ps(y, absmask);
-        __m128 mask = _mm_cmplt_ps(ax, ay);
-        __m128 tmin = _mm_min_ps(ax, ay), tmax = _mm_max_ps(ax, ay);
-        __m128 c = _mm_div_ps(tmin, _mm_add_ps(tmax, eps));
-        __m128 c2 = _mm_mul_ps(c, c);
-        __m128 a = _mm_mul_ps(c2, p7);
-        a = _mm_mul_ps(_mm_add_ps(a, p5), c2);
-        a = _mm_mul_ps(_mm_add_ps(a, p3), c2);
-        a = _mm_mul_ps(_mm_add_ps(a, p1), c);
-
-        __m128 b = _mm_sub_ps(_90, a);
-        a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
-
-        b = _mm_sub_ps(_180, a);
-        mask = _mm_cmplt_ps(x, z);
-        a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
-
-        b = _mm_sub_ps(_360, a);
-        mask = _mm_cmplt_ps(y, z);
-        a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
-
-        a = _mm_mul_ps(a, scale4);
-        _mm_storeu_ps(angle + i, a);
+        c = ax/(ay + static_cast<T>(DBL_EPSILON));
+        c2 = c*c;
+        a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
     }
-#elif CV_NEON
-    float32x4_t eps = vdupq_n_f32((float)DBL_EPSILON);
-    float32x4_t _90 = vdupq_n_f32(90.f), _180 = vdupq_n_f32(180.f), _360 = vdupq_n_f32(360.f);
-    float32x4_t z = vdupq_n_f32(0.0f), scale4 = vdupq_n_f32(scale);
-    float32x4_t p1 = vdupq_n_f32(atan2_p1), p3 = vdupq_n_f32(atan2_p3);
-    float32x4_t p5 = vdupq_n_f32(atan2_p5), p7 = vdupq_n_f32(atan2_p7);
+    if( x < 0 )
+        a = 180.f - a;
+    if( y < 0 )
+        a = 360.f - a;
+    return a;
+}
 
-    for( ; i <= len - 4; i += 4 )
-    {
-        float32x4_t x = vld1q_f32(X + i), y = vld1q_f32(Y + i);
-        float32x4_t ax = vabsq_f32(x), ay = vabsq_f32(y);
-        float32x4_t tmin = vminq_f32(ax, ay), tmax = vmaxq_f32(ax, ay);
-        float32x4_t c = vmulq_f32(tmin, cv_vrecpq_f32(vaddq_f32(tmax, eps)));
-        float32x4_t c2 = vmulq_f32(c, c);
-        float32x4_t a = vmulq_f32(c2, p7);
-        a = vmulq_f32(vaddq_f32(a, p5), c2);
-        a = vmulq_f32(vaddq_f32(a, p3), c2);
-        a = vmulq_f32(vaddq_f32(a, p1), c);
+template <typename T>
+static inline void atanImpl(const T *Y, const T *X, T *angle, int len, bool angleInDegrees)
+{
+    int i = 0;
+    T scale = angleInDegrees ? 1 : static_cast<T>(CV_PI/180);
 
-        a = vbslq_f32(vcgeq_f32(ax, ay), a, vsubq_f32(_90, a));
-        a = vbslq_f32(vcltq_f32(x, z), vsubq_f32(_180, a), a);
-        a = vbslq_f32(vcltq_f32(y, z), vsubq_f32(_360, a), a);
-
-        vst1q_f32(angle + i, vmulq_f32(a, scale4));
-    }
+#if CV_SIMD128
+    i = v_atan<T>(scale)(len, Y, X, angle);
 #endif
 
     for( ; i < len; i++ )
     {
-        float x = X[i], y = Y[i];
-        float ax = std::abs(x), ay = std::abs(y);
-        float a, c, c2;
-        if( ax >= ay )
-        {
-            c = ay/(ax + (float)DBL_EPSILON);
-            c2 = c*c;
-            a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
-        }
-        else
-        {
-            c = ax/(ay + (float)DBL_EPSILON);
-            c2 = c*c;
-            a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
-        }
-        if( x < 0 )
-            a = 180.f - a;
-        if( y < 0 )
-            a = 360.f - a;
-        angle[i] = (float)(a*scale);
+        angle[i] = atanImpl<T>(Y[i], X[i]) * scale;
     }
 }
 
+} // anonymous::
+
+namespace cv { namespace hal {
+
+///////////////////////////////////// ATAN2 ////////////////////////////////////
+
+void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(fastAtan32f, cv_hal_fastAtan32f, Y, X, angle, len, angleInDegrees);
+    atanImpl<float>(Y, X, angle, len, angleInDegrees);
+}
+
+void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(fastAtan64f, cv_hal_fastAtan64f, Y, X, angle, len, angleInDegrees);
+    atanImpl<double>(Y, X, angle, len, angleInDegrees);
+}
+
+// deprecated
+void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION()
+
+    fastAtan32f(Y, X, angle, len, angleInDegrees);
+}
 
 void magnitude32f(const float* x, const float* y, float* mag, int len)
 {
-#if defined HAVE_IPP
-    CV_IPP_CHECK()
-    {
-        IppStatus status = ippsMagnitude_32f(x, y, mag, len);
-        if (status >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(magnitude32f, cv_hal_magnitude32f, x, y, mag, len);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0);
 
     int i = 0;
 
-#if CV_AVX2
-    for (; i <= len - 16; i += 16)
-    {
-        __m256 x0 = _mm256_loadu_ps(x + i);
-        __m256 y0 = _mm256_loadu_ps(y + i);
-        __m256 x1 = _mm256_loadu_ps(x + i + 8);
-        __m256 y1 = _mm256_loadu_ps(y + i + 8);
-        x0 = _mm256_sqrt_ps(_mm256_fmadd_ps(x0, x0, _mm256_mul_ps(y0, y0)));
-        x1 = _mm256_sqrt_ps(_mm256_fmadd_ps(x1, x1, _mm256_mul_ps(y1, y1)));
-        _mm256_storeu_ps(mag + i, x0);
-        _mm256_storeu_ps(mag + i + 8, x1);
-    }
-#elif CV_SIMD128
+#if CV_SIMD128
     for( ; i <= len - 8; i += 8 )
     {
         v_float32x4 x0 = v_load(x + i), x1 = v_load(x + i + 4);
@@ -236,34 +255,14 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
 
 void magnitude64f(const double* x, const double* y, double* mag, int len)
 {
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        IppStatus status = ippsMagnitude_64f(x, y, mag, len);
-        if (status >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(magnitude64f, cv_hal_magnitude64f, x, y, mag, len);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64f, x, y, mag, len) >= 0);
 
     int i = 0;
 
-#if CV_AVX2
-    for (; i <= len - 8; i += 8)
-    {
-        __m256d x0 = _mm256_loadu_pd(x + i);
-        __m256d y0 = _mm256_loadu_pd(y + i);
-        __m256d x1 = _mm256_loadu_pd(x + i + 4);
-        __m256d y1 = _mm256_loadu_pd(y + i + 4);
-        x0 = _mm256_sqrt_pd(_mm256_fmadd_pd(x0, x0, _mm256_mul_pd(y0, y0)));
-        x1 = _mm256_sqrt_pd(_mm256_fmadd_pd(x1, x1, _mm256_mul_pd(y1, y1)));
-        _mm256_storeu_pd(mag + i, x0);
-        _mm256_storeu_pd(mag + i + 4, x1);
-    }
-#elif CV_SIMD128_64F
+#if CV_SIMD128_64F
     for( ; i <= len - 4; i += 4 )
     {
         v_float64x2 x0 = v_load(x + i), x1 = v_load(x + i + 2);
@@ -285,31 +284,14 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
 
 void invSqrt32f(const float* src, float* dst, int len)
 {
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        if (ippsInvSqrt_32f_A21(src, dst, len) >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(invSqrt32f, cv_hal_invSqrt32f, src, dst, len);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsInvSqrt_32f_A21, src, dst, len) >= 0);
 
     int i = 0;
 
-#if CV_AVX2
-    for (; i <= len - 16; i += 16)
-    {
-        __m256 x0 = _mm256_loadu_ps(src + i);
-        __m256 x1 = _mm256_loadu_ps(src + i + 8);
-        x0 = _mm256_rsqrt_ps(x0);
-        x1 = _mm256_rsqrt_ps(x1);
-        _mm256_storeu_ps(dst + i, x0);
-        _mm256_storeu_ps(dst + i + 8, x1);
-    }
-#elif CV_SIMD128
+#if CV_SIMD128
     for( ; i <= len - 8; i += 8 )
     {
         v_float32x4 t0 = v_load(src + i), t1 = v_load(src + i + 4);
@@ -326,20 +308,14 @@ void invSqrt32f(const float* src, float* dst, int len)
 
 void invSqrt64f(const double* src, double* dst, int len)
 {
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(invSqrt64f, cv_hal_invSqrt64f, src, dst, len);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsInvSqrt_64f_A50, src, dst, len) >= 0);
+
     int i = 0;
 
-#if CV_AVX2
-    __m256d _one = _mm256_set1_pd(1.0);
-    for (; i <= len - 8; i += 8)
-    {
-        __m256d x0 = _mm256_loadu_pd(src + i);
-        __m256d x1 = _mm256_loadu_pd(src + i + 4);
-        x0 = _mm256_div_pd(_one, _mm256_sqrt_pd(x0));
-        x1 = _mm256_div_pd(_one, _mm256_sqrt_pd(x1));
-        _mm256_storeu_pd(dst + i, x0);
-        _mm256_storeu_pd(dst + i + 4, x1);
-    }
-#elif CV_SSE2
+#if CV_SSE2
     __m128d v_1 = _mm_set1_pd(1.0);
     for ( ; i <= len - 2; i += 2)
         _mm_storeu_pd(dst + i, _mm_div_pd(v_1, _mm_sqrt_pd(_mm_loadu_pd(src + i))));
@@ -352,31 +328,14 @@ void invSqrt64f(const double* src, double* dst, int len)
 
 void sqrt32f(const float* src, float* dst, int len)
 {
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        if (ippsSqrt_32f_A21(src, dst, len) >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(sqrt32f, cv_hal_sqrt32f, src, dst, len);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsSqrt_32f_A21, src, dst, len) >= 0);
 
     int i = 0;
 
-#if CV_AVX2
-    for (; i <= len - 16; i += 16)
-    {
-        __m256 x0 = _mm256_loadu_ps(src + i);
-        __m256 x1 = _mm256_loadu_ps(src + i + 8);
-        x0 = _mm256_sqrt_ps(x0);
-        x1 = _mm256_sqrt_ps(x1);
-        _mm256_storeu_ps(dst + i, x0);
-        _mm256_storeu_ps(dst + i + 8, x1);
-    }
-#elif CV_SIMD128
+#if CV_SIMD128
     for( ; i <= len - 8; i += 8 )
     {
         v_float32x4 t0 = v_load(src + i), t1 = v_load(src + i + 4);
@@ -393,31 +352,14 @@ void sqrt32f(const float* src, float* dst, int len)
 
 void sqrt64f(const double* src, double* dst, int len)
 {
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        if (ippsSqrt_64f_A50(src, dst, len) >= 0)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return;
-        }
-        setIppErrorStatus();
-    }
-#endif
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(sqrt64f, cv_hal_sqrt64f, src, dst, len);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsSqrt_64f_A50, src, dst, len) >= 0);
 
     int i = 0;
 
-#if CV_AVX2
-    for (; i <= len - 8; i += 8)
-    {
-        __m256d x0 = _mm256_loadu_pd(src + i);
-        __m256d x1 = _mm256_loadu_pd(src + i + 4);
-        x0 = _mm256_sqrt_pd(x0);
-        x1 = _mm256_sqrt_pd(x1);
-        _mm256_storeu_pd(dst + i, x0);
-        _mm256_storeu_pd(dst + i + 4, x1);
-    }
-#elif CV_SIMD128_64F
+#if CV_SIMD128_64F
     for( ; i <= len - 4; i += 4 )
     {
         v_float64x2 t0 = v_load(src + i), t1 = v_load(src + i + 2);
@@ -534,6 +476,11 @@ static const double exp_max_val = 3000.*(1 << EXPTAB_SCALE); // log10(DBL_MAX) <
 
 void exp32f( const float *_x, float *y, int n )
 {
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(exp32f, cv_hal_exp32f, _x, y, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_32f_A21, _x, y, n) >= 0);
+
     static const float
     A4 = (float)(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
     A3 = (float)(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
@@ -733,6 +680,11 @@ void exp32f( const float *_x, float *y, int n )
 
 void exp64f( const double *_x, double *y, int n )
 {
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(exp64f, cv_hal_exp64f, _x, y, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_64f_A50, _x, y, n) >= 0);
+
     static const double
     A5 = .99999999999999999998285227504999 / EXPPOLY_32F_A0,
     A4 = .69314718055994546743029643825322 / EXPPOLY_32F_A0,
@@ -1175,9 +1127,13 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
 #define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
 static const double ln_2 = 0.69314718055994530941723212145818;
 
-#pragma optimize("", off)
 void log32f( const float *_x, float *y, int n )
 {
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(log32f, cv_hal_log32f, _x, y, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_32f_A21, _x, y, n) >= 0);
+
     static const float shift[] = { 0, -1.f/512 };
     static const float
     A0 = 0.3333333333333333333333333f,
@@ -1322,6 +1278,11 @@ void log32f( const float *_x, float *y, int n )
 
 void log64f( const double *x, double *y, int n )
 {
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(log64f, cv_hal_log64f, x, y, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_64f_A50, x, y, n) >= 0);
+
     static const double shift[] = { 0, -1./512 };
     static const double
     A7 = 1.0,
@@ -1504,7 +1465,6 @@ void log64f( const double *x, double *y, int n )
         y[i] = y0;
     }
 }
-#pragma optimize("", on)
 
 //=============================================================================
 // for compatibility with 3.0
@@ -1560,4 +1520,10 @@ void invSqrt(const double* src, double* dst, int len)
 }
 
 
-}} // cv::hal::
+} // cv::hal::
+} // cv::
+
+float cv::fastAtan2( float y, float x )
+{
+    return atanImpl<float>(y, x);
+}

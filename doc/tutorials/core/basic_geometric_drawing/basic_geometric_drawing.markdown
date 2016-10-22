@@ -47,70 +47,27 @@ Code
 ----
 
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp)
+    @include samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp
 
 Explanation
 -----------
 
--#  Since we plan to draw two examples (an atom and a rook), we have to create 02 images and two
+-#  Since we plan to draw two examples (an atom and a rook), we have to create two images and two
     windows to display them.
-    @code{.cpp}
-    /// Windows names
-    char atom_window[] = "Drawing 1: Atom";
-    char rook_window[] = "Drawing 2: Rook";
+    @snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp create_images
 
-    /// Create black empty images
-    Mat atom_image = Mat::zeros( w, w, CV_8UC3 );
-    Mat rook_image = Mat::zeros( w, w, CV_8UC3 );
-    @endcode
 -#  We created functions to draw different geometric shapes. For instance, to draw the atom we used
     *MyEllipse* and *MyFilledCircle*:
-    @code{.cpp}
-    /// 1. Draw a simple atom:
+    @snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp draw_atom
 
-    /// 1.a. Creating ellipses
-    MyEllipse( atom_image, 90 );
-    MyEllipse( atom_image, 0 );
-    MyEllipse( atom_image, 45 );
-    MyEllipse( atom_image, -45 );
-
-    /// 1.b. Creating circles
-    MyFilledCircle( atom_image, Point( w/2.0, w/2.0) );
-    @endcode
 -#  And to draw the rook we employed *MyLine*, *rectangle* and a *MyPolygon*:
-    @code{.cpp}
-    /// 2. Draw a rook
+    @snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp draw_rook
 
-    /// 2.a. Create a convex polygon
-    MyPolygon( rook_image );
-
-    /// 2.b. Creating rectangles
-    rectangle( rook_image,
-           Point( 0, 7*w/8.0 ),
-           Point( w, w),
-           Scalar( 0, 255, 255 ),
-           -1,
-           8 );
-
-    /// 2.c. Create a few lines
-    MyLine( rook_image, Point( 0, 15*w/16 ), Point( w, 15*w/16 ) );
-    MyLine( rook_image, Point( w/4, 7*w/8 ), Point( w/4, w ) );
-    MyLine( rook_image, Point( w/2, 7*w/8 ), Point( w/2, w ) );
-    MyLine( rook_image, Point( 3*w/4, 7*w/8 ), Point( 3*w/4, w ) );
-    @endcode
 -#  Let's check what is inside each of these functions:
     -   *MyLine*
-        @code{.cpp}
-        void MyLine( Mat img, Point start, Point end )
-        {
-            int thickness = 2;
-            int lineType = 8;
-            line( img, start, end,
-                  Scalar( 0, 0, 0 ),
-                  thickness,
-                  lineType );
-        }
-        @endcode
+        @snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp myline
+
         As we can see, *MyLine* just call the function @ref cv::line , which does the following:
 
         -   Draw a line from Point **start** to Point **end**
@@ -120,95 +77,31 @@ Explanation
         -   The line thickness is set to **thickness** (in this case 2)
         -   The line is a 8-connected one (**lineType** = 8)
     -   *MyEllipse*
-        @code{.cpp}
-        void MyEllipse( Mat img, double angle )
-        {
-            int thickness = 2;
-            int lineType = 8;
+        @snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp myellipse
 
-            ellipse( img,
-               Point( w/2.0, w/2.0 ),
-               Size( w/4.0, w/16.0 ),
-               angle,
-               0,
-               360,
-               Scalar( 255, 0, 0 ),
-               thickness,
-               lineType );
-        }
-        @endcode
         From the code above, we can observe that the function @ref cv::ellipse draws an ellipse such
         that:
 
         -   The ellipse is displayed in the image **img**
-        -   The ellipse center is located in the point **(w/2.0, w/2.0)** and is enclosed in a box
-            of size **(w/4.0, w/16.0)**
+        -   The ellipse center is located in the point **(w/2, w/2)** and is enclosed in a box
+            of size **(w/4, w/16)**
         -   The ellipse is rotated **angle** degrees
         -   The ellipse extends an arc between **0** and **360** degrees
-        -   The color of the figure will be **Scalar( 255, 0, 0)** which means blue in RGB value.
+        -   The color of the figure will be **Scalar( 255, 0, 0)** which means blue in BGR value.
         -   The ellipse's **thickness** is 2.
     -   *MyFilledCircle*
-        @code{.cpp}
-        void MyFilledCircle( Mat img, Point center )
-        {
-            int thickness = -1;
-            int lineType = 8;
+        @snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp myfilledcircle
 
-            circle( img,
-                center,
-                w/32.0,
-                Scalar( 0, 0, 255 ),
-                thickness,
-                lineType );
-        }
-        @endcode
         Similar to the ellipse function, we can observe that *circle* receives as arguments:
 
         -   The image where the circle will be displayed (**img**)
         -   The center of the circle denoted as the Point **center**
-        -   The radius of the circle: **w/32.0**
+        -   The radius of the circle: **w/32**
         -   The color of the circle: **Scalar(0, 0, 255)** which means *Red* in BGR
         -   Since **thickness** = -1, the circle will be drawn filled.
     -   *MyPolygon*
-        @code{.cpp}
-        void MyPolygon( Mat img )
-        {
-            int lineType = 8;
+        @snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp mypolygon
 
-            /* Create some points */
-            Point rook_points[1][20];
-            rook_points[0][0] = Point( w/4.0, 7*w/8.0 );
-            rook_points[0][1] = Point( 3*w/4.0, 7*w/8.0 );
-            rook_points[0][2] = Point( 3*w/4.0, 13*w/16.0 );
-            rook_points[0][3] = Point( 11*w/16.0, 13*w/16.0 );
-            rook_points[0][4] = Point( 19*w/32.0, 3*w/8.0 );
-            rook_points[0][5] = Point( 3*w/4.0, 3*w/8.0 );
-            rook_points[0][6] = Point( 3*w/4.0, w/8.0 );
-            rook_points[0][7] = Point( 26*w/40.0, w/8.0 );
-            rook_points[0][8] = Point( 26*w/40.0, w/4.0 );
-            rook_points[0][9] = Point( 22*w/40.0, w/4.0 );
-            rook_points[0][10] = Point( 22*w/40.0, w/8.0 );
-            rook_points[0][11] = Point( 18*w/40.0, w/8.0 );
-            rook_points[0][12] = Point( 18*w/40.0, w/4.0 );
-            rook_points[0][13] = Point( 14*w/40.0, w/4.0 );
-            rook_points[0][14] = Point( 14*w/40.0, w/8.0 );
-            rook_points[0][15] = Point( w/4.0, w/8.0 );
-            rook_points[0][16] = Point( w/4.0, 3*w/8.0 );
-            rook_points[0][17] = Point( 13*w/32.0, 3*w/8.0 );
-            rook_points[0][18] = Point( 5*w/16.0, 13*w/16.0 );
-            rook_points[0][19] = Point( w/4.0, 13*w/16.0) ;
-
-            const Point* ppt[1] = { rook_points[0] };
-            int npt[] = { 20 };
-
-            fillPoly( img,
-                      ppt,
-                      npt,
-                          1,
-                      Scalar( 255, 255, 255 ),
-                      lineType );
-        }
-        @endcode
         To draw a filled polygon we use the function @ref cv::fillPoly . We note that:
 
         -   The polygon will be drawn on **img**
@@ -218,22 +111,17 @@ Explanation
         -   The color of the polygon is defined by **Scalar( 255, 255, 255)**, which is the BGR
             value for *white*
     -   *rectangle*
-        @code{.cpp}
-        rectangle( rook_image,
-                   Point( 0, 7*w/8.0 ),
-                   Point( w, w),
-                   Scalar( 0, 255, 255 ),
-                   -1, 8 );
-        @endcode
+        @snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp rectangle
+
         Finally we have the @ref cv::rectangle function (we did not create a special function for
         this guy). We note that:
 
         -   The rectangle will be drawn on **rook_image**
-        -   Two opposite vertices of the rectangle are defined by *\* Point( 0, 7*w/8.0 )*\*
+        -   Two opposite vertices of the rectangle are defined by *\* Point( 0, 7*w/8 )*\*
             andPoint( w, w)*\*
         -   The color of the rectangle is given by **Scalar(0, 255, 255)** which is the BGR value
             for *yellow*
-        -   Since the thickness value is given by **-1**, the rectangle will be filled.
+        -   Since the thickness value is given by **FILLED (-1)**, the rectangle will be filled.
 
 Result
 ------

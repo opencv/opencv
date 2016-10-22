@@ -14,12 +14,7 @@
 
 IF(CMAKE_COMPILER_IS_GNUCXX)
 
-    EXEC_PROGRAM(
-        ${CMAKE_CXX_COMPILER}
-        ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
-        OUTPUT_VARIABLE gcc_compiler_version)
-    #MESSAGE("GCC Version: ${gcc_compiler_version}")
-    IF(gcc_compiler_version VERSION_GREATER "4.2.-1" AND gcc_compiler_version VERSION_LESS "6.0.0")
+    IF(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.2.0")
         SET(PCHSupport_FOUND TRUE)
     ENDIF()
 
@@ -67,7 +62,8 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
 
     GET_DIRECTORY_PROPERTY(DIRINC INCLUDE_DIRECTORIES )
     FOREACH(item ${DIRINC})
-        if(item MATCHES "^${OpenCV_SOURCE_DIR}/modules/")
+        ocv_is_opencv_directory(__result ${item})
+        if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
         else()
           LIST(APPEND ${_out_compile_flags} "${_PCH_isystem_prefix}\"${item}\"")
@@ -76,7 +72,8 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
 
     get_target_property(DIRINC ${_PCH_current_target} INCLUDE_DIRECTORIES )
     FOREACH(item ${DIRINC})
-        if(item MATCHES "^${OpenCV_SOURCE_DIR}/modules/")
+        ocv_is_opencv_directory(__result ${item})
+        if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
         else()
           LIST(APPEND ${_out_compile_flags} "${_PCH_isystem_prefix}\"${item}\"")
@@ -92,29 +89,21 @@ ENDMACRO(_PCH_GET_COMPILE_FLAGS)
 
 MACRO(_PCH_WRITE_PCHDEP_CXX _targetName _include_file _dephelp)
 
-    SET(${_dephelp} ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch_dephelp.cxx)
-    IF(CMAKE_HOST_WIN32)
-        ADD_CUSTOM_COMMAND(
-          OUTPUT "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "#include \\\"${_include_file}\\\"" >  "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "int testfunction();"               >> "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "int testfunction()"                >> "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "{"                                 >> "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "    return 0;"                     >> "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "}"                                 >> "${${_dephelp}}"
-          DEPENDS "${_include_file}"
-          )
-    else()
-        ADD_CUSTOM_COMMAND(
-          OUTPUT "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "\\#include \\\"${_include_file}\\\"" >  "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "int testfunction\\(\\)\\;"         >> "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "int testfunction\\(\\)"            >> "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "{"                                 >> "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "    \\return 0\\;"                 >> "${${_dephelp}}"
-          COMMAND ${CMAKE_COMMAND} -E echo "}"                                 >> "${${_dephelp}}"
-          DEPENDS "${_include_file}"
-          )
+    set(${_dephelp} "${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch_dephelp.cxx")
+    set(_content "")
+    if(EXISTS "${_dephelp}")
+      file(READ "${_dephelp}" _content)
+    endif()
+    set(_dummy_str
+"#include \"${_include_file}\"
+int testfunction();
+int testfunction()
+{
+    return 0;
+}
+")
+    if(NOT _content STREQUAL _dummy_str)
+      file(WRITE "${${_dephelp}}" "${_dummy_str}")
     endif()
 
 ENDMACRO(_PCH_WRITE_PCHDEP_CXX )
@@ -289,6 +278,19 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
       DEPENDS ${_targetName}_pch_dephelp
       )
 
+    get_target_property(_sources ${_targetName} SOURCES)
+    foreach(src ${_sources})
+      if(NOT "${src}" MATCHES "\\.mm$")
+        get_source_file_property(oldProps "${src}" COMPILE_FLAGS)
+        if(NOT oldProps)
+          set(newProperties "-include \"${CMAKE_CURRENT_BINARY_DIR}/${_name}\"")
+          set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${newProperties}")
+        else()
+          ocv_debug_message("Skip PCH, flags: ${oldProps} , file: ${src}")
+        endif()
+      endif()
+    endforeach()
+
     ADD_PRECOMPILED_HEADER_TO_TARGET(${_targetName} ${_input}  ${_output} ${_dowarn})
 
 ENDMACRO(ADD_PRECOMPILED_HEADER)
@@ -302,15 +304,7 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 MACRO(GET_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
     if(CMAKE_GENERATOR MATCHES "^Visual.*$")
-        set(_dummy_str "#include \"${_input}\"\n")
-
         set(${_targetName}_pch ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch.cpp)
-        if(EXISTS ${${_targetName}_pch})
-            # Check if contents is the same, if not rewrite
-            # todo
-        else()
-            FILE(WRITE ${${_targetName}_pch} ${_dummy_str})
-        endif()
     endif()
 
 ENDMACRO(GET_NATIVE_PRECOMPILED_HEADER)
@@ -330,16 +324,34 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
         # precompiled is specified at the target level
         # and I don't want to specifiy /F- for each moc/res/ui generated files (using Qt)
 
+        get_target_property(_sources ${_targetName} SOURCES)
+        foreach(src ${_sources})
+          if(NOT "${src}" MATCHES "\\.mm$")
+            get_source_file_property(oldProps "${src}" COMPILE_FLAGS)
+            if(NOT oldProps)
+              set(newProperties "/Yu\"${_input}\" /FI\"${_input}\"")
+              set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${newProperties}")
+            else()
+              ocv_debug_message("Skip PCH, flags: ${oldProps} , file: ${src}")
+            endif()
+          endif()
+        endforeach()
+
+        #also inlude ${oldProps} to have the same compile options
         GET_TARGET_PROPERTY(oldProps ${_targetName} COMPILE_FLAGS)
         if (oldProps MATCHES NOTFOUND)
             SET(oldProps "")
         endif()
-
-        SET(newProperties "${oldProps} /Yu\"${_input}\" /FI\"${_input}\"")
-        SET_TARGET_PROPERTIES(${_targetName} PROPERTIES COMPILE_FLAGS "${newProperties}")
-
-        #also inlude ${oldProps} to have the same compile options
         SET_SOURCE_FILES_PROPERTIES(${${_targetName}_pch} PROPERTIES COMPILE_FLAGS "${oldProps} /Yc\"${_input}\"")
+
+        set(_dummy_str "#include \"${_input}\"\n")
+        set(${_targetName}_pch ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch.cpp)
+        if(EXISTS ${${_targetName}_pch})
+            file(READ "${${_targetName}_pch}" _contents)
+        endif()
+        if(NOT _dummy_str STREQUAL "${_contents}")
+            file(WRITE ${${_targetName}_pch} ${_dummy_str})
+        endif()
 
     elseif (CMAKE_GENERATOR MATCHES Xcode)
 

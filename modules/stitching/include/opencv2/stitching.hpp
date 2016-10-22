@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_STITCHER_HPP__
-#define __OPENCV_STITCHING_STITCHER_HPP__
+#ifndef OPENCV_STITCHING_STITCHER_HPP
+#define OPENCV_STITCHING_STITCHER_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -52,6 +52,12 @@
 #include "opencv2/stitching/detail/seam_finders.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
+
+
+#if defined(Status)
+#  warning Detected X11 'Status' macro definition, it can cause build conflicts. Please, include this header before any X11 headers.
+#endif
+
 
 /**
 @defgroup stitching Images stitching
@@ -254,4 +260,4 @@ CV_EXPORTS_W Ptr<Stitcher> createStitcher(bool try_use_gpu = false);
 
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_STITCHER_HPP__
+#endif // OPENCV_STITCHING_STITCHER_HPP

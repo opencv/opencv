@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_INTRIN_HPP__
-#define __OPENCV_HAL_INTRIN_HPP__
+#ifndef OPENCV_HAL_INTRIN_HPP
+#define OPENCV_HAL_INTRIN_HPP
 
 #include <cmath>
 #include <float.h>
@@ -316,5 +316,99 @@ template <typename T> struct V_SIMD128Traits
 #endif
 
 //! @}
+
+//==================================================================================================
+
+//! @cond IGNORED
+
+namespace cv {
+
+template <typename R> struct V_RegTrait128;
+
+template <> struct V_RegTrait128<uchar> {
+    typedef v_uint8x16 reg;
+    typedef v_uint16x8 w_reg;
+    typedef v_uint32x4 q_reg;
+    typedef v_uint8x16 u_reg;
+    static v_uint8x16 zero() { return v_setzero_u8(); }
+    static v_uint8x16 all(uchar val) { return v_setall_u8(val); }
+};
+
+template <> struct V_RegTrait128<schar> {
+    typedef v_int8x16 reg;
+    typedef v_int16x8 w_reg;
+    typedef v_int32x4 q_reg;
+    typedef v_uint8x16 u_reg;
+    static v_int8x16 zero() { return v_setzero_s8(); }
+    static v_int8x16 all(schar val) { return v_setall_s8(val); }
+};
+
+template <> struct V_RegTrait128<ushort> {
+    typedef v_uint16x8 reg;
+    typedef v_uint32x4 w_reg;
+    typedef v_int16x8 int_reg;
+    typedef v_uint16x8 u_reg;
+    static v_uint16x8 zero() { return v_setzero_u16(); }
+    static v_uint16x8 all(ushort val) { return v_setall_u16(val); }
+};
+
+template <> struct V_RegTrait128<short> {
+    typedef v_int16x8 reg;
+    typedef v_int32x4 w_reg;
+    typedef v_uint16x8 u_reg;
+    static v_int16x8 zero() { return v_setzero_s16(); }
+    static v_int16x8 all(short val) { return v_setall_s16(val); }
+};
+
+template <> struct V_RegTrait128<unsigned> {
+    typedef v_uint32x4 reg;
+    typedef v_uint64x2 w_reg;
+    typedef v_int32x4 int_reg;
+    typedef v_uint32x4 u_reg;
+    static v_uint32x4 zero() { return v_setzero_u32(); }
+    static v_uint32x4 all(unsigned val) { return v_setall_u32(val); }
+};
+
+template <> struct V_RegTrait128<int> {
+    typedef v_int32x4 reg;
+    typedef v_int64x2 w_reg;
+    typedef v_uint32x4 u_reg;
+    static v_int32x4 zero() { return v_setzero_s32(); }
+    static v_int32x4 all(int val) { return v_setall_s32(val); }
+};
+
+template <> struct V_RegTrait128<uint64> {
+    typedef v_uint64x2 reg;
+    static v_uint64x2 zero() { return v_setzero_u64(); }
+    static v_uint64x2 all(uint64 val) { return v_setall_u64(val); }
+};
+
+template <> struct V_RegTrait128<int64> {
+    typedef v_int64x2 reg;
+    static v_int64x2 zero() { return v_setzero_s64(); }
+    static v_int64x2 all(int64 val) { return v_setall_s64(val); }
+};
+
+template <> struct V_RegTrait128<float> {
+    typedef v_float32x4 reg;
+    typedef v_int32x4 int_reg;
+    typedef v_float32x4 u_reg;
+    static v_float32x4 zero() { return v_setzero_f32(); }
+    static v_float32x4 all(float val) { return v_setall_f32(val); }
+};
+
+#if CV_SIMD128_64F
+template <> struct V_RegTrait128<double> {
+    typedef v_float64x2 reg;
+    typedef v_int32x4 int_reg;
+    typedef v_float64x2 u_reg;
+    static v_float64x2 zero() { return v_setzero_f64(); }
+    static v_float64x2 all(double val) { return v_setall_f64(val); }
+};
+#endif
+
+} // cv::
+
+//! @endcond
 
 #endif

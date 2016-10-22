@@ -757,38 +757,36 @@ struct SumSqr_SIMD<uchar, int, int>
 
         int x = 0;
         __m128i v_zero = _mm_setzero_si128(), v_sum = v_zero, v_sqsum = v_zero;
+        const int len_16 = len & ~15;
 
-        for ( ; x <= len - 16; x += 16)
+        for ( ; x <= len_16 - 16; )
         {
-            __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
-            __m128i v_half = _mm_unpacklo_epi8(v_src, v_zero);
-
-            __m128i v_mullo = _mm_mullo_epi16(v_half, v_half);
-            __m128i v_mulhi = _mm_mulhi_epi16(v_half, v_half);
-            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_half, v_zero));
-            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_half, v_zero));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
-
-            v_half = _mm_unpackhi_epi8(v_src, v_zero);
-            v_mullo = _mm_mullo_epi16(v_half, v_half);
-            v_mulhi = _mm_mulhi_epi16(v_half, v_half);
-            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_half, v_zero));
-            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_half, v_zero));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
+            const int len_tmp = min(x + 2048, len_16);
+            __m128i v_sum_tmp = v_zero;
+            for ( ; x <= len_tmp - 16; x += 16)
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
+                __m128i v_half_0 = _mm_unpacklo_epi8(v_src, v_zero);
+                __m128i v_half_1 = _mm_unpackhi_epi8(v_src, v_zero);
+                v_sum_tmp = _mm_add_epi16(v_sum_tmp, _mm_add_epi16(v_half_0, v_half_1));
+                __m128i v_half_2 = _mm_unpacklo_epi16(v_half_0, v_half_1);
+                __m128i v_half_3 = _mm_unpackhi_epi16(v_half_0, v_half_1);
+                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_2, v_half_2));
+                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_3, v_half_3));
+            }
+            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_sum_tmp, v_zero));
+            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_sum_tmp, v_zero));
         }
 
         for ( ; x <= len - 8; x += 8)
         {
             __m128i v_src = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i const *)(src0 + x)), v_zero);
+            __m128i v_half_0 = _mm_unpackhi_epi64(v_src, v_src);
+            __m128i v_sum_tmp = _mm_add_epi16(v_src, v_half_0);
+            __m128i v_half_1 = _mm_unpacklo_epi16(v_src, v_half_0);
 
-            __m128i v_mullo = _mm_mullo_epi16(v_src, v_src);
-            __m128i v_mulhi = _mm_mulhi_epi16(v_src, v_src);
-            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_src, v_zero));
-            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_src, v_zero));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
+            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_sum_tmp, v_zero));
+            v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_1, v_half_1));
         }
 
         int CV_DECL_ALIGNED(16) ar[8];
@@ -816,38 +814,36 @@ struct SumSqr_SIMD<schar, int, int>
 
         int x = 0;
         __m128i v_zero = _mm_setzero_si128(), v_sum = v_zero, v_sqsum = v_zero;
+        const int len_16 = len & ~15;
 
-        for ( ; x <= len - 16; x += 16)
+        for ( ; x <= len_16 - 16; )
         {
-            __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
-            __m128i v_half = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src), 8);
-
-            __m128i v_mullo = _mm_mullo_epi16(v_half, v_half);
-            __m128i v_mulhi = _mm_mulhi_epi16(v_half, v_half);
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_half), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_half), 16));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
-
-            v_half = _mm_srai_epi16(_mm_unpackhi_epi8(v_zero, v_src), 8);
-            v_mullo = _mm_mullo_epi16(v_half, v_half);
-            v_mulhi = _mm_mulhi_epi16(v_half, v_half);
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_half), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_half), 16));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
+            const int len_tmp = min(x + 2048, len_16);
+            __m128i v_sum_tmp = v_zero;
+            for ( ; x <= len_tmp - 16; x += 16)
+            {
+                __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
+                __m128i v_half_0 = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src), 8);
+                __m128i v_half_1 = _mm_srai_epi16(_mm_unpackhi_epi8(v_zero, v_src), 8);
+                v_sum_tmp = _mm_add_epi16(v_sum_tmp, _mm_add_epi16(v_half_0, v_half_1));
+                __m128i v_half_2 = _mm_unpacklo_epi16(v_half_0, v_half_1);
+                __m128i v_half_3 = _mm_unpackhi_epi16(v_half_0, v_half_1);
+                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_2, v_half_2));
+                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_3, v_half_3));
+            }
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_sum_tmp), 16));
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_sum_tmp), 16));
         }
 
         for ( ; x <= len - 8; x += 8)
         {
             __m128i v_src = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _mm_loadl_epi64((__m128i const *)(src0 + x))), 8);
+            __m128i v_half_0 = _mm_unpackhi_epi64(v_src, v_src);
+            __m128i v_sum_tmp = _mm_add_epi16(v_src, v_half_0);
+            __m128i v_half_1 = _mm_unpacklo_epi16(v_src, v_half_0);
 
-            __m128i v_mullo = _mm_mullo_epi16(v_src, v_src);
-            __m128i v_mulhi = _mm_mulhi_epi16(v_src, v_src);
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpacklo_epi16(v_mullo, v_mulhi));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_unpackhi_epi16(v_mullo, v_mulhi));
+            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_sum_tmp), 16));
+            v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_1, v_half_1));
         }
 
         int CV_DECL_ALIGNED(16) ar[8];
@@ -1141,6 +1137,8 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
 #ifdef HAVE_IPP
 static bool ipp_sum(Mat &src, Scalar &_res)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
@@ -1151,12 +1149,12 @@ static bool ipp_sum(Mat &src, Scalar &_res)
         int type = src.type();
         typedef IppStatus (CV_STDCALL* ippiSumFuncHint)(const void*, int, IppiSize, double *, IppHintAlgorithm);
         typedef IppStatus (CV_STDCALL* ippiSumFuncNoHint)(const void*, int, IppiSize, double *);
-        ippiSumFuncHint ippFuncHint =
+        ippiSumFuncHint ippiSumHint =
             type == CV_32FC1 ? (ippiSumFuncHint)ippiSum_32f_C1R :
             type == CV_32FC3 ? (ippiSumFuncHint)ippiSum_32f_C3R :
             type == CV_32FC4 ? (ippiSumFuncHint)ippiSum_32f_C4R :
             0;
-        ippiSumFuncNoHint ippFuncNoHint =
+        ippiSumFuncNoHint ippiSum =
             type == CV_8UC1 ? (ippiSumFuncNoHint)ippiSum_8u_C1R :
             type == CV_8UC3 ? (ippiSumFuncNoHint)ippiSum_8u_C3R :
             type == CV_8UC4 ? (ippiSumFuncNoHint)ippiSum_8u_C4R :
@@ -1167,12 +1165,13 @@ static bool ipp_sum(Mat &src, Scalar &_res)
             type == CV_16SC3 ? (ippiSumFuncNoHint)ippiSum_16s_C3R :
             type == CV_16SC4 ? (ippiSumFuncNoHint)ippiSum_16s_C4R :
             0;
-        CV_Assert(!ippFuncHint || !ippFuncNoHint);
-        if( ippFuncHint || ippFuncNoHint )
+        CV_Assert(!ippiSumHint || !ippiSum);
+        if( ippiSumHint || ippiSum )
         {
             Ipp64f res[4];
-            IppStatus ret = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, res, ippAlgHintAccurate) :
-                            ippFuncNoHint(src.ptr(), (int)src.step[0], sz, res);
+            IppStatus ret = ippiSumHint ?
+                            CV_INSTRUMENT_FUN_IPP(ippiSumHint, src.ptr(), (int)src.step[0], sz, res, ippAlgHintAccurate) :
+                            CV_INSTRUMENT_FUN_IPP(ippiSum, src.ptr(), (int)src.step[0], sz, res);
             if( ret >= 0 )
             {
                 for( int i = 0; i < cn; i++ )
@@ -1192,6 +1191,8 @@ static bool ipp_sum(Mat &src, Scalar &_res)
 
 cv::Scalar cv::sum( InputArray _src )
 {
+    CV_INSTRUMENT_REGION()
+
 #if defined HAVE_OPENCL || defined HAVE_IPP
     Scalar _res;
 #endif
@@ -1303,7 +1304,8 @@ namespace cv {
 
 static bool ipp_countNonZero( Mat &src, int &res )
 {
-#if !defined HAVE_IPP_ICV_ONLY
+    CV_INSTRUMENT_REGION_IPP()
+
     Ipp32s count = 0;
     IppStatus status = ippStsNoErr;
 
@@ -1318,18 +1320,15 @@ static bool ipp_countNonZero( Mat &src, int &res )
     }
 
     if (depth == CV_8U)
-        status = ippiCountInRange_8u_C1R((const Ipp8u *)src.data, srcstep, roiSize, &count, 0, 0);
+        status = CV_INSTRUMENT_FUN_IPP(ippiCountInRange_8u_C1R, (const Ipp8u *)src.data, srcstep, roiSize, &count, 0, 0);
     else if (depth == CV_32F)
-        status = ippiCountInRange_32f_C1R((const Ipp32f *)src.data, srcstep, roiSize, &count, 0, 0);
+        status = CV_INSTRUMENT_FUN_IPP(ippiCountInRange_32f_C1R, (const Ipp32f *)src.data, srcstep, roiSize, &count, 0, 0);
 
     if (status >= 0)
     {
         res = ((Ipp32s)src.total() - count);
         return true;
     }
-#else
-    CV_UNUSED(src); CV_UNUSED(res);
-#endif
     return false;
 }
 }
@@ -1338,6 +1337,8 @@ static bool ipp_countNonZero( Mat &src, int &res )
 
 int cv::countNonZero( InputArray _src )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), cn = CV_MAT_CN(type);
     CV_Assert( cn == 1 );
 
@@ -1373,6 +1374,8 @@ namespace cv
 {
 static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 700
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
@@ -1383,32 +1386,32 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *);
-            ippiMaskMeanFuncC1 ippFuncC1 =
+            ippiMaskMeanFuncC1 ippiMean_C1MR =
             type == CV_8UC1 ? (ippiMaskMeanFuncC1)ippiMean_8u_C1MR :
             type == CV_16UC1 ? (ippiMaskMeanFuncC1)ippiMean_16u_C1MR :
             type == CV_32FC1 ? (ippiMaskMeanFuncC1)ippiMean_32f_C1MR :
             0;
-            if( ippFuncC1 )
+            if( ippiMean_C1MR )
             {
                 Ipp64f res;
-                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &res) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiMean_C1MR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &res) >= 0 )
                 {
                     ret = Scalar(res);
                     return true;
                 }
             }
             typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
-            ippiMaskMeanFuncC3 ippFuncC3 =
+            ippiMaskMeanFuncC3 ippiMean_C3MR =
             type == CV_8UC3 ? (ippiMaskMeanFuncC3)ippiMean_8u_C3CMR :
             type == CV_16UC3 ? (ippiMaskMeanFuncC3)ippiMean_16u_C3CMR :
             type == CV_32FC3 ? (ippiMaskMeanFuncC3)ippiMean_32f_C3CMR :
             0;
-            if( ippFuncC3 )
+            if( ippiMean_C3MR )
             {
                 Ipp64f res1, res2, res3;
-                if( ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 1, &res1) >= 0 &&
-                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 2, &res2) >= 0 &&
-                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 3, &res3) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiMean_C3MR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 1, &res1) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiMean_C3MR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 2, &res2) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiMean_C3MR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 3, &res3) >= 0 )
                 {
                     ret = Scalar(res1, res2, res3);
                     return true;
@@ -1419,12 +1422,12 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
         {
             typedef IppStatus (CV_STDCALL* ippiMeanFuncHint)(const void*, int, IppiSize, double *, IppHintAlgorithm);
             typedef IppStatus (CV_STDCALL* ippiMeanFuncNoHint)(const void*, int, IppiSize, double *);
-            ippiMeanFuncHint ippFuncHint =
+            ippiMeanFuncHint ippiMeanHint =
                 type == CV_32FC1 ? (ippiMeanFuncHint)ippiMean_32f_C1R :
                 type == CV_32FC3 ? (ippiMeanFuncHint)ippiMean_32f_C3R :
                 type == CV_32FC4 ? (ippiMeanFuncHint)ippiMean_32f_C4R :
                 0;
-            ippiMeanFuncNoHint ippFuncNoHint =
+            ippiMeanFuncNoHint ippiMean =
                 type == CV_8UC1 ? (ippiMeanFuncNoHint)ippiMean_8u_C1R :
                 type == CV_8UC3 ? (ippiMeanFuncNoHint)ippiMean_8u_C3R :
                 type == CV_8UC4 ? (ippiMeanFuncNoHint)ippiMean_8u_C4R :
@@ -1436,12 +1439,12 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
                 type == CV_16SC4 ? (ippiMeanFuncNoHint)ippiMean_16s_C4R :
                 0;
             // Make sure only zero or one version of the function pointer is valid
-            CV_Assert(!ippFuncHint || !ippFuncNoHint);
-            if( ippFuncHint || ippFuncNoHint )
+            CV_Assert(!ippiMeanHint || !ippiMean);
+            if( ippiMeanHint || ippiMean )
             {
                 Ipp64f res[4];
-                IppStatus status = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, res, ippAlgHintAccurate) :
-                                ippFuncNoHint(src.ptr(), (int)src.step[0], sz, res);
+                IppStatus status = ippiMeanHint ? CV_INSTRUMENT_FUN_IPP(ippiMeanHint, src.ptr(), (int)src.step[0], sz, res, ippAlgHintAccurate) :
+                                CV_INSTRUMENT_FUN_IPP(ippiMean, src.ptr(), (int)src.step[0], sz, res);
                 if( status >= 0 )
                 {
                     for( int i = 0; i < src.channels(); i++ )
@@ -1461,6 +1464,8 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
 
 cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
@@ -1526,6 +1531,8 @@ namespace cv {
 
 static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION_OPENCL()
+
     bool haveMask = _mask.kind() != _InputArray::NONE;
     int nz = haveMask ? -1 : (int)_src.total();
     Scalar mean, stddev;
@@ -1589,7 +1596,8 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
             k.args(srcarg, src.cols, (int)src.total(), groups, dbarg);
 
         size_t globalsize = groups * wgs;
-        if (!k.run(1, &globalsize, &wgs, false))
+
+        if(!CV_INSTRUMENT_FUN_OPENCL_KERNEL(k.run, 1, &globalsize, &wgs, false))
             return false;
 
         typedef Scalar (* part_sum)(Mat m);
@@ -1645,6 +1653,8 @@ namespace cv
 {
 static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
@@ -1683,29 +1693,29 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *, Ipp64f *);
-            ippiMaskMeanStdDevFuncC1 ippFuncC1 =
+            ippiMaskMeanStdDevFuncC1 ippiMean_StdDev_C1MR =
             type == CV_8UC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_8u_C1MR :
             type == CV_16UC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_16u_C1MR :
             type == CV_32FC1 ? (ippiMaskMeanStdDevFuncC1)ippiMean_StdDev_32f_C1MR :
             0;
-            if( ippFuncC1 )
+            if( ippiMean_StdDev_C1MR )
             {
-                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, pmean, pstddev) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiMean_StdDev_C1MR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, pmean, pstddev) >= 0 )
                 {
                     return true;
                 }
             }
             typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
-            ippiMaskMeanStdDevFuncC3 ippFuncC3 =
+            ippiMaskMeanStdDevFuncC3 ippiMean_StdDev_C3CMR =
             type == CV_8UC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_8u_C3CMR :
             type == CV_16UC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_16u_C3CMR :
             type == CV_32FC3 ? (ippiMaskMeanStdDevFuncC3)ippiMean_StdDev_32f_C3CMR :
             0;
-            if( ippFuncC3 )
+            if( ippiMean_StdDev_C3CMR )
             {
-                if( ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
-                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
-                    ippFuncC3(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiMean_StdDev_C3CMR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiMean_StdDev_C3CMR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiMean_StdDev_C3CMR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
                 {
                     return true;
                 }
@@ -1714,31 +1724,31 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
         else
         {
             typedef IppStatus (CV_STDCALL* ippiMeanStdDevFuncC1)(const void *, int, IppiSize, Ipp64f *, Ipp64f *);
-            ippiMeanStdDevFuncC1 ippFuncC1 =
+            ippiMeanStdDevFuncC1 ippiMean_StdDev_C1R =
             type == CV_8UC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_8u_C1R :
             type == CV_16UC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_16u_C1R :
 #if (IPP_VERSION_X100 >= 810)
             type == CV_32FC1 ? (ippiMeanStdDevFuncC1)ippiMean_StdDev_32f_C1R ://Aug 2013: bug in IPP 7.1, 8.0
 #endif
             0;
-            if( ippFuncC1 )
+            if( ippiMean_StdDev_C1R )
             {
-                if( ippFuncC1(src.ptr(), (int)src.step[0], sz, pmean, pstddev) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiMean_StdDev_C1R, src.ptr(), (int)src.step[0], sz, pmean, pstddev) >= 0 )
                 {
                     return true;
                 }
             }
             typedef IppStatus (CV_STDCALL* ippiMeanStdDevFuncC3)(const void *, int, IppiSize, int, Ipp64f *, Ipp64f *);
-            ippiMeanStdDevFuncC3 ippFuncC3 =
+            ippiMeanStdDevFuncC3 ippiMean_StdDev_C3CR =
             type == CV_8UC3 ? (ippiMeanStdDevFuncC3)ippiMean_StdDev_8u_C3CR :
             type == CV_16UC3 ? (ippiMeanStdDevFuncC3)ippiMean_StdDev_16u_C3CR :
             type == CV_32FC3 ? (ippiMeanStdDevFuncC3)ippiMean_StdDev_32f_C3CR :
             0;
-            if( ippFuncC3 )
+            if( ippiMean_StdDev_C3CR )
             {
-                if( ippFuncC3(src.ptr(), (int)src.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
-                    ippFuncC3(src.ptr(), (int)src.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
-                    ippFuncC3(src.ptr(), (int)src.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiMean_StdDev_C3CR, src.ptr(), (int)src.step[0], sz, 1, &pmean[0], &pstddev[0]) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiMean_StdDev_C3CR, src.ptr(), (int)src.step[0], sz, 2, &pmean[1], &pstddev[1]) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiMean_StdDev_C3CR, src.ptr(), (int)src.step[0], sz, 3, &pmean[2], &pstddev[2]) >= 0 )
                 {
                     return true;
                 }
@@ -1755,6 +1765,8 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
@@ -2217,6 +2229,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 #ifdef HAVE_IPP
 static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, Mat &mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 700
     int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     size_t total_size = src.total();
@@ -2231,7 +2245,7 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
                                                                         IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
 
             CV_SUPPRESS_DEPRECATED_START
-            ippiMaskMinMaxIndxFuncC1 ippFuncC1 =
+            ippiMaskMinMaxIndxFuncC1 ippiMinMaxIndx_C1MR =
                 type == CV_8UC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1MR :
 #if IPP_VERSION_X100 < 900
                 type == CV_8SC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1MR :
@@ -2240,11 +2254,11 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
                 type == CV_32FC1 ? (ippiMaskMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1MR : 0;
             CV_SUPPRESS_DEPRECATED_END
 
-            if( ippFuncC1 )
+            if( ippiMinMaxIndx_C1MR )
             {
                 Ipp32f min, max;
                 IppiPoint minp, maxp;
-                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiMinMaxIndx_C1MR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
                 {
                     if( minVal )
                         *minVal = (double)min;
@@ -2271,7 +2285,7 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
             typedef IppStatus (CV_STDCALL* ippiMinMaxIndxFuncC1)(const void *, int, IppiSize, Ipp32f *, Ipp32f *, IppiPoint *, IppiPoint *);
 
             CV_SUPPRESS_DEPRECATED_START
-            ippiMinMaxIndxFuncC1 ippFuncC1 =
+            ippiMinMaxIndxFuncC1 ippiMinMaxIndx_C1R =
 #if IPP_VERSION_X100 != 900 // bug in 9.0.0 avx2 optimization
                 depth == CV_8U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8u_C1R :
 #endif
@@ -2279,17 +2293,19 @@ static bool ipp_minMaxIdx( Mat &src, double* minVal, double* maxVal, int* minIdx
                 depth == CV_8S ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_8s_C1R :
 #endif
                 depth == CV_16U ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_16u_C1R :
-#if !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
+#if IPP_DISABLE_BLOCK && !((defined _MSC_VER && defined _M_IX86) || defined __i386__)
+                // See bug #4955: the function fails with SEGFAULT when the source matrix contains NANs
+                // IPPICV version is 9.0.1.
                 depth == CV_32F ? (ippiMinMaxIndxFuncC1)ippiMinMaxIndx_32f_C1R :
 #endif
                 0;
             CV_SUPPRESS_DEPRECATED_END
 
-            if( ippFuncC1 )
+            if( ippiMinMaxIndx_C1R )
             {
                 Ipp32f min, max;
                 IppiPoint minp, maxp;
-                if( ippFuncC1(src.ptr(), (int)src.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiMinMaxIndx_C1R, src.ptr(), (int)src.step[0], sz, &min, &max, &minp, &maxp) >= 0 )
                 {
                     if( minVal )
                         *minVal = (double)min;
@@ -2323,6 +2339,8 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                    double* maxVal, int* minIdx, int* maxIdx,
                    InputArray _mask)
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
@@ -2385,6 +2403,8 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
                     Point* minLoc, Point* maxLoc, InputArray mask )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(_img.dims() <= 2);
 
     minMaxIdx(_img, minVal, maxVal, (int*)minLoc, (int*)maxLoc, mask);
@@ -2664,6 +2684,8 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 #ifdef HAVE_IPP
 static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
     size_t total_size = src.total();
@@ -2679,7 +2701,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *);
-            ippiMaskNormFuncC1 ippFuncC1 =
+            ippiMaskNormFuncC1 ippiNorm_C1MR =
                 normType == NORM_INF ?
                 (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_8u_C1MR :
 #if IPP_VERSION_X100 < 900
@@ -2704,10 +2726,10 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                 type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_32f_C1MR :
                 0) : 0;
-            if( ippFuncC1 )
+            if( ippiNorm_C1MR )
             {
                 Ipp64f norm;
-                if( ippFuncC1(src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiNorm_C1MR, src.ptr(), (int)src.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                 {
                     result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
                     return true;
@@ -2715,31 +2737,37 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
             }
 #if IPP_DISABLE_BLOCK
             typedef IppStatus (CV_STDCALL* ippiMaskNormFuncC3)(const void *, int, const void *, int, IppiSize, int, Ipp64f *);
-            ippiMaskNormFuncC3 ippFuncC3 =
+            ippiMaskNormFuncC3 ippiNorm_C3CMR =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_32f_C3CMR :
                 0) :
             normType == NORM_L1 ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_32f_C3CMR :
                 0) :
             normType == NORM_L2 || normType == NORM_L2SQR ?
                 (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_8u_C3CMR :
+#if IPP_VERSION_X100 < 900
                 type == CV_8SC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_8s_C3CMR :
+#endif
                 type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_32f_C3CMR :
                 0) : 0;
-            if( ippFuncC3 )
+            if( ippiNorm_C3CMR )
             {
                 Ipp64f norm1, norm2, norm3;
-                if( ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 1, &norm1) >= 0 &&
-                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 2, &norm2) >= 0 &&
-                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 3, &norm3) >= 0)
+                if( CV_INSTRUMENT_FUN_IPP(ippiNorm_C3CMR, (src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 1, &norm1)) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiNorm_C3CMR, (src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 2, &norm2)) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiNorm_C3CMR, (src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 3, &norm3)) >= 0)
                 {
                     Ipp64f norm =
                         normType == NORM_INF ? std::max(std::max(norm1, norm2), norm3) :
@@ -2756,7 +2784,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
         {
             typedef IppStatus (CV_STDCALL* ippiNormFuncHint)(const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
             typedef IppStatus (CV_STDCALL* ippiNormFuncNoHint)(const void *, int, IppiSize, Ipp64f *);
-            ippiNormFuncHint ippFuncHint =
+            ippiNormFuncHint ippiNormHint =
                 normType == NORM_L1 ?
                 (type == CV_32FC1 ? (ippiNormFuncHint)ippiNorm_L1_32f_C1R :
                 type == CV_32FC3 ? (ippiNormFuncHint)ippiNorm_L1_32f_C3R :
@@ -2767,7 +2795,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                 type == CV_32FC3 ? (ippiNormFuncHint)ippiNorm_L2_32f_C3R :
                 type == CV_32FC4 ? (ippiNormFuncHint)ippiNorm_L2_32f_C4R :
                 0) : 0;
-            ippiNormFuncNoHint ippFuncNoHint =
+            ippiNormFuncNoHint ippiNorm =
                 normType == NORM_INF ?
                 (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_Inf_8u_C1R :
                 type == CV_8UC3 ? (ippiNormFuncNoHint)ippiNorm_Inf_8u_C3R :
@@ -2807,12 +2835,12 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                 type == CV_16SC4 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C4R :
                 0) : 0;
             // Make sure only zero or one version of the function pointer is valid
-            CV_Assert(!ippFuncHint || !ippFuncNoHint);
-            if( ippFuncHint || ippFuncNoHint )
+            CV_Assert(!ippiNormHint || !ippiNorm);
+            if( ippiNormHint || ippiNorm )
             {
                 Ipp64f norm_array[4];
-                IppStatus ret = ippFuncHint ? ippFuncHint(src.ptr(), (int)src.step[0], sz, norm_array, ippAlgHintAccurate) :
-                                ippFuncNoHint(src.ptr(), (int)src.step[0], sz, norm_array);
+                IppStatus ret = ippiNormHint ? CV_INSTRUMENT_FUN_IPP(ippiNormHint, src.ptr(), (int)src.step[0], sz, norm_array, ippAlgHintAccurate) :
+                                CV_INSTRUMENT_FUN_IPP(ippiNorm, src.ptr(), (int)src.step[0], sz, norm_array);
                 if( ret >= 0 )
                 {
                     Ipp64f norm = (normType == NORM_L2 || normType == NORM_L2SQR) ? norm_array[0] * norm_array[0] : norm_array[0];
@@ -2840,6 +2868,8 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 
 double cv::norm( InputArray _src, int normType, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     normType &= NORM_TYPE_MASK;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
                normType == NORM_L2 || normType == NORM_L2SQR ||
@@ -3060,6 +3090,8 @@ namespace cv
 {
 static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask, double &result)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 700
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
 
@@ -3080,7 +3112,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
             if( !mask.empty() )
             {
                 typedef IppStatus (CV_STDCALL* ippiMaskNormRelFuncC1)(const void *, int, const void *, int, const void *, int, IppiSize, Ipp64f *);
-                ippiMaskNormRelFuncC1 ippFuncC1 =
+                ippiMaskNormRelFuncC1 ippiNormDiff_C1MR =
                     normType == NORM_INF ?
                     (type == CV_8UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_Inf_8u_C1MR :
 #if IPP_VERSION_X100 < 900
@@ -3109,10 +3141,10 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                     type == CV_16UC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_16u_C1MR :
                     type == CV_32FC1 ? (ippiMaskNormRelFuncC1)ippiNormRel_L2_32f_C1MR :
                     0) : 0;
-                if( ippFuncC1 )
+                if( ippiNormDiff_C1MR )
                 {
                     Ipp64f norm;
-                    if( ippFuncC1(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
+                    if( CV_INSTRUMENT_FUN_IPP(ippiNormDiff_C1MR, src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                     {
                         result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
                         return true;
@@ -3123,7 +3155,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
             {
                 typedef IppStatus (CV_STDCALL* ippiNormRelFuncNoHint)(const void *, int, const void *, int, IppiSize, Ipp64f *);
                 typedef IppStatus (CV_STDCALL* ippiNormRelFuncHint)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
-                ippiNormRelFuncNoHint ippFuncNoHint =
+                ippiNormRelFuncNoHint ippiNormDiff =
                     normType == NORM_INF ?
                     (type == CV_8UC1 ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_8u_C1R :
                     type == CV_16UC1 ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_16u_C1R :
@@ -3140,26 +3172,26 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                     type == CV_16UC1 ? (ippiNormRelFuncNoHint)ippiNormRel_L2_16u_C1R :
                     type == CV_16SC1 ? (ippiNormRelFuncNoHint)ippiNormRel_L2_16s_C1R :
                     0) : 0;
-                ippiNormRelFuncHint ippFuncHint =
+                ippiNormRelFuncHint ippiNormDiffHint =
                     normType == NORM_L1 ?
                     (type == CV_32FC1 ? (ippiNormRelFuncHint)ippiNormRel_L1_32f_C1R :
                     0) :
                     normType == NORM_L2 || normType == NORM_L2SQR ?
                     (type == CV_32FC1 ? (ippiNormRelFuncHint)ippiNormRel_L2_32f_C1R :
                     0) : 0;
-                if (ippFuncNoHint)
+                if (ippiNormDiff)
                 {
                     Ipp64f norm;
-                    if( ippFuncNoHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm) >= 0 )
+                    if( CV_INSTRUMENT_FUN_IPP(ippiNormDiff, src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm) >= 0 )
                     {
                         result = (double)norm;
                         return true;
                     }
                 }
-                if (ippFuncHint)
+                if (ippiNormDiffHint)
                 {
                     Ipp64f norm;
-                    if( ippFuncHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm, ippAlgHintAccurate) >= 0 )
+                    if( CV_INSTRUMENT_FUN_IPP(ippiNormDiffHint, src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, &norm, ippAlgHintAccurate) >= 0 )
                     {
                         result = (double)norm;
                         return true;
@@ -3187,7 +3219,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC1)(const void *, int, const void *, int, const void *, int, IppiSize, Ipp64f *);
-            ippiMaskNormDiffFuncC1 ippFuncC1 =
+            ippiMaskNormDiffFuncC1 ippiNormDiff_C1MR =
                 normType == NORM_INF ?
                 (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_8u_C1MR :
 #if IPP_VERSION_X100 < 900
@@ -3214,10 +3246,10 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_16u_C1MR :
                 type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_32f_C1MR :
                 0) : 0;
-            if( ippFuncC1 )
+            if( ippiNormDiff_C1MR )
             {
                 Ipp64f norm;
-                if( ippFuncC1(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
+                if( CV_INSTRUMENT_FUN_IPP(ippiNormDiff_C1MR, src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], mask.ptr(), (int)mask.step[0], sz, &norm) >= 0 )
                 {
                     result = (normType == NORM_L2SQR ? (double)(norm * norm) : (double)norm);
                     return true;
@@ -3225,7 +3257,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
             }
 #ifndef __APPLE__
             typedef IppStatus (CV_STDCALL* ippiMaskNormDiffFuncC3)(const void *, int, const void *, int, const void *, int, IppiSize, int, Ipp64f *);
-            ippiMaskNormDiffFuncC3 ippFuncC3 =
+            ippiMaskNormDiffFuncC3 ippiNormDiff_C3CMR =
                 normType == NORM_INF ?
                 (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
 #if IPP_VERSION_X100 < 900
@@ -3250,12 +3282,12 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_32f_C3CMR :
                 0) : 0;
-            if( ippFuncC3 )
+            if( ippiNormDiff_C3CMR )
             {
                 Ipp64f norm1, norm2, norm3;
-                if( ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 1, &norm1) >= 0 &&
-                    ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 2, &norm2) >= 0 &&
-                    ippFuncC3(src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 3, &norm3) >= 0)
+                if( CV_INSTRUMENT_FUN_IPP(ippiNormDiff_C3CMR, src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 1, &norm1) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiNormDiff_C3CMR, src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 2, &norm2) >= 0 &&
+                    CV_INSTRUMENT_FUN_IPP(ippiNormDiff_C3CMR, src1.data, (int)src1.step[0], src2.data, (int)src2.step[0], mask.data, (int)mask.step[0], sz, 3, &norm3) >= 0)
                 {
                     Ipp64f norm =
                         normType == NORM_INF ? std::max(std::max(norm1, norm2), norm3) :
@@ -3272,7 +3304,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
         {
             typedef IppStatus (CV_STDCALL* ippiNormDiffFuncHint)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
             typedef IppStatus (CV_STDCALL* ippiNormDiffFuncNoHint)(const void *, int, const void *, int, IppiSize, Ipp64f *);
-            ippiNormDiffFuncHint ippFuncHint =
+            ippiNormDiffFuncHint ippiNormDiffHint =
                 normType == NORM_L1 ?
                 (type == CV_32FC1 ? (ippiNormDiffFuncHint)ippiNormDiff_L1_32f_C1R :
                 type == CV_32FC3 ? (ippiNormDiffFuncHint)ippiNormDiff_L1_32f_C3R :
@@ -3283,7 +3315,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_32FC3 ? (ippiNormDiffFuncHint)ippiNormDiff_L2_32f_C3R :
                 type == CV_32FC4 ? (ippiNormDiffFuncHint)ippiNormDiff_L2_32f_C4R :
                 0) : 0;
-            ippiNormDiffFuncNoHint ippFuncNoHint =
+            ippiNormDiffFuncNoHint ippiNormDiff =
                 normType == NORM_INF ?
                 (type == CV_8UC1 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C1R :
                 type == CV_8UC3 ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C3R :
@@ -3325,12 +3357,12 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16SC4 ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C4R :
                 0) : 0;
             // Make sure only zero or one version of the function pointer is valid
-            CV_Assert(!ippFuncHint || !ippFuncNoHint);
-            if( ippFuncHint || ippFuncNoHint )
+            CV_Assert(!ippiNormDiffHint || !ippiNormDiff);
+            if( ippiNormDiffHint || ippiNormDiff )
             {
                 Ipp64f norm_array[4];
-                IppStatus ret = ippFuncHint ? ippFuncHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array, ippAlgHintAccurate) :
-                                ippFuncNoHint(src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array);
+                IppStatus ret = ippiNormDiffHint ? CV_INSTRUMENT_FUN_IPP(ippiNormDiffHint, src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array, ippAlgHintAccurate) :
+                                CV_INSTRUMENT_FUN_IPP(ippiNormDiff, src1.ptr(), (int)src1.step[0], src2.ptr(), (int)src2.step[0], sz, norm_array);
                 if( ret >= 0 )
                 {
                     Ipp64f norm = (normType == NORM_L2 || normType == NORM_L2SQR) ? norm_array[0] * norm_array[0] : norm_array[0];
@@ -3359,6 +3391,8 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
 
 double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
 
 #if defined HAVE_OPENCL || defined HAVE_IPP
@@ -3743,6 +3777,8 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                         int normType, int K, InputArray _mask,
                         int update, bool crosscheck )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int type = src1.type();
     CV_Assert( type == src2.type() && src1.cols == src2.cols &&
@@ -3852,6 +3888,8 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
 
 void cv::findNonZero( InputArray _src, OutputArray _idx )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     CV_Assert( src.type() == CV_8UC1 );
     int n = countNonZero(src);
@@ -3878,6 +3916,8 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
 
 double cv::PSNR(InputArray _src1, InputArray _src2)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _src1.depth() == CV_8U );
     double diff = std::sqrt(norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
     return 20*log10(255./(diff+DBL_EPSILON));
@@ -4035,6 +4075,16 @@ static const uchar popCountTable4[] =
     1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
+#if CV_AVX2
+static inline int _mm256_extract_epi32_(__m256i reg, const int i)
+{
+    CV_DECL_ALIGNED(32) int reg_data[8];
+    CV_DbgAssert(0 <= i && i < 8);
+    _mm256_store_si256((__m256i*)reg_data, reg);
+    return reg_data[i];
+}
+#endif
+
 int normHamming(const uchar* a, int n)
 {
     int i = 0;
@@ -4052,6 +4102,27 @@ int normHamming(const uchar* a, int n)
         uint64x2_t bitSet2 = vpaddlq_u32 (bits);
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    }
+#elif CV_AVX2
+    {
+        __m256i _r0 = _mm256_setzero_si256();
+        __m256i _0 = _mm256_setzero_si256();
+        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
+        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
+
+        for(; i <= n - 32; i+= 32)
+        {
+            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
+
+            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_a0, _popcnt_mask));
+            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
+                             _mm256_and_si256(_mm256_srli_epi16(_a0, 4), _popcnt_mask));
+
+            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
+        }
+        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
+        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
 #endif
         for( ; i <= n - 4; i += 4 )
@@ -4081,6 +4152,30 @@ int normHamming(const uchar* a, const uchar* b, int n)
         uint64x2_t bitSet2 = vpaddlq_u32 (bits);
         result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    }
+#elif CV_AVX2
+    {
+        __m256i _r0 = _mm256_setzero_si256();
+        __m256i _0 = _mm256_setzero_si256();
+        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
+        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
+
+        for(; i <= n - 32; i+= 32)
+        {
+            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
+            __m256i _b0 = _mm256_loadu_si256((const __m256i*)(b + i));
+
+            __m256i _xor = _mm256_xor_si256(_a0, _b0);
+
+            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_xor, _popcnt_mask));
+            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
+                             _mm256_and_si256(_mm256_srli_epi16(_xor, 4), _popcnt_mask));
+
+            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
+        }
+        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
+        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
 #endif
         for( ; i <= n - 4; i += 4 )

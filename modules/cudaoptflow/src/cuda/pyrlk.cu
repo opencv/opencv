@@ -344,6 +344,24 @@ namespace pyrlk
         return ret;
     }
 
+    template <typename T>
+    struct DenormalizationFactor
+    {
+        static __device__ __forceinline__ float factor()
+        {
+            return 1.0f;
+        }
+    };
+
+    template <>
+    struct DenormalizationFactor<uchar>
+    {
+        static __device__ __forceinline__ float factor()
+        {
+            return 255.0f;
+        }
+    };
+
     template <int cn, int PATCH_X, int PATCH_Y, bool calcErr, typename T>
     __global__ void sparseKernel(const float2* prevPts, float2* nextPts, uchar* status, float* err, const int level, const int rows, const int cols)
     {
@@ -532,7 +550,7 @@ namespace pyrlk
             nextPts[blockIdx.x] = nextPt;
 
             if (calcErr)
-                err[blockIdx.x] = static_cast<float>(errval) / (cn * c_winSize_x * c_winSize_y);
+                err[blockIdx.x] = static_cast<float>(errval) / (::min(cn, 3) * c_winSize_x * c_winSize_y) * DenormalizationFactor<T>::factor();
         }
     }
 
@@ -725,7 +743,7 @@ namespace pyrlk
             nextPts[blockIdx.x] = nextPt;
 
             if (calcErr)
-                err[blockIdx.x] = static_cast<float>(errval) / (3 * c_winSize_x * c_winSize_y);
+                err[blockIdx.x] = static_cast<float>(errval) / (::min(cn, 3)*c_winSize_x * c_winSize_y);
         }
     } // __global__ void sparseKernel_
 

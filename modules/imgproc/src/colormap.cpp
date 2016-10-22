@@ -492,6 +492,8 @@ namespace colormap
 
     void ColorMap::operator()(InputArray _src, OutputArray _dst) const
     {
+        CV_INSTRUMENT_REGION()
+
         if(_lut.total() != 256)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         Mat src = _src.getMat();

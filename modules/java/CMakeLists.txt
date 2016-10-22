@@ -129,7 +129,7 @@ set(scripts_gen_java "${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_java.py")
 set(scripts_hdr_parser "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
 
 # directory to store temporary files generated on first gen_java.py run
-set(probe_dir "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
+set(probe_dir "${CMAKE_CURRENT_BINARY_DIR}/test_gen")
 
 # handwritten C/C++ and Java sources
 glob_more_specific_sources(H "${CMAKE_CURRENT_SOURCE_DIR}/generator" handwritten_h_sources)
@@ -159,9 +159,18 @@ foreach(module ${OPENCV_JAVA_MODULES})
 
   set(opencv_public_headers_${module} ${module_headers})
   list(APPEND opencv_public_headers ${module_headers})
-  list(APPEND generated_cpp_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp")
+  list(APPEND generated_cpp_sources "${CMAKE_CURRENT_BINARY_DIR}/gen/${module}.cpp")
 
   include_directories("${module_java_dir}/src/cpp")
+
+  foreach(m ${OPENCV_MODULE_opencv_${module}_DEPS})
+    set(common_header_list "${OPENCV_MODULE_${m}_LOCATION}/misc/java/filelist_common")
+    if(EXISTS "${common_header_list}")
+      file(STRINGS "${common_header_list}" __headers)
+      ocv_list_add_prefix(__headers "${OPENCV_MODULE_${m}_LOCATION}/")
+      list(APPEND opencv_java_common_headers_${module} ${__headers})
+    endif()
+  endforeach()
 
   glob_more_specific_sources(H "${module_java_dir}" handwritten_h_sources)
   glob_more_specific_sources(CPP "${module_java_dir}" handwritten_cpp_sources)
@@ -171,11 +180,11 @@ foreach(module ${OPENCV_JAVA_MODULES})
   # first run of gen_java.py (to get list of generated files)
   file(REMOVE_RECURSE "${probe_dir}")
   file(MAKE_DIRECTORY "${probe_dir}")
-  execute_process(COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+  execute_process(COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}} "--common" ${opencv_java_common_headers_${module}}
                   WORKING_DIRECTORY "${probe_dir}"
                   OUTPUT_QUIET ERROR_QUIET)
   file(GLOB_RECURSE generated_java_sources_${module} RELATIVE "${probe_dir}" "${probe_dir}/*.java")
-  ocv_list_add_prefix(generated_java_sources_${module} "${CMAKE_CURRENT_BINARY_DIR}/")
+  ocv_list_add_prefix(generated_java_sources_${module} "${CMAKE_CURRENT_BINARY_DIR}/gen/")
   list(APPEND generated_java_sources ${generated_java_sources_${module}})
 endforeach()
 
@@ -205,13 +214,14 @@ add_cmake_dependencies(${scripts_gen_java} ${scripts_hdr_parser} ${opencv_public
 ######################################################################################################################################
 
 # step 1: generate .cpp/.java from OpenCV headers
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen")
 set(step1_depends "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers})
 foreach(module ${OPENCV_JAVA_MODULES})
   # second run of gen_java.py (at build time)
-  add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
-                     COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
-                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                     DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}}
+  add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/gen/${module}.cpp"
+                     COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}} "--common" ${opencv_java_common_headers_${module}}
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen/"
+                     DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}} ${opencv_java_common_headers_${module}}
                     )
 endforeach()
 
@@ -349,6 +359,7 @@ endif(ANDROID)
 
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable)
 
 ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}

@@ -42,12 +42,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_BASE_HPP__
-#define __OPENCV_CORE_BASE_HPP__
+#ifndef OPENCV_CORE_BASE_HPP
+#define OPENCV_CORE_BASE_HPP
 
 #ifndef __cplusplus
 #  error base.hpp header must be compiled as C++
 #endif
+
+#include "opencv2/opencv_modules.hpp"
 
 #include <climits>
 #include <algorithm>
@@ -686,4 +688,4 @@ CV_EXPORTS void setUseIPP(bool flag);
 
 #include "opencv2/core/neon_utils.hpp"
 
-#endif //__OPENCV_CORE_BASE_HPP__
+#endif //OPENCV_CORE_BASE_HPP

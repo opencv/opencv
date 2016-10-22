@@ -86,7 +86,7 @@ void cvCreateTestSamples( const char* infoname,
                           int invert, int maxintensitydev,
                           double maxxangle, double maxyangle, double maxzangle,
                           int showsamples,
-                          int winwidth, int winheight );
+                          int winwidth, int winheight, double maxscale );
 
 /*
  * cvCreateTrainingSamplesFromInfo

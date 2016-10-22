@@ -420,6 +420,8 @@ void Cloning::localColorChange(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float
 
 void Cloning::illuminationChange(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alpha, float beta)
 {
+    CV_INSTRUMENT_REGION()
+
     computeDerivatives(I,mask,wmask);
 
     arrayProduct(patchGradientX,binaryMaskFloat, patchGradientX);

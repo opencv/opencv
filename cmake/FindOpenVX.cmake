@@ -1,0 +1,32 @@
+ocv_clear_vars(HAVE_OPENVX)
+
+set(OPENVX_ROOT "" CACHE PATH "OpenVX install directory")
+set(OPENVX_LIB_CANDIDATES "openvx;vxu" CACHE STRING "OpenVX library candidates list")
+
+function(find_openvx_libs _found)
+  foreach(one ${OPENVX_LIB_CANDIDATES})
+    find_library(OPENVX_${one}_LIBRARY ${one} PATHS "${OPENVX_ROOT}/lib" "${OPENVX_ROOT}/bin")
+    if(OPENVX_${one}_LIBRARY)
+      list(APPEND _list ${OPENVX_${one}_LIBRARY})
+    endif()
+  endforeach()
+  set(${_found} ${_list} PARENT_SCOPE)
+endfunction()
+
+if(OPENVX_ROOT)
+  find_path(OPENVX_INCLUDE_DIR "VX/vx.h" PATHS "${OPENVX_ROOT}/include" DOC "OpenVX include path")
+  if(NOT DEFINED OPENVX_LIBRARIES)
+    find_openvx_libs(found)
+    if(found)
+      set(OPENVX_LIBRARIES "${found}" CACHE STRING "OpenVX libraries")
+    endif()
+  endif()
+endif()
+
+if(OPENVX_INCLUDE_DIR AND OPENVX_LIBRARIES)
+  set(HAVE_OPENVX TRUE)
+endif()
+
+if(NOT HAVE_OPENVX)
+  ocv_clear_vars(HAVE_OPENVX OPENVX_LIBRARIES OPENVX_INCLUDE_DIR)
+endif()

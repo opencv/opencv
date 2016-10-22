@@ -30,10 +30,8 @@ struct CV_EXPORTS Filter2D
 struct CV_EXPORTS SepFilter2D
 {
     static Ptr<hal::SepFilter2D> create(int stype, int dtype, int ktype,
-                                        uchar * kernelx_data, size_t kernelx_step,
-                                        int kernelx_width, int kernelx_height,
-                                        uchar * kernely_data, size_t kernely_step,
-                                        int kernely_width, int kernely_height,
+                                        uchar * kernelx_data, int kernelx_len,
+                                        uchar * kernely_data, int kernely_len,
                                         int anchor_x, int anchor_y,
                                         double delta, int borderType);
     virtual void apply(uchar * src_data, size_t src_step,
@@ -74,6 +72,115 @@ CV_EXPORTS void warpPerspectve(int src_type,
                                const uchar * src_data, size_t src_step, int src_width, int src_height,
                                uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
                                const double M[9], int interpolation, int borderType, const double borderValue[4]);
+
+CV_EXPORTS void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int scn, int dcn, bool swapBlue);
+
+CV_EXPORTS void cvtBGRtoBGR5x5(const uchar * src_data, size_t src_step,
+                               uchar * dst_data, size_t dst_step,
+                               int width, int height,
+                               int scn, bool swapBlue, int greenBits);
+
+CV_EXPORTS void cvtBGR5x5toBGR(const uchar * src_data, size_t src_step,
+                               uchar * dst_data, size_t dst_step,
+                               int width, int height,
+                               int dcn, bool swapBlue, int greenBits);
+
+CV_EXPORTS void cvtBGRtoGray(const uchar * src_data, size_t src_step,
+                             uchar * dst_data, size_t dst_step,
+                             int width, int height,
+                             int depth, int scn, bool swapBlue);
+
+CV_EXPORTS void cvtGraytoBGR(const uchar * src_data, size_t src_step,
+                             uchar * dst_data, size_t dst_step,
+                             int width, int height,
+                             int depth, int dcn);
+
+CV_EXPORTS void cvtBGR5x5toGray(const uchar * src_data, size_t src_step,
+                                uchar * dst_data, size_t dst_step,
+                                int width, int height,
+                                int greenBits);
+
+CV_EXPORTS void cvtGraytoBGR5x5(const uchar * src_data, size_t src_step,
+                                uchar * dst_data, size_t dst_step,
+                                int width, int height,
+                                int greenBits);
+CV_EXPORTS void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int scn, bool swapBlue, bool isCbCr);
+
+CV_EXPORTS void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int dcn, bool swapBlue, bool isCbCr);
+
+CV_EXPORTS void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int scn, bool swapBlue);
+
+CV_EXPORTS void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int dcn, bool swapBlue);
+
+CV_EXPORTS void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int scn, bool swapBlue, bool isFullRange, bool isHSV);
+
+CV_EXPORTS void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int dcn, bool swapBlue, bool isFullRange, bool isHSV);
+
+CV_EXPORTS void cvtBGRtoLab(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int scn, bool swapBlue, bool isLab, bool srgb);
+
+CV_EXPORTS void cvtLabtoBGR(const uchar * src_data, size_t src_step,
+                            uchar * dst_data, size_t dst_step,
+                            int width, int height,
+                            int depth, int dcn, bool swapBlue, bool isLab, bool srgb);
+
+CV_EXPORTS void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+                                    uchar * dst_data, size_t dst_step,
+                                    int dst_width, int dst_height,
+                                    int dcn, bool swapBlue, int uIdx);
+
+CV_EXPORTS void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+                                      uchar * dst_data, size_t dst_step,
+                                      int dst_width, int dst_height,
+                                      int dcn, bool swapBlue, int uIdx);
+
+CV_EXPORTS void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
+                                      uchar * dst_data, size_t dst_step,
+                                      int width, int height,
+                                      int scn, bool swapBlue, int uIdx);
+
+CV_EXPORTS void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+                                    uchar * dst_data, size_t dst_step,
+                                    int width, int height,
+                                    int dcn, bool swapBlue, int uIdx, int ycn);
+
+CV_EXPORTS void cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step,
+                                        uchar * dst_data, size_t dst_step,
+                                        int width, int height);
+
+CV_EXPORTS void cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step,
+                                        uchar * dst_data, size_t dst_step,
+                                        int width, int height);
+
+CV_EXPORTS void integral(int depth, int sdepth, int sqdepth,
+                         const uchar* src, size_t srcstep,
+                         uchar* sum, size_t sumstep,
+                         uchar* sqsum, size_t sqsumstep,
+                         uchar* tilted, size_t tstep,
+                         int width, int height, int cn);
 
 //! @}
 

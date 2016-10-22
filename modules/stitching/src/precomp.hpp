@@ -99,4 +99,6 @@
 # include "opencv2/stitching/stitching_tegra.hpp"
 #endif
 
+#include "util_log.hpp"
+
 #endif

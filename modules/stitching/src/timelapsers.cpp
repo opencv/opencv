@@ -65,6 +65,8 @@ void Timelapser::initialize(const std::vector<Point> &corners, const std::vector
 
 void Timelapser::process(InputArray _img, InputArray /*_mask*/, Point tl)
 {
+    CV_INSTRUMENT_REGION()
+
     dst_.setTo(Scalar::all(0));
 
     Mat img = _img.getMat();

@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_TRANSFORM_HPP__
-#define __OPENCV_CUDEV_PTR2D_TRANSFORM_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_TRANSFORM_HPP
+#define OPENCV_CUDEV_PTR2D_TRANSFORM_HPP
 
 #include "../common.hpp"
 #include "../grid/copy.hpp"

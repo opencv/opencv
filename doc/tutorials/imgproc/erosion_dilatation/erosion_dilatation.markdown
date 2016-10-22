@@ -44,6 +44,14 @@ Morphological Operations
 
 The background (bright) dilates around the black regions of the letter.
 
+To better grasp the idea and avoid possible confusion, in this another example we have inverted the original
+image such as the object in white is now the letter. We have performed two dilatations with a rectangular
+structuring element of size `3x3`.
+
+![Left image: original image inverted, right image: resulting dilatation](images/Morphology_1_Tutorial_Theory_Dilatation_2.png)
+
+The dilatation makes the object in white bigger.
+
 ### Erosion
 
 -   This operation is the sister of dilation. What this does is to compute a local minimum over the
@@ -56,11 +64,18 @@ The background (bright) dilates around the black regions of the letter.
 
     ![](images/Morphology_1_Tutorial_Theory_Erosion.png)
 
+In the same manner, the corresponding image resulting of the erosion operation on the inverted original image (two erosions
+with a rectangular structuring element of size `3x3`):
+
+![Left image: original image inverted, right image: resulting erosion](images/Morphology_1_Tutorial_Theory_Erosion_2.png)
+
+The erosion makes the object in white smaller.
+
 Code
 ----
 
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp
 
 Explanation
@@ -71,7 +86,7 @@ Explanation
 
     -   Load an image (can be BGR or grayscale)
     -   Create two windows (one for dilation output, the other for erosion)
-    -   Create a set of 02 Trackbars for each operation:
+    -   Create a set of two Trackbars for each operation:
         -   The first trackbar "Element" returns either **erosion_elem** or **dilation_elem**
         -   The second trackbar "Kernel size" return **erosion_size** or **dilation_size** for the
             corresponding operation.
@@ -81,23 +96,8 @@ Explanation
     Let's analyze these two functions:
 
 -#  **erosion:**
-    @code{.cpp}
-    /*  @function Erosion  */
-    void Erosion( int, void* )
-    {
-      int erosion_type;
-      if( erosion_elem == 0 ){ erosion_type = MORPH_RECT; }
-      else if( erosion_elem == 1 ){ erosion_type = MORPH_CROSS; }
-      else if( erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
+    @snippet cpp/tutorial_code/ImgProc/Morphology_1.cpp erosion
 
-      Mat element = getStructuringElement( erosion_type,
-                               Size( 2*erosion_size + 1, 2*erosion_size+1 ),
-                           Point( erosion_size, erosion_size ) );
-      /// Apply the erosion operation
-      erode( src, erosion_dst, element );
-      imshow( "Erosion Demo", erosion_dst );
-    }
-    @endcode
     -   The function that performs the *erosion* operation is @ref cv::erode . As we can see, it
         receives three arguments:
         -   *src*: The source image
@@ -105,11 +105,8 @@ Explanation
         -   *element*: This is the kernel we will use to perform the operation. If we do not
             specify, the default is a simple `3x3` matrix. Otherwise, we can specify its
             shape. For this, we need to use the function cv::getStructuringElement :
-            @code{.cpp}
-            Mat element = getStructuringElement( erosion_type,
-                                          Size( 2*erosion_size + 1, 2*erosion_size+1 ),
-                                          Point( erosion_size, erosion_size ) );
-            @endcode
+            @snippet cpp/tutorial_code/ImgProc/Morphology_1.cpp kernel
+
             We can choose any of three shapes for our kernel:
 
             -   Rectangular box: MORPH_RECT
@@ -129,23 +126,7 @@ Reference for more details.
     The code is below. As you can see, it is completely similar to the snippet of code for **erosion**.
     Here we also have the option of defining our kernel, its anchor point and the size of the operator
     to be used.
-    @code{.cpp}
-    /* @function Dilation */
-    void Dilation( int, void* )
-    {
-      int dilation_type;
-      if( dilation_elem == 0 ){ dilation_type = MORPH_RECT; }
-      else if( dilation_elem == 1 ){ dilation_type = MORPH_CROSS; }
-      else if( dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
-
-      Mat element = getStructuringElement( dilation_type,
-                                           Size( 2*dilation_size + 1, 2*dilation_size+1 ),
-                           Point( dilation_size, dilation_size ) );
-      /// Apply the dilation operation
-      dilate( src, dilation_dst, element );
-      imshow( "Dilation Demo", dilation_dst );
-    }
-    @endcode
+    @snippet cpp/tutorial_code/ImgProc/Morphology_1.cpp dilation
 
 Results
 -------

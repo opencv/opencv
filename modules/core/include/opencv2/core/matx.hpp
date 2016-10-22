@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_MATX_HPP__
-#define __OPENCV_CORE_MATX_HPP__
+#ifndef OPENCV_CORE_MATX_HPP
+#define OPENCV_CORE_MATX_HPP
 
 #ifndef __cplusplus
 #  error matx.hpp header must be compiled as C++
@@ -438,7 +438,7 @@ template<typename _Tp, int m> struct Matx_DetOp
             return p;
         for( int i = 0; i < m; i++ )
             p *= temp(i, i);
-        return 1./p;
+        return p;
     }
 };
 
@@ -1404,4 +1404,4 @@ template<typename _Tp> inline Vec<_Tp, 4>& operator *= (Vec<_Tp, 4>& v1, const V
 
 } // cv
 
-#endif // __OPENCV_CORE_MATX_HPP__
+#endif // OPENCV_CORE_MATX_HPP

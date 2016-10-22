@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_TYPES_HPP__
-#define __OPENCV_VIZ_TYPES_HPP__
+#ifndef OPENCV_VIZ_TYPES_HPP
+#define OPENCV_VIZ_TYPES_HPP
 
 #include <string>
 #include <opencv2/core.hpp>

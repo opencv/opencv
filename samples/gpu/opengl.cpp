@@ -17,10 +17,10 @@
     #include <GL/glu.h>
 #endif
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/cuda.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_IMGCODECS_HPP__
-#define __OPENCV_IMGCODECS_HPP__
+#ifndef OPENCV_IMGCODECS_HPP
+#define OPENCV_IMGCODECS_HPP
 
 #include "opencv2/core.hpp"
 
@@ -84,11 +84,12 @@ enum ImwriteFlags {
        IMWRITE_JPEG_RST_INTERVAL   = 4,  //!< JPEG restart interval, 0 - 65535, default is 0 - no restart.
        IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is 0 - don't use.
        IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is 0 - don't use.
-       IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. Default value is 3.
+       IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. Default value is 3. Also strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY).
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_DEFAULT.
        IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
        IMWRITE_PXM_BINARY          = 32, //!< For PPM, PGM, or PBM, it can be a binary format flag, 0 or 1. Default value is 1.
-       IMWRITE_WEBP_QUALITY        = 64  //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
+       IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
+       IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
      };
 
 //! Imwrite PNG specific flags used to tune the compression algorithm.
@@ -105,6 +106,16 @@ enum ImwritePNGFlags {
        IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY = 2, //!< Use this value to force Huffman encoding only (no string match).
        IMWRITE_PNG_STRATEGY_RLE          = 3, //!< Use this value to limit match distances to one (run-length encoding).
        IMWRITE_PNG_STRATEGY_FIXED        = 4  //!< Using this value prevents the use of dynamic Huffman codes, allowing for a simpler decoder for special applications.
+     };
+
+//! Imwrite PAM specific tupletype flags used to define the 'TUPETYPE' field of a PAM file.
+enum ImwritePAMFlags {
+       IMWRITE_PAM_FORMAT_NULL = 0,
+       IMWRITE_PAM_FORMAT_BLACKANDWHITE = 1,
+       IMWRITE_PAM_FORMAT_GRAYSCALE = 2,
+       IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA = 3,
+       IMWRITE_PAM_FORMAT_RGB = 4,
+       IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
      };
 
 /** @brief Loads an image from a file.
@@ -264,4 +275,4 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
 
 } // cv
 
-#endif //__OPENCV_IMGCODECS_HPP__
+#endif //OPENCV_IMGCODECS_HPP

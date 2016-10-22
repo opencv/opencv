@@ -146,7 +146,7 @@ macro(ipp_detect_version)
           IMPORTED_LOCATION ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
         )
         list(APPEND IPP_LIBRARIES ipp${name})
-        if (NOT BUILD_SHARED_LIBS OR NOT INSTALL_CREATE_DISTRIB)
+        if (NOT BUILD_SHARED_LIBS)
           # CMake doesn't support "install(TARGETS ${IPP_PREFIX}${name} " command with imported targets
           install(FILES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
                   DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
@@ -234,6 +234,12 @@ if(DEFINED ENV{OPENCV_IPP_PATH} AND NOT DEFINED IPPROOT)
   set(IPPROOT "$ENV{OPENCV_IPP_PATH}")
 endif()
 if(NOT DEFINED IPPROOT)
+  if(IOS AND NOT x86_64)
+    # 2016/10: There is an issue with MacOS binary .a file.
+    # It is fat multiarch library, and can't be "merged" multiple times.
+    # So try to ignore i386 version
+    return()
+  endif()
   include("${OpenCV_SOURCE_DIR}/3rdparty/ippicv/downloader.cmake")
   if(DEFINED OPENCV_ICV_PATH)
     set(IPPROOT "${OPENCV_ICV_PATH}")

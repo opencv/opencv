@@ -115,12 +115,13 @@ cvCreateMatHeader( int rows, int cols, int type )
 {
     type = CV_MAT_TYPE(type);
 
-    if( rows < 0 || cols <= 0 )
+    if( rows < 0 || cols < 0 )
         CV_Error( CV_StsBadSize, "Non-positive width or height" );
 
-    int min_step = CV_ELEM_SIZE(type)*cols;
+    int min_step = CV_ELEM_SIZE(type);
     if( min_step <= 0 )
         CV_Error( CV_StsUnsupportedFormat, "Invalid matrix type" );
+    min_step *= cols;
 
     CvMat* arr = (CvMat*)cvAlloc( sizeof(*arr));
 
@@ -148,7 +149,7 @@ cvInitMatHeader( CvMat* arr, int rows, int cols,
     if( (unsigned)CV_MAT_DEPTH(type) > CV_DEPTH_MAX )
         CV_Error( CV_BadNumChannels, "" );
 
-    if( rows < 0 || cols <= 0 )
+    if( rows < 0 || cols < 0 )
         CV_Error( CV_StsBadSize, "Non-positive cols or rows" );
 
     type = CV_MAT_TYPE( type );
@@ -833,6 +834,9 @@ cvCreateData( CvArr* arr )
 
         if( !CvIPL.allocateData )
         {
+            const int64 imageSize_tmp = (int64)img->widthStep*(int64)img->height;
+            if( (int64)img->imageSize != imageSize_tmp )
+                CV_Error( CV_StsNoMem, "Overflow for imageSize" );
             img->imageData = img->imageDataOrigin =
                         (char*)cvAlloc( (size_t)img->imageSize );
         }
@@ -940,7 +944,10 @@ cvSetData( CvArr* arr, void* data, int step )
             img->widthStep = min_step;
         }
 
-        img->imageSize = img->widthStep * img->height;
+        const int64 imageSize_tmp = (int64)img->widthStep*(int64)img->height;
+        img->imageSize = (int)imageSize_tmp;
+        if( (int64)img->imageSize != imageSize_tmp )
+            CV_Error( CV_StsNoMem, "Overflow for imageSize" );
         img->imageData = img->imageDataOrigin = (char*)data;
 
         if( (((int)(size_t)data | step) & 7) == 0 &&
@@ -2957,7 +2964,10 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     image->widthStep = (((image->width * image->nChannels *
          (image->depth & ~IPL_DEPTH_SIGN) + 7)/8)+ align - 1) & (~(align - 1));
     image->origin = origin;
-    image->imageSize = image->widthStep * image->height;
+    const int64 imageSize_tmp = (int64)image->widthStep*(int64)image->height;
+    image->imageSize = (int)imageSize_tmp;
+    if( (int64)image->imageSize != imageSize_tmp )
+        CV_Error( CV_StsNoMem, "Overflow for imageSize" );
 
     return image;
 }

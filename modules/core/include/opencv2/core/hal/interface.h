@@ -158,6 +158,21 @@ typedef signed char schar;
 #define CV_HAL_DFT_IS_INPLACE 1024
 //! @}
 
+//! @name SVD flags
+//! @{
+#define CV_HAL_SVD_NO_UV    1
+#define CV_HAL_SVD_SHORT_UV 2
+#define CV_HAL_SVD_MODIFY_A 4
+#define CV_HAL_SVD_FULL_UV  8
+//! @}
+
+//! @name Gemm flags
+//! @{
+#define CV_HAL_GEMM_1_T 1
+#define CV_HAL_GEMM_2_T 2
+#define CV_HAL_GEMM_3_T 4
+//! @}
+
 //! @}
 
 #endif

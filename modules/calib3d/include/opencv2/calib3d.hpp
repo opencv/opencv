@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CALIB3D_HPP__
-#define __OPENCV_CALIB3D_HPP__
+#ifndef OPENCV_CALIB3D_HPP
+#define OPENCV_CALIB3D_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -96,6 +96,10 @@ u = f_x*x' + c_x \\
 v = f_y*y' + c_y
 \end{array}\f]
 
+The following figure illustrates the pinhole camera model.
+
+![Pinhole camera model](pics/pinhole_camera_model.png)
+
 Real lenses usually have some distortion, mostly radial distortion and slight tangential distortion.
 So, the above model is extended as:
 
@@ -113,6 +117,10 @@ v = f_y*y'' + c_y
 \f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$, \f$k_5\f$, and \f$k_6\f$ are radial distortion coefficients. \f$p_1\f$ and \f$p_2\f$ are
 tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
 coefficients. Higher-order coefficients are not considered in OpenCV.
+
+The next figure shows two common types of radial distortion: barrel distortion (typically \f$ k_1 > 0 \f$ and pincushion distortion (typically \f$ k_1 < 0 \f$).
+
+![](pics/distortion_examples.png)
 
 In some cases the image sensor may be tilted in order to focus an oblique plane in front of the
 camera (Scheimpfug condition). This can be useful for particle image velocimetry (PIV) or
@@ -190,7 +198,7 @@ pattern (every view is described by several 3D-2D point correspondences).
 
     \f[x = Xc_1 \\ y = Xc_2 \\ z = Xc_3\f]
 
-    The pinehole projection coordinates of P is [a; b] where
+    The pinhole projection coordinates of P is [a; b] where
 
     \f[a = x / z \ and \ b = y / z \\ r^2 = a^2 + b^2 \\ \theta = atan(r)\f]
 
@@ -259,6 +267,7 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_FIX_S1_S2_S3_S4     = 0x10000,
        CALIB_TILTED_MODEL        = 0x40000,
        CALIB_FIX_TAUX_TAUY       = 0x80000,
+       CALIB_USE_QR              = 0x100000, //!< use QR instead of SVD decomposition for solving. Faster but potentially less precise
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
@@ -316,7 +325,7 @@ mask values are ignored.
 @param maxIters The maximum number of RANSAC iterations, 2000 is the maximum it can be.
 @param confidence Confidence level, between 0 and 1.
 
-The functions find and return the perspective transformation \f$H\f$ between the source and the
+The function finds and returns the perspective transformation \f$H\f$ between the source and the
 destination planes:
 
 \f[s_i  \vecthree{x'_i}{y'_i}{1} \sim H  \vecthree{x_i}{y_i}{1}\f]
@@ -383,7 +392,7 @@ and a rotation matrix.
 
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles in
 degrees (as the return value) that could be used in OpenGL. Note, there is always more than one
-sequence of rotations about the three principle axes that results in the same orientation of an
+sequence of rotations about the three principal axes that results in the same orientation of an
 object, eg. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angules
 are only one of the possible solutions.
  */
@@ -409,7 +418,7 @@ matrix and the position of a camera.
 
 It optionally returns three rotation matrices, one for each axis, and three Euler angles that could
 be used in OpenGL. Note, there is always more than one sequence of rotations about the three
-principle axes that results in the same orientation of an object, eg. see @cite Slabaugh . Returned
+principal axes that results in the same orientation of an object, eg. see @cite Slabaugh . Returned
 tree rotation matrices and corresponding three Euler angules are only one of the possible solutions.
 
 The function is based on RQDecomp3x3 .
@@ -767,6 +776,14 @@ k-th translation vector (see the next output parameter description) brings the c
 from the model coordinate space (in which object points are specified) to the world coordinate
 space, that is, a real position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 @param tvecs Output vector of translation vectors estimated for each pattern view.
+@param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
+ Order of deviations values:
+\f$(f_x, f_y, c_x, c_y, k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6 , s_1, s_2, s_3,
+ s_4, \tau_x, \tau_y)\f$ If one of parameters is not estimated, it's deviation is equals to zero.
+@param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
+ Order of deviations values: \f$(R_1, T_1, \dotsc , R_M, T_M)\f$ where M is number of pattern views,
+ \f$R_i, T_i\f$ are concatenated 1x3 vectors.
+ @param perViewErrors Output vector of average re-projection errors estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
 -   **CV_CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
@@ -840,6 +857,24 @@ The function returns the final re-projection error.
 
 @sa
    findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
+ */
+CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray stdDeviationsIntrinsics,
+                                     OutputArray stdDeviationsExtrinsics,
+                                     OutputArray perViewErrors,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+/** @overload double calibrateCamera( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray stdDeviations, OutputArray perViewErrors,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) )
  */
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
@@ -1273,8 +1308,8 @@ CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
 be floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
 @param focal focal length of the camera. Note that this function assumes that points1 and points2
-are feature points from cameras with same focal length and principle point.
-@param pp principle point of the camera.
+are feature points from cameras with same focal length and principal point.
+@param pp principal point of the camera.
 @param method Method for computing a fundamental matrix.
 -   **RANSAC** for the RANSAC algorithm.
 -   **LMEDS** for the LMedS algorithm.
@@ -1372,8 +1407,8 @@ floating-point (single or double precision).
 @param R Recovered relative rotation.
 @param t Recoverd relative translation.
 @param focal Focal length of the camera. Note that this function assumes that points1 and points2
-are feature points from cameras with same focal length and principle point.
-@param pp Principle point of the camera.
+are feature points from cameras with same focal length and principal point.
+@param pp principal point of the camera.
 @param mask Input/output mask for inliers in points1 and points2.
 :   If it is not empty, then it marks inliers in points1 and points2 for then given essential
 matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
@@ -1756,15 +1791,16 @@ namespace fisheye
 //! @{
 
     enum{
-        CALIB_USE_INTRINSIC_GUESS   = 1,
-        CALIB_RECOMPUTE_EXTRINSIC   = 2,
-        CALIB_CHECK_COND            = 4,
-        CALIB_FIX_SKEW              = 8,
-        CALIB_FIX_K1                = 16,
-        CALIB_FIX_K2                = 32,
-        CALIB_FIX_K3                = 64,
-        CALIB_FIX_K4                = 128,
-        CALIB_FIX_INTRINSIC         = 256
+        CALIB_USE_INTRINSIC_GUESS   = 1 << 0,
+        CALIB_RECOMPUTE_EXTRINSIC   = 1 << 1,
+        CALIB_CHECK_COND            = 1 << 2,
+        CALIB_FIX_SKEW              = 1 << 3,
+        CALIB_FIX_K1                = 1 << 4,
+        CALIB_FIX_K2                = 1 << 5,
+        CALIB_FIX_K3                = 1 << 6,
+        CALIB_FIX_K4                = 1 << 7,
+        CALIB_FIX_INTRINSIC         = 1 << 8,
+        CALIB_FIX_PRINCIPAL_POINT   = 1 << 9
     };
 
     /** @brief Projects points using fisheye model
@@ -1914,8 +1950,10 @@ namespace fisheye
     of intrinsic optimization.
     -   **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
     -   **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
-    -   **fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay
-    zero.
+    -   **fisheye::CALIB_FIX_K1..fisheye::CALIB_FIX_K4** Selected distortion coefficients
+    are set to zeros and stay zero.
+    -   **fisheye::CALIB_FIX_PRINCIPAL_POINT** The principal point is not changed during the global
+optimization. It stays at the center or at a different location specified when CALIB_USE_INTRINSIC_GUESS is set too.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */
     CV_EXPORTS_W double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,

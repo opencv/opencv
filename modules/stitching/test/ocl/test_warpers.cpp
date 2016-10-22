@@ -55,7 +55,7 @@ struct WarperTestBase :
     UMat usrc, udst, uxmap, uymap;
     Mat K, R;
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size size = randomSize(1, MAX_VALUE);
 
