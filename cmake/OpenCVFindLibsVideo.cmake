@@ -129,9 +129,9 @@ ocv_clear_vars(HAVE_ARAVIS_API)
 if(WITH_ARAVIS)
   find_path(ARAVIS_INCLUDE_PATH "arv.h"
             PATHS /usr/local /var /opt /usr ENV ProgramFiles ENV ProgramW6432
-            PATH_SUFFIXES include "aravis-0.6"
+            PATH_SUFFIXES include "aravis-0.6" "aravis-0.4"
             DOC "The path to Aravis SDK headers")
-  find_library(ARAVIS_LIBRARIES "aravis-0.6")
+  find_library(ARAVIS_LIBRARIES NAMES "aravis-0.6" "aravis-0.4" )
   if(ARAVIS_LIBRARIES AND ARAVIS_INCLUDE_PATH)
     set(HAVE_ARAVIS_API TRUE)
   endif()
