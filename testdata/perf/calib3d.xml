@@ -691,7 +691,6 @@
         3.5308960898112496e+03 3.2622770699157866e+02
         -5.9426185267769813e+02</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---5--SOLVEPNP_UPNP->
  <!-- resumed -->
-
 <TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM->
   <dst>
     <kind>65536</kind>
@@ -836,4 +835,5 @@
       <x>178</x>
       <y>209</y>
       <val>415.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM_3WAY->
+ <!-- resumed -->
 </opencv_storage>

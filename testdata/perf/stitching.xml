@@ -68,359 +68,7 @@
       <cn>2</cn>
       <val>0.</val></rng2></pano_small></stitch_b12--b12---orb->
  <!-- resumed -->
-
-<match_bestOf2Nearest--bestOf2Nearest---surf->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        41 152 606 611</data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        58 141 503 581</data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        0 0 0 0</data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data>
-        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></match_bestOf2Nearest--bestOf2Nearest---surf->
-<match_bestOf2Nearest--bestOf2Nearest---orb->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data></data></val></matches-distance></match_bestOf2Nearest--bestOf2Nearest---orb->
-<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---2->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        41 152 606 611</data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        58 141 503 581</data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        0 0 0 0</data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data>
-        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---2->
-<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---4->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        41 152 606 611</data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        58 141 503 581</data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        0 0 0 0</data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data>
-        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---4->
-<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---6->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        41 152 606 611</data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        58 141 503 581</data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        0 0 0 0</data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data>
-        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---6->
-<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---8->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        41 152 606 611</data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        58 141 503 581</data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data>
-        0 0 0 0</data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data>
-        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---8->
-<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---2->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---2->
-<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---4->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---4->
-<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---6->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---6->
-<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---8->
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>i</dt>
-      <data></data></val></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>0</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---8->
  <!-- resumed -->
-
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--SphericalWarperType->
   <xmap>
     <kind>655360</kind>
@@ -1057,4 +705,417 @@
       <x>3284</x>
       <y>1707</y>
       <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--PlaneWarperType->
+ <!-- resumed -->
+ <!-- resumed -->
+ <!-- resumed -->
+ <!-- resumed -->
+<match_bestOf2Nearest--bestOf2Nearest---surf->
+  <dist>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -2.7793536067739348e+02 5.3488230676776567e+00 1.</data></val></dist>
+  <R>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>2</cols>
+      <dt>d</dt>
+      <data>
+        9.9627406504423899e-01 6.4688775107662726e-03
+        -2.3499833501993842e-03 1.0300483980185959e+00
+        2.2884461978856592e-04 -1.5176756043706527e-05</data></val></R></match_bestOf2Nearest--bestOf2Nearest---surf->
+<match_bestOf2Nearest--bestOf2Nearest---orb->
+  <dist>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -2.7770717331711819e+02 5.5552606124841404e+00 1.</data></val></dist>
+  <R>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>2</cols>
+      <dt>d</dt>
+      <data>
+        9.9709755828169089e-01 1.1360545032881737e-02
+        -2.5571252668792365e-03 1.0278167391175599e+00
+        2.4630266279453605e-04 -1.6795766613481325e-05</data></val></R></match_bestOf2Nearest--bestOf2Nearest---orb->
+<match_affineBestOf2Nearest--affineBestOf2Nearest---surf->
+  <T>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -3.3730315570565688e+02 -2.2525460248619811e+00</data></val></T>
+  <R>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>2</cols>
+      <dt>d</dt>
+      <data>
+        9.4945199218801923e-01 -2.4512127970009456e-03
+        2.4512127970009456e-03 9.4945199218801923e-01</data></val></R></match_affineBestOf2Nearest--affineBestOf2Nearest---surf->
+<match_affineBestOf2Nearest--affineBestOf2Nearest---orb->
+  <T>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -3.3763860620539532e+02 -2.1207532997705814e+00</data></val></T>
+  <R>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>2</cols>
+      <dt>d</dt>
+      <data>
+        9.4888690995733649e-01 -2.6537800546038168e-03
+        2.6537800546038168e-03 9.4888690995733649e-01</data></val></R></match_affineBestOf2Nearest--affineBestOf2Nearest---orb->
+ <!-- resumed -->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--AffineWarperType->
+  <xmap>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>639.</max>
+    <last>
+      <x>639</x>
+      <y>638</y>
+      <val>639.</val></last>
+    <rng1>
+      <x>279</x>
+      <y>369</y>
+      <val>279.</val></rng1>
+    <rng2>
+      <x>333</x>
+      <y>306</y>
+      <val>333.</val></rng2></xmap>
+  <ymap>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>4.7850000000000000e+02</max>
+    <last>
+      <x>639</x>
+      <y>638</y>
+      <val>4.7850000000000000e+02</val></last>
+    <rng1>
+      <x>571</x>
+      <y>191</y>
+      <val>1.4325000000000000e+02</val></rng1>
+    <rng2>
+      <x>101</x>
+      <y>208</y>
+      <val>156.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--AffineWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--AffineWarperType->
+  <xmap>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1279.</max>
+    <last>
+      <x>1279</x>
+      <y>1278</y>
+      <val>1279.</val></last>
+    <rng1>
+      <x>1048</x>
+      <y>1171</y>
+      <val>1048.</val></rng1>
+    <rng2>
+      <x>910</x>
+      <y>773</y>
+      <val>910.</val></rng2></xmap>
+  <ymap>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>7.1887500000000000e+02</max>
+    <last>
+      <x>1279</x>
+      <y>1278</y>
+      <val>7.1887500000000000e+02</val></last>
+    <rng1>
+      <x>1234</x>
+      <y>840</y>
+      <val>4.7250000000000000e+02</val></rng1>
+    <rng2>
+      <x>1076</x>
+      <y>601</y>
+      <val>3.3806250000000000e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--AffineWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--AffineWarperType->
+  <xmap>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1919.</max>
+    <last>
+      <x>1919</x>
+      <y>1918</y>
+      <val>1919.</val></last>
+    <rng1>
+      <x>36</x>
+      <y>587</y>
+      <val>36.</val></rng1>
+    <rng2>
+      <x>34</x>
+      <y>1240</y>
+      <val>34.</val></rng2></xmap>
+  <ymap>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.0788750000000000e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1918</y>
+      <val>1.0788750000000000e+03</val></last>
+    <rng1>
+      <x>1061</x>
+      <y>1342</y>
+      <val>7.5487500000000000e+02</val></rng1>
+    <rng2>
+      <x>801</x>
+      <y>560</y>
+      <val>315.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--AffineWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--AffineWarperType->
+  <xmap>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>3839.</max>
+    <last>
+      <x>3839</x>
+      <y>3838</y>
+      <val>3839.</val></last>
+    <rng1>
+      <x>694</x>
+      <y>1472</y>
+      <val>694.</val></rng1>
+    <rng2>
+      <x>1185</x>
+      <y>1916</y>
+      <val>1185.</val></rng2></xmap>
+  <ymap>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>2.1588750000000000e+03</max>
+    <last>
+      <x>3839</x>
+      <y>3838</y>
+      <val>2.1588750000000000e+03</val></last>
+    <rng1>
+      <x>1075</x>
+      <y>863</y>
+      <val>4.8543750000000000e+02</val></rng1>
+    <rng2>
+      <x>445</x>
+      <y>1185</y>
+      <val>6.6656250000000000e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--AffineWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--AffineWarperType->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>638</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>348</x>
+      <y>68</y>
+      <val>64.</val></rng1>
+    <rng2>
+      <x>301</x>
+      <y>502</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--AffineWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--AffineWarperType->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>1278</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>474</x>
+      <y>299</y>
+      <val>64.</val></rng1>
+    <rng2>
+      <x>689</x>
+      <y>694</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--AffineWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--AffineWarperType->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1918</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>1545</x>
+      <y>716</y>
+      <val>64.</val></rng1>
+    <rng2>
+      <x>116</x>
+      <y>1465</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--AffineWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--AffineWarperType->
+  <dst>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
+    <last>
+      <x>3839</x>
+      <y>3838</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>1969</x>
+      <y>3084</y>
+      <val>64.</val></rng1>
+    <rng2>
+      <x>577</x>
+      <y>1280</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--AffineWarperType->
+ <!-- resumed -->
+ <!-- resumed -->
+<bundleAdjuster_affine--affine----surf----affinePartial-->
+  <first>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1. 0. 0. 0. 1. 0. 0. 0. 1.</data></val></first>
+  <T_second>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        -3.37448944e+02 -9.58017856e-02</data></val></T_second>
+  <R_second>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>2</cols>
+      <dt>f</dt>
+      <data>
+        9.48583722e-01 -8.43851521e-05 8.43851521e-05 9.48583722e-01</data></val></R_second></bundleAdjuster_affine--affine----surf----affinePartial-->
+<bundleAdjuster_affine--affine----surf----affine-->
+  <first>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1. 0. 0. 0. 1. 0. 0. 0. 1.</data></val></first>
+  <T_second>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        -3.37623169e+02 -3.50418389e-02</data></val></T_second>
+  <R_second>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>2</cols>
+      <dt>f</dt>
+      <data>
+        9.48872328e-01 -5.52965867e-05 7.29810608e-06 9.48492169e-01</data></val></R_second></bundleAdjuster_affine--affine----surf----affine-->
+<bundleAdjuster_affine--affine----orb----affinePartial-->
+  <first>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1. 0. 0. 0. 1. 0. 0. 0. 1.</data></val></first>
+  <T_second>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        -3.37931763e+02 -3.01150471e-01</data></val></T_second>
+  <R_second>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>2</cols>
+      <dt>f</dt>
+      <data>
+        9.49296236e-01 -2.40740876e-04 2.40740876e-04 9.49296236e-01</data></val></R_second></bundleAdjuster_affine--affine----orb----affinePartial-->
+<bundleAdjuster_affine--affine----orb----affine-->
+  <first>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>3</cols>
+      <dt>f</dt>
+      <data>
+        1. 0. 0. 0. 1. 0. 0. 0. 1.</data></val></first>
+  <T_second>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        -3.38172363e+02 -1.15763180e-01</data></val></T_second>
+  <R_second>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>2</cols>
+      <dt>f</dt>
+      <data>
+        9.49207783e-01 1.19245099e-03 2.08060806e-06 9.48981941e-01</data></val></R_second></bundleAdjuster_affine--affine----orb----affine-->
 </opencv_storage>
