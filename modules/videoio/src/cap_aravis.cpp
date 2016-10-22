@@ -51,7 +51,8 @@
 
 //
 // This file provides wrapper for using Aravis SDK library to access GigE Vision cameras.
-// aravis-0.6 library shall be installed else this code will not be included in build.
+// Aravis library (version 0.4 or 0.6) shall be installed else this code will not be included in build.
+//
 // To include this module invoke cmake with -DWITH_ARAVIS=ON
 //
 // Please obvserve, that jumbo frames are required when high fps & 16bit data is selected.
@@ -189,6 +190,9 @@ void CvCaptureCAM_Aravis::close()
 {
     if(camera)
         stopCapture();
+
+    g_object_unref(camera);
+    camera = NULL;
 }
 
 bool CvCaptureCAM_Aravis::getDeviceNameById(int id, std::string &device)

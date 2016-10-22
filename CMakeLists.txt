@@ -1125,7 +1125,7 @@ if(DEFINED WITH_GIGEAPI)
 endif(DEFINED WITH_GIGEAPI)
 
 if(DEFINED WITH_ARAVIS)
-  status("    Aravis SDK:"     HAVE_ARAVIS_API     THEN YES                                        ELSE NO)
+  status("    Aravis SDK:"     HAVE_ARAVIS_API     THEN "YES (${ARAVIS_LIBRARIES})"                ELSE NO)
 endif(DEFINED WITH_ARAVIS)
 
 if(DEFINED APPLE)
