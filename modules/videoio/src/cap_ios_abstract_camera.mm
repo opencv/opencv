@@ -150,9 +150,6 @@
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
-#if !__has_feature(objc_arc)
-    [super dealloc];
-#endif
 }
 
 
