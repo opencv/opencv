@@ -132,9 +132,11 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     [super stop];
 
     self.videoDataOutput = nil;
+#if !__has_feature(objc_arc)
     if (videoDataOutputQueue) {
         dispatch_release(videoDataOutputQueue);
     }
+#endif
 
     if (self.recordVideo == YES) {
         if (self.recordAssetWriter) {
