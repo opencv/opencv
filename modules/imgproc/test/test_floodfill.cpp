@@ -528,4 +528,18 @@ void CV_FloodFillTest::prepare_to_validation( int /*test_case_idx*/ )
 
 TEST(Imgproc_FloodFill, accuracy) { CV_FloodFillTest test; test.safe_run(); }
 
+TEST(Imgproc_FloodFill, maskValue)
+{
+    const int n = 50;
+    Mat img = Mat::zeros(n, n, CV_8U);
+    Mat mask = Mat::zeros(n + 2, n + 2, CV_8U);
+
+    circle(img, Point(n/2, n/2), 20, Scalar(100), 4);
+
+    int flags = 4 + CV_FLOODFILL_MASK_ONLY;
+    floodFill(img, mask, Point(n/2 + 13, n/2), Scalar(100), NULL, Scalar(),  Scalar(), flags);
+
+    ASSERT_TRUE(norm(mask.rowRange(1, n-1).colRange(1, n-1), NORM_INF) == 1.);
+}
+
 /* End of file. */
