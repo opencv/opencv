@@ -4332,7 +4332,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         else if( fs->fmt == CV_STORAGE_FORMAT_YAML )
         {
             if( !append )
-                icvPuts( fs, "%YAML 1.0\n---\n" );
+                icvPuts( fs, "%YAML:1.0\n---\n" );
             else
                 icvPuts( fs, "...\n---\n" );
             fs->start_write_struct = icvYMLStartWriteStruct;
