@@ -150,6 +150,7 @@
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
+    [super dealloc];
 }
 
 
@@ -202,11 +203,11 @@
         }
 
         [self.captureSession stopRunning];
-        self.captureSession = nil;
+        [videoCaptureConnection release];
+        [captureVideoPreviewLayer release];
+        [captureSession release];
     }
 
-    self.captureVideoPreviewLayer = nil;
-    self.videoCaptureConnection = nil;
     captureSessionLoaded = NO;
 }
 
