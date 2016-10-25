@@ -55,7 +55,7 @@ Arranging the terms: \f$r = x \cos \theta + y \sin \theta\f$
 -#  We can do the same operation above for all the points in an image. If the curves of two
     different points intersect in the plane \f$\theta\f$ - \f$r\f$, that means that both points belong to a
     same line. For instance, following with the example above and drawing the plot for two more
-    points: \f$x_{1} = 9\f$, \f$y_{1} = 4\f$ and \f$x_{2} = 12\f$, \f$y_{2} = 3\f$, we get:
+    points: \f$x_{1} = 4\f$, \f$y_{1} = 9\f$ and \f$x_{2} = 12\f$, \f$y_{2} = 3\f$, we get:
 
     ![](images/Hough_Lines_Tutorial_Theory_2.jpg)
 
@@ -95,10 +95,10 @@ Code
     -   Applies either a *Standard Hough Line Transform* or a *Probabilistic Line Transform*.
     -   Display the original image and the detected line in two windows.
 
--#  The sample code that we will explain can be downloaded from [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/houghlines.cpp). A slightly fancier version
+-#  The sample code that we will explain can be downloaded from [here](https://github.com/opencv/opencv/tree/master/samples/cpp/houghlines.cpp). A slightly fancier version
     (which shows both Hough standard and probabilistic with trackbars for changing the threshold
-    values) can be found [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
-    @includelineno samples/cpp/houghlines.cpp
+    values) can be found [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
+    @include samples/cpp/houghlines.cpp
 
 Explanation
 -----------

@@ -1,9 +1,9 @@
 /*this creates a yaml or xml list of files from the command line args
  */
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <string>
 #include <iostream>
 
@@ -23,13 +23,19 @@ static void help(char** av)
 
 int main(int ac, char** av)
 {
-  if (ac < 3)
+  cv::CommandLineParser parser(ac, av, "{help h||}{@output||}");
+  if (parser.has("help"))
+  {
+    help(av);
+    return 0;
+  }
+  string outputname = parser.get<string>("@output");
+
+  if (outputname.empty())
   {
     help(av);
     return 1;
   }
-
-  string outputname = av[1];
 
   Mat m = imread(outputname); //check if the output is an image - prevent overwrites!
   if(!m.empty()){

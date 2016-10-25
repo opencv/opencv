@@ -22,7 +22,7 @@ libraries. The following modules are available:
 -   **objdetect** - detection of objects and instances of the predefined classes (for example,
     faces, eyes, mugs, people, cars, and so on).
 -   **highgui** - an easy-to-use interface to simple UI capabilities.
--   **videoio** - an easy-to-use interface to video capturing and video codecs.
+-   @ref videoio - an easy-to-use interface to video capturing and video codecs.
 -   **gpu** - GPU-accelerated algorithms from different OpenCV modules.
 -   ... some other helper modules, such as FLANN and Google test wrappers, Python bindings, and
     others.
@@ -236,7 +236,7 @@ Multi-channel (n-channel) types can be specified using the following options:
     the number of channels is more than 4 or unknown at the compilation time.
 
 @note `CV_32FC1 == CV_32F, CV_32FC2 == CV_32FC(2) == CV_MAKETYPE(CV_32F, 2)`, and
-`CV_MAKETYPE(depth, n) == ((x&7)<<3) + (n-1)``. This means that the constant type is formed from the
+`CV_MAKETYPE(depth, n) == ((depth&7) + ((n-1)<<3)``. This means that the constant type is formed from the
 depth, taking the lowest 3 bits, and the number of channels minus 1, taking the next
 `log2(CV_CN_MAX)`` bits.
 

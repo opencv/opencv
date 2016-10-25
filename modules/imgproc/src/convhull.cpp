@@ -128,6 +128,8 @@ struct CHullCmpPoints
 
 void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat points = _points.getMat();
     int i, total = points.checkVector(2), depth = points.depth(), nout = 0;
     int miny_ind = 0, maxy_ind = 0;
@@ -264,6 +266,8 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
 void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defects )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat points = _points.getMat();
     int i, j = 0, npoints = points.checkVector(2, CV_32S);
     CV_Assert( npoints >= 0 );
@@ -302,7 +306,7 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
         int defect_deepest_point = -1;
         double defect_depth = 0;
         bool is_defect = false;
-
+        j=hcurr;
         for(;;)
         {
             // go through points to achieve next hull point
@@ -347,7 +351,7 @@ static bool isContourConvex_( const Point_<_Tp>* p, int n )
     _Tp dy0 = cur_pt.y - prev_pt.y;
     int orientation = 0;
 
-    for( int i = 0; i < n-1; i++ )
+    for( int i = 0; i < n; i++ )
     {
         _Tp dxdy0, dydx0;
         _Tp dx, dy;

@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CALIB3D_HPP__
-#define __OPENCV_CALIB3D_HPP__
+#ifndef OPENCV_CALIB3D_HPP
+#define OPENCV_CALIB3D_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -96,17 +96,61 @@ u = f_x*x' + c_x \\
 v = f_y*y' + c_y
 \end{array}\f]
 
+The following figure illustrates the pinhole camera model.
+
+![Pinhole camera model](pics/pinhole_camera_model.png)
+
 Real lenses usually have some distortion, mostly radial distortion and slight tangential distortion.
 So, the above model is extended as:
 
-\f[\begin{array}{l} \vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\ x' = x/z \\ y' = y/z \\ x'' = x'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\ y'' = y'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_1 r^2 + s_2 r^4 \\ \text{where} \quad r^2 = x'^2 + y'^2  \\ u = f_x*x'' + c_x \\ v = f_y*y'' + c_y \end{array}\f]
+\f[\begin{array}{l}
+\vecthree{x}{y}{z} = R  \vecthree{X}{Y}{Z} + t \\
+x' = x/z \\
+y' = y/z \\
+x'' = x'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\
+y'' = y'  \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
+\text{where} \quad r^2 = x'^2 + y'^2  \\
+u = f_x*x'' + c_x \\
+v = f_y*y'' + c_y
+\end{array}\f]
 
 \f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$, \f$k_5\f$, and \f$k_6\f$ are radial distortion coefficients. \f$p_1\f$ and \f$p_2\f$ are
 tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
-coefficients. Higher-order coefficients are not considered in OpenCV. In the functions below the
-coefficients are passed or returned as
+coefficients. Higher-order coefficients are not considered in OpenCV.
 
-\f[(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f]
+The next figure shows two common types of radial distortion: barrel distortion (typically \f$ k_1 > 0 \f$ and pincushion distortion (typically \f$ k_1 < 0 \f$).
+
+![](pics/distortion_examples.png)
+
+In some cases the image sensor may be tilted in order to focus an oblique plane in front of the
+camera (Scheimpfug condition). This can be useful for particle image velocimetry (PIV) or
+triangulation with a laser fan. The tilt causes a perspective distortion of \f$x''\f$ and
+\f$y''\f$. This distortion can be modelled in the following way, see e.g. @cite Louhichi07.
+
+\f[\begin{array}{l}
+s\vecthree{x'''}{y'''}{1} =
+\vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}(\tau_x, \tau_y)}
+{0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
+{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
+u = f_x*x''' + c_x \\
+v = f_y*y''' + c_y
+\end{array}\f]
+
+where the matrix \f$R(\tau_x, \tau_y)\f$ is defined by two rotations with angular parameter \f$\tau_x\f$
+and \f$\tau_y\f$, respectively,
+
+\f[
+R(\tau_x, \tau_y) =
+\vecthreethree{\cos(\tau_y)}{0}{-\sin(\tau_y)}{0}{1}{0}{\sin(\tau_y)}{0}{\cos(\tau_y)}
+\vecthreethree{1}{0}{0}{0}{\cos(\tau_x)}{\sin(\tau_x)}{0}{-\sin(\tau_x)}{\cos(\tau_x)} =
+\vecthreethree{\cos(\tau_y)}{\sin(\tau_y)\sin(\tau_x)}{-\sin(\tau_y)\cos(\tau_x)}
+{0}{\cos(\tau_x)}{\sin(\tau_x)}
+{\sin(\tau_y)}{-\cos(\tau_y)\sin(\tau_x)}{\cos(\tau_y)\cos(\tau_x)}.
+\f]
+
+In the functions below the coefficients are passed or returned as
+
+\f[(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f]
 
 vector. That is, if the vector contains four elements, it means that \f$k_3=0\f$ . The distortion
 coefficients do not depend on the scene viewed. Thus, they also belong to the intrinsic camera
@@ -139,7 +183,7 @@ pattern (every view is described by several 3D-2D point correspondences).
     -   A calibration example on stereo matching can be found at
         opencv_source_code/samples/cpp/stereo_match.cpp
     -   (Python) A camera calibration sample can be found at
-        opencv_source_code/samples/python2/calibrate.py
+        opencv_source_code/samples/python/calibrate.py
 
   @{
     @defgroup calib3d_fisheye Fisheye camera model
@@ -154,7 +198,7 @@ pattern (every view is described by several 3D-2D point correspondences).
 
     \f[x = Xc_1 \\ y = Xc_2 \\ z = Xc_3\f]
 
-    The pinehole projection coordinates of P is [a; b] where
+    The pinhole projection coordinates of P is [a; b] where
 
     \f[a = x / z \ and \ b = y / z \\ r^2 = a^2 + b^2 \\ \theta = atan(r)\f]
 
@@ -164,12 +208,12 @@ pattern (every view is described by several 3D-2D point correspondences).
 
     The distorted point coordinates are [x'; y'] where
 
-    \f[x' = (\theta_d / r) x \\ y' = (\theta_d / r) y \f]
+    \f[x' = (\theta_d / r) a \\ y' = (\theta_d / r) b \f]
 
-    Finally, convertion into pixel coordinates: The final pixel coordinates vector [u; v] where:
+    Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
 
     \f[u = f_x (x' + \alpha y') + c_x \\
-    v = f_y yy + c_y\f]
+    v = f_y y' + c_y\f]
 
     @defgroup calib3d_c C API
 
@@ -184,14 +228,15 @@ namespace cv
 
 //! type of the robust estimation algorithm
 enum { LMEDS  = 4, //!< least-median algorithm
-       RANSAC = 8  //!< RANSAC algorithm
+       RANSAC = 8, //!< RANSAC algorithm
+       RHO    = 16 //!< RHO algorithm
      };
 
 enum { SOLVEPNP_ITERATIVE = 0,
-       SOLVEPNP_EPNP      = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
-       SOLVEPNP_P3P       = 2, // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
-       SOLVEPNP_DLS       = 3, // Joel A. Hesch and Stergios I. Roumeliotis. "A Direct Least-Squares (DLS) Method for PnP"
-       SOLVEPNP_UPNP      = 4  // A.Penate-Sanchez, J.Andrade-Cetto, F.Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation"
+       SOLVEPNP_EPNP      = 1, //!< EPnP: Efficient Perspective-n-Point Camera Pose Estimation @cite lepetit2009epnp
+       SOLVEPNP_P3P       = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
+       SOLVEPNP_DLS       = 3, //!< A Direct Least-Squares (DLS) Method for PnP  @cite hesch2011direct
+       SOLVEPNP_UPNP      = 4  //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
 
 };
 
@@ -220,11 +265,15 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_RATIONAL_MODEL      = 0x04000,
        CALIB_THIN_PRISM_MODEL    = 0x08000,
        CALIB_FIX_S1_S2_S3_S4     = 0x10000,
+       CALIB_TILTED_MODEL        = 0x40000,
+       CALIB_FIX_TAUX_TAUY       = 0x80000,
+       CALIB_USE_QR              = 0x100000, //!< use QR instead of SVD decomposition for solving. Faster but potentially less precise
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
        // for stereo rectification
-       CALIB_ZERO_DISPARITY      = 0x00400
+       CALIB_ZERO_DISPARITY      = 0x00400,
+       CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
      };
 
 //! the algorithm for finding fundamental matrix
@@ -265,8 +314,9 @@ a vector\<Point2f\> .
 -   **0** - a regular method using all the points
 -   **RANSAC** - RANSAC-based robust method
 -   **LMEDS** - Least-Median robust method
+-   **RHO**    - PROSAC-based robust method
 @param ransacReprojThreshold Maximum allowed reprojection error to treat a point pair as an inlier
-(used in the RANSAC method only). That is, if
+(used in the RANSAC and RHO methods only). That is, if
 \f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} * \texttt{srcPoints} _i) \|  >  \texttt{ransacReprojThreshold}\f]
 then the point \f$i\f$ is considered an outlier. If srcPoints and dstPoints are measured in pixels,
 it usually makes sense to set this parameter somewhere in the range of 1 to 10.
@@ -275,7 +325,7 @@ mask values are ignored.
 @param maxIters The maximum number of RANSAC iterations, 2000 is the maximum it can be.
 @param confidence Confidence level, between 0 and 1.
 
-The functions find and return the perspective transformation \f$H\f$ between the source and the
+The function finds and returns the perspective transformation \f$H\f$ between the source and the
 destination planes:
 
 \f[s_i  \vecthree{x'_i}{y'_i}{1} \sim H  \vecthree{x_i}{y_i}{1}\f]
@@ -289,7 +339,7 @@ pairs to compute an initial homography estimate with a simple least-squares sche
 
 However, if not all of the point pairs ( \f$srcPoints_i\f$, \f$dstPoints_i\f$ ) fit the rigid perspective
 transformation (that is, there are some outliers), this initial estimate will be poor. In this case,
-you can use one of the two robust methods. Both methods, RANSAC and LMeDS , try many different
+you can use one of the three robust methods. The methods RANSAC, LMeDS and RHO try many different
 random subsets of the corresponding point pairs (of four pairs each), estimate the homography matrix
 using this subset and a simple least-square algorithm, and then compute the quality/goodness of the
 computed homography (which is the number of inliers for RANSAC or the median re-projection error for
@@ -300,7 +350,7 @@ Regardless of the method, robust or not, the computed homography matrix is refin
 inliers only in case of a robust method) with the Levenberg-Marquardt method to reduce the
 re-projection error even more.
 
-The method RANSAC can handle practically any ratio of outliers but it needs a threshold to
+The methods RANSAC and RHO can handle practically any ratio of outliers but need a threshold to
 distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
 correctly only when there are more than 50% of inliers. Finally, if there are no outliers and the
 noise is rather small, use the default method (method=0).
@@ -310,8 +360,9 @@ determined up to a scale. Thus, it is normalized so that \f$h_{33}=1\f$. Note th
 cannot be estimated, an empty one will be returned.
 
 @sa
-   getAffineTransform, getPerspectiveTransform, estimateRigidTransform, warpPerspective,
-    perspectiveTransform
+getAffineTransform, estimateAffine2D, estimateAffinePartial2D, getPerspectiveTransform, warpPerspective,
+perspectiveTransform
+
 
 @note
    -   A example on calculating a homography for image matching can be found at
@@ -342,7 +393,7 @@ and a rotation matrix.
 
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles in
 degrees (as the return value) that could be used in OpenGL. Note, there is always more than one
-sequence of rotations about the three principle axes that results in the same orientation of an
+sequence of rotations about the three principal axes that results in the same orientation of an
 object, eg. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angules
 are only one of the possible solutions.
  */
@@ -368,7 +419,7 @@ matrix and the position of a camera.
 
 It optionally returns three rotation matrices, one for each axis, and three Euler angles that could
 be used in OpenGL. Note, there is always more than one sequence of rotations about the three
-principle axes that results in the same orientation of an object, eg. see @cite Slabaugh . Returned
+principal axes that results in the same orientation of an object, eg. see @cite Slabaugh . Returned
 tree rotation matrices and corresponding three Euler angules are only one of the possible solutions.
 
 The function is based on RQDecomp3x3 .
@@ -441,8 +492,8 @@ vector\<Point3f\> ), where N is the number of points in the view.
 @param tvec Translation vector.
 @param cameraMatrix Camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is empty, the zero distortion coefficients are assumed.
 @param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
 @param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
@@ -474,14 +525,15 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
 
 /** @brief Finds an object pose from 3D-2D point correspondences.
 
-@param objectPoints Array of object points in the object coordinate space, 3xN/Nx3 1-channel or
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3f\> can be also passed here.
-@param imagePoints Array of corresponding image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel,
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
@@ -511,7 +563,17 @@ projections, as well as the camera matrix and the distortion coefficients.
 
 @note
    -   An example of how to use solvePnP for planar augmented reality can be found at
-        opencv_source_code/samples/python2/plane_ar.py
+        opencv_source_code/samples/python/plane_ar.py
+   -   If you are using Python:
+        - Numpy array slices won't work as input because solvePnP requires contiguous
+        arrays (enforced by the assertion using cv::Mat::checkVector() around line 55 of
+        modules/calib3d/src/solvepnp.cpp version 2.4.9)
+        - The P3P algorithm requires image points to be in an array of shape (N,1,2) due
+        to its calling of cv::undistortPoints (around line 75 of modules/calib3d/src/solvepnp.cpp version 2.4.9)
+        which requires 2-channel information.
+        - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
+        it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
+        np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
@@ -520,14 +582,15 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
 
 /** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
-@param objectPoints Array of object points in the object coordinate space, 3xN/Nx3 1-channel or
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3f\> can be also passed here.
-@param imagePoints Array of corresponding image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel,
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
 where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
@@ -685,19 +748,19 @@ CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
 
 /** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
-@param objectPoints In the new interface it is a vector of vectors of calibration pattern points
-in the calibration pattern coordinate space. The outer vector contains as many elements as the
-number of the pattern views. If the same calibration pattern is shown in each view and it is fully
-visible, all the vectors will be the same. Although, it is possible to use partially occluded
-patterns, or even different patterns in different views. Then, the vectors will be different. The
-points are 3D, but since they are in a pattern coordinate system, then, if the rig is planar, it
-may make sense to put the model to a XY coordinate plane so that Z-coordinate of each input object
-point is 0.
+@param objectPoints In the new interface it is a vector of vectors of calibration pattern points in
+the calibration pattern coordinate space (e.g. std::vector<std::vector<cv::Vec3f>>). The outer
+vector contains as many elements as the number of the pattern views. If the same calibration pattern
+is shown in each view and it is fully visible, all the vectors will be the same. Although, it is
+possible to use partially occluded patterns, or even different patterns in different views. Then,
+the vectors will be different. The points are 3D, but since they are in a pattern coordinate system,
+then, if the rig is planar, it may make sense to put the model to a XY coordinate plane so that
+Z-coordinate of each input object point is 0.
 In the old interface all the vectors of object points from different views are concatenated
 together.
-@param imagePoints In the new interface it is a vector of vectors of the projections of
-calibration pattern points. imagePoints.size() and objectPoints.size() and imagePoints[i].size()
-must be equal to objectPoints[i].size() for each i.
+@param imagePoints In the new interface it is a vector of vectors of the projections of calibration
+pattern points (e.g. std::vector<std::vector<cv::Vec2f>>). imagePoints.size() and
+objectPoints.size() and imagePoints[i].size() must be equal to objectPoints[i].size() for each i.
 In the old interface all the vectors of object points from different views are concatenated
 together.
 @param imageSize Size of the image used only to initialize the intrinsic camera matrix.
@@ -706,13 +769,22 @@ together.
 and/or CV_CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param distCoeffs Output vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements.
-@param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view.
-That is, each k-th rotation vector together with the corresponding k-th translation vector (see
-the next output parameter description) brings the calibration pattern from the model coordinate
-space (in which object points are specified) to the world coordinate space, that is, a real
-position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements.
+@param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view
+(e.g. std::vector<cv::Mat>>). That is, each k-th rotation vector together with the corresponding
+k-th translation vector (see the next output parameter description) brings the calibration pattern
+from the model coordinate space (in which object points are specified) to the world coordinate
+space, that is, a real position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 @param tvecs Output vector of translation vectors estimated for each pattern view.
+@param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
+ Order of deviations values:
+\f$(f_x, f_y, c_x, c_y, k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6 , s_1, s_2, s_3,
+ s_4, \tau_x, \tau_y)\f$ If one of parameters is not estimated, it's deviation is equals to zero.
+@param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
+ Order of deviations values: \f$(R_1, T_1, \dotsc , R_M, T_M)\f$ where M is number of pattern views,
+ \f$R_i, T_i\f$ are concatenated 1x3 vectors.
+ @param perViewErrors Output vector of average re-projection errors estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
 -   **CV_CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
@@ -740,6 +812,13 @@ backward compatibility, this extra flag should be explicitly specified to make t
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
 -   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
+the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+supplied distCoeffs matrix is used. Otherwise, it is set to 0.
+-   **CALIB_TILTED_MODEL** Coefficients tauX and tauY are enabled. To provide the
+backward compatibility, this extra flag should be explicitly specified to make the
+calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
+set, the function computes and returns only 5 distortion coefficients.
+-   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
 the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
@@ -779,6 +858,24 @@ The function returns the final re-projection error.
 
 @sa
    findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
+ */
+CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray stdDeviationsIntrinsics,
+                                     OutputArray stdDeviationsExtrinsics,
+                                     OutputArray perViewErrors,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+/** @overload double calibrateCamera( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray stdDeviations, OutputArray perViewErrors,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) )
  */
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
@@ -826,8 +923,8 @@ any of CV_CALIB_USE_INTRINSIC_GUESS , CV_CALIB_FIX_ASPECT_RATIO ,
 CV_CALIB_FIX_INTRINSIC , or CV_CALIB_FIX_FOCAL_LENGTH are specified, some or all of the
 matrix components must be initialized. See the flags description for details.
 @param distCoeffs1 Input/output vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 ot 12 elements. The
-output vector length depends on the flags.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. The output vector length depends on the flags.
 @param cameraMatrix2 Input/output second camera matrix. The parameter is similar to cameraMatrix1
 @param distCoeffs2 Input/output lens distortion coefficients for the second camera. The parameter
 is similar to distCoeffs1 .
@@ -860,6 +957,13 @@ backward compatibility, this extra flag should be explicitly specified to make t
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
 -   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
+the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+supplied distCoeffs matrix is used. Otherwise, it is set to 0.
+-   **CALIB_TILTED_MODEL** Coefficients tauX and tauY are enabled. To provide the
+backward compatibility, this extra flag should be explicitly specified to make the
+calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
+set, the function computes and returns only 5 distortion coefficients.
+-   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
 the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
@@ -910,8 +1014,8 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 /** @brief Computes rectification transforms for each head of a calibrated stereo camera.
 
 @param cameraMatrix1 First camera matrix.
-@param cameraMatrix2 Second camera matrix.
 @param distCoeffs1 First camera distortion parameters.
+@param cameraMatrix2 Second camera matrix.
 @param distCoeffs2 Second camera distortion parameters.
 @param imageSize Size of the image used for stereo calibration.
 @param R Rotation matrix between the coordinate systems of the first and the second cameras.
@@ -1045,8 +1149,9 @@ CV_EXPORTS_W float rectify3Collinear( InputArray cameraMatrix1, InputArray distC
 
 @param cameraMatrix Input camera matrix.
 @param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6],[s_1, s_2, s_3, s_4]])\f$ of 4, 5, 8 or 12 elements. If
-the vector is NULL/empty, the zero distortion coefficients are assumed.
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
 @param imageSize Original image size.
 @param alpha Free scaling parameter between 0 (when all the pixels in the undistorted image are
 valid) and 1 (when all the source image pixels are retained in the undistorted image). See
@@ -1170,12 +1275,45 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
-@param focal focal length of the camera. Note that this function assumes that points1 and points2
-are feature points from cameras with same focal length and principle point.
-@param pp principle point of the camera.
+@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix.
 @param method Method for computing a fundamental matrix.
 -   **RANSAC** for the RANSAC algorithm.
 -   **MEDS** for the LMedS algorithm.
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
+confidence (probability) that the estimated matrix is correct.
+@param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
+line in pixels, beyond which the point is considered an outlier and is not used for computing the
+final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
+point localization, image resolution, and the image noise.
+@param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
+for the other points. The array is computed only in the RANSAC and LMedS methods.
+
+This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
+@cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
+
+\f[[p_2; 1]^T K^{-T} E K^{-1} [p_1; 1] = 0\f]
+
+where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
+second images, respectively. The result of this function may be passed further to
+decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
+ */
+CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
+                                 InputArray cameraMatrix, int method = RANSAC,
+                                 double prob = 0.999, double threshold = 1.0,
+                                 OutputArray mask = noArray() );
+
+/** @overload
+@param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
+be floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1 .
+@param focal focal length of the camera. Note that this function assumes that points1 and points2
+are feature points from cameras with same focal length and principal point.
+@param pp principal point of the camera.
+@param method Method for computing a fundamental matrix.
+-   **RANSAC** for the RANSAC algorithm.
+-   **LMEDS** for the LMedS algorithm.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
@@ -1185,19 +1323,15 @@ confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
 
-This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
-@cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
+This function differs from the one above that it computes camera matrix from focal length and
+principal point:
 
-\f[[p_2; 1]^T K^T E K [p_1; 1] = 0 \\\f]\f[K =
+\f[K =
 \begin{bmatrix}
 f & 0 & x_{pp}  \\
 0 & f & y_{pp}  \\
 0 & 0 & 1
 \end{bmatrix}\f]
-
-where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
-second images, respectively. The result of this function may be passed further to
-decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
  */
 CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  double focal = 1.0, Point2d pp = Point2d(0, 0),
@@ -1225,11 +1359,11 @@ the check.
 @param points1 Array of N 2D points from the first image. The point coordinates should be
 floating-point (single or double precision).
 @param points2 Array of the second image points of the same size and format as points1 .
+@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix.
 @param R Recovered relative rotation.
 @param t Recoverd relative translation.
-@param focal Focal length of the camera. Note that this function assumes that points1 and points2
-are feature points from cameras with same focal length and principle point.
-@param pp Principle point of the camera.
 @param mask Input/output mask for inliers in points1 and points2.
 :   If it is not empty, then it marks inliers in points1 and points2 for then given essential
 matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
@@ -1253,19 +1387,48 @@ points1 and points2 are the same input for findEssentialMat. :
         points2[i] = ...;
     }
 
-    double focal = 1.0;
-    cv::Point2d pp(0.0, 0.0);
+    // cametra matrix with both focal lengths = 1, and principal point = (0, 0)
+    Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+
     Mat E, R, t, mask;
 
-    E = findEssentialMat(points1, points2, focal, pp, RANSAC, 0.999, 1.0, mask);
-    recoverPose(E, points1, points2, R, t, focal, pp, mask);
+    E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+    recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
 @endcode
+ */
+CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
+                            InputArray cameraMatrix, OutputArray R, OutputArray t,
+                            InputOutputArray mask = noArray() );
+
+/** @overload
+@param E The input essential matrix.
+@param points1 Array of N 2D points from the first image. The point coordinates should be
+floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1 .
+@param R Recovered relative rotation.
+@param t Recoverd relative translation.
+@param focal Focal length of the camera. Note that this function assumes that points1 and points2
+are feature points from cameras with same focal length and principal point.
+@param pp principal point of the camera.
+@param mask Input/output mask for inliers in points1 and points2.
+:   If it is not empty, then it marks inliers in points1 and points2 for then given essential
+matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
+which pass the cheirality check.
+
+This function differs from the one above that it computes camera matrix from focal length and
+principal point:
+
+\f[K =
+\begin{bmatrix}
+f & 0 & x_{pp}  \\
+0 & f & y_{pp}  \\
+0 & 0 & 1
+\end{bmatrix}\f]
  */
 CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
                             OutputArray R, OutputArray t,
                             double focal = 1.0, Point2d pp = Point2d(0, 0),
                             InputOutputArray mask = noArray() );
-
 
 /** @brief For points in an image of a stereo pair, computes the corresponding epilines in the other image.
 
@@ -1363,7 +1526,8 @@ CV_EXPORTS_W void validateDisparity( InputOutputArray disparity, InputArray cost
 /** @brief Reprojects a disparity image to 3D space.
 
 @param disparity Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit
-floating-point disparity image.
+floating-point disparity image. If 16-bit signed format is used, the values are assumed to have no
+fractional bits.
 @param _3dImage Output 3-channel floating-point image of the same size as disparity . Each
 element of _3dImage(x,y) contains 3D coordinates of the point (x,y) computed from the disparity
 map.
@@ -1390,6 +1554,17 @@ CV_EXPORTS_W void reprojectImageTo3D( InputArray disparity,
                                       bool handleMissingValues = false,
                                       int ddepth = -1 );
 
+/** @brief Calculates the Sampson Distance between two points.
+
+The function sampsonDistance calculates and returns the first order approximation of the geometric error as:
+\f[sd( \texttt{pt1} , \texttt{pt2} )= \frac{(\texttt{pt2}^t \cdot \texttt{F} \cdot \texttt{pt1})^2}{(\texttt{F} \cdot \texttt{pt1})(0) + (\texttt{F} \cdot \texttt{pt1})(1) + (\texttt{F}^t \cdot \texttt{pt2})(0) + (\texttt{F}^t \cdot \texttt{pt2})(1)}\f]
+The fundamental matrix may be calculated using the cv::findFundamentalMat function. See HZ 11.4.3 for details.
+@param pt1 first homogeneous 2d point
+@param pt2 second homogeneous 2d point
+@param F fundamental matrix
+*/
+CV_EXPORTS_W double sampsonDistance(InputArray pt1, InputArray pt2, InputArray F);
+
 /** @brief Computes an optimal affine transformation between two 3D point sets.
 
 @param src First input 3D point set.
@@ -1408,6 +1583,93 @@ RANSAC algorithm.
 CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
                                    OutputArray out, OutputArray inliers,
                                    double ransacThreshold = 3, double confidence = 0.99);
+
+/** @brief Computes an optimal affine transformation between two 2D point sets.
+
+@param from First input 2D point set.
+@param to Second input 2D point set.
+@param inliers Output vector indicating which points are inliers.
+@param method Robust method used to compute tranformation. The following methods are possible:
+-   cv::RANSAC - RANSAC-based robust method
+-   cv::LMEDS - Least-Median robust method
+RANSAC is the default method.
+@param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
+a point as an inlier. Applies only to RANSAC.
+@param maxIters The maximum number of robust method iterations, 2000 is the maximum it can be.
+@param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
+between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
+significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
+@param refineIters Maximum number of iterations of refining algorithm (Levenberg-Marquardt).
+Passing 0 will disable refining, so the output matrix will be output of robust method.
+
+@return Output 2D affine transformation matrix \f$2 \times 3\f$ or empty matrix if transformation
+could not be estimated.
+
+The function estimates an optimal 2D affine transformation between two 2D point sets using the
+selected robust algorithm.
+
+The computed transformation is then refined further (using only inliers) with the
+Levenberg-Marquardt method to reduce the re-projection error even more.
+
+@note
+The RANSAC method can handle practically any ratio of outliers but need a threshold to
+distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
+correctly only when there are more than 50% of inliers.
+
+@sa estimateAffinePartial2D, getAffineTransform
+*/
+CV_EXPORTS_W cv::Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
+                                  int method = RANSAC, double ransacReprojThreshold = 3,
+                                  size_t maxIters = 2000, double confidence = 0.99,
+                                  size_t refineIters = 10);
+
+/** @brief Computes an optimal limited affine transformation with 4 degrees of freedom between
+two 2D point sets.
+
+@param from First input 2D point set.
+@param to Second input 2D point set.
+@param inliers Output vector indicating which points are inliers.
+@param method Robust method used to compute tranformation. The following methods are possible:
+-   cv::RANSAC - RANSAC-based robust method
+-   cv::LMEDS - Least-Median robust method
+RANSAC is the default method.
+@param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
+a point as an inlier. Applies only to RANSAC.
+@param maxIters The maximum number of robust method iterations, 2000 is the maximum it can be.
+@param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
+between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
+significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
+@param refineIters Maximum number of iterations of refining algorithm (Levenberg-Marquardt).
+Passing 0 will disable refining, so the output matrix will be output of robust method.
+
+@return Output 2D affine transformation (4 degrees of freedom) matrix \f$2 \times 3\f$ or
+empty matrix if transformation could not be estimated.
+
+The function estimates an optimal 2D affine transformation with 4 degrees of freedom limited to
+combinations of translation, rotation, and uniform scaling. Uses the selected algorithm for robust
+estimation.
+
+The computed transformation is then refined further (using only inliers) with the
+Levenberg-Marquardt method to reduce the re-projection error even more.
+
+Estimated transformation matrix is:
+\f[ \begin{bmatrix} \cos(\theta)s & -\sin(\theta)s & tx \\
+                \sin(\theta)s & \cos(\theta)s & ty
+\end{bmatrix} \f]
+Where \f$ \theta \f$ is the rotation angle, \f$ s \f$ the scaling factor and \f$ tx, ty \f$ are
+translations in \f$ x, y \f$ axes respectively.
+
+@note
+The RANSAC method can handle practically any ratio of outliers but need a threshold to
+distinguish inliers from outliers. The method LMeDS does not need any threshold but it works
+correctly only when there are more than 50% of inliers.
+
+@sa estimateAffine2D, getAffineTransform
+*/
+CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
+                                  int method = RANSAC, double ransacReprojThreshold = 3,
+                                  size_t maxIters = 2000, double confidence = 0.99,
+                                  size_t refineIters = 10);
 
 /** @brief Decompose a homography matrix to rotation(s), translation(s) and plane normal(s).
 
@@ -1535,7 +1797,7 @@ check, quadratic interpolation and speckle filtering).
 
 @note
    -   (Python) An example illustrating the use of the StereoSGBM matching algorithm can be found
-        at opencv_source_code/samples/python2/stereo_match.py
+        at opencv_source_code/samples/python/stereo_match.py
  */
 class CV_EXPORTS_W StereoSGBM : public StereoMatcher
 {
@@ -1543,7 +1805,8 @@ public:
     enum
     {
         MODE_SGBM = 0,
-        MODE_HH   = 1
+        MODE_HH   = 1,
+        MODE_SGBM_3WAY = 2
     };
 
     CV_WRAP virtual int getPreFilterCap() const = 0;
@@ -1616,15 +1879,16 @@ namespace fisheye
 //! @{
 
     enum{
-        CALIB_USE_INTRINSIC_GUESS   = 1,
-        CALIB_RECOMPUTE_EXTRINSIC   = 2,
-        CALIB_CHECK_COND            = 4,
-        CALIB_FIX_SKEW              = 8,
-        CALIB_FIX_K1                = 16,
-        CALIB_FIX_K2                = 32,
-        CALIB_FIX_K3                = 64,
-        CALIB_FIX_K4                = 128,
-        CALIB_FIX_INTRINSIC         = 256
+        CALIB_USE_INTRINSIC_GUESS   = 1 << 0,
+        CALIB_RECOMPUTE_EXTRINSIC   = 1 << 1,
+        CALIB_CHECK_COND            = 1 << 2,
+        CALIB_FIX_SKEW              = 1 << 3,
+        CALIB_FIX_K1                = 1 << 4,
+        CALIB_FIX_K2                = 1 << 5,
+        CALIB_FIX_K3                = 1 << 6,
+        CALIB_FIX_K4                = 1 << 7,
+        CALIB_FIX_INTRINSIC         = 1 << 8,
+        CALIB_FIX_PRINCIPAL_POINT   = 1 << 9
     };
 
     /** @brief Projects points using fisheye model
@@ -1662,6 +1926,10 @@ namespace fisheye
     @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+
+    Note that the function assumes the camera matrix of the undistorted points to be indentity.
+    This means if you want to transform back points undistorted with undistortPoints() you have to
+    multiply them with \f$P^{-1}\f$.
      */
     CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
 
@@ -1770,8 +2038,10 @@ namespace fisheye
     of intrinsic optimization.
     -   **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
     -   **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
-    -   **fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay
-    zero.
+    -   **fisheye::CALIB_FIX_K1..fisheye::CALIB_FIX_K4** Selected distortion coefficients
+    are set to zeros and stay zero.
+    -   **fisheye::CALIB_FIX_PRINCIPAL_POINT** The principal point is not changed during the global
+optimization. It stays at the center or at a different location specified when CALIB_USE_INTRINSIC_GUESS is set too.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */
     CV_EXPORTS_W double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,

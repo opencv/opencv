@@ -104,7 +104,7 @@ namespace
         }
 
         BufferPool pool(Stream::Null());
-        GpuMat d_keypoints = pool.getBuffer(ROWS_COUNT, max_npoints_, CV_16SC2);
+        GpuMat d_keypoints = pool.getBuffer(ROWS_COUNT, max_npoints_, CV_32FC1);
 
         detectAsync(_image, d_keypoints, _mask, Stream::Null());
         convert(d_keypoints, keypoints);

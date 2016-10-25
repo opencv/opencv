@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_HPP__
-#define __OPENCV_VIZ_HPP__
+#ifndef OPENCV_VIZ_HPP
+#define OPENCV_VIZ_HPP
 
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
@@ -81,4 +81,4 @@ cw.setColor(viz::Color::yellow());
   @}
 */
 
-#endif /* __OPENCV_VIZ_HPP__ */
+#endif /* OPENCV_VIZ_HPP */

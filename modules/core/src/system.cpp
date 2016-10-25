@@ -42,6 +42,21 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
+
+namespace cv {
+
+static Mutex* __initialization_mutex = NULL;
+Mutex& getInitializationMutex()
+{
+    if (__initialization_mutex == NULL)
+        __initialization_mutex = new Mutex();
+    return *__initialization_mutex;
+}
+// force initialization (single-threaded environment)
+Mutex* __initialization_mutex_initializer = &getInitializationMutex();
+
+} // namespace cv
 
 #ifdef _MSC_VER
 # if _MSC_VER >= 1700
@@ -49,11 +64,13 @@
 # endif
 #endif
 
-#if defined ANDROID || defined __linux__
+#if defined ANDROID || defined __linux__ || defined __FreeBSD__
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <elf.h>
+#if defined ANDROID || defined __linux__
 #  include <linux/auxvec.h>
+#endif
 #endif
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
@@ -109,7 +126,7 @@
   #endif
 #endif
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #include <wrl/client.h>
 #ifndef __cplusplus_winrt
 #include <windows.storage.h>
@@ -159,7 +176,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
              UINT(g.Data4[2]), UINT(g.Data4[3]), UINT(g.Data4[4]),
              UINT(g.Data4[5]), UINT(g.Data4[6]), UINT(g.Data4[7]));
 
-    return prefix + std::wstring(guidStr);
+    return prefix.append(std::wstring(guidStr));
 }
 
 #endif
@@ -181,7 +198,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 
 #include <stdarg.h>
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__
+#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -274,6 +291,7 @@ struct HWFeatures
             f.have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
             f.have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
             f.have[CV_CPU_AVX]    = (((cpuid_data[2] & (1<<28)) != 0)&&((cpuid_data[2] & (1<<27)) != 0));//OS uses XSAVE_XRSTORE and CPU support AVX
+            f.have[CV_CPU_FP16]   = (cpuid_data[2] & (1<<29)) != 0;
 
             // make the second call to the cpuid command in order to get
             // information about extended features like AVX2
@@ -319,26 +337,37 @@ struct HWFeatures
         }
 
     #if defined ANDROID || defined __linux__
+    #ifdef __aarch64__
+        f.have[CV_CPU_NEON] = true;
+        f.have[CV_CPU_FP16] = true;
+    #elif defined __arm__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
         {
             Elf32_auxv_t auxv;
-            const size_t size_auxv_t = sizeof(Elf32_auxv_t);
+            const size_t size_auxv_t = sizeof(auxv);
 
-            while (read(cpufile, &auxv, sizeof(Elf32_auxv_t)) == size_auxv_t)
+            while ((size_t)read(cpufile, &auxv, size_auxv_t) == size_auxv_t)
             {
                 if (auxv.a_type == AT_HWCAP)
                 {
                     f.have[CV_CPU_NEON] = (auxv.a_un.a_val & 4096) != 0;
+                    f.have[CV_CPU_FP16] = (auxv.a_un.a_val & 2) != 0;
                     break;
                 }
             }
 
             close(cpufile);
         }
-    #elif (defined __clang__ || defined __APPLE__) && defined __ARM_NEON__
+    #endif
+    #elif (defined __clang__ || defined __APPLE__)
+    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
         f.have[CV_CPU_NEON] = true;
+    #endif
+    #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
+        f.have[CV_CPU_FP16] = true;
+    #endif
     #endif
 
         return f;
@@ -359,32 +388,19 @@ bool checkHardwareSupport(int feature)
 
 
 volatile bool useOptimizedFlag = true;
-#ifdef HAVE_IPP
-struct IPPInitializer
-{
-    IPPInitializer(void)
-    {
-#if IPP_VERSION_MAJOR >= 8
-        ippInit();
-#else
-        ippStaticInit();
-#endif
-    }
-};
-
-IPPInitializer ippInitializer;
-#endif
-
-volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];
-volatile bool USE_SSE4_2 = featuresEnabled.have[CV_CPU_SSE4_2];
-volatile bool USE_AVX = featuresEnabled.have[CV_CPU_AVX];
-volatile bool USE_AVX2 = featuresEnabled.have[CV_CPU_AVX2];
 
 void setUseOptimized( bool flag )
 {
     useOptimizedFlag = flag;
     currentFeatures = flag ? &featuresEnabled : &featuresDisabled;
-    USE_SSE2 = currentFeatures->have[CV_CPU_SSE2];
+
+    ipp::setUseIPP(flag);
+#ifdef HAVE_OPENCL
+    ocl::setUseOpenCL(flag);
+#endif
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    ::tegra::setUseTegra(flag);
+#endif
 }
 
 bool useOptimized(void)
@@ -532,24 +548,20 @@ String format( const char* fmt, ... )
 String tempfile( const char* suffix )
 {
     String fname;
-#ifndef HAVE_WINRT
+#ifndef WINRT
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
 #if defined WIN32 || defined _WIN32
-#ifdef HAVE_WINRT
+#ifdef WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
-    std::wstring temp_dir = L"";
-    const wchar_t* opencv_temp_dir = GetTempPathWinRT().c_str();
-    if (opencv_temp_dir)
-        temp_dir = std::wstring(opencv_temp_dir);
+    std::wstring temp_dir = GetTempPathWinRT();
 
-    std::wstring temp_file;
-    temp_file = GetTempFileNameWinRT(L"ocv");
+    std::wstring temp_file = GetTempFileNameWinRT(L"ocv");
     if (temp_file.empty())
         return String();
 
-    temp_file = temp_dir + std::wstring(L"\\") + temp_file;
+    temp_file = temp_dir.append(std::wstring(L"\\")).append(temp_file);
     DeleteFileW(temp_file.c_str());
 
     char aname[MAX_PATH];
@@ -916,92 +928,303 @@ bool Mutex::trylock() { return impl->trylock(); }
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
-class TLSStorage
-{
-    std::vector<void*> tlsData_;
-public:
-    TLSStorage() { tlsData_.reserve(16); }
-    ~TLSStorage();
-    inline void* getData(int key) const
-    {
-        CV_DbgAssert(key >= 0);
-        return (key < (int)tlsData_.size()) ? tlsData_[key] : NULL;
-    }
-    inline void setData(int key, void* data)
-    {
-        CV_DbgAssert(key >= 0);
-        if (key >= (int)tlsData_.size())
-        {
-            tlsData_.resize(key + 1, NULL);
-        }
-        tlsData_[key] = data;
-    }
-
-    inline static TLSStorage* get();
-};
-
 #ifdef WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
 #endif
-
-#ifdef HAVE_WINRT
-    // using C++11 thread attribute for local thread data
-    static __declspec( thread ) TLSStorage* g_tlsdata = NULL;
-
-    static void deleteThreadData()
-    {
-        if (g_tlsdata)
-        {
-            delete g_tlsdata;
-            g_tlsdata = NULL;
-        }
-    }
-
-    inline TLSStorage* TLSStorage::get()
-    {
-        if (!g_tlsdata)
-        {
-            g_tlsdata = new TLSStorage;
-        }
-        return g_tlsdata;
-    }
-#else
-#ifdef WINCE
-#   define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
+#ifndef TLS_OUT_OF_INDEXES
+#define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
 #endif
-    static DWORD tlsKey = TLS_OUT_OF_INDEXES;
+#endif
 
-    static void deleteThreadData()
+// TLS platform abstraction layer
+class TlsAbstraction
+{
+public:
+    TlsAbstraction();
+    ~TlsAbstraction();
+    void* GetData() const;
+    void  SetData(void *pData);
+
+private:
+#ifdef WIN32
+#ifndef WINRT
+    DWORD tlsKey;
+#endif
+#else // WIN32
+    pthread_key_t  tlsKey;
+#endif
+};
+
+#ifdef WIN32
+#ifdef WINRT
+static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
+TlsAbstraction::TlsAbstraction() {}
+TlsAbstraction::~TlsAbstraction() {}
+void* TlsAbstraction::GetData() const
+{
+    return tlsData;
+}
+void  TlsAbstraction::SetData(void *pData)
+{
+    tlsData = pData;
+}
+#else //WINRT
+TlsAbstraction::TlsAbstraction()
+{
+    tlsKey = TlsAlloc();
+    CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
+}
+TlsAbstraction::~TlsAbstraction()
+{
+    TlsFree(tlsKey);
+}
+void* TlsAbstraction::GetData() const
+{
+    return TlsGetValue(tlsKey);
+}
+void  TlsAbstraction::SetData(void *pData)
+{
+    CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
+}
+#endif
+#else // WIN32
+TlsAbstraction::TlsAbstraction()
+{
+    CV_Assert(pthread_key_create(&tlsKey, NULL) == 0);
+}
+TlsAbstraction::~TlsAbstraction()
+{
+    CV_Assert(pthread_key_delete(tlsKey) == 0);
+}
+void* TlsAbstraction::GetData() const
+{
+    return pthread_getspecific(tlsKey);
+}
+void  TlsAbstraction::SetData(void *pData)
+{
+    CV_Assert(pthread_setspecific(tlsKey, pData) == 0);
+}
+#endif
+
+// Per-thread data structure
+struct ThreadData
+{
+    ThreadData()
     {
-        if(tlsKey != TLS_OUT_OF_INDEXES)
+        idx = 0;
+        slots.reserve(32);
+    }
+
+    std::vector<void*> slots; // Data array for a thread
+    size_t idx;               // Thread index in TLS storage. This is not OS thread ID!
+};
+
+// Main TLS storage class
+class TlsStorage
+{
+public:
+    TlsStorage()
+    {
+        tlsSlots.reserve(32);
+        threads.reserve(32);
+    }
+    ~TlsStorage()
+    {
+        for(size_t i = 0; i < threads.size(); i++)
         {
-            delete (TLSStorage*)TlsGetValue(tlsKey);
-            TlsSetValue(tlsKey, NULL);
+            if(threads[i])
+            {
+                /* Current architecture doesn't allow proper global objects relase, so this check can cause crashes
+
+                // Check if all slots were properly cleared
+                for(size_t j = 0; j < threads[i]->slots.size(); j++)
+                {
+                    CV_Assert(threads[i]->slots[j] == 0);
+                }
+                */
+                delete threads[i];
+            }
+        }
+        threads.clear();
+    }
+
+    void releaseThread()
+    {
+        AutoLock guard(mtxGlobalAccess);
+        ThreadData *pTD = (ThreadData*)tls.GetData();
+        for(size_t i = 0; i < threads.size(); i++)
+        {
+            if(pTD == threads[i])
+            {
+                threads[i] = 0;
+                break;
+            }
+        }
+        tls.SetData(0);
+        delete pTD;
+    }
+
+    // Reserve TLS storage index
+    size_t reserveSlot()
+    {
+        AutoLock guard(mtxGlobalAccess);
+
+        // Find unused slots
+        for(size_t slot = 0; slot < tlsSlots.size(); slot++)
+        {
+            if(!tlsSlots[slot])
+            {
+                tlsSlots[slot] = 1;
+                return slot;
+            }
+        }
+
+        // Create new slot
+        tlsSlots.push_back(1);
+        return (tlsSlots.size()-1);
+    }
+
+    // Release TLS storage index and pass assosiated data to caller
+    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec)
+    {
+        AutoLock guard(mtxGlobalAccess);
+        CV_Assert(tlsSlots.size() > slotIdx);
+
+        for(size_t i = 0; i < threads.size(); i++)
+        {
+            if(threads[i])
+            {
+                std::vector<void*>& thread_slots = threads[i]->slots;
+                if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
+                {
+                    dataVec.push_back(thread_slots[slotIdx]);
+                    threads[i]->slots[slotIdx] = 0;
+                }
+            }
+        }
+
+        tlsSlots[slotIdx] = 0;
+    }
+
+    // Get data by TLS storage index
+    void* getData(size_t slotIdx) const
+    {
+        CV_Assert(tlsSlots.size() > slotIdx);
+
+        ThreadData* threadData = (ThreadData*)tls.GetData();
+        if(threadData && threadData->slots.size() > slotIdx)
+            return threadData->slots[slotIdx];
+
+        return NULL;
+    }
+
+    // Gather data from threads by TLS storage index
+    void gather(size_t slotIdx, std::vector<void*> &dataVec)
+    {
+        AutoLock guard(mtxGlobalAccess);
+        CV_Assert(tlsSlots.size() > slotIdx);
+
+        for(size_t i = 0; i < threads.size(); i++)
+        {
+            if(threads[i])
+            {
+                std::vector<void*>& thread_slots = threads[i]->slots;
+                if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
+                    dataVec.push_back(thread_slots[slotIdx]);
+            }
         }
     }
 
-    inline TLSStorage* TLSStorage::get()
+    // Set data to storage index
+    void setData(size_t slotIdx, void* pData)
     {
-        if (tlsKey == TLS_OUT_OF_INDEXES)
+        CV_Assert(tlsSlots.size() > slotIdx && pData != NULL);
+
+        ThreadData* threadData = (ThreadData*)tls.GetData();
+        if(!threadData)
         {
-            tlsKey = TlsAlloc();
-            CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
+            threadData = new ThreadData;
+            tls.SetData((void*)threadData);
+            {
+                AutoLock guard(mtxGlobalAccess);
+                threadData->idx = threads.size();
+                threads.push_back(threadData);
+            }
         }
-        TLSStorage* d = (TLSStorage*)TlsGetValue(tlsKey);
-        if (!d)
+
+        if(slotIdx >= threadData->slots.size())
         {
-            d = new TLSStorage;
-            TlsSetValue(tlsKey, d);
+            AutoLock guard(mtxGlobalAccess);
+            while(slotIdx >= threadData->slots.size())
+                threadData->slots.push_back(NULL);
         }
-        return d;
+        threadData->slots[slotIdx] = pData;
     }
-#endif //HAVE_WINRT
+
+private:
+    TlsAbstraction tls; // TLS abstraction layer instance
+
+    Mutex  mtxGlobalAccess;           // Shared objects operation guard
+    std::vector<int> tlsSlots;        // TLS keys state
+    std::vector<ThreadData*> threads; // Array for all allocated data. Thread data pointers are placed here to allow data cleanup
+};
+
+// Create global TLS storage object
+static TlsStorage &getTlsStorage()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TlsStorage, new TlsStorage())
+}
+
+TLSDataContainer::TLSDataContainer()
+{
+    key_ = (int)getTlsStorage().reserveSlot(); // Reserve key from TLS storage
+}
+
+TLSDataContainer::~TLSDataContainer()
+{
+    CV_Assert(key_ == -1); // Key must be released in child object
+}
+
+void TLSDataContainer::gatherData(std::vector<void*> &data) const
+{
+    getTlsStorage().gather(key_, data);
+}
+
+void TLSDataContainer::release()
+{
+    std::vector<void*> data;
+    data.reserve(32);
+    getTlsStorage().releaseSlot(key_, data); // Release key and get stored data for proper destruction
+    for(size_t i = 0; i < data.size(); i++)  // Delete all assosiated data
+        deleteDataInstance(data[i]);
+    key_ = -1;
+}
+
+void* TLSDataContainer::getData() const
+{
+    void* pData = getTlsStorage().getData(key_); // Check if data was already allocated
+    if(!pData)
+    {
+        // Create new data instance and save it to TLS storage
+        pData = createDataInstance();
+        getTlsStorage().setData(key_, pData);
+    }
+    return pData;
+}
+
+TLSData<CoreTLSData>& getCoreTlsData()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<CoreTLSData>, new TLSData<CoreTLSData>())
+}
 
 #if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
-#ifdef HAVE_WINRT
+#ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
+
+extern "C"
+BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved);
 
 extern "C"
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
@@ -1017,213 +1240,360 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
             // Not allowed to free resources if lpReserved is non-null
             // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
             cv::deleteThreadAllocData();
-            cv::deleteThreadData();
+            cv::getTlsStorage().releaseThread();
         }
     }
     return TRUE;
 }
 #endif
 
-#else
-    static pthread_key_t tlsKey = 0;
-    static pthread_once_t tlsKeyOnce = PTHREAD_ONCE_INIT;
-
-    static void deleteTLSStorage(void* data)
-    {
-        delete (TLSStorage*)data;
-    }
-
-    static void makeKey()
-    {
-        int errcode = pthread_key_create(&tlsKey, deleteTLSStorage);
-        CV_Assert(errcode == 0);
-    }
-
-    inline TLSStorage* TLSStorage::get()
-    {
-        pthread_once(&tlsKeyOnce, makeKey);
-        TLSStorage* d = (TLSStorage*)pthread_getspecific(tlsKey);
-        if( !d )
-        {
-            d = new TLSStorage;
-            pthread_setspecific(tlsKey, d);
-        }
-        return d;
-    }
-#endif
-
-class TLSContainerStorage
-{
-    cv::Mutex mutex_;
-    std::vector<TLSDataContainer*> tlsContainers_;
-public:
-    TLSContainerStorage() { }
-    ~TLSContainerStorage()
-    {
-        for (size_t i = 0; i < tlsContainers_.size(); i++)
-        {
-            CV_DbgAssert(tlsContainers_[i] == NULL); // not all keys released
-            tlsContainers_[i] = NULL;
-        }
-    }
-
-    int allocateKey(TLSDataContainer* pContainer)
-    {
-        cv::AutoLock lock(mutex_);
-        tlsContainers_.push_back(pContainer);
-        return (int)tlsContainers_.size() - 1;
-    }
-    void releaseKey(int id, TLSDataContainer* pContainer)
-    {
-        cv::AutoLock lock(mutex_);
-        CV_Assert(tlsContainers_[id] == pContainer);
-        tlsContainers_[id] = NULL;
-        // currently, we don't go into thread's TLSData and release data for this key
-    }
-
-    void destroyData(int key, void* data)
-    {
-        cv::AutoLock lock(mutex_);
-        TLSDataContainer* k = tlsContainers_[key];
-        if (!k)
-            return;
-        try
-        {
-            k->deleteDataInstance(data);
-        }
-        catch (...)
-        {
-            CV_DbgAssert(k == NULL); // Debug this!
-        }
-    }
-};
-
-// This is a wrapper function that will ensure 'tlsContainerStorage' is constructed on first use.
-// For more information: http://www.parashift.com/c++-faq/static-init-order-on-first-use.html
-static TLSContainerStorage& getTLSContainerStorage()
-{
-    static TLSContainerStorage *tlsContainerStorage = new TLSContainerStorage();
-    return *tlsContainerStorage;
-}
-
-TLSDataContainer::TLSDataContainer()
-    : key_(-1)
-{
-    key_ = getTLSContainerStorage().allocateKey(this);
-}
-
-TLSDataContainer::~TLSDataContainer()
-{
-    getTLSContainerStorage().releaseKey(key_, this);
-    key_ = -1;
-}
-
-void* TLSDataContainer::getData() const
-{
-    CV_Assert(key_ >= 0);
-    TLSStorage* tlsData = TLSStorage::get();
-    void* data = tlsData->getData(key_);
-    if (!data)
-    {
-        data = this->createDataInstance();
-        CV_DbgAssert(data != NULL);
-        tlsData->setData(key_, data);
-    }
-    return data;
-}
-
-TLSStorage::~TLSStorage()
-{
-    for (int i = 0; i < (int)tlsData_.size(); i++)
-    {
-        void*& data = tlsData_[i];
-        if (data)
-        {
-            getTLSContainerStorage().destroyData(i, data);
-            data = NULL;
-        }
-    }
-    tlsData_.clear();
-}
-
-
-
-TLSData<CoreTLSData>& getCoreTlsData()
-{
-    static TLSData<CoreTLSData> *value = new TLSData<CoreTLSData>();
-    return *value;
-}
-
-
-
 #ifdef CV_COLLECT_IMPL_DATA
+ImplCollector& getImplData()
+{
+    CV_SINGLETON_LAZY_INIT_REF(ImplCollector, new ImplCollector())
+}
+
 void setImpl(int flags)
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    data->implFlags = flags;
-    data->implCode.clear();
-    data->implFun.clear();
+    cv::AutoLock lock(getImplData().mutex);
+
+    getImplData().implFlags = flags;
+    getImplData().implCode.clear();
+    getImplData().implFun.clear();
 }
 
 void addImpl(int flag, const char* func)
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    data->implFlags |= flag;
+    cv::AutoLock lock(getImplData().mutex);
+
+    getImplData().implFlags |= flag;
     if(func) // use lazy collection if name was not specified
     {
-        size_t index = data->implCode.size();
-        if(!index || (data->implCode[index-1] != flag || data->implFun[index-1].compare(func))) // avoid duplicates
+        size_t index = getImplData().implCode.size();
+        if(!index || (getImplData().implCode[index-1] != flag || getImplData().implFun[index-1].compare(func))) // avoid duplicates
         {
-            data->implCode.push_back(flag);
-            data->implFun.push_back(func);
+            getImplData().implCode.push_back(flag);
+            getImplData().implFun.push_back(func);
         }
     }
 }
 
 int getImpl(std::vector<int> &impl, std::vector<String> &funName)
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    impl = data->implCode;
-    funName = data->implFun;
-    return data->implFlags; // return actual flags for lazy collection
+    cv::AutoLock lock(getImplData().mutex);
+
+    impl    = getImplData().implCode;
+    funName = getImplData().implFun;
+    return getImplData().implFlags; // return actual flags for lazy collection
 }
 
 bool useCollection()
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    return data->useCollection;
+    return getImplData().useCollection;
 }
 
 void setUseCollection(bool flag)
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    data->useCollection = flag;
+    cv::AutoLock lock(getImplData().mutex);
+
+    getImplData().useCollection = flag;
 }
 #endif
+
+namespace instr
+{
+bool useInstrumentation()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return getInstrumentStruct().useInstr;
+#else
+    return false;
+#endif
+}
+
+void setUseInstrumentation(bool flag)
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().useInstr = flag;
+#else
+    CV_UNUSED(flag);
+#endif
+}
+
+InstrNode* getTrace()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return &getInstrumentStruct().rootNode;
+#else
+    return NULL;
+#endif
+}
+
+void resetTrace()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().rootNode.removeChilds();
+    getInstrumentTLSStruct().pCurrentNode = &getInstrumentStruct().rootNode;
+#endif
+}
+
+void setFlags(FLAGS modeFlags)
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().enableMapping = (modeFlags & FLAGS_MAPPING);
+#else
+    CV_UNUSED(modeFlags);
+#endif
+}
+FLAGS getFlags()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    int flags = 0;
+    if(getInstrumentStruct().enableMapping)
+        flags |= FLAGS_MAPPING;
+    return (FLAGS)flags;
+#else
+    return (FLAGS)0;
+#endif
+}
+
+NodeData::NodeData(const char* funName, const char* fileName, int lineNum, cv::instr::TYPE instrType, cv::instr::IMPL implType)
+{
+    m_instrType = TYPE_GENERAL;
+    m_implType  = IMPL_PLAIN;
+
+    m_funName     = funName;
+    m_instrType   = instrType;
+    m_implType    = implType;
+    m_fileName    = fileName;
+    m_lineNum     = lineNum;
+
+    m_counter = 0;
+    m_ticksTotal = 0;
+
+    m_funError = false;
+    m_stopPoint = false;
+}
+NodeData::NodeData(NodeData &ref)
+{
+    *this = ref;
+}
+NodeData& NodeData::operator=(const NodeData &right)
+{
+    this->m_funName     = right.m_funName;
+    this->m_instrType   = right.m_instrType;
+    this->m_implType    = right.m_implType;
+    this->m_fileName    = right.m_fileName;
+    this->m_lineNum     = right.m_lineNum;
+    this->m_counter     = right.m_counter;
+    this->m_ticksTotal  = right.m_ticksTotal;
+    this->m_funError    = right.m_funError;
+    this->m_stopPoint   = right.m_stopPoint;
+    return *this;
+}
+NodeData::~NodeData()
+{
+}
+bool operator==(const NodeData& left, const NodeData& right)
+{
+    if(left.m_lineNum == right.m_lineNum && left.m_funName == right.m_funName && left.m_fileName == right.m_fileName)
+        return true;
+    return false;
+}
+
+#ifdef ENABLE_INSTRUMENTATION
+InstrStruct& getInstrumentStruct()
+{
+    static InstrStruct instr;
+    return instr;
+}
+
+InstrTLSStruct& getInstrumentTLSStruct()
+{
+    return *getInstrumentStruct().tlsStruct.get();
+}
+
+InstrNode* getCurrentNode()
+{
+    return getInstrumentTLSStruct().pCurrentNode;
+}
+
+IntrumentationRegion::IntrumentationRegion(const char* funName, const char* fileName, int lineNum, TYPE instrType, IMPL implType)
+{
+    m_disabled    = false;
+    m_regionTicks = 0;
+
+    InstrStruct *pStruct = &getInstrumentStruct();
+    if(pStruct->useInstr)
+    {
+        InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
+
+        // Disable in case of failure
+        if(!pTLS->pCurrentNode)
+        {
+            m_disabled = true;
+            return;
+        }
+
+        m_disabled = pTLS->pCurrentNode->m_payload.m_stopPoint;
+        if(m_disabled)
+            return;
+
+        NodeData payload(funName, fileName, lineNum, instrType, implType);
+        Node<NodeData>* pChild = NULL;
+
+        if(pStruct->enableMapping)
+        {
+            // Critical section
+            cv::AutoLock guard(pStruct->mutexCreate); // Guard from concurrent child creation
+            pChild = pTLS->pCurrentNode->findChild(payload);
+            if(!pChild)
+            {
+                pChild = new Node<NodeData>(payload);
+                pTLS->pCurrentNode->addChild(pChild);
+            }
+        }
+        else
+        {
+            pChild = pTLS->pCurrentNode->findChild(payload);
+            if(!pChild)
+            {
+                pTLS->pCurrentNode->m_payload.m_stopPoint = true;
+                return;
+            }
+        }
+        pTLS->pCurrentNode = pChild;
+
+        m_regionTicks = getTickCount();
+    }
+}
+
+IntrumentationRegion::~IntrumentationRegion()
+{
+    InstrStruct *pStruct = &getInstrumentStruct();
+    if(pStruct->useInstr)
+    {
+        if(!m_disabled)
+        {
+            InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
+            if(pTLS->pCurrentNode->m_payload.m_stopPoint)
+            {
+                pTLS->pCurrentNode->m_payload.m_stopPoint = false;
+            }
+            else
+            {
+                if (pTLS->pCurrentNode->m_payload.m_implType == cv::instr::IMPL_OPENCL &&
+                    (pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_FUN ||
+                        pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_WRAPPER))
+                {
+                    cv::ocl::finish(); // TODO Support "async" OpenCL instrumentation
+                }
+
+                uint64 ticks = (getTickCount() - m_regionTicks);
+                {
+                    cv::AutoLock guard(pStruct->mutexCount); // Concurrent ticks accumulation
+                    pTLS->pCurrentNode->m_payload.m_counter++;
+                    pTLS->pCurrentNode->m_payload.m_ticksTotal += ticks;
+                }
+
+                pTLS->pCurrentNode = pTLS->pCurrentNode->m_pParent;
+            }
+        }
+    }
+}
+#endif
+}
 
 namespace ipp
 {
 
-static int ippStatus = 0; // 0 - all is ok, -1 - IPP functions failed
-static const char * funcname = NULL, * filename = NULL;
-static int linen = 0;
+struct IPPInitSingleton
+{
+public:
+    IPPInitSingleton()
+    {
+        useIPP      = true;
+        ippStatus   = 0;
+        funcname    = NULL;
+        filename    = NULL;
+        linen       = 0;
+        ippFeatures = 0;
+
+#ifdef HAVE_IPP
+        const char* pIppEnv = getenv("OPENCV_IPP");
+        cv::String env = pIppEnv;
+        if(env.size())
+        {
+            if(env == "disabled")
+            {
+                std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
+                useIPP = false;
+            }
+#if IPP_VERSION_X100 >= 900
+            else if(env == "sse")
+                ippFeatures = ippCPUID_SSE;
+            else if(env == "sse2")
+                ippFeatures = ippCPUID_SSE2;
+            else if(env == "sse3")
+                ippFeatures = ippCPUID_SSE3;
+            else if(env == "ssse3")
+                ippFeatures = ippCPUID_SSSE3;
+            else if(env == "sse41")
+                ippFeatures = ippCPUID_SSE41;
+            else if(env == "sse42")
+                ippFeatures = ippCPUID_SSE42;
+            else if(env == "avx")
+                ippFeatures = ippCPUID_AVX;
+            else if(env == "avx2")
+                ippFeatures = ippCPUID_AVX2;
+#endif
+            else
+                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << std::endl;
+        }
+
+        IPP_INITIALIZER(ippFeatures)
+#endif
+    }
+
+    bool useIPP;
+
+    int         ippStatus; // 0 - all is ok, -1 - IPP functions failed
+    const char *funcname;
+    const char *filename;
+    int         linen;
+    int         ippFeatures;
+};
+
+static IPPInitSingleton& getIPPSingleton()
+{
+    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingleton, new IPPInitSingleton())
+}
+
+int getIppFeatures()
+{
+#ifdef HAVE_IPP
+    return getIPPSingleton().ippFeatures;
+#else
+    return 0;
+#endif
+}
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
-    ippStatus = status;
-    funcname = _funcname;
-    filename = _filename;
-    linen = _line;
+    getIPPSingleton().ippStatus = status;
+    getIPPSingleton().funcname = _funcname;
+    getIPPSingleton().filename = _filename;
+    getIPPSingleton().linen = _line;
 }
 
 int getIppStatus()
 {
-    return ippStatus;
+    return getIPPSingleton().ippStatus;
 }
 
 String getIppErrorLocation()
 {
-    return format("%s:%d %s", filename ? filename : "", linen, funcname ? funcname : "");
+    return format("%s:%d %s", getIPPSingleton().filename ? getIPPSingleton().filename : "", getIPPSingleton().linen, getIPPSingleton().funcname ? getIPPSingleton().funcname : "");
 }
 
 bool useIPP()
@@ -1232,11 +1602,7 @@ bool useIPP()
     CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
-        const char* pIppEnv = getenv("OPENCV_IPP");
-        if(pIppEnv && (cv::String(pIppEnv) == "disabled"))
-            data->useIPP = false;
-        else
-            data->useIPP = true;
+        data->useIPP = getIPPSingleton().useIPP;
     }
     return (data->useIPP > 0);
 #else
@@ -1248,7 +1614,7 @@ void setUseIPP(bool flag)
 {
     CoreTLSData* data = getCoreTlsData().get();
 #ifdef HAVE_IPP
-    data->useIPP = flag;
+    data->useIPP = (getIPPSingleton().useIPP)?flag:false;
 #else
     (void)flag;
     data->useIPP = false;
@@ -1258,5 +1624,35 @@ void setUseIPP(bool flag)
 } // namespace ipp
 
 } // namespace cv
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+
+namespace tegra {
+
+bool useTegra()
+{
+    cv::CoreTLSData* data = cv::getCoreTlsData().get();
+
+    if (data->useTegra < 0)
+    {
+        const char* pTegraEnv = getenv("OPENCV_TEGRA");
+        if (pTegraEnv && (cv::String(pTegraEnv) == "disabled"))
+            data->useTegra = false;
+        else
+            data->useTegra = true;
+    }
+
+    return (data->useTegra > 0);
+}
+
+void setUseTegra(bool flag)
+{
+    cv::CoreTLSData* data = cv::getCoreTlsData().get();
+    data->useTegra = flag;
+}
+
+} // namespace tegra
+
+#endif
 
 /* End of file. */

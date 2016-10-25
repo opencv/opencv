@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include <cstdio>
+#include <iostream>
 
 #include "cascadedetect.hpp"
 #include "opencv2/objdetect/objdetect_c.h"
@@ -59,6 +60,8 @@ template<typename _Tp> void copyVectorToUMat(const std::vector<_Tp>& v, UMat& um
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps,
                      std::vector<int>* weights, std::vector<double>* levelWeights)
 {
+    CV_INSTRUMENT_REGION()
+
     if( groupThreshold <= 0 || rectList.empty() )
     {
         if( weights )
@@ -359,23 +362,31 @@ static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detect
 
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps)
 {
+    CV_INSTRUMENT_REGION()
+
     groupRectangles(rectList, groupThreshold, eps, 0, 0);
 }
 
 void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& weights, int groupThreshold, double eps)
 {
+    CV_INSTRUMENT_REGION()
+
     groupRectangles(rectList, groupThreshold, eps, &weights, 0);
 }
 //used for cascade detection algorithm for ROC-curve calculating
 void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& rejectLevels,
                      std::vector<double>& levelWeights, int groupThreshold, double eps)
 {
+    CV_INSTRUMENT_REGION()
+
     groupRectangles(rectList, groupThreshold, eps, &rejectLevels, &levelWeights);
 }
 //can be used for HOG detection algorithm only
 void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights,
                                std::vector<double>& foundScales, double detectThreshold, Size winDetSize)
 {
+    CV_INSTRUMENT_REGION()
+
     groupRectangles_meanshift(rectList, detectThreshold, &foundWeights, foundScales, winDetSize);
 }
 
@@ -555,6 +566,7 @@ HaarEvaluator::HaarEvaluator()
     localSize = Size(4, 2);
     lbufSize = Size(0, 0);
     nchannels = 0;
+    tofs = 0;
 }
 
 HaarEvaluator::~HaarEvaluator()
@@ -617,8 +629,7 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
 void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 {
     const ScaleData& s = scaleData->at(scaleIdx);
-    tofs = (int)sbufSize.area();
-    sqofs = hasTiltedFeatures ? tofs*2 : tofs;
+    sqofs = hasTiltedFeatures ? sbufSize.area() * 2 : sbufSize.area();
 
     if (img.isUMat())
     {
@@ -627,38 +638,41 @@ void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
         int sqy = sy + (sqofs / sbufSize.width);
         UMat sum(usbuf, Rect(sx, sy, s.szi.width, s.szi.height));
         UMat sqsum(usbuf, Rect(sx, sqy, s.szi.width, s.szi.height));
-        sqsum.flags = (sqsum.flags & ~UMat::DEPTH_MASK) | CV_32F;
+        sqsum.flags = (sqsum.flags & ~UMat::DEPTH_MASK) | CV_32S;
 
         if (hasTiltedFeatures)
         {
             int sty = sy + (tofs / sbufSize.width);
             UMat tilted(usbuf, Rect(sx, sty, s.szi.width, s.szi.height));
-            integral(img, sum, sqsum, tilted, CV_32S, CV_32F);
+            integral(img, sum, sqsum, tilted, CV_32S, CV_32S);
         }
         else
         {
             UMatData* u = sqsum.u;
-            integral(img, sum, sqsum, noArray(), CV_32S, CV_32F);
-            CV_Assert(sqsum.u == u && sqsum.size() == s.szi && sqsum.type()==CV_32F);
+            integral(img, sum, sqsum, noArray(), CV_32S, CV_32S);
+            CV_Assert(sqsum.u == u && sqsum.size() == s.szi && sqsum.type()==CV_32S);
         }
     }
     else
     {
         Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
-        Mat sqsum(s.szi, CV_32F, sum.ptr<int>() + sqofs, sbuf.step);
+        Mat sqsum(s.szi, CV_32S, sum.ptr<int>() + sqofs, sbuf.step);
 
         if (hasTiltedFeatures)
         {
             Mat tilted(s.szi, CV_32S, sum.ptr<int>() + tofs, sbuf.step);
-            integral(img, sum, sqsum, tilted, CV_32S, CV_32F);
+            integral(img, sum, sqsum, tilted, CV_32S, CV_32S);
         }
         else
-            integral(img, sum, sqsum, noArray(), CV_32S, CV_32F);
+            integral(img, sum, sqsum, noArray(), CV_32S, CV_32S);
     }
 }
 
 void HaarEvaluator::computeOptFeatures()
 {
+    if (hasTiltedFeatures)
+        tofs = sbufSize.area();
+
     int sstep = sbufSize.width;
     CV_SUM_OFS( nofs[0], nofs[1], nofs[2], nofs[3], 0, normrect, sstep );
 
@@ -676,7 +690,6 @@ void HaarEvaluator::computeOptFeatures()
     copyVectorToUMat(*optfeatures_lbuf, ufbuf);
 }
 
-
 bool HaarEvaluator::setWindow( Point pt, int scaleIdx )
 {
     const ScaleData& s = getScaleData(scaleIdx);
@@ -687,18 +700,23 @@ bool HaarEvaluator::setWindow( Point pt, int scaleIdx )
         return false;
 
     pwin = &sbuf.at<int>(pt) + s.layer_ofs;
-    const float* pq = (const float*)(pwin + sqofs);
+    const int* pq = (const int*)(pwin + sqofs);
     int valsum = CALC_SUM_OFS(nofs, pwin);
-    float valsqsum = CALC_SUM_OFS(nofs, pq);
+    unsigned valsqsum = (unsigned)(CALC_SUM_OFS(nofs, pq));
 
-    double nf = (double)normrect.area() * valsqsum - (double)valsum * valsum;
+    double area = normrect.area();
+    double nf = area * valsqsum - (double)valsum * valsum;
     if( nf > 0. )
+    {
         nf = std::sqrt(nf);
+        varianceNormFactor = (float)(1./nf);
+        return area*varianceNormFactor < 1e-1;
+    }
     else
-        nf = 1.;
-    varianceNormFactor = (float)(1./nf);
-
-    return true;
+    {
+        varianceNormFactor = 1.f;
+        return false;
+    }
 }
 
 
@@ -937,10 +955,10 @@ Ptr<CascadeClassifierImpl::MaskGenerator> CascadeClassifierImpl::getMaskGenerato
 Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator()
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    return tegra::getCascadeClassifierMaskGenerator();
-#else
-    return Ptr<BaseCascadeClassifier::MaskGenerator>();
+    if (tegra::useTegra())
+        return tegra::getCascadeClassifierMaskGenerator();
 #endif
+    return Ptr<BaseCascadeClassifier::MaskGenerator>();
 }
 
 class CascadeClassifierInvoker : public ParallelLoopBody
@@ -1033,7 +1051,7 @@ public:
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 struct getNeighbors { int operator ()(const CvAvgComp& e) const { return e.neighbors; } };
 
-
+#ifdef HAVE_OPENCL
 bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<float>& scales,
                                                             std::vector<Rect>& candidates )
 {
@@ -1044,7 +1062,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     if( localsz.area() == 0 )
         return false;
     Size lbufSize = featureEvaluator->getLocalBufSize();
-    size_t localsize[] = { localsz.width, localsz.height };
+    size_t localsize[] = { (size_t)localsz.width, (size_t)localsz.height };
     const int grp_per_CU = 12;
     size_t globalsize[] = { grp_per_CU*ocl::Device::getDefault().maxComputeUnits()*localsize[0], localsize[1] };
     bool ok = false;
@@ -1164,6 +1182,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     }
     return ok;
 }
+#endif
 
 bool CascadeClassifierImpl::isOldFormatCascade() const
 {
@@ -1203,23 +1222,71 @@ static void detectMultiScaleOldFormat( const Mat& image, Ptr<CvHaarClassifierCas
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
 }
 
-
 void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::vector<Rect>& candidates,
                                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                                     bool outputRejectLevels )
 {
-    Size imgsz = _image.size();
+    CV_INSTRUMENT_REGION()
 
-    Mat grayImage;
-    _InputArray gray;
+    Size imgsz = _image.size();
+    Size originalWindowSize = getOriginalWindowSize();
+
+    if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
+        maxObjectSize = imgsz;
+
+    // If a too small image patch is entering the function, break early before any processing
+    if( (imgsz.height < originalWindowSize.height) || (imgsz.width < originalWindowSize.width) )
+        return;
+
+    std::vector<float> all_scales, scales;
+    all_scales.reserve(1024);
+    scales.reserve(1024);
+
+    // First calculate all possible scales for the given image and model, then remove undesired scales
+    // This allows us to cope with single scale detections (minSize == maxSize) that do not fall on precalculated scale
+    for( double factor = 1; ; factor *= scaleFactor )
+    {
+        Size windowSize( cvRound(originalWindowSize.width*factor), cvRound(originalWindowSize.height*factor) );
+        if( windowSize.width > imgsz.width || windowSize.height > imgsz.height )
+            break;
+        all_scales.push_back((float)factor);
+    }
+
+    // This will capture allowed scales and a minSize==maxSize scale, if it is in the precalculated scales
+    for( size_t index = 0; index < all_scales.size(); index++){
+        Size windowSize( cvRound(originalWindowSize.width*all_scales[index]), cvRound(originalWindowSize.height*all_scales[index]) );
+        if( windowSize.width > maxObjectSize.width || windowSize.height > maxObjectSize.height)
+            break;
+        if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
+            continue;
+        scales.push_back(all_scales[index]);
+    }
+
+    // If minSize and maxSize parameter are equal and scales is not filled yet, then the scale was not available in the precalculated scales
+    // In that case we want to return the most fitting scale (closest corresponding scale using L2 distance)
+    if( scales.empty() && !all_scales.empty() ){
+        std::vector<double> distances;
+        // Calculate distances
+        for(size_t v = 0; v < all_scales.size(); v++){
+            Size windowSize( cvRound(originalWindowSize.width*all_scales[v]), cvRound(originalWindowSize.height*all_scales[v]) );
+            double d = (minObjectSize.width - windowSize.width) * (minObjectSize.width - windowSize.width)
+                       + (minObjectSize.height - windowSize.height) * (minObjectSize.height - windowSize.height);
+            distances.push_back(d);
+        }
+        // Take the index of lowest value
+        // Use that index to push the correct scale parameter
+        size_t iMin=0;
+        for(size_t i = 0; i < distances.size(); ++i){
+            if(distances[iMin] > distances[i])
+                    iMin=i;
+        }
+        scales.push_back(all_scales[iMin]);
+    }
 
     candidates.clear();
     rejectLevels.clear();
     levelWeights.clear();
-
-    if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
-        maxObjectSize = imgsz;
 
 #ifdef HAVE_OPENCL
     bool use_ocl = tryOpenCL && ocl::useOpenCL() &&
@@ -1231,50 +1298,26 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
          !outputRejectLevels;
 #endif
 
-    /*if( use_ocl )
-    {
-        if (_image.channels() > 1)
-            cvtColor(_image, ugrayImage, COLOR_BGR2GRAY);
-        else if (_image.isUMat())
-            ugrayImage = _image.getUMat();
-        else
-            _image.copyTo(ugrayImage);
-        gray = ugrayImage;
-    }
-    else*/
-    {
-        if (_image.channels() > 1)
-            cvtColor(_image, grayImage, COLOR_BGR2GRAY);
-        else if (_image.isMat())
-            grayImage = _image.getMat();
-        else
-            _image.copyTo(grayImage);
-        gray = grayImage;
-    }
+    Mat grayImage;
+    _InputArray gray;
 
-    std::vector<float> scales;
-    scales.reserve(1024);
-
-    for( double factor = 1; ; factor *= scaleFactor )
-    {
-        Size originalWindowSize = getOriginalWindowSize();
-
-        Size windowSize( cvRound(originalWindowSize.width*factor), cvRound(originalWindowSize.height*factor) );
-        if( windowSize.width > maxObjectSize.width || windowSize.height > maxObjectSize.height ||
-            windowSize.width > imgsz.width || windowSize.height > imgsz.height )
-            break;
-        if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
-            continue;
-        scales.push_back((float)factor);
-    }
+    if (_image.channels() > 1)
+        cvtColor(_image, grayImage, COLOR_BGR2GRAY);
+    else if (_image.isMat())
+        grayImage = _image.getMat();
+    else
+        _image.copyTo(grayImage);
+    gray = grayImage;
 
     if( !featureEvaluator->setImage(gray, scales) )
         return;
 
+#ifdef HAVE_OPENCL
     // OpenCL code
     CV_OCL_RUN(use_ocl, ocl_detectMultiScaleNoGrouping( scales, candidates ))
 
     tryOpenCL = false;
+#endif
 
     // CPU code
     featureEvaluator->getMats();
@@ -1310,6 +1353,8 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           int flags, Size minObjectSize, Size maxObjectSize,
                                           bool outputRejectLevels )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( scaleFactor > 1 && _image.depth() == CV_8U );
 
     if( empty() )
@@ -1342,6 +1387,8 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize)
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<int> fakeLevels;
     std::vector<double> fakeWeights;
     detectMultiScale( _image, objects, fakeLevels, fakeWeights, scaleFactor,
@@ -1353,6 +1400,8 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           int minNeighbors, int flags, Size minObjectSize,
                                           Size maxObjectSize )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat image = _image.getMat();
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
 
@@ -1400,8 +1449,10 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
     else if( featureTypeStr == CC_LBP )
         featureType = FeatureEvaluator::LBP;
     else if( featureTypeStr == CC_HOG )
+    {
         featureType = FeatureEvaluator::HOG;
-
+        CV_Error(Error::StsNotImplemented, "HOG cascade is not supported in 3.0");
+    }
     else
         return false;
 
@@ -1518,9 +1569,11 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
 
 bool CascadeClassifierImpl::read_(const FileNode& root)
 {
+#ifdef HAVE_OPENCL
     tryOpenCL = true;
     haarKernel = ocl::Kernel();
     lbpKernel = ocl::Kernel();
+#endif
     ustages.release();
     unodes.release();
     uleaves.release();
@@ -1578,6 +1631,43 @@ bool CascadeClassifier::read(const FileNode &root)
     return ok;
 }
 
+void clipObjects(Size sz, std::vector<Rect>& objects,
+                 std::vector<int>* a, std::vector<double>* b)
+{
+    size_t i, j = 0, n = objects.size();
+    Rect win0 = Rect(0, 0, sz.width, sz.height);
+    if(a)
+    {
+        CV_Assert(a->size() == n);
+    }
+    if(b)
+    {
+        CV_Assert(b->size() == n);
+    }
+
+    for( i = 0; i < n; i++ )
+    {
+        Rect r = win0 & objects[i];
+        if( r.area() > 0 )
+        {
+            objects[j] = r;
+            if( i > j )
+            {
+                if(a) a->at(j) = a->at(i);
+                if(b) b->at(j) = b->at(i);
+            }
+            j++;
+        }
+    }
+
+    if( j < n )
+    {
+        objects.resize(j);
+        if(a) a->resize(j);
+        if(b) b->resize(j);
+    }
+}
+
 void CascadeClassifier::detectMultiScale( InputArray image,
                       CV_OUT std::vector<Rect>& objects,
                       double scaleFactor,
@@ -1585,8 +1675,11 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       Size minSize,
                       Size maxSize )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, scaleFactor, minNeighbors, flags, minSize, maxSize);
+    clipObjects(image.size(), objects, 0, 0);
 }
 
 void CascadeClassifier::detectMultiScale( InputArray image,
@@ -1596,9 +1689,12 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       int minNeighbors, int flags,
                       Size minSize, Size maxSize )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, numDetections,
                          scaleFactor, minNeighbors, flags, minSize, maxSize);
+    clipObjects(image.size(), objects, &numDetections, 0);
 }
 
 void CascadeClassifier::detectMultiScale( InputArray image,
@@ -1610,10 +1706,13 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       Size minSize, Size maxSize,
                       bool outputRejectLevels )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, rejectLevels, levelWeights,
                          scaleFactor, minNeighbors, flags,
                          minSize, maxSize, outputRejectLevels);
+    clipObjects(image.size(), objects, &rejectLevels, &levelWeights);
 }
 
 bool CascadeClassifier::isOldFormatCascade() const

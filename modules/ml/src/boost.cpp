@@ -387,6 +387,7 @@ public:
         if( roots.empty() )
             CV_Error( CV_StsBadArg, "RTrees have not been trained" );
 
+        writeFormat(fs);
         writeParams(fs);
 
         int k, ntrees = (int)roots.size();
@@ -465,7 +466,7 @@ public:
     CV_WRAP_SAME_PROPERTY(float, RegressionAccuracy, impl.params)
     CV_WRAP_SAME_PROPERTY_S(cv::Mat, Priors, impl.params)
 
-    String getDefaultModelName() const { return "opencv_ml_boost"; }
+    String getDefaultName() const { return "opencv_ml_boost"; }
 
     bool train( const Ptr<TrainData>& trainData, int flags )
     {

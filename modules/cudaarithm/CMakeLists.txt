@@ -1,4 +1,4 @@
-if(IOS OR (NOT HAVE_CUDA AND NOT BUILD_CUDA_STUBS))
+if(IOS OR WINRT OR (NOT HAVE_CUDA AND NOT BUILD_CUDA_STUBS))
   ocv_module_disable(cudaarithm)
 endif()
 

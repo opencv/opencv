@@ -184,11 +184,14 @@ void SimpleBlobDetectorImpl::read( const cv::FileNode& fn )
 
 void SimpleBlobDetectorImpl::write( cv::FileStorage& fs ) const
 {
+    writeFormat(fs);
     params.write(fs);
 }
 
 void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImage, std::vector<Center> &centers) const
 {
+    CV_INSTRUMENT_REGION()
+
     Mat image = _image.getMat(), binaryImage = _binaryImage.getMat();
     (void)image;
     centers.clear();
@@ -266,6 +269,8 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
                 continue;
         }
 
+        if(moms.m00 == 0.0)
+            continue;
         center.location = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
 
         if (params.filterByColor)
@@ -286,8 +291,6 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
             center.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
         }
 
-        if(moms.m00 == 0.0)
-            continue;
         centers.push_back(center);
 
 
@@ -303,6 +306,8 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
 
 void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>& keypoints, InputArray)
 {
+    CV_INSTRUMENT_REGION()
+
     //TODO: support mask
     keypoints.clear();
     Mat grayscaleImage;
@@ -310,6 +315,10 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
         cvtColor(image, grayscaleImage, COLOR_BGR2GRAY);
     else
         grayscaleImage = image.getMat();
+
+    if (grayscaleImage.type() != CV_8UC1) {
+        CV_Error(Error::StsUnsupportedFormat, "Blob detector only supports 8-bit images!");
+    }
 
     std::vector < std::vector<Center> > centers;
     for (double thresh = params.minThreshold; thresh < params.maxThreshold; thresh += params.thresholdStep)

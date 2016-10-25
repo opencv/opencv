@@ -548,13 +548,31 @@ void referenceRGB2YUV(const Mat& rgb, Mat& yuv, RGBreader* rgbReader, YUVwriter*
 
 struct ConversionYUV
 {
-    ConversionYUV( const int code )
+    explicit ConversionYUV( const int code )
     {
         yuvReader_  = YUVreader :: getReader(code);
         yuvWriter_  = YUVwriter :: getWriter(code);
         rgbReader_  = RGBreader :: getReader(code);
         rgbWriter_  = RGBwriter :: getWriter(code);
         grayWriter_ = GRAYwriter:: getWriter(code);
+    }
+
+    ~ConversionYUV()
+    {
+        if (yuvReader_)
+            delete yuvReader_;
+
+        if (yuvWriter_)
+            delete yuvWriter_;
+
+        if (rgbReader_)
+            delete rgbReader_;
+
+        if (rgbWriter_)
+            delete rgbWriter_;
+
+        if (grayWriter_)
+            delete grayWriter_;
     }
 
     int getDcn()

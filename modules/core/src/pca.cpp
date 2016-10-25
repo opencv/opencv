@@ -66,7 +66,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
 {
     Mat data = _data.getMat(), _mean = __mean.getMat();
     int covar_flags = CV_COVAR_SCALE;
-    int i, len, in_count;
+    int len, in_count;
     Size mean_sz;
 
     CV_Assert( data.channels() == 1 );
@@ -131,6 +131,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
         eigenvectors = evects1;
 
         // normalize eigenvectors
+        int i;
         for( i = 0; i < out_count; i++ )
         {
             Mat vec = eigenvectors.row(i);
@@ -157,15 +158,14 @@ void PCA::write(FileStorage& fs ) const
     fs << "mean" << mean;
 }
 
-void PCA::read(const FileNode& fs)
+void PCA::read(const FileNode& fn)
 {
-    CV_Assert( !fs.empty() );
-    String name = (String)fs["name"];
-    CV_Assert( name == "PCA" );
+    CV_Assert( !fn.empty() );
+    CV_Assert( (String)fn["name"] == "PCA" );
 
-    cv::read(fs["vectors"], eigenvectors);
-    cv::read(fs["values"], eigenvalues);
-    cv::read(fs["mean"], mean);
+    cv::read(fn["vectors"], eigenvectors);
+    cv::read(fn["values"], eigenvalues);
+    cv::read(fn["mean"], mean);
 }
 
 template <typename T>
@@ -202,7 +202,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
 {
     Mat data = _data.getMat(), _mean = __mean.getMat();
     int covar_flags = CV_COVAR_SCALE;
-    int i, len, in_count;
+    int len, in_count;
     Size mean_sz;
 
     CV_Assert( data.channels() == 1 );
@@ -266,6 +266,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
         eigenvectors = evects1;
 
         // normalize all eigenvectors
+        int i;
         for( i = 0; i < eigenvectors.rows; i++ )
         {
             Mat vec = eigenvectors.row(i);
@@ -350,6 +351,8 @@ Mat PCA::backProject(InputArray data) const
 void cv::PCACompute(InputArray data, InputOutputArray mean,
                     OutputArray eigenvectors, int maxComponents)
 {
+    CV_INSTRUMENT_REGION()
+
     PCA pca;
     pca(data, mean, 0, maxComponents);
     pca.mean.copyTo(mean);
@@ -359,6 +362,8 @@ void cv::PCACompute(InputArray data, InputOutputArray mean,
 void cv::PCACompute(InputArray data, InputOutputArray mean,
                     OutputArray eigenvectors, double retainedVariance)
 {
+    CV_INSTRUMENT_REGION()
+
     PCA pca;
     pca(data, mean, 0, retainedVariance);
     pca.mean.copyTo(mean);
@@ -368,6 +373,8 @@ void cv::PCACompute(InputArray data, InputOutputArray mean,
 void cv::PCAProject(InputArray data, InputArray mean,
                     InputArray eigenvectors, OutputArray result)
 {
+    CV_INSTRUMENT_REGION()
+
     PCA pca;
     pca.mean = mean.getMat();
     pca.eigenvectors = eigenvectors.getMat();
@@ -377,6 +384,8 @@ void cv::PCAProject(InputArray data, InputArray mean,
 void cv::PCABackProject(InputArray data, InputArray mean,
                     InputArray eigenvectors, OutputArray result)
 {
+    CV_INSTRUMENT_REGION()
+
     PCA pca;
     pca.mean = mean.getMat();
     pca.eigenvectors = eigenvectors.getMat();

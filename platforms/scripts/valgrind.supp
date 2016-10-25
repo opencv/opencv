@@ -1,0 +1,13 @@
+{
+   IPP static init
+   Memcheck:Cond
+   fun:ippicvGetCpuFeatures
+   fun:ippicvStaticInit
+}
+
+{
+   TBB - allocate_via_handler_v3 issue
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN3tbb8internal23allocate_via_handler_v3Em
+}

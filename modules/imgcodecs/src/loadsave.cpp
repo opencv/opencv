@@ -93,6 +93,9 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<PngDecoder>() );
         encoders.push_back( makePtr<PngEncoder>() );
     #endif
+    #ifdef HAVE_GDCM
+        decoders.push_back( makePtr<DICOMDecoder>() );
+    #endif
     #ifdef HAVE_JASPER
         decoders.push_back( makePtr<Jpeg2KDecoder>() );
         encoders.push_back( makePtr<Jpeg2KEncoder>() );
@@ -106,6 +109,8 @@ struct ImageCodecInitializer
         /// Attach the GDAL Decoder
         decoders.push_back( makePtr<GdalDecoder>() );
     #endif/*HAVE_GDAL*/
+        decoders.push_back( makePtr<PAMDecoder>() );
+        encoders.push_back( makePtr<PAMEncoder>() );
     }
 
     std::vector<ImageDecoder> decoders;
@@ -234,6 +239,7 @@ enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
  *                      LOAD_MAT=2
  *                    }
  * @param[in] mat Reference to C++ Mat object (If LOAD_MAT)
+ * @param[in] scale_denom Scale value
  *
 */
 static void*
@@ -251,7 +257,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         decoder = GdalDecoder().newDecoder();
     }else{
 #endif
-        decoder = findDecoder(filename);
+        decoder = findDecoder( filename );
 #ifdef HAVE_GDAL
     }
 #endif
@@ -261,8 +267,22 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         return 0;
     }
 
+    int scale_denom = 1;
+    if( flags > IMREAD_LOAD_GDAL )
+    {
+    if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
+        scale_denom = 2;
+    else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
+        scale_denom = 4;
+    else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
+        scale_denom = 8;
+    }
+
+    /// set the scale_denom in the driver
+    decoder->setScale( scale_denom );
+
     /// set the filename in the driver
-    decoder->setSource(filename);
+    decoder->setSource( filename );
 
    // read the header to make sure it succeeds
    if( !decoder->readHeader() )
@@ -275,7 +295,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 
     // grab the decoded type
     int type = decoder->type();
-    if( flags != IMREAD_UNCHANGED )
+    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
@@ -292,7 +312,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         if( hdrtype == LOAD_CVMAT )
         {
             matrix = cvCreateMat( size.height, size.width, type );
-            temp = cvarrToMat(matrix);
+            temp = cvarrToMat( matrix );
         }
         else
         {
@@ -303,7 +323,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     else
     {
         image = cvCreateImage( size, cvIplDepth(type), CV_MAT_CN(type) );
-        temp = cvarrToMat(image);
+        temp = cvarrToMat( image );
     }
 
     // read the image data
@@ -314,6 +334,11 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         if( mat )
             mat->release();
         return 0;
+    }
+
+    if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    {
+        resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ) );
     }
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
@@ -362,7 +387,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     {
         // grab the decoded type
         int type = decoder->type();
-        if (flags != IMREAD_UNCHANGED)
+        if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
         {
             if ((flags & CV_LOAD_IMAGE_ANYDEPTH) == 0)
                 type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
@@ -374,15 +399,8 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
                 type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
         }
 
-        // established the required input image size.
-        CvSize size;
-        size.width = decoder->width();
-        size.height = decoder->height();
-
-        Mat mat;
-        mat.create(size.height, size.width, type);
-
         // read the image data
+        Mat mat(decoder->height(), decoder->width(), type);
         if (!decoder->readData(mat))
         {
             break;
@@ -498,8 +516,14 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     if( !decoder->readHeader() )
     {
-        if( !filename.empty() )
-            remove(filename.c_str());
+        decoder.release();
+        if ( !filename.empty() )
+        {
+            if ( remove(filename.c_str()) != 0 )
+            {
+                CV_Error( CV_StsError, "unable to remove temporary file" );
+            }
+        }
         return 0;
     }
 
@@ -508,7 +532,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     size.height = decoder->height();
 
     int type = decoder->type();
-    if( flags != IMREAD_UNCHANGED )
+    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
@@ -540,8 +564,14 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     bool code = decoder->readData( *data );
-    if( !filename.empty() )
-        remove(filename.c_str());
+    decoder.release();
+    if ( !filename.empty() )
+    {
+        if ( remove(filename.c_str()) != 0 )
+        {
+            CV_Error( CV_StsError, "unable to remove temporary file" );
+        }
+    }
 
     if( !code )
     {

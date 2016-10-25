@@ -44,16 +44,16 @@ Code
         histogram of the lower half base image and with the same base image histogram.
     -   Display the numerical matching parameters obtained.
 -   **Downloadable code**: Click
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp)
 -   **Code at glance:**
 
-@includelineno cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp
+@include cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp
 
 Explanation
 -----------
 
 -#  Declare variables such as the matrices to store the base image and the two other images to
-    compare ( RGB and HSV )
+    compare ( BGR and HSV )
     @code{.cpp}
     Mat src_base, hsv_base;
     Mat src_test1, hsv_test1;

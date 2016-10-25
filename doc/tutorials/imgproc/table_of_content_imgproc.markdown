@@ -27,6 +27,14 @@ In this section you will learn about the image processing (manipulation) functio
 
     Here we investigate different morphology operators
 
+-   @subpage tutorial_moprh_lines_detection
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Theodore Tsesmelis
+
+    Here we will show how we can use different morphology operators to extract horizontal and vertical lines
+
 -   @subpage tutorial_pyramids
 
     *Compatibility:* \> OpenCV 2.0
@@ -42,6 +50,14 @@ In this section you will learn about the image processing (manipulation) functio
     *Author:* Ana Huamán
 
     After so much processing, it is time to decide which pixels stay!
+
+-   @subpage tutorial_threshold_inRange
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Rishiraj Surti
+
+    Thresholding operations using inRange function.
 
 -   @subpage tutorial_filter_2d
 

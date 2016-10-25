@@ -86,7 +86,7 @@
 
 #include <mferror.h>
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
     // for ComPtr usage
 #include <wrl/client.h>
 #ifdef __cplusplus_winrt
@@ -103,170 +103,16 @@
 #ifdef HAVE_CONCURRENCY
 #include <concrt.h>
 #ifndef __cplusplus_winrt
-__declspec(noreturn) void __stdcall __abi_WinRTraiseException(long);
-
-inline void __abi_ThrowIfFailed(long __hrArg)
-{
-    if (__hrArg < 0)
-    {
-        __abi_WinRTraiseException(__hrArg);
-    }
-}
-
-struct Guid
-{
-public:
-    Guid();
-    Guid(__rcGUID_t);
-    operator ::__rcGUID_t();
-    bool Equals(Guid __guidArg);
-    bool Equals(__rcGUID_t __guidArg);
-    Guid(unsigned int __aArg, unsigned short __bArg, unsigned short __cArg, unsigned __int8 __dArg,
-        unsigned __int8 __eArg, unsigned __int8 __fArg, unsigned __int8 __gArg, unsigned __int8 __hArg,
-        unsigned __int8 __iArg, unsigned __int8 __jArg, unsigned __int8 __kArg);
-    Guid(unsigned int __aArg, unsigned short __bArg, unsigned short __cArg, const unsigned __int8* __dArg);
-private:
-    unsigned long  __a;
-    unsigned short __b;
-    unsigned short __c;
-    unsigned char __d;
-    unsigned char __e;
-    unsigned char __f;
-    unsigned char __g;
-    unsigned char __h;
-    unsigned char __i;
-    unsigned char __j;
-    unsigned char __k;
-};
-
-static_assert(sizeof(Guid) == sizeof(::_GUID), "Incorect size for Guid");
-static_assert(sizeof(__rcGUID_t) == sizeof(::_GUID), "Incorect size for __rcGUID_t");
-
-////////////////////////////////////////////////////////////////////////////////
-inline Guid::Guid() : __a(0), __b(0), __c(0), __d(0), __e(0), __f(0), __g(0), __h(0), __i(0), __j(0), __k(0)
-{
-}
-
-inline Guid::Guid(__rcGUID_t __guid) :
-__a(reinterpret_cast<const __s_GUID&>(__guid).Data1),
-__b(reinterpret_cast<const __s_GUID&>(__guid).Data2),
-__c(reinterpret_cast<const __s_GUID&>(__guid).Data3),
-__d(reinterpret_cast<const __s_GUID&>(__guid).Data4[0]),
-__e(reinterpret_cast<const __s_GUID&>(__guid).Data4[1]),
-__f(reinterpret_cast<const __s_GUID&>(__guid).Data4[2]),
-__g(reinterpret_cast<const __s_GUID&>(__guid).Data4[3]),
-__h(reinterpret_cast<const __s_GUID&>(__guid).Data4[4]),
-__i(reinterpret_cast<const __s_GUID&>(__guid).Data4[5]),
-__j(reinterpret_cast<const __s_GUID&>(__guid).Data4[6]),
-__k(reinterpret_cast<const __s_GUID&>(__guid).Data4[7])
-{
-}
-
-inline Guid::operator ::__rcGUID_t()
-{
-    return reinterpret_cast<__rcGUID_t>(*this);
-}
-
-inline bool Guid::Equals(Guid __guidArg)
-{
-    return *this == __guidArg;
-}
-
-inline bool Guid::Equals(__rcGUID_t __guidArg)
-{
-    return *this == static_cast< Guid>(__guidArg);
-}
-
-inline bool operator==(Guid __aArg, Guid __bArg)
-{
-    auto __a = reinterpret_cast<unsigned long*>(&__aArg);
-    auto __b = reinterpret_cast<unsigned long*>(&__bArg);
-
-    return (__a[0] == __b[0] && __a[1] == __b[1] && __a[2] == __b[2] && __a[3] == __b[3]);
-}
-
-inline bool operator!=(Guid __aArg, Guid __bArg)
-{
-    return !(__aArg == __bArg);
-}
-
-inline bool operator<(Guid __aArg, Guid __bArg)
-{
-    auto __a = reinterpret_cast<unsigned long*>(&__aArg);
-    auto __b = reinterpret_cast<unsigned long*>(&__bArg);
-
-    if (__a[0] != __b[0])
-    {
-        return __a[0] < __b[0];
-    }
-
-    if (__a[1] != __b[1])
-    {
-        return __a[1] < __b[1];
-    }
-
-    if (__a[2] != __b[2])
-    {
-        return __a[2] < __b[2];
-    }
-
-    if (__a[3] != __b[3])
-    {
-        return __a[3] < __b[3];
-    }
-
-    return false;
-}
-
-inline Guid::Guid(unsigned int __aArg, unsigned short __bArg, unsigned short __cArg, unsigned __int8 __dArg,
-    unsigned __int8 __eArg, unsigned __int8 __fArg, unsigned __int8 __gArg, unsigned __int8 __hArg,
-    unsigned __int8 __iArg, unsigned __int8 __jArg, unsigned __int8 __kArg) :
-    __a(__aArg), __b(__bArg), __c(__cArg), __d(__dArg), __e(__eArg), __f(__fArg), __g(__gArg), __h(__hArg), __i(__iArg), __j(__jArg), __k(__kArg)
-{
-}
-
-inline Guid::Guid(unsigned int __aArg, unsigned short __bArg, unsigned short __cArg, const unsigned __int8 __dArg[8]) :
-__a(__aArg), __b(__bArg), __c(__cArg)
-{
-    __d = __dArg[0];
-    __e = __dArg[1];
-    __f = __dArg[2];
-    __g = __dArg[3];
-    __h = __dArg[4];
-    __i = __dArg[5];
-    __j = __dArg[6];
-    __k = __dArg[7];
-}
-
-__declspec(selectany) Guid __winrt_GUID_NULL(0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
-
-//
-//// Don't want to define the real IUnknown from unknown.h here. That would means if the user has
-//// any broken code that uses it, compile errors will take the form of e.g.:
-////     predefined C++ WinRT types (compiler internal)(41) : see declaration of 'IUnknown::QueryInterface'
-//// This is not helpful. If they use IUnknown, we still need to point them to the actual unknown.h so
-//// that they can see the original definition.
-////
-//// For WinRT, we'll instead have a parallel COM interface hierarchy for basic interfaces starting with _.
-//// The type mismatch is not an issue. COM passes types through GUID / void* combos - the original type
-//// doesn't come into play unless the user static_casts an implementation type to one of these, but
-//// the WinRT implementation types are hidden.
-__interface __declspec(uuid("00000000-0000-0000-C000-000000000046")) __abi_IUnknown
-{
-public:
-    virtual long __stdcall __abi_QueryInterface(Guid&, void**) = 0;
-    virtual unsigned long __stdcall __abi_AddRef() = 0;
-    virtual unsigned long __stdcall __abi_Release() = 0;
-};
+#include "wrl.h"
 #endif
-#include "ppltasks_winrt.h"
+#include "ppltasks_winrt.hpp"
 #endif
 #else
 #include <comdef.h>
 #endif
 
 struct IMFMediaType;
-#ifndef HAVE_WINRT
+#ifndef WINRT
 struct IMFActivate;
 struct IMFMediaSource;
 #endif
@@ -406,7 +252,7 @@ private:
     ImageGrabberCallback& operator=(const ImageGrabberCallback&);   // Declared to fix compilation warning.
  };
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 extern const __declspec(selectany) WCHAR RuntimeClass_CV_ImageGrabberWinRT[] = L"cv.ImageGrabberWinRT";
 
 class ImageGrabberWinRT :
@@ -547,7 +393,7 @@ public:
     CamParametrs getParametrs();
     void setParametrs(CamParametrs parametrs);
     void setEmergencyStopEvent(void *userData, void(*func)(int, void *));
-#ifdef HAVE_WINRT
+#ifdef WINRT
     long readInfoOfDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice, unsigned int Num);
     void waitForDevice()
     {
@@ -593,7 +439,7 @@ private:
     std::map<UINT64, FrameRateMap> vd_CaptureFormats;
     std::vector<MediaType> vd_CurrentFormats;
     IMFMediaSource *vd_pSource;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     MAKE_WRL_AGILE_REF(_MediaCapture) vd_pMedCap;
     EventRegistrationToken vd_cookie;
     ImageGrabberWinRT *vd_pImGr;
@@ -608,7 +454,7 @@ private:
     long setDeviceFormat(IMFMediaSource *pSource, unsigned long dwFormatIndex);
     void buildLibraryofTypes();
     int findType(unsigned int size, unsigned int frameRate = 0);
-#ifdef HAVE_WINRT
+#ifdef WINRT
     HRESULT enumerateCaptureFormats(MAKE_WRL_REF(_MediaCapture) pSource);
     long setDeviceFormat(MAKE_WRL_REF(_MediaCapture) pSource, unsigned long dwFormatIndex, MAKE_WRL_REF(_AsyncAction)* pAction);
     long resetDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice);
@@ -627,7 +473,7 @@ class videoDevices
 {
 public:
     ~videoDevices(void);
-#ifdef HAVE_WINRT
+#ifdef WINRT
     long initDevices(_DeviceClass devClass);
     void waitInit() {
         if (vds_enumTask) {
@@ -646,7 +492,7 @@ public:
     void clearDevices();
 private:
     UINT32 count;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     MAKE_WRL_REF(_AsyncAction) vds_enumTask;
 #endif
     std::vector<videoDevice *> vds_Devices;
@@ -715,7 +561,7 @@ public:
     bool setupDevice(int deviceID, unsigned int w, unsigned int h, unsigned int idealFramerate = 30);
     // Checking of recivig of new frame from video device with deviceID
     bool isFrameNew(int deviceID);
-#ifdef HAVE_WINRT
+#ifdef WINRT
     void waitForDevice(int deviceID);
 #endif
     // Writing of Raw Data pixels from video device with deviceID with correction of RedAndBlue flipping flipRedAndBlue and vertical flipping flipImage
@@ -1237,7 +1083,7 @@ ImageGrabber::~ImageGrabber(void)
     DebugPrintOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroying instance of the ImageGrabber class\n", ig_DeviceID);
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 
 ImageGrabberWinRT::ImageGrabberWinRT(bool synchronous):
     ImageGrabberCallback(synchronous),
@@ -1899,7 +1745,7 @@ Media_Foundation::~Media_Foundation(void)
 bool Media_Foundation::buildListOfDevices()
 {
     HRESULT hr = S_OK;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     videoDevices *vDs = &videoDevices::getInstance();
     hr = vDs->initDevices(WRL_ENUM_GET(_DeviceClass, DeviceClass, VideoCapture));
 #else
@@ -1987,7 +1833,7 @@ unsigned char * RawImage::getpPixels()
 videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pFriendlyName(NULL),
     vd_Width(0), vd_Height(0), vd_FrameRate(0), vd_pSource(NULL), vd_pImGrTh(NULL), vd_func(NULL), vd_userData(NULL)
 {
-#ifdef HAVE_WINRT
+#ifdef WINRT
     vd_pMedCap = nullptr;
     vd_cookie.value = 0;
     vd_pImGr = NULL;
@@ -2075,7 +1921,7 @@ CamParametrs videoDevice::getParametrs()
     return out;
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 long videoDevice::resetDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice)
 #else
 long videoDevice::resetDevice(IMFActivate *pActivate)
@@ -2086,7 +1932,7 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
     if(vd_pFriendlyName)
         CoTaskMemFree(vd_pFriendlyName);
     vd_pFriendlyName = NULL;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     if (pDevice)
     {
         ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCapture, _MediaCapture, pIMedCap, hr)
@@ -2157,7 +2003,7 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
     return hr;
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 long videoDevice::readInfoOfDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice, unsigned int Num)
 {
     HRESULT hr = -1;
@@ -2173,7 +2019,7 @@ long videoDevice::readInfoOfDevice(IMFActivate *pActivate, unsigned int Num)
 }
 #endif
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
 long videoDevice::checkDevice(_DeviceClass devClass, DEFINE_TASK<void>* pTask, MAKE_WRL_REF(_IDeviceInformation)* ppDevice)
 {
@@ -2273,7 +2119,7 @@ long videoDevice::initDevice()
 {
     HRESULT hr = S_OK;
     CoInitialize(NULL);
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
     MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
@@ -2381,7 +2227,7 @@ void videoDevice::closeDevice()
     {
         vd_IsSetuped = false;
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
         if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
             MAKE_WRL_REF(_AsyncAction) action;
@@ -2535,7 +2381,7 @@ void videoDevice::buildLibraryofTypes()
     }
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 long videoDevice::setDeviceFormat(MAKE_WRL_REF(_MediaCapture) pSource, unsigned long  dwFormatIndex, MAKE_WRL_REF(_AsyncAction)* pAction)
 {
     HRESULT hr;
@@ -2596,7 +2442,7 @@ bool videoDevice::isDeviceSetup()
 RawImage * videoDevice::getRawImageOut()
 {
     if(!vd_IsSetuped) return NULL;
-#ifdef HAVE_WINRT
+#ifdef WINRT
     if(vd_pImGr) return vd_pImGr->getRawImage();
 #endif
     if(vd_pImGrTh)
@@ -2618,7 +2464,7 @@ bool videoDevice::isFrameNew()
             vd_LockOut = RawDataLock;
 
             //must already be closed
-#ifdef HAVE_WINRT
+#ifdef WINRT
             if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
                 MAKE_WRL_REF(_AsyncAction) action;
                 if (FAILED(ImageGrabberWinRT::CreateInstance(&vd_pImGr))) return false;
@@ -2649,7 +2495,7 @@ bool videoDevice::isFrameNew()
             vd_pImGrTh->start();
             return true;
         }
-#ifdef HAVE_WINRT
+#ifdef WINRT
         if(vd_pImGr)
             return vd_pImGr->getRawImage()->isNew();
 #endif
@@ -2678,7 +2524,7 @@ bool videoDevice::setupDevice(unsigned int id)
         HRESULT hr = initDevice();
         if(SUCCEEDED(hr))
         {
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
             Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
             MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
@@ -2692,7 +2538,7 @@ bool videoDevice::setupDevice(unsigned int id)
             vd_Height = vd_CurrentFormats[id].height;
             vd_FrameRate = vd_CurrentFormats[id].MF_MT_FRAME_RATE_NUMERATOR /
                            vd_CurrentFormats[id].MF_MT_FRAME_RATE_DENOMINATOR;
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
             if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
                 DEFINE_TASK<void> _task;
@@ -2710,7 +2556,7 @@ bool videoDevice::setupDevice(unsigned int id)
             if(vd_IsSetuped)
                 DebugPrintOut(L"\n\nVIDEODEVICE %i: Device is setuped \n", vd_CurrentNumber);
             vd_PrevParametrs = getParametrs();
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
             END_CREATE_ASYNC(hr));
 #endif
@@ -2734,7 +2580,7 @@ bool videoDevice::setupDevice(unsigned int id)
 
 bool videoDevice::setupDevice(unsigned int w, unsigned int h, unsigned int idealFramerate)
 {
-    unsigned int id = findType(w * h, idealFramerate);
+    int id = findType(w * h, idealFramerate);
     if( id < 0 )
         return false;
 
@@ -2749,7 +2595,7 @@ wchar_t *videoDevice::getName()
 videoDevice::~videoDevice(void)
 {
     closeDevice();
-#ifdef HAVE_WINRT
+#ifdef WINRT
     RELEASE_WRL(vd_pMedCap)
 #endif
     SafeRelease(&vd_pSource);
@@ -2757,7 +2603,7 @@ videoDevice::~videoDevice(void)
         CoTaskMemFree(vd_pFriendlyName);
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 HRESULT videoDevice::enumerateCaptureFormats(MAKE_WRL_REF(_MediaCapture) pSource)
 {
     HRESULT hr;
@@ -2831,7 +2677,7 @@ done:
 
 videoDevices::videoDevices(void): count(0)
 {
-#ifdef HAVE_WINRT
+#ifdef WINRT
     vds_enumTask = nullptr;
 #endif
 }
@@ -2862,7 +2708,7 @@ videoDevice * videoDevices::getDevice(unsigned int i)
     return vds_Devices[i];
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 long videoDevices::initDevices(_DeviceClass devClass)
 {
     HRESULT hr = S_OK;
@@ -3196,7 +3042,7 @@ bool videoInput::isFrameNew(int deviceID)
     return false;
 }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 void videoInput::waitForDevice(int deviceID)
 {
     if (deviceID < 0)
@@ -3405,7 +3251,7 @@ unsigned int videoInput::listDevices(bool silent)
     if(accessToDevices)
     {
         videoDevices *VDS = &videoDevices::getInstance();
-#ifdef HAVE_WINRT
+#ifdef WINRT
         VDS->waitInit();
 #endif
         out = VDS->getCount();
@@ -3595,7 +3441,7 @@ protected:
     int index, width, height, fourcc;
     IplImage* frame;
     videoInput VI;
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     DEFINE_TASK<bool> openTask;
     Concurrency::critical_section lock;
@@ -3643,7 +3489,7 @@ void CvCaptureCAM_MSMF::close()
 // Initialize camera input
 bool CvCaptureCAM_MSMF::open( int _index )
 {
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     SAVE_CURRENT_CONTEXT(context);
     auto func = [_index, context, this](DEFINE_RET_VAL(bool)) -> DEFINE_RET_FORMAL(bool) {
@@ -3656,14 +3502,14 @@ bool CvCaptureCAM_MSMF::open( int _index )
     if (devices == 0)
         return false;
     try_index = try_index < 0 ? 0 : (try_index > devices-1 ? devices-1 : try_index);
-#ifdef HAVE_WINRT
+#ifdef WINRT
     HRESULT hr;
 #ifdef HAVE_CONCURRENCY
     BEGIN_CALL_IN_CONTEXT(hr, context, this, try_index)
 #endif
 #endif
     VI.setupDevice(try_index, 0, 0, 0); // With maximum frame size.
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     END_CALL_IN_CONTEXT_BASE
     VI.waitForDevice(try_index);
@@ -3672,13 +3518,13 @@ bool CvCaptureCAM_MSMF::open( int _index )
 #endif
 #endif
     if( !VI.isFrameNew(try_index) )
-#ifdef HAVE_WINRT
+#ifdef WINRT
         hr = E_FAIL;
 #else
         return false;
 #endif
     index = try_index;
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #ifdef HAVE_CONCURRENCY
     END_CALL_IN_CONTEXT_BASE
     RET_VAL(true)
@@ -4372,8 +4218,8 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
         hr = MFCopyImage(
             pData,                      // Destination buffer.
             cbWidth,                    // Destination stride.
-            (BYTE*)videoFrameBuffer,    // First row in source image.
-            cbWidth,                    // Source stride.
+            ((BYTE*)videoFrameBuffer) + (videoHeight-1)*cbWidth,    // First row in source image.
+            -cbWidth,                   // Source stride.
             cbWidth,                    // Image width in bytes.
             videoHeight                 // Image height in pixels.
             );

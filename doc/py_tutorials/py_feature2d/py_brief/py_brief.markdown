@@ -48,6 +48,8 @@ BRIEF in OpenCV
 
 Below code shows the computation of BRIEF descriptors with the help of CenSurE detector. (CenSurE
 detector is called STAR detector in OpenCV)
+
+note, that you need [opencv contrib](https://github.com/opencv/opencv_contrib)) to use this.
 @code{.py}
 import numpy as np
 import cv2
@@ -55,11 +57,11 @@ from matplotlib import pyplot as plt
 
 img = cv2.imread('simple.jpg',0)
 
-# Initiate STAR detector
-star = cv2.FeatureDetector_create("STAR")
+# Initiate FAST detector
+star = cv2.xfeatures2d.StarDetector_create()
 
 # Initiate BRIEF extractor
-brief = cv2.DescriptorExtractor_create("BRIEF")
+brief = cv2.xfeatures2d.BriefDescriptorExtractor_create()
 
 # find the keypoints with STAR
 kp = star.detect(img,None)
@@ -67,10 +69,10 @@ kp = star.detect(img,None)
 # compute the descriptors with BRIEF
 kp, des = brief.compute(img, kp)
 
-print brief.getInt('bytes')
+print brief.descriptorSize()
 print des.shape
 @endcode
-The function brief.getInt('bytes') gives the \f$n_d\f$ size used in bytes. By default it is 32. Next one
+The function brief.getDescriptorSize() gives the \f$n_d\f$ size used in bytes. By default it is 32. Next one
 is matching, which will be done in another chapter.
 
 Additional Resources

@@ -40,7 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 #include "opencv2/core/core_c.h"
 
 using namespace std;
@@ -128,6 +127,12 @@ TEST(Features2d_Detector_Keypoints_BRISK, validation)
 TEST(Features2d_Detector_Keypoints_FAST, validation)
 {
     CV_FeatureDetectorKeypointsTest test(FastFeatureDetector::create());
+    test.safe_run();
+}
+
+TEST(Features2d_Detector_Keypoints_AGAST, validation)
+{
+    CV_FeatureDetectorKeypointsTest test(AgastFeatureDetector::create());
     test.safe_run();
 }
 

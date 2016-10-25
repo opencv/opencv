@@ -78,9 +78,9 @@ scaled to fit the 0 to 1 range.
 \f[L  \leftarrow \frac{V_{max} + V_{min}}{2}\f]
 \f[S  \leftarrow \fork { \frac{V_{max} - V_{min}}{V_{max} + V_{min}} }{if  \(L < 0.5\) }
     { \frac{V_{max} - V_{min}}{2 - (V_{max} + V_{min})} }{if  \(L \ge 0.5\) }\f]
-\f[H  \leftarrow \forkthree {{60(G - B)}/{S}}{if  \(V_{max}=R\) }
-  {{120+60(B - R)}/{S}}{if  \(V_{max}=G\) }
-  {{240+60(R - G)}/{S}}{if  \(V_{max}=B\) }\f]
+\f[H  \leftarrow \forkthree {{60(G - B)}/{(V_{max}-V_{min})}}{if  \(V_{max}=R\) }
+  {{120+60(B - R)}/{(V_{max}-V_{min})}}{if  \(V_{max}=G\) }
+  {{240+60(R - G)}/{(V_{max}-V_{min})}}{if  \(V_{max}=B\) }\f]
 If \f$H<0\f$ then \f$H \leftarrow H+360\f$ . On output \f$0 \leq L \leq 1\f$, \f$0 \leq S \leq
 1\f$, \f$0 \leq H \leq 360\f$ .
 
@@ -123,7 +123,7 @@ In case of 8-bit and 16-bit images, R, G, and B are converted to the floating-po
 scaled to fit 0 to 1 range.
 
 \f[\vecthree{X}{Y}{Z} \leftarrow \vecthreethree{0.412453}{0.357580}{0.180423}{0.212671}{0.715160}{0.072169}{0.019334}{0.119193}{0.950227} \cdot \vecthree{R}{G}{B}\f]
-\f[L  \leftarrow \fork{116 Y^{1/3}}{for \(Y>0.008856\)}{903.3 Y}{for \(Y\leq 0.008856\)}\f]
+\f[L  \leftarrow \fork{116*Y^{1/3} - 16}{for \(Y>0.008856\)}{903.3 Y}{for \(Y\leq 0.008856\)}\f]
 \f[u'  \leftarrow 4*X/(X + 15*Y + 3 Z)\f]
 \f[v'  \leftarrow 9*Y/(X + 15*Y + 3 Z)\f]
 \f[u  \leftarrow 13*L*(u' - u_n)  \quad \text{where} \quad u_n=0.19793943\f]

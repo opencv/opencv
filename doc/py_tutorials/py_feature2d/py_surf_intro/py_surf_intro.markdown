@@ -80,7 +80,7 @@ examples are shown in Python terminal since it is just same as SIFT only.
 
 # Create SURF object. You can specify params here or later.
 # Here I set Hessian Threshold to 400
->>> surf = cv2.SURF(400)
+>>> surf = cv2.xfeatures2d.SURF_create(400)
 
 # Find keypoints and descriptors directly
 >>> kp, des = surf.detectAndCompute(img,None)
@@ -92,12 +92,12 @@ examples are shown in Python terminal since it is just same as SIFT only.
 While matching, we may need all those features, but not now. So we increase the Hessian Threshold.
 @code{.py}
 # Check present Hessian threshold
->>> print surf.hessianThreshold
+>>> print surf.getHessianThreshold()
 400.0
 
 # We set it to some 50000. Remember, it is just for representing in picture.
 # In actual cases, it is better to have a value 300-500
->>> surf.hessianThreshold = 50000
+>>> surf.setHessianThreshold(50000)
 
 # Again compute keypoints and check its number.
 >>> kp, des = surf.detectAndCompute(img,None)
@@ -119,10 +119,10 @@ on wings of butterfly. You can test it with other images.
 Now I want to apply U-SURF, so that it won't find the orientation.
 @code{.py}
 # Check upright flag, if it False, set it to True
->>> print surf.upright
+>>> print surf.getUpright()
 False
 
->>> surf.upright = True
+>>> surf.setUpright(True)
 
 # Recompute the feature points and draw it
 >>> kp = surf.detect(img,None)
@@ -143,7 +143,7 @@ Finally we check the descriptor size and change it to 128 if it is only 64-dim.
 64
 
 # That means flag, "extended" is False.
->>> surf.extended
+>>> surf.getExtended()
  False
 
 # So we make it to True to get 128-dim descriptors.

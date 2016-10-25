@@ -64,12 +64,12 @@ int CV_SLMLTest::run_test_case( int testCaseIdx )
         if( code == cvtest::TS::OK )
         {
             get_test_error( testCaseIdx, &test_resps1 );
-            fname1 = tempfile(".yml.gz");
-            save( fname1.c_str() );
+            fname1 = tempfile(".json.gz");
+            save( (fname1 + "?base64").c_str() );
             load( fname1.c_str() );
             get_test_error( testCaseIdx, &test_resps2 );
-            fname2 = tempfile(".yml.gz");
-            save( fname2.c_str() );
+            fname2 = tempfile(".json.gz");
+            save( (fname2 + "?base64").c_str() );
         }
         else
             ts->printf( cvtest::TS::LOG, "model can not be trained" );
@@ -156,6 +156,7 @@ TEST(ML_DTree, save_load) { CV_SLMLTest test( CV_DTREE ); test.safe_run(); }
 TEST(ML_Boost, save_load) { CV_SLMLTest test( CV_BOOST ); test.safe_run(); }
 TEST(ML_RTrees, save_load) { CV_SLMLTest test( CV_RTREES ); test.safe_run(); }
 TEST(DISABLED_ML_ERTrees, save_load) { CV_SLMLTest test( CV_ERTREES ); test.safe_run(); }
+TEST(MV_SVMSGD, save_load){ CV_SLMLTest test( CV_SVMSGD ); test.safe_run(); }
 
 class CV_LegacyTest : public cvtest::BaseTest
 {
@@ -190,17 +191,19 @@ protected:
         bool isTree = modelName == CV_BOOST || modelName == CV_DTREE || modelName == CV_RTREES;
         Ptr<StatModel> model;
         if (modelName == CV_BOOST)
-            model = StatModel::load<Boost>(filename);
+            model = Algorithm::load<Boost>(filename);
         else if (modelName == CV_ANN)
-            model = StatModel::load<ANN_MLP>(filename);
+            model = Algorithm::load<ANN_MLP>(filename);
         else if (modelName == CV_DTREE)
-            model = StatModel::load<DTrees>(filename);
+            model = Algorithm::load<DTrees>(filename);
         else if (modelName == CV_NBAYES)
-            model = StatModel::load<NormalBayesClassifier>(filename);
+            model = Algorithm::load<NormalBayesClassifier>(filename);
         else if (modelName == CV_SVM)
-            model = StatModel::load<SVM>(filename);
+            model = Algorithm::load<SVM>(filename);
         else if (modelName == CV_RTREES)
-            model = StatModel::load<RTrees>(filename);
+            model = Algorithm::load<RTrees>(filename);
+        else if (modelName == CV_SVMSGD)
+            model = Algorithm::load<SVMSGD>(filename);
         if (!model)
         {
             code = cvtest::TS::FAIL_INVALID_TEST_DATA;
@@ -260,6 +263,7 @@ TEST(ML_DTree, legacy_load) { CV_LegacyTest test(CV_DTREE, "_abalone.xml;_mushro
 TEST(ML_NBayes, legacy_load) { CV_LegacyTest test(CV_NBAYES, "_waveform.xml"); test.safe_run(); }
 TEST(ML_SVM, legacy_load) { CV_LegacyTest test(CV_SVM, "_poletelecomm.xml;_waveform.xml"); test.safe_run(); }
 TEST(ML_RTrees, legacy_load) { CV_LegacyTest test(CV_RTREES, "_waveform.xml"); test.safe_run(); }
+TEST(ML_SVMSGD, legacy_load) { CV_LegacyTest test(CV_SVMSGD, "_waveform.xml"); test.safe_run(); }
 
 /*TEST(ML_SVM, throw_exception_when_save_untrained_model)
 {
@@ -273,11 +277,11 @@ TEST(DISABLED_ML_SVM, linear_save_load)
 {
     Ptr<cv::ml::SVM> svm1, svm2, svm3;
 
-    svm1 = StatModel::load<SVM>("SVM45_X_38-1.xml");
-    svm2 = StatModel::load<SVM>("SVM45_X_38-2.xml");
-    string tname = tempfile("a.xml");
-    svm2->save(tname);
-    svm3 = StatModel::load<SVM>(tname);
+    svm1 = Algorithm::load<SVM>("SVM45_X_38-1.xml");
+    svm2 = Algorithm::load<SVM>("SVM45_X_38-2.xml");
+    string tname = tempfile("a.json");
+    svm2->save(tname + "?base64");
+    svm3 = Algorithm::load<SVM>(tname);
 
     ASSERT_EQ(svm1->getVarCount(), svm2->getVarCount());
     ASSERT_EQ(svm1->getVarCount(), svm3->getVarCount());

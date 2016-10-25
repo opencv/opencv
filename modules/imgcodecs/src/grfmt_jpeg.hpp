@@ -70,6 +70,12 @@ protected:
 
     FILE* m_f;
     void* m_state;
+
+private:
+    //Support for handling exif orientation tag in Jpeg file
+    int m_orientation;
+    int getOrientation();
+    void setOrientation(Mat& img);
 };
 
 

@@ -31,7 +31,7 @@ You can find the images (*graf1.png*, *graf3.png*) and homography (*H1to3p.xml*)
 
 ### Source Code
 
-@includelineno cpp/tutorial_code/features2D/AKAZE_match.cpp
+@include cpp/tutorial_code/features2D/AKAZE_match.cpp
 
 ### Explanation
 

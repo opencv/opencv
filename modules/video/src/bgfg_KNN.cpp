@@ -183,6 +183,7 @@ public:
 
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
         << "history" << history
         << "nsamples" << nN
@@ -318,7 +319,7 @@ CV_INLINE void
     {
         m_nNextShortUpdate[pixel] = (uchar)( rand() % m_nShortUpdate );
     };
-};
+}
 
 CV_INLINE int
         _cvCheckPixelBackgroundNP(long pixel,
@@ -435,7 +436,7 @@ CV_INLINE int
         };
     }
     return 0;
-};
+}
 
 CV_INLINE void
         icvUpdatePixelBackgroundNP(const Mat& _src, Mat& _dst,
@@ -458,10 +459,8 @@ CV_INLINE void
         uchar nShadowDetection
         )
 {
-    int size=_src.rows*_src.cols;
     int nchannels = CV_MAT_CN(_src.type());
-    const uchar* pDataCurrent=_src.ptr(0);
-    uchar* pDataOutput=_dst.ptr(0);
+
     //model
     uchar* m_aModel=_bgmodel.ptr(0);
     uchar* m_nNextLongUpdate=_nNextLongUpdate.ptr(0);
@@ -509,55 +508,60 @@ CV_INLINE void
     if (_nLongCounter >= m_nLongUpdate) _nLongCounter = 0;
 
     //go through the image
-    for (long i=0;i<size;i++)
+    long i = 0;
+    for (long y = 0; y < _src.rows; y++)
     {
-        const uchar* data=pDataCurrent;
-        pDataCurrent=pDataCurrent+nchannels;
-
-        //update model+ background subtract
-        uchar include=0;
-        int result= _cvCheckPixelBackgroundNP(i, data, nchannels,
-                m_nN, m_aModel, m_fTb,m_nkNN, m_fTau,m_bShadowDetection,include);
-
-        _cvUpdatePixelBackgroundNP(i,data,nchannels,
-                m_nN, m_aModel,
-                m_nNextLongUpdate,
-                m_nNextMidUpdate,
-                m_nNextShortUpdate,
-                m_aModelIndexLong,
-                m_aModelIndexMid,
-                m_aModelIndexShort,
-                m_nLongCounter,
-                m_nMidCounter,
-                m_nShortCounter,
-                m_nLongUpdate,
-                m_nMidUpdate,
-                m_nShortUpdate,
-                include
-                );
-        switch (result)
+        for (long x = 0; x < _src.cols; x++)
         {
-            case 0:
-                //foreground
-                (* pDataOutput)=255;
-                break;
-            case 1:
-                //background
-                (* pDataOutput)=0;
-                break;
-            case 2:
-                //shadow
-                (* pDataOutput)=nShadowDetection;
-                break;
+            const uchar* data = _src.ptr((int)y, (int)x);
+
+            //update model+ background subtract
+            uchar include=0;
+            int result= _cvCheckPixelBackgroundNP(i, data, nchannels,
+                    m_nN, m_aModel, m_fTb,m_nkNN, m_fTau,m_bShadowDetection,include);
+
+            _cvUpdatePixelBackgroundNP(i,data,nchannels,
+                    m_nN, m_aModel,
+                    m_nNextLongUpdate,
+                    m_nNextMidUpdate,
+                    m_nNextShortUpdate,
+                    m_aModelIndexLong,
+                    m_aModelIndexMid,
+                    m_aModelIndexShort,
+                    m_nLongCounter,
+                    m_nMidCounter,
+                    m_nShortCounter,
+                    m_nLongUpdate,
+                    m_nMidUpdate,
+                    m_nShortUpdate,
+                    include
+                    );
+            switch (result)
+            {
+                case 0:
+                    //foreground
+                    *_dst.ptr((int)y, (int)x) = 255;
+                    break;
+                case 1:
+                    //background
+                    *_dst.ptr((int)y, (int)x) = 0;
+                    break;
+                case 2:
+                    //shadow
+                    *_dst.ptr((int)y, (int)x) = nShadowDetection;
+                    break;
+            }
+            i++;
         }
-        pDataOutput++;
     }
-};
+}
 
 
 
 void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
 
@@ -596,6 +600,8 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
+    CV_INSTRUMENT_REGION()
+
     int nchannels = CV_MAT_CN(frameType);
     //CV_Assert( nchannels == 3 );
     Mat meanBackground(frameSize, CV_8UC3, Scalar::all(0));

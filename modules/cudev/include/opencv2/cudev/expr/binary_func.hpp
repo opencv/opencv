@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_EXPR_BINARY_FUNC_HPP__
-#define __OPENCV_CUDEV_EXPR_BINARY_FUNC_HPP__
+#ifndef OPENCV_CUDEV_EXPR_BINARY_FUNC_HPP
+#define OPENCV_CUDEV_EXPR_BINARY_FUNC_HPP
 
 #include "../common.hpp"
 #include "../util/type_traits.hpp"

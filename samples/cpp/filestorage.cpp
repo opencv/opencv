@@ -2,7 +2,7 @@
  * filestorage_sample demonstrate the usage of the opencv serialization functionality
  */
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include <iostream>
 #include <string>
 
@@ -70,13 +70,20 @@ static ostream& operator<<(ostream& out, const MyData& m){
 }
 int main(int ac, char** av)
 {
-  if (ac != 2)
+  cv::CommandLineParser parser(ac, av,
+    "{@input||}{help h ||}"
+  );
+  if (parser.has("help"))
+  {
+    help(av);
+    return 0;
+  }
+  string filename = parser.get<string>("@input");
+  if (filename.empty())
   {
     help(av);
     return 1;
   }
-
-  string filename = av[1];
 
   //write
   {

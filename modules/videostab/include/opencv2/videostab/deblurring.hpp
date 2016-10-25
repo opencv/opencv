@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_DEBLURRING_HPP__
-#define __OPENCV_VIDEOSTAB_DEBLURRING_HPP__
+#ifndef OPENCV_VIDEOSTAB_DEBLURRING_HPP
+#define OPENCV_VIDEOSTAB_DEBLURRING_HPP
 
 #include <vector>
 #include "opencv2/core.hpp"

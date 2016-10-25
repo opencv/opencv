@@ -1,4 +1,4 @@
-﻿/*M///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -90,16 +90,13 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int width = img.cols;
     int height = img.rows;
 
-    if (max_theta < 0 || max_theta > CV_PI ) {
-        CV_Error( CV_StsBadArg, "max_theta must fall between 0 and pi" );
-    }
-    if (min_theta < 0 || min_theta > max_theta ) {
-        CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+    if (max_theta < min_theta ) {
+        CV_Error( CV_StsBadArg, "max_theta must be greater than min_theta" );
     }
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
-#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         IppiSize srcSize = { width, height };
@@ -112,7 +109,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
         lines.resize(ipp_linesMax);
         IppStatus ok = ippiHoughLineGetSize_8u_C1R(srcSize, delta, ipp_linesMax, &bufferSize);
         Ipp8u* buffer = ippsMalloc_8u(bufferSize);
-        if (ok >= 0) ok = ippiHoughLine_Region_8u32f_C1R(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer);
+        if (ok >= 0) {ok = CV_INSTRUMENT_FUN_IPP(ippiHoughLine_Region_8u32f_C1R,(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer))};
         ippsFree(buffer);
         if (ok >= 0)
         {
@@ -178,7 +175,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
         int n = cvFloor(idx*scale) - 1;
         int r = idx - (n+1)*(numrho+2) - 1;
         line.rho = (r - (numrho - 1)*0.5f) * rho;
-        line.angle = n * theta;
+        line.angle = static_cast<float>(min_theta) + n * theta;
         lines.push_back(Vec2f(line.rho, line.angle));
     }
 }
@@ -432,7 +429,7 @@ HoughLinesProbabilistic( Mat& image,
     int numangle = cvRound(CV_PI / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
-#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         IppiSize srcSize = { width, height };
@@ -446,7 +443,7 @@ HoughLinesProbabilistic( Mat& image,
         Ipp8u* buffer = ippsMalloc_8u(bufferSize);
         pSpec = (IppiHoughProbSpec*) malloc(specSize);
         if (ok >= 0) ok = ippiHoughProbLineInit_8u32f_C1R(srcSize, delta, ippAlgHintNone, pSpec);
-        if (ok >= 0) ok = ippiHoughProbLine_8u32f_C1R(image.data, image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec);
+        if (ok >= 0) {ok = CV_INSTRUMENT_FUN_IPP(ippiHoughProbLine_8u32f_C1R,(image.data, image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec))};
 
         free(pSpec);
         ippsFree(buffer);
@@ -683,8 +680,8 @@ static bool ocl_makePointsList(InputArray _src, OutputArray _pointsList, InputOu
     pointListKernel.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(pointsList),
                          ocl::KernelArg::PtrWriteOnly(counters));
 
-    size_t localThreads[2]  = { workgroup_size, 1 };
-    size_t globalThreads[2] = { workgroup_size, src.rows };
+    size_t localThreads[2]  = { (size_t)workgroup_size, 1 };
+    size_t globalThreads[2] = { (size_t)workgroup_size, (size_t)src.rows };
 
     return pointListKernel.run(2, globalThreads, localThreads, false);
 }
@@ -778,7 +775,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
                         ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold, (float) rho, (float) theta);
 
-    size_t globalThreads[2] = { (numrho + pixPerWI - 1)/pixPerWI, numangle };
+    size_t globalThreads[2] = { ((size_t)numrho + pixPerWI - 1)/pixPerWI, (size_t)numangle };
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
         return false;
 
@@ -832,7 +829,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
                         ocl::KernelArg::WriteOnlyNoSize(lines), ocl::KernelArg::PtrWriteOnly(counters),
                         linesMax, threshold, (int) minLineLength, (int) maxGap, (float) rho, (float) theta);
 
-    size_t globalThreads[2] = { numrho, numangle };
+    size_t globalThreads[2] = { (size_t)numrho, (size_t)numangle };
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
         return false;
 
@@ -853,6 +850,8 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
                     double rho, double theta, int threshold,
                     double srn, double stn, double min_theta, double max_theta )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(srn == 0 && stn == 0 && _image.isUMat() && _lines.isUMat(),
                ocl_HoughLines(_image, _lines, rho, theta, threshold, min_theta, max_theta));
 
@@ -872,6 +871,8 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double minLineLength, double maxGap )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_image.isUMat() && _lines.isUMat(),
                ocl_HoughLinesP(_image, _lines, rho, theta, threshold, minLineLength, maxGap));
 
@@ -1325,6 +1326,8 @@ void cv::HoughCircles( InputArray _image, OutputArray _circles,
                        double param1, double param2,
                        int minRadius, int maxRadius )
 {
+    CV_INSTRUMENT_REGION()
+
     Ptr<CvMemStorage> storage(cvCreateMemStorage(STORAGE_SIZE));
     Mat image = _image.getMat();
     CvMat c_image = image;

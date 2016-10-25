@@ -1,9 +1,0 @@
-Building camera wrapper for Android 3.0.1:
-
-1) Get sources of Android 2.3.x (2.3.3 were used)
-2) Apply patches provided with this instruction to frameworks/base/include/camera/ICamera.h and frameworks/base/include/camera/Camera.h
-3) Get frameworks/base/include/gui/ISurfaceTexture.h and frameworks/base/include/gui/SurfaceTexture.h from Android 4.0.x (4.0.3 were used) sources and add them to your source tree.
-4) Apply provided patch to the frameworks/base/include/gui/SurfaceTexture.h.
-5) Pull /system/lib from your device running Andoid 3.x.x
-6) Edit <Android Root>/development/sdk/platform_source.properties file. Set Android version to 3.0.1.
-7) Build wrapper as normal using this modified source tree.

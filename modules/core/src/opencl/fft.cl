@@ -574,6 +574,16 @@ __kernel void fft_multi_radix_rows(__global const uchar* src_ptr, int src_step, 
         #pragma unroll
         for (int i=x; i<cols; i+=block_size)
             dst[i] = SCALE_VAL(smem[i], scale);
+#ifdef REAL_INPUT
+#ifdef COMPLEX_OUTPUT
+#ifdef IS_1D
+        for(int i=x+1; i < (dst_cols+1)/2; i+=block_size)
+        {
+            dst[dst_cols-i] = (CT)(SCALE_VAL(smem[i].x, scale), SCALE_VAL(-smem[i].y, scale));
+        }
+#endif
+#endif
+#endif
 #else
         // pack row to CCS
         __local FT* smem_1cn = (__local FT*) smem;

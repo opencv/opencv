@@ -58,18 +58,21 @@ static void mytest(cv::Ptr<cv::ConjGradSolver> solver,cv::Ptr<cv::MinProblemSolv
     std::cout<<"--------------------------\n";
 }
 
-class SphereF:public cv::MinProblemSolver::Function{
+class SphereF_CG:public cv::MinProblemSolver::Function{
 public:
+    int getDims() const { return 4; }
     double calc(const double* x)const{
         return x[0]*x[0]+x[1]*x[1]+x[2]*x[2]+x[3]*x[3];
     }
-    void getGradient(const double* x,double* grad){
+    // use automatically computed gradient
+    /*void getGradient(const double* x,double* grad){
         for(int i=0;i<4;i++){
             grad[i]=2*x[i];
         }
-    }
+    }*/
 };
-class RosenbrockF:public cv::MinProblemSolver::Function{
+class RosenbrockF_CG:public cv::MinProblemSolver::Function{
+    int getDims() const { return 2; }
     double calc(const double* x)const{
         return 100*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0])+(1-x[0])*(1-x[0]);
     }
@@ -79,11 +82,11 @@ class RosenbrockF:public cv::MinProblemSolver::Function{
     }
 };
 
-TEST(DISABLED_Core_ConjGradSolver, regression_basic){
+TEST(Core_ConjGradSolver, regression_basic){
     cv::Ptr<cv::ConjGradSolver> solver=cv::ConjGradSolver::create();
 #if 1
     {
-        cv::Ptr<cv::MinProblemSolver::Function> ptr_F(new SphereF());
+        cv::Ptr<cv::MinProblemSolver::Function> ptr_F(new SphereF_CG());
         cv::Mat x=(cv::Mat_<double>(4,1)<<50.0,10.0,1.0,-10.0),
             etalon_x=(cv::Mat_<double>(1,4)<<0.0,0.0,0.0,0.0);
         double etalon_res=0.0;
@@ -92,7 +95,7 @@ TEST(DISABLED_Core_ConjGradSolver, regression_basic){
 #endif
 #if 1
     {
-        cv::Ptr<cv::MinProblemSolver::Function> ptr_F(new RosenbrockF());
+        cv::Ptr<cv::MinProblemSolver::Function> ptr_F(new RosenbrockF_CG());
         cv::Mat x=(cv::Mat_<double>(2,1)<<0.0,0.0),
             etalon_x=(cv::Mat_<double>(2,1)<<1.0,1.0);
         double etalon_res=0.0;

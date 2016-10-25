@@ -298,11 +298,7 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
     }
     if (motionType == MOTION_EUCLIDEAN) {
         double new_theta = updatePtr[0];
-        if (mapPtr[3]>0)
-            new_theta += acos(mapPtr[0]);
-
-        if (mapPtr[3]<0)
-            new_theta -= acos(mapPtr[0]);
+        new_theta += asin(mapPtr[3]);
 
         mapPtr[2] += updatePtr[1];
         mapPtr[5] += updatePtr[2];
@@ -317,7 +313,8 @@ double cv::findTransformECC(InputArray templateImage,
                             InputArray inputImage,
                             InputOutputArray warpMatrix,
                             int motionType,
-                            TermCriteria criteria)
+                            TermCriteria criteria,
+                            InputArray inputMask)
 {
 
 
@@ -397,12 +394,28 @@ double cv::findTransformECC(InputArray templateImage,
     Mat templateFloat = Mat(hs, ws, CV_32F);// to store the (smoothed) template
     Mat imageFloat    = Mat(hd, wd, CV_32F);// to store the (smoothed) input image
     Mat imageWarped   = Mat(hs, ws, CV_32F);// to store the warped zero-mean input image
-    Mat allOnes		= Mat::ones(hd, wd, CV_8U); //to use it for mask warping
     Mat imageMask		= Mat(hs, ws, CV_8U); //to store the final mask
+
+    Mat inputMaskMat = inputMask.getMat();
+    //to use it for mask warping
+    Mat preMask;
+    if(inputMask.empty())
+        preMask = Mat::ones(hd, wd, CV_8U);
+    else
+        threshold(inputMask, preMask, 0, 1, THRESH_BINARY);
 
     //gaussian filtering is optional
     src.convertTo(templateFloat, templateFloat.type());
-    GaussianBlur(templateFloat, templateFloat, Size(5, 5), 0, 0);//is in-place filtering slower?
+    GaussianBlur(templateFloat, templateFloat, Size(5, 5), 0, 0);
+
+    Mat preMaskFloat;
+    preMask.convertTo(preMaskFloat, CV_32F);
+    GaussianBlur(preMaskFloat, preMaskFloat, Size(5, 5), 0, 0);
+    // Change threshold.
+    preMaskFloat *= (0.5/0.95);
+    // Rounding conversion.
+    preMaskFloat.convertTo(preMask, preMask.type());
+    preMask.convertTo(preMaskFloat, preMaskFloat.type());
 
     dst.convertTo(imageFloat, imageFloat.type());
     GaussianBlur(imageFloat, imageFloat, Size(5, 5), 0, 0);
@@ -420,6 +433,8 @@ double cv::findTransformECC(InputArray templateImage,
     filter2D(imageFloat, gradientX, -1, dx);
     filter2D(imageFloat, gradientY, -1, dx.t());
 
+    gradientX = gradientX.mul(preMaskFloat);
+    gradientY = gradientY.mul(preMaskFloat);
 
     // matrices needed for solving linear equation system for maximizing ECC
     Mat jacobian                = Mat(hs, ws*numberOfParameters, CV_32F);
@@ -449,22 +464,22 @@ double cv::findTransformECC(InputArray templateImage,
             warpAffine(imageFloat, imageWarped,     map, imageWarped.size(),     imageFlags);
             warpAffine(gradientX,  gradientXWarped, map, gradientXWarped.size(), imageFlags);
             warpAffine(gradientY,  gradientYWarped, map, gradientYWarped.size(), imageFlags);
-            warpAffine(allOnes,    imageMask,       map, imageMask.size(),       maskFlags);
+            warpAffine(preMask,    imageMask,       map, imageMask.size(),       maskFlags);
         }
         else
         {
             warpPerspective(imageFloat, imageWarped,     map, imageWarped.size(),     imageFlags);
             warpPerspective(gradientX,  gradientXWarped, map, gradientXWarped.size(), imageFlags);
             warpPerspective(gradientY,  gradientYWarped, map, gradientYWarped.size(), imageFlags);
-            warpPerspective(allOnes,    imageMask,       map, imageMask.size(),       maskFlags);
+            warpPerspective(preMask,    imageMask,       map, imageMask.size(),       maskFlags);
         }
-
 
         Scalar imgMean, imgStd, tmpMean, tmpStd;
         meanStdDev(imageWarped,   imgMean, imgStd, imageMask);
         meanStdDev(templateFloat, tmpMean, tmpStd, imageMask);
 
         subtract(imageWarped,   imgMean, imageWarped, imageMask);//zero-mean input
+        templateZM = Mat::zeros(templateZM.rows, templateZM.cols, templateZM.type());
         subtract(templateFloat, tmpMean, templateZM,  imageMask);//zero-mean template
 
         const double tmpNorm = std::sqrt(countNonZero(imageMask)*(tmpStd.val[0])*(tmpStd.val[0]));
@@ -496,6 +511,9 @@ double cv::findTransformECC(InputArray templateImage,
         // calculate enhanced correlation coefficiont (ECC)->rho
         last_rho = rho;
         rho = correlation/(imgNorm*tmpNorm);
+        if (cvIsNaN(rho)) {
+          CV_Error(Error::StsNoConv, "NaN encountered.");
+        }
 
         // project images into jacobian
         project_onto_jacobian_ECC( jacobian, imageWarped, imageProjection);

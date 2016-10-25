@@ -728,6 +728,24 @@ void cv::viz::WImage3D::setImage(InputArray image)
     actor->SetTexture(texture);
 }
 
+void cv::viz::WImage3D::setSize(const cv::Size& size)
+{
+    vtkSmartPointer<vtkActor> actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+    vtkSmartPointer<vtkTextureMapToPlane> textured_plane;
+    vtkSmartPointer<vtkPlaneSource> plane;
+    #if VTK_MAJOR_VERSION <= 5
+        textured_plane = vtkTextureMapToPlane::SafeDownCast(mapper->GetInputConnection(0,0)->GetProducer());
+        plane = vtkPlaneSource::SafeDownCast(textured_plane->GetInputConnection(0,0)->GetProducer());
+    #else
+        textured_plane = vtkTextureMapToPlane::SafeDownCast(mapper->GetInputAlgorithm());
+        plane = vtkPlaneSource::SafeDownCast(textured_plane->GetInputAlgorithm());
+    #endif
+    plane->SetOrigin(-0.5 * size.width, -0.5 * size.height, 0.0);
+    plane->SetPoint1( 0.5 * size.width, -0.5 * size.height, 0.0);
+    plane->SetPoint2(-0.5 * size.width,  0.5 * size.height, 0.0);
+}
+
 template<> cv::viz::WImage3D cv::viz::Widget::cast<cv::viz::WImage3D>()
 {
     Widget3D widget = this->cast<Widget3D>();

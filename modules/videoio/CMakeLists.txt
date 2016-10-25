@@ -1,5 +1,5 @@
 set(the_description "Media I/O")
-ocv_add_module(videoio opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidcamera)
+ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
 
 # ----------------------------------------------------------------------------
 #  CMake file for videoio. See root CMakeLists.txt
@@ -7,7 +7,7 @@ ocv_add_module(videoio opencv_imgproc opencv_imgcodecs OPTIONAL opencv_androidca
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-if(HAVE_WINRT_CX)
+if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
@@ -23,12 +23,43 @@ set(videoio_hdrs
 set(videoio_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/cap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_encoder.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_decoder.cpp
     )
 
 file(GLOB videoio_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
+
+# Removing WinRT API headers by default
+list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
+
+# Dependencies used by the implementation referenced
+# below are not available on WinRT 8.0.
+# Enabling it for WiRT 8.1+ only.
+if(DEFINED WINRT AND NOT DEFINED WINRT_8_0 AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
+
+    # WinRT detected. Adding WinRT API header
+    message(STATUS "  ${name}: WinRT detected. Adding WinRT API header")
+    list(APPEND videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
+
+    # Adding WinRT internal sources and headers
+    list(APPEND videoio_srcs
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_capture.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_bridge.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_video.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/CaptureFrameGrabber.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MediaStreamSink.cpp)
+    list(APPEND videoio_hdrs
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_capture.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_bridge.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_video.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MFIncludes.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/CaptureFrameGrabber.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MediaSink.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MediaStreamSink.hpp)
+endif()
 
 if(WIN32 AND NOT ARM)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_cmu.cpp)
@@ -61,6 +92,10 @@ if(HAVE_DC1394)
 endif(HAVE_DC1394)
 
 if(HAVE_GSTREAMER)
+  IF(WIN32)
+    INCLUDE_DIRECTORIES(${GSTREAMER_INCLUDE_DIR})
+    list(APPEND VIDEOIO_LIBRARIES ${GSTREAMER_LIBRARIES})
+  ENDIF(WIN32)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
 endif(HAVE_GSTREAMER)
 
@@ -70,7 +105,7 @@ endif(HAVE_UNICAP)
 
 if(HAVE_LIBV4L)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libv4l.cpp)
-elseif(HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
+elseif(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_v4l.cpp)
 endif()
 
@@ -86,11 +121,6 @@ if(HAVE_OPENNI2)
   list(APPEND VIDEOIO_LIBRARIES ${OPENNI2_LIBRARY})
 endif(HAVE_OPENNI2)
 
-if(HAVE_opencv_androidcamera)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_android.cpp)
-  add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)#TODO: remove this line
-endif(HAVE_opencv_androidcamera)
-
 if(HAVE_XIMEA)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ximea.cpp)
   if(XIMEA_PATH)
@@ -100,7 +130,9 @@ if(HAVE_XIMEA)
     link_directories("${XIMEA_LIBRARY_DIR}")
   endif()
   if(WIN32 AND X86_64)
-    list(APPEND VIDEOIO_LIBRARIES m3apiX64)
+    list(APPEND VIDEOIO_LIBRARIES xiapi64)
+  elseif(WIN32)
+    list(APPEND VIDEOIO_LIBRARIES xiapi32)
   elseif(APPLE)
     list(APPEND VIDEOIO_LIBRARIES "-framework m3api")
   else()
@@ -135,9 +167,22 @@ if(HAVE_GIGE_API)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
+if(HAVE_ARAVIS_API)
+  add_definitions(-DHAVE_ARAVIS_API)
+  ocv_include_directories(${ARAVIS_INCLUDE_PATH})
+  set(videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_aravis.cpp ${videoio_srcs})
+  list(APPEND VIDEOIO_LIBRARIES ${ARAVIS_LIBRARIES})
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_aravis.cpp)
+endif(HAVE_ARAVIS_API)
+
 if(HAVE_AVFOUNDATION)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation.mm)
-  list(APPEND VIDEOIO_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
+  if(IOS)
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation.mm)
+    list(APPEND VIDEOIO_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
+  else()
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation_mac.mm)
+    list(APPEND VIDEOIO_LIBRARIES "-framework Cocoa" "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore")
+  endif()
 endif()
 
 if(HAVE_QUICKTIME)
@@ -154,8 +199,11 @@ if(HAVE_INTELPERC)
   list(APPEND VIDEOIO_LIBRARIES ${INTELPERC_LIBRARIES})
 endif(HAVE_INTELPERC)
 
+if(HAVE_GPHOTO2)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gphoto2.cpp)
+endif(HAVE_GPHOTO2)
+
 if(IOS)
-  add_definitions(-DHAVE_IOS=1)
   list(APPEND videoio_srcs
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_abstract_camera.mm
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
@@ -219,20 +267,25 @@ if(WIN32 AND WITH_FFMPEG)
 
   if(MSVC_IDE)
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   elseif(MSVC AND (CMAKE_GENERATOR MATCHES "Visual"))
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   else()
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   endif()
 
   install(FILES "${ffmpeg_path}" DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs RENAME "${ffmpeg_bare_name_ver}")
+
+  if(INSTALL_CREATE_DISTRIB)
+    install(FILES "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/opencv_ffmpeg.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}.dll")
+    install(FILES "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/opencv_ffmpeg_64.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}_64.dll")
+  endif()
 endif()
 endmacro()
 

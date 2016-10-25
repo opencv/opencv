@@ -3,13 +3,10 @@
  * brief Sample code for simple filters
  * author OpenCV team
  */
-#include <iostream>
-#include <vector>
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -35,7 +32,7 @@ int main( void )
   namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Load the source image
-  src = imread( "../data/lena.jpg", 1 );
+  src = imread( "../data/lena.jpg", IMREAD_COLOR );
 
   if( display_caption( "Original Image" ) != 0 ) { return 0; }
 
@@ -46,33 +43,38 @@ int main( void )
   /// Applying Homogeneous blur
   if( display_caption( "Homogeneous Blur" ) != 0 ) { return 0; }
 
+  //![blur]
   for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
       { blur( src, dst, Size( i, i ), Point(-1,-1) );
         if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
-
+  //![blur]
 
   /// Applying Gaussian blur
   if( display_caption( "Gaussian Blur" ) != 0 ) { return 0; }
 
+  //![gaussianblur]
   for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
       { GaussianBlur( src, dst, Size( i, i ), 0, 0 );
         if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
-
+  //![gaussianblur]
 
   /// Applying Median blur
   if( display_caption( "Median Blur" ) != 0 ) { return 0; }
 
+  //![medianblur]
   for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
       { medianBlur ( src, dst, i );
         if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
-
+  //![medianblur]
 
   /// Applying Bilateral Filter
   if( display_caption( "Bilateral Blur" ) != 0 ) { return 0; }
 
+  //![bilateralfilter]
   for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
       { bilateralFilter ( src, dst, i, i*2, i/2 );
         if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
+  //![bilateralfilter]
 
   /// Wait until user press a key
   display_caption( "End: Press a key!" );

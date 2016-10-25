@@ -20,21 +20,23 @@
 
 #ifdef OP_CALC_WEIGHTS
 
-__kernel void calcAlmostDist2Weight(__global int * almostDist2Weight, int almostMaxDist,
+__kernel void calcAlmostDist2Weight(__global wlut_t * almostDist2Weight, int almostMaxDist,
                                     FT almostDist2ActualDistMultiplier, int fixedPointMult,
-                                    FT den, FT WEIGHT_THRESHOLD)
+                                    w_t den, FT WEIGHT_THRESHOLD)
 {
     int almostDist = get_global_id(0);
 
     if (almostDist < almostMaxDist)
     {
         FT dist = almostDist * almostDist2ActualDistMultiplier;
-        int weight = convert_int_sat_rte(fixedPointMult * exp(-dist * den));
-
-        if (weight < WEIGHT_THRESHOLD * fixedPointMult)
-            weight = 0;
-
-        almostDist2Weight[almostDist] = weight;
+#ifdef ABS
+        w_t w = exp((w_t)(-dist*dist) * den);
+#else
+        w_t w = exp((w_t)(-dist) * den);
+#endif
+        wlut_t weight = convert_wlut_t(fixedPointMult * (isnan(w) ? (w_t)1.0 : w));
+        almostDist2Weight[almostDist] =
+            weight < (wlut_t)(WEIGHT_THRESHOLD * fixedPointMult) ? (wlut_t)0 : weight;
     }
 }
 
@@ -44,21 +46,35 @@ __kernel void calcAlmostDist2Weight(__global int * almostDist2Weight, int almost
 
 #define SEARCH_SIZE_SQ (SEARCH_SIZE * SEARCH_SIZE)
 
-inline int calcDist(uchar_t a, uchar_t b)
+inline int calcDist(pixel_t a, pixel_t b)
 {
+#ifdef ABS
+    int_t retval = convert_int_t(abs_diff(a, b));
+#else
     int_t diff = convert_int_t(a) - convert_int_t(b);
     int_t retval = diff * diff;
+#endif
 
 #if cn == 1
     return retval;
 #elif cn == 2
     return retval.x + retval.y;
+#elif cn == 3
+    return retval.x + retval.y + retval.z;
+#elif cn == 4
+    return retval.x + retval.y + retval.z + retval.w;
 #else
-#error "cn should be either 1 or 2"
+#error "cn should be either 1, 2, 3 or 4"
 #endif
 }
 
-inline int calcDistUpDown(uchar_t down_value, uchar_t down_value_t, uchar_t up_value, uchar_t up_value_t)
+#ifdef ABS
+inline int calcDistUpDown(pixel_t down_value, pixel_t down_value_t, pixel_t up_value, pixel_t up_value_t)
+{
+    return calcDist(down_value, down_value_t) - calcDist(up_value, up_value_t);
+}
+#else
+inline int calcDistUpDown(pixel_t down_value, pixel_t down_value_t, pixel_t up_value, pixel_t up_value_t)
 {
     int_t A = convert_int_t(down_value) - convert_int_t(down_value_t);
     int_t B = convert_int_t(up_value) - convert_int_t(up_value_t);
@@ -68,10 +84,15 @@ inline int calcDistUpDown(uchar_t down_value, uchar_t down_value_t, uchar_t up_v
     return retval;
 #elif cn == 2
     return retval.x + retval.y;
+#elif cn == 3
+    return retval.x + retval.y + retval.z;
+#elif cn == 4
+    return retval.x + retval.y + retval.z + retval.w;
 #else
-#error "cn should be either 1 or 2"
+#error "cn should be either 1, 2, 3 or 4"
 #endif
 }
+#endif
 
 #define COND if (x == 0 && y == 0)
 
@@ -87,9 +108,9 @@ inline void calcFirstElementInRow(__global const uchar * src, int src_step, int 
     {
         int dist = 0, value;
 
-        __global const uchar_t * src_template = (__global const uchar_t *)(src +
-            mad24(sy + i / SEARCH_SIZE, src_step, mad24(cn, sx + i % SEARCH_SIZE, src_offset)));
-        __global const uchar_t * src_current = (__global const uchar_t *)(src + mad24(y, src_step, mad24(cn, x, src_offset)));
+        __global const pixel_t * src_template = (__global const pixel_t *)(src +
+            mad24(sy + i / SEARCH_SIZE, src_step, mad24(psz, sx + i % SEARCH_SIZE, src_offset)));
+        __global const pixel_t * src_current = (__global const pixel_t *)(src + mad24(y, src_step, mad24(psz, x, src_offset)));
         __global int * col_dists_current = col_dists + i * TEMPLATE_SIZE;
 
         #pragma unroll
@@ -107,8 +128,8 @@ inline void calcFirstElementInRow(__global const uchar * src, int src_step, int 
                 dist += value;
             }
 
-            src_current = (__global const uchar_t *)((__global const uchar *)src_current + src_step);
-            src_template = (__global const uchar_t *)((__global const uchar *)src_template + src_step);
+            src_current = (__global const pixel_t *)((__global const uchar *)src_current + src_step);
+            src_template = (__global const pixel_t *)((__global const uchar *)src_template + src_step);
         }
 
         #pragma unroll
@@ -130,9 +151,9 @@ inline void calcElementInFirstRow(__global const uchar * src, int src_step, int 
 
     for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
-        __global const uchar_t * src_current = (__global const uchar_t *)(src + mad24(y, src_step, mad24(cn, x, src_offset)));
-        __global const uchar_t * src_template = (__global const uchar_t *)(src +
-            mad24(sy + i / SEARCH_SIZE, src_step, mad24(cn, sx + i % SEARCH_SIZE, src_offset)));
+        __global const pixel_t * src_current = (__global const pixel_t *)(src + mad24(y, src_step, mad24(psz, x, src_offset)));
+        __global const pixel_t * src_template = (__global const pixel_t *)(src +
+            mad24(sy + i / SEARCH_SIZE, src_step, mad24(psz, sx + i % SEARCH_SIZE, src_offset)));
         __global int * col_dists_current = col_dists + TEMPLATE_SIZE * i;
 
         int col_dist = 0;
@@ -142,8 +163,8 @@ inline void calcElementInFirstRow(__global const uchar * src, int src_step, int 
         {
             col_dist += calcDist(src_current[0], src_template[0]);
 
-            src_current = (__global const uchar_t *)((__global const uchar *)src_current + src_step);
-            src_template = (__global const uchar_t *)((__global const uchar *)src_template + src_step);
+            src_current = (__global const pixel_t *)((__global const uchar *)src_current + src_step);
+            src_template = (__global const pixel_t *)((__global const uchar *)src_template + src_step);
         }
 
         dists[i] += col_dist - col_dists_current[first];
@@ -160,8 +181,8 @@ inline void calcElement(__global const uchar * src, int src_step, int src_offset
     int sy_up = y - TEMPLATE_SIZE2 - 1;
     int sy_down = y + TEMPLATE_SIZE2;
 
-    uchar_t up_value = *(__global const uchar_t *)(src + mad24(sy_up, src_step, mad24(cn, sx, src_offset)));
-    uchar_t down_value = *(__global const uchar_t *)(src + mad24(sy_down, src_step, mad24(cn, sx, src_offset)));
+    pixel_t up_value = *(__global const pixel_t *)(src + mad24(sy_up, src_step, mad24(psz, sx, src_offset)));
+    pixel_t down_value = *(__global const pixel_t *)(src + mad24(sy_down, src_step, mad24(psz, sx, src_offset)));
 
     sx -= SEARCH_SIZE2;
     sy_up -= SEARCH_SIZE2;
@@ -171,8 +192,8 @@ inline void calcElement(__global const uchar * src, int src_step, int src_offset
     {
         int wx = i % SEARCH_SIZE, wy = i / SEARCH_SIZE;
 
-        uchar_t up_value_t = *(__global const uchar_t *)(src + mad24(sy_up + wy, src_step, mad24(cn, sx + wx, src_offset)));
-        uchar_t down_value_t = *(__global const uchar_t *)(src + mad24(sy_down + wy, src_step, mad24(cn, sx + wx, src_offset)));
+        pixel_t up_value_t = *(__global const pixel_t *)(src + mad24(sy_up + wy, src_step, mad24(psz, sx + wx, src_offset)));
+        pixel_t down_value_t = *(__global const pixel_t *)(src + mad24(sy_down + wy, src_step, mad24(psz, sx + wx, src_offset)));
 
         __global int * col_dists_current = col_dists + mad24(i, TEMPLATE_SIZE, first);
         __global int * up_col_dists_current = up_col_dists + mad24(x0, SEARCH_SIZE_SQ, i);
@@ -186,24 +207,25 @@ inline void calcElement(__global const uchar * src, int src_step, int src_offset
 }
 
 inline void convolveWindow(__global const uchar * src, int src_step, int src_offset,
-                           __local int * dists, __global const int * almostDist2Weight,
+                           __local int * dists, __global const wlut_t * almostDist2Weight,
                            __global uchar * dst, int dst_step, int dst_offset,
-                           int y, int x, int id, __local int * weights_local,
-                           __local int_t * weighted_sum_local, int almostTemplateWindowSizeSqBinShift)
+                           int y, int x, int id, __local weight_t * weights_local,
+                           __local sum_t * weighted_sum_local, int almostTemplateWindowSizeSqBinShift)
 {
-    int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2, weights = 0;
-    int_t weighted_sum = (int_t)(0);
+    int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2;
+    weight_t weights = (weight_t)0;
+    sum_t weighted_sum = (sum_t)0;
 
     for (int i = id; i < SEARCH_SIZE_SQ; i += CTA_SIZE)
     {
-        int src_index = mad24(sy + i / SEARCH_SIZE, src_step, mad24(i % SEARCH_SIZE + sx, cn, src_offset));
-        int_t src_value = convert_int_t(*(__global const uchar_t *)(src + src_index));
+        int src_index = mad24(sy + i / SEARCH_SIZE, src_step, mad24(i % SEARCH_SIZE + sx, psz, src_offset));
+        sum_t src_value = convert_sum_t(*(__global const pixel_t *)(src + src_index));
 
         int almostAvgDist = dists[i] >> almostTemplateWindowSizeSqBinShift;
-        int weight = almostDist2Weight[almostAvgDist];
+        weight_t weight = convert_weight_t(almostDist2Weight[almostAvgDist]);
 
         weights += weight;
-        weighted_sum += (int_t)(weight) * src_value;
+        weighted_sum += (sum_t)weight * src_value;
     }
 
     weights_local[id] = weights;
@@ -223,26 +245,27 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
 
     if (id == 0)
     {
-        int dst_index = mad24(y, dst_step, mad24(cn, x, dst_offset));
-        int_t weighted_sum_local_0 = weighted_sum_local[0] + weighted_sum_local[1] +
+        int dst_index = mad24(y, dst_step, mad24(psz, x, dst_offset));
+        sum_t weighted_sum_local_0 = weighted_sum_local[0] + weighted_sum_local[1] +
             weighted_sum_local[2] + weighted_sum_local[3];
-        int weights_local_0 = weights_local[0] + weights_local[1] + weights_local[2] + weights_local[3];
+        weight_t weights_local_0 = weights_local[0] + weights_local[1] + weights_local[2] + weights_local[3];
 
-        *(__global uchar_t *)(dst + dst_index) = convert_uchar_t(weighted_sum_local_0 / (int_t)(weights_local_0));
+        *(__global pixel_t *)(dst + dst_index) = convert_pixel_t(weighted_sum_local_0 / (sum_t)weights_local_0);
     }
 }
 
 __kernel void fastNlMeansDenoising(__global const uchar * src, int src_step, int src_offset,
                                    __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                                   __global const int * almostDist2Weight, __global uchar * buffer,
+                                   __global const wlut_t * almostDist2Weight, __global uchar * buffer,
                                    int almostTemplateWindowSizeSqBinShift)
 {
     int block_x = get_group_id(0), nblocks_x = get_num_groups(0);
     int block_y = get_group_id(1);
     int id = get_local_id(0), first;
 
-    __local int dists[SEARCH_SIZE_SQ], weights[CTA_SIZE];
-    __local int_t weighted_sum[CTA_SIZE];
+    __local int dists[SEARCH_SIZE_SQ];
+    __local weight_t weights[CTA_SIZE];
+    __local sum_t weighted_sum[CTA_SIZE];
 
     int x0 = block_x * BLOCK_COLS, x1 = min(x0 + BLOCK_COLS, dst_cols);
     int y0 = block_y * BLOCK_ROWS, y1 = min(y0 + BLOCK_ROWS, dst_rows);

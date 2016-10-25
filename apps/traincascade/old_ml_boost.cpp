@@ -1200,7 +1200,7 @@ CvBoost::update_weights( CvBoostTree* tree )
         if (data->is_buf_16u)
         {
             unsigned short* labels = (unsigned short*)(dtree_data_buf->data.s + data->data_root->buf_idx*length_buf_row +
-                data->data_root->offset + (data->work_var_count-1)*data->sample_count);
+                data->data_root->offset + (size_t)(data->work_var_count-1)*data->sample_count);
             for( i = 0; i < n; i++ )
             {
                 // save original categorical responses {0,1}, convert them to {-1,1}
@@ -1218,7 +1218,7 @@ CvBoost::update_weights( CvBoostTree* tree )
         else
         {
             int* labels = dtree_data_buf->data.i + data->data_root->buf_idx*length_buf_row +
-                data->data_root->offset + (data->work_var_count-1)*data->sample_count;
+                data->data_root->offset + (size_t)(data->work_var_count-1)*data->sample_count;
 
             for( i = 0; i < n; i++ )
             {

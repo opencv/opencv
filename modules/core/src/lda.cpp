@@ -898,6 +898,8 @@ public:
     // National Institute of Standards and Technology (NIST).
     void compute(InputArray src)
     {
+        CV_INSTRUMENT_REGION()
+
         if(isSymmetric(src)) {
             // Fall back to OpenCV for a symmetric matrix!
             cv::eigen(src, _eigenvalues, _eigenvectors);
@@ -937,9 +939,9 @@ public:
 // Linear Discriminant Analysis implementation
 //------------------------------------------------------------------------------
 
-LDA::LDA(int num_components) : _num_components(num_components) { }
+LDA::LDA(int num_components) : _dataAsRow(true), _num_components(num_components) { }
 
-LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _num_components(num_components)
+LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _dataAsRow(true),  _num_components(num_components)
 {
     this->compute(src, labels); //! compute eigenvectors and eigenvalues
 }
@@ -960,7 +962,7 @@ void LDA::save(const String& filename) const
 void LDA::load(const String& filename) {
     FileStorage fs(filename, FileStorage::READ);
     if (!fs.isOpened())
-       CV_Error(Error::StsError, "File can't be opened for writing!");
+       CV_Error(Error::StsError, "File can't be opened for reading!");
     this->load(fs);
     fs.release();
 }
@@ -1106,14 +1108,14 @@ void LDA::compute(InputArrayOfArrays _src, InputArray _lbls) {
     }
 }
 
-// Projects samples into the LDA subspace.
+// Projects one or more row aligned samples into the LDA subspace.
 Mat LDA::project(InputArray src) {
-   return subspaceProject(_eigenvectors, Mat(), _dataAsRow ? src : src.getMat().t());
+   return subspaceProject(_eigenvectors, Mat(), src);
 }
 
-// Reconstructs projections from the LDA subspace.
+// Reconstructs projections from the LDA subspace from one or more row aligned samples.
 Mat LDA::reconstruct(InputArray src) {
-   return subspaceReconstruct(_eigenvectors, Mat(), _dataAsRow ? src : src.getMat().t());
+   return subspaceReconstruct(_eigenvectors, Mat(), src);
 }
 
 }

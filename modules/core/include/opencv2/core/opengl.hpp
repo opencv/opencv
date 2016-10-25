@@ -40,14 +40,15 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_OPENGL_HPP__
-#define __OPENCV_CORE_OPENGL_HPP__
+#ifndef OPENCV_CORE_OPENGL_HPP
+#define OPENCV_CORE_OPENGL_HPP
 
 #ifndef __cplusplus
 #  error opengl.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core.hpp"
+#include "ocl.hpp"
 
 namespace cv { namespace ogl {
 
@@ -511,7 +512,51 @@ CV_EXPORTS void render(const Arrays& arr, int mode = POINTS, Scalar color = Scal
 */
 CV_EXPORTS void render(const Arrays& arr, InputArray indices, int mode = POINTS, Scalar color = Scalar::all(255));
 
-//! @} core_opengl
+/////////////////// CL-GL Interoperability Functions ///////////////////
+
+namespace ocl {
+using namespace cv::ocl;
+
+// TODO static functions in the Context class
+/** @brief Creates OpenCL context from GL.
+@return Returns reference to OpenCL Context
+ */
+CV_EXPORTS Context& initializeContextFromGL();
+
+} // namespace cv::ogl::ocl
+
+/** @brief Converts InputArray to Texture2D object.
+@param src     - source InputArray.
+@param texture - destination Texture2D object.
+ */
+CV_EXPORTS void convertToGLTexture2D(InputArray src, Texture2D& texture);
+
+/** @brief Converts Texture2D object to OutputArray.
+@param texture - source Texture2D object.
+@param dst     - destination OutputArray.
+ */
+CV_EXPORTS void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst);
+
+/** @brief Maps Buffer object to process on CL side (convert to UMat).
+
+Function creates CL buffer from GL one, and then constructs UMat that can be used
+to process buffer data with OpenCV functions. Note that in current implementation
+UMat constructed this way doesn't own corresponding GL buffer object, so it is
+the user responsibility to close down CL/GL buffers relationships by explicitly
+calling unmapGLBuffer() function.
+@param buffer      - source Buffer object.
+@param accessFlags - data access flags (ACCESS_READ|ACCESS_WRITE).
+@return Returns UMat object
+ */
+CV_EXPORTS UMat mapGLBuffer(const Buffer& buffer, int accessFlags = ACCESS_READ|ACCESS_WRITE);
+
+/** @brief Unmaps Buffer object (releases UMat, previously mapped from Buffer).
+
+Function must be called explicitly by the user for each UMat previously constructed
+by the call to mapGLBuffer() function.
+@param u           - source UMat, created by mapGLBuffer().
+ */
+CV_EXPORTS void unmapGLBuffer(UMat& u);
 
 }} // namespace cv::ogl
 
@@ -681,4 +726,4 @@ bool cv::ogl::Arrays::empty() const
 
 //! @endcond
 
-#endif /* __OPENCV_CORE_OPENGL_HPP__ */
+#endif /* OPENCV_CORE_OPENGL_HPP */

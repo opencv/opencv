@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OBJDETECT_HPP__
-#define __OPENCV_OBJDETECT_HPP__
+#ifndef OPENCV_OBJDETECT_HPP
+#define OPENCV_OBJDETECT_HPP
 
 #include "opencv2/core.hpp"
 
@@ -91,7 +91,7 @@ compensate for the differences in the size of areas. The sums of pixel values ov
 regions are calculated rapidly using integral images (see below and the integral description).
 
 To see the object detector at work, have a look at the facedetect demo:
-<https://github.com/Itseez/opencv/tree/master/samples/cpp/dbt_face_detection.cpp>
+<https://github.com/opencv/opencv/tree/master/samples/cpp/dbt_face_detection.cpp>
 
 The following reference is for the detection part only. There is a separate application called
 opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
@@ -124,7 +124,7 @@ public:
     SimilarRects(double _eps) : eps(_eps) {}
     inline bool operator()(const Rect& r1, const Rect& r2) const
     {
-        double delta = eps*(std::min(r1.width, r2.width) + std::min(r1.height, r2.height))*0.5;
+        double delta = eps * ((std::min)(r1.width, r2.width) + (std::min)(r1.height, r2.height)) * 0.5;
         return std::abs(r1.x - r2.x) <= delta &&
             std::abs(r1.y - r2.y) <= delta &&
             std::abs(r1.x + r1.width - r2.x - r2.width) <= delta &&
@@ -255,13 +255,13 @@ public:
     @param flags Parameter with the same meaning for an old cascade as in the function
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
-    @param maxSize Maximum possible object size. Objects larger than that are ignored.
+    @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
 
     The function is parallelized with the TBB library.
 
     @note
        -   (Python) A face detection example using cascade classifiers can be found at
-            opencv_source_code/samples/python2/facedetect.py
+            opencv_source_code/samples/python/facedetect.py
     */
     CV_WRAP void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -283,7 +283,7 @@ public:
     @param flags Parameter with the same meaning for an old cascade as in the function
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
-    @param maxSize Maximum possible object size. Objects larger than that are ignored.
+    @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
     */
     CV_WRAP_AS(detectMultiScale2) void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -345,18 +345,18 @@ public:
     CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
         cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
         histogramNormType(HOGDescriptor::L2Hys), L2HysThreshold(0.2), gammaCorrection(true),
-        free_coef(-1.f), nlevels(HOGDescriptor::DEFAULT_NLEVELS)
+        free_coef(-1.f), nlevels(HOGDescriptor::DEFAULT_NLEVELS), signedGradient(false)
     {}
 
     CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
                   Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
                   int _histogramNormType=HOGDescriptor::L2Hys,
                   double _L2HysThreshold=0.2, bool _gammaCorrection=false,
-                  int _nlevels=HOGDescriptor::DEFAULT_NLEVELS)
+                  int _nlevels=HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient=false)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
     nbins(_nbins), derivAperture(_derivAperture), winSigma(_winSigma),
     histogramNormType(_histogramNormType), L2HysThreshold(_L2HysThreshold),
-    gammaCorrection(_gammaCorrection), free_coef(-1.f), nlevels(_nlevels)
+    gammaCorrection(_gammaCorrection), free_coef(-1.f), nlevels(_nlevels), signedGradient(_signedGradient)
     {}
 
     CV_WRAP HOGDescriptor(const String& filename)
@@ -432,6 +432,7 @@ public:
     UMat oclSvmDetector;
     float free_coef;
     CV_PROP int nlevels;
+    CV_PROP bool signedGradient;
 
 
     //! evaluate specified ROI and return confidence value for each location

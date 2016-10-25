@@ -84,7 +84,7 @@ void cv::cuda::sqrIntegral(InputArray, OutputArray, Stream&) { throw_no_cuda(); 
 ////////////////////////////////////////////////////////////////////////
 // norm
 
-namespace cv { namespace cuda { namespace internal {
+namespace cv { namespace cuda { namespace device {
 
 void normL2(cv::InputArray _src, cv::OutputArray _dst, cv::InputArray _mask, Stream& stream);
 
@@ -106,11 +106,11 @@ void cv::cuda::calcNorm(InputArray _src, OutputArray dst, int normType, InputArr
     }
     else if (normType == NORM_L2)
     {
-        cv::cuda::internal::normL2(src_single_channel, dst, mask, stream);
+        cv::cuda::device::normL2(src_single_channel, dst, mask, stream);
     }
     else // NORM_INF
     {
-        cv::cuda::internal::findMaxAbs(src_single_channel, dst, mask, stream);
+        cv::cuda::device::findMaxAbs(src_single_channel, dst, mask, stream);
     }
 }
 

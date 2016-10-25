@@ -44,6 +44,9 @@
 #ifndef __OPENCV_DENOISING_ARRAYS_HPP__
 #define __OPENCV_DENOISING_ARRAYS_HPP__
 
+namespace cv
+{
+
 template <class T>
 struct Array2d
 {
@@ -175,5 +178,7 @@ struct Array4d
         return steps[dimension];
     }
 };
+
+}
 
 #endif

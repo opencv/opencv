@@ -441,6 +441,8 @@ public:
         }
 
         root_ = pool_.allocate<KMeansNode>();
+        std::memset(root_, 0, sizeof(KMeansNode));
+
         computeNodeStatistics(root_, indices_, (int)size_);
         computeClustering(root_, indices_, (int)size_, branching_,0);
     }
@@ -864,14 +866,16 @@ private:
             variance -= distance_(centers[c], ZeroIterator<ElementType>(), veclen_);
 
             node->childs[c] = pool_.allocate<KMeansNode>();
+            std::memset(node->childs[c], 0, sizeof(KMeansNode));
             node->childs[c]->radius = radiuses[c];
             node->childs[c]->pivot = centers[c];
             node->childs[c]->variance = variance;
             node->childs[c]->mean_radius = mean_radius;
-            node->childs[c]->indices = NULL;
             computeClustering(node->childs[c],indices+start, end-start, branching, level+1);
             start=end;
         }
+
+        delete[] centers;
     }
 
 

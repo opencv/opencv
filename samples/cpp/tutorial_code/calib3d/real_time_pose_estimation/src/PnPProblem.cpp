@@ -99,6 +99,7 @@ void PnPProblem::set_P_matrix( const cv::Mat &R_matrix, const cv::Mat &t_matrix)
   _P_matrix.at<double>(1,2) = R_matrix.at<double>(1,2);
   _P_matrix.at<double>(2,0) = R_matrix.at<double>(2,0);
   _P_matrix.at<double>(2,1) = R_matrix.at<double>(2,1);
+  _P_matrix.at<double>(2,2) = R_matrix.at<double>(2,2);
   _P_matrix.at<double>(0,3) = t_matrix.at<double>(0);
   _P_matrix.at<double>(1,3) = t_matrix.at<double>(1);
   _P_matrix.at<double>(2,3) = t_matrix.at<double>(2);

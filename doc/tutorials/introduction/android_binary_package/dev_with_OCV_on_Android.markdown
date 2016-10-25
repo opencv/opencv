@@ -279,7 +279,7 @@ application. It will be capable of accessing camera output, processing it and di
         android:label="@string/app_name"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
     @endcode
--#  Add OpenCV library initialization to your activity. Fix errors by adding requited imports.
+-#  Add OpenCV library initialization to your activity. Fix errors by adding required imports.
     @code{.java}
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -307,7 +307,7 @@ application. It will be capable of accessing camera output, processing it and di
     @endcode
 -#  Defines that your activity implements CvCameraViewListener2 interface and fix activity related
     errors by defining missed methods. For this activity define onCreate, onDestroy and onPause and
-    implement them according code snippet bellow. Fix errors by adding requited imports.
+    implement them according code snippet bellow. Fix errors by adding required imports.
     @code{.java}
     private CameraBridgeViewBase mOpenCvCameraView;
 
@@ -356,10 +356,7 @@ from camera and implements CvCameraViewListener2 interface to get frames from ca
 First of all we create our application view using xml layout. Our layout consists of the only one
 full screen component of class org.opencv.android.JavaCameraView. This class is implemented inside
 OpenCV library. It is inherited from CameraBridgeViewBase, that extends SurfaceView and uses
-standard Android camera API. Alternatively you can use org.opencv.android.NativeCameraView class,
-that implements the same interface, but uses VideoCapture class as camera access back-end.
-opencv:show_fps="true" and opencv:camera_id="any" options enable FPS message and allow to use any
-camera on device. Application tries to use back camera first.
+standard Android camera API.
 
 After creating layout we need to implement Activity class. OpenCV initialization process has been
 already discussed above. In this sample we use asynchronous initialization. Implementation of

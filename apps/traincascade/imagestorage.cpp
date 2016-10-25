@@ -28,25 +28,18 @@ CvCascadeImageReader::NegReader::NegReader()
 
 bool CvCascadeImageReader::NegReader::create( const string _filename, Size _winSize )
 {
-    string dirname, str;
+    string str;
     std::ifstream file(_filename.c_str());
     if ( !file.is_open() )
         return false;
 
-    size_t pos = _filename.rfind('\\');
-    char dlmrt = '\\';
-    if (pos == string::npos)
-    {
-        pos = _filename.rfind('/');
-        dlmrt = '/';
-    }
-    dirname = pos == string::npos ? "" : _filename.substr(0, pos) + dlmrt;
     while( !file.eof() )
     {
         std::getline(file, str);
+        str.erase(str.find_last_not_of(" \n\r\t")+1);
         if (str.empty()) break;
         if (str.at(0) == '#' ) continue; /* comment */
-        imgFilenames.push_back(dirname + str);
+        imgFilenames.push_back(str);
     }
     file.close();
 
@@ -62,8 +55,10 @@ bool CvCascadeImageReader::NegReader::nextImg()
     for( size_t i = 0; i < count; i++ )
     {
         src = imread( imgFilenames[last++], 0 );
-        if( src.empty() )
+        if( src.empty() ){
+            last %= count;
             continue;
+        }
         round += last / count;
         round = round % (winSize.width * winSize.height);
         last %= count;

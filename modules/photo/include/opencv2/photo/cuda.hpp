@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_CUDA_HPP__
-#define __OPENCV_PHOTO_CUDA_HPP__
+#ifndef OPENCV_PHOTO_CUDA_HPP
+#define OPENCV_PHOTO_CUDA_HPP
 
 #include "opencv2/core/cuda.hpp"
 
@@ -105,7 +105,7 @@ CV_EXPORTS void fastNlMeansDenoising(InputArray src, OutputArray dst,
 @param h_luminance Parameter regulating filter strength. Big h value perfectly removes noise but
 also removes image details, smaller h value preserves details but also preserves some noise
 @param photo_render float The same as h but for color components. For most images value equals 10 will be
-enought to remove colored noise and do not distort colors
+enough to remove colored noise and do not distort colors
 @param search_window Size in pixels of the window that is used to compute weighted average for
 given pixel. Should be odd. Affect performance linearly: greater search_window - greater
 denoising time. Recommended value 21 pixels
@@ -129,4 +129,4 @@ CV_EXPORTS void fastNlMeansDenoisingColored(InputArray src, OutputArray dst,
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_PHOTO_CUDA_HPP__ */
+#endif /* OPENCV_PHOTO_CUDA_HPP */

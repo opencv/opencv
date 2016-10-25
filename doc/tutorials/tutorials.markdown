@@ -25,9 +25,16 @@ As always, we would be happy to hear your comments and receive your contribution
 
 -   @subpage tutorial_table_of_content_highgui
 
-    This section
-    contains valuable tutorials about how to read/save your image/video files and how to use the
+    This section contains valuable tutorials about how to use the
     built-in graphical user interface of the library.
+
+-   @subpage tutorial_table_of_content_imgcodecs
+
+    These tutorials show how to read and write images using imgcodecs module.
+
+-   @subpage tutorial_table_of_content_videoio
+
+    These tutorials show how to read and write videos using videio module.
 
 -   @subpage tutorial_table_of_content_calib3d
 
@@ -60,6 +67,10 @@ As always, we would be happy to hear your comments and receive your contribution
 
     Use OpenCV for
     advanced photo processing.
+
+-   @subpage tutorial_table_of_content_stitching
+
+    Learn how to create beautiful photo panoramas and more with OpenCV stitching pipeline.
 
 -   @subpage tutorial_table_of_content_gpu
 

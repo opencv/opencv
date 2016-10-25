@@ -106,7 +106,7 @@ bool  BmpDecoder::readHeader()
             if( m_width > 0 && m_height != 0 &&
              (((m_bpp == 1 || m_bpp == 4 || m_bpp == 8 ||
                 m_bpp == 24 || m_bpp == 32 ) && m_rle_code == BMP_RGB) ||
-               (m_bpp == 16 && (m_rle_code == BMP_RGB || m_rle_code == BMP_BITFIELDS)) ||
+               ((m_bpp == 16 || m_bpp == 32) && (m_rle_code == BMP_RGB || m_rle_code == BMP_BITFIELDS)) ||
                (m_bpp == 4 && m_rle_code == BMP_RLE4) ||
                (m_bpp == 8 && m_rle_code == BMP_RLE8)))
             {
@@ -131,6 +131,11 @@ bool  BmpDecoder::readHeader()
                         ;
                     else
                         result = false;
+                }
+                else if (m_bpp == 32 && m_rle_code == BMP_BITFIELDS)
+                {
+                    // 32bit BMP not require to check something - we can simply allow it to use
+                    ;
                 }
                 else if( m_bpp == 16 && m_rle_code == BMP_RGB )
                     m_bpp = 15;
@@ -166,8 +171,8 @@ bool  BmpDecoder::readHeader()
     catch(...)
     {
     }
-
-    m_type = iscolor ? CV_8UC3 : CV_8UC1;
+    // in 32 bit case alpha channel is used - so require CV_8UC4 type
+    m_type = iscolor ? (m_bpp == 32 ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
     m_origin = m_height > 0 ? IPL_ORIGIN_BL : IPL_ORIGIN_TL;
     m_height = std::abs(m_height);
 

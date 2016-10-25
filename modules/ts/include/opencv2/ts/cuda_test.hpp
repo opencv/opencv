@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_TEST_UTILITY_HPP__
-#define __OPENCV_CUDA_TEST_UTILITY_HPP__
+#ifndef OPENCV_CUDA_TEST_UTILITY_HPP
+#define OPENCV_CUDA_TEST_UTILITY_HPP
 
 #include <stdexcept>
 #include "cvconfig.h"
@@ -208,9 +208,6 @@ namespace cvtest
       } \
       void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::UnsafeTestBody()
 
-    #define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-    #define GET_PARAM(k) std::tr1::get< k >(GetParam())
-
     #define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
 
     // Depth
@@ -352,7 +349,7 @@ namespace cv { namespace cuda
 #ifdef HAVE_CUDA
 
 #define CV_CUDA_TEST_MAIN(resourcesubdir) \
-    CV_TEST_MAIN(resourcesubdir, cvtest::parseCudaDeviceOptions(argc, argv), cvtest::printCudaInfo())
+    CV_TEST_MAIN(resourcesubdir, cvtest::parseCudaDeviceOptions(argc, argv), cvtest::printCudaInfo(), cv::setUseOptimized(false))
 
 #else // HAVE_CUDA
 
@@ -366,4 +363,4 @@ namespace cv { namespace cuda
 #endif // HAVE_CUDA
 
 
-#endif // __OPENCV_CUDA_TEST_UTILITY_HPP__
+#endif // OPENCV_CUDA_TEST_UTILITY_HPP

@@ -232,7 +232,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         int val = ((uchar*)a_data)[j];
-                        ((uchar*)b_data)[j] = (uchar)(val <= 1 ? val :
+                        ((uchar*)b_data)[j] = (uchar)(val == 0 ? 255 : val == 1 ? 1 :
                                                       val == 2 && ipower == -1 ? 1 : 0);
                     }
                 else
@@ -247,17 +247,17 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                 if( ipower < 0 )
                     for( j = 0; j < ncols; j++ )
                     {
-                        int val = ((char*)a_data)[j];
-                        ((char*)b_data)[j] = (char)((val&~1)==0 ? val :
+                        int val = ((schar*)a_data)[j];
+                        ((schar*)b_data)[j] = (schar)(val == 0 ? 127 : val == 1 ? 1 :
                                                     val ==-1 ? 1-2*(ipower&1) :
                                                     val == 2 && ipower == -1 ? 1 : 0);
                     }
                 else
                     for( j = 0; j < ncols; j++ )
                     {
-                        int val = ((char*)a_data)[j];
+                        int val = ((schar*)a_data)[j];
                         val = ipow( val, ipower );
-                        ((char*)b_data)[j] = saturate_cast<schar>(val);
+                        ((schar*)b_data)[j] = saturate_cast<schar>(val);
                     }
                 break;
             case CV_16U:
@@ -265,7 +265,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         int val = ((ushort*)a_data)[j];
-                        ((ushort*)b_data)[j] = (ushort)((val&~1)==0 ? val :
+                        ((ushort*)b_data)[j] = (ushort)(val == 0 ? 65535 : val == 1 ? 1 :
                                                         val ==-1 ? 1-2*(ipower&1) :
                                                         val == 2 && ipower == -1 ? 1 : 0);
                     }
@@ -282,7 +282,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         int val = ((short*)a_data)[j];
-                        ((short*)b_data)[j] = (short)((val&~1)==0 ? val :
+                        ((short*)b_data)[j] = (short)(val == 0 ? 32767 : val == 1 ? 1 :
                                                       val ==-1 ? 1-2*(ipower&1) :
                                                       val == 2 && ipower == -1 ? 1 : 0);
                     }
@@ -299,7 +299,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         int val = ((int*)a_data)[j];
-                        ((int*)b_data)[j] = (val&~1)==0 ? val :
+                        ((int*)b_data)[j] = val == 0 ? INT_MAX : val == 1 ? 1 :
                         val ==-1 ? 1-2*(ipower&1) :
                         val == 2 && ipower == -1 ? 1 : 0;
                     }
@@ -350,8 +350,6 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
         }
     }
 }
-
-
 
 ///////////////////////////////////////// matrix tests ////////////////////////////////////////////
 
@@ -2332,6 +2330,17 @@ void Core_SolvePolyTest::run( int )
             pass = pass && div < err_eps;
         }
 
+        //test x^3 = 0
+        cv::Mat coeffs_5623(4, 1, CV_64FC1);
+        cv::Mat r_5623(3, 1, CV_64FC2);
+        coeffs_5623.at<double>(0) = 1;
+        coeffs_5623.at<double>(1) = 0;
+        coeffs_5623.at<double>(2) = 0;
+        coeffs_5623.at<double>(3) = 0;
+        double prec_5623 = cv::solveCubic(coeffs_5623, r_5623);
+        pass = pass && r_5623.at<double>(0) == 0 && r_5623.at<double>(1) == 0 && r_5623.at<double>(2) == 0;
+        pass = pass && prec_5623 == 1;
+
         if (!pass)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
@@ -2351,10 +2360,60 @@ void Core_SolvePolyTest::run( int )
     }
 }
 
+template<typename T>
+static void checkRoot(Mat& r, T re, T im)
+{
+    for (int i = 0; i < r.cols*r.rows; i++)
+    {
+        Vec<T, 2> v = *(Vec<T, 2>*)r.ptr(i);
+        if (fabs(re - v[0]) < 1e-6 && fabs(im - v[1]) < 1e-6)
+        {
+            v[0] = std::numeric_limits<T>::quiet_NaN();
+            v[1] = std::numeric_limits<T>::quiet_NaN();
+            return;
+        }
+    }
+    GTEST_NONFATAL_FAILURE_("Can't find root") << "(" << re << ", " << im << ")";
+}
+TEST(Core_SolvePoly, regression_5599)
+{
+    // x^4 - x^2 = 0, roots: 1, -1, 0, 0
+    cv::Mat coefs = (cv::Mat_<float>(1,5) << 0, 0, -1, 0, 1 );
+    {
+        cv::Mat r;
+        double prec;
+        prec = cv::solvePoly(coefs, r);
+        EXPECT_LE(prec, 1e-6);
+        EXPECT_EQ(4u, r.total());
+        //std::cout << "Preciseness = " << prec << std::endl;
+        //std::cout << "roots:\n" << r << "\n" << std::endl;
+        ASSERT_EQ(CV_32FC2, r.type());
+        checkRoot<float>(r, 1, 0);
+        checkRoot<float>(r, -1, 0);
+        checkRoot<float>(r, 0, 0);
+        checkRoot<float>(r, 0, 0);
+    }
+    // x^2 - 2x + 1 = 0,  roots: 1, 1
+    coefs = (cv::Mat_<float>(1,3) << 1, -2, 1 );
+    {
+        cv::Mat r;
+        double prec;
+        prec = cv::solvePoly(coefs, r);
+        EXPECT_LE(prec, 1e-6);
+        EXPECT_EQ(2u, r.total());
+        //std::cout << "Preciseness = " << prec << std::endl;
+        //std::cout << "roots:\n" << r << "\n" << std::endl;
+        ASSERT_EQ(CV_32FC2, r.type());
+        checkRoot<float>(r, 1, 0);
+        checkRoot<float>(r, 1, 0);
+    }
+}
+
 class Core_PhaseTest : public cvtest::BaseTest
 {
+    int t;
 public:
-    Core_PhaseTest() {}
+    Core_PhaseTest(int t_) : t(t_) {}
     ~Core_PhaseTest() {}
 protected:
     virtual void run(int)
@@ -2363,9 +2422,9 @@ protected:
         const int axisCount = 8;
         const int dim = theRNG().uniform(1,10);
         const float scale = theRNG().uniform(1.f, 100.f);
-        Mat x(axisCount + 1, dim, CV_32FC1),
-            y(axisCount + 1, dim, CV_32FC1);
-        Mat anglesInDegrees(axisCount + 1, dim, CV_32FC1);
+        Mat x(axisCount + 1, dim, t),
+            y(axisCount + 1, dim, t);
+        Mat anglesInDegrees(axisCount + 1, dim, t);
 
         // fill the data
         x.row(0).setTo(Scalar(0));
@@ -2444,40 +2503,25 @@ protected:
     }
 };
 
-class Core_CheckRange_Empty : public cvtest::BaseTest
-{
-public:
-    Core_CheckRange_Empty(){}
-    ~Core_CheckRange_Empty(){}
-protected:
-    virtual void run( int start_from );
-};
-
-void Core_CheckRange_Empty::run( int )
+TEST(Core_CheckRange_Empty, accuracy)
 {
     cv::Mat m;
     ASSERT_TRUE( cv::checkRange(m) );
 }
 
-TEST(Core_CheckRange_Empty, accuracy) { Core_CheckRange_Empty test; test.safe_run(); }
-
-class Core_CheckRange_INT_MAX : public cvtest::BaseTest
-{
-public:
-    Core_CheckRange_INT_MAX(){}
-    ~Core_CheckRange_INT_MAX(){}
-protected:
-    virtual void run( int start_from );
-};
-
-void Core_CheckRange_INT_MAX::run( int )
+TEST(Core_CheckRange_INT_MAX, accuracy)
 {
     cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
     ASSERT_FALSE( cv::checkRange(m, true, 0, 0, INT_MAX) );
     ASSERT_TRUE( cv::checkRange(m) );
 }
 
-TEST(Core_CheckRange_INT_MAX, accuracy) { Core_CheckRange_INT_MAX test; test.safe_run(); }
+TEST(Core_CheckRange_INT_MAX1, accuracy)
+{
+    cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
+    ASSERT_TRUE( cv::checkRange(m, true, 0, 0, INT_MAX+1.0f) );
+    ASSERT_TRUE( cv::checkRange(m) );
+}
 
 template <typename T> class Core_CheckRange : public testing::Test {};
 
@@ -2488,13 +2532,30 @@ TYPED_TEST_P(Core_CheckRange, Negative)
     double min_bound = 4.5;
     double max_bound = 16.0;
 
-    TypeParam data[] = {5, 10, 15, 4, 10, 2, 8, 12, 14};
+    TypeParam data[] = {5, 10, 15, 10, 10, 2, 8, 12, 14};
     cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
     cv::Point bad_pt(0, 0);
 
     ASSERT_FALSE(checkRange(src, true, &bad_pt, min_bound, max_bound));
-    ASSERT_EQ(bad_pt.x, 0);
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+TYPED_TEST_P(Core_CheckRange, Negative3CN)
+{
+    double min_bound = 4.5;
+    double max_bound = 16.0;
+
+    TypeParam data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                        10, 11, 12,   10, 11, 12,    2,  5,  6,
+                         8,  8,  8,   12, 12, 12,   14, 14, 14};
+    cv::Mat src = cv::Mat(3,3, CV_MAKETYPE(cv::DataDepth<TypeParam>::value, 3), data);
+
+    cv::Point bad_pt(0, 0);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt, min_bound, max_bound));
+    ASSERT_EQ(bad_pt.x, 2);
     ASSERT_EQ(bad_pt.y, 1);
 }
 
@@ -2556,7 +2617,49 @@ TYPED_TEST_P(Core_CheckRange, One)
     ASSERT_TRUE( checkRange(src2, true, NULL, min_bound, max_bound) );
 }
 
-REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds, Zero, One);
+TEST(Core_CheckRange, NaN)
+{
+    float data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                    10, 11, 12,   10, 11, 12,   5,  5,  std::numeric_limits<float>::quiet_NaN(),
+                     8,  8,  8,   12, 12, 12,   14, 14, 14};
+    cv::Mat src = cv::Mat(3,3, CV_32FC3, data);
+
+    cv::Point bad_pt(0, 0);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+TEST(Core_CheckRange, Inf)
+{
+    float data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                    10, 11, 12,   10, 11, 12,   5,  5,  std::numeric_limits<float>::infinity(),
+                     8,  8,  8,   12, 12, 12,   14, 14, 14};
+    cv::Mat src = cv::Mat(3,3, CV_32FC3, data);
+
+    cv::Point bad_pt(0, 0);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+TEST(Core_CheckRange, Inf_Minus)
+{
+    float data[] = { 5,  6,  7,   10, 11, 12,   13, 14, 15,
+                    10, 11, 12,   10, 11, 12,   5,  5,  -std::numeric_limits<float>::infinity(),
+                     8,  8,  8,   12, 12, 12,   14, 14, 14};
+    cv::Mat src = cv::Mat(3,3, CV_32FC3, data);
+
+    cv::Point bad_pt(0, 0);
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
@@ -2594,8 +2697,8 @@ TEST(Core_SVD, accuracy) { Core_SVDTest test; test.safe_run(); }
 TEST(Core_SVBkSb, accuracy) { Core_SVBkSbTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
-TEST(Core_Phase, accuracy) { Core_PhaseTest test; test.safe_run(); }
-
+TEST(Core_Phase, accuracy32f) { Core_PhaseTest test(CV_32FC1); test.safe_run(); }
+TEST(Core_Phase, accuracy64f) { Core_PhaseTest test(CV_64FC1); test.safe_run(); }
 
 TEST(Core_SVD, flt)
 {
@@ -2820,6 +2923,122 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::absdiff(goldMean, actualMean.reshape(0,1), meanDiff);
     cv::Scalar sDiff = cv::sum(meanDiff);
     ASSERT_EQ(sDiff.dot(sDiff), 0.0);
+}
+
+TEST(Core_Pow, special)
+{
+    for( int i = 0; i < 100; i++ )
+    {
+        int n = theRNG().uniform(1, 30);
+        Mat mtx0(1, n, CV_8S), mtx, result;
+        randu(mtx0, -5, 5);
+
+        int type = theRNG().uniform(0, 2) ? CV_64F : CV_32F;
+        double eps = type == CV_32F ? 1e-3 : 1e-10;
+        mtx0.convertTo(mtx, type);
+        // generate power from [-n, n] interval with 1/8 step - enough to check various cases.
+        const int max_pf = 3;
+        int pf = theRNG().uniform(0, max_pf*2+1);
+        double power = ((1 << pf) - (1 << (max_pf*2-1)))/16.;
+        int ipower = cvRound(power);
+        bool is_ipower = ipower == power;
+        cv::pow(mtx, power, result);
+        for( int j = 0; j < n; j++ )
+        {
+            double val = type == CV_32F ? (double)mtx.at<float>(j) : mtx.at<double>(j);
+            double r = type == CV_32F ? (double)result.at<float>(j) : result.at<double>(j);
+            double r0;
+            if( power == 0. )
+                r0 = 1;
+            else if( is_ipower )
+            {
+                r0 = 1;
+                for( int k = 0; k < std::abs(ipower); k++ )
+                    r0 *= val;
+                if( ipower < 0 )
+                    r0 = 1./r0;
+            }
+            else
+                r0 = std::pow(val, power);
+            if( cvIsInf(r0) )
+            {
+                ASSERT_TRUE(cvIsInf(r) != 0);
+            }
+            else if( cvIsNaN(r0) )
+            {
+                ASSERT_TRUE(cvIsNaN(r) != 0);
+            }
+            else
+            {
+                ASSERT_TRUE(cvIsInf(r) == 0 && cvIsNaN(r) == 0);
+                ASSERT_LT(fabs(r - r0), eps);
+            }
+        }
+    }
+}
+
+TEST(Core_Cholesky, accuracy64f)
+{
+    const int n = 5;
+    Mat A(n, n, CV_64F), refA;
+    Mat mean(1, 1, CV_64F);
+    *mean.ptr<double>() = 10.0;
+    Mat dev(1, 1, CV_64F);
+    *dev.ptr<double>() = 10.0;
+    RNG rng(10);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    A = A*A.t();
+    A.copyTo(refA);
+    Cholesky(A.ptr<double>(), A.step, n, NULL, 0, 0);
+
+   for (int i = 0; i < A.rows; i++)
+       for (int j = i + 1; j < A.cols; j++)
+           A.at<double>(i, j) = 0.0;
+   EXPECT_LE(norm(refA, A*A.t(), CV_RELATIVE_L2), FLT_EPSILON);
+}
+
+TEST(Core_QR_Solver, accuracy64f)
+{
+    int m = 20, n = 18;
+    Mat A(m, m, CV_64F);
+    Mat B(m, n, CV_64F);
+    Mat mean(1, 1, CV_64F);
+    *mean.ptr<double>() = 10.0;
+    Mat dev(1, 1, CV_64F);
+    *dev.ptr<double>() = 10.0;
+    RNG rng(10);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+    A = A*A.t();
+    Mat solutionQR;
+
+    //solve system with square matrix
+    solve(A, B, solutionQR, DECOMP_QR);
+    EXPECT_LE(norm(A*solutionQR, B, CV_RELATIVE_L2), FLT_EPSILON);
+
+    A = Mat(m, n, CV_64F);
+    B = Mat(m, n, CV_64F);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+
+    //solve normal system
+    solve(A, B, solutionQR, DECOMP_QR | DECOMP_NORMAL);
+    EXPECT_LE(norm(A.t()*(A*solutionQR), A.t()*B, CV_RELATIVE_L2), FLT_EPSILON);
+
+    //solve overdeterminated system as a least squares problem
+    Mat solutionSVD;
+    solve(A, B, solutionQR, DECOMP_QR);
+    solve(A, B, solutionSVD, DECOMP_SVD);
+    EXPECT_LE(norm(solutionQR, solutionSVD, CV_RELATIVE_L2), FLT_EPSILON);
+
+    //solve system with singular matrix
+    A = Mat(10, 10, CV_64F);
+    B = Mat(10, 1, CV_64F);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+    for (int i = 0; i < A.cols; i++)
+      A.at<double>(0, i) = A.at<double>(1, i);
+    ASSERT_FALSE(solve(A, B, solutionQR, DECOMP_QR));
 }
 
 /* End of file. */

@@ -13,7 +13,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   project("${project}_samples")
 
-  ocv_include_modules(${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules_recurse(${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
   ocv_include_directories(
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia"
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
@@ -81,6 +81,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   file(GLOB all_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 
+  if(NOT HAVE_OPENGL)
+    list(REMOVE_ITEM all_samples "opengl.cpp")
+  endif()
+
   foreach(sample_filename ${all_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
     file(GLOB sample_srcs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${sample}.*)
@@ -92,6 +96,9 @@ endif()
 
 if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
+  if(NOT HAVE_OPENGL)
+    list(REMOVE_ITEM install_list "opengl.cpp")
+  endif()
   install(FILES ${install_list}
           DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)

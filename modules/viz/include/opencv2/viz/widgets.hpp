@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_WIDGETS_HPP__
-#define __OPENCV_VIZ_WIDGETS_HPP__
+#ifndef OPENCV_VIZ_WIDGETS_HPP
+#define OPENCV_VIZ_WIDGETS_HPP
 
 #include <opencv2/viz/types.hpp>
 
@@ -66,7 +66,9 @@ namespace cv
             FONT_SIZE,
             REPRESENTATION,
             IMMEDIATE_RENDERING,
-            SHADING
+            SHADING,
+            AMBIENT,
+            LIGHTING
         };
 
         enum RepresentationValues
@@ -136,6 +138,7 @@ namespace cv
             -   **OPACITY**
             -   **LINE_WIDTH**
             -   **FONT_SIZE**
+            -   **AMBIENT**
             -
             **REPRESENTATION**: Expected values are
             :   -   **REPRESENTATION_POINTS**
@@ -494,6 +497,12 @@ namespace cv
             @param image BGR or Gray-Scale image.
              */
             void setImage(InputArray image);
+
+            /** @brief Sets the image size of the widget.
+
+            @param size the new size of the image.
+             */
+            void setSize(const Size& size);
         };
 
         /////////////////////////////////////////////////////////////////////////////

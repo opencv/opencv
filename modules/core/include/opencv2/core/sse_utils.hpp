@@ -39,12 +39,17 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_SSE_UTILS_HPP__
-#define __OPENCV_CORE_SSE_UTILS_HPP__
+#ifndef OPENCV_CORE_SSE_UTILS_HPP
+#define OPENCV_CORE_SSE_UTILS_HPP
 
 #ifndef __cplusplus
 #  error sse_utils.hpp header must be compiled as C++
 #endif
+
+#include "opencv2/core/cvdef.h"
+
+//! @addtogroup core_utils_sse
+//! @{
 
 #if CV_SSE2
 
@@ -642,4 +647,6 @@ inline void _mm_interleave_ps(__m128 & v_r0, __m128 & v_r1, __m128 & v_g0, __m12
 
 #endif // CV_SSE2
 
-#endif //__OPENCV_CORE_SSE_UTILS_HPP__
+//! @}
+
+#endif //OPENCV_CORE_SSE_UTILS_HPP

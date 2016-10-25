@@ -619,6 +619,8 @@ if(DEFINED CUDA_TARGET_CPU_ARCH)
   set(_cuda_target_cpu_arch_initial "${CUDA_TARGET_CPU_ARCH}")
 elseif(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|ARM)")
   set(_cuda_target_cpu_arch_initial "ARM")
+elseif(CUDA_VERSION VERSION_GREATER "6.5" AND CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|AARCH64)")
+  set(_cuda_target_cpu_arch_initial "AARCH64")
 else()
   set(_cuda_target_cpu_arch_initial "")
 endif()
@@ -637,11 +639,17 @@ mark_as_advanced(CUDA_TARGET_OS_VARIANT)
 # Target triplet
 if(DEFINED CUDA_TARGET_TRIPLET)
   set(_cuda_target_triplet_initial "${CUDA_TARGET_TRIPLET}")
-elseif(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND "${CUDA_TARGET_CPU_ARCH}" STREQUAL "ARM")
+elseif(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND "x${CUDA_TARGET_CPU_ARCH}" STREQUAL "xARM")
   if("${CUDA_TARGET_OS_VARIANT}" STREQUAL "Android" AND EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-androideabi")
     set(_cuda_target_triplet_initial "armv7-linux-androideabi")
   elseif(EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf")
     set(_cuda_target_triplet_initial "armv7-linux-gnueabihf")
+  endif()
+elseif(CUDA_VERSION VERSION_GREATER "6.5" AND CMAKE_CROSSCOMPILING AND "x${CUDA_TARGET_CPU_ARCH}" STREQUAL "xAARCH64")
+  if("${CUDA_TARGET_OS_VARIANT}" STREQUAL "Android" AND EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/aarch64-linux-androideabi")
+    set(_cuda_target_triplet_initial "aarch64-linux-androideabi")
+  elseif(EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/aarch64-linux-gnueabihf")
+    set(_cuda_target_triplet_initial "aarch64-linux-gnueabihf")
   endif()
 endif()
 set(CUDA_TARGET_TRIPLET "${_cuda_target_triplet_initial}" CACHE STRING "Specify the target triplet for which the input files must be compiled.")
@@ -677,6 +685,9 @@ macro(cuda_find_library_local_first_with_path_ext _var _names _doc _path_ext )
     # and old paths.
     set(_cuda_64bit_lib_dir "${_path_ext}lib/x64" "${_path_ext}lib64" "${_path_ext}libx64" )
   endif()
+  if(CMAKE_CROSSCOMPILING AND (ARM OR AARCH64))
+    set(_cuda_cross_arm_lib_dir "${_path_ext}lib/stubs")
+  endif()
   if(CUDA_VERSION VERSION_GREATER "6.0")
     set(_cuda_static_lib_names "")
     foreach(name ${_names})
@@ -690,7 +701,7 @@ macro(cuda_find_library_local_first_with_path_ext _var _names _doc _path_ext )
     PATHS "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}"
     ENV CUDA_PATH
     ENV CUDA_LIB_PATH
-    PATH_SUFFIXES ${_cuda_64bit_lib_dir} "${_path_ext}lib/Win32" "${_path_ext}lib" "${_path_ext}libWin32"
+    PATH_SUFFIXES ${_cuda_64bit_lib_dir} ${_cuda_cross_arm_lib_dir} "${_path_ext}lib/Win32" "${_path_ext}lib" "${_path_ext}libWin32"
     DOC ${_doc}
     NO_DEFAULT_PATH
     )
@@ -1094,8 +1105,10 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
     set(nvcc_flags ${nvcc_flags} -m32)
   endif()
 
-  if(CUDA_TARGET_CPU_ARCH)
-    set(nvcc_flags ${nvcc_flags} "--target-cpu-architecture=${CUDA_TARGET_CPU_ARCH}")
+  if(CUDA_TARGET_CPU_ARCH AND CUDA_VERSION VERSION_LESS "7.0")
+    # CPU architecture is either ARM or X86. Patch AARCH64 to be ARM
+    string(REPLACE "AARCH64" "ARM" CUDA_TARGET_CPU_ARCH_patched ${CUDA_TARGET_CPU_ARCH})
+    set(nvcc_flags ${nvcc_flags} "--target-cpu-architecture=${CUDA_TARGET_CPU_ARCH_patched}")
   endif()
 
   if(CUDA_TARGET_OS_VARIANT AND CUDA_VERSION VERSION_LESS "7.0")

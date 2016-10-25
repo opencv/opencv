@@ -602,13 +602,12 @@ static inline bool isGoodMotion(const float M[], float w, float h, float dx, flo
 {
     Point2f pt[4] = {Point2f(0,0), Point2f(w,0), Point2f(w,h), Point2f(0,h)};
     Point2f Mpt[4];
-    float z;
 
     for (int i = 0; i < 4; ++i)
     {
         Mpt[i].x = M[0]*pt[i].x + M[1]*pt[i].y + M[2];
         Mpt[i].y = M[3]*pt[i].x + M[4]*pt[i].y + M[5];
-        z = M[6]*pt[i].x + M[7]*pt[i].y + M[8];
+        float z = M[6]*pt[i].x + M[7]*pt[i].y + M[8];
         Mpt[i].x /= z;
         Mpt[i].y /= z;
     }
@@ -638,6 +637,8 @@ static inline void relaxMotion(const float M[], float t, float res[])
 
 Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
 
     const float w = static_cast<float>(size.width);
@@ -673,6 +674,8 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
 // TODO can be estimated for O(1) time
 float estimateOptimalTrimRatio(const Mat &M, Size size)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
 
     const float w = static_cast<float>(size.width);

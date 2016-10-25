@@ -74,7 +74,7 @@ void cv::cuda::pyrDown(InputArray _src, OutputArray _dst, Stream& stream)
         {0 /*pyrDown_gpu<schar>*/, 0 /*pyrDown_gpu<schar2>*/ , 0 /*pyrDown_gpu<schar3>*/, 0 /*pyrDown_gpu<schar4>*/},
         {pyrDown_gpu<ushort>     , 0 /*pyrDown_gpu<ushort2>*/, pyrDown_gpu<ushort3>     , pyrDown_gpu<ushort4>     },
         {pyrDown_gpu<short>      , 0 /*pyrDown_gpu<short2>*/ , pyrDown_gpu<short3>      , pyrDown_gpu<short4>      },
-        {0 /*pyrDown_gpu<int>*/  , 0 /*pyrDown_gpu<int2>*/   , 0 /*pyrDown_gpu<int3>*/  , 0 /*pyrDown_gpu<int4>*/  },
+        {pyrDown_gpu<int>        , 0 /*pyrDown_gpu<int2>*/   , pyrDown_gpu<int3>        , pyrDown_gpu<int4>        },
         {pyrDown_gpu<float>      , 0 /*pyrDown_gpu<float2>*/ , pyrDown_gpu<float3>      , pyrDown_gpu<float4>      }
     };
 

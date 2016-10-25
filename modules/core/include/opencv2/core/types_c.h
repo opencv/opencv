@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_TYPES_H__
-#define __OPENCV_CORE_TYPES_H__
+#ifndef OPENCV_CORE_TYPES_H
+#define OPENCV_CORE_TYPES_H
 
 #ifdef HAVE_IPL
 #  ifndef __IPL_H__
@@ -113,27 +113,11 @@ bytes of the header. In C++ interface the role of CvArr is played by InputArray 
  */
 typedef void CvArr;
 
-typedef union Cv32suf
-{
-    int i;
-    unsigned u;
-    float f;
-}
-Cv32suf;
-
-typedef union Cv64suf
-{
-    int64 i;
-    uint64 u;
-    double f;
-}
-Cv64suf;
-
 typedef int CVStatus;
 
 /** @see cv::Error::Code */
 enum {
- CV_StsOk=                       0,  /**< everithing is ok                */
+ CV_StsOk=                       0,  /**< everything is ok                */
  CV_StsBackTrace=               -1,  /**< pseudo error for back trace     */
  CV_StsError=                   -2,  /**< unknown /unspecified error      */
  CV_StsInternal=                -3,  /**< internal error (bad state)      */
@@ -143,28 +127,28 @@ enum {
  CV_StsNoConv=                  -7,  /**< iter. didn't converge           */
  CV_StsAutoTrace=               -8,  /**< tracing                         */
  CV_HeaderIsNull=               -9,  /**< image header is NULL            */
- CV_BadImageSize=              -10, /**< image size is invalid           */
- CV_BadOffset=                 -11, /**< offset is invalid               */
- CV_BadDataPtr=                -12, /**/
- CV_BadStep=                   -13, /**/
- CV_BadModelOrChSeq=           -14, /**/
- CV_BadNumChannels=            -15, /**/
- CV_BadNumChannel1U=           -16, /**/
- CV_BadDepth=                  -17, /**/
- CV_BadAlphaChannel=           -18, /**/
- CV_BadOrder=                  -19, /**/
- CV_BadOrigin=                 -20, /**/
- CV_BadAlign=                  -21, /**/
- CV_BadCallBack=               -22, /**/
- CV_BadTileSize=               -23, /**/
- CV_BadCOI=                    -24, /**/
- CV_BadROISize=                -25, /**/
- CV_MaskIsTiled=               -26, /**/
- CV_StsNullPtr=                -27, /**< null pointer */
- CV_StsVecLengthErr=           -28, /**< incorrect vector length */
- CV_StsFilterStructContentErr= -29, /**< incorr. filter structure content */
- CV_StsKernelStructContentErr= -30, /**< incorr. transform kernel content */
- CV_StsFilterOffsetErr=        -31, /**< incorrect filter offset value */
+ CV_BadImageSize=              -10,  /**< image size is invalid           */
+ CV_BadOffset=                 -11,  /**< offset is invalid               */
+ CV_BadDataPtr=                -12,  /**/
+ CV_BadStep=                   -13,  /**/
+ CV_BadModelOrChSeq=           -14,  /**/
+ CV_BadNumChannels=            -15,  /**/
+ CV_BadNumChannel1U=           -16,  /**/
+ CV_BadDepth=                  -17,  /**/
+ CV_BadAlphaChannel=           -18,  /**/
+ CV_BadOrder=                  -19,  /**/
+ CV_BadOrigin=                 -20,  /**/
+ CV_BadAlign=                  -21,  /**/
+ CV_BadCallBack=               -22,  /**/
+ CV_BadTileSize=               -23,  /**/
+ CV_BadCOI=                    -24,  /**/
+ CV_BadROISize=                -25,  /**/
+ CV_MaskIsTiled=               -26,  /**/
+ CV_StsNullPtr=                -27,  /**< null pointer */
+ CV_StsVecLengthErr=           -28,  /**< incorrect vector length */
+ CV_StsFilterStructContentErr= -29,  /**< incorr. filter structure content */
+ CV_StsKernelStructContentErr= -30,  /**< incorr. transform kernel content */
+ CV_StsFilterOffsetErr=        -31,  /**< incorrect filter offset value */
  CV_StsBadSize=                -201, /**< the input/output structure size is incorrect  */
  CV_StsDivByZero=              -202, /**< division by zero */
  CV_StsInplaceNotSupported=    -203, /**< in-place operation is not supported */
@@ -1685,6 +1669,9 @@ typedef struct CvFileStorage CvFileStorage;
 #define CV_STORAGE_FORMAT_AUTO   0
 #define CV_STORAGE_FORMAT_XML    8
 #define CV_STORAGE_FORMAT_YAML  16
+#define CV_STORAGE_FORMAT_JSON  24
+#define CV_STORAGE_BASE64       64
+#define CV_STORAGE_WRITE_BASE64  (CV_STORAGE_BASE64 | CV_STORAGE_WRITE)
 
 /** @brief List of attributes. :
 
@@ -1845,6 +1832,6 @@ CvModuleInfo;
 
 /** @} */
 
-#endif /*__OPENCV_CORE_TYPES_H__*/
+#endif /*OPENCV_CORE_TYPES_H*/
 
 /* End of file. */

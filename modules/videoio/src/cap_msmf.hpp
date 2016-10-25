@@ -1,205 +1,7 @@
-#ifdef HAVE_WINRT
+#ifdef WINRT
 #define ICustomStreamSink StreamSink
 #ifndef __cplusplus_winrt
-
-#define __is_winrt_array(type) (type == ABI::Windows::Foundation::PropertyType::PropertyType_UInt8Array || type == ABI::Windows::Foundation::PropertyType::PropertyType_Int16Array ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_UInt16Array || type == ABI::Windows::Foundation::PropertyType::PropertyType_Int32Array ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_UInt32Array || type == ABI::Windows::Foundation::PropertyType::PropertyType_Int64Array ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_UInt64Array || type == ABI::Windows::Foundation::PropertyType::PropertyType_SingleArray ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_DoubleArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_Char16Array ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_BooleanArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_StringArray ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_InspectableArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_DateTimeArray ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_TimeSpanArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_GuidArray ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_PointArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_SizeArray ||\
-    type == ABI::Windows::Foundation::PropertyType::PropertyType_RectArray || type == ABI::Windows::Foundation::PropertyType::PropertyType_OtherTypeArray)
-
-template<typename _Type, bool bUnknown = std::is_base_of<IUnknown, _Type>::value>
-struct winrt_type
-{
-};
-template<typename _Type>
-struct winrt_type<_Type, true>
-{
-    static IUnknown* create(_Type* _ObjInCtx) {
-        return reinterpret_cast<IUnknown*>(_ObjInCtx);
-    }
-    static IID getuuid() { return __uuidof(_Type); }
-    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_OtherType;
-};
-template <typename _Type>
-struct winrt_type<_Type, false>
-{
-    static IUnknown* create(_Type* _ObjInCtx) {
-        Microsoft::WRL::ComPtr<IInspectable> _PObj;
-        Microsoft::WRL::ComPtr<IActivationFactory> objFactory;
-        HRESULT hr = Windows::Foundation::GetActivationFactory(Microsoft::WRL::Wrappers::HStringReference(RuntimeClass_Windows_Foundation_PropertyValue).Get(), objFactory.ReleaseAndGetAddressOf());
-        if (FAILED(hr)) return nullptr;
-        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValueStatics> spPropVal;
-        if (SUCCEEDED(hr))
-            hr = objFactory.As(&spPropVal);
-        if (SUCCEEDED(hr)) {
-            hr = winrt_type<_Type>::create(spPropVal.Get(), _ObjInCtx, _PObj.GetAddressOf());
-            if (SUCCEEDED(hr))
-                return reinterpret_cast<IUnknown*>(_PObj.Detach());
-        }
-        return nullptr;
-    }
-    static IID getuuid() { return __uuidof(ABI::Windows::Foundation::IPropertyValue); }
-    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_OtherType;
-};
-
-template<>
-struct winrt_type<void>
-{
-    static HRESULT create(ABI::Windows::Foundation::IPropertyValueStatics* spPropVal, void* _ObjInCtx, IInspectable** ppInsp) {
-        (void)_ObjInCtx;
-        return spPropVal->CreateEmpty(ppInsp);
-    }
-    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_Empty;
-};
-#define MAKE_TYPE(Type, Name) template<>\
-struct winrt_type<Type>\
-{\
-    static HRESULT create(ABI::Windows::Foundation::IPropertyValueStatics* spPropVal, Type* _ObjInCtx, IInspectable** ppInsp) {\
-    return spPropVal->Create##Name(*_ObjInCtx, ppInsp);\
-}\
-    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_##Name;\
-};
-
-template<typename _Type>
-struct winrt_array_type
-{
-    static IUnknown* create(_Type* _ObjInCtx, size_t N) {
-        Microsoft::WRL::ComPtr<IInspectable> _PObj;
-        Microsoft::WRL::ComPtr<IActivationFactory> objFactory;
-        HRESULT hr = Windows::Foundation::GetActivationFactory(Microsoft::WRL::Wrappers::HStringReference(RuntimeClass_Windows_Foundation_PropertyValue).Get(), objFactory.ReleaseAndGetAddressOf());
-        if (FAILED(hr)) return nullptr;
-        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IPropertyValueStatics> spPropVal;
-        if (SUCCEEDED(hr))
-            hr = objFactory.As(&spPropVal);
-        if (SUCCEEDED(hr)) {
-            hr = winrt_array_type<_Type>::create(spPropVal.Get(), N, _ObjInCtx, _PObj.GetAddressOf());
-            if (SUCCEEDED(hr))
-                return reinterpret_cast<IUnknown*>(_PObj.Detach());
-        }
-        return nullptr;
-    }
-    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_OtherTypeArray;
-};
-template<int>
-struct winrt_prop_type {};
-
-template <>
-struct winrt_prop_type<ABI::Windows::Foundation::PropertyType_Empty> {
-    typedef void _Type;
-};
-
-template <>
-struct winrt_prop_type<ABI::Windows::Foundation::PropertyType_OtherType> {
-    typedef void _Type;
-};
-
-template <>
-struct winrt_prop_type<ABI::Windows::Foundation::PropertyType_OtherTypeArray> {
-    typedef void _Type;
-};
-
-#define MAKE_PROP(Prop, Type) template <>\
-struct winrt_prop_type<ABI::Windows::Foundation::PropertyType_##Prop> {\
-    typedef Type _Type;\
-};
-
-#define MAKE_ARRAY_TYPE(Type, Name) MAKE_PROP(Name, Type)\
-    MAKE_PROP(Name##Array, Type*)\
-    MAKE_TYPE(Type, Name)\
-    template<>\
-struct winrt_array_type<Type*>\
-{\
-    static HRESULT create(ABI::Windows::Foundation::IPropertyValueStatics* spPropVal, UINT32 __valueSize, Type** _ObjInCtx, IInspectable** ppInsp) {\
-    return spPropVal->Create##Name##Array(__valueSize, *_ObjInCtx, ppInsp);\
-}\
-    static const ABI::Windows::Foundation::PropertyType _PropType = ABI::Windows::Foundation::PropertyType::PropertyType_##Name##Array;\
-    static std::vector<Type> PropertyValueToVector(ABI::Windows::Foundation::IPropertyValue* propValue)\
-{\
-    UINT32 uLen = 0;\
-    Type* pArray = nullptr;\
-    propValue->Get##Name##Array(&uLen, &pArray);\
-    return std::vector<Type>(pArray, pArray + uLen);\
-}\
-};
-MAKE_ARRAY_TYPE(BYTE, UInt8)
-MAKE_ARRAY_TYPE(INT16, Int16)
-MAKE_ARRAY_TYPE(UINT16, UInt16)
-MAKE_ARRAY_TYPE(INT32, Int32)
-MAKE_ARRAY_TYPE(UINT32, UInt32)
-MAKE_ARRAY_TYPE(INT64, Int64)
-MAKE_ARRAY_TYPE(UINT64, UInt64)
-MAKE_ARRAY_TYPE(FLOAT, Single)
-MAKE_ARRAY_TYPE(DOUBLE, Double)
-MAKE_ARRAY_TYPE(WCHAR, Char16)
-//MAKE_ARRAY_TYPE(boolean, Boolean) //conflict with identical type in C++ of BYTE/UInt8
-MAKE_ARRAY_TYPE(HSTRING, String)
-MAKE_ARRAY_TYPE(IInspectable*, Inspectable)
-MAKE_ARRAY_TYPE(GUID, Guid)
-MAKE_ARRAY_TYPE(ABI::Windows::Foundation::DateTime, DateTime)
-MAKE_ARRAY_TYPE(ABI::Windows::Foundation::TimeSpan, TimeSpan)
-MAKE_ARRAY_TYPE(ABI::Windows::Foundation::Point, Point)
-MAKE_ARRAY_TYPE(ABI::Windows::Foundation::Size, Size)
-MAKE_ARRAY_TYPE(ABI::Windows::Foundation::Rect, Rect)
-
-template < typename T >
-struct DerefHelper
-{
-    typedef T DerefType;
-};
-
-template < typename T >
-struct DerefHelper<T*>
-{
-    typedef T DerefType;
-};
-
-#define __is_valid_winrt_type(_Type) (std::is_void<_Type>::value || \
-    std::is_same<_Type, BYTE>::value || \
-    std::is_same<_Type, INT16>::value || \
-    std::is_same<_Type, UINT16>::value || \
-    std::is_same<_Type, INT32>::value || \
-    std::is_same<_Type, UINT32>::value || \
-    std::is_same<_Type, INT64>::value || \
-    std::is_same<_Type, UINT64>::value || \
-    std::is_same<_Type, FLOAT>::value || \
-    std::is_same<_Type, DOUBLE>::value || \
-    std::is_same<_Type, WCHAR>::value || \
-    std::is_same<_Type, boolean>::value || \
-    std::is_same<_Type, HSTRING>::value || \
-    std::is_same<_Type, IInspectable *>::value || \
-    std::is_base_of<Microsoft::WRL::Details::RuntimeClassBase, _Type>::value || \
-    std::is_base_of<IInspectable, typename DerefHelper<_Type>::DerefType>::value || \
-    std::is_same<_Type, GUID>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::DateTime>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::TimeSpan>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::Point>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::Size>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::Rect>::value || \
-    std::is_same<_Type, BYTE*>::value || \
-    std::is_same<_Type, INT16*>::value || \
-    std::is_same<_Type, UINT16*>::value || \
-    std::is_same<_Type, INT32*>::value || \
-    std::is_same<_Type, UINT32*>::value || \
-    std::is_same<_Type, INT64*>::value || \
-    std::is_same<_Type, UINT64*>::value || \
-    std::is_same<_Type, FLOAT*>::value || \
-    std::is_same<_Type, DOUBLE*>::value || \
-    std::is_same<_Type, WCHAR*>::value || \
-    std::is_same<_Type, boolean*>::value || \
-    std::is_same<_Type, HSTRING*>::value || \
-    std::is_same<_Type, IInspectable **>::value || \
-    std::is_same<_Type, GUID*>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::DateTime*>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::TimeSpan*>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::Point*>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::Size*>::value || \
-    std::is_same<_Type, ABI::Windows::Foundation::Rect*>::value)
+#include "wrl.h"
 #endif
 #else
 EXTERN_C const IID IID_ICustomStreamSink;
@@ -380,7 +182,7 @@ MAKE_ENUM(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypePairs[] = {
 };
 MAKE_MAP(MFSTREAMSINK_MARKER_TYPE) StreamSinkMarkerTypeMap(StreamSinkMarkerTypePairs, StreamSinkMarkerTypePairs + sizeof(StreamSinkMarkerTypePairs) / sizeof(StreamSinkMarkerTypePairs[0]));
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 
 #ifdef __cplusplus_winrt
 #define _ContextCallback Concurrency::details::_ContextCallback
@@ -603,11 +405,6 @@ public:
     ComPtr() throw()
     {
     }
-    ComPtr(int nNull) throw()
-    {
-        assert(nNull == 0);
-        p = NULL;
-    }
     ComPtr(T* lp) throw()
     {
         p = lp;
@@ -638,13 +435,6 @@ public:
     {
         return p.operator==(pT);
     }
-    // For comparison to NULL
-    bool operator==(int nNull) const
-    {
-        assert(nNull == 0);
-        return p.operator==(NULL);
-    }
-
     bool operator!=(_In_opt_ T* pT) const throw()
     {
         return p.operator!=(pT);
@@ -1070,7 +860,7 @@ protected:
 };
 
 class StreamSink :
-#ifdef HAVE_WINRT
+#ifdef WINRT
     public Microsoft::WRL::RuntimeClass<
     Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::ClassicCom>,
     IMFStreamSink,
@@ -1100,7 +890,7 @@ public:
         if (riid == IID_IMarshal) {
             return MarshalQI(riid, ppv);
         } else {
-#ifdef HAVE_WINRT
+#ifdef WINRT
             hr = RuntimeClassT::QueryInterface(riid, ppv);
 #else
             if (riid == IID_IUnknown || riid == IID_IMFStreamSink) {
@@ -1126,7 +916,7 @@ public:
         return hr;
     }
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
     STDMETHOD(RuntimeClassInitialize)() { return S_OK; }
 #else
     ULONG STDMETHODCALLTYPE AddRef()
@@ -1177,7 +967,7 @@ public:
         m_StartTime(0), m_fGetStartTimeFromSample(false), m_fWaitingForFirstSample(false),
         m_state(State_TypeNotSet), m_pParent(nullptr),
         m_imageWidthInPixels(0), m_imageHeightInPixels(0) {
-#ifdef HAVE_WINRT
+#ifdef WINRT
         m_token.value = 0;
 #else
         m_bConnected = false;
@@ -1856,7 +1646,7 @@ public:
         return hr;
     }
 private:
-#ifdef HAVE_WINRT
+#ifdef WINRT
     EventRegistrationToken m_token;
 #else
     bool m_bConnected;
@@ -1864,7 +1654,7 @@ private:
 
     bool m_IsShutdown;                // Flag to indicate if Shutdown() method was called.
     CRITICAL_SECTION m_critSec;
-#ifndef HAVE_WINRT
+#ifndef WINRT
     long m_cRef;
 #endif
     IMFAttributes*        m_pParent;
@@ -2408,7 +2198,7 @@ protected:
 extern const __declspec(selectany) WCHAR RuntimeClass_CV_MediaSink[] = L"cv.MediaSink";
 
 class MediaSink :
-#ifdef HAVE_WINRT
+#ifdef WINRT
     public Microsoft::WRL::RuntimeClass<
     Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::WinRtClassicComMix >,
     Microsoft::WRL::Implements<ABI::Windows::Media::IMediaExtension>,
@@ -2420,7 +2210,7 @@ class MediaSink :
     public IMFMediaSink, public IMFClockStateSink, public CBaseAttributes<>
 #endif
 {
-#ifdef HAVE_WINRT
+#ifdef WINRT
     InspectableClass(RuntimeClass_CV_MediaSink, BaseTrust)
 public:
 #else
@@ -2488,7 +2278,7 @@ public:
             return S_OK;
         }
     }
-#ifdef HAVE_WINRT
+#ifdef WINRT
     STDMETHODIMP SetProperties(ABI::Windows::Foundation::Collections::IPropertySet *pConfiguration)
     {
         HRESULT hr = S_OK;
@@ -2828,7 +2618,7 @@ public:
 
         if (SUCCEEDED(hr))
         {
-#ifdef HAVE_WINRT
+#ifdef WINRT
             pStream = Microsoft::WRL::Make<StreamSink>();
             if (pStream == nullptr) {
                 hr = E_OUTOFMEMORY;
@@ -2940,7 +2730,7 @@ public:
         {
             hr = m_streams.Remove(pos, nullptr);
                     _ComPtr<ICustomStreamSink> spCustomSink;
-#ifdef HAVE_WINRT
+#ifdef WINRT
                     spCustomSink = static_cast<StreamSink*>(spStream.Get());
                     hr = S_OK;
 #else
@@ -3123,7 +2913,7 @@ public:
         HRESULT hr = CheckShutdown();
 
         if (SUCCEEDED(hr)) {
-            if (m_spClock == NULL) {
+            if (!m_spClock) {
                 hr = MF_E_NO_CLOCK; // There is no presentation clock.
             } else {
                 // Return the pointer to the caller.
@@ -3164,7 +2954,7 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef HAVE_WINRT
+#ifdef WINRT
                     spCustomSink = static_cast<StreamSink*>(pStream);
 #else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
@@ -3187,7 +2977,7 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef HAVE_WINRT
+#ifdef WINRT
                     spCustomSink = static_cast<StreamSink*>(pStream);
 #else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
@@ -3207,7 +2997,7 @@ public:
         {
                     _ComPtr<ICustomStreamSink> spCustomSink;
                     HRESULT hr;
-#ifdef HAVE_WINRT
+#ifdef WINRT
                     spCustomSink = static_cast<StreamSink*>(pStream);
 #else
                     hr = pStream->QueryInterface(IID_PPV_ARGS(spCustomSink.GetAddressOf()));
@@ -3317,7 +3107,7 @@ public:
         return hr;
     }
 private:
-#ifndef HAVE_WINRT
+#ifndef WINRT
     long m_cRef;
 #endif
     CRITICAL_SECTION            m_critSec;
@@ -3327,6 +3117,6 @@ private:
     LONGLONG                        m_llStartTime;
 };
 
-#ifdef HAVE_WINRT
+#ifdef WINRT
 ActivatableClass(MediaSink);
 #endif

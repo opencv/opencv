@@ -33,6 +33,8 @@ p3p::p3p(double _fx, double _fy, double _cx, double _cy)
 
 bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat& ipoints)
 {
+    CV_INSTRUMENT_REGION()
+
     double rotation_matrix[3][3], translation[3];
     std::vector<double> points;
     if (opoints.depth() == ipoints.depth())

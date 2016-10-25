@@ -5,11 +5,9 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
 
 using namespace cv;
 using namespace std;
@@ -27,8 +25,13 @@ void thresh_callback(int, void* );
  */
 int main( int, char** argv )
 {
-  /// Load source image and convert it to gray
-  src = imread( argv[1], 1 );
+  /// Load source image
+  src = imread(argv[1], IMREAD_COLOR);
+  if (src.empty())
+  {
+    cerr << "No image supplied ..." << endl;
+    return -1;
+  }
 
   /// Convert image to gray and blur it
   cvtColor( src, src_gray, COLOR_BGR2GRAY );

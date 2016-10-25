@@ -4,7 +4,7 @@ endif()
 
 include(${VTK_USE_FILE})
 set(the_description "Viz")
-ocv_define_module(viz opencv_core ${VTK_LIBRARIES})
+ocv_define_module(viz opencv_core ${VTK_LIBRARIES} WRAP python)
 
 if(APPLE AND BUILD_opencv_viz)
   ocv_target_link_libraries(opencv_viz "-framework Cocoa")

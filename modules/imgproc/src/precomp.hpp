@@ -49,6 +49,9 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/ocl.hpp"
+#include "opencv2/core/hal/hal.hpp"
+#include "opencv2/imgproc/hal/hal.hpp"
+#include "hal_replacement.hpp"
 
 #include <math.h>
 #include <assert.h>
@@ -92,5 +95,7 @@ extern const float icv8x32fSqrTab[];
 
 #include "_geom.h"
 #include "filterengine.hpp"
+
+#include "opencv2/core/sse_utils.hpp"
 
 #endif /*__OPENCV_CV_INTERNAL_H_*/

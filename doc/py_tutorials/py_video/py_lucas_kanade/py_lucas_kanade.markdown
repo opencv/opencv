@@ -156,7 +156,7 @@ in image, there is a chance that optical flow finds the next point which may loo
 actually for a robust tracking, corner points should be detected in particular intervals. OpenCV
 samples comes up with such a sample which finds the feature points at every 5 frames. It also run a
 backward-check of the optical flow points got to select only good ones. Check
-samples/python2/lk_track.py).
+samples/python/lk_track.py).
 
 See the results we got:
 
@@ -194,15 +194,15 @@ while(1):
     mag, ang = cv2.cartToPolar(flow[...,0], flow[...,1])
     hsv[...,0] = ang*180/np.pi/2
     hsv[...,2] = cv2.normalize(mag,None,0,255,cv2.NORM_MINMAX)
-    rgb = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
+    bgr = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
 
-    cv2.imshow('frame2',rgb)
+    cv2.imshow('frame2',bgr)
     k = cv2.waitKey(30) & 0xff
     if k == 27:
         break
     elif k == ord('s'):
         cv2.imwrite('opticalfb.png',frame2)
-        cv2.imwrite('opticalhsv.png',rgb)
+        cv2.imwrite('opticalhsv.png',bgr)
     prvs = next
 
 cap.release()
@@ -213,7 +213,7 @@ See the result below:
 ![image](images/opticalfb.jpg)
 
 OpenCV comes with a more advanced sample on dense optical flow, please see
-samples/python2/opt_flow.py.
+samples/python/opt_flow.py.
 
 Additional Resources
 --------------------
@@ -221,5 +221,5 @@ Additional Resources
 Exercises
 ---------
 
--#  Check the code in samples/python2/lk_track.py. Try to understand the code.
-2.  Check the code in samples/python2/opt_flow.py. Try to understand the code.
+-#  Check the code in samples/python/lk_track.py. Try to understand the code.
+2.  Check the code in samples/python/opt_flow.py. Try to understand the code.

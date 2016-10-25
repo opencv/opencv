@@ -158,7 +158,7 @@ cvTsDistTransform( const CvMat* _src, CvMat* _dst, int dist_type,
     const float init_val = 1e6;
     float mask[3];
     CvMat* temp;
-    int ofs[16];
+    int ofs[16] = {0};
     float delta[16];
     int tstep, count;
 
