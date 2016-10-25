@@ -50,7 +50,7 @@ ParamGrid::ParamGrid(double _minVal, double _maxVal, double _logStep)
     logStep = std::max(_logStep, 1.);
 }
 
-void StatModel::clear() {}
+bool StatModel::empty() const { return !isTrained(); }
 
 int StatModel::getVarCount() const { return 0; }
 
@@ -111,70 +111,45 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
     return (float)(err / n * (isclassifier ? 100 : 1));
 }
 
-void StatModel::save(const String& filename) const
-{
-    FileStorage fs(filename, FileStorage::WRITE);
-    fs << getDefaultModelName() << "{";
-    fs << "format" << (int)3;
-    write(fs);
-    fs << "}";
-}
-
 /* Calculates upper triangular matrix S, where A is a symmetrical matrix A=S'*S */
 static void Cholesky( const Mat& A, Mat& S )
 {
     CV_Assert(A.type() == CV_32F);
 
-    int dim = A.rows;
-    S.create(dim, dim, CV_32F);
-
-    int i, j, k;
-
-    for( i = 0; i < dim; i++ )
-    {
-        for( j = 0; j < i; j++ )
-            S.at<float>(i,j) = 0.f;
-
-        float sum = 0.f;
-        for( k = 0; k < i; k++ )
-        {
-            float val = S.at<float>(k,i);
-            sum += val*val;
-        }
-
-        S.at<float>(i,i) = std::sqrt(std::max(A.at<float>(i,i) - sum, 0.f));
-        float ival = 1.f/S.at<float>(i, i);
-
-        for( j = i + 1; j < dim; j++ )
-        {
-            sum = 0;
-            for( k = 0; k < i; k++ )
-                sum += S.at<float>(k, i) * S.at<float>(k, j);
-
-            S.at<float>(i, j) = (A.at<float>(i, j) - sum)*ival;
-        }
-    }
+    S = A.clone();
+    cv::Cholesky ((float*)S.ptr(),S.step, S.rows,NULL, 0, 0);
+    S = S.t();
+    for (int i=1;i<S.rows;i++)
+        for (int j=0;j<i;j++)
+            S.at<float>(i,j)=0;
 }
 
 /* Generates <sample> from multivariate normal distribution, where <mean> - is an
    average row vector, <cov> - symmetric covariation matrix */
 void randMVNormal( InputArray _mean, InputArray _cov, int nsamples, OutputArray _samples )
 {
+    // check mean vector and covariance matrix
     Mat mean = _mean.getMat(), cov = _cov.getMat();
-    int dim = (int)mean.total();
+    int dim = (int)mean.total();  // dimensionality
+    CV_Assert(mean.rows == 1 || mean.cols == 1);
+    CV_Assert(cov.rows == dim && cov.cols == dim);
+    mean = mean.reshape(1,1);     // ensure a row vector
 
+    // generate n-samples of the same dimension, from ~N(0,1)
     _samples.create(nsamples, dim, CV_32F);
     Mat samples = _samples.getMat();
-    randu(samples, 0., 1.);
+    randn(samples, Scalar::all(0), Scalar::all(1));
 
+    // decompose covariance using Cholesky: cov = U'*U
+    // (cov must be square, symmetric, and positive semi-definite matrix)
     Mat utmat;
     Cholesky(cov, utmat);
-    int flags = mean.cols == 1 ? 0 : GEMM_3_T;
 
+    // transform random numbers using specified mean and covariance
     for( int i = 0; i < nsamples; i++ )
     {
         Mat sample = samples.row(i);
-        gemm(sample, utmat, 1, mean, 1, sample, flags);
+        sample = sample * utmat + mean;
     }
 }
 

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SCAN_HPP__
-#define __OPENCV_CUDA_SCAN_HPP__
+#ifndef OPENCV_CUDA_SCAN_HPP
+#define OPENCV_CUDA_SCAN_HPP
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/utility.hpp"
@@ -255,4 +255,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // __OPENCV_CUDA_SCAN_HPP__
+#endif // OPENCV_CUDA_SCAN_HPP

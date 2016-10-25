@@ -79,7 +79,7 @@ public:
 
         for ( int i = begin; i<end; i++ )
         {
-            tdist2[i] = std::min(normL2Sqr_(data + step*i, data + stepci, dims), dist[i]);
+            tdist2[i] = std::min(normL2Sqr(data + step*i, data + stepci, dims), dist[i]);
         }
     }
 
@@ -114,7 +114,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
 
     for( i = 0; i < N; i++ )
     {
-        dist[i] = normL2Sqr_(data + step*i, data + step*centers[0], dims);
+        dist[i] = normL2Sqr(data + step*i, data + step*centers[0], dims);
         sum0 += dist[i];
     }
 
@@ -180,17 +180,16 @@ public:
         const int K = centers.rows;
         const int dims = centers.cols;
 
-        const float *sample;
         for( int i = begin; i<end; ++i)
         {
-            sample = data.ptr<float>(i);
+            const float *sample = data.ptr<float>(i);
             int k_best = 0;
             double min_dist = DBL_MAX;
 
             for( int k = 0; k < K; k++ )
             {
                 const float* center = centers.ptr<float>(k);
-                const double dist = normL2Sqr_(sample, center, dims);
+                const double dist = normL2Sqr(sample, center, dims);
 
                 if( min_dist > dist )
                 {
@@ -220,11 +219,13 @@ double cv::kmeans( InputArray _data, int K,
                    TermCriteria criteria, int attempts,
                    int flags, OutputArray _centers )
 {
+    CV_INSTRUMENT_REGION()
+
     const int SPP_TRIALS = 3;
     Mat data0 = _data.getMat();
-    bool isrow = data0.rows == 1 && data0.channels() > 1;
-    int N = !isrow ? data0.rows : data0.cols;
-    int dims = (!isrow ? data0.cols : 1)*data0.channels();
+    bool isrow = data0.rows == 1;
+    int N = isrow ? data0.cols : data0.rows;
+    int dims = (isrow ? 1 : data0.cols)*data0.channels();
     int type = data0.depth();
 
     attempts = std::max(attempts, 1);
@@ -385,7 +386,7 @@ double cv::kmeans( InputArray _data, int K,
                         if( labels[i] != max_k )
                             continue;
                         sample = data.ptr<float>(i);
-                        double dist = normL2Sqr_(sample, _old_center, dims);
+                        double dist = normL2Sqr(sample, _old_center, dims);
 
                         if( max_dist <= dist )
                         {

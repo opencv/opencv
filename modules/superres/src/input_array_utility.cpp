@@ -205,11 +205,11 @@ namespace
 
         static const double maxVals[] =
         {
-            std::numeric_limits<uchar>::max(),
-            std::numeric_limits<schar>::max(),
-            std::numeric_limits<ushort>::max(),
-            std::numeric_limits<short>::max(),
-            std::numeric_limits<int>::max(),
+            (double)std::numeric_limits<uchar>::max(),
+            (double)std::numeric_limits<schar>::max(),
+            (double)std::numeric_limits<ushort>::max(),
+            (double)std::numeric_limits<short>::max(),
+            (double)std::numeric_limits<int>::max(),
             1.0,
             1.0,
         };
@@ -235,6 +235,8 @@ namespace
 
 Mat cv::superres::convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1)
 {
+    CV_INSTRUMENT_REGION()
+
     if (src.type() == type)
         return src;
 
@@ -260,6 +262,8 @@ Mat cv::superres::convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1)
 
 UMat cv::superres::convertToType(const UMat& src, int type, UMat& buf0, UMat& buf1)
 {
+    CV_INSTRUMENT_REGION()
+
     if (src.type() == type)
         return src;
 

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_PERF_UTILITY_HPP__
-#define __OPENCV_CUDA_PERF_UTILITY_HPP__
+#ifndef OPENCV_CUDA_PERF_UTILITY_HPP
+#define OPENCV_CUDA_PERF_UTILITY_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -125,4 +125,4 @@ namespace perf
 #endif
 }
 
-#endif // __OPENCV_CUDA_PERF_UTILITY_HPP__
+#endif // OPENCV_CUDA_PERF_UTILITY_HPP

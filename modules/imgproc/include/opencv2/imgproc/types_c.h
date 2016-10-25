@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_IMGPROC_TYPES_C_H__
-#define __OPENCV_IMGPROC_TYPES_C_H__
+#ifndef OPENCV_IMGPROC_TYPES_C_H
+#define OPENCV_IMGPROC_TYPES_C_H
 
 #include "opencv2/core/core_c.h"
 
@@ -462,7 +462,7 @@ enum
 };
 
 /*
-Internal structure that is used for sequental retrieving contours from the image.
+Internal structure that is used for sequential retrieving contours from the image.
 It supports both hierarchical and plane variants of Suzuki algorithm.
 */
 typedef struct _CvContourScanner* CvContourScanner;

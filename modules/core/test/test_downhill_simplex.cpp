@@ -68,17 +68,19 @@ static void mytest(cv::Ptr<cv::DownhillSolver> solver,cv::Ptr<cv::MinProblemSolv
 
 class SphereF:public cv::MinProblemSolver::Function{
 public:
+    int getDims() const { return 2; }
     double calc(const double* x)const{
         return x[0]*x[0]+x[1]*x[1];
     }
 };
 class RosenbrockF:public cv::MinProblemSolver::Function{
+    int getDims() const { return 2; }
     double calc(const double* x)const{
         return 100*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0])+(1-x[0])*(1-x[0]);
     }
 };
 
-TEST(DISABLED_Core_DownhillSolver, regression_basic){
+TEST(Core_DownhillSolver, regression_basic){
     cv::Ptr<cv::DownhillSolver> solver=cv::DownhillSolver::create();
 #if 1
     {

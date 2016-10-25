@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_COLOR_HPP__
-#define __OPENCV_CUDA_COLOR_HPP__
+#ifndef OPENCV_CUDA_COLOR_HPP
+#define OPENCV_CUDA_COLOR_HPP
 
 #include "detail/color_detail.hpp"
 
@@ -306,4 +306,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // __OPENCV_CUDA_BORDER_INTERPOLATE_HPP__
+#endif // OPENCV_CUDA_COLOR_HPP

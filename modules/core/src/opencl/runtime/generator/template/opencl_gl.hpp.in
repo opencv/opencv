@@ -1,0 +1,15 @@
+#ifndef OPENCV_CORE_OCL_RUNTIME_OPENCL_GL_HPP
+#error "Invalid usage"
+#endif
+
+@CL_REMAP_ORIGIN@
+
+#include <CL/cl_gl.h>
+
+@CL_REMAP_DYNAMIC@
+
+#ifdef cl_khr_gl_sharing
+
+@CL_FN_DECLARATIONS@
+
+#endif // cl_khr_gl_sharing

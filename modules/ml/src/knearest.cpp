@@ -466,6 +466,7 @@ public:
 
     void write( FileStorage& fs ) const
     {
+        writeFormat(fs);
         impl->write(fs);
     }
 
@@ -496,7 +497,7 @@ public:
         return impl->train(data, flags);
     }
 
-    String getDefaultModelName() const { return impl->getModelName(); }
+    String getDefaultName() const { return impl->getModelName(); }
 
 protected:
     void initImpl(int algorithmType)

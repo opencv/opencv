@@ -45,6 +45,9 @@ static bool         param_verify_sanity;
 #ifdef CV_COLLECT_IMPL_DATA
 static bool         param_collect_impl;
 #endif
+#ifdef ENABLE_INSTRUMENTATION
+static bool         param_instrument;
+#endif
 extern bool         test_ipp_check;
 
 #ifdef HAVE_CUDA
@@ -185,7 +188,11 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
         return;
     }
 
+#ifndef WINRT
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
+#else
+    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
+#endif
     const char *path_separator = "/";
 
     if (data_path_dir)
@@ -438,9 +445,9 @@ static int countViolations(const cv::Mat& expected, const cv::Mat& actual, const
 
     if (v > 0 && max_violation != 0 && max_allowed != 0)
     {
-        int loc[10];
+        int loc[10] = {0};
         cv::minMaxIdx(maximum, 0, max_allowed, 0, loc, mask);
-        *max_violation = diff64f.at<double>(loc[1], loc[0]);
+        *max_violation = diff64f.at<double>(loc[0], loc[1]);
     }
 
     return v;
@@ -723,7 +730,222 @@ public:
     }
 };
 
+#ifdef ENABLE_INSTRUMENTATION
+static void printShift(cv::instr::InstrNode *pNode, cv::instr::InstrNode* pRoot)
+{
+    // Print empty line for a big tree nodes
+    if(pNode->m_pParent)
+    {
+        int parendIdx = pNode->m_pParent->findChild(pNode);
+        if(parendIdx > 0 && pNode->m_pParent->m_childs[parendIdx-1]->m_childs.size())
+        {
+            printShift(pNode->m_pParent->m_childs[parendIdx-1]->m_childs[0], pRoot);
+            printf("\n");
+        }
+    }
 
+    // Check if parents have more childs
+    std::vector<cv::instr::InstrNode*> cache;
+    cv::instr::InstrNode *pTmpNode = pNode;
+    while(pTmpNode->m_pParent && pTmpNode->m_pParent != pRoot)
+    {
+        cache.push_back(pTmpNode->m_pParent);
+        pTmpNode = pTmpNode->m_pParent;
+    }
+    for(int i = (int)cache.size()-1; i >= 0; i--)
+    {
+        if(cache[i]->m_pParent)
+        {
+            if(cache[i]->m_pParent->findChild(cache[i]) == cache[i]->m_pParent->m_childs.size()-1)
+                printf("    ");
+            else
+                printf("|   ");
+        }
+    }
+}
+
+static double calcLocalWeight(cv::instr::InstrNode *pNode)
+{
+    if(pNode->m_pParent && pNode->m_pParent->m_pParent)
+        return ((double)pNode->m_payload.m_ticksTotal*100/pNode->m_pParent->m_payload.m_ticksTotal);
+    else
+        return 100;
+}
+
+static double calcGlobalWeight(cv::instr::InstrNode *pNode)
+{
+    cv::instr::InstrNode* globNode = pNode;
+
+    while(globNode->m_pParent && globNode->m_pParent->m_pParent)
+        globNode = globNode->m_pParent;
+
+    return ((double)pNode->m_payload.m_ticksTotal*100/(double)globNode->m_payload.m_ticksTotal);
+}
+
+static void printNodeRec(cv::instr::InstrNode *pNode, cv::instr::InstrNode *pRoot)
+{
+    printf("%s", (pNode->m_payload.m_funName.substr(0, 40) + ((pNode->m_payload.m_funName.size()>40)?"...":"")).c_str());
+
+    // Write instrumentation flags
+    if(pNode->m_payload.m_instrType != cv::instr::TYPE_GENERAL || pNode->m_payload.m_implType != cv::instr::IMPL_PLAIN)
+    {
+        printf("<");
+        if(pNode->m_payload.m_instrType == cv::instr::TYPE_WRAPPER)
+            printf("W");
+        else if(pNode->m_payload.m_instrType == cv::instr::TYPE_FUN)
+            printf("F");
+        else if(pNode->m_payload.m_instrType == cv::instr::TYPE_MARKER)
+            printf("MARK");
+
+        if(pNode->m_payload.m_instrType != cv::instr::TYPE_GENERAL && pNode->m_payload.m_implType != cv::instr::IMPL_PLAIN)
+            printf("_");
+
+        if(pNode->m_payload.m_implType == cv::instr::IMPL_IPP)
+            printf("IPP");
+        else if(pNode->m_payload.m_implType == cv::instr::IMPL_OPENCL)
+            printf("OCL");
+
+        printf(">");
+    }
+
+    if(pNode->m_pParent)
+    {
+        printf(" - C:%d", pNode->m_payload.m_counter);
+        printf(" T:%.4fms", pNode->m_payload.getMeanMs());
+        if(pNode->m_pParent->m_pParent)
+            printf(" L:%.0f%% G:%.0f%%", calcLocalWeight(pNode), calcGlobalWeight(pNode));
+    }
+    printf("\n");
+
+    // Group childes
+    std::vector<cv::String> groups;
+    {
+        bool bFound = false;
+        for(size_t i = 0; i < pNode->m_childs.size(); i++)
+        {
+            bFound = false;
+            for(size_t j = 0; j < groups.size(); j++)
+            {
+                if(groups[j] == pNode->m_childs[i]->m_payload.m_funName)
+                {
+                    bFound = true;
+                    break;
+                }
+            }
+            if(!bFound)
+                groups.push_back(pNode->m_childs[i]->m_payload.m_funName);
+        }
+    }
+
+    for(size_t g = 0; g < groups.size(); g++)
+    {
+        for(size_t i = 0; i < pNode->m_childs.size(); i++)
+        {
+            if(pNode->m_childs[i]->m_payload.m_funName == groups[g])
+            {
+                printShift(pNode->m_childs[i], pRoot);
+
+                if(pNode->m_childs.size()-1 == pNode->m_childs[i]->m_pParent->findChild(pNode->m_childs[i]))
+                    printf("\\---");
+                else
+                    printf("|---");
+                printNodeRec(pNode->m_childs[i], pRoot);
+            }
+        }
+    }
+}
+
+template <typename T>
+std::string to_string_with_precision(const T value, const int p = 3)
+{
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(p) << value;
+    return out.str();
+}
+
+static cv::String nodeToString(cv::instr::InstrNode *pNode)
+{
+    cv::String string;
+    if (pNode->m_payload.m_funName == "ROOT")
+        string = pNode->m_payload.m_funName;
+    else
+    {
+        string = "#";
+        string += std::to_string(pNode->m_payload.m_instrType);
+        string += pNode->m_payload.m_funName;
+        string += " - L:";
+        string += to_string_with_precision(calcLocalWeight(pNode));
+        string += ", G:";
+        string += to_string_with_precision(calcGlobalWeight(pNode));
+    }
+    string += "(";
+    for(size_t i = 0; i < pNode->m_childs.size(); i++)
+        string += nodeToString(pNode->m_childs[i]);
+    string += ")";
+
+    return string;
+}
+
+static uint64 getNodeTimeRec(cv::instr::InstrNode *pNode, cv::instr::TYPE type, cv::instr::IMPL impl)
+{
+    uint64 ticks = 0;
+
+    if (pNode->m_pParent && (type < 0 || pNode->m_payload.m_instrType == type) && pNode->m_payload.m_implType == impl)
+    {
+        ticks = pNode->m_payload.m_ticksTotal;
+        return ticks;
+    }
+
+    for(size_t i = 0; i < pNode->m_childs.size(); i++)
+        ticks += getNodeTimeRec(pNode->m_childs[i], type, impl);
+
+    return ticks;
+}
+
+static uint64 getImplTime(cv::instr::IMPL impl)
+{
+    uint64 ticks = 0;
+    cv::instr::InstrNode *pRoot = cv::instr::getTrace();
+
+    ticks = getNodeTimeRec(pRoot, cv::instr::TYPE_FUN, impl);
+
+    return ticks;
+}
+
+static uint64 getTotalTime()
+{
+    uint64 ticks = 0;
+    cv::instr::InstrNode *pRoot = cv::instr::getTrace();
+
+    for(size_t i = 0; i < pRoot->m_childs.size(); i++)
+        ticks += pRoot->m_childs[i]->m_payload.m_ticksTotal;
+
+    return ticks;
+}
+
+::cv::String InstumentData::treeToString()
+{
+    cv::String string = nodeToString(cv::instr::getTrace());
+    return string;
+}
+
+void InstumentData::printTree()
+{
+    if(cv::instr::getTrace()->m_childs.size())
+    {
+        printf("[ TRACE    ]\n");
+        printNodeRec(cv::instr::getTrace(), cv::instr::getTrace());
+#ifdef HAVE_IPP
+        printf("\nIPP weight: %.1f%%", ((double)getImplTime(cv::instr::IMPL_IPP)*100/(double)getTotalTime()));
+#endif
+#ifdef HAVE_OPENCL
+        printf("\nOPENCL weight: %.1f%%", ((double)getImplTime(cv::instr::IMPL_OPENCL)*100/(double)getTotalTime()));
+#endif
+        printf("\n[/TRACE    ]\n");
+        fflush(stdout);
+    }
+}
+#endif
 
 /*****************************************************************************************\
 *                                   ::perf::TestBase
@@ -771,6 +993,9 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #ifdef CV_COLLECT_IMPL_DATA
         "{   perf_collect_impl           |false    |collect info about executed implementations}"
 #endif
+#ifdef ENABLE_INSTRUMENTATION
+        "{   perf_instrument             |false    |instrument code to collect implementations trace}"
+#endif
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
         "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
@@ -779,7 +1004,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     ;
 
     cv::CommandLineParser args(argc, argv, command_line_keys);
-    if (args.has("help"))
+    if (args.get<bool>("help"))
     {
         args.printMessage();
         return;
@@ -787,7 +1012,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
     ::testing::AddGlobalTestEnvironment(new PerfEnvironment);
 
-    param_impl          = args.has("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
+    param_impl          = args.get<bool>("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
     std::string perf_strategy = args.get<std::string>("perf_strategy");
     if (perf_strategy == "default")
     {
@@ -812,19 +1037,25 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_seed          = args.get<unsigned int>("perf_seed");
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
-    param_write_sanity  = args.has("perf_write_sanity");
-    param_verify_sanity = args.has("perf_verify_sanity");
-    test_ipp_check      = !args.has("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+    param_write_sanity  = args.get<bool>("perf_write_sanity");
+    param_verify_sanity = args.get<bool>("perf_verify_sanity");
+
+#ifdef HAVE_IPP
+    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+#endif
     param_threads       = args.get<int>("perf_threads");
 #ifdef CV_COLLECT_IMPL_DATA
-    param_collect_impl  = args.has("perf_collect_impl");
+    param_collect_impl  = args.get<bool>("perf_collect_impl");
+#endif
+#ifdef ENABLE_INSTRUMENTATION
+    param_instrument    = args.get<bool>("perf_instrument");
 #endif
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
 #endif
 
-    bool param_list_impls = args.has("perf_list_impls");
+    bool param_list_impls = args.get<bool>("perf_list_impls");
 
     if (param_list_impls)
     {
@@ -849,10 +1080,16 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     else
         cv::setUseCollection(0);
 #endif
+#ifdef ENABLE_INSTRUMENTATION
+    if(param_instrument)
+        cv::instr::setUseInstrumentation(true);
+    else
+        cv::instr::setUseInstrumentation(false);
+#endif
 
 #ifdef HAVE_CUDA
 
-    bool printOnly        = args.has("perf_cuda_info_only");
+    bool printOnly        = args.get<bool>("perf_cuda_info_only");
 
     if (printOnly)
         exit(0);
@@ -881,7 +1118,11 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #endif
 
     {
+#ifndef WINRT
         const char* path = getenv("OPENCV_PERF_VALIDATION_DIR");
+#else
+        const char* path = OPENCV_PERF_VALIDATION_DIR;
+#endif
         if (path)
             perf_validation_results_directory = path;
     }
@@ -903,7 +1144,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     if (!args.check())
     {
         args.printErrors();
-        return;
+        exit(1);
     }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
@@ -958,13 +1199,13 @@ int64 TestBase::_calibrate()
             cv::Mat b(2048, 2048, CV_32S, cv::Scalar(2));
             declare.time(30);
             double s = 0;
-            for(declare.iterations(20); startTimer(), next(); stopTimer())
+            for(declare.iterations(20); next() && startTimer(); stopTimer())
                 s+=a.dot(b);
             declare.time(s);
 
             //self calibration
             SetUp();
-            for(declare.iterations(1000); startTimer(), next(); stopTimer()){}
+            for(declare.iterations(1000); next() && startTimer(); stopTimer()){}
         }
     };
 
@@ -1185,7 +1426,11 @@ bool TestBase::next()
                         printf("Performance is unstable, it may be a result of overheat problems\n");
                         printf("Idle delay for %d ms... \n", perf_validation_idle_delay_ms);
 #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
+#ifndef WINRT_8_0
                         Sleep(perf_validation_idle_delay_ms);
+#else
+                        WaitForSingleObjectEx(GetCurrentThread(), perf_validation_idle_delay_ms, FALSE);
+#endif
 #else
                         usleep(perf_validation_idle_delay_ms * 1000);
 #endif
@@ -1227,8 +1472,6 @@ bool TestBase::next()
     }
 #endif
 
-    if (has_next)
-        startTimer(); // really we should measure activity from this moment, so reset start time
     return has_next;
 }
 
@@ -1266,9 +1509,17 @@ unsigned int TestBase::getTotalOutputSize() const
     return res;
 }
 
-void TestBase::startTimer()
+bool TestBase::startTimer()
 {
+#ifdef ENABLE_INSTRUMENTATION
+    if(currentIter == 0)
+    {
+        cv::instr::setFlags(cv::instr::getFlags()|cv::instr::FLAGS_MAPPING); // enable mapping for the first run
+        cv::instr::resetTrace();
+    }
+#endif
     lastTime = cv::getTickCount();
+    return true; // dummy true for conditional loop
 }
 
 void TestBase::stopTimer()
@@ -1282,6 +1533,10 @@ void TestBase::stopTimer()
     if (lastTime < 0) lastTime = 0;
     times.push_back(lastTime);
     lastTime = 0;
+
+#ifdef ENABLE_INSTRUMENTATION
+    cv::instr::setFlags(cv::instr::getFlags()&~cv::instr::FLAGS_MAPPING); // disable mapping to decrease overhead for +1 run
+#endif
 }
 
 performance_metrics& TestBase::calcMetrics()
@@ -1454,6 +1709,16 @@ void TestBase::reportMetrics(bool toJUnitXML)
         RecordProperty("gstddev", cv::format("%.6f", m.gstddev).c_str());
         RecordProperty("mean", cv::format("%.0f", m.mean).c_str());
         RecordProperty("stddev", cv::format("%.0f", m.stddev).c_str());
+#ifdef ENABLE_INSTRUMENTATION
+        if(cv::instr::useInstrumentation())
+        {
+            cv::String tree = InstumentData::treeToString();
+            RecordProperty("functions_hierarchy", tree.c_str());
+            RecordProperty("total_ipp_weight",    cv::format("%.1f", ((double)getImplTime(cv::instr::IMPL_IPP)*100/(double)getTotalTime())));
+            RecordProperty("total_opencl_weight", cv::format("%.1f", ((double)getImplTime(cv::instr::IMPL_OPENCL)*100/(double)getTotalTime())));
+            cv::instr::resetTrace();
+        }
+#endif
 #ifdef CV_COLLECT_IMPL_DATA
         if(param_collect_impl)
         {
@@ -1624,6 +1889,12 @@ void TestBase::TearDown()
         fflush(stdout);
     }
 #endif
+
+#ifdef ENABLE_INSTRUMENTATION
+    if(cv::instr::useInstrumentation())
+        InstumentData::printTree();
+#endif
+
     reportMetrics(true);
 }
 
@@ -1635,7 +1906,11 @@ std::string TestBase::getDataPath(const std::string& relativePath)
         throw PerfEarlyExitException();
     }
 
+#ifndef WINRT
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
+#else
+    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
+#endif
     const char *path_separator = "/";
 
     std::string path;

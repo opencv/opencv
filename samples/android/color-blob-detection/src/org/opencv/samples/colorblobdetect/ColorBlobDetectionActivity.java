@@ -25,6 +25,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.View.OnTouchListener;
+import android.view.SurfaceView;
 
 public class ColorBlobDetectionActivity extends Activity implements OnTouchListener, CvCameraViewListener2 {
     private static final String  TAG              = "OCVSample::Activity";
@@ -73,6 +74,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
         setContentView(R.layout.color_blob_detection_surface_view);
 
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.color_blob_detection_activity_surface_view);
+        mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 
@@ -90,7 +92,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
         } else {
             Log.d(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);

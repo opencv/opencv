@@ -552,6 +552,68 @@ void CV_SobelTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 
+/////////////// spatialGradient ///////////////
+
+class CV_SpatialGradientTest : public CV_DerivBaseTest
+{
+public:
+    CV_SpatialGradientTest();
+
+protected:
+    void prepare_to_validation( int test_case_idx );
+    void run_func();
+    void get_test_array_types_and_sizes( int test_case_idx,
+        vector<vector<Size> >& sizes, vector<vector<int> >& types );
+    int ksize;
+};
+
+CV_SpatialGradientTest::CV_SpatialGradientTest() {
+    test_array[OUTPUT].push_back(NULL);
+    test_array[REF_OUTPUT].push_back(NULL);
+    inplace = false;
+}
+
+
+void CV_SpatialGradientTest::get_test_array_types_and_sizes( int test_case_idx,
+                                                             vector<vector<Size> >& sizes,
+                                                             vector<vector<int> >& types )
+{
+    CV_DerivBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
+
+    sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = sizes[OUTPUT][0];
+
+    // Inputs are only CV_8UC1 for now
+    types[INPUT][0] = CV_8UC1;
+
+    // Outputs are only CV_16SC1 for now
+    types[OUTPUT][0] = types[OUTPUT][1] = types[REF_OUTPUT][0]
+                     = types[REF_OUTPUT][1] = CV_16SC1;
+
+    ksize = 3;
+    border = BORDER_DEFAULT; // TODO: Add BORDER_REPLICATE
+}
+
+
+void CV_SpatialGradientTest::run_func()
+{
+    spatialGradient( test_mat[INPUT][0], test_mat[OUTPUT][0],
+                     test_mat[OUTPUT][1], ksize, border );
+}
+
+void CV_SpatialGradientTest::prepare_to_validation( int /*test_case_idx*/ )
+{
+    int dx, dy;
+
+    dx = 1; dy = 0;
+    Sobel( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], CV_16SC1, dx, dy, ksize,
+           1, 0, border );
+
+    dx = 0; dy = 1;
+    Sobel( test_mat[INPUT][0], test_mat[REF_OUTPUT][1], CV_16SC1, dx, dy, ksize,
+           1, 0, border );
+}
+
+
 /////////////// laplace ///////////////
 
 class CV_LaplaceTest : public CV_DerivBaseTest
@@ -1773,6 +1835,7 @@ TEST(Imgproc_Dilate, accuracy) { CV_DilateTest test; test.safe_run(); }
 TEST(Imgproc_MorphologyEx, accuracy) { CV_MorphExTest test; test.safe_run(); }
 TEST(Imgproc_Filter2D, accuracy) { CV_FilterTest test; test.safe_run(); }
 TEST(Imgproc_Sobel, accuracy) { CV_SobelTest test; test.safe_run(); }
+TEST(Imgproc_SpatialGradient, accuracy) { CV_SpatialGradientTest test; test.safe_run(); }
 TEST(Imgproc_Laplace, accuracy) { CV_LaplaceTest test; test.safe_run(); }
 TEST(Imgproc_Blur, accuracy) { CV_BlurTest test; test.safe_run(); }
 TEST(Imgproc_GaussianBlur, accuracy) { CV_GaussianBlurTest test; test.safe_run(); }
@@ -1914,6 +1977,90 @@ TEST(Imgproc_Blur, borderTypes)
     blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE);
     Mat expected_dst =
             (Mat_<uchar>(3, 3) << 170, 113, 170, 113, 28, 113, 170, 113, 170);
+    EXPECT_EQ(expected_dst.type(), dst.type());
+    EXPECT_EQ(expected_dst.size(), dst.size());
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
+}
+
+TEST(Imgproc_Morphology, iterated)
+{
+    RNG& rng = theRNG();
+    for( int iter = 0; iter < 30; iter++ )
+    {
+        int width = rng.uniform(5, 33);
+        int height = rng.uniform(5, 33);
+        int cn = rng.uniform(1, 5);
+        int iterations = rng.uniform(1, 11);
+        int op = rng.uniform(0, 2);
+        Mat src(height, width, CV_8UC(cn)), dst0, dst1, dst2;
+
+        randu(src, 0, 256);
+        if( op == 0 )
+            dilate(src, dst0, Mat(), Point(-1,-1), iterations);
+        else
+            erode(src, dst0, Mat(), Point(-1,-1), iterations);
+
+        for( int i = 0; i < iterations; i++ )
+            if( op == 0 )
+                dilate(i == 0 ? src : dst1, dst1, Mat(), Point(-1,-1), 1);
+            else
+                erode(i == 0 ? src : dst1, dst1, Mat(), Point(-1,-1), 1);
+
+        Mat kern = getStructuringElement(MORPH_RECT, Size(3,3));
+        if( op == 0 )
+            dilate(src, dst2, kern, Point(-1,-1), iterations);
+        else
+            erode(src, dst2, kern, Point(-1,-1), iterations);
+        ASSERT_EQ(0.0, norm(dst0, dst1, NORM_INF));
+        ASSERT_EQ(0.0, norm(dst0, dst2, NORM_INF));
+    }
+}
+
+TEST(Imgproc_Sobel, borderTypes)
+{
+    int kernelSize = 3;
+
+    /// ksize > src_roi.size()
+    Mat src = (Mat_<uchar>(3, 3) << 1, 2, 3, 4, 5, 6, 7, 8, 9), dst, expected_dst;
+    Mat src_roi = src(Rect(1, 1, 1, 1));
+    src_roi.setTo(cv::Scalar::all(0));
+
+    // should work like !BORDER_ISOLATED, so the function MUST read values in full matrix
+    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
+    EXPECT_EQ(8, dst.at<short>(0, 0));
+    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT);
+    EXPECT_EQ(8, dst.at<short>(0, 0));
+
+    // should work like BORDER_ISOLATED
+    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE | BORDER_ISOLATED);
+    EXPECT_EQ(0, dst.at<short>(0, 0));
+    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT | BORDER_ISOLATED);
+    EXPECT_EQ(0, dst.at<short>(0, 0));
+
+    /// ksize <= src_roi.size()
+    src = Mat(5, 5, CV_8UC1, cv::Scalar(5));
+    src_roi = src(Rect(1, 1, 3, 3));
+    src_roi.setTo(0);
+
+    // should work like !BORDER_ISOLATED, so the function MUST read values in full matrix
+    expected_dst =
+        (Mat_<short>(3, 3) << -15, 0, 15, -20, 0, 20, -15, 0, 15);
+    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
+    EXPECT_EQ(expected_dst.type(), dst.type());
+    EXPECT_EQ(expected_dst.size(), dst.size());
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
+    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT);
+    EXPECT_EQ(expected_dst.type(), dst.type());
+    EXPECT_EQ(expected_dst.size(), dst.size());
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
+
+    // should work like !BORDER_ISOLATED, so the function MUST read values in full matrix
+    expected_dst = Mat::zeros(3, 3, CV_16SC1);
+    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE | BORDER_ISOLATED);
+    EXPECT_EQ(expected_dst.type(), dst.type());
+    EXPECT_EQ(expected_dst.size(), dst.size());
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
+    Sobel(src_roi, dst, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REFLECT | BORDER_ISOLATED);
     EXPECT_EQ(expected_dst.type(), dst.type());
     EXPECT_EQ(expected_dst.size(), dst.size());
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));

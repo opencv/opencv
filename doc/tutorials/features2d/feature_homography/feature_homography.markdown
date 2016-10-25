@@ -20,6 +20,7 @@ This tutorial code's is shown lines below.
 #include <stdio.h>
 #include <iostream>
 #include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/calib3d.hpp"
@@ -42,25 +43,18 @@ int main( int argc, char** argv )
   if( !img_object.data || !img_scene.data )
   { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
-  //-- Step 1: Detect the keypoints using SURF Detector
+  //-- Step 1: Detect the keypoints and extract descriptors using SURF
   int minHessian = 400;
 
-  SurfFeatureDetector detector( minHessian );
+  Ptr<SURF> detector = SURF::create( minHessian );
 
   std::vector<KeyPoint> keypoints_object, keypoints_scene;
-
-  detector.detect( img_object, keypoints_object );
-  detector.detect( img_scene, keypoints_scene );
-
-  //-- Step 2: Calculate descriptors (feature vectors)
-  SurfDescriptorExtractor extractor;
-
   Mat descriptors_object, descriptors_scene;
 
-  extractor.compute( img_object, keypoints_object, descriptors_object );
-  extractor.compute( img_scene, keypoints_scene, descriptors_scene );
+  detector->detectAndCompute( img_object, Mat(), keypoints_object, descriptors_object );
+  detector->detectAndCompute( img_scene, Mat(), keypoints_scene, descriptors_scene );
 
-  //-- Step 3: Matching descriptor vectors using FLANN matcher
+  //-- Step 2: Matching descriptor vectors using FLANN matcher
   FlannBasedMatcher matcher;
   std::vector< DMatch > matches;
   matcher.match( descriptors_object, descriptors_scene, matches );
@@ -81,20 +75,20 @@ int main( int argc, char** argv )
   std::vector< DMatch > good_matches;
 
   for( int i = 0; i < descriptors_object.rows; i++ )
-  { if( matches[i].distance < 3*min_dist )
+  { if( matches[i].distance <= 3*min_dist )
      { good_matches.push_back( matches[i]); }
   }
 
   Mat img_matches;
   drawMatches( img_object, keypoints_object, img_scene, keypoints_scene,
                good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+               std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
   //-- Localize the object
   std::vector<Point2f> obj;
   std::vector<Point2f> scene;
 
-  for( int i = 0; i < good_matches.size(); i++ )
+  for( size_t i = 0; i < good_matches.size(); i++ )
   {
     //-- Get the keypoints from the good matches
     obj.push_back( keypoints_object[ good_matches[i].queryIdx ].pt );

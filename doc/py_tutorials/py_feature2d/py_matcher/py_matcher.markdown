@@ -46,20 +46,20 @@ Here, we will see a simple example on how to match features between two images. 
 a queryImage and a trainImage. We will try to find the queryImage in trainImage using feature
 matching. ( The images are /samples/c/box.png and /samples/c/box_in_scene.png)
 
-We are using SIFT descriptors to match features. So let's start with loading images, finding
+We are using ORB descriptors to match features. So let's start with loading images, finding
 descriptors etc.
 @code{.py}
 import numpy as np
 import cv2
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 
 img1 = cv2.imread('box.png',0)          # queryImage
 img2 = cv2.imread('box_in_scene.png',0) # trainImage
 
-# Initiate SIFT detector
-orb = cv2.ORB()
+# Initiate ORB detector
+orb = cv2.ORB_create()
 
-# find the keypoints and descriptors with SIFT
+# find the keypoints and descriptors with ORB
 kp1, des1 = orb.detectAndCompute(img1,None)
 kp2, des2 = orb.detectAndCompute(img2,None)
 @endcode

@@ -167,33 +167,34 @@ INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, BroxOpticalFlow, ALL_DEVICES);
 
 namespace
 {
-    IMPLEMENT_PARAM_CLASS(UseGray, bool)
+    IMPLEMENT_PARAM_CLASS(Chan, int)
+    IMPLEMENT_PARAM_CLASS(DataType, int)
 }
 
-PARAM_TEST_CASE(PyrLKOpticalFlow, cv::cuda::DeviceInfo, UseGray)
+PARAM_TEST_CASE(PyrLKOpticalFlow, cv::cuda::DeviceInfo, Chan, DataType)
 {
     cv::cuda::DeviceInfo devInfo;
-    bool useGray;
-
+    int channels;
+    int dataType;
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        useGray = GET_PARAM(1);
-
+        channels = GET_PARAM(1);
+        dataType = GET_PARAM(2);
         cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
 CUDA_TEST_P(PyrLKOpticalFlow, Sparse)
 {
-    cv::Mat frame0 = readImage("opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame0 = readImage("opticalflow/frame0.png", channels == 1 ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage("opticalflow/frame1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame1 = readImage("opticalflow/frame1.png", channels == 1 ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat gray_frame;
-    if (useGray)
+    if (channels == 1)
         gray_frame = frame0;
     else
         cv::cvtColor(frame0, gray_frame, cv::COLOR_BGR2GRAY);
@@ -208,21 +209,31 @@ CUDA_TEST_P(PyrLKOpticalFlow, Sparse)
     cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> pyrLK =
             cv::cuda::SparsePyrLKOpticalFlow::create();
 
-    cv::cuda::GpuMat d_nextPts;
-    cv::cuda::GpuMat d_status;
-    pyrLK->calc(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status);
-
-    std::vector<cv::Point2f> nextPts(d_nextPts.cols);
-    cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void*) &nextPts[0]);
-    d_nextPts.download(nextPts_mat);
-
-    std::vector<unsigned char> status(d_status.cols);
-    cv::Mat status_mat(1, d_status.cols, CV_8UC1, (void*) &status[0]);
-    d_status.download(status_mat);
-
     std::vector<cv::Point2f> nextPts_gold;
     std::vector<unsigned char> status_gold;
     cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts_gold, status_gold, cv::noArray());
+
+
+    cv::cuda::GpuMat d_nextPts;
+    cv::cuda::GpuMat d_status;
+    cv::Mat converted0, converted1;
+    if(channels == 4)
+    {
+        cv::cvtColor(frame0, frame0, cv::COLOR_BGR2BGRA);
+        cv::cvtColor(frame1, frame1, cv::COLOR_BGR2BGRA);
+    }
+    frame0.convertTo(converted0, dataType);
+    frame1.convertTo(converted1, dataType);
+
+    pyrLK->calc(loadMat(converted0), loadMat(converted1), d_pts, d_nextPts, d_status);
+
+    std::vector<cv::Point2f> nextPts(d_nextPts.cols);
+    cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void*)&nextPts[0]);
+    d_nextPts.download(nextPts_mat);
+
+    std::vector<unsigned char> status(d_status.cols);
+    cv::Mat status_mat(1, d_status.cols, CV_8UC1, (void*)&status[0]);
+    d_status.download(status_mat);
 
     ASSERT_EQ(nextPts_gold.size(), nextPts.size());
     ASSERT_EQ(status_gold.size(), status.size());
@@ -251,11 +262,16 @@ CUDA_TEST_P(PyrLKOpticalFlow, Sparse)
     double bad_ratio = static_cast<double>(mistmatch) / nextPts.size();
 
     ASSERT_LE(bad_ratio, 0.01);
+
+
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, PyrLKOpticalFlow, testing::Combine(
     ALL_DEVICES,
-    testing::Values(UseGray(true), UseGray(false))));
+    testing::Values(Chan(1), Chan(3), Chan(4)),
+    testing::Values(DataType(CV_8U), DataType(CV_16U), DataType(CV_32S), DataType(CV_32F))));
+
+
 
 //////////////////////////////////////////////////////
 // FarnebackOpticalFlow

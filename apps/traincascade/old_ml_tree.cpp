@@ -424,9 +424,9 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
             int* c_map;
 
             if (is_buf_16u)
-                udst = (unsigned short*)(buf->data.s + vi*sample_count);
+                udst = (unsigned short*)(buf->data.s + (size_t)vi*sample_count);
             else
-                idst = buf->data.i + vi*sample_count;
+                idst = buf->data.i + (size_t)vi*sample_count;
 
             // copy data
             for( i = 0; i < sample_count; i++ )
@@ -540,9 +540,9 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
         else if( ci < 0 ) // process ordered variable
         {
             if (is_buf_16u)
-                udst = (unsigned short*)(buf->data.s + vi*sample_count);
+                udst = (unsigned short*)(buf->data.s + (size_t)vi*sample_count);
             else
-                idst = buf->data.i + vi*sample_count;
+                idst = buf->data.i + (size_t)vi*sample_count;
 
             for( i = 0; i < sample_count; i++ )
             {
@@ -583,9 +583,9 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     // set sample labels
     if (is_buf_16u)
-        udst = (unsigned short*)(buf->data.s + work_var_count*sample_count);
+        udst = (unsigned short*)(buf->data.s + (size_t)work_var_count*sample_count);
     else
-        idst = buf->data.i + work_var_count*sample_count;
+        idst = buf->data.i + (size_t)work_var_count*sample_count;
 
     for (i = 0; i < sample_count; i++)
     {
@@ -602,7 +602,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
         if (is_buf_16u)
         {
-            usdst = (unsigned short*)(buf->data.s + (get_work_var_count()-1)*sample_count);
+            usdst = (unsigned short*)(buf->data.s + (size_t)(get_work_var_count()-1)*sample_count);
             for( i = vi = 0; i < sample_count; i++ )
             {
                 usdst[i] = (unsigned short)vi++;
@@ -619,7 +619,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
         }
         else
         {
-            idst2 = buf->data.i + (get_work_var_count()-1)*sample_count;
+            idst2 = buf->data.i + (size_t)(get_work_var_count()-1)*sample_count;
             for( i = vi = 0; i < sample_count; i++ )
             {
                 idst2[i] = vi++;
@@ -785,7 +785,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
                 if (is_buf_16u)
                 {
                     unsigned short* udst = (unsigned short*)(buf->data.s + root->buf_idx*get_length_subbuf() +
-                        vi*sample_count + root->offset);
+                        (size_t)vi*sample_count + root->offset);
                     for( i = 0; i < count; i++ )
                     {
                         int val = src[sidx[i]];
@@ -796,7 +796,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
                 else
                 {
                     int* idst = buf->data.i + root->buf_idx*get_length_subbuf() +
-                        vi*sample_count + root->offset;
+                        (size_t)vi*sample_count + root->offset;
                     for( i = 0; i < count; i++ )
                     {
                         int val = src[sidx[i]];
@@ -822,7 +822,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
                 if (is_buf_16u)
                 {
                     unsigned short* udst_idx = (unsigned short*)(buf->data.s + root->buf_idx*get_length_subbuf() +
-                        vi*sample_count + data_root->offset);
+                        (size_t)vi*sample_count + data_root->offset);
                     for( i = 0; i < num_valid; i++ )
                     {
                         idx = src_idx[i];
@@ -846,7 +846,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
                 else
                 {
                     int* idst_idx = buf->data.i + root->buf_idx*get_length_subbuf() +
-                        vi*sample_count + root->offset;
+                        (size_t)vi*sample_count + root->offset;
                     for( i = 0; i < num_valid; i++ )
                     {
                         idx = src_idx[i];
@@ -874,14 +874,14 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
         if (is_buf_16u)
         {
             unsigned short* sample_idx_dst = (unsigned short*)(buf->data.s + root->buf_idx*get_length_subbuf() +
-                workVarCount*sample_count + root->offset);
+                (size_t)workVarCount*sample_count + root->offset);
             for (i = 0; i < count; i++)
                 sample_idx_dst[i] = (unsigned short)sample_idx_src[sidx[i]];
         }
         else
         {
             int* sample_idx_dst = buf->data.i + root->buf_idx*get_length_subbuf() +
-                workVarCount*sample_count + root->offset;
+                (size_t)workVarCount*sample_count + root->offset;
             for (i = 0; i < count; i++)
                 sample_idx_dst[i] = sample_idx_src[sidx[i]];
         }
@@ -1192,10 +1192,10 @@ void CvDTreeTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* ord_valu
 
     if( !is_buf_16u )
         *sorted_indices = buf->data.i + n->buf_idx*get_length_subbuf() +
-        vi*sample_count + n->offset;
+        (size_t)vi*sample_count + n->offset;
     else {
         const unsigned short* short_indices = (const unsigned short*)(buf->data.s + n->buf_idx*get_length_subbuf() +
-            vi*sample_count + n->offset );
+            (size_t)vi*sample_count + n->offset );
         for( int i = 0; i < node_sample_count; i++ )
             sorted_indices_buf[i] = short_indices[i];
         *sorted_indices = sorted_indices_buf;
@@ -1266,10 +1266,10 @@ const int* CvDTreeTrainData::get_cat_var_data( CvDTreeNode* n, int vi, int* cat_
     const int* cat_values = 0;
     if( !is_buf_16u )
         cat_values = buf->data.i + n->buf_idx*get_length_subbuf() +
-            vi*sample_count + n->offset;
+            (size_t)vi*sample_count + n->offset;
     else {
         const unsigned short* short_values = (const unsigned short*)(buf->data.s + n->buf_idx*get_length_subbuf() +
-            vi*sample_count + n->offset);
+            (size_t)vi*sample_count + n->offset);
         for( int i = 0; i < n->sample_count; i++ )
             cat_values_buf[i] = short_values[i];
         cat_values = cat_values_buf;

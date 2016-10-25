@@ -57,11 +57,35 @@ cv::viz::MouseEvent::MouseEvent(const Type& _type, const MouseButton& _button, c
 ////////////////////////////////////////////////////////////////////
 /// cv::viz::Mesh3d
 
-cv::viz::Mesh cv::viz::Mesh::load(const String& file)
+cv::viz::Mesh cv::viz::Mesh::load(const String& file, int type)
 {
-    vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
-    reader->SetFileName(file.c_str());
-    reader->Update();
+    vtkSmartPointer<vtkPolyDataAlgorithm> reader = vtkSmartPointer<vtkPolyDataAlgorithm>::New();
+    switch (type) {
+      case LOAD_AUTO:
+      {
+        CV_Assert(!"cv::viz::Mesh::LOAD_AUTO: Not implemented yet");
+        break;
+      }
+      case LOAD_PLY:
+      {
+        vtkSmartPointer<vtkPLYReader> ply_reader = vtkSmartPointer<vtkPLYReader>::New();
+        ply_reader->SetFileName(file.c_str());
+        ply_reader->Update();
+        reader = ply_reader;
+        break;
+      }
+      case LOAD_OBJ:
+      {
+        vtkSmartPointer<vtkOBJReader> obj_reader = vtkSmartPointer<vtkOBJReader>::New();
+        obj_reader->SetFileName(file.c_str());
+        obj_reader->Update();
+        reader = obj_reader;
+        break;
+      }
+      default:
+        CV_Assert(!"cv::viz::Mesh::load: Unknown file type");
+        break;
+    }
 
     vtkSmartPointer<vtkPolyData> polydata = reader->GetOutput();
     CV_Assert("File does not exist or file format is not supported." && polydata);

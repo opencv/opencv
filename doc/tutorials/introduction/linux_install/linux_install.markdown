@@ -16,6 +16,7 @@ Required Packages
 -   [optional] libtbb2 libtbb-dev
 -   [optional] libdc1394 2.x
 -   [optional] libjpeg-dev, libpng-dev, libtiff-dev, libjasper-dev, libdc1394-22-dev
+-   [optional] CUDA Toolkit 6.5 or higher
 
 The packages can be installed using a terminal and the following commands or by using Synaptic
 Manager:
@@ -28,7 +29,7 @@ Getting OpenCV Source Code
 --------------------------
 
 You can use the latest stable OpenCV version or you can grab the latest snapshot from our [Git
-repository](https://github.com/Itseez/opencv.git).
+repository](https://github.com/opencv/opencv.git).
 
 ### Getting the Latest Stable OpenCV Version
 
@@ -37,14 +38,14 @@ repository](https://github.com/Itseez/opencv.git).
 
 ### Getting the Cutting-edge OpenCV from the Git Repository
 
-Launch Git client and clone [OpenCV repository](http://github.com/itseez/opencv). If you need
-modules from [OpenCV contrib repository](http://github.com/itseez/opencv_contrib) then clone it too.
+Launch Git client and clone [OpenCV repository](http://github.com/opencv/opencv). If you need
+modules from [OpenCV contrib repository](http://github.com/opencv/opencv_contrib) then clone it too.
 
 For example
 @code{.bash}
 cd ~/<my_working_directory>
-git clone https://github.com/Itseez/opencv.git
-git clone https://github.com/Itseez/opencv_contrib.git
+git clone https://github.com/opencv/opencv.git
+git clone https://github.com/opencv/opencv_contrib.git
 @endcode
 Building OpenCV from Source Using CMake
 ---------------------------------------
@@ -114,11 +115,11 @@ Building OpenCV from Source Using CMake
 -#  [optional] Running tests
 
     -   Get the required test data from [OpenCV extra
-        repository](https://github.com/Itseez/opencv_extra).
+        repository](https://github.com/opencv/opencv_extra).
 
     For example
     @code{.bash}
-    git clone https://github.com/Itseez/opencv_extra.git
+    git clone https://github.com/opencv/opencv_extra.git
     @endcode
     -   set OPENCV_TEST_DATA_PATH environment variable to \<path to opencv_extra/testdata\>.
     -   execute tests from build directory.

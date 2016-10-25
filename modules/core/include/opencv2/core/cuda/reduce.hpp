@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_REDUCE_HPP__
-#define __OPENCV_CUDA_REDUCE_HPP__
+#ifndef OPENCV_CUDA_REDUCE_HPP
+#define OPENCV_CUDA_REDUCE_HPP
 
 #include <thrust/tuple.h>
 #include "detail/reduce.hpp"
@@ -202,4 +202,4 @@ namespace cv { namespace cuda { namespace device
 
 //! @endcond
 
-#endif // __OPENCV_CUDA_UTILITY_HPP__
+#endif // OPENCV_CUDA_REDUCE_HPP

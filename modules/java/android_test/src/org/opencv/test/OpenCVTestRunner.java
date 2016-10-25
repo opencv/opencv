@@ -82,7 +82,7 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
             // Using OpenCV Manager for initialization;
 
             Log("Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, getContext(), mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, getContext(), mLoaderCallback);
 
             synchronized (this) {
                 try {

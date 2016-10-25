@@ -138,7 +138,12 @@ protected:
             {
                 InT d = disp(y, x);
 
-                double from[4] = { x, y, d, 1 };
+                double from[4] = {
+                    static_cast<double>(x),
+                    static_cast<double>(y),
+                    static_cast<double>(d),
+                    1.0,
+                };
                 Mat_<double> res = Q * Mat_<double>(4, 1, from);
                 res /= res(3, 0);
 

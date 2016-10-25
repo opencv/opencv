@@ -63,6 +63,8 @@ public:
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray _times)
     {
+        CV_INSTRUMENT_REGION()
+
         std::vector<Mat> images;
         src.getMatVector(images);
         Mat times = _times.getMat();
@@ -90,7 +92,9 @@ public:
 
             for(int i = 0, x = step_x / 2; i < x_points; i++, x += step_x) {
                 for(int j = 0, y = step_y / 2; j < y_points; j++, y += step_y) {
-                    sample_points.push_back(Point(x, y));
+                    if( 0 <= x && x < images[0].cols &&
+                        0 <= y && y < images[0].rows )
+                        sample_points.push_back(Point(x, y));
                 }
             }
         }
@@ -139,6 +143,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "samples" << samples
            << "lambda" << lambda
@@ -181,6 +186,8 @@ public:
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray _times)
     {
+        CV_INSTRUMENT_REGION()
+
         std::vector<Mat> images;
         src.getMatVector(images);
         Mat times = _times.getMat();
@@ -248,6 +255,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "max_iter" << max_iter
            << "threshold" << threshold;

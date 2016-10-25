@@ -150,7 +150,7 @@ BINARY_TOC             = NO
 TOC_EXPAND             = NO
 GENERATE_QHP           = @CMAKE_DOXYGEN_GENERATE_QHP@
 QCH_FILE               = ../opencv-@OPENCV_VERSION@.qch
-QHP_NAMESPACE          = org.itseez.opencv.@OPENCV_VERSION@
+QHP_NAMESPACE          = org.opencv.@OPENCV_VERSION@
 QHP_VIRTUAL_FOLDER     = opencv
 QHP_CUST_FILTER_NAME   =
 QHP_CUST_FILTER_ATTRS  =
@@ -243,11 +243,8 @@ PREDEFINED             = __cplusplus=1 \
                          CV_NORETURN= \
                          CV_DEFAULT(x)=" = x" \
                          CV_NEON=1 \
-                         FLANN_DEPRECATED= \
-                         "CV_PURE_PROPERTY(type, name)= /** \@see set##name */ virtual type get##name() const = 0; /** \@copybrief get##name \@see get##name */ virtual void set##name(type val) = 0;" \
-                         "CV_IMPL_PROPERTY(type, name, x)= /** \@see set##name */ virtual type get##name() const = 0; /** \@copybrief get##name \@see get##name */ virtual void set##name(type val) = 0;" \
-                         "CV_IMPL_PROPERTY_S(type, name, x)= /** \@see set##name */ virtual type get##name() const = 0; /** \@copybrief get##name \@see get##name */ virtual void set##name(const type & val);" \
-                         "CV_IMPL_PROPERTY_RO(type, name, x)= virtual type get##name() const;"
+                         CV_SSE2=1 \
+                         FLANN_DEPRECATED=
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
 TAGFILES               =

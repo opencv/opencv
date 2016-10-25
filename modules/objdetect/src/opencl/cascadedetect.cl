@@ -160,7 +160,7 @@ void runHaarClassifier(
                 __global const int* psum = psum1;
                 #endif
 
-                __global const float* psqsum = (__global const float*)(psum1 + sqofs);
+                __global const int* psqsum = (__global const int*)(psum1 + sqofs);
                 float sval = (psum[nofs.x] - psum[nofs.y] - psum[nofs.z] + psum[nofs.w])*invarea;
                 float sqval = (psqsum[nofs0.x] - psqsum[nofs0.y] - psqsum[nofs0.z] + psqsum[nofs0.w])*invarea;
                 float nf = (float)normarea * sqrt(max(sqval - sval * sval, 0.f));
@@ -180,11 +180,11 @@ void runHaarClassifier(
                         int4 ofs = f->ofs[0];
                         sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                         ofs = f->ofs[1];
-                        sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                        sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.y, sval);
                         if( weight.z > 0 )
                         {
                             ofs = f->ofs[2];
-                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                            sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.z, sval);
                         }
 
                         s += (sval < st.y*nf) ? st.z : st.w;
@@ -204,11 +204,11 @@ void runHaarClassifier(
 
                             sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                             ofs = f->ofs[1];
-                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                            sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.y, sval);
                             if( weight.z > 0 )
                             {
                                 ofs = f->ofs[2];
-                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                                sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.z, sval);
                             }
 
                             idx = (sval < as_float(n.y)*nf) ? n.z : n.w;
@@ -281,11 +281,12 @@ void runHaarClassifier(
                             int4 ofs = f->ofs[0];
                             float sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                             ofs = f->ofs[1];
-                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                            sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.y, sval);
                             //if( weight.z > 0 )
+                            if( fabs(weight.z) > 0 )
                             {
                                 ofs = f->ofs[2];
-                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                                sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.z, sval);
                             }
 
                             partsum += (sval < st.y*nf) ? st.z : st.w;
@@ -303,11 +304,11 @@ void runHaarClassifier(
 
                                 float sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                                 ofs = f->ofs[1];
-                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                                sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.y, sval);
                                 if( weight.z > 0 )
                                 {
                                     ofs = f->ofs[2];
-                                    sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                                    sval = mad((psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w]), weight.z, sval);
                                 }
 
                                 idx = (sval < as_float(n.y)*nf) ? n.z : n.w;

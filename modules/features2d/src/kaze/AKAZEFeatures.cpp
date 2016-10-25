@@ -191,7 +191,7 @@ public:
 
     for (int i = range.start; i < range.end; i++)
     {
-        float ratio = (float)fastpow(2, evolution[i].octave);
+      float ratio = (float)fastpow(2, evolution[i].octave);
       int sigma_size_ = fRound(evolution[i].esigma * options_.derivative_factor / ratio);
 
       compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Lx, 1, 0, sigma_size_);
@@ -342,14 +342,14 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<KeyPoint>& kpts)
 
             if (is_out == false) {
               if (is_repeated == false) {
-                point.pt.x *= ratio;
-                point.pt.y *= ratio;
+                point.pt.x = (float)(point.pt.x*ratio + .5*(ratio-1.0));
+                point.pt.y = (float)(point.pt.y*ratio + .5*(ratio-1.0));
                 kpts_aux.push_back(point);
                 npoints++;
               }
               else {
-                point.pt.x *= ratio;
-                point.pt.y *= ratio;
+                point.pt.x = (float)(point.pt.x*ratio + .5*(ratio-1.0));
+                point.pt.y = (float)(point.pt.y*ratio + .5*(ratio-1.0));
                 kpts_aux[id_repeated] = point;
               }
             } // if is_out
@@ -439,8 +439,8 @@ void AKAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint>& kpts)
         kpts[i].pt.x = x + dst(0);
       kpts[i].pt.y = y + dst(1);
       int power = fastpow(2, evolution_[kpts[i].class_id].octave);
-      kpts[i].pt.x *= power;
-      kpts[i].pt.y *= power;
+      kpts[i].pt.x = (float)(kpts[i].pt.x*power + .5*(power-1));
+      kpts[i].pt.y = (float)(kpts[i].pt.y*power + .5*(power-1));
       kpts[i].angle = 0.0;
 
       // In OpenCV the size of a keypoint its the diameter
@@ -812,7 +812,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
       }
     }
   }
-  fastAtan2(resY, resX, Ang, ang_size, false);
+  hal::fastAtan32f(resY, resX, Ang, ang_size, false);
   // Loop slides pi/3 window around feature point
   for (ang1 = 0; ang1 < (float)(2.0 * CV_PI); ang1 += 0.15f) {
     ang2 = (ang1 + (float)(CV_PI / 3.0) >(float)(2.0*CV_PI) ? ang1 - (float)(5.0*CV_PI / 3.0) : ang1 + (float)(CV_PI / 3.0));
@@ -839,7 +839,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
     if (sumX*sumX + sumY*sumY > max) {
       // store largest orientation
       max = sumX*sumX + sumY*sumY;
-      kpt.angle = getAngle(sumX, sumY);
+      kpt.angle = getAngle(sumX, sumY) * 180.f / static_cast<float>(CV_PI);
     }
   }
 }
@@ -1000,7 +1000,7 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
   scale = fRound(0.5f*kpt.size / ratio);
-  angle = kpt.angle;
+  angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
   level = kpt.class_id;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
@@ -1406,8 +1406,9 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
   float scale = (float)fRound(0.5f*kpt.size / ratio);
   float xf = kpt.pt.x / ratio;
   float yf = kpt.pt.y / ratio;
-  float co = cos(kpt.angle);
-  float si = sin(kpt.angle);
+  float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
+  float co = cos(angle);
+  float si = sin(angle);
   int pattern_size = options_->descriptor_pattern_size;
 
   int dpos = 0;
@@ -1441,7 +1442,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   // Get the information from the keypoint
   float ratio = (float)(1 << kpt.octave);
   int scale = fRound(0.5f*kpt.size / ratio);
-  float angle = kpt.angle;
+  float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
   int level = kpt.class_id;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;

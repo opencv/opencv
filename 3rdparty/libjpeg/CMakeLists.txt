@@ -15,6 +15,13 @@ else()
   ocv_list_filterout(lib_srcs jmemnobs.c)
 endif()
 
+if(WINRT)
+    add_definitions(-DNO_GETENV)
+    get_directory_property( DirDefs COMPILE_DEFINITIONS )
+    message(STATUS "Adding NO_GETENV to compiler definitions for WINRT:")
+    message(STATUS "   COMPILE_DEFINITIONS = ${DirDefs}")
+endif()
+
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------
@@ -38,6 +45,8 @@ ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 /wd4244 /wd4267) # vs2005
 set_target_properties(${JPEG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${JPEG_LIBRARY}
   DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+  COMPILE_PDB_NAME ${JPEG_LIBRARY}
+  COMPILE_PDB_NAME_DEBUG "${JPEG_LIBRARY}${OPENCV_DEBUG_POSTFIX}"
   ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
   )
 

@@ -49,7 +49,7 @@ pyopencv_generated_\*.h files). But there may be some basic OpenCV datatypes lik
 Size. They need to be extended manually. For example, a Mat type should be extended to Numpy array,
 Size should be extended to a tuple of two integers etc. Similarly, there may be some complex
 structs/classes/functions etc. which need to be extended manually. All such manual wrapper functions
-are placed in modules/python/src2/pycv2.hpp.
+are placed in modules/python/src2/cv2.cpp.
 
 So now only thing left is the compilation of these wrapper files which gives us **cv2** module. So
 when you call a function, say res = equalizeHist(img1,img2) in Python, you pass two numpy arrays and
@@ -142,5 +142,6 @@ public:
 So these are the major extension macros available in OpenCV. Typically, a developer has to put
 proper macros in their appropriate positions. Rest is done by generator scripts. Sometimes, there
 may be an exceptional cases where generator scripts cannot create the wrappers. Such functions need
-to be handled manually. But most of the time, a code written according to OpenCV coding guidelines
-will be automatically wrapped by generator scripts.
+to be handled manually, to do this write your own pyopencv_*.hpp extending headers and put them into
+misc/python subdirectory of your module. But most of the time, a code written according to OpenCV
+coding guidelines will be automatically wrapped by generator scripts.

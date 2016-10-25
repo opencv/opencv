@@ -100,7 +100,7 @@ public:
     virtual bool grabFrame();
     virtual bool retrieveFrame(int outputType, OutputArray frame);
     virtual int getCaptureDomain();
-    bool isOpened() const;
+    virtual bool isOpened() const;
 protected:
     bool m_contextOpened;
 

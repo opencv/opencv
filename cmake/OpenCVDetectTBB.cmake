@@ -24,7 +24,7 @@ if(NOT HAVE_TBB)
   set(TBB_DEFAULT_INCLUDE_DIRS
     "/opt/intel/tbb/include" "/usr/local/include" "/usr/include"
     "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB"
-    "C:/Program Files (x86)/tbb/include"
+    "C:/Program Files/tbb/include"
     "C:/Program Files (x86)/tbb/include"
     "${CMAKE_INSTALL_PREFIX}/include")
 
@@ -65,6 +65,8 @@ if(NOT HAVE_TBB)
           set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc11")
         elseif(MSVC12)
           set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc12")
+        elseif(MSVC14)
+          set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc14")
         endif()
         set(TBB_LIB_DIR "${_TBB_LIB_PATH}" CACHE PATH "Full path of TBB library directory")
         link_directories("${TBB_LIB_DIR}")

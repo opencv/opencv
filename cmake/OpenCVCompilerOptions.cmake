@@ -47,6 +47,18 @@ macro(add_extra_compiler_option option)
   endif()
 endmacro()
 
+# Gets environment variable and puts its value to the corresponding preprocessor definition
+# Useful for WINRT that has no access to environment variables
+macro(add_env_definitions option)
+  set(value $ENV{${option}})
+  if("${value}" STREQUAL "")
+    message(WARNING "${option} environment variable is empty. Please set it to appropriate location to get correct results")
+  else()
+    string(REPLACE "\\" "\\\\" value ${value})
+  endif()
+  add_definitions("-D${option}=\"${value}\"")
+endmacro()
+
 # OpenCV fails some tests when 'char' is 'unsigned' by default
 add_extra_compiler_option(-fsigned-char)
 
@@ -85,6 +97,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-Wno-narrowing)
     add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
     add_extra_compiler_option(-Wno-unnamed-type-template-args)
+    add_extra_compiler_option(-Wno-comment)
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 
@@ -96,6 +109,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   # We need pthread's
   if(UNIX AND NOT ANDROID AND NOT (APPLE AND CMAKE_COMPILER_IS_CLANGCXX))
     add_extra_compiler_option(-pthread)
+  endif()
+
+  if(CMAKE_COMPILER_IS_CLANGCXX)
+    add_extra_compiler_option(-Qunused-arguments)
   endif()
 
   if(OPENCV_WARNINGS_ARE_ERRORS)
@@ -127,7 +144,12 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
   if(ENABLE_SSE2)
     add_extra_compiler_option(-msse2)
+  elseif(X86 OR X86_64)
+    add_extra_compiler_option(-mno-sse2)
   endif()
+  if(ARM)
+    add_extra_compiler_option("-mfp16-format=ieee")
+  endif(ARM)
   if(ENABLE_NEON)
     add_extra_compiler_option("-mfpu=neon")
   endif()
@@ -139,6 +161,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   if(NOT MINGW)
     if(ENABLE_AVX)
       add_extra_compiler_option(-mavx)
+    elseif(X86 OR X86_64)
+      add_extra_compiler_option(-mno-avx)
     endif()
     if(ENABLE_AVX2)
       add_extra_compiler_option(-mavx2)
@@ -152,18 +176,26 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     if(NOT OPENCV_EXTRA_CXX_FLAGS MATCHES "-mavx")
       if(ENABLE_SSE3)
         add_extra_compiler_option(-msse3)
+      elseif(X86 OR X86_64)
+        add_extra_compiler_option(-mno-sse3)
       endif()
 
       if(ENABLE_SSSE3)
         add_extra_compiler_option(-mssse3)
+      elseif(X86 OR X86_64)
+        add_extra_compiler_option(-mno-ssse3)
       endif()
 
       if(ENABLE_SSE41)
         add_extra_compiler_option(-msse4.1)
+      elseif(X86 OR X86_64)
+        add_extra_compiler_option(-mno-sse4.1)
       endif()
 
       if(ENABLE_SSE42)
         add_extra_compiler_option(-msse4.2)
+      elseif(X86 OR X86_64)
+        add_extra_compiler_option(-mno-sse4.2)
       endif()
 
       if(ENABLE_POPCNT)
@@ -199,6 +231,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   if(ENABLE_COVERAGE)
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} --coverage")
     set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} --coverage")
+  endif()
+
+  if(ENABLE_INSTRUMENTATION)
+    set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} --std=c++11")
+    set(WITH_VTK OFF) # There are issues with VTK 6.0
   endif()
 
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")
@@ -265,6 +302,16 @@ if(MSVC)
   endif()
 endif()
 
+if(MSVC12 AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /FS")
+  set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /FS")
+endif()
+
+# Adding additional using directory for WindowsPhone 8.0 to get Windows.winmd properly
+if(WINRT_PHONE AND WINRT_8_0)
+  set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /AI\$(WindowsSDK_MetadataPath)")
+endif()
+
 # Extra link libs if the user selects building static libs:
 if(NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX AND NOT ANDROID)
   # Android does not need these settings because they are already set by toolchain file
@@ -287,6 +334,34 @@ set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG   "${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG
 if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_OPENCV_GCC_VERSION_NUM GREATER 399)
   add_extra_compiler_option(-fvisibility=hidden)
   add_extra_compiler_option(-fvisibility-inlines-hidden)
+endif()
+
+if(NOT OPENCV_FP16_DISABLE AND NOT IOS)
+  if(ARM AND ENABLE_NEON)
+    set(FP16_OPTION "-mfpu=neon-fp16")
+  elseif((X86 OR X86_64) AND NOT MSVC AND ENABLE_AVX)
+    set(FP16_OPTION "-mf16c")
+  endif()
+  try_compile(__VALID_FP16
+    "${OpenCV_BINARY_DIR}"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/fp16.cpp"
+    COMPILE_DEFINITIONS "-DCHECK_FP16" "${FP16_OPTION}"
+    OUTPUT_VARIABLE TRY_OUT
+    )
+  if(NOT __VALID_FP16)
+    if((X86 OR X86_64) AND NOT MSVC AND NOT ENABLE_AVX)
+      # GCC enables AVX when mf16c is passed
+      message(STATUS "FP16: Feature disabled")
+    else()
+      message(STATUS "FP16: Compiler support is not available")
+    endif()
+  else()
+    message(STATUS "FP16: Compiler support is available")
+    set(HAVE_FP16 1)
+    if(NOT ${FP16_OPTION} STREQUAL "")
+      add_extra_compiler_option(${FP16_OPTION})
+    endif()
+  endif()
 endif()
 
 #combine all "extra" options
@@ -324,5 +399,11 @@ if(MSVC)
   if(NOT ENABLE_NOISY_WARNINGS)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4251) # class 'std::XXX' needs to have dll-interface to be used by clients of YYY
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4324) # 'struct_name' : structure was padded due to __declspec(align())
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4275) # non dll-interface class 'std::exception' used as base for dll-interface class 'cv::Exception'
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4589) # Constructor of abstract class 'cv::ORB' ignores initializer for virtual base class 'cv::Algorithm'
   endif()
+endif()
+
+if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/usr/local/lib")
+  link_directories("/usr/local/lib")
 endif()

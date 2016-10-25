@@ -57,6 +57,7 @@
 
 /* DirectX */
 #cmakedefine HAVE_DIRECTX
+#cmakedefine HAVE_DIRECTX_NV12
 #cmakedefine HAVE_D3D11
 #cmakedefine HAVE_D3D10
 #cmakedefine HAVE_D3D9
@@ -110,6 +111,9 @@
 /* libpng/png.h needs to be included */
 #cmakedefine HAVE_LIBPNG_PNG_H
 
+/* GDCM DICOM codec */
+#cmakedefine HAVE_GDCM
+
 /* V4L/V4L2 capturing support via libv4l */
 #cmakedefine HAVE_LIBV4L
 
@@ -118,6 +122,9 @@
 
 /* NVidia Video Decoding API*/
 #cmakedefine HAVE_NVCUVID
+
+/* NVidia Video Encoding API*/
+#cmakedefine HAVE_NVCUVENC
 
 /* OpenCL Support */
 #cmakedefine HAVE_OPENCL
@@ -138,6 +145,12 @@
 
 /* PNG codec */
 #cmakedefine HAVE_PNG
+
+/* Posix threads (pthreads) */
+#cmakedefine HAVE_PTHREADS
+
+/* parallel_for with pthreads */
+#cmakedefine HAVE_PTHREADS_PF
 
 /* Qt support */
 #cmakedefine HAVE_QT
@@ -169,9 +182,6 @@
 /* Win32 UI */
 #cmakedefine HAVE_WIN32UI
 
-/* Windows Runtime support */
-#cmakedefine HAVE_WINRT
-
 /* XIMEA camera support */
 #cmakedefine HAVE_XIMEA
 
@@ -181,3 +191,30 @@
 /* Define if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #cmakedefine WORDS_BIGENDIAN
+
+/* gPhoto2 library */
+#cmakedefine HAVE_GPHOTO2
+
+/* VA library (libva) */
+#cmakedefine HAVE_VA
+
+/* Intel VA-API/OpenCL */
+#cmakedefine HAVE_VA_INTEL
+
+/* Lapack */
+#cmakedefine HAVE_LAPACK
+
+/* Lapack Generic */
+#cmakedefine HAVE_LAPACK_GENERIC
+
+/* Lapack MKL */
+#cmakedefine HAVE_LAPACK_MKL
+
+/* FP16 */
+#cmakedefine HAVE_FP16
+
+/* Library was compiled with functions instrumentation */
+#cmakedefine ENABLE_INSTRUMENTATION
+
+/* OpenVX */
+#cmakedefine HAVE_OPENVX

@@ -13,16 +13,25 @@ static void help()
 {
     cout << "\nThis program demonstrates template match with mask.\n"
             "Usage:\n"
-            "./mask_tmpl <image_name> <template_name> <mask_name>, Default is ../data/lena_tmpl.jpg\n"
+            "./mask_tmpl -i=<image_name> -t=<template_name> -m=<mask_name>, Default is ../data/lena_tmpl.jpg\n"
             << endl;
 }
 
 int main( int argc, const char** argv )
 {
-    const char* filename = argc == 4 ? argv[1] : "../data/lena_tmpl.jpg";
-    const char* tmplname = argc == 4 ? argv[2] : "../data/tmpl.png";
-    const char* maskname = argc == 4 ? argv[3] : "../data/mask.png";
-
+    cv::CommandLineParser parser(argc, argv,
+        "{help h||}"
+        "{ i | ../data/lena_tmpl.jpg | }"
+        "{ t | ../data/tmpl.png | }"
+        "{ m | ../data/mask.png | }");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string filename = parser.get<string>("i");
+    string tmplname = parser.get<string>("t");
+    string maskname = parser.get<string>("m");
     Mat img = imread(filename);
     Mat tmpl = imread(tmplname);
     Mat mask = imread(maskname);

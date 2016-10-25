@@ -42,785 +42,51 @@
 //M*/
 
 #include "precomp.hpp"
+
 #include "opencl_kernels_core.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #ifdef __APPLE__
 #undef CV_NEON
 #define CV_NEON 0
 #endif
 
-namespace cv
-{
+#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/cn) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
 
 /****************************************************************************************\
 *                                       split & merge                                    *
 \****************************************************************************************/
 
-#if CV_NEON
-template<typename T> struct VSplit2;
-template<typename T> struct VSplit3;
-template<typename T> struct VSplit4;
-
-#define SPLIT2_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
-    template<>                                                                    \
-    struct name<data_type>                                                        \
-    {                                                                             \
-        void operator()(const data_type* src, data_type* dst0,                    \
-                        data_type* dst1) const                                    \
-        {                                                                         \
-            reg_type r = load_func(src);                                          \
-            store_func(dst0, r.val[0]);                                           \
-            store_func(dst1, r.val[1]);                                           \
-        }                                                                         \
-    }
-
-#define SPLIT3_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
-    template<>                                                                    \
-    struct name<data_type>                                                        \
-    {                                                                             \
-        void operator()(const data_type* src, data_type* dst0, data_type* dst1,   \
-                        data_type* dst2) const                                    \
-        {                                                                         \
-            reg_type r = load_func(src);                                          \
-            store_func(dst0, r.val[0]);                                           \
-            store_func(dst1, r.val[1]);                                           \
-            store_func(dst2, r.val[2]);                                           \
-        }                                                                         \
-    }
-
-#define SPLIT4_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
-    template<>                                                                    \
-    struct name<data_type>                                                        \
-    {                                                                             \
-        void operator()(const data_type* src, data_type* dst0, data_type* dst1,   \
-                        data_type* dst2, data_type* dst3) const                   \
-        {                                                                         \
-            reg_type r = load_func(src);                                          \
-            store_func(dst0, r.val[0]);                                           \
-            store_func(dst1, r.val[1]);                                           \
-            store_func(dst2, r.val[2]);                                           \
-            store_func(dst3, r.val[3]);                                           \
-        }                                                                         \
-    }
-
-SPLIT2_KERNEL_TEMPLATE(VSplit2, uchar ,  uint8x16x2_t, vld2q_u8 , vst1q_u8 );
-SPLIT2_KERNEL_TEMPLATE(VSplit2, ushort,  uint16x8x2_t, vld2q_u16, vst1q_u16);
-SPLIT2_KERNEL_TEMPLATE(VSplit2, int   ,   int32x4x2_t, vld2q_s32, vst1q_s32);
-SPLIT2_KERNEL_TEMPLATE(VSplit2, int64 ,   int64x1x2_t, vld2_s64 , vst1_s64 );
-
-SPLIT3_KERNEL_TEMPLATE(VSplit3, uchar ,  uint8x16x3_t, vld3q_u8 , vst1q_u8 );
-SPLIT3_KERNEL_TEMPLATE(VSplit3, ushort,  uint16x8x3_t, vld3q_u16, vst1q_u16);
-SPLIT3_KERNEL_TEMPLATE(VSplit3, int   ,   int32x4x3_t, vld3q_s32, vst1q_s32);
-SPLIT3_KERNEL_TEMPLATE(VSplit3, int64 ,   int64x1x3_t, vld3_s64 , vst1_s64 );
-
-SPLIT4_KERNEL_TEMPLATE(VSplit4, uchar ,  uint8x16x4_t, vld4q_u8 , vst1q_u8 );
-SPLIT4_KERNEL_TEMPLATE(VSplit4, ushort,  uint16x8x4_t, vld4q_u16, vst1q_u16);
-SPLIT4_KERNEL_TEMPLATE(VSplit4, int   ,   int32x4x4_t, vld4q_s32, vst1q_s32);
-SPLIT4_KERNEL_TEMPLATE(VSplit4, int64 ,   int64x1x4_t, vld4_s64 , vst1_s64 );
-
-#elif CV_SSE2
-
-template <typename T>
-struct VSplit2
-{
-    VSplit2() : support(false) { }
-    void operator()(const T *, T *, T *) const { }
-
-    bool support;
-};
-
-template <typename T>
-struct VSplit3
-{
-    VSplit3() : support(false) { }
-    void operator()(const T *, T *, T *, T *) const { }
-
-    bool support;
-};
-
-template <typename T>
-struct VSplit4
-{
-    VSplit4() : support(false) { }
-    void operator()(const T *, T *, T *, T *, T *) const { }
-
-    bool support;
-};
-
-#define SPLIT2_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_deinterleave, flavor)   \
-template <>                                                                                \
-struct VSplit2<data_type>                                                                  \
-{                                                                                          \
-    enum                                                                                   \
-    {                                                                                      \
-        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
-    };                                                                                     \
-                                                                                           \
-    VSplit2()                                                                              \
-    {                                                                                      \
-        support = checkHardwareSupport(CV_CPU_SSE2);                                       \
-    }                                                                                      \
-                                                                                           \
-    void operator()(const data_type * src,                                                 \
-                    data_type * dst0, data_type * dst1) const                              \
-    {                                                                                      \
-        reg_type v_src0 = _mm_loadu_##flavor((cast_type const *)(src));                    \
-        reg_type v_src1 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC));     \
-        reg_type v_src2 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 2)); \
-        reg_type v_src3 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 3)); \
-                                                                                           \
-        _mm_deinterleave(v_src0, v_src1, v_src2, v_src3);                                  \
-                                                                                           \
-        _mm_storeu_##flavor((cast_type *)(dst0), v_src0);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst0 + ELEMS_IN_VEC), v_src1);                   \
-        _mm_storeu_##flavor((cast_type *)(dst1), v_src2);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst1 + ELEMS_IN_VEC), v_src3);                   \
-    }                                                                                      \
-                                                                                           \
-    bool support;                                                                          \
-}
-
-#define SPLIT3_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_deinterleave, flavor)   \
-template <>                                                                                \
-struct VSplit3<data_type>                                                                  \
-{                                                                                          \
-    enum                                                                                   \
-    {                                                                                      \
-        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
-    };                                                                                     \
-                                                                                           \
-    VSplit3()                                                                              \
-    {                                                                                      \
-        support = checkHardwareSupport(CV_CPU_SSE2);                                       \
-    }                                                                                      \
-                                                                                           \
-    void operator()(const data_type * src,                                                 \
-                    data_type * dst0, data_type * dst1, data_type * dst2) const            \
-    {                                                                                      \
-        reg_type v_src0 = _mm_loadu_##flavor((cast_type const *)(src));                    \
-        reg_type v_src1 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC));     \
-        reg_type v_src2 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 2)); \
-        reg_type v_src3 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 3)); \
-        reg_type v_src4 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 4)); \
-        reg_type v_src5 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 5)); \
-                                                                                           \
-        _mm_deinterleave(v_src0, v_src1, v_src2,                                           \
-                         v_src3, v_src4, v_src5);                                          \
-                                                                                           \
-        _mm_storeu_##flavor((cast_type *)(dst0), v_src0);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst0 + ELEMS_IN_VEC), v_src1);                   \
-        _mm_storeu_##flavor((cast_type *)(dst1), v_src2);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst1 + ELEMS_IN_VEC), v_src3);                   \
-        _mm_storeu_##flavor((cast_type *)(dst2), v_src4);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst2 + ELEMS_IN_VEC), v_src5);                   \
-    }                                                                                      \
-                                                                                           \
-    bool support;                                                                          \
-}
-
-#define SPLIT4_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_deinterleave, flavor)   \
-template <>                                                                                \
-struct VSplit4<data_type>                                                                  \
-{                                                                                          \
-    enum                                                                                   \
-    {                                                                                      \
-        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
-    };                                                                                     \
-                                                                                           \
-    VSplit4()                                                                              \
-    {                                                                                      \
-        support = checkHardwareSupport(CV_CPU_SSE2);                                       \
-    }                                                                                      \
-                                                                                           \
-    void operator()(const data_type * src, data_type * dst0, data_type * dst1,             \
-                    data_type * dst2, data_type * dst3) const                              \
-    {                                                                                      \
-        reg_type v_src0 = _mm_loadu_##flavor((cast_type const *)(src));                    \
-        reg_type v_src1 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC));     \
-        reg_type v_src2 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 2)); \
-        reg_type v_src3 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 3)); \
-        reg_type v_src4 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 4)); \
-        reg_type v_src5 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 5)); \
-        reg_type v_src6 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 6)); \
-        reg_type v_src7 = _mm_loadu_##flavor((cast_type const *)(src + ELEMS_IN_VEC * 7)); \
-                                                                                           \
-        _mm_deinterleave(v_src0, v_src1, v_src2, v_src3,                                   \
-                         v_src4, v_src5, v_src6, v_src7);                                  \
-                                                                                           \
-        _mm_storeu_##flavor((cast_type *)(dst0), v_src0);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst0 + ELEMS_IN_VEC), v_src1);                   \
-        _mm_storeu_##flavor((cast_type *)(dst1), v_src2);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst1 + ELEMS_IN_VEC), v_src3);                   \
-        _mm_storeu_##flavor((cast_type *)(dst2), v_src4);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst2 + ELEMS_IN_VEC), v_src5);                   \
-        _mm_storeu_##flavor((cast_type *)(dst3), v_src6);                                  \
-        _mm_storeu_##flavor((cast_type *)(dst3 + ELEMS_IN_VEC), v_src7);                   \
-    }                                                                                      \
-                                                                                           \
-    bool support;                                                                          \
-}
-
-SPLIT2_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_deinterleave_epi8, si128);
-SPLIT2_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_deinterleave_epi16, si128);
-SPLIT2_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_deinterleave_ps, ps);
-
-SPLIT3_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_deinterleave_epi8, si128);
-SPLIT3_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_deinterleave_epi16, si128);
-SPLIT3_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_deinterleave_ps, ps);
-
-SPLIT4_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_deinterleave_epi8, si128);
-SPLIT4_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_deinterleave_epi16, si128);
-SPLIT4_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_deinterleave_ps, ps);
-
-#endif
-
-template<typename T> static void
-split_( const T* src, T** dst, int len, int cn )
-{
-    int k = cn % 4 ? cn % 4 : 4;
-    int i, j;
-    if( k == 1 )
-    {
-        T* dst0 = dst[0];
-
-        if(cn == 1)
-        {
-            memcpy(dst0, src, len * sizeof(T));
-        }
-        else
-        {
-            for( i = 0, j = 0 ; i < len; i++, j += cn )
-                dst0[i] = src[j];
-        }
-    }
-    else if( k == 2 )
-    {
-        T *dst0 = dst[0], *dst1 = dst[1];
-        i = j = 0;
-
-#if CV_NEON
-        if(cn == 2)
-        {
-            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
-            int inc_j = 2 * inc_i;
-
-            VSplit2<T> vsplit;
-            for( ; i < len - inc_i; i += inc_i, j += inc_j)
-                vsplit(src + j, dst0 + i, dst1 + i);
-        }
-#elif CV_SSE2
-        if (cn == 2)
-        {
-            int inc_i = 32/sizeof(T);
-            int inc_j = 2 * inc_i;
-
-            VSplit2<T> vsplit;
-            if (vsplit.support)
-            {
-                for( ; i <= len - inc_i; i += inc_i, j += inc_j)
-                    vsplit(src + j, dst0 + i, dst1 + i);
-            }
-        }
-#endif
-        for( ; i < len; i++, j += cn )
-        {
-            dst0[i] = src[j];
-            dst1[i] = src[j+1];
-        }
-    }
-    else if( k == 3 )
-    {
-        T *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2];
-        i = j = 0;
-
-#if CV_NEON
-        if(cn == 3)
-        {
-            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
-            int inc_j = 3 * inc_i;
-
-            VSplit3<T> vsplit;
-            for( ; i <= len - inc_i; i += inc_i, j += inc_j)
-                vsplit(src + j, dst0 + i, dst1 + i, dst2 + i);
-        }
-#elif CV_SSE2
-        if (cn == 3)
-        {
-            int inc_i = 32/sizeof(T);
-            int inc_j = 3 * inc_i;
-
-            VSplit3<T> vsplit;
-
-            if (vsplit.support)
-            {
-                for( ; i <= len - inc_i; i += inc_i, j += inc_j)
-                    vsplit(src + j, dst0 + i, dst1 + i, dst2 + i);
-            }
-        }
-#endif
-        for( ; i < len; i++, j += cn )
-        {
-            dst0[i] = src[j];
-            dst1[i] = src[j+1];
-            dst2[i] = src[j+2];
-        }
-    }
-    else
-    {
-        T *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3];
-        i = j = 0;
-
-#if CV_NEON
-        if(cn == 4)
-        {
-            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
-            int inc_j = 4 * inc_i;
-
-            VSplit4<T> vsplit;
-            for( ; i <= len - inc_i; i += inc_i, j += inc_j)
-                vsplit(src + j, dst0 + i, dst1 + i, dst2 + i, dst3 + i);
-        }
-#elif CV_SSE2
-        if (cn == 4)
-        {
-            int inc_i = 32/sizeof(T);
-            int inc_j = 4 * inc_i;
-
-            VSplit4<T> vsplit;
-            if (vsplit.support)
-            {
-                for( ; i <= len - inc_i; i += inc_i, j += inc_j)
-                    vsplit(src + j, dst0 + i, dst1 + i, dst2 + i, dst3 + i);
-            }
-        }
-#endif
-        for( ; i < len; i++, j += cn )
-        {
-            dst0[i] = src[j]; dst1[i] = src[j+1];
-            dst2[i] = src[j+2]; dst3[i] = src[j+3];
-        }
-    }
-
-    for( ; k < cn; k += 4 )
-    {
-        T *dst0 = dst[k], *dst1 = dst[k+1], *dst2 = dst[k+2], *dst3 = dst[k+3];
-        for( i = 0, j = k; i < len; i++, j += cn )
-        {
-            dst0[i] = src[j]; dst1[i] = src[j+1];
-            dst2[i] = src[j+2]; dst3[i] = src[j+3];
-        }
-    }
-}
-
-
-#if CV_NEON
-template<typename T> struct VMerge2;
-template<typename T> struct VMerge3;
-template<typename T> struct VMerge4;
-
-#define MERGE2_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
-    template<>                                                                    \
-    struct name<data_type>{                                                       \
-        void operator()(const data_type* src0, const data_type* src1,             \
-                        data_type* dst){                                          \
-            reg_type r;                                                           \
-            r.val[0] = load_func(src0);                                           \
-            r.val[1] = load_func(src1);                                           \
-            store_func(dst, r);                                                   \
-        }                                                                         \
-    }
-
-#define MERGE3_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
-    template<>                                                                    \
-    struct name<data_type>{                                                       \
-        void operator()(const data_type* src0, const data_type* src1,             \
-                        const data_type* src2, data_type* dst){                   \
-            reg_type r;                                                           \
-            r.val[0] = load_func(src0);                                           \
-            r.val[1] = load_func(src1);                                           \
-            r.val[2] = load_func(src2);                                           \
-            store_func(dst, r);                                                   \
-        }                                                                         \
-    }
-
-#define MERGE4_KERNEL_TEMPLATE(name, data_type, reg_type, load_func, store_func)  \
-    template<>                                                                    \
-    struct name<data_type>{                                                       \
-        void operator()(const data_type* src0, const data_type* src1,             \
-                        const data_type* src2, const data_type* src3,             \
-                        data_type* dst){                                          \
-            reg_type r;                                                           \
-            r.val[0] = load_func(src0);                                           \
-            r.val[1] = load_func(src1);                                           \
-            r.val[2] = load_func(src2);                                           \
-            r.val[3] = load_func(src3);                                           \
-            store_func(dst, r);                                                   \
-        }                                                                         \
-    }
-
-MERGE2_KERNEL_TEMPLATE(VMerge2, uchar ,  uint8x16x2_t, vld1q_u8 , vst2q_u8 );
-MERGE2_KERNEL_TEMPLATE(VMerge2, ushort,  uint16x8x2_t, vld1q_u16, vst2q_u16);
-MERGE2_KERNEL_TEMPLATE(VMerge2, int   ,   int32x4x2_t, vld1q_s32, vst2q_s32);
-MERGE2_KERNEL_TEMPLATE(VMerge2, int64 ,   int64x1x2_t, vld1_s64 , vst2_s64 );
-
-MERGE3_KERNEL_TEMPLATE(VMerge3, uchar ,  uint8x16x3_t, vld1q_u8 , vst3q_u8 );
-MERGE3_KERNEL_TEMPLATE(VMerge3, ushort,  uint16x8x3_t, vld1q_u16, vst3q_u16);
-MERGE3_KERNEL_TEMPLATE(VMerge3, int   ,   int32x4x3_t, vld1q_s32, vst3q_s32);
-MERGE3_KERNEL_TEMPLATE(VMerge3, int64 ,   int64x1x3_t, vld1_s64 , vst3_s64 );
-
-MERGE4_KERNEL_TEMPLATE(VMerge4, uchar ,  uint8x16x4_t, vld1q_u8 , vst4q_u8 );
-MERGE4_KERNEL_TEMPLATE(VMerge4, ushort,  uint16x8x4_t, vld1q_u16, vst4q_u16);
-MERGE4_KERNEL_TEMPLATE(VMerge4, int   ,   int32x4x4_t, vld1q_s32, vst4q_s32);
-MERGE4_KERNEL_TEMPLATE(VMerge4, int64 ,   int64x1x4_t, vld1_s64 , vst4_s64 );
-
-#elif CV_SSE2
-
-template <typename T>
-struct VMerge2
-{
-    VMerge2() : support(false) { }
-    void operator()(const T *, const T *, T *) const { }
-
-    bool support;
-};
-
-template <typename T>
-struct VMerge3
-{
-    VMerge3() : support(false) { }
-    void operator()(const T *, const T *, const T *, T *) const { }
-
-    bool support;
-};
-
-template <typename T>
-struct VMerge4
-{
-    VMerge4() : support(false) { }
-    void operator()(const T *, const T *, const T *, const T *, T *) const { }
-
-    bool support;
-};
-
-#define MERGE2_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor, se) \
-template <>                                                                                \
-struct VMerge2<data_type>                                                                  \
-{                                                                                          \
-    enum                                                                                   \
-    {                                                                                      \
-        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
-    };                                                                                     \
-                                                                                           \
-    VMerge2()                                                                              \
-    {                                                                                      \
-        support = checkHardwareSupport(se);                                                \
-    }                                                                                      \
-                                                                                           \
-    void operator()(const data_type * src0, const data_type * src1,                        \
-                    data_type * dst) const                                                 \
-    {                                                                                      \
-        reg_type v_src0 = _mm_loadu_##flavor((const cast_type *)(src0));                   \
-        reg_type v_src1 = _mm_loadu_##flavor((const cast_type *)(src0 + ELEMS_IN_VEC));    \
-        reg_type v_src2 = _mm_loadu_##flavor((const cast_type *)(src1));                   \
-        reg_type v_src3 = _mm_loadu_##flavor((const cast_type *)(src1 + ELEMS_IN_VEC));    \
-                                                                                           \
-        _mm_interleave(v_src0, v_src1, v_src2, v_src3);                                    \
-                                                                                           \
-        _mm_storeu_##flavor((cast_type *)(dst), v_src0);                                   \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC), v_src1);                    \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 2), v_src2);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 3), v_src3);                \
-    }                                                                                      \
-                                                                                           \
-    bool support;                                                                          \
-}
-
-#define MERGE3_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor, se) \
-template <>                                                                                \
-struct VMerge3<data_type>                                                                  \
-{                                                                                          \
-    enum                                                                                   \
-    {                                                                                      \
-        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
-    };                                                                                     \
-                                                                                           \
-    VMerge3()                                                                              \
-    {                                                                                      \
-        support = checkHardwareSupport(se);                                                \
-    }                                                                                      \
-                                                                                           \
-    void operator()(const data_type * src0, const data_type * src1, const data_type * src2,\
-                    data_type * dst) const                                                 \
-    {                                                                                      \
-        reg_type v_src0 = _mm_loadu_##flavor((const cast_type *)(src0));                   \
-        reg_type v_src1 = _mm_loadu_##flavor((const cast_type *)(src0 + ELEMS_IN_VEC));    \
-        reg_type v_src2 = _mm_loadu_##flavor((const cast_type *)(src1));                   \
-        reg_type v_src3 = _mm_loadu_##flavor((const cast_type *)(src1 + ELEMS_IN_VEC));    \
-        reg_type v_src4 = _mm_loadu_##flavor((const cast_type *)(src2));                   \
-        reg_type v_src5 = _mm_loadu_##flavor((const cast_type *)(src2 + ELEMS_IN_VEC));    \
-                                                                                           \
-        _mm_interleave(v_src0, v_src1, v_src2,                                             \
-                       v_src3, v_src4, v_src5);                                            \
-                                                                                           \
-        _mm_storeu_##flavor((cast_type *)(dst), v_src0);                                   \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC), v_src1);                    \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 2), v_src2);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 3), v_src3);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 4), v_src4);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 5), v_src5);                \
-    }                                                                                      \
-                                                                                           \
-    bool support;                                                                          \
-}
-
-#define MERGE4_KERNEL_TEMPLATE(data_type, reg_type, cast_type, _mm_interleave, flavor, se) \
-template <>                                                                                \
-struct VMerge4<data_type>                                                                  \
-{                                                                                          \
-    enum                                                                                   \
-    {                                                                                      \
-        ELEMS_IN_VEC = 16 / sizeof(data_type)                                              \
-    };                                                                                     \
-                                                                                           \
-    VMerge4()                                                                              \
-    {                                                                                      \
-        support = checkHardwareSupport(se);                                                \
-    }                                                                                      \
-                                                                                           \
-    void operator()(const data_type * src0, const data_type * src1,                        \
-                    const data_type * src2, const data_type * src3,                        \
-                    data_type * dst) const                                                 \
-    {                                                                                      \
-        reg_type v_src0 = _mm_loadu_##flavor((const cast_type *)(src0));                   \
-        reg_type v_src1 = _mm_loadu_##flavor((const cast_type *)(src0 + ELEMS_IN_VEC));    \
-        reg_type v_src2 = _mm_loadu_##flavor((const cast_type *)(src1));                   \
-        reg_type v_src3 = _mm_loadu_##flavor((const cast_type *)(src1 + ELEMS_IN_VEC));    \
-        reg_type v_src4 = _mm_loadu_##flavor((const cast_type *)(src2));                   \
-        reg_type v_src5 = _mm_loadu_##flavor((const cast_type *)(src2 + ELEMS_IN_VEC));    \
-        reg_type v_src6 = _mm_loadu_##flavor((const cast_type *)(src3));                   \
-        reg_type v_src7 = _mm_loadu_##flavor((const cast_type *)(src3 + ELEMS_IN_VEC));    \
-                                                                                           \
-        _mm_interleave(v_src0, v_src1, v_src2, v_src3,                                     \
-                       v_src4, v_src5, v_src6, v_src7);                                    \
-                                                                                           \
-        _mm_storeu_##flavor((cast_type *)(dst), v_src0);                                   \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC), v_src1);                    \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 2), v_src2);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 3), v_src3);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 4), v_src4);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 5), v_src5);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 6), v_src6);                \
-        _mm_storeu_##flavor((cast_type *)(dst + ELEMS_IN_VEC * 7), v_src7);                \
-    }                                                                                      \
-                                                                                           \
-    bool support;                                                                          \
-}
-
-MERGE2_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128, CV_CPU_SSE2);
-MERGE3_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128, CV_CPU_SSE2);
-MERGE4_KERNEL_TEMPLATE( uchar, __m128i, __m128i, _mm_interleave_epi8, si128, CV_CPU_SSE2);
-
-#if CV_SSE4_1
-MERGE2_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128, CV_CPU_SSE4_1);
-MERGE3_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128, CV_CPU_SSE4_1);
-MERGE4_KERNEL_TEMPLATE(ushort, __m128i, __m128i, _mm_interleave_epi16, si128, CV_CPU_SSE4_1);
-#endif
-
-MERGE2_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps, CV_CPU_SSE2);
-MERGE3_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps, CV_CPU_SSE2);
-MERGE4_KERNEL_TEMPLATE(   int,  __m128,   float, _mm_interleave_ps, ps, CV_CPU_SSE2);
-
-#endif
-
-template<typename T> static void
-merge_( const T** src, T* dst, int len, int cn )
-{
-    int k = cn % 4 ? cn % 4 : 4;
-    int i, j;
-    if( k == 1 )
-    {
-        const T* src0 = src[0];
-        for( i = j = 0; i < len; i++, j += cn )
-            dst[j] = src0[i];
-    }
-    else if( k == 2 )
-    {
-        const T *src0 = src[0], *src1 = src[1];
-        i = j = 0;
-#if CV_NEON
-        if(cn == 2)
-        {
-            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
-            int inc_j = 2 * inc_i;
-
-            VMerge2<T> vmerge;
-            for( ; i < len - inc_i; i += inc_i, j += inc_j)
-                vmerge(src0 + i, src1 + i, dst + j);
-        }
-#elif CV_SSE2
-        if(cn == 2)
-        {
-            int inc_i = 32/sizeof(T);
-            int inc_j = 2 * inc_i;
-
-            VMerge2<T> vmerge;
-            if (vmerge.support)
-                for( ; i < len - inc_i; i += inc_i, j += inc_j)
-                    vmerge(src0 + i, src1 + i, dst + j);
-        }
-#endif
-        for( ; i < len; i++, j += cn )
-        {
-            dst[j] = src0[i];
-            dst[j+1] = src1[i];
-        }
-    }
-    else if( k == 3 )
-    {
-        const T *src0 = src[0], *src1 = src[1], *src2 = src[2];
-        i = j = 0;
-#if CV_NEON
-        if(cn == 3)
-        {
-            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
-            int inc_j = 3 * inc_i;
-
-            VMerge3<T> vmerge;
-            for( ; i < len - inc_i; i += inc_i, j += inc_j)
-                vmerge(src0 + i, src1 + i, src2 + i, dst + j);
-        }
-#elif CV_SSE2
-        if(cn == 3)
-        {
-            int inc_i = 32/sizeof(T);
-            int inc_j = 3 * inc_i;
-
-            VMerge3<T> vmerge;
-            if (vmerge.support)
-                for( ; i < len - inc_i; i += inc_i, j += inc_j)
-                    vmerge(src0 + i, src1 + i, src2 + i, dst + j);
-        }
-#endif
-        for( ; i < len; i++, j += cn )
-        {
-            dst[j] = src0[i];
-            dst[j+1] = src1[i];
-            dst[j+2] = src2[i];
-        }
-    }
-    else
-    {
-        const T *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
-        i = j = 0;
-#if CV_NEON
-        if(cn == 4)
-        {
-            int inc_i = (sizeof(T) == 8)? 1: 16/sizeof(T);
-            int inc_j = 4 * inc_i;
-
-            VMerge4<T> vmerge;
-            for( ; i < len - inc_i; i += inc_i, j += inc_j)
-                vmerge(src0 + i, src1 + i, src2 + i, src3 + i, dst + j);
-        }
-#elif CV_SSE2
-        if(cn == 4)
-        {
-            int inc_i = 32/sizeof(T);
-            int inc_j = 4 * inc_i;
-
-            VMerge4<T> vmerge;
-            if (vmerge.support)
-                for( ; i < len - inc_i; i += inc_i, j += inc_j)
-                    vmerge(src0 + i, src1 + i, src2 + i, src3 + i, dst + j);
-        }
-#endif
-        for( ; i < len; i++, j += cn )
-        {
-            dst[j] = src0[i]; dst[j+1] = src1[i];
-            dst[j+2] = src2[i]; dst[j+3] = src3[i];
-        }
-    }
-
-    for( ; k < cn; k += 4 )
-    {
-        const T *src0 = src[k], *src1 = src[k+1], *src2 = src[k+2], *src3 = src[k+3];
-        for( i = 0, j = k; i < len; i++, j += cn )
-        {
-            dst[j] = src0[i]; dst[j+1] = src1[i];
-            dst[j+2] = src2[i]; dst[j+3] = src3[i];
-        }
-    }
-}
-
-static void split8u(const uchar* src, uchar** dst, int len, int cn )
-{
-    split_(src, dst, len, cn);
-}
-
-static void split16u(const ushort* src, ushort** dst, int len, int cn )
-{
-    split_(src, dst, len, cn);
-}
-
-static void split32s(const int* src, int** dst, int len, int cn )
-{
-    split_(src, dst, len, cn);
-}
-
-static void split64s(const int64* src, int64** dst, int len, int cn )
-{
-    split_(src, dst, len, cn);
-}
-
-static void merge8u(const uchar** src, uchar* dst, int len, int cn )
-{
-    merge_(src, dst, len, cn);
-}
-
-static void merge16u(const ushort** src, ushort* dst, int len, int cn )
-{
-    merge_(src, dst, len, cn);
-}
-
-static void merge32s(const int** src, int* dst, int len, int cn )
-{
-    merge_(src, dst, len, cn);
-}
-
-static void merge64s(const int64** src, int64* dst, int len, int cn )
-{
-    merge_(src, dst, len, cn);
-}
-
 typedef void (*SplitFunc)(const uchar* src, uchar** dst, int len, int cn);
-typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
 
 static SplitFunc getSplitFunc(int depth)
 {
     static SplitFunc splitTab[] =
     {
-        (SplitFunc)GET_OPTIMIZED(split8u), (SplitFunc)GET_OPTIMIZED(split8u), (SplitFunc)GET_OPTIMIZED(split16u), (SplitFunc)GET_OPTIMIZED(split16u),
-        (SplitFunc)GET_OPTIMIZED(split32s), (SplitFunc)GET_OPTIMIZED(split32s), (SplitFunc)GET_OPTIMIZED(split64s), 0
+        (SplitFunc)GET_OPTIMIZED(cv::hal::split8u), (SplitFunc)GET_OPTIMIZED(cv::hal::split8u), (SplitFunc)GET_OPTIMIZED(cv::hal::split16u), (SplitFunc)GET_OPTIMIZED(cv::hal::split16u),
+        (SplitFunc)GET_OPTIMIZED(cv::hal::split32s), (SplitFunc)GET_OPTIMIZED(cv::hal::split32s), (SplitFunc)GET_OPTIMIZED(cv::hal::split64s), 0
     };
 
     return splitTab[depth];
 }
 
+typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
+
 static MergeFunc getMergeFunc(int depth)
 {
     static MergeFunc mergeTab[] =
     {
-        (MergeFunc)GET_OPTIMIZED(merge8u), (MergeFunc)GET_OPTIMIZED(merge8u), (MergeFunc)GET_OPTIMIZED(merge16u), (MergeFunc)GET_OPTIMIZED(merge16u),
-        (MergeFunc)GET_OPTIMIZED(merge32s), (MergeFunc)GET_OPTIMIZED(merge32s), (MergeFunc)GET_OPTIMIZED(merge64s), 0
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), 0
     };
 
     return mergeTab[depth];
 }
 
-}
-
 void cv::split(const Mat& src, Mat* mv)
 {
+    CV_INSTRUMENT_REGION()
+
     int k, depth = src.depth(), cn = src.channels();
     if( cn == 1 )
     {
@@ -831,8 +97,8 @@ void cv::split(const Mat& src, Mat* mv)
     SplitFunc func = getSplitFunc(depth);
     CV_Assert( func != 0 );
 
-    int esz = (int)src.elemSize(), esz1 = (int)src.elemSize1();
-    int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
+    size_t esz = src.elemSize(), esz1 = src.elemSize1();
+    size_t blocksize0 = (BLOCK_SIZE + esz-1)/esz;
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -845,14 +111,15 @@ void cv::split(const Mat& src, Mat* mv)
     }
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
+    size_t total = it.size;
+    size_t blocksize = std::min((size_t)CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn), cn <= 4 ? total : std::min(total, blocksize0));
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        for( int j = 0; j < total; j += blocksize )
+        for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
-            func( ptrs[0], &ptrs[1], bsz, cn );
+            size_t bsz = std::min(total - j, blocksize);
+            func( ptrs[0], &ptrs[1], (int)bsz, cn );
 
             if( j + blocksize < total )
             {
@@ -902,7 +169,7 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
         argidx = k.set(argidx, ocl::KernelArg::WriteOnlyNoSize(dst[i]));
     k.set(argidx, rowsPerWI);
 
-    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -912,6 +179,8 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 
 void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
                ocl_split(_m, _mv))
 
@@ -924,11 +193,10 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 
     CV_Assert( !_mv.fixedType() || _mv.empty() || _mv.type() == m.depth() );
 
-    Size size = m.size();
     int depth = m.depth(), cn = m.channels();
     _mv.create(cn, 1, depth);
     for (int i = 0; i < cn; ++i)
-        _mv.create(size, depth, i);
+        _mv.create(m.dims, m.size.p, depth, i);
 
     std::vector<Mat> dst;
     _mv.getMatVector(dst);
@@ -938,6 +206,8 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( mv && n > 0 );
 
     int depth = mv[0].depth();
@@ -980,8 +250,11 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         return;
     }
 
+    MergeFunc func = getMergeFunc(depth);
+    CV_Assert( func != 0 );
+
     size_t esz = dst.elemSize(), esz1 = dst.elemSize1();
-    int blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
+    size_t blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -991,15 +264,15 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         arrays[k+1] = &mv[k];
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
-    MergeFunc func = getMergeFunc(depth);
+    size_t total = (int)it.size;
+    size_t blocksize = std::min((size_t)CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn), cn <= 4 ? total : std::min(total, blocksize0));
 
     for( i = 0; i < it.nplanes; i++, ++it )
     {
-        for( int j = 0; j < total; j += blocksize )
+        for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
-            func( (const uchar**)&ptrs[1], ptrs[0], bsz, cn );
+            size_t bsz = std::min(total - j, blocksize);
+            func( (const uchar**)&ptrs[1], ptrs[0], (int)bsz, cn );
 
             if( j + blocksize < total )
             {
@@ -1069,7 +342,7 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
     argidx = k.set(argidx, ocl::KernelArg::WriteOnly(dst));
     k.set(argidx, rowsPerWI);
 
-    size_t globalsize[2] = { dst.cols, (dst.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1079,6 +352,8 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_mv.isUMatVector() && _dst.isUMat(),
                ocl_merge(_mv, _dst))
 
@@ -1173,6 +448,8 @@ static MixChannelsFunc getMixchFunc(int depth)
 
 void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
+    CV_INSTRUMENT_REGION()
+
     if( npairs == 0 )
         return;
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
@@ -1338,7 +615,7 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
     argindex = k.set(argindex, size.width);
     k.set(argindex, rowsPerWI);
 
-    size_t globalsize[2] = { size.width, (size.height + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -1349,6 +626,8 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
+    CV_INSTRUMENT_REGION()
+
     if (npairs == 0 || fromTo == NULL)
         return;
 
@@ -1378,6 +657,8 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                      const std::vector<int>& fromTo)
 {
+    CV_INSTRUMENT_REGION()
+
     if (fromTo.empty())
         return;
 
@@ -1406,6 +687,8 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( 0 <= coi && coi < cn );
     int ch[] = { coi, 0 };
@@ -1427,6 +710,8 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 
 void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
     CV_Assert( _src.sameSize(_dst) && sdepth == ddepth );
@@ -5095,6 +4380,260 @@ struct Cvt_SIMD<float, int>
 
 #endif
 
+#if !CV_FP16_TYPE
+// const numbers for floating points format
+const unsigned int kShiftSignificand    = 13;
+const unsigned int kMaskFp16Significand = 0x3ff;
+const unsigned int kBiasFp16Exponent    = 15;
+const unsigned int kBiasFp32Exponent    = 127;
+#endif
+
+#if CV_FP16_TYPE
+static float convertFp16SW(short fp16)
+{
+    // Fp16 -> Fp32
+    Cv16suf a;
+    a.i = fp16;
+    return (float)a.h;
+}
+#else
+static float convertFp16SW(short fp16)
+{
+    // Fp16 -> Fp32
+    Cv16suf b;
+    b.i = fp16;
+    int exponent    = b.fmt.exponent - kBiasFp16Exponent;
+    int significand = b.fmt.significand;
+
+    Cv32suf a;
+    a.i = 0;
+    a.fmt.sign = b.fmt.sign; // sign bit
+    if( exponent == 16 )
+    {
+        // Inf or NaN
+        a.i = a.i | 0x7F800000;
+        if( significand != 0 )
+        {
+            // NaN
+#if defined(__x86_64__) || defined(_M_X64)
+            // 64bit
+            a.i = a.i | 0x7FC00000;
+#endif
+            a.fmt.significand = a.fmt.significand | (significand << kShiftSignificand);
+        }
+        return a.f;
+    }
+    else if ( exponent == -15 )
+    {
+        // subnormal in Fp16
+        if( significand == 0 )
+        {
+            // zero
+            return a.f;
+        }
+        else
+        {
+            int shift = -1;
+            while( ( significand & 0x400 ) == 0 )
+            {
+                significand = significand << 1;
+                shift++;
+            }
+            significand = significand & kMaskFp16Significand;
+            exponent -= shift;
+        }
+    }
+
+    a.fmt.exponent = (exponent+kBiasFp32Exponent);
+    a.fmt.significand = significand << kShiftSignificand;
+    return a.f;
+}
+#endif
+
+#if CV_FP16_TYPE
+static short convertFp16SW(float fp32)
+{
+    // Fp32 -> Fp16
+    Cv16suf a;
+    a.h = (__fp16)fp32;
+    return a.i;
+}
+#else
+static short convertFp16SW(float fp32)
+{
+    // Fp32 -> Fp16
+    Cv32suf a;
+    a.f = fp32;
+    int exponent    = a.fmt.exponent - kBiasFp32Exponent;
+    int significand = a.fmt.significand;
+
+    Cv16suf result;
+    result.i = 0;
+    unsigned int absolute = a.i & 0x7fffffff;
+    if( 0x477ff000 <= absolute )
+    {
+        // Inf in Fp16
+        result.i = result.i | 0x7C00;
+        if( exponent == 128 && significand != 0 )
+        {
+            // NaN
+            result.i = (short)( result.i | 0x200 | ( significand >> kShiftSignificand ) );
+        }
+    }
+    else if ( absolute < 0x33000001 )
+    {
+        // too small for fp16
+        result.i = 0;
+    }
+    else if ( absolute < 0x33c00000 )
+    {
+        result.i = 1;
+    }
+    else if ( absolute < 0x34200001 )
+    {
+        result.i = 2;
+    }
+    else if ( absolute < 0x387fe000 )
+    {
+        // subnormal in Fp16
+        int fp16Significand = significand | 0x800000;
+        int bitShift = (-exponent) - 1;
+        fp16Significand = fp16Significand >> bitShift;
+
+        // special cases to round up
+        bitShift = exponent + 24;
+        int threshold = ( ( 0x400000 >> bitShift ) | ( ( ( significand & ( 0x800000 >> bitShift ) ) >> ( 126 - a.fmt.exponent ) ) ^ 1 ) );
+        if( threshold <= ( significand & ( 0xffffff >> ( exponent + 25 ) ) ) )
+        {
+            fp16Significand++;
+        }
+        result.i = (short)fp16Significand;
+    }
+    else
+    {
+        // usual situation
+        // exponent
+        result.fmt.exponent = ( exponent + kBiasFp16Exponent );
+
+        // significand;
+        short fp16Significand = (short)(significand >> kShiftSignificand);
+        result.fmt.significand = fp16Significand;
+
+        // special cases to round up
+        short lsb10bitsFp32 = (significand & 0x1fff);
+        short threshold = 0x1000 + ( ( fp16Significand & 0x1 ) ? 0 : 1 );
+        if( threshold <= lsb10bitsFp32 )
+        {
+            result.i++;
+        }
+        else if ( fp16Significand == 0x3ff && exponent == -15)
+        {
+            result.i++;
+        }
+    }
+
+    // sign bit
+    result.fmt.sign = a.fmt.sign;
+    return result.i;
+}
+#endif
+
+// template for FP16 HW conversion function
+template<typename T, typename DT> static void
+cvtScaleHalf_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size);
+
+template<> void
+cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t dstep, Size size)
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    if( checkHardwareSupport(CV_CPU_FP16) )
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
+            if ( ( (intptr_t)dst & 0xf ) == 0 )
+#endif
+            {
+#if CV_FP16 && CV_SIMD128
+                for ( ; x <= size.width - 4; x += 4)
+                {
+                    v_float32x4 v_src = v_load(src + x);
+
+                    v_float16x4 v_dst = v_cvt_f16(v_src);
+
+                    v_store_f16(dst + x, v_dst);
+                }
+#endif
+            }
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+    else
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+}
+
+template<> void
+cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t dstep, Size size)
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    if( checkHardwareSupport(CV_CPU_FP16) )
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
+            if ( ( (intptr_t)src & 0xf ) == 0 )
+#endif
+            {
+#if CV_FP16 && CV_SIMD128
+                for ( ; x <= size.width - 4; x += 4)
+                {
+                    v_float16x4 v_src = v_load_f16(src + x);
+
+                    v_float32x4 v_dst = v_cvt_f32(v_src);
+
+                    v_store(dst + x, v_dst);
+                }
+#endif
+            }
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+    else
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+}
+
 template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
@@ -5182,6 +4721,13 @@ static void cvtScaleAbs##suffix( const stype* src, size_t sstep, const uchar*, s
     tfunc(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
+#define DEF_CVT_SCALE_FP16_FUNC(suffix, stype, dtype) \
+static void cvtScaleHalf##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+dtype* dst, size_t dstep, Size size, double*) \
+{ \
+    cvtScaleHalf_<stype,dtype>(src, sstep, dst, dstep, size); \
+}
+
 #define DEF_CVT_SCALE_FUNC(suffix, stype, dtype, wtype) \
 static void cvtScale##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 dtype* dst, size_t dstep, Size size, double* scale) \
@@ -5194,18 +4740,7 @@ dtype* dst, size_t dstep, Size size, double* scale) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    CV_IPP_CHECK()\
-    {\
-        if (src && dst)\
-        {\
-            if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
-            {\
-                CV_IMPL_ADD(CV_IMPL_IPP)\
-                return; \
-            }\
-            setIppErrorStatus(); \
-        }\
-    }\
+    CV_IPP_RUN(src && dst, CV_INSTRUMENT_FUN_IPP(ippiConvert_##ippFavor, src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
     cvt_(src, sstep, dst, dstep, size); \
 }
 
@@ -5213,18 +4748,7 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    CV_IPP_CHECK()\
-    {\
-        if (src && dst)\
-        {\
-            if (ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
-            {\
-                CV_IMPL_ADD(CV_IMPL_IPP)\
-                return; \
-            }\
-            setIppErrorStatus(); \
-        }\
-    }\
+    CV_IPP_RUN(src && dst, CV_INSTRUMENT_FUN_IPP(ippiConvert_##ippFavor, src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
     cvt_(src, sstep, dst, dstep, size); \
 }
 #else
@@ -5259,6 +4783,9 @@ DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float)
+
+DEF_CVT_SCALE_FP16_FUNC(32f16f, float, short)
+DEF_CVT_SCALE_FP16_FUNC(16f32f, short, float)
 
 DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float)
 DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float)
@@ -5379,6 +4906,17 @@ static BinaryFunc getCvtScaleAbsFunc(int depth)
     };
 
     return cvtScaleAbsTab[depth];
+}
+
+BinaryFunc getConvertFuncFp16(int ddepth)
+{
+    static BinaryFunc cvtTab[] =
+    {
+        0, 0, 0,
+        (BinaryFunc)(cvtScaleHalf32f16f), 0, (BinaryFunc)(cvtScaleHalf16f32f),
+        0, 0,
+    };
+    return cvtTab[CV_MAT_DEPTH(ddepth)];
 }
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth)
@@ -5527,7 +5065,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     else if (wdepth == CV_64F)
         k.args(srcarg, dstarg, alpha, beta);
 
-    size_t globalsize[2] = { src.cols * cn / kercn, (src.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -5537,6 +5075,8 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_convertScaleAbs(_src, _dst, alpha, beta))
 
@@ -5565,8 +5105,54 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
     }
 }
 
+void cv::convertFp16( InputArray _src, OutputArray _dst)
+{
+    CV_INSTRUMENT_REGION()
+
+    Mat src = _src.getMat();
+    int ddepth = 0;
+
+    switch( src.depth() )
+    {
+    case CV_32F:
+        ddepth = CV_16S;
+        break;
+    case CV_16S:
+        ddepth = CV_32F;
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported input depth");
+        return;
+    }
+
+    int type = CV_MAKETYPE(ddepth, src.channels());
+    _dst.create( src.dims, src.size, type );
+    Mat dst = _dst.getMat();
+    BinaryFunc func = getConvertFuncFp16(ddepth);
+    int cn = src.channels();
+    CV_Assert( func != 0 );
+
+    if( src.dims <= 2 )
+    {
+        Size sz = getContinuousSize(src, dst, cn);
+        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, 0);
+    }
+    else
+    {
+        const Mat* arrays[] = {&src, &dst, 0};
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs);
+        Size sz((int)(it.size*cn), 1);
+
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func(ptrs[0], 1, 0, 0, ptrs[1], 1, sz, 0);
+    }
+}
+
 void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
+    CV_INSTRUMENT_REGION()
+
     bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
 
     if( _type < 0 )
@@ -5695,7 +5281,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
         ocl::KernelArg::WriteOnly(dst, dcn, kercn));
 
-    size_t globalSize[2] = { dst.cols * dcn / kercn, (dst.rows + 3) / 4 };
+    size_t globalSize[2] = { (size_t)dst.cols * dcn / kercn, ((size_t)dst.rows + 3) / 4 };
     return k.run(2, globalSize, NULL, false);
 }
 
@@ -5704,7 +5290,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 #if defined(HAVE_IPP)
 namespace ipp {
 
-#if 0 // there are no performance benefits (PR #2653)
+#if IPP_DISABLE_BLOCK // there are no performance benefits (PR #2653)
 class IppLUTParallelBody_LUTC1 : public ParallelLoopBody
 {
 public:
@@ -5791,7 +5377,7 @@ public:
         CV_DbgAssert(lutcn == 3 || lutcn == 4);
         if (lutcn == 3)
         {
-            IppStatus status = ippiCopy_8u_C3P3R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C3P3R, lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -5801,7 +5387,7 @@ public:
         }
         else if (lutcn == 4)
         {
-            IppStatus status = ippiCopy_8u_C4P4R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C4P4R, lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -5834,7 +5420,7 @@ public:
 
         if (lutcn == 3)
         {
-            if (ippiLUTPalette_8u_C3R(
+            if (CV_INSTRUMENT_FUN_IPP(ippiLUTPalette_8u_C3R,
                     src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
             {
@@ -5844,7 +5430,7 @@ public:
         }
         else if (lutcn == 4)
         {
-            if (ippiLUTPalette_8u_C4R(
+            if (CV_INSTRUMENT_FUN_IPP(ippiLUTPalette_8u_C4R,
                     src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
             {
@@ -5860,6 +5446,47 @@ private:
     IppLUTParallelBody_LUTCN& operator=(const IppLUTParallelBody_LUTCN&);
 };
 } // namespace ipp
+
+static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
+{
+    CV_INSTRUMENT_REGION_IPP()
+
+    int lutcn = lut.channels();
+
+    if(src.dims > 2)
+        return false;
+
+    bool ok = false;
+    Ptr<ParallelLoopBody> body;
+
+    size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
+#if IPP_DISABLE_BLOCK // there are no performance benefits (PR #2653)
+    if (lutcn == 1)
+    {
+        ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);
+        body.reset(p);
+    }
+    else
+#endif
+    if ((lutcn == 3 || lutcn == 4) && elemSize1 == 1)
+    {
+        ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTCN(src, lut, dst, &ok);
+        body.reset(p);
+    }
+
+    if (body != NULL && ok)
+    {
+        Range all(0, dst.rows);
+        if (dst.total()>>18)
+            parallel_for_(all, *body, (double)std::max((size_t)1, dst.total()>>16));
+        else
+            (*body)(all);
+        if (ok)
+            return true;
+    }
+
+    return false;
+}
 #endif // IPP
 
 class LUTParallelBody : public ParallelLoopBody
@@ -5909,6 +5536,8 @@ private:
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int cn = _src.channels(), depth = _src.depth();
     int lutcn = _lut.channels();
 
@@ -5923,29 +5552,13 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
+    CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
+
     if (_src.dims() <= 2)
     {
         bool ok = false;
         Ptr<ParallelLoopBody> body;
-#if defined(HAVE_IPP)
-        CV_IPP_CHECK()
-        {
-            size_t elemSize1 = CV_ELEM_SIZE1(dst.depth());
-#if 0 // there are no performance benefits (PR #2653)
-            if (lutcn == 1)
-            {
-                ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTC1(src, lut, dst, &ok);
-                body.reset(p);
-            }
-            else
-#endif
-            if ((lutcn == 3 || lutcn == 4) && elemSize1 == 1)
-            {
-                ParallelLoopBody* p = new ipp::IppLUTParallelBody_LUTCN(src, lut, dst, &ok);
-                body.reset(p);
-            }
-        }
-#endif
+
         if (body == NULL || ok == false)
         {
             ok = false;
@@ -6052,7 +5665,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
                 k.args(srcarg, maskarg, dstarg);
         }
 
-        size_t globalsize[2] = { src.cols, (src.rows + rowsPerWI - 1) / rowsPerWI };
+        size_t globalsize[2] = { (size_t)src.cols, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
         return k.run(2, globalsize, NULL, false);
     }
     else
@@ -6072,6 +5685,8 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
                     int norm_type, int rtype, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     double scale = 1, shift = 0;
     if( norm_type == CV_MINMAX )
     {
@@ -6090,22 +5705,21 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
     if( rtype < 0 )
         rtype = _dst.fixedType() ? _dst.depth() : depth;
-    _dst.createSameSize(_src, CV_MAKETYPE(rtype, cn));
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
 
-    Mat src = _src.getMat(), dst = _dst.getMat();
+    Mat src = _src.getMat();
     if( _mask.empty() )
-        src.convertTo( dst, rtype, scale, shift );
+        src.convertTo( _dst, rtype, scale, shift );
     else
     {
         Mat temp;
         src.convertTo( temp, rtype, scale, shift );
-        temp.copyTo( dst, _mask );
+        temp.copyTo( _dst, _mask );
     }
 }
 

@@ -377,6 +377,7 @@ private:
         // evaluate kdtree for all parameter combinations
         for (size_t i = 0; i < FLANN_ARRAY_LEN(testTrees); ++i) {
             CostData cost;
+            cost.params["algorithm"] = FLANN_INDEX_KDTREE;
             cost.params["trees"] = testTrees[i];
 
             evaluate_kdtree(cost);

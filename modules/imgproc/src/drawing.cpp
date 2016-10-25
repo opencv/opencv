@@ -45,6 +45,8 @@ namespace cv
 
 enum { XY_SHIFT = 16, XY_ONE = 1 << XY_SHIFT, DRAWING_STORAGE_BLOCK = (1<<12) - 256 };
 
+static const int MAX_THICKNESS = 32767;
+
 struct PolyEdge
 {
     PolyEdge() : y0(0), y1(0), x(0), dx(0), next(0) {}
@@ -77,6 +79,8 @@ FillConvexPoly( Mat& img, const Point* v, int npts,
 
 bool clipLine( Size img_size, Point& pt1, Point& pt2 )
 {
+    CV_INSTRUMENT_REGION()
+
     int64 x1, y1, x2, y2;
     int c1, c2;
     int64 right = img_size.width-1, bottom = img_size.height-1;
@@ -136,6 +140,8 @@ bool clipLine( Size img_size, Point& pt1, Point& pt2 )
 
 bool clipLine( Rect img_rect, Point& pt1, Point& pt2 )
 {
+    CV_INSTRUMENT_REGION()
+
     Point tl = img_rect.tl();
     pt1 -= tl; pt2 -= tl;
     bool inside = clipLine(img_rect.size(), pt1, pt2);
@@ -239,7 +245,7 @@ Line( Mat& img, Point pt1, Point pt2,
 {
     if( connectivity == 0 )
         connectivity = 8;
-    if( connectivity == 1 )
+    else if( connectivity == 1 )
         connectivity = 4;
 
     LineIterator iterator(img, pt1, pt2, connectivity, true);
@@ -288,14 +294,14 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
     int x_step, y_step;
     int i, j;
     int ep_table[9];
-    int cb = ((uchar*)color)[0], cg = ((uchar*)color)[1], cr = ((uchar*)color)[2];
-    int _cb, _cg, _cr;
+    int cb = ((uchar*)color)[0], cg = ((uchar*)color)[1], cr = ((uchar*)color)[2], ca = ((uchar*)color)[3];
+    int _cb, _cg, _cr, _ca;
     int nch = img.channels();
     uchar* ptr = img.ptr();
     size_t step = img.step;
     Size size = img.size();
 
-    if( !((nch == 1 || nch == 3) && img.depth() == CV_8U) )
+    if( !((nch == 1 || nch == 3 || nch == 4) && img.depth() == CV_8U) )
     {
         Line(img, pt1, pt2, color);
         return;
@@ -468,7 +474,7 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
         }
         #undef ICV_PUT_POINT
     }
-    else
+    else if(nch == 1)
     {
         #define  ICV_PUT_POINT()            \
         {                                   \
@@ -531,6 +537,89 @@ LineAA( Mat& img, Point pt1, Point pt2, const void* color )
                 ICV_PUT_POINT();
 
                 tptr++;
+                a = (ep_corr * FilterTable[63 - dist] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                pt1.x += x_step;
+                ptr += step;
+                scount++;
+                ecount--;
+            }
+        }
+        #undef ICV_PUT_POINT
+    }
+    else
+    {
+        #define  ICV_PUT_POINT()            \
+        {                                   \
+            _cb = tptr[0];                  \
+            _cb += ((cb - _cb)*a + 127)>> 8;\
+            _cg = tptr[1];                  \
+            _cg += ((cg - _cg)*a + 127)>> 8;\
+            _cr = tptr[2];                  \
+            _cr += ((cr - _cr)*a + 127)>> 8;\
+            _ca = tptr[3];                  \
+            _ca += ((ca - _ca)*a + 127)>> 8;\
+            tptr[0] = (uchar)_cb;           \
+            tptr[1] = (uchar)_cg;           \
+            tptr[2] = (uchar)_cr;           \
+            tptr[3] = (uchar)_ca;           \
+        }
+        if( ax > ay )
+        {
+            ptr += (pt1.x >> XY_SHIFT) * 4;
+
+            while( ecount >= 0 )
+            {
+                uchar *tptr = ptr + ((pt1.y >> XY_SHIFT) - 1) * step;
+
+                int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
+                                       (((ecount >= 2) + 1) & (ecount | 2))];
+                int a, dist = (pt1.y >> (XY_SHIFT - 5)) & 31;
+
+                a = (ep_corr * FilterTable[dist + 32] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                tptr += step;
+                a = (ep_corr * FilterTable[dist] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                tptr += step;
+                a = (ep_corr * FilterTable[63 - dist] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                pt1.y += y_step;
+                ptr += 4;
+                scount++;
+                ecount--;
+            }
+        }
+        else
+        {
+            ptr += (pt1.y >> XY_SHIFT) * step;
+
+            while( ecount >= 0 )
+            {
+                uchar *tptr = ptr + ((pt1.x >> XY_SHIFT) - 1) * 4;
+
+                int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
+                                       (((ecount >= 2) + 1) & (ecount | 2))];
+                int a, dist = (pt1.x >> (XY_SHIFT - 5)) & 31;
+
+                a = (ep_corr * FilterTable[dist + 32] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                tptr += 4;
+                a = (ep_corr * FilterTable[dist] >> 8) & 0xff;
+                ICV_PUT_POINT();
+                ICV_PUT_POINT();
+
+                tptr += 4;
                 a = (ep_corr * FilterTable[63 - dist] >> 8) & 0xff;
                 ICV_PUT_POINT();
                 ICV_PUT_POINT();
@@ -837,6 +926,8 @@ void ellipse2Poly( Point center, Size axes, int angle,
                    int arc_start, int arc_end,
                    int delta, std::vector<Point>& pts )
 {
+    CV_INSTRUMENT_REGION()
+
     float alpha, beta;
     double size_a = axes.width, size_b = axes.height;
     double cx = center.x, cy = center.y;
@@ -1569,6 +1660,71 @@ PolyLine( Mat& img, const Point* v, int count, bool is_closed,
     }
 }
 
+/* ----------------------------------------------------------------------------------------- */
+/* ADDING A SET OF PREDEFINED MARKERS WHICH COULD BE USED TO HIGHLIGHT POSITIONS IN AN IMAGE */
+/* ----------------------------------------------------------------------------------------- */
+
+void drawMarker(Mat& img, Point position, const Scalar& color, int markerType, int markerSize, int thickness, int line_type)
+{
+    switch(markerType)
+    {
+    // The cross marker case
+    case MARKER_CROSS:
+        line(img, Point(position.x-(markerSize/2), position.y), Point(position.x+(markerSize/2), position.y), color, thickness, line_type);
+        line(img, Point(position.x, position.y-(markerSize/2)), Point(position.x, position.y+(markerSize/2)), color, thickness, line_type);
+        break;
+
+    // The tilted cross marker case
+    case MARKER_TILTED_CROSS:
+        line(img, Point(position.x-(markerSize/2), position.y-(markerSize/2)), Point(position.x+(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x+(markerSize/2), position.y-(markerSize/2)), Point(position.x-(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
+        break;
+
+    // The star marker case
+    case MARKER_STAR:
+        line(img, Point(position.x-(markerSize/2), position.y), Point(position.x+(markerSize/2), position.y), color, thickness, line_type);
+        line(img, Point(position.x, position.y-(markerSize/2)), Point(position.x, position.y+(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x-(markerSize/2), position.y-(markerSize/2)), Point(position.x+(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x+(markerSize/2), position.y-(markerSize/2)), Point(position.x-(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
+        break;
+
+    // The diamond marker case
+    case MARKER_DIAMOND:
+        line(img, Point(position.x, position.y-(markerSize/2)), Point(position.x+(markerSize/2), position.y), color, thickness, line_type);
+        line(img, Point(position.x+(markerSize/2), position.y), Point(position.x, position.y+(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x, position.y+(markerSize/2)), Point(position.x-(markerSize/2), position.y), color, thickness, line_type);
+        line(img, Point(position.x-(markerSize/2), position.y), Point(position.x, position.y-(markerSize/2)), color, thickness, line_type);
+        break;
+
+    // The square marker case
+    case MARKER_SQUARE:
+        line(img, Point(position.x-(markerSize/2), position.y-(markerSize/2)), Point(position.x+(markerSize/2), position.y-(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x+(markerSize/2), position.y-(markerSize/2)), Point(position.x+(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x+(markerSize/2), position.y+(markerSize/2)), Point(position.x-(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x-(markerSize/2), position.y+(markerSize/2)), Point(position.x-(markerSize/2), position.y-(markerSize/2)), color, thickness, line_type);
+        break;
+
+    // The triangle up marker case
+    case MARKER_TRIANGLE_UP:
+        line(img, Point(position.x-(markerSize/2), position.y+(markerSize/2)), Point(position.x+(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x+(markerSize/2), position.y+(markerSize/2)), Point(position.x, position.y-(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x, position.y-(markerSize/2)), Point(position.x-(markerSize/2), position.y+(markerSize/2)), color, thickness, line_type);
+        break;
+
+    // The triangle down marker case
+    case MARKER_TRIANGLE_DOWN:
+        line(img, Point(position.x-(markerSize/2), position.y-(markerSize/2)), Point(position.x+(markerSize/2), position.y-(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x+(markerSize/2), position.y-(markerSize/2)), Point(position.x, position.y+(markerSize/2)), color, thickness, line_type);
+        line(img, Point(position.x, position.y+(markerSize/2)), Point(position.x-(markerSize/2), position.y-(markerSize/2)), color, thickness, line_type);
+        break;
+
+    // If any number that doesn't exist is entered as marker type, draw a cross marker, to avoid crashes
+    default:
+        drawMarker(img, position, color, MARKER_CROSS, markerSize, thickness, line_type);
+        break;
+    }
+}
+
 /****************************************************************************************\
 *                              External functions                                        *
 \****************************************************************************************/
@@ -1576,12 +1732,14 @@ PolyLine( Mat& img, const Point* v, int count, bool is_closed,
 void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
            int thickness, int line_type, int shift )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
-    CV_Assert( 0 <= thickness && thickness <= 255 );
+    CV_Assert( 0 <= thickness && thickness <= MAX_THICKNESS );
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
@@ -1592,6 +1750,8 @@ void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
 void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
            int thickness, int line_type, int shift, double tipLength)
 {
+    CV_INSTRUMENT_REGION()
+
     const double tipSize = norm(pt1-pt2)*tipLength; // Factor to normalize the size of the tip depending on the length of the arrow
 
     line(img, pt1, pt2, color, thickness, line_type, shift);
@@ -1611,12 +1771,14 @@ void rectangle( InputOutputArray _img, Point pt1, Point pt2,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
 
     if( lineType == CV_AA && img.depth() != CV_8U )
         lineType = 8;
 
-    CV_Assert( thickness <= 255 );
+    CV_Assert( thickness <= MAX_THICKNESS );
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
@@ -1642,6 +1804,8 @@ void rectangle( Mat& img, Rect rec,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
     if( rec.area() > 0 )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
@@ -1652,18 +1816,20 @@ void rectangle( Mat& img, Rect rec,
 void circle( InputOutputArray _img, Point center, int radius,
              const Scalar& color, int thickness, int line_type, int shift )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
-    CV_Assert( radius >= 0 && thickness <= 255 &&
+    CV_Assert( radius >= 0 && thickness <= MAX_THICKNESS &&
         0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
     scalarToRawData(color, buf, img.type(), 0);
 
-    if( thickness > 1 || line_type >= CV_AA )
+    if( thickness > 1 || line_type != LINE_8 || shift > 0 )
     {
         center.x <<= XY_SHIFT - shift;
         center.y <<= XY_SHIFT - shift;
@@ -1680,13 +1846,15 @@ void ellipse( InputOutputArray _img, Point center, Size axes,
               double angle, double start_angle, double end_angle,
               const Scalar& color, int thickness, int line_type, int shift )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
     CV_Assert( axes.width >= 0 && axes.height >= 0 &&
-        thickness <= 255 && 0 <= shift && shift <= XY_SHIFT );
+        thickness <= MAX_THICKNESS && 0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
     scalarToRawData(color, buf, img.type(), 0);
@@ -1706,13 +1874,15 @@ void ellipse( InputOutputArray _img, Point center, Size axes,
 void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
              int thickness, int lineType)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
 
     if( lineType == CV_AA && img.depth() != CV_8U )
         lineType = 8;
 
     CV_Assert( box.size.width >= 0 && box.size.height >= 0 &&
-               thickness <= 255 );
+               thickness <= MAX_THICKNESS );
 
     double buf[4];
     scalarToRawData(color, buf, img.type(), 0);
@@ -1728,6 +1898,8 @@ void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
 void fillConvexPoly( Mat& img, const Point* pts, int npts,
                      const Scalar& color, int line_type, int shift )
 {
+    CV_INSTRUMENT_REGION()
+
     if( !pts || npts <= 0 )
         return;
 
@@ -1745,6 +1917,8 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
                const Scalar& color, int line_type,
                int shift, Point offset )
 {
+    CV_INSTRUMENT_REGION()
+
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
@@ -1770,11 +1944,13 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
 void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
                 const Scalar& color, int thickness, int line_type, int shift )
 {
+    CV_INSTRUMENT_REGION()
+
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
     CV_Assert( pts && npts && ncontours >= 0 &&
-               0 <= thickness && thickness <= 255 &&
+               0 <= thickness && thickness <= MAX_THICKNESS &&
                0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
@@ -1858,7 +2034,11 @@ static const int HersheyComplex[] = {
 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2223, 2084,
 2224, 2247, 587, 2249, 2101, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2111,
 2112, 2113, 2114, 2115, 2116, 2117, 2118, 2119, 2120, 2121, 2122, 2123, 2124, 2125, 2126,
-2225, 2229, 2226, 2246 };
+2225, 2229, 2226, 2246, 2801, 2802, 2803, 2804, 2805, 2806, 2807, 2808, 2809, 2810, 2811,
+2812, 2813, 2814, 2815, 2816, 2817, 2818, 2819, 2820, 2821, 2822, 2823, 2824, 2825, 2826,
+2827, 2828, 2829, 2830, 2831, 2832, 2901, 2902, 2903, 2904, 2905, 2906, 2907, 2908, 2909,
+2910, 2911, 2912, 2913, 2914, 2915, 2916, 2917, 2918, 2919, 2920, 2921, 2922, 2923, 2924,
+2925, 2926, 2927, 2928, 2929, 2930, 2931, 2932};
 
 static const int HersheyComplexItalic[] = {
 (9 + 12*16) + FONT_ITALIC_ALPHA + FONT_ITALIC_DIGIT + FONT_ITALIC_PUNCT +
@@ -1950,6 +2130,50 @@ static const int* getFontData(int fontFace)
     return ascii;
 }
 
+inline void readCheck(int &c, int &i, const String &text, int fontFace)
+{
+
+    int leftBoundary = ' ', rightBoundary = 127;
+
+    if(c >= 0x80 && fontFace == FONT_HERSHEY_COMPLEX)
+    {
+        if(c == 0xD0 && (uchar)text[i + 1] >= 0x90 && (uchar)text[i + 1] <= 0xBF)
+        {
+            c = (uchar)text[++i] - 17;
+            leftBoundary = 127;
+            rightBoundary = 175;
+        }
+        else if(c == 0xD1 && (uchar)text[i + 1] >= 0x80 && (uchar)text[i + 1] <= 0x8F)
+        {
+            c = (uchar)text[++i] + 47;
+            leftBoundary = 175;
+            rightBoundary = 191;
+        }
+        else
+        {
+            if(c >= 0xC0 && text[i+1] != 0) //2 bytes utf
+                i++;
+
+            if(c >= 0xE0 && text[i+1] != 0) //3 bytes utf
+                i++;
+
+            if(c >= 0xF0 && text[i+1] != 0) //4 bytes utf
+                i++;
+
+            if(c >= 0xF8 && text[i+1] != 0) //5 bytes utf
+                i++;
+
+            if(c >= 0xFC && text[i+1] != 0) //6 bytes utf
+                i++;
+
+            c = '?';
+        }
+    }
+
+    if(c >= rightBoundary || c < leftBoundary)
+        c = '?';
+}
+
 extern const char* g_HersheyGlyphs[];
 
 void putText( InputOutputArray _img, const String& text, Point org,
@@ -1957,6 +2181,12 @@ void putText( InputOutputArray _img, const String& text, Point org,
               int thickness, int line_type, bool bottomLeftOrigin )
 
 {
+    CV_INSTRUMENT_REGION()
+
+    if ( text.empty() )
+    {
+        return;
+    }
     Mat img = _img.getMat();
     const int* ascii = getFontData(fontFace);
 
@@ -1978,13 +2208,12 @@ void putText( InputOutputArray _img, const String& text, Point org,
     pts.reserve(1 << 10);
     const char **faces = cv::g_HersheyGlyphs;
 
-    for( int i = 0; text[i] != '\0'; i++ )
+    for( int i = 0; i < (int)text.size(); i++ )
     {
         int c = (uchar)text[i];
         Point p;
 
-        if( c >= 127 || c < ' ' )
-            c = '?';
+        readCheck(c, i, text, fontFace);
 
         const char* ptr = faces[ascii[(c-' ')+1]];
         p.x = (uchar)ptr[0] - 'R';
@@ -2026,13 +2255,12 @@ Size getTextSize( const String& text, int fontFace, double fontScale, int thickn
     int cap_line = (ascii[0] >> 4) & 15;
     size.height = cvRound((cap_line + base_line)*fontScale + (thickness+1)/2);
 
-    for( int i = 0; text[i] != '\0'; i++ )
+    for( int i = 0; i < (int)text.size(); i++ )
     {
         int c = (uchar)text[i];
         Point p;
 
-        if( c >= 127 || c < ' ' )
-            c = '?';
+        readCheck(c, i, text, fontFace);
 
         const char* ptr = faces[ascii[(c-' ')+1]];
         p.x = (uchar)ptr[0] - 'R';
@@ -2052,6 +2280,8 @@ Size getTextSize( const String& text, int fontFace, double fontScale, int thickn
 void cv::fillConvexPoly(InputOutputArray _img, InputArray _points,
                         const Scalar& color, int lineType, int shift)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat(), points = _points.getMat();
     CV_Assert(points.checkVector(2, CV_32S) >= 0);
     fillConvexPoly(img, points.ptr<Point>(), points.rows*points.cols*points.channels()/2, color, lineType, shift);
@@ -2061,6 +2291,8 @@ void cv::fillConvexPoly(InputOutputArray _img, InputArray _points,
 void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
                   const Scalar& color, int lineType, int shift, Point offset)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
     int i, ncontours = (int)pts.total();
     if( ncontours == 0 )
@@ -2085,6 +2317,8 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
                    bool isClosed, const Scalar& color,
                    int thickness, int lineType, int shift )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat img = _img.getMat();
     bool manyContours = pts.kind() == _InputArray::STD_VECTOR_VECTOR ||
                         pts.kind() == _InputArray::STD_VECTOR_MAT;
@@ -2100,7 +2334,11 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
     {
         Mat p = pts.getMat(manyContours ? i : -1);
         if( p.total() == 0 )
+        {
+            ptsptr[i] = NULL;
+            npts[i] = 0;
             continue;
+        }
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
         ptsptr[i] = p.ptr<Point>();
         npts[i] = p.rows*p.cols*p.channels()/2;
@@ -2127,10 +2365,10 @@ static void addChildContour(InputArrayOfArrays contours,
 
         int h_next = hierarchy[i][0], h_prev = hierarchy[i][1],
             v_next = hierarchy[i][2], v_prev = hierarchy[i][3];
-        seq[i].h_next = (size_t)h_next < ncontours ? &seq[h_next] : 0;
-        seq[i].h_prev = (size_t)h_prev < ncontours ? &seq[h_prev] : 0;
-        seq[i].v_next = (size_t)v_next < ncontours ? &seq[v_next] : 0;
-        seq[i].v_prev = (size_t)v_prev < ncontours ? &seq[v_prev] : 0;
+        seq[i].h_next = (0 <= h_next && h_next < (int)ncontours) ? &seq[h_next] : 0;
+        seq[i].h_prev = (0 <= h_prev && h_prev < (int)ncontours) ? &seq[h_prev] : 0;
+        seq[i].v_next = (0 <= v_next && v_next < (int)ncontours) ? &seq[v_next] : 0;
+        seq[i].v_prev = (0 <= v_prev && v_prev < (int)ncontours) ? &seq[v_prev] : 0;
 
         if( v_next >= 0 )
             addChildContour(contours, ncontours, hierarchy, v_next, seq, block);
@@ -2143,6 +2381,8 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                    int lineType, InputArray _hierarchy,
                    int maxLevel, Point offset )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
     CvMat _cimage = image;
 
@@ -2246,7 +2486,7 @@ cvDrawContours( void* _img, CvSeq* contour,
     if( !contour )
         return;
 
-    CV_Assert( thickness <= 255 );
+    CV_Assert( thickness <= MAX_THICKNESS );
 
     scalarToRawData( externalColor, ext_buf, img.type(), 0 );
     scalarToRawData( holeColor, hole_buf, img.type(), 0 );

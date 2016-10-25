@@ -4,11 +4,9 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
@@ -17,39 +15,45 @@ using namespace cv;
  */
 int main( int, char** argv )
 {
-
+  //![variables]
   Mat src, src_gray, dst;
   int kernel_size = 3;
   int scale = 1;
   int delta = 0;
   int ddepth = CV_16S;
   const char* window_name = "Laplace Demo";
+  //![variables]
 
-  /// Load an image
-  src = imread( argv[1] );
+  //![load]
+  src = imread( argv[1], IMREAD_COLOR ); // Load an image
 
   if( src.empty() )
     { return -1; }
+  //![load]
 
-  /// Remove noise by blurring with a Gaussian filter
+  //![reduce_noise]
+  /// Reduce noise by blurring with a Gaussian filter
   GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
+  //![reduce_noise]
 
-  /// Convert the image to grayscale
-  cvtColor( src, src_gray, COLOR_RGB2GRAY );
-
-  /// Create window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
+  //![convert_to_gray]
+  cvtColor( src, src_gray, COLOR_BGR2GRAY ); // Convert the image to grayscale
+  //![convert_to_gray]
 
   /// Apply Laplace function
   Mat abs_dst;
-
+  //![laplacian]
   Laplacian( src_gray, dst, ddepth, kernel_size, scale, delta, BORDER_DEFAULT );
+  //![laplacian]
+
+  //![convert]
   convertScaleAbs( dst, abs_dst );
+  //![convert]
 
-  /// Show what you got
+  //![display]
   imshow( window_name, abs_dst );
-
   waitKey(0);
+  //![display]
 
   return 0;
 }

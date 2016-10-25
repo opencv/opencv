@@ -253,7 +253,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpAffine,
     const double aplha = CV_PI / 4;
     const double mat[2 * 3] =
     {
-        std::cos(aplha), -std::sin(aplha), src.cols / 2,
+        std::cos(aplha), -std::sin(aplha), static_cast<double>(src.cols) / 2.0,
         std::sin(aplha),  std::cos(aplha), 0
     };
     const cv::Mat M(2, 3, CV_64F, (void*) mat);
@@ -301,7 +301,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpPerspective,
     declare.in(src, WARMUP_RNG);
 
     const double aplha = CV_PI / 4;
-    double mat[3][3] = { {std::cos(aplha), -std::sin(aplha), src.cols / 2},
+    double mat[3][3] = { {std::cos(aplha), -std::sin(aplha), static_cast<double>(src.cols) / 2.0},
                          {std::sin(aplha),  std::cos(aplha), 0},
                          {0.0,              0.0,             1.0}};
     const cv::Mat M(3, 3, CV_64F, (void*) mat);

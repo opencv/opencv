@@ -100,9 +100,7 @@ PERF_TEST_P(Size_MatType_BorderType, blur16x16,
     BorderType btype = get<2>(GetParam());
     double eps = 1e-3;
 
-#if CV_NEON
     eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : eps;
-#endif
 
     Mat src(size, type);
     Mat dst(size, type);

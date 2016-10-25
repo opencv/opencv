@@ -134,7 +134,7 @@ void cv::cuda::minMax(InputArray _src, double* minVal, double* maxVal, InputArra
         *maxVal = vals[1];
 }
 
-namespace cv { namespace cuda { namespace internal {
+namespace cv { namespace cuda { namespace device {
 
 void findMaxAbs(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream);
 
@@ -155,7 +155,7 @@ namespace
     }
 }
 
-void cv::cuda::internal::findMaxAbs(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
+void cv::cuda::device::findMaxAbs(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _dst, Stream& stream);
     static const func_t funcs[] =

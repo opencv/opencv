@@ -1,11 +1,15 @@
+include(CMakeParseArguments)
+
 # Debugging function
 function(ocv_cmake_dump_vars)
+  set(VARS "")
+  get_cmake_property(_variableNames VARIABLES)
   cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
   set(regex "${DUMP_UNPARSED_ARGUMENTS}")
-  get_cmake_property(_variableNames VARIABLES)
-  set(VARS "")
+  string(TOLOWER "${regex}" regex_lower)
   foreach(_variableName ${_variableNames})
-    if(_variableName MATCHES "${regex}")
+    string(TOLOWER "${_variableName}" _variableName_lower)
+    if(_variableName MATCHES "${regex}" OR _variableName_lower MATCHES "${regex_lower}")
       set(VARS "${VARS}${_variableName}=${${_variableName}}\n")
     endif()
   endforeach()
@@ -16,6 +20,28 @@ function(ocv_cmake_dump_vars)
   endif()
 endfunction()
 
+function(ocv_cmake_eval var_name)
+  if(DEFINED ${var_name})
+    file(WRITE "${CMAKE_BINARY_DIR}/CMakeCommand-${var_name}.cmake" ${${var_name}})
+    include("${CMAKE_BINARY_DIR}/CMakeCommand-${var_name}.cmake")
+  endif()
+  if(";${ARGN};" MATCHES ";ONCE;")
+    unset(${var_name} CACHE)
+  endif()
+endfunction()
+
+macro(ocv_cmake_configure file_name var_name)
+  configure_file(${file_name} "${CMAKE_BINARY_DIR}/CMakeConfig-${var_name}.cmake" ${ARGN})
+  file(READ "${CMAKE_BINARY_DIR}/CMakeConfig-${var_name}.cmake" ${var_name})
+endmacro()
+
+macro(ocv_update VAR)
+  if(NOT DEFINED ${VAR})
+    set(${VAR} ${ARGN})
+  else()
+    #ocv_debug_message("Preserve old value for ${VAR}: ${${VAR}}")
+  endif()
+endmacro()
 
 # Search packages for host system instead of packages for target system
 # in case of cross compilation thess macro should be defined by toolchain file
@@ -58,6 +84,24 @@ macro(ocv_check_environment_variables)
   endforeach()
 endmacro()
 
+macro(ocv_path_join result_var P1 P2_)
+  string(REGEX REPLACE "^[/]+" "" P2 "${P2_}")
+  if("${P1}" STREQUAL "" OR "${P1}" STREQUAL ".")
+    set(${result_var} "${P2}")
+  elseif("${P1}" STREQUAL "/")
+    set(${result_var} "/${P2}")
+  elseif("${P2}" STREQUAL "")
+    set(${result_var} "${P1}")
+  else()
+    set(${result_var} "${P1}/${P2}")
+  endif()
+  string(REGEX REPLACE "([/\\]?)[\\.][/\\]" "\\1" ${result_var} "${${result_var}}")
+  if("${${result_var}}" STREQUAL "")
+    set(${result_var} ".")
+  endif()
+  #message(STATUS "'${P1}' '${P2_}' => '${${result_var}}'")
+endmacro()
+
 # rename modules target to world if needed
 macro(_ocv_fix_target target_var)
   if(BUILD_opencv_world)
@@ -67,14 +111,29 @@ macro(_ocv_fix_target target_var)
   endif()
 endmacro()
 
+function(ocv_is_opencv_directory result_var dir)
+  get_filename_component(__abs_dir "${dir}" ABSOLUTE)
+  if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}"
+      OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}"
+      OR (OPENCV_EXTRA_MODULES_PATH AND "${__abs_dir}" MATCHES "^${OPENCV_EXTRA_MODULES_PATH}"))
+    set(${result_var} 1 PARENT_SCOPE)
+  else()
+    set(${result_var} 0 PARENT_SCOPE)
+  endif()
+endfunction()
+
+
 # adds include directories in such way that directories from the OpenCV source tree go first
 function(ocv_include_directories)
   ocv_debug_message("ocv_include_directories( ${ARGN} )")
   set(__add_before "")
   foreach(dir ${ARGN})
-    get_filename_component(__abs_dir "${dir}" ABSOLUTE)
-    if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}" OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}")
+    ocv_is_opencv_directory(__is_opencv_dir "${dir}")
+    if(__is_opencv_dir)
       list(APPEND __add_before "${dir}")
+    elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+           dir MATCHES "/usr/include$")
+      # workaround for GCC 6.x bug
     else()
       include_directories(AFTER SYSTEM "${dir}")
     endif()
@@ -82,13 +141,28 @@ function(ocv_include_directories)
   include_directories(BEFORE ${__add_before})
 endfunction()
 
+function(ocv_append_target_property target prop)
+  get_target_property(val ${target} ${prop})
+  if(val)
+    set(val "${val} ${ARGN}")
+    set_target_properties(${target} PROPERTIES ${prop} "${val}")
+  else()
+    set_target_properties(${target} PROPERTIES ${prop} "${ARGN}")
+  endif()
+endfunction()
+
 # adds include directories in such way that directories from the OpenCV source tree go first
 function(ocv_target_include_directories target)
   _ocv_fix_target(target)
   set(__params "")
+  if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+      ";${ARGN};" MATCHES "/usr/include;")
+    return() # workaround for GCC 6.x bug
+  endif()
   foreach(dir ${ARGN})
     get_filename_component(__abs_dir "${dir}" ABSOLUTE)
-    if("${__abs_dir}" MATCHES "^${OpenCV_SOURCE_DIR}" OR "${__abs_dir}" MATCHES "^${OpenCV_BINARY_DIR}")
+    ocv_is_opencv_directory(__is_opencv_dir "${dir}")
+    if(__is_opencv_dir)
       list(APPEND __params "${__abs_dir}")
     else()
       list(APPEND __params "${dir}")
@@ -109,6 +183,7 @@ endfunction()
 # clears all passed variables
 macro(ocv_clear_vars)
   foreach(_var ${ARGN})
+    unset(${_var})
     unset(${_var} CACHE)
   endforeach()
 endmacro()
@@ -124,7 +199,7 @@ set(OCV_COMPILER_FAIL_REGEX
     "[Uu]nknown option"                         # HP
     "[Ww]arning: [Oo]ption"                     # SunPro
     "command option .* is not recognized"       # XL
-    "not supported in this configuration; ignored"       # AIX
+    "not supported in this configuration, ignored"       # AIX (';' is replaced with ',')
     "File with unknown suffix passed to linker" # PGI
     "WARNING: unknown flag:"                    # Open64
   )
@@ -163,12 +238,25 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
         COMPILE_DEFINITIONS "${FLAG}"
         OUTPUT_VARIABLE OUTPUT)
 
-      FOREACH(_regex ${OCV_COMPILER_FAIL_REGEX})
-        IF("${OUTPUT}" MATCHES "${_regex}")
-          SET(${RESULT} 0)
-          break()
-        ENDIF()
-      ENDFOREACH()
+      if(${RESULT})
+        string(REPLACE ";" "," OUTPUT_LINES "${OUTPUT}")
+        string(REPLACE "\n" ";" OUTPUT_LINES "${OUTPUT_LINES}")
+        foreach(_regex ${OCV_COMPILER_FAIL_REGEX})
+          if(NOT ${RESULT})
+            break()
+          endif()
+          foreach(_line ${OUTPUT_LINES})
+            if("${_line}" MATCHES "${_regex}")
+              file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+                  "Build output check failed:\n"
+                  "    Regex: '${_regex}'\n"
+                  "    Output line: '${_line}'\n")
+              set(${RESULT} 0)
+              break()
+            endif()
+          endforeach()
+        endforeach()
+      endif()
 
       IF(${RESULT})
         SET(${RESULT} 1 CACHE INTERNAL "Test ${RESULT}")
@@ -176,6 +264,13 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
       ELSE(${RESULT})
         MESSAGE(STATUS "Performing Test ${RESULT} - Failed")
         SET(${RESULT} "" CACHE INTERNAL "Test ${RESULT}")
+        file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+            "Compilation failed:\n"
+            "    source file: '${_fname}'\n"
+            "    check option: '${FLAG}'\n"
+            "===== BUILD LOG =====\n"
+            "${OUTPUT}\n"
+            "===== END =====\n\n")
       ENDIF(${RESULT})
     else()
       SET(${RESULT} 0)
@@ -341,7 +436,7 @@ macro(CHECK_MODULE module_name define)
 endmacro()
 
 
-set(OPENCV_BUILD_INFO_FILE "${OpenCV_BINARY_DIR}/version_string.tmp")
+set(OPENCV_BUILD_INFO_FILE "${CMAKE_BINARY_DIR}/version_string.tmp")
 file(REMOVE "${OPENCV_BUILD_INFO_FILE}")
 function(ocv_output_status msg)
   message(STATUS "${msg}")
@@ -413,31 +508,6 @@ function(status text)
     ocv_output_status("${text}")
   endif()
 endfunction()
-
-
-# splits cmake libraries list of format "general;item1;debug;item2;release;item3" to two lists
-macro(ocv_split_libs_list lst lstdbg lstopt)
-  set(${lstdbg} "")
-  set(${lstopt} "")
-  set(perv_keyword "")
-  foreach(word ${${lst}})
-    if(word STREQUAL "debug" OR word STREQUAL "optimized")
-      set(perv_keyword ${word})
-    elseif(word STREQUAL "general")
-      set(perv_keyword "")
-    elseif(perv_keyword STREQUAL "debug")
-      list(APPEND ${lstdbg} "${word}")
-      set(perv_keyword "")
-    elseif(perv_keyword STREQUAL "optimized")
-      list(APPEND ${lstopt} "${word}")
-      set(perv_keyword "")
-    else()
-      list(APPEND ${lstdbg} "${word}")
-      list(APPEND ${lstopt} "${word}")
-      set(perv_keyword "")
-    endif()
-  endforeach()
-endmacro()
 
 
 # remove all matching elements from the list
@@ -528,17 +598,15 @@ endmacro()
 
 
 # convert list of paths to libraries names without lib prefix
-macro(ocv_convert_to_lib_name var)
-  set(__tmp "")
+function(ocv_convert_to_lib_name var)
+  set(tmp "")
   foreach(path ${ARGN})
-    get_filename_component(__tmp_name "${path}" NAME_WE)
-    string(REGEX REPLACE "^lib" "" __tmp_name ${__tmp_name})
-    list(APPEND __tmp "${__tmp_name}")
+    get_filename_component(tmp_name "${path}" NAME_WE)
+    string(REGEX REPLACE "^lib" "" tmp_name "${tmp_name}")
+    list(APPEND tmp "${tmp_name}")
   endforeach()
-  set(${var} ${__tmp})
-  unset(__tmp)
-  unset(__tmp_name)
-endmacro()
+  set(${var} ${tmp} PARENT_SCOPE)
+endfunction()
 
 
 # add install command
@@ -590,20 +658,22 @@ function(ocv_install_target)
 
 #      message(STATUS "Process ${__target} dst=${__dst}...")
       if(DEFINED __dst)
-        if(CMAKE_VERSION VERSION_LESS 2.8.12)
+        # If CMake version is >=3.1.0 or <2.8.12.
+        if(NOT CMAKE_VERSION VERSION_LESS 3.1.0 OR CMAKE_VERSION VERSION_LESS 2.8.12)
           get_target_property(fname ${__target} LOCATION_DEBUG)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Debug)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug)
           endif()
 
           get_target_property(fname ${__target} LOCATION_RELEASE)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Release)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release)
           endif()
         else()
-          # CMake 2.8.12 brokes PDB support in STATIC libraries for MSVS
+          # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
+          message(WARNING "PDB's are not supported from this version of CMake, use CMake version later then 3.1.0 or before 2.8.12.")
         endif()
       endif()
     endif()
@@ -750,6 +820,9 @@ function(ocv_target_link_libraries target)
       endif()
     endforeach()
   endif()
+  if(";${LINK_DEPS};" MATCHES ";${target};")
+    list(REMOVE_ITEM LINK_DEPS "${target}") # prevent "link to itself" warning (world problem)
+  endif()
   target_link_libraries(${target} ${LINK_DEPS})
 endfunction()
 
@@ -769,32 +842,23 @@ function(ocv_add_executable target)
 endfunction()
 
 function(ocv_add_library target)
-  set(cuda_objs "")
-  if(HAVE_CUDA)
-    set(cuda_srcs "")
-
-    foreach(var ${ARGN})
-      if(var MATCHES ".cu")
-        list(APPEND cuda_srcs ${var})
-      endif()
-    endforeach()
-
-    if(cuda_srcs)
-      ocv_include_directories(${CUDA_INCLUDE_DIRS})
-      ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
-    endif()
+  if(HAVE_CUDA AND ARGN MATCHES "\\.cu")
+    ocv_include_directories(${CUDA_INCLUDE_DIRS})
+    ocv_cuda_compile(cuda_objs ${ARGN})
     set(OPENCV_MODULE_${target}_CUDA_OBJECTS ${cuda_objs} CACHE INTERNAL "Compiled CUDA object files")
   endif()
 
   add_library(${target} ${ARGN} ${cuda_objs})
 
-  # Add OBJECT library to use in compound modules
-  if (NOT OPENCV_MODULE_${target}_CHILDREN
+  # Add OBJECT library (added in cmake 2.8.8) to use in compound modules
+  if (NOT CMAKE_VERSION VERSION_LESS "2.8.8" AND OPENCV_ENABLE_OBJECT_TARGETS
+      AND NOT OPENCV_MODULE_${target}_CHILDREN
       AND NOT OPENCV_MODULE_${target}_CLASS STREQUAL "BINDINGS"
       AND NOT ${target} STREQUAL "opencv_ts"
+      AND (NOT BUILD_opencv_world OR NOT HAVE_CUDA)
     )
     set(sources ${ARGN})
-    ocv_list_filterout(sources "\\\\.(cl|inc)$")
+    ocv_list_filterout(sources "\\\\.(cl|inc|cu)$")
     add_library(${target}_object OBJECT ${sources})
     set_target_properties(${target}_object PROPERTIES
       EXCLUDE_FROM_ALL True
@@ -808,4 +872,166 @@ function(ocv_add_library target)
   endif()
 
   _ocv_append_target_includes(${target})
+endfunction()
+
+# build the list of opencv libs and dependencies for all modules
+#  _modules - variable to hold list of all modules
+#  _extra - variable to hold list of extra dependencies
+#  _3rdparty - variable to hold list of prebuilt 3rdparty libraries
+macro(ocv_get_all_libs _modules _extra _3rdparty)
+  set(${_modules} "")
+  set(${_extra} "")
+  set(${_3rdparty} "")
+  foreach(m ${OPENCV_MODULES_PUBLIC})
+    if(TARGET ${m})
+      get_target_property(deps ${m} INTERFACE_LINK_LIBRARIES)
+      if(NOT deps)
+        set(deps "")
+      endif()
+    else()
+      set(deps "")
+    endif()
+    set(_rev_deps "${deps};${m}")
+    ocv_list_reverse(_rev_deps)
+    foreach (dep ${_rev_deps})
+      if(DEFINED OPENCV_MODULE_${dep}_LOCATION)
+        list(INSERT ${_modules} 0 ${dep})
+      endif()
+    endforeach()
+    foreach (dep ${deps} ${OPENCV_LINKER_LIBS})
+      if (NOT DEFINED OPENCV_MODULE_${dep}_LOCATION)
+        if (TARGET ${dep})
+          get_target_property(_output ${dep} ARCHIVE_OUTPUT_DIRECTORY)
+          if ("${_output}" STREQUAL "${3P_LIBRARY_OUTPUT_PATH}")
+            list(INSERT ${_3rdparty} 0 ${dep})
+          else()
+            list(INSERT ${_extra} 0 ${dep})
+          endif()
+        else()
+          list(INSERT ${_extra} 0 ${dep})
+        endif()
+      endif()
+    endforeach()
+  endforeach()
+
+  # ippicv specific handling
+  list(FIND ${_extra} "ippicv" ippicv_idx)
+  if (${ippicv_idx} GREATER -1)
+    list(REMOVE_ITEM ${_extra} "ippicv")
+    if(NOT BUILD_SHARED_LIBS)
+      list(INSERT ${_3rdparty} 0 "ippicv")
+    endif()
+  endif()
+
+  ocv_list_filterout(${_modules} "^[\$]<")
+  ocv_list_filterout(${_3rdparty} "^[\$]<")
+  ocv_list_filterout(${_extra} "^[\$]<")
+
+  # convert CMake lists to makefile literals
+  foreach(lst ${_modules} ${_3rdparty} ${_extra})
+    ocv_list_unique(${lst})
+    ocv_list_reverse(${lst})
+  endforeach()
+endmacro()
+
+function(ocv_download)
+  cmake_parse_arguments(DL "" "PACKAGE;HASH;URL;DESTINATION_DIR;DOWNLOAD_DIR" "" ${ARGN})
+  if(NOT DL_DOWNLOAD_DIR)
+    set(DL_DOWNLOAD_DIR "${DL_DESTINATION_DIR}/downloads")
+  endif()
+  if(DEFINED DL_DESTINATION_DIR)
+    set(DESTINATION_TARGET "${DL_DESTINATION_DIR}/${DL_PACKAGE}")
+    if(EXISTS "${DESTINATION_TARGET}")
+      file(MD5 "${DESTINATION_TARGET}" target_md5)
+      if(NOT target_md5 STREQUAL DL_HASH)
+        file(REMOVE "${DESTINATION_TARGET}")
+      else()
+        set(DOWNLOAD_PACKAGE_LOCATION "" PARENT_SCOPE)
+        unset(DOWNLOAD_PACKAGE_LOCATION)
+        return()
+      endif()
+    endif()
+  endif()
+  set(DOWNLOAD_TARGET "${DL_DOWNLOAD_DIR}/${DL_HASH}/${DL_PACKAGE}")
+  get_filename_component(DOWNLOAD_TARGET_DIR "${DOWNLOAD_TARGET}" PATH)
+  if(EXISTS "${DOWNLOAD_TARGET}")
+    file(MD5 "${DOWNLOAD_TARGET}" target_md5)
+    if(NOT target_md5 STREQUAL DL_HASH)
+      message(WARNING "Download: Local copy of ${DL_PACKAGE} has invalid MD5 hash: ${target_md5} (expected: ${DL_HASH})")
+      file(REMOVE "${DOWNLOAD_TARGET}")
+      file(REMOVE_RECURSE "${DOWNLOAD_TARGET_DIR}")
+    endif()
+  endif()
+
+  if(NOT EXISTS "${DOWNLOAD_TARGET}")
+    set(__url "")
+    foreach(__url_i ${DL_URL})
+      if(NOT ("${__url_i}" STREQUAL ""))
+        set(__url "${__url_i}")
+        break()
+      endif()
+    endforeach()
+    if("${__url}" STREQUAL "")
+      message(FATAL_ERROR "Download URL is not specified for package ${DL_PACKAGE}")
+    endif()
+
+    if(NOT EXISTS "${DOWNLOAD_TARGET_DIR}")
+      file(MAKE_DIRECTORY ${DOWNLOAD_TARGET_DIR})
+    endif()
+    message(STATUS "Downloading ${DL_PACKAGE}...")
+    #message(STATUS "    ${__url}${DL_PACKAGE}")
+    file(DOWNLOAD "${__url}${DL_PACKAGE}" "${DOWNLOAD_TARGET}"
+         TIMEOUT 600 STATUS __status
+         EXPECTED_MD5 ${DL_HASH})
+    if(NOT __status EQUAL 0)
+      message(FATAL_ERROR "Failed to download ${DL_PACKAGE}. Status=${__status}")
+    else()
+      # Don't remove this code, because EXPECTED_MD5 parameter doesn't fail "file(DOWNLOAD)" step on wrong hash
+      file(MD5 "${DOWNLOAD_TARGET}" target_md5)
+      if(NOT target_md5 STREQUAL DL_HASH)
+        message(FATAL_ERROR "Downloaded copy of ${DL_PACKAGE} has invalid MD5 hash: ${target_md5} (expected: ${DL_HASH})")
+      endif()
+    endif()
+    message(STATUS "Downloading ${DL_PACKAGE}... Done")
+  endif()
+
+  if(DEFINED DL_DESTINATION_DIR)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DOWNLOAD_TARGET}" "${DL_DESTINATION_DIR}/"
+                    RESULT_VARIABLE __result)
+
+    if(NOT __result EQUAL 0)
+      message(FATAL_ERROR "Downloader: Failed to copy package from ${DOWNLOAD_TARGET} to ${DL_DESTINATION_DIR} with error ${__result}")
+    endif()
+  endif()
+
+  set(DOWNLOAD_PACKAGE_LOCATION ${DOWNLOAD_TARGET} PARENT_SCOPE)
+endfunction()
+
+function(ocv_add_test_from_target test_name test_kind the_target)
+  if(CMAKE_VERSION VERSION_GREATER "2.8" AND NOT CMAKE_CROSSCOMPILING)
+    if(NOT "${test_kind}" MATCHES "^(Accuracy|Performance|Sanity)$")
+      message(FATAL_ERROR "Unknown test kind : ${test_kind}")
+    endif()
+    if(NOT TARGET "${the_target}")
+      message(FATAL_ERROR "${the_target} is not a CMake target")
+    endif()
+
+    string(TOLOWER "${test_kind}" test_kind_lower)
+    set(test_report_dir "${CMAKE_BINARY_DIR}/test-reports/${test_kind_lower}")
+    file(MAKE_DIRECTORY "${test_report_dir}")
+
+    add_test(NAME "${test_name}"
+      COMMAND "${the_target}"
+              "--gtest_output=xml:${the_target}.xml"
+              ${ARGN})
+
+    set_tests_properties("${test_name}" PROPERTIES
+      LABELS "${OPENCV_MODULE_${the_module}_LABEL};${test_kind}"
+      WORKING_DIRECTORY "${test_report_dir}")
+
+    if(OPENCV_TEST_DATA_PATH)
+      set_tests_properties("${test_name}" PROPERTIES
+        ENVIRONMENT "OPENCV_TEST_DATA_PATH=${OPENCV_TEST_DATA_PATH}")
+    endif()
+  endif()
 endfunction()

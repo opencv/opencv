@@ -1,4 +1,4 @@
-if(IOS OR APPLE OR (NOT HAVE_CUDA AND NOT BUILD_CUDA_STUBS))
+if(IOS OR APPLE OR WINRT OR (NOT HAVE_CUDA AND NOT BUILD_CUDA_STUBS))
   ocv_module_disable(cudacodec)
 endif()
 
@@ -15,7 +15,9 @@ set(extra_libs "")
 
 if(HAVE_NVCUVID)
   list(APPEND extra_libs ${CUDA_CUDA_LIBRARY} ${CUDA_nvcuvid_LIBRARY})
+endif()
 
+if(HAVE_NVCUVENC)
   if(WIN32)
     list(APPEND extra_libs ${CUDA_nvcuvenc_LIBRARY})
   endif()

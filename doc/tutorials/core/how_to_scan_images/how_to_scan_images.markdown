@@ -51,13 +51,13 @@ three major ways of going through an image pixel by pixel. To make things a litt
 will make the scanning for each image using all of these methods, and print out how long it took.
 
 You can download the full source code [here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp) or look it up in
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp) or look it up in
 the samples directory of OpenCV at the cpp tutorial code for the core section. Its basic usage is:
 @code{.bash}
 how_to_scan_images imageName.jpg intValueToReduce [G]
 @endcode
 The final argument is optional. If given the image will be loaded in gray scale format, otherwise
-the RGB color way is used. The first thing is to calculate the lookup table.
+the BGR color space is used. The first thing is to calculate the lookup table.
 
 @snippet how_to_scan_images.cpp dividewith
 
@@ -88,7 +88,7 @@ case of a gray scale image we have something like:
 ![](tutorial_how_matrix_stored_1.png)
 
 For multichannel images the columns contain as many sub columns as the number of channels. For
-example in case of an RGB color system:
+example in case of an BGR color system:
 
 ![](tutorial_how_matrix_stored_2.png)
 

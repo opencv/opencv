@@ -2,7 +2,10 @@
 #include "precomp.hpp"
 #include "epnp.h"
 
-epnp::epnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& ipoints)
+namespace cv
+{
+
+epnp::epnp(const Mat& cameraMatrix, const Mat& opoints, const Mat& ipoints)
 {
   if (cameraMatrix.depth() == CV_32F)
       init_camera_parameters<float>(cameraMatrix);
@@ -17,14 +20,14 @@ epnp::epnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& i
   if (opoints.depth() == ipoints.depth())
   {
     if (opoints.depth() == CV_32F)
-      init_points<cv::Point3f,cv::Point2f>(opoints, ipoints);
+      init_points<Point3f,Point2f>(opoints, ipoints);
     else
-      init_points<cv::Point3d,cv::Point2d>(opoints, ipoints);
+      init_points<Point3d,Point2d>(opoints, ipoints);
   }
   else if (opoints.depth() == CV_32F)
-    init_points<cv::Point3f,cv::Point2d>(opoints, ipoints);
+    init_points<Point3f,Point2d>(opoints, ipoints);
   else
-    init_points<cv::Point3d,cv::Point2f>(opoints, ipoints);
+    init_points<Point3d,Point2f>(opoints, ipoints);
 
   alphas.resize(4 * number_of_correspondences);
   pcs.resize(3 * number_of_correspondences);
@@ -144,7 +147,7 @@ void epnp::compute_pcs(void)
   }
 }
 
-void epnp::compute_pose(cv::Mat& R, cv::Mat& t)
+void epnp::compute_pose(Mat& R, Mat& t)
 {
   choose_control_points();
   compute_barycentric_coordinates();
@@ -189,8 +192,8 @@ void epnp::compute_pose(cv::Mat& R, cv::Mat& t)
   if (rep_errors[2] < rep_errors[1]) N = 2;
   if (rep_errors[3] < rep_errors[N]) N = 3;
 
-  cv::Mat(3, 1, CV_64F, ts[N]).copyTo(t);
-  cv::Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
+  Mat(3, 1, CV_64F, ts[N]).copyTo(t);
+  Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
 }
 
 void epnp::copy_R_and_t(const double R_src[3][3], const double t_src[3],
@@ -620,4 +623,6 @@ void epnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
     }
     pX[i] = (pb[i] - sum) / A2[i];
   }
+}
+
 }

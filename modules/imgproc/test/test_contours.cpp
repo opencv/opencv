@@ -410,4 +410,83 @@ TEST(Core_Drawing, _914)
     ASSERT_EQ( (3*rows + cols)*3 - 3*9, pixelsDrawn);
 }
 
+TEST(Core_Drawing, polylines_empty)
+{
+    Mat img(100, 100, CV_8UC1, Scalar(0));
+    vector<Point> pts; // empty
+    polylines(img, pts, false, Scalar(255));
+    int cnt = countNonZero(img);
+    ASSERT_EQ(cnt, 0);
+}
+
+TEST(Core_Drawing, polylines)
+{
+    Mat img(100, 100, CV_8UC1, Scalar(0));
+    vector<Point> pts;
+    pts.push_back(Point(0, 0));
+    pts.push_back(Point(20, 0));
+    polylines(img, pts, false, Scalar(255));
+    int cnt = countNonZero(img);
+    ASSERT_EQ(cnt, 21);
+}
+
+//rotate/flip a quadrant appropriately
+static void rot(int n, int *x, int *y, int rx, int ry)
+{
+    if (ry == 0) {
+        if (rx == 1) {
+            *x = n-1 - *x;
+            *y = n-1 - *y;
+        }
+
+        //Swap x and y
+        int t  = *x;
+        *x = *y;
+        *y = t;
+    }
+}
+
+static void d2xy(int n, int d, int *x, int *y)
+{
+    int rx, ry, s, t=d;
+    *x = *y = 0;
+    for (s=1; s<n; s*=2)
+    {
+        rx = 1 & (t/2);
+        ry = 1 & (t ^ rx);
+        rot(s, x, y, rx, ry);
+        *x += s * rx;
+        *y += s * ry;
+        t /= 4;
+    }
+}
+
+TEST(Imgproc_FindContours, hilbert)
+{
+    int n = 64, n2 = n*n, scale = 10, w = (n + 2)*scale;
+    Point ofs(scale, scale);
+    Mat img(w, w, CV_8U);
+    img.setTo(Scalar::all(0));
+
+    Point p(0,0);
+    for( int i = 0; i < n2; i++ )
+    {
+        Point q(0,0);
+        d2xy(n2, i, &q.x, &q.y);
+        line(img, p*scale + ofs, q*scale + ofs, Scalar::all(255));
+        p = q;
+    }
+    dilate(img, img, Mat());
+    vector<vector<Point> > contours;
+    findContours(img, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
+    printf("ncontours = %d, contour[0].npoints=%d\n", (int)contours.size(), (int)contours[0].size());
+    img.setTo(Scalar::all(0));
+
+    drawContours(img, contours, 0, Scalar::all(255), 1);
+    //imshow("hilbert", img);
+    //waitKey();
+    ASSERT_EQ(1, (int)contours.size());
+    ASSERT_EQ(9832, (int)contours[0].size());
+}
+
 /* End of file. */

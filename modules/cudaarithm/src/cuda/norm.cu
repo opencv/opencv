@@ -128,7 +128,7 @@ double cv::cuda::norm(InputArray _src1, InputArray _src2, int normType)
     return val;
 }
 
-namespace cv { namespace cuda { namespace internal {
+namespace cv { namespace cuda { namespace device {
 
 void normL2(cv::InputArray _src, cv::OutputArray _dst, cv::InputArray _mask, Stream& stream);
 
@@ -158,7 +158,7 @@ namespace
     }
 }
 
-void cv::cuda::internal::normL2(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
+void cv::cuda::device::normL2(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _dst, Stream& stream);
     static const func_t funcs[] =

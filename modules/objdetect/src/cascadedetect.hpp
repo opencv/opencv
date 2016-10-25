@@ -5,6 +5,9 @@
 namespace cv
 {
 
+void clipObjects(Size sz, std::vector<Rect>& objects,
+                 std::vector<int>* a, std::vector<double>* b);
+
 class FeatureEvaluator
 {
 public:
@@ -122,9 +125,10 @@ protected:
                             int yStep, double factor, std::vector<Rect>& candidates,
                             std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                             Size sumSize0, bool outputRejectLevels = false );
+#ifdef HAVE_OPENCL
     bool ocl_detectMultiScaleNoGrouping( const std::vector<float>& scales,
                                          std::vector<Rect>& candidates );
-
+#endif
     void detectMultiScaleNoGrouping( InputArray image, std::vector<Rect>& candidates,
                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
@@ -215,8 +219,10 @@ protected:
     Ptr<MaskGenerator> maskGenerator;
     UMat ugrayImage;
     UMat ufacepos, ustages, unodes, uleaves, usubsets;
+#ifdef HAVE_OPENCL
     ocl::Kernel haarKernel, lbpKernel;
     bool tryOpenCL;
+#endif
 
     Mutex mtx;
 };

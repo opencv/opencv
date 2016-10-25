@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    <group android:checkableBehavior="single">
+        <item android:id="@+id/no_proc" android:title="No processing" />
+        <item android:id="@+id/cpu" android:title="Use CPU code" />
+        <item android:id="@+id/ocl_direct" android:title="Use OpenCL direct" />
+        <item android:id="@+id/ocl_ocv" android:title="Use OpenCL via OpenCV" />
+    </group>
+</menu>

@@ -128,7 +128,7 @@ int main()
     //! [show_vectors]
     thick = 2;
     lineType  = 8;
-    Mat sv = svm->getSupportVectors();
+    Mat sv = svm->getUncompressedSupportVectors();
 
     for (int i = 0; i < sv.rows; ++i)
     {

@@ -1178,6 +1178,11 @@ TEST(Core_IOArray, submat_create)
     EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
 }
 
+TEST(Core_Mat, issue4457_pass_null_ptr)
+{
+    ASSERT_ANY_THROW(cv::Mat mask(45, 45, CV_32F, 0));
+}
+
 TEST(Core_Mat, reshape_1942)
 {
     cv::Mat A = (cv::Mat_<float>(2,3) << 3.4884074, 1.4159607, 0.78737736,  2.3456569, -0.88010466, 0.3009364);
@@ -1187,6 +1192,119 @@ TEST(Core_Mat, reshape_1942)
         cn = M.channels();
     );
     ASSERT_EQ(1, cn);
+}
+
+static void check_ndim_shape(const cv::Mat &mat, int cn, int ndims, const int *sizes)
+{
+    EXPECT_EQ(mat.channels(), cn);
+    EXPECT_EQ(mat.dims, ndims);
+
+    if (mat.dims != ndims)
+        return;
+
+    for (int i = 0; i < ndims; i++)
+        EXPECT_EQ(mat.size[i], sizes[i]);
+}
+
+TEST(Core_Mat, reshape_ndims_2)
+{
+    const cv::Mat A(8, 16, CV_8UC3);
+    cv::Mat B;
+
+    {
+        int new_sizes_mask[] = { 0, 3, 4, 4 };
+        int new_sizes_real[] = { 8, 3, 4, 4 };
+        ASSERT_NO_THROW(B = A.reshape(1, 4, new_sizes_mask));
+        check_ndim_shape(B, 1, 4, new_sizes_real);
+    }
+    {
+        int new_sizes[] = { 16, 8 };
+        ASSERT_NO_THROW(B = A.reshape(0, 2, new_sizes));
+        check_ndim_shape(B, 3, 2, new_sizes);
+        EXPECT_EQ(B.rows, new_sizes[0]);
+        EXPECT_EQ(B.cols, new_sizes[1]);
+    }
+    {
+        int new_sizes[] = { 2, 5, 1, 3 };
+        cv::Mat A_sliced = A(cv::Range::all(), cv::Range(0, 15));
+        ASSERT_ANY_THROW(A_sliced.reshape(4, 4, new_sizes));
+    }
+}
+
+TEST(Core_Mat, reshape_ndims_4)
+{
+    const int sizes[] = { 2, 6, 4, 12 };
+    const cv::Mat A(4, sizes, CV_8UC3);
+    cv::Mat B;
+
+    {
+        int new_sizes_mask[] = { 0, 864 };
+        int new_sizes_real[] = { 2, 864 };
+        ASSERT_NO_THROW(B = A.reshape(1, 2, new_sizes_mask));
+        check_ndim_shape(B, 1, 2, new_sizes_real);
+        EXPECT_EQ(B.rows, new_sizes_real[0]);
+        EXPECT_EQ(B.cols, new_sizes_real[1]);
+    }
+    {
+        int new_sizes_mask[] = { 4, 0, 0, 2, 3 };
+        int new_sizes_real[] = { 4, 6, 4, 2, 3 };
+        ASSERT_NO_THROW(B = A.reshape(0, 5, new_sizes_mask));
+        check_ndim_shape(B, 3, 5, new_sizes_real);
+    }
+    {
+        int new_sizes_mask[] = { 1, 1 };
+        ASSERT_ANY_THROW(A.reshape(0, 2, new_sizes_mask));
+    }
+    {
+        int new_sizes_mask[] = { 4, 6, 3, 3, 0 };
+        ASSERT_ANY_THROW(A.reshape(0, 5, new_sizes_mask));
+    }
+}
+
+TEST(Core_Mat, push_back)
+{
+    Mat a = (Mat_<float>(1,2) << 3.4884074f, 1.4159607f);
+    Mat b = (Mat_<float>(1,2) << 0.78737736f, 2.3456569f);
+
+    a.push_back(b);
+
+    ASSERT_EQ(2, a.cols);
+    ASSERT_EQ(2, a.rows);
+
+    ASSERT_FLOAT_EQ(3.4884074f, a.at<float>(0, 0));
+    ASSERT_FLOAT_EQ(1.4159607f, a.at<float>(0, 1));
+    ASSERT_FLOAT_EQ(0.78737736f, a.at<float>(1, 0));
+    ASSERT_FLOAT_EQ(2.3456569f, a.at<float>(1, 1));
+
+    Mat c = (Mat_<float>(2,2) << -0.88010466f, 0.3009364f, 2.22399974f, -5.45933905f);
+
+    ASSERT_EQ(c.rows, a.cols);
+
+    a.push_back(c.t());
+
+    ASSERT_EQ(2, a.cols);
+    ASSERT_EQ(4, a.rows);
+
+    ASSERT_FLOAT_EQ(3.4884074f, a.at<float>(0, 0));
+    ASSERT_FLOAT_EQ(1.4159607f, a.at<float>(0, 1));
+    ASSERT_FLOAT_EQ(0.78737736f, a.at<float>(1, 0));
+    ASSERT_FLOAT_EQ(2.3456569f, a.at<float>(1, 1));
+    ASSERT_FLOAT_EQ(-0.88010466f, a.at<float>(2, 0));
+    ASSERT_FLOAT_EQ(2.22399974f, a.at<float>(2, 1));
+    ASSERT_FLOAT_EQ(0.3009364f, a.at<float>(3, 0));
+    ASSERT_FLOAT_EQ(-5.45933905f, a.at<float>(3, 1));
+
+    a.push_back(Mat::ones(2, 2, CV_32FC1));
+
+    ASSERT_EQ(6, a.rows);
+
+    for(int row=4; row<a.rows; row++) {
+
+        for(int col=0; col<a.cols; col++) {
+
+            ASSERT_FLOAT_EQ(1.f, a.at<float>(row, col));
+        }
+    }
 }
 
 TEST(Core_Mat, copyNx1ToVector)
@@ -1208,4 +1326,223 @@ TEST(Core_Mat, copyNx1ToVector)
     src.convertTo(dst16, CV_16U);
 
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
+}
+
+TEST(Core_Matx, fromMat_)
+{
+    Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
+    Matx22d b(a);
+    ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
+}
+
+TEST(Core_InputArray, empty)
+{
+    vector<vector<Point> > data;
+    ASSERT_TRUE( _InputArray(data).empty() );
+}
+
+TEST(Core_CopyMask, bug1918)
+{
+    Mat_<unsigned char> tmpSrc(100,100);
+    tmpSrc = 124;
+    Mat_<unsigned char> tmpMask(100,100);
+    tmpMask = 255;
+    Mat_<unsigned char> tmpDst(100,100);
+    tmpDst = 2;
+    tmpSrc.copyTo(tmpDst,tmpMask);
+    ASSERT_EQ(sum(tmpDst)[0], 124*100*100);
+}
+
+TEST(Core_SVD, orthogonality)
+{
+    for( int i = 0; i < 2; i++ )
+    {
+        int type = i == 0 ? CV_32F : CV_64F;
+        Mat mat_D(2, 2, type);
+        mat_D.setTo(88.);
+        Mat mat_U, mat_W;
+        SVD::compute(mat_D, mat_W, mat_U, noArray(), SVD::FULL_UV);
+        mat_U *= mat_U.t();
+        ASSERT_LT(norm(mat_U, Mat::eye(2, 2, type), NORM_INF), 1e-5);
+    }
+}
+
+
+TEST(Core_SparseMat, footprint)
+{
+    int n = 1000000;
+    int sz[] = { n, n };
+    SparseMat m(2, sz, CV_64F);
+
+    int nodeSize0 = (int)m.hdr->nodeSize;
+    double dataSize0 = ((double)m.hdr->pool.size() + (double)m.hdr->hashtab.size()*sizeof(size_t))*1e-6;
+    printf("before: node size=%d bytes, data size=%.0f Mbytes\n", nodeSize0, dataSize0);
+
+    for (int i = 0; i < n; i++)
+    {
+        m.ref<double>(i, i) = 1;
+    }
+
+    double dataSize1 = ((double)m.hdr->pool.size() + (double)m.hdr->hashtab.size()*sizeof(size_t))*1e-6;
+    double threshold = (n*nodeSize0*1.6 + n*2.*sizeof(size_t))*1e-6;
+    printf("after: data size=%.0f Mbytes, threshold=%.0f MBytes\n", dataSize1, threshold);
+
+    ASSERT_LE((int)m.hdr->nodeSize, 32);
+    ASSERT_LE(dataSize1, threshold);
+}
+
+
+// Can't fix without dirty hacks or broken user code (PR #4159)
+TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
+{
+    cv::Mat_<uchar> src_base(5, 1);
+    std::vector<uchar> dst8;
+
+    src_base << 1, 2, 3, 4, 5;
+
+    Mat src(src_base);
+    OutputArray _dst(dst8);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+}
+
+TEST(Core_Mat_vector, copyTo_roi_column)
+{
+    cv::Mat_<uchar> src_base(5, 2);
+    std::vector<uchar> dst1;
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.col(0));
+#if 0 // Can't fix without dirty hacks or broken user code (PR #4159)
+    OutputArray _dst(dst1);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+#endif
+
+    std::vector<uchar> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ((size_t)5, dst2.size());
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(3, (int)dst2[1]);
+    EXPECT_EQ(5, (int)dst2[2]);
+    EXPECT_EQ(7, (int)dst2[3]);
+    EXPECT_EQ(9, (int)dst2[4]);
+}
+
+TEST(Core_Mat_vector, copyTo_roi_row)
+{
+    cv::Mat_<uchar> src_base(2, 5);
+    std::vector<uchar> dst1;
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.row(0));
+    OutputArray _dst(dst1);
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+
+    std::vector<uchar> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ((size_t)5, dst2.size());
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(2, (int)dst2[1]);
+    EXPECT_EQ(3, (int)dst2[2]);
+    EXPECT_EQ(4, (int)dst2[3]);
+    EXPECT_EQ(5, (int)dst2[4]);
+}
+
+TEST(Mat, regression_5991)
+{
+    int sz[] = {2,3,2};
+    Mat mat(3, sz, CV_32F, Scalar(1));
+    ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
+    EXPECT_EQ(sz[0], mat.size[0]);
+    EXPECT_EQ(sz[1], mat.size[1]);
+    EXPECT_EQ(sz[2], mat.size[2]);
+    EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+}
+
+#ifdef OPENCV_TEST_BIGDATA
+TEST(Mat, regression_6696_BigData_8Gb)
+{
+    int width = 60000;
+    int height = 10000;
+
+    Mat destImageBGR = Mat(height, width, CV_8UC3, Scalar(1, 2, 3, 0));
+    Mat destImageA = Mat(height, width, CV_8UC1, Scalar::all(4));
+
+    vector<Mat> planes;
+    split(destImageBGR, planes);
+    planes.push_back(destImageA);
+    merge(planes, destImageBGR);
+
+    EXPECT_EQ(1, destImageBGR.at<Vec4b>(0)[0]);
+    EXPECT_EQ(2, destImageBGR.at<Vec4b>(0)[1]);
+    EXPECT_EQ(3, destImageBGR.at<Vec4b>(0)[2]);
+    EXPECT_EQ(4, destImageBGR.at<Vec4b>(0)[3]);
+
+    EXPECT_EQ(1, destImageBGR.at<Vec4b>(height-1, width-1)[0]);
+    EXPECT_EQ(2, destImageBGR.at<Vec4b>(height-1, width-1)[1]);
+    EXPECT_EQ(3, destImageBGR.at<Vec4b>(height-1, width-1)[2]);
+    EXPECT_EQ(4, destImageBGR.at<Vec4b>(height-1, width-1)[3]);
+}
+#endif
+
+TEST(Reduce, regression_should_fail_bug_4594)
+{
+    cv::Mat src = cv::Mat::eye(4, 4, CV_8U);
+    std::vector<int> dst;
+
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MIN, CV_32S), cv::Exception);
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MAX, CV_32S), cv::Exception);
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
+}
+
+TEST(Mat, push_back_vector)
+{
+    cv::Mat result(1, 5, CV_32FC1);
+
+    std::vector<float> vec1(result.cols + 1);
+    std::vector<int> vec2(result.cols);
+
+    EXPECT_THROW(result.push_back(vec1), cv::Exception);
+    EXPECT_THROW(result.push_back(vec2), cv::Exception);
+
+    vec1.resize(result.cols);
+
+    for (int i = 0; i < 5; ++i)
+        result.push_back(cv::Mat(vec1).reshape(1, 1));
+
+    ASSERT_EQ(6, result.rows);
+}
+
+TEST(Mat, regression_5917_clone_empty)
+{
+    Mat cloned;
+    Mat_<Point2f> source(5, 0);
+
+    ASSERT_NO_THROW(cloned = source.clone());
 }

@@ -42,6 +42,10 @@
 
 #include "test_precomp.hpp"
 
+#include <fstream>
+#include <sstream>
+#include <iostream>
+
 using namespace cv;
 using namespace std;
 
@@ -87,6 +91,15 @@ TEST(Imgcodecs_imread, regression)
 {
     const char* const filenames[] =
     {
+#ifdef HAVE_JASPER
+        "Rome.jp2",
+#endif
+#ifdef HAVE_GDCM
+        "int16-mono1.dcm",
+        "uint8-mono2.dcm",
+        "uint16-mono2.dcm",
+        "uint8-rgb.dcm",
+#endif
         "color_palette_alpha.png",
         "multipage.tif",
         "rle.hdr",
@@ -99,15 +112,176 @@ TEST(Imgcodecs_imread, regression)
 
     for (size_t i = 0; i < sizeof(filenames) / sizeof(filenames[0]); ++i)
     {
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_UNCHANGED));
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_GRAYSCALE));
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_COLOR));
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_ANYDEPTH));
-        ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_ANYCOLOR));
-        if (i != 2) // GDAL does not support hdr
-            ASSERT_TRUE(imread_compare(folder + string(filenames[i]), IMREAD_LOAD_GDAL));
+        const string path = folder + string(filenames[i]);
+        ASSERT_TRUE(imread_compare(path, IMREAD_UNCHANGED));
+        ASSERT_TRUE(imread_compare(path, IMREAD_GRAYSCALE));
+        ASSERT_TRUE(imread_compare(path, IMREAD_COLOR));
+        ASSERT_TRUE(imread_compare(path, IMREAD_ANYDEPTH));
+        ASSERT_TRUE(imread_compare(path, IMREAD_ANYCOLOR));
+        const string ext = path.substr( path.length() - 3 );
+        if ( ext != "hdr" && ext != "dcm" )
+        {
+            // GDAL does not support hdr nor dcm
+            ASSERT_TRUE(imread_compare(path, IMREAD_LOAD_GDAL));
+        }
     }
 }
+
+template<class T>
+string to_string(T i)
+{
+    stringstream ss;
+    string s;
+    ss << i;
+    s = ss.str();
+
+    return s;
+}
+
+
+/**
+ * Test for check whether reading exif orientation tag was processed successfully or not
+ * The test info is the set of 8 images named testExifRotate_{1 to 8}.jpg
+ * The test image is the square 10x10 points divided by four sub-squares:
+ * (R corresponds to Red, G to Green, B to Blue, W to white)
+ * ---------             ---------
+ * | R | G |             | G | R |
+ * |-------| - (tag 1)   |-------| - (tag 2)
+ * | B | W |             | W | B |
+ * ---------             ---------
+ *
+ * ---------             ---------
+ * | W | B |             | B | W |
+ * |-------| - (tag 3)   |-------| - (tag 4)
+ * | G | R |             | R | G |
+ * ---------             ---------
+ *
+ * ---------             ---------
+ * | R | B |             | G | W |
+ * |-------| - (tag 5)   |-------| - (tag 6)
+ * | G | W |             | R | B |
+ * ---------             ---------
+ *
+ * ---------             ---------
+ * | W | G |             | B | R |
+ * |-------| - (tag 7)   |-------| - (tag 8)
+ * | B | R |             | W | G |
+ * ---------             ---------
+ *
+ *
+ * Every image contains exif field with orientation tag (0x112)
+ * After reading each image the corresponding matrix must be read as
+ * ---------
+ * | R | G |
+ * |-------|
+ * | B | W |
+ * ---------
+ *
+ */
+class CV_GrfmtJpegExifOrientationTest : public cvtest::BaseTest
+{
+public:
+    void run(int)
+    {
+        try
+        {
+            for( int i = 1; i <= 8; ++i)
+            {
+                string fileName = "readwrite/testExifOrientation_" + to_string(i) + ".jpg";
+                m_img = imread(string(ts->get_data_path()) + fileName);
+                if( !m_img.data )
+                {
+                    ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
+                }
+                ts->printf(cvtest::TS::LOG, "start  reading image\t%s\n", fileName.c_str());
+                if( !checkOrientation() )
+                {
+                    ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+                }
+            }
+
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+        }
+    }
+private:
+    bool checkOrientation();
+    Mat m_img;
+};
+
+
+bool CV_GrfmtJpegExifOrientationTest::checkOrientation()
+{
+    Vec3b vec;
+    int red = 0;
+    int green = 0;
+    int blue = 0;
+
+    const int colorThresholdHigh = 250;
+    const int colorThresholdLow = 5;
+
+    //Checking the first quadrant (with supposed red)
+    vec = m_img.at<Vec3b>(2, 2); //some point inside the square
+    red   = vec.val[2];
+    green = vec.val[1];
+    blue  = vec.val[0];
+
+    ts->printf(cvtest::TS::LOG, "RED QUADRANT:\n");
+    ts->printf(cvtest::TS::LOG, "Red calculated:\t\t%d\n", red);
+    ts->printf(cvtest::TS::LOG, "Green calculated:\t%d\n", green);
+    ts->printf(cvtest::TS::LOG, "Blue calculated:\t%d\n", blue);
+    if( red < colorThresholdHigh ) return false;
+    if( blue > colorThresholdLow ) return false;
+    if( green > colorThresholdLow ) return false;
+
+    //Checking the second quadrant (with supposed green)
+    vec = m_img.at<Vec3b>(2, 7);  //some point inside the square
+    red   = vec.val[2];
+    green = vec.val[1];
+    blue  = vec.val[0];
+    ts->printf(cvtest::TS::LOG, "GREEN QUADRANT:\n");
+    ts->printf(cvtest::TS::LOG, "Red calculated:\t\t%d\n", red);
+    ts->printf(cvtest::TS::LOG, "Green calculated:\t%d\n", green);
+    ts->printf(cvtest::TS::LOG, "Blue calculated:\t%d\n", blue);
+    if( green < colorThresholdHigh ) return false;
+    if( red > colorThresholdLow ) return false;
+    if( blue > colorThresholdLow ) return false;
+
+    //Checking the third quadrant (with supposed blue)
+    vec = m_img.at<Vec3b>(7, 2);  //some point inside the square
+    red   = vec.val[2];
+    green = vec.val[1];
+    blue  = vec.val[0];
+    ts->printf(cvtest::TS::LOG, "BLUE QUADRANT:\n");
+    ts->printf(cvtest::TS::LOG, "Red calculated:\t\t%d\n", red);
+    ts->printf(cvtest::TS::LOG, "Green calculated:\t%d\n", green);
+    ts->printf(cvtest::TS::LOG, "Blue calculated:\t%d\n", blue);
+    if( blue < colorThresholdHigh ) return false;
+    if( red > colorThresholdLow ) return false;
+    if( green > colorThresholdLow ) return false;
+
+    return true;
+}
+
+TEST(Imgcodecs_jpeg_exif, setOrientation)
+{
+    CV_GrfmtJpegExifOrientationTest test;
+    test.safe_run();
+}
+
+#ifdef HAVE_JASPER
+TEST(Imgcodecs_jasper, regression)
+{
+    const string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
+
+    ASSERT_TRUE(imread_compare(folder + "Bretagne2.jp2", IMREAD_COLOR));
+    ASSERT_TRUE(imread_compare(folder + "Bretagne2.jp2", IMREAD_GRAYSCALE));
+    ASSERT_TRUE(imread_compare(folder + "Grey.jp2", IMREAD_COLOR));
+    ASSERT_TRUE(imread_compare(folder + "Grey.jp2", IMREAD_GRAYSCALE));
+}
+#endif
 
 class CV_GrfmtWriteBigImageTest : public cvtest::BaseTest
 {
@@ -142,6 +316,7 @@ string ext_from_int(int ext)
 #ifdef HAVE_TIFF
     if (ext == 3) return ".tiff";
 #endif
+    if (ext == 4) return ".pam";
     return "";
 }
 
@@ -157,7 +332,7 @@ public:
 
             for (int k = 1; k <= 5; ++k)
             {
-                for (int ext = 0; ext < 4; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
+                for (int ext = 0; ext < 5; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
                 {
                     if(ext_from_int(ext).empty())
                         continue;
@@ -654,6 +829,36 @@ TEST(Imgcodecs_Tiff, decode_tile_remainder)
     CV_GrfmtReadTifTiledWithNotFullTiles test; test.safe_run();
 }
 
+TEST(Imgcodecs_Tiff, decode_infinite_rowsperstrip)
+{
+    const uchar sample_data[142] = {
+        0x49, 0x49, 0x2a, 0x00, 0x10, 0x00, 0x00, 0x00, 0x56, 0x54,
+        0x56, 0x5a, 0x59, 0x55, 0x5a, 0x00, 0x0a, 0x00, 0x00, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x07, 0x00,
+        0x00, 0x00, 0x02, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x08, 0x00, 0x00, 0x00, 0x03, 0x01, 0x03, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x01,
+        0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+        0x15, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x16, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0xff, 0xff, 0xff, 0xff, 0x17, 0x01, 0x04, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x1c, 0x01, 0x03, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00
+    };
+
+    const string filename = cv::tempfile(".tiff");
+    std::ofstream outfile(filename.c_str(), std::ofstream::binary);
+    outfile.write(reinterpret_cast<const char *>(sample_data), sizeof sample_data);
+    outfile.close();
+
+    EXPECT_NO_THROW(cv::imread(filename, IMREAD_UNCHANGED));
+
+    remove(filename.c_str());
+}
+
 class CV_GrfmtReadTifMultiPage : public cvtest::BaseTest
 {
 private:
@@ -692,6 +897,19 @@ public:
 TEST(Imgcodecs_Tiff, decode_multipage)
 {
     CV_GrfmtReadTifMultiPage test; test.safe_run();
+}
+
+TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<uchar> buf;
+    EXPECT_NO_THROW(cv::imencode(".tiff", img, buf));
+
+    EXPECT_NO_THROW(cv::imdecode(buf, IMREAD_UNCHANGED));
 }
 
 #endif
@@ -820,4 +1038,28 @@ TEST(Imgcodecs_Hdr, regression)
         minMaxLoc(abs(img_rle - written_img), &min, &max);
         ASSERT_FALSE(max > DBL_EPSILON);
     }
+}
+
+TEST(Imgcodecs_Pam, readwrite)
+{
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "readwrite/";
+    string filepath = folder + "lena.pam";
+
+    cv::Mat img = cv::imread(filepath);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_PAM_TUPLETYPE);
+    params.push_back(IMWRITE_PAM_FORMAT_RGB);
+
+    string writefile = cv::tempfile(".pam");
+    EXPECT_NO_THROW(cv::imwrite(writefile, img, params));
+    cv::Mat reread = cv::imread(writefile);
+
+    string writefile_no_param = cv::tempfile(".pam");
+    EXPECT_NO_THROW(cv::imwrite(writefile_no_param, img));
+    cv::Mat reread_no_param = cv::imread(writefile_no_param);
+
+    EXPECT_EQ(0, cvtest::norm(reread, reread_no_param, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(img, reread, NORM_INF));
 }

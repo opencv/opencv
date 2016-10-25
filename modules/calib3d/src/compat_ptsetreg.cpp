@@ -58,6 +58,7 @@ CvLevMarq::CvLevMarq()
     iters = 0;
     completeSymmFlag = false;
     errNorm = prevErrNorm = DBL_MAX;
+    solveMethod = cv::DECOMP_SVD;
 }
 
 CvLevMarq::CvLevMarq( int nparams, int nerrs, CvTermCriteria criteria0, bool _completeSymmFlag )
@@ -93,9 +94,6 @@ void CvLevMarq::init( int nparams, int nerrs, CvTermCriteria criteria0, bool _co
     prevParam.reset(cvCreateMat( nparams, 1, CV_64F ));
     param.reset(cvCreateMat( nparams, 1, CV_64F ));
     JtJ.reset(cvCreateMat( nparams, nparams, CV_64F ));
-    JtJN.reset(cvCreateMat( nparams, nparams, CV_64F ));
-    JtJV.reset(cvCreateMat( nparams, nparams, CV_64F ));
-    JtJW.reset(cvCreateMat( nparams, 1, CV_64F ));
     JtErr.reset(cvCreateMat( nparams, 1, CV_64F ));
     if( nerrs > 0 )
     {
@@ -116,12 +114,11 @@ void CvLevMarq::init( int nparams, int nerrs, CvTermCriteria criteria0, bool _co
     state = STARTED;
     iters = 0;
     completeSymmFlag = _completeSymmFlag;
+    solveMethod = cv::DECOMP_SVD;
 }
 
 bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
 {
-    double change;
-
     matJ = _err = 0;
 
     assert( !err.empty() );
@@ -174,7 +171,7 @@ bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
 
     lambdaLg10 = MAX(lambdaLg10-1, -16);
     if( ++iters >= criteria.max_iter ||
-        (change = cvNorm(param, prevParam, CV_RELATIVE_L2)) < criteria.epsilon )
+        cvNorm(param, prevParam, CV_RELATIVE_L2) < criteria.epsilon )
     {
         _param = param;
         state = DONE;
@@ -193,8 +190,6 @@ bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
 
 bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, double*& _errNorm )
 {
-    double change;
-
     CV_Assert( !err );
     if( state == DONE )
     {
@@ -243,9 +238,11 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
 
     lambdaLg10 = MAX(lambdaLg10-1, -16);
     if( ++iters >= criteria.max_iter ||
-        (change = cvNorm(param, prevParam, CV_RELATIVE_L2)) < criteria.epsilon )
+        cvNorm(param, prevParam, CV_RELATIVE_L2) < criteria.epsilon )
     {
         _param = param;
+        _JtJ = JtJ;
+        _JtErr = JtErr;
         state = DONE;
         return false;
     }
@@ -260,35 +257,72 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
     return true;
 }
 
+namespace {
+static void subMatrix(const cv::Mat& src, cv::Mat& dst, const std::vector<uchar>& cols,
+                      const std::vector<uchar>& rows) {
+    int nonzeros_cols = cv::countNonZero(cols);
+    cv::Mat tmp(src.rows, nonzeros_cols, CV_64FC1);
+
+    for (int i = 0, j = 0; i < (int)cols.size(); i++)
+    {
+        if (cols[i])
+        {
+            src.col(i).copyTo(tmp.col(j++));
+        }
+    }
+
+    int nonzeros_rows  = cv::countNonZero(rows);
+    dst.create(nonzeros_rows, nonzeros_cols, CV_64FC1);
+    for (int i = 0, j = 0; i < (int)rows.size(); i++)
+    {
+        if (rows[i])
+        {
+            tmp.row(i).copyTo(dst.row(j++));
+        }
+    }
+}
+
+}
+
+
 void CvLevMarq::step()
 {
+    using namespace cv;
     const double LOG10 = log(10.);
     double lambda = exp(lambdaLg10*LOG10);
-    int i, j, nparams = param->rows;
+    int nparams = param->rows;
 
-    for( i = 0; i < nparams; i++ )
-        if( mask->data.ptr[i] == 0 )
-        {
-            double *row = JtJ->data.db + i*nparams, *col = JtJ->data.db + i;
-            for( j = 0; j < nparams; j++ )
-                row[j] = col[j*nparams] = 0;
-            JtErr->data.db[i] = 0;
-        }
+    Mat _JtJ = cvarrToMat(JtJ);
+    Mat _mask = cvarrToMat(mask);
+
+    int nparams_nz = countNonZero(_mask);
+    if(!JtJN || JtJN->rows != nparams_nz) {
+        // prevent re-allocation in every step
+        JtJN.reset(cvCreateMat( nparams_nz, nparams_nz, CV_64F ));
+        JtJV.reset(cvCreateMat( nparams_nz, 1, CV_64F ));
+        JtJW.reset(cvCreateMat( nparams_nz, 1, CV_64F ));
+    }
+
+    Mat _JtJN = cvarrToMat(JtJN);
+    Mat _JtErr = cvarrToMat(JtJV);
+    Mat_<double> nonzero_param = cvarrToMat(JtJW);
+
+    subMatrix(cvarrToMat(JtErr), _JtErr, std::vector<uchar>(1, 1), _mask);
+    subMatrix(_JtJ, _JtJN, _mask, _mask);
 
     if( !err )
-        cvCompleteSymm( JtJ, completeSymmFlag );
+        completeSymm( _JtJN, completeSymmFlag );
+
 #if 1
-    cvCopy( JtJ, JtJN );
-    for( i = 0; i < nparams; i++ )
-        JtJN->data.db[(nparams+1)*i] *= 1. + lambda;
+    _JtJN.diag() *= 1. + lambda;
 #else
-    cvSetIdentity(JtJN, cvRealScalar(lambda));
-    cvAdd( JtJ, JtJN, JtJN );
+    _JtJN.diag() += lambda;
 #endif
-    cvSVD( JtJN, JtJW, 0, JtJV, CV_SVD_MODIFY_A + CV_SVD_U_T + CV_SVD_V_T );
-    cvSVBkSb( JtJW, JtJV, JtJV, JtErr, param, CV_SVD_U_T + CV_SVD_V_T );
-    for( i = 0; i < nparams; i++ )
-        param->data.db[i] = prevParam->data.db[i] - (mask->data.ptr[i] ? param->data.db[i] : 0);
+    solve(_JtJN, _JtErr, nonzero_param, solveMethod);
+
+    int j = 0;
+    for( int i = 0; i < nparams; i++ )
+        param->data.db[i] = prevParam->data.db[i] - (mask->data.ptr[i] ? nonzero_param(j++) : 0);
 }
 
 

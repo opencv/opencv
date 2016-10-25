@@ -1,0 +1,11 @@
+clCreateFromGLBuffer
+clCreateFromGLRenderbuffer
+clCreateFromGLTexture
+clCreateFromGLTexture2D
+clCreateFromGLTexture3D
+clEnqueueAcquireGLObjects
+clEnqueueReleaseGLObjects
+clGetGLContextInfoKHR
+clGetGLObjectInfo
+clGetGLTextureInfo
+#total 10

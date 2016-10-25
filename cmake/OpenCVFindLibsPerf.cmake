@@ -2,6 +2,35 @@
 #  Detect other 3rd-party performance and math libraries
 # ----------------------------------------------------------------------------
 
+# --- Lapack ---
+if(WITH_LAPACK)
+  if(WIN32)
+    set(BLA_STATIC 1)
+  endif()
+  find_package(LAPACK)
+  if(LAPACK_FOUND)
+    find_path(LAPACKE_INCLUDE_DIR "lapacke.h")
+    find_path(MKL_LAPACKE_INCLUDE_DIR "mkl_lapack.h")
+    if(LAPACKE_INCLUDE_DIR OR MKL_LAPACKE_INCLUDE_DIR)
+      find_path(CBLAS_INCLUDE_DIR "cblas.h")
+      find_path(MKL_CBLAS_INCLUDE_DIR "mkl_cblas.h")
+
+      if(CBLAS_INCLUDE_DIR OR MKL_CBLAS_INCLUDE_DIR)
+        set(HAVE_LAPACK 1)
+
+      if(CBLAS_INCLUDE_DIR)
+        ocv_include_directories(${LAPACKE_INCLUDE_DIR} ${CBLAS_INCLUDE_DIR})
+        set(HAVE_LAPACK_GENERIC 1)
+      elseif(MKL_CBLAS_INCLUDE_DIR)
+        ocv_include_directories(${MKL_LAPACKE_INCLUDE_DIR} ${MKL_CBLAS_INCLUDE_DIR})
+        set(HAVE_LAPACK_MKL 1)
+      endif()
+        list(APPEND OPENCV_LINKER_LIBS ${LAPACK_LIBRARIES})
+      endif()
+    endif()
+  endif()
+endif()
+
 # --- TBB ---
 if(WITH_TBB)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
@@ -93,8 +122,25 @@ else()
   set(HAVE_CSTRIPES 0)
 endif()
 
+# --- GCD ---
+if(APPLE AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+  set(HAVE_GCD 1)
+else()
+  set(HAVE_GCD 0)
+endif()
+
+# --- Concurrency ---
+if(MSVC AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
+  file(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
+  try_compile(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}" "${_fname}")
+  file(REMOVE "${_fname}")
+else()
+  set(HAVE_CONCURRENCY 0)
+endif()
+
 # --- OpenMP ---
-if(WITH_OPENMP AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+if(WITH_OPENMP)
   find_package(OpenMP)
   if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -103,19 +149,16 @@ if(WITH_OPENMP AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
   set(HAVE_OPENMP "${OPENMP_FOUND}")
 endif()
 
-# --- GCD ---
-if(APPLE AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES AND NOT HAVE_OPENMP)
-  set(HAVE_GCD 1)
-else()
-  set(HAVE_GCD 0)
+if(NOT MSVC AND NOT DEFINED HAVE_PTHREADS)
+  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/pthread_test.cpp")
+  file(WRITE "${_fname}" "#include <pthread.h>\nint main() { (void)pthread_self(); return 0; }\n")
+  try_compile(HAVE_PTHREADS "${CMAKE_BINARY_DIR}" "${_fname}")
+  file(REMOVE "${_fname}")
 endif()
 
-# --- Concurrency ---
-if(MSVC AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES AND NOT HAVE_OPENMP)
-  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
-  file(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
-  try_compile(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}" "${_fname}")
-  file(REMOVE "${_fname}")
+ocv_clear_vars(HAVE_PTHREADS_PF)
+if(WITH_PTHREADS_PF)
+  set(HAVE_PTHREADS_PF ${HAVE_PTHREADS})
 else()
-  set(HAVE_CONCURRENCY 0)
+  set(HAVE_PTHREADS_PF 0)
 endif()

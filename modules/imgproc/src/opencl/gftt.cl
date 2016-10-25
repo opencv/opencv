@@ -64,7 +64,7 @@ __kernel void maxEigenVal(__global const uchar * srcptr, int src_step, int src_o
         int src_index = mad24(id / cols, src_step, mad24((id % cols), (int)sizeof(float), src_offset));
 #ifdef HAVE_MASK
         int mask_index = mad24(id / cols, mask_step, id % cols + mask_offset);
-        if (mask[mask_index])
+        if (maskptr[mask_index])
 #endif
             maxval = max(maxval, *(__global const float *)(srcptr + src_index));
     }

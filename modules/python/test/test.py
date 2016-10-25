@@ -23,47 +23,15 @@ try:
 except ImportError:
     from urllib import urlopen
 
-class NewOpenCVTests(unittest.TestCase):
-
-    # path to local repository folder containing 'samples' folder
-    repoPath = None
-    # github repository url
-    repoUrl = 'https://raw.github.com/Itseez/opencv/master'
-
-    def get_sample(self, filename, iscolor = cv2.IMREAD_COLOR):
-        if not filename in self.image_cache:
-            filedata = None
-            if NewOpenCVTests.repoPath is not None:
-                candidate = NewOpenCVTests.repoPath + '/' + filename
-                if os.path.isfile(candidate):
-                    with open(candidate, 'rb') as f:
-                        filedata = f.read()
-            if filedata is None:
-                filedata = urlopen(NewOpenCVTests.repoUrl + '/' + filename).read()
-            self.image_cache[filename] = cv2.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
-        return self.image_cache[filename]
-
-    def setUp(self):
-        self.image_cache = {}
-
-    def hashimg(self, im):
-        """ Compute a hash for an image, useful for image comparisons """
-        return hashlib.md5(im.tostring()).digest()
-
-    if sys.version_info[:2] == (2, 6):
-        def assertLess(self, a, b, msg=None):
-            if not a < b:
-                self.fail('%s not less than %s' % (repr(a), repr(b)))
-
-        def assertLessEqual(self, a, b, msg=None):
-            if not a <= b:
-                self.fail('%s not less than or equal to %s' % (repr(a), repr(b)))
-
-        def assertGreater(self, a, b, msg=None):
-            if not a > b:
-                self.fail('%s not greater than %s' % (repr(a), repr(b)))
+from tests_common import NewOpenCVTests
 
 # Tests to run first; check the handful of basic operations that the later tests rely on
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+def load_tests(loader, tests, pattern):
+    tests.addTests(loader.discover(basedir, pattern='test_*.py'))
+    return tests
 
 class Hackathon244Tests(NewOpenCVTests):
 
@@ -145,6 +113,70 @@ class Hackathon244Tests(NewOpenCVTests):
         self.check_close_pairs(mc, mc0, 5)
         self.assertLessEqual(abs(mr - mr0), 5)
 
+    def test_inheritance(self):
+        bm = cv2.StereoBM_create()
+        bm.getPreFilterCap() # from StereoBM
+        bm.getBlockSize() # from SteroMatcher
+
+        boost = cv2.ml.Boost_create()
+        boost.getBoostType() # from ml::Boost
+        boost.getMaxDepth() # from ml::DTrees
+        boost.isClassifier() # from ml::StatModel
+
+    def test_umat_matching(self):
+        img1 = self.get_sample("samples/data/right01.jpg")
+        img2 = self.get_sample("samples/data/right02.jpg")
+
+        orb = cv2.ORB_create()
+
+        img1, img2 = cv2.UMat(img1), cv2.UMat(img2)
+        ps1, descs_umat1 = orb.detectAndCompute(img1, None)
+        ps2, descs_umat2 = orb.detectAndCompute(img2, None)
+
+        self.assertIsInstance(descs_umat1, cv2.UMat)
+        self.assertIsInstance(descs_umat2, cv2.UMat)
+        self.assertGreater(len(ps1), 0)
+        self.assertGreater(len(ps2), 0)
+
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+        res_umats = bf.match(descs_umat1, descs_umat2)
+        res = bf.match(descs_umat1.get(), descs_umat2.get())
+
+        self.assertGreater(len(res), 0)
+        self.assertEqual(len(res_umats), len(res))
+
+    def test_umat_optical_flow(self):
+        img1 = self.get_sample("samples/data/right01.jpg", cv2.IMREAD_GRAYSCALE)
+        img2 = self.get_sample("samples/data/right02.jpg", cv2.IMREAD_GRAYSCALE)
+        # Note, that if you want to see performance boost by OCL implementation - you need enough data
+        # For example you can increase maxCorners param to 10000 and increase img1 and img2 in such way:
+        # img = np.hstack([np.vstack([img] * 6)] * 6)
+
+        feature_params = dict(maxCorners=239,
+                              qualityLevel=0.3,
+                              minDistance=7,
+                              blockSize=7)
+
+        p0 = cv2.goodFeaturesToTrack(img1, mask=None, **feature_params)
+        p0_umat = cv2.goodFeaturesToTrack(cv2.UMat(img1), mask=None, **feature_params)
+        self.assertEqual(p0_umat.get().shape, p0.shape)
+
+        p0 = np.array(sorted(p0, key=lambda p: tuple(p[0])))
+        p0_umat = cv2.UMat(np.array(sorted(p0_umat.get(), key=lambda p: tuple(p[0]))))
+        self.assertTrue(np.allclose(p0_umat.get(), p0))
+
+        p1_mask_err = cv2.calcOpticalFlowPyrLK(img1, img2, p0, None)
+
+        p1_mask_err_umat0 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(img1, img2, p0_umat, None))
+        p1_mask_err_umat1 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(cv2.UMat(img1), img2, p0_umat, None))
+        p1_mask_err_umat2 = map(cv2.UMat.get, cv2.calcOpticalFlowPyrLK(img1, cv2.UMat(img2), p0_umat, None))
+
+        # # results of OCL optical flow differs from CPU implementation, so result can not be easily compared
+        # for p1_mask_err_umat in [p1_mask_err_umat0, p1_mask_err_umat1, p1_mask_err_umat2]:
+        #     for data, data_umat in zip(p1_mask_err, p1_mask_err_umat):
+        #         self.assertTrue(np.allclose(data, data_umat))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='run OpenCV python tests')
     parser.add_argument('--repo', help='use sample image files from local git repository (path to folder), '
@@ -155,6 +187,10 @@ if __name__ == '__main__':
     print("Testing OpenCV", cv2.__version__)
     print("Local repo path:", args.repo)
     NewOpenCVTests.repoPath = args.repo
+    try:
+        NewOpenCVTests.extraTestDataPath = os.environ['OPENCV_TEST_DATA_PATH']
+    except KeyError:
+        print('Missing opencv extra repository. Some of tests may fail.')
     random.seed(0)
     unit_argv = [sys.argv[0]] + other;
     unittest.main(argv=unit_argv)

@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_TYPES_HPP__
-#define __OPENCV_VIZ_TYPES_HPP__
+#ifndef OPENCV_VIZ_TYPES_HPP
+#define OPENCV_VIZ_TYPES_HPP
 
 #include <string>
 #include <opencv2/core.hpp>
@@ -119,6 +119,12 @@ namespace cv
         class CV_EXPORTS Mesh
         {
         public:
+            enum {
+                LOAD_AUTO = 0,
+                LOAD_PLY = 1,
+                LOAD_OBJ = 2
+            };
+
             Mat cloud, colors, normals;
 
             //! Raw integer list of the form: (n,id1,id2,...,idn, n,id1,id2,...,idn, ...)
@@ -127,11 +133,17 @@ namespace cv
 
             Mat texture, tcoords;
 
-            /** @brief Loads a mesh from a ply file.
+            /** @brief Loads a mesh from a ply or a obj file.
 
-            @param file File name (for now only PLY is supported)
+            @param file File name
+            @param type File type (for now only PLY and OBJ are supported)
+
+            **File type** can be one of the following:
+            -   **LOAD_PLY**
+            -   **LOAD_OBJ**
              */
-            static Mesh load(const String& file);
+            static Mesh load(const String& file, int type = LOAD_PLY);
+
         };
 
         /** @brief This class wraps intrinsic parameters of a camera.

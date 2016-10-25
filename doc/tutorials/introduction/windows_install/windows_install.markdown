@@ -43,7 +43,7 @@ These videos above are long-obsolete and contain inaccurate information. Be care
 solutions described in those videos are no longer supported and may even break your install.
 
 If you are building your own libraries you can take the source files from our [Git
-repository](https://github.com/Itseez/opencv.git).
+repository](https://github.com/opencv/opencv.git).
 
 Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
@@ -83,9 +83,8 @@ of them, you need to download and install them on your system.
     more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
 -   [OpenEXR](http://www.openexr.com/downloads.html) source files are required for the library to work with this high dynamic range (HDR)
     image file format.
--   The [OpenNI Framework](http://www.openni.org/) contains a set of open source APIs that provide support for natural
-    interaction with devices via methods such as voice command recognition, hand gestures and body
-    motion tracking.
+-   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures and body
+    motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
 -   [Miktex]( http://miktex.org/2.9/setup) is the best [TEX](https://secure.wikimedia.org/wikipedia/en/wiki/TeX) implementation on
     the Windows OS. It is required to build the *OpenCV documentation*.
 -   [Sphinx](http://sphinx.pocoo.org/) is a python documentation generator and is the tool that will actually create the
@@ -114,7 +113,7 @@ libraries). If you do not need the support for some of these you can just freely
     you're doing -- it's OK.
     -#  Clone the repository to the selected directory. After clicking *Clone* button, a window will
         appear where you can select from what repository you want to download source files
-        (<https://github.com/Itseez/opencv.git>) and to what directory (`D:/OpenCV`).
+        (<https://github.com/opencv/opencv.git>) and to what directory (`D:/OpenCV`).
     -#  Push the OK button and be patient as the repository is quite a heavy download. It will take
         some time depending on your Internet connection.
 

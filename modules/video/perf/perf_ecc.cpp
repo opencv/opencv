@@ -67,5 +67,5 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
         findTransformECC(templateImage, img, warpMat, transform_type,
             TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 5, -1));
     }
-    SANITY_CHECK(warpMat, 1e-3);
+    SANITY_CHECK(warpMat, 3e-3);
 }

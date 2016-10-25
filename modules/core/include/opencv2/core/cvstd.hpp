@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CVSTD_HPP__
-#define __OPENCV_CORE_CVSTD_HPP__
+#ifndef OPENCV_CORE_CVSTD_HPP
+#define OPENCV_CORE_CVSTD_HPP
 
 #ifndef __cplusplus
 #  error cvstd.hpp header must be compiled as C++
@@ -67,6 +67,11 @@
 
 namespace cv
 {
+    static inline uchar abs(uchar a) { return a; }
+    static inline ushort abs(ushort a) { return a; }
+    static inline unsigned abs(unsigned a) { return a; }
+    static inline uint64 abs(uint64 a) { return a; }
+
     using std::min;
     using std::max;
     using std::abs;
@@ -75,14 +80,6 @@ namespace cv
     using std::exp;
     using std::pow;
     using std::log;
-}
-
-namespace std
-{
-    static inline uchar abs(uchar a) { return a; }
-    static inline ushort abs(ushort a) { return a; }
-    static inline unsigned abs(unsigned a) { return a; }
-    static inline uint64 abs(uint64 a) { return a; }
 }
 
 #else
@@ -411,6 +408,11 @@ struct Ptr
     template<typename Y>
     Ptr<Y> dynamicCast() const;
 
+#ifdef CV_CXX_MOVE_SEMANTICS
+    Ptr(Ptr&& o);
+    Ptr& operator = (Ptr&& o);
+#endif
+
 private:
     detail::PtrOwner* owner;
     T* stored;
@@ -571,6 +573,8 @@ private:
 
     char* allocate(size_t len); // len without trailing 0
     void deallocate();
+
+    String(int); // disabled and invalid. Catch invalid usages like, commandLineParser.has(0) problem
 };
 
 //! @} core_basic
@@ -896,6 +900,7 @@ size_t String::find_first_of(const String& str, size_t pos) const
 inline
 size_t String::find_first_of(const char* s, size_t pos) const
 {
+    if (len_ == 0) return npos;
     if (pos >= len_ || !s[0]) return npos;
     const char* lmax = cstr_ + len_;
     for (const char* i = cstr_ + pos; i < lmax; ++i)
@@ -910,6 +915,7 @@ size_t String::find_first_of(const char* s, size_t pos) const
 inline
 size_t String::find_last_of(const char* s, size_t pos, size_t n) const
 {
+    if (len_ == 0) return npos;
     if (pos >= len_) pos = len_ - 1;
     for (const char* i = cstr_ + pos; i >= cstr_; --i)
     {
@@ -935,6 +941,7 @@ size_t String::find_last_of(const String& str, size_t pos) const
 inline
 size_t String::find_last_of(const char* s, size_t pos) const
 {
+    if (len_ == 0) return npos;
     if (pos >= len_) pos = len_ - 1;
     for (const char* i = cstr_ + pos; i >= cstr_; --i)
     {
@@ -1040,9 +1047,11 @@ static inline bool operator>= (const String& lhs, const char*   rhs) { return lh
 
 #ifndef OPENCV_NOSTL_TRANSITIONAL
 namespace std
+{
+    static inline void swap(cv::String& a, cv::String& b) { a.swap(b); }
+}
 #else
 namespace cv
-#endif
 {
     template<> inline
     void swap<cv::String>(cv::String& a, cv::String& b)
@@ -1050,7 +1059,8 @@ namespace cv
         a.swap(b);
     }
 }
+#endif
 
 #include "opencv2/core/ptr.inl.hpp"
 
-#endif //__OPENCV_CORE_CVSTD_HPP__
+#endif //OPENCV_CORE_CVSTD_HPP

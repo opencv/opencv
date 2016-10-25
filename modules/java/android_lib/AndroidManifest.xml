@@ -4,5 +4,5 @@
       android:versionCode="@OPENCV_VERSION_MAJOR@@OPENCV_VERSION_MINOR@@OPENCV_VERSION_PATCH@0"
       android:versionName="@OPENCV_VERSION@">
 
-    <uses-sdk android:minSdkVersion="8" />
+    <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="21" />
 </manifest>

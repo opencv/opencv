@@ -1,42 +1,38 @@
-The build script is to be fixed.
-Right now it assumes that 32-bit MinGW is in the system path and
-64-bit mingw is installed to c:\Apps\MinGW64.
+* On Linux and other Unix flavors OpenCV uses default or user-built ffmpeg/libav libraries.
+  If user builds ffmpeg/libav from source and wants OpenCV to stay BSD library, not GPL/LGPL,
+  he/she should use --enabled-shared configure flag and make sure that no GPL components are
+  enabled (some notable examples are x264 (H264 encoder) and libac3 (Dolby AC3 audio codec)).
+  See https://www.ffmpeg.org/legal.html for details.
 
-It is important that gcc is used, not g++!
-Otherwise the produced DLL will likely be dependent on libgcc_s_dw2-1.dll or similar DLL.
-While we want to make the DLLs with minimum dependencies: Win32 libraries + msvcrt.dll.
+  If you want to play very safe and do not want to use FFMPEG at all, regardless of whether it's installed on
+  your system or not, configure and build OpenCV using CMake with WITH_FFMPEG=OFF flag. OpenCV will then use
+  AVFoundation (OSX), GStreamer (Linux) or other available backends supported by opencv_videoio module.
 
-ffopencv.c is really a C++ source, hence -x c++ is used.
+  There is also our self-contained motion jpeg codec, which you can use without any worries.
+  It handles CV_FOURCC('M', 'J', 'P', 'G') streams within an AVI container (".avi").
 
-How to update opencv_ffmpeg.dll and opencv_ffmpeg_64.dll when a new version of FFMPEG is release?
+* On Windows OpenCV uses pre-built ffmpeg binaries, built with proper flags (without GPL components) and
+  wrapped with simple, stable OpenCV-compatible API.
+  The binaries are opencv_ffmpeg.dll (version for 32-bit Windows) and
+  opencv_ffmpeg_64.dll (version for 64-bit Windows).
 
-1. Install 32-bit MinGW + MSYS from
-   http://sourceforge.net/projects/mingw/files/Automated%20MinGW%20Installer/mingw-get-inst/
-   Let's assume, it's installed in C:\MSYS32.
-2. Install 64-bit MinGW. http://mingw-w64.sourceforge.net/
-   Let's assume, it's installed in C:\MSYS64
-3. Copy C:\MSYS32\msys to C:\MSYS64\msys. Edit C:\MSYS64\msys\etc\fstab, change C:\MSYS32 to C:\MSYS64.
+  See build_win32.txt for the build instructions, if you want to rebuild opencv_ffmpeg*.dll from scratch.
 
-4. Now you have working MSYS32 and MSYS64 environments.
-   Launch, one by one, C:\MSYS32\msys\msys.bat and C:\MSYS64\msys\msys.bat to create your home directories.
+  The pre-built opencv_ffmpeg*.dll is:
+  * LGPL library, not BSD libraries.
+  * Loaded at runtime by opencv_videoio module.
+    If it succeeds, ffmpeg can be used to decode/encode videos;
+    otherwise, other API is used.
 
-4. Download ffmpeg-x.y.z.tar.gz (where x.y.z denotes the actual ffmpeg version).
-   Copy it to C:\MSYS{32|64}\msys\home\<loginname> directory.
+  FFMPEG build contains H264 encoder based on the OpenH264 library, that should be installed separatelly.
+  OpenH264 Video Codec provided by Cisco Systems, Inc.
+  See https://github.com/cisco/openh264/releases for details and OpenH264 license.
+  Downloaded binary file can be placed into global system path (System32 or SysWOW64) or near application binaries.
+  You can also specify location of binary file via OPENH264_LIBRARY_PATH environment variable.
 
-5. To build 32-bit ffmpeg libraries, run C:\MSYS32\msys\msys.bat and type the following commands:
+  If LGPL/GPL software can not be supplied with your OpenCV-based product, simply exclude
+  opencv_ffmpeg*.dll from your distribution; OpenCV will stay fully functional except for the ability to
+  decode/encode videos using FFMPEG (though, it may still be able to do that using other API,
+  such as Video for Windows, Windows Media Foundation or our self-contained motion jpeg codec).
 
-   5.1. tar -xzf ffmpeg-x.y.z.tar.gz
-   5.2. mkdir build
-   5.3. cd build
-   5.4. ../ffmpeg-x.y.z/configure --enable-w32threads
-   5.5. make
-   5.6. make install
-   5.7. cd /local/lib
-   5.8. strip -g *.a
-
-6. Then repeat the same for 64-bit case. The output libs: libavcodec.a etc. need to be renamed to libavcodec64.a etc.
-
-7. Then, copy all those libs to <opencv>\3rdparty\lib\, copy the headers to <opencv>\3rdparty\include\ffmpeg_.
-
-8. Then, go to <opencv>\3rdparty\ffmpeg, edit make.bat
-   (change paths to the actual paths to your msys32 and msys64 distributions) and then run make.bat
+  See license.txt for the FFMPEG copyright notice and the licensing terms.

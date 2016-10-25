@@ -1,5 +1,5 @@
 set(the_description "Image codecs")
-ocv_add_module(imgcodecs opencv_imgproc)
+ocv_add_module(imgcodecs opencv_imgproc WRAP java python)
 
 # ----------------------------------------------------------------------------
 #  CMake file for imgcodecs. See root CMakeLists.txt
@@ -9,7 +9,7 @@ ocv_add_module(imgcodecs opencv_imgproc)
 
 ocv_clear_vars(GRFMT_LIBS)
 
-if(HAVE_WINRT_CX)
+if(HAVE_WINRT_CX AND NOT WINRT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
@@ -35,6 +35,11 @@ if(HAVE_PNG)
   list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
 endif()
 
+if(HAVE_GDCM)
+  ocv_include_directories(${GDCM_INCLUDE_DIRS})
+  list(APPEND GRFMT_LIBS ${GDCM_LIBRARIES})
+endif()
+
 if(HAVE_TIFF)
   ocv_include_directories(${TIFF_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${TIFF_LIBRARIES})
@@ -57,10 +62,13 @@ endif()
 
 file(GLOB grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.hpp)
 file(GLOB grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.cpp)
+
 list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/bitstrm.hpp)
 list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/bitstrm.cpp)
 list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/rgbe.hpp)
 list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/rgbe.cpp)
+list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/jpeg_exif.hpp)
+list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/jpeg_exif.cpp)
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
@@ -81,7 +89,6 @@ file(GLOB imgcodecs_ext_hdrs
      )
 
 if(IOS)
-  add_definitions(-DHAVE_IOS=1)
   list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/ios_conversions.mm)
   list(APPEND IMGCODECS_LIBRARIES "-framework Accelerate" "-framework CoreGraphics" "-framework CoreImage" "-framework QuartzCore" "-framework AssetsLibrary")
 endif()

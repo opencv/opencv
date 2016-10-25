@@ -98,7 +98,29 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
             OCL_OFF(cv::cvtColor(src_roi, dst_roi, code, channelsOut));
             OCL_ON(cv::cvtColor(usrc_roi, udst_roi, code, channelsOut));
 
-            Near(threshold);
+            int h_limit = 256;
+            switch (code)
+            {
+            case COLOR_RGB2HLS: case COLOR_BGR2HLS:
+                h_limit = 180;
+            case COLOR_RGB2HLS_FULL: case COLOR_BGR2HLS_FULL:
+            {
+                ASSERT_EQ(dst_roi.type(), udst_roi.type());
+                ASSERT_EQ(dst_roi.size(), udst_roi.size());
+                Mat gold, actual;
+                dst_roi.convertTo(gold, CV_32FC3);
+                udst_roi.getMat(ACCESS_READ).convertTo(actual, CV_32FC3);
+                Mat absdiff1, absdiff2, absdiff3;
+                cv::absdiff(gold, actual, absdiff1);
+                cv::absdiff(gold, actual + h_limit, absdiff2);
+                cv::absdiff(gold, actual - h_limit, absdiff3);
+                Mat diff = cv::min(cv::min(absdiff1, absdiff2), absdiff3);
+                EXPECT_LE(cvtest::norm(diff, NORM_INF), threshold);
+                break;
+            }
+            default:
+                Near(threshold);
+            }
         }
     }
 };
@@ -128,7 +150,7 @@ OCL_TEST_P(CvtColor, BGR2GRAY) { performTest(3, 1, CVTCODE(BGR2GRAY)); }
 OCL_TEST_P(CvtColor, GRAY2BGR) { performTest(1, 3, CVTCODE(GRAY2BGR)); }
 OCL_TEST_P(CvtColor, RGBA2GRAY) { performTest(4, 1, CVTCODE(RGBA2GRAY)); }
 OCL_TEST_P(CvtColor, GRAY2RGBA) { performTest(1, 4, CVTCODE(GRAY2RGBA)); }
-OCL_TEST_P(CvtColor, BGRA2GRAY) { performTest(4, 1, CVTCODE(BGRA2GRAY)); }
+OCL_TEST_P(CvtColor, BGRA2GRAY) { performTest(4, 1, CVTCODE(BGRA2GRAY), cv::ocl::Device::getDefault().isNVidia() ? 1 : 1e-3); }
 OCL_TEST_P(CvtColor, GRAY2BGRA) { performTest(1, 4, CVTCODE(GRAY2BGRA)); }
 
 // RGB <-> YUV
@@ -155,7 +177,7 @@ OCL_TEST_P(CvtColor, YCrCb2BGRA) { performTest(3, 4, CVTCODE(YCrCb2BGR)); }
 
 // RGB <-> XYZ
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 #define IPP_EPS depth <= CV_32S ? 1 : 5e-5
 #else
 #define IPP_EPS 1e-3
@@ -175,7 +197,7 @@ OCL_TEST_P(CvtColor, XYZ2BGRA) { performTest(3, 4, CVTCODE(XYZ2BGR), IPP_EPS); }
 
 // RGB <-> HSV
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 #define IPP_EPS depth <= CV_32S ? 1 : 4e-5
 #else
 #define IPP_EPS 1e-3
@@ -207,7 +229,7 @@ OCL_TEST_P(CvtColor8u32f, HSV2BGRA_FULL) { performTest(3, 4, CVTCODE(HSV2BGR_FUL
 
 // RGB <-> HLS
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 #define IPP_EPS depth == CV_8U ? 2 : 1e-3
 #else
 #define IPP_EPS depth == CV_8U ? 1 : 1e-3
@@ -269,7 +291,7 @@ OCL_TEST_P(CvtColor8u, GRAY2BGR555) { performTest(1, 2, CVTCODE(GRAY2BGR555)); }
 
 // RGBA <-> mRGBA
 
-#if IPP_VERSION_X100 > 0
+#ifdef HAVE_IPP
 #define IPP_EPS depth <= CV_32S ? 1 : 1e-3
 #else
 #define IPP_EPS 1e-3

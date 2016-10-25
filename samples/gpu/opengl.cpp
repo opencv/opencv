@@ -1,13 +1,4 @@
 #include <iostream>
-#include "cvconfig.h"
-
-#ifndef HAVE_OPENGL
-int main()
-{
-    std::cerr << "Library was built without OpenGL support" << std::endl;
-    return -1;
-}
-#else
 
 #ifdef WIN32
     #define WIN32_LEAN_AND_MEAN 1
@@ -26,10 +17,10 @@ int main()
     #include <GL/glu.h>
 #endif
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/cuda.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -124,5 +115,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-
-#endif

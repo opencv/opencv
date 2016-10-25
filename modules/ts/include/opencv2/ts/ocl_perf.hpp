@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_TS_OCL_PERF_HPP__
-#define __OPENCV_TS_OCL_PERF_HPP__
+#ifndef OPENCV_TS_OCL_PERF_HPP
+#define OPENCV_TS_OCL_PERF_HPP
 
 #include "ocl_test.hpp"
 #include "ts_perf.hpp"
@@ -97,13 +97,13 @@ using std::tr1::tuple;
 
 // TODO Replace finish call to dstUMat.wait()
 #define OCL_TEST_CYCLE() \
-    for (cvtest::ocl::perf::safeFinish(); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer())
+    for (cvtest::ocl::perf::safeFinish(); next() && startTimer(); cvtest::ocl::perf::safeFinish(), stopTimer())
 
 #define OCL_TEST_CYCLE_N(n) \
-    for(declare.iterations(n), cvtest::ocl::perf::safeFinish(); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer())
+    for (declare.iterations(n), cvtest::ocl::perf::safeFinish(); next() && startTimer(); cvtest::ocl::perf::safeFinish(), stopTimer())
 
 #define OCL_TEST_CYCLE_MULTIRUN(runsNum) \
-    for (declare.runs(runsNum), cvtest::ocl::perf::safeFinish(); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer()) \
+    for (declare.runs(runsNum), cvtest::ocl::perf::safeFinish(); next() && startTimer(); cvtest::ocl::perf::safeFinish(), stopTimer()) \
         for (int r = 0; r < runsNum; cvtest::ocl::perf::safeFinish(), ++r)
 
 
@@ -128,4 +128,4 @@ using namespace perf;
 } // namespace cvtest::ocl
 } // namespace cvtest
 
-#endif // __OPENCV_TS_OCL_PERF_HPP__
+#endif // OPENCV_TS_OCL_PERF_HPP

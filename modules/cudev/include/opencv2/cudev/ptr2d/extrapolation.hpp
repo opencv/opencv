@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_PTR2D_EXTRAPOLATION_HPP__
-#define __OPENCV_CUDEV_PTR2D_EXTRAPOLATION_HPP__
+#ifndef OPENCV_CUDEV_PTR2D_EXTRAPOLATION_HPP
+#define OPENCV_CUDEV_PTR2D_EXTRAPOLATION_HPP
 
 #include "../common.hpp"
 #include "../util/vec_traits.hpp"
@@ -198,12 +198,12 @@ struct BrdWrap
 {
     __device__ __forceinline__ static int idx_low(int i, int len)
     {
-        return (i >= 0) * i + (i < 0) * (i - ((i - len + 1) / len) * len);
+        return (i >= 0) ? i : (i - ((i - len + 1) / len) * len);
     }
 
     __device__ __forceinline__ static int idx_high(int i, int len)
     {
-        return (i < len) * i + (i >= len) * (i % len);
+        return (i < len) ? i : (i % len);
     }
 };
 

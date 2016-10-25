@@ -68,6 +68,8 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     exit_callback_ = vtkSmartPointer<ExitCallback>::New();
     exit_callback_->viz = this;
 
+    offScreenMode_ = false;
+
     setBackgroundMeshLab();
 }
 
@@ -85,7 +87,7 @@ void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned
 
 void cv::viz::Viz3d::VizImpl::ExitCallback::Execute(vtkObject*, unsigned long event_id, void*)
 {
-    if (event_id == vtkCommand::ExitEvent)
+    if (event_id == vtkCommand::ExitEvent && viz->interactor_)
     {
         viz->interactor_->TerminateApp();
         viz->interactor_ = 0;
@@ -185,6 +187,38 @@ void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
     timer_callback_->timer_id = local->CreateRepeatingTimer(std::max(1, time));
     local->Start();
     local->DestroyTimer(timer_callback_->timer_id);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::setOffScreenRendering()
+{
+    window_->SetOffScreenRendering(1);
+    offScreenMode_ = true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::removeAllLights()
+{
+    renderer_->RemoveAllLights();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::addLight(Vec3d position, Vec3d focalPoint, Color color, Color diffuseColor, Color ambientColor, Color specularColor)
+{
+    Color color_  = vtkcolor(color);
+    Color diffuseColor_ = vtkcolor(diffuseColor);
+    Color ambientColor_ = vtkcolor(ambientColor);
+    Color specularColor_ = vtkcolor(specularColor);
+
+    vtkSmartPointer<vtkLight> light = vtkSmartPointer<vtkLight>::New();
+    light->SetPosition(position.val);
+    light->SetFocalPoint(focalPoint.val);
+    light->SetColor(color_.val);
+    light->SetDiffuseColor(diffuseColor_.val);
+    light->SetAmbientColor(ambientColor_.val);
+    light->SetSpecularColor(specularColor_.val);
+
+    renderer_->AddLight(light);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -292,6 +326,39 @@ cv::Affine3d cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::saveScreenshot(const String &file) { style_->saveScreenshot(file.c_str()); }
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+cv::Mat cv::viz::Viz3d::VizImpl::getScreenshot() const
+{
+    vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
+        vtkSmartPointer<vtkWindowToImageFilter>::New();
+    windowToImageFilter->SetInput(window_);
+    windowToImageFilter->ReadFrontBufferOff(); // read from the back buffer
+    windowToImageFilter->Update();
+
+    vtkImageData *resultImage = windowToImageFilter->GetOutput();
+    int * dim  = resultImage->GetDimensions();
+    cv::Mat image(dim[1], dim[0], CV_8UC3);
+
+    Vec3b* dptr = reinterpret_cast<Vec3b*>(resultImage->GetScalarPointer());
+    size_t elem_step = resultImage->GetIncrements()[1]/sizeof(Vec3b);
+
+    for (int y = 0; y < image.rows; ++y)
+    {
+        const Vec3b* drow = dptr + elem_step * y;
+        unsigned char *srow = image.ptr<unsigned char>(image.rows - y - 1);
+        for (int x = 0; x < image.cols; ++x, srow += image.channels())
+        {
+          srow[0] = drow[x][2];
+          srow[1] = drow[x][1];
+          srow[2] = drow[x][0];
+        }
+    }
+
+    resultImage = 0;
+
+    return image;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::registerMouseCallback(MouseCallback callback, void* cookie)

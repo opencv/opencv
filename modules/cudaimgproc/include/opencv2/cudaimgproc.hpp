@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDAIMGPROC_HPP__
-#define __OPENCV_CUDAIMGPROC_HPP__
+#ifndef OPENCV_CUDAIMGPROC_HPP
+#define OPENCV_CUDAIMGPROC_HPP
 
 #ifndef __cplusplus
 #  error cudaimgproc.hpp header must be compiled as C++
@@ -588,6 +588,7 @@ CV_EXPORTS Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, i
 
 //! @} cudaimgproc_feature
 
+
 ///////////////////////////// Mean Shift //////////////////////////////
 
 /** @brief Performs mean-shift filtering for each point of the source image.
@@ -725,4 +726,4 @@ CV_EXPORTS void blendLinear(InputArray img1, InputArray img2, InputArray weights
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_CUDAIMGPROC_HPP__ */
+#endif /* OPENCV_CUDAIMGPROC_HPP */

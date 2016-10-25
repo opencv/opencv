@@ -10,8 +10,10 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2015, Intel Corporation, all rights reserved.
 // Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2015, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_HPP__
-#define __OPENCV_CORE_HPP__
+#ifndef OPENCV_CORE_HPP
+#define OPENCV_CORE_HPP
 
 #ifndef __cplusplus
 #  error core.hpp header must be compiled as C++
@@ -70,6 +72,7 @@
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
+        @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
     @}
     @defgroup core_opengl OpenGL interoperability
@@ -78,6 +81,16 @@
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
     @defgroup core_opencl OpenCL support
+    @defgroup core_va_intel Intel VA-API/OpenCL (CL-VA) interoperability
+    @defgroup core_hal Hardware Acceleration Layer
+    @{
+        @defgroup core_hal_functions Functions
+        @defgroup core_hal_interface Interface
+        @defgroup core_hal_intrin Universal intrinsics
+        @{
+            @defgroup core_hal_intrin_impl Private implementation helpers
+        @}
+    @}
 @}
  */
 
@@ -413,7 +426,7 @@ CV_EXPORTS_W void multiply(InputArray src1, InputArray src2,
 
 /** @brief Performs per-element division of two arrays or a scalar by an array.
 
-The functions divide divide one array by another:
+The function cv::divide divides one array by another:
 \f[\texttt{dst(I) = saturate(src1(I)*scale/src2(I))}\f]
 or a scalar by an array when there is no src1 :
 \f[\texttt{dst(I) = saturate(scale/src2(I))}\f]
@@ -511,13 +524,24 @@ For example:
 CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha = 1, double beta = 0);
 
+/** @brief Converts an array to half precision floating number.
+
+This function converts FP32 (single precision floating point) from/to FP16 (half precision floating point).  The input array has to have type of CV_32F or
+CV_16S to represent the bit depth.  If the input array is neither of them, the function will raise an error.
+The format of half precision floating point is defined in IEEE 754-2008.
+
+@param src input array.
+@param dst output array.
+*/
+CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
+
 /** @brief Performs a look-up table transform of an array.
 
 The function LUT fills the output array with values from the look-up table. Indices of the entries
 are taken from the input array. That is, the function processes each element of src as follows:
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
-\f[d =  \fork{0}{if \texttt{src} has depth \texttt{CV\_8U}}{128}{if \texttt{src} has depth \texttt{CV\_8S}}\f]
+\f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}\f]
 @param src input array of 8-bit elements.
 @param lut look-up table of 256 elements; in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
@@ -529,7 +553,7 @@ CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst);
 
 /** @brief Calculates the sum of array elements.
 
-The functions sum calculate and return the sum of array elements,
+The function cv::sum calculates and returns the sum of array elements,
 independently for each channel.
 @param src input array that must have from 1 to 4 channels.
 @sa  countNonZero, mean, meanStdDev, norm, minMaxLoc, reduce
@@ -575,10 +599,10 @@ CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
 
 /** @brief Calculates an average (mean) of array elements.
 
-The function mean calculates the mean value M of array elements,
+The function cv::mean calculates the mean value M of array elements,
 independently for each channel, and return it:
 \f[\begin{array}{l} N =  \sum _{I: \; \texttt{mask} (I) \ne 0} 1 \\ M_c =  \left ( \sum _{I: \; \texttt{mask} (I) \ne 0}{ \texttt{mtx} (I)_c} \right )/N \end{array}\f]
-When all the mask elements are 0's, the functions return Scalar::all(0)
+When all the mask elements are 0's, the function returns Scalar::all(0)
 @param src input array that should have from 1 to 4 channels so that the result can be stored in
 Scalar_ .
 @param mask optional operation mask.
@@ -588,11 +612,11 @@ CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask = noArray());
 
 /** Calculates a mean and standard deviation of array elements.
 
-The function meanStdDev calculates the mean and the standard deviation M
+The function cv::meanStdDev calculates the mean and the standard deviation M
 of array elements independently for each channel and returns it via the
 output parameters:
 \f[\begin{array}{l} N =  \sum _{I, \texttt{mask} (I)  \ne 0} 1 \\ \texttt{mean} _c =  \frac{\sum_{ I: \; \texttt{mask}(I) \ne 0} \texttt{src} (I)_c}{N} \\ \texttt{stddev} _c =  \sqrt{\frac{\sum_{ I: \; \texttt{mask}(I) \ne 0} \left ( \texttt{src} (I)_c -  \texttt{mean} _c \right )^2}{N}} \end{array}\f]
-When all the mask elements are 0's, the functions return
+When all the mask elements are 0's, the function returns
 mean=stddev=Scalar::all(0).
 @note The calculated standard deviation is only the diagonal of the
 complete normalized covariance matrix. If the full matrix is needed, you
@@ -612,26 +636,26 @@ CV_EXPORTS_W void meanStdDev(InputArray src, OutputArray mean, OutputArray stdde
 /** @brief Calculates an absolute array norm, an absolute difference norm, or a
 relative difference norm.
 
-The functions norm calculate an absolute norm of src1 (when there is no
+The function cv::norm calculates an absolute norm of src1 (when there is no
 src2 ):
 
-\f[norm =  \forkthree{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM\_INF}\) }
-{ \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM\_L1}\) }
-{ \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM\_L2}\) }\f]
+\f[norm =  \forkthree{\|\texttt{src1}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+{ \| \texttt{src1} \| _{L_1} =  \sum _I | \texttt{src1} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
+{ \| \texttt{src1} \| _{L_2} =  \sqrt{\sum_I \texttt{src1}(I)^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
 
 or an absolute or relative difference norm if src2 is there:
 
-\f[norm =  \forkthree{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM\_INF}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM\_L1}\) }
-{ \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM\_L2}\) }\f]
+\f[norm =  \forkthree{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}} =  \max _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_INF}\) }
+{ \| \texttt{src1} - \texttt{src2} \| _{L_1} =  \sum _I | \texttt{src1} (I) -  \texttt{src2} (I)|}{if  \(\texttt{normType} = \texttt{NORM_L1}\) }
+{ \| \texttt{src1} - \texttt{src2} \| _{L_2} =  \sqrt{\sum_I (\texttt{src1}(I) - \texttt{src2}(I))^2} }{if  \(\texttt{normType} = \texttt{NORM_L2}\) }\f]
 
 or
 
-\f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM\_RELATIVE\_INF}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM\_RELATIVE\_L1}\) }
-{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM\_RELATIVE\_L2}\) }\f]
+\f[norm =  \forkthree{\frac{\|\texttt{src1}-\texttt{src2}\|_{L_{\infty}}    }{\|\texttt{src2}\|_{L_{\infty}} }}{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_INF}\) }
+{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_1} }{\|\texttt{src2}\|_{L_1}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L1}\) }
+{ \frac{\|\texttt{src1}-\texttt{src2}\|_{L_2} }{\|\texttt{src2}\|_{L_2}} }{if  \(\texttt{normType} = \texttt{NORM_RELATIVE_L2}\) }\f]
 
-The functions norm return the calculated norm.
+The function cv::norm returns the calculated norm.
 
 When the mask parameter is specified and it is not empty, the norm is
 calculated only over the region specified by the mask.
@@ -679,7 +703,7 @@ CV_EXPORTS_W void batchDistance(InputArray src1, InputArray src2,
 
 /** @brief Normalizes the norm or value range of an array.
 
-The functions normalize scale and shift the input array elements so that
+The function cv::normalize normalizes scale and shift the input array elements so that
 \f[\| \texttt{dst} \| _{L_p}= \texttt{alpha}\f]
 (where p=Inf, 1 or 2) when normType=NORM_INF, NORM_L1, or NORM_L2, respectively; or so that
 \f[\min _I  \texttt{dst} (I)= \texttt{alpha} , \, \, \max _I  \texttt{dst} (I)= \texttt{beta}\f]
@@ -691,6 +715,37 @@ min-max but modify the whole array, you can use norm and Mat::convertTo.
 
 In case of sparse matrices, only the non-zero values are analyzed and transformed. Because of this,
 the range transformation for sparse matrices is not allowed since it can shift the zero level.
+
+Possible usage with some positive example data:
+@code{.cpp}
+    vector<double> positiveData = { 2.0, 8.0, 10.0 };
+    vector<double> normalizedData_l1, normalizedData_l2, normalizedData_inf, normalizedData_minmax;
+
+    // Norm to probability (total count)
+    // sum(numbers) = 20.0
+    // 2.0      0.1     (2.0/20.0)
+    // 8.0      0.4     (8.0/20.0)
+    // 10.0     0.5     (10.0/20.0)
+    normalize(positiveData, normalizedData_l1, 1.0, 0.0, NORM_L1);
+
+    // Norm to unit vector: ||positiveData|| = 1.0
+    // 2.0      0.15
+    // 8.0      0.62
+    // 10.0     0.77
+    normalize(positiveData, normalizedData_l2, 1.0, 0.0, NORM_L2);
+
+    // Norm to max element
+    // 2.0      0.2     (2.0/10.0)
+    // 8.0      0.8     (8.0/10.0)
+    // 10.0     1.0     (10.0/10.0)
+    normalize(positiveData, normalizedData_inf, 1.0, 0.0, NORM_INF);
+
+    // Norm to range [0.0;1.0]
+    // 2.0      0.0     (shift to left border)
+    // 8.0      0.75    (6.0/8.0)
+    // 10.0     1.0     (shift to right border)
+    normalize(positiveData, normalizedData_minmax, 1.0, 0.0, NORM_MINMAX);
+@endcode
 
 @param src input array.
 @param dst output array of the same size as src .
@@ -718,11 +773,11 @@ CV_EXPORTS void normalize( const SparseMat& src, SparseMat& dst, double alpha, i
 
 /** @brief Finds the global minimum and maximum in an array.
 
-The functions minMaxLoc find the minimum and maximum element values and their positions. The
+The function cv::minMaxLoc finds the minimum and maximum element values and their positions. The
 extremums are searched across the whole array or, if mask is not an empty array, in the specified
 array region.
 
-The functions do not work with multi-channel arrays. If you need to find minimum or maximum
+The function do not work with multi-channel arrays. If you need to find minimum or maximum
 elements across all the channels, use Mat::reshape first to reinterpret the array as
 single-channel. Or you may extract the particular channel using either extractImageCOI , or
 mixChannels , or split .
@@ -741,7 +796,7 @@ CV_EXPORTS_W void minMaxLoc(InputArray src, CV_OUT double* minVal,
 
 /** @brief Finds the global minimum and maximum in an array
 
-The function minMaxIdx finds the minimum and maximum element values and their positions. The
+The function cv::minMaxIdx finds the minimum and maximum element values and their positions. The
 extremums are searched across the whole array or, if mask is not an empty array, in the specified
 array region. The function does not work with multi-channel arrays. If you need to find minimum or
 maximum elements across all the channels, use Mat::reshape first to reinterpret the array as
@@ -779,12 +834,12 @@ CV_EXPORTS void minMaxLoc(const SparseMat& a, double* minVal,
 
 /** @brief Reduces a matrix to a vector.
 
-The function reduce reduces the matrix to a vector by treating the matrix rows/columns as a set of
+The function cv::reduce reduces the matrix to a vector by treating the matrix rows/columns as a set of
 1D vectors and performing the specified operation on the vectors until a single row/column is
 obtained. For example, the function can be used to compute horizontal and vertical projections of a
-raster image. In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element
-bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction
-modes.
+raster image. In case of REDUCE_MAX and REDUCE_MIN , the output image should have the same type as the source one.
+In case of REDUCE_SUM and REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
+And multi-channel arrays are also supported in these two reduction modes.
 @param src input 2D matrix.
 @param dst output vector. Its size and type is defined by dim and dtype parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to
@@ -796,19 +851,19 @@ otherwise, its type will be CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()).
 */
 CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype = -1);
 
-/** @brief Creates one multichannel array out of several single-channel ones.
+/** @brief Creates one multi-channel array out of several single-channel ones.
 
-The functions merge merge several arrays to make a single multi-channel array. That is, each
+The function cv::merge merges several arrays to make a single multi-channel array. That is, each
 element of the output array will be a concatenation of the elements of the input arrays, where
 elements of i-th input array are treated as mv[i].channels()-element vectors.
 
-The function split does the reverse operation. If you need to shuffle channels in some other
-advanced way, use mixChannels .
+The function cv::split does the reverse operation. If you need to shuffle channels in some other
+advanced way, use cv::mixChannels.
 @param mv input array of matrices to be merged; all the matrices in mv must have the same
 size and the same depth.
 @param count number of input matrices when mv is a plain C array; it must be greater than zero.
 @param dst output array of the same size and the same depth as mv[0]; The number of channels will
-be the total number of channels in the matrix array.
+be equal to the parameter count.
 @sa  mixChannels, split, Mat::reshape
 */
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
@@ -823,7 +878,7 @@ CV_EXPORTS_W void merge(InputArrayOfArrays mv, OutputArray dst);
 
 /** @brief Divides a multi-channel array into several single-channel arrays.
 
-The functions split split a multi-channel array into separate single-channel arrays:
+The function cv::split splits a multi-channel array into separate single-channel arrays:
 \f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
 If you need to extract a single channel or do some other sophisticated channel permutation, use
 mixChannels .
@@ -843,34 +898,34 @@ CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 /** @brief Copies specified channels from input arrays to the specified channels of
 output arrays.
 
-The functions mixChannels provide an advanced mechanism for shuffling image channels.
+The function cv::mixChannels provides an advanced mechanism for shuffling image channels.
 
-split and merge and some forms of cvtColor are partial cases of mixChannels .
+cv::split,cv::merge,cv::extractChannel,cv::insertChannel and some forms of cv::cvtColor are partial cases of cv::mixChannels.
 
-In the example below, the code splits a 4-channel RGBA image into a 3-channel BGR (with R and B
+In the example below, the code splits a 4-channel BGRA image into a 3-channel BGR (with B and R
 channels swapped) and a separate alpha-channel image:
 @code{.cpp}
-    Mat rgba( 100, 100, CV_8UC4, Scalar(1,2,3,4) );
-    Mat bgr( rgba.rows, rgba.cols, CV_8UC3 );
-    Mat alpha( rgba.rows, rgba.cols, CV_8UC1 );
+    Mat bgra( 100, 100, CV_8UC4, Scalar(255,0,0,255) );
+    Mat bgr( bgra.rows, bgra.cols, CV_8UC3 );
+    Mat alpha( bgra.rows, bgra.cols, CV_8UC1 );
 
     // forming an array of matrices is a quite efficient operation,
     // because the matrix data is not copied, only the headers
     Mat out[] = { bgr, alpha };
-    // rgba[0] -> bgr[2], rgba[1] -> bgr[1],
-    // rgba[2] -> bgr[0], rgba[3] -> alpha[0]
+    // bgra[0] -> bgr[2], bgra[1] -> bgr[1],
+    // bgra[2] -> bgr[0], bgra[3] -> alpha[0]
     int from_to[] = { 0,2, 1,1, 2,0, 3,3 };
-    mixChannels( &rgba, 1, out, 2, from_to, 4 );
+    mixChannels( &bgra, 1, out, 2, from_to, 4 );
 @endcode
 @note Unlike many other new-style C++ functions in OpenCV (see the introduction section and
-Mat::create ), mixChannels requires the output arrays to be pre-allocated before calling the
+Mat::create ), cv::mixChannels requires the output arrays to be pre-allocated before calling the
 function.
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param nsrcs number of matrices in src.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
-depth must be the same as in src[0].
-@param ndsts number of matrices in dst.
+@param nsrcs number of matrices in `src`.
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
+depth must be the same as in `src[0]`.
+@param ndsts number of matrices in `dst`.
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
 dst; the continuous channel numbering is used: the first input image channels are indexed from 0 to
@@ -878,16 +933,16 @@ src[0].channels()-1, the second input image channels are indexed from src[0].cha
 src[0].channels() + src[1].channels()-1, and so on, the same scheme is used for the output image
 channels; as a special case, when fromTo[k\*2] is negative, the corresponding output channel is
 filled with zero .
-@param npairs number of index pairs in fromTo.
-@sa split, merge, cvtColor
+@param npairs number of index pairs in `fromTo`.
+@sa split, merge, extractChannel, insertChannel, cvtColor
 */
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
                             const int* fromTo, size_t npairs);
 
 /** @overload
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
@@ -902,9 +957,9 @@ CV_EXPORTS void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst
                             const int* fromTo, size_t npairs);
 
 /** @overload
-@param src input array or vector of matricesl; all of the matrices must have the same size and the
+@param src input array or vector of matrices; all of the matrices must have the same size and the
 same depth.
-@param dst output array or vector of matrices; all the matrices *must be allocated*; their size and
+@param dst output array or vector of matrices; all the matrices **must be allocated**; their size and
 depth must be the same as in src[0].
 @param fromTo array of index pairs specifying which channels are copied and where; fromTo[k\*2] is
 a 0-based index of the input channel in src, fromTo[k\*2+1] is an index of the output channel in
@@ -917,19 +972,25 @@ filled with zero .
 CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                               const std::vector<int>& fromTo);
 
-/** @brief extracts a single channel from src (coi is 0-based index)
-@todo document
+/** @brief Extracts a single channel from src (coi is 0-based index)
+@param src input array
+@param dst output array
+@param coi index of channel to extract
+@sa mixChannels, split
 */
 CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
 
-/** @brief inserts a single channel to dst (coi is 0-based index)
-@todo document
+/** @brief Inserts a single channel to dst (coi is 0-based index)
+@param src input array
+@param dst output array
+@param coi index of channel for insertion
+@sa mixChannels, merge
 */
 CV_EXPORTS_W void insertChannel(InputArray src, InputOutputArray dst, int coi);
 
 /** @brief Flips a 2D array around vertical, horizontal, or both axes.
 
-The function flip flips the array in one of three different ways (row
+The function cv::flip flips the array in one of three different ways (row
 and column indices are 0-based):
 \f[\texttt{dst} _{ij} =
 \left\{
@@ -963,51 +1024,160 @@ CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
 /** @brief Fills the output array with repeated copies of the input array.
 
-The functions repeat duplicate the input array one or more times along each of the two axes:
+The function cv::repeat duplicates the input array one or more times along each of the two axes:
 \f[\texttt{dst} _{ij}= \texttt{src} _{i\mod src.rows, \; j\mod src.cols }\f]
 The second variant of the function is more convenient to use with @ref MatrixExpressions.
 @param src input array to replicate.
-@param dst output array of the same type as src.
-@param ny Flag to specify how many times the src is repeated along the
+@param ny Flag to specify how many times the `src` is repeated along the
 vertical axis.
-@param nx Flag to specify how many times the src is repeated along the
+@param nx Flag to specify how many times the `src` is repeated along the
 horizontal axis.
-@sa reduce
+@param dst output array of the same type as `src`.
+@sa cv::reduce
 */
 CV_EXPORTS_W void repeat(InputArray src, int ny, int nx, OutputArray dst);
 
 /** @overload
 @param src input array to replicate.
-@param ny Flag to specify how many times the src is repeated along the
+@param ny Flag to specify how many times the `src` is repeated along the
 vertical axis.
-@param nx Flag to specify how many times the src is repeated along the
+@param nx Flag to specify how many times the `src` is repeated along the
 horizontal axis.
   */
 CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
 
-/** @brief concatenate matrices horizontally
-@todo document
+/** @brief Applies horizontal concatenation to given matrices.
+
+The function horizontally concatenates two or more cv::Mat matrices (with the same number of rows).
+@code{.cpp}
+    cv::Mat matArray[] = { cv::Mat(4, 1, CV_8UC1, cv::Scalar(1)),
+                           cv::Mat(4, 1, CV_8UC1, cv::Scalar(2)),
+                           cv::Mat(4, 1, CV_8UC1, cv::Scalar(3)),};
+
+    cv::Mat out;
+    cv::hconcat( matArray, 3, out );
+    //out:
+    //[1, 2, 3;
+    // 1, 2, 3;
+    // 1, 2, 3;
+    // 1, 2, 3]
+@endcode
+@param src input array or vector of matrices. all of the matrices must have the same number of rows and the same depth.
+@param nsrc number of matrices in src.
+@param dst output array. It has the same number of rows and depth as the src, and the sum of cols of the src.
+@sa cv::vconcat(const Mat*, size_t, OutputArray), @sa cv::vconcat(InputArrayOfArrays, OutputArray) and @sa cv::vconcat(InputArray, InputArray, OutputArray)
 */
 CV_EXPORTS void hconcat(const Mat* src, size_t nsrc, OutputArray dst);
-/** @overload */
+/** @overload
+ @code{.cpp}
+    cv::Mat_<float> A = (cv::Mat_<float>(3, 2) << 1, 4,
+                                                  2, 5,
+                                                  3, 6);
+    cv::Mat_<float> B = (cv::Mat_<float>(3, 2) << 7, 10,
+                                                  8, 11,
+                                                  9, 12);
+
+    cv::Mat C;
+    cv::hconcat(A, B, C);
+    //C:
+    //[1, 4, 7, 10;
+    // 2, 5, 8, 11;
+    // 3, 6, 9, 12]
+ @endcode
+ @param src1 first input array to be considered for horizontal concatenation.
+ @param src2 second input array to be considered for horizontal concatenation.
+ @param dst output array. It has the same number of rows and depth as the src1 and src2, and the sum of cols of the src1 and src2.
+ */
 CV_EXPORTS void hconcat(InputArray src1, InputArray src2, OutputArray dst);
-/** @overload */
+/** @overload
+ @code{.cpp}
+    std::vector<cv::Mat> matrices = { cv::Mat(4, 1, CV_8UC1, cv::Scalar(1)),
+                                      cv::Mat(4, 1, CV_8UC1, cv::Scalar(2)),
+                                      cv::Mat(4, 1, CV_8UC1, cv::Scalar(3)),};
+
+    cv::Mat out;
+    cv::hconcat( matrices, out );
+    //out:
+    //[1, 2, 3;
+    // 1, 2, 3;
+    // 1, 2, 3;
+    // 1, 2, 3]
+ @endcode
+ @param src input array or vector of matrices. all of the matrices must have the same number of rows and the same depth.
+ @param dst output array. It has the same number of rows and depth as the src, and the sum of cols of the src.
+same depth.
+ */
 CV_EXPORTS_W void hconcat(InputArrayOfArrays src, OutputArray dst);
 
-/** @brief concatenate matrices vertically
-@todo document
+/** @brief Applies vertical concatenation to given matrices.
+
+The function vertically concatenates two or more cv::Mat matrices (with the same number of cols).
+@code{.cpp}
+    cv::Mat matArray[] = { cv::Mat(1, 4, CV_8UC1, cv::Scalar(1)),
+                           cv::Mat(1, 4, CV_8UC1, cv::Scalar(2)),
+                           cv::Mat(1, 4, CV_8UC1, cv::Scalar(3)),};
+
+    cv::Mat out;
+    cv::vconcat( matArray, 3, out );
+    //out:
+    //[1,   1,   1,   1;
+    // 2,   2,   2,   2;
+    // 3,   3,   3,   3]
+@endcode
+@param src input array or vector of matrices. all of the matrices must have the same number of cols and the same depth.
+@param nsrc number of matrices in src.
+@param dst output array. It has the same number of cols and depth as the src, and the sum of rows of the src.
+@sa cv::hconcat(const Mat*, size_t, OutputArray), @sa cv::hconcat(InputArrayOfArrays, OutputArray) and @sa cv::hconcat(InputArray, InputArray, OutputArray)
 */
 CV_EXPORTS void vconcat(const Mat* src, size_t nsrc, OutputArray dst);
-/** @overload */
+/** @overload
+ @code{.cpp}
+    cv::Mat_<float> A = (cv::Mat_<float>(3, 2) << 1, 7,
+                                                  2, 8,
+                                                  3, 9);
+    cv::Mat_<float> B = (cv::Mat_<float>(3, 2) << 4, 10,
+                                                  5, 11,
+                                                  6, 12);
+
+    cv::Mat C;
+    cv::vconcat(A, B, C);
+    //C:
+    //[1, 7;
+    // 2, 8;
+    // 3, 9;
+    // 4, 10;
+    // 5, 11;
+    // 6, 12]
+ @endcode
+ @param src1 first input array to be considered for vertical concatenation.
+ @param src2 second input array to be considered for vertical concatenation.
+ @param dst output array. It has the same number of cols and depth as the src1 and src2, and the sum of rows of the src1 and src2.
+ */
 CV_EXPORTS void vconcat(InputArray src1, InputArray src2, OutputArray dst);
-/** @overload */
+/** @overload
+ @code{.cpp}
+    std::vector<cv::Mat> matrices = { cv::Mat(1, 4, CV_8UC1, cv::Scalar(1)),
+                                      cv::Mat(1, 4, CV_8UC1, cv::Scalar(2)),
+                                      cv::Mat(1, 4, CV_8UC1, cv::Scalar(3)),};
+
+    cv::Mat out;
+    cv::vconcat( matrices, out );
+    //out:
+    //[1,   1,   1,   1;
+    // 2,   2,   2,   2;
+    // 3,   3,   3,   3]
+ @endcode
+ @param src input array or vector of matrices. all of the matrices must have the same number of cols and the same depth
+ @param dst output array. It has the same number of cols and depth as the src, and the sum of rows of the src.
+same depth.
+ */
 CV_EXPORTS_W void vconcat(InputArrayOfArrays src, OutputArray dst);
 
 /** @brief computes bitwise conjunction of the two arrays (dst = src1 & src2)
 Calculates the per-element bit-wise conjunction of two arrays or an
 array and a scalar.
 
-The function calculates the per-element bit-wise logical conjunction for:
+The function cv::bitwise_and calculates the per-element bit-wise logical conjunction for:
 *   Two arrays when src1 and src2 have the same size:
     \f[\texttt{dst} (I) =  \texttt{src1} (I)  \wedge \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0\f]
 *   An array and a scalar when src2 is constructed from Scalar or has
@@ -1034,7 +1204,7 @@ CV_EXPORTS_W void bitwise_and(InputArray src1, InputArray src2,
 /** @brief Calculates the per-element bit-wise disjunction of two arrays or an
 array and a scalar.
 
-The function calculates the per-element bit-wise logical disjunction for:
+The function cv::bitwise_or calculates the per-element bit-wise logical disjunction for:
 *   Two arrays when src1 and src2 have the same size:
     \f[\texttt{dst} (I) =  \texttt{src1} (I)  \vee \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0\f]
 *   An array and a scalar when src2 is constructed from Scalar or has
@@ -1061,7 +1231,7 @@ CV_EXPORTS_W void bitwise_or(InputArray src1, InputArray src2,
 /** @brief Calculates the per-element bit-wise "exclusive or" operation on two
 arrays or an array and a scalar.
 
-The function calculates the per-element bit-wise logical "exclusive-or"
+The function cv::bitwise_xor calculates the per-element bit-wise logical "exclusive-or"
 operation for:
 *   Two arrays when src1 and src2 have the same size:
     \f[\texttt{dst} (I) =  \texttt{src1} (I)  \oplus \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0\f]
@@ -1088,7 +1258,7 @@ CV_EXPORTS_W void bitwise_xor(InputArray src1, InputArray src2,
 
 /** @brief  Inverts every bit of an array.
 
-The function calculates per-element bit-wise inversion of the input
+The function cv::bitwise_not calculates per-element bit-wise inversion of the input
 array:
 \f[\texttt{dst} (I) =  \neg \texttt{src} (I)\f]
 In case of a floating-point input array, its machine-specific bit
@@ -1105,7 +1275,7 @@ CV_EXPORTS_W void bitwise_not(InputArray src, OutputArray dst,
 
 /** @brief Calculates the per-element absolute difference between two arrays or between an array and a scalar.
 
-The function absdiff calculates:
+The function cv::absdiff calculates:
 *   Absolute difference between two arrays when they have the same
     size and type:
     \f[\texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2}(I)|)\f]
@@ -1171,7 +1341,8 @@ equivalent matrix expressions:
 @endcode
 @param src1 first input array or a scalar; when it is an array, it must have a single channel.
 @param src2 second input array or a scalar; when it is an array, it must have a single channel.
-@param dst output array that has the same size and type as the input arrays.
+@param dst output array of type ref CV_8U that has the same size and the same number of channels as
+    the input arrays.
 @param cmpop a flag, that specifies correspondence between the arrays (cv::CmpTypes)
 @sa checkRange, min, max, threshold
 */
@@ -1179,7 +1350,7 @@ CV_EXPORTS_W void compare(InputArray src1, InputArray src2, OutputArray dst, int
 
 /** @brief Calculates per-element minimum of two arrays or an array and a scalar.
 
-The functions min calculate the per-element minimum of two arrays:
+The function cv::min calculates the per-element minimum of two arrays:
 \f[\texttt{dst} (I)= \min ( \texttt{src1} (I), \texttt{src2} (I))\f]
 or array and a scalar:
 \f[\texttt{dst} (I)= \min ( \texttt{src1} (I), \texttt{value} )\f]
@@ -1200,7 +1371,7 @@ CV_EXPORTS void min(const UMat& src1, const UMat& src2, UMat& dst);
 
 /** @brief Calculates per-element maximum of two arrays or an array and a scalar.
 
-The functions max calculate the per-element maximum of two arrays:
+The function cv::max calculates the per-element maximum of two arrays:
 \f[\texttt{dst} (I)= \max ( \texttt{src1} (I), \texttt{src2} (I))\f]
 or array and a scalar:
 \f[\texttt{dst} (I)= \max ( \texttt{src1} (I), \texttt{value} )\f]
@@ -1221,7 +1392,7 @@ CV_EXPORTS void max(const UMat& src1, const UMat& src2, UMat& dst);
 
 /** @brief Calculates a square root of array elements.
 
-The functions sqrt calculate a square root of each input array element.
+The function cv::sqrt calculates a square root of each input array element.
 In case of multi-channel arrays, each channel is processed
 independently. The accuracy is approximately the same as of the built-in
 std::sqrt .
@@ -1232,8 +1403,8 @@ CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst);
 
 /** @brief Raises every array element to a power.
 
-The function pow raises every element of the input array to power :
-\f[\texttt{dst} (I) =  \fork{\texttt{src}(I)^power}{if \texttt{power} is integer}{|\texttt{src}(I)|^power}{otherwise}\f]
+The function cv::pow raises every element of the input array to power :
+\f[\texttt{dst} (I) =  \fork{\texttt{src}(I)^{power}}{if \(\texttt{power}\) is integer}{|\texttt{src}(I)|^{power}}{otherwise}\f]
 
 So, for a non-integer power exponent, the absolute values of input array
 elements are used. However, it is possible to get true values for
@@ -1257,7 +1428,7 @@ CV_EXPORTS_W void pow(InputArray src, double power, OutputArray dst);
 
 /** @brief Calculates the exponent of every array element.
 
-The function exp calculates the exponent of every element of the input
+The function cv::exp calculates the exponent of every element of the input
 array:
 \f[\texttt{dst} [I] = e^{ src(I) }\f]
 
@@ -1273,14 +1444,11 @@ CV_EXPORTS_W void exp(InputArray src, OutputArray dst);
 
 /** @brief Calculates the natural logarithm of every array element.
 
-The function log calculates the natural logarithm of the absolute value
-of every element of the input array:
-\f[\texttt{dst} (I) =  \fork{\log |\texttt{src}(I)|}{if \(\texttt{src}(I) \ne 0\) }{\texttt{C}}{otherwise}\f]
+The function cv::log calculates the natural logarithm of every element of the input array:
+\f[\texttt{dst} (I) =  \log (\texttt{src}(I)) \f]
 
-where C is a large negative number (about -700 in the current
-implementation). The maximum relative error is about 7e-6 for
-single-precision input and less than 1e-10 for double-precision input.
-Special values (NaN, Inf) are not handled.
+Output on zero, negative and special (NaN, Inf) values is undefined.
+
 @param src input array.
 @param dst output array of the same size and type as src .
 @sa exp, cartToPolar, polarToCart, phase, pow, sqrt, magnitude
@@ -1289,7 +1457,7 @@ CV_EXPORTS_W void log(InputArray src, OutputArray dst);
 
 /** @brief Calculates x and y coordinates of 2D vectors from their magnitude and angle.
 
-The function polarToCart calculates the Cartesian coordinates of each 2D
+The function cv::polarToCart calculates the Cartesian coordinates of each 2D
 vector represented by the corresponding elements of magnitude and angle:
 \f[\begin{array}{l} \texttt{x} (I) =  \texttt{magnitude} (I) \cos ( \texttt{angle} (I)) \\ \texttt{y} (I) =  \texttt{magnitude} (I) \sin ( \texttt{angle} (I)) \\ \end{array}\f]
 
@@ -1312,7 +1480,7 @@ CV_EXPORTS_W void polarToCart(InputArray magnitude, InputArray angle,
 
 /** @brief Calculates the magnitude and angle of 2D vectors.
 
-The function cartToPolar calculates either the magnitude, angle, or both
+The function cv::cartToPolar calculates either the magnitude, angle, or both
 for every 2D vector (x(I),y(I)):
 \f[\begin{array}{l} \texttt{magnitude} (I)= \sqrt{\texttt{x}(I)^2+\texttt{y}(I)^2} , \\ \texttt{angle} (I)= \texttt{atan2} ( \texttt{y} (I), \texttt{x} (I))[ \cdot180 / \pi ] \end{array}\f]
 
@@ -1334,7 +1502,7 @@ CV_EXPORTS_W void cartToPolar(InputArray x, InputArray y,
 
 /** @brief Calculates the rotation angle of 2D vectors.
 
-The function phase calculates the rotation angle of each 2D vector that
+The function cv::phase calculates the rotation angle of each 2D vector that
 is formed from the corresponding elements of x and y :
 \f[\texttt{angle} (I) =  \texttt{atan2} ( \texttt{y} (I), \texttt{x} (I))\f]
 
@@ -1353,7 +1521,7 @@ CV_EXPORTS_W void phase(InputArray x, InputArray y, OutputArray angle,
 
 /** @brief Calculates the magnitude of 2D vectors.
 
-The function magnitude calculates the magnitude of 2D vectors formed
+The function cv::magnitude calculates the magnitude of 2D vectors formed
 from the corresponding elements of x and y arrays:
 \f[\texttt{dst} (I) =  \sqrt{\texttt{x}(I)^2 + \texttt{y}(I)^2}\f]
 @param x floating-point array of x-coordinates of the vectors.
@@ -1366,11 +1534,11 @@ CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
 
 /** @brief Checks every element of an input array for invalid values.
 
-The functions checkRange check that every array element is neither NaN nor infinite. When minVal \<
--DBL_MAX and maxVal \< DBL_MAX, the functions also check that each value is between minVal and
+The function cv::checkRange checks that every array element is neither NaN nor infinite. When minVal \>
+-DBL_MAX and maxVal \< DBL_MAX, the function also checks that each value is between minVal and
 maxVal. In case of multi-channel arrays, each channel is processed independently. If some values
 are out of range, position of the first outlier is stored in pos (when pos != NULL). Then, the
-functions either return false (when quiet=true) or throw an exception.
+function either returns false (when quiet=true) or throws an exception.
 @param a input array.
 @param quiet a flag, indicating whether the functions quietly return false when the array elements
 are out of range or they throw an exception.
@@ -1388,7 +1556,7 @@ CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
 /** @brief Performs generalized matrix multiplication.
 
-The function performs generalized matrix multiplication similar to the
+The function cv::gemm performs generalized matrix multiplication similar to the
 gemm functions in BLAS level 3. For example,
 `gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`
 corresponds to
@@ -1419,7 +1587,7 @@ CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
 
 /** @brief Calculates the product of a matrix and its transposition.
 
-The function mulTransposed calculates the product of src and its
+The function cv::mulTransposed calculates the product of src and its
 transposition:
 \f[\texttt{dst} = \texttt{scale} ( \texttt{src} - \texttt{delta} )^T ( \texttt{src} - \texttt{delta} )\f]
 if aTa=true , and
@@ -1451,7 +1619,7 @@ CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
 
 /** @brief Transposes a matrix.
 
-The function transpose transposes the matrix src :
+The function cv::transpose transposes the matrix src :
 \f[\texttt{dst} (i,j) =  \texttt{src} (j,i)\f]
 @note No complex conjugation is done in case of a complex matrix. It it
 should be done separately if needed.
@@ -1462,7 +1630,7 @@ CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
 
 /** @brief Performs the matrix transformation of every array element.
 
-The function transform performs the matrix transformation of every
+The function cv::transform performs the matrix transformation of every
 element of the array src and stores the results in dst :
 \f[\texttt{dst} (I) =  \texttt{m} \cdot \texttt{src} (I)\f]
 (when m.cols=src.channels() ), or
@@ -1482,13 +1650,13 @@ m.cols or m.cols-1.
 @param dst output array of the same size and depth as src; it has as
 many channels as m.rows.
 @param m transformation 2x2 or 2x3 floating-point matrix.
-@sa perspectiveTransform, getAffineTransform, estimateRigidTransform, warpAffine, warpPerspective
+@sa perspectiveTransform, getAffineTransform, estimateAffine2D, warpAffine, warpPerspective
 */
 CV_EXPORTS_W void transform(InputArray src, OutputArray dst, InputArray m );
 
 /** @brief Performs the perspective matrix transformation of vectors.
 
-The function perspectiveTransform transforms every element of src by
+The function cv::perspectiveTransform transforms every element of src by
 treating it as a 2D or 3D vector, in the following way:
 \f[(x, y, z)  \rightarrow (x'/w, y'/w, z'/w)\f]
 where
@@ -1515,7 +1683,7 @@ CV_EXPORTS_W void perspectiveTransform(InputArray src, OutputArray dst, InputArr
 
 /** @brief Copies the lower or the upper half of a square matrix to another half.
 
-The function completeSymm copies the lower half of a square matrix to
+The function cv::completeSymm copies the lower half of a square matrix to
 its another half. The matrix diagonal remains unchanged:
 *   \f$\texttt{mtx}_{ij}=\texttt{mtx}_{ji}\f$ for \f$i > j\f$ if
     lowerToUpper=false
@@ -1530,7 +1698,7 @@ CV_EXPORTS_W void completeSymm(InputOutputArray mtx, bool lowerToUpper = false);
 
 /** @brief Initializes a scaled identity matrix.
 
-The function setIdentity initializes a scaled identity matrix:
+The function cv::setIdentity initializes a scaled identity matrix:
 \f[\texttt{mtx} (i,j)= \fork{\texttt{value}}{ if \(i=j\)}{0}{otherwise}\f]
 
 The function can also be emulated using the matrix initializers and the
@@ -1547,7 +1715,7 @@ CV_EXPORTS_W void setIdentity(InputOutputArray mtx, const Scalar& s = Scalar(1))
 
 /** @brief Returns the determinant of a square floating-point matrix.
 
-The function determinant calculates and returns the determinant of the
+The function cv::determinant calculates and returns the determinant of the
 specified matrix. For small matrices ( mtx.cols=mtx.rows\<=3 ), the
 direct method is used. For larger matrices, the function uses LU
 factorization with partial pivoting.
@@ -1562,7 +1730,7 @@ CV_EXPORTS_W double determinant(InputArray mtx);
 
 /** @brief Returns the trace of a matrix.
 
-The function trace returns the sum of the diagonal elements of the
+The function cv::trace returns the sum of the diagonal elements of the
 matrix mtx .
 \f[\mathrm{tr} ( \texttt{mtx} ) =  \sum _i  \texttt{mtx} (i,i)\f]
 @param mtx input matrix.
@@ -1571,7 +1739,7 @@ CV_EXPORTS_W Scalar trace(InputArray mtx);
 
 /** @brief Finds the inverse or pseudo-inverse of a matrix.
 
-The function invert inverts the matrix src and stores the result in dst
+The function cv::invert inverts the matrix src and stores the result in dst
 . When the matrix src is singular or non-square, the function calculates
 the pseudo-inverse matrix (the dst matrix) so that norm(src\*dst - I) is
 minimal, where I is an identity matrix.
@@ -1598,7 +1766,7 @@ CV_EXPORTS_W double invert(InputArray src, OutputArray dst, int flags = DECOMP_L
 
 /** @brief Solves one or more linear systems or least-squares problems.
 
-The function solve solves a linear system or least-squares problem (the
+The function cv::solve solves a linear system or least-squares problem (the
 latter is possible with SVD or QR methods, or by specifying the flag
 DECOMP_NORMAL ):
 \f[\texttt{dst} =  \arg \min _X \| \texttt{src1} \cdot \texttt{X} -  \texttt{src2} \|\f]
@@ -1623,7 +1791,7 @@ CV_EXPORTS_W bool solve(InputArray src1, InputArray src2,
 
 /** @brief Sorts each row or each column of a matrix.
 
-The function sort sorts each matrix row or each matrix column in
+The function cv::sort sorts each matrix row or each matrix column in
 ascending or descending order. So you should pass two operation flags to
 get desired behaviour. If you want to sort matrix rows or columns
 lexicographically, you can use STL std::sort generic function with the
@@ -1638,7 +1806,7 @@ CV_EXPORTS_W void sort(InputArray src, OutputArray dst, int flags);
 
 /** @brief Sorts each row or each column of a matrix.
 
-The function sortIdx sorts each matrix row or each matrix column in the
+The function cv::sortIdx sorts each matrix row or each matrix column in the
 ascending or descending order. So you should pass two operation flags to
 get desired behaviour. Instead of reordering the elements themselves, it
 stores the indices of sorted elements in the output array. For example:
@@ -1672,7 +1840,7 @@ CV_EXPORTS_W int solveCubic(InputArray coeffs, OutputArray roots);
 
 /** @brief Finds the real or complex roots of a polynomial equation.
 
-The function solvePoly finds real and complex roots of a polynomial equation:
+The function cv::solvePoly finds real and complex roots of a polynomial equation:
 \f[\texttt{coeffs} [n] x^{n} +  \texttt{coeffs} [n-1] x^{n-1} + ... +  \texttt{coeffs} [1] x +  \texttt{coeffs} [0] = 0\f]
 @param coeffs array of polynomial coefficients.
 @param roots output (complex) array of roots.
@@ -1682,7 +1850,7 @@ CV_EXPORTS_W double solvePoly(InputArray coeffs, OutputArray roots, int maxIters
 
 /** @brief Calculates eigenvalues and eigenvectors of a symmetric matrix.
 
-The functions eigen calculate just eigenvalues, or eigenvalues and eigenvectors of the symmetric
+The function cv::eigen calculates just eigenvalues, or eigenvalues and eigenvectors of the symmetric
 matrix src:
 @code
     src*eigenvectors.row(i).t() = eigenvalues.at<srcType>(i)*eigenvectors.row(i).t()
@@ -1703,7 +1871,7 @@ CV_EXPORTS_W bool eigen(InputArray src, OutputArray eigenvalues,
 
 /** @brief Calculates the covariance matrix of a set of vectors.
 
-The functions calcCovarMatrix calculate the covariance matrix and, optionally, the mean vector of
+The function cv::calcCovarMatrix calculates the covariance matrix and, optionally, the mean vector of
 the set of input vectors.
 @param samples samples stored as separate matrices
 @param nsamples number of samples
@@ -1753,7 +1921,7 @@ CV_EXPORTS_W void SVBackSubst( InputArray w, InputArray u, InputArray vt,
 
 /** @brief Calculates the Mahalanobis distance between two vectors.
 
-The function Mahalanobis calculates and returns the weighted distance between two vectors:
+The function cv::Mahalanobis calculates and returns the weighted distance between two vectors:
 \f[d( \texttt{vec1} , \texttt{vec2} )= \sqrt{\sum_{i,j}{\texttt{icovar(i,j)}\cdot(\texttt{vec1}(I)-\texttt{vec2}(I))\cdot(\texttt{vec1(j)}-\texttt{vec2(j)})} }\f]
 The covariance matrix may be calculated using the cv::calcCovarMatrix function and then inverted using
 the invert function (preferably using the cv::DECOMP_SVD method, as the most accurate).
@@ -1765,7 +1933,7 @@ CV_EXPORTS_W double Mahalanobis(InputArray v1, InputArray v2, InputArray icovar)
 
 /** @brief Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-point array.
 
-The function performs one of the following:
+The function cv::dft performs one of the following:
 -   Forward the Fourier transform of a 1D vector of N elements:
     \f[Y = F^{(N)}  \cdot X,\f]
     where \f$F^{(N)}_{jk}=\exp(-2\pi i j k/N)\f$ and \f$i=\sqrt{-1}\f$
@@ -1881,9 +2049,9 @@ so you need to "flip" the second convolution operand B vertically and horizontal
 -   An example using the discrete fourier transform can be found at
     opencv_source_code/samples/cpp/dft.cpp
 -   (Python) An example using the dft functionality to perform Wiener deconvolution can be found
-    at opencv_source/samples/python2/deconvolution.py
+    at opencv_source/samples/python/deconvolution.py
 -   (Python) An example rearranging the quadrants of a Fourier image can be found at
-    opencv_source/samples/python2/dft.py
+    opencv_source/samples/python/dft.py
 @param src input array that could be real or complex.
 @param dst output array whose size and type depends on the flags .
 @param flags transformation flags, representing a combination of the cv::DftFlags
@@ -1913,7 +2081,7 @@ CV_EXPORTS_W void idft(InputArray src, OutputArray dst, int flags = 0, int nonze
 
 /** @brief Performs a forward or inverse discrete Cosine transform of 1D or 2D array.
 
-The function dct performs a forward or inverse discrete Cosine transform (DCT) of a 1D or 2D
+The function cv::dct performs a forward or inverse discrete Cosine transform (DCT) of a 1D or 2D
 floating-point array:
 -   Forward Cosine transform of a 1D vector of N elements:
     \f[Y = C^{(N)}  \cdot X\f]
@@ -1964,7 +2132,7 @@ CV_EXPORTS_W void idct(InputArray src, OutputArray dst, int flags = 0);
 
 /** @brief Performs the per-element multiplication of two Fourier spectrums.
 
-The function mulSpectrums performs the per-element multiplication of the two CCS-packed or complex
+The function cv::mulSpectrums performs the per-element multiplication of the two CCS-packed or complex
 matrices that are results of a real or complex Fourier transform.
 
 The function, together with dft and idft , may be used to calculate convolution (pass conjB=false )
@@ -1991,7 +2159,7 @@ original one. Arrays whose size is a power-of-two (2, 4, 8, 16, 32, ...) are the
 Though, the arrays whose size is a product of 2's, 3's, and 5's (for example, 300 = 5\*5\*3\*2\*2)
 are also processed quite efficiently.
 
-The function getOptimalDFTSize returns the minimum number N that is greater than or equal to vecsize
+The function cv::getOptimalDFTSize returns the minimum number N that is greater than or equal to vecsize
 so that the DFT of a vector of size N can be processed efficiently. In the current implementation N
 = 2 ^p^ \* 3 ^q^ \* 5 ^r^ for some integer p, q, r.
 
@@ -2007,7 +2175,7 @@ CV_EXPORTS_W int getOptimalDFTSize(int vecsize);
 
 /** @brief Returns the default random number generator.
 
-The function theRNG returns the default random number generator. For each thread, there is a
+The function cv::theRNG returns the default random number generator. For each thread, there is a
 separate random number generator, so you can use the function safely in multi-thread environments.
 If you just need to get a single random number using this generator or initialize an array, you can
 use randu or randn instead. But if you are going to generate many random numbers inside a loop, it
@@ -2015,6 +2183,14 @@ is much faster to use this function to retrieve the generator and then use RNG::
 @sa RNG, randu, randn
 */
 CV_EXPORTS RNG& theRNG();
+
+/** @brief Sets state of default random number generator.
+
+The function cv::setRNGSeed sets state of default random number generator to custom value.
+@param seed new state for default random number generator
+@sa RNG, randu, randn
+*/
+CV_EXPORTS_W void setRNGSeed(int seed);
 
 /** @brief Generates a single uniformly-distributed random number or an array of random numbers.
 
@@ -2030,7 +2206,7 @@ CV_EXPORTS_W void randu(InputOutputArray dst, InputArray low, InputArray high);
 
 /** @brief Fills the array with normally distributed random numbers.
 
-The function randn fills the matrix dst with normally distributed random numbers with the specified
+The function cv::randn fills the matrix dst with normally distributed random numbers with the specified
 mean vector and the standard deviation matrix. The generated random numbers are clipped to fit the
 value range of the output array data type.
 @param dst output array of random numbers; the array must be pre-allocated and have 1 to 4 channels.
@@ -2043,7 +2219,7 @@ CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev
 
 /** @brief Shuffles the array elements randomly.
 
-The function randShuffle shuffles the specified 1D array by randomly choosing pairs of elements and
+The function cv::randShuffle shuffles the specified 1D array by randomly choosing pairs of elements and
 swapping them. The number of such swap operations will be dst.rows\*dst.cols\*iterFactor .
 @param dst input/output numerical 1D array.
 @param iterFactor scale factor that determines the number of random swap operations (see the details
@@ -2162,11 +2338,11 @@ public:
     The operator performs %PCA of the supplied dataset. It is safe to reuse
     the same PCA structure for multiple datasets. That is, if the structure
     has been previously used with another dataset, the existing internal
-    data is reclaimed and the new eigenvalues, @ref eigenvectors , and @ref
+    data is reclaimed and the new @ref eigenvalues, @ref eigenvectors and @ref
     mean are allocated and computed.
 
-    The computed eigenvalues are sorted from the largest to the smallest and
-    the corresponding eigenvectors are stored as eigenvectors rows.
+    The computed @ref eigenvalues are sorted from the largest to the smallest and
+    the corresponding @ref eigenvectors are stored as eigenvectors rows.
 
     @param data input samples stored as the matrix rows or as the matrix
     columns.
@@ -2246,11 +2422,17 @@ public:
      */
     void backProject(InputArray vec, OutputArray result) const;
 
-    /** @brief write and load PCA matrix
+    /** @brief write PCA objects
 
-*/
-    void write(FileStorage& fs ) const;
-    void read(const FileNode& fs);
+    Writes @ref eigenvalues @ref eigenvectors and @ref mean to specified FileStorage
+     */
+    void write(FileStorage& fs) const;
+
+    /** @brief load PCA objects
+
+    Loads @ref eigenvalues @ref eigenvectors and @ref mean from specified FileNode
+     */
+    void read(const FileNode& fn);
 
     Mat eigenvectors; //!< eigenvectors of the covariation matrix
     Mat eigenvalues; //!< eigenvalues of the covariation matrix
@@ -2269,8 +2451,7 @@ class CV_EXPORTS LDA
 {
 public:
     /** @brief constructor
-    Initializes a LDA with num_components (default 0) and specifies how
-    samples are aligned (default dataAsRow=true).
+    Initializes a LDA with num_components (default 0).
     */
     explicit LDA(int num_components = 0);
 
@@ -2301,15 +2482,17 @@ public:
       */
     ~LDA();
 
-    /** Compute the discriminants for data in src and labels.
+    /** Compute the discriminants for data in src (row aligned) and labels.
       */
     void compute(InputArrayOfArrays src, InputArray labels);
 
     /** Projects samples into the LDA subspace.
+        src may be one or more row aligned samples.
       */
     Mat project(InputArray src);
 
     /** Reconstructs projections from the LDA subspace.
+        src may be one or more row aligned projections.
       */
     Mat reconstruct(InputArray src);
 
@@ -2325,11 +2508,10 @@ public:
     static Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
 
 protected:
-    bool _dataAsRow;
+    bool _dataAsRow; // unused, but needed for 3.0 ABI compatibility.
     int _num_components;
     Mat _eigenvectors;
     Mat _eigenvalues;
-
     void lda(InputArrayOfArrays src, InputArray labels);
 };
 
@@ -2340,9 +2522,7 @@ matrix. The Singular Value Decomposition is used to solve least-square
 problems, under-determined linear systems, invert matrices, compute
 condition numbers, and so on.
 
-For a faster operation, you can pass flags=SVD::MODIFY_A|... to modify
-the decomposed matrix when it is not necessary to preserve it. If you
-want to compute a condition number of a matrix or an absolute value of
+If you want to compute a condition number of a matrix or an absolute value of
 its determinant, you do not need `u` and `vt`. You can pass
 flags=SVD::NO_UV|... . Another flag SVD::FULL_UV indicates that full-size u
 and vt must be computed, which is not necessary most of the time.
@@ -2353,8 +2533,8 @@ class CV_EXPORTS SVD
 {
 public:
     enum Flags {
-        /** use the algorithm to modify the decomposed matrix; it can save space and speed up
-            processing */
+        /** allow the algorithm to modify the decomposed matrix; it can save space and speed up
+            processing. currently ignored. */
         MODIFY_A = 1,
         /** indicates that only a vector of singular values `w` is to be processed, while u and vt
             will be set to empty matrices */
@@ -2696,7 +2876,7 @@ and groups the input samples around the clusters. As an output, \f$\texttt{label
 
 @note
 -   (Python) An example on K-means clustering can be found at
-    opencv_source_code/samples/python2/kmeans.py
+    opencv_source_code/samples/python/kmeans.py
 @param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
 Examples of this array can be:
 -   Mat points(count, 2, CV_32F);
@@ -2765,6 +2945,21 @@ public:
 
 };
 
+static inline
+String& operator << (String& out, Ptr<Formatted> fmtd)
+{
+    fmtd->reset();
+    for(const char* str = fmtd->next(); str; str = fmtd->next())
+        out += cv::String(str);
+    return out;
+}
+
+static inline
+String& operator << (String& out, const Mat& mtx)
+{
+    return out << Formatter::get()->format(mtx);
+}
+
 //////////////////////////////////////// Algorithm ////////////////////////////////////
 
 class CV_EXPORTS Algorithm;
@@ -2812,6 +3007,10 @@ public:
     Algorithm();
     virtual ~Algorithm();
 
+    /** @brief Clears the algorithm state
+    */
+    CV_WRAP virtual void clear() {}
+
     /** @brief Stores algorithm parameters in a file storage
     */
     virtual void write(FileStorage& fs) const { (void)fs; }
@@ -2819,42 +3018,80 @@ public:
     /** @brief Reads algorithm parameters from a file storage
     */
     virtual void read(const FileNode& fn) { (void)fn; }
+
+    /** @brief Returns true if the Algorithm is empty (e.g. in the very beginning or after unsuccessful read
+     */
+    virtual bool empty() const { return false; }
+
+    /** @brief Reads algorithm from the file node
+
+     This is static template method of Algorithm. It's usage is following (in the case of SVM):
+     @code
+     Ptr<SVM> svm = Algorithm::read<SVM>(fn);
+     @endcode
+     In order to make this method work, the derived class must overwrite Algorithm::read(const
+     FileNode& fn) and also have static create() method without parameters
+     (or with all the optional parameters)
+     */
+    template<typename _Tp> static Ptr<_Tp> read(const FileNode& fn)
+    {
+        Ptr<_Tp> obj = _Tp::create();
+        obj->read(fn);
+        return !obj->empty() ? obj : Ptr<_Tp>();
+    }
+
+    /** @brief Loads algorithm from the file
+
+     @param filename Name of the file to read.
+     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+
+     This is static template method of Algorithm. It's usage is following (in the case of SVM):
+     @code
+     Ptr<SVM> svm = Algorithm::load<SVM>("my_svm_model.xml");
+     @endcode
+     In order to make this method work, the derived class must overwrite Algorithm::read(const
+     FileNode& fn).
+     */
+    template<typename _Tp> static Ptr<_Tp> load(const String& filename, const String& objname=String())
+    {
+        FileStorage fs(filename, FileStorage::READ);
+        FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
+        if (fn.empty()) return Ptr<_Tp>();
+        Ptr<_Tp> obj = _Tp::create();
+        obj->read(fn);
+        return !obj->empty() ? obj : Ptr<_Tp>();
+    }
+
+    /** @brief Loads algorithm from a String
+
+     @param strModel The string variable containing the model you want to load.
+     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+
+     This is static template method of Algorithm. It's usage is following (in the case of SVM):
+     @code
+     Ptr<SVM> svm = Algorithm::loadFromString<SVM>(myStringModel);
+     @endcode
+     */
+    template<typename _Tp> static Ptr<_Tp> loadFromString(const String& strModel, const String& objname=String())
+    {
+        FileStorage fs(strModel, FileStorage::READ + FileStorage::MEMORY);
+        FileNode fn = objname.empty() ? fs.getFirstTopLevelNode() : fs[objname];
+        Ptr<_Tp> obj = _Tp::create();
+        obj->read(fn);
+        return !obj->empty() ? obj : Ptr<_Tp>();
+    }
+
+    /** Saves the algorithm to a file.
+     In order to make this method work, the derived class must implement Algorithm::write(FileStorage& fs). */
+    CV_WRAP virtual void save(const String& filename) const;
+
+    /** Returns the algorithm string identifier.
+     This string is used as top level xml/yml node tag when the object is saved to a file or string. */
+    CV_WRAP virtual String getDefaultName() const;
+
+protected:
+    void writeFormat(FileStorage& fs) const;
 };
-
-// define properties
-
-#define CV_PURE_PROPERTY(type, name) \
-    CV_WRAP virtual type get##name() const = 0; \
-    CV_WRAP virtual void set##name(type val) = 0;
-
-#define CV_PURE_PROPERTY_S(type, name) \
-    CV_WRAP virtual type get##name() const = 0; \
-    CV_WRAP virtual void set##name(const type & val) = 0;
-
-#define CV_PURE_PROPERTY_RO(type, name) \
-    CV_WRAP virtual type get##name() const = 0;
-
-// basic property implementation
-
-#define CV_IMPL_PROPERTY_RO(type, name, member) \
-    inline type get##name() const { return member; }
-
-#define CV_HELP_IMPL_PROPERTY(r_type, w_type, name, member) \
-    CV_IMPL_PROPERTY_RO(r_type, name, member) \
-    inline void set##name(w_type val) { member = val; }
-
-#define CV_HELP_WRAP_PROPERTY(r_type, w_type, name, internal_name, internal_obj) \
-    r_type get##name() const { return internal_obj.get##internal_name(); } \
-    void set##name(w_type val) { internal_obj.set##internal_name(val); }
-
-#define CV_IMPL_PROPERTY(type, name, member) CV_HELP_IMPL_PROPERTY(type, type, name, member)
-#define CV_IMPL_PROPERTY_S(type, name, member) CV_HELP_IMPL_PROPERTY(type, const type &, name, member)
-
-#define CV_WRAP_PROPERTY(type, name, internal_name, internal_obj)  CV_HELP_WRAP_PROPERTY(type, type, name, internal_name, internal_obj)
-#define CV_WRAP_PROPERTY_S(type, name, internal_name, internal_obj) CV_HELP_WRAP_PROPERTY(type, const type &, name, internal_name, internal_obj)
-
-#define CV_WRAP_SAME_PROPERTY(type, name, internal_obj) CV_WRAP_PROPERTY(type, name, name, internal_obj)
-#define CV_WRAP_SAME_PROPERTY_S(type, name, internal_obj) CV_WRAP_PROPERTY_S(type, name, name, internal_obj)
 
 struct Param {
     enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7,
@@ -2960,4 +3197,4 @@ template<> struct ParamType<uchar>
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/optim.hpp"
 
-#endif /*__OPENCV_CORE_HPP__*/
+#endif /*OPENCV_CORE_HPP*/

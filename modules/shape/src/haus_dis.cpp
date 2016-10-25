@@ -77,6 +77,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "distance" << distanceFlag
            << "rank" << rankProportion;
@@ -128,6 +129,8 @@ static float _apply(const Mat &set1, const Mat &set2, int distType, double propR
 
 float HausdorffDistanceExtractorImpl::computeDistance(InputArray contour1, InputArray contour2)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat set1=contour1.getMat(), set2=contour2.getMat();
     if (set1.type() != CV_32F)
         set1.convertTo(set1, CV_32F);

@@ -82,7 +82,7 @@ void CvStatModel::load( const char* filename, const char* name )
 {
     CvFileStorage* fs = 0;
 
-    CV_FUNCNAME( "CvStatModel::load" );
+    CV_FUNCNAME( "CvAlgorithm::load" );
 
     __BEGIN__;
 

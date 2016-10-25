@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP__
-#define __OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP__
+#ifndef OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP
+#define OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP
 
 #include <vector>
 #include <fstream>

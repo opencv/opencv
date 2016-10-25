@@ -1,6 +1,6 @@
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <iostream>
 
@@ -16,8 +16,21 @@ static void help()
 
 int main(int argc, char** argv)
 {
-    const char* filename = argc >= 2 ? argv[1] : "../data/pic1.png";
-
+    cv::CommandLineParser parser(argc, argv,
+        "{help h||}{@image|../data/pic1.png|}"
+    );
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string filename = parser.get<string>("@image");
+    if (filename.empty())
+    {
+        help();
+        cout << "no image_name provided" << endl;
+        return -1;
+    }
     Mat src = imread(filename, 0);
     if(src.empty())
     {

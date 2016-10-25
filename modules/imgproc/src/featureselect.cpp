@@ -54,7 +54,8 @@ struct greaterThanPtr :
         public std::binary_function<const float *, const float *, bool>
 {
     bool operator () (const float * a, const float * b) const
-    { return *a > *b; }
+    // Ensure a fully deterministic result of the sort
+    { return (*a > *b) ? true : (*a < *b) ? false : (a > b); }
 };
 
 #ifdef HAVE_OPENCL
@@ -66,7 +67,8 @@ struct Corner
     short x;
 
     bool operator < (const Corner & c) const
-    {  return val > c.val; }
+    // Ensure a fully deterministic result of the sort
+    {  return (val > c.val) ? true : (val < c.val) ? false : (y > c.y) ? true : (y < c.y) ? false : (x > c.x); }
 };
 
 static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
@@ -156,7 +158,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                    thresholdarg, (int)possibleCornersCount);
         }
 
-        size_t globalsize[2] = { eig.cols - 2, eig.rows - 2 };
+        size_t globalsize[2] = { (size_t)eig.cols - 2, (size_t)eig.rows - 2 };
         if (!k.run(2, globalsize, NULL, false))
             return false;
 
@@ -267,6 +269,8 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               InputArray _mask, int blockSize,
                               bool useHarrisDetector, double harrisK )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
     CV_Assert( _mask.empty() || (_mask.type() == CV_8UC1 && _mask.sameSize(_image)) );
 
@@ -309,10 +313,17 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                 tmpCorners.push_back(eig_data + x);
         }
     }
-    std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr() );
 
     std::vector<Point2f> corners;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
+
+    if (total == 0)
+    {
+        _corners.release();
+        return;
+    }
+
+    std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr() );
 
     if (minDistance >= 1)
     {
@@ -351,6 +362,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             y2 = std::min(grid_height-1, y2);
 
             for( int yy = y1; yy <= y2; yy++ )
+            {
                 for( int xx = x1; xx <= x2; xx++ )
                 {
                     std::vector <Point2f> &m = grid[yy*grid_width + xx];
@@ -370,6 +382,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                         }
                     }
                 }
+            }
 
             break_out:
 

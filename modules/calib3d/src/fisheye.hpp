@@ -10,7 +10,7 @@ struct CV_EXPORTS IntrinsicParams
     Vec2d c;
     Vec4d k;
     double alpha;
-    std::vector<int> isEstimate;
+    std::vector<uchar> isEstimate;
 
     IntrinsicParams();
     IntrinsicParams(Vec2d f, Vec2d c, Vec4d k, double alpha = 0);

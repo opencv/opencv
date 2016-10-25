@@ -47,7 +47,7 @@ using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cudacodec;
 
-#if !defined(HAVE_NVCUVID) || !defined(WIN32)
+#if !defined(HAVE_NVCUVENC) || !defined(WIN32)
 
 cv::cudacodec::EncoderParams::EncoderParams() { throw_no_cuda(); }
 cv::cudacodec::EncoderParams::EncoderParams(const String&) { throw_no_cuda(); }
@@ -60,7 +60,7 @@ Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String&, Size, double, c
 Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
 Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
 
-#else // !defined HAVE_CUDA || !defined WIN32
+#else // !defined HAVE_NVCUVENC || !defined WIN32
 
 void RGB_to_YV12(const GpuMat& src, GpuMat& dst);
 
@@ -913,4 +913,4 @@ Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>& en
     return makePtr<VideoWriterImpl>(encoderCallback, frameSize, fps, params, format);
 }
 
-#endif // !defined HAVE_CUDA || !defined WIN32
+#endif // !defined HAVE_NVCUVENC || !defined WIN32

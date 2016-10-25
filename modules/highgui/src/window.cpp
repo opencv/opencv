@@ -65,7 +65,10 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_CARBON(name,prop_value);
         #elif defined (HAVE_COCOA)
             cvSetModeWindow_COCOA(name,prop_value);
+        #elif defined (WINRT)
+            cvSetModeWindow_WinRT(name, prop_value);
         #endif
+
     break;
 
     case CV_WND_PROP_AUTOSIZE:
@@ -104,6 +107,8 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetModeWindow_CARBON(name);
         #elif defined (HAVE_COCOA)
             return cvGetModeWindow_COCOA(name);
+        #elif defined (WINRT)
+            return cvGetModeWindow_WinRT(name);
         #else
             return -1;
         #endif
@@ -209,6 +214,11 @@ void cv::setTrackbarPos( const String& trackbarName, const String& winName, int 
 void cv::setTrackbarMax(const String& trackbarName, const String& winName, int maxval)
 {
     cvSetTrackbarMax(trackbarName.c_str(), winName.c_str(), maxval);
+}
+
+void cv::setTrackbarMin(const String& trackbarName, const String& winName, int minval)
+{
+    cvSetTrackbarMin(trackbarName.c_str(), winName.c_str(), minval);
 }
 
 int cv::getTrackbarPos( const String& trackbarName, const String& winName )
@@ -381,9 +391,9 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 #if defined (HAVE_QT)
 
-cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
+cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight, int style, int spacing)
 {
-    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
+    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style, spacing);
     void* pf = &f; // to suppress strict-aliasing
     return *(cv::QtFont*)pf;
 }
@@ -392,6 +402,14 @@ void cv::addText( const Mat& img, const String& text, Point org, const QtFont& f
 {
     CvMat _img = img;
     cvAddText( &_img, text.c_str(), org, (CvFont*)&font);
+}
+
+void cv::addText( const Mat& img, const String& text, Point org, const String& nameFont,
+        int pointSize, Scalar color, int weight, int style, int spacing)
+{
+    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style, spacing);
+    CvMat _img = img;
+    cvAddText( &_img, text.c_str(), org, &f);
 }
 
 void cv::displayStatusBar(const String& name,  const String& text, int delayms)
@@ -431,61 +449,69 @@ int cv::createButton(const String& button_name, ButtonCallback on_change, void* 
 
 #else
 
+static const char* NO_QT_ERR_MSG = "The library is compiled without QT support";
+
 cv::QtFont cv::fontQt(const String&, int, Scalar, int,  int, int)
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
     return QtFont();
 }
 
 void cv::addText( const Mat&, const String&, Point, const QtFont&)
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+}
+
+void cv::addText(const Mat&, const String&, Point, const String&, int, Scalar, int, int, int)
+{
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::displayStatusBar(const String&,  const String&, int)
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::displayOverlay(const String&,  const String&, int )
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 int cv::startLoop(int (*)(int argc, char *argv[]), int , char**)
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
     return 0;
 }
 
 void cv::stopLoop()
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::saveWindowParameters(const String&)
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::loadWindowParameters(const String&)
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 {
-    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
     return 0;
 }
 
 #endif
 
-#if   defined(HAVE_WIN32UI)   // see window_w32.cpp
+#if   defined (HAVE_WIN32UI)  // see window_w32.cpp
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_carbon.cpp
 #elif defined (HAVE_CARBON)
-#elif defined (HAVE_QT)       //YV see window_QT.cpp
+#elif defined (HAVE_QT)       // see window_QT.cpp
+#elif defined (WINRT) && !defined (WINRT_8_0) // see window_winrt.cpp
 
 #else
 
@@ -581,6 +607,11 @@ CV_IMPL void cvSetTrackbarPos( const char*, const char*, int )
 CV_IMPL void cvSetTrackbarMax(const char*, const char*, int)
 {
     CV_NO_GUI_ERROR( "cvSetTrackbarMax" );
+}
+
+CV_IMPL void cvSetTrackbarMin(const char*, const char*, int)
+{
+    CV_NO_GUI_ERROR( "cvSetTrackbarMin" );
 }
 
 CV_IMPL void* cvGetWindowHandle( const char* )

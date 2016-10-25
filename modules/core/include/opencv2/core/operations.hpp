@@ -12,6 +12,8 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_OPERATIONS_HPP__
-#define __OPENCV_CORE_OPERATIONS_HPP__
+#ifndef OPENCV_CORE_OPERATIONS_HPP
+#define OPENCV_CORE_OPERATIONS_HPP
 
 #ifndef __cplusplus
 #  error operations.hpp header must be compiled as C++

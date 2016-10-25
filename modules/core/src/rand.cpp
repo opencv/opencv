@@ -624,7 +624,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         int ptype = depth == CV_64F ? CV_64F : CV_32F;
         int esz = (int)CV_ELEM_SIZE(ptype);
 
-        if( _param1.isContinuous() && _param1.type() == ptype )
+        if( _param1.isContinuous() && _param1.type() == ptype && n1 >= cn)
             mean = _param1.ptr();
         else
         {
@@ -637,18 +637,18 @@ void RNG::fill( InputOutputArray _mat, int disttype,
             for( j = n1*esz; j < cn*esz; j++ )
                 mean[j] = mean[j - n1*esz];
 
-        if( _param2.isContinuous() && _param2.type() == ptype )
+        if( _param2.isContinuous() && _param2.type() == ptype && n2 >= cn)
             stddev = _param2.ptr();
         else
         {
-            Mat tmp(_param2.size(), ptype, parambuf + cn);
+            Mat tmp(_param2.size(), ptype, parambuf + MAX(n1, cn));
             _param2.convertTo(tmp, ptype);
-            stddev = (uchar*)(parambuf + cn);
+            stddev = (uchar*)(parambuf + MAX(n1, cn));
         }
 
-        if( n1 < cn )
-            for( j = n1*esz; j < cn*esz; j++ )
-                stddev[j] = stddev[j - n1*esz];
+        if( n2 < cn )
+            for( j = n2*esz; j < cn*esz; j++ )
+                stddev[j] = stddev[j - n2*esz];
 
         stdmtx = _param2.rows == cn && _param2.cols == cn;
         scaleFunc = randnScaleTab[depth];
@@ -734,13 +734,23 @@ cv::RNG& cv::theRNG()
     return getCoreTlsData().get()->rng;
 }
 
+void cv::setRNGSeed(int seed)
+{
+    theRNG() = RNG(static_cast<uint64>(seed));
+}
+
+
 void cv::randu(InputOutputArray dst, InputArray low, InputArray high)
 {
+    CV_INSTRUMENT_REGION()
+
     theRNG().fill(dst, RNG::UNIFORM, low, high);
 }
 
 void cv::randn(InputOutputArray dst, InputArray mean, InputArray stddev)
 {
+    CV_INSTRUMENT_REGION()
+
     theRNG().fill(dst, RNG::NORMAL, mean, stddev);
 }
 
@@ -748,29 +758,35 @@ namespace cv
 {
 
 template<typename T> static void
-randShuffle_( Mat& _arr, RNG& rng, double iterFactor )
+randShuffle_( Mat& _arr, RNG& rng, double )
 {
-    int sz = _arr.rows*_arr.cols, iters = cvRound(iterFactor*sz);
+    unsigned sz = (unsigned)_arr.total();
     if( _arr.isContinuous() )
     {
         T* arr = _arr.ptr<T>();
-        for( int i = 0; i < iters; i++ )
+        for( unsigned i = 0; i < sz; i++ )
         {
-            int j = (unsigned)rng % sz, k = (unsigned)rng % sz;
-            std::swap( arr[j], arr[k] );
+            unsigned j = (unsigned)rng % sz;
+            std::swap( arr[j], arr[i] );
         }
     }
     else
     {
+        CV_Assert( _arr.dims <= 2 );
         uchar* data = _arr.ptr();
         size_t step = _arr.step;
+        int rows = _arr.rows;
         int cols = _arr.cols;
-        for( int i = 0; i < iters; i++ )
+        for( int i0 = 0; i0 < rows; i0++ )
         {
-            int j1 = (unsigned)rng % sz, k1 = (unsigned)rng % sz;
-            int j0 = j1/cols, k0 = k1/cols;
-            j1 -= j0*cols; k1 -= k0*cols;
-            std::swap( ((T*)(data + step*j0))[j1], ((T*)(data + step*k0))[k1] );
+            T* p = _arr.ptr<T>(i0);
+            for( int j0 = 0; j0 < cols; j0++ )
+            {
+                unsigned k1 = (unsigned)rng % sz;
+                int i1 = (int)(k1 / cols);
+                int j1 = (int)(k1 - (unsigned)i1*(unsigned)cols);
+                std::swap( p[j0], ((T*)(data + step*i1))[j1] );
+            }
         }
     }
 }
@@ -781,6 +797,8 @@ typedef void (*RandShuffleFunc)( Mat& dst, RNG& rng, double iterFactor );
 
 void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
 {
+    CV_INSTRUMENT_REGION()
+
     RandShuffleFunc tab[] =
     {
         0,

@@ -114,6 +114,7 @@ double upnp::compute_pose(Mat& R, Mat& t)
   SVD::compute(MtM, D, Ut, Vt, SVD::MODIFY_A | SVD::FULL_UV);
   Mat(Ut.t()).copyTo(Ut);
   M->release();
+  delete M;
 
   double l_6x12[6 * 12], rho[6];
   Mat L_6x12 = Mat(6, 12, CV_64F, l_6x12);
@@ -589,7 +590,16 @@ void upnp::gauss_newton(const Mat * L_6x12, const Mat * Rho, double betas[4], do
   }
 
   if (f[0] < 0) f[0] = -f[0];
-    fu = fv = f[0];
+  fu = fv = f[0];
+
+  A->release();
+  delete A;
+
+  B->release();
+  delete B;
+
+  X->release();
+  delete X;
 
 }
 

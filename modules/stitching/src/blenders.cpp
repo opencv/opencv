@@ -267,7 +267,7 @@ static bool ocl_MultiBandBlender_feed(InputArray _src, InputArray _weight,
            ocl::KernelArg::ReadWrite(_dst_weight.getUMat())
            );
 
-    size_t globalsize[2] = {src.cols, src.rows };
+    size_t globalsize[2] = {(size_t)src.cols, (size_t)src.rows };
     return k.run(2, globalsize, NULL, false);
 }
 #endif
@@ -469,7 +469,7 @@ static bool ocl_normalizeUsingWeightMap(InputArray _weight, InputOutputArray _ma
            ocl::KernelArg::ReadOnly(_weight.getUMat())
            );
 
-    size_t globalsize[2] = {mat.cols, mat.rows };
+    size_t globalsize[2] = {(size_t)mat.cols, (size_t)mat.rows };
     return k.run(2, globalsize, NULL, false);
 }
 #endif
@@ -481,7 +481,7 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 #ifdef HAVE_TEGRA_OPTIMIZATION
     src = _src.getMat();
     weight = _weight.getMat();
-    if(tegra::normalizeUsingWeightMap(weight, src))
+    if(tegra::useTegra() && tegra::normalizeUsingWeightMap(weight, src))
         return;
 #endif
 
@@ -552,7 +552,7 @@ void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     cv::Mat imgMat = img.getMat();
-    if(tegra::createLaplacePyr(imgMat, num_levels, pyr))
+    if(tegra::useTegra() && tegra::createLaplacePyr(imgMat, num_levels, pyr))
         return;
 #endif
 

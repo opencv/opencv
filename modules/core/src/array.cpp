@@ -115,12 +115,13 @@ cvCreateMatHeader( int rows, int cols, int type )
 {
     type = CV_MAT_TYPE(type);
 
-    if( rows < 0 || cols <= 0 )
+    if( rows < 0 || cols < 0 )
         CV_Error( CV_StsBadSize, "Non-positive width or height" );
 
-    int min_step = CV_ELEM_SIZE(type)*cols;
+    int min_step = CV_ELEM_SIZE(type);
     if( min_step <= 0 )
         CV_Error( CV_StsUnsupportedFormat, "Invalid matrix type" );
+    min_step *= cols;
 
     CvMat* arr = (CvMat*)cvAlloc( sizeof(*arr));
 
@@ -148,7 +149,7 @@ cvInitMatHeader( CvMat* arr, int rows, int cols,
     if( (unsigned)CV_MAT_DEPTH(type) > CV_DEPTH_MAX )
         CV_Error( CV_BadNumChannels, "" );
 
-    if( rows < 0 || cols <= 0 )
+    if( rows < 0 || cols < 0 )
         CV_Error( CV_StsBadSize, "Non-positive cols or rows" );
 
     type = CV_MAT_TYPE( type );
@@ -504,7 +505,7 @@ cvInitNArrayIterator( int count, CvArr** arrs,
 CV_IMPL int cvNextNArraySlice( CvNArrayIterator* iterator )
 {
     assert( iterator != 0 );
-    int i, dims, size = 0;
+    int i, dims;
 
     for( dims = iterator->dims; dims > 0; dims-- )
     {
@@ -514,7 +515,7 @@ CV_IMPL int cvNextNArraySlice( CvNArrayIterator* iterator )
         if( --iterator->stack[dims-1] > 0 )
             break;
 
-        size = iterator->hdr[0]->dim[dims-1].size;
+        const int size = iterator->hdr[0]->dim[dims-1].size;
 
         for( i = 0; i < iterator->count; i++ )
             iterator->ptr[i] -= (size_t)size*iterator->hdr[i]->dim[dims-1].step;
@@ -833,6 +834,9 @@ cvCreateData( CvArr* arr )
 
         if( !CvIPL.allocateData )
         {
+            const int64 imageSize_tmp = (int64)img->widthStep*(int64)img->height;
+            if( (int64)img->imageSize != imageSize_tmp )
+                CV_Error( CV_StsNoMem, "Overflow for imageSize" );
             img->imageData = img->imageDataOrigin =
                         (char*)cvAlloc( (size_t)img->imageSize );
         }
@@ -856,7 +860,6 @@ cvCreateData( CvArr* arr )
     else if( CV_IS_MATND_HDR( arr ))
     {
         CvMatND* mat = (CvMatND*)arr;
-        int i;
         size_t total_size = CV_ELEM_SIZE(mat->type);
 
         if( mat->dim[0].size == 0 )
@@ -872,6 +875,7 @@ cvCreateData( CvArr* arr )
         }
         else
         {
+            int i;
             for( i = mat->dims - 1; i >= 0; i-- )
             {
                 size_t size = (size_t)mat->dim[i].step*mat->dim[i].size;
@@ -940,7 +944,10 @@ cvSetData( CvArr* arr, void* data, int step )
             img->widthStep = min_step;
         }
 
-        img->imageSize = img->widthStep * img->height;
+        const int64 imageSize_tmp = (int64)img->widthStep*(int64)img->height;
+        img->imageSize = (int)imageSize_tmp;
+        if( (int64)img->imageSize != imageSize_tmp )
+            CV_Error( CV_StsNoMem, "Overflow for imageSize" );
         img->imageData = img->imageDataOrigin = (char*)data;
 
         if( (((int)(size_t)data | step) & 7) == 0 &&
@@ -1055,16 +1062,19 @@ cvGetRawData( const CvArr* arr, uchar** data, int* step, CvSize* roi_size )
 
         if( roi_size || step )
         {
-            int i, size1 = mat->dim[0].size, size2 = 1;
-
-            if( mat->dims > 2 )
-                for( i = 1; i < mat->dims; i++ )
-                    size1 *= mat->dim[i].size;
-            else
-                size2 = mat->dim[1].size;
-
             if( roi_size )
             {
+                int size1 = mat->dim[0].size, size2 = 1;
+
+                if( mat->dims > 2 )
+                {
+                    int i;
+                    for( i = 1; i < mat->dims; i++ )
+                        size1 *= mat->dim[i].size;
+                }
+                else
+                    size2 = mat->dim[1].size;
+
                 roi_size->width = size2;
                 roi_size->height = size1;
             }
@@ -2458,7 +2468,6 @@ cvGetMat( const CvArr* array, CvMat* mat,
     else if( allowND && CV_IS_MATND_HDR(src) )
     {
         CvMatND* matnd = (CvMatND*)src;
-        int i;
         int size1 = matnd->dim[0].size, size2 = 1;
 
         if( !src->data.ptr )
@@ -2468,8 +2477,11 @@ cvGetMat( const CvArr* array, CvMat* mat,
             CV_Error( CV_StsBadArg, "Only continuous nD arrays are supported here" );
 
         if( matnd->dims > 2 )
+        {
+            int i;
             for( i = 1; i < matnd->dims; i++ )
                 size2 *= matnd->dim[i].size;
+        }
         else
             size2 = matnd->dims == 1 ? 1 : matnd->dim[1].size;
 
@@ -2785,7 +2797,6 @@ cvGetImage( const CvArr* array, IplImage* img )
 {
     IplImage* result = 0;
     const IplImage* src = (const IplImage*)array;
-    int depth;
 
     if( !img )
         CV_Error( CV_StsNullPtr, "" );
@@ -2800,7 +2811,7 @@ cvGetImage( const CvArr* array, IplImage* img )
         if( mat->data.ptr == 0 )
             CV_Error( CV_StsNullPtr, "" );
 
-        depth = cvIplDepth(mat->type);
+        int depth = cvIplDepth(mat->type);
 
         cvInitImageHeader( img, cvSize(mat->cols, mat->rows),
                            depth, CV_MAT_CN(mat->type) );
@@ -2953,7 +2964,10 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     image->widthStep = (((image->width * image->nChannels *
          (image->depth & ~IPL_DEPTH_SIGN) + 7)/8)+ align - 1) & (~(align - 1));
     image->origin = origin;
-    image->imageSize = image->widthStep * image->height;
+    const int64 imageSize_tmp = (int64)image->widthStep*(int64)image->height;
+    image->imageSize = (int)imageSize_tmp;
+    if( (int64)image->imageSize != imageSize_tmp )
+        CV_Error( CV_StsNoMem, "Overflow for imageSize" );
 
     return image;
 }

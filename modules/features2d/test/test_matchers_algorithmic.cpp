@@ -40,7 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -542,4 +541,14 @@ TEST( Features2d_DescriptorMatcher_FlannBased, regression )
     CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based",
                                   DescriptorMatcher::create("FlannBased"), 0.04f );
     test.safe_run();
+}
+
+TEST( Features2d_DMatch, read_write )
+{
+    FileStorage fs(".xml", FileStorage::WRITE + FileStorage::MEMORY);
+    vector<DMatch> matches;
+    matches.push_back(DMatch(1,2,3,4.5f));
+    fs << "Match" << matches;
+    String str = fs.releaseAndGetString();
+    ASSERT_NE( strstr(str.c_str(), "4.5"), (char*)0 );
 }

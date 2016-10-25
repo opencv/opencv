@@ -77,8 +77,7 @@ Following scheme represents common documentation places for _opencv_ repository:
 <opencv>
 ├── doc             - doxygen config files, root page (root.markdown.in), BibTeX file (opencv.bib)
 │   ├── tutorials       - tutorials hierarchy (pages and images)
-│   ├── py_tutorials    - python tutorials hierarchy (pages and images)
-│   └── user_guide      - old user guide (pages and images)
+│   └── py_tutorials    - python tutorials hierarchy (pages and images)
 ├── modules
 │   └── <modulename>
 │       ├── doc         - documentation pages and images for module
@@ -415,7 +414,8 @@ you can manually specify it in curly braces:
 
 To include whole example file into documentation, _include_ and _includelineno_ commands are used.
 The file is searched in common samples locations, so you can specify just its name or short part of
-the path. The _includelineno_ version also shows line numbers.
+the path. The _includelineno_ version also shows line numbers but prevents copy-pasting since
+the line numbers are included.
 
 @verbatim
 @include samples/cpp/test.cpp

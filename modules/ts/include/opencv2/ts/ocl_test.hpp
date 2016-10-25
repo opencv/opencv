@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_TS_OCL_TEST_HPP__
-#define __OPENCV_TS_OCL_TEST_HPP__
+#ifndef OPENCV_TS_OCL_TEST_HPP
+#define OPENCV_TS_OCL_TEST_HPP
 
 #include "opencv2/opencv_modules.hpp"
 
@@ -324,9 +324,8 @@ struct CV_EXPORTS TSTestWithParam : public TestUtils, public ::testing::TestWith
 
 };
 
+#undef PARAM_TEST_CASE
 #define PARAM_TEST_CASE(name, ...) struct name : public TSTestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-
-#define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
 #ifndef IMPLEMENT_PARAM_CLASS
 #define IMPLEMENT_PARAM_CLASS(name, type) \
@@ -350,8 +349,8 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #define OCL_TEST_F(name, ...) typedef name OCL_##name; TEST_F(OCL_##name, __VA_ARGS__)
 #define OCL_TEST(name, ...) TEST(OCL_##name, __VA_ARGS__)
 
-#define OCL_OFF(fn) cv::ocl::setUseOpenCL(false); fn
-#define OCL_ON(fn) cv::ocl::setUseOpenCL(true); fn
+#define OCL_OFF(...) cv::ocl::setUseOpenCL(false); __VA_ARGS__ ;
+#define OCL_ON(...) cv::ocl::setUseOpenCL(true); __VA_ARGS__ ;
 
 #define OCL_ALL_DEPTHS Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)
 #define OCL_ALL_CHANNELS Values(1, 2, 3, 4)
@@ -365,4 +364,4 @@ CV_ENUM(BorderType, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WR
 
 } } // namespace cvtest::ocl
 
-#endif // __OPENCV_TS_OCL_TEST_HPP__
+#endif // OPENCV_TS_OCL_TEST_HPP

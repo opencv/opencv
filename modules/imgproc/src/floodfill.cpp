@@ -459,6 +459,8 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
                   Point seedPoint, Scalar newVal, Rect* rect,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     ConnectedComp comp;
     std::vector<FFillSegment> buffer;
 
@@ -483,6 +485,11 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     int type = img.type();
     int depth = img.depth();
     int cn = img.channels();
+
+    if ( (cn != 1) && (cn != 3) )
+    {
+        CV_Error( CV_StsBadArg, "Number of channels in input image must be 1 or 3" );
+    }
 
     if( connectivity == 0 )
         connectivity = 4;
@@ -579,7 +586,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    uchar newMaskVal = (uchar)((flags & ~0xff) == 0 ? 1 : ((flags >> 8) & 255));
+    uchar newMaskVal = (uchar)((flags & 0xff00) == 0 ? 1 : ((flags >> 8) & 255));
 
     if( type == CV_8UC1 )
         floodFillGrad_CnIR<uchar, uchar, int, Diff8uC1>(
@@ -624,6 +631,8 @@ int cv::floodFill( InputOutputArray _image, Point seedPoint,
                   Scalar newVal, Rect* rect,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     return floodFill(_image, Mat(), seedPoint, newVal, rect, loDiff, upDiff, flags);
 }
 

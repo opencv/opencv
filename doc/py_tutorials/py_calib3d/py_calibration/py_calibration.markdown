@@ -22,17 +22,17 @@ red line. All the expected straight lines are bulged out. Visit [Distortion
 
 ![image](images/calib_radial.jpg)
 
-This distortion is solved as follows:
+This distortion is represented as follows:
 
-\f[x_{corrected} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
-y_{corrected} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)\f]
+\f[x_{distorted} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
+y_{distorted} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)\f]
 
 Similarly, another distortion is the tangential distortion which occurs because image taking lense
 is not aligned perfectly parallel to the imaging plane. So some areas in image may look nearer than
-expected. It is solved as below:
+expected. It is represented as below:
 
-\f[x_{corrected} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
-y_{corrected} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]\f]
+\f[x_{distorted} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
+y_{distorted} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]\f]
 
 In short, we need to find five parameters, known as distortion coefficients given by:
 
@@ -121,21 +121,21 @@ images = glob.glob('*.jpg')
 
 for fname in images:
     img = cv2.imread(fname)
-    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Find the chess board corners
-    ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
+    ret, corners = cv2.findChessboardCorners(gray, (7,6), None)
 
     # If found, add object points, image points (after refining them)
     if ret == True:
         objpoints.append(objp)
 
-        cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+        corners2=cv2.cornerSubPix(gray,corners, (11,11), (-1,-1), criteria)
         imgpoints.append(corners)
 
         # Draw and display the corners
-        cv2.drawChessboardCorners(img, (7,6), corners2,ret)
-        cv2.imshow('img',img)
+        cv2.drawChessboardCorners(img, (7,6), corners2, ret)
+        cv2.imshow('img', img)
         cv2.waitKey(500)
 
 cv2.destroyAllWindows()
@@ -150,7 +150,7 @@ So now we have our object points and image points we are ready to go for calibra
 use the function, **cv2.calibrateCamera()**. It returns the camera matrix, distortion coefficients,
 rotation and translation vectors etc.
 @code{.py}
-ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 @endcode
 ### Undistortion
 
@@ -165,7 +165,7 @@ So we take a new image (left12.jpg in this case. That is the first image in this
 @code{.py}
 img = cv2.imread('left12.jpg')
 h,  w = img.shape[:2]
-newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
 @endcode
 #### 1. Using **cv2.undistort()**
 
@@ -175,9 +175,9 @@ This is the shortest path. Just call the function and use ROI obtained above to 
 dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
 # crop the image
-x,y,w,h = roi
+x, y, w, h = roi
 dst = dst[y:y+h, x:x+w]
-cv2.imwrite('calibresult.png',dst)
+cv2.imwrite('calibresult.png', dst)
 @endcode
 #### 2. Using **remapping**
 
@@ -185,13 +185,13 @@ This is curved path. First find a mapping function from distorted image to undis
 use the remap function.
 @code{.py}
 # undistort
-mapx,mapy = cv2.initUndistortRectifyMap(mtx,dist,None,newcameramtx,(w,h),5)
-dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
+mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcameramtx, (w,h), 5)
+dst = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
 
 # crop the image
-x,y,w,h = roi
+x, y, w, h = roi
 dst = dst[y:y+h, x:x+w]
-cv2.imwrite('calibresult.png',dst)
+cv2.imwrite('calibresult.png', dst)
 @endcode
 Both the methods give the same result. See the result below:
 
@@ -215,8 +215,8 @@ calibration images.
 mean_error = 0
 for i in xrange(len(objpoints)):
     imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
-    error = cv2.norm(imgpoints[i],imgpoints2, cv2.NORM_L2)/len(imgpoints2)
-    tot_error += error
+    error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+    mean_error += error
 
 print "total error: ", mean_error/len(objpoints)
 @endcode

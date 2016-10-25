@@ -50,10 +50,55 @@
 
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/cudev.hpp"
+#include "opencv2/core/cuda/utility.hpp"
 
 using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cudev;
+
+device::ThrustAllocator::~ThrustAllocator()
+{
+}
+namespace
+{
+    class DefaultThrustAllocator: public cv::cuda::device::ThrustAllocator
+    {
+    public:
+        __device__ __host__ uchar* allocate(size_t numBytes)
+        {
+#ifndef __CUDA_ARCH__
+            uchar* ptr;
+            CV_CUDEV_SAFE_CALL(cudaMalloc(&ptr, numBytes));
+            return ptr;
+#else
+            return NULL;
+#endif
+        }
+        __device__ __host__ void deallocate(uchar* ptr, size_t numBytes)
+        {
+            (void)numBytes;
+#ifndef __CUDA_ARCH__
+            CV_CUDEV_SAFE_CALL(cudaFree(ptr));
+#endif
+        }
+    };
+    DefaultThrustAllocator defaultThrustAllocator;
+    cv::cuda::device::ThrustAllocator* g_thrustAllocator = &defaultThrustAllocator;
+}
+
+
+cv::cuda::device::ThrustAllocator& cv::cuda::device::ThrustAllocator::getAllocator()
+{
+    return *g_thrustAllocator;
+}
+
+void cv::cuda::device::ThrustAllocator::setAllocator(cv::cuda::device::ThrustAllocator* allocator)
+{
+    if(allocator == NULL)
+        g_thrustAllocator = &defaultThrustAllocator;
+    else
+        g_thrustAllocator = allocator;
+}
 
 namespace
 {
@@ -465,6 +510,17 @@ namespace
 
         gridTransformUnary_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), op, stream);
     }
+
+    template <typename T, typename D>
+    void convertScaleHalf(const GpuMat& src, const GpuMat& dst, Stream& stream)
+    {
+        typedef typename VecTraits<T>::elem_type src_elem_type;
+        typedef typename VecTraits<D>::elem_type dst_elem_type;
+        typedef typename LargerType<src_elem_type, float>::type larger_elem_type;
+        typedef typename LargerType<float, dst_elem_type>::type scalar_type;
+
+        gridTransformUnary_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), saturate_cast_fp16_func<T,D>(), stream);
+    }
 }
 
 void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) const
@@ -536,6 +592,38 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
     };
 
     funcs[sdepth][ddepth](reshape(1), dst.reshape(1), alpha, beta, stream);
+}
+
+void cv::cuda::convertFp16(InputArray _src, OutputArray _dst, Stream& stream)
+{
+    GpuMat src = _src.getGpuMat();
+    int ddepth = 0;
+
+    switch(src.depth())
+    {
+    case CV_32F:
+        ddepth = CV_16S;
+        break;
+    case CV_16S:
+        ddepth = CV_32F;
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported input depth");
+        return;
+    }
+    int type = CV_MAKE_TYPE(CV_MAT_DEPTH(ddepth), src.channels());
+    _dst.create(src.size(), type);
+    GpuMat dst = _dst.getGpuMat();
+
+    typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
+    {
+        0, 0, 0,
+        convertScaleHalf<float, short>, 0, convertScaleHalf<short, float>,
+        0, 0,
+    };
+
+    funcs[ddepth](src.reshape(1), dst.reshape(1), stream);
 }
 
 #endif
