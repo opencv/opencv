@@ -134,6 +134,10 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
     [super stop];
 
     [videoDataOutput release];
+    if (videoDataOutputQueue) {
+        dispatch_release(videoDataOutputQueue);
+    }
+        
     if (self.recordVideo == YES) {
         if (self.recordAssetWriter) {
             if (self.recordAssetWriter.status == AVAssetWriterStatusWriting) {
