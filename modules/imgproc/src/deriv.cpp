@@ -864,16 +864,18 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                    ocl_Laplacian5(_src, _dst, kd, ks, scale,
                                   delta, borderType, wdepth, ddepth))
 
+        Mat src = _src.getMat(), dst = _dst.getMat();
+        Point ofs;
+        Size wsz(src.cols, src.rows);
+        if(!(borderType&BORDER_ISOLATED))
+            src.locateROI( wsz, ofs );
+        borderType = (borderType&~BORDER_ISOLATED);
+
         const size_t STRIPE_SIZE = 1 << 14;
         Ptr<FilterEngine> fx = createSeparableLinearFilter(stype,
             wtype, kd, ks, Point(-1,-1), 0, borderType, borderType, Scalar() );
         Ptr<FilterEngine> fy = createSeparableLinearFilter(stype,
             wtype, ks, kd, Point(-1,-1), 0, borderType, borderType, Scalar() );
-
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        Point ofs;
-        Size wsz(src.cols, src.rows);
-        src.locateROI( wsz, ofs );
 
         int y = fx->start(src, wsz, ofs), dsty = 0, dy = 0;
         fy->start(src, wsz, ofs);
