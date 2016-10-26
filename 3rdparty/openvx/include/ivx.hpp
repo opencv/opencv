@@ -25,23 +25,31 @@ Details: TBD
     // checking compiler
     #if __cplusplus < 201103L && (!defined(_MSC_VER) || _MSC_VER < 1800)
         #define IVX_USE_CXX98
-        #ifdef _MSC_VER
-            #pragma message ("ivx.hpp: The ISO C++ 2011 standard is not enabled, switching to C++98 fallback implementation.")
-        #else
-            #warning The ISO C++ 2011 standard is not enabled, switching to C++98 fallback implementation.
-        #endif
-    #endif
-    // checking OpenVX version
-    #ifndef VX_VERSION_1_1
-        #define IVX_USE_CXX98
-        #ifdef _MSC_VER
-            #pragma message ("ivx.hpp: OpenVX version < 1.1, switching to C++98 fallback implementation.")
-        #else
-            #warning OpenVX version < 1.1, switching to C++98 fallback implementation.
-        #endif
     #endif
 #endif // IVX_USE_CXX98
 
+#ifdef IVX_USE_CXX98
+    #ifdef _MSC_VER
+        #pragma message ("ivx.hpp: The ISO C++ 2011 standard is not enabled, switching to C++98 fallback implementation.")
+    #else
+        #warning The ISO C++ 2011 standard is not enabled, switching to C++98 fallback implementation.
+    #endif
+#endif // IVX_USE_CXX98
+
+#ifndef IVX_USE_EXTERNAL_REFCOUNT
+    // checking OpenVX version
+    #ifndef VX_VERSION_1_1
+        #define IVX_USE_EXTERNAL_REFCOUNT
+    #endif
+#endif // IVX_USE_CXX98
+
+#ifdef IVX_USE_EXTERNAL_REFCOUNT
+    #ifdef _MSC_VER
+        #pragma message ("ivx.hpp: OpenVX version < 1.1, switching to external refcounter implementation.")
+    #else
+        #warning OpenVX version < 1.1, switching to external refcounter implementation.
+    #endif
+#endif // IVX_USE_EXTERNAL_REFCOUNT
 
 #include <stdexcept>
 #include <utility>
@@ -52,8 +60,11 @@ Details: TBD
     #include <type_traits>
     #include <initializer_list>
 #else
+    namespace ivx
+    {
     template<typename, typename> struct is_same { static const bool value = false; };
     template<typename T> struct is_same<T, T>   { static const bool value = true; };
+    }
 #endif
 
 #ifdef IVX_USE_OPENCV
@@ -305,7 +316,7 @@ inline void checkVxRef(vx_reference ref, const std::string& func, const std::str
 * RefWrapper - base class for referenced objects wrappers
 */
 
-#ifdef IVX_USE_CXX98
+#ifdef IVX_USE_EXTERNAL_REFCOUNT
 
 template <typename T> class RefWrapper
 {
@@ -321,6 +332,15 @@ public:
 
     RefWrapper(const RefWrapper& r) : ref(r.ref), refcount(r.refcount)
     { addRef(); }
+
+#ifndef IVX_USE_CXX98
+    RefWrapper(RefWrapper&& rw) noexcept : RefWrapper()
+    {
+        using std::swap;
+        swap(ref, rw.ref);
+        swap(refcount, rw.refcount);
+    }
+#endif
 
     operator T() const
     { return ref; }
@@ -363,6 +383,12 @@ public:
     bool operator !() const
     { return ref == 0; }
 
+#ifndef IVX_USE_CXX98
+    explicit operator bool() const
+    { return ref != 0; }
+#endif
+
+#ifdef IVX_USE_CXX98
     template<typename C>
     C get() const
     {
@@ -371,6 +397,15 @@ public:
         // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
         return C(c, true);
     }
+#else
+    template<typename C = Context, typename = typename std::enable_if<std::is_same<C, Context>::value>::type>
+    C getContext() const
+    {
+        vx_context c = vxGetContext(castToReference(ref));
+        // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
+        return C(c, true);
+    }
+#endif // IVX_USE_CXX98
 
 protected:
     T ref;
@@ -412,35 +447,51 @@ protected:
     { release(); }
 };
 
-#define IVX_REF_STD_CTORS_AND_ASSIGNMENT(Class) \
-    Class() : RefWrapper() {} \
-    explicit Class(Class::vxType _ref, bool retainRef = false) : RefWrapper(_ref, retainRef) {} \
-    Class(const Class& _obj) : RefWrapper(_obj) {} \
-    \
-    Class& operator=(Class _obj) { using std::swap; swap(ref, _obj.ref); swap(refcount, _obj.refcount); return *this; }
+#ifdef IVX_USE_CXX98
 
-#else // not IVX_USE_CXX98
+    #define IVX_REF_STD_CTORS_AND_ASSIGNMENT(Class) \
+        Class() : RefWrapper() {} \
+        explicit Class(Class::vxType _ref, bool retainRef = false) : RefWrapper(_ref, retainRef) {} \
+        Class(const Class& _obj) : RefWrapper(_obj) {} \
+        \
+        Class& operator=(Class _obj) { using std::swap; swap(ref, _obj.ref); swap(refcount, _obj.refcount); return *this; }
+
+#else
+
+    #define IVX_REF_STD_CTORS_AND_ASSIGNMENT(Class) \
+        Class() : RefWrapper() {} \
+        explicit Class(Class::vxType _ref, bool retainRef = false) : RefWrapper(_ref, retainRef) {} \
+        Class(const Class& _obj) : RefWrapper(_obj) {} \
+        Class(Class&& _obj) : RefWrapper(std::move(_obj)) {} \
+        \
+        Class& operator=(Class _obj) { using std::swap; swap(ref, _obj.ref); swap(refcount, _obj.refcount); return *this; }
+
+#endif // IVX_USE_CXX98
+
+#else // not IVX_USE_EXTERNAL_REFCOUNT
 
 template <typename T> class RefWrapper
 {
 public:
-    using vxType = T;
+    typedef T vxType;
     static const vx_enum vxTypeEnum = RefTypeTraits <T>::vxTypeEnum;
 
     RefWrapper() : ref(0)
     {}
 
-    explicit RefWrapper(T r, bool retainRef = false) : RefWrapper()
+    explicit RefWrapper(T r, bool retainRef = false) : ref(0)
     { reset(r, retainRef); }
 
     RefWrapper(const RefWrapper& r) : ref(r.ref)
     { addRef(); }
 
+#ifndef IVX_USE_CXX98
     RefWrapper(RefWrapper&& rw) noexcept : RefWrapper()
     {
         using std::swap;
         swap(ref, rw.ref);
     }
+#endif
 
     operator T() const
     { return ref; }
@@ -448,6 +499,16 @@ public:
     operator vx_reference() const
     { return castToReference(ref); }
 
+#ifdef IVX_USE_CXX98
+    template<typename C>
+    C get() const
+    {
+        typedef int static_assert_context[is_same<C, Context>::value ? 1 : -1];
+        vx_context c = vxGetContext(castToReference(ref));
+        // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
+        return C(c, true);
+    }
+#else
     template<typename C = Context, typename = typename std::enable_if<std::is_same<C, Context>::value>::type>
     C getContext() const
     {
@@ -455,6 +516,7 @@ public:
         // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
         return C(c, true);
     }
+#endif // IVX_USE_CXX98
 
     void reset(T r, bool retainRef = false)
     {
@@ -481,8 +543,13 @@ public:
         return *this;
     }
 
+    bool operator !() const
+    { return ref == 0; }
+
+#ifndef IVX_USE_CXX98
     explicit operator bool() const
     { return ref != 0; }
+#endif
 
 protected:
     T ref;
@@ -508,15 +575,28 @@ protected:
     { release(); }
 };
 
-#define IVX_REF_STD_CTORS_AND_ASSIGNMENT(Class) \
-    Class() : RefWrapper() {} \
-    explicit Class(Class::vxType _ref, bool retainRef = false) : RefWrapper(_ref, retainRef) {} \
-    Class(const Class& _obj) : RefWrapper(_obj) {} \
-    Class(Class&& _obj) : RefWrapper(std::move(_obj)) {} \
-    \
-    Class& operator=(Class _obj) { using std::swap; swap(ref, _obj.ref); return *this; }
+#ifdef IVX_USE_CXX98
+
+    #define IVX_REF_STD_CTORS_AND_ASSIGNMENT(Class) \
+        Class() : RefWrapper() {} \
+        explicit Class(Class::vxType _ref, bool retainRef = false) : RefWrapper(_ref, retainRef) {} \
+        Class(const Class& _obj) : RefWrapper(_obj) {} \
+        \
+        Class& operator=(Class _obj) { using std::swap; swap(ref, _obj.ref); return *this; }
+
+#else
+
+    #define IVX_REF_STD_CTORS_AND_ASSIGNMENT(Class) \
+        Class() : RefWrapper() {} \
+        explicit Class(Class::vxType _ref, bool retainRef = false) : RefWrapper(_ref, retainRef) {} \
+        Class(const Class& _obj) : RefWrapper(_obj) {} \
+        Class(Class&& _obj) : RefWrapper(std::move(_obj)) {} \
+        \
+        Class& operator=(Class _obj) { using std::swap; swap(ref, _obj.ref); return *this; }
 
 #endif // IVX_USE_CXX98
+
+#endif // IVX_USE_EXTERNAL_REFCOUNT
 
 /*
 * Context
@@ -1196,8 +1276,13 @@ public:
         swap(_addr, p._addr);
         swap(_data, p._data);
         swap(_externalMem, p._externalMem);
+#ifdef VX_VERSION_1_1
         swap(_memType, p._memType);
         swap(_mapId, p._mapId);
+#else
+        swap(_rect, p._rect);
+        swap(_planeIdx, p._planeIdx);
+#endif
         swap(_img, p._img);
         swap(_m, p._m);
     }
