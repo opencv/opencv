@@ -1717,11 +1717,14 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
              ipp_boxfilter( _src,  _dst,  ddepth, ksize,  anchor, normalize,  borderType));
 #endif
 
-    Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
-                        ksize, anchor, normalize, borderType );
     Point ofs;
     Size wsz(src.cols, src.rows);
-    src.locateROI( wsz, ofs );
+    if(!(borderType&BORDER_ISOLATED))
+        src.locateROI( wsz, ofs );
+    borderType = (borderType&~BORDER_ISOLATED);
+
+    Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
+                        ksize, anchor, normalize, borderType );
 
     f->apply( src, dst, wsz, ofs );
 }
