@@ -4290,9 +4290,9 @@ public:
         bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
     #endif
 
-        Mat _bufxy(brows0, bcols0, CV_16SC2), _bufa;
+        Mat _bufxy(brows0, bcols0, CV_32SC2), _bufa;
         if( !nnfunc )
-            _bufa.create(brows0, bcols0, CV_16UC1);
+            _bufa.create(brows0, bcols0, CV_32SC2);
 
         for( y = range.start; y < range.end; y += brows0 )
         {
@@ -4305,7 +4305,7 @@ public:
 
                 if( nnfunc )
                 {
-                    if( m1->type() == CV_16SC2 && m2->empty() ) // the data is already in the right format
+                    if( m1->type() == CV_32SC2 && m2->empty() ) // the data is already in the right format
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
                     else if( map_depth != CV_32F )
                     {
@@ -4374,7 +4374,7 @@ public:
                     short* XY = bufxy.ptr<short>(y1);
                     ushort* A = bufa.ptr<ushort>(y1);
 
-                    if( m1->type() == CV_16SC2 && (m2->type() == CV_16UC1 || m2->type() == CV_16SC1) )
+                    if( m1->type() == CV_32SC2 && (m2->type() == CV_32SC1 || m2->type() == CV_32SC1) )
                     {
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
 
@@ -4526,15 +4526,15 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
             rowsPerWI = dev.isIntel() ? 4 : 1;
 
     if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
-            || _map1.type() == CV_16SC1 || _map2.type() == CV_16SC1)
+            || _map1.type() == CV_32SC1 || _map2.type() == CV_32SC1)
         return false;
 
     UMat src = _src.getUMat(), map1 = _map1.getUMat(), map2 = _map2.getUMat();
 
-    if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.empty())) ||
-        (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.empty())) )
+    if( (map1.type() == CV_32SC2 && (map2.type() == CV_32SC1 || map2.empty())) ||
+        (map2.type() == CV_32SC2 && (map1.type() == CV_32SC1 || map1.empty())) )
     {
-        if (map1.type() != CV_16SC2)
+        if (map1.type() != CV_32SC2)
             std::swap(map1, map2);
     }
     else
@@ -4546,7 +4546,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     String kernelName = "remap";
     if (map1.type() == CV_32FC2 && map2.empty())
         kernelName += "_32FC2";
-    else if (map1.type() == CV_16SC2)
+    else if (map1.type() == CV_32SC2)
     {
         kernelName += "_16SC2";
         if (!map2.empty())
@@ -4915,15 +4915,15 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     const Mat *m1 = &map1, *m2 = &map2;
 
-    if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1 || map2.empty())) ||
-        (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.type() == CV_16SC1 || map1.empty())) )
+    if( (map1.type() == CV_32SC2 && (map2.type() == CV_32SC1 || map2.type() == CV_32SC1 || map2.empty())) ||
+        (map2.type() == CV_32SC2 && (map1.type() == CV_32SC1 || map1.type() == CV_32SC1 || map1.empty())) )
     {
-        if( map1.type() != CV_16SC2 )
+        if( map1.type() != CV_32SC2 )
             std::swap(m1, m2);
     }
     else
     {
-        CV_Assert( ((map1.type() == CV_32FC2 || map1.type() == CV_16SC2) && map2.empty()) ||
+        CV_Assert( ((map1.type() == CV_32FC2 || map1.type() == CV_32SC2) && map2.empty()) ||
             (map1.type() == CV_32FC1 && map2.type() == CV_32FC1) );
         planar_input = map1.channels() == 1;
     }
@@ -4944,34 +4944,34 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     const Mat *m1 = &map1, *m2 = &map2;
     int m1type = m1->type(), m2type = m2->type();
 
-    CV_Assert( (m1type == CV_16SC2 && (nninterpolate || m2type == CV_16UC1 || m2type == CV_16SC1)) ||
-               (m2type == CV_16SC2 && (nninterpolate || m1type == CV_16UC1 || m1type == CV_16SC1)) ||
+    CV_Assert( (m1type == CV_32SC2 && (nninterpolate || m2type == CV_32SC1 || m2type == CV_32SC1)) ||
+               (m2type == CV_32SC2 && (nninterpolate || m1type == CV_32SC1 || m1type == CV_32SC1)) ||
                (m1type == CV_32FC1 && m2type == CV_32FC1) ||
                (m1type == CV_32FC2 && m2->empty()) );
 
-    if( m2type == CV_16SC2 )
+    if( m2type == CV_32SC2 )
     {
         std::swap( m1, m2 );
         std::swap( m1type, m2type );
     }
 
     if( dstm1type <= 0 )
-        dstm1type = m1type == CV_16SC2 ? CV_32FC2 : CV_16SC2;
-    CV_Assert( dstm1type == CV_16SC2 || dstm1type == CV_32FC1 || dstm1type == CV_32FC2 );
+        dstm1type = m1type == CV_32SC2 ? CV_32FC2 : CV_32SC2;
+    CV_Assert( dstm1type == CV_32SC2 || dstm1type == CV_32FC1 || dstm1type == CV_32FC2 );
     _dstmap1.create( size, dstm1type );
     dstmap1 = _dstmap1.getMat();
 
     if( !nninterpolate && dstm1type != CV_32FC2 )
     {
-        _dstmap2.create( size, dstm1type == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
+        _dstmap2.create( size, dstm1type == CV_32SC2 ? CV_32SC1 : CV_32FC1 );
         dstmap2 = _dstmap2.getMat();
     }
     else
         _dstmap2.release();
 
     if( m1type == dstm1type || (nninterpolate &&
-        ((m1type == CV_16SC2 && dstm1type == CV_32FC2) ||
-        (m1type == CV_32FC2 && dstm1type == CV_16SC2))) )
+        ((m1type == CV_32SC2 && dstm1type == CV_32FC2) ||
+        (m1type == CV_32FC2 && dstm1type == CV_32SC2))) )
     {
         m1->convertTo( dstmap1, dstmap1.type() );
         if( !dstmap2.empty() && dstmap2.type() == m2->type() )
@@ -5022,7 +5022,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         ushort* dst2 = (ushort*)dst2f;
         x = 0;
 
-        if( m1type == CV_32FC1 && dstm1type == CV_16SC2 )
+        if( m1type == CV_32FC1 && dstm1type == CV_32SC2 )
         {
             if( nninterpolate )
             {
@@ -5151,7 +5151,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 }
             }
         }
-        else if( m1type == CV_32FC2 && dstm1type == CV_16SC2 )
+        else if( m1type == CV_32FC2 && dstm1type == CV_32SC2 )
         {
             if( nninterpolate )
             {
@@ -5235,7 +5235,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 }
             }
         }
-        else if( m1type == CV_16SC2 && dstm1type == CV_32FC1 )
+        else if( m1type == CV_32SC2 && dstm1type == CV_32FC1 )
         {
             #if CV_NEON
             uint16x8_t v_mask2 = vdupq_n_u16(INTER_TAB_SIZE2-1);
@@ -5315,7 +5315,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 dst2f[x] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
         }
-        else if( m1type == CV_16SC2 && dstm1type == CV_32FC2 )
+        else if( m1type == CV_32SC2 && dstm1type == CV_32FC2 )
         {
             #if CV_NEON
             int16x8_t v_mask2 = vdupq_n_s16(INTER_TAB_SIZE2-1);
@@ -5423,7 +5423,7 @@ public:
                 int bw = std::min( bw0, dst.cols - x);
                 int bh = std::min( bh0, range.end - y);
 
-                Mat _XY(bh, bw, CV_16SC2, XY), matA;
+                Mat _XY(bh, bw, CV_32SC2, XY), matA;
                 Mat dpart(dst, Rect(x, y, bw, bh));
 
                 for( y1 = 0; y1 < bh; y1++ )
@@ -5913,7 +5913,7 @@ public:
                 int bw = std::min( bw0, width - x);
                 int bh = std::min( bh0, range.end - y); // height
 
-                Mat _XY(bh, bw, CV_16SC2, XY), matA;
+                Mat _XY(bh, bw, CV_32SC2, XY), matA;
                 Mat dpart(dst, Rect(x, y, bw, bh));
 
                 for( y1 = 0; y1 < bh; y1++ )
@@ -6338,7 +6338,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                 ippFunc = type == CV_8UC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspective_8u_C1R :
                 type == CV_8UC3 ? (ippiWarpPerspectiveFunc)ippiWarpPerspective_8u_C3R :
                 type == CV_8UC4 ? (ippiWarpPerspectiveFunc)ippiWarpPerspective_8u_C4R :
-                type == CV_16UC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspective_16u_C1R :
+                type == CV_16UC1? (ippiWarpPerspectiveFunc)ippiWarpPerspective_16u_C1R :
                 type == CV_16UC3 ? (ippiWarpPerspectiveFunc)ippiWarpPerspective_16u_C3R :
                 type == CV_16UC4 ? (ippiWarpPerspectiveFunc)ippiWarpPerspective_16u_C4R :
                 type == CV_32FC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspective_32f_C1R :
@@ -6642,8 +6642,8 @@ cvConvertMaps( const CvArr* arr1, const CvArr* arr2, CvArr* dstarr1, CvArr* dsta
     if( dstarr2 )
     {
         dstmap2 = cv::cvarrToMat(dstarr2);
-        if( dstmap2.type() == CV_16SC1 )
-            dstmap2 = cv::Mat(dstmap2.size(), CV_16UC1, dstmap2.ptr(), dstmap2.step);
+        if( dstmap2.type() == CV_32SC1 )
+            dstmap2 = cv::Mat(dstmap2.size(), CV_32SC1, dstmap2.ptr(), dstmap2.step);
     }
 
     cv::convertMaps( map1, map2, dstmap1, dstmap2, dstmap1.type(), false );
