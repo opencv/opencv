@@ -363,7 +363,6 @@ public:
     bool operator !() const
     { return ref == 0; }
 
-#ifdef IVX_USE_CXX98
     template<typename C>
     C get() const
     {
@@ -372,15 +371,6 @@ public:
         // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
         return C(c, true);
     }
-#else
-    template<typename C = Context, typename = typename std::enable_if<std::is_same<C, Context>::value>::type>
-    C getContext() const
-    {
-        vx_context c = vxGetContext(castToReference(ref));
-        // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
-        return C(c, true);
-    }
-#endif // IVX_USE_CXX98
 
 protected:
     T ref;
