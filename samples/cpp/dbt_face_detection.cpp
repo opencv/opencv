@@ -81,7 +81,7 @@ int main(int , char** )
     Mat GrayFrame;
     vector<Rect> Faces;
 
-    while(true)
+    do
     {
         VideoStream >> ReferenceFrame;
         cvtColor(ReferenceFrame, GrayFrame, COLOR_RGB2GRAY);
@@ -94,9 +94,7 @@ int main(int , char** )
         }
 
         imshow(WindowName, ReferenceFrame);
-
-        if (waitKey(30) >= 0) break;
-    }
+    } while (waitKey(30) < 0);
 
     Detector.stop();
 
