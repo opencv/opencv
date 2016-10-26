@@ -427,7 +427,7 @@ protected:
     explicit Class(Class::vxType _ref, bool retainRef = false) : RefWrapper(_ref, retainRef) {} \
     Class(const Class& _obj) : RefWrapper(_obj) {} \
     \
-    Class& operator=(Class _obj) { using std::swap; swap(ref, _obj.ref); return *this; }
+    Class& operator=(Class _obj) { using std::swap; swap(ref, _obj.ref); swap(refcount, _obj.refcount); return *this; }
 
 #else // not IVX_USE_CXX98
 
