@@ -578,6 +578,12 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingT
     return shouldHandleResult;
 }
 
+cv::DetectionBasedTracker::Parameters::Parameters()
+{
+  maxTrackLifetime = 5;
+  minDetectionPeriod = 0;
+}
+
 cv::DetectionBasedTracker::InnerParameters::InnerParameters()
 {
     numLastPositionsToTrack=4;
