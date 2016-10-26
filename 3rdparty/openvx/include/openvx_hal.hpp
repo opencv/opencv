@@ -21,6 +21,12 @@
 #define VX_INTERPOLATION_BILINEAR VX_INTERPOLATION_TYPE_BILINEAR
 #define VX_INTERPOLATION_AREA VX_INTERPOLATION_TYPE_AREA
 #define VX_INTERPOLATION_NEAREST_NEIGHBOR VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR
+#define VX_IMAGE_RANGE VX_IMAGE_ATTRIBUTE_RANGE
+#define VX_IMAGE_SPACE VX_IMAGE_ATTRIBUTE_SPACE
+#define vx_border_t vx_border_mode_t
+#define VX_BORDER_CONSTANT VX_BORDER_MODE_CONSTANT
+#define VX_BORDER_REPLICATE VX_BORDER_MODE_REPLICATE
+#define VX_CONTEXT_IMMEDIATE_BORDER VX_CONTEXT_ATTRIBUTE_IMMEDIATE_BORDER_MODE
 
 #endif
 
@@ -97,6 +103,24 @@ struct VX_Traits<short>
     enum {
         ImgType = VX_DF_IMAGE_S16,
         DataType = VX_TYPE_INT16
+    };
+};
+
+template <>
+struct VX_Traits<uint>
+{
+    enum {
+        ImgType = VX_DF_IMAGE_U32,
+        DataType = VX_TYPE_UINT32
+    };
+};
+
+template <>
+struct VX_Traits<int>
+{
+    enum {
+        ImgType = VX_DF_IMAGE_S32,
+        DataType = VX_TYPE_INT32
     };
 };
 
@@ -190,7 +214,12 @@ struct vxImage
     vxImage(vxContext &ctx, int imgType, const uchar *data, size_t step, int w, int h)
     {
         if (h == 1)
-            step = w;
+            step = w * ((imgType == VX_DF_IMAGE_RGBX ||
+                         imgType == VX_DF_IMAGE_U32 || imgType == VX_DF_IMAGE_S32) ? 4 :
+                         imgType == VX_DF_IMAGE_RGB ? 3 :
+                        (imgType == VX_DF_IMAGE_U16 || imgType == VX_DF_IMAGE_S16 ||
+                         imgType == VX_DF_IMAGE_UYVY || imgType == VX_DF_IMAGE_YUYV) ? 2 : 1);
+
         vx_imagepatch_addressing_t addr[4];
         void *ptrs[4];
         switch (imgType)
@@ -270,15 +299,17 @@ struct vxMatrix
     {
         mtx = vxCreateMatrix(ctx.ctx, VX_Traits<T>::DataType, w, h);
         vxErr::check(mtx);
+#if VX_VERSION > VX_VERSION_1_0
         vxErr::check(vxCopyMatrix(mtx, const_cast<T*>(data), VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+#else
+        vxErr::check(vxWriteMatrix(mtx, const_cast<T*>(data)));
+#endif
     }
     ~vxMatrix()
     {
         vxReleaseMatrix(&mtx);
     }
 };
-
-#if VX_VERSION > VX_VERSION_1_0
 
 struct vxConvolution
 {
@@ -288,7 +319,11 @@ struct vxConvolution
     {
         cnv = vxCreateConvolution(ctx.ctx, w, h);
         vxErr::check(cnv);
+#if VX_VERSION > VX_VERSION_1_0
         vxErr::check(vxCopyConvolutionCoefficients(cnv, const_cast<short*>(data), VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+#else
+        vxErr::check(vxWriteConvolutionCoefficients(cnv, const_cast<short*>(data)));
+#endif
     }
     ~vxConvolution()
     {
@@ -296,7 +331,15 @@ struct vxConvolution
     }
 };
 
+inline void setConstantBorder(vx_border_t &border, vx_uint8 val)
+{
+    border.mode = VX_BORDER_CONSTANT;
+#if VX_VERSION > VX_VERSION_1_0
+    border.constant_value.U8 = val;
+#else
+    border.constant_value = val;
 #endif
+}
 
 //==================================================================================================
 // real code starts here
@@ -444,8 +487,6 @@ inline int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int a
     return CV_HAL_ERROR_OK;
 }
 
-#if VX_VERSION > VX_VERSION_1_0
-
 inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
     try
@@ -461,8 +502,7 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
         switch (borderType)
         {
         case CV_HAL_BORDER_CONSTANT:
-            border.mode = VX_BORDER_CONSTANT;
-            border.constant_value.U8 = (vx_uint8)(borderValue[0]);
+            setConstantBorder(border, (vx_uint8)borderValue[0]);
             break;
         case CV_HAL_BORDER_REPLICATE:
             border.mode = VX_BORDER_REPLICATE;
@@ -519,8 +559,7 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
         switch (borderType)
         {
         case CV_HAL_BORDER_CONSTANT:
-            border.mode = VX_BORDER_CONSTANT;
-            border.constant_value.U8 = (vx_uint8)(borderValue[0]);
+            setConstantBorder(border, (vx_uint8)borderValue[0]);
             break;
         case CV_HAL_BORDER_REPLICATE:
             border.mode = VX_BORDER_REPLICATE;
@@ -585,8 +624,7 @@ inline int ovx_hal_filterInit(cvhalFilter2D **filter_context, uchar *kernel_data
     switch (borderType)
     {
     case CV_HAL_BORDER_CONSTANT:
-        border.mode = VX_BORDER_CONSTANT;
-        border.constant_value.U8 = 0;
+        setConstantBorder(border, 0);
         break;
     case CV_HAL_BORDER_REPLICATE:
         border.mode = VX_BORDER_REPLICATE;
@@ -698,8 +736,7 @@ inline int ovx_hal_sepFilterInit(cvhalFilter2D **filter_context, int src_type, i
     switch (borderType)
     {
     case CV_HAL_BORDER_CONSTANT:
-        border.mode = VX_BORDER_CONSTANT;
-        border.constant_value.U8 = 0;
+        setConstantBorder(border, 0);
         break;
     case CV_HAL_BORDER_REPLICATE:
         border.mode = VX_BORDER_REPLICATE;
@@ -737,6 +774,8 @@ inline int ovx_hal_sepFilterInit(cvhalFilter2D **filter_context, int src_type, i
     return CV_HAL_ERROR_OK;
 }
 
+#if VX_VERSION > VX_VERSION_1_0
+
 struct MorphCtx
 {
     vxMatrix mask;
@@ -759,18 +798,17 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
     switch (borderType)
     {
     case CV_HAL_BORDER_CONSTANT:
-        border.mode = VX_BORDER_CONSTANT;
         if (borderValue[0] == DBL_MAX && borderValue[1] == DBL_MAX && borderValue[2] == DBL_MAX && borderValue[3] == DBL_MAX)
         {
             if (operation == MORPH_ERODE)
-                border.constant_value.U8 = UCHAR_MAX;
+                setConstantBorder(border, UCHAR_MAX);
             else
-                border.constant_value.U8 = 0;
+                setConstantBorder(border, 0);
         }
         else
         {
-            int rounded = round(borderValue[0]);
-            border.constant_value.U8 = (uchar)((unsigned)rounded <= UCHAR_MAX ? rounded : rounded > 0 ? UCHAR_MAX : 0);
+            int rounded = (int)round(borderValue[0]);
+            setConstantBorder(border, (vx_uint8)((unsigned)rounded <= UCHAR_MAX ? rounded : rounded > 0 ? UCHAR_MAX : 0));
         }
         break;
     case CV_HAL_BORDER_REPLICATE:
@@ -784,7 +822,7 @@ inline int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int 
 
     vx_size maxKernelDim;
     vxErr::check(vxQueryContext(ctx->ctx, VX_CONTEXT_NONLINEAR_MAX_DIMENSION, &maxKernelDim, sizeof(maxKernelDim)));
-    if (kernel_width > maxKernelDim || kernel_height > maxKernelDim)
+    if ((vx_size)kernel_width > maxKernelDim || (vx_size)kernel_height > maxKernelDim)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     std::vector<uchar> kernel_mat;
@@ -951,7 +989,7 @@ inline int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 
 inline int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx)
 {
-    if (!swapBlue || (bcn != 3 && bcn != 4) || uIdx || w / 2 != astep - w / 2)
+    if (!swapBlue || (bcn != 3 && bcn != 4) || uIdx || (size_t)w / 2 != astep - (size_t)w / 2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     if (w & 1 || h & 1) // It's not described in spec but sample implementation unable to convert odd sized images
@@ -978,7 +1016,7 @@ inline int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * 
 
 inline int ovx_hal_cvtBGRtoThreePlaneYUV(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int acn, bool swapBlue, int uIdx)
 {
-    if (!swapBlue || (acn != 3 && acn != 4) || uIdx || w / 2 != bstep - w / 2)
+    if (!swapBlue || (acn != 3 && acn != 4) || uIdx || (size_t)w / 2 != bstep - (size_t)w / 2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     if (w & 1 || h & 1) // It's not described in spec but sample implementation unable to convert odd sized images
@@ -1064,8 +1102,6 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 #undef cv_hal_resize
 #define cv_hal_resize ovx_hal_resize
 
-#if VX_VERSION > VX_VERSION_1_0
-
 #undef cv_hal_warpAffine
 #define cv_hal_warpAffine ovx_hal_warpAffine
 #undef cv_hal_warpPerspective
@@ -1084,6 +1120,8 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 #define cv_hal_sepFilter ovx_hal_filter
 #undef cv_hal_sepFilterFree
 #define cv_hal_sepFilterFree ovx_hal_filterFree
+
+#if VX_VERSION > VX_VERSION_1_0
 
 #undef cv_hal_morphInit
 #define cv_hal_morphInit ovx_hal_morphInit
