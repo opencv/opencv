@@ -749,21 +749,22 @@ public:
     static vx_imagepatch_addressing_t createAddressing()
     { vx_imagepatch_addressing_t ipa = VX_IMAGEPATCH_ADDR_INIT; return ipa; }
 
-    static vx_imagepatch_addressing_t createAddressing( vx_uint32 dimX, vx_uint32 dimY,
-                vx_int32 strideX, vx_int32 strideY,
-                vx_uint32 scaleX = VX_SCALE_UNITY, vx_uint32 scaleY = VX_SCALE_UNITY )
-        {
-            if (std::abs(strideY) < std::abs(strideX*(vx_int32)dimX))
-                throw WrapperError(std::string(__func__)+"(): invalid arguments");
-            vx_imagepatch_addressing_t ipa = VX_IMAGEPATCH_ADDR_INIT;
-            ipa.dim_x = dimX;
-            ipa.dim_y = dimY;
-            ipa.stride_x = strideX;
-            ipa.stride_y = strideY;
-            ipa.scale_x = scaleX;
-            ipa.scale_y = scaleY;
-            return ipa;
-        }
+    static vx_imagepatch_addressing_t createAddressing(
+            vx_uint32 dimX, vx_uint32 dimY,
+            vx_int32 strideX, vx_int32 strideY,
+            vx_uint32 scaleX = VX_SCALE_UNITY, vx_uint32 scaleY = VX_SCALE_UNITY )
+    {
+        if (std::abs(strideY) < std::abs(strideX*(vx_int32)dimX))
+            throw WrapperError(std::string(__func__)+"(): invalid arguments");
+        vx_imagepatch_addressing_t ipa = VX_IMAGEPATCH_ADDR_INIT;
+        ipa.dim_x = dimX;
+        ipa.dim_y = dimY;
+        ipa.stride_x = strideX;
+        ipa.stride_y = strideY;
+        ipa.scale_x = scaleX;
+        ipa.scale_y = scaleY;
+        return ipa;
+    }
 
     vx_imagepatch_addressing_t createAddressing(vx_uint32 planeIdx)
     { return createAddressing(planeIdx, getValidRegion()); }
@@ -779,7 +780,8 @@ public:
 #ifndef VX_VERSION_1_1
     static const vx_enum VX_MEMORY_TYPE_HOST = VX_IMPORT_TYPE_HOST;
 #endif
-    static Image createFromHandle( vx_context context, vx_df_image format,
+    static Image createFromHandle(
+            vx_context context, vx_df_image format,
             const std::vector<vx_imagepatch_addressing_t>& addrs,
             const std::vector<void*>& ptrs, vx_enum memType = VX_MEMORY_TYPE_HOST )
     {
