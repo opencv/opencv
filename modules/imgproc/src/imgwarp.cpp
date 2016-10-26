@@ -4944,34 +4944,34 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     const Mat *m1 = &map1, *m2 = &map2;
     int m1type = m1->type(), m2type = m2->type();
 
-    CV_Assert( (m1type == CV_16SC2 && (nninterpolate || m2type == CV_16UC1 || m2type == CV_16SC1)) ||
-               (m2type == CV_16SC2 && (nninterpolate || m1type == CV_16UC1 || m1type == CV_16SC1)) ||
+    CV_Assert( (m1type == CV_32SC2 && (nninterpolate || m2type == CV_32SC1 || m2type == CV_32SC1)) ||
+               (m2type == CV_32SC2 && (nninterpolate || m1type == CV_32SC1 || m1type == CV_32SC1)) ||
                (m1type == CV_32FC1 && m2type == CV_32FC1) ||
                (m1type == CV_32FC2 && m2->empty()) );
 
-    if( m2type == CV_16SC2 )
+    if( m2type == CV_32SC2 )
     {
         std::swap( m1, m2 );
         std::swap( m1type, m2type );
     }
 
     if( dstm1type <= 0 )
-        dstm1type = m1type == CV_16SC2 ? CV_32FC2 : CV_16SC2;
-    CV_Assert( dstm1type == CV_16SC2 || dstm1type == CV_32FC1 || dstm1type == CV_32FC2 );
+        dstm1type = m1type == CV_32SC2 ? CV_32FC2 : CV_32SC2;
+    CV_Assert( dstm1type == CV_32SC2 || dstm1type == CV_32FC1 || dstm1type == CV_32FC2 );
     _dstmap1.create( size, dstm1type );
     dstmap1 = _dstmap1.getMat();
 
     if( !nninterpolate && dstm1type != CV_32FC2 )
     {
-        _dstmap2.create( size, dstm1type == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
+        _dstmap2.create( size, dstm1type == CV_32SC2 ? CV_32SC1 : CV_32FC1 );
         dstmap2 = _dstmap2.getMat();
     }
     else
         _dstmap2.release();
 
     if( m1type == dstm1type || (nninterpolate &&
-        ((m1type == CV_16SC2 && dstm1type == CV_32FC2) ||
-        (m1type == CV_32FC2 && dstm1type == CV_16SC2))) )
+        ((m1type == CV_32SC2 && dstm1type == CV_32FC2) ||
+        (m1type == CV_32FC2 && dstm1type == CV_32SC2))) )
     {
         m1->convertTo( dstmap1, dstmap1.type() );
         if( !dstmap2.empty() && dstmap2.type() == m2->type() )
