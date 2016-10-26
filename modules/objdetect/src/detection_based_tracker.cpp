@@ -139,13 +139,24 @@ class cv::DetectionBasedTracker::SeparateDetectionWork
         }
         void setParameters(const cv::DetectionBasedTracker::Parameters& params)
         {
+#ifdef USE_STD_THREADS
             std::unique_lock<std::mutex> mtx_lock(mtx);
+#else
+            pthread_mutex_lock(&mutex);
+#endif
             parameters = params;
+#ifndef USE_STD_THREADS
+            pthread_mutex_unlock(&mutex);
+#endif
         }
 
         inline void init()
         {
+#ifdef USE_STD_THREADS
             std::unique_lock<std::mutex> mtx_lock(mtx);
+#else
+            pthread_mutex_lock(&mutex);
+#endif
             stateThread = STATE_THREAD_STOPPED;
             isObjectDetectingReady = false;
             shouldObjectDetectingResultsBeForgot = false;
@@ -153,6 +164,7 @@ class cv::DetectionBasedTracker::SeparateDetectionWork
             objectDetectorThreadStartStop.notify_one();
 #else
             pthread_cond_signal(&(objectDetectorThreadStartStop));
+            pthread_mutex_unlock(&mutex);
 #endif
         }
     protected:
