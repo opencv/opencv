@@ -125,7 +125,7 @@ namespace cv
 class cv::DetectionBasedTracker::SeparateDetectionWork
 {
     public:
-        SeparateDetectionWork(cv::DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector, 
+        SeparateDetectionWork(cv::DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector,
                               const cv::DetectionBasedTracker::Parameters& params);
         virtual ~SeparateDetectionWork();
         bool communicateWithDetectingThread(const Mat& imageGray, std::vector<Rect>& rectsWhereRegions);
@@ -204,14 +204,14 @@ class cv::DetectionBasedTracker::SeparateDetectionWork
         cv::DetectionBasedTracker::Parameters parameters;
 };
 
-cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector, 
+cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector,
                                                                         const cv::DetectionBasedTracker::Parameters& params)
     :detectionBasedTracker(_detectionBasedTracker),
     cascadeInThread(),
     isObjectDetectingReady(false),
     shouldObjectDetectingResultsBeForgot(false),
     stateThread(STATE_THREAD_STOPPED),
-    timeWhenDetectingThreadStartedWork(-1), 
+    timeWhenDetectingThreadStartedWork(-1),
     parameters(params)
 {
     CV_Assert(_detector);
