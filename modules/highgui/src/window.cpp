@@ -153,6 +153,14 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
+    case CV_WND_PROP_VISIBLE:
+        #if defined (HAVE_QT)
+            return cvGetPropVisible_QT(name);
+        #else
+            return -1;
+        #endif
+    break;
+
     default:
         return -1;
     }
