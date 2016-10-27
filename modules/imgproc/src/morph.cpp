@@ -1855,15 +1855,21 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 
     Point s_ofs;
     Size s_wsz(src.cols, src.rows);
-    src.locateROI(s_wsz, s_ofs);
     Point d_ofs;
     Size d_wsz(dst.cols, dst.rows);
-    dst.locateROI(d_wsz, d_ofs);
+    bool isolated = (borderType&BORDER_ISOLATED)?true:false;
+    borderType = (borderType&~BORDER_ISOLATED);
+
+    if(!isolated)
+    {
+        src.locateROI(s_wsz, s_ofs);
+        dst.locateROI(d_wsz, d_ofs);
+    }
 
     Ptr<hal::Morph> ctx = hal::Morph::create(op, src.type(), dst.type(), src.cols, src.rows,
                                                            kernel.type(), kernel.data, kernel.step, kernel.cols, kernel.rows,
                                                            anchor.x, anchor.y, borderType, borderValue.val, iterations,
-                                                           src.isSubmatrix(), src.data == dst.data);
+                                                           (src.isSubmatrix() && !isolated), src.data == dst.data);
     ctx->apply(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
                s_wsz.width, s_wsz.height, s_ofs.x, s_ofs.y,
                d_wsz.width, d_wsz.height, d_ofs.x, d_ofs.y);
