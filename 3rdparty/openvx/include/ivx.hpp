@@ -28,7 +28,7 @@ Details: TBD
     #endif
 #endif // IVX_USE_CXX98
 
-#ifdef IVX_USE_CXX98
+#if defined(IVX_USE_CXX98) && !defined(IVX_HIDE_INFO_WARNINGS)
     #ifdef _MSC_VER
         #pragma message ("ivx.hpp: The ISO C++ 2011 standard is not enabled, switching to C++98 fallback implementation.")
     #else
@@ -43,7 +43,7 @@ Details: TBD
     #endif
 #endif // IVX_USE_CXX98
 
-#ifdef IVX_USE_EXTERNAL_REFCOUNT
+#if defined(IVX_USE_EXTERNAL_REFCOUNT) && !defined(IVX_HIDE_INFO_WARNINGS)
     #ifdef _MSC_VER
         #pragma message ("ivx.hpp: OpenVX version < 1.1, switching to external refcounter implementation.")
     #else
