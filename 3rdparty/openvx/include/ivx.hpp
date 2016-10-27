@@ -58,7 +58,6 @@ Details: TBD
 
 #ifndef IVX_USE_CXX98
     #include <type_traits>
-    #include <initializer_list>
 #else
     namespace ivx
     {
@@ -683,6 +682,9 @@ public:
         return node;
     }
 
+    static Node create(vx_graph graph,  vx_enum kernelID, const std::vector<vx_reference>& params)
+    { return Node::create(graph, Kernel::getByEnum(Context::getFrom(graph), kernelID), params); }
+
     template<typename T0>
     static Node create(vx_graph g, vx_enum kernelID,
                        const T0& arg0)
@@ -769,7 +771,7 @@ public:
     static Node create(vx_graph g, vx_kernel k)
     { return Node(vxCreateGenericNode(g, k)); }
 
-    static Node create(vx_graph graph, vx_kernel kernel, std::initializer_list<vx_reference> params)
+    static Node create(vx_graph graph, vx_kernel kernel, const std::vector<vx_reference>& params)
     {
         Node node = Node::create(graph, kernel);
         vx_uint32 i = 0;
@@ -777,6 +779,9 @@ public:
             node.setParameterByIndex(i++, p);
         return node;
     }
+
+    static Node create(vx_graph graph,  vx_enum kernelID, const std::vector<vx_reference>& params)
+    { return Node::create(graph, Kernel::getByEnum(Context::getFrom(graph), kernelID), params); }
 
     template<typename...Ts>
     static Node create(vx_graph g, vx_enum kernelID, const Ts&...args)
