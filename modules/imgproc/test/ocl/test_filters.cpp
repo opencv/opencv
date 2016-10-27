@@ -165,28 +165,6 @@ OCL_TEST_P(LaplacianTest, Accuracy)
     }
 }
 
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// Sobel
-
-typedef FilterTestBase SobelTest;
-
-OCL_TEST_P(SobelTest, Mat)
-{
-    int dx = size.width, dy = size.height;
-    double scale = param;
-
-    for (int j = 0; j < test_loop_times; j++)
-    {
-        random_roi();
-
-        OCL_OFF(cv::Sobel(src_roi, dst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
-        OCL_ON(cv::Sobel(usrc_roi, udst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
-
-        Near();
-    }
-}
-
 PARAM_TEST_CASE(Deriv3x3_cols16_rows2_Base, MatType,
                 int, // kernel size
                 Size, // dx, dy
@@ -246,6 +224,45 @@ PARAM_TEST_CASE(Deriv3x3_cols16_rows2_Base, MatType,
             OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
+
+typedef Deriv3x3_cols16_rows2_Base Laplacian3_cols16_rows2;
+
+OCL_TEST_P(Laplacian3_cols16_rows2, Accuracy)
+{
+    double scale = param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::Laplacian(src_roi, dst_roi, -1, ksize, scale, 10, borderType));
+        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, -1, ksize, scale, 10, borderType));
+
+        Near();
+    }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Sobel
+
+typedef FilterTestBase SobelTest;
+
+OCL_TEST_P(SobelTest, Mat)
+{
+    int dx = size.width, dy = size.height;
+    double scale = param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::Sobel(src_roi, dst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
+        OCL_ON(cv::Sobel(usrc_roi, udst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
+
+        Near();
+    }
+}
 
 typedef Deriv3x3_cols16_rows2_Base Sobel3x3_cols16_rows2;
 
@@ -633,6 +650,15 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
                             FILTER_TYPES,
                             Values(1, 3, 5), // kernel size
+                            Values(Size(0, 0)), // not used
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(1.0, 0.2, 3.0), // kernel scale
+                            Bool(),
+                            Values(1))); // not used
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, Laplacian3_cols16_rows2, Combine(
+                            Values((MatType)CV_8UC1),
+                            Values(3), // kernel size
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(1.0, 0.2, 3.0), // kernel scale
