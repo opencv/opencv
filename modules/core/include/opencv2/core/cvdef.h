@@ -418,7 +418,9 @@ Cv64suf;
 *          exchange-add operation for atomic operations on reference counters            *
 \****************************************************************************************/
 
-#if defined __GNUC__
+#ifdef CV_XADD
+  // allow to use user-defined macro
+#elif defined __GNUC__
 #  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)
 #    ifdef __ATOMIC_ACQ_REL
 #      define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)
