@@ -807,8 +807,57 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     return k.run(2, globalsize, NULL, false);
 }
 
+static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
+                                InputArray _kernel, double delta, int borderType)
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) && (ddepth == CV_8U) &&
+         (borderType != BORDER_WRAP) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) )
+        return false;
+
+    Mat kernel = _kernel.getMat().reshape(1, 1);
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s", borderMap[borderType],
+            ocl::kernelToStr(kernel, CV_32F, "KERNEL_MATRIX").c_str());
+
+    ocl::Kernel k("laplacian3_8UC1_cols16_rows2", cv::ocl::imgproc::laplacian3_oclsrc, build_opts);
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = k.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = k.set(idxArg, (int)src.step);
+    idxArg = k.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = k.set(idxArg, (int)dst.step);
+    idxArg = k.set(idxArg, (int)dst.rows);
+    idxArg = k.set(idxArg, (int)dst.cols);
+    idxArg = k.set(idxArg, static_cast<float>(delta));
+
+    return k.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
 }
 
+}
 #endif
 
 #if defined(HAVE_IPP)
@@ -892,6 +941,22 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
+    if( ksize == 1 || ksize == 3 )
+    {
+        float K[2][9] =
+        {
+            { 0, 1, 0, 1, -4, 1, 0, 1, 0 },
+            { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
+        };
+
+        Mat kernel(3, 3, CV_32F, K[ksize == 3]);
+        if( scale != 1 )
+            kernel *= scale;
+
+        CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+                   ocl_Laplacian3_8UC1(_src, _dst, ddepth, kernel, delta, borderType));
+    }
+
     CV_IPP_RUN((ksize == 3 || ksize == 5) && ((borderType & BORDER_ISOLATED) != 0 || !_src.isSubmatrix()) &&
         ((stype == CV_8UC1 && ddepth == CV_16S) || (ddepth == CV_32F && stype == CV_32FC1)) && (!cv::ocl::useOpenCL()),
         ipp_Laplacian(_src, _dst, ddepth, ksize, scale, delta, borderType));
@@ -920,6 +985,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         Mat kernel(3, 3, CV_32F, K[ksize == 3]);
         if( scale != 1 )
             kernel *= scale;
+
         filter2D( _src, _dst, ddepth, kernel, Point(-1, -1), delta, borderType );
     }
     else
