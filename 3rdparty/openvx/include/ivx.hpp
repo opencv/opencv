@@ -677,7 +677,7 @@ public:
     {
         Node node = Node::create(graph, kernel);
         vx_uint32 i = 0;
-        for (std::vector<vx_reference>::const_iterator p = params.begin(); p != params.end(); p++)
+        for (std::vector<vx_reference>::const_iterator p = params.begin(); p != params.end(); ++p)
             node.setParameterByIndex(i++, *p);
         return node;
     }
