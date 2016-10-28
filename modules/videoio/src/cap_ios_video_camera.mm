@@ -131,7 +131,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
 {
     [super stop];
 
-    self.videoDataOutput = nil;
+    [self.videoDataOutput release];
     if (videoDataOutputQueue) {
         dispatch_release(videoDataOutputQueue);
     }
@@ -144,11 +144,11 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
             } else {
                 NSLog(@"[Camera] Recording Error: asset writer status is not writing");
             }
-            self.recordAssetWriter = nil;
+            [self.recordAssetWriter release];
         }
 
-        self.recordAssetWriterInput = nil;
-        self.recordPixelBufferAdaptor = nil;
+        [self.recordAssetWriterInput release];
+        [self.recordPixelBufferAdaptor release];
     }
 
     if (self.customPreviewLayer) {
