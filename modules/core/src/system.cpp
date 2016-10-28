@@ -423,8 +423,7 @@ int64 getTickCount(void)
 {
 #if HAVE_CPP11
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-    //return now.time_since_epoch().count();
+    return now.time_since_epoch().count();
 #elif defined WIN32 || defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
@@ -446,8 +445,7 @@ int64 getTickCount(void)
 double getTickFrequency(void)
 {
 #if HAVE_CPP11
-    //return 1e9;
-    return 1e6;
+    return 1e9;
 #elif defined WIN32 || defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
