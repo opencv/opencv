@@ -782,25 +782,37 @@ inline void v_store_f16(short* ptr, v_float16x4& a)
 { vst1_f16(ptr, a.val); }
 #endif
 
-#define OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(_Tpvec, scalartype, func, scalar_func) \
+#define OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
 inline scalartype v_reduce_##func(const _Tpvec& a) \
 { \
-    scalartype CV_DECL_ALIGNED(16) buf[4]; \
-    v_store_aligned(buf, a); \
-    scalartype s0 = scalar_func(buf[0], buf[1]); \
-    scalartype s1 = scalar_func(buf[2], buf[3]); \
-    return scalar_func(s0, s1); \
+    _Tpnvec##_t a0 = vp##vectorfunc##_##suffix(vget_low_##suffix(a.val), vget_high_##suffix(a.val)); \
+    a0 = vp##vectorfunc##_##suffix(a0, a0); \
+    return (scalartype)vget_lane_##suffix(vp##vectorfunc##_##suffix(a0, a0),0); \
 }
 
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, unsigned, sum, OPENCV_HAL_ADD)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, unsigned, max, std::max)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, unsigned, min, std::min)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int, sum, OPENCV_HAL_ADD)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int, max, std::max)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int, min, std::min)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float, sum, OPENCV_HAL_ADD)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float, max, std::max)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float, min, std::min)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, unsigned short, sum, add, u16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, unsigned short, max, max, u16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, unsigned short, min, min, u16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, sum, add, s16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, max, max, s16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, min, min, s16)
+
+#define OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
+inline scalartype v_reduce_##func(const _Tpvec& a) \
+{ \
+    _Tpnvec##_t a0 = vp##vectorfunc##_##suffix(vget_low_##suffix(a.val), vget_high_##suffix(a.val)); \
+    return (scalartype)vget_lane_##suffix(vp##vectorfunc##_##suffix(a0, vget_high_##suffix(a.val)),0); \
+}
+
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, uint32x2, unsigned, sum, add, u32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, uint32x2, unsigned, max, max, u32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, uint32x2, unsigned, min, min, u32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int32x2, int, sum, add, s32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int32x2, int, max, max, s32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int32x2, int, min, min, s32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, sum, add, f32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, max, max, f32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, min, min, f32)
 
 inline int v_signmask(const v_uint8x16& a)
 {
