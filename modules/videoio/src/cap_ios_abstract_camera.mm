@@ -203,11 +203,11 @@
         }
 
         [self.captureSession stopRunning];
-        [self.captureSession release];
+        [captureSession release];
     }
 
-    [self.captureVideoPreviewLayer release];
-    [self.videoCaptureConnection release];
+    [captureVideoPreviewLayer release];
+    [videoCaptureConnection release];
     captureSessionLoaded = NO;
 }
 
