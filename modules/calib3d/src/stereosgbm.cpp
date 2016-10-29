@@ -132,7 +132,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
     const PixType *row1 = img1.ptr<PixType>(y), *row2 = img2.ptr<PixType>(y);
     PixType *prow1 = buffer + width2*2, *prow2 = prow1 + width*cn*2;
 #if CV_SIMD128
-    bool useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+    bool useSIMD = hasSIMD128();
 #endif
 
     tab += tabOfs;
@@ -292,7 +292,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     };
     static const v_uint16x8 v_LSB = v_uint16x8(0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80);
 
-    bool useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+    bool useSIMD = hasSIMD128();
 #endif
 
     const int ALIGN = 16;
@@ -891,7 +891,7 @@ buffers(_buffers), img1(&_img1), img2(&_img2), dst_disp(_dst_disp), clipTab(_cli
     ftzero = std::max(params.preFilterCap, 15) | 1;
 
 #if CV_SIMD128
-    useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+    useSIMD = hasSIMD128();
 #endif
 }
 
@@ -1054,7 +1054,7 @@ inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, Co
                                    CostType& leftMinCost, CostType& topMinCost, int D, int P1, int P2)
 {
 #if CV_SIMD128
-    if(checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON))
+    if(hasSIMD128())
     {
         v_int16x8 P1_reg = v_setall_s16(cv::saturate_cast<CostType>(P1));
 
@@ -1166,7 +1166,7 @@ inline void accumulateCostsRight(CostType* rightBuf, CostType* topBuf, CostType*
                                  CostType& rightMinCost, int D, int P1, int P2, int& optimal_disp, CostType& min_cost)
 {
 #if CV_SIMD128
-    if(checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON))
+    if(hasSIMD128())
     {
         v_int16x8 P1_reg = v_setall_s16(cv::saturate_cast<CostType>(P1));
 

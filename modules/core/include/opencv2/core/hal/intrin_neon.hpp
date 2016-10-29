@@ -46,6 +46,7 @@
 #define OPENCV_HAL_INTRIN_NEON_HPP
 
 #include <algorithm>
+#include "opencv2/core/utility.hpp"
 
 namespace cv
 {
@@ -1217,6 +1218,16 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
     return v_float16x4(vcvt_f16_f32(a.val));
 }
 #endif
+
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return checkHardwareSupport(CV_CPU_NEON);
+}
+
+//! @}
 
 //! @endcond
 

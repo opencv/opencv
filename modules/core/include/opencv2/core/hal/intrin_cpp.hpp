@@ -1772,6 +1772,17 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
 
 //! @}
 
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return false;
+}
+
+//! @}
+
+
 }
 
 #endif
