@@ -202,7 +202,7 @@ endif()
 
 # --- GDAL (optional) ---
 if(WITH_GDAL)
-    find_package(GDAL)
+    find_package(GDAL QUIET)
 
     if(NOT GDAL_FOUND)
         ocv_clear_vars(GDAL_LIBRARY GDAL_INCLUDE_DIR)
@@ -214,7 +214,7 @@ if(WITH_GDAL)
 endif()
 
 if (WITH_GDCM)
-  find_package(GDCM)
+  find_package(GDCM QUIET)
   if(NOT GDCM_FOUND)
     set(HAVE_GDCM NO)
     ocv_clear_vars(GDCM_VERSION GDCM_LIBRARIES)
