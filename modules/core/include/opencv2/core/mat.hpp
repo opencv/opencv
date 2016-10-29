@@ -1046,9 +1046,8 @@ public:
 
     /** @brief creates a diagonal matrix
 
-    The method makes a new header for the specified matrix diagonal. The new matrix is represented as a
-    single-column matrix. Similarly to Mat::row and Mat::col, this is an O(1) operation.
-    @param d Single-column matrix that forms a diagonal matrix
+    The method creates a square diagonal matrix from specified main diagonal.
+    @param d One-dimensional matrix that represents the main diagonal.
      */
     static Mat diag(const Mat& d);
 
