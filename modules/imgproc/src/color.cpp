@@ -5995,13 +5995,77 @@ struct Luv2RGB_f
         float d = 1.f/(whitept[0] + whitept[1]*15 + whitept[2]*3);
         un = 4*whitept[0]*d;
         vn = 9*whitept[1]*d;
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
 
         CV_Assert(whitept[1] == 1.f);
     }
 
+    #if CV_SSE2
+    void process(__m128& v_l0, __m128& v_l1, __m128& v_u0,
+                 __m128& v_u1, __m128& v_v0, __m128& v_v1) const
+    {
+        __m128 v_y0 = _mm_mul_ps(_mm_add_ps(v_l0, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
+        __m128 v_y1 = _mm_mul_ps(_mm_add_ps(v_l1, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
+        v_y0 = _mm_mul_ps(_mm_mul_ps(v_y0, v_y0), v_y0);
+        v_y1 = _mm_mul_ps(_mm_mul_ps(v_y1, v_y1), v_y1);
+        __m128 v_d0 = _mm_div_ps(_mm_set1_ps(1.f/13.f), v_l0);
+        __m128 v_d1 = _mm_div_ps(_mm_set1_ps(1.f/13.f), v_l1);
+        v_u0 = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(v_u0, v_d0), _mm_set1_ps(un)), _mm_set1_ps(3.f));
+        v_u1 = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(v_u1, v_d1), _mm_set1_ps(un)), _mm_set1_ps(3.f));
+        v_v0 = _mm_add_ps(_mm_mul_ps(v_v0, v_d0), _mm_set1_ps(vn));
+        v_v1 = _mm_add_ps(_mm_mul_ps(v_v1, v_d1), _mm_set1_ps(vn));
+        __m128 v_iv0 = _mm_div_ps(_mm_set1_ps(0.25f), v_v0);
+        __m128 v_iv1 = _mm_div_ps(_mm_set1_ps(0.25f), v_v1);
+        __m128 v_x0 = _mm_mul_ps(_mm_mul_ps(_mm_set1_ps(3.f), v_u0), v_iv0);
+        __m128 v_x1 = _mm_mul_ps(_mm_mul_ps(_mm_set1_ps(3.f), v_u1), v_iv1);
+        __m128 v_z0 = _mm_mul_ps(_mm_sub_ps(_mm_sub_ps(_mm_set1_ps(12.f), v_u0), _mm_mul_ps(_mm_set1_ps(20.f), v_v0)), v_iv0);
+        __m128 v_z1 = _mm_mul_ps(_mm_sub_ps(_mm_sub_ps(_mm_set1_ps(12.f), v_u1), _mm_mul_ps(_mm_set1_ps(20.f), v_v1)), v_iv1);
+
+        v_l0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[0]));
+        v_l1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[0]));
+        v_u0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[3]));
+        v_u1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[3]));
+        v_v0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[6]));
+        v_v1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[6]));
+        v_l0 = _mm_add_ps(v_l0, _mm_set1_ps(coeffs[1]));
+        v_l1 = _mm_add_ps(v_l1, _mm_set1_ps(coeffs[1]));
+        v_u0 = _mm_add_ps(v_u0, _mm_set1_ps(coeffs[4]));
+        v_u1 = _mm_add_ps(v_u1, _mm_set1_ps(coeffs[4]));
+        v_v0 = _mm_add_ps(v_v0, _mm_set1_ps(coeffs[7]));
+        v_v1 = _mm_add_ps(v_v1, _mm_set1_ps(coeffs[7]));
+        v_l0 = _mm_add_ps(v_l0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[2])));
+        v_l1 = _mm_add_ps(v_l1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[2])));
+        v_u0 = _mm_add_ps(v_u0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[5])));
+        v_u1 = _mm_add_ps(v_u1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[5])));
+        v_v0 = _mm_add_ps(v_v0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[8])));
+        v_v1 = _mm_add_ps(v_v1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[8])));
+        v_l0 = _mm_mul_ps(v_l0, v_y0);
+        v_l1 = _mm_mul_ps(v_l1, v_y1);
+        v_u0 = _mm_mul_ps(v_u0, v_y0);
+        v_u1 = _mm_mul_ps(v_u1, v_y1);
+        v_v0 = _mm_mul_ps(v_v0, v_y0);
+        v_v1 = _mm_mul_ps(v_v1, v_y1);
+
+        v_l0 = _mm_max_ps(v_l0, _mm_setzero_ps());
+        v_l1 = _mm_max_ps(v_l1, _mm_setzero_ps());
+        v_u0 = _mm_max_ps(v_u0, _mm_setzero_ps());
+        v_u1 = _mm_max_ps(v_u1, _mm_setzero_ps());
+        v_v0 = _mm_max_ps(v_v0, _mm_setzero_ps());
+        v_v1 = _mm_max_ps(v_v1, _mm_setzero_ps());
+        v_l0 = _mm_min_ps(v_l0, _mm_set1_ps(1.f));
+        v_l1 = _mm_min_ps(v_l1, _mm_set1_ps(1.f));
+        v_u0 = _mm_min_ps(v_u0, _mm_set1_ps(1.f));
+        v_u1 = _mm_min_ps(v_u1, _mm_set1_ps(1.f));
+        v_v0 = _mm_min_ps(v_v0, _mm_set1_ps(1.f));
+        v_v1 = _mm_min_ps(v_v1, _mm_set1_ps(1.f));
+    }
+    #endif
+
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, dcn = dstcn;
+        int i = 0, dcn = dstcn;
         const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -6011,7 +6075,69 @@ struct Luv2RGB_f
         float _un = un, _vn = vn;
         n *= 3;
 
-        for( i = 0; i < n; i += 3, dst += dcn )
+        #if CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, dst += dcn * 8 )
+            {
+                __m128 v_l0 = _mm_loadu_ps(src + i +  0);
+                __m128 v_l1 = _mm_loadu_ps(src + i +  4);
+                __m128 v_u0 = _mm_loadu_ps(src + i +  8);
+                __m128 v_u1 = _mm_loadu_ps(src + i + 12);
+                __m128 v_v0 = _mm_loadu_ps(src + i + 16);
+                __m128 v_v1 = _mm_loadu_ps(src + i + 20);
+
+                _mm_deinterleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                process(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                if( gammaTab )
+                {
+                    __m128 v_gscale = _mm_set1_ps(gscale);
+                    v_l0 = _mm_mul_ps(v_l0, v_gscale);
+                    v_l1 = _mm_mul_ps(v_l1, v_gscale);
+                    v_u0 = _mm_mul_ps(v_u0, v_gscale);
+                    v_u1 = _mm_mul_ps(v_u1, v_gscale);
+                    v_v0 = _mm_mul_ps(v_v0, v_gscale);
+                    v_v1 = _mm_mul_ps(v_v1, v_gscale);
+                    splineInterpolate(v_l0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_l1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_u0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_u1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_v0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_v1, gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                if( dcn == 4 )
+                {
+                    __m128 v_a0 = _mm_set1_ps(alpha);
+                    __m128 v_a1 = _mm_set1_ps(alpha);
+                    _mm_interleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1, v_a0, v_a1);
+
+                    _mm_storeu_ps(dst +  0, v_l0);
+                    _mm_storeu_ps(dst +  4, v_l1);
+                    _mm_storeu_ps(dst +  8, v_u0);
+                    _mm_storeu_ps(dst + 12, v_u1);
+                    _mm_storeu_ps(dst + 16, v_v0);
+                    _mm_storeu_ps(dst + 20, v_v1);
+                    _mm_storeu_ps(dst + 24, v_a0);
+                    _mm_storeu_ps(dst + 28, v_a1);
+                }
+                else
+                {
+                    _mm_interleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                    _mm_storeu_ps(dst +  0, v_l0);
+                    _mm_storeu_ps(dst +  4, v_l1);
+                    _mm_storeu_ps(dst +  8, v_u0);
+                    _mm_storeu_ps(dst + 12, v_u1);
+                    _mm_storeu_ps(dst + 16, v_v0);
+                    _mm_storeu_ps(dst + 20, v_v1);
+                }
+            }
+        }
+        #endif
+        for( ; i < n; i += 3, dst += dcn )
         {
             float L = src[i], u = src[i+1], v = src[i+2], d, X, Y, Z;
             Y = (L + 16.f) * (1.f/116.f);
@@ -6047,6 +6173,9 @@ struct Luv2RGB_f
     int dstcn;
     float coeffs[9], un, vn;
     bool srgb;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
 };
 
 
