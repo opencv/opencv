@@ -112,6 +112,8 @@ if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
   string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Woverloaded-virtual -Wunused-private-field)
+
 if(MSVC AND NOT BUILD_SHARED_LIBS)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
 endif()

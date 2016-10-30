@@ -94,8 +94,7 @@ class Builder:
             sys.exit(1)
 
     def getToolchain(self, arch, target):
-        toolchain = os.path.join(self.opencv, "platforms", "ios", "cmake", "Toolchains", "Toolchain-%s_Xcode.cmake" % target)
-        return toolchain
+        return None
 
     def getCMakeArgs(self, arch, target):
         args = [
@@ -192,6 +191,20 @@ class Builder:
             d = os.path.join(framework_dir, *l[1])
             os.symlink(s, d)
 
+class iOSBuilder(Builder):
+
+    def getToolchain(self, arch, target):
+        toolchain = os.path.join(self.opencv, "platforms", "ios", "cmake", "Toolchains", "Toolchain-%s_Xcode.cmake" % target)
+        return toolchain
+
+    def getCMakeArgs(self, arch, target):
+        args = Builder.getCMakeArgs(self, arch, target)
+        args = args + [
+            '-DIOS_ARCH=%s' % arch
+        ]
+        return args
+
+
 if __name__ == "__main__":
     folder = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
     parser = argparse.ArgumentParser(description='The script builds OpenCV.framework for iOS.')
@@ -201,7 +214,7 @@ if __name__ == "__main__":
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     args = parser.parse_args()
 
-    b = Builder(args.opencv, args.contrib, args.without,
+    b = iOSBuilder(args.opencv, args.contrib, args.without,
         [
             ("armv7", "iPhoneOS"),
             ("arm64", "iPhoneOS"),

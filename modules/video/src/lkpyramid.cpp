@@ -44,6 +44,7 @@
 #include <stdio.h>
 #include "lkpyramid.hpp"
 #include "opencl_kernels_video.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -66,16 +67,9 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
     deriv_type *trow0 = alignPtr(_tempBuf + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
 
-#if CV_SSE2
-    __m128i z = _mm_setzero_si128(), c3 = _mm_set1_epi16(3), c10 = _mm_set1_epi16(10);
-#endif
-
-#if CV_NEON
-    const uint16x8_t q8 = vdupq_n_u16(3);
-    const uint8x8_t d18 = vdup_n_u8(10);
-
-    const int16x8_t q8i = vdupq_n_s16(3);
-    const int16x8_t q9 = vdupq_n_s16(10);
+#if CV_SIMD128
+    v_int16x8 c3 = v_setall_s16(3), c10 = v_setall_s16(10);
+    bool haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
 #endif
 
     for( y = 0; y < rows; y++ )
@@ -87,33 +81,21 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 
         // do vertical convolution
         x = 0;
-#if CV_SSE2
-        for( ; x <= colsn - 8; x += 8 )
+#if CV_SIMD128
+        if(haveSIMD)
         {
-            __m128i s0 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow0 + x)), z);
-            __m128i s1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow1 + x)), z);
-            __m128i s2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow2 + x)), z);
-            __m128i t0 = _mm_add_epi16(_mm_mullo_epi16(_mm_add_epi16(s0, s2), c3), _mm_mullo_epi16(s1, c10));
-            __m128i t1 = _mm_sub_epi16(s2, s0);
-            _mm_store_si128((__m128i*)(trow0 + x), t0);
-            _mm_store_si128((__m128i*)(trow1 + x), t1);
-        }
-#endif
+            for( ; x <= colsn - 8; x += 8 )
+            {
+                v_int16x8 s0 = v_reinterpret_as_s16(v_load_expand(srow0 + x));
+                v_int16x8 s1 = v_reinterpret_as_s16(v_load_expand(srow1 + x));
+                v_int16x8 s2 = v_reinterpret_as_s16(v_load_expand(srow2 + x));
 
-#if CV_NEON
-        for( ; x <= colsn - 8; x += 8)
-        {
-            uint8x8_t d0 = vld1_u8((const uint8_t*)&srow0[x]);
-            uint8x8_t d1 = vld1_u8((const uint8_t*)&srow1[x]);
-            uint8x8_t d2 = vld1_u8((const uint8_t*)&srow2[x]);
-            uint16x8_t q4 = vaddl_u8(d0, d2);
-            uint16x8_t q11 = vsubl_u8(d2, d0);
-            uint16x8_t q5 = vmulq_u16(q4, q8);
-            uint16x8_t q6 = vmull_u8(d1, d18);
-            uint16x8_t q10 = vaddq_u16(q6, q5);
-            vst1q_u16((uint16_t*)&trow0[x], q10);
-            vst1q_u16((uint16_t*)&trow1[x], q11);
+                v_int16x8 t1 = s2 - s0;
+                v_int16x8 t0 = (s0 + s2) * c3 + s1 * c10;
 
+                v_store(trow0 + x, t0);
+                v_store(trow1 + x, t1);
+            }
         }
 #endif
 
@@ -135,49 +117,22 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 
         // do horizontal convolution, interleave the results and store them to dst
         x = 0;
-#if CV_SSE2
-        for( ; x <= colsn - 8; x += 8 )
+#if CV_SIMD128
+        if(haveSIMD)
         {
-            __m128i s0 = _mm_loadu_si128((const __m128i*)(trow0 + x - cn));
-            __m128i s1 = _mm_loadu_si128((const __m128i*)(trow0 + x + cn));
-            __m128i s2 = _mm_loadu_si128((const __m128i*)(trow1 + x - cn));
-            __m128i s3 = _mm_load_si128((const __m128i*)(trow1 + x));
-            __m128i s4 = _mm_loadu_si128((const __m128i*)(trow1 + x + cn));
+            for( ; x <= colsn - 8; x += 8 )
+            {
+                v_int16x8 s0 = v_load(trow0 + x - cn);
+                v_int16x8 s1 = v_load(trow0 + x + cn);
+                v_int16x8 s2 = v_load(trow1 + x - cn);
+                v_int16x8 s3 = v_load(trow1 + x);
+                v_int16x8 s4 = v_load(trow1 + x + cn);
 
-            __m128i t0 = _mm_sub_epi16(s1, s0);
-            __m128i t1 = _mm_add_epi16(_mm_mullo_epi16(_mm_add_epi16(s2, s4), c3), _mm_mullo_epi16(s3, c10));
-            __m128i t2 = _mm_unpacklo_epi16(t0, t1);
-            t0 = _mm_unpackhi_epi16(t0, t1);
-            // this can probably be replaced with aligned stores if we aligned dst properly.
-            _mm_storeu_si128((__m128i*)(drow + x*2), t2);
-            _mm_storeu_si128((__m128i*)(drow + x*2 + 8), t0);
-        }
-#endif
+                v_int16x8 t0 = s1 - s0;
+                v_int16x8 t1 = ((s2 + s4) * c3) + (s3 * c10);
 
-#if CV_NEON
-        for( ; x <= colsn - 8; x += 8 )
-        {
-
-            int16x8_t q0 = vld1q_s16((const int16_t*)&trow0[x+cn]);
-            int16x8_t q1 = vld1q_s16((const int16_t*)&trow0[x-cn]);
-            int16x8_t q2 = vld1q_s16((const int16_t*)&trow1[x+cn]);
-            int16x8_t q3 = vld1q_s16((const int16_t*)&trow1[x-cn]);
-            int16x8_t q5 = vsubq_s16(q0, q1);
-            int16x8_t q6 = vaddq_s16(q2, q3);
-            int16x8_t q4 = vld1q_s16((const int16_t*)&trow1[x]);
-            int16x8_t q7 = vmulq_s16(q6, q8i);
-            int16x8_t q10 = vmulq_s16(q4, q9);
-            int16x8_t q11 = vaddq_s16(q7, q10);
-            int16x4_t d22 = vget_low_s16(q11);
-            int16x4_t d23 = vget_high_s16(q11);
-            int16x4_t d11 = vget_high_s16(q5);
-            int16x4_t d10 = vget_low_s16(q5);
-            int16x4x2_t q5x2, q11x2;
-            q5x2.val[0] = d10; q5x2.val[1] = d22;
-            q11x2.val[0] = d11; q11x2.val[1] = d23;
-            vst2_s16((int16_t*)&drow[x*2], q5x2);
-            vst2_s16((int16_t*)&drow[(x*2)+8], q11x2);
-
+                v_store_interleave((drow + x*2), t0, t1);
+            }
         }
 #endif
         for( ; x < colsn; x++ )
@@ -429,9 +384,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 q8 = vmulq_s32(q4, q6);
                 q15 = vmulq_s32(q6, q6);
 
-                nq0 = vaddq_f32(nq0, vreinterpretq_f32_s32(q7));
-                nq1 = vaddq_f32(nq1, vreinterpretq_f32_s32(q8));
-                nq2 = vaddq_f32(nq2, vreinterpretq_f32_s32(q15));
+                nq0 = vaddq_f32(nq0, vcvtq_f32_s32(q7));
+                nq1 = vaddq_f32(nq1, vcvtq_f32_s32(q8));
+                nq2 = vaddq_f32(nq2, vcvtq_f32_s32(q15));
 
                 vst1q_f32(nA11, nq0);
                 vst1q_f32(nA12, nq1);
@@ -644,8 +599,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     nq9 = vaddq_s32(nq9, nq10);
                     nq4 = vaddq_s32(nq4, nq5);
 
-                    nB1v = vaddq_f32(nB1v, vreinterpretq_f32_s32(nq9));
-                    nB2v = vaddq_f32(nB2v, vreinterpretq_f32_s32(nq4));
+                    nB1v = vaddq_f32(nB1v, vcvtq_f32_s32(nq9));
+                    nB2v = vaddq_f32(nB2v, vcvtq_f32_s32(nq4));
 
                     vst1q_f32(nB1, nB1v);
                     vst1q_f32(nB2, nB2v);

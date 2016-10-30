@@ -1295,6 +1295,61 @@ struct ColumnSum<int, float> :
 
 #ifdef HAVE_OPENCL
 
+static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth,
+                                   Size ksize, Point anchor, int borderType, bool normalize )
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    if (anchor.x < 0)
+        anchor.x = ksize.width / 2;
+    if (anchor.y < 0)
+        anchor.y = ksize.height / 2;
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0) &&
+         (anchor.x == 1) && (anchor.y == 1) &&
+         (ksize.width == 3) && (ksize.height == 3)) )
+        return false;
+
+    float alpha = 1.0f / (ksize.height * ksize.width);
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s", borderMap[borderType], normalize ? "-D NORMALIZE" : "");
+
+    ocl::Kernel kernel("boxFilter3x3_8UC1_cols16_rows2", cv::ocl::imgproc::boxFilter3x3_oclsrc, build_opts);
+    if (kernel.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = kernel.set(idxArg, (int)dst.step);
+    idxArg = kernel.set(idxArg, (int)dst.rows);
+    idxArg = kernel.set(idxArg, (int)dst.cols);
+    if (normalize)
+        idxArg = kernel.set(idxArg, (float)alpha);
+
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+}
+
 #define DIVUP(total, grain) ((total + grain - 1) / (grain))
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
@@ -1683,6 +1738,11 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 {
     CV_INSTRUMENT_REGION()
 
+    CV_OCL_RUN(_dst.isUMat() &&
+               (borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT ||
+                borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101),
+               ocl_boxFilter3x3_8UC1(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
+
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
     Mat src = _src.getMat();
@@ -1717,11 +1777,14 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
              ipp_boxfilter( _src,  _dst,  ddepth, ksize,  anchor, normalize,  borderType));
 #endif
 
-    Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
-                        ksize, anchor, normalize, borderType );
     Point ofs;
     Size wsz(src.cols, src.rows);
-    src.locateROI( wsz, ofs );
+    if(!(borderType&BORDER_ISOLATED))
+        src.locateROI( wsz, ofs );
+    borderType = (borderType&~BORDER_ISOLATED);
+
+    Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
+                        ksize, anchor, normalize, borderType );
 
     f->apply( src, dst, wsz, ofs );
 }

@@ -73,7 +73,7 @@ represents the minimum length of line that should be detected.
 import cv2
 import numpy as np
 
-img = cv2.imread('dave.jpg')
+img = cv2.imread('sudoku.png')
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 edges = cv2.Canny(gray,50,150,apertureSize = 3)
 
@@ -121,7 +121,7 @@ the parameters of lines, and you had to find all the points. Here, everything is
 import cv2
 import numpy as np
 
-img = cv2.imread('dave.jpg')
+img = cv2.imread('sudoku.png')
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 edges = cv2.Canny(gray,50,150,apertureSize = 3)
 lines = cv2.HoughLinesP(edges,1,np.pi/180,100,minLineLength=100,maxLineGap=10)

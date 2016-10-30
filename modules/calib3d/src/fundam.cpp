@@ -47,29 +47,6 @@
 namespace cv
 {
 
-static bool haveCollinearPoints( const Mat& m, int count )
-{
-    int j, k, i = count-1;
-    const Point2f* ptr = m.ptr<Point2f>();
-
-    // check that the i-th selected point does not belong
-    // to a line connecting some previously selected points
-    for( j = 0; j < i; j++ )
-    {
-        double dx1 = ptr[j].x - ptr[i].x;
-        double dy1 = ptr[j].y - ptr[i].y;
-        for( k = 0; k < j; k++ )
-        {
-            double dx2 = ptr[k].x - ptr[i].x;
-            double dy2 = ptr[k].y - ptr[i].y;
-            if( fabs(dx2*dy1 - dy2*dx1) <= FLT_EPSILON*(fabs(dx1) + fabs(dy1) + fabs(dx2) + fabs(dy2)))
-                return true;
-        }
-    }
-    return false;
-}
-
-
 class HomographyEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:

@@ -107,6 +107,35 @@ private:
 };
 
 
+struct FindFeaturesBody : ParallelLoopBody
+{
+    FindFeaturesBody(FeaturesFinder &finder, InputArrayOfArrays images,
+                     std::vector<ImageFeatures> &features, const std::vector<std::vector<cv::Rect> > *rois)
+            : finder_(finder), images_(images), features_(features), rois_(rois) {}
+
+    void operator ()(const Range &r) const
+    {
+        for (int i = r.start; i < r.end; ++i)
+        {
+            Mat image = images_.getMat(i);
+            if (rois_)
+                finder_(image, features_[i], (*rois_)[i]);
+            else
+                finder_(image, features_[i]);
+        }
+    }
+
+private:
+    FeaturesFinder &finder_;
+    InputArrayOfArrays images_;
+    std::vector<ImageFeatures> &features_;
+    const std::vector<std::vector<cv::Rect> > *rois_;
+
+    // to cease visual studio warning
+    void operator =(const FindFeaturesBody&);
+};
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 typedef std::set<std::pair<int,int> > MatchesSet;
@@ -324,6 +353,55 @@ void FeaturesFinder::operator ()(InputArray image, ImageFeatures &features, cons
 }
 
 
+void FeaturesFinder::operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features)
+{
+    size_t count = images.total();
+    features.resize(count);
+
+    FindFeaturesBody body(*this, images, features, NULL);
+    if (isThreadSafe())
+        parallel_for_(Range(0, static_cast<int>(count)), body);
+    else
+        body(Range(0, static_cast<int>(count)));
+}
+
+
+void FeaturesFinder::operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
+                                  const std::vector<std::vector<cv::Rect> > &rois)
+{
+    CV_Assert(rois.size() == images.total());
+    size_t count = images.total();
+    features.resize(count);
+
+    FindFeaturesBody body(*this, images, features, &rois);
+    if (isThreadSafe())
+        parallel_for_(Range(0, static_cast<int>(count)), body);
+    else
+        body(Range(0, static_cast<int>(count)));
+}
+
+
+bool FeaturesFinder::isThreadSafe() const
+{
+    if (ocl::useOpenCL())
+    {
+        return false;
+    }
+    if (dynamic_cast<const SurfFeaturesFinder*>(this))
+    {
+        return true;
+    }
+    else if (dynamic_cast<const OrbFeaturesFinder*>(this))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+
 SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers,
                                        int num_octaves_descr, int num_layers_descr)
 {
@@ -460,6 +538,27 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
         //features.descriptors = _descriptors.getUMat(ACCESS_READ);
         _descriptors.copyTo(features.descriptors);
     }
+}
+
+AKAZEFeaturesFinder::AKAZEFeaturesFinder(int descriptor_type,
+                                         int descriptor_size,
+                                         int descriptor_channels,
+                                         float threshold,
+                                         int nOctaves,
+                                         int nOctaveLayers,
+                                         int diffusivity)
+{
+    akaze = AKAZE::create(descriptor_type, descriptor_size, descriptor_channels,
+                          threshold, nOctaves, nOctaveLayers, diffusivity);
+}
+
+void AKAZEFeaturesFinder::find(InputArray image, detail::ImageFeatures &features)
+{
+    CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
+    Mat descriptors;
+    UMat uimage = image.getUMat();
+    akaze->detectAndCompute(uimage, UMat(), features.keypoints, descriptors);
+    features.descriptors = descriptors.getUMat(ACCESS_READ);
 }
 
 #ifdef HAVE_OPENCV_XFEATURES2D
@@ -698,6 +797,58 @@ void BestOf2NearestRangeMatcher::operator ()(const std::vector<ImageFeatures> &f
     else
         body(Range(0, static_cast<int>(near_pairs.size())));
     LOGLN_CHAT("");
+}
+
+
+void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
+                                        MatchesInfo &matches_info)
+{
+    (*impl_)(features1, features2, matches_info);
+
+    // Check if it makes sense to find transform
+    if (matches_info.matches.size() < static_cast<size_t>(num_matches_thresh1_))
+        return;
+
+    // Construct point-point correspondences for transform estimation
+    Mat src_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
+    Mat dst_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
+    for (size_t i = 0; i < matches_info.matches.size(); ++i)
+    {
+        const cv::DMatch &m = matches_info.matches[i];
+        src_points.at<Point2f>(0, static_cast<int>(i)) = features1.keypoints[m.queryIdx].pt;
+        dst_points.at<Point2f>(0, static_cast<int>(i)) = features2.keypoints[m.trainIdx].pt;
+    }
+
+    // Find pair-wise motion
+    if (full_affine_)
+        matches_info.H = estimateAffine2D(src_points, dst_points, matches_info.inliers_mask);
+    else
+        matches_info.H = estimateAffinePartial2D(src_points, dst_points, matches_info.inliers_mask);
+
+    if (matches_info.H.empty()) {
+        // could not find transformation
+        matches_info.confidence = 0;
+        matches_info.num_inliers = 0;
+        return;
+    }
+
+    // Find number of inliers
+    matches_info.num_inliers = 0;
+    for (size_t i = 0; i < matches_info.inliers_mask.size(); ++i)
+        if (matches_info.inliers_mask[i])
+            matches_info.num_inliers++;
+
+    // These coeffs are from paper M. Brown and D. Lowe. "Automatic Panoramic
+    // Image Stitching using Invariant Features"
+    matches_info.confidence =
+        matches_info.num_inliers / (8 + 0.3 * matches_info.matches.size());
+
+    /* should we remove matches between too close images? */
+    // matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
+
+    // extend H to represent linear tranformation in homogeneous coordinates
+    matches_info.H.push_back(Mat::zeros(1, 3, CV_64F));
+    matches_info.H.at<double>(2, 2) = 1;
 }
 
 

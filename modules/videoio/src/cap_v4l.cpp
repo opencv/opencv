@@ -1613,6 +1613,7 @@ static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
                                      int property_id ) {
   {
       v4l2_format form;
+      memset(&form, 0, sizeof(v4l2_format));
       form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
       if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &form)) {
           /* display an error message, and return an error code */
@@ -1849,7 +1850,7 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
      if (capture->deviceHandle != -1)
        close(capture->deviceHandle);
 
-     if (capture->frame.imageData)
+     if (capture->frame_allocated && capture->frame.imageData)
          cvFree(&capture->frame.imageData);
 
      capture->deviceName.clear(); // flag that the capture is closed
