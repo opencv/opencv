@@ -1801,7 +1801,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
 
     cv::HoughCircles(src, circles_mat, method, dp, min_dist, param1, param2, min_radius, max_radius, circles_max, 3);
 
-    cvSeqPushMulti(circles, circles_mat.data, circles_mat.total());
+    cvSeqPushMulti(circles, circles_mat.data, (int)circles_mat.total());
 
     return circles;
 }
