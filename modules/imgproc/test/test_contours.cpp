@@ -483,10 +483,26 @@ TEST(Imgproc_FindContours, hilbert)
     img.setTo(Scalar::all(0));
 
     drawContours(img, contours, 0, Scalar::all(255), 1);
-    //imshow("hilbert", img);
-    //waitKey();
+
     ASSERT_EQ(1, (int)contours.size());
     ASSERT_EQ(9832, (int)contours[0].size());
+}
+
+TEST(Imgproc_FindContours, border)
+{
+    Mat img;
+    copyMakeBorder(Mat::zeros(8, 10, CV_8U), img, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(1));
+
+    std::vector<std::vector<cv::Point> > contours;
+    findContours(img, contours, RETR_LIST, CHAIN_APPROX_NONE);
+
+    Mat img_draw_contours = Mat::zeros(img.size(), CV_8U);
+    for (size_t cpt = 0; cpt < contours.size(); cpt++)
+    {
+      drawContours(img_draw_contours, contours, static_cast<int>(cpt), cv::Scalar(255));
+    }
+
+    ASSERT_TRUE(norm(img - img_draw_contours, NORM_INF) == 0.0);
 }
 
 /* End of file. */
