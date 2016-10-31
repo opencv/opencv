@@ -1,4 +1,4 @@
-#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID) || (defined(_MSC_VER) && _MSC_VER>1700)
+#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID) || (defined(_MSC_VER) && _MSC_VER>1800)
 
 #include <opencv2/imgproc.hpp>  // Gaussian Blur
 #include <opencv2/core.hpp>        // Basic OpenCV structures (cv::Mat, Scalar)
