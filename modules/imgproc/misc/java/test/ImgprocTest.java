@@ -1116,7 +1116,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Imgproc.HoughLinesP(img, lines, 1, 3.1415926/180, 100);
 
-        assertEquals(2, lines.cols());
+        assertEquals(2, lines.rows());
 
         /*
         Log.d("HoughLinesP", "lines=" + lines);
@@ -1407,14 +1407,14 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testMinEnclosingCircle() {
-        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-1, 0), new Point(0, -1), new Point(1, 0), new Point(0, 1));
+        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-100, 0), new Point(0, -100), new Point(100, 0), new Point(0, 100));
         Point actualCenter = new Point();
         float[] radius = new float[1];
 
         Imgproc.minEnclosingCircle(points, actualCenter, radius);
 
         assertEquals(new Point(0, 0), actualCenter);
-        assertEquals(1.03f, radius[0], EPS);
+        assertEquals(100.0f, radius[0], 1.0);
     }
 
     public void testMomentsMat() {
