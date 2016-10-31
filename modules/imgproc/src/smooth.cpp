@@ -44,6 +44,11 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#ifdef HAVE_OPENVX
+#define IVX_HIDE_INFO_WARNINGS
+#define IVX_USE_OPENCV
+#include "ivx.hpp"
+#endif
 /*
  * This file includes the code, contributed by Simon Perreault
  * (the function icvMedianBlur_8u_O1)
@@ -3122,6 +3127,94 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 
 }
 
+#ifdef HAVE_OPENVX
+namespace cv
+{
+    static bool openvx_medianFilter(InputArray _src, OutputArray _dst, int ksize)
+    {
+        if (_src.type() != CV_8UC1 || _dst.type() != CV_8U
+#ifndef VX_VERSION_1_1
+            || ksize != 3
+#endif
+            )
+            return false;
+
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+
+        vx_border_t border;
+        border.mode = VX_BORDER_REPLICATE;
+
+        try
+        {
+            ivx::Context ctx = ivx::Context::create();
+#ifdef VX_VERSION_1_1
+            if ((vx_size)ksize > ctx.nonlinearMaxDimension())
+                return false;
+#endif
+
+            Mat a;
+            if (dst.data != src.data)
+                a = src;
+            else
+                src.copyTo(a);
+
+            ivx::Image
+                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+                ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+            //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+            //since OpenVX standart says nothing about thread-safety for now
+            vx_border_t prevBorder = ctx.borderMode();
+            ctx.setBorderMode(border);
+#ifdef VX_VERSION_1_1
+            if (ksize == 3)
+#endif
+            {
+                ivx::IVX_CHECK_STATUS(vxuMedian3x3(ctx, ia, ib));
+            }
+#ifdef VX_VERSION_1_1
+            else
+            {
+                ivx::Matrix mtx;
+                if(ksize == 5)
+                    mtx = ivx::Matrix::createFromPattern(ctx, VX_PATTERN_BOX, ksize, ksize);
+                else
+                {
+                    vx_size supportedSize;
+                    ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_NONLINEAR_MAX_DIMENSION, &supportedSize, sizeof(supportedSize)));
+                    if ((vx_size)ksize > supportedSize)
+                    {
+                        ctx.setBorderMode(prevBorder);
+                        return false;
+                    }
+                    Mat mask(ksize, ksize, CV_8UC1, Scalar(255));
+                    mtx = ivx::Matrix::create(ctx, VX_TYPE_UINT8, ksize, ksize);
+                    mtx.copyFrom(mask);
+                }
+                ivx::IVX_CHECK_STATUS(vxuNonLinearFilter(ctx, VX_NONLINEAR_FILTER_MEDIAN, ia, mtx, ib));
+            }
+#endif
+            ctx.setBorderMode(prevBorder);
+        }
+        catch (ivx::RuntimeError & e)
+        {
+            CV_Error(CV_StsInternal, e.what());
+            return false;
+        }
+        catch (ivx::WrapperError & e)
+        {
+            CV_Error(CV_StsInternal, e.what());
+            return false;
+        }
+
+        return true;
+    }
+}
+#endif
+
 #ifdef HAVE_IPP
 namespace cv
 {
@@ -3201,6 +3294,11 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
+
+#ifdef HAVE_OPENVX
+    if (openvx_medianFilter(_src0, _dst, ksize))
+        return;
+#endif
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 810 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
 
