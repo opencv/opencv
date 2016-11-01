@@ -5374,6 +5374,41 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 
 #endif
 
+#ifdef HAVE_OPENVX
+static bool openvx_LUT(Mat src, Mat dst, Mat _lut)
+{
+    if (src.type() != CV_8UC1 || dst.type() != src.type() || _lut.type() != src.type() || !_lut.isContinuous())
+        return false;
+
+    try
+    {
+        ivx::Context ctx = ivx::Context::create();
+
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(src.cols, src.rows, 1, (vx_int32)(src.step)), src.data),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+        ivx::LUT lut = ivx::LUT::create(ctx);
+        lut.copyFrom(_lut);
+        ivx::IVX_CHECK_STATUS(vxuTableLookup(ctx, ia, lut, ib));
+    }
+    catch (ivx::RuntimeError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    catch (ivx::WrapperError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+
+    return true;
+}
+#endif
+
 #if defined(HAVE_IPP)
 namespace ipp {
 
@@ -5638,6 +5673,11 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
+
+#ifdef HAVE_OPENVX
+    if (openvx_LUT(src, dst, lut))
+        return;
+#endif
 
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
 

@@ -322,6 +322,15 @@ template <> struct RefTypeTraits <vx_matrix>
     static vx_status release(vxType& ref) { return vxReleaseMatrix(&ref); }
 };
 
+class LUT;
+template <> struct RefTypeTraits <vx_lut>
+{
+    typedef vx_lut vxType;
+    typedef LUT wrapperType;
+    static const vx_enum vxTypeEnum = VX_TYPE_LUT;
+    static vx_status release(vxType& ref) { return vxReleaseLUT(&ref); }
+};
+
 #ifdef IVX_USE_CXX98
 
 /// Casting to vx_reference with compile-time check
@@ -2315,6 +2324,163 @@ public:
     void copyFrom(const cv::Mat& m)
     {
         if ((vx_size)(m.rows) != rows() || (vx_size)(m.cols) != columns()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
+        if (m.type() != enumToCVType(dataType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        copyFrom(m.isContinuous() ? m.ptr() : m.clone().ptr());
+    }
+#endif //IVX_USE_OPENCV
+};
+
+/*
+* LUT
+*/
+class LUT : public RefWrapper<vx_lut>
+{
+public:
+    IVX_REF_STD_CTORS_AND_ASSIGNMENT(LUT);
+
+#ifdef VX_VERSION_1_1
+    static LUT create(vx_context context, vx_enum dataType = VX_TYPE_UINT8, vx_size count = 256)
+    {
+#else
+    static LUT create(vx_context context)
+    {
+        vx_enum dataType = VX_TYPE_UINT8;
+        vx_size count = 256;
+#endif
+        return LUT(vxCreateLUT(context, dataType, count));
+    }
+
+#ifndef VX_VERSION_1_1
+    static const vx_enum VX_MEMORY_TYPE_HOST = VX_IMPORT_TYPE_HOST;
+#endif
+
+    template<typename T>
+    void query(vx_enum att, T& value) const
+    {
+        IVX_CHECK_STATUS(vxQueryLUT(ref, att, &value, sizeof(value)));
+    }
+
+#ifndef VX_VERSION_1_1
+    static const vx_enum
+        VX_LUT_TYPE = VX_LUT_ATTRIBUTE_TYPE,
+        VX_LUT_COUNT = VX_LUT_ATTRIBUTE_COUNT,
+        VX_LUT_SIZE = VX_LUT_ATTRIBUTE_SIZE;
+#endif
+
+    vx_enum dataType() const
+    {
+        vx_enum v;
+        query(VX_LUT_TYPE, v);
+        return v;
+    }
+
+    vx_size count() const
+    {
+        vx_size v;
+        query(VX_LUT_COUNT, v);
+        return v;
+    }
+
+    vx_size size() const
+    {
+        vx_size v;
+        query(VX_LUT_SIZE, v);
+        return v;
+    }
+
+#ifdef VX_VERSION_1_1
+    vx_uint32 offset() const
+    {
+        vx_enum v;
+        query(VX_LUT_OFFSET, v);
+        return v;
+    }
+#endif // VX_VERSION_1_1
+
+    void copyTo(void* data)
+    {
+        if (!data) throw WrapperError(std::string(__func__) + "(): output pointer is 0");
+#ifdef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxCopyLUT(ref, data, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
+#else
+        IVX_CHECK_STATUS(vxAccessLUT(ref, &data, VX_READ_ONLY));
+        IVX_CHECK_STATUS(vxCommitLUT(ref, data));
+#endif
+    }
+
+    void copyFrom(const void* data)
+    {
+        if (!data) throw WrapperError(std::string(__func__) + "(): input pointer is 0");
+#ifdef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxCopyLUT(ref, const_cast<void*>(data), VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+#else
+        IVX_CHECK_STATUS(vxAccessLUT(ref, const_cast<void**>(&data), VX_WRITE_ONLY));
+        IVX_CHECK_STATUS(vxCommitLUT(ref, data));
+#endif
+    }
+
+    void copy(void* data, vx_enum usage, vx_enum memType = VX_MEMORY_TYPE_HOST)
+    {
+#ifdef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxCopyLUT(ref, data, usage, memType));
+#else
+        IVX_CHECK_STATUS(vxAccessLUT(ref, const_cast<void**>(&data), usage));
+        IVX_CHECK_STATUS(vxCommitLUT(ref, data));
+        (void)memType;
+#endif
+    }
+
+    template<typename T> void copyTo(std::vector<T>& data)
+    {
+        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (data.size() != count())
+        {
+            if (data.size() == 0)
+                data.resize(count());
+            else
+                throw WrapperError(std::string(__func__) + "(): destination size is wrong");
+        }
+        copyTo(&data[0]);
+    }
+
+    template<typename T> void copyFrom(const std::vector<T>& data)
+    {
+        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (data.size() != count()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
+        copyFrom(&data[0]);
+    }
+
+#ifdef IVX_USE_OPENCV
+    void copyTo(cv::Mat& m)
+    {
+        if (m.type() != enumToCVType(dataType())) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (!(
+            ((vx_size)(m.rows) == count() && m.cols == 1) ||
+            ((vx_size)(m.cols) == count() && m.rows == 1)
+            ) && !m.empty())
+            throw WrapperError(std::string(__func__) + "(): destination size is wrong");
+
+        if (m.isContinuous() && (vx_size)(m.total()) == count())
+        {
+            copyTo(m.ptr());
+        }
+        else
+        {
+            cv::Mat tmp(1, (int)count(), enumToCVType(dataType()));
+            copyTo(tmp.ptr());
+            if (m.empty())
+                m = tmp;
+            else
+                tmp.copyTo(m);
+        }
+    }
+
+    void copyFrom(const cv::Mat& m)
+    {
+        if (!(
+                ((vx_size)(m.rows) == count() && m.cols == 1) ||
+                ((vx_size)(m.cols) == count() && m.rows == 1)
+           )) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         if (m.type() != enumToCVType(dataType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
         copyFrom(m.isContinuous() ? m.ptr() : m.clone().ptr());
     }
