@@ -1823,6 +1823,26 @@ static const vx_enum
         query(VX_THRESHOLD_FALSE_VALUE, v);
         return v;
     }
+
+    /// vxSetThresholdAttribute(THRESHOLD_VALUE) wrapper
+    void setValue(vx_int32 &val)
+    { IVX_CHECK_STATUS(vxSetThresholdAttribute(ref, VX_THRESHOLD_THRESHOLD_VALUE, &val, sizeof(val))); }
+
+    /// vxSetThresholdAttribute(THRESHOLD_LOWER) wrapper
+    void setValueLower(vx_int32 &val)
+    { IVX_CHECK_STATUS(vxSetThresholdAttribute(ref, VX_THRESHOLD_THRESHOLD_LOWER, &val, sizeof(val))); }
+
+    /// vxSetThresholdAttribute(THRESHOLD_UPPER) wrapper
+    void setValueUpper(vx_int32 &val)
+    { IVX_CHECK_STATUS(vxSetThresholdAttribute(ref, VX_THRESHOLD_THRESHOLD_UPPER, &val, sizeof(val))); }
+
+    /// vxSetThresholdAttribute(TRUE_VALUE) wrapper
+    void setValueTrue(vx_int32 &val)
+    { IVX_CHECK_STATUS(vxSetThresholdAttribute(ref, VX_THRESHOLD_TRUE_VALUE, &val, sizeof(val))); }
+
+    /// vxSetThresholdAttribute(FALSE_VALUE) wrapper
+    void setValueFalse(vx_int32 &val)
+    { IVX_CHECK_STATUS(vxSetThresholdAttribute(ref, VX_THRESHOLD_FALSE_VALUE, &val, sizeof(val))); }
 };
 
 /// vx_array wrapper
