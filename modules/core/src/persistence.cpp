@@ -96,6 +96,15 @@ static inline bool cv_isspace(char c)
     return (9 <= c && c <= 13) || c == ' ';
 }
 
+static inline char* cv_skip_BOM(char* ptr)
+{
+    if((uchar)ptr[0] == 0xef && (uchar)ptr[1] == 0xbb && (uchar)ptr[2] == 0xbf) //UTF-8 BOM
+    {
+      return ptr + 3;
+    }
+    return ptr;
+}
+
 static char* icv_itoa( int _val, char* buffer, int /*radix*/ )
 {
     const int radix = 10;
@@ -4399,10 +4408,13 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         const char* json_signature = "{";
         char buf[16];
         icvGets( fs, buf, sizeof(buf)-2 );
+        char* bufPtr = cv_skip_BOM(buf);
+        size_t bufOffset = bufPtr - buf;
+
         fs->fmt
-            = strncmp( buf, yaml_signature, strlen(yaml_signature) ) == 0
+            = strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0
             ? CV_STORAGE_FORMAT_YAML
-            : strncmp( buf, json_signature, strlen(json_signature) ) == 0
+            : strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0
             ? CV_STORAGE_FORMAT_JSON
             : CV_STORAGE_FORMAT_XML
             ;
@@ -4420,6 +4432,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
             buf_size = MAX( buf_size, (size_t)(CV_FS_MAX_LEN*2 + 1024) );
         }
         icvRewind(fs);
+        fs->strbufpos = bufOffset;
 
         fs->str_hash = cvCreateMap( 0, sizeof(CvStringHash),
                         sizeof(CvStringHashNode), fs->memstorage, 256 );
