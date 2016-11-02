@@ -1023,9 +1023,9 @@ around both axes.
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
 enum RotateFlags {
-    ROTATE_90 = 0, //Rotate 90 degrees clockwise
+    ROTATE_90_CLOCKWISE = 0, //Rotate 90 degrees clockwise
     ROTATE_180 = 1, //Rotate 180 degrees clockwise
-    ROTATE_270 = 2, //Rotate 270 degrees clockwise
+    ROTATE_90_COUNTERCLOCKWISE = 2, //Rotate 270 degrees clockwise
 };
 /** @brief Rotates a 2D array in multiples of 90 degrees.
 The function rotate rotates the array in one of three different ways:
