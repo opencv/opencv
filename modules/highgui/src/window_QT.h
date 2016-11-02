@@ -414,7 +414,7 @@ public:
 protected:
     void icvmouseEvent(QMouseEvent* event, type_mouse_event category);
     void icvmouseHandler(QMouseEvent* event, type_mouse_event category, int& cv_event, int& flags);
-    void icvmouseProcessing(QPointF pt, int cv_event, int flags);
+    virtual void icvmouseProcessing(QPointF pt, int cv_event, int flags);
 
     CvMouseCallback mouseCallback;
     void* mouseData;
