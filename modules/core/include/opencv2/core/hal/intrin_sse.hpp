@@ -46,6 +46,7 @@
 #define OPENCV_HAL_SSE_HPP
 
 #include <algorithm>
+#include "opencv2/core/utility.hpp"
 
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 1
@@ -1725,6 +1726,16 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
     return v_float16x4(_mm_cvtps_ph(a.val, 0));
 }
 #endif
+
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return checkHardwareSupport(CV_CPU_SSE2);
+}
+
+//! @}
 
 //! @endcond
 
