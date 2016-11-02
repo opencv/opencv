@@ -301,7 +301,7 @@ struct v_float16x4
     }
     short get0() const
     {
-        return vget_lane_s16(vreinterpret_f16_s16(val), 0);
+        return vget_lane_s16(vreinterpret_s16_f16(val), 0);
     }
     float16x4_t val;
 };
