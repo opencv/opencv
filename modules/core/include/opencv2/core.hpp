@@ -3027,7 +3027,8 @@ public:
 
      This is static template method of Algorithm. It's usage is following (in the case of SVM):
      @code
-     Ptr<SVM> svm = Algorithm::read<SVM>(fn);
+     cv::FileStorage fsRead("example.xml", FileStorage::READ);
+     Ptr<SVM> svm = Algorithm::read<SVM>(fsRead.root());
      @endcode
      In order to make this method work, the derived class must overwrite Algorithm::read(const
      FileNode& fn) and also have static create() method without parameters
