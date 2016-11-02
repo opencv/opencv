@@ -4406,18 +4406,22 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         size_t buf_size = 1 << 20;
         const char* yaml_signature = "%YAML";
         const char* json_signature = "{";
+        const char* xml_signature  = "<?xml";
         char buf[16];
         icvGets( fs, buf, sizeof(buf)-2 );
         char* bufPtr = cv_skip_BOM(buf);
         size_t bufOffset = bufPtr - buf;
 
-        fs->fmt
-            = strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0
-            ? CV_STORAGE_FORMAT_YAML
-            : strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0
-            ? CV_STORAGE_FORMAT_JSON
-            : CV_STORAGE_FORMAT_XML
-            ;
+        if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_YAML;
+        else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_JSON;
+        else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_XML;
+        else if(fs->strbufsize  == bufOffset)
+            CV_Error(CV_BADARG_ERR, "Input file is empty");
+        else
+            CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 
         if( !isGZ )
         {
