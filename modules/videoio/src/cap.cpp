@@ -275,7 +275,128 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 
     return capture;
 }
+/**   */
 
+CV_IMPL CvCapture *cvCreateCameraCaptureCap(int index,int apiPreference)
+{
+
+  int pref = (index / 100) * 100; //no pref => 0
+  if (apiPreference == pref)
+      pref = 0;
+  else if (apiPreference == 0)
+      apiPreference = pref;
+  index = index + apiPreference - pref;
+  CvCapture *capture = 0;
+switch (pref)
+    {
+    default:
+        // user specified an API we do not know
+        // bail out to let the user know that it is not available
+        if (pref) break;
+
+#ifdef HAVE_MSMF
+    case CV_CAP_MSMF:
+        TRY_OPEN(capture, cvCreateCameraCapture_MSMF(index))
+        if (pref) break;
+#endif
+#ifdef HAVE_TYZX
+    case CV_CAP_STEREO:
+        TRY_OPEN(capture, cvCreateCameraCapture_TYZX(index))
+        if (pref) break;
+#endif
+    case CV_CAP_VFW:
+#ifdef HAVE_VFW
+        TRY_OPEN(capture, cvCreateCameraCapture_VFW(index))
+#endif
+        if (pref) break; // CV_CAP_VFW
+
+#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+        TRY_OPEN(capture, cvCreateCameraCapture_V4L(index))
+#endif
+
+#ifdef HAVE_GSTREAMER
+        TRY_OPEN(capture, cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L2, reinterpret_cast<char *>(index)))
+
+        TRY_OPEN(capture, cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L, reinterpret_cast<char *>(index)))
+#endif
+
+    case CV_CAP_FIREWIRE:
+#ifdef HAVE_DC1394_2
+        TRY_OPEN(capture, cvCreateCameraCapture_DC1394_2(index))
+#endif
+
+#ifdef HAVE_DC1394
+        TRY_OPEN(capture, cvCreateCameraCapture_DC1394(index))
+#endif
+
+#ifdef HAVE_CMU1394
+        TRY_OPEN(capture, cvCreateCameraCapture_CMU(index))
+#endif
+
+#if defined(HAVE_GSTREAMER) && 0
+        // Re-enable again when gstreamer 1394 support will land in the backend code
+        TRY_OPEN(capture, cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_1394, 0))
+#endif
+
+        if (pref) break; // CV_CAP_FIREWIRE
+
+#ifdef HAVE_MIL
+    case CV_CAP_MIL:
+        TRY_OPEN(capture, cvCreateCameraCapture_MIL(index))
+        if (pref) break;
+#endif
+
+#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
+    case CV_CAP_QT:
+        TRY_OPEN(capture, cvCreateCameraCapture_QT(index))
+        if (pref) break;
+#endif
+
+#ifdef HAVE_UNICAP
+    case CV_CAP_UNICAP:
+        TRY_OPEN(capture, cvCreateCameraCapture_Unicap(index))
+        if (pref) break;
+#endif
+
+#ifdef HAVE_PVAPI
+    case CV_CAP_PVAPI:
+        TRY_OPEN(capture, cvCreateCameraCapture_PvAPI(index))
+        if (pref) break;
+#endif
+
+#ifdef HAVE_OPENNI
+    case CV_CAP_OPENNI:
+        TRY_OPEN(capture, cvCreateCameraCapture_OpenNI(index))
+        if (pref) break;
+#endif
+
+#ifdef HAVE_OPENNI2
+    case CV_CAP_OPENNI2:
+        TRY_OPEN(capture, cvCreateCameraCapture_OpenNI2(index))
+        if (pref) break;
+#endif
+
+#ifdef HAVE_XIMEA
+    case CV_CAP_XIAPI:
+        TRY_OPEN(capture, cvCreateCameraCapture_XIMEA(index))
+        if (pref) break;
+#endif
+
+#ifdef HAVE_AVFOUNDATION
+    case CV_CAP_AVFOUNDATION:
+        TRY_OPEN(capture, cvCreateCameraCapture_AVFoundation(index))
+        if (pref) break;
+#endif
+
+#ifdef HAVE_GIGE_API
+    case CV_CAP_GIGANETIX:
+        TRY_OPEN(capture, cvCreateCameraCapture_Giganetix(index))
+        if (pref) break; // CV_CAP_GIGANETIX
+#endif
+  }
+
+    return capture;
+}
 /**
  * Videoreader dispatching method: it tries to find the first
  * API that can access a given filename.
@@ -586,6 +707,16 @@ bool VideoCapture::open(int index)
     if (!icap.empty())
         return true;
     cap.reset(cvCreateCameraCapture(index));
+    return isOpened();
+}
+
+bool VideoCapture::open(int index,int apiPreference = CAP_ANY)
+{
+    if (isOpened()) release();
+    icap = IVideoCapture_create(index);
+    if (!icap.empty())
+        return true;
+    cap.reset(cvCreateCameraCaptureCap(index,apiPreference));
     return isOpened();
 }
 
