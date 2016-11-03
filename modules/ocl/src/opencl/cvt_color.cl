@@ -295,8 +295,8 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
 #endif
 
             dst_ptr[0] = SAT_CAST( Y );
-            dst_ptr[1] = SAT_CAST( V ); //sic! store channels as YVU, not YUV
-            dst_ptr[2] = SAT_CAST( U );
+            dst_ptr[1] = SAT_CAST( U );
+            dst_ptr[2] = SAT_CAST( V );
         }
 #elif (2 == pixels_per_work_item)
         {
@@ -323,8 +323,7 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
             const VECTOR2 U = SAT_CAST2(ui);
             const VECTOR2 V = SAT_CAST2(vi);
 #endif
-            //sic! store channels as YVU, not YUV
-            vstore8((VECTOR8)(Y.s0, V.s0, U.s0, 0, Y.s1, V.s1, U.s1, 0), 0, dst_ptr);
+            vstore8((VECTOR8)(Y.s0, U.s0, V.s0, 0, Y.s1, U.s1, V.s1, 0), 0, dst_ptr);
         }
 #elif (4 == pixels_per_work_item)
         {
@@ -342,8 +341,7 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
             const VECTOR4 Y = SAT_CAST4(yi);
             const VECTOR4 U = SAT_CAST4(ui);
             const VECTOR4 V = SAT_CAST4(vi);
-            //sic! store channels as YVU, not YUV
-            vstore16((VECTOR16)(Y.s0, V.s0, U.s0, 0, Y.s1, V.s1, U.s1, 0, Y.s2, V.s2, U.s2, 0, Y.s3, V.s3, U.s3, 0), 0, dst_ptr);
+            vstore16((VECTOR16)(Y.s0, U.s0, V.s0, 0, Y.s1, U.s1, V.s1, 0, Y.s2, U.s2, V.s2, 0, Y.s3, U.s3, V.s3, 0), 0, dst_ptr);
 #endif
         }
 #endif //pixels_per_work_item
@@ -377,8 +375,7 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
 
 #if (1 == pixels_per_work_item)
         {
-            //sic! channels stored as YVU, not YUV
-            const DATA_TYPE yuv[] = {src_ptr[0], src_ptr[2], src_ptr[1]};
+            const DATA_TYPE yuv[] = {src_ptr[0], src_ptr[1], src_ptr[2]};
 
 #ifdef DEPTH_5
             float B = yuv[0] + (yuv[1] - HALF_MAX) * coeffs[0];
@@ -402,19 +399,17 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
             const VECTOR8 r0 = vload8(0, src_ptr);
 
 #ifdef DEPTH_5
-            //sic! channels stored as YVU, not YUV
             const float2 Y = r0.s04;
-            const float2 U = r0.s26;
-            const float2 V = r0.s15;
+            const float2 U = r0.s15;
+            const float2 V = r0.s26;
 
             const float2 c0 = (bidx != 0) ? (Y + (V - HALF_MAX) * coeffs[3]) : (Y + (U - HALF_MAX) * coeffs[0]);
             const float2 c1 = Y + (V - HALF_MAX) * coeffs[2] + (U - HALF_MAX) * coeffs[1];
             const float2 c2 = (bidx != 0) ? (Y + (U - HALF_MAX) * coeffs[0]) : (Y + (V - HALF_MAX) * coeffs[3]);
 #else
-            //sic! channels stored as YVU, not YUV
             const int2 Y = convert_int2(r0.s04);
-            const int2 U = convert_int2(r0.s26);
-            const int2 V = convert_int2(r0.s15);
+            const int2 U = convert_int2(r0.s15);
+            const int2 V = convert_int2(r0.s26);
 
             const int2 c0i = (bidx != 0) ? (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift)) : (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift));
             const int2 c1i = Y + CV_DESCALE((V - HALF_MAX) * coeffs[2] + (U - HALF_MAX) * coeffs[1], yuv_shift);
@@ -436,10 +431,9 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
 #ifndef DEPTH_5
             const VECTOR16 r0 = vload16(0, src_ptr);
 
-            //sic! channels stored as YVU, not YUV
             const int4 Y = convert_int4(r0.s048c);
-            const int4 U = convert_int4(r0.s26ae);
-            const int4 V = convert_int4(r0.s159d);
+            const int4 U = convert_int4(r0.s159d);
+            const int4 V = convert_int4(r0.s26ae);
 
             const int4 c0i = (bidx != 0) ? (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift)) : (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift));
             const int4 c1i = Y + CV_DESCALE((V - HALF_MAX) * coeffs[2] + (U - HALF_MAX) * coeffs[1], yuv_shift);
