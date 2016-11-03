@@ -1749,16 +1749,18 @@ template<typename _Tp> struct RGB2YCrCb_f
 {
     typedef _Tp channel_type;
 
-    RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_f(int _srccn, int _blueIdx, bool _isCrCb) : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {R2YF, G2YF, B2YF, YCRF, YCBF};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const float coeffs_crb[] = { R2YF, G2YF, B2YF, YCRF, YCBF };
+        static const float coeffs_yuv[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int scn = srccn, bidx = blueIdx;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const _Tp delta = ColorChannel<_Tp>::half();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         n *= 3;
@@ -1767,10 +1769,11 @@ template<typename _Tp> struct RGB2YCrCb_f
             _Tp Y = saturate_cast<_Tp>(src[0]*C0 + src[1]*C1 + src[2]*C2);
             _Tp Cr = saturate_cast<_Tp>((src[bidx^2] - Y)*C3 + delta);
             _Tp Cb = saturate_cast<_Tp>((src[bidx] - Y)*C4 + delta);
-            dst[i] = Y; dst[i+1] = Cr; dst[i+2] = Cb;
+            dst[i] = Y; dst[i+1+yuvOrder] = Cr; dst[i+2-yuvOrder] = Cb;
         }
     }
     int srccn, blueIdx;
+    bool isCrCb;
     float coeffs[5];
 };
 
@@ -1781,11 +1784,12 @@ struct RGB2YCrCb_f<float>
 {
     typedef float channel_type;
 
-    RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) :
-        srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_f(int _srccn, int _blueIdx, bool _isCrCb) :
+        srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {R2YF, G2YF, B2YF, YCRF, YCBF};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const float coeffs_crb[] = { R2YF, G2YF, B2YF, YCRF, YCBF };
+        static const float coeffs_yuv[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if(blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -1800,6 +1804,7 @@ struct RGB2YCrCb_f<float>
     void operator()(const float * src, float * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const float delta = ColorChannel<float>::half();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         n *= 3;
@@ -1809,8 +1814,8 @@ struct RGB2YCrCb_f<float>
             {
                 float32x4x3_t v_src = vld3q_f32(src), v_dst;
                 v_dst.val[0] = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], v_c0), v_src.val[1], v_c1), v_src.val[2], v_c2);
-                v_dst.val[1] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx^2], v_dst.val[0]), v_c3);
-                v_dst.val[2] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx], v_dst.val[0]), v_c4);
+                v_dst.val[1+yuvOrder] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx^2], v_dst.val[0]), v_c3);
+                v_dst.val[2-yuvOrder] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx], v_dst.val[0]), v_c4);
 
                 vst3q_f32(dst + i, v_dst);
             }
@@ -1820,8 +1825,8 @@ struct RGB2YCrCb_f<float>
                 float32x4x4_t v_src = vld4q_f32(src);
                 float32x4x3_t v_dst;
                 v_dst.val[0] = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], v_c0), v_src.val[1], v_c1), v_src.val[2], v_c2);
-                v_dst.val[1] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx^2], v_dst.val[0]), v_c3);
-                v_dst.val[2] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx], v_dst.val[0]), v_c4);
+                v_dst.val[1+yuvOrder] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx^2], v_dst.val[0]), v_c3);
+                v_dst.val[2-yuvOrder] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx], v_dst.val[0]), v_c4);
 
                 vst3q_f32(dst + i, v_dst);
             }
@@ -1831,10 +1836,11 @@ struct RGB2YCrCb_f<float>
             float Y = src[0]*C0 + src[1]*C1 + src[2]*C2;
             float Cr = (src[bidx^2] - Y)*C3 + delta;
             float Cb = (src[bidx] - Y)*C4 + delta;
-            dst[i] = Y; dst[i+1] = Cr; dst[i+2] = Cb;
+            dst[i] = Y; dst[i+1+yuvOrder] = Cr; dst[i+2-yuvOrder] = Cb;
         }
     }
     int srccn, blueIdx;
+    bool isCrCb;
     float coeffs[5];
     float32x4_t v_c0, v_c1, v_c2, v_c3, v_c4, v_delta;
 };
@@ -1846,11 +1852,12 @@ struct RGB2YCrCb_f<float>
 {
     typedef float channel_type;
 
-    RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) :
-        srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_f(int _srccn, int _blueIdx, bool _isCrCb) :
+        srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {R2YF, G2YF, B2YF, YCRF, YCBF};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const float coeffs_crb[] = { R2YF, G2YF, B2YF, YCRF, YCBF };
+        static const float coeffs_yuv[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -1878,6 +1885,7 @@ struct RGB2YCrCb_f<float>
     void operator()(const float * src, float * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const float delta = ColorChannel<float>::half();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         n *= 3;
@@ -1911,14 +1919,19 @@ struct RGB2YCrCb_f<float>
                 process(v_r1, v_g1, v_b1,
                         v_y1, v_cr1, v_cb1);
 
-                _mm_interleave_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                if(isCrCb)
+                    _mm_interleave_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                else //YUV
+                {
+                    _mm_interleave_ps(v_y0, v_y1, v_cb0, v_cb1, v_cr0, v_cr1);
+                }
 
                 _mm_storeu_ps(dst + i, v_y0);
                 _mm_storeu_ps(dst + i + 4, v_y1);
-                _mm_storeu_ps(dst + i + 8, v_cr0);
-                _mm_storeu_ps(dst + i + 12, v_cr1);
-                _mm_storeu_ps(dst + i + 16, v_cb0);
-                _mm_storeu_ps(dst + i + 20, v_cb1);
+                _mm_storeu_ps(dst + i + 8  + yuvOrder*8, v_cr0);
+                _mm_storeu_ps(dst + i + 12 + yuvOrder*8, v_cr1);
+                _mm_storeu_ps(dst + i + 16 - yuvOrder*8, v_cb0);
+                _mm_storeu_ps(dst + i + 20 - yuvOrder*8, v_cb1);
             }
         }
 
@@ -1927,10 +1940,11 @@ struct RGB2YCrCb_f<float>
             float Y = src[0]*C0 + src[1]*C1 + src[2]*C2;
             float Cr = (src[bidx^2] - Y)*C3 + delta;
             float Cb = (src[bidx] - Y)*C4 + delta;
-            dst[i] = Y; dst[i+1] = Cr; dst[i+2] = Cb;
+            dst[i] = Y; dst[i+1+yuvOrder] = Cr; dst[i+2-yuvOrder] = Cb;
         }
     }
     int srccn, blueIdx;
+    bool isCrCb;
     float coeffs[5];
     __m128 v_c0, v_c1, v_c2, v_c3, v_c4, v_delta;
     bool haveSIMD;
@@ -1942,16 +1956,18 @@ template<typename _Tp> struct RGB2YCrCb_i
 {
     typedef _Tp channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int scn = srccn, bidx = blueIdx;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<_Tp>::half()*(1 << yuv_shift);
         n *= 3;
@@ -1961,11 +1977,12 @@ template<typename _Tp> struct RGB2YCrCb_i
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<_Tp>(Y);
-            dst[i+1] = saturate_cast<_Tp>(Cr);
-            dst[i+2] = saturate_cast<_Tp>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<_Tp>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<_Tp>(Cb);
         }
     }
     int srccn, blueIdx;
+    bool isCrCb;
     int coeffs[5];
 };
 
@@ -1976,11 +1993,12 @@ struct RGB2YCrCb_i<uchar>
 {
     typedef uchar channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -1996,6 +2014,7 @@ struct RGB2YCrCb_i<uchar>
     void operator()(const uchar * src, uchar * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<uchar>::half()*(1 << yuv_shift);
         n *= 3;
@@ -2044,8 +2063,8 @@ struct RGB2YCrCb_i<uchar>
             v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), yuv_shift);
 
             v_dst.val[0] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Y0), vqmovn_s32(v_Y1)));
-            v_dst.val[1] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cr0), vqmovn_s32(v_Cr1)));
-            v_dst.val[2] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cb0), vqmovn_s32(v_Cb1)));
+            v_dst.val[1+yuvOrder] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cr0), vqmovn_s32(v_Cr1)));
+            v_dst.val[2-yuvOrder] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cb0), vqmovn_s32(v_Cb1)));
 
             vst3_u8(dst + i, v_dst);
         }
@@ -2056,11 +2075,12 @@ struct RGB2YCrCb_i<uchar>
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<uchar>(Y);
-            dst[i+1] = saturate_cast<uchar>(Cr);
-            dst[i+2] = saturate_cast<uchar>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<uchar>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<uchar>(Cb);
         }
     }
     int srccn, blueIdx, coeffs[5];
+    bool isCrCb;
     int16x4_t v_c0, v_c1, v_c2;
     int32x4_t v_c3, v_c4, v_delta, v_delta2;
 };
@@ -2070,11 +2090,12 @@ struct RGB2YCrCb_i<ushort>
 {
     typedef ushort channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -2090,6 +2111,7 @@ struct RGB2YCrCb_i<ushort>
     void operator()(const ushort * src, ushort * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<ushort>::half()*(1 << yuv_shift);
         n *= 3;
@@ -2132,8 +2154,8 @@ struct RGB2YCrCb_i<ushort>
             v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), yuv_shift);
 
             v_dst.val[0] = vcombine_u16(vqmovun_s32(v_Y0), vqmovun_s32(v_Y1));
-            v_dst.val[1] = vcombine_u16(vqmovun_s32(v_Cr0), vqmovun_s32(v_Cr1));
-            v_dst.val[2] = vcombine_u16(vqmovun_s32(v_Cb0), vqmovun_s32(v_Cb1));
+            v_dst.val[1+yuvOrder] = vcombine_u16(vqmovun_s32(v_Cr0), vqmovun_s32(v_Cr1));
+            v_dst.val[2-yuvOrder] = vcombine_u16(vqmovun_s32(v_Cb0), vqmovun_s32(v_Cb1));
 
             vst3q_u16(dst + i, v_dst);
         }
@@ -2166,8 +2188,8 @@ struct RGB2YCrCb_i<ushort>
             v_Cb = vshrq_n_s32(vaddq_s32(v_Cb, v_delta2), yuv_shift);
 
             v_dst.val[0] = vqmovun_s32(v_Y);
-            v_dst.val[1] = vqmovun_s32(v_Cr);
-            v_dst.val[2] = vqmovun_s32(v_Cb);
+            v_dst.val[1+yuvOrder] = vqmovun_s32(v_Cr);
+            v_dst.val[2-yuvOrder] = vqmovun_s32(v_Cb);
 
             vst3_u16(dst + i, v_dst);
         }
@@ -2178,11 +2200,12 @@ struct RGB2YCrCb_i<ushort>
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<ushort>(Y);
-            dst[i+1] = saturate_cast<ushort>(Cr);
-            dst[i+2] = saturate_cast<ushort>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<ushort>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<ushort>(Cb);
         }
     }
     int srccn, blueIdx, coeffs[5];
+    bool isCrCb;
     int32x4_t v_c0, v_c1, v_c2, v_c3, v_c4, v_delta, v_delta2;
 };
 
@@ -2193,11 +2216,12 @@ struct RGB2YCrCb_i<uchar>
 {
     typedef uchar channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -2206,7 +2230,10 @@ struct RGB2YCrCb_i<uchar>
         v_delta_32 = _mm_set1_epi32(delta);
         short delta2 = 1 + ColorChannel<uchar>::half() * 2;
         v_coeff = _mm_set_epi16(delta2, (short)coeffs[4], delta2, (short)coeffs[3], delta2, (short)coeffs[4], delta2, (short)coeffs[3]);
-        v_shuffle2 = _mm_set_epi8(0x0, 0x0, 0x0, 0x0, 0xf, 0xe, 0xc, 0xb, 0xa, 0x8, 0x7, 0x6, 0x4, 0x3, 0x2, 0x0);
+        if(isCrCb)
+            v_shuffle2 = _mm_set_epi8(0x0, 0x0, 0x0, 0x0, 0xf, 0xe, 0xc, 0xb, 0xa, 0x8, 0x7, 0x6, 0x4, 0x3, 0x2, 0x0);
+        else //if YUV
+            v_shuffle2 = _mm_set_epi8(0x0, 0x0, 0x0, 0x0, 0xe, 0xf, 0xc, 0xa, 0xb, 0x8, 0x6, 0x7, 0x4, 0x2, 0x3, 0x0);
         haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1);
     }
 
@@ -2260,6 +2287,7 @@ struct RGB2YCrCb_i<uchar>
     void operator()(const uchar * src, uchar * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<uchar>::half()*(1 << yuv_shift);
         n *= 3;
@@ -2336,8 +2364,8 @@ struct RGB2YCrCb_i<uchar>
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<uchar>(Y);
-            dst[i+1] = saturate_cast<uchar>(Cr);
-            dst[i+2] = saturate_cast<uchar>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<uchar>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<uchar>(Cb);
         }
     }
 
@@ -2345,6 +2373,7 @@ struct RGB2YCrCb_i<uchar>
     __m128i v_coeff;
     __m128i v_shuffle2;
     int srccn, blueIdx, coeffs[5];
+    bool isCrCb;
     bool haveSIMD;
 };
 
@@ -2353,11 +2382,12 @@ struct RGB2YCrCb_i<ushort>
 {
     typedef ushort channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, YCRI, YCBI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -2414,6 +2444,7 @@ struct RGB2YCrCb_i<ushort>
     void operator()(const ushort * src, ushort * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<ushort>::half()*(1 << yuv_shift);
         n *= 3;
@@ -2448,14 +2479,17 @@ struct RGB2YCrCb_i<ushort>
                 process(v_r1, v_g1, v_b1,
                         v_y1, v_cr1, v_cb1);
 
-                _mm_interleave_epi16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                if(isCrCb)
+                    _mm_interleave_epi16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                else //YUV
+                    _mm_interleave_epi16(v_y0, v_y1, v_cb0, v_cb1, v_cr0, v_cr1);
 
                 _mm_storeu_si128((__m128i *)(dst + i), v_y0);
                 _mm_storeu_si128((__m128i *)(dst + i + 8), v_y1);
-                _mm_storeu_si128((__m128i *)(dst + i + 16), v_cr0);
-                _mm_storeu_si128((__m128i *)(dst + i + 24), v_cr1);
-                _mm_storeu_si128((__m128i *)(dst + i + 32), v_cb0);
-                _mm_storeu_si128((__m128i *)(dst + i + 40), v_cb1);
+                _mm_storeu_si128((__m128i *)(dst + i + 16 + yuvOrder*16), v_cr0);
+                _mm_storeu_si128((__m128i *)(dst + i + 24 + yuvOrder*16), v_cr1);
+                _mm_storeu_si128((__m128i *)(dst + i + 32 - yuvOrder*16), v_cb0);
+                _mm_storeu_si128((__m128i *)(dst + i + 40 - yuvOrder*16), v_cb1);
             }
         }
 
@@ -2465,12 +2499,13 @@ struct RGB2YCrCb_i<ushort>
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<ushort>(Y);
-            dst[i+1] = saturate_cast<ushort>(Cr);
-            dst[i+2] = saturate_cast<ushort>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<ushort>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<ushort>(Cb);
         }
     }
 
     int srccn, blueIdx, coeffs[5];
+    bool isCrCb;
     __m128i v_c0, v_c1, v_c2;
     __m128i v_c3, v_c4, v_delta, v_delta2;
     __m128i v_zero;
@@ -2483,23 +2518,25 @@ template<typename _Tp> struct YCrCb2RGB_f
 {
     typedef _Tp channel_type;
 
-    YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_f(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {CR2RF, CR2GF, CB2GF, CB2BF};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const float coeffs_cbr[] = {CR2RF, CR2GF, CB2GF, CB2BF};
+        static const float coeffs_yuv[] = { V2RF,  V2GF,  U2GF,  U2BF};
+        memcpy(coeffs, isCrCb ? coeffs_cbr : coeffs_yuv, 4*sizeof(coeffs[0]));
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const _Tp delta = ColorChannel<_Tp>::half(), alpha = ColorChannel<_Tp>::max();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
         for(int i = 0; i < n; i += 3, dst += dcn)
         {
             _Tp Y = src[i];
-            _Tp Cr = src[i+1];
-            _Tp Cb = src[i+2];
+            _Tp Cr = src[i+1+yuvOrder];
+            _Tp Cb = src[i+2-yuvOrder];
 
             _Tp b = saturate_cast<_Tp>(Y + (Cb - delta)*C3);
             _Tp g = saturate_cast<_Tp>(Y + (Cb - delta)*C2 + (Cr - delta)*C1);
@@ -2511,6 +2548,7 @@ template<typename _Tp> struct YCrCb2RGB_f
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     float coeffs[4];
 };
 
@@ -2521,11 +2559,12 @@ struct YCrCb2RGB_f<float>
 {
     typedef float channel_type;
 
-    YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_f(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {CR2RF, CR2GF, CB2GF, CB2BF};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const float coeffs_cbr[] = {CR2RF, CR2GF, CB2GF, CB2BF};
+        static const float coeffs_yuv[] = { V2RF,  V2GF,  U2GF,  U2BF};
+        memcpy(coeffs, isCrCb ? coeffs_cbr : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_f32(coeffs[0]);
         v_c1 = vdupq_n_f32(coeffs[1]);
@@ -2538,6 +2577,7 @@ struct YCrCb2RGB_f<float>
     void operator()(const float* src, float* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const float delta = ColorChannel<float>::half(), alpha = ColorChannel<float>::max();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -2546,7 +2586,7 @@ struct YCrCb2RGB_f<float>
             for ( ; i <= n - 12; i += 12, dst += 12)
             {
                 float32x4x3_t v_src = vld3q_f32(src + i), v_dst;
-                float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1], v_Cb = v_src.val[2];
+                float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1+yuvOrder], v_Cb = v_src.val[2-yuvOrder];
 
                 v_dst.val[bidx] = vmlaq_f32(v_Y, vsubq_f32(v_Cb, v_delta), v_c3);
                 v_dst.val[1] = vaddq_f32(vmlaq_f32(vmulq_f32(vsubq_f32(v_Cb, v_delta), v_c2), vsubq_f32(v_Cr, v_delta), v_c1), v_Y);
@@ -2559,7 +2599,7 @@ struct YCrCb2RGB_f<float>
             {
                 float32x4x3_t v_src = vld3q_f32(src + i);
                 float32x4x4_t v_dst;
-                float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1], v_Cb = v_src.val[2];
+                float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1+yuvOrder], v_Cb = v_src.val[2-yuvOrder];
 
                 v_dst.val[bidx] = vmlaq_f32(v_Y, vsubq_f32(v_Cb, v_delta), v_c3);
                 v_dst.val[1] = vaddq_f32(vmlaq_f32(vmulq_f32(vsubq_f32(v_Cb, v_delta), v_c2), vsubq_f32(v_Cr, v_delta), v_c1), v_Y);
@@ -2571,7 +2611,7 @@ struct YCrCb2RGB_f<float>
 
         for ( ; i < n; i += 3, dst += dcn)
         {
-            float Y = src[i], Cr = src[i+1], Cb = src[i+2];
+            float Y = src[i], Cr = src[i+1+yuvOrder], Cb = src[i+2-yuvOrder];
 
             float b = Y + (Cb - delta)*C3;
             float g = Y + (Cb - delta)*C2 + (Cr - delta)*C1;
@@ -2583,6 +2623,7 @@ struct YCrCb2RGB_f<float>
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     float coeffs[4];
     float32x4_t v_c0, v_c1, v_c2, v_c3, v_alpha, v_delta;
 };
@@ -2594,11 +2635,12 @@ struct YCrCb2RGB_f<float>
 {
     typedef float channel_type;
 
-    YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_f(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {CR2RF, CR2GF, CB2GF, CB2BF};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const float coeffs_cbr[] = {CR2RF, CR2GF, CB2GF, CB2BF};
+        static const float coeffs_yuv[] = { V2RF,  V2GF,  U2GF,  U2BF};
+        memcpy(coeffs, isCrCb ? coeffs_cbr : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = _mm_set1_ps(coeffs[0]);
         v_c1 = _mm_set1_ps(coeffs[1]);
@@ -2616,6 +2658,9 @@ struct YCrCb2RGB_f<float>
         v_cb = _mm_sub_ps(v_cb, v_delta);
         v_cr = _mm_sub_ps(v_cr, v_delta);
 
+        if (!isCrCb)
+            std::swap(v_cb, v_cr);
+
         v_b = _mm_mul_ps(v_cb, v_c3);
         v_g = _mm_add_ps(_mm_mul_ps(v_cb, v_c2), _mm_mul_ps(v_cr, v_c1));
         v_r = _mm_mul_ps(v_cr, v_c0);
@@ -2631,6 +2676,7 @@ struct YCrCb2RGB_f<float>
     void operator()(const float* src, float* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const float delta = ColorChannel<float>::half(), alpha = ColorChannel<float>::max();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -2681,7 +2727,7 @@ struct YCrCb2RGB_f<float>
 
         for ( ; i < n; i += 3, dst += dcn)
         {
-            float Y = src[i], Cr = src[i+1], Cb = src[i+2];
+            float Y = src[i], Cr = src[i+1+yuvOrder], Cb = src[i+2-yuvOrder];
 
             float b = Y + (Cb - delta)*C3;
             float g = Y + (Cb - delta)*C2 + (Cr - delta)*C1;
@@ -2693,6 +2739,7 @@ struct YCrCb2RGB_f<float>
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     float coeffs[4];
 
     __m128 v_c0, v_c1, v_c2, v_c3, v_alpha, v_delta;
@@ -2705,24 +2752,26 @@ template<typename _Tp> struct YCrCb2RGB_i
 {
     typedef _Tp channel_type;
 
-    YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {CR2RI, CR2GI, CB2GI, CB2BI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const _Tp delta = ColorChannel<_Tp>::half(), alpha = ColorChannel<_Tp>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
         for(int i = 0; i < n; i += 3, dst += dcn)
         {
             _Tp Y = src[i];
-            _Tp Cr = src[i+1];
-            _Tp Cb = src[i+2];
+            _Tp Cr = src[i+1+yuvOrder];
+            _Tp Cb = src[i+2-yuvOrder];
 
             int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
             int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
@@ -2736,6 +2785,7 @@ template<typename _Tp> struct YCrCb2RGB_i
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     int coeffs[4];
 };
 
@@ -2746,11 +2796,12 @@ struct YCrCb2RGB_i<uchar>
 {
     typedef uchar channel_type;
 
-    YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {CR2RI, CR2GI, CB2GI, CB2BI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_s32(coeffs[0]);
         v_c1 = vdupq_n_s32(coeffs[1]);
@@ -2764,6 +2815,7 @@ struct YCrCb2RGB_i<uchar>
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const uchar delta = ColorChannel<uchar>::half(), alpha = ColorChannel<uchar>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -2777,8 +2829,8 @@ struct YCrCb2RGB_i<uchar>
             v_src16.val[2] = vreinterpretq_s16_u16(vmovl_u8(v_src.val[2]));
 
             int16x4_t v_Y = vget_low_s16(v_src16.val[0]),
-                      v_Cr = vget_low_s16(v_src16.val[1]),
-                      v_Cb = vget_low_s16(v_src16.val[2]);
+                      v_Cr = vget_low_s16(v_src16.val[1+yuvOrder]),
+                      v_Cb = vget_low_s16(v_src16.val[2-yuvOrder]);
 
             int32x4_t v_b0 = vmulq_s32(v_c3, vsubl_s16(v_Cb, v_delta));
             v_b0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), yuv_shift), v_Y);
@@ -2788,8 +2840,8 @@ struct YCrCb2RGB_i<uchar>
             v_r0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), yuv_shift), v_Y);
 
             v_Y = vget_high_s16(v_src16.val[0]);
-            v_Cr = vget_high_s16(v_src16.val[1]);
-            v_Cb = vget_high_s16(v_src16.val[2]);
+            v_Cr = vget_high_s16(v_src16.val[1+yuvOrder]);
+            v_Cb = vget_high_s16(v_src16.val[2-yuvOrder]);
 
             int32x4_t v_b1 = vmulq_s32(v_c3, vsubl_s16(v_Cb, v_delta));
             v_b1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), yuv_shift), v_Y);
@@ -2824,8 +2876,8 @@ struct YCrCb2RGB_i<uchar>
         for ( ; i < n; i += 3, dst += dcn)
         {
             uchar Y = src[i];
-            uchar Cr = src[i+1];
-            uchar Cb = src[i+2];
+            uchar Cr = src[i+1+yuvOrder];
+            uchar Cb = src[i+2-yuvOrder];
 
             int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
             int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
@@ -2839,6 +2891,7 @@ struct YCrCb2RGB_i<uchar>
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     int coeffs[4];
 
     int32x4_t v_c0, v_c1, v_c2, v_c3, v_delta2;
@@ -2851,11 +2904,12 @@ struct YCrCb2RGB_i<ushort>
 {
     typedef ushort channel_type;
 
-    YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {CR2RI, CR2GI, CB2GI, CB2BI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_s32(coeffs[0]);
         v_c1 = vdupq_n_s32(coeffs[1]);
@@ -2870,6 +2924,7 @@ struct YCrCb2RGB_i<ushort>
     void operator()(const ushort* src, ushort* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const ushort delta = ColorChannel<ushort>::half(), alpha = ColorChannel<ushort>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -2879,8 +2934,8 @@ struct YCrCb2RGB_i<ushort>
             uint16x8x3_t v_src = vld3q_u16(src + i);
 
             int32x4_t v_Y = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[0]))),
-                      v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[1]))),
-                      v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[2])));
+                      v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[1+yuvOrder]))),
+                      v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[2-yuvOrder])));
 
             int32x4_t v_b0 = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
             v_b0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), yuv_shift), v_Y);
@@ -2890,8 +2945,8 @@ struct YCrCb2RGB_i<ushort>
             v_r0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), yuv_shift), v_Y);
 
             v_Y = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[0]))),
-            v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[1]))),
-            v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[2])));
+            v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[1+yuvOrder]))),
+            v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[2-yuvOrder])));
 
             int32x4_t v_b1 = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
             v_b1 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), yuv_shift), v_Y);
@@ -2928,8 +2983,8 @@ struct YCrCb2RGB_i<ushort>
             uint16x4x3_t v_src = vld3_u16(src + i);
 
             int32x4_t v_Y = vreinterpretq_s32_u32(vmovl_u16(v_src.val[0])),
-                      v_Cr = vreinterpretq_s32_u32(vmovl_u16(v_src.val[1])),
-                      v_Cb = vreinterpretq_s32_u32(vmovl_u16(v_src.val[2]));
+                      v_Cr = vreinterpretq_s32_u32(vmovl_u16(v_src.val[1+yuvOrder])),
+                      v_Cb = vreinterpretq_s32_u32(vmovl_u16(v_src.val[2-yuvOrder]));
 
             int32x4_t v_b = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
             v_b = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b, v_delta2), yuv_shift), v_Y);
@@ -2964,8 +3019,8 @@ struct YCrCb2RGB_i<ushort>
         for ( ; i < n; i += 3, dst += dcn)
         {
             ushort Y = src[i];
-            ushort Cr = src[i+1];
-            ushort Cb = src[i+2];
+            ushort Cr = src[i+1+yuvOrder];
+            ushort Cb = src[i+2-yuvOrder];
 
             int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
             int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
@@ -2979,6 +3034,7 @@ struct YCrCb2RGB_i<ushort>
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     int coeffs[4];
 
     int32x4_t v_c0, v_c1, v_c2, v_c3, v_delta2, v_delta;
@@ -2993,11 +3049,12 @@ struct YCrCb2RGB_i<uchar>
 {
     typedef uchar channel_type;
 
-    YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {CR2RI, CR2GI, CB2GI, CB2BI};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = _mm_set1_epi16((short)coeffs[0]);
         v_c1 = _mm_set1_epi16((short)coeffs[1]);
@@ -3010,8 +3067,9 @@ struct YCrCb2RGB_i<uchar>
         uchar alpha = ColorChannel<uchar>::max();
         v_alpha = _mm_set1_epi8(*(char *)&alpha);
 
-        int maxc = max(max(coeffs[0], coeffs[1]), max(coeffs[2], coeffs[3]));
-        useSSE = maxc <= std::numeric_limits<short>::max();
+        // when using YUV, one of coefficients is bigger than std::numeric_limits<short>::max(),
+        //which is not appropriate for SSE
+        useSSE = isCrCb;
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
     }
 
@@ -3130,6 +3188,7 @@ struct YCrCb2RGB_i<uchar>
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const uchar delta = ColorChannel<uchar>::half(), alpha = ColorChannel<uchar>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -3294,8 +3353,8 @@ struct YCrCb2RGB_i<uchar>
         for ( ; i < n; i += 3, dst += dcn)
         {
             uchar Y = src[i];
-            uchar Cr = src[i+1];
-            uchar Cb = src[i+2];
+            uchar Cr = src[i+1+yuvOrder];
+            uchar Cb = src[i+2-yuvOrder];
 
             int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
             int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
@@ -3310,6 +3369,7 @@ struct YCrCb2RGB_i<uchar>
     }
     int dstcn, blueIdx;
     int coeffs[4];
+    bool isCrCb;
     bool useSSE, haveSIMD;
 
     __m128i v_c0, v_c1, v_c2, v_c3, v_delta2;
@@ -7944,17 +8004,13 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    static const float yuv_f[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
-    static const int yuv_i[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
-    const float* coeffs_f = isCbCr ? 0 : yuv_f;
-    const int* coeffs_i = isCbCr ? 0 : yuv_i;
     int blueIdx = swapBlue ? 2 : 0;
     if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<uchar>(scn, blueIdx, coeffs_i));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<uchar>(scn, blueIdx, isCbCr));
     else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<ushort>(scn, blueIdx, coeffs_i));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<ushort>(scn, blueIdx, isCbCr));
     else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_f<float>(scn, blueIdx, coeffs_f));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_f<float>(scn, blueIdx, isCbCr));
 }
 
 void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
@@ -8000,17 +8056,13 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    static const float yuv_f[] = {V2RF, V2GF, U2GF, U2BF};
-    static const int yuv_i[] = { V2RI, V2GI, U2GI, U2BI };
-    const float* coeffs_f = isCbCr ? 0 : yuv_f;
-    const int* coeffs_i = isCbCr ? 0 : yuv_i;
     int blueIdx = swapBlue ? 2 : 0;
     if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<uchar>(dcn, blueIdx, coeffs_i));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<uchar>(dcn, blueIdx, isCbCr));
     else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<ushort>(dcn, blueIdx, coeffs_i));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<ushort>(dcn, blueIdx, isCbCr));
     else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_f<float>(dcn, blueIdx, coeffs_f));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_f<float>(dcn, blueIdx, isCbCr));
 }
 
 void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,

@@ -273,8 +273,8 @@ __kernel void RGB2YUV(__global const uchar* srcptr, int src_step, int src_offset
 #endif
 
                 dst[0] = SAT_CAST( Y );
-                dst[1] = SAT_CAST( V ); //sic! store channels as YVU, not YUV
-                dst[2] = SAT_CAST( U );
+                dst[1] = SAT_CAST( U );
+                dst[2] = SAT_CAST( V );
 
                 ++y;
                 dst_index += dst_step;
@@ -307,7 +307,7 @@ __kernel void YUV2RGB(__global const uchar* srcptr, int src_step, int src_offset
                 __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr + src_index);
                 __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + dst_index);
                 DATA_TYPE_4 src_pix = vload4(0, src);
-                DATA_TYPE Y = src_pix.x, V = src_pix.y, U = src_pix.z; //sic! channels stored as YVU, not YUV
+                DATA_TYPE Y = src_pix.x, U = src_pix.y, V = src_pix.z;
 
 #ifdef DEPTH_5
                 __constant float * coeffs = c_YUV2RGBCoeffs_f;

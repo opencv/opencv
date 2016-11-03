@@ -619,7 +619,7 @@ enum ColorConversionCodes {
     COLOR_Luv2LBGR     = 80,
     COLOR_Luv2LRGB     = 81,
 
-    COLOR_BGR2YUV      = 82, //!< convert between RGB/BGR and YUV (actual channel order is YVU)
+    COLOR_BGR2YUV      = 82, //!< convert between RGB/BGR and YUV
     COLOR_RGB2YUV      = 83,
     COLOR_YUV2BGR      = 84,
     COLOR_YUV2RGB      = 85,
