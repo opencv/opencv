@@ -1012,6 +1012,14 @@ public:
      */
     CV_WRAP void getEdgeList(CV_OUT std::vector<Vec4f>& edgeList) const;
 
+    /** @brief Returns a list of the leading edge ID connected to each triangle.
+
+    @param leadingEdgeList – Output vector.
+
+    The function gives one edge ID for each triangle.
+     */
+    CV_WRAP void getLeadingEdgeList(CV_OUT std::vector<int>& leadingEdgeList) const;
+
     /** @brief Returns a list of all triangles.
 
     @param triangleList – Output vector.
