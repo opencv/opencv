@@ -454,7 +454,9 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
 
         // TODO optimize copyTo()
         //features.descriptors = _descriptors.getUMat(ACCESS_READ);
-        _descriptors.copyTo(features.descriptors);
+        if (_descriptors.dims > 0)
+            _descriptors.copyTo(features.descriptors);
+
     }
 }
 
