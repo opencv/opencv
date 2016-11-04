@@ -215,7 +215,7 @@ namespace
                 if (residual != 0)
                 {
                     int residualStep = MAX(histSize / residual, 1);
-                    for (int i = 0; i < histSize; i += residualStep)
+                    for (int i = 0; i < histSize && residual > 0; i += residualStep, residual--)
                         tileHist[i]++;
                 }
             }
