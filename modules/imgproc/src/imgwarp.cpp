@@ -2795,8 +2795,6 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         if (*ok == false)
             return;
 
@@ -4772,8 +4770,6 @@ public:
 
     virtual void operator() (const Range & range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         IppiRect srcRoiRect = { 0, 0, src.cols, src.rows };
         Mat dstRoi = dst.rowRange(range);
         IppiSize dstRoiSize = ippiSize(dstRoi.size());
@@ -5609,8 +5605,6 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         IppiSize srcsize = { src.cols, src.rows };
         IppiRect srcroi = { 0, 0, src.cols, src.rows };
         IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
@@ -6254,8 +6248,6 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         IppiSize srcsize = {src.cols, src.rows};
         IppiRect srcroi = {0, 0, src.cols, src.rows};
         IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
