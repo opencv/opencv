@@ -517,8 +517,7 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
             setConstantBorder(border, (vx_uint8)borderValue[0]);
             break;
         case CV_HAL_BORDER_REPLICATE:
-            border.mode = VX_BORDER_REPLICATE;
-            break;
+            // Neither 1.0 nor 1.1 OpenVX support BORDER_REPLICATE for warpings
         default:
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
         }
@@ -526,8 +525,9 @@ inline int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, i
         int mode;
         if (interpolation == CV_HAL_INTER_LINEAR)
             mode = VX_INTERPOLATION_BILINEAR;
-        else if (interpolation == CV_HAL_INTER_AREA)
-            mode = VX_INTERPOLATION_AREA;
+        //AREA interpolation is unsupported
+        //else if (interpolation == CV_HAL_INTER_AREA)
+        //    mode = VX_INTERPOLATION_AREA;
         else if (interpolation == CV_HAL_INTER_NEAREST)
             mode = VX_INTERPOLATION_NEAREST_NEIGHBOR;
         else
@@ -576,8 +576,7 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
             setConstantBorder(border, (vx_uint8)borderValue[0]);
             break;
         case CV_HAL_BORDER_REPLICATE:
-            border.mode = VX_BORDER_REPLICATE;
-            break;
+            // Neither 1.0 nor 1.1 OpenVX support BORDER_REPLICATE for warpings
         default:
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
         }
@@ -585,8 +584,9 @@ inline int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int a
         int mode;
         if (interpolation == CV_HAL_INTER_LINEAR)
             mode = VX_INTERPOLATION_BILINEAR;
-        else if (interpolation == CV_HAL_INTER_AREA)
-            mode = VX_INTERPOLATION_AREA;
+        //AREA interpolation is unsupported
+        //else if (interpolation == CV_HAL_INTER_AREA)
+        //    mode = VX_INTERPOLATION_AREA;
         else if (interpolation == CV_HAL_INTER_NEAREST)
             mode = VX_INTERPOLATION_NEAREST_NEIGHBOR;
         else
@@ -1132,8 +1132,10 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 
 #undef cv_hal_warpAffine
 #define cv_hal_warpAffine ovx_hal_warpAffine
-#undef cv_hal_warpPerspective
-#define cv_hal_warpPerspective ovx_hal_warpPerspectve
+//OpenVX perspective warp use round to zero policy at least in sample implementation
+//while OpenCV require round to nearest
+//#undef cv_hal_warpPerspective
+//#define cv_hal_warpPerspective ovx_hal_warpPerspectve
 
 #undef cv_hal_filterInit
 #define cv_hal_filterInit ovx_hal_filterInit
