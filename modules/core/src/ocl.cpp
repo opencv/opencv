@@ -3450,7 +3450,7 @@ int Kernel::set(int i, const KernelArg& arg)
 bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                  bool sync, const Queue& q)
 {
-    CV_INSTRUMENT_REGION_META(p->name.c_str(), instr::TYPE_FUN, instr::IMPL_OPENCL);
+    CV_INSTRUMENT_REGION_OPENCL_RUN(p->name.c_str());
 
     if(!p || !p->handle || p->e != 0)
         return false;
@@ -3563,7 +3563,7 @@ struct Program::Impl
     Impl(const ProgramSource& _src,
          const String& _buildflags, String& errmsg)
     {
-        CV_INSTRUMENT_REGION_OPENCL_(cv::format("Compile: %" PRIx64 " options: %s", _src.hash(), _buildflags.c_str()).c_str());
+        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Compile: %" PRIx64 " options: %s", _src.hash(), _buildflags.c_str()).c_str());
         refcount = 1;
         const Context& ctx = Context::getDefault();
         src = _src;
