@@ -1188,8 +1188,6 @@ public:
 
     virtual void operator() (const Range & range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         Ipp32s levelNum = histSize + 1;
         Mat phist(hist->size(), hist->type(), Scalar::all(0));
 #if IPP_VERSION_X100 >= 900

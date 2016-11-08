@@ -3368,8 +3368,6 @@ public:
 
       virtual void operator() (const Range& range) const
       {
-          CV_INSTRUMENT_REGION_IPP()
-
           int d = radius * 2 + 1;
           IppiSize kernel = {d, d};
           IppiSize roi={dst.cols, range.end - range.start};

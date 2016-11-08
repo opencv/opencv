@@ -46,7 +46,7 @@ static bool         param_verify_sanity;
 static bool         param_collect_impl;
 #endif
 #ifdef ENABLE_INSTRUMENTATION
-static bool         param_instrument;
+static int          param_instrument;
 #endif
 extern bool         test_ipp_check;
 
@@ -744,7 +744,7 @@ static void printShift(cv::instr::InstrNode *pNode, cv::instr::InstrNode* pRoot)
         }
     }
 
-    // Check if parents have more childs
+    // Check if parents have more childes
     std::vector<cv::instr::InstrNode*> cache;
     cv::instr::InstrNode *pTmpNode = pNode;
     while(pTmpNode->m_pParent && pTmpNode->m_pParent != pRoot)
@@ -756,7 +756,7 @@ static void printShift(cv::instr::InstrNode *pNode, cv::instr::InstrNode* pRoot)
     {
         if(cache[i]->m_pParent)
         {
-            if(cache[i]->m_pParent->findChild(cache[i]) == cache[i]->m_pParent->m_childs.size()-1)
+            if(cache[i]->m_pParent->findChild(cache[i]) == (int)cache[i]->m_pParent->m_childs.size()-1)
                 printf("    ");
             else
                 printf("|   ");
@@ -810,48 +810,39 @@ static void printNodeRec(cv::instr::InstrNode *pNode, cv::instr::InstrNode *pRoo
 
     if(pNode->m_pParent)
     {
-        printf(" - C:%d", pNode->m_payload.m_counter);
-        printf(" T:%.4fms", pNode->m_payload.getMeanMs());
+        printf(" - TC:%d C:%d", pNode->m_payload.m_threads, pNode->m_payload.m_counter);
+        printf(" T:%.2fms", pNode->m_payload.getTotalMs());
         if(pNode->m_pParent->m_pParent)
             printf(" L:%.0f%% G:%.0f%%", calcLocalWeight(pNode), calcGlobalWeight(pNode));
     }
     printf("\n");
 
-    // Group childes
-    std::vector<cv::String> groups;
     {
-        bool bFound = false;
-        for(size_t i = 0; i < pNode->m_childs.size(); i++)
+        // Group childes by name
+        for(size_t i = 1; i < pNode->m_childs.size(); i++)
         {
-            bFound = false;
-            for(size_t j = 0; j < groups.size(); j++)
+            if(pNode->m_childs[i-1]->m_payload.m_funName == pNode->m_childs[i]->m_payload.m_funName )
+                continue;
+            for(size_t j = i+1; j < pNode->m_childs.size(); j++)
             {
-                if(groups[j] == pNode->m_childs[i]->m_payload.m_funName)
+                if(pNode->m_childs[i-1]->m_payload.m_funName == pNode->m_childs[j]->m_payload.m_funName )
                 {
-                    bFound = true;
-                    break;
+                    cv::swap(pNode->m_childs[i], pNode->m_childs[j]);
+                    i++;
                 }
             }
-            if(!bFound)
-                groups.push_back(pNode->m_childs[i]->m_payload.m_funName);
         }
     }
 
-    for(size_t g = 0; g < groups.size(); g++)
+    for(size_t i = 0; i < pNode->m_childs.size(); i++)
     {
-        for(size_t i = 0; i < pNode->m_childs.size(); i++)
-        {
-            if(pNode->m_childs[i]->m_payload.m_funName == groups[g])
-            {
-                printShift(pNode->m_childs[i], pRoot);
+        printShift(pNode->m_childs[i], pRoot);
 
-                if(pNode->m_childs.size()-1 == pNode->m_childs[i]->m_pParent->findChild(pNode->m_childs[i]))
-                    printf("\\---");
-                else
-                    printf("|---");
-                printNodeRec(pNode->m_childs[i], pRoot);
-            }
-        }
+        if(i == pNode->m_childs.size()-1)
+            printf("\\---");
+        else
+            printf("|---");
+        printNodeRec(pNode->m_childs[i], pRoot);
     }
 }
 
@@ -871,7 +862,7 @@ static cv::String nodeToString(cv::instr::InstrNode *pNode)
     else
     {
         string = "#";
-        string += std::to_string(pNode->m_payload.m_instrType);
+        string += std::to_string((int)pNode->m_payload.m_instrType);
         string += pNode->m_payload.m_funName;
         string += " - L:";
         string += to_string_with_precision(calcLocalWeight(pNode));
@@ -931,19 +922,16 @@ static uint64 getTotalTime()
 
 void InstumentData::printTree()
 {
-    if(cv::instr::getTrace()->m_childs.size())
-    {
-        printf("[ TRACE    ]\n");
-        printNodeRec(cv::instr::getTrace(), cv::instr::getTrace());
+    printf("[ TRACE    ]\n");
+    printNodeRec(cv::instr::getTrace(), cv::instr::getTrace());
 #ifdef HAVE_IPP
-        printf("\nIPP weight: %.1f%%", ((double)getImplTime(cv::instr::IMPL_IPP)*100/(double)getTotalTime()));
+    printf("\nIPP weight: %.1f%%", ((double)getImplTime(cv::instr::IMPL_IPP)*100/(double)getTotalTime()));
 #endif
 #ifdef HAVE_OPENCL
-        printf("\nOPENCL weight: %.1f%%", ((double)getImplTime(cv::instr::IMPL_OPENCL)*100/(double)getTotalTime()));
+    printf("\nOPENCL weight: %.1f%%", ((double)getImplTime(cv::instr::IMPL_OPENCL)*100/(double)getTotalTime()));
 #endif
-        printf("\n[/TRACE    ]\n");
-        fflush(stdout);
-    }
+    printf("\n[/TRACE    ]\n");
+    fflush(stdout);
 }
 #endif
 
@@ -994,7 +982,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_collect_impl           |false    |collect info about executed implementations}"
 #endif
 #ifdef ENABLE_INSTRUMENTATION
-        "{   perf_instrument             |false    |instrument code to collect implementations trace}"
+        "{   perf_instrument             |0        |instrument code to collect implementations trace: 1 - perform instrumentation; 2 - separate functions with the same name }"
 #endif
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
@@ -1048,7 +1036,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_collect_impl  = args.get<bool>("perf_collect_impl");
 #endif
 #ifdef ENABLE_INSTRUMENTATION
-    param_instrument    = args.get<bool>("perf_instrument");
+    param_instrument    = args.get<int>("perf_instrument");
 #endif
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
@@ -1081,8 +1069,12 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         cv::setUseCollection(0);
 #endif
 #ifdef ENABLE_INSTRUMENTATION
-    if(param_instrument)
+    if(param_instrument > 0)
+    {
+        if(param_instrument == 2)
+            cv::instr::setFlags(cv::instr::getFlags()|cv::instr::FLAGS_EXPAND_SAME_NAMES);
         cv::instr::setUseInstrumentation(true);
+    }
     else
         cv::instr::setUseInstrumentation(false);
 #endif
@@ -1856,6 +1848,11 @@ void TestBase::TearDown()
         if (HasFailure())
         {
             reportMetrics(false);
+
+#ifdef ENABLE_INSTRUMENTATION
+            if(cv::instr::useInstrumentation())
+                InstumentData::printTree();
+#endif
             return;
         }
     }

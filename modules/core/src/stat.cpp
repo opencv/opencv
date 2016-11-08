@@ -1597,7 +1597,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
         size_t globalsize = groups * wgs;
 
-        if(!CV_INSTRUMENT_FUN_OPENCL_KERNEL(k.run, 1, &globalsize, &wgs, false))
+        if(!k.run(1, &globalsize, &wgs, false))
             return false;
 
         typedef Scalar (* part_sum)(Mat m);
