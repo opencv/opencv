@@ -1165,8 +1165,17 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     ocl::Kernel k;
     if (ocl::Device::getDefault().isIntel() && channels == 1)
     {
-        k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
-        globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+        if (type == CV_8UC1 && src.cols % 2 == 0)
+        {
+            buildOptions.clear();
+            k.create("pyrUp_cols2", ocl::imgproc::pyramid_up_oclsrc, buildOptions);
+            globalThreads[0] = dst.cols/4; globalThreads[1] = dst.rows/2;
+        }
+        else
+        {
+            k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+            globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+        }
     }
     else
         k.create("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
