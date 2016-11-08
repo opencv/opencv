@@ -1005,10 +1005,15 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
 /****************************************************************************************\
 *                                     Circle Detection                                   *
 \****************************************************************************************/
+
+#if CV_SIMD128
+static
 inline unsigned int trailingZeros(unsigned int value) {
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1500)
-    return _BitScanForward(value);
+#if (_MSC_VER < 1700)
+    unsigned long index = 0;
+    _BitScanForward(&index, value);
+    return (unsigned int)index;
 #else
     return _tzcnt_u32(value);
 #endif
@@ -1025,6 +1030,7 @@ inline unsigned int trailingZeros(unsigned int value) {
     return MultiplyDeBruijnBitPosition[((uint32_t)((value & -value) * 0x077CB531U)) >> 27];
 #endif
 }
+#endif
 
 namespace cv
 {
