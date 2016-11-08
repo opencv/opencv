@@ -142,6 +142,8 @@ template <bool useCustomDeriv>
 static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputArray _dst, float low_thresh, float high_thresh,
                       int aperture_size, bool L2gradient, int cn, const Size & size)
 {
+    CV_INSTRUMENT_REGION_OPENCL()
+
     UMat map;
 
     const ocl::Device &dev = ocl::Device::getDefault();

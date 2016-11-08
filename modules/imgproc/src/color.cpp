@@ -259,8 +259,6 @@ public:
 
     virtual void operator()(const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP();
-
         const void *yS = src_data + src_step * range.start;
         void *yD = dst_data + dst_step * range.start;
         if( !cvt(yS, static_cast<int>(src_step), yD, static_cast<int>(dst_step), width, range.end - range.start) )

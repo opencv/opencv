@@ -457,10 +457,11 @@ class InstrStruct
 public:
     InstrStruct()
     {
-        useInstr         = false;
-        enableMapping    = true;
+        useInstr    = false;
+        flags       = FLAGS_MAPPING;
+        maxDepth    = 0;
 
-        rootNode.m_payload = NodeData("ROOT", NULL, 0, TYPE_GENERAL, IMPL_PLAIN);
+        rootNode.m_payload = NodeData("ROOT", NULL, 0, NULL, false, TYPE_GENERAL, IMPL_PLAIN);
         tlsStruct.get()->pCurrentNode = &rootNode;
     }
 
@@ -468,7 +469,8 @@ public:
     Mutex mutexCount;
 
     bool       useInstr;
-    bool       enableMapping;
+    int        flags;
+    int        maxDepth;
     InstrNode  rootNode;
     TLSData<InstrTLSStruct> tlsStruct;
 };
@@ -476,7 +478,7 @@ public:
 class CV_EXPORTS IntrumentationRegion
 {
 public:
-    IntrumentationRegion(const char* funName, const char* fileName, int lineNum, TYPE instrType = TYPE_GENERAL, IMPL implType = IMPL_PLAIN);
+    IntrumentationRegion(const char* funName, const char* fileName, int lineNum, void *retAddress, bool alwaysExpand, TYPE instrType = TYPE_GENERAL, IMPL implType = IMPL_PLAIN);
     ~IntrumentationRegion();
 
 private:
@@ -484,20 +486,28 @@ private:
     uint64  m_regionTicks;
 };
 
-InstrStruct&    getInstrumentStruct();
-InstrTLSStruct& getInstrumentTLSStruct();
-CV_EXPORTS InstrNode* getCurrentNode();
+CV_EXPORTS InstrStruct& getInstrumentStruct();
+InstrTLSStruct&         getInstrumentTLSStruct();
+CV_EXPORTS InstrNode*   getCurrentNode();
 }
 }
 
-///// General instrumentation
+#ifdef _WIN32
+#define CV_INSTRUMENT_GET_RETURN_ADDRESS _ReturnAddress()
+#else
+#define CV_INSTRUMENT_GET_RETURN_ADDRESS __builtin_extract_return_addr(__builtin_return_address(0))
+#endif
+
 // Instrument region
-#define CV_INSTRUMENT_REGION_META(NAME, TYPE, IMPL)      ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, TYPE, IMPL);
+#define CV_INSTRUMENT_REGION_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)        ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, CV_INSTRUMENT_GET_RETURN_ADDRESS, ALWAYS_EXPAND, TYPE, IMPL);
+#define CV_INSTRUMENT_REGION_CUSTOM_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)\
+    void *__curr_address__ = [&]() {return CV_INSTRUMENT_GET_RETURN_ADDRESS;}();\
+    ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, __curr_address__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
 // Instrument functions with non-void return type
 #define CV_INSTRUMENT_FUN_RT_META(TYPE, IMPL, ERROR_COND, FUN, ...) ([&]()\
 {\
     if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, TYPE, IMPL);\
+        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
         try{\
             auto status = ((FUN)(__VA_ARGS__));\
             if(ERROR_COND){\
@@ -518,7 +528,7 @@ CV_EXPORTS InstrNode* getCurrentNode();
 #define CV_INSTRUMENT_FUN_RV_META(TYPE, IMPL, FUN, ...) ([&]()\
 {\
     if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, TYPE, IMPL);\
+        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
         try{\
             (FUN)(__VA_ARGS__);\
         }catch(...){\
@@ -531,17 +541,19 @@ CV_EXPORTS InstrNode* getCurrentNode();
     }\
 }())
 // Instrumentation information marker
-#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, ::cv::instr::TYPE_MARKER, IMPL);}
+#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, NULL, false, ::cv::instr::TYPE_MARKER, IMPL);}
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro
-#define CV_INSTRUMENT_REGION()              CV_INSTRUMENT_REGION_META(__FUNCTION__, cv::instr::TYPE_GENERAL, cv::instr::IMPL_PLAIN)
-// Parallel OpenCV region instrumentation macro
-#define CV_INSTRUMENT_REGION_MT()           CV_INSTRUMENT_REGION_MT_META(cv::instr::TYPE_GENERAL, cv::instr::IMPL_PLAIN)
+#define CV_INSTRUMENT_REGION()              CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
+// Custom OpenCV region instrumentation macro
+#define CV_INSTRUMENT_REGION_NAME(NAME)     CV_INSTRUMENT_REGION_CUSTOM_META(NAME,  false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
+// Instrumentation for parallel_for_ or other regions which forks and gathers threads
+#define CV_INSTRUMENT_REGION_MT_FORK()      CV_INSTRUMENT_REGION_META(__FUNCTION__, true,  ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
 
 ///// IPP instrumentation
 // Wrapper region instrumentation macro
-#define CV_INSTRUMENT_REGION_IPP()          CV_INSTRUMENT_REGION_META(__FUNCTION__, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
+#define CV_INSTRUMENT_REGION_IPP()          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
 // Function instrumentation macro
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, status < 0, FUN, __VA_ARGS__)
 // Diagnostic markers
@@ -549,26 +561,28 @@ CV_EXPORTS InstrNode* getCurrentNode();
 
 ///// OpenCL instrumentation
 // Wrapper region instrumentation macro
-#define CV_INSTRUMENT_REGION_OPENCL()              CV_INSTRUMENT_REGION_META(__FUNCTION__, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
-#define CV_INSTRUMENT_REGION_OPENCL_(NAME)         CV_INSTRUMENT_REGION_META(NAME, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
-// Function instrumentation macro
-#define CV_INSTRUMENT_FUN_OPENCL_KERNEL(FUN, ...)  CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_OPENCL, status == 0, FUN, __VA_ARGS__)
+#define CV_INSTRUMENT_REGION_OPENCL()              CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
+// OpenCL kernel compilation wrapper
+#define CV_INSTRUMENT_REGION_OPENCL_COMPILE(NAME)  CV_INSTRUMENT_REGION_META(NAME, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
+// OpenCL kernel run wrapper
+#define CV_INSTRUMENT_REGION_OPENCL_RUN(NAME)      CV_INSTRUMENT_REGION_META(NAME, false, ::cv::instr::TYPE_FUN, ::cv::instr::IMPL_OPENCL)
 // Diagnostic markers
 #define CV_INSTRUMENT_MARK_OPENCL(NAME)            CV_INSTRUMENT_MARK_META(::cv::instr::IMPL_OPENCL, NAME)
 #else
 #define CV_INSTRUMENT_REGION_META(...)
 
 #define CV_INSTRUMENT_REGION()
-#define CV_INSTRUMENT_REGION_MT()
+#define CV_INSTRUMENT_REGION_NAME(...)
+#define CV_INSTRUMENT_REGION_MT_FORK()
 
 #define CV_INSTRUMENT_REGION_IPP()
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...) ((FUN)(__VA_ARGS__))
-#define CV_INSTRUMENT_MARK_IPP(NAME)
+#define CV_INSTRUMENT_MARK_IPP(...)
 
 #define CV_INSTRUMENT_REGION_OPENCL()
-#define CV_INSTRUMENT_REGION_OPENCL_(...)
-#define CV_INSTRUMENT_FUN_OPENCL_KERNEL(FUN, ...) ((FUN)(__VA_ARGS__))
-#define CV_INSTRUMENT_MARK_OPENCL(NAME)
+#define CV_INSTRUMENT_REGION_OPENCL_COMPILE(...)
+#define CV_INSTRUMENT_REGION_OPENCL_RUN(...)
+#define CV_INSTRUMENT_MARK_OPENCL(...)
 #endif
 
 //! @endcond
