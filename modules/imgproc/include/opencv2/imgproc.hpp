@@ -1012,6 +1012,14 @@ public:
      */
     CV_WRAP void getEdgeList(CV_OUT std::vector<Vec4f>& edgeList) const;
 
+    /** @brief Returns a list of the leading edge ID connected to each triangle.
+
+    @param leadingEdgeList – Output vector.
+
+    The function gives one edge ID for each triangle.
+     */
+    CV_WRAP void getLeadingEdgeList(CV_OUT std::vector<int>& leadingEdgeList) const;
+
     /** @brief Returns a list of all triangles.
 
     @param triangleList – Output vector.
@@ -2297,6 +2305,8 @@ not supported by this function.
 borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
+@note
+Due to current implementaion limitations the size of an input and output images should be less than 32767x32767.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,

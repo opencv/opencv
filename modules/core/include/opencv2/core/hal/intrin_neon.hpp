@@ -46,6 +46,7 @@
 #define OPENCV_HAL_INTRIN_NEON_HPP
 
 #include <algorithm>
+#include "opencv2/core/utility.hpp"
 
 namespace cv
 {
@@ -285,8 +286,6 @@ template <typename T> static inline float16x4_t vld1_f16(const T* ptr)
 { return vreinterpret_f16_s16(vld1_s16((const short*)ptr)); }
 template <typename T> static inline void vst1_f16(T* ptr, float16x4_t a)
 { vst1_s16((short*)ptr, vreinterpret_s16_f16(a)); }
-static inline short vget_lane_f16(float16x4_t a, int b)
-{ return vget_lane_s16(vreinterpret_s16_f16(a), b); }
 
 struct v_float16x4
 {
@@ -302,7 +301,7 @@ struct v_float16x4
     }
     short get0() const
     {
-        return vget_lane_f16(val, 0);
+        return vget_lane_s16(vreinterpret_s16_f16(val), 0);
     }
     float16x4_t val;
 };
@@ -1217,6 +1216,16 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
     return v_float16x4(vcvt_f16_f32(a.val));
 }
 #endif
+
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return checkHardwareSupport(CV_CPU_NEON);
+}
+
+//! @}
 
 //! @endcond
 

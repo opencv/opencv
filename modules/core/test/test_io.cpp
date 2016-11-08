@@ -928,3 +928,25 @@ TEST(Core_InputOutput, filestorage_json_comment)
 
     EXPECT_EQ(str, String("value"));
 }
+
+TEST(Core_InputOutput, filestorage_utf8_bom)
+{
+    EXPECT_NO_THROW(
+    {
+        String content ="\xEF\xBB\xBF<?xml version=\"1.0\"?>\n<opencv_storage>\n</opencv_storage>\n";
+        cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+        fs.release();
+    });
+    EXPECT_NO_THROW(
+    {
+        String content ="\xEF\xBB\xBF%YAML:1.0\n";
+        cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+        fs.release();
+    });
+    EXPECT_NO_THROW(
+    {
+        String content ="\xEF\xBB\xBF{\n}\n";
+        cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+        fs.release();
+    });
+}

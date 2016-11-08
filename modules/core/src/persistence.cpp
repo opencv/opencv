@@ -96,6 +96,15 @@ static inline bool cv_isspace(char c)
     return (9 <= c && c <= 13) || c == ' ';
 }
 
+static inline char* cv_skip_BOM(char* ptr)
+{
+    if((uchar)ptr[0] == 0xef && (uchar)ptr[1] == 0xbb && (uchar)ptr[2] == 0xbf) //UTF-8 BOM
+    {
+      return ptr + 3;
+    }
+    return ptr;
+}
+
 static char* icv_itoa( int _val, char* buffer, int /*radix*/ )
 {
     const int radix = 10;
@@ -4397,15 +4406,22 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         size_t buf_size = 1 << 20;
         const char* yaml_signature = "%YAML";
         const char* json_signature = "{";
+        const char* xml_signature  = "<?xml";
         char buf[16];
         icvGets( fs, buf, sizeof(buf)-2 );
-        fs->fmt
-            = strncmp( buf, yaml_signature, strlen(yaml_signature) ) == 0
-            ? CV_STORAGE_FORMAT_YAML
-            : strncmp( buf, json_signature, strlen(json_signature) ) == 0
-            ? CV_STORAGE_FORMAT_JSON
-            : CV_STORAGE_FORMAT_XML
-            ;
+        char* bufPtr = cv_skip_BOM(buf);
+        size_t bufOffset = bufPtr - buf;
+
+        if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_YAML;
+        else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_JSON;
+        else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_XML;
+        else if(fs->strbufsize  == bufOffset)
+            CV_Error(CV_BADARG_ERR, "Input file is empty");
+        else
+            CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 
         if( !isGZ )
         {
@@ -4420,6 +4436,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
             buf_size = MAX( buf_size, (size_t)(CV_FS_MAX_LEN*2 + 1024) );
         }
         icvRewind(fs);
+        fs->strbufpos = bufOffset;
 
         fs->str_hash = cvCreateMap( 0, sizeof(CvStringHash),
                         sizeof(CvStringHashNode), fs->memstorage, 256 );

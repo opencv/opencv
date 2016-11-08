@@ -22,13 +22,17 @@ class Err(Exception):
     def __init__(self, msg, *args):
         self.msg = msg % args
 
-def execute(cmd, silent = False, cwd = "."):
+def execute(cmd, silent = False, cwd = ".", env = None):
     try:
         log.debug("Run: %s", cmd)
+        if env:
+            for k in env:
+                log.debug("    Environ: %s=%s", k, env[k])
+            env = os.environ.update(env)
         if silent:
-            return check_output(cmd, stderr = STDOUT, cwd = cwd).decode("latin-1")
+            return check_output(cmd, stderr = STDOUT, cwd = cwd, env = env).decode("latin-1")
         else:
-            return check_call(cmd, cwd = cwd)
+            return check_call(cmd, cwd = cwd, env = env)
     except CalledProcessError as e:
         if silent:
             log.debug("Process returned: %d", e.returncode)
@@ -171,6 +175,8 @@ parse_patterns = (
     {'name': "cuda_library",             'default': None,       'pattern': re.compile(r"^CUDA_CUDA_LIBRARY:FILEPATH=(.+)$")},
     {'name': "cuda_version",             'default': None,       'pattern': re.compile(r"^CUDA_VERSION:STRING=(.+)$")},
     {'name': "core_dependencies",        'default': None,       'pattern': re.compile(r"^opencv_core_LIB_DEPENDS:STATIC=(.+)$")},
+    {'name': "python2",                  'default': None,       'pattern': re.compile(r"^BUILD_opencv_python2:BOOL=(.*)$")},
+    {'name': "python3",                  'default': None,       'pattern': re.compile(r"^BUILD_opencv_python3:BOOL=(.*)$")},
 )
 
 class CMakeCache:
@@ -247,17 +253,27 @@ class CMakeCache:
             files = glob.glob(os.path.join(d, mask))
             if not self.getOS() == "android" and self.withJava():
                 files.append("java")
+            if self.withPython2():
+                files.append("python2")
+            if self.withPython3():
+                files.append("python3")
             return [f for f in files if isGood(f)]
         return []
 
     def isMainModule(self, name):
-        return name in self.main_modules
+        return name in self.main_modules + ['python2', 'python3']
 
     def withCuda(self):
         return self.cuda_version and self.with_cuda == "ON" and self.cuda_library and not self.cuda_library.endswith("-NOTFOUND")
 
     def withJava(self):
         return self.ant_executable and self.java_test_binary_dir
+
+    def withPython2(self):
+        return self.python2 == 'ON'
+
+    def withPython3(self):
+        return self.python3 == 'ON'
 
     def getGitVersion(self):
         if self.cmake_home_vcver:

@@ -4,11 +4,10 @@ package org.opencv.test;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
+import java.lang.reflect.Method;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -32,6 +31,9 @@ public class OpenCVTestCase extends TestCase {
     public static final boolean passNYI = true;
 
     protected static boolean isTestCaseEnabled = true;
+
+    protected static final String XFEATURES2D = "org.opencv.xfeatures2d.";
+    protected static final String DEFAULT_FACTORY = "create";
 
     protected static final int matSize = 10;
     protected static final double EPS = 0.001;
@@ -491,4 +493,77 @@ public class OpenCVTestCase extends TestCase {
         }
     }
 
+    protected <T> T createClassInstance(String cname, String factoryName, Class cParams[], Object oValues[]) {
+        T instance = null;
+
+        assertFalse("Class name should not be empty", "".equals(cname));
+
+        String message="";
+        try {
+            Class algClass = getClassForName(cname);
+            Method factory = null;
+
+            if(cParams!=null && cParams.length>0) {
+                if(!"".equals(factoryName)) {
+                    factory = algClass.getDeclaredMethod(factoryName, cParams);
+                    instance = (T) factory.invoke(null, oValues);
+                }
+                else {
+                    instance = (T) algClass.getConstructor(cParams).newInstance(oValues);
+                }
+            }
+            else {
+                if(!"".equals(factoryName)) {
+                    factory = algClass.getDeclaredMethod(factoryName);
+                    instance = (T) factory.invoke(null);
+                }
+                else {
+                    instance = (T) algClass.getConstructor().newInstance();
+                }
+            }
+        }
+        catch(Exception ex) {
+            message = TAG + " :: " + "could not instantiate " + cname + "! Exception: " + ex.getMessage();
+        }
+
+        assertTrue(message, instance!=null);
+
+        return instance;
+    }
+
+    protected <T> void setProperty(T instance, String propertyName, String propertyType, Object propertyValue) {
+        String message = "";
+        try {
+            String smethod = "set" + propertyName.substring(0,1).toUpperCase() + propertyName.substring(1);
+            Method setter = instance.getClass().getMethod(smethod, getClassForName(propertyType));
+            setter.invoke(instance, propertyValue);
+        }
+        catch(Exception ex) {
+            message = "Error when setting property [" + propertyName + "]: " + ex.getMessage();
+        }
+
+        assertTrue(message, "".equals(message));
+    }
+
+    protected Class getClassForName(String sclass) throws ClassNotFoundException{
+        if("int".equals(sclass))
+            return Integer.TYPE;
+        else if("long".equals(sclass))
+            return Long.TYPE;
+        else if("double".equals(sclass))
+            return Double.TYPE;
+        else if("float".equals(sclass))
+            return Float.TYPE;
+        else if("boolean".equals(sclass))
+            return Boolean.TYPE;
+        else if("char".equals(sclass))
+            return Character.TYPE;
+        else if("byte".equals(sclass))
+            return Byte.TYPE;
+        else if("short".equals(sclass))
+            return Short.TYPE;
+        else
+            return Class.forName(sclass);
+
+    }
 }

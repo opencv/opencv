@@ -1477,6 +1477,78 @@ Ptr<Morph> Morph ::create(int op, int src_type, int dst_type, int max_width, int
 
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
+static bool ocl_morph3x3_8UC1( InputArray _src, OutputArray _dst, InputArray _kernel, Point anchor,
+                               int op, int actual_op = -1, InputArray _extraMat = noArray())
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    Size ksize = _kernel.size();
+
+    Mat kernel8u;
+    String processing;
+
+    bool haveExtraMat = !_extraMat.empty();
+    CV_Assert(actual_op <= 3 || haveExtraMat);
+
+    _kernel.getMat().convertTo(kernel8u, CV_8U);
+    for (int y = 0; y < kernel8u.rows; ++y)
+        for (int x = 0; x < kernel8u.cols; ++x)
+            if (kernel8u.at<uchar>(y, x) != 0)
+                processing += format("PROCESS(%d,%d)", y, x);
+
+    if (anchor.x < 0)
+        anchor.x = ksize.width / 2;
+    if (anchor.y < 0)
+        anchor.y = ksize.height / 2;
+
+    if (actual_op < 0)
+        actual_op = op;
+
+    if (type != CV_8UC1 ||
+        !((_src.offset() == 0) && (_src.step() % 4 == 0)) ||
+        !((_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) ||
+        !(anchor.x == 1 && anchor.y == 1) ||
+        !(ksize.width == 3 && ksize.height == 3))
+        return false;
+
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", NULL, NULL, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
+    String opts = format("-D PROCESS_ELEM_=%s -D %s%s", processing.c_str(), op2str[op],
+                         actual_op == op ? "" : cv::format(" -D %s", op2str[actual_op]).c_str());
+
+    ocl::Kernel k;
+    k.create("morph3x3_8UC1_cols16_rows2", cv::ocl::imgproc::morph3x3_oclsrc, opts);
+
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(depth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+    UMat extraMat = _extraMat.getUMat();
+
+    int idxArg = k.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = k.set(idxArg, (int)src.step);
+    idxArg = k.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = k.set(idxArg, (int)dst.step);
+    idxArg = k.set(idxArg, (int)dst.rows);
+    idxArg = k.set(idxArg, (int)dst.cols);
+
+    if (haveExtraMat)
+    {
+        idxArg = k.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(extraMat));
+    }
+
+    return k.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+}
+
 static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kernel, Point anchor, int borderType,
                             int op, int actual_op = -1, InputArray _extraMat = noArray())
 {
@@ -1676,6 +1748,9 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
 #endif
          )
     {
+        if (ocl_morph3x3_8UC1(_src, _dst, kernel, anchor, op, actual_op, _extraMat))
+            return true;
+
         if (ocl_morphSmall(_src, _dst, kernel, anchor, borderType, op, actual_op, _extraMat))
             return true;
     }

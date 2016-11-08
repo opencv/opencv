@@ -1564,8 +1564,6 @@ public:
 
     virtual void operator()(const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP();
-
         IppStatus status;
         Ipp8u* pBuffer = 0;
         Ipp8u* pMemInit= 0;
@@ -1647,8 +1645,6 @@ public:
 
     virtual void operator()(const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP();
-
         IppStatus status;
         Ipp8u* pBuffer = 0;
         Ipp8u* pMemInit= 0;
@@ -3809,8 +3805,6 @@ public:
 
     virtual void operator()(const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         if(*ok == false)
             return;
 

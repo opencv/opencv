@@ -1197,7 +1197,7 @@ template <>
 struct Div_SIMD<uchar>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Div_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const uchar * src1, const uchar * src2, uchar * dst, int width, double scale) const
     {
@@ -1243,7 +1243,7 @@ template <>
 struct Div_SIMD<schar>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Div_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const schar * src1, const schar * src2, schar * dst, int width, double scale) const
     {
@@ -1289,7 +1289,7 @@ template <>
 struct Div_SIMD<ushort>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Div_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const ushort * src1, const ushort * src2, ushort * dst, int width, double scale) const
     {
@@ -1334,7 +1334,7 @@ template <>
 struct Div_SIMD<short>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Div_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const short * src1, const short * src2, short * dst, int width, double scale) const
     {
@@ -1379,7 +1379,7 @@ template <>
 struct Div_SIMD<int>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Div_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const int * src1, const int * src2, int * dst, int width, double scale) const
     {
@@ -1423,7 +1423,7 @@ template <>
 struct Div_SIMD<float>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Div_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const float * src1, const float * src2, float * dst, int width, double scale) const
     {
@@ -1463,7 +1463,7 @@ template <>
 struct Recip_SIMD<uchar>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Recip_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const uchar * src2, uchar * dst, int width, double scale) const
     {
@@ -1504,7 +1504,7 @@ template <>
 struct Recip_SIMD<schar>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Recip_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const schar * src2, schar * dst, int width, double scale) const
     {
@@ -1545,7 +1545,7 @@ template <>
 struct Recip_SIMD<ushort>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Recip_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const ushort * src2, ushort * dst, int width, double scale) const
     {
@@ -1585,7 +1585,7 @@ template <>
 struct Recip_SIMD<short>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Recip_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const short * src2, short * dst, int width, double scale) const
     {
@@ -1625,7 +1625,7 @@ template <>
 struct Recip_SIMD<int>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Recip_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const int * src2, int * dst, int width, double scale) const
     {
@@ -1665,7 +1665,7 @@ template <>
 struct Recip_SIMD<float>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Recip_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const float * src2, float * dst, int width, double scale) const
     {
@@ -1702,7 +1702,7 @@ template <>
 struct Div_SIMD<double>
 {
     bool haveSIMD;
-    Div_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Div_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const double * src1, const double * src2, double * dst, int width, double scale) const
     {
@@ -1739,7 +1739,7 @@ template <>
 struct Recip_SIMD<double>
 {
     bool haveSIMD;
-    Recip_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON); }
+    Recip_SIMD() { haveSIMD = hasSIMD128(); }
 
     int operator() (const double * src2, double * dst, int width, double scale) const
     {

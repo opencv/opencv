@@ -142,6 +142,8 @@ template <bool useCustomDeriv>
 static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputArray _dst, float low_thresh, float high_thresh,
                       int aperture_size, bool L2gradient, int cn, const Size & size)
 {
+    CV_INSTRUMENT_REGION_OPENCL()
+
     UMat map;
 
     const ocl::Device &dev = ocl::Device::getDefault();
@@ -301,7 +303,7 @@ public:
     void operator()(const Range &boundaries) const
     {
 #if CV_SIMD128
-        bool haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+        bool haveSIMD = hasSIMD128();
 #endif
 
         const int type = src.type(), cn = CV_MAT_CN(type);
@@ -709,7 +711,7 @@ public:
         uchar* pdst = dst.ptr() + (ptrdiff_t)(dst.step * boundaries.start);
 
 #if CV_SIMD128
-        bool haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+        bool haveSIMD = hasSIMD128();
 #endif
 
         for (int i = boundaries.start; i < boundaries.end; i++, pmap += mapstep, pdst += dst.step)
@@ -962,7 +964,7 @@ static void CannyImpl(Mat& dx, Mat& dy, Mat& dst,
     #define CANNY_POP(d)     (d) = *--stack_top
 
 #if CV_SIMD128
-    bool haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+    bool haveSIMD = hasSIMD128();
 #endif
 
     // calculate magnitude and angle of gradient, perform non-maxima suppression.

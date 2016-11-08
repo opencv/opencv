@@ -2795,8 +2795,6 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         if (*ok == false)
             return;
 
@@ -4772,8 +4770,6 @@ public:
 
     virtual void operator() (const Range & range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         IppiRect srcRoiRect = { 0, 0, src.cols, src.rows };
         Mat dstRoi = dst.rowRange(range);
         IppiSize dstRoiSize = ippiSize(dstRoi.size());
@@ -4856,6 +4852,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
+    CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
+
     if( dst.data == src.data )
         src = src.clone();
 
@@ -5607,8 +5605,6 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         IppiSize srcsize = { src.cols, src.rows };
         IppiRect srcroi = { 0, 0, src.cols, src.rows };
         IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
@@ -6252,8 +6248,6 @@ public:
 
     virtual void operator() (const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP()
-
         IppiSize srcsize = {src.cols, src.rows};
         IppiRect srcroi = {0, 0, src.cols, src.rows};
         IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};

@@ -1029,7 +1029,7 @@ public:
 
     Node<OBJECT>* findChild(OBJECT& payload) const
     {
-        for(int i = 0; i < this->m_childs.size(); i++)
+        for(size_t i = 0; i < this->m_childs.size(); i++)
         {
             if(this->m_childs[i]->m_payload == payload)
                 return this->m_childs[i];
@@ -1039,10 +1039,10 @@ public:
 
     int findChild(Node<OBJECT> *pNode) const
     {
-        for (int i = 0; i < this->m_childs.size(); i++)
+        for (size_t i = 0; i < this->m_childs.size(); i++)
         {
             if(this->m_childs[i] == pNode)
-                return i;
+                return (int)i;
         }
         return -1;
     }
@@ -1059,12 +1059,20 @@ public:
 
     void removeChilds()
     {
-        for(int i = 0; i < m_childs.size(); i++)
+        for(size_t i = 0; i < m_childs.size(); i++)
         {
             m_childs[i]->m_pParent = 0; // avoid excessive parent vector trimming
             delete m_childs[i];
         }
         m_childs.clear();
+    }
+
+    int getDepth()
+    {
+        int   count   = 0;
+        Node *pParent = m_pParent;
+        while(pParent) count++, pParent = pParent->m_pParent;
+        return count;
     }
 
 public:
@@ -1094,10 +1102,19 @@ enum IMPL
     IMPL_OPENCL,
 };
 
+struct NodeDataTls
+{
+    NodeDataTls()
+    {
+        m_ticksTotal = 0;
+    }
+    uint64      m_ticksTotal;
+};
+
 class CV_EXPORTS NodeData
 {
 public:
-    NodeData(const char* funName = 0, const char* fileName = NULL, int lineNum = 0, cv::instr::TYPE instrType = TYPE_GENERAL, cv::instr::IMPL implType = IMPL_PLAIN);
+    NodeData(const char* funName = 0, const char* fileName = NULL, int lineNum = 0, void* retAddress = NULL, bool alwaysExpand = false, cv::instr::TYPE instrType = TYPE_GENERAL, cv::instr::IMPL implType = IMPL_PLAIN);
     NodeData(NodeData &ref);
     ~NodeData();
     NodeData& operator=(const NodeData&);
@@ -1107,17 +1124,18 @@ public:
     cv::instr::IMPL     m_implType;
     const char*         m_fileName;
     int                 m_lineNum;
-
-    volatile int        m_counter;
-    volatile uint64     m_ticksTotal;
-
-    // No synchronization
-    double getTotalMs() const { return (double)m_ticksTotal * 1000. / cv::getTickFrequency(); }
-    // No synchronization
-    double getMeanMs() const { return (double)m_ticksTotal * 1000. / (m_counter * cv::getTickFrequency()); }
-
+    void*               m_retAddress;
+    bool                m_alwaysExpand;
     bool                m_funError;
-    bool                m_stopPoint;
+
+    volatile int         m_counter;
+    volatile uint64      m_ticksTotal;
+    TLSData<NodeDataTls> m_tls;
+    int                  m_threads;
+
+    // No synchronization
+    double getTotalMs()   const { return ((double)m_ticksTotal / cv::getTickFrequency()) * 1000; }
+    double getMeanMs()    const { return (((double)m_ticksTotal/m_counter) / cv::getTickFrequency()) * 1000; }
 };
 bool operator==(const NodeData& lhs, const NodeData& rhs);
 
@@ -1134,8 +1152,9 @@ CV_EXPORTS void       resetTrace();
 
 enum FLAGS
 {
-    FLAGS_NONE = 0,
-    FLAGS_MAPPING = 1 << 0,
+    FLAGS_NONE              = 0,
+    FLAGS_MAPPING           = 0x01,
+    FLAGS_EXPAND_SAME_NAMES = 0x02,
 };
 
 CV_EXPORTS void       setFlags(FLAGS modeFlags);
