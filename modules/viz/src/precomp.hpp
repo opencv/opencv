@@ -280,7 +280,7 @@ namespace cv
                 scalars->SetName("Colors");
                 scalars->SetNumberOfComponents(3);
                 scalars->SetNumberOfTuples((vtkIdType)size);
-                scalars->SetArray(color_data->val, (vtkIdType)(size * 3), 0);
+                scalars->SetArray(color_data->val, (vtkIdType)(size * 3), 0, vtkUnsignedCharArray::VTK_DATA_ARRAY_DELETE);
                 return scalars;
             }
 
