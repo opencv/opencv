@@ -606,6 +606,11 @@ bool VideoCapture::open(int index)
     cap.reset(cvCreateCameraCapture(index));
     return isOpened();
 }
+bool  VideoCapture::open(int cameraNum, int apiPreference)
+{
+    cameraNum = cameraNum + apiPreference;
+    return open(cameraNum);
+}
 
 bool VideoCapture::isOpened() const
 {
