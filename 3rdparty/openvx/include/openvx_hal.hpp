@@ -1130,10 +1130,10 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 #undef cv_hal_resize
 #define cv_hal_resize ovx_hal_resize
 
-#undef cv_hal_warpAffine
-#define cv_hal_warpAffine ovx_hal_warpAffine
-//OpenVX perspective warp use round to zero policy at least in sample implementation
+//OpenVX warps use round to zero policy at least in sample implementation
 //while OpenCV require round to nearest
+//#undef cv_hal_warpAffine
+//#define cv_hal_warpAffine ovx_hal_warpAffine
 //#undef cv_hal_warpPerspective
 //#define cv_hal_warpPerspective ovx_hal_warpPerspectve
 
