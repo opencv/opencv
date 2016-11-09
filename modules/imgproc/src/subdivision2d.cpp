@@ -282,10 +282,10 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
     int i, maxEdges = (int)(qedges.size() * 4);
 
     if( qedges.size() < (size_t)4 )
-        CV_Error( CV_StsError, "Subdivision is empty" );
+        return PTLOC_ERROR;
 
     if( pt.x < topLeft.x || pt.y < topLeft.y || pt.x >= bottomRight.x || pt.y >= bottomRight.y )
-        CV_Error( CV_StsOutOfRange, "" );
+        return PTLOC_OUTSIDE_RECT;
 
     int edge = recentEdge;
     CV_Assert(edge > 0);
@@ -660,7 +660,10 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     int vertex = 0, edge = 0;
     int loc = locate( pt, edge, vertex );
 
-    if( loc != PTLOC_ON_EDGE && loc != PTLOC_INSIDE )
+    if( loc == PTLOC_OUTSIDE_RECT || loc == PTLOC_ERROR )
+        return loc;
+
+    if( loc == PTLOC_VERTEX )
         return vertex;
 
     vertex = 0;
