@@ -1337,8 +1337,7 @@ static const vx_enum VX_SCALAR_TYPE = VX_SCALAR_ATTRIBUTE_TYPE;
     template<typename T>
     void getValue(T& val)
     {
-        vx_enum t = type();
-        if(sizeof(T) != enumToTypeSize(t)) throw WrapperError(std::string(__func__)+"(): incompatible types");
+        if(TypeToEnum<T>::value != type()) throw WrapperError(std::string(__func__)+"(): incompatible types");
 #ifdef VX_VERSION_1_1
         IVX_CHECK_STATUS( vxCopyScalar(ref, &val, VX_READ_ONLY, VX_MEMORY_TYPE_HOST) );
 #else
@@ -1358,8 +1357,7 @@ static const vx_enum VX_SCALAR_TYPE = VX_SCALAR_ATTRIBUTE_TYPE;
     template<typename T>
     void setValue(T val)
     {
-        vx_enum t = type();
-        if (sizeof(T) != enumToTypeSize(t)) throw WrapperError(std::string(__func__)+"(): incompatible types");
+        if (TypeToEnum<T>::value != type()) throw WrapperError(std::string(__func__)+"(): incompatible types");
 #ifdef VX_VERSION_1_1
         IVX_CHECK_STATUS(vxCopyScalar(ref, &val, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
 #else
