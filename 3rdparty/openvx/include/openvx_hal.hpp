@@ -1131,8 +1131,8 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 #undef cv_hal_merge8u
 #define cv_hal_merge8u ovx_hal_merge8u
 
-#undef cv_hal_resize
-#define cv_hal_resize ovx_hal_resize
+//#undef cv_hal_resize
+//#define cv_hal_resize ovx_hal_resize
 
 //OpenVX warps use round to zero policy at least in sample implementation
 //while OpenCV require round to nearest
