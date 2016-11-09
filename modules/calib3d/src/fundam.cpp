@@ -954,7 +954,7 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     }
     CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F || depth == CV_64F));
 
-    int dtype = CV_MAKETYPE(depth <= CV_32F ? CV_32F : CV_64F, cn+1);
+    int dtype = CV_MAKETYPE(depth, cn+1);
     _dst.create(npoints, 1, dtype);
     Mat dst = _dst.getMat();
     if( !dst.isContinuous() )
