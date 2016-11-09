@@ -1188,33 +1188,14 @@ public:
     bool isMapped() const
     { return _img != 0; }
 
-    bool isMemoryExternal() const
-    { return _externalMem; }
-
 #ifdef IVX_USE_OPENCV
     cv::Mat& getMat()
-    {
-        if(_m.empty() && _data)
-        {
-            int matType = CV_8UC(_addr.stride_x);
-            if(_img)
-            {
-                vx_df_image format;
-                IVX_CHECK_STATUS( vxQueryImage(_img, VX_IMAGE_FORMAT, &format, sizeof(format)) );
-                matType = formatToMatType(format);
-            }
-            _m = cv::Mat( vx_int32((vx_int64)_addr.dim_y * VX_SCALE_UNITY / _addr.scale_y),
-                          vx_int32((vx_int64)_addr.dim_x * VX_SCALE_UNITY / _addr.scale_x),
-                          matType, _data, std::size_t(_addr.stride_y) );
-        }
-        return _m;
-    }
+    { return _m; }
 #endif //IVX_USE_OPENCV
 
 protected:
     vx_imagepatch_addressing_t _addr;
     void* _data;
-    bool _externalMem;
     vx_image _img;
 #ifdef VX_VERSION_1_1
     vx_memory_type_e _memType;
@@ -1227,26 +1208,8 @@ protected:
     cv::Mat _m;
 #endif
 
-    void alloc(vx_size bytes)
-    {
-        if (_externalMem || _data) throw WrapperError(std::string(__func__)+"(): wrong state");
-        _data = new char[bytes];
-#ifdef IVX_USE_OPENCV
-        _m.release();
-#endif
-    }
-
-    void free()
-    {
-        if (_externalMem) throw WrapperError(std::string(__func__)+"(): freeing external memory");
-        if(_data) delete[] (char*)_data; _data = 0;
-#ifdef IVX_USE_OPENCV
-        _m.release();
-#endif
-    }
-
 public:
-    Patch() : _addr(createAddressing()), _data(0), _externalMem(false), _img(0)
+    Patch() : _addr(createAddressing()), _data(0), _img(0)
 #ifdef VX_VERSION_1_1
        , _memType(VX_MEMORY_TYPE_HOST)
     {}
@@ -1255,32 +1218,12 @@ public:
     { _rect.start_x = _rect.end_x = _rect.start_y = _rect.end_y = 0u; }
 #endif
 
-    Patch(const vx_imagepatch_addressing_t& addr, void* data = 0)
-        : _addr(createAddressing()), _data(0), _externalMem(false), _img(0)
-#ifdef VX_VERSION_1_1
-           , _memType(VX_MEMORY_TYPE_HOST)
-#else
-           , _planeIdx(-1)
-#endif
-    {
-#ifndef VX_VERSION_1_1
-        _rect.start_x = _rect.end_x = _rect.start_y = _rect.end_y = 0u;
-#endif
-        _addr = addr;
-        if (data)
-        {
-            _externalMem = true;
-            _data = data;
-        }
-    }
-
 #ifndef IVX_USE_CXX98
     Patch(Patch&& p) : Patch()
     {
         using std::swap;
         swap(_addr, p._addr);
         swap(_data, p._data);
-        swap(_externalMem, p._externalMem);
 #ifdef VX_VERSION_1_1
         swap(_memType, p._memType);
         swap(_mapId, p._mapId);
@@ -1293,74 +1236,12 @@ public:
     }
 #endif
 
-    void copyTo(vx_image img, vx_uint32 planeIdx)
-    { copyTo(img, planeIdx, Image(img, true).getValidRegion()); }
-
-    void copyTo(vx_image img, vx_uint32 planeIdx, const vx_rectangle_t& rect)
-    {
-        // TODO: add sizes consistency checks
-        /*
-        vx_uint32 w = r.end_x-r.start_x, h = r.end_y-r.start_y;
-        if (w > _addr.dim_x) throw WrapperError("Patch::copyTo(): inconsistent dimension X");
-        if (h > _addr.dim_y) throw WrapperError("Patch::copyTo(): inconsistent dimension Y");
-        */
-        /*vx_size patchBytes = vxComputeImagePatchSize(img, &r, planeIdx);
-        if (patchBytes == 0) throw WrapperError("Patch::copyTo(): vxComputeImagePatchSize returned 0");
-        vx_size strideX = patchBytes / w / h;
-        if (strideX > _addr.stride_x) throw WrapperError("Patch::copyTo(): stride X is too small");*/
-#ifdef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxCopyImagePatch(img, &rect, planeIdx, &_addr, _data, VX_WRITE_ONLY, _memType));
-#else
-        IVX_CHECK_STATUS(vxAccessImagePatch(img, &rect, planeIdx, &_addr, &_data, VX_WRITE_ONLY));
-        IVX_CHECK_STATUS(vxCommitImagePatch(img, const_cast<vx_rectangle_t*>(&rect), planeIdx, &_addr, _data));
-        _rect = rect;
-        _planeIdx = planeIdx;
-#endif
-    }
-
-    void copyFrom(vx_image img, vx_uint32 planeIdx)
-    { copyFrom(img, planeIdx, Image(img, true).getValidRegion()); }
-
-    void copyFrom(vx_image img, vx_uint32 planeIdx, const vx_rectangle_t& rect)
-    {
-        vx_uint32 w = rect.end_x-rect.start_x, h = rect.end_y-rect.start_y;
-        vx_size patchBytes = vxComputeImagePatchSize(img, &rect, planeIdx);
-        if (patchBytes == 0) throw WrapperError(std::string(__func__)+"(): vxComputeImagePatchSize returned 0");
-        if (_addr.dim_x == 0)
-        {
-            // init
-            _addr = createAddressing(w, h, (vx_int32)(patchBytes/w/h), (vx_int32)(patchBytes/h));
-        }
-        else
-        {
-            // check
-            // TODO: add sizes consistency checks
-            /*
-            if (w != _addr.dim_x) throw WrapperError("Patch::copyFrom(): inconsistent dimension X");
-            if (h != _addr.dim_y) throw WrapperError("Patch::copyFrom(): inconsistent dimension Y");
-            */
-            /*vx_size strideX = patchBytes / w / h;
-            if (strideX > _addr.stride_x) throw WrapperError("Patch::copyFrom(): stride X is too small");*/
-        }
-        if (!_data) alloc(_addr.stride_y * _addr.dim_y);
-#ifdef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxCopyImagePatch(img, &rect, planeIdx, &_addr, _data, VX_READ_ONLY, _memType));
-#else
-        IVX_CHECK_STATUS(vxAccessImagePatch(img, &rect, planeIdx, &_addr, &_data, VX_READ_ONLY));
-        IVX_CHECK_STATUS(vxCommitImagePatch(img, const_cast<vx_rectangle_t*>(&rect), planeIdx, &_addr, _data));
-        _rect = rect;
-        _planeIdx = planeIdx;
-#endif
-    }
-
     void map(vx_image img, vx_uint32 planeIdx)
     { map(img, planeIdx, Image(img, true).getValidRegion()); }
 
     void map(vx_image img, vx_uint32 planeIdx, const vx_rectangle_t& rect, vx_enum usage = VX_READ_ONLY, vx_uint32 flags = 0)
     {
         if (isMapped()) throw WrapperError(std::string(__func__)+"(): already mapped");
-        if(!_externalMem) free();
-        _data = 0; // could still point to external
 #ifdef VX_VERSION_1_1
         IVX_CHECK_STATUS(vxMapImagePatch(img, &rect, planeIdx, &_mapId, &_addr, &_data, usage, _memType, flags) );
 #else
@@ -1368,10 +1249,15 @@ public:
         _rect = rect;
         _planeIdx = planeIdx;
 #endif
+        if (_data == 0) throw WrapperError(std::string(__func__)+"(): mapped address is null");
         _img = img;
-        _externalMem = true;
 #ifdef IVX_USE_OPENCV
-        _m.release();
+        vx_df_image format;
+        IVX_CHECK_STATUS( vxQueryImage(_img, VX_IMAGE_FORMAT, &format, sizeof(format)) );
+        int matType = formatToMatType(format);
+        _m = cv::Mat( vx_int32((vx_int64)_addr.dim_y * VX_SCALE_UNITY / _addr.scale_y),
+                      vx_int32((vx_int64)_addr.dim_x * VX_SCALE_UNITY / _addr.scale_x),
+                      matType, _data, std::size_t(_addr.stride_y) );
 #endif
     }
 
@@ -1387,17 +1273,13 @@ public:
 #endif
         _img = 0;
         _data = 0;
-        _externalMem = false;
 #ifdef IVX_USE_OPENCV
         _m.release();
 #endif
     }
 
     ~Patch()
-    {
-        try { if (_img) unmap(); } catch(...) {; /*ignore*/}
-        if(!_externalMem) free();
-    }
+    { try { if (_img) unmap(); } catch(...) {; /*ignore*/} }
 
     void* pixelPtr(vx_uint32 x, vx_uint32 y)
     {
