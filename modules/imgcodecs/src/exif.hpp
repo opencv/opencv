@@ -41,8 +41,8 @@
 //M*/
 
 
-#ifndef _OPENCV_JPEG_EXIF_HPP_
-#define _OPENCV_JPEG_EXIF_HPP_
+#ifndef _OPENCV_EXIF_HPP_
+#define _OPENCV_EXIF_HPP_
 
 #include <cstdio>
 #include <map>
@@ -131,21 +131,21 @@ struct ExifEntry_t
 };
 
 /**
- * @brief Picture orientation which may be taken from JPEG's EXIF
+ * @brief Picture orientation which may be taken from EXIF
  *      Orientation usually matters when the picture is taken by
  *      smartphone or other camera with orientation sensor support
  *      Corresponds to EXIF 2.3 Specification
  */
-enum JpegOrientation
+enum ImageOrientation
 {
-    JPEG_ORIENTATION_TL = 1, ///< 0th row == visual top, 0th column == visual left-hand side
-    JPEG_ORIENTATION_TR = 2, ///< 0th row == visual top, 0th column == visual right-hand side
-    JPEG_ORIENTATION_BR = 3, ///< 0th row == visual bottom, 0th column == visual right-hand side
-    JPEG_ORIENTATION_BL = 4, ///< 0th row == visual bottom, 0th column == visual left-hand side
-    JPEG_ORIENTATION_LT = 5, ///< 0th row == visual left-hand side, 0th column == visual top
-    JPEG_ORIENTATION_RT = 6, ///< 0th row == visual right-hand side, 0th column == visual top
-    JPEG_ORIENTATION_RB = 7, ///< 0th row == visual right-hand side, 0th column == visual bottom
-    JPEG_ORIENTATION_LB = 8  ///< 0th row == visual left-hand side, 0th column == visual bottom
+    IMAGE_ORIENTATION_TL = 1, ///< Horizontal (normal)
+    IMAGE_ORIENTATION_TR = 2, ///< Mirrored horizontal
+    IMAGE_ORIENTATION_BR = 3, ///< Rotate 180
+    IMAGE_ORIENTATION_BL = 4, ///< Mirrored vertical
+    IMAGE_ORIENTATION_LT = 5, ///< Mirrored horizontal & rotate 270 CW
+    IMAGE_ORIENTATION_RT = 6, ///< Rotate 90 CW
+    IMAGE_ORIENTATION_RB = 7, ///< Mirrored horizontal & rotate 90 CW
+    IMAGE_ORIENTATION_LB = 8  ///< Rotate 270 CW
 };
 
 /**
@@ -250,4 +250,4 @@ private:
 
 }
 
-#endif /* JPEG_EXIF_HPP_ */
+#endif /* _OPENCV_EXIF_HPP_ */
