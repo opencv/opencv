@@ -47,6 +47,12 @@
 
 #include "opencl_kernels_core.hpp"
 
+#ifdef HAVE_OPENVX
+#define IVX_HIDE_INFO_WARNINGS
+#define IVX_USE_OPENCV
+#include "ivx.hpp"
+#endif
+
 namespace cv
 {
 
@@ -1648,6 +1654,75 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
 #endif
 
+#ifdef HAVE_OPENVX
+namespace cv
+{
+    static bool openvx_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
+    {
+        size_t total_size = src.total();
+        int rows = src.size[0], cols = rows ? (int)(total_size / rows) : 0;
+        if (src.type() != CV_8UC1|| !mask.empty() ||
+               (src.dims != 2 && !(src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size))
+           )
+        return false;
+
+        try
+        {
+            ivx::Context ctx = ivx::Context::create();
+#ifndef VX_VERSION_1_1
+            if (ctx.vendorID() == VX_ID_KHRONOS)
+                return false; // Do not use OpenVX meanStdDev estimation for sample 1.0.1 implementation due to lack of accuracy
+#endif
+
+            ivx::Image
+                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(cols, rows, 1, (vx_int32)(src.step[0])), src.ptr());
+
+            vx_float32 mean_temp, stddev_temp;
+            ivx::IVX_CHECK_STATUS(vxuMeanStdDev(ctx, ia, &mean_temp, &stddev_temp));
+
+            if (_mean.needed())
+            {
+                if (!_mean.fixedSize())
+                    _mean.create(1, 1, CV_64F, -1, true);
+                Mat mean = _mean.getMat();
+                CV_Assert(mean.type() == CV_64F && mean.isContinuous() &&
+                    (mean.cols == 1 || mean.rows == 1) && mean.total() >= 1);
+                double *pmean = mean.ptr<double>();
+                pmean[0] = mean_temp;
+                for (int c = 1; c < (int)mean.total(); c++)
+                    pmean[c] = 0;
+            }
+
+            if (_sdv.needed())
+            {
+                if (!_sdv.fixedSize())
+                    _sdv.create(1, 1, CV_64F, -1, true);
+                Mat stddev = _sdv.getMat();
+                CV_Assert(stddev.type() == CV_64F && stddev.isContinuous() &&
+                    (stddev.cols == 1 || stddev.rows == 1) && stddev.total() >= 1);
+                double *pstddev = stddev.ptr<double>();
+                pstddev[0] = stddev_temp;
+                for (int c = 1; c < (int)stddev.total(); c++)
+                    pstddev[c] = 0;
+            }
+
+            return true;
+        }
+        catch (ivx::RuntimeError & e)
+        {
+            CV_Error(CV_StsInternal, e.what());
+            return false;
+        }
+        catch (ivx::WrapperError & e)
+        {
+            CV_Error(CV_StsInternal, e.what());
+            return false;
+        }
+    }
+}
+#endif
+
 #ifdef HAVE_IPP
 namespace cv
 {
@@ -1772,6 +1847,11 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
+
+#ifdef HAVE_OPENVX
+    if (openvx_meanStdDev(src, _mean, _sdv, mask))
+        return;
+#endif
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
