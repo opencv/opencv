@@ -2455,11 +2455,14 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
     }
 
     // write the stream header, if any
+    int header_err =
     #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
         av_write_header(oc_);
     #else
         avformat_write_header(oc_, NULL);
     #endif
+    if (header_err != 0)
+        return false;
 
     return true;
 }
