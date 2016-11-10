@@ -232,7 +232,7 @@ static ImageEncoder findEncoder( const String& _ext )
 
 enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
 
-static void RotateImage(const String& filename, Mat& img)
+static void ApplyExifOrientation(const String& filename, Mat& img)
 {
     int orientation = IMAGE_ORIENTATION_TL;
 
@@ -461,7 +461,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
             // optionally rotate the data if EXIF' orientation flag says so
             if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
             {
-                RotateImage(filename, mat);
+                ApplyExifOrientation(filename, mat);
             }
 
             break;
@@ -496,7 +496,7 @@ Mat imread( const String& filename, int flags )
     /// optionally rotate the data if EXIF' orientation flag says so
     if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
     {
-        RotateImage(filename, img);
+        ApplyExifOrientation(filename, img);
     }
 
     /// return a reference to the data
