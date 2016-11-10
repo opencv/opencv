@@ -908,6 +908,11 @@ int _interlockedExchangeAdd(int* addr, int delta)
 
 #elif defined __APPLE__
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <libkern/OSAtomic.h>
 
 struct Mutex::Impl
@@ -922,6 +927,10 @@ struct Mutex::Impl
     OSSpinLock sl;
     int refcount;
 };
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #elif defined __linux__ && !defined ANDROID && !defined __LINUXTHREADS_OLD__
 
