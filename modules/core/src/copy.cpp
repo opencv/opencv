@@ -833,14 +833,14 @@ static bool ocl_rotate(InputArray _src, OutputArray _dst, int rotateMode)
     switch (rotateMode)
     {
     case ROTATE_90_CLOCKWISE:
-        _dst.getUMat() = _src.getUMat().t();
+        transpose(_src, _dst);
         flip(_dst, _dst, 1);
         break;
     case ROTATE_180:
         flip(_src, _dst, -1);
         break;
     case ROTATE_90_COUNTERCLOCKWISE:
-        _dst.getUMat() = _src.getUMat().t();
+        transpose(_src, _dst);
         flip(_dst, _dst, 0);
         break;
     default:
@@ -859,14 +859,14 @@ void rotate(InputArray _src, OutputArray _dst, int rotateMode)
     switch (rotateMode)
     {
     case ROTATE_90_CLOCKWISE:
-        _dst.getMat() = _src.getMat().t();
+        transpose(_src, _dst);
         flip(_dst, _dst, 1);
         break;
     case ROTATE_180:
         flip(_src, _dst, -1);
         break;
     case ROTATE_90_COUNTERCLOCKWISE:
-        _dst.getMat() = _src.getMat().t();
+        transpose(_src, _dst);
         flip(_dst, _dst, 0);
         break;
     default:
