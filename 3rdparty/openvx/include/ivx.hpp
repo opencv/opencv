@@ -61,6 +61,7 @@ Details: TBD
 #else
     namespace ivx
     {
+    // helpers for compile-time type checking
     template<typename, typename> struct is_same { static const bool value = false; };
     template<typename T> struct is_same<T, T>   { static const bool value = true; };
     }
@@ -73,16 +74,16 @@ Details: TBD
 namespace ivx
 {
 
-/*
-* RuntimeError - OpenVX runtime errors exception class
-*/
+/// Exception class for OpenVX runtime errors
 class RuntimeError : public std::runtime_error
 {
 public:
+    /// Constructor
     explicit RuntimeError(vx_status status, const std::string& msg = "")
         : runtime_error(msg), _status(status)
     {}
 
+    /// OpenVX error code
     vx_status status() const
     { return _status; }
 
@@ -90,12 +91,11 @@ private:
     vx_status   _status;
 };
 
-/*
-* WrapperError - wrappers logic errors exception class
-*/
+/// Exception class for wrappers logic errors
 class WrapperError : public std::logic_error
 {
 public:
+    /// Constructor
     explicit WrapperError(const std::string& msg) : logic_error(msg)
     {}
 };
@@ -106,12 +106,11 @@ inline void checkVxStatus(vx_status status, const std::string& func, const std::
 }
 
 
+/// Helper macro for turning a runtime error in the provided code into a \RuntimeError
 #define IVX_CHECK_STATUS(code) checkVxStatus(code, __func__, #code)
 
 
-/*
-* EnumToType - enum to type compile-time converter (TODO: add more types)
-*/
+/// OpenVX enum to type compile-time converter (TODO: add more types)
 template<vx_enum E> struct EnumToType {};
 template<> struct EnumToType<VX_TYPE_CHAR>     { typedef vx_char type;      static const vx_size bytes = sizeof(type); };
 template<> struct EnumToType<VX_TYPE_INT8>     { typedef vx_int8 type;      static const vx_size bytes = sizeof(type); };
@@ -132,6 +131,7 @@ template<> struct EnumToType<VX_TYPE_BOOL>     { typedef vx_bool type;      stat
 template <vx_enum E> using EnumToType_t = typename EnumToType<E>::type;
 #endif
 
+/// Gets size in bytes for the provided OpenVX type enum
 vx_size enumToTypeSize(vx_enum type)
 {
     switch (type)
@@ -155,9 +155,7 @@ vx_size enumToTypeSize(vx_enum type)
     }
 }
 
-/*
-* TypeToEnum - type to enum compile-time converter (TODO: add more types)
-*/
+/// type to enum compile-time converter (TODO: add more types)
 template<typename T> struct TypeToEnum {};
 template<> struct TypeToEnum<vx_char>     { static const vx_enum value = VX_TYPE_CHAR; };
 template<> struct TypeToEnum<vx_int8>     { static const vx_enum value = VX_TYPE_INT8; };
@@ -176,9 +174,7 @@ template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE
 //template<> struct TypeToEnum<vx_size>     { static const vx_enum val = VX_TYPE_SIZE; };
 //template<> struct TypeToEnum<vx_df_image> { static const vx_enum val = VX_TYPE_DF_IMAGE; };
 
-/*
-* RefTypeTraits - provides info for vx_reference extending types
-*/
+/// Helper type, provides info for OpenVX 'objects' (vx_reference extending) types
 template <typename T> struct RefTypeTraits {};
 
 class Context;
@@ -262,10 +258,9 @@ template <> struct RefTypeTraits <vx_threshold>
     static vx_status release(vxType& ref) { return vxReleaseThreshold(&ref); }
 };
 
-/*
-* Casting to vx_reference with compile-time check
-*/
 #ifdef IVX_USE_CXX98
+
+/// Casting to vx_reference with compile-time check
 
 // takes 'vx_reference' itself and RefWrapper<T> via 'operator vx_reference()'
 vx_reference castToReference(vx_reference ref)
@@ -294,6 +289,8 @@ struct is_ref<T, decltype(T::vxType(), void())> : std::true_type {};
 template<typename T>
 struct is_ref<T, decltype(RefTypeTraits<T>::vxTypeEnum, void())> : std::true_type {};
 
+/// Casting to vx_reference with compile-time check
+
 template<typename T>
 vx_reference castToReference(const T& obj)
 {
@@ -309,14 +306,13 @@ inline void checkVxRef(vx_reference ref, const std::string& func, const std::str
     if(status != VX_SUCCESS) throw RuntimeError( status, func + "() : " + msg );
 }
 
+/// Helper macro for checking the provided OpenVX 'object' and throwing a \RuntimeError in case of error
 #define IVX_CHECK_REF(code) checkVxRef(castToReference(code), __func__, #code)
 
-/*
-* RefWrapper - base class for referenced objects wrappers
-*/
 
 #ifdef IVX_USE_EXTERNAL_REFCOUNT
 
+/// Base class for OpenVX 'objects' wrappers
 template <typename T> class RefWrapper
 {
 public:
@@ -469,6 +465,7 @@ protected:
 
 #else // not IVX_USE_EXTERNAL_REFCOUNT
 
+/// Base class for OpenVX 'objects' wrappers
 template <typename T> class RefWrapper
 {
 public:
@@ -597,9 +594,7 @@ protected:
 
 #endif // IVX_USE_EXTERNAL_REFCOUNT
 
-/*
-* Context
-*/
+/// vx_context wrapper
 class Context : public RefWrapper<vx_context>
 {
 public:
@@ -621,9 +616,7 @@ public:
     { IVX_CHECK_STATUS( vxLoadKernels(ref, module.c_str()) ); }
 };
 
-/*
-* Graph
-*/
+/// vx_graph wrapper
 class Graph : public RefWrapper<vx_graph>
 {
 public:
@@ -645,9 +638,7 @@ public:
     { IVX_CHECK_STATUS(vxWaitGraph(ref)); }
 };
 
-/*
-* Kernel
-*/
+/// vx_kernel wrapper
 class Kernel : public RefWrapper<vx_kernel>
 {
 public:
@@ -660,11 +651,9 @@ public:
     { return Kernel(vxGetKernelByName(c, name.c_str())); }
 };
 
-/*
-* Node
-*/
 #ifdef IVX_USE_CXX98
 
+/// vx_node wrapper
 class Node : public RefWrapper<vx_node>
 {
 public:
@@ -763,6 +752,7 @@ public:
 
 #else // not IVX_USE_CXX98
 
+/// vx_node wrapper
 class Node : public RefWrapper<vx_node>
 {
 public:
@@ -794,9 +784,7 @@ public:
 
 #endif // IVX_USE_CXX98
 
-/*
-* Image
-*/
+/// vx_image wrapper
 class Image : public RefWrapper<vx_image>
 {
 public:
@@ -1159,6 +1147,7 @@ static const vx_enum
     struct Patch;
 };
 
+/// Helper class for a mapping vx_image patch
 struct Image::Patch
 {
 public:
@@ -1297,9 +1286,7 @@ private:
 #endif
 };
 
-/*
-* Param
-*/
+/// vx_parameter wrapper
 class Param : public RefWrapper<vx_parameter>
 {
 public:
@@ -1307,9 +1294,7 @@ public:
     // NYI
 };
 
-/*
-* Scalar
-*/
+/// vx_scalar wrapper
 class Scalar : public RefWrapper<vx_scalar>
 {
 public:
@@ -1366,9 +1351,7 @@ static const vx_enum VX_SCALAR_TYPE = VX_SCALAR_ATTRIBUTE_TYPE;
     }
 };
 
-/*
-* Threshold
-*/
+/// vx_threshold wrapper
 class Threshold : public RefWrapper<vx_threshold>
 {
 public:
@@ -1458,9 +1441,7 @@ static const vx_enum
     }
 };
 
-/*
-* Array
-*/
+/// vx_array wrapper
 class Array : public RefWrapper<vx_array>
 {
 public:
@@ -1474,15 +1455,12 @@ public:
 };
 
 
-/*
-* standard nodes
-*/
+/// Standard nodes
 namespace nodes {
 
+/// Creates a Gaussian Filter 3x3 Node (vxGaussian3x3Node)
 Node gaussian3x3(vx_graph graph, vx_image inImg, vx_image outImg)
-{
-    return Node(vxGaussian3x3Node(graph, inImg, outImg));
-}
+{ return Node(vxGaussian3x3Node(graph, inImg, outImg)); }
 
 } // namespace nodes
 
