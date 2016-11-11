@@ -562,23 +562,12 @@ include(cmake/OpenCVFindLibsPerf.cmake)
 #  Detect other 3rd-party libraries/tools
 # ----------------------------------------------------------------------------
 
-# --- Doxygen and PlantUML for documentation ---
-unset(DOXYGEN_FOUND CACHE)
+# --- Doxygen for documentation ---
 if(BUILD_DOCS)
   find_package(Doxygen)
-  if (PLANTUML_JAR)
-    message(STATUS "Using PlantUML path from command line: ${PLANTUML_JAR}")
-  elseif(DEFINED ENV{PLANTUML_JAR})
-    set(PLANTUML_JAR $ENV{PLANTUML_JAR})
-    message(STATUS "Using PLantUML path from environment: ${PLANTUML_JAR}")
-  else()
-    message(STATUS "To enable PlantUML support, set PLANTUML_JAR environment variable or pass -DPLANTUML_JAR=<filepath> option to cmake")
-  endif()
-  if (PLANTUML_JAR AND DOXYGEN_VERSION VERSION_LESS 1.8.8)
-    message(STATUS "You need Doxygen version 1.8.8 or later to use PlantUML")
-    unset(PLANTUML_JAR)
-  endif()
-endif(BUILD_DOCS)
+else()
+  unset(DOXYGEN_FOUND CACHE)
+endif()
 
 # --- Python Support ---
 include(cmake/OpenCVDetectPython.cmake)
@@ -1341,7 +1330,6 @@ if(BUILD_DOCS)
   status("")
   status("  Documentation:")
   status("    Doxygen:"             DOXYGEN_FOUND             THEN "${DOXYGEN_EXECUTABLE} (ver ${DOXYGEN_VERSION})" ELSE NO)
-  status("    PlantUML:"            PLANTUML_JAR              THEN "${PLANTUML_JAR}" ELSE NO)
 endif()
 
 # ========================== samples and tests ==========================
