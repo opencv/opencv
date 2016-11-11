@@ -495,7 +495,7 @@ GType cvImageWidget_get_type (void){
           (GClassInitFunc) cvImageWidget_class_init,
           sizeof(CvImageWidget),
           (GInstanceInitFunc) cvImageWidget_init,
-          (GTypeFlags)NULL
+          (GTypeFlags)0
           );
     }
 
