@@ -82,10 +82,10 @@ inline float3 sobel(int idx, __local const floatN *smem)
     // result: x, y, mag
     float3 res;
 
-    floatN dx = fma(2, smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4],
+    floatN dx = fma((floatN)2, smem[idx + GRP_SIZEX + 6] - smem[idx + GRP_SIZEX + 4],
         smem[idx + 2] - smem[idx] + smem[idx + 2 * GRP_SIZEX + 10] - smem[idx + 2 * GRP_SIZEX + 8]);
 
-    floatN dy = fma(2, smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9],
+    floatN dy = fma((floatN)2, smem[idx + 1] - smem[idx + 2 * GRP_SIZEX + 9],
         smem[idx + 2] - smem[idx + 2 * GRP_SIZEX + 10] + smem[idx] - smem[idx + 2 * GRP_SIZEX + 8]);
 
 #ifdef L2GRAD

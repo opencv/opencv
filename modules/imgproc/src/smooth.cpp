@@ -2016,9 +2016,68 @@ cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
     return createSeparableLinearFilter( type, type, kx, ky, Point(-1,-1), 0, borderType );
 }
 
-#ifdef HAVE_IPP
 namespace cv
 {
+#ifdef HAVE_OPENCL
+
+static bool ocl_GaussianBlur3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
+                                     InputArray _kernelX, InputArray _kernelY, int borderType)
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) )
+        return false;
+
+    Mat kernelX = _kernelX.getMat().reshape(1, 1);
+    if (kernelX.cols % 2 != 1)
+        return false;
+    Mat kernelY = _kernelY.getMat().reshape(1, 1);
+    if (kernelY.cols % 2 != 1)
+        return false;
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s%s", borderMap[borderType],
+            ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
+            ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
+
+    ocl::Kernel kernel("gaussianBlur3x3_8UC1_cols16_rows2", cv::ocl::imgproc::gaussianBlur3x3_oclsrc, build_opts);
+    if (kernel.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = kernel.set(idxArg, (int)dst.step);
+    idxArg = kernel.set(idxArg, (int)dst.rows);
+    idxArg = kernel.set(idxArg, (int)dst.cols);
+
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+}
+
+#endif
+
+#ifdef HAVE_IPP
+
 static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
@@ -2109,8 +2168,8 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #endif
     return false;
 }
-}
 #endif
+}
 
 
 void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
@@ -2148,6 +2207,12 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 &&
+               ksize.width == 3 && ksize.height == 3 &&
+               (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
+               ocl_GaussianBlur3x3_8UC1(_src, _dst, CV_MAT_DEPTH(type), kx, ky, borderType));
+
     sepFilter2D(_src, _dst, CV_MAT_DEPTH(type), kx, ky, Point(-1,-1), 0, borderType );
 }
 

@@ -49,21 +49,21 @@
 #if depth == 0
     #define DATA_TYPE uchar
     #define MAX_NUM  255
-    #define HALF_MAX 128
+    #define HALF_MAX_NUM 128
     #define COEFF_TYPE int
     #define SAT_CAST(num) convert_uchar_sat(num)
     #define DEPTH_0
 #elif depth == 2
     #define DATA_TYPE ushort
     #define MAX_NUM  65535
-    #define HALF_MAX 32768
+    #define HALF_MAX_NUM 32768
     #define COEFF_TYPE int
     #define SAT_CAST(num) convert_ushort_sat(num)
     #define DEPTH_2
 #elif depth == 5
     #define DATA_TYPE float
     #define MAX_NUM  1.0f
-    #define HALF_MAX 0.5f
+    #define HALF_MAX_NUM 0.5f
     #define COEFF_TYPE float
     #define SAT_CAST(num) (num)
     #define DEPTH_5
@@ -229,11 +229,11 @@ __kernel void RGB2YUV(__global const uchar* srcptr, int src_step, int src_offset
 #ifdef DEPTH_5
                 __constant float * coeffs = c_RGB2YUVCoeffs_f;
                 const DATA_TYPE Y = fma(b, coeffs[0], fma(g, coeffs[1], r * coeffs[2]));
-                const DATA_TYPE U = fma(b - Y, coeffs[3], HALF_MAX);
-                const DATA_TYPE V = fma(r - Y, coeffs[4], HALF_MAX);
+                const DATA_TYPE U = fma(b - Y, coeffs[3], HALF_MAX_NUM);
+                const DATA_TYPE V = fma(r - Y, coeffs[4], HALF_MAX_NUM);
 #else
                 __constant int * coeffs = c_RGB2YUVCoeffs_i;
-                const int delta = HALF_MAX * (1 << yuv_shift);
+                const int delta = HALF_MAX_NUM * (1 << yuv_shift);
                 const int Y = CV_DESCALE(mad24(b, coeffs[0], mad24(g, coeffs[1], mul24(r, coeffs[2]))), yuv_shift);
                 const int U = CV_DESCALE(mad24(b - Y, coeffs[3], delta), yuv_shift);
                 const int V = CV_DESCALE(mad24(r - Y, coeffs[4], delta), yuv_shift);
@@ -278,14 +278,14 @@ __kernel void YUV2RGB(__global const uchar* srcptr, int src_step, int src_offset
 
 #ifdef DEPTH_5
                 __constant float * coeffs = c_YUV2RGBCoeffs_f;
-                float r = fma(V - HALF_MAX, coeffs[3], Y);
-                float g = fma(V - HALF_MAX, coeffs[2], fma(U - HALF_MAX, coeffs[1], Y));
-                float b = fma(U - HALF_MAX, coeffs[0], Y);
+                float r = fma(V - HALF_MAX_NUM, coeffs[3], Y);
+                float g = fma(V - HALF_MAX_NUM, coeffs[2], fma(U - HALF_MAX_NUM, coeffs[1], Y));
+                float b = fma(U - HALF_MAX_NUM, coeffs[0], Y);
 #else
                 __constant int * coeffs = c_YUV2RGBCoeffs_i;
-                const int r = Y + CV_DESCALE(mul24(V - HALF_MAX, coeffs[3]), yuv_shift);
-                const int g = Y + CV_DESCALE(mad24(V - HALF_MAX, coeffs[2], mul24(U - HALF_MAX, coeffs[1])), yuv_shift);
-                const int b = Y + CV_DESCALE(mul24(U - HALF_MAX, coeffs[0]), yuv_shift);
+                const int r = Y + CV_DESCALE(mul24(V - HALF_MAX_NUM, coeffs[3]), yuv_shift);
+                const int g = Y + CV_DESCALE(mad24(V - HALF_MAX_NUM, coeffs[2], mul24(U - HALF_MAX_NUM, coeffs[1])), yuv_shift);
+                const int b = Y + CV_DESCALE(mul24(U - HALF_MAX_NUM, coeffs[0]), yuv_shift);
 #endif
 
                 dst[bidx] = SAT_CAST( b );
@@ -328,8 +328,8 @@ __kernel void YUV2RGB_NVx(__global const uchar* srcptr, int src_step, int src_of
                 float Y3 = ysrc[src_step];
                 float Y4 = ysrc[src_step + 1];
 
-                float U  = ((float)usrc[uidx]) - HALF_MAX;
-                float V  = ((float)usrc[1-uidx]) - HALF_MAX;
+                float U  = ((float)usrc[uidx]) - HALF_MAX_NUM;
+                float V  = ((float)usrc[1-uidx]) - HALF_MAX_NUM;
 
                 __constant float* coeffs = c_YUV2RGBCoeffs_420;
                 float ruv = fma(coeffs[4], V, 0.5f);
@@ -373,6 +373,8 @@ __kernel void YUV2RGB_NVx(__global const uchar* srcptr, int src_step, int src_of
     }
 }
 
+#if uidx < 2
+
 __kernel void YUV2RGB_YV12_IYUV(__global const uchar* srcptr, int src_step, int src_offset,
                                 __global uchar* dstptr, int dst_step, int dt_offset,
                                 int rows, int cols)
@@ -399,12 +401,12 @@ __kernel void YUV2RGB_YV12_IYUV(__global const uchar* srcptr, int src_step, int 
 #ifdef SRC_CONT
                 __global const uchar* uvsrc = srcptr + mad24(rows, src_step, src_offset);
                 int u_ind = mad24(y, cols >> 1, x);
-                float uv[2] = { ((float)uvsrc[u_ind]) - HALF_MAX, ((float)uvsrc[u_ind + ((rows * cols) >> 2)]) - HALF_MAX };
+                float uv[2] = { ((float)uvsrc[u_ind]) - HALF_MAX_NUM, ((float)uvsrc[u_ind + ((rows * cols) >> 2)]) - HALF_MAX_NUM };
 #else
                 int vsteps[2] = { cols >> 1, src_step - (cols >> 1)};
                 __global const uchar* usrc = srcptr + mad24(rows + (y>>1), src_step, src_offset + (y%2)*(cols >> 1) + x);
                 __global const uchar* vsrc = usrc + mad24(rows >> 2, src_step, rows % 4 ? vsteps[y%2] : 0);
-                float uv[2] = { ((float)usrc[0]) - HALF_MAX, ((float)vsrc[0]) - HALF_MAX };
+                float uv[2] = { ((float)usrc[0]) - HALF_MAX_NUM, ((float)vsrc[0]) - HALF_MAX_NUM };
 #endif
                 float U = uv[uidx];
                 float V = uv[1-uidx];
@@ -450,6 +452,10 @@ __kernel void YUV2RGB_YV12_IYUV(__global const uchar* srcptr, int src_step, int 
         }
     }
 }
+
+#endif
+
+#if uidx < 2
 
 __constant float c_RGB2YUVCoeffs_420[8] = { 0.256999969f, 0.50399971f, 0.09799957f, -0.1479988098f, -0.2909994125f,
                                             0.438999176f, -0.3679990768f, -0.0709991455f };
@@ -556,6 +562,8 @@ __kernel void RGB2YUV_YV12_IYUV(__global const uchar* srcptr, int src_step, int 
     }
 }
 
+#endif
+
 __kernel void YUV2RGB_422(__global const uchar* srcptr, int src_step, int src_offset,
                           __global uchar* dstptr, int dst_step, int dst_offset,
                           int rows, int cols)
@@ -576,15 +584,15 @@ __kernel void YUV2RGB_422(__global const uchar* srcptr, int src_step, int src_of
                 __constant float* coeffs = c_YUV2RGBCoeffs_420;
 
 #ifndef USE_OPTIMIZED_LOAD
-                float U = ((float) src[uidx]) - HALF_MAX;
-                float V = ((float) src[(2 + uidx) % 4]) - HALF_MAX;
+                float U = ((float) src[uidx]) - HALF_MAX_NUM;
+                float V = ((float) src[(2 + uidx) % 4]) - HALF_MAX_NUM;
                 float y00 = max(0.f, ((float) src[yidx]) - 16.f) * coeffs[0];
                 float y01 = max(0.f, ((float) src[yidx + 2]) - 16.f) * coeffs[0];
 #else
                 int load_src = *((__global int*) src);
                 float vec_src[4] = { load_src & 0xff, (load_src >> 8) & 0xff, (load_src >> 16) & 0xff, (load_src >> 24) & 0xff};
-                float U = vec_src[uidx] - HALF_MAX;
-                float V = vec_src[(2 + uidx) % 4] - HALF_MAX;
+                float U = vec_src[uidx] - HALF_MAX_NUM;
+                float V = vec_src[(2 + uidx) % 4] - HALF_MAX_NUM;
                 float y00 = max(0.f, vec_src[yidx] - 16.f) * coeffs[0];
                 float y01 = max(0.f, vec_src[yidx + 2] - 16.f) * coeffs[0];
 #endif
@@ -644,11 +652,11 @@ __kernel void RGB2YCrCb(__global const uchar* srcptr, int src_step, int src_offs
 #ifdef DEPTH_5
                 __constant float * coeffs = c_RGB2YCrCbCoeffs_f;
                 DATA_TYPE Y = fma(b, coeffs[2], fma(g, coeffs[1], r * coeffs[0]));
-                DATA_TYPE Cr = fma(r - Y, coeffs[3], HALF_MAX);
-                DATA_TYPE Cb = fma(b - Y, coeffs[4], HALF_MAX);
+                DATA_TYPE Cr = fma(r - Y, coeffs[3], HALF_MAX_NUM);
+                DATA_TYPE Cb = fma(b - Y, coeffs[4], HALF_MAX_NUM);
 #else
                 __constant int * coeffs = c_RGB2YCrCbCoeffs_i;
-                int delta = HALF_MAX * (1 << yuv_shift);
+                int delta = HALF_MAX_NUM * (1 << yuv_shift);
                 int Y =  CV_DESCALE(mad24(b, coeffs[2], mad24(g, coeffs[1], mul24(r, coeffs[0]))), yuv_shift);
                 int Cr = CV_DESCALE(mad24(r - Y, coeffs[3], delta), yuv_shift);
                 int Cb = CV_DESCALE(mad24(b - Y, coeffs[4], delta), yuv_shift);
@@ -694,14 +702,14 @@ __kernel void YCrCb2RGB(__global const uchar* src, int src_step, int src_offset,
 
 #ifdef DEPTH_5
                 __constant float * coeff = c_YCrCb2RGBCoeffs_f;
-                float r = fma(coeff[0], cr - HALF_MAX, yp);
-                float g = fma(coeff[1], cr - HALF_MAX, fma(coeff[2], cb - HALF_MAX, yp));
-                float b = fma(coeff[3], cb - HALF_MAX, yp);
+                float r = fma(coeff[0], cr - HALF_MAX_NUM, yp);
+                float g = fma(coeff[1], cr - HALF_MAX_NUM, fma(coeff[2], cb - HALF_MAX_NUM, yp));
+                float b = fma(coeff[3], cb - HALF_MAX_NUM, yp);
 #else
                 __constant int * coeff = c_YCrCb2RGBCoeffs_i;
-                int r = yp + CV_DESCALE(coeff[0] * (cr - HALF_MAX), yuv_shift);
-                int g = yp + CV_DESCALE(mad24(coeff[1], cr - HALF_MAX, coeff[2] * (cb - HALF_MAX)), yuv_shift);
-                int b = yp + CV_DESCALE(coeff[3] * (cb - HALF_MAX), yuv_shift);
+                int r = yp + CV_DESCALE(coeff[0] * (cr - HALF_MAX_NUM), yuv_shift);
+                int g = yp + CV_DESCALE(mad24(coeff[1], cr - HALF_MAX_NUM, coeff[2] * (cb - HALF_MAX_NUM)), yuv_shift);
+                int b = yp + CV_DESCALE(coeff[3] * (cb - HALF_MAX_NUM), yuv_shift);
 #endif
 
                 dstptr[(bidx^2)] = SAT_CAST(r);
@@ -1564,9 +1572,9 @@ __kernel void RGBA2mRGBA(__global const uchar* src, int src_step, int src_offset
                 uchar4 src_pix = *(__global const uchar4 *)(src + src_index);
 
                 *(__global uchar4 *)(dst + dst_index) =
-                    (uchar4)(mad24(src_pix.x, src_pix.w, HALF_MAX) / MAX_NUM,
-                             mad24(src_pix.y, src_pix.w, HALF_MAX) / MAX_NUM,
-                             mad24(src_pix.z, src_pix.w, HALF_MAX) / MAX_NUM, src_pix.w);
+                    (uchar4)(mad24(src_pix.x, src_pix.w, HALF_MAX_NUM) / MAX_NUM,
+                             mad24(src_pix.y, src_pix.w, HALF_MAX_NUM) / MAX_NUM,
+                             mad24(src_pix.z, src_pix.w, HALF_MAX_NUM) / MAX_NUM, src_pix.w);
 
                 ++y;
                 dst_index += dst_step;

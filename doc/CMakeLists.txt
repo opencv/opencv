@@ -159,12 +159,6 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
 
-  if(PLANTUML_JAR)
-    set(CMAKE_DOXYGEN_PLANTUML_SUPPORT "PLANTUML_JAR_PATH      = ${PLANTUML_JAR}\n")
-  else()
-    set(CMAKE_DOXYGEN_PLANTUML_SUPPORT "ALIASES               += startuml{1}=\"@warning __No plantuml!__ \\n \\n @if DUMMY_PLANTUML_CODE\" enduml=\"@endif\"\n")
-  endif()
-
   # writing file
   configure_file(Doxyfile.in ${doxyfile} @ONLY)
   configure_file(root.markdown.in ${rootfile} @ONLY)

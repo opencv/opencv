@@ -177,6 +177,7 @@ public:
 };
 
 typedef Point_<int> Point2i;
+typedef Point_<int64> Point2l;
 typedef Point_<float> Point2f;
 typedef Point_<double> Point2d;
 typedef Point2i Point;
@@ -308,6 +309,7 @@ public:
 };
 
 typedef Size_<int> Size2i;
+typedef Size_<int64> Size2l;
 typedef Size_<float> Size2f;
 typedef Size_<double> Size2d;
 typedef Size2i Size;
