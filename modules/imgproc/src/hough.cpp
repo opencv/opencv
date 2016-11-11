@@ -1629,7 +1629,8 @@ namespace cv
         CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
 
         Mat accum;
-        UMat edges, dx, dy;
+//        UMat edges, dx, dy;
+        Mat edges, dx, dy;
 
         MemStorage storage(cvCreateMemStorage(0));
         Seq<Point> nz(storage);
@@ -1645,8 +1646,12 @@ namespace cv
         if(maxRadius - minRadius > 32)
             numberOfThreads = std::max(1, std::min(numThreads, 2));
 
+//        parallel_for_(Range(0, edges.rows),
+//                      HoughCirclesAccumInvoker(edges.getMat(ACCESS_READ), dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ),
+//                                               accum, nz, minRadius, maxRadius, dp),
+//                      numberOfThreads);
         parallel_for_(Range(0, edges.rows),
-                      HoughCirclesAccumInvoker(edges.getMat(ACCESS_READ), dx.getMat(ACCESS_READ), dy.getMat(ACCESS_READ),
+                      HoughCirclesAccumInvoker(edges, dx, dy,
                                                accum, nz, minRadius, maxRadius, dp),
                       numberOfThreads);
 
