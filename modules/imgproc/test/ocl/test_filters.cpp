@@ -187,12 +187,108 @@ OCL_TEST_P(SobelTest, Mat)
     }
 }
 
+PARAM_TEST_CASE(Deriv3x3_cols16_rows2_Base, MatType,
+                int, // kernel size
+                Size, // dx, dy
+                BorderType, // border type
+                double, // optional parameter
+                bool, // roi or not
+                int)  // width multiplier
+{
+    int type, borderType, ksize;
+    Size size;
+    double param;
+    bool useRoi;
+    int widthMultiple;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        ksize = GET_PARAM(1);
+        size = GET_PARAM(2);
+        borderType = GET_PARAM(3);
+        param = GET_PARAM(4);
+        useRoi = GET_PARAM(5);
+        widthMultiple = GET_PARAM(6);
+    }
+
+    void random_roi()
+    {
+        size = Size(3, 3);
+
+        Size roiSize = randomSize(size.width, MAX_VALUE, size.height, MAX_VALUE);
+        roiSize.width = std::max(size.width + 13, roiSize.width & (~0xf));
+        roiSize.height = std::max(size.height + 1, roiSize.height & (~0x1));
+
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, 5, 256);
+
+        Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -60, 70);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+    }
+
+    void Near()
+    {
+        Near(1, false);
+    }
+
+    void Near(double threshold, bool relative)
+    {
+        if (relative)
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
+        else
+            OCL_EXPECT_MATS_NEAR(dst, threshold);
+    }
+};
+
+typedef Deriv3x3_cols16_rows2_Base Sobel3x3_cols16_rows2;
+
+OCL_TEST_P(Sobel3x3_cols16_rows2, Mat)
+{
+    int dx = size.width, dy = size.height;
+    double scale = param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::Sobel(src_roi, dst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
+        OCL_ON(cv::Sobel(usrc_roi, udst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
+
+        Near();
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Scharr
 
 typedef FilterTestBase ScharrTest;
 
 OCL_TEST_P(ScharrTest, Mat)
+{
+    int dx = size.width, dy = size.height;
+    double scale = param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::Scharr(src_roi, dst_roi, -1, dx, dy, scale, /* delta */ 0, borderType));
+        OCL_ON(cv::Scharr(usrc_roi, udst_roi, -1, dx, dy, scale, /* delta */ 0, borderType));
+
+        Near();
+    }
+}
+
+typedef Deriv3x3_cols16_rows2_Base Scharr3x3_cols16_rows2;
+
+OCL_TEST_P(Scharr3x3_cols16_rows2, Mat)
 {
     int dx = size.width, dy = size.height;
     double scale = param;
@@ -552,7 +648,25 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
                             Bool(),
                             Values(1))); // not used
 
+OCL_INSTANTIATE_TEST_CASE_P(Filter, Sobel3x3_cols16_rows2, Combine(
+                            Values((MatType)CV_8UC1),
+                            Values(3), // kernel size
+                            Values(Size(1, 0), Size(1, 1), Size(2, 0), Size(2, 1)), // dx, dy
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(0.0), // not used
+                            Bool(),
+                            Values(1))); // not used
+
 OCL_INSTANTIATE_TEST_CASE_P(Filter, ScharrTest, Combine(
+                            FILTER_TYPES,
+                            Values(0), // not used
+                            Values(Size(0, 1), Size(1, 0)), // dx, dy
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(1.0, 0.2), // kernel scale
+                            Bool(),
+                            Values(1))); // not used
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, Scharr3x3_cols16_rows2, Combine(
                             FILTER_TYPES,
                             Values(0), // not used
                             Values(Size(0, 1), Size(1, 0)), // dx, dy
