@@ -63,13 +63,24 @@ protected:
     int blob_count, max_log_blob_count;
     int retr_mode, approx_method;
 
-    int min_log_img_size, max_log_img_size;
+    int min_log_img_width, max_log_img_width;
+    int min_log_img_height, max_log_img_height;
     CvSize img_size;
     int count, count2;
 
     IplImage* img[NUM_IMG];
     CvMemStorage* storage;
     CvSeq *contours, *contours2, *chain;
+
+    static const bool useVeryWideImages =
+#if SIZE_MAX <= 0xffffffff
+        // 32-bit: don't even try the very wide images
+        false
+#else
+        // 64-bit: test with very wide images
+        true
+#endif
+        ;
 };
 
 
@@ -77,13 +88,16 @@ CV_FindContourTest::CV_FindContourTest()
 {
     int i;
 
-    test_case_count    = 300;
+    test_case_count    = useVeryWideImages ? 10 : 300;
     min_blob_size      = 1;
     max_blob_size      = 50;
     max_log_blob_count = 10;
 
-    min_log_img_size   = 3;
-    max_log_img_size   = 10;
+    min_log_img_width  = useVeryWideImages ? 17 : 3;
+    max_log_img_width  = useVeryWideImages ? 17 : 10;
+
+    min_log_img_height = 3;
+    max_log_img_height = 10;
 
     for( i = 0; i < NUM_IMG; i++ )
         img[i] = 0;
@@ -122,8 +136,10 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
     min_blob_size      = cvReadInt( find_param( fs, "min_blob_size" ), min_blob_size );
     max_blob_size      = cvReadInt( find_param( fs, "max_blob_size" ), max_blob_size );
     max_log_blob_count = cvReadInt( find_param( fs, "max_log_blob_count" ), max_log_blob_count );
-    min_log_img_size   = cvReadInt( find_param( fs, "min_log_img_size" ), min_log_img_size );
-    max_log_img_size   = cvReadInt( find_param( fs, "max_log_img_size" ), max_log_img_size );
+    min_log_img_width  = cvReadInt( find_param( fs, "min_log_img_width" ), min_log_img_width );
+    max_log_img_width  = cvReadInt( find_param( fs, "max_log_img_width" ), max_log_img_width );
+    min_log_img_height = cvReadInt( find_param( fs, "min_log_img_height"), min_log_img_height );
+    max_log_img_height = cvReadInt( find_param( fs, "max_log_img_height"), max_log_img_height );
 
     min_blob_size = cvtest::clipInt( min_blob_size, 1, 100 );
     max_blob_size = cvtest::clipInt( max_blob_size, 1, 100 );
@@ -133,11 +149,16 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
 
     max_log_blob_count = cvtest::clipInt( max_log_blob_count, 1, 10 );
 
-    min_log_img_size = cvtest::clipInt( min_log_img_size, 1, 10 );
-    max_log_img_size = cvtest::clipInt( max_log_img_size, 1, 10 );
+    min_log_img_width  = cvtest::clipInt( min_log_img_width, 1, useVeryWideImages ? 17 : 10 );
+    min_log_img_width  = cvtest::clipInt( max_log_img_width, 1, useVeryWideImages ? 17 : 10 );
+    min_log_img_height = cvtest::clipInt( min_log_img_height, 1, 10 );
+    min_log_img_height = cvtest::clipInt( max_log_img_height, 1, 10 );
 
-    if( min_log_img_size > max_log_img_size )
-        CV_SWAP( min_log_img_size, max_log_img_size, t );
+    if( min_log_img_width > max_log_img_width )
+        std::swap( min_log_img_width, max_log_img_width );
+
+    if (min_log_img_height > max_log_img_height)
+        std::swap(min_log_img_height, max_log_img_height);
 
     return 0;
 }
@@ -215,9 +236,9 @@ int CV_FindContourTest::prepare_test_case( int test_case_idx )
     blob_count = cvRound(exp(cvtest::randReal(rng)*max_log_blob_count*CV_LOG2));
 
     img_size.width = cvRound(exp((cvtest::randReal(rng)*
-        (max_log_img_size - min_log_img_size) + min_log_img_size)*CV_LOG2));
+        (max_log_img_width - min_log_img_width) + min_log_img_width)*CV_LOG2));
     img_size.height = cvRound(exp((cvtest::randReal(rng)*
-        (max_log_img_size - min_log_img_size) + min_log_img_size)*CV_LOG2));
+        (max_log_img_height - min_log_img_height) + min_log_img_height)*CV_LOG2));
 
     approx_method = cvtest::randInt( rng ) % 4 + 1;
     retr_mode = cvtest::randInt( rng ) % 4;
