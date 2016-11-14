@@ -45,6 +45,8 @@
 
 #include "precomp.hpp"
 #include "grfmts.hpp"
+#include "utils.hpp"
+#include "exif.hpp"
 #undef min
 #undef max
 #include <iostream>
@@ -227,7 +229,60 @@ static ImageEncoder findEncoder( const String& _ext )
     return ImageEncoder();
 }
 
+
 enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
+
+static void ApplyExifOrientation(const String& filename, Mat& img)
+{
+    int orientation = IMAGE_ORIENTATION_TL;
+
+    if (filename.size() > 0)
+    {
+        ExifReader reader( filename );
+        if( reader.parse() )
+        {
+            ExifEntry_t entry = reader.getTag( ORIENTATION );
+            if (entry.tag != INVALID_TAG)
+            {
+                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
+            }
+        }
+    }
+
+    switch( orientation )
+    {
+        case    IMAGE_ORIENTATION_TL: //0th row == visual top, 0th column == visual left-hand side
+            //do nothing, the image already has proper orientation
+            break;
+        case    IMAGE_ORIENTATION_TR: //0th row == visual top, 0th column == visual right-hand side
+            flip(img, img, 1); //flip horizontally
+            break;
+        case    IMAGE_ORIENTATION_BR: //0th row == visual bottom, 0th column == visual right-hand side
+            flip(img, img, -1);//flip both horizontally and vertically
+            break;
+        case    IMAGE_ORIENTATION_BL: //0th row == visual bottom, 0th column == visual left-hand side
+            flip(img, img, 0); //flip vertically
+            break;
+        case    IMAGE_ORIENTATION_LT: //0th row == visual left-hand side, 0th column == visual top
+            transpose(img, img);
+            break;
+        case    IMAGE_ORIENTATION_RT: //0th row == visual right-hand side, 0th column == visual top
+            transpose(img, img);
+            flip(img, img, 1); //flip horizontally
+            break;
+        case    IMAGE_ORIENTATION_RB: //0th row == visual right-hand side, 0th column == visual bottom
+            transpose(img, img);
+            flip(img, img, -1); //flip both horizontally and vertically
+            break;
+        case    IMAGE_ORIENTATION_LB: //0th row == visual left-hand side, 0th column == visual bottom
+            transpose(img, img);
+            flip(img, img, 0); //flip vertically
+            break;
+        default:
+            //by default the image read has normal (JPEG_ORIENTATION_TL) orientation
+            break;
+    }
+}
 
 /**
  * Read an image into memory and return the information
@@ -403,6 +458,12 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         Mat mat(decoder->height(), decoder->width(), type);
         if (!decoder->readData(mat))
         {
+            // optionally rotate the data if EXIF' orientation flag says so
+            if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+            {
+                ApplyExifOrientation(filename, mat);
+            }
+
             break;
         }
 
@@ -431,6 +492,12 @@ Mat imread( const String& filename, int flags )
 
     /// load the data
     imread_( filename, flags, LOAD_MAT, &img );
+
+    /// optionally rotate the data if EXIF' orientation flag says so
+    if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    {
+        ApplyExifOrientation(filename, img);
+    }
 
     /// return a reference to the data
     return img;
