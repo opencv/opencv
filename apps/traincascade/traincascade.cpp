@@ -4,6 +4,10 @@
 using namespace std;
 using namespace cv;
 
+
+// Test weibo
+
+
 int main( int argc, char* argv[] )
 {
     CvCascadeClassifier classifier;
