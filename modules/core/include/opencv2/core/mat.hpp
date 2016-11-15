@@ -368,6 +368,16 @@ inline void Mat::release()
     data = datastart = dataend = datalimit = 0;
     for(int i = 0; i < dims; i++)
         size.p[i] = 0;
+#ifdef _DEBUG
+    flags = MAGIC_VAL;
+    dims = rows = cols = 0;
+    if (step.p != step.buf)
+    {
+        fastFree(step.p);
+        step.p = step.buf;
+        size.p = &rows;
+    }
+#endif
     refcount = 0;
 }
 
