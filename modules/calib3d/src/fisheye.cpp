@@ -1040,8 +1040,10 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         int b = cv::countNonZero(intrinsicRight.isEstimate);
         cv::Mat deltas;
         solve(J.t() * J, J.t()*e, deltas);
-        intrinsicLeft = intrinsicLeft + deltas.rowRange(0, a);
-        intrinsicRight = intrinsicRight + deltas.rowRange(a, a + b);
+        if (a > 0)
+            intrinsicLeft = intrinsicLeft + deltas.rowRange(0, a);
+        if (b > 0)
+            intrinsicRight = intrinsicRight + deltas.rowRange(a, a + b);
         omcur = omcur + cv::Vec3d(deltas.rowRange(a + b, a + b + 3));
         Tcur = Tcur + cv::Vec3d(deltas.rowRange(a + b + 3, a + b + 6));
         for (int image_idx = 0; image_idx < n_images; ++image_idx)
