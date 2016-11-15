@@ -621,7 +621,7 @@ String tempfile( const char* suffix )
     return fname;
 }
 
-static CvErrorCallback customErrorCallback = 0;
+static ErrorCallback customErrorCallback = 0;
 static void* customErrorCallbackData = 0;
 static bool breakOnError = false;
 
@@ -666,13 +666,13 @@ void error(int _code, const String& _err, const char* _func, const char* _file, 
     error(cv::Exception(_code, _err, _func, _file, _line));
 }
 
-CvErrorCallback
-redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
+ErrorCallback
+redirectError( ErrorCallback errCallback, void* userdata, void** prevUserdata)
 {
     if( prevUserdata )
         *prevUserdata = customErrorCallbackData;
 
-    CvErrorCallback prevCallback = customErrorCallback;
+    ErrorCallback prevCallback = customErrorCallback;
 
     customErrorCallback     = errCallback;
     customErrorCallbackData = userdata;
