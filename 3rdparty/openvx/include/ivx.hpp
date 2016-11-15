@@ -319,16 +319,22 @@ public:
     typedef T vxType;
     static const vx_enum vxTypeEnum = RefTypeTraits <T>::vxTypeEnum;
 
+    /// Default constructor
     RefWrapper() : ref(0), refcount(0)
     {}
 
+    /// Constructor
+    /// \param r OpenVX 'object' (e.g. vx_image)
+    /// \param retainRef flag indicating whether to increase ref counter in constructor (false by default)
     explicit RefWrapper(T r, bool retainRef = false) : ref(0), refcount(0)
     { reset(r, retainRef); }
 
+    /// Copy constructor
     RefWrapper(const RefWrapper& r) : ref(r.ref), refcount(r.refcount)
     { addRef(); }
 
 #ifndef IVX_USE_CXX98
+    /// Move constructor
     RefWrapper(RefWrapper&& rw) noexcept : RefWrapper()
     {
         using std::swap;
@@ -337,12 +343,17 @@ public:
     }
 #endif
 
+    /// Casting to the wrapped OpenVX 'object'
     operator T() const
     { return ref; }
 
+    /// Casting to vx_reference since every OpenVX 'object' extends it
     operator vx_reference() const
     { return castToReference(ref); }
 
+    /// Assigning a new value (decreasing ref counter for the old one)
+    /// \param r OpenVX 'object' (e.g. vx_image)
+    /// \param retainRef flag indicating whether to increase ref counter in constructor (false by default)
     void reset(T r, bool retainRef = false)
     {
         release();
@@ -356,9 +367,12 @@ public:
         checkRef();
     }
 
+    /// Assigning an empty value (decreasing ref counter for the old one)
     void reset()
     { release(); }
 
+    /// Dropping kept value without releas decreasing ref counter
+    /// \return the value being dropped
     T detach()
     {
         T tmp = ref;
@@ -367,6 +381,7 @@ public:
         return tmp;
     }
 
+    /// Unified assignment operator (covers both copy and move cases)
     RefWrapper& operator=(RefWrapper r)
     {
         using std::swap;
@@ -375,15 +390,18 @@ public:
         return *this;
     }
 
+    /// Checking for non-empty
     bool operator !() const
     { return ref == 0; }
 
 #ifndef IVX_USE_CXX98
+    /// Explicit boolean evaluation (called automatically inside conditional operators only)
     explicit operator bool() const
     { return ref != 0; }
 #endif
 
 #ifdef IVX_USE_CXX98
+    /// Getting a context that is kept in each OpenVX 'object' (call get<Context>())
     template<typename C>
     C get() const
     {
@@ -393,6 +411,7 @@ public:
         return C(c, true);
     }
 #else
+    /// Getting a context that is kept in each OpenVX 'object'
     template<typename C = Context, typename = typename std::enable_if<std::is_same<C, Context>::value>::type>
     C getContext() const
     {
@@ -878,12 +897,14 @@ public:
         vx_size num = planes();
         if(num == 0)
             throw WrapperError(std::string(__func__)+"(): unexpected planes number");
-        if (newPtrs.size() < num)
+        if (!newPtrs.empty() && newPtrs.size() < num)
             throw WrapperError(std::string(__func__)+"(): too few input pointers");
-        if (prevPtrs.empty()) prevPtrs.resize(num, 0);
-        else if (prevPtrs.size() < num)
+        if (!prevPtrs.empty() && prevPtrs.size() < num)
             throw WrapperError(std::string(__func__)+"(): too few output pointers");
-        IVX_CHECK_STATUS( vxSwapImageHandle(ref, &newPtrs[0], &prevPtrs[0], num) );
+        IVX_CHECK_STATUS( vxSwapImageHandle( ref,
+                                             newPtrs.empty()  ? 0 : &newPtrs[0],
+                                             prevPtrs.empty() ? 0 : &prevPtrs[0],
+                                             num ) );
     }
 
     void swapHandle(const std::vector<void*>& newPtrs)
@@ -1129,6 +1150,9 @@ static const vx_enum
         default: throw WrapperError(std::string(__func__)+"(): unsupported color format");
         }
     }
+
+    static vx_imagepatch_addressing_t createAddressing(const cv::Mat& m)
+    { return createAddressing((vx_uint32)m.cols, (vx_uint32)m.rows, (vx_int32)m.elemSize(), (vx_int32)m.step); }
 
     void copyTo(vx_uint32 planeIdx, cv::Mat& m)
     {
