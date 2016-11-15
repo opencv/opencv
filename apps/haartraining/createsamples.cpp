@@ -52,6 +52,11 @@
 #include <ctime>
 #include <memory>
 
+// std::auto_ptr
+#if defined(__GNUC__) && __GNUC__ >= 6
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 using namespace std;
 
 #include "cvhaartraining.h"
