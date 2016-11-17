@@ -12,7 +12,7 @@
 
 enum UserMemoryMode
 {
-    COPY, MAP_TO_VX, MAP_FROM_VX
+    COPY, USER_MEM, MAP
 };
 
 ivx::Graph createProcessingGraph(ivx::Image& inputImage, ivx::Image& outputImage)
@@ -100,7 +100,7 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
         Image ivxResult;
 
         Mat output;
-        if (mode == COPY || mode == MAP_FROM_VX)
+        if (mode == COPY || mode == MAP)
         {
             //we will copy or map data from vx_image to cv::Mat
             ivxResult = ivx::Image::create(context, width, height, VX_DF_IMAGE_U8);
@@ -117,8 +117,6 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
 
         Graph graph = createProcessingGraph(ivxImage, ivxResult);
 
-        std::vector<void*> ptrs;
-
         bool stop = false;
         while (!stop)
         {
@@ -129,12 +127,13 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
 
             //getting resulting image in cv::Mat
             Image::Patch resultPatch;
-            std::vector<void*> prevPtrs;
+            std::vector<void*> ptrs;
+            std::vector<void*> prevPtrs(ivxResult.planes());
             if (mode == COPY)
             {
                 ivxResult.copyTo(0, output);
             }
-            else if (mode == MAP_FROM_VX)
+            else if (mode == MAP)
             {
                 //create cv::Mat based on vx_image mapped data
                 resultPatch.map(ivxResult, 0, ivxResult.getValidRegion(), VX_READ_AND_WRITE);
@@ -156,9 +155,9 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
 
 #ifdef VX_VERSION_1_1
             //restore handle
-            if (mode == MAP_TO_VX)
+            if (mode == USER_MEM)
             {
-                ivxResult.swapHandle(prevPtrs);
+                ivxResult.swapHandle(prevPtrs, ptrs);
             }
 #endif
 
@@ -184,7 +183,7 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
             //we should take user memory back before release
             //(it's not done automatically according to standard)
             ivxImage.swapHandle();
-            if (mode == MAP_TO_VX) ivxResult.swapHandle();
+            if (mode == USER_MEM) ivxResult.swapHandle();
         }
 #endif
     }
@@ -210,8 +209,8 @@ int main(int argc, char *argv[])
         "{video    | <none> | video file to be processed}"
         "{mode | copy | user memory interaction mode: \n"
         "copy: create VX images and copy data to/from them\n"
-        "map_to_vx: use handles to user-allocated memory\n"
-        "map_from_vx: map resulting VX image to user memory}"
+        "user_mem: use handles to user-allocated memory\n"
+        "map: map resulting VX image to user memory}"
         ;
 
     cv::CommandLineParser parser(argc, argv, keys);
@@ -229,13 +228,13 @@ int main(int argc, char *argv[])
     {
         mode = COPY;
     }
-    else if(modeString == "map_to_vx")
+    else if(modeString == "user_mem")
     {
-        mode = MAP_TO_VX;
+        mode = USER_MEM;
     }
-    else if(modeString == "map_from_vx")
+    else if(modeString == "map")
     {
-        mode = MAP_FROM_VX;
+        mode = MAP;
     }
     else
     {
