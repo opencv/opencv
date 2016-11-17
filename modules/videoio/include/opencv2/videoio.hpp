@@ -650,6 +650,16 @@ public:
     */
     CV_WRAP virtual bool open(int index);
 
+   /** @brief  Open a camera for video capturing
+
+    @overload
+
+    This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts.
+    Parameters are similar as the constructor VideoCapture(int index),except it takes an additional argument apiPreference.
+    @return open(cameraNum + apiPreference).
+    */
+    CV_WRAP bool open(int cameraNum, int apiPreference);
+
     /** @brief Returns true if video capturing has been initialized already.
 
     If the previous call to VideoCapture constructor or VideoCapture::open() succeeded, the method returns
