@@ -24,7 +24,7 @@ typedef uintptr_t vx_map_id;
 
 enum UserMemoryMode
 {
-    COPY, MAP_TO_VX
+    COPY, USER_MEM
 };
 
 vx_image convertCvMatToVxImage(vx_context context, cv::Mat image, bool toCopy)
@@ -89,11 +89,7 @@ vx_image convertCvMatToVxImage(vx_context context, cv::Mat image, bool toCopy)
     }
     else
     {
-#ifdef VX_VERSION_1_1
-        ovxImage = vxCreateImageFromHandle(context, color, &addr, (void*const*)&ovxData, VX_MEMORY_TYPE_HOST);
-#else
         ovxImage = vxCreateImageFromHandle(context, color, &addr, (void**)&ovxData, VX_MEMORY_TYPE_HOST);
-#endif
         if (vxGetStatus((vx_reference)ovxImage) != VX_SUCCESS)
             throw std::runtime_error("Failed to create image from handle");
     }
@@ -322,7 +318,7 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
     cv::waitKey(0);
 
     //we need to take user memory back before releasing the image
-    if (mode == MAP_TO_VX)
+    if (mode == USER_MEM)
         swapVxImage(ovxImage);
 
     cv::destroyAllWindows();
@@ -339,7 +335,7 @@ int main(int argc, char *argv[])
         "{image    | <none> | image to be processed}"
         "{mode | copy | user memory interaction mode: \n"
         "copy: create VX images and copy data to/from them\n"
-        "map_to_vx: use handles to user-allocated memory}"
+        "user_mem: use handles to user-allocated memory}"
         ;
 
     cv::CommandLineParser parser(argc, argv, keys);
@@ -357,11 +353,11 @@ int main(int argc, char *argv[])
     {
         mode = COPY;
     }
-    else if(modeString == "map_to_vx")
+    else if(modeString == "user_mem")
     {
-        mode = MAP_TO_VX;
+        mode = USER_MEM;
     }
-    else if(modeString == "map_from_vx")
+    else if(modeString == "map")
     {
         std::cerr << modeString << " is not implemented in this sample" << std::endl;
         return -1;

@@ -58,6 +58,11 @@ Details: TBD
 
 #ifndef IVX_USE_CXX98
     #include <type_traits>
+    namespace ivx
+    {
+        using std::is_same;
+        using std::is_pointer;
+    }
 #else
     namespace ivx
     {
@@ -1517,8 +1522,8 @@ static const vx_enum
     static Threshold createRange(vx_context c, vx_enum dataType, vx_int32 valLower, vx_int32 valUpper)
     {
         Threshold thr = create(c, VX_THRESHOLD_TYPE_RANGE, dataType);
-        IVX_CHECK_STATUS( vxSetThresholdAttribute(thr.ref, VX_THRESHOLD_THRESHOLD_LOWER, &val1, sizeof(val1)) );
-        IVX_CHECK_STATUS( vxSetThresholdAttribute(thr.ref, VX_THRESHOLD_THRESHOLD_UPPER, &val2, sizeof(val2)) );
+        IVX_CHECK_STATUS( vxSetThresholdAttribute(thr.ref, VX_THRESHOLD_THRESHOLD_LOWER, &valLower, sizeof(valLower)) );
+        IVX_CHECK_STATUS( vxSetThresholdAttribute(thr.ref, VX_THRESHOLD_THRESHOLD_UPPER, &valUpper, sizeof(valUpper)) );
         return thr;
     }
 
