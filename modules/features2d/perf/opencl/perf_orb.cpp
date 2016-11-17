@@ -27,8 +27,8 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Detect, ORB_IMAGES)
 
     OCL_TEST_CYCLE() detector->detect(frame, points, mask);
 
-    std::sort(points.begin(), points.end(), comparators::KeypointGreater());
-    SANITY_CHECK_KEYPOINTS(points, 1e-5);
+    EXPECT_GT(points.size(), 20u);
+    SANITY_CHECK_NOTHING();
 }
 
 OCL_PERF_TEST_P(ORBFixture, ORB_Extract, ORB_IMAGES)
@@ -47,25 +47,20 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Extract, ORB_IMAGES)
     Ptr<ORB> detector = ORB::create(1500, 1.3f, 1);
     vector<KeyPoint> points;
     detector->detect(frame, points, mask);
-    std::sort(points.begin(), points.end(), comparators::KeypointGreater());
+    EXPECT_GT(points.size(), 20u);
 
     UMat descriptors;
 
     OCL_TEST_CYCLE() detector->compute(frame, points, descriptors);
 
-    SANITY_CHECK(descriptors);
+    EXPECT_EQ((size_t)descriptors.rows, points.size());
+    SANITY_CHECK_NOTHING();
 }
 
 OCL_PERF_TEST_P(ORBFixture, ORB_Full, ORB_IMAGES)
 {
     string filename = getDataPath(GetParam());
     Mat mframe = imread(filename, IMREAD_GRAYSCALE);
-
-    double desc_eps = 1e-6;
-#ifdef ANDROID
-    if (cv::ocl::Device::getDefault().isNVidia())
-        desc_eps = 2;
-#endif
 
     if (mframe.empty())
         FAIL() << "Unable to load source image " << filename;
@@ -81,9 +76,9 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Full, ORB_IMAGES)
 
     OCL_TEST_CYCLE() detector->detectAndCompute(frame, mask, points, descriptors, false);
 
-    ::perf::sort(points, descriptors);
-    SANITY_CHECK_KEYPOINTS(points, 1e-5);
-    SANITY_CHECK(descriptors, desc_eps);
+    EXPECT_GT(points.size(), 20u);
+    EXPECT_EQ((size_t)descriptors.rows, points.size());
+    SANITY_CHECK_NOTHING();
 }
 
 } // ocl
