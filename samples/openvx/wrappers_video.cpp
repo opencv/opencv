@@ -91,10 +91,7 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
         }
         else
         {
-            vx_imagepatch_addressing_t addressing = Image::createAddressing(frame);
-            const std::vector<vx_imagepatch_addressing_t> addrs(1, addressing);
-            const std::vector<void*> ptrs(1, frame.data);
-            ivxImage = Image::createFromHandle(context, color, addrs, ptrs);
+            ivxImage = Image::createFromHandle(context, color, Image::createAddressing(frame), frame.data);
         }
 
         Image ivxResult;
@@ -109,10 +106,8 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
         {
             //create vx_image based on user data, no copying required
             output = cv::Mat(height, width, CV_8U, cv::Scalar(0));
-            vx_imagepatch_addressing_t addressing = Image::createAddressing(output);
-            const std::vector<vx_imagepatch_addressing_t> addrs(1, addressing);
-            const std::vector<void*> ptrs(1, output.data);
-            ivxResult = Image::createFromHandle(context, Image::matTypeToFormat(CV_8U), addrs, ptrs);
+            ivxResult = Image::createFromHandle(context, Image::matTypeToFormat(CV_8U),
+                                                Image::createAddressing(output), output.data);
         }
 
         Graph graph = createProcessingGraph(ivxImage, ivxResult);
