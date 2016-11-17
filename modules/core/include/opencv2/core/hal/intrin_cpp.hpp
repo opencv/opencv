@@ -455,8 +455,10 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> operator ~ (const v_reg<_Tp, 
 {
     v_reg<_Tp, n> c;
     for( int i = 0; i < n; i++ )
+    {
         c.s[i] = V_TypeTraits<_Tp>::reinterpret_from_int(~V_TypeTraits<_Tp>::reinterpret_int(a.s[i]));
-        return c;
+    }
+    return c;
 }
 
 //! @brief Helper macro
