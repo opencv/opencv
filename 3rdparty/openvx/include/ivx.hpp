@@ -871,6 +871,10 @@ public:
     static Image createVirtual(vx_graph graph, vx_uint32 width = 0, vx_uint32 height = 0, vx_df_image format = VX_DF_IMAGE_VIRT)
     { return Image(vxCreateVirtualImage(graph, width, height, format)); }
 
+    /// vxCreateUniformImage() wrapper
+    static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const vx_pixel_value_t& value)
+    { return Image(vxCreateUniformImage(context, width, height, format, &value)); }
+
     /// Planes number for the specified image format (fourcc)
     /// \return 0 for unknown formats
     static vx_size planes(vx_df_image format)
@@ -954,6 +958,13 @@ public:
 #endif
     }
 
+    /// vxCreateImageFromHandle() wrapper for a single plane image
+    static Image createFromHandle(vx_context context, vx_df_image format,const vx_imagepatch_addressing_t& addr, void* ptr)
+    {
+        if(planes(format) != 1) throw WrapperError(std::string(__func__)+"(): not a single plane format");
+        return Image(vxCreateImageFromHandle(context, format, &addr, &ptr, VX_MEMORY_TYPE_HOST));
+    }
+
 #ifdef VX_VERSION_1_1
     /// vxSwapImageHandle() wrapper
     /// \param newPtrs  keeps addresses of new image planes data, can be of image planes size or empty when new pointers are not provided
@@ -971,6 +982,17 @@ public:
                                              newPtrs.empty()  ? 0 : &newPtrs[0],
                                              prevPtrs.empty() ? 0 : &prevPtrs[0],
                                              num ) );
+    }
+
+    /// vxSwapImageHandle() wrapper for a single plane image
+    /// \param newPtr  an address of new image data, can be zero when new pointer is not provided
+    /// \return the previuos address of image data
+    void* swapHandle(void* newPtr)
+    {
+        if(planes() != 1) throw WrapperError(std::string(__func__)+"(): not a single plane image");
+        void* prevPtr = 0;
+        IVX_CHECK_STATUS( vxSwapImageHandle(ref, &newPtr, &prevPtr, 1) );
+        return prevPtr;
     }
 
     /// vxSwapImageHandle() wrapper for the case when no new pointers provided and previous ones are not needed (retrive memory back)
@@ -1251,6 +1273,14 @@ static const vx_enum
         //vx_rectangle_t r = getValidRegion();
         copyFrom(planeIdx, createAddressing((vx_uint32)m.cols, (vx_uint32)m.rows, (vx_int32)m.elemSize(), (vx_int32)m.step), m.ptr());
     }
+
+    /*
+    static Image createFromHandle(vx_context context, const cv::Mat& mat)
+    { throw WrapperError(std::string(__func__)+"(): NYI"); }
+
+    cv::Mat swapHandle(const cv::Mat& newMat)
+    { throw WrapperError(std::string(__func__)+"(): NYI"); }
+    */
 #endif //IVX_USE_OPENCV
 
     struct Patch;
