@@ -19,8 +19,7 @@ ivx::Graph createProcessingGraph(ivx::Image& inputImage, ivx::Image& outputImage
 {
     using namespace ivx;
 
-    Context context = inputImage.getContext();
-
+    Context context = inputImage.get<Context>();
     Graph graph = Graph::create(context);
 
     vx_uint32 width  = inputImage.width();
