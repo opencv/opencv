@@ -1,5 +1,6 @@
-add_library(openvx_hal STATIC src/openvx_hal.cpp include/openvx_hal.hpp include/ivx.hpp include/ivx_lib_debug.hpp)
+add_library(openvx_hal STATIC hal/openvx_hal.cpp hal/openvx_hal.hpp include/ivx.hpp include/ivx_lib_debug.hpp)
 target_include_directories(openvx_hal PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/hal
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_SOURCE_DIR}/modules/core/include
   ${CMAKE_SOURCE_DIR}/modules/imgproc/include
@@ -14,5 +15,5 @@ endif()
 set(OPENVX_HAL_FOUND TRUE PARENT_SCOPE)
 set(OPENVX_HAL_VERSION 0.0.1 PARENT_SCOPE)
 set(OPENVX_HAL_LIBRARIES "openvx_hal" PARENT_SCOPE)
-set(OPENVX_HAL_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/openvx_hal.hpp" PARENT_SCOPE)
-set(OPENVX_HAL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include" "${OPENVX_INCLUDE_DIR}" PARENT_SCOPE)
+set(OPENVX_HAL_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/hal/openvx_hal.hpp" PARENT_SCOPE)
+set(OPENVX_HAL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/hal" "${OPENVX_INCLUDE_DIR}" PARENT_SCOPE)
