@@ -27,6 +27,13 @@ enum UserMemoryMode
     COPY, USER_MEM
 };
 
+vx_image convertCvMatToVxImage(vx_context context, cv::Mat image, bool toCopy);
+cv::Mat copyVxImageToCvMat(vx_image ovxImage);
+void swapVxImage(vx_image ovxImage);
+vx_status createProcessingGraph(vx_image inputImage, vx_image outputImage, vx_graph& graph);
+int ovxDemo(std::string inputPath, UserMemoryMode mode);
+
+
 vx_image convertCvMatToVxImage(vx_context context, cv::Mat image, bool toCopy)
 {
     if (!(!image.empty() && image.dims <= 2 && image.channels() == 1))

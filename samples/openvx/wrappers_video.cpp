@@ -15,6 +15,10 @@ enum UserMemoryMode
     COPY, USER_MEM, MAP
 };
 
+ivx::Graph createProcessingGraph(ivx::Image& inputImage, ivx::Image& outputImage);
+int ovxDemo(std::string inputPath, UserMemoryMode mode);
+
+
 ivx::Graph createProcessingGraph(ivx::Image& inputImage, ivx::Image& outputImage)
 {
     using namespace ivx;
