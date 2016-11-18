@@ -89,8 +89,8 @@ class RuntimeError : public std::runtime_error
 {
 public:
     /// Constructor
-    explicit RuntimeError(vx_status status, const std::string& msg = "")
-        : runtime_error(msg), _status(status)
+    explicit RuntimeError(vx_status st, const std::string& msg = "")
+        : runtime_error(msg), _status(st)
     {}
 
     /// OpenVX error code
@@ -142,7 +142,7 @@ template <vx_enum E> using EnumToType_t = typename EnumToType<E>::type;
 #endif
 
 /// Gets size in bytes for the provided OpenVX type enum
-vx_size enumToTypeSize(vx_enum type)
+inline vx_size enumToTypeSize(vx_enum type)
 {
     switch (type)
     {
@@ -1314,16 +1314,16 @@ public:
     { return _mapId; }
 #else
     /// reference to vx_rectangle_t for the current mapping
-    const vx_rectangle_t& rect() const
+    const vx_rectangle_t& rectangle() const
     { return _rect; }
 
     /// Image plane index for the current mapping
-    vx_uint32 planeIdx() const
+    vx_uint32 planeIndex() const
     { return _planeIdx; }
 #endif // VX_VERSION_1_1
 
     /// vx_image for the current mapping
-    vx_image img() const
+    vx_image image() const
     { return _img; }
 
     /// where this patch is  mapped
@@ -1393,6 +1393,7 @@ public:
         IVX_CHECK_STATUS(vxMapImagePatch(img, &rect, planeIdx, &_mapId, &_addr, &_data, usage, _memType, flags) );
 #else
         IVX_CHECK_STATUS(vxAccessImagePatch(img, &rect, planeIdx, &_addr, &_data, usage));
+        (void)flags;
         _rect = rect;
         _planeIdx = planeIdx;
 #endif
@@ -1565,8 +1566,8 @@ static const vx_enum
 
     /// vxQueryThreshold() wrapper
     template<typename T>
-    void query(vx_enum att, T& value) const
-    { IVX_CHECK_STATUS( vxQueryThreshold(ref, att, &value, sizeof(value)) ); }
+    void query(vx_enum att, T& val) const
+    { IVX_CHECK_STATUS( vxQueryThreshold(ref, att, &value, sizeof(val)) ); }
 
     /// vxQueryThreshold(VX_THRESHOLD_TYPE) wrapper
     vx_enum type() const
