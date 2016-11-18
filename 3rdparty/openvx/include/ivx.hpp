@@ -532,7 +532,6 @@ public:
     operator vx_reference() const
     { return castToReference(ref); }
 
-#ifdef IVX_USE_CXX98
     /// Getting a context that is kept in each OpenVX 'object' (call get<Context>())
     template<typename C>
     C get() const
@@ -542,7 +541,8 @@ public:
         // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
         return C(c, true);
     }
-#else
+
+#ifndef IVX_USE_CXX98
     /// Getting a context that is kept in each OpenVX 'object'
     template<typename C = Context, typename = typename std::enable_if<std::is_same<C, Context>::value>::type>
     C getContext() const
@@ -871,9 +871,15 @@ public:
     static Image createVirtual(vx_graph graph, vx_uint32 width = 0, vx_uint32 height = 0, vx_df_image format = VX_DF_IMAGE_VIRT)
     { return Image(vxCreateVirtualImage(graph, width, height, format)); }
 
+#ifdef VX_VERSION_1_1
     /// vxCreateUniformImage() wrapper
     static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const vx_pixel_value_t& value)
     { return Image(vxCreateUniformImage(context, width, height, format, &value)); }
+#else
+    /// vxCreateUniformImage() wrapper
+    static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const void* value)
+    { return Image(vxCreateUniformImage(context, width, height, format, value)); }
+#endif
 
     /// Planes number for the specified image format (fourcc)
     /// \return 0 for unknown formats
@@ -962,7 +968,7 @@ public:
     static Image createFromHandle(vx_context context, vx_df_image format,const vx_imagepatch_addressing_t& addr, void* ptr)
     {
         if(planes(format) != 1) throw WrapperError(std::string(__func__)+"(): not a single plane format");
-        return Image(vxCreateImageFromHandle(context, format, &addr, &ptr, VX_MEMORY_TYPE_HOST));
+        return Image(vxCreateImageFromHandle(context, format, const_cast<vx_imagepatch_addressing_t*> (&addr), &ptr, VX_MEMORY_TYPE_HOST));
     }
 
 #ifdef VX_VERSION_1_1
