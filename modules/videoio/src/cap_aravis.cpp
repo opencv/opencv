@@ -188,11 +188,12 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
 
 void CvCaptureCAM_Aravis::close()
 {
-    if(camera)
+    if(camera) {
         stopCapture();
 
-    g_object_unref(camera);
-    camera = NULL;
+        g_object_unref(camera);
+        camera = NULL;
+    }
 }
 
 bool CvCaptureCAM_Aravis::getDeviceNameById(int id, std::string &device)
@@ -207,6 +208,7 @@ bool CvCaptureCAM_Aravis::getDeviceNameById(int id, std::string &device)
     return false;
 }
 
+#include <iostream>
 bool CvCaptureCAM_Aravis::create( int index )
 {
     std::string deviceName;
@@ -559,8 +561,10 @@ void CvCaptureCAM_Aravis::stopCapture()
 {
     arv_camera_stop_acquisition(camera);
 
-    g_object_unref(stream);
-    stream = NULL;
+    if(stream) {
+        g_object_unref(stream);
+        stream = NULL;
+    }
 }
 
 bool CvCaptureCAM_Aravis::startCapture()
