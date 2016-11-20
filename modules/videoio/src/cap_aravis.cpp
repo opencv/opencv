@@ -208,7 +208,6 @@ bool CvCaptureCAM_Aravis::getDeviceNameById(int id, std::string &device)
     return false;
 }
 
-#include <iostream>
 bool CvCaptureCAM_Aravis::create( int index )
 {
     std::string deviceName;
