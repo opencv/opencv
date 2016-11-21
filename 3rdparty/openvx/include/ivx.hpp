@@ -410,7 +410,6 @@ public:
     { return ref != 0; }
 #endif
 
-#ifdef IVX_USE_CXX98
     /// Getting a context that is kept in each OpenVX 'object' (call get<Context>())
     template<typename C>
     C get() const
@@ -420,7 +419,8 @@ public:
         // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
         return C(c, true);
     }
-#else
+
+#ifndef IVX_USE_CXX98
     /// Getting a context that is kept in each OpenVX 'object'
     template<typename C = Context, typename = typename std::enable_if<std::is_same<C, Context>::value>::type>
     C getContext() const
@@ -1567,7 +1567,7 @@ static const vx_enum
     /// vxQueryThreshold() wrapper
     template<typename T>
     void query(vx_enum att, T& val) const
-    { IVX_CHECK_STATUS( vxQueryThreshold(ref, att, &value, sizeof(val)) ); }
+    { IVX_CHECK_STATUS( vxQueryThreshold(ref, att, &val, sizeof(val)) ); }
 
     /// vxQueryThreshold(VX_THRESHOLD_TYPE) wrapper
     vx_enum type() const
