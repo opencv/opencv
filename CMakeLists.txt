@@ -557,6 +557,8 @@ include(cmake/OpenCVFindLibsGrfmt.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
+include(cmake/OpenCVDetectFindGflags.cmake)
+include(cmake/OpenCVDetectFindGlog.cmake)
 
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
