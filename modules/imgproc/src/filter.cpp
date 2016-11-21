@@ -4640,6 +4640,11 @@ struct IppFilter : public hal::Filter2D
         int ddepth = CV_MAT_DEPTH(dtype);
         int sdepth = CV_MAT_DEPTH(stype);
 
+#if IPP_VERSION_X100 >= 201700 && IPP_VERSION_X100 < 201702 // IPP bug with 1x1 kernel
+        if(kernel_width == 1 && kernel_height == 1)
+            return false;
+#endif
+
         bool runIpp = true
                       && (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE)
                       && (sdepth == ddepth)
@@ -4911,26 +4916,29 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
     }
 
 #ifdef HAVE_IPP
-    if (kernel_type == CV_32FC1) {
-        IppFilter<CV_32F>* impl = new IppFilter<CV_32F>();
-        if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
-                       max_width, max_height, stype, dtype,
-                       borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
-        {
-            return Ptr<hal::Filter2D>(impl);
+    CV_IPP_CHECK()
+    {
+        if (kernel_type == CV_32FC1) {
+            IppFilter<CV_32F>* impl = new IppFilter<CV_32F>();
+            if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
+                           max_width, max_height, stype, dtype,
+                           borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
+            {
+                return Ptr<hal::Filter2D>(impl);
+            }
+            delete impl;
         }
-        delete impl;
-    }
 
-    if (kernel_type == CV_16SC1) {
-        IppFilter<CV_16S>* impl = new IppFilter<CV_16S>();
-        if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
-                       max_width, max_height, stype, dtype,
-                       borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
-        {
-            return Ptr<hal::Filter2D>(impl);
+        if (kernel_type == CV_16SC1) {
+            IppFilter<CV_16S>* impl = new IppFilter<CV_16S>();
+            if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
+                           max_width, max_height, stype, dtype,
+                           borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
+            {
+                return Ptr<hal::Filter2D>(impl);
+            }
+            delete impl;
         }
-        delete impl;
     }
 #endif
 
