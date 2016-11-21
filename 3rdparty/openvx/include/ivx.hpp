@@ -81,6 +81,21 @@ Details: TBD
     #include "opencv2/core.hpp"
 #endif
 
+// disabling false alarm warnings
+#if defined(_MSC_VER)
+    #pragma warning(push)
+    //#pragma warning( disable : 4??? )
+#elif defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wunused-local-typedef"
+    #pragma clang diagnostic ignored "-Wmissing-prototypes"
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+    #pragma GCC diagnostic ignored "-Wunused-value"
+    #pragma GCC diagnostic ignored "-Wmissing-declarations"
+#endif // compiler macro
+
 namespace ivx
 {
 
@@ -273,12 +288,12 @@ template <> struct RefTypeTraits <vx_threshold>
 /// Casting to vx_reference with compile-time check
 
 // takes 'vx_reference' itself and RefWrapper<T> via 'operator vx_reference()'
-vx_reference castToReference(vx_reference ref)
+inline vx_reference castToReference(vx_reference ref)
 { return ref; }
 
 // takes vx_reference extensions that have RefTypeTraits<T> specializations
 template<typename T>
-vx_reference castToReference(const T& ref, typename RefTypeTraits<T>::vxType dummy = 0)
+inline vx_reference castToReference(const T& ref, typename RefTypeTraits<T>::vxType dummy = 0)
 { (void)dummy; return (vx_reference)ref; }
 
 #else
@@ -302,7 +317,7 @@ struct is_ref<T, decltype(RefTypeTraits<T>::vxTypeEnum, void())> : std::true_typ
 /// Casting to vx_reference with compile-time check
 
 template<typename T>
-vx_reference castToReference(const T& obj)
+inline vx_reference castToReference(const T& obj)
 {
     static_assert(is_ref<T>::value, "unsupported conversion");
     return (vx_reference) obj;
@@ -1162,12 +1177,12 @@ static const vx_enum
     /// vxCopyImagePatch() wrapper (or vxAccessImagePatch() + vxCommitImagePatch() for OpenVX 1.0)
     void copy( vx_uint32 planeIdx, vx_rectangle_t rect,
                const vx_imagepatch_addressing_t& addr, void* data,
-               vx_enum usage, vx_enum memType = VX_MEMORY_TYPE_HOST )
+               vx_enum usage, vx_enum memoryType = VX_MEMORY_TYPE_HOST )
     {
 #ifdef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxCopyImagePatch(ref, &rect, planeIdx, &addr, (void*)data, usage, memType));
+        IVX_CHECK_STATUS(vxCopyImagePatch(ref, &rect, planeIdx, &addr, (void*)data, usage, memoryType));
 #else
-        (void)memType;
+        (void)memoryType;
         vx_imagepatch_addressing_t* a = const_cast<vx_imagepatch_addressing_t*>(&addr);
         IVX_CHECK_STATUS(vxAccessImagePatch(ref, &rect, planeIdx, a, &data, usage));
         IVX_CHECK_STATUS(vxCommitImagePatch(ref, &rect, planeIdx, a, data));
@@ -1652,5 +1667,14 @@ Node gaussian3x3(vx_graph graph, vx_image inImg, vx_image outImg)
 } // namespace nodes
 
 } // namespace ivx
+
+// restore warnings
+#if defined(_MSC_VER)
+    #pragma warning(pop)
+#elif defined(__clang__)
+    #pragma clang diagnostic pop
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic pop
+#endif // compiler macro
 
 #endif //IVX_HPP
