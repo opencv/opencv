@@ -1086,7 +1086,7 @@ void HOGDescriptorTester::detect(const Mat& img,
         return;
     }
 
-    const double eps = 0.0;
+    const double eps = FLT_EPSILON * 100;
     double diff_norm = cvtest::norm(actual_weights, weights, NORM_L2);
     if (diff_norm > eps)
     {
@@ -1096,7 +1096,6 @@ void HOGDescriptorTester::detect(const Mat& img,
         failed = true;
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         ts->set_gtest_status();
-        return;
     }
 }
 
@@ -1169,7 +1168,7 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
     actual_hog->compute(img, actual_descriptors, winStride, padding, locations);
 
     double diff_norm = cvtest::norm(actual_descriptors, descriptors, NORM_L2);
-    const double eps = 0.0;
+    const double eps = FLT_EPSILON * 100;
     if (diff_norm > eps)
     {
         ts->printf(cvtest::TS::SUMMARY, "Norm of the difference: %lf\n", diff_norm);
@@ -1178,7 +1177,6 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
         ts->printf(cvtest::TS::LOG, "Channels: %d\n", img.channels());
         ts->set_gtest_status();
         failed = true;
-        return;
     }
 }
 
@@ -1315,7 +1313,7 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     const char* args[] = { "Gradient's", "Qangles's" };
     actual_hog->computeGradient(img, actual_mats[0], actual_mats[1], paddingTL, paddingBR);
 
-    const double eps = 0.0;
+    const double eps = FLT_EPSILON * 100;
     for (i = 0; i < 2; ++i)
     {
        double diff_norm = cvtest::norm(reference_mats[i], actual_mats[i], NORM_L2);
@@ -1327,7 +1325,6 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
            ts->set_gtest_status();
            failed = true;
-           return;
        }
     }
 }
