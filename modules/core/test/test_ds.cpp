@@ -56,7 +56,7 @@ static void cvTsSimpleSeqShiftAndCopy( CvTsSimpleSeq* seq, int from_idx, int to_
                 (seq->count - from_idx)*elem_size );
     }
     seq->count += to_idx - from_idx;
-    if( elem && to_idx > from_idx )
+    if( elem )
         memcpy( seq->array + from_idx*elem_size, elem, (to_idx - from_idx)*elem_size );
 }
 

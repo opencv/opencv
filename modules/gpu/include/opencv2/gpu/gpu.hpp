@@ -54,6 +54,12 @@
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/features2d/features2d.hpp"
 
+// std::auto_ptr
+#if defined(__GNUC__) && __GNUC__ >= 6
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 namespace cv { namespace gpu {
 
 //////////////////////////////// CudaMem ////////////////////////////////
@@ -2526,5 +2532,9 @@ CV_EXPORTS void calcWobbleSuppressionMaps(
 } // namespace gpu
 
 } // namespace cv
+
+#if defined(__GNUC__) && __GNUC__ >= 6
+#pragma GCC diagnostic pop
+#endif
 
 #endif /* __OPENCV_GPU_HPP__ */

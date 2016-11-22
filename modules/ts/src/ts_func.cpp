@@ -1757,7 +1757,7 @@ cmpUlpsFlt_(const int* src1, const int* src2, size_t total, int imaxdiff, size_t
     for( i = 0; i < total; i++ )
     {
         int a = src1[i], b = src2[i];
-        if( a < 0 ) a ^= C; if( b < 0 ) b ^= C;
+        if( a < 0 ) { a ^= C; } if( b < 0 ) { b ^= C; }
         int diff = std::abs(a - b);
         if( realmaxdiff < diff )
         {
@@ -1779,7 +1779,7 @@ cmpUlpsFlt_(const int64* src1, const int64* src2, size_t total, int imaxdiff, si
     for( i = 0; i < total; i++ )
     {
         int64 a = src1[i], b = src2[i];
-        if( a < 0 ) a ^= C; if( b < 0 ) b ^= C;
+        if( a < 0 ) { a ^= C; } if( b < 0 ) { b ^= C; }
         double diff = fabs((double)a - (double)b);
         if( realmaxdiff < diff )
         {

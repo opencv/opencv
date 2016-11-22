@@ -1339,6 +1339,7 @@ bool CV_StereoCalibrationTest::checkPandROI( int test_case_idx, const Mat& M, co
 
     undistortPoints(Mat(pts), upts, M, D, R, P );
     for( k = 0; k < N*N; k++ )
+    {
         if( upts[k].x < -imgsize.width*eps || upts[k].x > imgsize.width*(1+eps) ||
             upts[k].y < -imgsize.height*eps || upts[k].y > imgsize.height*(1+eps) )
         {
@@ -1346,6 +1347,7 @@ bool CV_StereoCalibrationTest::checkPandROI( int test_case_idx, const Mat& M, co
                 test_case_idx, pts[k].x, pts[k].y, upts[k].x, upts[k].y);
             return false;
         }
+    }
 
         // step 2. check that all the points inside ROI belong to the original source image
         Mat temp(imgsize, CV_8U), utemp, map1, map2;
