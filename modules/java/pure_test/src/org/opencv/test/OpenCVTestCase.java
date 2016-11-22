@@ -27,6 +27,11 @@ import org.opencv.core.KeyPoint;
 import org.opencv.imgcodecs.Imgcodecs;
 
 public class OpenCVTestCase extends TestCase {
+
+    public static class TestSkipException extends RuntimeException {
+        public TestSkipException() {}
+    }
+
     //change to 'true' to unblock fail on fail("Not yet implemented")
     public static final boolean passNYI = true;
 
@@ -214,10 +219,38 @@ public class OpenCVTestCase extends TestCase {
     protected void runTest() throws Throwable {
         // Do nothing if the precondition does not hold.
         if (isTestCaseEnabled) {
-            super.runTest();
+            try {
+                super.runTest();
+            } catch (TestSkipException ex) {
+                OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" skipped!");
+                assertTrue(true);
+            }
         } else {
             OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" disabled!");
         }
+    }
+
+    public void runBare() throws Throwable {
+        Throwable exception = null;
+        try {
+            setUp();
+        } catch (TestSkipException ex) {
+            OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" skipped!");
+            assertTrue(true);
+            return;
+        }
+        try {
+            runTest();
+        } catch (Throwable running) {
+            exception = running;
+        } finally {
+            try {
+                tearDown();
+            } catch (Throwable tearingDown) {
+                if (exception == null) exception = tearingDown;
+            }
+        }
+        if (exception != null) throw exception;
     }
 
     protected Mat getMat(int type, double... vals)
@@ -523,6 +556,10 @@ public class OpenCVTestCase extends TestCase {
             }
         }
         catch(Exception ex) {
+            if (cname.startsWith(XFEATURES2D))
+            {
+                throw new TestSkipException();
+            }
             message = TAG + " :: " + "could not instantiate " + cname + "! Exception: " + ex.getMessage();
         }
 
