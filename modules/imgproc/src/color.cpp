@@ -5074,16 +5074,169 @@ struct HLS2RGB_f
     typedef float channel_type;
 
     HLS2RGB_f(int _dstcn, int _blueIdx, float _hrange)
-    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {}
+    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+    }
+
+    #if CV_SSE2
+    void process(__m128& v_h0, __m128& v_h1, __m128& v_l0,
+                 __m128& v_l1, __m128& v_s0, __m128& v_s1) const
+    {
+        __m128 v_lel0 = _mm_cmple_ps(v_l0, _mm_set1_ps(0.5f));
+        __m128 v_lel1 = _mm_cmple_ps(v_l1, _mm_set1_ps(0.5f));
+        __m128 v_p20 = _mm_andnot_ps(v_lel0, _mm_sub_ps(_mm_add_ps(v_l0, v_s0), _mm_mul_ps(v_l0, v_s0)));
+        __m128 v_p21 = _mm_andnot_ps(v_lel1, _mm_sub_ps(_mm_add_ps(v_l1, v_s1), _mm_mul_ps(v_l1, v_s1)));
+        v_p20 = _mm_or_ps(v_p20, _mm_and_ps(v_lel0, _mm_mul_ps(v_l0, _mm_add_ps(_mm_set1_ps(1.0f), v_s0))));
+        v_p21 = _mm_or_ps(v_p21, _mm_and_ps(v_lel1, _mm_mul_ps(v_l1, _mm_add_ps(_mm_set1_ps(1.0f), v_s1))));
+
+        __m128 v_p10 = _mm_sub_ps(_mm_mul_ps(_mm_set1_ps(2.0f), v_l0), v_p20);
+        __m128 v_p11 = _mm_sub_ps(_mm_mul_ps(_mm_set1_ps(2.0f), v_l1), v_p21);
+
+        v_h0 = _mm_mul_ps(v_h0, _mm_set1_ps(hscale));
+        v_h1 = _mm_mul_ps(v_h1, _mm_set1_ps(hscale));
+
+        __m128 v_pre_sector0 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_h0));
+        __m128 v_pre_sector1 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_h1));
+
+        v_h0 = _mm_sub_ps(v_h0, v_pre_sector0);
+        v_h1 = _mm_sub_ps(v_h1, v_pre_sector1);
+
+        __m128 v_p2_p10 = _mm_sub_ps(v_p20, v_p10);
+        __m128 v_p2_p11 = _mm_sub_ps(v_p21, v_p11);
+        __m128 v_tab20 = _mm_add_ps(v_p10, _mm_mul_ps(v_p2_p10, _mm_sub_ps(_mm_set1_ps(1.0f), v_h0)));
+        __m128 v_tab21 = _mm_add_ps(v_p11, _mm_mul_ps(v_p2_p11, _mm_sub_ps(_mm_set1_ps(1.0f), v_h1)));
+        __m128 v_tab30 = _mm_add_ps(v_p10, _mm_mul_ps(v_p2_p10, v_h0));
+        __m128 v_tab31 = _mm_add_ps(v_p11, _mm_mul_ps(v_p2_p11, v_h1));
+
+        __m128 v_sector0 = _mm_div_ps(v_pre_sector0, _mm_set1_ps(6.0f));
+        __m128 v_sector1 = _mm_div_ps(v_pre_sector1, _mm_set1_ps(6.0f));
+        v_sector0 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_sector0));
+        v_sector1 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_sector1));
+        v_sector0 = _mm_mul_ps(v_sector0, _mm_set1_ps(6.0f));
+        v_sector1 = _mm_mul_ps(v_sector1, _mm_set1_ps(6.0f));
+        v_sector0 = _mm_sub_ps(v_pre_sector0, v_sector0);
+        v_sector1 = _mm_sub_ps(v_pre_sector1, v_sector1);
+
+        v_h0 = _mm_and_ps(v_p10, _mm_cmplt_ps(v_sector0, _mm_set1_ps(2.0f)));
+        v_h1 = _mm_and_ps(v_p11, _mm_cmplt_ps(v_sector1, _mm_set1_ps(2.0f)));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab30, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab31, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_p20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_p21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_p20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_p21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab20, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab21, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_l0 = _mm_and_ps(v_tab30, _mm_cmplt_ps(v_sector0, _mm_set1_ps(1.0f)));
+        v_l1 = _mm_and_ps(v_tab31, _mm_cmplt_ps(v_sector1, _mm_set1_ps(1.0f)));
+        v_l0 = _mm_or_ps(v_l0, _mm_and_ps(v_p20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(1.0f))));
+        v_l1 = _mm_or_ps(v_l1, _mm_and_ps(v_p21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(1.0f))));
+        v_l0 = _mm_or_ps(v_l0, _mm_and_ps(v_p20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_l1 = _mm_or_ps(v_l1, _mm_and_ps(v_p21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_l0 = _mm_or_ps(v_l0, _mm_and_ps(v_tab20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_l1 = _mm_or_ps(v_l1, _mm_and_ps(v_tab21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_l0 = _mm_or_ps(v_l0, _mm_and_ps(v_p10, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_l1 = _mm_or_ps(v_l1, _mm_and_ps(v_p11, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_s0 = _mm_and_ps(v_p20, _mm_cmplt_ps(v_sector0, _mm_set1_ps(1.0f)));
+        v_s1 = _mm_and_ps(v_p21, _mm_cmplt_ps(v_sector1, _mm_set1_ps(1.0f)));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(1.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(1.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_p10, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_p11, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_p10, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_p11, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab30, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab31, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_p20, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_p21, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(4.0f))));
+    }
+    #endif
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, bidx = blueIdx, dcn = dstcn;
+        int i = 0, bidx = blueIdx, dcn = dstcn;
         float _hscale = hscale;
         float alpha = ColorChannel<float>::max();
         n *= 3;
 
-        for( i = 0; i < n; i += 3, dst += dcn )
+        #if CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, dst += dcn * 8 )
+            {
+                __m128 v_h0 = _mm_loadu_ps(src + i +  0);
+                __m128 v_h1 = _mm_loadu_ps(src + i +  4);
+                __m128 v_l0 = _mm_loadu_ps(src + i +  8);
+                __m128 v_l1 = _mm_loadu_ps(src + i + 12);
+                __m128 v_s0 = _mm_loadu_ps(src + i + 16);
+                __m128 v_s1 = _mm_loadu_ps(src + i + 20);
+
+                _mm_deinterleave_ps(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
+
+                process(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
+
+                if (dcn == 3)
+                {
+                    if (bidx)
+                    {
+                        _mm_interleave_ps(v_s0, v_s1, v_l0, v_l1, v_h0, v_h1);
+
+                        _mm_storeu_ps(dst +  0, v_s0);
+                        _mm_storeu_ps(dst +  4, v_s1);
+                        _mm_storeu_ps(dst +  8, v_l0);
+                        _mm_storeu_ps(dst + 12, v_l1);
+                        _mm_storeu_ps(dst + 16, v_h0);
+                        _mm_storeu_ps(dst + 20, v_h1);
+                    }
+                    else
+                    {
+                        _mm_interleave_ps(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
+
+                        _mm_storeu_ps(dst +  0, v_h0);
+                        _mm_storeu_ps(dst +  4, v_h1);
+                        _mm_storeu_ps(dst +  8, v_l0);
+                        _mm_storeu_ps(dst + 12, v_l1);
+                        _mm_storeu_ps(dst + 16, v_s0);
+                        _mm_storeu_ps(dst + 20, v_s1);
+                    }
+                }
+                else
+                {
+                    __m128 v_a0 = _mm_set1_ps(alpha);
+                    __m128 v_a1 = _mm_set1_ps(alpha);
+                    if (bidx)
+                    {
+                        _mm_interleave_ps(v_s0, v_s1, v_l0, v_l1, v_h0, v_h1, v_a0, v_a1);
+
+                        _mm_storeu_ps(dst +  0, v_s0);
+                        _mm_storeu_ps(dst +  4, v_s1);
+                        _mm_storeu_ps(dst +  8, v_l0);
+                        _mm_storeu_ps(dst + 12, v_l1);
+                        _mm_storeu_ps(dst + 16, v_h0);
+                        _mm_storeu_ps(dst + 20, v_h1);
+                        _mm_storeu_ps(dst + 24, v_a0);
+                        _mm_storeu_ps(dst + 28, v_a1);
+                    }
+                    else
+                    {
+                        _mm_interleave_ps(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1, v_a0, v_a1);
+
+                        _mm_storeu_ps(dst +  0, v_h0);
+                        _mm_storeu_ps(dst +  4, v_h1);
+                        _mm_storeu_ps(dst +  8, v_l0);
+                        _mm_storeu_ps(dst + 12, v_l1);
+                        _mm_storeu_ps(dst + 16, v_s0);
+                        _mm_storeu_ps(dst + 20, v_s1);
+                        _mm_storeu_ps(dst + 24, v_a0);
+                        _mm_storeu_ps(dst + 28, v_a1);
+                    }
+                }
+            }
+        }
+        #endif
+        for( ; i < n; i += 3, dst += dcn )
         {
             float h = src[i], l = src[i+1], s = src[i+2];
             float b, g, r;
@@ -5130,6 +5283,9 @@ struct HLS2RGB_f
 
     int dstcn, blueIdx;
     float hscale;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
 };
 
 
