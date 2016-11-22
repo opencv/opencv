@@ -15,6 +15,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   ocv_include_modules_recurse(${OPENCV_OPENVX_SAMPLE_REQUIRED_DEPS})
 
   add_definitions(-DIVX_USE_OPENCV)
+  add_definitions(-DIVX_HIDE_INFO_WARNINGS)
 
   file(GLOB srcs_wrapped wrappers.cpp *.hpp)
   file(GLOB srcs_orig  no_wrappers.cpp *.hpp)
