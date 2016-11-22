@@ -58,6 +58,11 @@ Details: TBD
 
 #ifndef IVX_USE_CXX98
     #include <type_traits>
+    namespace ivx
+    {
+        using std::is_same;
+        using std::is_pointer;
+    }
 #else
     namespace ivx
     {
@@ -76,6 +81,21 @@ Details: TBD
     #include "opencv2/core.hpp"
 #endif
 
+// disabling false alarm warnings
+#if defined(_MSC_VER)
+    #pragma warning(push)
+    //#pragma warning( disable : 4??? )
+#elif defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wunused-local-typedef"
+    #pragma clang diagnostic ignored "-Wmissing-prototypes"
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+    #pragma GCC diagnostic ignored "-Wunused-value"
+    #pragma GCC diagnostic ignored "-Wmissing-declarations"
+#endif // compiler macro
+
 namespace ivx
 {
 
@@ -84,8 +104,8 @@ class RuntimeError : public std::runtime_error
 {
 public:
     /// Constructor
-    explicit RuntimeError(vx_status status, const std::string& msg = "")
-        : runtime_error(msg), _status(status)
+    explicit RuntimeError(vx_status st, const std::string& msg = "")
+        : runtime_error(msg), _status(st)
     {}
 
     /// OpenVX error code
@@ -137,7 +157,7 @@ template <vx_enum E> using EnumToType_t = typename EnumToType<E>::type;
 #endif
 
 /// Gets size in bytes for the provided OpenVX type enum
-vx_size enumToTypeSize(vx_enum type)
+inline vx_size enumToTypeSize(vx_enum type)
 {
     switch (type)
     {
@@ -268,12 +288,12 @@ template <> struct RefTypeTraits <vx_threshold>
 /// Casting to vx_reference with compile-time check
 
 // takes 'vx_reference' itself and RefWrapper<T> via 'operator vx_reference()'
-vx_reference castToReference(vx_reference ref)
+inline vx_reference castToReference(vx_reference ref)
 { return ref; }
 
 // takes vx_reference extensions that have RefTypeTraits<T> specializations
 template<typename T>
-vx_reference castToReference(const T& ref, typename RefTypeTraits<T>::vxType dummy = 0)
+inline vx_reference castToReference(const T& ref, typename RefTypeTraits<T>::vxType dummy = 0)
 { (void)dummy; return (vx_reference)ref; }
 
 #else
@@ -297,7 +317,7 @@ struct is_ref<T, decltype(RefTypeTraits<T>::vxTypeEnum, void())> : std::true_typ
 /// Casting to vx_reference with compile-time check
 
 template<typename T>
-vx_reference castToReference(const T& obj)
+inline vx_reference castToReference(const T& obj)
 {
     static_assert(is_ref<T>::value, "unsupported conversion");
     return (vx_reference) obj;
@@ -405,7 +425,6 @@ public:
     { return ref != 0; }
 #endif
 
-#ifdef IVX_USE_CXX98
     /// Getting a context that is kept in each OpenVX 'object' (call get<Context>())
     template<typename C>
     C get() const
@@ -415,7 +434,8 @@ public:
         // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
         return C(c, true);
     }
-#else
+
+#ifndef IVX_USE_CXX98
     /// Getting a context that is kept in each OpenVX 'object'
     template<typename C = Context, typename = typename std::enable_if<std::is_same<C, Context>::value>::type>
     C getContext() const
@@ -527,7 +547,6 @@ public:
     operator vx_reference() const
     { return castToReference(ref); }
 
-#ifdef IVX_USE_CXX98
     /// Getting a context that is kept in each OpenVX 'object' (call get<Context>())
     template<typename C>
     C get() const
@@ -537,7 +556,8 @@ public:
         // vxGetContext doesn't increment ref count, let do it in wrapper c-tor
         return C(c, true);
     }
-#else
+
+#ifndef IVX_USE_CXX98
     /// Getting a context that is kept in each OpenVX 'object'
     template<typename C = Context, typename = typename std::enable_if<std::is_same<C, Context>::value>::type>
     C getContext() const
@@ -866,6 +886,16 @@ public:
     static Image createVirtual(vx_graph graph, vx_uint32 width = 0, vx_uint32 height = 0, vx_df_image format = VX_DF_IMAGE_VIRT)
     { return Image(vxCreateVirtualImage(graph, width, height, format)); }
 
+#ifdef VX_VERSION_1_1
+    /// vxCreateUniformImage() wrapper
+    static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const vx_pixel_value_t& value)
+    { return Image(vxCreateUniformImage(context, width, height, format, &value)); }
+#else
+    /// vxCreateUniformImage() wrapper
+    static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const void* value)
+    { return Image(vxCreateUniformImage(context, width, height, format, value)); }
+#endif
+
     /// Planes number for the specified image format (fourcc)
     /// \return 0 for unknown formats
     static vx_size planes(vx_df_image format)
@@ -949,6 +979,13 @@ public:
 #endif
     }
 
+    /// vxCreateImageFromHandle() wrapper for a single plane image
+    static Image createFromHandle(vx_context context, vx_df_image format,const vx_imagepatch_addressing_t& addr, void* ptr)
+    {
+        if(planes(format) != 1) throw WrapperError(std::string(__func__)+"(): not a single plane format");
+        return Image(vxCreateImageFromHandle(context, format, const_cast<vx_imagepatch_addressing_t*> (&addr), &ptr, VX_MEMORY_TYPE_HOST));
+    }
+
 #ifdef VX_VERSION_1_1
     /// vxSwapImageHandle() wrapper
     /// \param newPtrs  keeps addresses of new image planes data, can be of image planes size or empty when new pointers are not provided
@@ -966,6 +1003,17 @@ public:
                                              newPtrs.empty()  ? 0 : &newPtrs[0],
                                              prevPtrs.empty() ? 0 : &prevPtrs[0],
                                              num ) );
+    }
+
+    /// vxSwapImageHandle() wrapper for a single plane image
+    /// \param newPtr  an address of new image data, can be zero when new pointer is not provided
+    /// \return the previuos address of image data
+    void* swapHandle(void* newPtr)
+    {
+        if(planes() != 1) throw WrapperError(std::string(__func__)+"(): not a single plane image");
+        void* prevPtr = 0;
+        IVX_CHECK_STATUS( vxSwapImageHandle(ref, &newPtr, &prevPtr, 1) );
+        return prevPtr;
     }
 
     /// vxSwapImageHandle() wrapper for the case when no new pointers provided and previous ones are not needed (retrive memory back)
@@ -1129,12 +1177,12 @@ static const vx_enum
     /// vxCopyImagePatch() wrapper (or vxAccessImagePatch() + vxCommitImagePatch() for OpenVX 1.0)
     void copy( vx_uint32 planeIdx, vx_rectangle_t rect,
                const vx_imagepatch_addressing_t& addr, void* data,
-               vx_enum usage, vx_enum memType = VX_MEMORY_TYPE_HOST )
+               vx_enum usage, vx_enum memoryType = VX_MEMORY_TYPE_HOST )
     {
 #ifdef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxCopyImagePatch(ref, &rect, planeIdx, &addr, (void*)data, usage, memType));
+        IVX_CHECK_STATUS(vxCopyImagePatch(ref, &rect, planeIdx, &addr, (void*)data, usage, memoryType));
 #else
-        (void)memType;
+        (void)memoryType;
         vx_imagepatch_addressing_t* a = const_cast<vx_imagepatch_addressing_t*>(&addr);
         IVX_CHECK_STATUS(vxAccessImagePatch(ref, &rect, planeIdx, a, &data, usage));
         IVX_CHECK_STATUS(vxCommitImagePatch(ref, &rect, planeIdx, a, data));
@@ -1246,6 +1294,14 @@ static const vx_enum
         //vx_rectangle_t r = getValidRegion();
         copyFrom(planeIdx, createAddressing((vx_uint32)m.cols, (vx_uint32)m.rows, (vx_int32)m.elemSize(), (vx_int32)m.step), m.ptr());
     }
+
+    /*
+    static Image createFromHandle(vx_context context, const cv::Mat& mat)
+    { throw WrapperError(std::string(__func__)+"(): NYI"); }
+
+    cv::Mat swapHandle(const cv::Mat& newMat)
+    { throw WrapperError(std::string(__func__)+"(): NYI"); }
+    */
 #endif //IVX_USE_OPENCV
 
     struct Patch;
@@ -1273,16 +1329,16 @@ public:
     { return _mapId; }
 #else
     /// reference to vx_rectangle_t for the current mapping
-    const vx_rectangle_t& rect() const
+    const vx_rectangle_t& rectangle() const
     { return _rect; }
 
     /// Image plane index for the current mapping
-    vx_uint32 planeIdx() const
+    vx_uint32 planeIndex() const
     { return _planeIdx; }
 #endif // VX_VERSION_1_1
 
     /// vx_image for the current mapping
-    vx_image img() const
+    vx_image image() const
     { return _img; }
 
     /// where this patch is  mapped
@@ -1352,6 +1408,7 @@ public:
         IVX_CHECK_STATUS(vxMapImagePatch(img, &rect, planeIdx, &_mapId, &_addr, &_data, usage, _memType, flags) );
 #else
         IVX_CHECK_STATUS(vxAccessImagePatch(img, &rect, planeIdx, &_addr, &_data, usage));
+        (void)flags;
         _rect = rect;
         _planeIdx = planeIdx;
 #endif
@@ -1517,15 +1574,15 @@ static const vx_enum
     static Threshold createRange(vx_context c, vx_enum dataType, vx_int32 valLower, vx_int32 valUpper)
     {
         Threshold thr = create(c, VX_THRESHOLD_TYPE_RANGE, dataType);
-        IVX_CHECK_STATUS( vxSetThresholdAttribute(thr.ref, VX_THRESHOLD_THRESHOLD_LOWER, &val1, sizeof(val1)) );
-        IVX_CHECK_STATUS( vxSetThresholdAttribute(thr.ref, VX_THRESHOLD_THRESHOLD_UPPER, &val2, sizeof(val2)) );
+        IVX_CHECK_STATUS( vxSetThresholdAttribute(thr.ref, VX_THRESHOLD_THRESHOLD_LOWER, &valLower, sizeof(valLower)) );
+        IVX_CHECK_STATUS( vxSetThresholdAttribute(thr.ref, VX_THRESHOLD_THRESHOLD_UPPER, &valUpper, sizeof(valUpper)) );
         return thr;
     }
 
     /// vxQueryThreshold() wrapper
     template<typename T>
-    void query(vx_enum att, T& value) const
-    { IVX_CHECK_STATUS( vxQueryThreshold(ref, att, &value, sizeof(value)) ); }
+    void query(vx_enum att, T& val) const
+    { IVX_CHECK_STATUS( vxQueryThreshold(ref, att, &val, sizeof(val)) ); }
 
     /// vxQueryThreshold(VX_THRESHOLD_TYPE) wrapper
     vx_enum type() const
@@ -1610,5 +1667,14 @@ Node gaussian3x3(vx_graph graph, vx_image inImg, vx_image outImg)
 } // namespace nodes
 
 } // namespace ivx
+
+// restore warnings
+#if defined(_MSC_VER)
+    #pragma warning(pop)
+#elif defined(__clang__)
+    #pragma clang diagnostic pop
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic pop
+#endif // compiler macro
 
 #endif //IVX_HPP
