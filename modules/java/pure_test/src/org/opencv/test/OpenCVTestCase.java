@@ -270,6 +270,10 @@ public class OpenCVTestCase extends TestCase {
         TestCase.fail(msg);
     }
 
+    public static void assertGE(double v1, double v2) {
+        assertTrue("Failed: " + v1 + " >= " + v2, v1 >= v2);
+    }
+
     public static <E extends Number> void assertListEquals(List<E> list1, List<E> list2) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
@@ -484,10 +488,10 @@ public class OpenCVTestCase extends TestCase {
 
         if (isEqualityMeasured)
             assertTrue("Max difference between expected and actiual Mats is "+ maxDiff + ", that bigger than " + eps,
-                    Core.checkRange(diff, true, 0.0, eps));
+                    maxDiff <= eps);
         else
             assertFalse("Max difference between expected and actiual Mats is "+ maxDiff + ", that less than " + eps,
-                    Core.checkRange(diff, true, 0.0, eps));
+                    maxDiff <= eps);
     }
 
     protected static String readFile(String path) {
