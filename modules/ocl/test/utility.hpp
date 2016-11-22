@@ -296,7 +296,7 @@ CV_FLAGS(DftFlags, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REA
     }; \
     \
     int GTEST_TEST_CLASS_NAME_(test_case_name, \
-                             test_name)::gtest_registering_dummy_ = \
+                             test_name)::gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_ = \
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
     \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() \

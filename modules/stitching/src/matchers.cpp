@@ -50,6 +50,7 @@ using namespace cv::gpu;
 #ifdef HAVE_OPENCV_NONFREE
 #include "opencv2/nonfree/nonfree.hpp"
 
+CV_ATTR_USED
 static bool makeUseOfNonfree = initModule_nonfree();
 #endif
 

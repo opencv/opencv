@@ -292,7 +292,7 @@ namespace cv
         return classname##_info_var; \
     } \
     \
-    static ::cv::AlgorithmInfo& classname##_info_auto = classname##_info(); \
+    CV_ATTR_USED static ::cv::AlgorithmInfo& classname##_info_auto = classname##_info(); \
     \
     ::cv::AlgorithmInfo* classname::info() const \
     { \

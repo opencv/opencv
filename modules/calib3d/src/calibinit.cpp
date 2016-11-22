@@ -1036,13 +1036,15 @@ icvRemoveQuadFromGroup(CvCBQuad **quads, int count, CvCBQuad *q0)
                 q->neighbors[j] = 0;
                 q->count--;
                 for(int k = 0; k < 4; k++ )
+                {
                     if( q0->neighbors[k] == q )
                     {
                         q0->neighbors[k] = 0;
                         q0->count--;
                         break;
                     }
-                    break;
+                }
+                break;
             }
         }
     }
