@@ -1,3 +1,33 @@
+if(ENABLE_CCACHE AND NOT CMAKE_COMPILER_IS_CCACHE)
+  # This works fine with Unix Makefiles and Ninja generators
+  find_host_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    message(STATUS "Looking for ccache - found (${CCACHE_PROGRAM})")
+    get_property(__OLD_RULE_LAUNCH_COMPILE GLOBAL PROPERTY RULE_LAUNCH_COMPILE)
+    if(__OLD_RULE_LAUNCH_COMPILE)
+      message(STATUS "Can't replace CMake compiler launcher")
+    else()
+      set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+      # NOTE: Actually this check doesn't work as expected.
+      # "RULE_LAUNCH_COMPILE" is ignored by CMake during try_compile() step.
+      # ocv_check_compiler_flag(CXX "" IS_CCACHE_WORKS)
+      set(IS_CCACHE_WORKS 1)
+      if(IS_CCACHE_WORKS)
+        set(CMAKE_COMPILER_IS_CCACHE 1)
+      else()
+        message(STATUS "Unable to compile program with enabled ccache, reverting...")
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${__OLD_RULE_LAUNCH_COMPILE}")
+      endif()
+    else()
+      message(STATUS "Looking for ccache - not found")
+    endif()
+  endif()
+endif()
+
+if((CMAKE_COMPILER_IS_CLANGCXX OR CMAKE_COMPILER_IS_CLANGCC OR CMAKE_COMPILER_IS_CCACHE) AND NOT CMAKE_GENERATOR MATCHES "Xcode")
+  set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
+endif()
+
 if(MINGW OR (X86 AND UNIX AND NOT APPLE))
   # mingw compiler is known to produce unstable SSE code with -O3 hence we are trying to use -O2 instead
   if(CMAKE_COMPILER_IS_GNUCXX)
