@@ -45,6 +45,11 @@ The references are:
 #include "fast_score.hpp"
 #include "opencl_kernels_features2d.hpp"
 
+#ifdef HAVE_OPENVX
+#define IVX_USE_OPENCV
+#define IVX_HIDE_INFO_WARNINGS
+#include "ivx.hpp"
+#endif
 #if defined _MSC_VER
 # pragma warning( disable : 4127)
 #endif
@@ -329,6 +334,84 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 }
 #endif
 
+
+#ifdef HAVE_OPENVX
+static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
+                        int _threshold, bool nonmaxSuppression, int type)
+{
+    using namespace ivx;
+
+    // Nonmax suppression is done differently in OpenCV than in OpenVX
+    // 9/16 is the only supported mode in OpenVX
+    if(nonmaxSuppression || type != FastFeatureDetector::TYPE_9_16)
+        return false;
+
+    Mat imgMat = _img.getMat();
+    if(imgMat.empty() || imgMat.type() != CV_8UC1)
+        return false;
+
+    try
+    {
+        Context context = Context::create();
+        Image img = Image::createFromHandle(context, Image::matTypeToFormat(imgMat.type()),
+                                            Image::createAddressing(imgMat), (void*)imgMat.data);
+        ivx::Scalar threshold = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, _threshold);
+        vx_size capacity = imgMat.cols * imgMat.rows;
+        Array corners = Array::create(context, VX_TYPE_KEYPOINT, capacity);
+
+        ivx::Scalar numCorners = ivx::Scalar::create<VX_TYPE_SIZE>(context, 0);
+
+        IVX_CHECK_STATUS(vxuFastCorners(context, img, threshold, (vx_bool)nonmaxSuppression, corners, numCorners));
+
+        //Download points from array, to be replaced by wrapper version
+        size_t nPoints = numCorners.getValue<vx_size>();
+        keypoints.clear();
+        keypoints.reserve(nPoints);
+        vx_size arrayStride;
+        vx_keypoint_t* arrayPtr = NULL;
+#ifndef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxAccessArrayRange(corners, 0, nPoints, &arrayStride, (void**)&arrayPtr, VX_READ_ONLY));
+#else
+        vx_map_id mapId;
+        IVX_CHECK_STATUS(vxMapArrayRange(corners, 0, nPoints, &mapId, &arrayStride, (void**)&arrayPtr, VX_READ_ONLY,
+                                         VX_MEMORY_TYPE_HOST, 0));
+#endif
+        for(size_t i = 0; i < nPoints; i++)
+        {
+            //if nonmaxSuppression is false, kp.strength is undefined
+            vx_keypoint_t kp = vxArrayItem(vx_keypoint_t, arrayPtr, i, arrayStride);
+            keypoints.push_back(KeyPoint((float)kp.x, (float)kp.y, 7.f, -1, kp.strength));
+        }
+
+#ifndef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxCommitArrayRange(corners, 0, nPoints, &arrayPtr));
+#else
+        IVX_CHECK_STATUS(vxUnmapArrayRange(corners, mapId));
+#endif
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        img.swapHandle();
+#endif
+    }
+    catch (RuntimeError & e)
+    {
+        CV_Error(cv::Error::StsInternal, e.what());
+        return false;
+    }
+    catch (WrapperError & e)
+    {
+        CV_Error(cv::Error::StsInternal, e.what());
+        return false;
+    }
+
+    return true;
+}
+
+#endif
+
+
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
     CV_INSTRUMENT_REGION()
@@ -340,6 +423,13 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     CV_IMPL_ADD(CV_IMPL_OCL);
     return;
   }
+#endif
+
+#ifdef HAVE_OPENVX
+    if(openvx_FAST(_img, keypoints, threshold, nonmax_suppression, type))
+    {
+        return;
+    }
 #endif
 
   switch(type) {
