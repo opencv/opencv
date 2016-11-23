@@ -421,7 +421,7 @@ if (NOT GFLAGS_FOUND)
     # The empty string in this list is important, it represents the case when
     # the libraries have no prefix (shared libraries / DLLs).
     unset(CMAKE_FIND_LIBRARY_PREFIXES "lib" "" "${CMAKE_FIND_LIBRARY_PREFIXES}")
-  endif (MSVC)
+  endif (MSVC AND DEFINED CALLERS_CMAKE_FIND_LIBRARY_PREFIXES)
 
   # Search user-installed locations first, so that we prefer user installs
   # to system installs where both exist.
