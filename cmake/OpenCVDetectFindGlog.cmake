@@ -200,7 +200,7 @@ if (NOT GLOG_FOUND)
     set(CALLERS_CMAKE_FIND_LIBRARY_PREFIXES "${CMAKE_FIND_LIBRARY_PREFIXES}")
     # The empty string in this list is important, it represents the case when
     # the libraries have no prefix (shared libraries / DLLs).
-    # LaurentBerger For Opencv PR 7700  set(CMAKE_FIND_LIBRARY_PREFIXES "lib" "" "${CMAKE_FIND_LIBRARY_PREFIXES}")
+    set(CMAKE_FIND_LIBRARY_PREFIXES "lib" "" "${CMAKE_FIND_LIBRARY_PREFIXES}")
   endif (MSVC)
 
   # Search user-installed locations first, so that we prefer user installs
