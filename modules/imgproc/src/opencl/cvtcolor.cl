@@ -84,6 +84,39 @@ enum
     BLOCK_SIZE = 256
 };
 
+//constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
+#define B2YF 0.114f
+#define G2YF 0.587f
+#define R2YF 0.299f
+//to YCbCr
+#define YCBF 0.564f
+#define YCRF 0.713f
+#define YCBI 9241
+#define YCRI 11682
+//to YUV
+#define B2UF 0.492f
+#define R2VF 0.877f
+#define B2UI 8061
+#define R2VI 14369
+//from YUV
+#define U2BF 2.032f
+#define U2GF -0.395f
+#define V2GF -0.581f
+#define V2RF 1.140f
+#define U2BI 33292
+#define U2GI -6472
+#define V2GI -9519
+#define V2RI 18678
+//from YCrCb
+#define CR2RF 1.403f
+#define CB2GF -0.344f
+#define CR2GF -0.714f
+#define CB2BF 1.773f
+#define CR2RI 22987
+#define CB2GI -5636
+#define CR2GI -11698
+#define CB2BI 29049
+
 #define scnbytes ((int)sizeof(DATA_TYPE)*scn)
 #define dcnbytes ((int)sizeof(DATA_TYPE)*dcn)
 
@@ -151,7 +184,7 @@ __kernel void RGB2Gray(__global const uchar * srcptr, int src_step, int src_offs
                 __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + dst_index);
                 DATA_TYPE_4 src_pix = vload4(0, src);
 #ifdef DEPTH_5
-                dst[0] = fma(src_pix.B_COMP, 0.114f, fma(src_pix.G_COMP, 0.587f, src_pix.R_COMP * 0.299f));
+                dst[0] = fma(src_pix.B_COMP, B2YF, fma(src_pix.G_COMP, G2YF, src_pix.R_COMP * R2YF));
 #else
                 dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, B2Y, mad24(src_pix.G_COMP, G2Y, mul24(src_pix.R_COMP, R2Y))), yuv_shift);
 #endif
@@ -201,8 +234,8 @@ __kernel void Gray2RGB(__global const uchar * srcptr, int src_step, int src_offs
 
 ///////////////////////////////////// RGB <-> YUV //////////////////////////////////////
 
-__constant float c_RGB2YUVCoeffs_f[5]  = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-__constant int   c_RGB2YUVCoeffs_i[5]  = { B2Y, G2Y, R2Y, 8061, 14369 };
+__constant float c_RGB2YUVCoeffs_f[5]  = { B2YF, G2YF, R2YF, B2UF, R2VF };
+__constant int   c_RGB2YUVCoeffs_i[5]  = { B2Y, G2Y, R2Y, B2UI, R2VI };
 
 __kernel void RGB2YUV(__global const uchar* srcptr, int src_step, int src_offset,
                       __global uchar* dstptr, int dst_step, int dt_offset,
@@ -251,8 +284,8 @@ __kernel void RGB2YUV(__global const uchar* srcptr, int src_step, int src_offset
     }
 }
 
-__constant float c_YUV2RGBCoeffs_f[4] = { 2.032f, -0.395f, -0.581f, 1.140f };
-__constant int   c_YUV2RGBCoeffs_i[4] = { 33292, -6472, -9519, 18678 };
+__constant float c_YUV2RGBCoeffs_f[4] = { U2BF, U2GF, V2GF, V2RF };
+__constant int   c_YUV2RGBCoeffs_i[4] = { U2BI, U2GI, V2GI, V2RI };
 
 __kernel void YUV2RGB(__global const uchar* srcptr, int src_step, int src_offset,
                       __global uchar* dstptr, int dst_step, int dt_offset,
@@ -624,8 +657,8 @@ __kernel void YUV2RGB_422(__global const uchar* srcptr, int src_step, int src_of
 
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
-__constant float c_RGB2YCrCbCoeffs_f[5] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
-__constant int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, 11682, 9241};
+__constant float c_RGB2YCrCbCoeffs_f[5] = {R2YF, G2YF, B2YF, YCRF, YCBF};
+__constant int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, YCRI, YCBI};
 
 __kernel void RGB2YCrCb(__global const uchar* srcptr, int src_step, int src_offset,
                         __global uchar* dstptr, int dst_step, int dt_offset,
@@ -674,8 +707,8 @@ __kernel void RGB2YCrCb(__global const uchar* srcptr, int src_step, int src_offs
     }
 }
 
-__constant float c_YCrCb2RGBCoeffs_f[4] = { 1.403f, -0.714f, -0.344f, 1.773f };
-__constant int   c_YCrCb2RGBCoeffs_i[4] = { 22987, -11698, -5636, 29049 };
+__constant float c_YCrCb2RGBCoeffs_f[4] = { CR2RF, CR2GF, CB2GF, CB2BF };
+__constant int   c_YCrCb2RGBCoeffs_i[4] = { CR2RI, CR2GI, CB2GI, CB2BI };
 
 __kernel void YCrCb2RGB(__global const uchar* src, int src_step, int src_offset,
                         __global uchar* dst, int dst_step, int dst_offset,
