@@ -141,7 +141,32 @@ template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab
     return ((tab[3]*x + tab[2])*x + tab[1])*x + tab[0];
 }
 
-#if CV_SSE2
+#if CV_NEON
+template<typename _Tp> static inline void splineInterpolate(float32x4_t& v_x, const _Tp* tab, int n)
+{
+    int32x4_t v_ix = vcvtq_s32_f32(vminq_f32(vmaxq_f32(v_x, vdupq_n_f32(0)), vdupq_n_f32(n - 1)));
+    v_x = vsubq_f32(v_x, vcvtq_f32_s32(v_ix));
+    v_ix = vshlq_n_s32(v_ix, 2);
+
+    int CV_DECL_ALIGNED(16) ix[4];
+    vst1q_s32(ix, v_ix);
+
+    float32x4_t v_tab0 = vld1q_f32(tab + ix[0]);
+    float32x4_t v_tab1 = vld1q_f32(tab + ix[1]);
+    float32x4_t v_tab2 = vld1q_f32(tab + ix[2]);
+    float32x4_t v_tab3 = vld1q_f32(tab + ix[3]);
+
+    float32x4x2_t v01 = vtrnq_f32(v_tab0, v_tab1);
+    float32x4x2_t v23 = vtrnq_f32(v_tab2, v_tab3);
+
+    v_tab0 = vcombine_f32(vget_low_f32(v01.val[0]), vget_low_f32(v23.val[0]));
+    v_tab1 = vcombine_f32(vget_low_f32(v01.val[1]), vget_low_f32(v23.val[1]));
+    v_tab2 = vcombine_f32(vget_high_f32(v01.val[0]), vget_high_f32(v23.val[0]));
+    v_tab3 = vcombine_f32(vget_high_f32(v01.val[1]), vget_high_f32(v23.val[1]));
+
+    v_x = vmlaq_f32(v_tab0, vmlaq_f32(v_tab1, vmlaq_f32(v_tab2, v_tab3, v_x), v_x), v_x);
+}
+#elif CV_SSE2
 template<typename _Tp> static inline void splineInterpolate(__m128& v_x, const _Tp* tab, int n)
 {
     __m128i v_ix = _mm_cvttps_epi32(_mm_min_ps(_mm_max_ps(v_x, _mm_setzero_ps()), _mm_set1_ps(float(n - 1))));
@@ -5968,7 +5993,28 @@ struct RGB2Luv_f
         CV_Assert(whitept[1] == 1.f);
     }
 
-    #if CV_SSE2
+    #if CV_NEON
+    void process(float32x4x3_t& v_src) const
+    {
+        float32x4_t v_x = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[0])), v_src.val[1], vdupq_n_f32(coeffs[1])), v_src.val[2], vdupq_n_f32(coeffs[2]));
+        float32x4_t v_y = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[3])), v_src.val[1], vdupq_n_f32(coeffs[4])), v_src.val[2], vdupq_n_f32(coeffs[5]));
+        float32x4_t v_z = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[6])), v_src.val[1], vdupq_n_f32(coeffs[7])), v_src.val[2], vdupq_n_f32(coeffs[8]));
+
+        v_src.val[0] = vmulq_f32(v_y, vdupq_n_f32(LabCbrtTabScale));
+        splineInterpolate(v_src.val[0], LabCbrtTab, LAB_CBRT_TAB_SIZE);
+
+        v_src.val[0] = vmlaq_f32(vdupq_n_f32(-16.f), v_src.val[0], vdupq_n_f32(116.f));
+
+        float32x4_t v_div = vmaxq_f32(vmlaq_f32(vmlaq_f32(v_x, vdupq_n_f32(15.f), v_y), vdupq_n_f32(3.f), v_z), vdupq_n_f32(FLT_EPSILON));
+        float32x4_t v_reciprocal = vrecpeq_f32(v_div);
+        v_reciprocal = vmulq_f32(vrecpsq_f32(v_div, v_reciprocal), v_reciprocal);
+        v_reciprocal = vmulq_f32(vrecpsq_f32(v_div, v_reciprocal), v_reciprocal);
+        float32x4_t v_d = vmulq_f32(vdupq_n_f32(52.f), v_reciprocal);
+
+        v_src.val[1] = vmulq_f32(v_src.val[0], vmlaq_f32(vdupq_n_f32(-un), v_x, v_d));
+        v_src.val[2] = vmulq_f32(v_src.val[0], vmlaq_f32(vdupq_n_f32(-vn), vmulq_f32(vdupq_n_f32(2.25f), v_y), v_d));
+    }
+    #elif CV_SSE2
     void process(__m128& v_r0, __m128& v_r1, __m128& v_g0,
                  __m128& v_g1, __m128& v_b0, __m128& v_b1) const
     {
@@ -6042,7 +6088,52 @@ struct RGB2Luv_f
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         n *= 3;
 
-        #if CV_SSE2
+        #if CV_NEON
+        if (scn == 3)
+        {
+            for( ; i <= n - 12; i += 12, src += scn * 4 )
+            {
+                float32x4x3_t v_src = vld3q_f32(src);
+                if( gammaTab )
+                {
+                    v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
+                    v_src.val[1] = vmulq_f32(v_src.val[1], vdupq_n_f32(gscale));
+                    v_src.val[2] = vmulq_f32(v_src.val[2], vdupq_n_f32(gscale));
+                    splineInterpolate(v_src.val[0], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[1], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[2], gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                process(v_src);
+
+                vst3q_f32(dst + i, v_src);
+            }
+        }
+        else
+        {
+            for( ; i <= n - 12; i += 12, src += scn * 4 )
+            {
+                float32x4x4_t v_src = vld4q_f32(src);
+                if( gammaTab )
+                {
+                    v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
+                    v_src.val[1] = vmulq_f32(v_src.val[1], vdupq_n_f32(gscale));
+                    v_src.val[2] = vmulq_f32(v_src.val[2], vdupq_n_f32(gscale));
+                    splineInterpolate(v_src.val[0], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[1], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[2], gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                float32x4x3_t v_dst;
+                v_dst.val[0] = v_src.val[0];
+                v_dst.val[1] = v_src.val[1];
+                v_dst.val[2] = v_src.val[2];
+                process(v_dst);
+
+                vst3q_f32(dst + i, v_dst);
+            }
+        }
+        #elif CV_SSE2
         if (haveSIMD)
         {
             for( ; i <= n - 24; i += 24, src += scn * 8 )
