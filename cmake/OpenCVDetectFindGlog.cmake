@@ -194,7 +194,7 @@ if (NOT GLOG_FOUND)
 
   # Handle possible presence of lib prefix for libraries on MSVC, see
   # also GLOG_RESET_FIND_LIBRARY_PREFIX().
-  if (MSVC)
+  if (MSVC AND DEFINED CALLERS_CMAKE_FIND_LIBRARY_PREFIXES)
     # Preserve the caller's original values for CMAKE_FIND_LIBRARY_PREFIXES
     # s/t we can set it back before returning.
     set(CALLERS_CMAKE_FIND_LIBRARY_PREFIXES "${CMAKE_FIND_LIBRARY_PREFIXES}")
