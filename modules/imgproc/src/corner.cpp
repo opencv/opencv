@@ -104,7 +104,7 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
             v_t = vmlaq_f32(vmulq_f32(v_t, v_t), v_b, v_b);
             vst1q_f32(dst + j, vsubq_f32(vaddq_f32(v_a, v_c), cv_vsqrtq_f32(v_t)));
         }
-    #endif
+    #else
         for( ; j < size.width; j++ )
         {
             float a = cov[j*3]*0.5f;
@@ -112,6 +112,7 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
             float c = cov[j*3+2]*0.5f;
             dst[j] = (float)((a + c) - std::sqrt((a - c)*(a - c) + b*b));
         }
+    #endif
     }
 }
 
@@ -349,7 +350,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
                 _mm_storeu_ps(cov_data + j * 3 + 20, v_dy2_1);
             }
         }
-        #endif
+        #else
 
         for( ; j < size.width; j++ )
         {
@@ -360,6 +361,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
             cov_data[j*3+1] = dx*dy;
             cov_data[j*3+2] = dy*dy;
         }
+        #endif
     }
 
     boxFilter(cov, cov, cov.depth(), Size(block_size, block_size),
