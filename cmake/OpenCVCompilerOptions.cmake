@@ -97,6 +97,10 @@ if(BUILD_TINY_GPU_MODULE)
   add_definitions(-DOPENCV_TINY_GPU_MODULE)
 endif()
 
+if(CV_ICC AND NOT ENABLE_FAST_MATH)
+  add_extra_compiler_option("-fp-model precise")
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX)
   # High level of warnings.
   add_extra_compiler_option(-W)
