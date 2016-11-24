@@ -14,10 +14,6 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
   set(CMAKE_COMPILER_IS_CLANGCC 1)
 endif()
 
-if((CMAKE_COMPILER_IS_CLANGCXX OR CMAKE_COMPILER_IS_CLANGCC) AND NOT CMAKE_GENERATOR MATCHES "Xcode")
-  set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
-endif()
-
 # ----------------------------------------------------------------------------
 # Detect Intel ICC compiler -- for -fPIC in 3rdparty ( UNIX ONLY ):
 #  see  include/opencv/cxtypes.h file for related   ICC & CV_ICC defines.
