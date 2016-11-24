@@ -249,9 +249,22 @@ public class Calib3dTest extends OpenCVTestCase {
 
         Mat fm = Calib3d.findFundamentalMat(pts, pts);
 
-        truth = new Mat(3, 3, CvType.CV_64F);
-        truth.put(0, 0, 0, -0.577, 0.288, 0.577, 0, 0.288, -0.288, -0.288, 0);
-        assertMatEqual(truth, fm, EPS);
+        // Check definition of fundamental matrix:
+        // [p2; 1]T * F * [p1; 1] = 0
+        // (p2 == p1 in this testcase)
+        for (int i = 0; i < pts.rows(); i++)
+        {
+            Mat pt = new Mat(3, 1, fm.type());
+            pt.put(0, 0, pts.get(i, 0)[0], pts.get(i, 0)[1], 1);
+
+            Mat pt_t = pt.t();
+
+            Mat tmp = new Mat();
+            Mat res = new Mat();
+            Core.gemm(pt_t, fm, 1.0, new Mat(), 0.0, tmp);
+            Core.gemm(tmp, pt, 1.0, new Mat(), 0.0, res);
+            assertTrue(Math.abs(res.get(0, 0)[0]) <= 1e-6);
+        }
     }
 
     public void testFindFundamentalMatListOfPointListOfPointInt() {

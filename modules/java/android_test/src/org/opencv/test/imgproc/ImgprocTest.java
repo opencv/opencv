@@ -165,7 +165,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         double arcLength = Imgproc.arcLength(curve, false);
 
-        assertEquals(5.656854152679443, arcLength);
+        assertEquals(5.656854152679443, arcLength, EPS);
     }
 
     public void testBilateralFilterMatMatIntDoubleDouble() {
@@ -367,7 +367,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         double distance = Imgproc.compareHist(H1, H2, Imgproc.CV_COMP_CORREL);
 
-        assertEquals(1., distance);
+        assertEquals(1., distance, EPS);
     }
 
     public void testContourAreaMat() {
@@ -376,7 +376,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         double area = Imgproc.contourArea(contour);
 
-        assertEquals(45., area);
+        assertEquals(45., area, EPS);
     }
 
     public void testContourAreaMatBoolean() {
@@ -385,7 +385,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         double area = Imgproc.contourArea(contour, true);
 
-        assertEquals(45., area);
+        assertEquals(45., area, EPS);
         // TODO_: write better test
     }
 
