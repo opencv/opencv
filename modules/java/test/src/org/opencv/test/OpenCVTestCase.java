@@ -28,6 +28,11 @@ import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
 
 public class OpenCVTestCase extends TestCase {
+
+    public static class TestSkipException extends RuntimeException {
+        public TestSkipException() {}
+    }
+
     //change to 'true' to unblock fail on fail("Not yet implemented")
     public static final boolean passNYI = true;
 
@@ -212,10 +217,38 @@ public class OpenCVTestCase extends TestCase {
     protected void runTest() throws Throwable {
         // Do nothing if the precondition does not hold.
         if (isTestCaseEnabled) {
-            super.runTest();
+            try {
+                super.runTest();
+            } catch (TestSkipException ex) {
+                OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" skipped!");
+                assertTrue(true);
+            }
         } else {
             OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" disabled!");
         }
+    }
+
+    public void runBare() throws Throwable {
+        Throwable exception = null;
+        try {
+            setUp();
+        } catch (TestSkipException ex) {
+            OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" skipped!");
+            assertTrue(true);
+            return;
+        }
+        try {
+            runTest();
+        } catch (Throwable running) {
+            exception = running;
+        } finally {
+            try {
+                tearDown();
+            } catch (Throwable tearingDown) {
+                if (exception == null) exception = tearingDown;
+            }
+        }
+        if (exception != null) throw exception;
     }
 
     protected Mat getMat(int type, double... vals)
@@ -233,6 +266,10 @@ public class OpenCVTestCase extends TestCase {
         if(msg == "Not yet implemented" && passNYI)
             return;
         TestCase.fail(msg);
+    }
+
+    public static void assertGE(double v1, double v2) {
+        assertTrue("Failed: " + v1 + " >= " + v2, v1 >= v2);
     }
 
     public static <E extends Number> void assertListEquals(List<E> list1, List<E> list2) {
@@ -449,10 +486,10 @@ public class OpenCVTestCase extends TestCase {
 
         if (isEqualityMeasured)
             assertTrue("Max difference between expected and actiual Mats is "+ maxDiff + ", that bigger than " + eps,
-                    Core.checkRange(diff, true, 0.0, eps));
+                    maxDiff <= eps);
         else
             assertFalse("Max difference between expected and actiual Mats is "+ maxDiff + ", that less than " + eps,
-                    Core.checkRange(diff, true, 0.0, eps));
+                    maxDiff <= eps);
     }
 
     protected static String readFile(String path) {
