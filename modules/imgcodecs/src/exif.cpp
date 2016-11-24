@@ -160,6 +160,10 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
             case APP9: case APP10: case APP11: case APP12: case APP13: case APP14: case APP15:
             case COM:
                 bytesToSkip = getFieldSize( f );
+                if (bytesToSkip < markerSize) {
+                    fclose(f);
+                    throw ExifParsingError();
+                }
                 fseek( f, static_cast<long>( bytesToSkip - markerSize ), SEEK_CUR );
                 break;
 
