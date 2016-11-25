@@ -263,8 +263,8 @@ namespace cv
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
-            vx_border_t prevBorder = ctx.borderMode();
-            ctx.setBorderMode(border);
+            vx_border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border);
             if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1)
             {
                 if(dx)
@@ -277,7 +277,7 @@ namespace cv
 #if VX_VERSION <= VX_VERSION_1_0
                 if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
                 {
-                    ctx.setBorderMode(prevBorder);
+                    ctx.setImmediateBorder(prevBorder);
                     return false;
                 }
 #endif
@@ -292,7 +292,7 @@ namespace cv
                 cnv.setScale(cscale);
                 ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
             }
-            ctx.setBorderMode(prevBorder);
+            ctx.setImmediateBorder(prevBorder);
             return true;
         }
         catch (ivx::RuntimeError & e)
