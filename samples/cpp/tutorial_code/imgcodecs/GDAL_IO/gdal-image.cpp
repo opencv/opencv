@@ -3,9 +3,9 @@
 */
 
 // OpenCV Headers
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 // C++ Standard Libraries
 #include <cmath>
@@ -159,17 +159,21 @@ int main( int argc, char* argv[] ){
      * Check input arguments
     */
     if( argc < 3 ){
-        cout << "usage: " << argv[0] << " <image> <dem>" << endl;
-        return 1;
+        cout << "usage: " << argv[0] << " <image_name> <dem_model_name>" << endl;
+        return -1;
     }
 
     // load the image (note that we don't have the projection information.  You will
     // need to load that yourself or use the full GDAL driver.  The values are pre-defined
     // at the top of this file
+    //![load1]
     cv::Mat image = cv::imread(argv[1], cv::IMREAD_LOAD_GDAL | cv::IMREAD_COLOR );
+    //![load1]
 
+    //![load2]
     // load the dem model
     cv::Mat dem = cv::imread(argv[2], cv::IMREAD_LOAD_GDAL | cv::IMREAD_ANYDEPTH );
+    //![load2]
 
     // create our output products
     cv::Mat output_dem(   image.size(), CV_8UC3 );

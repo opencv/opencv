@@ -50,7 +50,7 @@ if __name__ == '__main__':
         em.setCovarianceMatrixType(cv2.ml.EM_COV_MAT_GENERIC)
         em.trainEM(points)
         means = em.getMeans()
-        covs = em.getCovs()  # Known bug: https://github.com/Itseez/opencv/pull/4232
+        covs = em.getCovs()  # Known bug: https://github.com/opencv/opencv/pull/4232
         found_distrs = zip(means, covs)
         print('ready!\n')
 

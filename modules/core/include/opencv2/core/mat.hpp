@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_MAT_HPP__
-#define __OPENCV_CORE_MAT_HPP__
+#ifndef OPENCV_CORE_MAT_HPP
+#define OPENCV_CORE_MAT_HPP
 
 #ifndef __cplusplus
 #  error mat.hpp header must be compiled as C++
@@ -1046,9 +1046,8 @@ public:
 
     /** @brief creates a diagonal matrix
 
-    The method makes a new header for the specified matrix diagonal. The new matrix is represented as a
-    single-column matrix. Similarly to Mat::row and Mat::col, this is an O(1) operation.
-    @param d Single-column matrix that forms a diagonal matrix
+    The method creates a square diagonal matrix from specified main diagonal.
+    @param d One-dimensional matrix that represents the main diagonal.
      */
     static Mat diag(const Mat& d);
 
@@ -1645,10 +1644,16 @@ public:
     /** @overload */
     const uchar* ptr(int i0=0) const;
 
-    /** @overload */
-    uchar* ptr(int i0, int i1);
-    /** @overload */
-    const uchar* ptr(int i0, int i1) const;
+    /** @overload
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
+    */
+    uchar* ptr(int row, int col);
+    /** @overload
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
+    */
+    const uchar* ptr(int row, int col) const;
 
     /** @overload */
     uchar* ptr(int i0, int i1, int i2);
@@ -1668,10 +1673,16 @@ public:
     template<typename _Tp> _Tp* ptr(int i0=0);
     /** @overload */
     template<typename _Tp> const _Tp* ptr(int i0=0) const;
-    /** @overload */
-    template<typename _Tp> _Tp* ptr(int i0, int i1);
-    /** @overload */
-    template<typename _Tp> const _Tp* ptr(int i0, int i1) const;
+    /** @overload
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
+    */
+    template<typename _Tp> _Tp* ptr(int row, int col);
+    /** @overload
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
+    */
+    template<typename _Tp> const _Tp* ptr(int row, int col) const;
     /** @overload */
     template<typename _Tp> _Tp* ptr(int i0, int i1, int i2);
     /** @overload */
@@ -1721,15 +1732,15 @@ public:
     */
     template<typename _Tp> const _Tp& at(int i0=0) const;
     /** @overload
-    @param i0 Index along the dimension 0
-    @param i1 Index along the dimension 1
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
     */
-    template<typename _Tp> _Tp& at(int i0, int i1);
+    template<typename _Tp> _Tp& at(int row, int col);
     /** @overload
-    @param i0 Index along the dimension 0
-    @param i1 Index along the dimension 1
+    @param row Index along the dimension 0
+    @param col Index along the dimension 1
     */
-    template<typename _Tp> const _Tp& at(int i0, int i1) const;
+    template<typename _Tp> const _Tp& at(int row, int col) const;
 
     /** @overload
     @param i0 Index along the dimension 0
@@ -2094,9 +2105,9 @@ public:
     //! returns read-only reference to the specified element (1D case)
     const _Tp& operator ()(int idx0) const;
     //! returns reference to the specified element (2D case)
-    _Tp& operator ()(int idx0, int idx1);
+    _Tp& operator ()(int row, int col);
     //! returns read-only reference to the specified element (2D case)
-    const _Tp& operator ()(int idx0, int idx1) const;
+    const _Tp& operator ()(int row, int col) const;
     //! returns reference to the specified element (3D case)
     _Tp& operator ()(int idx0, int idx1, int idx2);
     //! returns read-only reference to the specified element (3D case)
@@ -3146,21 +3157,29 @@ The example below illustrates how you can compute a normalized and threshold 3D 
         }
 
         minProb *= image.rows*image.cols;
-        Mat plane;
-        NAryMatIterator it(&hist, &plane, 1);
+
+        // initialize iterator (the style is different from STL).
+        // after initialization the iterator will contain
+        // the number of slices or planes the iterator will go through.
+        // it simultaneously increments iterators for several matrices
+        // supplied as a null terminated list of pointers
+        const Mat* arrays[] = {&hist, 0};
+        Mat planes[1];
+        NAryMatIterator itNAry(arrays, planes, 1);
         double s = 0;
         // iterate through the matrix. on each iteration
-        // it.planes[*] (of type Mat) will be set to the current plane.
-        for(int p = 0; p < it.nplanes; p++, ++it)
+        // itNAry.planes[i] (of type Mat) will be set to the current plane
+        // of the i-th n-dim matrix passed to the iterator constructor.
+        for(int p = 0; p < itNAry.nplanes; p++, ++itNAry)
         {
-            threshold(it.planes[0], it.planes[0], minProb, 0, THRESH_TOZERO);
-            s += sum(it.planes[0])[0];
+            threshold(itNAry.planes[0], itNAry.planes[0], minProb, 0, THRESH_TOZERO);
+            s += sum(itNAry.planes[0])[0];
         }
 
         s = 1./s;
-        it = NAryMatIterator(&hist, &plane, 1);
-        for(int p = 0; p < it.nplanes; p++, ++it)
-            it.planes[0] *= s;
+        itNAry = NAryMatIterator(arrays, planes, 1);
+        for(int p = 0; p < itNAry.nplanes; p++, ++itNAry)
+            itNAry.planes[0] *= s;
     }
 @endcode
  */
@@ -3439,4 +3458,4 @@ CV_EXPORTS MatExpr abs(const MatExpr& e);
 
 #include "opencv2/core/mat.inl.hpp"
 
-#endif // __OPENCV_CORE_MAT_HPP__
+#endif // OPENCV_CORE_MAT_HPP

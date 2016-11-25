@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -83,8 +84,628 @@ struct AccW_SIMD
     }
 };
 
-#if CV_NEON
+#if CV_AVX
+template <>
+struct Acc_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8 ; x += 8)
+            {
+                __m256 v_src = _mm256_loadu_ps(src + x);
+                __m256 v_dst = _mm256_loadu_ps(dst + x);
+                v_dst = _mm256_add_ps(v_src, v_dst);
+                _mm256_storeu_ps(dst + x, v_dst);
+            }
+        }
+        return x;
+    }
+};
 
+template <>
+struct Acc_SIMD<float, double>
+{
+    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8 ; x += 8)
+            {
+                __m256 v_src = _mm256_loadu_ps(src + x);
+                __m256d v_src0 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src,0));
+                __m256d v_src1 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src,1));
+                __m256d v_dst0 = _mm256_loadu_pd(dst + x);
+                __m256d v_dst1 = _mm256_loadu_pd(dst + x + 4);
+                v_dst0 = _mm256_add_pd(v_src0, v_dst0);
+                v_dst1 = _mm256_add_pd(v_src1, v_dst1);
+                _mm256_storeu_pd(dst + x, v_dst0);
+                _mm256_storeu_pd(dst + x + 4, v_dst1);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct Acc_SIMD<double, double>
+{
+    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                __m256d v_src = _mm256_loadu_pd(src + x);
+                __m256d v_dst = _mm256_loadu_pd(dst + x);
+
+                v_dst = _mm256_add_pd(v_dst, v_src);
+                _mm256_storeu_pd(dst + x, v_dst);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct AccSqr_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8 ; x += 8)
+            {
+                __m256 v_src = _mm256_loadu_ps(src + x);
+                __m256 v_dst = _mm256_loadu_ps(dst + x);
+
+                v_src = _mm256_mul_ps(v_src, v_src);
+                v_dst = _mm256_add_ps(v_src, v_dst);
+                _mm256_storeu_ps(dst + x, v_dst);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct AccSqr_SIMD<float, double>
+{
+    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8 ; x += 8)
+            {
+                __m256 v_src = _mm256_loadu_ps(src + x);
+                __m256d v_src0 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src,0));
+                __m256d v_src1 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src,1));
+                __m256d v_dst0 = _mm256_loadu_pd(dst + x);
+                __m256d v_dst1 = _mm256_loadu_pd(dst + x + 4);
+
+                v_src0 = _mm256_mul_pd(v_src0, v_src0);
+                v_src1 = _mm256_mul_pd(v_src1, v_src1);
+                v_dst0 = _mm256_add_pd(v_src0, v_dst0);
+                v_dst1 = _mm256_add_pd(v_src1, v_dst1);
+                _mm256_storeu_pd(dst + x, v_dst0);
+                _mm256_storeu_pd(dst + x + 4, v_dst1);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct AccSqr_SIMD<double, double>
+{
+    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                __m256d v_src = _mm256_loadu_pd(src + x);
+                __m256d v_dst = _mm256_loadu_pd(dst + x);
+
+                v_src = _mm256_mul_pd(v_src, v_src);
+                v_dst = _mm256_add_pd(v_dst, v_src);
+                _mm256_storeu_pd(dst + x, v_dst);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct AccProd_SIMD<float, float>
+{
+    int operator() (const float * src1, const float * src2, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                __m256 v_src0 = _mm256_loadu_ps(src1 + x);
+                __m256 v_src1 = _mm256_loadu_ps(src2 + x);
+                __m256 v_dst = _mm256_loadu_ps(dst + x);
+                __m256 v_src = _mm256_mul_ps(v_src0, v_src1);
+
+                v_dst = _mm256_add_ps(v_src, v_dst);
+                _mm256_storeu_ps(dst + x, v_dst);
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccProd_SIMD<float, double>
+{
+    int operator() (const float * src1, const float * src2, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                __m256 v_1src = _mm256_loadu_ps(src1 + x);
+                __m256 v_2src = _mm256_loadu_ps(src2 + x);
+                __m256d v_src00 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_1src,0));
+                __m256d v_src01 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_1src,1));
+                __m256d v_src10 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_2src,0));
+                __m256d v_src11 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_2src,1));
+                __m256d v_dst0 = _mm256_loadu_pd(dst + x);
+                __m256d v_dst1 = _mm256_loadu_pd(dst + x + 4);
+
+                __m256d v_src0 = _mm256_mul_pd(v_src00, v_src10);
+                __m256d v_src1 = _mm256_mul_pd(v_src01, v_src11);
+                v_dst0 = _mm256_add_pd(v_src0, v_dst0);
+                v_dst1 = _mm256_add_pd(v_src1, v_dst1);
+                _mm256_storeu_pd(dst + x, v_dst0);
+                _mm256_storeu_pd(dst + x + 4, v_dst1);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct AccProd_SIMD<double, double>
+{
+    int operator() (const double * src1, const double * src2, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                __m256d v_src0 = _mm256_loadu_pd(src1 + x);
+                __m256d v_src1 = _mm256_loadu_pd(src2 + x);
+                __m256d v_dst = _mm256_loadu_pd(dst + x);
+
+                v_src0 = _mm256_mul_pd(v_src0, v_src1);
+                v_dst = _mm256_add_pd(v_dst, v_src0);
+                _mm256_storeu_pd(dst + x, v_dst);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct AccW_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
+    {
+        int x = 0;
+        __m256 v_alpha = _mm256_set1_ps(alpha);
+        __m256 v_beta = _mm256_set1_ps(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 16; x += 16)
+            {
+                _mm256_storeu_ps(dst + x, _mm256_add_ps(_mm256_mul_ps(_mm256_loadu_ps(dst + x), v_beta), _mm256_mul_ps(_mm256_loadu_ps(src + x), v_alpha)));
+                _mm256_storeu_ps(dst + x + 8, _mm256_add_ps(_mm256_mul_ps(_mm256_loadu_ps(dst + x + 8), v_beta), _mm256_mul_ps(_mm256_loadu_ps(src + x + 8), v_alpha)));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccW_SIMD<float, double>
+{
+    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn, double alpha) const
+    {
+        int x = 0;
+        __m256d v_alpha = _mm256_set1_pd(alpha);
+        __m256d v_beta = _mm256_set1_pd(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 16; x += 16)
+            {
+                __m256 v_src0 = _mm256_loadu_ps(src + x);
+                __m256 v_src1 = _mm256_loadu_ps(src + x + 8);
+                __m256d v_src00 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src0,0));
+                __m256d v_src01 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src0,1));
+                __m256d v_src10 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src1,0));
+                __m256d v_src11 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src1,1));
+
+                _mm256_storeu_pd(dst + x, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x), v_beta), _mm256_mul_pd(v_src00, v_alpha)));
+                _mm256_storeu_pd(dst + x + 4, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 4), v_beta), _mm256_mul_pd(v_src01, v_alpha)));
+                _mm256_storeu_pd(dst + x + 8, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 8), v_beta), _mm256_mul_pd(v_src10, v_alpha)));
+                _mm256_storeu_pd(dst + x + 12, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 12), v_beta), _mm256_mul_pd(v_src11, v_alpha)));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccW_SIMD<double, double>
+{
+    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn, double alpha) const
+    {
+        int x = 0;
+        __m256d v_alpha = _mm256_set1_pd(alpha);
+        __m256d v_beta = _mm256_set1_pd(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                __m256d v_src0 = _mm256_loadu_pd(src + x);
+                __m256d v_src1 = _mm256_loadu_pd(src + x + 4);
+
+                _mm256_storeu_pd(dst + x, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x), v_beta), _mm256_mul_pd(v_src0, v_alpha)));
+                _mm256_storeu_pd(dst + x + 4, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 4), v_beta), _mm256_mul_pd(v_src1, v_alpha)));
+            }
+        }
+
+        return x;
+    }
+};
+#elif CV_SIMD128
+template <>
+struct Acc_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                v_store(dst + x, v_load(dst + x) + v_load(src + x));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_load(src + x + 4));
+            }
+        }
+
+        return x;
+    }
+};
+
+#if CV_SIMD128_64F
+template <>
+struct Acc_SIMD<float, double>
+{
+    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                v_float32x4 v_src = v_load(src + x);
+                v_float64x2 v_src0 = v_cvt_f64(v_src);
+                v_float64x2 v_src1 = v_cvt_f64_high(v_src);
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 2, v_load(dst + x + 2) + v_src1);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct Acc_SIMD<double, double>
+{
+    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                v_float64x2 v_src0 = v_load(src + x);
+                v_float64x2 v_src1 = v_load(src + x + 2);
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 2, v_load(dst + x + 2) + v_src1);
+            }
+        }
+        return x;
+    }
+};
+#endif //CV_SIMD128_64F
+
+template <>
+struct AccSqr_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                v_float32x4 v_src0 = v_load(src + x);
+                v_float32x4 v_src1 = v_load(src + x + 4);
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_src1);
+            }
+        }
+
+        return x;
+    }
+};
+
+#if CV_SIMD128_64F
+template <>
+struct AccSqr_SIMD<float, double>
+{
+    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                v_float32x4 v_src = v_load(src + x);
+                v_float64x2 v_src0 = v_cvt_f64(v_src);
+                v_float64x2 v_src1 = v_cvt_f64_high(v_src);
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 2, v_load(dst + x + 2) + v_src1);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct AccSqr_SIMD<double, double>
+{
+    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                v_float64x2 v_src0 = v_load(src + x);
+                v_float64x2 v_src1 = v_load(src + x + 2);
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 2, v_load(dst + x + 2) + v_src1);
+            }
+        }
+        return x;
+    }
+};
+#endif //CV_SIMD128_64F
+
+template <>
+struct AccProd_SIMD<float, float>
+{
+    int operator() (const float * src1, const float * src2, float * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                v_store(dst + x, v_load(dst + x) + v_load(src1 + x) * v_load(src2 + x));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_load(src1 + x + 4) * v_load(src2 + x + 4));
+            }
+        }
+
+        return x;
+    }
+};
+
+#if CV_SIMD128_64F
+template <>
+struct AccProd_SIMD<float, double>
+{
+    int operator() (const float * src1, const float * src2, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                v_float32x4 v_1src  = v_load(src1 + x);
+                v_float32x4 v_2src  = v_load(src2 + x);
+
+                v_float64x2 v_1src0 = v_cvt_f64(v_1src);
+                v_float64x2 v_1src1 = v_cvt_f64_high(v_1src);
+                v_float64x2 v_2src0 = v_cvt_f64(v_2src);
+                v_float64x2 v_2src1 = v_cvt_f64_high(v_2src);
+
+                v_store(dst + x, v_load(dst + x) + (v_1src0 * v_2src0));
+                v_store(dst + x + 2, v_load(dst + x + 2) + (v_1src1 * v_2src1));
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct AccProd_SIMD<double, double>
+{
+    int operator() (const double * src1, const double * src2, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                v_float64x2 v_src00 = v_load(src1 + x);
+                v_float64x2 v_src01 = v_load(src1 + x + 2);
+                v_float64x2 v_src10 = v_load(src2 + x);
+                v_float64x2 v_src11 = v_load(src2 + x + 2);
+
+                v_store(dst + x, v_load(dst + x) + (v_src00 * v_src10));
+                v_store(dst + x + 2, v_load(dst + x + 2) + (v_src01 * v_src11));
+            }
+        }
+        return x;
+    }
+};
+#endif //CV_SIMD128_64F
+
+template <>
+struct AccW_SIMD<float, float>
+{
+    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
+    {
+        int x = 0;
+        v_float32x4 v_alpha = v_setall_f32(alpha);
+        v_float32x4 v_beta = v_setall_f32(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                v_store(dst + x, ((v_load(dst + x) * v_beta) + (v_load(src + x) * v_alpha)));
+                v_store(dst + x + 4, ((v_load(dst + x + 4) * v_beta) + (v_load(src + x + 4) * v_alpha)));
+            }
+        }
+
+        return x;
+    }
+};
+
+#if CV_SIMD128_64F
+template <>
+struct AccW_SIMD<float, double>
+{
+    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn, double alpha) const
+    {
+        int x = 0;
+        v_float64x2 v_alpha = v_setall_f64(alpha);
+        v_float64x2 v_beta = v_setall_f64(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                v_float32x4 v_src0 = v_load(src + x);
+                v_float32x4 v_src1 = v_load(src + x + 4);
+                v_float64x2 v_src00 = v_cvt_f64(v_src0);
+                v_float64x2 v_src01 = v_cvt_f64_high(v_src0);
+                v_float64x2 v_src10 = v_cvt_f64(v_src1);
+                v_float64x2 v_src11 = v_cvt_f64_high(v_src1);
+
+                v_store(dst + x, ((v_load(dst + x) * v_beta) + (v_src00 * v_alpha)));
+                v_store(dst + x + 2, ((v_load(dst + x + 2) * v_beta) + (v_src01 * v_alpha)));
+                v_store(dst + x + 4, ((v_load(dst + x + 4) * v_beta) + (v_src10 * v_alpha)));
+                v_store(dst + x + 6, ((v_load(dst + x + 6) * v_beta) + (v_src11 * v_alpha)));
+            }
+        }
+
+        return x;
+    }
+};
+
+template <>
+struct AccW_SIMD<double, double>
+{
+    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn, double alpha) const
+    {
+        int x = 0;
+        v_float64x2 v_alpha = v_setall_f64(alpha);
+        v_float64x2 v_beta = v_setall_f64(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 4; x += 4)
+            {
+                v_float64x2 v_src0 = v_load(src + x);
+                v_float64x2 v_src1 = v_load(src + x + 2);
+
+                v_store(dst + x, ((v_load(dst + x) * v_beta) + (v_src0 * v_alpha)));
+                v_store(dst + x + 2, ((v_load(dst + x + 2) * v_beta) + (v_src1 * v_alpha)));
+            }
+        }
+
+        return x;
+    }
+};
+#endif //CV_SIMD128_64F
+#endif //CV_SIMD128
+
+#if CV_SIMD128
 template <>
 struct Acc_SIMD<uchar, float>
 {
@@ -97,28 +718,41 @@ struct Acc_SIMD<uchar, float>
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vld1q_u8(src + x);
-                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
+                v_uint8x16 v_src  = v_load(src + x);
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
         else if (cn == 1)
         {
-            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
+            v_uint8x16 v_0 = v_setall_u8(0);
 
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vandq_u8(vld1q_u8(src + x), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
-                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
+                v_uint8x16 v_mask = v_load(mask + x);
+                v_mask = ~(v_0 == v_mask);
+                v_uint8x16 v_src = v_load(src + x);
+                v_src = v_src & v_mask;
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
 
@@ -132,17 +766,17 @@ struct Acc_SIMD<ushort, float>
     int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
-
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                uint16x8_t v_src = vld1q_u16(src + x);
-                uint32x4_t v_src0 = vmovl_u16(vget_low_u16(v_src)), v_src1 = vmovl_u16(vget_high_u16(v_src));
+                v_uint16x8 v_src = v_load(src + x);
+                v_uint32x4 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src0)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src1)));
             }
         }
 
@@ -150,10 +784,72 @@ struct Acc_SIMD<ushort, float>
     }
 };
 
+#if CV_SIMD128_64F
 template <>
-struct Acc_SIMD<float, float>
+struct Acc_SIMD<uchar, double>
 {
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
+    int operator() (const uchar * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 16; x += 16)
+            {
+                v_uint8x16 v_src  = v_load(src + x);
+                v_uint16x8 v_int0, v_int1;
+                v_expand(v_src, v_int0, v_int1);
+
+                v_uint32x4 v_int00, v_int01, v_int10, v_int11;
+                v_expand(v_int0, v_int00, v_int01);
+                v_expand(v_int1, v_int10, v_int11);
+
+                v_float64x2 v_src0 = v_cvt_f64(v_reinterpret_as_s32(v_int00));
+                v_float64x2 v_src1 = v_cvt_f64_high(v_reinterpret_as_s32(v_int00));
+                v_float64x2 v_src2 = v_cvt_f64(v_reinterpret_as_s32(v_int01));
+                v_float64x2 v_src3 = v_cvt_f64_high(v_reinterpret_as_s32(v_int01));
+                v_float64x2 v_src4 = v_cvt_f64(v_reinterpret_as_s32(v_int10));
+                v_float64x2 v_src5 = v_cvt_f64_high(v_reinterpret_as_s32(v_int10));
+                v_float64x2 v_src6 = v_cvt_f64(v_reinterpret_as_s32(v_int11));
+                v_float64x2 v_src7 = v_cvt_f64_high(v_reinterpret_as_s32(v_int11));
+
+                v_float64x2 v_dst0 = v_load(dst + x);
+                v_float64x2 v_dst1 = v_load(dst + x + 2);
+                v_float64x2 v_dst2 = v_load(dst + x + 4);
+                v_float64x2 v_dst3 = v_load(dst + x + 6);
+                v_float64x2 v_dst4 = v_load(dst + x + 8);
+                v_float64x2 v_dst5 = v_load(dst + x + 10);
+                v_float64x2 v_dst6 = v_load(dst + x + 12);
+                v_float64x2 v_dst7 = v_load(dst + x + 14);
+
+                v_dst0 = v_dst0 + v_src0;
+                v_dst1 = v_dst1 + v_src1;
+                v_dst2 = v_dst2 + v_src2;
+                v_dst3 = v_dst3 + v_src3;
+                v_dst4 = v_dst4 + v_src4;
+                v_dst5 = v_dst5 + v_src5;
+                v_dst6 = v_dst6 + v_src6;
+                v_dst7 = v_dst7 + v_src7;
+
+                v_store(dst + x, v_dst0);
+                v_store(dst + x + 2, v_dst1);
+                v_store(dst + x + 4, v_dst2);
+                v_store(dst + x + 6, v_dst3);
+                v_store(dst + x + 8, v_dst4);
+                v_store(dst + x + 10, v_dst5);
+                v_store(dst + x + 12, v_dst6);
+                v_store(dst + x + 14, v_dst7);
+            }
+        }
+        return x;
+    }
+};
+
+template <>
+struct Acc_SIMD<ushort, double>
+{
+    int operator() (const ushort * src, double * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
 
@@ -162,14 +858,35 @@ struct Acc_SIMD<float, float>
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vld1q_f32(src + x)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vld1q_f32(src + x + 4)));
+                v_uint16x8 v_src  = v_load(src + x);
+                v_uint32x4 v_int0, v_int1;
+                v_expand(v_src, v_int0, v_int1);
+
+                v_float64x2 v_src0 = v_cvt_f64(v_reinterpret_as_s32(v_int0));
+                v_float64x2 v_src1 = v_cvt_f64_high(v_reinterpret_as_s32(v_int0));
+                v_float64x2 v_src2 = v_cvt_f64(v_reinterpret_as_s32(v_int1));
+                v_float64x2 v_src3 = v_cvt_f64_high(v_reinterpret_as_s32(v_int1));
+
+                v_float64x2 v_dst0 = v_load(dst + x);
+                v_float64x2 v_dst1 = v_load(dst + x + 2);
+                v_float64x2 v_dst2 = v_load(dst + x + 4);
+                v_float64x2 v_dst3 = v_load(dst + x + 6);
+
+                v_dst0 = v_dst0 + v_src0;
+                v_dst1 = v_dst1 + v_src1;
+                v_dst2 = v_dst2 + v_src2;
+                v_dst3 = v_dst3 + v_src3;
+
+                v_store(dst + x, v_dst0);
+                v_store(dst + x + 2, v_dst1);
+                v_store(dst + x + 4, v_dst2);
+                v_store(dst + x + 6, v_dst3);
             }
         }
-
         return x;
     }
 };
+#endif
 
 template <>
 struct AccSqr_SIMD<uchar, float>
@@ -183,30 +900,44 @@ struct AccSqr_SIMD<uchar, float>
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vld1q_u8(src + x);
-                uint8x8_t v_src_0 = vget_low_u8(v_src), v_src_1 = vget_high_u8(v_src);
-                uint16x8_t v_src0 = vmull_u8(v_src_0, v_src_0), v_src1 = vmull_u8(v_src_1, v_src_1);
+                v_uint8x16 v_src  = v_load(src + x);
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
         else if (cn == 1)
         {
-            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
-
+            v_uint8x16 v_0 = v_setall_u8(0);
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vandq_u8(vld1q_u8(src + x), veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0)));
-                uint8x8_t v_src_0 = vget_low_u8(v_src), v_src_1 = vget_high_u8(v_src);
-                uint16x8_t v_src0 = vmull_u8(v_src_0, v_src_0), v_src1 = vmull_u8(v_src_1, v_src_1);
+                v_uint8x16 v_mask = v_load(mask + x);
+                v_mask = ~(v_0 == v_mask);
+                v_uint8x16 v_src = v_load(src + x);
+                v_src = v_src & v_mask;
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
 
@@ -226,30 +957,18 @@ struct AccSqr_SIMD<ushort, float>
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                uint16x8_t v_src = vld1q_u16(src + x);
-                uint16x4_t v_src_0 = vget_low_u16(v_src), v_src_1 = vget_high_u16(v_src);
-                uint32x4_t v_src0 = vmull_u16(v_src_0, v_src_0), v_src1 = vmull_u16(v_src_1, v_src_1);
+                v_uint16x8 v_src = v_load(src + x);
+                v_uint32x4 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
-            }
-        }
-        else if (cn == 1)
-        {
-            uint8x8_t v_255 = vdup_n_u8(255), v_0 = vdup_n_u8(0);
+                v_float32x4 v_float0, v_float1;
+                v_float0 = v_cvt_f32(v_reinterpret_as_s32(v_src0));
+                v_float1 = v_cvt_f32(v_reinterpret_as_s32(v_src1));
+                v_float0 = v_float0 * v_float0;
+                v_float1 = v_float1 * v_float1;
 
-            for ( ; x <= len - 8; x += 8)
-            {
-                uint8x8_t v_mask_src = veor_u8(v_255, vceq_u8(vld1_u8(mask + x), v_0));
-                uint8x8x2_t v_mask_zp = vzip_u8(v_mask_src, v_mask_src);
-                uint16x8_t v_mask = vreinterpretq_u16_u8(vcombine_u8(v_mask_zp.val[0], v_mask_zp.val[1])),
-                           v_src = vandq_u16(vld1q_u16(src + x), v_mask);
-
-                uint16x4_t v_src_0 = vget_low_u16(v_src), v_src_1 = vget_high_u16(v_src);
-                uint32x4_t v_src0 = vmull_u16(v_src_0, v_src_0), v_src1 = vmull_u16(v_src_1, v_src_1);
-
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+                v_store(dst + x, v_load(dst + x) + v_float0);
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_float1);
             }
         }
 
@@ -257,10 +976,11 @@ struct AccSqr_SIMD<ushort, float>
     }
 };
 
+#if CV_SIMD128_64F
 template <>
-struct AccSqr_SIMD<float, float>
+struct AccSqr_SIMD<uchar, double>
 {
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
+    int operator() (const uchar * src, double * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
 
@@ -269,17 +989,90 @@ struct AccSqr_SIMD<float, float>
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                float32x4_t v_src = vld1q_f32(src + x);
-                vst1q_f32(dst + x, vmlaq_f32(vld1q_f32(dst + x), v_src, v_src));
+                v_uint8x16 v_src = v_load(src + x);
+                v_uint16x8 v_int, dummy;
+                v_expand(v_src, v_int, dummy);
 
-                v_src = vld1q_f32(src + x + 4);
-                vst1q_f32(dst + x + 4, vmlaq_f32(vld1q_f32(dst + x + 4), v_src, v_src));
+                v_uint32x4 v_int0, v_int1;
+                v_expand(v_int, v_int0, v_int1);
+
+                v_float64x2 v_src0 = v_cvt_f64(v_reinterpret_as_s32(v_int0));
+                v_float64x2 v_src1 = v_cvt_f64_high(v_reinterpret_as_s32(v_int0));
+                v_float64x2 v_src2 = v_cvt_f64(v_reinterpret_as_s32(v_int1));
+                v_float64x2 v_src3 = v_cvt_f64_high(v_reinterpret_as_s32(v_int1));
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
+                v_src2 = v_src2 * v_src2;
+                v_src3 = v_src3 * v_src3;
+
+                v_float64x2 v_dst0 = v_load(dst + x);
+                v_float64x2 v_dst1 = v_load(dst + x + 2);
+                v_float64x2 v_dst2 = v_load(dst + x + 4);
+                v_float64x2 v_dst3 = v_load(dst + x + 6);
+
+                v_dst0 += v_src0;
+                v_dst1 += v_src1;
+                v_dst2 += v_src2;
+                v_dst3 += v_src3;
+
+                v_store(dst + x, v_dst0);
+                v_store(dst + x + 2, v_dst1);
+                v_store(dst + x + 4, v_dst2);
+                v_store(dst + x + 6, v_dst3);
             }
         }
-
         return x;
     }
 };
+
+template <>
+struct AccSqr_SIMD<ushort, double>
+{
+    int operator() (const ushort * src, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                v_uint16x8 v_src  = v_load(src + x);
+                v_uint32x4 v_int_0, v_int_1;
+                v_expand(v_src, v_int_0, v_int_1);
+
+                v_int32x4 v_int0 = v_reinterpret_as_s32(v_int_0);
+                v_int32x4 v_int1 = v_reinterpret_as_s32(v_int_1);
+
+                v_float64x2 v_src0 = v_cvt_f64(v_int0);
+                v_float64x2 v_src1 = v_cvt_f64_high(v_int0);
+                v_float64x2 v_src2 = v_cvt_f64(v_int1);
+                v_float64x2 v_src3 = v_cvt_f64_high(v_int1);
+                v_src0 = v_src0 * v_src0;
+                v_src1 = v_src1 * v_src1;
+                v_src2 = v_src2 * v_src2;
+                v_src3 = v_src3 * v_src3;
+
+                v_float64x2 v_dst0 = v_load(dst + x);
+                v_float64x2 v_dst1 = v_load(dst + x + 2);
+                v_float64x2 v_dst2 = v_load(dst + x + 4);
+                v_float64x2 v_dst3 = v_load(dst + x + 6);
+
+                v_dst0 += v_src0;
+                v_dst1 += v_src1;
+                v_dst2 += v_src2;
+                v_dst3 += v_src3;
+
+                v_store(dst + x, v_dst0);
+                v_store(dst + x + 2, v_dst1);
+                v_store(dst + x + 4, v_dst2);
+                v_store(dst + x + 6, v_dst3);
+            }
+        }
+        return x;
+    }
+};
+#endif
 
 template <>
 struct AccProd_SIMD<uchar, float>
@@ -288,36 +1081,60 @@ struct AccProd_SIMD<uchar, float>
     {
         int x = 0;
 
+        len *= cn;
         if (!mask)
         {
-            len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_1src = vld1q_u8(src1 + x), v_2src = vld1q_u8(src2 + x);
-                uint16x8_t v_src0 = vmull_u8(vget_low_u8(v_1src), vget_low_u8(v_2src)),
-                           v_src1 = vmull_u8(vget_high_u8(v_1src), vget_high_u8(v_2src));
+                v_uint8x16 v_1src = v_load(src1 + x);
+                v_uint8x16 v_2src = v_load(src2 + x);
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+                v_uint16x8 v_1src0, v_1src1, v_2src0, v_2src1;
+                v_expand(v_1src, v_1src0, v_1src1);
+                v_expand(v_2src, v_2src0, v_2src1);
+
+                v_uint16x8 v_src0, v_src1;
+                v_src0 = v_1src0 * v_2src0;
+                v_src1 = v_1src1 * v_2src1;
+
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
         else if (cn == 1)
         {
-            uint8x16_t v_255 = vdupq_n_u8(255), v_0 = vdupq_n_u8(0);
+            v_uint8x16 v_0 = v_setzero_u8();
 
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_mask = veorq_u8(v_255, vceqq_u8(vld1q_u8(mask + x), v_0));
-                uint8x16_t v_1src = vandq_u8(vld1q_u8(src1 + x), v_mask), v_2src = vandq_u8(vld1q_u8(src2 + x), v_mask);
-                uint16x8_t v_src0 = vmull_u8(vget_low_u8(v_1src), vget_low_u8(v_2src)),
-                           v_src1 = vmull_u8(vget_high_u8(v_1src), vget_high_u8(v_2src));
+                v_uint8x16 v_mask = v_load(mask + x);
+                v_mask = ~(v_0 == v_mask);
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0)))));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0)))));
-                vst1q_f32(dst + x + 8, vaddq_f32(vld1q_f32(dst + x + 8), vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1)))));
-                vst1q_f32(dst + x + 12, vaddq_f32(vld1q_f32(dst + x + 12), vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1)))));
+                v_uint8x16 v_1src = v_load(src1 + x) & v_mask;
+                v_uint8x16 v_2src = v_load(src2 + x) & v_mask;
+
+                v_uint16x8 v_1src0, v_1src1, v_2src0, v_2src1;
+                v_expand(v_1src, v_1src0, v_1src1);
+                v_expand(v_2src, v_2src0, v_2src1);
+
+                v_uint16x8 v_src0, v_src1;
+                v_src0 = v_1src0 * v_2src0;
+                v_src1 = v_1src1 * v_2src1;
+
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_store(dst + x, v_load(dst + x) + v_cvt_f32(v_reinterpret_as_s32(v_src00)));
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_cvt_f32(v_reinterpret_as_s32(v_src01)));
+                v_store(dst + x + 8, v_load(dst + x + 8) + v_cvt_f32(v_reinterpret_as_s32(v_src10)));
+                v_store(dst + x + 12, v_load(dst + x + 12) + v_cvt_f32(v_reinterpret_as_s32(v_src11)));
             }
         }
 
@@ -337,31 +1154,53 @@ struct AccProd_SIMD<ushort, float>
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                uint16x8_t v_1src = vld1q_u16(src1 + x), v_2src = vld1q_u16(src2 + x);
-                uint32x4_t v_src0 = vmull_u16(vget_low_u16(v_1src), vget_low_u16(v_2src)),
-                           v_src1 = vmull_u16(vget_high_u16(v_1src), vget_high_u16(v_2src));
+                v_uint16x8 v_1src = v_load(src1 + x);
+                v_uint16x8 v_2src = v_load(src2 + x);
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+                v_uint32x4 v_1src0, v_1src1, v_2src0, v_2src1;
+                v_expand(v_1src, v_1src0, v_1src1);
+                v_expand(v_2src, v_2src0, v_2src1);
+
+                v_float32x4 v_1float0 = v_cvt_f32(v_reinterpret_as_s32(v_1src0));
+                v_float32x4 v_1float1 = v_cvt_f32(v_reinterpret_as_s32(v_1src1));
+                v_float32x4 v_2float0 = v_cvt_f32(v_reinterpret_as_s32(v_2src0));
+                v_float32x4 v_2float1 = v_cvt_f32(v_reinterpret_as_s32(v_2src1));
+
+                v_float32x4 v_src0 = v_1float0 * v_2float0;
+                v_float32x4 v_src1 = v_1float1 * v_2float1;
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_src1);
             }
         }
         else if (cn == 1)
         {
-            uint8x8_t v_255 = vdup_n_u8(255), v_0 = vdup_n_u8(0);
+            v_uint16x8 v_0 = v_setzero_u16();
 
             for ( ; x <= len - 8; x += 8)
             {
-                uint8x8_t v_mask_src = veor_u8(v_255, vceq_u8(vld1_u8(mask + x), v_0));
-                uint8x8x2_t v_mask_zp = vzip_u8(v_mask_src, v_mask_src);
-                uint16x8_t v_mask = vreinterpretq_u16_u8(vcombine_u8(v_mask_zp.val[0], v_mask_zp.val[1])),
-                           v_1src = vandq_u16(vld1q_u16(src1 + x), v_mask),
-                           v_2src = vandq_u16(vld1q_u16(src2 + x), v_mask);
+                v_uint8x16 v_mask = v_load_halves(mask + x, mask + x);
+                v_uint16x8 v_mask0, v_mask1;
+                v_expand(v_mask, v_mask0, v_mask1);
+                v_mask0 = ~(v_0 == v_mask0);
 
-                uint32x4_t v_src0 = vmull_u16(vget_low_u16(v_1src), vget_low_u16(v_2src)),
-                           v_src1 = vmull_u16(vget_high_u16(v_1src), vget_high_u16(v_2src));
+                v_uint16x8 v_1src = v_load(src1 + x) & v_mask0;
+                v_uint16x8 v_2src = v_load(src2 + x) & v_mask0;
 
-                vst1q_f32(dst + x, vaddq_f32(vld1q_f32(dst + x), vcvtq_f32_u32(v_src0)));
-                vst1q_f32(dst + x + 4, vaddq_f32(vld1q_f32(dst + x + 4), vcvtq_f32_u32(v_src1)));
+                v_uint32x4 v_1src0, v_1src1, v_2src0, v_2src1;
+                v_expand(v_1src, v_1src0, v_1src1);
+                v_expand(v_2src, v_2src0, v_2src1);
+
+                v_float32x4 v_1float0 = v_cvt_f32(v_reinterpret_as_s32(v_1src0));
+                v_float32x4 v_1float1 = v_cvt_f32(v_reinterpret_as_s32(v_1src1));
+                v_float32x4 v_2float0 = v_cvt_f32(v_reinterpret_as_s32(v_2src0));
+                v_float32x4 v_2float1 = v_cvt_f32(v_reinterpret_as_s32(v_2src1));
+
+                v_float32x4 v_src0 = v_1float0 * v_2float0;
+                v_float32x4 v_src1 = v_1float1 * v_2float1;
+
+                v_store(dst + x, v_load(dst + x) + v_src0);
+                v_store(dst + x + 4, v_load(dst + x + 4) + v_src1);
             }
         }
 
@@ -369,10 +1208,11 @@ struct AccProd_SIMD<ushort, float>
     }
 };
 
+#if CV_SIMD128_64F
 template <>
-struct AccProd_SIMD<float, float>
+struct AccProd_SIMD<uchar, double>
 {
-    int operator() (const float * src1, const float * src2, float * dst, const uchar * mask, int len, int cn) const
+    int operator() (const uchar * src1, const uchar * src2, double * dst, const uchar * mask, int len, int cn) const
     {
         int x = 0;
 
@@ -381,14 +1221,96 @@ struct AccProd_SIMD<float, float>
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                vst1q_f32(dst + x, vmlaq_f32(vld1q_f32(dst + x), vld1q_f32(src1 + x), vld1q_f32(src2 + x)));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vld1q_f32(dst + x + 4), vld1q_f32(src1 + x + 4), vld1q_f32(src2 + x + 4)));
+                v_uint8x16 v_1src  = v_load(src1 + x);
+                v_uint8x16 v_2src  = v_load(src2 + x);
+
+                v_uint16x8 v_1int, v_2int, dummy;
+                v_expand(v_1src, v_1int, dummy);
+                v_expand(v_2src, v_2int, dummy);
+
+                v_uint32x4 v_1int_0, v_1int_1, v_2int_0, v_2int_1;
+                v_expand(v_1int, v_1int_0, v_1int_1);
+                v_expand(v_2int, v_2int_0, v_2int_1);
+
+                v_int32x4 v_1int0 = v_reinterpret_as_s32(v_1int_0);
+                v_int32x4 v_1int1 = v_reinterpret_as_s32(v_1int_1);
+                v_int32x4 v_2int0 = v_reinterpret_as_s32(v_2int_0);
+                v_int32x4 v_2int1 = v_reinterpret_as_s32(v_2int_1);
+
+                v_float64x2 v_src0 = v_cvt_f64(v_1int0) * v_cvt_f64(v_2int0);
+                v_float64x2 v_src1 = v_cvt_f64_high(v_1int0) * v_cvt_f64_high(v_2int0);
+                v_float64x2 v_src2 = v_cvt_f64(v_1int1) * v_cvt_f64(v_2int1);
+                v_float64x2 v_src3 = v_cvt_f64_high(v_1int1) * v_cvt_f64_high(v_2int1);
+
+                v_float64x2 v_dst0 = v_load(dst + x);
+                v_float64x2 v_dst1 = v_load(dst + x + 2);
+                v_float64x2 v_dst2 = v_load(dst + x + 4);
+                v_float64x2 v_dst3 = v_load(dst + x + 6);
+
+                v_dst0 += v_src0;
+                v_dst1 += v_src1;
+                v_dst2 += v_src2;
+                v_dst3 += v_src3;
+
+                v_store(dst + x, v_dst0);
+                v_store(dst + x + 2, v_dst1);
+                v_store(dst + x + 4, v_dst2);
+                v_store(dst + x + 6, v_dst3);
             }
         }
-
         return x;
     }
 };
+
+template <>
+struct AccProd_SIMD<ushort, double>
+{
+    int operator() (const ushort * src1, const ushort * src2, double * dst, const uchar * mask, int len, int cn) const
+    {
+        int x = 0;
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                v_uint16x8 v_1src  = v_load(src1 + x);
+                v_uint16x8 v_2src  = v_load(src2 + x);
+
+                v_uint32x4 v_1int_0, v_1int_1, v_2int_0, v_2int_1;
+                v_expand(v_1src, v_1int_0, v_1int_1);
+                v_expand(v_2src, v_2int_0, v_2int_1);
+
+                v_int32x4 v_1int0 = v_reinterpret_as_s32(v_1int_0);
+                v_int32x4 v_1int1 = v_reinterpret_as_s32(v_1int_1);
+                v_int32x4 v_2int0 = v_reinterpret_as_s32(v_2int_0);
+                v_int32x4 v_2int1 = v_reinterpret_as_s32(v_2int_1);
+
+                v_float64x2 v_src0 = v_cvt_f64(v_1int0) * v_cvt_f64(v_2int0);
+                v_float64x2 v_src1 = v_cvt_f64_high(v_1int0) * v_cvt_f64_high(v_2int0);
+                v_float64x2 v_src2 = v_cvt_f64(v_1int1) * v_cvt_f64(v_2int1);
+                v_float64x2 v_src3 = v_cvt_f64_high(v_1int1) * v_cvt_f64_high(v_2int1);
+
+                v_float64x2 v_dst0 = v_load(dst + x);
+                v_float64x2 v_dst1 = v_load(dst + x + 2);
+                v_float64x2 v_dst2 = v_load(dst + x + 4);
+                v_float64x2 v_dst3 = v_load(dst + x + 6);
+
+                v_dst0 = v_dst0 + v_src0;
+                v_dst1 = v_dst1 + v_src1;
+                v_dst2 = v_dst2 + v_src2;
+                v_dst3 = v_dst3 + v_src3;
+
+                v_store(dst + x, v_dst0);
+                v_store(dst + x + 2, v_dst1);
+                v_store(dst + x + 4, v_dst2);
+                v_store(dst + x + 6, v_dst3);
+            }
+        }
+        return x;
+    }
+};
+#endif
 
 template <>
 struct AccW_SIMD<uchar, float>
@@ -396,24 +1318,37 @@ struct AccW_SIMD<uchar, float>
     int operator() (const uchar * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
     {
         int x = 0;
-        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
+        v_float32x4 v_alpha = v_setall_f32(alpha);
+        v_float32x4 v_beta = v_setall_f32(1.0f - alpha);
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 16; x += 16)
             {
-                uint8x16_t v_src = vld1q_u8(src + x);
-                uint16x8_t v_src0 = vmovl_u8(vget_low_u8(v_src)), v_src1 = vmovl_u8(vget_high_u8(v_src));
+                v_uint8x16 v_src = v_load(src + x);
 
-                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta),
-                                             vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src0))), v_alpha));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta),
-                                             vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src0))), v_alpha));
-                vst1q_f32(dst + x + 8, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 8), v_beta),
-                                                 vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_src1))), v_alpha));
-                vst1q_f32(dst + x + 12, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 12), v_beta),
-                                                  vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_src1))), v_alpha));
+                v_uint16x8 v_src0, v_src1;
+                v_expand(v_src, v_src0, v_src1);
+
+                v_uint32x4 v_src00, v_src01, v_src10, v_src11;
+                v_expand(v_src0, v_src00, v_src01);
+                v_expand(v_src1, v_src10, v_src11);
+
+                v_float32x4 v_dst00 = v_load(dst + x);
+                v_float32x4 v_dst01 = v_load(dst + x + 4);
+                v_float32x4 v_dst10 = v_load(dst + x + 8);
+                v_float32x4 v_dst11 = v_load(dst + x + 12);
+
+                v_dst00 = (v_dst00 * v_beta) + (v_cvt_f32(v_reinterpret_as_s32(v_src00)) * v_alpha);
+                v_dst01 = (v_dst01 * v_beta) + (v_cvt_f32(v_reinterpret_as_s32(v_src01)) * v_alpha);
+                v_dst10 = (v_dst10 * v_beta) + (v_cvt_f32(v_reinterpret_as_s32(v_src10)) * v_alpha);
+                v_dst11 = (v_dst11 * v_beta) + (v_cvt_f32(v_reinterpret_as_s32(v_src11)) * v_alpha);
+
+                v_store(dst + x, v_dst00);
+                v_store(dst + x + 4, v_dst01);
+                v_store(dst + x + 8, v_dst10);
+                v_store(dst + x + 12, v_dst11);
             }
         }
 
@@ -427,18 +1362,79 @@ struct AccW_SIMD<ushort, float>
     int operator() (const ushort * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
     {
         int x = 0;
-        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
+        v_float32x4 v_alpha = v_setall_f32(alpha);
+        v_float32x4 v_beta = v_setall_f32(1.0f - alpha);
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                uint16x8_t v_src = vld1q_u16(src + x);
-                uint32x4_t v_src0 = vmovl_u16(vget_low_u16(v_src)), v_src1 = vmovl_u16(vget_high_u16(v_src));
+                v_uint16x8 v_src = v_load(src + x);
+                v_uint32x4 v_int0, v_int1;
+                v_expand(v_src, v_int0, v_int1);
 
-                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta), vcvtq_f32_u32(v_src0), v_alpha));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta), vcvtq_f32_u32(v_src1), v_alpha));
+                v_float32x4 v_src0 = v_cvt_f32(v_reinterpret_as_s32(v_int0));
+                v_float32x4 v_src1 = v_cvt_f32(v_reinterpret_as_s32(v_int1));
+                v_src0 = v_src0 * v_alpha;
+                v_src1 = v_src1 * v_alpha;
+
+                v_float32x4 v_dst0 = v_load(dst + x) * v_beta;
+                v_float32x4 v_dst1 = v_load(dst + x + 4) * v_beta;
+
+                v_store(dst + x, v_dst0 + v_src0);
+                v_store(dst + x + 4, v_dst1 + v_src1);
+            }
+        }
+
+        return x;
+    }
+};
+
+#if CV_SIMD128_64F
+template <>
+struct AccW_SIMD<uchar, double>
+{
+    int operator() (const uchar * src, double * dst, const uchar * mask, int len, int cn, double alpha) const
+    {
+        int x = 0;
+        v_float64x2 v_alpha = v_setall_f64(alpha);
+        v_float64x2 v_beta = v_setall_f64(1.0f - alpha);
+
+        if (!mask)
+        {
+            len *= cn;
+            for ( ; x <= len - 8; x += 8)
+            {
+                v_uint8x16 v_src = v_load(src + x);
+                v_uint16x8 v_int, dummy;
+                v_expand(v_src, v_int, dummy);
+
+                v_uint32x4 v_int_0, v_int_1;
+                v_expand(v_int, v_int_0, v_int_1);
+
+                v_int32x4 v_int0 = v_reinterpret_as_s32(v_int_0);
+                v_int32x4 v_int1 = v_reinterpret_as_s32(v_int_1);
+
+                v_float64x2 v_src0 = v_cvt_f64(v_int0);
+                v_float64x2 v_src1 = v_cvt_f64_high(v_int0);
+                v_float64x2 v_src2 = v_cvt_f64(v_int1);
+                v_float64x2 v_src3 = v_cvt_f64_high(v_int1);
+
+                v_float64x2 v_dst0 = v_load(dst + x);
+                v_float64x2 v_dst1 = v_load(dst + x + 2);
+                v_float64x2 v_dst2 = v_load(dst + x + 4);
+                v_float64x2 v_dst3 = v_load(dst + x + 6);
+
+                v_dst0 = (v_dst0 * v_beta) + (v_src0 * v_alpha);
+                v_dst1 = (v_dst1 * v_beta) + (v_src1 * v_alpha);
+                v_dst2 = (v_dst2 * v_beta) + (v_src2 * v_alpha);
+                v_dst3 = (v_dst3 * v_beta) + (v_src3 * v_alpha);
+
+                v_store(dst + x, v_dst0);
+                v_store(dst + x + 2, v_dst1);
+                v_store(dst + x + 4, v_dst2);
+                v_store(dst + x + 6, v_dst3);
             }
         }
 
@@ -447,28 +1443,53 @@ struct AccW_SIMD<ushort, float>
 };
 
 template <>
-struct AccW_SIMD<float, float>
+struct AccW_SIMD<ushort, double>
 {
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
+    int operator() (const ushort * src, double * dst, const uchar * mask, int len, int cn, double alpha) const
     {
         int x = 0;
-        float32x4_t v_alpha = vdupq_n_f32(alpha), v_beta = vdupq_n_f32(1.0f - alpha);
+        v_float64x2 v_alpha = v_setall_f64(alpha);
+        v_float64x2 v_beta = v_setall_f64(1.0f - alpha);
 
         if (!mask)
         {
             len *= cn;
             for ( ; x <= len - 8; x += 8)
             {
-                vst1q_f32(dst + x, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x), v_beta), vld1q_f32(src + x), v_alpha));
-                vst1q_f32(dst + x + 4, vmlaq_f32(vmulq_f32(vld1q_f32(dst + x + 4), v_beta), vld1q_f32(src + x + 4), v_alpha));
+                v_uint16x8 v_src = v_load(src + x);
+                v_uint32x4 v_int_0, v_int_1;
+                v_expand(v_src, v_int_0, v_int_1);
+
+                v_int32x4 v_int0 = v_reinterpret_as_s32(v_int_0);
+                v_int32x4 v_int1 = v_reinterpret_as_s32(v_int_1);
+
+                v_float64x2 v_src00 = v_cvt_f64(v_int0);
+                v_float64x2 v_src01 = v_cvt_f64_high(v_int0);
+                v_float64x2 v_src10 = v_cvt_f64(v_int1);
+                v_float64x2 v_src11 = v_cvt_f64_high(v_int1);
+
+                v_float64x2 v_dst00 = v_load(dst + x);
+                v_float64x2 v_dst01 = v_load(dst + x + 2);
+                v_float64x2 v_dst10 = v_load(dst + x + 4);
+                v_float64x2 v_dst11 = v_load(dst + x + 6);
+
+                v_dst00 = (v_dst00 * v_beta) + (v_src00 * v_alpha);
+                v_dst01 = (v_dst01 * v_beta) + (v_src01 * v_alpha);
+                v_dst10 = (v_dst10 * v_beta) + (v_src10 * v_alpha);
+                v_dst11 = (v_dst11 * v_beta) + (v_src11 * v_alpha);
+
+                v_store(dst + x, v_dst00);
+                v_store(dst + x + 2, v_dst01);
+                v_store(dst + x + 4, v_dst10);
+                v_store(dst + x + 6, v_dst11);
             }
         }
 
         return x;
     }
 };
-
-#endif
+#endif //CV_SIMD128_64F
+#endif //CV_SIMD128
 
 template<typename T, typename AT> void
 acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
@@ -848,6 +1869,8 @@ namespace cv
 {
 static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
 
@@ -855,28 +1878,28 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
 
     if (src.dims <= 2 || (src.isContinuous() && dst.isContinuous() && (mask.empty() || mask.isContinuous())))
     {
-        typedef IppStatus (CV_STDCALL * ippiAdd)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
-        typedef IppStatus (CV_STDCALL * ippiAddMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
+        typedef IppStatus (CV_STDCALL * IppiAdd)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
+        typedef IppStatus (CV_STDCALL * IppiAddMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
                                                     int srcDstStep, IppiSize roiSize);
-        ippiAdd ippFunc = 0;
-        ippiAddMask ippFuncMask = 0;
+        IppiAdd ippiAdd_I = 0;
+        IppiAddMask ippiAdd_IM = 0;
 
         if (mask.empty())
         {
             CV_SUPPRESS_DEPRECATED_START
-            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAdd)ippiAdd_8u32f_C1IR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAdd)ippiAdd_16u32f_C1IR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAdd)ippiAdd_32f_C1IR : 0;
+            ippiAdd_I = sdepth == CV_8U && ddepth == CV_32F ? (IppiAdd)ippiAdd_8u32f_C1IR :
+                sdepth == CV_16U && ddepth == CV_32F ? (IppiAdd)ippiAdd_16u32f_C1IR :
+                sdepth == CV_32F && ddepth == CV_32F ? (IppiAdd)ippiAdd_32f_C1IR : 0;
             CV_SUPPRESS_DEPRECATED_END
         }
         else if (scn == 1)
         {
-            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddMask)ippiAdd_8u32f_C1IMR :
-                sdepth == CV_16U && ddepth == CV_32F ? (ippiAddMask)ippiAdd_16u32f_C1IMR :
-                sdepth == CV_32F && ddepth == CV_32F ? (ippiAddMask)ippiAdd_32f_C1IMR : 0;
+            ippiAdd_IM = sdepth == CV_8U && ddepth == CV_32F ? (IppiAddMask)ippiAdd_8u32f_C1IMR :
+                sdepth == CV_16U && ddepth == CV_32F ? (IppiAddMask)ippiAdd_16u32f_C1IMR :
+                sdepth == CV_32F && ddepth == CV_32F ? (IppiAddMask)ippiAdd_32f_C1IMR : 0;
         }
 
-        if (ippFunc || ippFuncMask)
+        if (ippiAdd_I || ippiAdd_IM)
         {
             IppStatus status = ippStsErr;
 
@@ -892,11 +1915,11 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
             }
             size.width *= scn;
 
-            if (ippFunc)
-                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-            else if(ippFuncMask)
-                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                                        dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            if (ippiAdd_I)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAdd_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            else if (ippiAdd_IM)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAdd_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return true;
@@ -909,6 +1932,8 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
 
 void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
@@ -942,6 +1967,8 @@ namespace cv
 {
 static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputArray _mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
 
@@ -952,23 +1979,23 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
         typedef IppStatus (CV_STDCALL * ippiAddSquare)(const void * pSrc, int srcStep, Ipp32f * pSrcDst, int srcdstStep, IppiSize roiSize);
         typedef IppStatus (CV_STDCALL * ippiAddSquareMask)(const void * pSrc, int srcStep, const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst,
                                                             int srcDstStep, IppiSize roiSize);
-        ippiAddSquare ippFunc = 0;
-        ippiAddSquareMask ippFuncMask = 0;
+        ippiAddSquare ippiAddSquare_I = 0;
+        ippiAddSquareMask ippiAddSquare_IM = 0;
 
         if (mask.empty())
         {
-            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_8u32f_C1IR :
+            ippiAddSquare_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_8u32f_C1IR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_16u32f_C1IR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquare)ippiAddSquare_32f_C1IR : 0;
         }
         else if (scn == 1)
         {
-            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_8u32f_C1IMR :
+            ippiAddSquare_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_8u32f_C1IMR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_16u32f_C1IMR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddSquareMask)ippiAddSquare_32f_C1IMR : 0;
         }
 
-        if (ippFunc || ippFuncMask)
+        if (ippiAddSquare_I || ippiAddSquare_IM)
         {
             IppStatus status = ippStsErr;
 
@@ -984,11 +2011,11 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
             }
             size.width *= scn;
 
-            if (ippFunc)
-                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
-            else if(ippFuncMask)
-                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                                        dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            if (ippiAddSquare_I)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddSquare_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            else if (ippiAddSquare_IM)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddSquare_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return true;
@@ -1001,6 +2028,8 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
 
 void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
@@ -1034,6 +2063,8 @@ namespace cv
 static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
 
@@ -1045,23 +2076,23 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
                                                         int src2Step, Ipp32f * pSrcDst, int srcDstStep, IppiSize roiSize);
         typedef IppStatus (CV_STDCALL * ippiAddProductMask)(const void * pSrc1, int src1Step, const void * pSrc2, int src2Step,
                                                             const Ipp8u * pMask, int maskStep, Ipp32f * pSrcDst, int srcDstStep, IppiSize roiSize);
-        ippiAddProduct ippFunc = 0;
-        ippiAddProductMask ippFuncMask = 0;
+        ippiAddProduct ippiAddProduct_I = 0;
+        ippiAddProductMask ippiAddProduct_IM = 0;
 
         if (mask.empty())
         {
-            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_8u32f_C1IR :
+            ippiAddProduct_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_8u32f_C1IR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_16u32f_C1IR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProduct)ippiAddProduct_32f_C1IR : 0;
         }
         else if (scn == 1)
         {
-            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_8u32f_C1IMR :
+            ippiAddProduct_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_8u32f_C1IMR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_16u32f_C1IMR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddProductMask)ippiAddProduct_32f_C1IMR : 0;
         }
 
-        if (ippFunc || ippFuncMask)
+        if (ippiAddProduct_I || ippiAddProduct_IM)
         {
             IppStatus status = ippStsErr;
 
@@ -1078,12 +2109,12 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
             }
             size.width *= scn;
 
-            if (ippFunc)
-                status = ippFunc(src1.ptr(), src1step, src2.ptr(), src2step, dst.ptr<Ipp32f>(),
-                                    dststep, ippiSize(size.width, size.height));
-            else if(ippFuncMask)
-                status = ippFuncMask(src1.ptr(), src1step, src2.ptr(), src2step, mask.ptr<Ipp8u>(), maskstep,
-                                        dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
+            if (ippiAddProduct_I)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddProduct_I, src1.ptr(), src1step, src2.ptr(), src2step, dst.ptr<Ipp32f>(),
+                    dststep, ippiSize(size.width, size.height));
+            else if (ippiAddProduct_IM)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddProduct_IM, src1.ptr(), src1step, src2.ptr(), src2step, mask.ptr<Ipp8u>(), maskstep,
+                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height));
 
             if (status >= 0)
                 return true;
@@ -1099,6 +2130,8 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
 void cv::accumulateProduct( InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
@@ -1133,6 +2166,8 @@ namespace cv
 static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
 
@@ -1145,23 +2180,23 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
         typedef IppStatus (CV_STDCALL * ippiAddWeightedMask)(const void * pSrc, int srcStep, const Ipp8u * pMask,
                                                                 int maskStep, Ipp32f * pSrcDst,
                                                                 int srcDstStep, IppiSize roiSize, Ipp32f alpha);
-        ippiAddWeighted ippFunc = 0;
-        ippiAddWeightedMask ippFuncMask = 0;
+        ippiAddWeighted ippiAddWeighted_I = 0;
+        ippiAddWeightedMask ippiAddWeighted_IM = 0;
 
         if (mask.empty())
         {
-            ippFunc = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_8u32f_C1IR :
+            ippiAddWeighted_I = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_8u32f_C1IR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_16u32f_C1IR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeighted)ippiAddWeighted_32f_C1IR : 0;
         }
         else if (scn == 1)
         {
-            ippFuncMask = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_8u32f_C1IMR :
+            ippiAddWeighted_IM = sdepth == CV_8U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_8u32f_C1IMR :
                 sdepth == CV_16U && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_16u32f_C1IMR :
                 sdepth == CV_32F && ddepth == CV_32F ? (ippiAddWeightedMask)ippiAddWeighted_32f_C1IMR : 0;
         }
 
-        if (ippFunc || ippFuncMask)
+        if (ippiAddWeighted_I || ippiAddWeighted_IM)
         {
             IppStatus status = ippStsErr;
 
@@ -1177,11 +2212,11 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
             }
             size.width *= scn;
 
-            if (ippFunc)
-                status = ippFunc(src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
-            else if(ippFuncMask)
-                status = ippFuncMask(src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
-                                        dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
+            if (ippiAddWeighted_I)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddWeighted_I, src.ptr(), srcstep, dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
+            else if (ippiAddWeighted_IM)
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddWeighted_IM, src.ptr(), srcstep, mask.ptr<Ipp8u>(), maskstep,
+                    dst.ptr<Ipp32f>(), dststep, ippiSize(size.width, size.height), (Ipp32f)alpha);
 
             if (status >= 0)
                 return true;
@@ -1195,6 +2230,8 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
 void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 

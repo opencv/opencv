@@ -227,16 +227,15 @@ struct MomentsInTile_SIMD<uchar, int, int>
 
         if( useSIMD )
         {
-            __m128i qx_init = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7);
             __m128i dx = _mm_set1_epi16(8);
-            __m128i z = _mm_setzero_si128(), qx0 = z, qx1 = z, qx2 = z, qx3 = z, qx = qx_init;
+            __m128i z = _mm_setzero_si128(), qx0 = z, qx1 = z, qx2 = z, qx3 = z, qx = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7);
 
             for( ; x <= len - 8; x += 8 )
             {
                 __m128i p = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(ptr + x)), z);
                 __m128i sx = _mm_mullo_epi16(qx, qx);
 
-                qx0 = _mm_add_epi32(qx0, _mm_sad_epu8(p, z));
+                qx0 = _mm_add_epi16(qx0, p);
                 qx1 = _mm_add_epi32(qx1, _mm_madd_epi16(p, qx));
                 qx2 = _mm_add_epi32(qx2, _mm_madd_epi16(p, sx));
                 qx3 = _mm_add_epi32(qx3, _mm_madd_epi16( _mm_mullo_epi16(p, qx), sx));
@@ -244,14 +243,21 @@ struct MomentsInTile_SIMD<uchar, int, int>
                 qx = _mm_add_epi16(qx, dx);
             }
 
-            _mm_store_si128((__m128i*)buf, qx0);
-            x0 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx1);
-            x1 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx2);
-            x2 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, qx3);
-            x3 = buf[0] + buf[1] + buf[2] + buf[3];
+            __m128i qx01_lo = _mm_unpacklo_epi32(qx0, qx1);
+            __m128i qx23_lo = _mm_unpacklo_epi32(qx2, qx3);
+            __m128i qx01_hi = _mm_unpackhi_epi32(qx0, qx1);
+            __m128i qx23_hi = _mm_unpackhi_epi32(qx2, qx3);
+            qx01_lo = _mm_add_epi32(qx01_lo, qx01_hi);
+            qx23_lo = _mm_add_epi32(qx23_lo, qx23_hi);
+            __m128i qx0123_lo = _mm_unpacklo_epi64(qx01_lo, qx23_lo);
+            __m128i qx0123_hi = _mm_unpackhi_epi64(qx01_lo, qx23_lo);
+            qx0123_lo = _mm_add_epi32(qx0123_lo, qx0123_hi);
+            _mm_store_si128((__m128i*)buf, qx0123_lo);
+
+            x0 = (buf[0] & 0xffff) + (buf[0] >> 16);
+            x1 = buf[1];
+            x2 = buf[2];
+            x3 = buf[3];
         }
 
         return x;
@@ -345,37 +351,42 @@ struct MomentsInTile_SIMD<ushort, int, int64>
 
         if (useSIMD)
         {
-            __m128i vx_init0 = _mm_setr_epi32(0, 1, 2, 3), vx_init1 = _mm_setr_epi32(4, 5, 6, 7),
-                v_delta = _mm_set1_epi32(8), v_zero = _mm_setzero_si128(), v_x0 = v_zero,
-                v_x1 = v_zero, v_x2 = v_zero, v_x3 = v_zero, v_ix0 = vx_init0, v_ix1 = vx_init1;
+            __m128i v_delta = _mm_set1_epi32(4), v_zero = _mm_setzero_si128(), v_x0 = v_zero,
+                v_x1 = v_zero, v_x2 = v_zero, v_x3 = v_zero, v_ix0 = _mm_setr_epi32(0, 1, 2, 3);
 
-            for( ; x <= len - 8; x += 8 )
+            for( ; x <= len - 4; x += 4 )
             {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(ptr + x));
-                __m128i v_src0 = _mm_unpacklo_epi16(v_src, v_zero), v_src1 = _mm_unpackhi_epi16(v_src, v_zero);
+                __m128i v_src = _mm_loadl_epi64((const __m128i *)(ptr + x));
+                v_src = _mm_unpacklo_epi16(v_src, v_zero);
 
-                v_x0 = _mm_add_epi32(v_x0, _mm_add_epi32(v_src0, v_src1));
-                __m128i v_x1_0 = _mm_mullo_epi32(v_src0, v_ix0), v_x1_1 = _mm_mullo_epi32(v_src1, v_ix1);
-                v_x1 = _mm_add_epi32(v_x1, _mm_add_epi32(v_x1_0, v_x1_1));
+                v_x0 = _mm_add_epi32(v_x0, v_src);
+                v_x1 = _mm_add_epi32(v_x1, _mm_mullo_epi32(v_src, v_ix0));
 
-                __m128i v_2ix0 = _mm_mullo_epi32(v_ix0, v_ix0), v_2ix1 = _mm_mullo_epi32(v_ix1, v_ix1);
-                v_x2 = _mm_add_epi32(v_x2, _mm_add_epi32(_mm_mullo_epi32(v_2ix0, v_src0), _mm_mullo_epi32(v_2ix1, v_src1)));
+                __m128i v_ix1 = _mm_mullo_epi32(v_ix0, v_ix0);
+                v_x2 = _mm_add_epi32(v_x2, _mm_mullo_epi32(v_src, v_ix1));
 
-                __m128i t = _mm_add_epi32(_mm_mullo_epi32(v_2ix0, v_x1_0), _mm_mullo_epi32(v_2ix1, v_x1_1));
-                v_x3 = _mm_add_epi64(v_x3, _mm_add_epi64(_mm_unpacklo_epi32(t, v_zero), _mm_unpackhi_epi32(t, v_zero)));
+                v_ix1 = _mm_mullo_epi32(v_ix0, v_ix1);
+                v_src = _mm_mullo_epi32(v_src, v_ix1);
+                v_x3 = _mm_add_epi64(v_x3, _mm_add_epi64(_mm_unpacklo_epi32(v_src, v_zero), _mm_unpackhi_epi32(v_src, v_zero)));
 
                 v_ix0 = _mm_add_epi32(v_ix0, v_delta);
-                v_ix1 = _mm_add_epi32(v_ix1, v_delta);
             }
 
-            _mm_store_si128((__m128i*)buf, v_x0);
-            x0 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, v_x1);
-            x1 = buf[0] + buf[1] + buf[2] + buf[3];
-            _mm_store_si128((__m128i*)buf, v_x2);
-            x2 = buf[0] + buf[1] + buf[2] + buf[3];
-
+            __m128i v_x01_lo = _mm_unpacklo_epi32(v_x0, v_x1);
+            __m128i v_x22_lo = _mm_unpacklo_epi32(v_x2, v_x2);
+            __m128i v_x01_hi = _mm_unpackhi_epi32(v_x0, v_x1);
+            __m128i v_x22_hi = _mm_unpackhi_epi32(v_x2, v_x2);
+            v_x01_lo = _mm_add_epi32(v_x01_lo, v_x01_hi);
+            v_x22_lo = _mm_add_epi32(v_x22_lo, v_x22_hi);
+            __m128i v_x0122_lo = _mm_unpacklo_epi64(v_x01_lo, v_x22_lo);
+            __m128i v_x0122_hi = _mm_unpackhi_epi64(v_x01_lo, v_x22_lo);
+            v_x0122_lo = _mm_add_epi32(v_x0122_lo, v_x0122_hi);
             _mm_store_si128((__m128i*)buf64, v_x3);
+            _mm_store_si128((__m128i*)buf, v_x0122_lo);
+
+            x0 = buf[0];
+            x1 = buf[1];
+            x2 = buf[2];
             x3 = buf64[0] + buf64[1];
         }
 
@@ -555,6 +566,8 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
 
 cv::Moments cv::moments( InputArray _src, bool binary )
 {
+    CV_INSTRUMENT_REGION()
+
     const int TILE_SIZE = 32;
     MomentsInTileFunc func = 0;
     uchar nzbuf[TILE_SIZE*TILE_SIZE];
@@ -598,7 +611,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 
                     if (ippFunc)
                     {
-                        if (ippFunc(mat.data, (int)mat.step, roi, moment) >= 0)
+                        if (CV_INSTRUMENT_FUN_IPP(ippFunc,(mat.data, (int)mat.step, roi, moment)) >= 0)
                         {
                             IppiPoint point = { 0, 0 };
                             ippiGetSpatialMoment_64f(moment, 0, 0, 0, point, &m.m00);
@@ -729,6 +742,8 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 
 void cv::HuMoments( const Moments& m, double hu[7] )
 {
+    CV_INSTRUMENT_REGION()
+
     double t0 = m.nu30 + m.nu12;
     double t1 = m.nu21 + m.nu03;
 
@@ -756,6 +771,8 @@ void cv::HuMoments( const Moments& m, double hu[7] )
 
 void cv::HuMoments( const Moments& m, OutputArray _hu )
 {
+    CV_INSTRUMENT_REGION()
+
     _hu.create(7, 1, CV_64F);
     Mat hu = _hu.getMat();
     CV_Assert( hu.isContinuous() );

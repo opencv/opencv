@@ -234,6 +234,12 @@ if(DEFINED ENV{OPENCV_IPP_PATH} AND NOT DEFINED IPPROOT)
   set(IPPROOT "$ENV{OPENCV_IPP_PATH}")
 endif()
 if(NOT DEFINED IPPROOT)
+  if(IOS AND NOT x86_64)
+    # 2016/10: There is an issue with MacOS binary .a file.
+    # It is fat multiarch library, and can't be "merged" multiple times.
+    # So try to ignore i386 version
+    return()
+  endif()
   include("${OpenCV_SOURCE_DIR}/3rdparty/ippicv/downloader.cmake")
   if(DEFINED OPENCV_ICV_PATH)
     set(IPPROOT "${OPENCV_ICV_PATH}")

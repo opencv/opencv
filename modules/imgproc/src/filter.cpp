@@ -379,6 +379,8 @@ int FilterEngine::proceed( const uchar* src, int srcstep, int count,
 
 void FilterEngine::apply(const Mat& src, Mat& dst, const Size & wsz, const Point & ofs)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( src.type() == srcType && dst.type() == dstType );
 
     int y = start(src, wsz, ofs);
@@ -506,56 +508,52 @@ struct RowVec_8u32s
 
         if( smallValues )
         {
-            for( ; i <= width - 16; i += 16 )
+            __m128i z = _mm_setzero_si128();
+            for( ; i <= width - 8; i += 8 )
             {
                 const uchar* src = _src + i;
-                __m128i f, z = _mm_setzero_si128(), s0 = z, s1 = z, s2 = z, s3 = z;
-                __m128i x0, x1, x2, x3;
+                __m128i s0 = z, s1 = z;
 
                 for( k = 0; k < _ksize; k++, src += cn )
                 {
-                    f = _mm_cvtsi32_si128(_kx[k]);
+                    __m128i f = _mm_cvtsi32_si128(_kx[k]);
                     f = _mm_shuffle_epi32(f, 0);
-                    f = _mm_packs_epi32(f, f);
 
-                    x0 = _mm_loadu_si128((const __m128i*)src);
-                    x2 = _mm_unpackhi_epi8(x0, z);
+                    __m128i x0 = _mm_loadl_epi64((const __m128i*)src);
                     x0 = _mm_unpacklo_epi8(x0, z);
-                    x1 = _mm_mulhi_epi16(x0, f);
-                    x3 = _mm_mulhi_epi16(x2, f);
-                    x0 = _mm_mullo_epi16(x0, f);
-                    x2 = _mm_mullo_epi16(x2, f);
 
-                    s0 = _mm_add_epi32(s0, _mm_unpacklo_epi16(x0, x1));
-                    s1 = _mm_add_epi32(s1, _mm_unpackhi_epi16(x0, x1));
-                    s2 = _mm_add_epi32(s2, _mm_unpacklo_epi16(x2, x3));
-                    s3 = _mm_add_epi32(s3, _mm_unpackhi_epi16(x2, x3));
+                    __m128i x1 = _mm_unpackhi_epi16(x0, z);
+                    x0 = _mm_unpacklo_epi16(x0, z);
+
+                    x0 = _mm_madd_epi16(x0, f);
+                    x1 = _mm_madd_epi16(x1, f);
+
+                    s0 = _mm_add_epi32(s0, x0);
+                    s1 = _mm_add_epi32(s1, x1);
                 }
 
                 _mm_store_si128((__m128i*)(dst + i), s0);
                 _mm_store_si128((__m128i*)(dst + i + 4), s1);
-                _mm_store_si128((__m128i*)(dst + i + 8), s2);
-                _mm_store_si128((__m128i*)(dst + i + 12), s3);
             }
 
-            for( ; i <= width - 4; i += 4 )
+            if( i <= width - 4 )
             {
                 const uchar* src = _src + i;
-                __m128i f, z = _mm_setzero_si128(), s0 = z, x0, x1;
+                __m128i s0 = z;
 
                 for( k = 0; k < _ksize; k++, src += cn )
                 {
-                    f = _mm_cvtsi32_si128(_kx[k]);
+                    __m128i f = _mm_cvtsi32_si128(_kx[k]);
                     f = _mm_shuffle_epi32(f, 0);
-                    f = _mm_packs_epi32(f, f);
 
-                    x0 = _mm_cvtsi32_si128(*(const int*)src);
+                    __m128i x0 = _mm_cvtsi32_si128(*(const int*)src);
                     x0 = _mm_unpacklo_epi8(x0, z);
-                    x1 = _mm_mulhi_epi16(x0, f);
-                    x0 = _mm_mullo_epi16(x0, f);
-                    s0 = _mm_add_epi32(s0, _mm_unpacklo_epi16(x0, x1));
+                    x0 = _mm_unpacklo_epi16(x0, z);
+                    x0 = _mm_madd_epi16(x0, f);
+                    s0 = _mm_add_epi32(s0, x0);
                 }
                 _mm_store_si128((__m128i*)(dst + i), s0);
+                i += 4;
             }
         }
         return i;
@@ -652,41 +650,30 @@ struct SymmRowSmallVec_8u32s
                 {
                     __m128i k0 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[0]), 0),
                             k1 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[1]), 0);
-                    k0 = _mm_packs_epi32(k0, k0);
                     k1 = _mm_packs_epi32(k1, k1);
 
-                    for( ; i <= width - 16; i += 16, src += 16 )
+                    for( ; i <= width - 8; i += 8, src += 8 )
                     {
-                        __m128i x0, x1, x2, y0, y1, t0, t1, z0, z1, z2, z3;
-                        x0 = _mm_loadu_si128((__m128i*)(src - cn));
-                        x1 = _mm_loadu_si128((__m128i*)src);
-                        x2 = _mm_loadu_si128((__m128i*)(src + cn));
-                        y0 = _mm_add_epi16(_mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x2, z));
-                        x0 = _mm_add_epi16(_mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x2, z));
-                        y1 = _mm_unpackhi_epi8(x1, z);
+                        __m128i x0 = _mm_loadl_epi64((__m128i*)(src - cn));
+                        __m128i x1 = _mm_loadl_epi64((__m128i*)src);
+                        __m128i x2 = _mm_loadl_epi64((__m128i*)(src + cn));
+
+                        x0 = _mm_unpacklo_epi8(x0, z);
                         x1 = _mm_unpacklo_epi8(x1, z);
+                        x2 = _mm_unpacklo_epi8(x2, z);
+                        __m128i x3 = _mm_unpacklo_epi16(x0, x2);
+                        __m128i x4 = _mm_unpackhi_epi16(x0, x2);
+                        __m128i x5 = _mm_unpacklo_epi16(x1, z);
+                        __m128i x6 = _mm_unpackhi_epi16(x1, z);
+                        x3 = _mm_madd_epi16(x3, k1);
+                        x4 = _mm_madd_epi16(x4, k1);
+                        x5 = _mm_madd_epi16(x5, k0);
+                        x6 = _mm_madd_epi16(x6, k0);
+                        x3 = _mm_add_epi32(x3, x5);
+                        x4 = _mm_add_epi32(x4, x6);
 
-                        t1 = _mm_mulhi_epi16(x1, k0);
-                        t0 = _mm_mullo_epi16(x1, k0);
-                        x2 = _mm_mulhi_epi16(x0, k1);
-                        x0 = _mm_mullo_epi16(x0, k1);
-                        z0 = _mm_unpacklo_epi16(t0, t1);
-                        z1 = _mm_unpackhi_epi16(t0, t1);
-                        z0 = _mm_add_epi32(z0, _mm_unpacklo_epi16(x0, x2));
-                        z1 = _mm_add_epi32(z1, _mm_unpackhi_epi16(x0, x2));
-
-                        t1 = _mm_mulhi_epi16(y1, k0);
-                        t0 = _mm_mullo_epi16(y1, k0);
-                        y1 = _mm_mulhi_epi16(y0, k1);
-                        y0 = _mm_mullo_epi16(y0, k1);
-                        z2 = _mm_unpacklo_epi16(t0, t1);
-                        z3 = _mm_unpackhi_epi16(t0, t1);
-                        z2 = _mm_add_epi32(z2, _mm_unpacklo_epi16(y0, y1));
-                        z3 = _mm_add_epi32(z3, _mm_unpackhi_epi16(y0, y1));
-                        _mm_store_si128((__m128i*)(dst + i), z0);
-                        _mm_store_si128((__m128i*)(dst + i + 4), z1);
-                        _mm_store_si128((__m128i*)(dst + i + 8), z2);
-                        _mm_store_si128((__m128i*)(dst + i + 12), z3);
+                        _mm_store_si128((__m128i*)(dst + i), x3);
+                        _mm_store_si128((__m128i*)(dst + i + 4), x4);
                     }
                 }
             }
@@ -717,57 +704,45 @@ struct SymmRowSmallVec_8u32s
                     __m128i k0 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[0]), 0),
                             k1 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[1]), 0),
                             k2 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[2]), 0);
-                    k0 = _mm_packs_epi32(k0, k0);
                     k1 = _mm_packs_epi32(k1, k1);
                     k2 = _mm_packs_epi32(k2, k2);
 
-                    for( ; i <= width - 16; i += 16, src += 16 )
+                    for( ; i <= width - 8; i += 8, src += 8 )
                     {
-                        __m128i x0, x1, x2, y0, y1, t0, t1, z0, z1, z2, z3;
-                        x0 = _mm_loadu_si128((__m128i*)(src - cn));
-                        x1 = _mm_loadu_si128((__m128i*)src);
-                        x2 = _mm_loadu_si128((__m128i*)(src + cn));
-                        y0 = _mm_add_epi16(_mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x2, z));
-                        x0 = _mm_add_epi16(_mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x2, z));
-                        y1 = _mm_unpackhi_epi8(x1, z);
-                        x1 = _mm_unpacklo_epi8(x1, z);
+                        __m128i x0 = _mm_loadl_epi64((__m128i*)src);
 
-                        t1 = _mm_mulhi_epi16(x1, k0);
-                        t0 = _mm_mullo_epi16(x1, k0);
-                        x2 = _mm_mulhi_epi16(x0, k1);
-                        x0 = _mm_mullo_epi16(x0, k1);
-                        z0 = _mm_unpacklo_epi16(t0, t1);
-                        z1 = _mm_unpackhi_epi16(t0, t1);
-                        z0 = _mm_add_epi32(z0, _mm_unpacklo_epi16(x0, x2));
-                        z1 = _mm_add_epi32(z1, _mm_unpackhi_epi16(x0, x2));
+                        x0 = _mm_unpacklo_epi8(x0, z);
+                        __m128i x1 = _mm_unpacklo_epi16(x0, z);
+                        __m128i x2 = _mm_unpackhi_epi16(x0, z);
+                        x1 = _mm_madd_epi16(x1, k0);
+                        x2 = _mm_madd_epi16(x2, k0);
 
-                        t1 = _mm_mulhi_epi16(y1, k0);
-                        t0 = _mm_mullo_epi16(y1, k0);
-                        y1 = _mm_mulhi_epi16(y0, k1);
-                        y0 = _mm_mullo_epi16(y0, k1);
-                        z2 = _mm_unpacklo_epi16(t0, t1);
-                        z3 = _mm_unpackhi_epi16(t0, t1);
-                        z2 = _mm_add_epi32(z2, _mm_unpacklo_epi16(y0, y1));
-                        z3 = _mm_add_epi32(z3, _mm_unpackhi_epi16(y0, y1));
+                        __m128i x3 = _mm_loadl_epi64((__m128i*)(src - cn));
+                        __m128i x4 = _mm_loadl_epi64((__m128i*)(src + cn));
 
-                        x0 = _mm_loadu_si128((__m128i*)(src - cn*2));
-                        x1 = _mm_loadu_si128((__m128i*)(src + cn*2));
-                        y1 = _mm_add_epi16(_mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x1, z));
-                        y0 = _mm_add_epi16(_mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x1, z));
+                        x3 = _mm_unpacklo_epi8(x3, z);
+                        x4 = _mm_unpacklo_epi8(x4, z);
+                        __m128i x5 = _mm_unpacklo_epi16(x3, x4);
+                        __m128i x6 = _mm_unpackhi_epi16(x3, x4);
+                        x5 = _mm_madd_epi16(x5, k1);
+                        x6 = _mm_madd_epi16(x6, k1);
+                        x1 = _mm_add_epi32(x1, x5);
+                        x2 = _mm_add_epi32(x2, x6);
 
-                        t1 = _mm_mulhi_epi16(y0, k2);
-                        t0 = _mm_mullo_epi16(y0, k2);
-                        y0 = _mm_mullo_epi16(y1, k2);
-                        y1 = _mm_mulhi_epi16(y1, k2);
-                        z0 = _mm_add_epi32(z0, _mm_unpacklo_epi16(t0, t1));
-                        z1 = _mm_add_epi32(z1, _mm_unpackhi_epi16(t0, t1));
-                        z2 = _mm_add_epi32(z2, _mm_unpacklo_epi16(y0, y1));
-                        z3 = _mm_add_epi32(z3, _mm_unpackhi_epi16(y0, y1));
+                        x3 = _mm_loadl_epi64((__m128i*)(src - cn*2));
+                        x4 = _mm_loadl_epi64((__m128i*)(src + cn*2));
 
-                        _mm_store_si128((__m128i*)(dst + i), z0);
-                        _mm_store_si128((__m128i*)(dst + i + 4), z1);
-                        _mm_store_si128((__m128i*)(dst + i + 8), z2);
-                        _mm_store_si128((__m128i*)(dst + i + 12), z3);
+                        x3 = _mm_unpacklo_epi8(x3, z);
+                        x4 = _mm_unpacklo_epi8(x4, z);
+                        x5 = _mm_unpacklo_epi16(x3, x4);
+                        x6 = _mm_unpackhi_epi16(x3, x4);
+                        x5 = _mm_madd_epi16(x5, k2);
+                        x6 = _mm_madd_epi16(x6, k2);
+                        x1 = _mm_add_epi32(x1, x5);
+                        x2 = _mm_add_epi32(x2, x6);
+
+                        _mm_store_si128((__m128i*)(dst + i), x1);
+                        _mm_store_si128((__m128i*)(dst + i + 4), x2);
                     }
                 }
             }
@@ -791,77 +766,75 @@ struct SymmRowSmallVec_8u32s
                     }
                 else
                 {
-                    __m128i k1 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[1]), 0);
-                    k1 = _mm_packs_epi32(k1, k1);
+                    __m128i k0 = _mm_set_epi32(-kx[1], kx[1], -kx[1], kx[1]);
+                    k0 = _mm_packs_epi32(k0, k0);
 
                     for( ; i <= width - 16; i += 16, src += 16 )
                     {
-                        __m128i x0, x1, y0, y1, z0, z1, z2, z3;
-                        x0 = _mm_loadu_si128((__m128i*)(src + cn));
-                        x1 = _mm_loadu_si128((__m128i*)(src - cn));
-                        y0 = _mm_sub_epi16(_mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x1, z));
-                        x0 = _mm_sub_epi16(_mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x1, z));
+                        __m128i x0 = _mm_loadu_si128((__m128i*)(src + cn));
+                        __m128i x1 = _mm_loadu_si128((__m128i*)(src - cn));
 
-                        x1 = _mm_mulhi_epi16(x0, k1);
-                        x0 = _mm_mullo_epi16(x0, k1);
-                        z0 = _mm_unpacklo_epi16(x0, x1);
-                        z1 = _mm_unpackhi_epi16(x0, x1);
+                        __m128i x2 = _mm_unpacklo_epi8(x0, z);
+                        __m128i x3 = _mm_unpacklo_epi8(x1, z);
+                        __m128i x4 = _mm_unpackhi_epi8(x0, z);
+                        __m128i x5 = _mm_unpackhi_epi8(x1, z);
+                        __m128i x6 = _mm_unpacklo_epi16(x2, x3);
+                        __m128i x7 = _mm_unpacklo_epi16(x4, x5);
+                        __m128i x8 = _mm_unpackhi_epi16(x2, x3);
+                        __m128i x9 = _mm_unpackhi_epi16(x4, x5);
+                        x6 = _mm_madd_epi16(x6, k0);
+                        x7 = _mm_madd_epi16(x7, k0);
+                        x8 = _mm_madd_epi16(x8, k0);
+                        x9 = _mm_madd_epi16(x9, k0);
 
-                        y1 = _mm_mulhi_epi16(y0, k1);
-                        y0 = _mm_mullo_epi16(y0, k1);
-                        z2 = _mm_unpacklo_epi16(y0, y1);
-                        z3 = _mm_unpackhi_epi16(y0, y1);
-                        _mm_store_si128((__m128i*)(dst + i), z0);
-                        _mm_store_si128((__m128i*)(dst + i + 4), z1);
-                        _mm_store_si128((__m128i*)(dst + i + 8), z2);
-                        _mm_store_si128((__m128i*)(dst + i + 12), z3);
+                        _mm_store_si128((__m128i*)(dst + i), x6);
+                        _mm_store_si128((__m128i*)(dst + i + 4), x8);
+                        _mm_store_si128((__m128i*)(dst + i + 8), x7);
+                        _mm_store_si128((__m128i*)(dst + i + 12), x9);
                     }
                 }
             }
             else if( _ksize == 5 )
             {
-                __m128i k0 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[0]), 0),
-                        k1 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[1]), 0),
-                        k2 = _mm_shuffle_epi32(_mm_cvtsi32_si128(kx[2]), 0);
+                __m128i k0 = _mm_loadl_epi64((__m128i*)(kx + 1));
+                k0 = _mm_unpacklo_epi64(k0, k0);
                 k0 = _mm_packs_epi32(k0, k0);
-                k1 = _mm_packs_epi32(k1, k1);
-                k2 = _mm_packs_epi32(k2, k2);
 
                 for( ; i <= width - 16; i += 16, src += 16 )
                 {
-                    __m128i x0, x1, x2, y0, y1, t0, t1, z0, z1, z2, z3;
-                    x0 = _mm_loadu_si128((__m128i*)(src + cn));
-                    x2 = _mm_loadu_si128((__m128i*)(src - cn));
-                    y0 = _mm_sub_epi16(_mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x2, z));
-                    x0 = _mm_sub_epi16(_mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x2, z));
+                    __m128i x0 = _mm_loadu_si128((__m128i*)(src + cn));
+                    __m128i x1 = _mm_loadu_si128((__m128i*)(src - cn));
 
-                    x2 = _mm_mulhi_epi16(x0, k1);
-                    x0 = _mm_mullo_epi16(x0, k1);
-                    z0 = _mm_unpacklo_epi16(x0, x2);
-                    z1 = _mm_unpackhi_epi16(x0, x2);
-                    y1 = _mm_mulhi_epi16(y0, k1);
-                    y0 = _mm_mullo_epi16(y0, k1);
-                    z2 = _mm_unpacklo_epi16(y0, y1);
-                    z3 = _mm_unpackhi_epi16(y0, y1);
+                    __m128i x2 = _mm_unpackhi_epi8(x0, z);
+                    __m128i x3 = _mm_unpackhi_epi8(x1, z);
+                    x0 = _mm_unpacklo_epi8(x0, z);
+                    x1 = _mm_unpacklo_epi8(x1, z);
+                    __m128i x5 = _mm_sub_epi16(x2, x3);
+                    __m128i x4 = _mm_sub_epi16(x0, x1);
 
-                    x0 = _mm_loadu_si128((__m128i*)(src + cn*2));
-                    x1 = _mm_loadu_si128((__m128i*)(src - cn*2));
-                    y1 = _mm_sub_epi16(_mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x1, z));
-                    y0 = _mm_sub_epi16(_mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x1, z));
+                    __m128i x6 = _mm_loadu_si128((__m128i*)(src + cn * 2));
+                    __m128i x7 = _mm_loadu_si128((__m128i*)(src - cn * 2));
 
-                    t1 = _mm_mulhi_epi16(y0, k2);
-                    t0 = _mm_mullo_epi16(y0, k2);
-                    y0 = _mm_mullo_epi16(y1, k2);
-                    y1 = _mm_mulhi_epi16(y1, k2);
-                    z0 = _mm_add_epi32(z0, _mm_unpacklo_epi16(t0, t1));
-                    z1 = _mm_add_epi32(z1, _mm_unpackhi_epi16(t0, t1));
-                    z2 = _mm_add_epi32(z2, _mm_unpacklo_epi16(y0, y1));
-                    z3 = _mm_add_epi32(z3, _mm_unpackhi_epi16(y0, y1));
+                    __m128i x8 = _mm_unpackhi_epi8(x6, z);
+                    __m128i x9 = _mm_unpackhi_epi8(x7, z);
+                    x6 = _mm_unpacklo_epi8(x6, z);
+                    x7 = _mm_unpacklo_epi8(x7, z);
+                    __m128i x11 = _mm_sub_epi16(x8, x9);
+                    __m128i x10 = _mm_sub_epi16(x6, x7);
 
-                    _mm_store_si128((__m128i*)(dst + i), z0);
-                    _mm_store_si128((__m128i*)(dst + i + 4), z1);
-                    _mm_store_si128((__m128i*)(dst + i + 8), z2);
-                    _mm_store_si128((__m128i*)(dst + i + 12), z3);
+                    __m128i x13 = _mm_unpackhi_epi16(x5, x11);
+                    __m128i x12 = _mm_unpackhi_epi16(x4, x10);
+                    x5 = _mm_unpacklo_epi16(x5, x11);
+                    x4 = _mm_unpacklo_epi16(x4, x10);
+                    x5 = _mm_madd_epi16(x5, k0);
+                    x4 = _mm_madd_epi16(x4, k0);
+                    x13 = _mm_madd_epi16(x13, k0);
+                    x12 = _mm_madd_epi16(x12, k0);
+
+                    _mm_store_si128((__m128i*)(dst + i), x4);
+                    _mm_store_si128((__m128i*)(dst + i + 4), x12);
+                    _mm_store_si128((__m128i*)(dst + i + 8), x5);
+                    _mm_store_si128((__m128i*)(dst + i + 12), x13);
                 }
             }
         }
@@ -870,19 +843,18 @@ struct SymmRowSmallVec_8u32s
         kx -= _ksize/2;
         for( ; i <= width - 4; i += 4, src += 4 )
         {
-            __m128i f, s0 = z, x0, x1;
+            __m128i s0 = z;
 
             for( k = j = 0; k < _ksize; k++, j += cn )
             {
-                f = _mm_cvtsi32_si128(kx[k]);
+                __m128i f = _mm_cvtsi32_si128(kx[k]);
                 f = _mm_shuffle_epi32(f, 0);
-                f = _mm_packs_epi32(f, f);
 
-                x0 = _mm_cvtsi32_si128(*(const int*)(src + j));
+                __m128i x0 = _mm_cvtsi32_si128(*(const int*)(src + j));
                 x0 = _mm_unpacklo_epi8(x0, z);
-                x1 = _mm_mulhi_epi16(x0, f);
-                x0 = _mm_mullo_epi16(x0, f);
-                s0 = _mm_add_epi32(s0, _mm_unpacklo_epi16(x0, x1));
+                x0 = _mm_unpacklo_epi16(x0, z);
+                x0 = _mm_madd_epi16(x0, f);
+                s0 = _mm_add_epi32(s0, x0);
             }
             _mm_store_si128((__m128i*)(dst + i), s0);
         }
@@ -1441,6 +1413,8 @@ private:
     mutable int bufsz;
     int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         int _ksize = kernel.rows + kernel.cols - 1;
         if ((1 != cn && 3 != cn) || width < _ksize*8)
             return 0;
@@ -1462,10 +1436,10 @@ private:
         float borderValue[] = {0.f, 0.f, 0.f};
         // here is the trick. IPP needs border type and extrapolates the row. We did it already.
         // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
-        if( (cn == 1 && ippiFilterRowBorderPipeline_32f_C1R(src, step, &dst, roisz, _kx, _ksize, 0,
-                                                            ippBorderRepl, borderValue[0], bufptr) < 0) ||
-            (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src, step, &dst, roisz, _kx, _ksize, 0,
-                                                            ippBorderRepl, borderValue, bufptr) < 0))
+        if( (cn == 1 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C1R,(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue[0], bufptr)) < 0) ||
+            (cn == 3 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C3R,(src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue, bufptr)) < 0))
         {
             setIppErrorStatus();
             return 0;
@@ -4570,40 +4544,39 @@ struct ReplacementFilter : public hal::Filter2D
 };
 
 #ifdef HAVE_IPP
-#if !HAVE_ICV
-typedef IppStatus(CV_STDCALL* ippiFilterBorder)(
+typedef IppStatus(CV_STDCALL* IppiFilterBorder)(
     const void* pSrc, int srcStep, void* pDst, int dstStep,
     IppiSize dstRoiSize, IppiBorderType border, const void* borderValue,
     const IppiFilterBorderSpec* pSpec, Ipp8u* pBuffer);
 
-static ippiFilterBorder getIppFunc(int stype)
+static IppiFilterBorder getIppFunc(int stype)
 {
     switch (stype)
     {
     case CV_8UC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C1R);
     case CV_8UC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C3R);
     case CV_8UC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_8u_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_8u_C4R);
     case CV_16UC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C1R);
     case CV_16UC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C3R);
     case CV_16UC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16u_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16u_C4R);
     case CV_16SC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C1R);
     case CV_16SC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C3R);
     case CV_16SC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_16s_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_16s_C4R);
     case CV_32FC1:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C1R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C1R);
     case CV_32FC3:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C3R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C3R);
     case CV_32FC4:
-        return reinterpret_cast<ippiFilterBorder>(ippiFilterBorder_32f_C4R);
+        return reinterpret_cast<IppiFilterBorder>(ippiFilterBorder_32f_C4R);
     default:
         return 0;
     }
@@ -4667,6 +4640,11 @@ struct IppFilter : public hal::Filter2D
         int ddepth = CV_MAT_DEPTH(dtype);
         int sdepth = CV_MAT_DEPTH(stype);
 
+#if IPP_VERSION_X100 >= 201700 && IPP_VERSION_X100 < 201702 // IPP bug with 1x1 kernel
+        if(kernel_width == 1 && kernel_height == 1)
+            return false;
+#endif
+
         bool runIpp = true
                       && (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE)
                       && (sdepth == ddepth)
@@ -4720,18 +4698,19 @@ struct IppFilter : public hal::Filter2D
 
     void apply(uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int, int, int, int)
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         if (dst_data == src_data)
             CV_Error(Error::StsBadArg, "Inplace IPP Filter2D is not supported");
-        ippiFilterBorder ippFunc = getIppFunc(src_type);
+        IppiFilterBorder ippiFilterBorder = getIppFunc(src_type);
         IppiSize dstRoiSize = { width, height };
         kernel_type borderValue[4] = { 0, 0, 0, 0 };
-        IppStatus status = ippFunc(src_data, (int)src_step, dst_data, (int)dst_step, dstRoiSize, ippBorderType, borderValue, spec, buffer);
+        IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiFilterBorder, src_data, (int)src_step, dst_data, (int)dst_step, dstRoiSize, ippBorderType, borderValue, spec, buffer);
         if (status >= 0) {
             CV_IMPL_ADD(CV_IMPL_IPP);
         }
     }
 };
-#endif
 #endif
 
 struct DftFilter : public hal::Filter2D
@@ -4849,13 +4828,13 @@ struct ReplacementSepFilter : public hal::SepFilter2D
     bool isInitialized;
     ReplacementSepFilter() : ctx(0), isInitialized(false) {}
     bool init(int stype, int dtype, int ktype,
-              uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-              uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+              uchar * kernelx_data, int kernelx_len,
+              uchar * kernely_data, int kernely_len,
               int anchor_x, int anchor_y, double delta, int borderType)
     {
         int res = cv_hal_sepFilterInit(&ctx, stype, dtype, ktype,
-                                       kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                                       kernely_data, kernely_step, kernely_width, kernely_height,
+                                       kernelx_data, kernelx_len,
+                                       kernely_data, kernely_len,
                                        anchor_x, anchor_y, delta, borderType);
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
@@ -4888,14 +4867,14 @@ struct OcvSepFilter : public hal::SepFilter2D
     int src_type;
     int dst_type;
     bool init(int stype, int dtype, int ktype,
-              uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-              uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+              uchar * kernelx_data, int kernelx_len,
+              uchar * kernely_data, int kernely_len,
               int anchor_x, int anchor_y, double delta, int borderType)
     {
         src_type = stype;
         dst_type = dtype;
-        Mat kernelX(Size(kernelx_width, kernelx_height), ktype, kernelx_data, kernelx_step);
-        Mat kernelY(Size(kernely_width, kernely_height), ktype, kernely_data, kernely_step);
+        Mat kernelX(Size(kernelx_len, 1), ktype, kernelx_data);
+        Mat kernelY(Size(kernely_len, 1), ktype, kernely_data);
 
         f = createSeparableLinearFilter( stype, dtype, kernelX, kernelY,
                                          Point(anchor_x, anchor_y),
@@ -4937,29 +4916,30 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
     }
 
 #ifdef HAVE_IPP
-#if !HAVE_ICV
-    if (kernel_type == CV_32FC1) {
-        IppFilter<CV_32F>* impl = new IppFilter<CV_32F>();
-        if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
-                       max_width, max_height, stype, dtype,
-                       borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
-        {
-            return Ptr<hal::Filter2D>(impl);
+    CV_IPP_CHECK()
+    {
+        if (kernel_type == CV_32FC1) {
+            IppFilter<CV_32F>* impl = new IppFilter<CV_32F>();
+            if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
+                           max_width, max_height, stype, dtype,
+                           borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
+            {
+                return Ptr<hal::Filter2D>(impl);
+            }
+            delete impl;
         }
-        delete impl;
-    }
 
-    if (kernel_type == CV_16SC1) {
-        IppFilter<CV_16S>* impl = new IppFilter<CV_16S>();
-        if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
-                       max_width, max_height, stype, dtype,
-                       borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
-        {
-            return Ptr<hal::Filter2D>(impl);
+        if (kernel_type == CV_16SC1) {
+            IppFilter<CV_16S>* impl = new IppFilter<CV_16S>();
+            if (impl->init(kernel_data, kernel_step, kernel_type, kernel_width, kernel_height,
+                           max_width, max_height, stype, dtype,
+                           borderType, delta, anchor_x, anchor_y, isSubmatrix, isInplace))
+            {
+                return Ptr<hal::Filter2D>(impl);
+            }
+            delete impl;
         }
-        delete impl;
     }
-#endif
 #endif
 
     if (DftFilter::isAppropriate(stype, dtype, kernel_width, kernel_height))
@@ -4986,15 +4966,15 @@ Ptr<hal::Filter2D> Filter2D::create(uchar* kernel_data, size_t kernel_step, int 
 //---------------------------------------------------------------
 
 Ptr<SepFilter2D> SepFilter2D::create(int stype, int dtype, int ktype,
-                                     uchar * kernelx_data, size_t kernelx_step, int kernelx_width, int kernelx_height,
-                                     uchar * kernely_data, size_t kernely_step, int kernely_width, int kernely_height,
+                                     uchar * kernelx_data, int kernelx_len,
+                                     uchar * kernely_data, int kernely_len,
                                      int anchor_x, int anchor_y, double delta, int borderType)
 {
     {
         ReplacementSepFilter * impl = new ReplacementSepFilter();
         if (impl->init(stype, dtype, ktype,
-                       kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                       kernely_data, kernely_step, kernely_width, kernely_height,
+                       kernelx_data, kernelx_len,
+                       kernely_data, kernely_len,
                        anchor_x, anchor_y, delta, borderType))
         {
             return Ptr<hal::SepFilter2D>(impl);
@@ -5004,8 +4984,8 @@ Ptr<SepFilter2D> SepFilter2D::create(int stype, int dtype, int ktype,
     {
         OcvSepFilter * impl = new OcvSepFilter();
         impl->init(stype, dtype, ktype,
-                   kernelx_data, kernelx_step, kernelx_width, kernelx_height,
-                   kernely_data, kernely_step, kernely_width, kernely_height,
+                   kernelx_data, kernelx_len,
+                   kernely_data, kernely_len,
                    anchor_x, anchor_y, delta, borderType);
         return Ptr<hal::SepFilter2D>(impl);
     }
@@ -5022,6 +5002,8 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor0,
                    double delta, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_filter2D(_src, _dst, ddepth, _kernel, anchor0, delta, borderType))
 
@@ -5049,7 +5031,9 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > _kernelY.total() && (size_t)_src.cols() > _kernelX.total(),
                ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
 
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
@@ -5065,11 +5049,15 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     if( (borderType & BORDER_ISOLATED) == 0 )
         src.locateROI( wsz, ofs );
 
-    CV_Assert(kernelX.type() == kernelY.type());
+    CV_Assert( kernelX.type() == kernelY.type() &&
+               (kernelX.cols == 1 || kernelX.rows == 1) &&
+               (kernelY.cols == 1 || kernelY.rows == 1) );
 
+    Mat contKernelX = kernelX.isContinuous() ? kernelX : kernelX.clone();
+    Mat contKernelY = kernelY.isContinuous() ? kernelY : kernelY.clone();
     Ptr<hal::SepFilter2D> c = hal::SepFilter2D::create(src.type(), dst.type(), kernelX.type(),
-                                                       kernelX.data, kernelX.step, kernelX.cols, kernelX.rows,
-                                                       kernelY.data, kernelY.step, kernelY.cols, kernelY.rows,
+                                                       contKernelX.data, kernelX.cols + kernelX.rows - 1,
+                                                       contKernelY.data, kernelY.cols + kernelY.rows - 1,
                                                        anchor.x, anchor.y, delta, borderType & ~BORDER_ISOLATED);
     c->apply(src.data, src.step, dst.data, dst.step, dst.cols, dst.rows, wsz.width, wsz.height, ofs.x, ofs.y);
 }

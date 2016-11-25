@@ -43,6 +43,8 @@
 
 double cv::matchShapes(InputArray contour1, InputArray contour2, int method, double)
 {
+    CV_INSTRUMENT_REGION()
+
     double ma[7], mb[7];
     int i, sma, smb;
     double eps = 1.e-5;

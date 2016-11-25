@@ -224,29 +224,30 @@ vector<Rect> get_annotations(Mat input_image)
 
 int main( int argc, const char** argv )
 {
-    // If no arguments are given, then supply some information on how this tool works
-    if( argc == 1 ){
-        cout << "Usage: " << argv[0] << endl;
-        cout << " -images <folder_location> [example - /data/testimages/]" << endl;
-        cout << " -annotations <ouput_file> [example - /data/annotations.txt]" << endl;
-        cout << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
+    // Use the cmdlineparser to process input arguments
+    CommandLineParser parser(argc, argv,
+        "{ help h usage ? |      | show this message }"
+        "{ images i       |      | (required) path to image folder [example - /data/testimages/] }"
+        "{ annotations a  |      | (required) path to annotations txt file [example - /data/annotations.txt] }"
+        "{ maxWindowHeight m  |  -1   | (optional) images larger in height than this value will be scaled down }"
+        "{ resizeFactor r  |  2  | (optional) factor for scaling down [default = half the size] }"
+    );
+    // Read in the input arguments
+    if (parser.has("help")){
+        parser.printMessage();
+        cerr << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
+        return 0;
+    }
+    string image_folder(parser.get<string>("images"));
+    string annotations_file(parser.get<string>("annotations"));
+    if (image_folder.empty() || annotations_file.empty()){
+        parser.printMessage();
+        cerr << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
         return -1;
     }
 
-    // Read in the input arguments
-    string image_folder;
-    string annotations_file;
-    for(int i = 1; i < argc; ++i )
-    {
-        if( !strcmp( argv[i], "-images" ) )
-        {
-            image_folder = argv[++i];
-        }
-        else if( !strcmp( argv[i], "-annotations" ) )
-        {
-            annotations_file = argv[++i];
-        }
-    }
+    int resizeFactor = parser.get<int>("resizeFactor");
+    int const maxWindowHeight = parser.get<int>("maxWindowHeight") > 0 ? parser.get<int>("maxWindowHeight") : -1;
 
     // Check if the folder actually exists
     // If -1 is returned then the folder actually exists, and thus you can continue
@@ -282,6 +283,7 @@ int main( int argc, const char** argv )
     for (size_t i = 0; i < filenames.size(); i++){
         // Read in an image
         Mat current_image = imread(filenames[i]);
+        bool const resize_bool = (maxWindowHeight > 0) && (current_image.rows > maxWindowHeight);
 
         // Check if the image is actually read - avoid other files in the folder, because glob() takes them all
         // If not then simply skip this iteration
@@ -289,8 +291,21 @@ int main( int argc, const char** argv )
             continue;
         }
 
+        if(resize_bool){
+            resize(current_image, current_image, Size(current_image.cols/resizeFactor, current_image.rows/resizeFactor));
+        }
+
         // Perform annotations & store the result inside the vectorized structure
+        // If the image was resized before, then resize the found annotations back to original dimensions
         vector<Rect> current_annotations = get_annotations(current_image);
+        if(resize_bool){
+            for(int j =0; j < (int)current_annotations.size(); j++){
+                current_annotations[j].x = current_annotations[j].x * resizeFactor;
+                current_annotations[j].y = current_annotations[j].y * resizeFactor;
+                current_annotations[j].width = current_annotations[j].width * resizeFactor;
+                current_annotations[j].height = current_annotations[j].height * resizeFactor;
+            }
+        }
         annotations.push_back(current_annotations);
 
         // Check if the ESC key was hit, then exit earlier then expected

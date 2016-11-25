@@ -42,8 +42,8 @@
 //M*/
 
 
-#ifndef __OPENCV_CORE_C_H__
-#define __OPENCV_CORE_C_H__
+#ifndef OPENCV_CORE_C_H
+#define OPENCV_CORE_C_H
 
 #include "opencv2/core/types_c.h"
 
@@ -1976,8 +1976,16 @@ CVAPI(void) cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,
 
 The function opens file storage for reading or writing data. In the latter case, a new file is
 created or an existing file is rewritten. The type of the read or written file is determined by the
-filename extension: .xml for XML and .yml or .yaml for YAML. The function returns a pointer to the
-CvFileStorage structure. If the file cannot be opened then the function returns NULL.
+filename extension: .xml for XML, .yml or .yaml for YAML and .json for JSON.
+
+At the same time, it also supports adding parameters like "example.xml?base64". The three ways
+are the same:
+@snippet samples/cpp/filestorage_base64.cpp suffix_in_file_name
+@snippet samples/cpp/filestorage_base64.cpp flag_write_base64
+@snippet samples/cpp/filestorage_base64.cpp flag_write_and_flag_base64
+
+The function returns a pointer to the CvFileStorage structure.
+If the file cannot be opened then the function returns NULL.
 @param filename Name of the file associated with the storage
 @param memstorage Memory storage used for temporary data and for
 :   storing dynamic structures, such as CvSeq or CvGraph . If it is NULL, a temporary memory
@@ -1985,6 +1993,7 @@ CvFileStorage structure. If the file cannot be opened then the function returns 
 @param flags Can be one of the following:
 > -   **CV_STORAGE_READ** the storage is open for reading
 > -   **CV_STORAGE_WRITE** the storage is open for writing
+      (use **CV_STORAGE_WRITE | CV_STORAGE_WRITE_BASE64** to write rawdata in Base64)
 @param encoding
  */
 CVAPI(CvFileStorage*)  cvOpenFileStorage( const char* filename, CvMemStorage* memstorage,
@@ -2022,7 +2031,8 @@ One and only one of the two above flags must be specified
 @param type_name Optional parameter - the object type name. In
     case of XML it is written as a type_id attribute of the structure opening tag. In the case of
     YAML it is written after a colon following the structure name (see the example in
-    CvFileStorage description). Mainly it is used with user objects. When the storage is read, the
+    CvFileStorage description). In case of JSON it is written as a name/value pair.
+    Mainly it is used with user objects. When the storage is read, the
     encoded type name is used to determine the object type (see CvTypeInfo and cvFindType ).
 @param attributes This parameter is not used in the current implementation
  */
@@ -2162,7 +2172,7 @@ the file with multiple streams looks like this:
 @endcode
 The YAML file will look like this:
 @code{.yaml}
-    %YAML:1.0
+    %YAML 1.0
     # stream #1 data
     ...
     ---
@@ -2186,6 +2196,28 @@ to a sequence rather than a map.
  */
 CVAPI(void) cvWriteRawData( CvFileStorage* fs, const void* src,
                                 int len, const char* dt );
+
+/** @brief Writes multiple numbers in Base64.
+
+If either CV_STORAGE_WRITE_BASE64 or cv::FileStorage::WRITE_BASE64 is used,
+this function will be the same as cvWriteRawData. If neither, the main
+difference is that it outputs a sequence in Base64 encoding rather than
+in plain text.
+
+This function can only be used to write a sequence with a type "binary".
+
+Consider the following two examples where their output is the same:
+@snippet samples/cpp/filestorage_base64.cpp without_base64_flag
+and
+@snippet samples/cpp/filestorage_base64.cpp with_write_base64_flag
+
+@param fs File storage
+@param src Pointer to the written array
+@param len Number of the array elements to write
+@param dt Specification of each array element, see @ref format_spec "format specification"
+*/
+CVAPI(void) cvWriteRawDataBase64( CvFileStorage* fs, const void* src,
+                                 int len, const char* dt );
 
 /** @brief Returns a unique pointer for a given name.
 
@@ -2468,7 +2500,7 @@ CVAPI(void) cvReadRawData( const CvFileStorage* fs, const CvFileNode* src,
 /** @brief Writes a file node to another file storage.
 
 The function writes a copy of a file node to file storage. Possible applications of the function are
-merging several file storages into one and conversion between XML and YAML formats.
+merging several file storages into one and conversion between XML, YAML and JSON formats.
 @param fs Destination file storage
 @param new_node_name New name of the file node in the destination file storage. To keep the
 existing name, use cvcvGetFileNodeName

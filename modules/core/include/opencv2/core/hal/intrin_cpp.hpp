@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_INTRIN_CPP_HPP__
-#define __OPENCV_HAL_INTRIN_CPP_HPP__
+#ifndef OPENCV_HAL_INTRIN_CPP_HPP
+#define OPENCV_HAL_INTRIN_CPP_HPP
 
 #include <limits>
 #include <cstring>
@@ -103,7 +103,7 @@ block and to save contents of the register to memory block.
 
 These operations allow to reorder or recombine elements in one or multiple vectors.
 
-- Interleave, deinterleave (3 and 4 channels): @ref v_load_deinterleave, @ref v_store_interleave
+- Interleave, deinterleave (2, 3 and 4 channels): @ref v_load_deinterleave, @ref v_store_interleave
 - Expand: @ref v_load_expand, @ref v_load_expand_q, @ref v_expand
 - Pack: @ref v_pack, @ref v_pack_u, @ref v_rshr_pack, @ref v_rshr_pack_u,
 @ref v_pack_store, @ref v_pack_u_store, @ref v_rshr_pack_store, @ref v_rshr_pack_u_store
@@ -455,8 +455,10 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> operator ~ (const v_reg<_Tp, 
 {
     v_reg<_Tp, n> c;
     for( int i = 0; i < n; i++ )
+    {
         c.s[i] = V_TypeTraits<_Tp>::reinterpret_from_int(~V_TypeTraits<_Tp>::reinterpret_int(a.s[i]));
-        return c;
+    }
+    return c;
 }
 
 //! @brief Helper macro
@@ -1075,12 +1077,31 @@ v_load_expand_q(const _Tp* ptr)
     return c;
 }
 
-/** @brief Load and deinterleave (4 channels)
+/** @brief Load and deinterleave (2 channels)
 
-Load data from memory deinterleave and store to 4 registers.
+Load data from memory deinterleave and store to 2 registers.
 Scheme:
 @code
-{A1 B1 C1 D1 A2 B2 C2 D2 ...} ==> {A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}, {D1 D2 ...}
+{A1 B1 A2 B2 ...} ==> {A1 A2 ...}, {B1 B2 ...}
+@endcode
+For all types except 64-bit. */
+template<typename _Tp, int n> inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
+                                                            v_reg<_Tp, n>& b)
+{
+    int i, i2;
+    for( i = i2 = 0; i < n; i++, i2 += 2 )
+    {
+        a.s[i] = ptr[i2];
+        b.s[i] = ptr[i2+1];
+    }
+}
+
+/** @brief Load and deinterleave (3 channels)
+
+Load data from memory deinterleave and store to 3 registers.
+Scheme:
+@code
+{A1 B1 C1 A2 B2 C2 ...} ==> {A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}
 @endcode
 For all types except 64-bit. */
 template<typename _Tp, int n> inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
@@ -1095,12 +1116,12 @@ template<typename _Tp, int n> inline void v_load_deinterleave(const _Tp* ptr, v_
     }
 }
 
-/** @brief Load and deinterleave (3 channels)
+/** @brief Load and deinterleave (4 channels)
 
-Load data from memory deinterleave and store to 3 registers.
+Load data from memory deinterleave and store to 4 registers.
 Scheme:
 @code
-{A1 B1 C1 A2 B2 C2 ...} ==> {A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}
+{A1 B1 C1 D1 A2 B2 C2 D2 ...} ==> {A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}, {D1 D2 ...}
 @endcode
 For all types except 64-bit. */
 template<typename _Tp, int n>
@@ -1118,12 +1139,32 @@ inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
     }
 }
 
+/** @brief Interleave and store (2 channels)
+
+Interleave and store data from 2 registers to memory.
+Scheme:
+@code
+{A1 A2 ...}, {B1 B2 ...} ==> {A1 B1 A2 B2 ...}
+@endcode
+For all types except 64-bit. */
+template<typename _Tp, int n>
+inline void v_store_interleave( _Tp* ptr, const v_reg<_Tp, n>& a,
+                               const v_reg<_Tp, n>& b)
+{
+    int i, i2;
+    for( i = i2 = 0; i < n; i++, i2 += 2 )
+    {
+        ptr[i2] = a.s[i];
+        ptr[i2+1] = b.s[i];
+    }
+}
+
 /** @brief Interleave and store (3 channels)
 
 Interleave and store data from 3 registers to memory.
 Scheme:
 @code
-{A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}, {D1 D2 ...} ==> {A1 B1 C1 D1 A2 B2 C2 D2 ...}
+{A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...} ==> {A1 B1 C1 A2 B2 C2 ...}
 @endcode
 For all types except 64-bit. */
 template<typename _Tp, int n>
@@ -1732,6 +1773,17 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
 }
 
 //! @}
+
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return false;
+}
+
+//! @}
+
 
 }
 

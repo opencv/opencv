@@ -51,40 +51,22 @@ Code
     -   Display the result in a window
 
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp
 
 Explanation
 -----------
 
 -#  Create some needed variables:
-    @code{.cpp}
-    Mat src, src_gray, dst;
-    int kernel_size = 3;
-    int scale = 1;
-    int delta = 0;
-    int ddepth = CV_16S;
-    char* window_name = "Laplace Demo";
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp variables
 -#  Loads the source image:
-    @code{.cpp}
-    src = imread( argv[1] );
-
-    if( !src.data )
-      { return -1; }
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp load
 -#  Apply a Gaussian blur to reduce noise:
-    @code{.cpp}
-    GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp reduce_noise
 -#  Convert the image to grayscale using @ref cv::cvtColor
-    @code{.cpp}
-    cvtColor( src, src_gray, COLOR_RGB2GRAY );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp convert_to_gray
 -#  Apply the Laplacian operator to the grayscale image:
-    @code{.cpp}
-    Laplacian( src_gray, dst, ddepth, kernel_size, scale, delta, BORDER_DEFAULT );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp laplacian
     where the arguments are:
 
     -   *src_gray*: The input image.
@@ -96,13 +78,9 @@ Explanation
     -   *scale*, *delta* and *BORDER_DEFAULT*: We leave them as default values.
 
 -#  Convert the output from the Laplacian operator to a *CV_8U* image:
-    @code{.cpp}
-    convertScaleAbs( dst, abs_dst );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp convert
 -#  Display the result in a window:
-    @code{.cpp}
-    imshow( window_name, abs_dst );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp display
 
 Results
 -------

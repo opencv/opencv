@@ -184,6 +184,8 @@ namespace cv
 {
 static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, double scale, double delta, int borderType)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 810
     if ((0 > dx) || (0 > dy) || (1 != dx + dy))
         return false;
@@ -230,7 +232,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             pBuffer = ippsMalloc_8u(bufferSize);
             if (NULL == pBuffer)
                 return false;
-            sts = ippiFilterScharrHorizMaskBorder_8u16s_C1R(src.ptr(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
+            sts = CV_INSTRUMENT_FUN_IPP(ippiFilterScharrHorizMaskBorder_8u16s_C1R, src.ptr(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         else
         {
@@ -239,7 +241,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             pBuffer = ippsMalloc_8u(bufferSize);
             if (NULL == pBuffer)
                 return false;
-            sts = ippiFilterScharrVertMaskBorder_8u16s_C1R(src.ptr(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
+            sts = CV_INSTRUMENT_FUN_IPP(ippiFilterScharrVertMaskBorder_8u16s_C1R, src.ptr(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         ippsFree(pBuffer);
     }
@@ -253,7 +255,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             pBuffer = ippsMalloc_8u(bufferSize);
             if (NULL == pBuffer)
                 return false;
-            sts = ippiFilterScharrHorizMaskBorder_16s_C1R(src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
+            sts = CV_INSTRUMENT_FUN_IPP(ippiFilterScharrHorizMaskBorder_16s_C1R, src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         else
         {
@@ -262,7 +264,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             pBuffer = ippsMalloc_8u(bufferSize);
             if (NULL == pBuffer)
                 return false;
-            sts = ippiFilterScharrVertMaskBorder_16s_C1R(src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
+            sts = CV_INSTRUMENT_FUN_IPP(ippiFilterScharrVertMaskBorder_16s_C1R, src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         ippsFree(pBuffer);
     }
@@ -276,7 +278,7 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             pBuffer = ippsMalloc_8u(bufferSize);
             if (NULL == pBuffer)
                 return false;
-            sts = ippiFilterScharrHorizMaskBorder_32f_C1R(src.ptr<Ipp32f>(), (int)src.step, dst.ptr<Ipp32f>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
+            sts = CV_INSTRUMENT_FUN_IPP(ippiFilterScharrHorizMaskBorder_32f_C1R, src.ptr<Ipp32f>(), (int)src.step, dst.ptr<Ipp32f>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         else
         {
@@ -285,14 +287,14 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
             pBuffer = ippsMalloc_8u(bufferSize);
             if (NULL == pBuffer)
                 return false;
-            sts = ippiFilterScharrVertMaskBorder_32f_C1R(src.ptr<Ipp32f>(), (int)src.step, dst.ptr<Ipp32f>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
+            sts = CV_INSTRUMENT_FUN_IPP(ippiFilterScharrVertMaskBorder_32f_C1R, src.ptr<Ipp32f>(), (int)src.step, dst.ptr<Ipp32f>(), (int)dst.step, roiSize, ippMskSize3x3, ippiBorderType, 0, pBuffer);
         }
         ippsFree(pBuffer);
         if (sts < 0)
             return false;;
 
         if (FLT_EPSILON < fabs(scale - 1.0))
-            sts = ippiMulC_32f_C1R(dst.ptr<Ipp32f>(), (int)dst.step, (Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, roiSize);
+            sts = CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1R, dst.ptr<Ipp32f>(), (int)dst.step, (Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, roiSize);
     }
     return (0 <= sts);
 #else
@@ -303,7 +305,9 @@ static bool IPPDerivScharr(InputArray _src, OutputArray _dst, int ddepth, int dx
 
 static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType)
 {
-    if ((borderType != BORDER_REPLICATE) || ((3 != ksize) && (5 != ksize)))
+    CV_INSTRUMENT_REGION_IPP()
+
+    if (((borderType & ~BORDER_ISOLATED) != BORDER_REPLICATE) || ((3 != ksize) && (5 != ksize)))
         return false;
     if (fabs(delta) > FLT_EPSILON)
         return false;
@@ -313,6 +317,10 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
     int bufSize = 0;
     cv::AutoBuffer<char> buffer;
     Mat src = _src.getMat(), dst = _dst.getMat();
+
+    if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
+        return false;
+
     if ( ddepth < 0 )
         ddepth = src.depth();
 
@@ -333,7 +341,7 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             buffer.allocate(bufSize);
 #endif
 
-            if (0 > ippiFilterSobelNegVertBorder_8u16s_C1R(src.ptr<Ipp8u>(), (int)src.step,
+            if (0 > CV_INSTRUMENT_FUN_IPP(ippiFilterSobelNegVertBorder_8u16s_C1R, src.ptr<Ipp8u>(), (int)src.step,
                                 dst.ptr<Ipp16s>(), (int)dst.step, roi, kernel,
                                 ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 return false;
@@ -352,14 +360,13 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             buffer.allocate(bufSize);
 #endif
 
-            if (0 > ippiFilterSobelHorizBorder_8u16s_C1R(src.ptr<Ipp8u>(), (int)src.step,
+            if (0 > CV_INSTRUMENT_FUN_IPP(ippiFilterSobelHorizBorder_8u16s_C1R, src.ptr<Ipp8u>(), (int)src.step,
                                 dst.ptr<Ipp16s>(), (int)dst.step, roi, kernel,
                                 ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 return false;
             return true;
         }
 
-#if !defined(HAVE_IPP_ICV_ONLY)
         if ((dx == 2) && (dy == 0))
         {
 #if IPP_VERSION_X100 >= 900
@@ -372,7 +379,7 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             buffer.allocate(bufSize);
 #endif
 
-            if (0 > ippiFilterSobelVertSecondBorder_8u16s_C1R(src.ptr<Ipp8u>(), (int)src.step,
+            if (0 > CV_INSTRUMENT_FUN_IPP(ippiFilterSobelVertSecondBorder_8u16s_C1R, src.ptr<Ipp8u>(), (int)src.step,
                                 dst.ptr<Ipp16s>(), (int)dst.step, roi, kernel,
                                 ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 return false;
@@ -391,13 +398,12 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             buffer.allocate(bufSize);
 #endif
 
-            if (0 > ippiFilterSobelHorizSecondBorder_8u16s_C1R(src.ptr<Ipp8u>(), (int)src.step,
+            if (0 > CV_INSTRUMENT_FUN_IPP(ippiFilterSobelHorizSecondBorder_8u16s_C1R, src.ptr<Ipp8u>(), (int)src.step,
                                 dst.ptr<Ipp16s>(), (int)dst.step, roi, kernel,
                                 ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 return false;
             return true;
         }
-#endif
     }
 
     if (src.type() == CV_32F && dst.type() == CV_32F)
@@ -445,7 +451,7 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             return true;
         }
 #endif
-#if !defined(HAVE_IPP_ICV_ONLY)
+
         if((dx == 2) && (dy == 0))
         {
 #if IPP_VERSION_X100 >= 900
@@ -458,12 +464,12 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             buffer.allocate(bufSize);
 #endif
 
-            if (0 > ippiFilterSobelVertSecondBorder_32f_C1R(src.ptr<Ipp32f>(), (int)src.step,
+            if (0 > CV_INSTRUMENT_FUN_IPP(ippiFilterSobelVertSecondBorder_32f_C1R, src.ptr<Ipp32f>(), (int)src.step,
                             dst.ptr<Ipp32f>(), (int)dst.step, roi, kernel,
                             ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 return false;
             if(scale != 1)
-                ippiMulC_32f_C1R(dst.ptr<Ipp32f>(), (int)dst.step, (Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1R, dst.ptr<Ipp32f>(), (int)dst.step, (Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
             return true;
         }
 
@@ -479,22 +485,23 @@ static bool IPPDerivSobel(InputArray _src, OutputArray _dst, int ddepth, int dx,
             buffer.allocate(bufSize);
 #endif
 
-            if (0 > ippiFilterSobelHorizSecondBorder_32f_C1R(src.ptr<Ipp32f>(), (int)src.step,
+            if (0 > CV_INSTRUMENT_FUN_IPP(ippiFilterSobelHorizSecondBorder_32f_C1R, src.ptr<Ipp32f>(), (int)src.step,
                             dst.ptr<Ipp32f>(), (int)dst.step, roi, kernel,
                             ippBorderRepl, 0, (Ipp8u*)(char*)buffer))
                 return false;
 
             if(scale != 1)
-                ippiMulC_32f_C1R(dst.ptr<Ipp32f>(), (int)dst.step, (Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
+                CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1R, dst.ptr<Ipp32f>(), (int)dst.step, (Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, ippiSize(dst.cols*dst.channels(), dst.rows));
             return true;
         }
-#endif
     }
     return false;
 }
 
 static bool ipp_sobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     if (ksize < 0)
     {
         if (IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType))
@@ -510,9 +517,71 @@ static bool ipp_sobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int
 }
 #endif
 
+#ifdef HAVE_OPENCL
+namespace cv
+{
+static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
+                                  InputArray _kernelX, InputArray _kernelY, double delta, int borderType)
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) && (ddepth == CV_8U) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) )
+        return false;
+
+    Mat kernelX = _kernelX.getMat().reshape(1, 1);
+    if (kernelX.cols % 2 != 1)
+        return false;
+    Mat kernelY = _kernelY.getMat().reshape(1, 1);
+    if (kernelY.cols % 2 != 1)
+        return false;
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s%s", borderMap[borderType],
+            ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
+            ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
+
+    ocl::Kernel kernel("sepFilter3x3_8UC1_cols16_rows2", cv::ocl::imgproc::sepFilter3x3_oclsrc, build_opts);
+    if (kernel.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = kernel.set(idxArg, (int)dst.step);
+    idxArg = kernel.set(idxArg, (int)dst.rows);
+    idxArg = kernel.set(idxArg, (int)dst.cols);
+    idxArg = kernel.set(idxArg, static_cast<float>(delta));
+
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+}
+}
+#endif
+
 void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                 int ksize, double scale, double delta, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
         ddepth = sdepth;
@@ -530,7 +599,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-    CV_IPP_RUN(true, ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
+    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
@@ -545,6 +614,11 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         else
             ky *= scale;
     }
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && ksize == 3 &&
+               (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
+               ocl_sepFilter3x3_8UC1(_src, _dst, ddepth, kx, ky, delta, borderType));
+
     sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
@@ -552,6 +626,8 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
 void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                  double scale, double delta, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
         ddepth = sdepth;
@@ -567,7 +643,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-    CV_IPP_RUN(true, IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType));
+    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), IPPDerivScharr(_src, _dst, ddepth, dx, dy, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
@@ -582,6 +658,11 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         else
             ky *= scale;
     }
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 &&
+               (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
+               ocl_sepFilter3x3_8UC1(_src, _dst, ddepth, kx, ky, delta, borderType));
+
     sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
@@ -726,8 +807,57 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     return k.run(2, globalsize, NULL, false);
 }
 
+static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
+                                InputArray _kernel, double delta, int borderType)
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) && (ddepth == CV_8U) &&
+         (borderType != BORDER_WRAP) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) )
+        return false;
+
+    Mat kernel = _kernel.getMat().reshape(1, 1);
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s", borderMap[borderType],
+            ocl::kernelToStr(kernel, CV_32F, "KERNEL_MATRIX").c_str());
+
+    ocl::Kernel k("laplacian3_8UC1_cols16_rows2", cv::ocl::imgproc::laplacian3_oclsrc, build_opts);
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = k.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = k.set(idxArg, (int)src.step);
+    idxArg = k.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = k.set(idxArg, (int)dst.step);
+    idxArg = k.set(idxArg, (int)dst.rows);
+    idxArg = k.set(idxArg, (int)dst.cols);
+    idxArg = k.set(idxArg, static_cast<float>(delta));
+
+    return k.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
 }
 
+}
 #endif
 
 #if defined(HAVE_IPP)
@@ -736,6 +866,8 @@ namespace cv
 static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
         ddepth = sdepth;
@@ -761,7 +893,7 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ddepth, int ksi
             if (borderTypeIpp >= 0 && ippiFilterLaplacianGetBufferSize_##ippfavor##_C1R(roisize, masksize, &bufsize) >= 0) \
             { \
                 Ipp8u * buffer = ippsMalloc_8u(bufsize); \
-                status = ippiFilterLaplacianBorder_##ippfavor##_C1R(src.ptr<ippsrctype>(), (int)src.step, dst.ptr<ippdsttype>(), \
+                status = CV_INSTRUMENT_FUN_IPP(ippiFilterLaplacianBorder_##ippfavor##_C1R, src.ptr<ippsrctype>(), (int)src.step, dst.ptr<ippdsttype>(), \
                                                                     (int)dst.step, roisize, masksize, borderTypeIpp, 0, buffer); \
                 ippsFree(buffer); \
             } \
@@ -773,18 +905,18 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ddepth, int ksi
             IPP_FILTER_LAPLACIAN(Ipp8u, Ipp16s, 8u16s);
 
             if (needScale && status >= 0)
-                status = ippiMulC_16s_C1IRSfs((Ipp16s)iscale, dst.ptr<Ipp16s>(), (int)dst.step, roisize, 0);
+                status = CV_INSTRUMENT_FUN_IPP(ippiMulC_16s_C1IRSfs, (Ipp16s)iscale, dst.ptr<Ipp16s>(), (int)dst.step, roisize, 0);
             if (needDelta && status >= 0)
-                status = ippiAddC_16s_C1IRSfs((Ipp16s)idelta, dst.ptr<Ipp16s>(), (int)dst.step, roisize, 0);
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddC_16s_C1IRSfs, (Ipp16s)idelta, dst.ptr<Ipp16s>(), (int)dst.step, roisize, 0);
         }
         else if (sdepth == CV_32F && ddepth == CV_32F)
         {
             IPP_FILTER_LAPLACIAN(Ipp32f, Ipp32f, 32f);
 
             if (needScale && status >= 0)
-                status = ippiMulC_32f_C1IR((Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, roisize);
+                status = CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1IR, (Ipp32f)scale, dst.ptr<Ipp32f>(), (int)dst.step, roisize);
             if (needDelta && status >= 0)
-                status = ippiAddC_32f_C1IR((Ipp32f)delta, dst.ptr<Ipp32f>(), (int)dst.step, roisize);
+                status = CV_INSTRUMENT_FUN_IPP(ippiAddC_32f_C1IR, (Ipp32f)delta, dst.ptr<Ipp32f>(), (int)dst.step, roisize);
         }
         CV_SUPPRESS_DEPRECATED_END
 
@@ -802,10 +934,28 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ddepth, int ksi
 void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
+
+    if( ksize == 1 || ksize == 3 )
+    {
+        float K[2][9] =
+        {
+            { 0, 1, 0, 1, -4, 1, 0, 1, 0 },
+            { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
+        };
+
+        Mat kernel(3, 3, CV_32F, K[ksize == 3]);
+        if( scale != 1 )
+            kernel *= scale;
+
+        CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+                   ocl_Laplacian3_8UC1(_src, _dst, ddepth, kernel, delta, borderType));
+    }
 
     CV_IPP_RUN((ksize == 3 || ksize == 5) && ((borderType & BORDER_ISOLATED) != 0 || !_src.isSubmatrix()) &&
         ((stype == CV_8UC1 && ddepth == CV_16S) || (ddepth == CV_32F && stype == CV_32FC1)) && (!cv::ocl::useOpenCL()),
@@ -835,6 +985,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         Mat kernel(3, 3, CV_32F, K[ksize == 3]);
         if( scale != 1 )
             kernel *= scale;
+
         filter2D( _src, _dst, ddepth, kernel, Point(-1, -1), delta, borderType );
     }
     else
@@ -849,16 +1000,18 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                    ocl_Laplacian5(_src, _dst, kd, ks, scale,
                                   delta, borderType, wdepth, ddepth))
 
+        Mat src = _src.getMat(), dst = _dst.getMat();
+        Point ofs;
+        Size wsz(src.cols, src.rows);
+        if(!(borderType&BORDER_ISOLATED))
+            src.locateROI( wsz, ofs );
+        borderType = (borderType&~BORDER_ISOLATED);
+
         const size_t STRIPE_SIZE = 1 << 14;
         Ptr<FilterEngine> fx = createSeparableLinearFilter(stype,
             wtype, kd, ks, Point(-1,-1), 0, borderType, borderType, Scalar() );
         Ptr<FilterEngine> fy = createSeparableLinearFilter(stype,
             wtype, ks, kd, Point(-1,-1), 0, borderType, borderType, Scalar() );
-
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        Point ofs;
-        Size wsz(src.cols, src.rows);
-        src.locateROI( wsz, ofs );
 
         int y = fx->start(src, wsz, ofs), dsty = 0, dy = 0;
         fy->start(src, wsz, ofs);

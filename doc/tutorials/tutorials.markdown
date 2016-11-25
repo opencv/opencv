@@ -68,6 +68,10 @@ As always, we would be happy to hear your comments and receive your contribution
     Use OpenCV for
     advanced photo processing.
 
+-   @subpage tutorial_table_of_content_stitching
+
+    Learn how to create beautiful photo panoramas and more with OpenCV stitching pipeline.
+
 -   @subpage tutorial_table_of_content_gpu
 
     Squeeze out every

@@ -38,9 +38,9 @@ void help()
     << " OpenCV. You can process both videos (-vid) and images (-img)."             << endl
                                                                                     << endl
     << "Usage:"                                                                     << endl
-    << "./bs {-vid <video filename>|-img <image filename>}"                         << endl
-    << "for example: ./bs -vid video.avi"                                           << endl
-    << "or: ./bs -img /data/images/1.png"                                           << endl
+    << "./bg_sub {-vid <video filename>|-img <image filename>}"                     << endl
+    << "for example: ./bg_sub -vid video.avi"                                       << endl
+    << "or: ./bg_sub -img /data/images/1.png"                                       << endl
     << "--------------------------------------------------------------------------" << endl
     << endl;
 }

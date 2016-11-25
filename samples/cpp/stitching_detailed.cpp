@@ -56,9 +56,12 @@
 #include "opencv2/stitching/detail/matchers.hpp"
 #include "opencv2/stitching/detail/motion_estimators.hpp"
 #include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/util.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
+
+#define ENABLE_LOG 1
+#define LOG(msg) std::cout << msg
+#define LOGLN(msg) std::cout << msg << std::endl
 
 using namespace std;
 using namespace cv;
@@ -81,12 +84,16 @@ static void printUsage()
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
         "  --features (surf|orb)\n"
         "      Type of features used for images matching. The default is surf.\n"
+        "  --matcher (homography|affine)\n"
+        "      Matcher used for pairwise image matching.\n"
+        "  --estimator (homography|affine)\n"
+        "      Type of estimator used for transformation estimation.\n"
         "  --match_conf <float>\n"
         "      Confidence for feature matching step. The default is 0.65 for surf and 0.3 for orb.\n"
         "  --conf_thresh <float>\n"
         "      Threshold for two images are from the same panorama confidence.\n"
         "      The default is 1.0.\n"
-        "  --ba (reproj|ray)\n"
+        "  --ba (no|reproj|ray|affine)\n"
         "      Bundle adjustment cost function. The default is ray.\n"
         "  --ba_refine_mask (mask)\n"
         "      Set refinement mask for bundle adjustment. It looks like 'x_xxx',\n"
@@ -102,7 +109,7 @@ static void printUsage()
         "      Labels description: Nm is number of matches, Ni is number of inliers,\n"
         "      C is confidence.\n"
         "\nCompositing Flags:\n"
-        "  --warp (plane|cylindrical|spherical|fisheye|stereographic|compressedPlaneA2B1|compressedPlaneA1.5B1|compressedPlanePortraitA2B1|compressedPlanePortraitA1.5B1|paniniA2B1|paniniA1.5B1|paniniPortraitA2B1|paniniPortraitA1.5B1|mercator|transverseMercator)\n"
+        "  --warp (affine|plane|cylindrical|spherical|fisheye|stereographic|compressedPlaneA2B1|compressedPlaneA1.5B1|compressedPlanePortraitA2B1|compressedPlanePortraitA1.5B1|paniniA2B1|paniniA1.5B1|paniniPortraitA2B1|paniniPortraitA1.5B1|mercator|transverseMercator)\n"
         "      Warp surface type. The default is 'spherical'.\n"
         "  --seam_megapix <float>\n"
         "      Resolution for seam estimation step. The default is 0.1 Mpx.\n"
@@ -135,6 +142,8 @@ double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
 string features_type = "surf";
+string matcher_type = "homography";
+string estimator_type = "homography";
 string ba_cost_func = "ray";
 string ba_refine_mask = "xxxxx";
 bool do_wave_correct = true;
@@ -209,6 +218,28 @@ static int parseCmdArgs(int argc, char** argv)
             features_type = argv[i + 1];
             if (features_type == "orb")
                 match_conf = 0.3f;
+            i++;
+        }
+        else if (string(argv[i]) == "--matcher")
+        {
+            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
+                matcher_type = argv[i + 1];
+            else
+            {
+                cout << "Bad --matcher flag value\n";
+                return -1;
+            }
+            i++;
+        }
+        else if (string(argv[i]) == "--estimator")
+        {
+            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
+                estimator_type = argv[i + 1];
+            else
+            {
+                cout << "Bad --estimator flag value\n";
+                return -1;
+            }
             i++;
         }
         else if (string(argv[i]) == "--match_conf")
@@ -462,18 +493,16 @@ int main(int argc, char* argv[])
     t = getTickCount();
 #endif
     vector<MatchesInfo> pairwise_matches;
-    if (range_width==-1)
-    {
-        BestOf2NearestMatcher matcher(try_cuda, match_conf);
-        matcher(features, pairwise_matches);
-        matcher.collectGarbage();
-    }
+    Ptr<FeaturesMatcher> matcher;
+    if (matcher_type == "affine")
+        matcher = makePtr<AffineBestOf2NearestMatcher>(false, try_cuda, match_conf);
+    else if (range_width==-1)
+        matcher = makePtr<BestOf2NearestMatcher>(try_cuda, match_conf);
     else
-    {
-        BestOf2NearestRangeMatcher matcher(range_width, try_cuda, match_conf);
-        matcher(features, pairwise_matches);
-        matcher.collectGarbage();
-    }
+        matcher = makePtr<BestOf2NearestRangeMatcher>(range_width, try_cuda, match_conf);
+
+    (*matcher)(features, pairwise_matches);
+    matcher->collectGarbage();
 
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
@@ -509,9 +538,14 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    HomographyBasedEstimator estimator;
+    Ptr<Estimator> estimator;
+    if (estimator_type == "affine")
+        estimator = makePtr<AffineBasedEstimator>();
+    else
+        estimator = makePtr<HomographyBasedEstimator>();
+
     vector<CameraParams> cameras;
-    if (!estimator(features, pairwise_matches, cameras))
+    if (!(*estimator)(features, pairwise_matches, cameras))
     {
         cout << "Homography estimation failed.\n";
         return -1;
@@ -522,12 +556,14 @@ int main(int argc, char* argv[])
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
-        LOGLN("Initial intrinsics #" << indices[i]+1 << ":\n" << cameras[i].K());
+        LOGLN("Initial camera intrinsics #" << indices[i]+1 << ":\nK:\n" << cameras[i].K() << "\nR:\n" << cameras[i].R);
     }
 
     Ptr<detail::BundleAdjusterBase> adjuster;
     if (ba_cost_func == "reproj") adjuster = makePtr<detail::BundleAdjusterReproj>();
     else if (ba_cost_func == "ray") adjuster = makePtr<detail::BundleAdjusterRay>();
+    else if (ba_cost_func == "affine") adjuster = makePtr<detail::BundleAdjusterAffinePartial>();
+    else if (ba_cost_func == "no") adjuster = makePtr<NoBundleAdjuster>();
     else
     {
         cout << "Unknown bundle adjustment cost function: '" << ba_cost_func << "'.\n";
@@ -552,7 +588,7 @@ int main(int argc, char* argv[])
     vector<double> focals;
     for (size_t i = 0; i < cameras.size(); ++i)
     {
-        LOGLN("Camera #" << indices[i]+1 << ":\n" << cameras[i].K());
+        LOGLN("Camera #" << indices[i]+1 << ":\nK:\n" << cameras[i].K() << "\nR:\n" << cameras[i].R);
         focals.push_back(cameras[i].focal);
     }
 
@@ -609,6 +645,8 @@ int main(int argc, char* argv[])
     {
         if (warp_type == "plane")
             warper_creator = makePtr<cv::PlaneWarper>();
+        else if (warp_type == "affine")
+            warper_creator = makePtr<cv::AffineWarper>();
         else if (warp_type == "cylindrical")
             warper_creator = makePtr<cv::CylindricalWarper>();
         else if (warp_type == "spherical")

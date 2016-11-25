@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_INTRIN_HPP__
-#define __OPENCV_HAL_INTRIN_HPP__
+#ifndef OPENCV_HAL_INTRIN_HPP
+#define OPENCV_HAL_INTRIN_HPP
 
 #include <cmath>
 #include <float.h>

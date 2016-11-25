@@ -62,101 +62,26 @@ Code
     -   The filter output (with each kernel) will be shown during 500 milliseconds
 
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp)
-@code{.cpp}
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp)
+    @include cpp/tutorial_code/ImgTrans/filter2D_demo.cpp
 
-using namespace cv;
-
-/* @function main */
-int main ( int argc, char** argv )
-{
-  /// Declare variables
-  Mat src, dst;
-
-  Mat kernel;
-  Point anchor;
-  double delta;
-  int ddepth;
-  int kernel_size;
-  char* window_name = "filter2D Demo";
-
-  int c;
-
-  /// Load an image
-  src = imread( argv[1] );
-
-  if( !src.data )
-  { return -1; }
-
-  /// Create window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
-
-  /// Initialize arguments for the filter
-  anchor = Point( -1, -1 );
-  delta = 0;
-  ddepth = -1;
-
-  /// Loop - Will filter the image with different kernel sizes each 0.5 seconds
-  int ind = 0;
-  while( true )
-    {
-      c = waitKey(500);
-      /// Press 'ESC' to exit the program
-      if( (char)c == 27 )
-        { break; }
-
-      /// Update kernel size for a normalized box filter
-      kernel_size = 3 + 2*( ind%5 );
-      kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
-
-      /// Apply filter
-      filter2D(src, dst, ddepth , kernel, anchor, delta, BORDER_DEFAULT );
-      imshow( window_name, dst );
-      ind++;
-    }
-
-  return 0;
-}
-@endcode
 Explanation
 -----------
 
 -#  Load an image
-    @code{.cpp}
-    src = imread( argv[1] );
-
-    if( !src.data )
-      { return -1; }
-    @endcode
--#  Create a window to display the result
-    @code{.cpp}
-    namedWindow( window_name, WINDOW_AUTOSIZE );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/filter2D_demo.cpp load
 -#  Initialize the arguments for the linear filter
-    @code{.cpp}
-    anchor = Point( -1, -1 );
-    delta = 0;
-    ddepth = -1;
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/filter2D_demo.cpp init_arguments
 -#  Perform an infinite loop updating the kernel size and applying our linear filter to the input
     image. Let's analyze that more in detail:
 -#  First we define the kernel our filter is going to use. Here it is:
-    @code{.cpp}
-    kernel_size = 3 + 2*( ind%5 );
-    kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/filter2D_demo.cpp update_kernel
     The first line is to update the *kernel_size* to odd values in the range: \f$[3,11]\f$. The second
     line actually builds the kernel by setting its value to a matrix filled with \f$1's\f$ and
     normalizing it by dividing it between the number of elements.
 
 -#  After setting the kernel, we can generate the filter by using the function @ref cv::filter2D :
-    @code{.cpp}
-    filter2D(src, dst, ddepth , kernel, anchor, delta, BORDER_DEFAULT );
-    @endcode
+    @snippet cpp/tutorial_code/ImgTrans/filter2D_demo.cpp apply_filter
     The arguments denote:
 
     -#  *src*: Source image

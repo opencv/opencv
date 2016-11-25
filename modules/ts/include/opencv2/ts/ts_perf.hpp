@@ -1,5 +1,5 @@
-#ifndef __OPENCV_TS_PERF_HPP__
-#define __OPENCV_TS_PERF_HPP__
+#ifndef OPENCV_TS_PERF_HPP
+#define OPENCV_TS_PERF_HPP
 
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
@@ -121,7 +121,7 @@ private:
         }                                                                               \
     private: int val_;                                                                  \
     };                                                                                  \
-    inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
+    static inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
 #define CV_FLAGS(class_name, ...)                                                       \
     namespace {                                                                         \
@@ -150,7 +150,7 @@ private:
         }                                                                               \
     private: int val_;                                                                  \
     };                                                                                  \
-    inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
+    static inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
 CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTYPE1)
 
@@ -354,6 +354,15 @@ typedef struct ImplData
 } ImplData;
 #endif
 
+#ifdef ENABLE_INSTRUMENTATION
+class InstumentData
+{
+public:
+    static ::cv::String treeToString();
+    static void         printTree();
+};
+#endif
+
 class CV_EXPORTS TestBase: public ::testing::Test
 {
 public:
@@ -371,8 +380,8 @@ public:
 
     class PerfSkipTestException: public cv::Exception
     {
-        int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
     public:
+        int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
         PerfSkipTestException() : dummy(0) {}
     };
 
@@ -382,7 +391,7 @@ protected:
     virtual void SetUp();
     virtual void TearDown();
 
-    void startTimer();
+    bool startTimer(); // bool is dummy for conditional loop
     void stopTimer();
     bool next();
 
@@ -406,6 +415,10 @@ protected:
 #ifdef CV_COLLECT_IMPL_DATA
     ImplData implConf;
 #endif
+#ifdef ENABLE_INSTRUMENTATION
+    InstumentData instrConf;
+#endif
+
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
     typedef std::vector<int64> TimeVector;
@@ -645,9 +658,9 @@ int main(int argc, char **argv)\
     CV_PERF_TEST_MAIN_INTERNALS(modulename, plain_only, __VA_ARGS__)\
 }
 
-#define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())
-#define TEST_CYCLE() for(; startTimer(), next(); stopTimer())
-#define TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; ++r)
+#define TEST_CYCLE_N(n) for(declare.iterations(n); next() && startTimer(); stopTimer())
+#define TEST_CYCLE() for(; next() && startTimer(); stopTimer())
+#define TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); next() && startTimer(); stopTimer()) for(int r = 0; r < runsNum; ++r)
 
 namespace perf
 {
@@ -691,4 +704,4 @@ struct CV_EXPORTS KeypointGreater :
 void CV_EXPORTS sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors);
 } //namespace perf
 
-#endif //__OPENCV_TS_PERF_HPP__
+#endif //OPENCV_TS_PERF_HPP

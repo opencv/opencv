@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOIO_H__
-#define __OPENCV_VIDEOIO_H__
+#ifndef OPENCV_VIDEOIO_H
+#define OPENCV_VIDEOIO_H
 
 #include "opencv2/core/core_c.h"
 
@@ -57,13 +57,18 @@ extern "C" {
 *                         Working with Video Files and Cameras                           *
 \****************************************************************************************/
 
-/* "black box" capture structure */
+/** @brief "black box" capture structure
+
+In C++ use cv::VideoCapture
+*/
 typedef struct CvCapture CvCapture;
 
-/* start capturing frames from video file */
+/** @brief start capturing frames from video file
+*/
 CVAPI(CvCapture*) cvCreateFileCapture( const char* filename );
 
-/* start capturing frames from video file. allows specifying a preferred API to use */
+/** @brief start capturing frames from video file. allows specifying a preferred API to use
+*/
 CVAPI(CvCapture*) cvCreateFileCaptureWithPreference( const char* filename , int apiPreference);
 
 enum
@@ -117,27 +122,37 @@ enum
     CV_CAP_GPHOTO2 = 1700,
     CV_CAP_GSTREAMER = 1800, // GStreamer
     CV_CAP_FFMPEG = 1900,    // FFMPEG
-    CV_CAP_IMAGES = 2000     // OpenCV Image Sequence (e.g. img_%02d.jpg)
+    CV_CAP_IMAGES = 2000,    // OpenCV Image Sequence (e.g. img_%02d.jpg)
+
+    CV_CAP_ARAVIS = 2100     // Aravis GigE SDK
 };
 
-/* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
+/** @brief start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*)
+*/
 CVAPI(CvCapture*) cvCreateCameraCapture( int index );
 
-/* grab a frame, return 1 on success, 0 on fail.
-  this function is thought to be fast               */
+/** @brief grab a frame, return 1 on success, 0 on fail.
+
+  this function is thought to be fast
+*/
 CVAPI(int) cvGrabFrame( CvCapture* capture );
 
-/* get the frame grabbed with cvGrabFrame(..)
+/** @brief get the frame grabbed with cvGrabFrame(..)
+
   This function may apply some frame processing like
   frame decompression, flipping etc.
-  !!!DO NOT RELEASE or MODIFY the retrieved frame!!! */
+  @warning !!!DO NOT RELEASE or MODIFY the retrieved frame!!!
+*/
 CVAPI(IplImage*) cvRetrieveFrame( CvCapture* capture, int streamIdx CV_DEFAULT(0) );
 
-/* Just a combination of cvGrabFrame and cvRetrieveFrame
-   !!!DO NOT RELEASE or MODIFY the retrieved frame!!!      */
+/** @brief Just a combination of cvGrabFrame and cvRetrieveFrame
+
+  @warning !!!DO NOT RELEASE or MODIFY the retrieved frame!!!
+*/
 CVAPI(IplImage*) cvQueryFrame( CvCapture* capture );
 
-/* stop capturing/reading and free resources */
+/** @brief stop capturing/reading and free resources
+*/
 CVAPI(void) cvReleaseCapture( CvCapture** capture );
 
 enum
@@ -200,7 +215,8 @@ enum
     // OpenNI map generators
     CV_CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
     CV_CAP_OPENNI_IMAGE_GENERATOR = 1 << 30,
-    CV_CAP_OPENNI_GENERATORS_MASK = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_OPENNI_IMAGE_GENERATOR,
+    CV_CAP_OPENNI_IR_GENERATOR    = 1 << 29,
+    CV_CAP_OPENNI_GENERATORS_MASK = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_OPENNI_IR_GENERATOR,
 
     // Properties of cameras available through OpenNI interfaces
     CV_CAP_PROP_OPENNI_OUTPUT_MODE     = 100,
@@ -222,10 +238,12 @@ enum
 
     CV_CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_GENERATOR_PRESENT,
     CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_OUTPUT_MODE,
+    CV_CAP_OPENNI_DEPTH_GENERATOR_PRESENT         = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_GENERATOR_PRESENT,
     CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE        = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_BASELINE,
     CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH    = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_FOCAL_LENGTH,
     CV_CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION    = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_REGISTRATION,
     CV_CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION_ON = CV_CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION,
+    CV_CAP_OPENNI_IR_GENERATOR_PRESENT            = CV_CAP_OPENNI_IR_GENERATOR + CV_CAP_PROP_OPENNI_GENERATOR_PRESENT,
 
     // Properties of cameras available through GStreamer interface
     CV_CAP_GSTREAMER_QUEUE_LENGTH           = 200, // default is 1
@@ -391,6 +409,7 @@ enum
     CV_CAP_PROP_XI_SENSOR_FEATURE_SELECTOR                      = 585, // Selects the current feature which is accessible by XI_PRM_SENSOR_FEATURE_VALUE.
     CV_CAP_PROP_XI_SENSOR_FEATURE_VALUE                         = 586, // Allows access to sensor feature value currently selected by XI_PRM_SENSOR_FEATURE_SELECTOR.
 
+
     // Properties for Android cameras
     CV_CAP_PROP_ANDROID_FLASH_MODE = 8001,
     CV_CAP_PROP_ANDROID_FOCUS_MODE = 8002,
@@ -454,7 +473,10 @@ enum
 
     // Data given from RGB image generator.
     CV_CAP_OPENNI_BGR_IMAGE                 = 5,
-    CV_CAP_OPENNI_GRAY_IMAGE                = 6
+    CV_CAP_OPENNI_GRAY_IMAGE                = 6,
+
+    // Data given from IR image generator.
+    CV_CAP_OPENNI_IR_IMAGE                  = 7
 };
 
 // Supported output modes of OpenNI image generator
@@ -492,51 +514,74 @@ enum
     CV_CAP_PROP_VIEWFINDER                = 17010  // Enter liveview mode.
 };
 
-/* retrieve or set capture properties */
+/** @brief retrieve capture properties
+*/
 CVAPI(double) cvGetCaptureProperty( CvCapture* capture, int property_id );
+/** @brief set capture properties
+*/
 CVAPI(int)    cvSetCaptureProperty( CvCapture* capture, int property_id, double value );
 
-// Return the type of the capturer (eg, CV_CAP_V4W, CV_CAP_UNICAP), which is unknown if created with CV_CAP_ANY
+/** @brief Return the type of the capturer (eg, ::CV_CAP_VFW, ::CV_CAP_UNICAP)
+
+It is unknown if created with ::CV_CAP_ANY
+*/
 CVAPI(int)    cvGetCaptureDomain( CvCapture* capture);
 
-/* "black box" video file writer structure */
+/** @brief "black box" video file writer structure
+
+In C++ use cv::VideoWriter
+*/
 typedef struct CvVideoWriter CvVideoWriter;
 
+//! Macro to construct the fourcc code of the codec. Same as CV_FOURCC()
 #define CV_FOURCC_MACRO(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
 
+/** @brief Constructs the fourcc code of the codec function
+
+Simply call it with 4 chars fourcc code like `CV_FOURCC('I', 'Y', 'U', 'V')`
+
+List of codes can be obtained at [Video Codecs by FOURCC](http://www.fourcc.org/codecs.php) page.
+FFMPEG backend with MP4 container natively uses other values as fourcc code:
+see [ObjectType](http://www.mp4ra.org/codecs.html).
+*/
 CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 {
     return CV_FOURCC_MACRO(c1, c2, c3, c4);
 }
 
-#define CV_FOURCC_PROMPT -1  /* Open Codec Selection Dialog (Windows only) */
-#define CV_FOURCC_DEFAULT CV_FOURCC('I', 'Y', 'U', 'V') /* Use default codec for specified filename (Linux only) */
+//! (Windows only) Open Codec Selection Dialog
+#define CV_FOURCC_PROMPT -1
+//! (Linux only) Use default codec for specified filename
+#define CV_FOURCC_DEFAULT CV_FOURCC('I', 'Y', 'U', 'V')
 
-/* initialize video file writer */
+/** @brief initialize video file writer
+*/
 CVAPI(CvVideoWriter*) cvCreateVideoWriter( const char* filename, int fourcc,
                                            double fps, CvSize frame_size,
                                            int is_color CV_DEFAULT(1));
 
-/* write frame to video file */
+/** @brief write frame to video file
+*/
 CVAPI(int) cvWriteFrame( CvVideoWriter* writer, const IplImage* image );
 
-/* close video file writer */
+/** @brief close video file writer
+*/
 CVAPI(void) cvReleaseVideoWriter( CvVideoWriter** writer );
 
-/****************************************************************************************\
-*                              Obsolete functions/synonyms                               *
-\****************************************************************************************/
+// ***************************************************************************************
+//! @name Obsolete functions/synonyms
+//! @{
+#define cvCaptureFromCAM cvCreateCameraCapture //!< @deprecated use cvCreateCameraCapture() instead
+#define cvCaptureFromFile cvCreateFileCapture  //!< @deprecated use cvCreateFileCapture() instead
+#define cvCaptureFromAVI cvCaptureFromFile     //!< @deprecated use cvCreateFileCapture() instead
+#define cvCreateAVIWriter cvCreateVideoWriter  //!< @deprecated use cvCreateVideoWriter() instead
+#define cvWriteToAVI cvWriteFrame              //!< @deprecated use cvWriteFrame() instead
+//!  @} Obsolete...
 
-#define cvCaptureFromFile cvCreateFileCapture
-#define cvCaptureFromCAM cvCreateCameraCapture
-#define cvCaptureFromAVI cvCaptureFromFile
-#define cvCreateAVIWriter cvCreateVideoWriter
-#define cvWriteToAVI cvWriteFrame
-
-/** @} videoio_c */
+//! @} videoio_c
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif //__OPENCV_VIDEOIO_H__
+#endif //OPENCV_VIDEOIO_H

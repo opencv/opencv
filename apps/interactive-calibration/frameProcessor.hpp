@@ -1,9 +1,14 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #ifndef FRAME_PROCESSOR_HPP
 #define FRAME_PROCESSOR_HPP
 
 #include <opencv2/core.hpp>
 #include <opencv2/aruco/charuco.hpp>
 #include <opencv2/calib3d.hpp>
+
 #include "calibCommon.hpp"
 #include "calibController.hpp"
 

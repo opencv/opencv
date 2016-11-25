@@ -4,11 +4,9 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
@@ -29,19 +27,19 @@ int main ( int, char** argv )
 
   int c;
 
-  /// Load an image
-  src = imread( argv[1] );
+  //![load]
+  src = imread( argv[1], IMREAD_COLOR ); // Load an image
 
   if( src.empty() )
     { return -1; }
+  //![load]
 
-  /// Create window
-  namedWindow( window_name, WINDOW_AUTOSIZE );
-
+  //![init_arguments]
   /// Initialize arguments for the filter
   anchor = Point( -1, -1 );
   delta = 0;
   ddepth = -1;
+  //![init_arguments]
 
   /// Loop - Will filter the image with different kernel sizes each 0.5 seconds
   int ind = 0;
@@ -52,12 +50,15 @@ int main ( int, char** argv )
          if( (char)c == 27 )
            { break; }
 
+         //![update_kernel]
          /// Update kernel size for a normalized box filter
          kernel_size = 3 + 2*( ind%5 );
          kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
+         //![update_kernel]
 
-         /// Apply filter
+         //![apply_filter]
          filter2D(src, dst, ddepth , kernel, anchor, delta, BORDER_DEFAULT );
+         //![apply_filter]
          imshow( window_name, dst );
          ind++;
        }

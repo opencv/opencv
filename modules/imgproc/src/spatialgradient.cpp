@@ -78,6 +78,7 @@ static inline void spatialGradientKernel( T& vx, T& vy,
 void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
                       int ksize, int borderType )
 {
+    CV_INSTRUMENT_REGION()
 
     // Prepare InputArray src
     Mat src = _src.getMat();
@@ -129,140 +130,143 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     int i_start = 0;
     int j_start = 0;
 #if CV_SIMD128 && CV_SSE2
-    uchar *m_src;
-    short *n_dx, *n_dy;
-
-    // Characters in variable names have the following meanings:
-    // u: unsigned char
-    // s: signed int
-    //
-    // [row][column]
-    // m: offset -1
-    // n: offset  0
-    // p: offset  1
-    // Example: umn is offset -1 in row and offset 0 in column
-    for ( i = 0; i < H - 1; i += 2 )
+    if(hasSIMD128())
     {
-        if   ( i == 0 ) p_src = src.ptr<uchar>(i_top);
-        else            p_src = src.ptr<uchar>(i-1);
+        uchar *m_src;
+        short *n_dx, *n_dy;
 
-        c_src = src.ptr<uchar>(i);
-        n_src = src.ptr<uchar>(i+1);
-
-        if ( i == H - 2 ) m_src = src.ptr<uchar>(i_bottom);
-        else              m_src = src.ptr<uchar>(i+2);
-
-        c_dx = dx.ptr<short>(i);
-        c_dy = dy.ptr<short>(i);
-        n_dx = dx.ptr<short>(i+1);
-        n_dy = dy.ptr<short>(i+1);
-
-        v_uint8x16 v_select_m = v_uint8x16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                           0, 0, 0, 0xFF);
-
-        // Process rest of columns 16-column chunks at a time
-        for ( j = 1; j < W - 16; j += 16 )
+        // Characters in variable names have the following meanings:
+        // u: unsigned char
+        // s: signed int
+        //
+        // [row][column]
+        // m: offset -1
+        // n: offset  0
+        // p: offset  1
+        // Example: umn is offset -1 in row and offset 0 in column
+        for ( i = 0; i < H - 1; i += 2 )
         {
-            // Load top row for 3x3 Sobel filter
-            v_uint8x16 v_um = v_load(&p_src[j-1]);
-            v_uint8x16 v_up = v_load(&p_src[j+1]);
-            // TODO: Replace _mm_slli_si128 with hal method
-            v_uint8x16 v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
-                                                   v_uint8x16(_mm_srli_si128(v_um.val, 1)));
-            v_uint16x8 v_um1, v_um2, v_un1, v_un2, v_up1, v_up2;
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16x8 v_s1m1 = v_reinterpret_as_s16(v_um1);
-            v_int16x8 v_s1m2 = v_reinterpret_as_s16(v_um2);
-            v_int16x8 v_s1n1 = v_reinterpret_as_s16(v_un1);
-            v_int16x8 v_s1n2 = v_reinterpret_as_s16(v_un2);
-            v_int16x8 v_s1p1 = v_reinterpret_as_s16(v_up1);
-            v_int16x8 v_s1p2 = v_reinterpret_as_s16(v_up2);
+            if   ( i == 0 ) p_src = src.ptr<uchar>(i_top);
+            else            p_src = src.ptr<uchar>(i-1);
 
-            // Load second row for 3x3 Sobel filter
-            v_um = v_load(&c_src[j-1]);
-            v_up = v_load(&c_src[j+1]);
-            // TODO: Replace _mm_slli_si128 with hal method
-            v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
-                                        v_uint8x16(_mm_srli_si128(v_um.val, 1)));
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16x8 v_s2m1 = v_reinterpret_as_s16(v_um1);
-            v_int16x8 v_s2m2 = v_reinterpret_as_s16(v_um2);
-            v_int16x8 v_s2n1 = v_reinterpret_as_s16(v_un1);
-            v_int16x8 v_s2n2 = v_reinterpret_as_s16(v_un2);
-            v_int16x8 v_s2p1 = v_reinterpret_as_s16(v_up1);
-            v_int16x8 v_s2p2 = v_reinterpret_as_s16(v_up2);
+            c_src = src.ptr<uchar>(i);
+            n_src = src.ptr<uchar>(i+1);
 
-            // Load third row for 3x3 Sobel filter
-            v_um = v_load(&n_src[j-1]);
-            v_up = v_load(&n_src[j+1]);
-            // TODO: Replace _mm_slli_si128 with hal method
-            v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
-                                        v_uint8x16(_mm_srli_si128(v_um.val, 1)));
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16x8 v_s3m1 = v_reinterpret_as_s16(v_um1);
-            v_int16x8 v_s3m2 = v_reinterpret_as_s16(v_um2);
-            v_int16x8 v_s3n1 = v_reinterpret_as_s16(v_un1);
-            v_int16x8 v_s3n2 = v_reinterpret_as_s16(v_un2);
-            v_int16x8 v_s3p1 = v_reinterpret_as_s16(v_up1);
-            v_int16x8 v_s3p2 = v_reinterpret_as_s16(v_up2);
+            if ( i == H - 2 ) m_src = src.ptr<uchar>(i_bottom);
+            else              m_src = src.ptr<uchar>(i+2);
 
-            // dx & dy for rows 1, 2, 3
-            v_int16x8 v_sdx1, v_sdy1;
-            spatialGradientKernel<v_int16x8>( v_sdx1, v_sdy1,
-                                              v_s1m1, v_s1n1, v_s1p1,
-                                              v_s2m1,         v_s2p1,
-                                              v_s3m1, v_s3n1, v_s3p1 );
+            c_dx = dx.ptr<short>(i);
+            c_dy = dy.ptr<short>(i);
+            n_dx = dx.ptr<short>(i+1);
+            n_dy = dy.ptr<short>(i+1);
 
-            v_int16x8 v_sdx2, v_sdy2;
-            spatialGradientKernel<v_int16x8>( v_sdx2, v_sdy2,
-                                              v_s1m2, v_s1n2, v_s1p2,
-                                              v_s2m2,         v_s2p2,
-                                              v_s3m2, v_s3n2, v_s3p2 );
+            v_uint8x16 v_select_m = v_uint8x16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                               0, 0, 0, 0xFF);
 
-            // Store
-            v_store(&c_dx[j],   v_sdx1);
-            v_store(&c_dx[j+8], v_sdx2);
-            v_store(&c_dy[j],   v_sdy1);
-            v_store(&c_dy[j+8], v_sdy2);
+            // Process rest of columns 16-column chunks at a time
+            for ( j = 1; j < W - 16; j += 16 )
+            {
+                // Load top row for 3x3 Sobel filter
+                v_uint8x16 v_um = v_load(&p_src[j-1]);
+                v_uint8x16 v_up = v_load(&p_src[j+1]);
+                // TODO: Replace _mm_slli_si128 with hal method
+                v_uint8x16 v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
+                                                       v_uint8x16(_mm_srli_si128(v_um.val, 1)));
+                v_uint16x8 v_um1, v_um2, v_un1, v_un2, v_up1, v_up2;
+                v_expand(v_um, v_um1, v_um2);
+                v_expand(v_un, v_un1, v_un2);
+                v_expand(v_up, v_up1, v_up2);
+                v_int16x8 v_s1m1 = v_reinterpret_as_s16(v_um1);
+                v_int16x8 v_s1m2 = v_reinterpret_as_s16(v_um2);
+                v_int16x8 v_s1n1 = v_reinterpret_as_s16(v_un1);
+                v_int16x8 v_s1n2 = v_reinterpret_as_s16(v_un2);
+                v_int16x8 v_s1p1 = v_reinterpret_as_s16(v_up1);
+                v_int16x8 v_s1p2 = v_reinterpret_as_s16(v_up2);
 
-            // Load fourth row for 3x3 Sobel filter
-            v_um = v_load(&m_src[j-1]);
-            v_up = v_load(&m_src[j+1]);
-            // TODO: Replace _mm_slli_si128 with hal method
-            v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
-                                        v_uint8x16(_mm_srli_si128(v_um.val, 1)));
-            v_expand(v_um, v_um1, v_um2);
-            v_expand(v_un, v_un1, v_un2);
-            v_expand(v_up, v_up1, v_up2);
-            v_int16x8 v_s4m1 = v_reinterpret_as_s16(v_um1);
-            v_int16x8 v_s4m2 = v_reinterpret_as_s16(v_um2);
-            v_int16x8 v_s4n1 = v_reinterpret_as_s16(v_un1);
-            v_int16x8 v_s4n2 = v_reinterpret_as_s16(v_un2);
-            v_int16x8 v_s4p1 = v_reinterpret_as_s16(v_up1);
-            v_int16x8 v_s4p2 = v_reinterpret_as_s16(v_up2);
+                // Load second row for 3x3 Sobel filter
+                v_um = v_load(&c_src[j-1]);
+                v_up = v_load(&c_src[j+1]);
+                // TODO: Replace _mm_slli_si128 with hal method
+                v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
+                                            v_uint8x16(_mm_srli_si128(v_um.val, 1)));
+                v_expand(v_um, v_um1, v_um2);
+                v_expand(v_un, v_un1, v_un2);
+                v_expand(v_up, v_up1, v_up2);
+                v_int16x8 v_s2m1 = v_reinterpret_as_s16(v_um1);
+                v_int16x8 v_s2m2 = v_reinterpret_as_s16(v_um2);
+                v_int16x8 v_s2n1 = v_reinterpret_as_s16(v_un1);
+                v_int16x8 v_s2n2 = v_reinterpret_as_s16(v_un2);
+                v_int16x8 v_s2p1 = v_reinterpret_as_s16(v_up1);
+                v_int16x8 v_s2p2 = v_reinterpret_as_s16(v_up2);
 
-            // dx & dy for rows 2, 3, 4
-            spatialGradientKernel<v_int16x8>( v_sdx1, v_sdy1,
-                                              v_s2m1, v_s2n1, v_s2p1,
-                                              v_s3m1,         v_s3p1,
-                                              v_s4m1, v_s4n1, v_s4p1 );
+                // Load third row for 3x3 Sobel filter
+                v_um = v_load(&n_src[j-1]);
+                v_up = v_load(&n_src[j+1]);
+                // TODO: Replace _mm_slli_si128 with hal method
+                v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
+                                            v_uint8x16(_mm_srli_si128(v_um.val, 1)));
+                v_expand(v_um, v_um1, v_um2);
+                v_expand(v_un, v_un1, v_un2);
+                v_expand(v_up, v_up1, v_up2);
+                v_int16x8 v_s3m1 = v_reinterpret_as_s16(v_um1);
+                v_int16x8 v_s3m2 = v_reinterpret_as_s16(v_um2);
+                v_int16x8 v_s3n1 = v_reinterpret_as_s16(v_un1);
+                v_int16x8 v_s3n2 = v_reinterpret_as_s16(v_un2);
+                v_int16x8 v_s3p1 = v_reinterpret_as_s16(v_up1);
+                v_int16x8 v_s3p2 = v_reinterpret_as_s16(v_up2);
 
-            spatialGradientKernel<v_int16x8>( v_sdx2, v_sdy2,
-                                              v_s2m2, v_s2n2, v_s2p2,
-                                              v_s3m2,         v_s3p2,
-                                              v_s4m2, v_s4n2, v_s4p2 );
+                // dx & dy for rows 1, 2, 3
+                v_int16x8 v_sdx1, v_sdy1;
+                spatialGradientKernel<v_int16x8>( v_sdx1, v_sdy1,
+                                                  v_s1m1, v_s1n1, v_s1p1,
+                                                  v_s2m1,         v_s2p1,
+                                                  v_s3m1, v_s3n1, v_s3p1 );
 
-            // Store
-            v_store(&n_dx[j],   v_sdx1);
-            v_store(&n_dx[j+8], v_sdx2);
-            v_store(&n_dy[j],   v_sdy1);
-            v_store(&n_dy[j+8], v_sdy2);
+                v_int16x8 v_sdx2, v_sdy2;
+                spatialGradientKernel<v_int16x8>( v_sdx2, v_sdy2,
+                                                  v_s1m2, v_s1n2, v_s1p2,
+                                                  v_s2m2,         v_s2p2,
+                                                  v_s3m2, v_s3n2, v_s3p2 );
+
+                // Store
+                v_store(&c_dx[j],   v_sdx1);
+                v_store(&c_dx[j+8], v_sdx2);
+                v_store(&c_dy[j],   v_sdy1);
+                v_store(&c_dy[j+8], v_sdy2);
+
+                // Load fourth row for 3x3 Sobel filter
+                v_um = v_load(&m_src[j-1]);
+                v_up = v_load(&m_src[j+1]);
+                // TODO: Replace _mm_slli_si128 with hal method
+                v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
+                                            v_uint8x16(_mm_srli_si128(v_um.val, 1)));
+                v_expand(v_um, v_um1, v_um2);
+                v_expand(v_un, v_un1, v_un2);
+                v_expand(v_up, v_up1, v_up2);
+                v_int16x8 v_s4m1 = v_reinterpret_as_s16(v_um1);
+                v_int16x8 v_s4m2 = v_reinterpret_as_s16(v_um2);
+                v_int16x8 v_s4n1 = v_reinterpret_as_s16(v_un1);
+                v_int16x8 v_s4n2 = v_reinterpret_as_s16(v_un2);
+                v_int16x8 v_s4p1 = v_reinterpret_as_s16(v_up1);
+                v_int16x8 v_s4p2 = v_reinterpret_as_s16(v_up2);
+
+                // dx & dy for rows 2, 3, 4
+                spatialGradientKernel<v_int16x8>( v_sdx1, v_sdy1,
+                                                  v_s2m1, v_s2n1, v_s2p1,
+                                                  v_s3m1,         v_s3p1,
+                                                  v_s4m1, v_s4n1, v_s4p1 );
+
+                spatialGradientKernel<v_int16x8>( v_sdx2, v_sdy2,
+                                                  v_s2m2, v_s2n2, v_s2p2,
+                                                  v_s3m2,         v_s3p2,
+                                                  v_s4m2, v_s4n2, v_s4p2 );
+
+                // Store
+                v_store(&n_dx[j],   v_sdx1);
+                v_store(&n_dx[j+8], v_sdx2);
+                v_store(&n_dy[j],   v_sdy1);
+                v_store(&n_dy[j+8], v_sdy2);
+            }
         }
     }
     i_start = i;

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_MATCHERS_HPP__
-#define __OPENCV_STITCHING_MATCHERS_HPP__
+#ifndef OPENCV_STITCHING_MATCHERS_HPP
+#define OPENCV_STITCHING_MATCHERS_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -83,8 +83,26 @@ public:
     @sa detail::ImageFeatures, Rect_
     */
     void operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
+    /** @brief Finds features in the given images in parallel.
+
+    @param images Source images
+    @param features Found features for each image
+    @param rois Regions of interest for each image
+
+    @sa detail::ImageFeatures, Rect_
+    */
+    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
+                     const std::vector<std::vector<cv::Rect> > &rois);
+    /** @overload */
+    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features);
     /** @brief Frees unused memory allocated before if there is any. */
     virtual void collectGarbage() {}
+
+    /* TODO OpenCV ABI 4.x
+    reimplement this as public method similar to FeaturesMatcher and remove private function hack
+    @return True, if it's possible to use the same finder instance in parallel, false otherwise
+    bool isThreadSafe() const { return is_thread_safe_; }
+    */
 
 protected:
     /** @brief This method must implement features finding logic in order to make the wrappers
@@ -95,6 +113,10 @@ protected:
 
     @sa detail::ImageFeatures */
     virtual void find(InputArray image, ImageFeatures &features) = 0;
+    /** @brief uses dynamic_cast to determine thread-safety
+    @return True, if it's possible to use the same finder instance in parallel, false otherwise
+    */
+    bool isThreadSafe() const;
 };
 
 /** @brief SURF features finder.
@@ -131,6 +153,26 @@ private:
     Size grid_size;
 };
 
+/** @brief AKAZE features finder. :
+
+@sa detail::FeaturesFinder, AKAZE
+*/
+class CV_EXPORTS AKAZEFeaturesFinder : public detail::FeaturesFinder
+{
+public:
+    AKAZEFeaturesFinder(int descriptor_type = AKAZE::DESCRIPTOR_MLDB,
+                        int descriptor_size = 0,
+                        int descriptor_channels = 3,
+                        float threshold = 0.001f,
+                        int nOctaves = 4,
+                        int nOctaveLayers = 4,
+                        int diffusivity = KAZE::DIFF_PM_G2);
+
+private:
+    void find(InputArray image, detail::ImageFeatures &features);
+
+    Ptr<AKAZE> akaze;
+};
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
@@ -156,7 +198,10 @@ private:
 
 /** @brief Structure containing information about matches between two images.
 
-It's assumed that there is a homography between those images.
+It's assumed that there is a transformation between those images. Transformation may be
+homography or affine transformation based on selected matcher.
+
+@sa detail::FeaturesMatcher
 */
 struct CV_EXPORTS MatchesInfo
 {
@@ -168,7 +213,7 @@ struct CV_EXPORTS MatchesInfo
     std::vector<DMatch> matches;
     std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
     int num_inliers;                    //!< Number of geometrically consistent matches
-    Mat H;                              //!< Estimated homography
+    Mat H;                              //!< Estimated transformation
     double confidence;                  //!< Confidence two images are from the same panorama
 };
 
@@ -267,9 +312,44 @@ protected:
     int range_width_;
 };
 
+/** @brief Features matcher similar to cv::detail::BestOf2NearestMatcher which
+finds two best matches for each feature and leaves the best one only if the
+ratio between descriptor distances is greater than the threshold match_conf.
+
+Unlike cv::detail::BestOf2NearestMatcher this matcher uses affine
+transformation (affine trasformation estimate will be placed in matches_info).
+
+@sa cv::detail::FeaturesMatcher cv::detail::BestOf2NearestMatcher
+ */
+class CV_EXPORTS AffineBestOf2NearestMatcher : public BestOf2NearestMatcher
+{
+public:
+    /** @brief Constructs a "best of 2 nearest" matcher that expects affine trasformation
+    between images
+
+    @param full_affine whether to use full affine transformation with 6 degress of freedom or reduced
+    transformation with 4 degrees of freedom using only rotation, translation and uniform scaling
+    @param try_use_gpu Should try to use GPU or not
+    @param match_conf Match distances ration threshold
+    @param num_matches_thresh1 Minimum number of matches required for the 2D affine transform
+    estimation used in the inliers classification step
+
+    @sa cv::estimateAffine2D cv::estimateAffinePartial2D
+     */
+    AffineBestOf2NearestMatcher(bool full_affine = false, bool try_use_gpu = false,
+                                float match_conf = 0.3f, int num_matches_thresh1 = 6) :
+        BestOf2NearestMatcher(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh1),
+        full_affine_(full_affine) {}
+
+protected:
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info);
+
+    bool full_affine_;
+};
+
 //! @} stitching_match
 
 } // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_MATCHERS_HPP__
+#endif // OPENCV_STITCHING_MATCHERS_HPP

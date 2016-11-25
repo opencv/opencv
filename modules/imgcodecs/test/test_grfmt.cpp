@@ -44,6 +44,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 using namespace cv;
 using namespace std;
@@ -93,6 +94,12 @@ TEST(Imgcodecs_imread, regression)
 #ifdef HAVE_JASPER
         "Rome.jp2",
 #endif
+#ifdef HAVE_GDCM
+        "int16-mono1.dcm",
+        "uint8-mono2.dcm",
+        "uint16-mono2.dcm",
+        "uint8-rgb.dcm",
+#endif
         "color_palette_alpha.png",
         "multipage.tif",
         "rle.hdr",
@@ -111,9 +118,10 @@ TEST(Imgcodecs_imread, regression)
         ASSERT_TRUE(imread_compare(path, IMREAD_COLOR));
         ASSERT_TRUE(imread_compare(path, IMREAD_ANYDEPTH));
         ASSERT_TRUE(imread_compare(path, IMREAD_ANYCOLOR));
-        if (path.substr(path.length() - 3) != "hdr")
+        const string ext = path.substr( path.length() - 3 );
+        if ( ext != "hdr" && ext != "dcm" )
         {
-            // GDAL does not support hdr
+            // GDAL does not support hdr nor dcm
             ASSERT_TRUE(imread_compare(path, IMREAD_LOAD_GDAL));
         }
     }
@@ -308,6 +316,7 @@ string ext_from_int(int ext)
 #ifdef HAVE_TIFF
     if (ext == 3) return ".tiff";
 #endif
+    if (ext == 4) return ".pam";
     return "";
 }
 
@@ -323,7 +332,7 @@ public:
 
             for (int k = 1; k <= 5; ++k)
             {
-                for (int ext = 0; ext < 4; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
+                for (int ext = 0; ext < 5; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
                 {
                     if(ext_from_int(ext).empty())
                         continue;
@@ -890,6 +899,19 @@ TEST(Imgcodecs_Tiff, decode_multipage)
     CV_GrfmtReadTifMultiPage test; test.safe_run();
 }
 
+TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<uchar> buf;
+    EXPECT_NO_THROW(cv::imencode(".tiff", img, buf));
+
+    EXPECT_NO_THROW(cv::imdecode(buf, IMREAD_UNCHANGED));
+}
+
 #endif
 
 #ifdef HAVE_WEBP
@@ -1016,4 +1038,28 @@ TEST(Imgcodecs_Hdr, regression)
         minMaxLoc(abs(img_rle - written_img), &min, &max);
         ASSERT_FALSE(max > DBL_EPSILON);
     }
+}
+
+TEST(Imgcodecs_Pam, readwrite)
+{
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "readwrite/";
+    string filepath = folder + "lena.pam";
+
+    cv::Mat img = cv::imread(filepath);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_PAM_TUPLETYPE);
+    params.push_back(IMWRITE_PAM_FORMAT_RGB);
+
+    string writefile = cv::tempfile(".pam");
+    EXPECT_NO_THROW(cv::imwrite(writefile, img, params));
+    cv::Mat reread = cv::imread(writefile);
+
+    string writefile_no_param = cv::tempfile(".pam");
+    EXPECT_NO_THROW(cv::imwrite(writefile_no_param, img));
+    cv::Mat reread_no_param = cv::imread(writefile_no_param);
+
+    EXPECT_EQ(0, cvtest::norm(reread, reread_no_param, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(img, reread, NORM_INF));
 }

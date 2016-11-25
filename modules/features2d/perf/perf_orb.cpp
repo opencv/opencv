@@ -27,8 +27,9 @@ PERF_TEST_P(orb, detect, testing::Values(ORB_IMAGES))
 
     TEST_CYCLE() detector->detect(frame, points, mask);
 
-    sort(points.begin(), points.end(), comparators::KeypointGreater());
-    SANITY_CHECK_KEYPOINTS(points, 1e-5);
+    EXPECT_GT(points.size(), 20u);
+
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
@@ -45,13 +46,15 @@ PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
     Ptr<ORB> detector = ORB::create(1500, 1.3f, 1);
     vector<KeyPoint> points;
     detector->detect(frame, points, mask);
-    sort(points.begin(), points.end(), comparators::KeypointGreater());
+
+    EXPECT_GT(points.size(), 20u);
 
     Mat descriptors;
 
     TEST_CYCLE() detector->compute(frame, points, descriptors);
 
-    SANITY_CHECK(descriptors);
+    EXPECT_EQ((size_t)descriptors.rows, points.size());
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
@@ -71,7 +74,7 @@ PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
 
     TEST_CYCLE() detector->detectAndCompute(frame, mask, points, descriptors, false);
 
-    perf::sort(points, descriptors);
-    SANITY_CHECK_KEYPOINTS(points, 1e-5);
-    SANITY_CHECK(descriptors);
+    EXPECT_GT(points.size(), 20u);
+    EXPECT_EQ((size_t)descriptors.rows, points.size());
+    SANITY_CHECK_NOTHING();
 }

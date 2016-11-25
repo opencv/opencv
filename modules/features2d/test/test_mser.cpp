@@ -132,7 +132,7 @@ TEST(Features2d_MSER, cases)
             GaussianBlur(src, src, Size(5, 5), 1.5, 1.5);
 
         int minRegs = use_big_image ? 7 : 2;
-        int maxRegs = use_big_image ? 1000 : 15;
+        int maxRegs = use_big_image ? 1000 : 20;
         if( binarize && (thresh == 0 || thresh == 255) )
             minRegs = maxRegs = 0;
 

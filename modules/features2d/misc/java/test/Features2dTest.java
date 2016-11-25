@@ -13,14 +13,13 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Range;
 import org.opencv.core.DMatch;
-import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
-import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.Features2d;
 import org.opencv.core.KeyPoint;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import org.opencv.features2d.Feature2D;
 
 public class Features2dTest extends OpenCVTestCase {
 
@@ -78,11 +77,11 @@ public class Features2dTest extends OpenCVTestCase {
 
     public void testPTOD()
     {
-        String detectorCfg = "%YAML:1.0\nhessianThreshold: 4000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n";
-        String extractorCfg = "%YAML:1.0\nnOctaves: 4\nnOctaveLayers: 2\nextended: 0\nupright: 0\n";
+        String detectorCfg = "%YAML:1.0\n---\nhessianThreshold: 4000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n";
+        String extractorCfg = "%YAML:1.0\n---\nnOctaves: 4\nnOctaveLayers: 2\nextended: 0\nupright: 0\n";
 
-        FeatureDetector detector = FeatureDetector.create(FeatureDetector.SURF);
-        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
+        Feature2D detector = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
+        Feature2D extractor = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
         DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE);
 
         String detectorCfgFile = OpenCVTestRunner.getTempFileName("yml");

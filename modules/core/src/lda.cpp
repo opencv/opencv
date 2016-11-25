@@ -898,6 +898,8 @@ public:
     // National Institute of Standards and Technology (NIST).
     void compute(InputArray src)
     {
+        CV_INSTRUMENT_REGION()
+
         if(isSymmetric(src)) {
             // Fall back to OpenCV for a symmetric matrix!
             cv::eigen(src, _eigenvalues, _eigenvectors);

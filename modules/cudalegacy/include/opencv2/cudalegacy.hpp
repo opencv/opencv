@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDALEGACY_HPP__
-#define __OPENCV_CUDALEGACY_HPP__
+#ifndef OPENCV_CUDALEGACY_HPP
+#define OPENCV_CUDALEGACY_HPP
 
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/cudalegacy/NCV.hpp"
@@ -287,4 +287,4 @@ CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& c
 
 }}
 
-#endif /* __OPENCV_CUDALEGACY_HPP__ */
+#endif /* OPENCV_CUDALEGACY_HPP */

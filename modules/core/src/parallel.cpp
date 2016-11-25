@@ -144,18 +144,64 @@ namespace cv
 namespace
 {
 #ifdef CV_PARALLEL_FRAMEWORK
-    class ParallelLoopBodyWrapper
+#ifdef ENABLE_INSTRUMENTATION
+    static void SyncNodes(cv::instr::InstrNode *pNode)
+    {
+        std::vector<cv::instr::NodeDataTls*> data;
+        pNode->m_payload.m_tls.gather(data);
+
+        uint64 ticksMax = 0;
+        int    threads  = 0;
+        for(size_t i = 0; i < data.size(); i++)
+        {
+            if(data[i] && data[i]->m_ticksTotal)
+            {
+                ticksMax = MAX(ticksMax, data[i]->m_ticksTotal);
+                pNode->m_payload.m_ticksTotal -= data[i]->m_ticksTotal;
+                data[i]->m_ticksTotal = 0;
+                threads++;
+            }
+        }
+        pNode->m_payload.m_ticksTotal += ticksMax;
+        pNode->m_payload.m_threads = MAX(pNode->m_payload.m_threads, threads);
+
+        for(size_t i = 0; i < pNode->m_childs.size(); i++)
+            SyncNodes(pNode->m_childs[i]);
+    }
+#endif
+
+    class ParallelLoopBodyWrapper : public cv::ParallelLoopBody
     {
     public:
         ParallelLoopBodyWrapper(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes)
         {
+
             body = &_body;
             wholeRange = _r;
             double len = wholeRange.end - wholeRange.start;
             nstripes = cvRound(_nstripes <= 0 ? len : MIN(MAX(_nstripes, 1.), len));
+
+#ifdef ENABLE_INSTRUMENTATION
+            pThreadRoot = cv::instr::getInstrumentTLSStruct().pCurrentNode;
+#endif
         }
+#ifdef ENABLE_INSTRUMENTATION
+        ~ParallelLoopBodyWrapper()
+        {
+            for(size_t i = 0; i < pThreadRoot->m_childs.size(); i++)
+                SyncNodes(pThreadRoot->m_childs[i]);
+        }
+#endif
         void operator()(const cv::Range& sr) const
         {
+#ifdef ENABLE_INSTRUMENTATION
+            {
+                cv::instr::InstrTLSStruct *pInstrTLS = &cv::instr::getInstrumentTLSStruct();
+                pInstrTLS->pCurrentNode = pThreadRoot; // Initialize TLS node for thread
+            }
+#endif
+            CV_INSTRUMENT_REGION()
+
             cv::Range r;
             r.start = (int)(wholeRange.start +
                             ((uint64)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
@@ -169,6 +215,9 @@ namespace
         const cv::ParallelLoopBody* body;
         cv::Range wholeRange;
         int nstripes;
+#ifdef ENABLE_INSTRUMENTATION
+        cv::instr::InstrNode *pThreadRoot;
+#endif
     };
 
 #if defined HAVE_TBB
@@ -252,6 +301,10 @@ static SchedPtr pplScheduler;
 
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
+    CV_INSTRUMENT_REGION_MT_FORK()
+    if (range.empty())
+        return;
+
 #ifdef CV_PARALLEL_FRAMEWORK
 
     if(numThreads != 0)
@@ -309,7 +362,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
 
 #elif defined HAVE_PTHREADS_PF
 
-        parallel_for_pthreads(range, body, nstripes);
+        parallel_for_pthreads(pbody.stripeRange(), pbody, pbody.stripeRange().size());
 
 #else
 
@@ -504,7 +557,7 @@ int cv::getNumberOfCPUs(void)
 {
 #if defined WIN32 || defined _WIN32
     SYSTEM_INFO sysinfo;
-#if defined(_M_ARM) || defined(_M_X64) || defined(WINRT)
+#if (defined(_M_ARM) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );
 #else
     GetSystemInfo( &sysinfo );

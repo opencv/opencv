@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_AUTOCALIB_HPP__
-#define __OPENCV_STITCHING_AUTOCALIB_HPP__
+#ifndef OPENCV_STITCHING_AUTOCALIB_HPP
+#define OPENCV_STITCHING_AUTOCALIB_HPP
 
 #include "opencv2/core.hpp"
 #include "matchers.hpp"
@@ -83,4 +83,4 @@ bool CV_EXPORTS calibrateRotatingCamera(const std::vector<Mat> &Hs, Mat &K);
 } // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_AUTOCALIB_HPP__
+#endif // OPENCV_STITCHING_AUTOCALIB_HPP

@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include "frameProcessor.hpp"
 #include "rotationConverters.hpp"
 
@@ -5,6 +9,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/aruco/charuco.hpp>
 #include <opencv2/highgui.hpp>
+
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -253,8 +258,8 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     mCapuredFrames = 0;
     mNeededFramesNum = capParams.calibrationStep;
     mDelayBetweenCaptures = static_cast<int>(capParams.captureDelay * capParams.fps);
-    mMaxTemplateOffset = std::sqrt(std::pow(mCalibData->imageSize.height, 2) +
-                                   std::pow(mCalibData->imageSize.width, 2)) / 20.0;
+    mMaxTemplateOffset = std::sqrt(static_cast<float>(mCalibData->imageSize.height * mCalibData->imageSize.height) +
+                                   static_cast<float>(mCalibData->imageSize.width * mCalibData->imageSize.width)) / 20.0;
     mSquareSize = capParams.squareSize;
     mTemplDist = capParams.templDst;
 
