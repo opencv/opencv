@@ -42,11 +42,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_USE_OPENCV
-#define IVX_HIDE_INFO_WARNINGS
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 namespace cv
 {
@@ -1268,6 +1264,63 @@ private:
 
 }
 
+#ifdef HAVE_OPENVX
+namespace cv
+{
+    static bool openvx_calchist(const Mat& image, OutputArray _hist, const int histSize,
+        const float* _range)
+    {
+        vx_int32 offset = (vx_int32)(_range[0]);
+        vx_uint32 range = (vx_uint32)(_range[1] - _range[0]);
+        if (float(offset) != _range[0] || float(range) != (_range[1] - _range[0]))
+            return false;
+
+        size_t total_size = image.total();
+        int rows = image.dims > 1 ? image.size[0] : 1, cols = rows ? (int)(total_size / rows) : 0;
+        if (image.dims > 2 && !(image.isContinuous() && cols > 0 && (size_t)rows*cols == total_size))
+            return false;
+
+        try
+        {
+            ivx::Context ctx = ivx::Context::create();
+#if VX_VERSION <= VX_VERSION_1_0
+            if (ctx.vendorID() == VX_ID_KHRONOS && (range % histSize))
+                return false;
+#endif
+
+            ivx::Image
+                img = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(cols, rows, 1, (vx_int32)(image.step[0])), image.data);
+
+            ivx::Distribution vxHist = ivx::Distribution::create(ctx, histSize, offset, range);
+            ivx::IVX_CHECK_STATUS(vxuHistogram(ctx, img, vxHist));
+
+            _hist.create(1, &histSize, CV_32F);
+            Mat hist = _hist.getMat(), ihist = hist;
+            ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK) | CV_32S;
+            vxHist.copyTo(ihist);
+            ihist.convertTo(hist, CV_32F);
+
+#ifdef VX_VERSION_1_1
+            img.swapHandle();
+#endif
+        }
+        catch (ivx::RuntimeError & e)
+        {
+            CV_Error(CV_StsInternal, e.what());
+            return false;
+        }
+        catch (ivx::WrapperError & e)
+        {
+            CV_Error(CV_StsInternal, e.what());
+            return false;
+        }
+
+        return true;
+    }
+}
+#endif
+
 #if defined(HAVE_IPP)
 namespace cv
 {
@@ -1320,6 +1373,13 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
                    const float** ranges, bool uniform, bool accumulate )
 {
     CV_INSTRUMENT_REGION()
+
+    CV_OVX_RUN(
+        images && histSize &&
+        nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && _mask.getMat().empty() &&
+        (!channels || channels[0] == 0) && !accumulate && uniform &&
+        ranges && ranges[0],
+        openvx_calchist(images[0], _hist, histSize[0], ranges[0]));
 
     CV_IPP_RUN(nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
                 channels[0] == 0 && _mask.getMat().empty() && images[0].dims <= 2 &&
