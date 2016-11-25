@@ -3215,5 +3215,6 @@ template<> struct ParamType<uchar>
 #include "opencv2/core/cvstd.inl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/optim.hpp"
+#include "opencv2/core/ovx.hpp"
 
 #endif /*OPENCV_CORE_HPP*/
