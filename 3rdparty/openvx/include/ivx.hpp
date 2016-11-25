@@ -696,6 +696,11 @@ protected:
 
 #endif // IVX_USE_EXTERNAL_REFCOUNT
 
+#ifndef VX_VERSION_1_1
+//TODO: provide wrapper for border mode
+typedef vx_border_mode_t vx_border_t;
+#endif
+
 /// vx_context wrapper
 class Context : public RefWrapper<vx_context>
 {
@@ -719,6 +724,146 @@ public:
     /// vxLoadKernels() wrapper
     void loadKernels(const std::string& module)
     { IVX_CHECK_STATUS( vxLoadKernels(ref, module.c_str()) ); }
+
+    /// vxQueryContext() wrapper
+    template<typename T>
+    void query(vx_enum att, T& value) const
+    { IVX_CHECK_STATUS(vxQueryContext(ref, att, &value, sizeof(value))); }
+
+#ifndef VX_VERSION_1_1
+    static const vx_enum
+        VX_CONTEXT_VENDOR_ID = VX_CONTEXT_ATTRIBUTE_VENDOR_ID,
+        VX_CONTEXT_VERSION = VX_CONTEXT_ATTRIBUTE_VERSION,
+        VX_CONTEXT_UNIQUE_KERNELS = VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNELS,
+        VX_CONTEXT_MODULES = VX_CONTEXT_ATTRIBUTE_MODULES,
+        VX_CONTEXT_REFERENCES = VX_CONTEXT_ATTRIBUTE_REFERENCES,
+        VX_CONTEXT_IMPLEMENTATION = VX_CONTEXT_ATTRIBUTE_IMPLEMENTATION,
+        VX_CONTEXT_EXTENSIONS_SIZE = VX_CONTEXT_ATTRIBUTE_EXTENSIONS_SIZE,
+        VX_CONTEXT_EXTENSIONS = VX_CONTEXT_ATTRIBUTE_EXTENSIONS,
+        VX_CONTEXT_CONVOLUTION_MAX_DIMENSION = VX_CONTEXT_ATTRIBUTE_CONVOLUTION_MAXIMUM_DIMENSION,
+        VX_CONTEXT_OPTICAL_FLOW_MAX_WINDOW_DIMENSION = VX_CONTEXT_ATTRIBUTE_OPTICAL_FLOW_WINDOW_MAXIMUM_DIMENSION,
+        VX_CONTEXT_IMMEDIATE_BORDER = VX_CONTEXT_ATTRIBUTE_IMMEDIATE_BORDER_MODE,
+        VX_CONTEXT_UNIQUE_KERNEL_TABLE = VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNEL_TABLE;
+#endif
+
+    /// vxQueryContext(VX_CONTEXT_VENDOR_ID) wrapper
+    vx_uint16 vendorID() const
+    {
+        vx_uint16 v;
+        query(VX_CONTEXT_VENDOR_ID, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_VERSION) wrapper
+    vx_uint16 version() const
+    {
+        vx_uint16 v;
+        query(VX_CONTEXT_VERSION, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_UNIQUE_KERNELS) wrapper
+    vx_uint32 uniqueKernels() const
+    {
+        vx_uint32 v;
+        query(VX_CONTEXT_UNIQUE_KERNELS, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_MODULES) wrapper
+    vx_uint32 modules() const
+    {
+        vx_uint32 v;
+        query(VX_CONTEXT_MODULES, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_REFERENCES) wrapper
+    vx_uint32 references() const
+    {
+        vx_uint32 v;
+        query(VX_CONTEXT_REFERENCES, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_EXTENSIONS_SIZE) wrapper
+    vx_size extensionsSize() const
+    {
+        vx_size v;
+        query(VX_CONTEXT_EXTENSIONS_SIZE, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_CONVOLUTION_MAX_DIMENSION) wrapper
+    vx_size convolutionMaxDimension() const
+    {
+        vx_size v;
+        query(VX_CONTEXT_CONVOLUTION_MAX_DIMENSION, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_OPTICAL_FLOW_MAX_WINDOW_DIMENSION) wrapper
+    vx_size opticalFlowMaxWindowSize() const
+    {
+        vx_size v;
+        query(VX_CONTEXT_OPTICAL_FLOW_MAX_WINDOW_DIMENSION, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_IMMEDIATE_BORDER) wrapper
+    vx_border_t borderMode() const
+    {
+        vx_border_t v;
+        query(VX_CONTEXT_IMMEDIATE_BORDER, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_IMPLEMENTATION) wrapper
+    std::string implementation() const
+    {
+        std::vector<vx_char> v(VX_MAX_IMPLEMENTATION_NAME);
+        IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_IMPLEMENTATION, &v[0], v.size() * sizeof(vx_char)));
+        return std::string(v.data());
+    }
+
+    /// vxQueryContext(VX_CONTEXT_EXTENSIONS) wrapper
+    std::string extensions() const
+    {
+        std::vector<vx_char> v(extensionsSize());
+        IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_EXTENSIONS, &v[0], v.size() * sizeof(vx_char)));
+        return std::string(v.data());
+    }
+
+    /// vxQueryContext(VX_CONTEXT_UNIQUE_KERNEL_TABLE) wrapper
+    std::vector<vx_kernel_info_t> kernelTable() const
+    {
+        std::vector<vx_kernel_info_t> v(uniqueKernels());
+        IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_UNIQUE_KERNEL_TABLE, &v[0], v.size() * sizeof(vx_kernel_info_t)));
+        return v;
+    }
+
+#ifdef VX_VERSION_1_1
+    /// vxQueryContext(VX_CONTEXT_IMMEDIATE_BORDER_POLICY) wrapper
+    vx_enum borderPolicy() const
+    {
+        vx_enum v;
+        query(VX_CONTEXT_IMMEDIATE_BORDER_POLICY, v);
+        return v;
+    }
+
+    /// vxQueryContext(VX_CONTEXT_NONLINEAR_MAX_DIMENSION) wrapper
+    vx_size nonlinearMaxDimension() const
+    {
+        vx_size v;
+        query(VX_CONTEXT_NONLINEAR_MAX_DIMENSION, v);
+        return v;
+    }
+#endif
+
+    /// vxSetContextAttribute(VX_CONTEXT_IMMEDIATE_BORDER) wrapper
+    void setBorderMode(vx_border_t &border)
+    { IVX_CHECK_STATUS(vxSetContextAttribute(ref, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border))); }
+
 };
 
 /// vx_graph wrapper
@@ -1751,6 +1896,9 @@ public:
     {
         return VX_TYPE_INT16;
     }
+
+    void setScale(vx_uint32 newScale)
+    { IVX_CHECK_STATUS( vxSetConvolutionAttribute(ref, VX_CONVOLUTION_SCALE, &newScale, sizeof(newScale)) ); }
 
     void copyTo(void* data)
     {
