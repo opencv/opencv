@@ -2465,6 +2465,9 @@ typedef ::std::wstring wstring;
 // returns 'condition'.
 GTEST_API_ bool IsTrue(bool condition);
 
+template <typename T> class scoped_ptr;
+template <typename T> static void swap(scoped_ptr<T>& a, scoped_ptr<T>& b);
+
 // Defines scoped_ptr.
 
 // This implementation of scoped_ptr is PARTIAL - it only contains
@@ -2496,16 +2499,19 @@ class scoped_ptr {
     }
   }
 
-  friend void swap(scoped_ptr& a, scoped_ptr& b) {
-    using std::swap;
-    swap(a.ptr_, b.ptr_);
-  }
+  friend void swap<T>(scoped_ptr<T>& a, scoped_ptr<T>& b);
 
  private:
   T* ptr_;
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(scoped_ptr);
 };
+
+template <typename T>
+static void swap(scoped_ptr<T>& a, scoped_ptr<T>& b) {
+  using std::swap;
+  swap(a.ptr_, b.ptr_);
+}
 
 // Defines RE.
 
