@@ -95,11 +95,11 @@ private:
 
 #define CV_ENUM(class_name, ...)                                                        \
     namespace {                                                                         \
+    using namespace cv;using namespace cv::cuda; using namespace cv::ocl;               \
     struct class_name {                                                                 \
         class_name(int val = 0) : val_(val) {}                                          \
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
-            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             const int vals[] = { __VA_ARGS__ };                                         \
             const char* svals = #__VA_ARGS__;                                           \
             for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i) {         \
@@ -115,8 +115,7 @@ private:
             *os << "UNKNOWN";                                                           \
         }                                                                               \
         static ::testing::internal::ParamGenerator<class_name> all() {                  \
-            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
-            static class_name vals[] = { __VA_ARGS__ };                                 \
+            const class_name vals[] = { __VA_ARGS__ };                                  \
             return ::testing::ValuesIn(vals);                                           \
         }                                                                               \
     private: int val_;                                                                  \
