@@ -445,10 +445,6 @@ endif(WIN32 AND NOT MINGW)
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
 if(UNIX)
-  include(cmake/OpenCVFindPkgConfig.cmake OPTIONAL)
-  include(CheckFunctionExists)
-  include(CheckIncludeFile)
-
   if(NOT APPLE)
     CHECK_INCLUDE_FILE(pthread.h HAVE_LIBPTHREAD)
     if(ANDROID)
