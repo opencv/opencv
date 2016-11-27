@@ -11,6 +11,37 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
+if(NOT COMMAND cmake_parse_arguments)
+  include(CMakeParseArguments OPTIONAL) # CMake 2.8.3+
+endif()
+
+# Debugging function
+function(ocv_cmake_dump_vars)
+  set(VARS "")
+  get_cmake_property(_variableNames VARIABLES)
+  if(COMMAND cmake_parse_arguments222)
+    cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
+    set(regex "${DUMP_UNPARSED_ARGUMENTS}")
+  else()
+    set(regex "${ARGV0}")
+    if(ARGV1 STREQUAL "TOFILE")
+      set(DUMP_TOFILE "${ARGV2}")
+    endif()
+  endif()
+  string(TOLOWER "${regex}" regex_lower)
+  foreach(_variableName ${_variableNames})
+    string(TOLOWER "${_variableName}" _variableName_lower)
+    if(_variableName MATCHES "${regex}" OR _variableName_lower MATCHES "${regex_lower}")
+      set(VARS "${VARS}${_variableName}=${${_variableName}}\n")
+    endif()
+  endforeach()
+  if(DUMP_TOFILE)
+    file(WRITE ${CMAKE_BINARY_DIR}/${DUMP_TOFILE} "${VARS}")
+  else()
+    message(AUTHOR_WARNING "${VARS}")
+  endif()
+endfunction()
+
 # assert macro
 # Note: it doesn't support lists in arguments
 # Usage samples:
