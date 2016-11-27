@@ -40,6 +40,9 @@
 //
 //M*/
 
+#define HAVE_FFMPEG_SWSCALE
+#define HAVE_GENTOO_FFMPEG
+
 #include "cap_ffmpeg_api.hpp"
 #include <assert.h>
 #include <algorithm>

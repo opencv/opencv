@@ -61,12 +61,6 @@
 /* FFMpeg video library */
 #cmakedefine HAVE_FFMPEG
 
-/* ffmpeg's libswscale */
-#cmakedefine HAVE_FFMPEG_SWSCALE
-
-/* ffmpeg in Gentoo */
-#cmakedefine HAVE_GENTOO_FFMPEG
-
 /* GStreamer multimedia framework */
 #cmakedefine HAVE_GSTREAMER
 
