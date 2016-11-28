@@ -100,21 +100,21 @@ namespace cv{
 
         inline
         void init(int nlabels){
-                _mstatsv->create(cv::Size(CC_STAT_MAX, nlabels), cv::DataType<int>::type);
-                statsv = _mstatsv->getMat();
-                _mcentroidsv->create(cv::Size(2, nlabels), cv::DataType<double>::type);
-                centroidsv = _mcentroidsv->getMat();
+            _mstatsv->create(cv::Size(CC_STAT_MAX, nlabels), cv::DataType<int>::type);
+            statsv = _mstatsv->getMat();
+            _mcentroidsv->create(cv::Size(2, nlabels), cv::DataType<double>::type);
+            centroidsv = _mcentroidsv->getMat();
 
-                for (int l = 0; l < (int)nlabels; ++l){
-                    int *row = (int *)&statsv.at<int>(l, 0);
-                    row[CC_STAT_LEFT] = INT_MAX;
-                    row[CC_STAT_TOP] = INT_MAX;
-                    row[CC_STAT_WIDTH] = INT_MIN;
-                    row[CC_STAT_HEIGHT] = INT_MIN;
-                    row[CC_STAT_AREA] = 0;
-                }
-                integrals.resize(nlabels, Point2ui64(0, 0));
+            for (int l = 0; l < (int)nlabels; ++l){
+                int *row = (int *)&statsv.at<int>(l, 0);
+                row[CC_STAT_LEFT] = INT_MAX;
+                row[CC_STAT_TOP] = INT_MAX;
+                row[CC_STAT_WIDTH] = INT_MIN;
+                row[CC_STAT_HEIGHT] = INT_MIN;
+                row[CC_STAT_AREA] = 0;
             }
+            integrals.resize(nlabels, Point2ui64(0, 0));
+        }
 
         inline
         void initElement(const int nlabels){
@@ -149,7 +149,7 @@ namespace cv{
                 row[CC_STAT_HEIGHT] = row[CC_STAT_HEIGHT] - row[CC_STAT_TOP] + 1;
 
                 Point2ui64& integral = integrals[l];
-                double *centroid =& centroidsv.at<double>(l, 0);
+                double *centroid = &centroidsv.at<double>(l, 0);
                 double area = ((unsigned*)row)[CC_STAT_AREA];
                 centroid[0] = double(integral.x) / area;
                 centroid[1] = double(integral.y) / area;
@@ -288,7 +288,7 @@ namespace cv{
                 int r = range.start;
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT(r  *imgLabels_.cols / 4 + 1);
+                LabelT label = LabelT((r * imgLabels_.cols + 1) / 2 + 1);
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -302,10 +302,10 @@ namespace cv{
                 // +-+-+
                 for (; r != range.end; ++r)
                 {
-                    PixelT const  *const img_row = img_.ptr<PixelT>(r);
-                    PixelT const  *const img_row_prev = (PixelT *)(((char *)img_row) - img_.step.p[0]);
-                    LabelT * const  imgLabels_row = imgLabels_.ptr<LabelT>(r);
-                    LabelT * const  imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels_.step.p[0]);
+                    PixelT const * const img_row = img_.ptr<PixelT>(r);
+                    PixelT const * const img_row_prev = (PixelT *)(((char *)img_row) - img_.step.p[0]);
+                    LabelT * const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                    LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels_.step.p[0]);
                     for (int c = 0; c < w; ++c) {
 
 #define condition_p c > 0 && r > limitLine && img_row_prev[c - 1] > 0
@@ -390,7 +390,7 @@ namespace cv{
                 int r = range.start;
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT(r  *imgLabels_.cols / 4 + 1);
+                LabelT label = LabelT((r * imgLabels_.cols + 1) / 2 + 1);
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -403,10 +403,10 @@ namespace cv{
                 // |s|x|
                 // +-+-+
                 for (; r != range.end; ++r){
-                    PixelT const  *const img_row = img_.ptr<PixelT>(r);
-                    PixelT const  *const img_row_prev = (PixelT *)(((char *)img_row) - img_.step.p[0]);
-                    LabelT * const  imgLabels_row = imgLabels_.ptr<LabelT>(r);
-                    LabelT * const  imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels_.step.p[0]);
+                    PixelT const * const img_row = img_.ptr<PixelT>(r);
+                    PixelT const * const img_row_prev = (PixelT *)(((char *)img_row) - img_.step.p[0]);
+                    LabelT * const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                    LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels_.step.p[0]);
                     for (int c = 0; c < w; ++c) {
 
 #define condition_q r > limitLine && img_row_prev[c] > 0
@@ -510,7 +510,7 @@ namespace cv{
             for (int r = chunksSizeAndLabels[0]; r < h; r = chunksSizeAndLabels[r]){
 
                 LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
-                LabelT * const  imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
+                LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
 
                 for (int c = 0; c < w; ++c){
 
@@ -555,7 +555,7 @@ namespace cv{
             for (int r = chunksSizeAndLabels[0]; r < h; r = chunksSizeAndLabels[r]){
 
                 LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
-                LabelT * const  imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
+                LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
 
                 for (int c = 0; c < w; ++c){
 
@@ -594,18 +594,19 @@ namespace cv{
             //1 0 1 0 1...
             //............
             //Obviously, 4-way connectivity upper bound is also good for 8-way connectivity labeling
-            const size_t Plength = (size_t(h)  *size_t(w) + 1) / 2 + 1;
+            const size_t Plength = (size_t(h) * size_t(w) + 1) / 2 + 1;
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            int *chunksSizeAndLabels = (int *)cv::fastMalloc(h  *sizeof(int));
+            int *chunksSizeAndLabels = (int *)cv::fastMalloc(h * sizeof(int));
 
             //Tree of labels
-            LabelT *P = (LabelT *)cv::fastMalloc(Plength  *sizeof(LabelT));
+            LabelT *P = (LabelT *)cv::fastMalloc(Plength * sizeof(LabelT));
             //First label is for background
             P[0] = 0;
 
             cv::Range range(0, h);
+            LabelT nLabels = 1;
 
             if (connectivity == 8){
                 //First scan, each thread works with chunk of img.rows/nThreads rows
@@ -623,10 +624,9 @@ namespace cv{
                 //merge labels of different chunks
                 mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels);
             }
-            LabelT nLabels = 1;
 
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                flattenL(P, i  * w / 4 + 1, chunksSizeAndLabels[i + 1], nLabels);
+                flattenL(P, (i * w + 1) / 2 + 1, chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics dataof threads
@@ -650,7 +650,6 @@ namespace cv{
     //Kesheng Wu, et al
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingWu{
-
         LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop){
             CV_Assert(imgLabels.rows == img.rows);
             CV_Assert(imgLabels.cols == img.cols);
@@ -668,7 +667,7 @@ namespace cv{
             //1 0 1 0 1...
             //............
             //Obviously, 4-way connectivity upper bound is also good for 8-way connectivity labeling
-            const size_t Plength = (size_t(h)  *size_t(w) + 1) / 2 + 1;
+            const size_t Plength = (size_t(h) * size_t(w) + 1) / 2 + 1;
             //array P for equivalences resolution
             LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT) *Plength);
             //first label is for background pixels
@@ -678,10 +677,10 @@ namespace cv{
             if (connectivity == 8){
                 for (int r = 0; r < h; ++r){
                     // Get row pointers
-                    PixelT const  *const img_row = img.ptr<PixelT>(r);
-                    PixelT const  *const img_row_prev = (PixelT *)(((char *)img_row) - img.step.p[0]);
-                    LabelT * const  imgLabels_row = imgLabels.ptr<LabelT>(r);
-                    LabelT * const  imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
+                    PixelT const * const img_row = img.ptr<PixelT>(r);
+                    PixelT const * const img_row_prev = (PixelT *)(((char *)img_row) - img.step.p[0]);
+                    LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                    LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
 
                     for (int c = 0; c < w; ++c){
 
@@ -751,10 +750,10 @@ namespace cv{
             }
             else{
                 for (int r = 0; r < h; ++r){
-                    PixelT const  *const img_row = img.ptr<PixelT>(r);
-                    PixelT const  *const img_row_prev = (PixelT *)(((char *)img_row) - img.step.p[0]);
-                    LabelT * const  imgLabels_row = imgLabels.ptr<LabelT>(r);
-                    LabelT * const  imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
+                    PixelT const * const img_row = img.ptr<PixelT>(r);
+                    PixelT const * const img_row_prev = (PixelT *)(((char *)img_row) - img.step.p[0]);
+                    LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                    LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
                     for (int c = 0; c < w; ++c) {
 
 #define condition_q r > 0 && img_row_prev[c] > 0
@@ -842,7 +841,7 @@ namespace cv{
 
                 chunksSizeAndLabels_[r] = range.end + (range.end % 2);
 
-                LabelT label = LabelT(r  *imgLabels_.cols / 4 + 1);
+                LabelT label = LabelT((r + 1) * (imgLabels_.cols + 1) / 4);
 
                 const LabelT firstLabel = label;
                 const int h = img_.rows, w = img_.cols;
@@ -2540,14 +2539,14 @@ namespace cv{
             //0 0 0 0 0...
             //1 0 1 0 1...
             //............
-            const size_t Plength = ((size_t(h) + 1)  *(size_t(w) + 1)) / 4 + 1;
+            const size_t Plength = ((size_t(h) + 1) * (size_t(w) + 1)) / 4 + 1;
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            int *chunksSizeAndLabels = (int *)cv::fastMalloc(h  *sizeof(int));
+            int *chunksSizeAndLabels = (int *)cv::fastMalloc(h * sizeof(int));
 
             //Tree of labels
-            LabelT *P = (LabelT *)cv::fastMalloc(Plength  *sizeof(LabelT));
+            LabelT *P = (LabelT *)cv::fastMalloc(Plength * sizeof(LabelT));
             //First label is for background
             P[0] = 0;
 
@@ -2562,7 +2561,7 @@ namespace cv{
 
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                flattenL(P, i  *w / 4 + 1, chunksSizeAndLabels[i + 1], nLabels);
+                flattenL(P, (i + 1) * (w + 1) / 4, chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics data
@@ -2587,60 +2586,60 @@ namespace cv{
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGrana{
         LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop){
-                CV_Assert(img.rows == imgLabels.rows);
-                CV_Assert(img.cols == imgLabels.cols);
-                CV_Assert(connectivity == 8);
+            CV_Assert(img.rows == imgLabels.rows);
+            CV_Assert(img.cols == imgLabels.cols);
+            CV_Assert(connectivity == 8);
 
-                const int h = img.rows;
-                const int w = img.cols;
+            const int h = img.rows;
+            const int w = img.cols;
 
-                //A quick and dirty upper bound for the maximimum number of labels.
-                //Following formula comes from the fact that a 2x2 block in 8-connectivity case
-                //can never have more than 1 new label and 1 label for background.
-                //Worst case image example pattern:
-                //1 0 1 0 1...
-                //0 0 0 0 0...
-                //1 0 1 0 1...
-                //............
-                const size_t Plength = ((size_t(h) + 1)  *(size_t(w) + 1)) / 4 + 1;
+            //A quick and dirty upper bound for the maximimum number of labels.
+            //Following formula comes from the fact that a 2x2 block in 8-connectivity case
+            //can never have more than 1 new label and 1 label for background.
+            //Worst case image example pattern:
+            //1 0 1 0 1...
+            //0 0 0 0 0...
+            //1 0 1 0 1...
+            //............
+            const size_t Plength = ((size_t(h) + 1) * (size_t(w) + 1)) / 4 + 1;
 
-                LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT) *Plength);
-                P[0] = 0;
-                LabelT lunique = 1;
+            LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT) *Plength);
+            P[0] = 0;
+            LabelT lunique = 1;
 
-                // First scan
-                for (int r = 0; r < h; r += 2) {
-                    // Get rows pointer
-                    const PixelT * const img_row = img.ptr<PixelT>(r);
-                    const PixelT * const img_row_prev = (PixelT *)(((char *)img_row) - img.step.p[0]);
-                    const PixelT * const img_row_prev_prev = (PixelT *)(((char *)img_row_prev) - img.step.p[0]);
-                    const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
-                    LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
-                    LabelT * const imgLabels_row_prev_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0] - imgLabels.step.p[0]);
-                    for (int c = 0; c < w; c += 2) {
+            // First scan
+            for (int r = 0; r < h; r += 2) {
+                // Get rows pointer
+                const PixelT * const img_row = img.ptr<PixelT>(r);
+                const PixelT * const img_row_prev = (PixelT *)(((char *)img_row) - img.step.p[0]);
+                const PixelT * const img_row_prev_prev = (PixelT *)(((char *)img_row_prev) - img.step.p[0]);
+                const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
+                LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                LabelT * const imgLabels_row_prev_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0] - imgLabels.step.p[0]);
+                for (int c = 0; c < w; c += 2) {
 
-                        // We work with 2x2 blocks
-                        // +-+-+-+
-                        // |P|Q|R|
-                        // +-+-+-+
-                        // |S|X|
-                        // +-+-+
+                    // We work with 2x2 blocks
+                    // +-+-+-+
+                    // |P|Q|R|
+                    // +-+-+-+
+                    // |S|X|
+                    // +-+-+
 
-                        // The pixels are named as follows
-                        // +---+---+---+
-                        // |a b|c d|e f|
-                        // |g h|i j|k l|
-                        // +---+---+---+
-                        // |m n|o p|
-                        // |q r|s t|
-                        // +---+---+
+                    // The pixels are named as follows
+                    // +---+---+---+
+                    // |a b|c d|e f|
+                    // |g h|i j|k l|
+                    // +---+---+---+
+                    // |m n|o p|
+                    // |q r|s t|
+                    // +---+---+
 
-                        // Pixels a, f, l, q are not needed, since we need to understand the
-                        // the connectivity between these blocks and those pixels only metter
-                        // when considering the outer connectivities
+                    // Pixels a, f, l, q are not needed, since we need to understand the
+                    // the connectivity between these blocks and those pixels only metter
+                    // when considering the outer connectivities
 
-                        // A bunch of defines used to check if the pixels are foreground,
-                        // without going outside the image limits.
+                    // A bunch of defines used to check if the pixels are foreground,
+                    // without going outside the image limits.
 #define condition_b c-1>=0 && r-2>=0 && img_row_prev_prev[c-1]>0
 #define condition_c r-2>=0 && img_row_prev_prev[c]>0
 #define condition_d c+1<w&& r-2>=0 && img_row_prev_prev[c+1]>0
@@ -2661,38 +2660,130 @@ namespace cv{
 #define condition_s r+1<h && img_row_fol[c]>0
 #define condition_t c+1<w && r+1<h && img_row_fol[c+1]>0
 
-                        // This is a decision tree which allows to choose which action to
-                        // perform, checking as few conditions as possible.
-                        // Actions: the blocks label are provisionally stored in the top left
-                        // pixel of the block in the labels image
+                    // This is a decision tree which allows to choose which action to
+                    // perform, checking as few conditions as possible.
+                    // Actions: the blocks label are provisionally stored in the top left
+                    // pixel of the block in the labels image
 
-                        if (condition_o) {
-                            if (condition_n) {
-                                if (condition_j) {
-                                    if (condition_i) {
-                                        //Action_6: Assign label of block S
-                                        imgLabels_row[c] = imgLabels_row[c - 2];
-                                        continue;
+                    if (condition_o) {
+                        if (condition_n) {
+                            if (condition_j) {
+                                if (condition_i) {
+                                    //Action_6: Assign label of block S
+                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                    continue;
+                                }
+                                else {
+                                    if (condition_c) {
+                                        if (condition_h) {
+                                            //Action_6: Assign label of block S
+                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                            continue;
+                                        }
+                                        else {
+                                            if (condition_g) {
+                                                if (condition_b) {
+                                                    //Action_6: Assign label of block S
+                                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                                    continue;
+                                                }
+                                                else {
+                                                    //Action_11: Merge labels of block Q and S
+                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                    continue;
+                                                }
+                                            }
+                                            else {
+                                                //Action_11: Merge labels of block Q and S
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                continue;
+                                            }
+                                        }
                                     }
                                     else {
-                                        if (condition_c) {
-                                            if (condition_h) {
+                                        //Action_11: Merge labels of block Q and S
+                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                        continue;
+                                    }
+                                }
+                            }
+                            else {
+                                if (condition_p) {
+                                    if (condition_k) {
+                                        if (condition_d) {
+                                            if (condition_i) {
                                                 //Action_6: Assign label of block S
                                                 imgLabels_row[c] = imgLabels_row[c - 2];
                                                 continue;
                                             }
                                             else {
-                                                if (condition_g) {
-                                                    if (condition_b) {
+                                                if (condition_c) {
+                                                    if (condition_h) {
                                                         //Action_6: Assign label of block S
                                                         imgLabels_row[c] = imgLabels_row[c - 2];
                                                         continue;
                                                     }
                                                     else {
-                                                        //Action_11: Merge labels of block Q and S
-                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                        continue;
+                                                        if (condition_g) {
+                                                            if (condition_b) {
+                                                                //Action_6: Assign label of block S
+                                                                imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                continue;
+                                                            }
+                                                            else {
+                                                                //Action_12: Merge labels of block R and S
+                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                continue;
+                                                            }
+                                                        }
+                                                        else {
+                                                            //Action_12: Merge labels of block R and S
+                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                            continue;
+                                                        }
                                                     }
+                                                }
+                                                else {
+                                                    //Action_12: Merge labels of block R and S
+                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                        else {
+                                            //Action_12: Merge labels of block R and S
+                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                            continue;
+                                        }
+                                    }
+                                    else {
+                                        //Action_6: Assign label of block S
+                                        imgLabels_row[c] = imgLabels_row[c - 2];
+                                        continue;
+                                    }
+                                }
+                                else {
+                                    //Action_6: Assign label of block S
+                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                    continue;
+                                }
+                            }
+                        }
+                        else {
+                            if (condition_r) {
+                                if (condition_j) {
+                                    if (condition_m) {
+                                        if (condition_h) {
+                                            if (condition_i) {
+                                                //Action_6: Assign label of block S
+                                                imgLabels_row[c] = imgLabels_row[c - 2];
+                                                continue;
+                                            }
+                                            else {
+                                                if (condition_c) {
+                                                    //Action_6: Assign label of block S
+                                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                                    continue;
                                                 }
                                                 else {
                                                     //Action_11: Merge labels of block Q and S
@@ -2702,40 +2793,82 @@ namespace cv{
                                             }
                                         }
                                         else {
+                                            if (condition_g) {
+                                                if (condition_b) {
+                                                    if (condition_i) {
+                                                        //Action_6: Assign label of block S
+                                                        imgLabels_row[c] = imgLabels_row[c - 2];
+                                                        continue;
+                                                    }
+                                                    else {
+                                                        if (condition_c) {
+                                                            //Action_6: Assign label of block S
+                                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                                            continue;
+                                                        }
+                                                        else {
+                                                            //Action_11: Merge labels of block Q and S
+                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                            continue;
+                                                        }
+                                                    }
+                                                }
+                                                else {
+                                                    //Action_11: Merge labels of block Q and S
+                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                    continue;
+                                                }
+                                            }
+                                            else {
+                                                //Action_11: Merge labels of block Q and S
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        if (condition_i) {
                                             //Action_11: Merge labels of block Q and S
                                             imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
                                             continue;
+                                        }
+                                        else {
+                                            if (condition_h) {
+                                                if (condition_c) {
+                                                    //Action_11: Merge labels of block Q and S
+                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                    continue;
+                                                }
+                                                else {
+                                                    //Action_14: Merge labels of block P, Q and S
+                                                    imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c]), imgLabels_row[c - 2]);
+                                                    continue;
+                                                }
+                                            }
+                                            else {
+                                                //Action_11: Merge labels of block Q and S
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                continue;
+                                            }
                                         }
                                     }
                                 }
                                 else {
                                     if (condition_p) {
                                         if (condition_k) {
-                                            if (condition_d) {
-                                                if (condition_i) {
-                                                    //Action_6: Assign label of block S
-                                                    imgLabels_row[c] = imgLabels_row[c - 2];
-                                                    continue;
-                                                }
-                                                else {
-                                                    if (condition_c) {
-                                                        if (condition_h) {
+                                            if (condition_m) {
+                                                if (condition_h) {
+                                                    if (condition_d) {
+                                                        if (condition_i) {
                                                             //Action_6: Assign label of block S
                                                             imgLabels_row[c] = imgLabels_row[c - 2];
                                                             continue;
                                                         }
                                                         else {
-                                                            if (condition_g) {
-                                                                if (condition_b) {
-                                                                    //Action_6: Assign label of block S
-                                                                    imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                    continue;
-                                                                }
-                                                                else {
-                                                                    //Action_12: Merge labels of block R and S
-                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                    continue;
-                                                                }
+                                                            if (condition_c) {
+                                                                //Action_6: Assign label of block S
+                                                                imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                continue;
                                                             }
                                                             else {
                                                                 //Action_12: Merge labels of block R and S
@@ -2750,166 +2883,26 @@ namespace cv{
                                                         continue;
                                                     }
                                                 }
-                                            }
-                                            else {
-                                                //Action_12: Merge labels of block R and S
-                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                continue;
-                                            }
-                                        }
-                                        else {
-                                            //Action_6: Assign label of block S
-                                            imgLabels_row[c] = imgLabels_row[c - 2];
-                                            continue;
-                                        }
-                                    }
-                                    else {
-                                        //Action_6: Assign label of block S
-                                        imgLabels_row[c] = imgLabels_row[c - 2];
-                                        continue;
-                                    }
-                                }
-                            }
-                            else {
-                                if (condition_r) {
-                                    if (condition_j) {
-                                        if (condition_m) {
-                                            if (condition_h) {
-                                                if (condition_i) {
-                                                    //Action_6: Assign label of block S
-                                                    imgLabels_row[c] = imgLabels_row[c - 2];
-                                                    continue;
-                                                }
                                                 else {
-                                                    if (condition_c) {
-                                                        //Action_6: Assign label of block S
-                                                        imgLabels_row[c] = imgLabels_row[c - 2];
-                                                        continue;
-                                                    }
-                                                    else {
-                                                        //Action_11: Merge labels of block Q and S
-                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                        continue;
-                                                    }
-                                                }
-                                            }
-                                            else {
-                                                if (condition_g) {
-                                                    if (condition_b) {
-                                                        if (condition_i) {
-                                                            //Action_6: Assign label of block S
-                                                            imgLabels_row[c] = imgLabels_row[c - 2];
-                                                            continue;
-                                                        }
-                                                        else {
-                                                            if (condition_c) {
-                                                                //Action_6: Assign label of block S
-                                                                imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                continue;
-                                                            }
-                                                            else {
-                                                                //Action_11: Merge labels of block Q and S
-                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                                continue;
-                                                            }
-                                                        }
-                                                    }
-                                                    else {
-                                                        //Action_11: Merge labels of block Q and S
-                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                        continue;
-                                                    }
-                                                }
-                                                else {
-                                                    //Action_11: Merge labels of block Q and S
-                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                    continue;
-                                                }
-                                            }
-                                        }
-                                        else {
-                                            if (condition_i) {
-                                                //Action_11: Merge labels of block Q and S
-                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                continue;
-                                            }
-                                            else {
-                                                if (condition_h) {
-                                                    if (condition_c) {
-                                                        //Action_11: Merge labels of block Q and S
-                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                        continue;
-                                                    }
-                                                    else {
-                                                        //Action_14: Merge labels of block P, Q and S
-                                                        imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c]), imgLabels_row[c - 2]);
-                                                        continue;
-                                                    }
-                                                }
-                                                else {
-                                                    //Action_11: Merge labels of block Q and S
-                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                    continue;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else {
-                                        if (condition_p) {
-                                            if (condition_k) {
-                                                if (condition_m) {
-                                                    if (condition_h) {
-                                                        if (condition_d) {
-                                                            if (condition_i) {
-                                                                //Action_6: Assign label of block S
-                                                                imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                continue;
-                                                            }
-                                                            else {
-                                                                if (condition_c) {
+                                                    if (condition_d) {
+                                                        if (condition_g) {
+                                                            if (condition_b) {
+                                                                if (condition_i) {
                                                                     //Action_6: Assign label of block S
                                                                     imgLabels_row[c] = imgLabels_row[c - 2];
                                                                     continue;
                                                                 }
                                                                 else {
-                                                                    //Action_12: Merge labels of block R and S
-                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                    continue;
-                                                                }
-                                                            }
-                                                        }
-                                                        else {
-                                                            //Action_12: Merge labels of block R and S
-                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                            continue;
-                                                        }
-                                                    }
-                                                    else {
-                                                        if (condition_d) {
-                                                            if (condition_g) {
-                                                                if (condition_b) {
-                                                                    if (condition_i) {
+                                                                    if (condition_c) {
                                                                         //Action_6: Assign label of block S
                                                                         imgLabels_row[c] = imgLabels_row[c - 2];
                                                                         continue;
                                                                     }
                                                                     else {
-                                                                        if (condition_c) {
-                                                                            //Action_6: Assign label of block S
-                                                                            imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                            continue;
-                                                                        }
-                                                                        else {
-                                                                            //Action_12: Merge labels of block R and S
-                                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                            continue;
-                                                                        }
+                                                                        //Action_12: Merge labels of block R and S
+                                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                        continue;
                                                                     }
-                                                                }
-                                                                else {
-                                                                    //Action_12: Merge labels of block R and S
-                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                    continue;
                                                                 }
                                                             }
                                                             else {
@@ -2919,18 +2912,18 @@ namespace cv{
                                                             }
                                                         }
                                                         else {
-                                                            if (condition_i) {
-                                                                if (condition_g) {
-                                                                    if (condition_b) {
-                                                                        //Action_12: Merge labels of block R and S
-                                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                        continue;
-                                                                    }
-                                                                    else {
-                                                                        //Action_16: labels of block Q, R and S
-                                                                        imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
-                                                                        continue;
-                                                                    }
+                                                            //Action_12: Merge labels of block R and S
+                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                            continue;
+                                                        }
+                                                    }
+                                                    else {
+                                                        if (condition_i) {
+                                                            if (condition_g) {
+                                                                if (condition_b) {
+                                                                    //Action_12: Merge labels of block R and S
+                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                    continue;
                                                                 }
                                                                 else {
                                                                     //Action_16: labels of block Q, R and S
@@ -2939,43 +2932,8 @@ namespace cv{
                                                                 }
                                                             }
                                                             else {
-                                                                //Action_12: Merge labels of block R and S
-                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                continue;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                else {
-                                                    if (condition_i) {
-                                                        if (condition_d) {
-                                                            //Action_12: Merge labels of block R and S
-                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                            continue;
-                                                        }
-                                                        else {
-                                                            //Action_16: labels of block Q, R and S
-                                                            imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
-                                                            continue;
-                                                        }
-                                                    }
-                                                    else {
-                                                        if (condition_h) {
-                                                            if (condition_d) {
-                                                                if (condition_c) {
-                                                                    //Action_12: Merge labels of block R and S
-                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                    continue;
-                                                                }
-                                                                else {
-                                                                    //Action_15: Merge labels of block P, R and S
-                                                                    imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
-                                                                    continue;
-                                                                }
-                                                            }
-                                                            else {
-                                                                //Action_15: Merge labels of block P, R and S
-                                                                imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
+                                                                //Action_16: labels of block Q, R and S
+                                                                imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
                                                                 continue;
                                                             }
                                                         }
@@ -2988,48 +2946,41 @@ namespace cv{
                                                 }
                                             }
                                             else {
-                                                if (condition_h) {
-                                                    if (condition_m) {
-                                                        //Action_6: Assign label of block S
-                                                        imgLabels_row[c] = imgLabels_row[c - 2];
+                                                if (condition_i) {
+                                                    if (condition_d) {
+                                                        //Action_12: Merge labels of block R and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
                                                         continue;
                                                     }
                                                     else {
-                                                        // ACTION_9 Merge labels of block P and S
-                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row[c - 2]);
+                                                        //Action_16: labels of block Q, R and S
+                                                        imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
                                                         continue;
                                                     }
                                                 }
                                                 else {
-                                                    if (condition_i) {
-                                                        if (condition_m) {
-                                                            if (condition_g) {
-                                                                if (condition_b) {
-                                                                    //Action_6: Assign label of block S
-                                                                    imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                    continue;
-                                                                }
-                                                                else {
-                                                                    //Action_11: Merge labels of block Q and S
-                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                                    continue;
-                                                                }
+                                                    if (condition_h) {
+                                                        if (condition_d) {
+                                                            if (condition_c) {
+                                                                //Action_12: Merge labels of block R and S
+                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                continue;
                                                             }
                                                             else {
-                                                                //Action_11: Merge labels of block Q and S
-                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                                //Action_15: Merge labels of block P, R and S
+                                                                imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
                                                                 continue;
                                                             }
                                                         }
                                                         else {
-                                                            //Action_11: Merge labels of block Q and S
-                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                            //Action_15: Merge labels of block P, R and S
+                                                            imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
                                                             continue;
                                                         }
                                                     }
                                                     else {
-                                                        //Action_6: Assign label of block S
-                                                        imgLabels_row[c] = imgLabels_row[c - 2];
+                                                        //Action_12: Merge labels of block R and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
                                                         continue;
                                                     }
                                                 }
@@ -3083,62 +3034,104 @@ namespace cv{
                                             }
                                         }
                                     }
-                                }
-                                else {
-                                    if (condition_j) {
-                                        if (condition_i) {
-                                            //Action_4: Assign label of block Q
-                                            imgLabels_row[c] = imgLabels_row_prev_prev[c];
-                                            continue;
+                                    else {
+                                        if (condition_h) {
+                                            if (condition_m) {
+                                                //Action_6: Assign label of block S
+                                                imgLabels_row[c] = imgLabels_row[c - 2];
+                                                continue;
+                                            }
+                                            else {
+                                                // ACTION_9 Merge labels of block P and S
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row[c - 2]);
+                                                continue;
+                                            }
                                         }
                                         else {
-                                            if (condition_h) {
-                                                if (condition_c) {
-                                                    //Action_4: Assign label of block Q
-                                                    imgLabels_row[c] = imgLabels_row_prev_prev[c];
-                                                    continue;
+                                            if (condition_i) {
+                                                if (condition_m) {
+                                                    if (condition_g) {
+                                                        if (condition_b) {
+                                                            //Action_6: Assign label of block S
+                                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                                            continue;
+                                                        }
+                                                        else {
+                                                            //Action_11: Merge labels of block Q and S
+                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                            continue;
+                                                        }
+                                                    }
+                                                    else {
+                                                        //Action_11: Merge labels of block Q and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                        continue;
+                                                    }
                                                 }
                                                 else {
-                                                    //Action_7: Merge labels of block P and Q
-                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c]);
+                                                    //Action_11: Merge labels of block Q and S
+                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
                                                     continue;
                                                 }
                                             }
                                             else {
-                                                //Action_4: Assign label of block Q
-                                                imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                                //Action_6: Assign label of block S
+                                                imgLabels_row[c] = imgLabels_row[c - 2];
                                                 continue;
                                             }
                                         }
                                     }
+                                }
+                            }
+                            else {
+                                if (condition_j) {
+                                    if (condition_i) {
+                                        //Action_4: Assign label of block Q
+                                        imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                        continue;
+                                    }
                                     else {
-                                        if (condition_p) {
-                                            if (condition_k) {
-                                                if (condition_i) {
-                                                    if (condition_d) {
-                                                        //Action_5: Assign label of block R
-                                                        imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
-                                                        continue;
-                                                    }
-                                                    else {
-                                                        // ACTION_10 Merge labels of block Q and R
-                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]);
-                                                        continue;
-                                                    }
+                                        if (condition_h) {
+                                            if (condition_c) {
+                                                //Action_4: Assign label of block Q
+                                                imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                                continue;
+                                            }
+                                            else {
+                                                //Action_7: Merge labels of block P and Q
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c]);
+                                                continue;
+                                            }
+                                        }
+                                        else {
+                                            //Action_4: Assign label of block Q
+                                            imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                            continue;
+                                        }
+                                    }
+                                }
+                                else {
+                                    if (condition_p) {
+                                        if (condition_k) {
+                                            if (condition_i) {
+                                                if (condition_d) {
+                                                    //Action_5: Assign label of block R
+                                                    imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
+                                                    continue;
                                                 }
                                                 else {
-                                                    if (condition_h) {
-                                                        if (condition_d) {
-                                                            if (condition_c) {
-                                                                //Action_5: Assign label of block R
-                                                                imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
-                                                                continue;
-                                                            }
-                                                            else {
-                                                                //Action_8: Merge labels of block P and R
-                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c + 2]);
-                                                                continue;
-                                                            }
+                                                    // ACTION_10 Merge labels of block Q and R
+                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]);
+                                                    continue;
+                                                }
+                                            }
+                                            else {
+                                                if (condition_h) {
+                                                    if (condition_d) {
+                                                        if (condition_c) {
+                                                            //Action_5: Assign label of block R
+                                                            imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
+                                                            continue;
                                                         }
                                                         else {
                                                             //Action_8: Merge labels of block P and R
@@ -3147,31 +3140,15 @@ namespace cv{
                                                         }
                                                     }
                                                     else {
-                                                        //Action_5: Assign label of block R
-                                                        imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
+                                                        //Action_8: Merge labels of block P and R
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row_prev_prev[c + 2]);
                                                         continue;
                                                     }
-                                                }
-                                            }
-                                            else {
-                                                if (condition_i) {
-                                                    //Action_4: Assign label of block Q
-                                                    imgLabels_row[c] = imgLabels_row_prev_prev[c];
-                                                    continue;
                                                 }
                                                 else {
-                                                    if (condition_h) {
-                                                        //Action_3: Assign label of block P
-                                                        imgLabels_row[c] = imgLabels_row_prev_prev[c - 2];
-                                                        continue;
-                                                    }
-                                                    else {
-                                                        //Action_2: New label (the block has foreground pixels and is not connected to anything else)
-                                                        imgLabels_row[c] = lunique;
-                                                        P[lunique] = lunique;
-                                                        lunique = lunique + 1;
-                                                        continue;
-                                                    }
+                                                    //Action_5: Assign label of block R
+                                                    imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
+                                                    continue;
                                                 }
                                             }
                                         }
@@ -3197,38 +3174,54 @@ namespace cv{
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
-                        else {
-                            if (condition_s) {
-                                if (condition_p) {
-                                    if (condition_n) {
-                                        if (condition_j) {
-                                            if (condition_i) {
-                                                //Action_6: Assign label of block S
-                                                imgLabels_row[c] = imgLabels_row[c - 2];
+                                    else {
+                                        if (condition_i) {
+                                            //Action_4: Assign label of block Q
+                                            imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                            continue;
+                                        }
+                                        else {
+                                            if (condition_h) {
+                                                //Action_3: Assign label of block P
+                                                imgLabels_row[c] = imgLabels_row_prev_prev[c - 2];
                                                 continue;
                                             }
                                             else {
-                                                if (condition_c) {
-                                                    if (condition_h) {
-                                                        //Action_6: Assign label of block S
-                                                        imgLabels_row[c] = imgLabels_row[c - 2];
-                                                        continue;
-                                                    }
-                                                    else {
-                                                        if (condition_g) {
-                                                            if (condition_b) {
-                                                                //Action_6: Assign label of block S
-                                                                imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                continue;
-                                                            }
-                                                            else {
-                                                                //Action_11: Merge labels of block Q and S
-                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                                continue;
-                                                            }
+                                                //Action_2: New label (the block has foreground pixels and is not connected to anything else)
+                                                imgLabels_row[c] = lunique;
+                                                P[lunique] = lunique;
+                                                lunique = lunique + 1;
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        if (condition_s) {
+                            if (condition_p) {
+                                if (condition_n) {
+                                    if (condition_j) {
+                                        if (condition_i) {
+                                            //Action_6: Assign label of block S
+                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                            continue;
+                                        }
+                                        else {
+                                            if (condition_c) {
+                                                if (condition_h) {
+                                                    //Action_6: Assign label of block S
+                                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                                    continue;
+                                                }
+                                                else {
+                                                    if (condition_g) {
+                                                        if (condition_b) {
+                                                            //Action_6: Assign label of block S
+                                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                                            continue;
                                                         }
                                                         else {
                                                             //Action_11: Merge labels of block Q and S
@@ -3236,17 +3229,80 @@ namespace cv{
                                                             continue;
                                                         }
                                                     }
+                                                    else {
+                                                        //Action_11: Merge labels of block Q and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                        continue;
+                                                    }
                                                 }
-                                                else {
-                                                    //Action_11: Merge labels of block Q and S
-                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                            }
+                                            else {
+                                                //Action_11: Merge labels of block Q and S
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        if (condition_k) {
+                                            if (condition_d) {
+                                                if (condition_i) {
+                                                    //Action_6: Assign label of block S
+                                                    imgLabels_row[c] = imgLabels_row[c - 2];
                                                     continue;
                                                 }
+                                                else {
+                                                    if (condition_c) {
+                                                        if (condition_h) {
+                                                            //Action_6: Assign label of block S
+                                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                                            continue;
+                                                        }
+                                                        else {
+                                                            if (condition_g) {
+                                                                if (condition_b) {
+                                                                    //Action_6: Assign label of block S
+                                                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                    continue;
+                                                                }
+                                                                else {
+                                                                    //Action_12: Merge labels of block R and S
+                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                    continue;
+                                                                }
+                                                            }
+                                                            else {
+                                                                //Action_12: Merge labels of block R and S
+                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                continue;
+                                                            }
+                                                        }
+                                                    }
+                                                    else {
+                                                        //Action_12: Merge labels of block R and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                        continue;
+                                                    }
+                                                }
+                                            }
+                                            else {
+                                                //Action_12: Merge labels of block R and S
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                continue;
                                             }
                                         }
                                         else {
-                                            if (condition_k) {
-                                                if (condition_d) {
+                                            //Action_6: Assign label of block S
+                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                            continue;
+                                        }
+                                    }
+                                }
+                                else {
+                                    if (condition_r) {
+                                        if (condition_j) {
+                                            if (condition_m) {
+                                                if (condition_h) {
                                                     if (condition_i) {
                                                         //Action_6: Assign label of block S
                                                         imgLabels_row[c] = imgLabels_row[c - 2];
@@ -3254,100 +3310,9 @@ namespace cv{
                                                     }
                                                     else {
                                                         if (condition_c) {
-                                                            if (condition_h) {
-                                                                //Action_6: Assign label of block S
-                                                                imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                continue;
-                                                            }
-                                                            else {
-                                                                if (condition_g) {
-                                                                    if (condition_b) {
-                                                                        //Action_6: Assign label of block S
-                                                                        imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                        continue;
-                                                                    }
-                                                                    else {
-                                                                        //Action_12: Merge labels of block R and S
-                                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                        continue;
-                                                                    }
-                                                                }
-                                                                else {
-                                                                    //Action_12: Merge labels of block R and S
-                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                    continue;
-                                                                }
-                                                            }
-                                                        }
-                                                        else {
-                                                            //Action_12: Merge labels of block R and S
-                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                            continue;
-                                                        }
-                                                    }
-                                                }
-                                                else {
-                                                    //Action_12: Merge labels of block R and S
-                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                    continue;
-                                                }
-                                            }
-                                            else {
-                                                //Action_6: Assign label of block S
-                                                imgLabels_row[c] = imgLabels_row[c - 2];
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    else {
-                                        if (condition_r) {
-                                            if (condition_j) {
-                                                if (condition_m) {
-                                                    if (condition_h) {
-                                                        if (condition_i) {
                                                             //Action_6: Assign label of block S
                                                             imgLabels_row[c] = imgLabels_row[c - 2];
                                                             continue;
-                                                        }
-                                                        else {
-                                                            if (condition_c) {
-                                                                //Action_6: Assign label of block S
-                                                                imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                continue;
-                                                            }
-                                                            else {
-                                                                //Action_11: Merge labels of block Q and S
-                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                                continue;
-                                                            }
-                                                        }
-                                                    }
-                                                    else {
-                                                        if (condition_g) {
-                                                            if (condition_b) {
-                                                                if (condition_i) {
-                                                                    //Action_6: Assign label of block S
-                                                                    imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                    continue;
-                                                                }
-                                                                else {
-                                                                    if (condition_c) {
-                                                                        //Action_6: Assign label of block S
-                                                                        imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                        continue;
-                                                                    }
-                                                                    else {
-                                                                        //Action_11: Merge labels of block Q and S
-                                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                                        continue;
-                                                                    }
-                                                                }
-                                                            }
-                                                            else {
-                                                                //Action_11: Merge labels of block Q and S
-                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                                continue;
-                                                            }
                                                         }
                                                         else {
                                                             //Action_11: Merge labels of block Q and S
@@ -3357,135 +3322,18 @@ namespace cv{
                                                     }
                                                 }
                                                 else {
-                                                    //Action_11: Merge labels of block Q and S
-                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                    continue;
-                                                }
-                                            }
-                                            else {
-                                                if (condition_k) {
-                                                    if (condition_d) {
-                                                        if (condition_m) {
-                                                            if (condition_h) {
-                                                                if (condition_i) {
-                                                                    //Action_6: Assign label of block S
-                                                                    imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                    continue;
-                                                                }
-                                                                else {
-                                                                    if (condition_c) {
-                                                                        //Action_6: Assign label of block S
-                                                                        imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                        continue;
-                                                                    }
-                                                                    else {
-                                                                        //Action_12: Merge labels of block R and S
-                                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                        continue;
-                                                                    }
-                                                                }
-                                                            }
-                                                            else {
-                                                                if (condition_g) {
-                                                                    if (condition_b) {
-                                                                        if (condition_i) {
-                                                                            //Action_6: Assign label of block S
-                                                                            imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                            continue;
-                                                                        }
-                                                                        else {
-                                                                            if (condition_c) {
-                                                                                //Action_6: Assign label of block S
-                                                                                imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                                continue;
-                                                                            }
-                                                                            else {
-                                                                                //Action_12: Merge labels of block R and S
-                                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                                continue;
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    else {
-                                                                        //Action_12: Merge labels of block R and S
-                                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                        continue;
-                                                                    }
-                                                                }
-                                                                else {
-                                                                    //Action_12: Merge labels of block R and S
-                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                    continue;
-                                                                }
-                                                            }
-                                                        }
-                                                        else {
-                                                            //Action_12: Merge labels of block R and S
-                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                            continue;
-                                                        }
-                                                    }
-                                                    else {
-                                                        if (condition_i) {
-                                                            if (condition_m) {
-                                                                if (condition_h) {
-                                                                    //Action_12: Merge labels of block R and S
-                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                    continue;
-                                                                }
-                                                                else {
-                                                                    if (condition_g) {
-                                                                        if (condition_b) {
-                                                                            //Action_12: Merge labels of block R and S
-                                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                                            continue;
-                                                                        }
-                                                                        else {
-                                                                            //Action_16: labels of block Q, R and S
-                                                                            imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
-                                                                            continue;
-                                                                        }
-                                                                    }
-                                                                    else {
-                                                                        //Action_16: labels of block Q, R and S
-                                                                        imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
-                                                                        continue;
-                                                                    }
-                                                                }
-                                                            }
-                                                            else {
-                                                                //Action_16: labels of block Q, R and S
-                                                                imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
-                                                                continue;
-                                                            }
-                                                        }
-                                                        else {
-                                                            //Action_12: Merge labels of block R and S
-                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
-                                                            continue;
-                                                        }
-                                                    }
-                                                }
-                                                else {
-                                                    if (condition_i) {
-                                                        if (condition_m) {
-                                                            if (condition_h) {
+                                                    if (condition_g) {
+                                                        if (condition_b) {
+                                                            if (condition_i) {
                                                                 //Action_6: Assign label of block S
                                                                 imgLabels_row[c] = imgLabels_row[c - 2];
                                                                 continue;
                                                             }
                                                             else {
-                                                                if (condition_g) {
-                                                                    if (condition_b) {
-                                                                        //Action_6: Assign label of block S
-                                                                        imgLabels_row[c] = imgLabels_row[c - 2];
-                                                                        continue;
-                                                                    }
-                                                                    else {
-                                                                        //Action_11: Merge labels of block Q and S
-                                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
-                                                                        continue;
-                                                                    }
+                                                                if (condition_c) {
+                                                                    //Action_6: Assign label of block S
+                                                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                    continue;
                                                                 }
                                                                 else {
                                                                     //Action_11: Merge labels of block Q and S
@@ -3501,67 +3349,261 @@ namespace cv{
                                                         }
                                                     }
                                                     else {
-                                                        //Action_6: Assign label of block S
-                                                        imgLabels_row[c] = imgLabels_row[c - 2];
+                                                        //Action_11: Merge labels of block Q and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
                                                         continue;
                                                     }
                                                 }
                                             }
-                                        }
-                                        else {
-                                            if (condition_j) {
-                                                //Action_4: Assign label of block Q
-                                                imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                            else {
+                                                //Action_11: Merge labels of block Q and S
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
                                                 continue;
                                             }
-                                            else {
-                                                if (condition_k) {
-                                                    if (condition_i) {
-                                                        if (condition_d) {
-                                                            //Action_5: Assign label of block R
-                                                            imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
-                                                            continue;
+                                        }
+                                        else {
+                                            if (condition_k) {
+                                                if (condition_d) {
+                                                    if (condition_m) {
+                                                        if (condition_h) {
+                                                            if (condition_i) {
+                                                                //Action_6: Assign label of block S
+                                                                imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                continue;
+                                                            }
+                                                            else {
+                                                                if (condition_c) {
+                                                                    //Action_6: Assign label of block S
+                                                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                    continue;
+                                                                }
+                                                                else {
+                                                                    //Action_12: Merge labels of block R and S
+                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                    continue;
+                                                                }
+                                                            }
                                                         }
                                                         else {
-                                                            // ACTION_10 Merge labels of block Q and R
-                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]);
-                                                            continue;
+                                                            if (condition_g) {
+                                                                if (condition_b) {
+                                                                    if (condition_i) {
+                                                                        //Action_6: Assign label of block S
+                                                                        imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                        continue;
+                                                                    }
+                                                                    else {
+                                                                        if (condition_c) {
+                                                                            //Action_6: Assign label of block S
+                                                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                            continue;
+                                                                        }
+                                                                        else {
+                                                                            //Action_12: Merge labels of block R and S
+                                                                            imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                            continue;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                else {
+                                                                    //Action_12: Merge labels of block R and S
+                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                    continue;
+                                                                }
+                                                            }
+                                                            else {
+                                                                //Action_12: Merge labels of block R and S
+                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                continue;
+                                                            }
                                                         }
                                                     }
                                                     else {
-                                                        //Action_5: Assign label of block R
-                                                        imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
+                                                        //Action_12: Merge labels of block R and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
                                                         continue;
                                                     }
                                                 }
                                                 else {
                                                     if (condition_i) {
-                                                        //Action_4: Assign label of block Q
-                                                        imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                                        if (condition_m) {
+                                                            if (condition_h) {
+                                                                //Action_12: Merge labels of block R and S
+                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                continue;
+                                                            }
+                                                            else {
+                                                                if (condition_g) {
+                                                                    if (condition_b) {
+                                                                        //Action_12: Merge labels of block R and S
+                                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                                        continue;
+                                                                    }
+                                                                    else {
+                                                                        //Action_16: labels of block Q, R and S
+                                                                        imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
+                                                                        continue;
+                                                                    }
+                                                                }
+                                                                else {
+                                                                    //Action_16: labels of block Q, R and S
+                                                                    imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
+                                                                    continue;
+                                                                }
+                                                            }
+                                                        }
+                                                        else {
+                                                            //Action_16: labels of block Q, R and S
+                                                            imgLabels_row[c] = set_union(P, set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]), imgLabels_row[c - 2]);
+                                                            continue;
+                                                        }
+                                                    }
+                                                    else {
+                                                        //Action_12: Merge labels of block R and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c - 2]);
+                                                        continue;
+                                                    }
+                                                }
+                                            }
+                                            else {
+                                                if (condition_i) {
+                                                    if (condition_m) {
+                                                        if (condition_h) {
+                                                            //Action_6: Assign label of block S
+                                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                                            continue;
+                                                        }
+                                                        else {
+                                                            if (condition_g) {
+                                                                if (condition_b) {
+                                                                    //Action_6: Assign label of block S
+                                                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                                                    continue;
+                                                                }
+                                                                else {
+                                                                    //Action_11: Merge labels of block Q and S
+                                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                                    continue;
+                                                                }
+                                                            }
+                                                            else {
+                                                                //Action_11: Merge labels of block Q and S
+                                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                                continue;
+                                                            }
+                                                        }
+                                                    }
+                                                    else {
+                                                        //Action_11: Merge labels of block Q and S
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c - 2]);
+                                                        continue;
+                                                    }
+                                                }
+                                                else {
+                                                    //Action_6: Assign label of block S
+                                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        if (condition_j) {
+                                            //Action_4: Assign label of block Q
+                                            imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                            continue;
+                                        }
+                                        else {
+                                            if (condition_k) {
+                                                if (condition_i) {
+                                                    if (condition_d) {
+                                                        //Action_5: Assign label of block R
+                                                        imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
                                                         continue;
                                                     }
                                                     else {
-                                                        //Action_2: New label (the block has foreground pixels and is not connected to anything else)
-                                                        imgLabels_row[c] = lunique;
-                                                        P[lunique] = lunique;
-                                                        lunique = lunique + 1;
+                                                        // ACTION_10 Merge labels of block Q and R
+                                                        imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]);
                                                         continue;
                                                     }
+                                                }
+                                                else {
+                                                    //Action_5: Assign label of block R
+                                                    imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
+                                                    continue;
+                                                }
+                                            }
+                                            else {
+                                                if (condition_i) {
+                                                    //Action_4: Assign label of block Q
+                                                    imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                                    continue;
+                                                }
+                                                else {
+                                                    //Action_2: New label (the block has foreground pixels and is not connected to anything else)
+                                                    imgLabels_row[c] = lunique;
+                                                    P[lunique] = lunique;
+                                                    lunique = lunique + 1;
+                                                    continue;
                                                 }
                                             }
                                         }
                                     }
                                 }
+                            }
+                            else {
+                                if (condition_r) {
+                                    //Action_6: Assign label of block S
+                                    imgLabels_row[c] = imgLabels_row[c - 2];
+                                    continue;
+                                }
                                 else {
-                                    if (condition_r) {
+                                    if (condition_n) {
                                         //Action_6: Assign label of block S
                                         imgLabels_row[c] = imgLabels_row[c - 2];
                                         continue;
                                     }
                                     else {
-                                        if (condition_n) {
-                                            //Action_6: Assign label of block S
-                                            imgLabels_row[c] = imgLabels_row[c - 2];
+                                        //Action_2: New label (the block has foreground pixels and is not connected to anything else)
+                                        imgLabels_row[c] = lunique;
+                                        P[lunique] = lunique;
+                                        lunique = lunique + 1;
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            if (condition_p) {
+                                if (condition_j) {
+                                    //Action_4: Assign label of block Q
+                                    imgLabels_row[c] = imgLabels_row_prev_prev[c];
+                                    continue;
+                                }
+                                else {
+                                    if (condition_k) {
+                                        if (condition_i) {
+                                            if (condition_d) {
+                                                //Action_5: Assign label of block R
+                                                imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
+                                                continue;
+                                            }
+                                            else {
+                                                // ACTION_10 Merge labels of block Q and R
+                                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]);
+                                                continue;
+                                            }
+                                        }
+                                        else {
+                                            //Action_5: Assign label of block R
+                                            imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
+                                            continue;
+                                        }
+                                    }
+                                    else {
+                                        if (condition_i) {
+                                            //Action_4: Assign label of block Q
+                                            imgLabels_row[c] = imgLabels_row_prev_prev[c];
                                             continue;
                                         }
                                         else {
@@ -3575,175 +3617,52 @@ namespace cv{
                                 }
                             }
                             else {
-                                if (condition_p) {
-                                    if (condition_j) {
-                                        //Action_4: Assign label of block Q
-                                        imgLabels_row[c] = imgLabels_row_prev_prev[c];
-                                        continue;
-                                    }
-                                    else {
-                                        if (condition_k) {
-                                            if (condition_i) {
-                                                if (condition_d) {
-                                                    //Action_5: Assign label of block R
-                                                    imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
-                                                    continue;
-                                                }
-                                                else {
-                                                    // ACTION_10 Merge labels of block Q and R
-                                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row_prev_prev[c + 2]);
-                                                    continue;
-                                                }
-                                            }
-                                            else {
-                                                //Action_5: Assign label of block R
-                                                imgLabels_row[c] = imgLabels_row_prev_prev[c + 2];
-                                                continue;
-                                            }
-                                        }
-                                        else {
-                                            if (condition_i) {
-                                                //Action_4: Assign label of block Q
-                                                imgLabels_row[c] = imgLabels_row_prev_prev[c];
-                                                continue;
-                                            }
-                                            else {
-                                                //Action_2: New label (the block has foreground pixels and is not connected to anything else)
-                                                imgLabels_row[c] = lunique;
-                                                P[lunique] = lunique;
-                                                lunique = lunique + 1;
-                                                continue;
-                                            }
-                                        }
-                                    }
+                                if (condition_t) {
+                                    //Action_2: New label (the block has foreground pixels and is not connected to anything else)
+                                    imgLabels_row[c] = lunique;
+                                    P[lunique] = lunique;
+                                    lunique = lunique + 1;
+                                    continue;
                                 }
                                 else {
-                                    if (condition_t) {
-                                        //Action_2: New label (the block has foreground pixels and is not connected to anything else)
-                                        imgLabels_row[c] = lunique;
-                                        P[lunique] = lunique;
-                                        lunique = lunique + 1;
-                                        continue;
-                                    }
-                                    else {
-                                        // Action_1: No action (the block has no foreground pixels)
-                                        imgLabels_row[c] = 0;
-                                        continue;
-                                    }
+                                    // Action_1: No action (the block has no foreground pixels)
+                                    imgLabels_row[c] = 0;
+                                    continue;
                                 }
                             }
                         }
                     }
-
                 }
 
-                // Second scan + analysis
-                LabelT nLabels = flattenL(P, lunique);
-                sop.init(nLabels);
+            }
 
-                if (imgLabels.rows&  1){
-                    if (imgLabels.cols&  1){
-                        //Case 1: both rows and cols odd
-                        for (int r = 0; r < imgLabels.rows; r += 2) {
-                            // Get rows pointer
-                            const PixelT * const img_row = img.ptr<PixelT>(r);
-                            const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
-                            LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
-                            LabelT * const imgLabels_row_fol = (LabelT *)(((char *)imgLabels_row) + imgLabels.step.p[0]);
+            // Second scan + analysis
+            LabelT nLabels = flattenL(P, lunique);
+            sop.init(nLabels);
 
-                            for (int c = 0; c < imgLabels.cols; c += 2) {
-                                LabelT iLabel = imgLabels_row[c];
-                                if (iLabel > 0) {
-                                    iLabel = P[iLabel];
-                                    if (img_row[c] > 0){
-                                        imgLabels_row[c] = iLabel;
-                                        sop(r, c, iLabel);
-                                    }
-                                    else{
-                                        imgLabels_row[c] = 0;
-                                        sop(r, c, 0);
-                                    }
-                                    if (c + 1 < imgLabels.cols) {
-                                        if (img_row[c + 1] > 0){
-                                            imgLabels_row[c + 1] = iLabel;
-                                            sop(r, c + 1, iLabel);
-                                        }
-                                        else{
-                                            imgLabels_row[c + 1] = 0;
-                                            sop(r, c + 1, 0);
-                                        }
-                                        if (r + 1 < imgLabels.rows) {
-                                            if (img_row_fol[c] > 0){
-                                                imgLabels_row_fol[c] = iLabel;
-                                                sop(r + 1, c, iLabel);
-                                            }
-                                            else{
-                                                imgLabels_row_fol[c] = 0;
-                                                sop(r + 1, c, 0);
-                                            }
-                                            if (img_row_fol[c + 1] > 0){
-                                                imgLabels_row_fol[c + 1] = iLabel;
-                                                sop(r + 1, c + 1, iLabel);
-                                            }
-                                            else{
-                                                imgLabels_row_fol[c + 1] = 0;
-                                                sop(r + 1, c + 1, 0);
-                                            }
-                                        }
-                                    }
-                                    else if (r + 1 < imgLabels.rows) {
-                                        if (img_row_fol[c] > 0){
-                                            imgLabels_row_fol[c] = iLabel;
-                                            sop(r + 1, c, iLabel);
-                                        }
-                                        else{
-                                            imgLabels_row_fol[c] = 0;
-                                            sop(r + 1, c, 0);
-                                        }
-                                    }
+            if (imgLabels.rows & 1){
+                if (imgLabels.cols & 1){
+                    //Case 1: both rows and cols odd
+                    for (int r = 0; r < imgLabels.rows; r += 2) {
+                        // Get rows pointer
+                        const PixelT * const img_row = img.ptr<PixelT>(r);
+                        const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
+                        LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                        LabelT * const imgLabels_row_fol = (LabelT *)(((char *)imgLabels_row) + imgLabels.step.p[0]);
+
+                        for (int c = 0; c < imgLabels.cols; c += 2) {
+                            LabelT iLabel = imgLabels_row[c];
+                            if (iLabel > 0) {
+                                iLabel = P[iLabel];
+                                if (img_row[c] > 0){
+                                    imgLabels_row[c] = iLabel;
+                                    sop(r, c, iLabel);
                                 }
-                                else {
+                                else{
                                     imgLabels_row[c] = 0;
                                     sop(r, c, 0);
-                                    if (c + 1 < imgLabels.cols) {
-                                        imgLabels_row[c + 1] = 0;
-                                        sop(r, c + 1, 0);
-                                        if (r + 1 < imgLabels.rows) {
-                                            imgLabels_row_fol[c] = 0;
-                                            imgLabels_row_fol[c + 1] = 0;
-                                            sop(r + 1, c, 0);
-                                            sop(r + 1, c + 1, 0);
-                                        }
-                                    }
-                                    else if (r + 1 < imgLabels.rows) {
-                                        imgLabels_row_fol[c] = 0;
-                                        sop(r + 1, c, 0);
-                                    }
                                 }
-                            }
-                        }
-                    }//END Case 1
-                    else{
-                        //Case 2: only rows odd
-                        for (int r = 0; r < imgLabels.rows; r += 2) {
-                            // Get rows pointer
-                            const PixelT * const img_row = img.ptr<PixelT>(r);
-                            const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
-                            LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
-                            LabelT * const imgLabels_row_fol = (LabelT *)(((char *)imgLabels_row) + imgLabels.step.p[0]);
-
-                            for (int c = 0; c < imgLabels.cols; c += 2) {
-                                LabelT iLabel = imgLabels_row[c];
-                                if (iLabel > 0) {
-                                    iLabel = P[iLabel];
-                                    if (img_row[c] > 0){
-                                        imgLabels_row[c] = iLabel;
-                                        sop(r, c, iLabel);
-                                    }
-                                    else{
-                                        imgLabels_row[c] = 0;
-                                        sop(r, c, 0);
-                                    }
+                                if (c + 1 < imgLabels.cols) {
                                     if (img_row[c + 1] > 0){
                                         imgLabels_row[c + 1] = iLabel;
                                         sop(r, c + 1, iLabel);
@@ -3771,44 +3690,7 @@ namespace cv{
                                         }
                                     }
                                 }
-                                else {
-                                    imgLabels_row[c] = 0;
-                                    imgLabels_row[c + 1] = 0;
-                                    sop(r, c, 0);
-                                    sop(r, c + 1, 0);
-                                    if (r + 1 < imgLabels.rows) {
-                                        imgLabels_row_fol[c] = 0;
-                                        imgLabels_row_fol[c + 1] = 0;
-                                        sop(r + 1, c, 0);
-                                        sop(r + 1, c + 1, 0);
-                                    }
-                                }
-                            }
-                        }
-                    }// END Case 2
-                }
-                else{
-                    if (imgLabels.cols&  1){
-                        //Case 3: only cols odd
-                        for (int r = 0; r < imgLabels.rows; r += 2) {
-                            // Get rows pointer
-                            const PixelT * const img_row = img.ptr<PixelT>(r);
-                            const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
-                            LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
-                            LabelT * const imgLabels_row_fol = (LabelT *)(((char *)imgLabels_row) + imgLabels.step.p[0]);
-
-                            for (int c = 0; c < imgLabels.cols; c += 2) {
-                                LabelT iLabel = imgLabels_row[c];
-                                if (iLabel > 0) {
-                                    iLabel = P[iLabel];
-                                    if (img_row[c] > 0){
-                                        imgLabels_row[c] = iLabel;
-                                        sop(r, c, iLabel);
-                                    }
-                                    else{
-                                        imgLabels_row[c] = 0;
-                                        sop(r, c, 0);
-                                    }
+                                else if (r + 1 < imgLabels.rows) {
                                     if (img_row_fol[c] > 0){
                                         imgLabels_row_fol[c] = iLabel;
                                         sop(r + 1, c, iLabel);
@@ -3817,69 +3699,59 @@ namespace cv{
                                         imgLabels_row_fol[c] = 0;
                                         sop(r + 1, c, 0);
                                     }
-                                    if (c + 1 < imgLabels.cols) {
-                                        if (img_row[c + 1] > 0){
-                                            imgLabels_row[c + 1] = iLabel;
-                                            sop(r, c + 1, iLabel);
-                                        }
-                                        else{
-                                            imgLabels_row[c + 1] = 0;
-                                            sop(r, c + 1, 0);
-                                        }
-                                        if (img_row_fol[c + 1] > 0){
-                                            imgLabels_row_fol[c + 1] = iLabel;
-                                            sop(r + 1, c + 1, iLabel);
-                                        }
-                                        else{
-                                            imgLabels_row_fol[c + 1] = 0;
-                                            sop(r + 1, c + 1, 0);
-                                        }
-                                    }
                                 }
-                                else{
-                                    imgLabels_row[c] = 0;
-                                    imgLabels_row_fol[c] = 0;
-                                    sop(r, c, 0);
-                                    sop(r + 1, c, 0);
-                                    if (c + 1 < imgLabels.cols) {
-                                        imgLabels_row[c + 1] = 0;
+                            }
+                            else {
+                                imgLabels_row[c] = 0;
+                                sop(r, c, 0);
+                                if (c + 1 < imgLabels.cols) {
+                                    imgLabels_row[c + 1] = 0;
+                                    sop(r, c + 1, 0);
+                                    if (r + 1 < imgLabels.rows) {
+                                        imgLabels_row_fol[c] = 0;
                                         imgLabels_row_fol[c + 1] = 0;
-                                        sop(r, c + 1, 0);
+                                        sop(r + 1, c, 0);
                                         sop(r + 1, c + 1, 0);
                                     }
                                 }
+                                else if (r + 1 < imgLabels.rows) {
+                                    imgLabels_row_fol[c] = 0;
+                                    sop(r + 1, c, 0);
+                                }
                             }
                         }
-                    }// END case 3
-                    else{
-                        //Case 4: nothing odd
-                        for (int r = 0; r < imgLabels.rows; r += 2) {
-                            // Get rows pointer
-                            const PixelT * const img_row = img.ptr<PixelT>(r);
-                            const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
-                            LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
-                            LabelT * const imgLabels_row_fol = (LabelT *)(((char *)imgLabels_row) + imgLabels.step.p[0]);
+                    }
+                }//END Case 1
+                else{
+                    //Case 2: only rows odd
+                    for (int r = 0; r < imgLabels.rows; r += 2) {
+                        // Get rows pointer
+                        const PixelT * const img_row = img.ptr<PixelT>(r);
+                        const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
+                        LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                        LabelT * const imgLabels_row_fol = (LabelT *)(((char *)imgLabels_row) + imgLabels.step.p[0]);
 
-                            for (int c = 0; c < imgLabels.cols; c += 2) {
-                                LabelT iLabel = imgLabels_row[c];
-                                if (iLabel > 0) {
-                                    iLabel = P[iLabel];
-                                    if (img_row[c] > 0){
-                                        imgLabels_row[c] = iLabel;
-                                        sop(r, c, iLabel);
-                                    }
-                                    else{
-                                        imgLabels_row[c] = 0;
-                                        sop(r, c, 0);
-                                    }
-                                    if (img_row[c + 1] > 0){
-                                        imgLabels_row[c + 1] = iLabel;
-                                        sop(r, c + 1, iLabel);
-                                    }
-                                    else{
-                                        imgLabels_row[c + 1] = 0;
-                                        sop(r, c + 1, 0);
-                                    }
+                        for (int c = 0; c < imgLabels.cols; c += 2) {
+                            LabelT iLabel = imgLabels_row[c];
+                            if (iLabel > 0) {
+                                iLabel = P[iLabel];
+                                if (img_row[c] > 0){
+                                    imgLabels_row[c] = iLabel;
+                                    sop(r, c, iLabel);
+                                }
+                                else{
+                                    imgLabels_row[c] = 0;
+                                    sop(r, c, 0);
+                                }
+                                if (img_row[c + 1] > 0){
+                                    imgLabels_row[c + 1] = iLabel;
+                                    sop(r, c + 1, iLabel);
+                                }
+                                else{
+                                    imgLabels_row[c + 1] = 0;
+                                    sop(r, c + 1, 0);
+                                }
+                                if (r + 1 < imgLabels.rows) {
                                     if (img_row_fol[c] > 0){
                                         imgLabels_row_fol[c] = iLabel;
                                         sop(r + 1, c, iLabel);
@@ -3897,27 +3769,154 @@ namespace cv{
                                         sop(r + 1, c + 1, 0);
                                     }
                                 }
-                                else {
-                                    imgLabels_row[c] = 0;
-                                    imgLabels_row[c + 1] = 0;
+                            }
+                            else {
+                                imgLabels_row[c] = 0;
+                                imgLabels_row[c + 1] = 0;
+                                sop(r, c, 0);
+                                sop(r, c + 1, 0);
+                                if (r + 1 < imgLabels.rows) {
                                     imgLabels_row_fol[c] = 0;
                                     imgLabels_row_fol[c + 1] = 0;
-                                    sop(r, c, 0);
-                                    sop(r, c + 1, 0);
                                     sop(r + 1, c, 0);
                                     sop(r + 1, c + 1, 0);
                                 }
                             }
                         }
-                    }//END case 4
-                }
+                    }
+                }// END Case 2
+            }
+            else{
+                if (imgLabels.cols & 1){
+                    //Case 3: only cols odd
+                    for (int r = 0; r < imgLabels.rows; r += 2) {
+                        // Get rows pointer
+                        const PixelT * const img_row = img.ptr<PixelT>(r);
+                        const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
+                        LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                        LabelT * const imgLabels_row_fol = (LabelT *)(((char *)imgLabels_row) + imgLabels.step.p[0]);
 
-                sop.finish();
-                fastFree(P);
+                        for (int c = 0; c < imgLabels.cols; c += 2) {
+                            LabelT iLabel = imgLabels_row[c];
+                            if (iLabel > 0) {
+                                iLabel = P[iLabel];
+                                if (img_row[c] > 0){
+                                    imgLabels_row[c] = iLabel;
+                                    sop(r, c, iLabel);
+                                }
+                                else{
+                                    imgLabels_row[c] = 0;
+                                    sop(r, c, 0);
+                                }
+                                if (img_row_fol[c] > 0){
+                                    imgLabels_row_fol[c] = iLabel;
+                                    sop(r + 1, c, iLabel);
+                                }
+                                else{
+                                    imgLabels_row_fol[c] = 0;
+                                    sop(r + 1, c, 0);
+                                }
+                                if (c + 1 < imgLabels.cols) {
+                                    if (img_row[c + 1] > 0){
+                                        imgLabels_row[c + 1] = iLabel;
+                                        sop(r, c + 1, iLabel);
+                                    }
+                                    else{
+                                        imgLabels_row[c + 1] = 0;
+                                        sop(r, c + 1, 0);
+                                    }
+                                    if (img_row_fol[c + 1] > 0){
+                                        imgLabels_row_fol[c + 1] = iLabel;
+                                        sop(r + 1, c + 1, iLabel);
+                                    }
+                                    else{
+                                        imgLabels_row_fol[c + 1] = 0;
+                                        sop(r + 1, c + 1, 0);
+                                    }
+                                }
+                            }
+                            else{
+                                imgLabels_row[c] = 0;
+                                imgLabels_row_fol[c] = 0;
+                                sop(r, c, 0);
+                                sop(r + 1, c, 0);
+                                if (c + 1 < imgLabels.cols) {
+                                    imgLabels_row[c + 1] = 0;
+                                    imgLabels_row_fol[c + 1] = 0;
+                                    sop(r, c + 1, 0);
+                                    sop(r + 1, c + 1, 0);
+                                }
+                            }
+                        }
+                    }
+                }// END case 3
+                else{
+                    //Case 4: nothing odd
+                    for (int r = 0; r < imgLabels.rows; r += 2) {
+                        // Get rows pointer
+                        const PixelT * const img_row = img.ptr<PixelT>(r);
+                        const PixelT * const img_row_fol = (PixelT *)(((char *)img_row) + img.step.p[0]);
+                        LabelT * const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                        LabelT * const imgLabels_row_fol = (LabelT *)(((char *)imgLabels_row) + imgLabels.step.p[0]);
 
-                return nLabels;
+                        for (int c = 0; c < imgLabels.cols; c += 2) {
+                            LabelT iLabel = imgLabels_row[c];
+                            if (iLabel > 0) {
+                                iLabel = P[iLabel];
+                                if (img_row[c] > 0){
+                                    imgLabels_row[c] = iLabel;
+                                    sop(r, c, iLabel);
+                                }
+                                else{
+                                    imgLabels_row[c] = 0;
+                                    sop(r, c, 0);
+                                }
+                                if (img_row[c + 1] > 0){
+                                    imgLabels_row[c + 1] = iLabel;
+                                    sop(r, c + 1, iLabel);
+                                }
+                                else{
+                                    imgLabels_row[c + 1] = 0;
+                                    sop(r, c + 1, 0);
+                                }
+                                if (img_row_fol[c] > 0){
+                                    imgLabels_row_fol[c] = iLabel;
+                                    sop(r + 1, c, iLabel);
+                                }
+                                else{
+                                    imgLabels_row_fol[c] = 0;
+                                    sop(r + 1, c, 0);
+                                }
+                                if (img_row_fol[c + 1] > 0){
+                                    imgLabels_row_fol[c + 1] = iLabel;
+                                    sop(r + 1, c + 1, iLabel);
+                                }
+                                else{
+                                    imgLabels_row_fol[c + 1] = 0;
+                                    sop(r + 1, c + 1, 0);
+                                }
+                            }
+                            else {
+                                imgLabels_row[c] = 0;
+                                imgLabels_row[c + 1] = 0;
+                                imgLabels_row_fol[c] = 0;
+                                imgLabels_row_fol[c + 1] = 0;
+                                sop(r, c, 0);
+                                sop(r, c + 1, 0);
+                                sop(r + 1, c, 0);
+                                sop(r + 1, c + 1, 0);
+                            }
+                        }
+                    }
+                }//END case 4
+            }
 
-            }   //End function LabelingGrana operator()
+            sop.finish();
+            fastFree(P);
+
+            return nLabels;
+
+        }   //End function LabelingGrana operator()
     };//End struct LabelingGrana
     }//end namespace connectedcomponents
 
@@ -3932,8 +3931,12 @@ namespace cv{
         int lDepth = L.depth();
         int iDepth = I.depth();
         const char *currentParallelFramework = cv::currentParallelFramework();
+        const int numberOfCPUs = cv::getNumberOfCPUs();
 
         CV_Assert(iDepth == CV_8U || iDepth == CV_8S);
+
+        //Run parallel labeling only if the rows of the image are at least twice the number returned by getNumberOfCPUs
+        const bool is_parallel = currentParallelFramework != NULL && numberOfCPUs > 1 && L.rows / numberOfCPUs >= 2;
 
         if (ccltype == CCL_WU || connectivity == 4){
             // Wu algorithm is used
@@ -3941,21 +3944,15 @@ namespace cv{
             using connectedcomponents::LabelingWuParallel;
             //warn if L's depth is not sufficient?
             if (lDepth == CV_8U){
-                if (currentParallelFramework == NULL)
-                    return (int)LabelingWu<uchar, uchar, StatsOp>()(I, L, connectivity, sop);
-                else
-                    return (int)LabelingWuParallel<uchar, uchar, StatsOp>()(I, L, connectivity, sop);
+                //Not supported yet
             }
             else if (lDepth == CV_16U){
-                if (currentParallelFramework == NULL)
-                    return (int)LabelingWu<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
-                else
-                    return (int)LabelingWuParallel<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
+                return (int)LabelingWu<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
             }
             else if (lDepth == CV_32S){
                 //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
                 //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
-                if (currentParallelFramework == NULL)
+                if (!is_parallel)
                     return (int)LabelingWu<int, uchar, StatsOp>()(I, L, connectivity, sop);
                 else
                     return (int)LabelingWuParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);
@@ -3967,21 +3964,15 @@ namespace cv{
             using connectedcomponents::LabelingGranaParallel;
             //warn if L's depth is not sufficient?
             if (lDepth == CV_8U){
-                if (currentParallelFramework == NULL)
-                    return (int)LabelingGrana<uchar, uchar, StatsOp>()(I, L, connectivity, sop);
-                else
-                    return (int)LabelingGranaParallel<uchar, uchar, StatsOp>()(I, L, connectivity, sop);
+                //Not supported yet
             }
             else if (lDepth == CV_16U){
-                if (currentParallelFramework == NULL)
-                    return (int)LabelingGrana<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
-                else
-                    return (int)LabelingGranaParallel<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
+                return (int)LabelingGrana<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
             }
             else if (lDepth == CV_32S){
                 //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
                 //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
-                if (currentParallelFramework == NULL)
+                if (!is_parallel)
                     return (int)LabelingGrana<int, uchar, StatsOp>()(I, L, connectivity, sop);
                 else
                     return (int)LabelingGranaParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);

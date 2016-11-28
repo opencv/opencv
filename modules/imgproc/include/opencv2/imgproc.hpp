@@ -3677,7 +3677,7 @@ the source image. ccltype specifies the connected components labeling algorithm 
 Grana (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
 for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
 This function uses parallel version of both Grana and Wu's algorithms if at least one allowed
-parallel framework is enabled.
+parallel framework is enabled and if the rows of the image are at least twice the number returned by getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
@@ -3709,7 +3709,7 @@ the source image. ccltype specifies the connected components labeling algorithm 
 Grana's (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
 for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
 This function uses parallel version of both Grana and Wu's algorithms (statistics included) if at least one allowed
-parallel framework is enabled.
+parallel framework is enabled and if the rows of the image are at least twice the number returned by getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
