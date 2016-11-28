@@ -480,9 +480,13 @@ CV_IMPL int cvStartWindowThread(){
     // conditional that indicates a key has been pressed
     cond_have_key = g_cond_new();
 
+#if !GLIB_CHECK_VERSION(2, 32, 0)
     // this is the window update thread
     window_thread = g_thread_create((GThreadFunc) icvWindowThreadLoop,
                     NULL, TRUE, NULL);
+#else
+    window_thread = g_thread_new("OpenCV window update", (GThreadFunc)icvWindowThreadLoop, NULL);
+#endif
     }
     thread_started = window_thread!=NULL;
     return thread_started;
