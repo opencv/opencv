@@ -27,6 +27,7 @@ void checkIppStatus();
       ::test_info_ =\
         ::testing::internal::MakeAndRegisterTestInfo(\
             #test_case_name, #test_name, NULL, NULL, \
+            ::testing::internal::CodeLocation(__FILE__, __LINE__), \
             (::testing::internal::GetTestTypeId()), \
             ::testing::Test::SetUpTestCase, \
             ::testing::Test::TearDownTestCase, \
@@ -52,6 +53,7 @@ void checkIppStatus();
       ::test_info_ =\
         ::testing::internal::MakeAndRegisterTestInfo(\
             #test_fixture, #test_name, NULL, NULL, \
+            ::testing::internal::CodeLocation(__FILE__, __LINE__), \
             (::testing::internal::GetTypeId<test_fixture>()), \
             test_fixture::SetUpTestCase, \
             test_fixture::TearDownTestCase, \
@@ -72,14 +74,17 @@ void checkIppStatus();
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\
-              #test_case_name, __FILE__, __LINE__)->AddTestPattern(\
-                  #test_case_name, \
-                  #test_name, \
-                  new ::testing::internal::TestMetaFactory< \
-                      GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>()); \
+              #test_case_name, \
+              ::testing::internal::CodeLocation(\
+                  __FILE__, __LINE__))->AddTestPattern(\
+                      #test_case_name, \
+                      #test_name, \
+                      new ::testing::internal::TestMetaFactory< \
+                          GTEST_TEST_CLASS_NAME_(\
+                              test_case_name, test_name)>()); \
       return 0; \
     } \
-    static int gtest_registering_dummy_; \
+    static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_; \
     GTEST_DISALLOW_COPY_AND_ASSIGN_(\
         GTEST_TEST_CLASS_NAME_(test_case_name, test_name)); \
   }; \
