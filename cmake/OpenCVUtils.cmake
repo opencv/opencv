@@ -1,3 +1,10 @@
+include(CheckFunctionExists)
+include(CheckIncludeFile)
+
+if(UNIX)
+  find_package(PkgConfig)
+endif()
+
 # Search packages for host system instead of packages for target system
 # in case of cross compilation thess macro should be defined by toolchain file
 if(NOT COMMAND find_host_package)
