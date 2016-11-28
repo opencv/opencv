@@ -104,6 +104,10 @@ CV_INLINE IppiSize ippiSize(const cv::Size & _size)
     return size;
 }
 
+#if IPP_VERSION_MAJOR >= 9 // IPP 9+ is not supported
+#undef HAVE_IPP
+#undef IPP_VERSION_MAJOR
+#endif
 #endif
 
 #ifndef IPPI_CALL
