@@ -42,6 +42,12 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#ifdef HAVE_OPENVX
+#define IVX_USE_OPENCV
+#define IVX_HIDE_INFO_WARNINGS
+#include "ivx.hpp"
+#endif
+
 #include <cstdio>
 #include <vector>
 #include <iostream>
@@ -262,6 +268,117 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
 #endif
 
+#ifdef HAVE_OPENVX
+struct VxKeypointsComparator
+{
+    bool operator () (const vx_keypoint_t& a, const vx_keypoint_t& b)
+    {
+        return a.strength > b.strength;
+    }
+};
+
+static bool openvx_harris(Mat image, OutputArray _corners,
+                          int _maxCorners, double _qualityLevel, double _minDistance,
+                          int _blockSize, double _harrisK)
+{
+    using namespace ivx;
+
+    if(image.type() != CV_8UC1) return false;
+
+    //OpenVX implementations don't have to provide other sizes
+    if(!(_blockSize == 3 || _blockSize == 5 || _blockSize == 7)) return false;
+
+    try
+    {
+        Context context = Context::create();
+
+        Image ovxImage = Image::createFromHandle(context, Image::matTypeToFormat(image.type()),
+                                                 Image::createAddressing(image), image.data);
+        //The minimum threshold which to eliminate Harris Corner scores (computed using the normalized Sobel kernel).
+        //set to 0, we'll filter it later by threshold
+        ivx::Scalar strengthThresh = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, 0);
+
+        //The gradient window size to use on the input.
+        ivx::Scalar gradientSize = ivx::Scalar::create<VX_TYPE_INT32>(context, 3);
+
+        //The block window size used to compute the harris corner score
+        ivx::Scalar blockSize = ivx::Scalar::create<VX_TYPE_INT32>(context, _blockSize);
+
+        //The scalar sensitivity threshold k from the Harris-Stephens equation
+        ivx::Scalar sensivity = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, _harrisK);
+
+        //The radial Euclidean distance for non-maximum suppression
+        ivx::Scalar minDistance = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, _minDistance);
+
+        vx_size capacity = image.cols * image.rows;
+        Array corners = Array::create(context, VX_TYPE_KEYPOINT, capacity);
+        ivx::Scalar numCorners = ivx::Scalar::create<VX_TYPE_SIZE>(context, 0);
+
+        IVX_CHECK_STATUS(vxuHarrisCorners(context, ovxImage, strengthThresh, minDistance, sensivity,
+                                          gradientSize.getValue<vx_int32>(), blockSize.getValue<vx_int32>(),
+                                          corners, numCorners));
+
+        //Download points from array (to be replaced by wrapper version)
+        size_t nPoints = numCorners.getValue<vx_size>();
+        vx_size arrayStride;
+        vx_keypoint_t* arrayPtr = NULL;
+#ifndef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxAccessArrayRange(corners, 0, nPoints, &arrayStride, (void**)&arrayPtr, VX_READ_ONLY));
+#else
+        vx_map_id mapId;
+        IVX_CHECK_STATUS(vxMapArrayRange(corners, 0, nPoints, &mapId, &arrayStride, (void**)&arrayPtr, VX_READ_ONLY,
+                                         VX_MEMORY_TYPE_HOST, 0));
+#endif
+        std::vector<vx_keypoint_t> vxKeypoints(nPoints);
+        for(size_t i = 0; i < nPoints; i++)
+        {
+            vxKeypoints[i] = vxArrayItem(vx_keypoint_t, arrayPtr, i, arrayStride);
+        }
+
+#ifndef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxCommitArrayRange(corners, 0, nPoints, &arrayPtr));
+#else
+        IVX_CHECK_STATUS(vxUnmapArrayRange(corners, mapId));
+#endif
+        std::sort(vxKeypoints.begin(), vxKeypoints.end(), VxKeypointsComparator());
+
+        vx_float32 maxStrength = 0.0f;
+        if(vxKeypoints.size() > 0)
+            maxStrength = vxKeypoints[0].strength;
+        size_t maxKeypoints = min((size_t)_maxCorners, vxKeypoints.size());
+        std::vector<Point2f> keypoints;
+        keypoints.reserve(maxKeypoints);
+        for(size_t i = 0; i < maxKeypoints; i++)
+        {
+            vx_keypoint_t kp = vxKeypoints[i];
+            if(kp.strength < maxStrength*_qualityLevel) break;
+            keypoints.push_back(Point2f((float)kp.x, (float)kp.y));
+        }
+
+        Mat(keypoints).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        ovxImage.swapHandle();
+#endif
+    }
+    catch (RuntimeError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    catch (WrapperError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+
+    return true;
+}
+
+#endif
+
 }
 
 void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
@@ -284,6 +401,14 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         _corners.release();
         return;
     }
+
+#ifdef HAVE_OPENVX
+    if(useHarrisDetector && _mask.empty() &&
+       openvx_harris(image, _corners, maxCorners, qualityLevel, minDistance, blockSize, harrisK))
+    {
+        return;
+    }
+#endif
 
     if( useHarrisDetector )
         cornerHarris( image, eig, blockSize, 3, harrisK );
