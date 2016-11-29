@@ -4647,14 +4647,19 @@ static bool _openvx_cvt(const T* src, size_t sstep,
 {
     using namespace ivx;
 
+    if(!(size.width > 0 && size.height > 0))
+    {
+        return true;
+    }
+
     try
     {
         Context context = Context::create();
-        Image srcImage = Image::createFromHandle(context, TypeToEnum<T>::value,
+        Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(DataType<T>::type),
                                                  Image::createAddressing(size.width, size.height,
                                                                          (vx_uint32)sizeof(T), (vx_uint32)sstep),
                                                  (void*)src);
-        Image dstImage = Image::createFromHandle(context, TypeToEnum<DT>::value,
+        Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(DataType<DT>::type),
                                                  Image::createAddressing(size.width, size.height,
                                                                          (vx_uint32)sizeof(DT), (vx_uint32)dstep),
                                                  (void*)dst);
