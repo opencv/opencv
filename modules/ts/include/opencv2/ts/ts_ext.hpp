@@ -8,7 +8,25 @@
 #ifndef OPENCV_TS_EXT_HPP
 #define OPENCV_TS_EXT_HPP
 
+namespace cvtest {
 void checkIppStatus();
+}
+
+#define CV_TEST_INIT cv::ipp::setIppStatus(0);
+#define CV_TEST_CLEANUP ::cvtest::checkIppStatus();
+#define CV_TEST_BODY_IMPL \
+    { \
+       try { \
+          CV_TEST_INIT \
+          Body(); \
+          CV_TEST_CLEANUP \
+       } \
+       catch (cvtest::SkipTestException& e) \
+       { \
+          printf("[     SKIP ] %s\n", e.what()); \
+       } \
+    } \
+
 
 #undef TEST
 #define TEST(test_case_name, test_name) \
@@ -33,7 +51,7 @@ void checkIppStatus();
             ::testing::Test::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV_TEST_BODY_IMPL \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
 #undef TEST_F
@@ -59,7 +77,7 @@ void checkIppStatus();
             test_fixture::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_fixture, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
+    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() CV_TEST_BODY_IMPL \
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
 #undef TEST_P
@@ -91,7 +109,7 @@ void checkIppStatus();
   int GTEST_TEST_CLASS_NAME_(test_case_name, \
                              test_name)::gtest_registering_dummy_ = \
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV_TEST_BODY_IMPL \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
 #endif  // OPENCV_TS_EXT_HPP

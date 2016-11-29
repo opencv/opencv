@@ -19,6 +19,7 @@
 # include <sys/time.h>
 #endif
 
+using namespace cvtest;
 using namespace perf;
 
 int64 TestBase::timeLimitDefault = 0;
@@ -48,7 +49,10 @@ static bool         param_collect_impl;
 #ifdef ENABLE_INSTRUMENTATION
 static int          param_instrument;
 #endif
+
+namespace cvtest {
 extern bool         test_ipp_check;
+}
 
 #ifdef HAVE_CUDA
 static int          param_cuda_device;
