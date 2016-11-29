@@ -46,6 +46,8 @@
 
 using namespace cvtest;
 
+namespace {
+
 //////////////////////////////////////////////////////
 // BroxOpticalFlow
 
@@ -400,5 +402,7 @@ CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     ALL_DEVICES,
     testing::Values(Gamma(0.0), Gamma(1.0))));
+
+} // namespace
 
 #endif // HAVE_CUDA

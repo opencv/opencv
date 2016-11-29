@@ -68,6 +68,8 @@ namespace
     }
 }
 
+namespace {
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Blur
 
@@ -707,5 +709,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_Filters, Median, testing::Combine(
                     KernelSize(15)),
     WHOLE_SUBMAT)
     );
+
+} //namespace
 
 #endif // HAVE_CUDA
