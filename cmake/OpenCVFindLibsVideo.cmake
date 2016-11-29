@@ -190,63 +190,35 @@ if(WITH_XIMEA)
 endif(WITH_XIMEA)
 
 # --- FFMPEG ---
-ocv_clear_vars(HAVE_FFMPEG HAVE_FFMPEG_CODEC HAVE_FFMPEG_FORMAT HAVE_FFMPEG_UTIL HAVE_FFMPEG_SWSCALE HAVE_FFMPEG_RESAMPLE HAVE_GENTOO_FFMPEG HAVE_FFMPEG_FFMPEG)
+ocv_clear_vars(HAVE_FFMPEG)
 if(WITH_FFMPEG)
   if(WIN32 AND NOT ARM)
     include("${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/ffmpeg_version.cmake")
-  elseif(UNIX)
-    CHECK_MODULE(libavcodec HAVE_FFMPEG_CODEC)
-    CHECK_MODULE(libavformat HAVE_FFMPEG_FORMAT)
-    CHECK_MODULE(libavutil HAVE_FFMPEG_UTIL)
-    CHECK_MODULE(libswscale HAVE_FFMPEG_SWSCALE)
-    CHECK_MODULE(libavresample HAVE_FFMPEG_RESAMPLE)
-
-    CHECK_INCLUDE_FILE(libavformat/avformat.h HAVE_GENTOO_FFMPEG)
-    CHECK_INCLUDE_FILE(ffmpeg/avformat.h HAVE_FFMPEG_FFMPEG)
-    if(NOT HAVE_GENTOO_FFMPEG AND NOT HAVE_FFMPEG_FFMPEG)
-      if(EXISTS /usr/include/ffmpeg/libavformat/avformat.h OR HAVE_FFMPEG_SWSCALE)
-        set(HAVE_GENTOO_FFMPEG TRUE)
-      endif()
+    set(HAVE_FFMPEG TRUE)
+  elseif(PKG_CONFIG_FOUND)
+    ocv_check_modules(FFMPEG libavcodec libavformat libavutil libswscale)
+    ocv_check_modules(FFMPEG_libavresample libavresample)
+    if(FFMPEG_libavresample_FOUND)
+      ocv_append_build_options(FFMPEG FFMPEG_libavresample)
     endif()
-    if(HAVE_FFMPEG_CODEC AND HAVE_FFMPEG_FORMAT AND HAVE_FFMPEG_UTIL AND HAVE_FFMPEG_SWSCALE)
-      set(HAVE_FFMPEG TRUE)
-    endif()
-
     if(HAVE_FFMPEG)
-      # Find the bzip2 library because it is required on some systems
-      FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2)
-      if(NOT BZIP2_LIBRARIES)
-        # Do an other trial
-        FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
+      try_compile(__VALID_FFMPEG
+          "${OpenCV_BINARY_DIR}"
+          "${OpenCV_SOURCE_DIR}/cmake/checks/ffmpeg_test.cpp"
+          CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${FFMPEG_INCLUDE_DIRS}"
+                      "-DLINK_DIRECTORIES:STRING=${FFMPEG_LIBRARY_DIRS}"
+                      "-DLINK_LIBRARIES:STRING=${FFMPEG_LIBRARIES}"
+          OUTPUT_VARIABLE TRY_OUT
+      )
+      if(NOT __VALID_FFMPEG)
+        #message(FATAL_ERROR "FFMPEG: test check build log:\n${TRY_OUT}")
+        message(STATUS "WARNING: Can't build ffmpeg test code")
+      else()
+        ocv_append_build_options(HIGHGUI FFMPEG)
       endif()
-    else()
-      find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h"
-                PATHS /usr/local /usr /opt
-                PATH_SUFFIXES include
-                DOC "The path to FFMPEG headers")
-      if(FFMPEG_INCLUDE_DIR)
-        set(HAVE_GENTOO_FFMPEG TRUE)
-        set(FFMPEG_LIB_DIR "${FFMPEG_INCLUDE_DIR}/../lib" CACHE PATH "Full path of FFMPEG library directory")
-        find_library(FFMPEG_CODEC_LIB "avcodec" HINTS "${FFMPEG_LIB_DIR}")
-        find_library(FFMPEG_FORMAT_LIB "avformat" HINTS "${FFMPEG_LIB_DIR}")
-        find_library(FFMPEG_UTIL_LIB "avutil" HINTS "${FFMPEG_LIB_DIR}")
-        find_library(FFMPEG_SWSCALE_LIB "swscale" HINTS "${FFMPEG_LIB_DIR}")
-        if(FFMPEG_CODEC_LIB AND FFMPEG_FORMAT_LIB AND
-           FFMPEG_UTIL_LIB AND FFMPEG_SWSCALE_LIB)
-          set(ALIASOF_libavcodec_VERSION "Unknown")
-          set(ALIASOF_libavformat_VERSION "Unknown")
-          set(ALIASOF_libavutil_VERSION "Unknown")
-          set(ALIASOF_libswscale_VERSION "Unknown")
-          set(HAVE_FFMPEG 1)
-        endif()
-      endif(FFMPEG_INCLUDE_DIR)
-      if(HAVE_FFMPEG)
-        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES}
-            ${FFMPEG_CODEC_LIB} ${FFMPEG_FORMAT_LIB}
-            ${FFMPEG_UTIL_LIB} ${FFMPEG_SWSCALE_LIB})
-        ocv_include_directories(${FFMPEG_INCLUDE_DIR})
-      endif(HAVE_FFMPEG)
     endif()
+  else()
+    message(STATUS "Can't find ffmpeg - 'pkg-config' utility is missing")
   endif()
 endif(WITH_FFMPEG)
 
