@@ -332,18 +332,20 @@ public:
 
     virtual bool open( const char* _filename );
     virtual void close();
+    virtual bool setProperty( int, double );
     virtual bool writeFrame( const IplImage* );
 
 protected:
     char* filename;
     unsigned currentframe;
+    std::vector<int> params;
 };
 
 bool CvVideoWriter_Images::writeFrame( const IplImage* image )
 {
     char str[_MAX_PATH];
     sprintf(str, filename, currentframe);
-    int ret = cvSaveImage(str, image);
+    int ret = cvSaveImage(str, image, &params[0]);
 
     currentframe++;
 
@@ -358,6 +360,7 @@ void CvVideoWriter_Images::close()
         filename = 0;
     }
     currentframe = 0;
+    params.clear();
 }
 
 
@@ -380,6 +383,15 @@ bool CvVideoWriter_Images::open( const char* _filename )
     }
 
     currentframe = offset;
+    params.clear();
+    return true;
+}
+
+
+bool CvVideoWriter_Images::setProperty( int id, double value )
+{
+    params.push_back( id );
+    params.push_back( static_cast<int>( value ) );
     return true;
 }
 
