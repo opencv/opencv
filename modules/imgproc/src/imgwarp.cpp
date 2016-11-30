@@ -5662,15 +5662,15 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
     if ( !dev.isIntel() || !(type == CV_8UC1) ||
          !(dtype == CV_8UC1) || !(_dst.cols() % 4 == 0) ||
          !(borderType == cv::BORDER_CONSTANT &&
-          (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR)))
+          (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)))
         return false;
 
     const char * const warp_op[2] = { "Affine", "Perspective" };
-    const char * const interpolationMap[3] = { "nearest", "linear", NULL };
+    const char * const interpolationMap[3] = { "nearest", "linear", "cubic" };
     ocl::ProgramSource program = ocl::imgproc::warp_transform_oclsrc;
     String kernelName = format("warp%s_%s_8u", warp_op[op_type], interpolationMap[interpolation]);
 
-    bool is32f = (interpolation == INTER_LINEAR);
+    bool is32f = (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
     int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
     int sctype = CV_MAKETYPE(wdepth, cn);
 
