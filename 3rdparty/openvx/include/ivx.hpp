@@ -2151,7 +2151,7 @@ public:
 namespace nodes {
 
 /// Creates a Gaussian Filter 3x3 Node (vxGaussian3x3Node)
-Node gaussian3x3(vx_graph graph, vx_image inImg, vx_image outImg)
+inline Node gaussian3x3(vx_graph graph, vx_image inImg, vx_image outImg)
 { return Node(vxGaussian3x3Node(graph, inImg, outImg)); }
 
 } // namespace nodes
