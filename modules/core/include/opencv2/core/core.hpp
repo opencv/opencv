@@ -910,8 +910,10 @@ public:
 
     //! returns 4 vertices of the rectangle
     void points(Point2f pts[]) const;
-    //! returns the minimal up-right rectangle containing the rotated rectangle
+    //! returns the minimal up-right integer rectangle containing the rotated rectangle
     Rect boundingRect() const;
+    //! returns the minimal (exact) floating point rectangle containing the rotated rectangle, not intended for use with images
+    Rect_<float> boundingRect2f() const;
     //! conversion to the old-style CvBox2D structure
     operator CvBox2D() const;
 
