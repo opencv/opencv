@@ -437,7 +437,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpAffine, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpAffine_cols4, Combine(
                             Values((MatType)CV_8UC1),
-                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
+                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR, (Interpolation)INTER_CUBIC),
                             Bool(),
                             Bool()));
 
@@ -449,7 +449,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective_cols4, Combine(
                             Values((MatType)CV_8UC1),
-                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
+                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR, (Interpolation)INTER_CUBIC),
                             Bool(),
                             Bool()));
 
