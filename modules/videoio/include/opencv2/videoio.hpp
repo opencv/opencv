@@ -914,6 +914,46 @@ protected:
 template<> CV_EXPORTS void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const;
 template<> CV_EXPORTS void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const;
 
+namespace videoio {
+
+/** @brief Constructs property index for custom backend API for cv::VideoReader and cv::VideoWriter
+
+Support of these properties are optional and depends on backend
+
+Sample usage:
+@code
+    cv::VideoWriter writer("img_%05d.jpg", 0, 0.0, cv::Size(640, 480));
+    if (!writer.isOpened()) {
+        return -1;
+    }
+
+    // Set property specific to Image backend
+    bool result = writer.set(cv::videoio::apiProp(cv::CAP_IMAGES, cv::IMWRITE_JPEG_QUALITY), 80);
+    if (!result) {
+       // something is wrong
+    }
+@endcode
+
+@param api API backend to use (see cv::VideoCaptureAPIs)
+@param prop Backend specific property value
+
+@return Property index for get/set methods of VideoWriter / VideoReader
+*/
+CV_EXPORTS_W int apiProp(int api, int prop);
+
+/** @brief Extracts information from backend-related property index
+
+@param apiProp Property index (see cv::VideoWriter::apiProp() call)
+@param prop Backend-specific property index
+
+@return API backend index (returns 0 for common properties)
+
+@see apiProp
+*/
+CV_EXPORTS_W int apiPropInfo(int apiProp, CV_OUT int& prop);
+
+} // namespace
+
 //! @} videoio
 
 } // cv

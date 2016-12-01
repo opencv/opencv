@@ -794,4 +794,31 @@ int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
     return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
 
+#define CV_PROP_CUSTOM_API_MARK 0x80000000
+#define CV_PROP_CUSTOM_API_ID_MULTIPLIER 10 // 100 doesn't work with current enums
+#define CV_PROP_CUSTOM_API_ID_LIMIT 0x3ff // api limit is about 10'000
+#define CV_PROP_CUSTOM_API_PROP_BITS 20 // prop limit is about 1'000'000
+#define CV_PROP_CUSTOM_API_PROP_LIMIT ((1 << 20) - 1)
+int videoio::apiProp(int api, int prop)
+{
+    CV_Assert(api > 0 && "api is invalid");
+    CV_Assert((api % CV_PROP_CUSTOM_API_ID_MULTIPLIER) == 0 && "api value is invalid, you should use CAP_ enums");
+    CV_Assert(api < 10240 && "api invalid range");
+    CV_Assert(prop >= 0 && prop <= /*0xfffff*/CV_PROP_CUSTOM_API_PROP_LIMIT && "prop range is not supported");
+    int api_id = api / CV_PROP_CUSTOM_API_ID_MULTIPLIER;
+    return CV_PROP_CUSTOM_API_MARK | (api_id << 20) | (prop);
+}
+int videoio::apiPropInfo(int apiProp, CV_OUT int& prop)
+{
+    if (apiProp & CV_PROP_CUSTOM_API_MARK)
+    {
+        prop = apiProp & CV_PROP_CUSTOM_API_PROP_LIMIT;
+        int api_id = (apiProp >> 20) & CV_PROP_CUSTOM_API_ID_LIMIT;
+        return api_id * CV_PROP_CUSTOM_API_ID_MULTIPLIER;
+    }
+    // it is a regular property
+    prop = apiProp;
+    return 0;
+}
+
 }

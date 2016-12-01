@@ -393,9 +393,14 @@ bool CvVideoWriter_Images::open( const char* _filename )
 
 bool CvVideoWriter_Images::setProperty( int id, double value )
 {
-    params.push_back( id );
-    params.push_back( static_cast<int>( value ) );
-    return true;
+    int prop = 0;
+    if (cv::videoio::apiPropInfo(id, prop) == cv::CAP_IMAGES)
+    {
+        params.push_back( prop );
+        params.push_back( static_cast<int>( value ) );
+        return true;
+    }
+    return false; // not supported
 }
 
 
