@@ -42,6 +42,12 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#ifdef HAVE_OPENVX
+#define IVX_USE_OPENCV
+#define IVX_HIDE_INFO_WARNINGS
+#include "ivx.hpp"
+#endif
+
 namespace cv
 {
 
@@ -3700,6 +3706,45 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 
 #endif
 
+#ifdef HAVE_OPENVX
+namespace cv
+{
+static bool openvx_equalize_hist(Mat srcMat, Mat dstMat)
+{
+    using namespace ivx;
+
+    try
+    {
+        Context context = Context::create();
+        Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(srcMat.type()),
+                                                 Image::createAddressing(srcMat), srcMat.data);
+        Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(dstMat.type()),
+                                                 Image::createAddressing(dstMat), dstMat.data);
+
+        IVX_CHECK_STATUS(vxuEqualizeHist(context, srcImage, dstImage));
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        srcImage.swapHandle(); dstImage.swapHandle();
+#endif
+    }
+    catch (RuntimeError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    catch (WrapperError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+
+    return true;
+}
+}
+#endif
+
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION()
@@ -3715,6 +3760,13 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
+
+#ifdef HAVE_OPENVX
+    if(openvx_equalize_hist(src, dst))
+    {
+        return;
+    }
+#endif
 
     Mutex histogramLockInstance;
 
