@@ -41,7 +41,7 @@ if(UNIX)
   endif()
 endif()
 
-if(MSVC AND CMAKE_C_COMPILER MATCHES "icc")
+if(MSVC AND CMAKE_C_COMPILER MATCHES "icc|icl")
   set(CV_ICC   __INTEL_COMPILER_FOR_WINDOWS)
 endif()
 

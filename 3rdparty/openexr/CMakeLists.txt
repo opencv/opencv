@@ -52,6 +52,11 @@ if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
 
+if(MSVC AND CV_ICC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qrestrict")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Qrestrict")
+endif()
+
 add_library(IlmImf STATIC ${lib_hdrs} ${lib_srcs})
 target_link_libraries(IlmImf ${ZLIB_LIBRARIES})
 
