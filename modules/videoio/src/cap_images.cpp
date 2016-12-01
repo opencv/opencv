@@ -345,7 +345,10 @@ bool CvVideoWriter_Images::writeFrame( const IplImage* image )
 {
     char str[_MAX_PATH];
     sprintf(str, filename, currentframe);
-    int ret = cvSaveImage(str, image, &params[0]);
+    std::vector<int> image_params = params;
+    image_params.push_back(0); // append parameters 'stop' mark
+    image_params.push_back(0);
+    int ret = cvSaveImage(str, image, &image_params[0]);
 
     currentframe++;
 
