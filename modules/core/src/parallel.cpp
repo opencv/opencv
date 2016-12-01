@@ -84,37 +84,30 @@
 */
 
 #if defined HAVE_TBB
+    #include "tbb/tbb.h"
+    #include "tbb/task.h"
     #include "tbb/tbb_stddef.h"
-    #if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
-        #include "tbb/tbb.h"
-        #include "tbb/task.h"
-        #if TBB_INTERFACE_VERSION >= 6100
-            #include "tbb/task_arena.h"
-        #endif
-        #undef min
-        #undef max
-    #else
-        #undef HAVE_TBB
-    #endif // end TBB version
-#endif
-
-#ifndef HAVE_TBB
-    #if defined HAVE_CSTRIPES
-        #include "C=.h"
-        #undef shared
-    #elif defined HAVE_OPENMP
-        #include <omp.h>
-    #elif defined HAVE_GCD
-        #include <dispatch/dispatch.h>
-        #include <pthread.h>
-    #elif defined WINRT && _MSC_VER < 1900
-        #include <ppltasks.h>
-    #elif defined HAVE_CONCURRENCY
-        #include <ppl.h>
+    #if TBB_INTERFACE_VERSION >= 8000
+        #include "tbb/task_arena.h"
     #endif
+    #undef min
+    #undef max
+#elif defined HAVE_CSTRIPES
+    #include "C=.h"
+    #undef shared
+#elif defined HAVE_OPENMP
+    #include <omp.h>
+#elif defined HAVE_GCD
+    #include <dispatch/dispatch.h>
+    #include <pthread.h>
+#elif defined WINRT && _MSC_VER < 1900
+    #include <ppltasks.h>
+#elif defined HAVE_CONCURRENCY
+    #include <ppl.h>
 #endif
 
-#if defined HAVE_TBB && TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+
+#if defined HAVE_TBB
 #  define CV_PARALLEL_FRAMEWORK "tbb"
 #elif defined HAVE_CSTRIPES
 #  define CV_PARALLEL_FRAMEWORK "cstripes"
@@ -491,8 +484,10 @@ void cv::setNumThreads( int threads )
 int cv::getThreadNum(void)
 {
 #if defined HAVE_TBB
-    #if TBB_INTERFACE_VERSION >= 6100 && defined TBB_PREVIEW_TASK_ARENA && TBB_PREVIEW_TASK_ARENA
-        return tbb::task_arena::current_slot();
+    #if TBB_INTERFACE_VERSION >= 9100
+        return tbb::this_task_arena::current_thread_index();
+    #elif TBB_INTERFACE_VERSION >= 8000
+        return tbb::task_arena::current_thread_index();
     #else
         return 0;
     #endif
