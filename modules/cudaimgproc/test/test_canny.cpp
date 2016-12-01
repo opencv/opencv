@@ -55,6 +55,8 @@ namespace
     IMPLEMENT_PARAM_CLASS(L2gradient, bool)
 }
 
+namespace {
+
 PARAM_TEST_CASE(Canny, cv::cuda::DeviceInfo, AppertureSize, L2gradient, UseRoi)
 {
     cv::cuda::DeviceInfo devInfo;
@@ -97,5 +99,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, Canny, testing::Combine(
     testing::Values(AppertureSize(3), AppertureSize(5)),
     testing::Values(L2gradient(false), L2gradient(true)),
     WHOLE_SUBMAT));
+
+} // namespace
 
 #endif // HAVE_CUDA

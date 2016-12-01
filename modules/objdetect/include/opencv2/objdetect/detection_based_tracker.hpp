@@ -46,7 +46,7 @@
 
 // After this condition removal update blacklist for bindings: modules/python/common.cmake
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__) || \
-  (defined(__cplusplus) &&  __cplusplus > 201103L) || (defined(_MSC_VER) && _MSC_VER >= 1700)
+  (defined(__cplusplus) &&  __cplusplus > 199711L) || (defined(_MSC_VER) && _MSC_VER >= 1700)
 
 #include <vector>
 

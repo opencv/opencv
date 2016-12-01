@@ -132,13 +132,8 @@ endif()
 
 if(NOT INSTALL_CREATE_DISTRIB AND DEFINED ${PYTHON}_PACKAGES_PATH)
   set(__dst "${${PYTHON}_PACKAGES_PATH}")
-  install(TARGETS ${the_module} OPTIONAL
-          ${PYTHON_INSTALL_CONFIGURATIONS}
-          RUNTIME DESTINATION "${__dst}" COMPONENT python
-          LIBRARY DESTINATION "${__dst}" COMPONENT python
-          ${PYTHON_INSTALL_ARCHIVE}
-          )
-else()
+endif()
+if(NOT __dst)
   if(DEFINED ${PYTHON}_VERSION_MAJOR)
     set(__ver "${${PYTHON}_VERSION_MAJOR}.${${PYTHON}_VERSION_MINOR}")
   elseif(DEFINED ${PYTHON}_VERSION_STRING)
@@ -146,12 +141,19 @@ else()
   else()
     set(__ver "unknown")
   endif()
-  install(TARGETS ${the_module}
-          CONFIGURATIONS Release
-          RUNTIME DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
-          LIBRARY DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT python
-          )
+  if(INSTALL_CREATE_DISTRIB)
+    set(__dst "python/${__ver}/${OpenCV_ARCH}")
+  else()
+    set(__dst "python/${__ver}")
+  endif()
 endif()
+
+install(TARGETS ${the_module}
+        ${PYTHON_INSTALL_CONFIGURATIONS}
+        RUNTIME DESTINATION "${__dst}" COMPONENT python
+        LIBRARY DESTINATION "${__dst}" COMPONENT python
+        ${PYTHON_INSTALL_ARCHIVE}
+        )
 
 unset(PYTHON_SRC_DIR)
 unset(PYTHON_CVPY_PROCESS)

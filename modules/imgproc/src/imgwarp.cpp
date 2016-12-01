@@ -5647,6 +5647,81 @@ private:
 
 enum { OCL_OP_PERSPECTIVE = 1, OCL_OP_AFFINE = 0 };
 
+static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArray _M0,
+                                    Size dsize, int flags, int borderType, const Scalar& borderValue,
+                                    int op_type)
+{
+    CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), dtype = _dst.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    int interpolation = flags & INTER_MAX;
+    if( interpolation == INTER_AREA )
+        interpolation = INTER_LINEAR;
+
+    if ( !dev.isIntel() || !(type == CV_8UC1) ||
+         !(dtype == CV_8UC1) || !(_dst.cols() % 4 == 0) ||
+         !(borderType == cv::BORDER_CONSTANT &&
+          (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)))
+        return false;
+
+    const char * const warp_op[2] = { "Affine", "Perspective" };
+    const char * const interpolationMap[3] = { "nearest", "linear", "cubic" };
+    ocl::ProgramSource program = ocl::imgproc::warp_transform_oclsrc;
+    String kernelName = format("warp%s_%s_8u", warp_op[op_type], interpolationMap[interpolation]);
+
+    bool is32f = (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
+    int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
+    int sctype = CV_MAKETYPE(wdepth, cn);
+
+    ocl::Kernel k;
+    String opts = format("-D ST=%s", ocl::typeToStr(sctype));
+
+    k.create(kernelName.c_str(), program, opts);
+    if (k.empty())
+        return false;
+
+    float borderBuf[] = { 0, 0, 0, 0 };
+    scalarToRawData(borderValue, borderBuf, sctype);
+
+    UMat src = _src.getUMat(), M0;
+    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    UMat dst = _dst.getUMat();
+
+    float M[9];
+    int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
+    Mat matM(matRows, 3, CV_32F, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) && M1.rows == matRows && M1.cols == 3 );
+    M1.convertTo(matM, matM.type());
+
+    if( !(flags & WARP_INVERSE_MAP) )
+    {
+        if (op_type == OCL_OP_PERSPECTIVE)
+            invert(matM, matM);
+        else
+        {
+            float D = M[0]*M[4] - M[1]*M[3];
+            D = D != 0 ? 1.f/D : 0;
+            float A11 = M[4]*D, A22=M[0]*D;
+            M[0] = A11; M[1] *= -D;
+            M[3] *= -D; M[4] = A22;
+            float b1 = -M[0]*M[2] - M[1]*M[5];
+            float b2 = -M[3]*M[2] - M[4]*M[5];
+            M[2] = b1; M[5] = b2;
+        }
+    }
+    matM.convertTo(M0, CV_32F);
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
+           ocl::KernelArg(0, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
+
+    size_t globalThreads[2];
+    globalThreads[0] = (size_t)(dst.cols / 4);
+    globalThreads[1] = (size_t)dst.rows;
+
+    return k.run(2, globalThreads, NULL, false);
+}
+
 static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                               Size dsize, int flags, int borderType, const Scalar& borderValue,
                               int op_type)
@@ -5785,6 +5860,11 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      int flags, int borderType, const Scalar& borderValue )
 {
     CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
+               ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
+                                       borderValue, OCL_OP_AFFINE))
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
@@ -6311,6 +6391,11 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     CV_INSTRUMENT_REGION()
 
     CV_Assert( _src.total() > 0 );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
+               ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType, borderValue,
+                                       OCL_OP_PERSPECTIVE))
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,

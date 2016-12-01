@@ -180,14 +180,17 @@ namespace cvtest
         static int AddToRegistry() { \
           ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
               GetTestCasePatternHolder<test_case_name>(\
-                  #test_case_name, __FILE__, __LINE__)->AddTestPattern(\
-                      #test_case_name, \
-                      #test_name, \
-                      new ::testing::internal::TestMetaFactory< \
-                          GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>()); \
+                  #test_case_name, \
+                  ::testing::internal::CodeLocation(\
+                      __FILE__, __LINE__))->AddTestPattern(\
+                          #test_case_name, \
+                          #test_name, \
+                          new ::testing::internal::TestMetaFactory< \
+                              GTEST_TEST_CLASS_NAME_(\
+                                  test_case_name, test_name)>()); \
           return 0; \
         } \
-        static int gtest_registering_dummy_; \
+        static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_; \
         GTEST_DISALLOW_COPY_AND_ASSIGN_(\
             GTEST_TEST_CLASS_NAME_(test_case_name, test_name)); \
       }; \
