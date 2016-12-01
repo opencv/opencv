@@ -556,6 +556,20 @@ enum { CAP_PROP_GPHOTO2_PREVIEW           = 17001, //!< Capture only preview fro
 
 //! @} gPhoto2
 
+
+/** @name Images backend
+    @{
+*/
+
+/** @brief Images backend properties
+
+*/
+enum { CAP_PROP_IMAGES_BASE = 18000,
+       CAP_PROP_IMAGES_LAST = 19000 // excluding
+     };
+
+//! @} Images
+
 //! @} videoio_flags_others
 
 
