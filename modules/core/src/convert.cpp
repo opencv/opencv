@@ -46,6 +46,12 @@
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#ifdef HAVE_OPENVX
+#define IVX_USE_OPENCV
+#define IVX_HIDE_INFO_WARNINGS
+#include "ivx.hpp"
+#endif
+
 #ifdef __APPLE__
 #undef CV_NEON
 #define CV_NEON 0
@@ -4634,10 +4640,91 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
     }
 }
 
+#ifdef HAVE_OPENVX
+template<typename T, typename DT>
+static bool _openvx_cvt(const T* src, size_t sstep,
+                        DT* dst, size_t dstep, Size size)
+{
+    using namespace ivx;
+
+    if(!(size.width > 0 && size.height > 0))
+    {
+        return true;
+    }
+
+    try
+    {
+        Context context = Context::create();
+        Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(DataType<T>::type),
+                                                 Image::createAddressing(size.width, size.height,
+                                                                         (vx_uint32)sizeof(T), (vx_uint32)sstep),
+                                                 (void*)src);
+        Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(DataType<DT>::type),
+                                                 Image::createAddressing(size.width, size.height,
+                                                                         (vx_uint32)sizeof(DT), (vx_uint32)dstep),
+                                                 (void*)dst);
+
+        IVX_CHECK_STATUS(vxuConvertDepth(context, srcImage, dstImage, VX_CONVERT_POLICY_SATURATE, 0));
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        srcImage.swapHandle(); dstImage.swapHandle();
+#endif
+    }
+    catch (RuntimeError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    catch (WrapperError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+
+    return true;
+}
+
+template<typename T, typename DT>
+static bool openvx_cvt(const T* src, size_t sstep,
+                       DT* dst, size_t dstep, Size size)
+{
+    (void)src; (void)sstep; (void)dst; (void)dstep; (void)size;
+    return false;
+}
+
+#define DEFINE_OVX_CVT_SPECIALIZATION(T, DT) \
+template<>                                                                    \
+bool openvx_cvt(const T *src, size_t sstep, DT *dst, size_t dstep, Size size) \
+{                                                                             \
+    return _openvx_cvt<T, DT>(src, sstep, dst, dstep, size);                  \
+}
+
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, ushort)
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, short)
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, int)
+DEFINE_OVX_CVT_SPECIALIZATION(ushort, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(ushort, int)
+DEFINE_OVX_CVT_SPECIALIZATION(short, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(short, int)
+DEFINE_OVX_CVT_SPECIALIZATION(int, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(int, ushort)
+DEFINE_OVX_CVT_SPECIALIZATION(int, short)
+
+#endif
+
 template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
 {
+#ifdef HAVE_OPENVX
+    if(openvx_cvt(src, sstep, dst, dstep, size))
+    {
+        return;
+    }
+#endif
+
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
     Cvt_SIMD<T, DT> vop;
