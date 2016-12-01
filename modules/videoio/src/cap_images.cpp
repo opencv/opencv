@@ -393,9 +393,13 @@ bool CvVideoWriter_Images::open( const char* _filename )
 
 bool CvVideoWriter_Images::setProperty( int id, double value )
 {
-    params.push_back( id );
-    params.push_back( static_cast<int>( value ) );
-    return true;
+    if (id >= cv::CAP_PROP_IMAGES_BASE && id < cv::CAP_PROP_IMAGES_LAST)
+    {
+        params.push_back( id - cv::CAP_PROP_IMAGES_BASE );
+        params.push_back( static_cast<int>( value ) );
+        return true;
+    }
+    return false; // not supported
 }
 
 
