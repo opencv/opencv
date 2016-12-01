@@ -848,9 +848,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
 
 #endif /* HAVE_OPENCL */
 
-}
-
-void cv::HoughLines( InputArray _image, OutputArray _lines,
+void HoughLines( InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double srn, double stn, double min_theta, double max_theta )
 {
@@ -871,7 +869,7 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
 }
 
 
-void cv::HoughLinesP(InputArray _image, OutputArray _lines,
+void HoughLinesP(InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double minLineLength, double maxGap )
 {
@@ -886,154 +884,9 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
     Mat(lines).copyTo(_lines);
 }
 
-
-
-/* Wrapper function for standard hough transform */
-CV_IMPL CvSeq*
-cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
-               double rho, double theta, int threshold,
-               double param1, double param2,
-               double min_theta, double max_theta )
-{
-    cv::Mat image = cv::cvarrToMat(src_image);
-    std::vector<cv::Vec2f> l2;
-    std::vector<cv::Vec4i> l4;
-    CvSeq* result = 0;
-
-    CvMat* mat = 0;
-    CvSeq* lines = 0;
-    CvSeq lines_header;
-    CvSeqBlock lines_block;
-    int lineType, elemSize;
-    int linesMax = INT_MAX;
-    int iparam1, iparam2;
-
-    if( !lineStorage )
-        CV_Error( CV_StsNullPtr, "NULL destination" );
-
-    if( rho <= 0 || theta <= 0 || threshold <= 0 )
-        CV_Error( CV_StsOutOfRange, "rho, theta and threshold must be positive" );
-
-    if( method != CV_HOUGH_PROBABILISTIC )
-    {
-        lineType = CV_32FC2;
-        elemSize = sizeof(float)*2;
-    }
-    else
-    {
-        lineType = CV_32SC4;
-        elemSize = sizeof(int)*4;
-    }
-
-    if( CV_IS_STORAGE( lineStorage ))
-    {
-        lines = cvCreateSeq( lineType, sizeof(CvSeq), elemSize, (CvMemStorage*)lineStorage );
-    }
-    else if( CV_IS_MAT( lineStorage ))
-    {
-        mat = (CvMat*)lineStorage;
-
-        if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) )
-            CV_Error( CV_StsBadArg,
-                      "The destination matrix should be continuous and have a single row or a single column" );
-
-        if( CV_MAT_TYPE( mat->type ) != lineType )
-            CV_Error( CV_StsBadArg,
-                      "The destination matrix data type is inappropriate, see the manual" );
-
-        lines = cvMakeSeqHeaderForArray( lineType, sizeof(CvSeq), elemSize, mat->data.ptr,
-                                         mat->rows + mat->cols - 1, &lines_header, &lines_block );
-        linesMax = lines->total;
-        cvClearSeq( lines );
-    }
-    else
-        CV_Error( CV_StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
-
-    iparam1 = cvRound(param1);
-    iparam2 = cvRound(param2);
-
-    switch( method )
-    {
-    case CV_HOUGH_STANDARD:
-        HoughLinesStandard( image, (float)rho,
-                            (float)theta, threshold, l2, linesMax, min_theta, max_theta );
-        break;
-    case CV_HOUGH_MULTI_SCALE:
-        HoughLinesSDiv( image, (float)rho, (float)theta,
-                        threshold, iparam1, iparam2, l2, linesMax, min_theta, max_theta );
-        break;
-    case CV_HOUGH_PROBABILISTIC:
-        HoughLinesProbabilistic( image, (float)rho, (float)theta,
-                                 threshold, iparam1, iparam2, l4, linesMax );
-        break;
-    default:
-        CV_Error( CV_StsBadArg, "Unrecognized method id" );
-    }
-
-    int nlines = (int)(l2.size() + l4.size());
-
-    if( mat )
-    {
-        if( mat->cols > mat->rows )
-            mat->cols = nlines;
-        else
-            mat->rows = nlines;
-    }
-
-    if( nlines )
-    {
-        cv::Mat lx = method == CV_HOUGH_STANDARD || method == CV_HOUGH_MULTI_SCALE ?
-                    cv::Mat(nlines, 1, CV_32FC2, &l2[0]) : cv::Mat(nlines, 1, CV_32SC4, &l4[0]);
-
-        if( mat )
-        {
-            cv::Mat dst(nlines, 1, lx.type(), mat->data.ptr);
-            lx.copyTo(dst);
-        }
-        else
-        {
-            cvSeqPushMulti(lines, lx.ptr(), nlines);
-        }
-    }
-
-    if( !mat )
-        result = lines;
-    return result;
-}
-
-
 /****************************************************************************************\
 *                                     Circle Detection                                   *
 \****************************************************************************************/
-
-#if CV_SIMD128
-static
-inline unsigned int trailingZeros(unsigned int value) {
-#if defined(_MSC_VER)
-#if (_MSC_VER < 1700)
-    unsigned long index = 0;
-    _BitScanForward(&index, value);
-    return (unsigned int)index;
-#else
-    return _tzcnt_u32(value);
-#endif
-#elif defined(__GNUC__) || defined(__GNUG__)
-    return __builtin_ctz(value);
-#elif defined(__ICC) || defined(__INTEL_COMPILER)
-    return _bit_scan_forward(value);
-#elif defined(__clang__)
-    return llvm.cttz.i32(value, true);
-#else
-    static const int MultiplyDeBruijnBitPosition[32] = {
-        0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
-        31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
-    return MultiplyDeBruijnBitPosition[((uint32_t)((value & -value) * 0x077CB531U)) >> 27];
-#endif
-}
-#endif
-
-namespace cv
-{
     struct markedCircle
     {
         markedCircle(Vec3f _c, int _idx, int _idxC) :
@@ -1119,13 +972,13 @@ namespace cv
 
                             if(mask1)
                             {
-                                x += trailingZeros(mask1);
+                                x += trailingZeros32(mask1);
                                 goto _next_step;
                             }
 
                             if(mask2)
                             {
-                                x += trailingZeros(mask2 << 16);
+                                x += trailingZeros32(mask2 << 16);
                                 goto _next_step;
                             }
                         }
@@ -1771,6 +1624,119 @@ namespace cv
     {
         HoughCircles(_image, _circles, method, dp, minDist, param1, param2, minRadius, maxRadius, -1, 3);
     }
+} // \namespace cv
+
+/* Wrapper function for standard hough transform */
+CV_IMPL CvSeq*
+cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
+               double rho, double theta, int threshold,
+               double param1, double param2,
+               double min_theta, double max_theta )
+{
+    cv::Mat image = cv::cvarrToMat(src_image);
+    std::vector<cv::Vec2f> l2;
+    std::vector<cv::Vec4i> l4;
+    CvSeq* result = 0;
+
+    CvMat* mat = 0;
+    CvSeq* lines = 0;
+    CvSeq lines_header;
+    CvSeqBlock lines_block;
+    int lineType, elemSize;
+    int linesMax = INT_MAX;
+    int iparam1, iparam2;
+
+    if( !lineStorage )
+        CV_Error( CV_StsNullPtr, "NULL destination" );
+
+    if( rho <= 0 || theta <= 0 || threshold <= 0 )
+        CV_Error( CV_StsOutOfRange, "rho, theta and threshold must be positive" );
+
+    if( method != CV_HOUGH_PROBABILISTIC )
+    {
+        lineType = CV_32FC2;
+        elemSize = sizeof(float)*2;
+    }
+    else
+    {
+        lineType = CV_32SC4;
+        elemSize = sizeof(int)*4;
+    }
+
+    if( CV_IS_STORAGE( lineStorage ))
+    {
+        lines = cvCreateSeq( lineType, sizeof(CvSeq), elemSize, (CvMemStorage*)lineStorage );
+    }
+    else if( CV_IS_MAT( lineStorage ))
+    {
+        mat = (CvMat*)lineStorage;
+
+        if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) )
+            CV_Error( CV_StsBadArg,
+                      "The destination matrix should be continuous and have a single row or a single column" );
+
+        if( CV_MAT_TYPE( mat->type ) != lineType )
+            CV_Error( CV_StsBadArg,
+                      "The destination matrix data type is inappropriate, see the manual" );
+
+        lines = cvMakeSeqHeaderForArray( lineType, sizeof(CvSeq), elemSize, mat->data.ptr,
+                                         mat->rows + mat->cols - 1, &lines_header, &lines_block );
+        linesMax = lines->total;
+        cvClearSeq( lines );
+    }
+    else
+        CV_Error( CV_StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
+
+    iparam1 = cvRound(param1);
+    iparam2 = cvRound(param2);
+
+    switch( method )
+    {
+    case CV_HOUGH_STANDARD:
+        HoughLinesStandard( image, (float)rho,
+                            (float)theta, threshold, l2, linesMax, min_theta, max_theta );
+        break;
+    case CV_HOUGH_MULTI_SCALE:
+        HoughLinesSDiv( image, (float)rho, (float)theta,
+                        threshold, iparam1, iparam2, l2, linesMax, min_theta, max_theta );
+        break;
+    case CV_HOUGH_PROBABILISTIC:
+        HoughLinesProbabilistic( image, (float)rho, (float)theta,
+                                 threshold, iparam1, iparam2, l4, linesMax );
+        break;
+    default:
+        CV_Error( CV_StsBadArg, "Unrecognized method id" );
+    }
+
+    int nlines = (int)(l2.size() + l4.size());
+
+    if( mat )
+    {
+        if( mat->cols > mat->rows )
+            mat->cols = nlines;
+        else
+            mat->rows = nlines;
+    }
+
+    if( nlines )
+    {
+        cv::Mat lx = method == CV_HOUGH_STANDARD || method == CV_HOUGH_MULTI_SCALE ?
+                    cv::Mat(nlines, 1, CV_32FC2, &l2[0]) : cv::Mat(nlines, 1, CV_32SC4, &l4[0]);
+
+        if( mat )
+        {
+            cv::Mat dst(nlines, 1, lx.type(), mat->data.ptr);
+            lx.copyTo(dst);
+        }
+        else
+        {
+            cvSeqPushMulti(lines, lx.ptr(), nlines);
+        }
+    }
+
+    if( !mat )
+        result = lines;
+    return result;
 }
 
 CV_IMPL CvSeq*
