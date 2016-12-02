@@ -1703,8 +1703,8 @@ namespace cv
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
-            vx_border_t prevBorder = ctx.borderMode();
-            ctx.setBorderMode(border);
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border);
             if (ddepth == CV_8U && ksize.width == 3 && ksize.height == 3 && normalize)
             {
                 ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
@@ -1726,7 +1726,7 @@ namespace cv
                     cnv.setScale(1 << 15);
                 ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
             }
-            ctx.setBorderMode(prevBorder);
+            ctx.setImmediateBorder(prevBorder);
         }
         catch (ivx::RuntimeError & e)
         {
@@ -3405,8 +3405,8 @@ namespace cv
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
-            vx_border_t prevBorder = ctx.borderMode();
-            ctx.setBorderMode(border);
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border);
 #ifdef VX_VERSION_1_1
             if (ksize == 3)
 #endif
@@ -3425,7 +3425,7 @@ namespace cv
                     ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_NONLINEAR_MAX_DIMENSION, &supportedSize, sizeof(supportedSize)));
                     if ((vx_size)ksize > supportedSize)
                     {
-                        ctx.setBorderMode(prevBorder);
+                        ctx.setImmediateBorder(prevBorder);
                         return false;
                     }
                     Mat mask(ksize, ksize, CV_8UC1, Scalar(255));
@@ -3435,7 +3435,7 @@ namespace cv
                 ivx::IVX_CHECK_STATUS(vxuNonLinearFilter(ctx, VX_NONLINEAR_FILTER_MEDIAN, ia, mtx, ib));
             }
 #endif
-            ctx.setBorderMode(prevBorder);
+            ctx.setImmediateBorder(prevBorder);
         }
         catch (ivx::RuntimeError & e)
         {
