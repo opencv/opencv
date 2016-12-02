@@ -336,7 +336,7 @@ static bool openvx_harris(Mat image, OutputArray _corners,
         }
 
 #ifndef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxCommitArrayRange(corners, 0, nPoints, &arrayPtr));
+        IVX_CHECK_STATUS(vxCommitArrayRange(corners, 0, nPoints, arrayPtr));
 #else
         IVX_CHECK_STATUS(vxUnmapArrayRange(corners, mapId));
 #endif
