@@ -363,31 +363,16 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
 
         IVX_CHECK_STATUS(vxuFastCorners(context, img, threshold, (vx_bool)nonmaxSuppression, corners, numCorners));
 
-        //Download points from array, to be replaced by wrapper version
         size_t nPoints = numCorners.getValue<vx_size>();
-        keypoints.clear();
-        keypoints.reserve(nPoints);
-        vx_size arrayStride;
-        vx_keypoint_t* arrayPtr = NULL;
-#ifndef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxAccessArrayRange(corners, 0, nPoints, &arrayStride, (void**)&arrayPtr, VX_READ_ONLY));
-#else
-        vx_map_id mapId;
-        IVX_CHECK_STATUS(vxMapArrayRange(corners, 0, nPoints, &mapId, &arrayStride, (void**)&arrayPtr, VX_READ_ONLY,
-                                         VX_MEMORY_TYPE_HOST, 0));
-#endif
+        keypoints.clear(); keypoints.reserve(nPoints);
+        std::vector<vx_keypoint_t> vxCorners;
+        corners.copyTo(vxCorners);
         for(size_t i = 0; i < nPoints; i++)
         {
+            vx_keypoint_t kp = vxCorners[i];
             //if nonmaxSuppression is false, kp.strength is undefined
-            vx_keypoint_t kp = vxArrayItem(vx_keypoint_t, arrayPtr, i, arrayStride);
             keypoints.push_back(KeyPoint((float)kp.x, (float)kp.y, 7.f, -1, kp.strength));
         }
-
-#ifndef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxCommitArrayRange(corners, 0, nPoints, &arrayPtr));
-#else
-        IVX_CHECK_STATUS(vxUnmapArrayRange(corners, mapId));
-#endif
 
 #ifdef VX_VERSION_1_1
         //we should take user memory back before release
