@@ -2191,6 +2191,113 @@ static bool ocl_GaussianBlur3x3_8UC1(InputArray _src, OutputArray _dst, int ddep
 
 #endif
 
+#ifdef HAVE_OPENVX
+
+static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
+                                double sigma1, double sigma2, int borderType)
+{
+    int stype = _src.type();
+    if (sigma2 <= 0)
+        sigma2 = sigma1;
+    // automatic detection of kernel size from sigma
+    if (ksize.width <= 0 && sigma1 > 0)
+        ksize.width = cvRound(sigma1*6 + 1) | 1;
+    if (ksize.height <= 0 && sigma2 > 0)
+        ksize.height = cvRound(sigma2*6 + 1) | 1;
+
+    if (stype != CV_8UC1 ||
+        ksize.width < 3 || ksize.height < 3 ||
+        ksize.width % 2 != 1 || ksize.height % 2 != 1)
+        return false;
+
+    sigma1 = std::max(sigma1, 0.);
+    sigma2 = std::max(sigma2, 0.);
+
+    Mat src = _src.getMat();
+    Mat dst = _dst.getMat();
+
+    if (src.cols < ksize.width || src.rows < ksize.height)
+        return false;
+
+    if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
+        return false; //Process isolated borders only
+    vx_border_t border;
+    switch (borderType & ~BORDER_ISOLATED)
+    {
+    case BORDER_CONSTANT:
+        border.mode = VX_BORDER_CONSTANT;
+#if VX_VERSION > VX_VERSION_1_0
+        border.constant_value.U8 = (vx_uint8)(0);
+#else
+        border.constant_value = (vx_uint32)(0);
+#endif
+        break;
+    case BORDER_REPLICATE:
+        border.mode = VX_BORDER_REPLICATE;
+        break;
+    default:
+        return false;
+    }
+
+    try
+    {
+        ivx::Context ctx = ivx::Context::create();
+        if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
+            return false;
+
+        Mat a;
+        if (dst.data != src.data)
+            a = src;
+        else
+            src.copyTo(a);
+
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+        //since OpenVX standart says nothing about thread-safety for now
+        vx_border_t prevBorder = ctx.borderMode();
+        ctx.setBorderMode(border);
+        if (ksize.width == 3 && ksize.height == 3 && (sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) && (sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON))
+        {
+            ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
+        }
+        else
+        {
+#if VX_VERSION <= VX_VERSION_1_0
+            if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(a.cols) <= ctx.convolutionMaxDimension() || (vx_size)(a.rows) <= ctx.convolutionMaxDimension()))
+            {
+                ctx.setBorderMode(prevBorder);
+                return false;
+            }
+#endif
+            Mat convData;
+            cv::Mat(cv::getGaussianKernel(ksize.height, sigma2)*cv::getGaussianKernel(ksize.width, sigma1).t()).convertTo(convData, CV_16SC1, (1 << 15));
+            ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
+            cnv.copyFrom(convData);
+            cnv.setScale(1 << 15);
+            ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
+        }
+        ctx.setBorderMode(prevBorder);
+    }
+    catch (ivx::RuntimeError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    catch (ivx::WrapperError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    return true;
+}
+
+#endif
+
 #ifdef HAVE_IPP
 
 static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
@@ -2310,6 +2417,11 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         _src.copyTo(_dst);
         return;
     }
+
+#ifdef HAVE_OPENVX
+    if (openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
+        return;
+#endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     Mat src = _src.getMat();
