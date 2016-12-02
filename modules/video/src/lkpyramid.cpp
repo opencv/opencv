@@ -1128,37 +1128,15 @@ namespace
             Array estimatedPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
             Array nextPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
 
-            vx_size prevArrayStride, estArrayStride, nextArrayStride;
-            vx_keypoint_t* prevArrayPtr = NULL, *estArrayPtr = NULL, *nextArrayPtr = NULL;
-            //Upload data to arrays, TODO: replace by wrapper version
-#ifndef VX_VERSION_1_1
-            IVX_CHECK_STATUS(vxAccessArrayRange(prevPts, 0, npoints, &prevArrayStride, (void**)&prevArrayPtr,
-                                                VX_WRITE_ONLY));
-            IVX_CHECK_STATUS(vxAccessArrayRange(estimatedPts, 0, npoints, &estArrayStride, (void**)&estArrayPtr,
-                                                VX_WRITE_ONLY));
-#else
-            vx_map_id prevMapId, estMapId, nextMapId;
-            IVX_CHECK_STATUS(vxMapArrayRange(prevPts, 0, npoints, &prevMapId, &prevArrayStride, (void**)&prevArrayPtr,
-                                             VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0));
-            IVX_CHECK_STATUS(vxMapArrayRange(estimatedPts, 0, npoints, &estMapId, &estArrayStride, (void**)&estArrayPtr,
-                                             VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0));
-#endif
+            std::vector<vx_keypoint_t> vxPrevPts, vxEstPts, vxNextPts;
             for(size_t i = 0; i < npoints; i++)
             {
-                vx_keypoint_t& prevPt = vxArrayItem(vx_keypoint_t, prevArrayPtr, i, prevArrayStride);
-                vx_keypoint_t& estPt  = vxArrayItem(vx_keypoint_t, estArrayPtr,  i, estArrayStride);
+                vx_keypoint_t& prevPt = vxPrevPts[i]; vx_keypoint_t& estPt  = vxEstPts[i];
                 prevPt.x = prevPtsMat.at<Point2f>(i).x; prevPt.y = prevPtsMat.at<Point2f>(i).y;
                  estPt.x = nextPtsMat.at<Point2f>(i).x;  estPt.y = nextPtsMat.at<Point2f>(i).y;
                 prevPt.tracking_status = estPt.tracking_status = vx_true_e;
             }
-
-#ifndef VX_VERSION_1_1
-            IVX_CHECK_STATUS(vxCommitArrayRange(prevPts, 0, npoints, &prevArrayPtr));
-            IVX_CHECK_STATUS(vxCommitArrayRange(estimatedPts, 0, npoints, &estArrayPtr));
-#else
-            IVX_CHECK_STATUS(vxUnmapArrayRange(prevPts, prevMapId));
-            IVX_CHECK_STATUS(vxUnmapArrayRange(estArrayPtr, estMapId));
-#endif
+            prevPts.addItems(vxPrevPts); estimatedPts.addItems(vxEstPts);
 
             if( (criteria.type & TermCriteria::COUNT) == 0 )
                 criteria.maxCount = 30;
@@ -1189,33 +1167,20 @@ namespace
             graph.process();
 
             //Download results, TODO: replace by wrapper version
-#ifndef VX_VERSION_1_1
-            IVX_CHECK_STATUS(vxAccessArrayRange(nextPts, 0, npoints, &nextArrayStride, (void**)&nextArrayPtr,
-                                                VX_READ_ONLY));
-#else
-            IVX_CHECK_STATUS(vxMapArrayRange(nextPts, 0, npoints, &nextMapId, &nextArrayStride, (void**)&nextArrayPtr,
-                                             VX_READ_ONLY, VX_MEMORY_TYPE_HOST, 0));
-#endif
+            nextPts.copyTo(vxNextPts);
             for(size_t i = 0; i < npoints; i++)
             {
-                vx_keypoint_t kp = vxArrayItem(vx_keypoint_t, nextArrayPtr, i, nextArrayStride);
+                vx_keypoint_t kp = vxNextPts[i];
                 nextPtsMat.at<Point2f>(i) = Point2f(kp.x, kp.y);
                 statusMat.at<uchar>(i) = (bool)kp.tracking_status;
                 // OpenVX doesn't return detection errors
                 errMat.at<float>(i) = 0;
             }
-#ifndef VX_VERSION_1_1
-            IVX_CHECK_STATUS(vxCommitArrayRange(nextPts, 0, npoints, &nextArrayPtr));
-#else
-            IVX_CHECK_STATUS(vxUnmapArrayRange(nextPts, nextMapId));
-#endif
-
 
 #ifdef VX_VERSION_1_1
         //we should take user memory back before release
         //(it's not done automatically according to standard)
-        prevImg.swapHandle();
-        nextImg.swapHandle();
+        prevImg.swapHandle(); nextImg.swapHandle();
 #endif
         }
         catch (RuntimeError & e)
