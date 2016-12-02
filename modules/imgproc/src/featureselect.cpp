@@ -318,28 +318,9 @@ static bool openvx_harris(Mat image, OutputArray _corners,
                                           gradientSize.getValue<vx_int32>(), blockSize.getValue<vx_int32>(),
                                           corners, numCorners));
 
-        //Download points from array (to be replaced by wrapper version)
-        size_t nPoints = numCorners.getValue<vx_size>();
-        vx_size arrayStride;
-        vx_keypoint_t* arrayPtr = NULL;
-#ifndef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxAccessArrayRange(corners, 0, nPoints, &arrayStride, (void**)&arrayPtr, VX_READ_ONLY));
-#else
-        vx_map_id mapId;
-        IVX_CHECK_STATUS(vxMapArrayRange(corners, 0, nPoints, &mapId, &arrayStride, (void**)&arrayPtr, VX_READ_ONLY,
-                                         VX_MEMORY_TYPE_HOST, 0));
-#endif
-        std::vector<vx_keypoint_t> vxKeypoints(nPoints);
-        for(size_t i = 0; i < nPoints; i++)
-        {
-            vxKeypoints[i] = vxArrayItem(vx_keypoint_t, arrayPtr, i, arrayStride);
-        }
+        std::vector<vx_keypoint_t> vxKeypoints;
+        corners.copyTo(vxKeypoints);
 
-#ifndef VX_VERSION_1_1
-        IVX_CHECK_STATUS(vxCommitArrayRange(corners, 0, nPoints, arrayPtr));
-#else
-        IVX_CHECK_STATUS(vxUnmapArrayRange(corners, mapId));
-#endif
         std::sort(vxKeypoints.begin(), vxKeypoints.end(), VxKeypointsComparator());
 
         vx_float32 maxStrength = 0.0f;
@@ -365,12 +346,12 @@ static bool openvx_harris(Mat image, OutputArray _corners,
     }
     catch (RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
+        CV_Error(cv::Error::StsInternal, e.what());
         return false;
     }
     catch (WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
+        CV_Error(cv::Error::StsInternal, e.what());
         return false;
     }
 
