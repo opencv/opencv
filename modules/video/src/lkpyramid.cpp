@@ -46,6 +46,12 @@
 #include "opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#ifdef HAVE_OPENVX
+#define IVX_USE_OPENCV
+#define IVX_HIDE_INFO_WARNINGS
+#include "ivx.hpp"
+#endif
+
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
 namespace
@@ -1055,7 +1061,178 @@ namespace
         return sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
     }
 #endif
+
+#ifdef HAVE_OPENVX
+    bool openvx_pyrlk(InputArray _prevImg, InputArray _nextImg, InputArray _prevPts, InputOutputArray _nextPts,
+                             OutputArray _status, OutputArray _err)
+    {
+        using namespace ivx;
+
+        // Pyramids as input are not acceptable because there's no (direct or simple) way
+        // to build vx_pyramid on user data
+        if(_prevImg.kind() != _InputArray::MAT || _nextImg.kind() != _InputArray::MAT)
+            return false;
+
+        // OpenVX uses minimum eigen values as error measure
+        if(!(OPTFLOW_LK_GET_MIN_EIGENVALS & flags))
+            return false;
+
+        Mat prevImgMat = _prevImg.getMat(), nextImgMat = _nextImg.getMat();
+
+        if(prevImgMat.type() != CV_8UC1 || nextImgMat.type() != CV_8UC1)
+            return false;
+
+        CV_Assert(prevImgMat.size() == nextImgMat.size());
+        Mat prevPtsMat = _prevPts.getMat();
+        int checkPrev = prevPtsMat.checkVector(2, CV_32F, false);
+        CV_Assert( checkPrev >= 0 );
+        size_t npoints = checkPrev;
+
+        if( !(flags & OPTFLOW_USE_INITIAL_FLOW) )
+            _nextPts.create(prevPtsMat.size(), prevPtsMat.type(), -1, true);
+        Mat nextPtsMat = _nextPts.getMat();
+        CV_Assert( nextPtsMat.checkVector(2, CV_32F, false) == (int)npoints );
+
+        _status.create((int)npoints, 1, CV_8U, -1, true);
+        Mat statusMat = _status.getMat();
+        uchar* status = statusMat.ptr();
+        for(size_t i = 0; i < npoints; i++ )
+            status[i] = true;
+
+        Mat errMat;
+        if( _err.needed() )
+        {
+            _err.create((int)npoints, 1, CV_32F, -1, true);
+            errMat = _err.getMat();
+        }
+
+        try
+        {
+            Context context = Context::create();
+            Image prevImg = Image::createFromHandle(context, Image::matTypeToFormat(prevImgMat.type()),
+                                                    Image::createAddressing(prevImgMat), (void*)prevImgMat.data);
+            Image nextImg = Image::createFromHandle(context, Image::matTypeToFormat(nextImgMat.type()),
+                                                    Image::createAddressing(nextImgMat), (void*)nextImgMat.data);
+
+            Graph graph = Graph::create(context);
+
+            Pyramid prevPyr = Pyramid::createVirtual(graph, (vx_size)maxLevel+1, VX_SCALE_PYRAMID_HALF,
+                                                     prevImg.width(), prevImg.height(), prevImg.format());
+            Pyramid nextPyr = Pyramid::createVirtual(graph, (vx_size)maxLevel+1, VX_SCALE_PYRAMID_HALF,
+                                                     nextImg.width(), nextImg.height(), nextImg.format());
+
+            ivx::Node::create(graph, VX_KERNEL_GAUSSIAN_PYRAMID, prevImg, prevPyr);
+            ivx::Node::create(graph, VX_KERNEL_GAUSSIAN_PYRAMID, nextImg, nextPyr);
+
+            Array prevPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+            Array estimatedPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+            Array nextPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+
+            vx_size prevArrayStride, estArrayStride, nextArrayStride;
+            vx_keypoint_t* prevArrayPtr = NULL, *estArrayPtr = NULL, *nextArrayPtr = NULL;
+            //Upload data to arrays, TODO: replace by wrapper version
+#ifndef VX_VERSION_1_1
+            IVX_CHECK_STATUS(vxAccessArrayRange(prevPts, 0, npoints, &prevArrayStride, (void**)&prevArrayPtr,
+                                                VX_WRITE_ONLY));
+            IVX_CHECK_STATUS(vxAccessArrayRange(estimatedPts, 0, npoints, &estArrayStride, (void**)&estArrayPtr,
+                                                VX_WRITE_ONLY));
+#else
+            vx_map_id prevMapId, estMapId, nextMapId;
+            IVX_CHECK_STATUS(vxMapArrayRange(prevPts, 0, npoints, &prevMapId, &prevArrayStride, (void**)&prevArrayPtr,
+                                             VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0));
+            IVX_CHECK_STATUS(vxMapArrayRange(estimatedPts, 0, npoints, &estMapId, &estArrayStride, (void**)&estArrayPtr,
+                                             VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0));
+#endif
+            for(size_t i = 0; i < npoints; i++)
+            {
+                vx_keypoint_t& prevPt = vxArrayItem(vx_keypoint_t, prevArrayPtr, i, prevArrayStride);
+                vx_keypoint_t& estPt  = vxArrayItem(vx_keypoint_t, estArrayPtr,  i, estArrayStride);
+                prevPt.x = prevPtsMat.at<Point2f>(i).x; prevPt.y = prevPtsMat.at<Point2f>(i).y;
+                 estPt.x = nextPtsMat.at<Point2f>(i).x;  estPt.y = nextPtsMat.at<Point2f>(i).y;
+                prevPt.tracking_status = estPt.tracking_status = vx_true_e;
+            }
+
+#ifndef VX_VERSION_1_1
+            IVX_CHECK_STATUS(vxCommitArrayRange(prevPts, 0, npoints, &prevArrayPtr));
+            IVX_CHECK_STATUS(vxCommitArrayRange(estimatedPts, 0, npoints, &estArrayPtr));
+#else
+            IVX_CHECK_STATUS(vxUnmapArrayRange(prevPts, prevMapId));
+            IVX_CHECK_STATUS(vxUnmapArrayRange(estArrayPtr, estMapId));
+#endif
+
+            if( (criteria.type & TermCriteria::COUNT) == 0 )
+                criteria.maxCount = 30;
+            else
+                criteria.maxCount = std::min(std::max(criteria.maxCount, 0), 100);
+            if( (criteria.type & TermCriteria::EPS) == 0 )
+                criteria.epsilon = 0.01;
+            else
+                criteria.epsilon = std::min(std::max(criteria.epsilon, 0.), 10.);
+            criteria.epsilon *= criteria.epsilon;
+
+            vx_enum termEnum = (criteria.type == TermCriteria::COUNT) ? VX_TERM_CRITERIA_ITERATIONS :
+                               (criteria.type == TermCriteria::EPS) ? VX_TERM_CRITERIA_EPSILON :
+                               VX_TERM_CRITERIA_BOTH;
+
+            //minEigThreshold is fixed to 0.0001f
+            ivx::Scalar termination = ivx::Scalar::create<VX_TYPE_ENUM>(context, termEnum);
+            ivx::Scalar epsilon = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, criteria.epsilon);
+            ivx::Scalar numIterations = ivx::Scalar::create<VX_TYPE_UINT32>(context, criteria.maxCount);
+            ivx::Scalar useInitial = ivx::Scalar::create<VX_TYPE_BOOL>(context, (vx_bool)(flags & OPTFLOW_USE_INITIAL_FLOW));
+            //assume winSize is square
+            ivx::Scalar windowSize = ivx::Scalar::create<VX_TYPE_SIZE>(context, (vx_size)winSize.width);
+
+            ivx::Node::create(graph, VX_KERNEL_OPTICAL_FLOW_PYR_LK, prevPyr, nextPyr, prevPts, estimatedPts,
+                              nextPts, termination, epsilon, numIterations, useInitial, windowSize);
+
+            graph.verify();
+            graph.process();
+
+            //Download results, TODO: replace by wrapper version
+#ifndef VX_VERSION_1_1
+            IVX_CHECK_STATUS(vxAccessArrayRange(nextPts, 0, npoints, &nextArrayStride, (void**)&nextArrayPtr,
+                                                VX_READ_ONLY));
+#else
+            IVX_CHECK_STATUS(vxMapArrayRange(nextPts, 0, npoints, &nextMapId, &nextArrayStride, (void**)&nextArrayPtr,
+                                             VX_READ_ONLY, VX_MEMORY_TYPE_HOST, 0));
+#endif
+            for(size_t i = 0; i < npoints; i++)
+            {
+                vx_keypoint_t kp = vxArrayItem(vx_keypoint_t, nextArrayPtr, i, nextArrayStride);
+                nextPtsMat.at<Point2f>(i) = Point2f(kp.x, kp.y);
+                statusMat.at<uchar>(i) = (bool)kp.tracking_status;
+                // OpenVX doesn't return detection errors
+                errMat.at<float>(i) = 0;
+            }
+#ifndef VX_VERSION_1_1
+            IVX_CHECK_STATUS(vxCommitArrayRange(nextPts, 0, npoints, &nextArrayPtr));
+#else
+            IVX_CHECK_STATUS(vxUnmapArrayRange(nextPts, nextMapId));
+#endif
+
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        prevImg.swapHandle();
+        nextImg.swapHandle();
+#endif
+        }
+        catch (RuntimeError & e)
+        {
+            CV_Error(cv::Error::StsInternal, e.what());
+        }
+        catch (WrapperError & e)
+        {
+            CV_Error(cv::Error::StsInternal, e.what());
+        }
+
+        return true;
+    }
+#endif
 };
+
+
 
 void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
@@ -1067,6 +1244,13 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                (_prevImg.isUMat() || _nextImg.isUMat()) &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
+
+#ifdef HAVE_OPENVX
+    if(openvx_pyrlk(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
+    {
+        return;
+    }
+#endif
 
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;
