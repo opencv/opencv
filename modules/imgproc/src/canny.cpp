@@ -866,10 +866,11 @@ void Canny( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), dst = _dst.getMat();
 
     CV_OVX_RUN(
-        src.type() == CV_8UC1 &&
-                !src.isSubmatrix() &&
-                src.cols >= aperture_size &&
-                src.rows >= aperture_size,
+        false && /* disabling due to accuracy issues */
+            src.type() == CV_8UC1 &&
+            !src.isSubmatrix() &&
+            src.cols >= aperture_size &&
+            src.rows >= aperture_size,
         openvx_canny(
             src,
             dst,

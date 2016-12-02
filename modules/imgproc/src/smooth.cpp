@@ -1714,7 +1714,7 @@ namespace cv
 #if VX_VERSION <= VX_VERSION_1_0
                 if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
                 {
-                    ctx.setBorderMode(prevBorder);
+                    ctx.setImmediateBorder(prevBorder);
                     return false;
                 }
 #endif
