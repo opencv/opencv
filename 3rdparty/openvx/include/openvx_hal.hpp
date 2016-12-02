@@ -1159,6 +1159,32 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
     return CV_HAL_ERROR_OK;
 }
 
+inline int ovx_hal_integral(int depth, int sdepth, int , const uchar * a, size_t astep, uchar * b, size_t bstep, uchar * c, size_t , uchar * d, size_t , int w, int h, int cn)
+{
+    if (depth != CV_8U || sdepth != CV_32S || c != NULL || d != NULL || cn != 1)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    try
+    {
+        vxContext * ctx = vxContext::getContext();
+        vxImage ia(*ctx, a, astep, w, h);
+        vxImage ib(*ctx, (unsigned int *)(b+bstep+sizeof(unsigned int)), bstep, w, h);
+        vxErr::check(vxuIntegralImage(ctx->ctx, ia.img, ib.img));
+        memset(b, 0, (w+1)*sizeof(unsigned int));
+        b += bstep;
+        for (int i = 0; i < h; i++, b += bstep)
+        {
+            *((unsigned int*)b) = 0;
+        }
+    }
+    catch (vxErr & e)
+    {
+        e.print();
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
 //==================================================================================================
 // functions redefinition
 // ...
@@ -1241,5 +1267,7 @@ inline int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b,
 #define cv_hal_cvtBGRtoThreePlaneYUV ovx_hal_cvtBGRtoThreePlaneYUV
 #undef cv_hal_cvtOnePlaneYUVtoBGR
 #define cv_hal_cvtOnePlaneYUVtoBGR ovx_hal_cvtOnePlaneYUVtoBGR
+#undef cv_hal_integral
+#define cv_hal_integral ovx_hal_integral
 
 #endif
