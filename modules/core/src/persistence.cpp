@@ -714,8 +714,8 @@ cvReleaseFileStorage( CvFileStorage** p_fs )
 
         delete fs->outbuf;
         delete fs->base64_writer;
-        delete fs->delayed_struct_key;
-        delete fs->delayed_type_name;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
 
         memset( fs, 0, sizeof(*fs) );
         cvFree( &fs );
@@ -1218,8 +1218,8 @@ static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_typ
         }
 
         /* reset */
-        delete fs->delayed_struct_key;
-        delete fs->delayed_type_name;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
         fs->delayed_struct_key   = 0;
         fs->delayed_struct_flags = 0;
         fs->delayed_type_name    = 0;
