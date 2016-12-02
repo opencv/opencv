@@ -70,7 +70,7 @@ Building OpenCV from Source Using CMake, Using the Command Line
       cd ~/opencv
       mkdir release
       cd release
-      cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
+      cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local ..
 
 #. Enter the created temporary directory (<cmake_binary_dir>) and proceed with:
 
