@@ -180,7 +180,7 @@ endif()
 set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
 
 add_library(tbb ${TBB_SOURCE_FILES})
-target_compile_definitions(tbb PRIVATE TBB_USE_GCC_BUILTINS=1 __TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
+target_compile_definitions(tbb PUBLIC TBB_USE_GCC_BUILTINS=1 __TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
 target_include_directories(tbb SYSTEM PUBLIC $<BUILD_INTERFACE:${tbb_src_dir}/include>)
 
 if (WIN32)
