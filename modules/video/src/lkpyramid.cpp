@@ -1068,13 +1068,9 @@ namespace
     {
         using namespace ivx;
 
-        // Pyramids as input are not acceptable because there's no (direct or simple) way
+        // Pyramids as inputs are not acceptable because there's no (direct or simple) way
         // to build vx_pyramid on user data
         if(_prevImg.kind() != _InputArray::MAT || _nextImg.kind() != _InputArray::MAT)
-            return false;
-
-        // OpenVX uses minimum eigen values as error measure
-        if(!(OPTFLOW_LK_GET_MIN_EIGENVALS & flags))
             return false;
 
         Mat prevImgMat = _prevImg.getMat(), nextImgMat = _nextImg.getMat();
@@ -1109,6 +1105,26 @@ namespace
         try
         {
             Context context = Context::create();
+
+            if(context.vendorID() == VX_ID_KHRONOS)
+            {
+                // PyrLK in OVX 1.0.1 performs vxCommitImagePatch incorrecty and crashes
+                if(VX_VERSION == VX_VERSION_1_0)
+                    return false;
+                // Implementation ignores border mode
+                // So check that minimal size of image in pyramid is big enough
+                int width = prevImgMat.cols, height = prevImgMat.rows;
+                for(int i = 0; i < maxLevel+1; i++)
+                {
+                    if(width < winSize.width + 1 || height < winSize.height + 1)
+                        return false;
+                    else
+                    {
+                        width /= 2; height /= 2;
+                    }
+                }
+            }
+
             Image prevImg = Image::createFromHandle(context, Image::matTypeToFormat(prevImgMat.type()),
                                                     Image::createAddressing(prevImgMat), (void*)prevImgMat.data);
             Image nextImg = Image::createFromHandle(context, Image::matTypeToFormat(nextImgMat.type()),
@@ -1128,7 +1144,7 @@ namespace
             Array estimatedPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
             Array nextPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
 
-            std::vector<vx_keypoint_t> vxPrevPts, vxEstPts, vxNextPts;
+            std::vector<vx_keypoint_t> vxPrevPts(npoints), vxEstPts(npoints), vxNextPts(npoints);
             for(size_t i = 0; i < npoints; i++)
             {
                 vx_keypoint_t& prevPt = vxPrevPts[i]; vx_keypoint_t& estPt  = vxEstPts[i];
@@ -1166,7 +1182,6 @@ namespace
             graph.verify();
             graph.process();
 
-            //Download results, TODO: replace by wrapper version
             nextPts.copyTo(vxNextPts);
             for(size_t i = 0; i < npoints; i++)
             {
@@ -1211,7 +1226,9 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
 
 #ifdef HAVE_OPENVX
-    if(openvx_pyrlk(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
+    // Disabled due to bad accuracy
+    if(false &&
+       openvx_pyrlk(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
     {
         return;
     }
