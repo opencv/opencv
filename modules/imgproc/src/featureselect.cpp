@@ -384,7 +384,9 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     }
 
 #ifdef HAVE_OPENVX
-    if(useHarrisDetector && _mask.empty() &&
+    // Disabled due to bad accuracy
+    if(false &&
+       useHarrisDetector && _mask.empty() &&
        openvx_harris(image, _corners, maxCorners, qualityLevel, minDistance, blockSize, harrisK))
     {
         return;
