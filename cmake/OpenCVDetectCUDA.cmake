@@ -164,7 +164,7 @@ if(CUDA_FOUND)
 
   mark_as_advanced(CUDA_BUILD_CUBIN CUDA_BUILD_EMULATION CUDA_VERBOSE_BUILD CUDA_SDK_ROOT_DIR)
 
-  macro(ocv_cuda_compile VAR)
+  macro(ocv_cuda_filter_options)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
 
@@ -190,6 +190,10 @@ if(CUDA_FOUND)
 
       string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
     endforeach()
+  endmacro()
+
+  macro(ocv_cuda_compile VAR)
+    ocv_cuda_filter_options()
 
     if(BUILD_SHARED_LIBS)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -DCVAPI_EXPORTS)

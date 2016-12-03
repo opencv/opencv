@@ -61,11 +61,6 @@ namespace
         cv::Rect roi(ksize.width, ksize.height, m.cols - 2 * ksize.width, m.rows - 2 * ksize.height);
         return m(roi);
     }
-
-    cv::Mat getInnerROI(cv::InputArray m, int ksize)
-    {
-        return getInnerROI(m, cv::Size(ksize, ksize));
-    }
 }
 
 namespace {
