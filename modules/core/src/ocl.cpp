@@ -6073,6 +6073,18 @@ void* Image2D::ptr() const
     return p ? p->handle : 0;
 }
 
+bool internal::isOpenCLForced()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = getBoolParameter("OPENCV_OPENCL_FORCE", false);
+        initialized = true;
+    }
+    return value;
+}
+
 bool internal::isPerformanceCheckBypassed()
 {
     static bool initialized = false;
