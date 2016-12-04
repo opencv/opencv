@@ -1265,8 +1265,6 @@ getRTMatrix( const Point2f* a, const Point2f* b,
             sa[1][1] += a[i].y*a[i].y;
             sa[1][2] += a[i].y;
 
-            sa[2][2] += 1;
-
             sb[0] += a[i].x*b[i].x;
             sb[1] += a[i].y*b[i].x;
             sb[2] += b[i].x;
@@ -1281,7 +1279,7 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
         sa[3][3] = sa[0][0];
         sa[4][4] = sa[1][1];
-        sa[5][5] = sa[2][2];
+        sa[5][5] = sa[2][2] = count;
 
         solve( A, B, MM, DECOMP_EIG );
     }
@@ -1296,14 +1294,6 @@ getRTMatrix( const Point2f* a, const Point2f* b,
             sa[0][0] += a[i].x*a[i].x + a[i].y*a[i].y;
             sa[0][2] += a[i].x;
             sa[0][3] += a[i].y;
-
-
-            sa[2][1] += -a[i].y;
-            sa[2][2] += 1;
-
-            sa[3][0] += a[i].y;
-            sa[3][1] += a[i].x;
-            sa[3][3] += 1;
 
             sb[0] += a[i].x*b[i].x + a[i].y*b[i].y;
             sb[1] += a[i].x*b[i].y - a[i].y*b[i].x;
