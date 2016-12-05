@@ -1276,7 +1276,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
     // OpenVX limitations
     if((srcMat.type() != CV_8U) ||
-       (borderType != BorderTypes::BORDER_REPLICATE) ||
+       (borderType != BORDER_REPLICATE) ||
        (_dsz != acceptableSize && _dsz.area() != 0))
         return false;
 
@@ -1295,6 +1295,13 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
     try
     {
         Context context = Context::create();
+        if(context.vendorID() == VX_ID_KHRONOS)
+        {
+            // This implementation performs floor-like rounding
+            // (OpenCV uses floor(x+0.5)-like rounding)
+            // and ignores border mode (and loses 1px size border)
+            return false;
+        }
 
         Image srcImg = Image::createFromHandle(context, Image::matTypeToFormat(srcMat.type()),
                                                Image::createAddressing(srcMat), (void*)srcMat.data);
