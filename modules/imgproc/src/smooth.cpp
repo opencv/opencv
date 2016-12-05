@@ -2274,8 +2274,8 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder = ctx.borderMode();
-        ctx.setBorderMode(border);
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(border);
         if (ksize.width == 3 && ksize.height == 3 && (sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) && (sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON))
         {
             ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
@@ -2285,7 +2285,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 #if VX_VERSION <= VX_VERSION_1_0
             if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(a.cols) <= ctx.convolutionMaxDimension() || (vx_size)(a.rows) <= ctx.convolutionMaxDimension()))
             {
-                ctx.setBorderMode(prevBorder);
+                ctx.setImmediateBorder(prevBorder);
                 return false;
             }
 #endif
@@ -2296,7 +2296,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             cnv.setScale(1 << 15);
             ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
         }
-        ctx.setBorderMode(prevBorder);
+        ctx.setImmediateBorder(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
