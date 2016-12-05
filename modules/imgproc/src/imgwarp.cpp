@@ -4766,12 +4766,28 @@ static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation
 #endif
         break;
     case INTER_NEAREST:
+/* NEAREST_NEIGHBOR mode disabled since OpenCV round half to even while OpenVX sample implementation round half up
 #if VX_VERSION > VX_VERSION_1_0
         inter_type = VX_INTERPOLATION_NEAREST_NEIGHBOR;
 #else
         inter_type = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
 #endif
+        if (!map1.empty())
+            for (int y = 0; y < map1.rows; ++y)
+            {
+                float* line = map1.ptr<float>(y);
+                for (int x = 0; x < map1.cols; ++x)
+                    line[x] = cvRound(line[x]);
+            }
+        if (!map2.empty())
+            for (int y = 0; y < map2.rows; ++y)
+            {
+                float* line = map2.ptr<float>(y);
+                for (int x = 0; x < map2.cols; ++x)
+                    line[x] = cvRound(line[x]);
+            }
         break;
+*/
     case INTER_AREA://AREA interpolation mode is unsupported
     default:
         return false;
