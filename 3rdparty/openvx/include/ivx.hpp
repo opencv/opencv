@@ -203,33 +203,9 @@ template<> struct TypeToEnum<vx_keypoint_t> {static const vx_enum value = VX_TYP
 //template<> struct TypeToEnum<vx_size>     { static const vx_enum val = VX_TYPE_SIZE; };
 //template<> struct TypeToEnum<vx_df_image> { static const vx_enum val = VX_TYPE_DF_IMAGE; };
 
-inline vx_enum fixEnum(const vx_enum a)
+inline bool areTypesCompatible(const vx_enum a, const vx_enum b)
 {
-    switch (a)
-    {
-    case VX_TYPE_CHAR:      return TypeToEnum<EnumToType<VX_TYPE_CHAR>::type>::value;
-    case VX_TYPE_INT8:      return TypeToEnum<EnumToType<VX_TYPE_INT8>::type>::value;
-    case VX_TYPE_UINT8:     return TypeToEnum<EnumToType<VX_TYPE_UINT8>::type>::value;
-    case VX_TYPE_INT16:     return TypeToEnum<EnumToType<VX_TYPE_INT16>::type>::value;
-    case VX_TYPE_UINT16:    return TypeToEnum<EnumToType<VX_TYPE_UINT16>::type>::value;
-    case VX_TYPE_INT32:     return TypeToEnum<EnumToType<VX_TYPE_INT32>::type>::value;
-    case VX_TYPE_UINT32:    return TypeToEnum<EnumToType<VX_TYPE_UINT32>::type>::value;
-    case VX_TYPE_INT64:     return TypeToEnum<EnumToType<VX_TYPE_INT64>::type>::value;
-    case VX_TYPE_UINT64:    return TypeToEnum<EnumToType<VX_TYPE_UINT64>::type>::value;
-    case VX_TYPE_FLOAT32:   return TypeToEnum<EnumToType<VX_TYPE_FLOAT32>::type>::value;
-    case VX_TYPE_FLOAT64:   return TypeToEnum<EnumToType<VX_TYPE_FLOAT64>::type>::value;
-    case VX_TYPE_ENUM:      return TypeToEnum<EnumToType<VX_TYPE_ENUM>::type>::value;
-    case VX_TYPE_SIZE:      return TypeToEnum<EnumToType<VX_TYPE_SIZE>::type>::value;
-    case VX_TYPE_DF_IMAGE:  return TypeToEnum<EnumToType<VX_TYPE_DF_IMAGE>::type>::value;
-    case VX_TYPE_BOOL:      return TypeToEnum<EnumToType<VX_TYPE_BOOL>::type>::value;
-    case VX_TYPE_KEYPOINT:  return TypeToEnum<EnumToType<VX_TYPE_KEYPOINT>::type>::value;
-    default: throw WrapperError(std::string(__func__) + ": unsupported type enum");
-    }
-}
-
-inline bool areEqualTypes(const vx_enum a, const vx_enum b)
-{
-    return fixEnum(a) == fixEnum(b);
+    return enumToTypeSize(a) == enumToTypeSize(b);
 }
 
 #ifdef IVX_USE_OPENCV
@@ -1818,7 +1794,8 @@ static const vx_enum VX_SCALAR_TYPE = VX_SCALAR_ATTRIBUTE_TYPE;
     template<typename T>
     void getValue(T& val)
     {
-        if(!areEqualTypes(TypeToEnum<T>::value, type())) throw WrapperError(std::string(__func__)+"(): incompatible types");
+        if (!areTypesCompatible(TypeToEnum<T>::value, type()))
+            throw WrapperError(std::string(__func__)+"(): incompatible types");
 #ifdef VX_VERSION_1_1
         IVX_CHECK_STATUS( vxCopyScalar(ref, &val, VX_READ_ONLY, VX_MEMORY_TYPE_HOST) );
 #else
@@ -1840,7 +1817,8 @@ static const vx_enum VX_SCALAR_TYPE = VX_SCALAR_ATTRIBUTE_TYPE;
     template<typename T>
     void setValue(T val)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, type())) throw WrapperError(std::string(__func__)+"(): incompatible types");
+        if (!areTypesCompatible(TypeToEnum<T>::value, type()))
+            throw WrapperError(std::string(__func__)+"(): incompatible types");
 #ifdef VX_VERSION_1_1
         IVX_CHECK_STATUS(vxCopyScalar(ref, &val, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
 #else
@@ -2076,15 +2054,29 @@ public:
     void copy(void* data, vx_enum usage, vx_enum memType = VX_MEMORY_TYPE_HOST)
     { copyRange(0, itemCount(), data, usage, memType); }
 
+    template<typename T> void addItem(const T& item)
+    {
+        if (!areTypesCompatible(TypeToEnum<T>::value, itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        addItems(1, &item, sizeof(T));
+    }
+
+    template<typename T> void addItems(const std::vector<T>& data)
+    {
+        if (!areTypesCompatible(TypeToEnum<T>::value, itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        addItems(data.size(), &data[0], itemSize());
+    }
+
     template<typename T> void copyRangeTo(size_t start, size_t end, std::vector<T>& data)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, itemType())) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
-        if (data.size() != (end - start))
+        if (!areTypesCompatible(TypeToEnum<T>::value, itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (data.empty())
+            data.resize((end - start));
+        else if (data.size() != (end - start))
         {
-            if (data.size() == 0)
-                data.resize((end - start));
-            else
-                throw WrapperError(std::string(__func__) + "(): destination size is wrong");
+            throw WrapperError(std::string(__func__) + "(): destination size is wrong");
         }
         copyRangeTo(start, end, &data[0]);
     }
@@ -2094,27 +2086,34 @@ public:
 
     template<typename T> void copyRangeFrom(size_t start, size_t end, const std::vector<T>& data)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, itemType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, itemType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         if (data.size() != (end - start)) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyRangeFrom(start, end, &data[0]);
     }
 
     template<typename T> void copyFrom(std::vector<T>& data)
-    {
-        if(itemCount() > 0)
-            copyRangeFrom(0, itemCount(), data);
-        else
-            addItems(data.size(), &data[0], itemSize());
-    }
+    { copyRangeFrom(0, itemCount(), data); }
 
 #ifdef IVX_USE_OPENCV
+    void addItems(cv::InputArray ia)
+    {
+        cv::Mat m = ia.getMat();
+        if (m.type() != enumToCVType(itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        addItems(m.total(), m.isContinuous() ? m.ptr() : m.clone().ptr(),
+                 (vx_size)(m.elemSize()));
+    }
+
     void copyRangeTo(size_t start, size_t end, cv::Mat& m)
     {
-        if (m.type() != enumToCVType(itemType())) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (m.type() != enumToCVType(itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
         if (!(
                 ((vx_size)(m.rows) == (end - start) && m.cols == 1) ||
                 ((vx_size)(m.cols) == (end - start) && m.rows == 1)
-            ) && !m.empty()) throw WrapperError(std::string(__func__) + "(): destination size is wrong");
+            ) && !m.empty())
+            throw WrapperError(std::string(__func__) + "(): destination size is wrong");
 
         if (m.isContinuous() && (vx_size)(m.total()) == (end - start))
         {
@@ -2139,19 +2138,15 @@ public:
         if (!(
                 ((vx_size)(m.rows) == (end - start) && m.cols == 1) ||
                 ((vx_size)(m.cols) == (end - start) && m.rows == 1)
-             )) throw WrapperError(std::string(__func__) + "(): source size is wrong");
-        if (m.type() != enumToCVType(itemType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+             ))
+            throw WrapperError(std::string(__func__) + "(): source size is wrong");
+        if (m.type() != enumToCVType(itemType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         copyFrom(m.isContinuous() ? m.ptr() : m.clone().ptr());
     }
 
     void copyFrom(const cv::Mat& m)
-    {
-        if(itemCount() > 0)
-            copyRangeFrom(0, itemCount(), m);
-        else
-            addItems(m.total(), m.isContinuous() ? m.ptr() : m.clone().ptr(),
-                     (vx_size)(m.elemSize()));
-    }
+    { copyRangeFrom(0, itemCount(), m); }
 #endif //IVX_USE_OPENCV
 };
 
@@ -2253,7 +2248,8 @@ public:
 
     template<typename T> void copyTo(std::vector<T>& data)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, dataType())) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
         if (data.size() != size())
         {
             if (data.size() == 0)
@@ -2266,7 +2262,8 @@ public:
 
     template<typename T> void copyFrom(const std::vector<T>& data)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, dataType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         if (data.size() != size()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyFrom(&data[0]);
     }
@@ -2413,7 +2410,8 @@ public:
 
     template<typename T> void copyTo(std::vector<T>& data)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, dataType())) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
         if (data.size() != size())
         {
             if (data.size() == 0)
@@ -2426,7 +2424,8 @@ public:
 
     template<typename T> void copyFrom(const std::vector<T>& data)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, dataType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         if (data.size() != size()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyFrom(&data[0]);
     }
@@ -2564,7 +2563,8 @@ public:
 
     template<typename T> void copyTo(std::vector<T>& data)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, dataType())) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
         if (data.size() != count())
         {
             if (data.size() == 0)
@@ -2577,7 +2577,8 @@ public:
 
     template<typename T> void copyFrom(const std::vector<T>& data)
     {
-        if (!areEqualTypes(TypeToEnum<T>::value, dataType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         if (data.size() != count()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyFrom(&data[0]);
     }
