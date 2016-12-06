@@ -4641,6 +4641,13 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 }
 
 #ifdef HAVE_OPENVX
+
+#ifdef _DEBUG
+#define VX_DbgThrow(s) CV_Error(cv::Error::StsInternal, (s))
+#else
+#define VX_DbgThrow(s) return false;
+#endif
+
 template<typename T, typename DT>
 static bool _openvx_cvt(const T* src, size_t sstep,
                         DT* dst, size_t dstep, Size continuousSize)
@@ -4652,9 +4659,10 @@ static bool _openvx_cvt(const T* src, size_t sstep,
         return true;
     }
 
+    CV_Assert(sstep / sizeof(T) == dstep / sizeof(DT));
+
     //.height is for number of continuous pieces
     //.width  is for length of one piece
-
     Size imgSize = continuousSize;
     if(continuousSize.height == 1)
     {
@@ -4685,11 +4693,11 @@ static bool _openvx_cvt(const T* src, size_t sstep,
     }
     catch (RuntimeError & e)
     {
-        CV_Error(cv::Error::StsInternal, e.what());
+        VX_DbgThrow(e.what());
     }
     catch (WrapperError & e)
     {
-        CV_Error(cv::Error::StsInternal, e.what());
+        VX_DbgThrow(e.what());
     }
 
     return true;
