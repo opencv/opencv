@@ -46,11 +46,7 @@
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_USE_OPENCV
-#define IVX_HIDE_INFO_WARNINGS
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 #ifdef __APPLE__
 #undef CV_NEON
@@ -4735,12 +4731,10 @@ template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
 {
-#ifdef HAVE_OPENVX
-    if(openvx_cvt(src, sstep, dst, dstep, size))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(
+        false,
+        openvx_cvt(src, sstep, dst, dstep, size)
+    );
 
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);

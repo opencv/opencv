@@ -133,6 +133,92 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
                                 testing::Values(L2gradient(false), L2gradient(true)),
                                 testing::Values(UseRoi(false), UseRoi(true))));
 
-} } // namespace cvtest::ocl
+
+IMPLEMENT_PARAM_CLASS(ImagePath, string)
+//IMPLEMENT_PARAM_CLASS(ApertureSize, int)
+//IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+
+PARAM_TEST_CASE(CannyVX, ImagePath, ApertureSize, L2gradient)
+{
+    string imgPath;
+    int kSize;
+    bool useL2;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    virtual void SetUp()
+    {
+        imgPath = GET_PARAM(0);
+        kSize = GET_PARAM(1);
+        useL2 = GET_PARAM(2);
+    }
+
+    void loadImage()
+    {
+        src = readImage(imgPath, IMREAD_GRAYSCALE);
+        ASSERT_FALSE(src.empty()) << "cann't load image: " << imgPath;
+    }
+};
+
+TEST_P(CannyVX, Accuracy)
+{
+    if(haveOpenVX())
+    {
+        loadImage();
+
+        setUseOpenVX(false);
+        Mat canny;
+        cv::Canny(src, canny, 100, 150, 3);
+
+        setUseOpenVX(true);
+        Mat cannyVX;
+        cv::Canny(src, cannyVX, 100, 150, 3);
+
+        setUseOpenVX(false);
+        Mat diff, diff1;
+        absdiff(canny, cannyVX, diff);
+        boxFilter(diff, diff1, -1, Size(3,3));
+        diff1 = diff1 > 255/9*3;
+        erode(diff1, diff1, Mat());
+        double error = cv::norm(diff1, NORM_L1) / 255;
+        const int maxError = 10;
+        if(error > maxError)
+        {
+            string outPath =
+                    string("CannyVX-diff-") +
+                    imgPath + '-' +
+                    'k' + char(kSize+'0') + '-' +
+                    (useL2 ? "l2" : "l1");
+            std::replace(outPath.begin(), outPath.end(), '/', '_');
+            std::replace(outPath.begin(), outPath.end(), '\\', '_');
+            std::replace(outPath.begin(), outPath.end(), '.', '_');
+            imwrite(outPath+".png", diff);
+        }
+        ASSERT_LE(error, maxError);
+
+    }
+}
+
+    INSTANTIATE_TEST_CASE_P(
+                ImgProc, CannyVX,
+                testing::Combine(
+                    testing::Values(
+                        string("shared/baboon.png"),
+                        string("shared/fruits.png"),
+                        string("shared/lena.png"),
+                        string("shared/pic1.png"),
+                        string("shared/pic3.png"),
+                        string("shared/pic5.png"),
+                        string("shared/pic6.png")
+                    ),
+                    testing::Values(ApertureSize(3), ApertureSize(5)),
+                    testing::Values(L2gradient(false), L2gradient(true))
+                )
+    );
+
+} // namespace ocl
+
+} // namespace cvtest
 
 #endif // HAVE_OPENCL
