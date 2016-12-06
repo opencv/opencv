@@ -302,7 +302,8 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
     return code;
 }
 
-TEST(Imgproc_Canny, accuracy) { CV_CannyTest test; test.safe_run(); }
-TEST(Imgproc_Canny, accuracy_deriv) { CV_CannyTest test(true); test.safe_run(); }
+// disabling, since testing on a white noise seems having too few sense...
+TEST(DISABLED_Imgproc_Canny, accuracy) { CV_CannyTest test; test.safe_run(); }
+TEST(DISABLED_Imgproc_Canny, accuracy_deriv) { CV_CannyTest test(true); test.safe_run(); }
 
 /* End of file. */
