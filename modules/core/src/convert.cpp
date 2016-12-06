@@ -4641,26 +4641,45 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 }
 
 #ifdef HAVE_OPENVX
+
+#ifdef _DEBUG
+#define VX_DbgThrow(s) CV_Error(cv::Error::StsInternal, (s))
+#else
+#define VX_DbgThrow(s) return false;
+#endif
+
 template<typename T, typename DT>
 static bool _openvx_cvt(const T* src, size_t sstep,
-                        DT* dst, size_t dstep, Size size)
+                        DT* dst, size_t dstep, Size continuousSize)
 {
     using namespace ivx;
 
-    if(!(size.width > 0 && size.height > 0))
+    if(!(continuousSize.width > 0 && continuousSize.height > 0 && sstep > 0 && dstep > 0))
     {
         return true;
+    }
+
+    CV_Assert(sstep / sizeof(T) == dstep / sizeof(DT));
+
+    //.height is for number of continuous pieces
+    //.width  is for length of one piece
+    Size imgSize = continuousSize;
+    if(continuousSize.height == 1)
+    {
+        //continuous case
+        imgSize.width  = sstep / sizeof(T);
+        imgSize.height = continuousSize.width / (sstep / sizeof(T));
     }
 
     try
     {
         Context context = Context::create();
         Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(DataType<T>::type),
-                                                 Image::createAddressing(size.width, size.height,
+                                                 Image::createAddressing(imgSize.width, imgSize.height,
                                                                          (vx_uint32)sizeof(T), (vx_uint32)sstep),
                                                  (void*)src);
         Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(DataType<DT>::type),
-                                                 Image::createAddressing(size.width, size.height,
+                                                 Image::createAddressing(imgSize.width, imgSize.height,
                                                                          (vx_uint32)sizeof(DT), (vx_uint32)dstep),
                                                  (void*)dst);
 
@@ -4674,13 +4693,11 @@ static bool _openvx_cvt(const T* src, size_t sstep,
     }
     catch (RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
 
     return true;
