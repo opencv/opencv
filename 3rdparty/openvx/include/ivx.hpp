@@ -746,6 +746,19 @@ protected:
 
 #ifndef VX_VERSION_1_1
 typedef vx_border_mode_t border_t;
+
+static const vx_enum VX_BORDER_CONSTANT = VX_BORDER_MODE_CONSTANT;
+static const vx_enum VX_BORDER_REPLICATE = VX_BORDER_MODE_REPLICATE;
+
+static const vx_enum VX_INTERPOLATION_BILINEAR = VX_INTERPOLATION_TYPE_BILINEAR;
+static const vx_enum VX_INTERPOLATION_AREA = VX_INTERPOLATION_TYPE_AREA;
+static const vx_enum VX_INTERPOLATION_NEAREST_NEIGHBOR = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
+
+static const vx_enum VX_MEMORY_TYPE_HOST = VX_IMPORT_TYPE_HOST;
+static const vx_enum VX_IMAGE_RANGE = VX_IMAGE_ATTRIBUTE_RANGE;
+static const vx_enum VX_IMAGE_SPACE = VX_IMAGE_ATTRIBUTE_SPACE;
+static const vx_enum VX_CONTEXT_IMMEDIATE_BORDER = VX_CONTEXT_ATTRIBUTE_IMMEDIATE_BORDER_MODE;
+
 #else
 typedef vx_border_t border_t;
 #endif
@@ -1887,7 +1900,9 @@ public:
         swap(_planeIdx, p._planeIdx);
 #endif
         swap(_img, p._img);
+#ifdef IVX_USE_OPENCV
         swap(_m, p._m);
+#endif
     }
 #endif
 
