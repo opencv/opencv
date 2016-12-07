@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 
@@ -60,7 +62,7 @@ protected:
 void CV_DrawingTest::run( int )
 {
     Mat testImg, valImg;
-    const string fname = "drawing/image.png";
+    const string fname = "../highgui/drawing/image.png";
     string path = ts->get_data_path(), filename;
     filename = path + fname;
 
@@ -69,9 +71,15 @@ void CV_DrawingTest::run( int )
     valImg = imread( filename );
     if( valImg.empty() )
     {
-        imwrite( filename, testImg );
-        //ts->printf( ts->LOG, "test image can not be read");
-        //ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        //imwrite( filename, testImg );
+        ts->printf( ts->LOG, "test image can not be read");
+#ifdef HAVE_PNG
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+#else
+        ts->printf( ts->LOG, "PNG image support is not available");
+        ts->set_failed_test_info(cvtest::TS::OK);
+#endif
+        return;
     }
     else
     {
@@ -543,11 +551,9 @@ void CV_DrawingTest_Far::draw(Mat& img)
     img = img(Rect(32768, 0, 600, 400)).clone();
 }
 
-#ifdef HAVE_JPEG
-TEST(Imgcodecs_Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
-TEST(Imgcodecs_Drawing,      c_regression) { CV_DrawingTest_C   test; test.safe_run(); }
-TEST(Imgcodecs_Drawing,    far_regression) { CV_DrawingTest_Far test; test.safe_run(); }
-#endif
+TEST(Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
+TEST(Drawing,      c_regression) { CV_DrawingTest_C   test; test.safe_run(); }
+TEST(Drawing,    far_regression) { CV_DrawingTest_Far test; test.safe_run(); }
 
 class CV_FillConvexPolyTest : public cvtest::BaseTest
 {
@@ -581,7 +587,7 @@ protected:
     }
 };
 
-TEST(Imgcodecs_Drawing, fillconvexpoly_clipping) { CV_FillConvexPolyTest test; test.safe_run(); }
+TEST(Drawing, fillconvexpoly_clipping) { CV_FillConvexPolyTest test; test.safe_run(); }
 
 class CV_DrawingTest_UTF8 : public cvtest::BaseTest
 {
@@ -655,8 +661,12 @@ protected:
             img->copyTo(sub);
             shift += img->size().height + 1;
         }
-        imwrite("/tmp/all_fonts.png", result);
+        //imwrite("/tmp/all_fonts.png", result);
     }
 };
 
-TEST(Highgui_Drawing, utf8_support) { CV_DrawingTest_UTF8 test; test.safe_run(); }
+TEST(Drawing, utf8_support) { CV_DrawingTest_UTF8 test; test.safe_run(); }
+
+
+
+} // namespace
