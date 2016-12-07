@@ -419,9 +419,6 @@ static void fixCCS( Mat& mat, int cols, int flags )
     }
 }
 
-#if defined _MSC_VER &&  _MSC_VER >= 1700
-#pragma optimize("", off)
-#endif
 static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
 {
     dst.create(src1.rows, src1.cols, src1.type());
@@ -430,12 +427,27 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
     CV_Assert( src1.size == src2.size && src1.type() == src2.type() &&
               (src1.type() == CV_32FC2 || src1.type() == CV_64FC2) );
 
+    const Mat* src1_ = &src1;
+    Mat src1_tmp;
+    if (dst.data == src1.data)
+    {
+        src1_tmp = src1.clone();
+        src1_ = &src1_tmp;
+    }
+    const Mat* src2_ = &src2;
+    Mat src2_tmp;
+    if (dst.data == src2.data)
+    {
+        src2_tmp = src2.clone();
+        src2_ = &src2_tmp;
+    }
+
     for( i = 0; i < dst.rows; i++ )
     {
         if( depth == CV_32F )
         {
-            const float* a = src1.ptr<float>(i);
-            const float* b = src2.ptr<float>(i);
+            const float* a = src1_->ptr<float>(i);
+            const float* b = src2_->ptr<float>(i);
             float* c = dst.ptr<float>(i);
 
             if( !(flags & CV_DXT_MUL_CONJ) )
@@ -459,8 +471,8 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
         }
         else
         {
-            const double* a = src1.ptr<double>(i);
-            const double* b = src2.ptr<double>(i);
+            const double* a = src1_->ptr<double>(i);
+            const double* b = src2_->ptr<double>(i);
             double* c = dst.ptr<double>(i);
 
             if( !(flags & CV_DXT_MUL_CONJ) )
@@ -484,9 +496,6 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
         }
     }
 }
-#if defined _MSC_VER &&  _MSC_VER >= 1700
-#pragma optimize("", on)
-#endif
 
 }
 
