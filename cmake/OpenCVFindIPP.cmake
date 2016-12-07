@@ -85,8 +85,6 @@ function(get_ipp_version _ROOT_DIR)
     message(STATUS "found IPP: ${_MAJOR}.${_MINOR}.${_BUILD} [${_VERSION_STR}]")
     message(STATUS "at: ${_ROOT_DIR}")
 
-    return()
-
 endfunction()
 
 
@@ -128,8 +126,6 @@ function(set_ipp_old_libraries)
         ${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPSP}${IPP_DISP}${IPP_ARCH}${IPP_LIB_SUFFIX}
         ${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPCORE}${IPP_ARCH}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
         PARENT_SCOPE)
-
-    return()
 
 endfunction()
 
@@ -173,7 +169,6 @@ function(set_ipp_new_libraries _LATEST_VERSION)
             ${IPP_LIB_PREFIX}svml${CMAKE_SHARED_LIBRARY_SUFFIX})
     endif()
     set(IPP_LIBRARIES ${IPP_LIBRARIES} PARENT_SCOPE)
-    return()
 
 endfunction()
 
@@ -208,7 +203,7 @@ function(set_ipp_variables _LATEST_VERSION)
         set(IPP_LIBRARIES ${IPP_LIBRARIES} PARENT_SCOPE)
         message(STATUS "IPP libs: ${IPP_LIBRARIES}")
 
-    else()
+    elseif(${_LATEST_VERSION} VERSION_LESS "9.0")
 #        message(STATUS "new")
 
         # set INCLUDE and LIB folders
@@ -229,7 +224,10 @@ function(set_ipp_variables _LATEST_VERSION)
         endif()
 
         if (UNIX)
-            get_filename_component(INTEL_COMPILER_LIBRARY_DIR ${IPP_ROOT_DIR}/../lib REALPATH)
+            get_filename_component(INTEL_COMPILER_LIBRARY_DIR ${IPP_ROOT_DIR}/../compiler/lib REALPATH)
+            if(NOT EXISTS "${INTEL_COMPILER_LIBRARY_DIR}")
+              get_filename_component(INTEL_COMPILER_LIBRARY_DIR ${IPP_ROOT_DIR}/../lib REALPATH)
+            endif()
             if (IPP_X64)
                 if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/intel64)
                     message(SEND_ERROR "Intel compiler EM64T libraries not found")
@@ -253,9 +251,10 @@ function(set_ipp_variables _LATEST_VERSION)
         set(IPP_LIBRARIES ${IPP_LIBRARIES} PARENT_SCOPE)
         message(STATUS "IPP libs: ${IPP_LIBRARIES}")
 
+    else()
+        message(STATUS "IPP: version ${_LATEST_VERSION} is not supported (${IPP_ROOT_DIR})")
+        set(IPP_FOUND 0 PARENT_SCOPE)
     endif()
-
-    return()
 
 endfunction()
 
