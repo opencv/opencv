@@ -368,4 +368,10 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4589") # Constructor of abstract class ... ignores initializer for virtual base class 'cv::Algorithm'
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4359") # Alignment specifier is less than actual alignment (4), and will be ignored
   endif()
+
+  if(CV_ICC AND NOT ENABLE_NOISY_WARNINGS)
+    foreach(flags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
+      string(REGEX REPLACE "( |^)/W[0-9]+( |$)" "\\1\\2" ${flags} "${${flags}}")
+    endforeach()
+  endif()
 endif()
