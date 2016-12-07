@@ -1905,6 +1905,12 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
     _dst.create( srcA.rows, srcA.cols, type );
     Mat dst = _dst.getMat();
 
+    // correct inplace support
+    if (dst.data == srcA.data)
+        srcA = srcA.clone();
+    if (dst.data == srcB.data)
+        srcB = srcB.clone();
+
     bool is_1d = (flags & DFT_ROWS) || (rows == 1 || (cols == 1 &&
              srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous()));
 
