@@ -163,3 +163,11 @@ Additionally you can find very basic sample source code to introduce you to the 
     _Author:_ Maksim Shabunin
 
     This document describes some aspects of 2.4 -> 3.0 transition process.
+
+-   @subpage tutorial_building_tegra_cuda
+
+    _Compatibility:_ \> OpenCV 3.1.0
+
+    _Author:_ Randy J. Ray
+
+    This tutorial will help you build OpenCV 3.1.0 for NVIDIA<sup>&reg;</sup> Tegra<sup>&reg;</sup> systems with CUDA 8.0.
