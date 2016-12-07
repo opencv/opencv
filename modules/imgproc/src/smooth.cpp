@@ -2135,15 +2135,16 @@ namespace cv
 {
 #ifdef HAVE_OPENCL
 
-static bool ocl_GaussianBlur3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
-                                     InputArray _kernelX, InputArray _kernelY, int borderType)
+static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize, int ddepth,
+                                  InputArray _kernelX, InputArray _kernelY, int borderType)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if ( !(dev.isIntel() && (type == CV_8UC1) &&
          (_src.offset() == 0) && (_src.step() % 4 == 0) &&
-         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) )
+         ((ksize.width == 5 && (_src.cols() % 4 == 0)) ||
+         (ksize.width == 3 && (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)))) )
         return false;
 
     Mat kernelX = _kernelX.getMat().reshape(1, 1);
@@ -2160,8 +2161,16 @@ static bool ocl_GaussianBlur3x3_8UC1(InputArray _src, OutputArray _dst, int ddep
     size_t globalsize[2] = { 0, 0 };
     size_t localsize[2] = { 0, 0 };
 
-    globalsize[0] = size.width / 16;
-    globalsize[1] = size.height / 2;
+    if (ksize.width == 3)
+    {
+        globalsize[0] = size.width / 16;
+        globalsize[1] = size.height / 2;
+    }
+    else if (ksize.width == 5)
+    {
+        globalsize[0] = size.width / 4;
+        globalsize[1] = size.height / 1;
+    }
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
@@ -2169,7 +2178,13 @@ static bool ocl_GaussianBlur3x3_8UC1(InputArray _src, OutputArray _dst, int ddep
             ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
             ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
 
-    ocl::Kernel kernel("gaussianBlur3x3_8UC1_cols16_rows2", cv::ocl::imgproc::gaussianBlur3x3_oclsrc, build_opts);
+    ocl::Kernel kernel;
+
+    if (ksize.width == 3)
+        kernel.create("gaussianBlur3x3_8UC1_cols16_rows2", cv::ocl::imgproc::gaussianBlur3x3_oclsrc, build_opts);
+    else if (ksize.width == 5)
+        kernel.create("gaussianBlur5x5_8UC1_cols4", cv::ocl::imgproc::gaussianBlur5x5_oclsrc, build_opts);
+
     if (kernel.empty())
         return false;
 
@@ -2436,9 +2451,10 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 &&
-               ksize.width == 3 && ksize.height == 3 &&
+               ((ksize.width == 3 && ksize.height == 3) ||
+               (ksize.width == 5 && ksize.height == 5)) &&
                (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
-               ocl_GaussianBlur3x3_8UC1(_src, _dst, CV_MAT_DEPTH(type), kx, ky, borderType));
+               ocl_GaussianBlur_8UC1(_src, _dst, ksize, CV_MAT_DEPTH(type), kx, ky, borderType));
 
     sepFilter2D(_src, _dst, CV_MAT_DEPTH(type), kx, ky, Point(-1,-1), 0, borderType );
 }
