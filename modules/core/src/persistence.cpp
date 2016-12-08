@@ -7513,6 +7513,8 @@ bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
         return false;
     if (cnt == 0U)
         cnt = std::strlen(reinterpret_cast<char const *>(src));
+    if (cnt == 0U)
+        return false;
     if (cnt & 0x3U)
         return false;
 
