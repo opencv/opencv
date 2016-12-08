@@ -410,47 +410,6 @@ _exit_:
 
 TEST(Imgproc_FindContours, accuracy) { CV_FindContourTest test; test.safe_run(); }
 
-TEST(Core_Drawing, _914)
-{
-    const int rows = 256;
-    const int cols = 256;
-
-    Mat img(rows, cols, CV_8UC1, Scalar(255));
-
-    line(img, Point(0, 10), Point(255, 10), Scalar(0), 2, 4);
-    line(img, Point(-5, 20), Point(260, 20), Scalar(0), 2, 4);
-    line(img, Point(10, 0), Point(10, 255), Scalar(0), 2, 4);
-
-    double x0 = 0.0/pow(2.0, -2.0);
-    double x1 = 255.0/pow(2.0, -2.0);
-    double y = 30.5/pow(2.0, -2.0);
-
-    line(img, Point(int(x0), int(y)), Point(int(x1), int(y)), Scalar(0), 2, 4, 2);
-
-    int pixelsDrawn = rows*cols - countNonZero(img);
-    ASSERT_EQ( (3*rows + cols)*3 - 3*9, pixelsDrawn);
-}
-
-TEST(Core_Drawing, polylines_empty)
-{
-    Mat img(100, 100, CV_8UC1, Scalar(0));
-    vector<Point> pts; // empty
-    polylines(img, pts, false, Scalar(255));
-    int cnt = countNonZero(img);
-    ASSERT_EQ(cnt, 0);
-}
-
-TEST(Core_Drawing, polylines)
-{
-    Mat img(100, 100, CV_8UC1, Scalar(0));
-    vector<Point> pts;
-    pts.push_back(Point(0, 0));
-    pts.push_back(Point(20, 0));
-    polylines(img, pts, false, Scalar(255));
-    int cnt = countNonZero(img);
-    ASSERT_EQ(cnt, 21);
-}
-
 //rotate/flip a quadrant appropriately
 static void rot(int n, int *x, int *y, int rx, int ry)
 {
