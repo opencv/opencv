@@ -22,6 +22,18 @@ Details: TBD
 #include <VX/vx.h>
 #include <VX/vxu.h>
 
+#ifndef VX_VERSION_1_1
+// 1.1 to 1.0 backward compatibility defines
+
+static const vx_enum VX_INTERPOLATION_BILINEAR = VX_INTERPOLATION_TYPE_BILINEAR;
+static const vx_enum VX_INTERPOLATION_AREA = VX_INTERPOLATION_TYPE_AREA;
+static const vx_enum VX_INTERPOLATION_NEAREST_NEIGHBOR = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
+
+static const vx_enum VX_BORDER_CONSTANT = VX_BORDER_MODE_CONSTANT;
+static const vx_enum VX_BORDER_REPLICATE = VX_BORDER_MODE_REPLICATE;
+
+#endif
+
 #ifndef IVX_USE_CXX98
     // checking compiler
     #if __cplusplus < 201103L && (!defined(_MSC_VER) || _MSC_VER < 1800)
@@ -56,6 +68,7 @@ Details: TBD
 #include <utility>
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 #ifndef IVX_USE_CXX98
     #include <type_traits>
@@ -746,19 +759,6 @@ protected:
 
 #ifndef VX_VERSION_1_1
 typedef vx_border_mode_t border_t;
-
-static const vx_enum VX_BORDER_CONSTANT = VX_BORDER_MODE_CONSTANT;
-static const vx_enum VX_BORDER_REPLICATE = VX_BORDER_MODE_REPLICATE;
-
-static const vx_enum VX_INTERPOLATION_BILINEAR = VX_INTERPOLATION_TYPE_BILINEAR;
-static const vx_enum VX_INTERPOLATION_AREA = VX_INTERPOLATION_TYPE_AREA;
-static const vx_enum VX_INTERPOLATION_NEAREST_NEIGHBOR = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
-
-static const vx_enum VX_MEMORY_TYPE_HOST = VX_IMPORT_TYPE_HOST;
-static const vx_enum VX_IMAGE_RANGE = VX_IMAGE_ATTRIBUTE_RANGE;
-static const vx_enum VX_IMAGE_SPACE = VX_IMAGE_ATTRIBUTE_SPACE;
-static const vx_enum VX_CONTEXT_IMMEDIATE_BORDER = VX_CONTEXT_ATTRIBUTE_IMMEDIATE_BORDER_MODE;
-
 #else
 typedef vx_border_t border_t;
 #endif

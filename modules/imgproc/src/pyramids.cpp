@@ -1278,7 +1278,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
     // The only border mode which is supported by both cv::pyrDown() and OpenVX
     // and produces predictable results
-    vx_border_t borderMode;
+    ivx::border_t borderMode;
     borderMode.mode = VX_BORDER_REPLICATE;
 
     _dst.create( acceptableSize, srcMat.type() );

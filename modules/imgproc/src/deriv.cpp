@@ -221,19 +221,14 @@ namespace cv
 
         if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
             return false; //Process isolated borders only
-        vx_border_t border;
+        vx_enum border;
         switch (borderType & ~BORDER_ISOLATED)
         {
         case BORDER_CONSTANT:
-            border.mode = VX_BORDER_CONSTANT;
-#if VX_VERSION > VX_VERSION_1_0
-            border.constant_value.U8 = (vx_uint8)(0);
-#else
-            border.constant_value = (vx_uint32)(0);
-#endif
+            border = VX_BORDER_CONSTANT;
             break;
         case BORDER_REPLICATE:
-            border.mode = VX_BORDER_REPLICATE;
+            border = VX_BORDER_REPLICATE;
             break;
         default:
             return false;
@@ -259,8 +254,8 @@ namespace cv
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
-            vx_border_t prevBorder = ctx.immediateBorder();
-            ctx.setImmediateBorder(border);
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border, (vx_uint8)(0));
             if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1)
             {
                 if(dx)

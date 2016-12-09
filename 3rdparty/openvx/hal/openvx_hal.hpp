@@ -4,6 +4,8 @@
 #include "opencv2/core/hal/interface.h"
 #include "opencv2/imgproc/hal/interface.h"
 
+#include "VX/vx.h"
+
 template <typename T>
 int ovx_hal_add(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h);
 template <typename T>

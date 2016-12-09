@@ -11,10 +11,6 @@
 #include <climits>
 #include <cmath>
 
-#ifndef VX_VENDOR_ID
-#define VX_VENDOR_ID VX_ID_DEFAULT
-#endif
-
 //==================================================================================================
 // utility
 // ...
@@ -74,7 +70,7 @@ inline bool dimTooBig(int size)
         return false;
 }
 
-inline void setConstantBorder(vx_border_t &border, vx_uint8 val)
+inline void setConstantBorder(ivx::border_t &border, vx_uint8 val)
 {
     border.mode = VX_BORDER_CONSTANT;
 #if VX_VERSION > VX_VERSION_1_0
@@ -271,7 +267,7 @@ int ovx_hal_merge8u(const uchar **src_data, uchar *dst_data, int len, int cn)
             ic = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
                 ivx::Image::createAddressing(len, 1, 1, (vx_int32)(len)), (void*)src_data[2]),
             id = ivx::Image::createFromHandle(ctx, cn == 4 ? VX_DF_IMAGE_RGBX : VX_DF_IMAGE_RGB,
-                ivx::Image::createAddressing(len, 1, cn, (vx_int32)(len)), (void*)dst_data);
+                ivx::Image::createAddressing(len, 1, cn, (vx_int32)(len*cn)), (void*)dst_data);
         ivx::IVX_CHECK_STATUS(vxuChannelCombine(ctx, ia, ib, ic,
             cn == 4 ? (vx_image)(ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
                                      ivx::Image::createAddressing(len, 1, 1, (vx_int32)(len)), (void*)src_data[3])) : NULL,
@@ -359,17 +355,8 @@ int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, 
         if (!(atype == CV_8UC1 || atype == CV_8SC1))
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-        vx_border_t border;
-        switch (borderType)
-        {
-        case CV_HAL_BORDER_CONSTANT:
-            setConstantBorder(border, (vx_uint8)borderValue[0]);
-            break;
-        case CV_HAL_BORDER_REPLICATE:
-            // Neither 1.0 nor 1.1 OpenVX support BORDER_REPLICATE for warpings
-        default:
+        if(borderType != CV_HAL_BORDER_CONSTANT) // Neither 1.0 nor 1.1 OpenVX support BORDER_REPLICATE for warpings
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        }
 
         int mode;
         if (interpolation == CV_HAL_INTER_LINEAR)
@@ -392,10 +379,10 @@ int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, 
         mtx.copyFrom(data);
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder = ctx.borderMode();
-        ctx.setBorderMode(border);
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(VX_BORDER_CONSTANT, (vx_uint8)borderValue[0]);
         ivx::IVX_CHECK_STATUS(vxuWarpAffine(ctx, ia, mtx, mode, ib));
-        ctx.setBorderMode(prevBorder);
+        ctx.setImmediateBorder(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
@@ -428,17 +415,8 @@ int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int 
         if (!(atype == CV_8UC1 || atype == CV_8SC1))
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-        vx_border_t border;
-        switch (borderType)
-        {
-        case CV_HAL_BORDER_CONSTANT:
-            setConstantBorder(border, (vx_uint8)borderValue[0]);
-            break;
-        case CV_HAL_BORDER_REPLICATE:
-            // Neither 1.0 nor 1.1 OpenVX support BORDER_REPLICATE for warpings
-        default:
+        if (borderType != CV_HAL_BORDER_CONSTANT) // Neither 1.0 nor 1.1 OpenVX support BORDER_REPLICATE for warpings
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        }
 
         int mode;
         if (interpolation == CV_HAL_INTER_LINEAR)
@@ -461,10 +439,10 @@ int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int 
         mtx.copyFrom(data);
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder = ctx.borderMode();
-        ctx.setBorderMode(border);
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(VX_BORDER_CONSTANT, (vx_uint8)borderValue[0]);
         ivx::IVX_CHECK_STATUS(vxuWarpPerspective(ctx, ia, mtx, mode, ib));
-        ctx.setBorderMode(prevBorder);
+        ctx.setImmediateBorder(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
@@ -485,8 +463,8 @@ struct FilterCtx
 {
     ivx::Convolution cnv;
     int dst_type;
-    vx_border_t border;
-    FilterCtx(ivx::Context &ctx, const std::vector<short> data, int w, int h, int _dst_type, vx_border_t & _border) :
+    ivx::border_t border;
+    FilterCtx(ivx::Context &ctx, const std::vector<short> data, int w, int h, int _dst_type, ivx::border_t & _border) :
         cnv(ivx::Convolution::create(ctx, w, h)), dst_type(_dst_type), border(_border) {
         cnv.copyFrom(data);
     }
@@ -500,7 +478,7 @@ int ovx_hal_filterInit(cvhalFilter2D **filter_context, uchar *kernel_data, size_
         kernel_width % 2 == 0 || kernel_height % 2 == 0 || anchor_x != kernel_width / 2 || anchor_y != kernel_height / 2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    vx_border_t border;
+    ivx::border_t border;
     switch (borderType)
     {
     case CV_HAL_BORDER_CONSTANT:
@@ -588,10 +566,10 @@ int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar 
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder = ctx.borderMode();
-        ctx.setBorderMode(cnv->border);
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(cnv->border);
         ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv->cnv, ib));
-        ctx.setBorderMode(prevBorder);
+        ctx.setImmediateBorder(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
@@ -615,7 +593,7 @@ int ovx_hal_sepFilterInit(cvhalFilter2D **filter_context, int src_type, int dst_
         kernelx_length % 2 == 0 || kernely_length % 2 == 0 || anchor_x != kernelx_length / 2 || anchor_y != kernely_length / 2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    vx_border_t border;
+    ivx::border_t border;
     switch (borderType)
     {
     case CV_HAL_BORDER_CONSTANT:
@@ -663,8 +641,8 @@ struct MorphCtx
 {
     ivx::Matrix mask;
     int operation;
-    vx_border_t border;
-    MorphCtx(ivx::Context &ctx, const std::vector<vx_uint8> data, int w, int h, int _operation, vx_border_t & _border) :
+    ivx::border_t border;
+    MorphCtx(ivx::Context &ctx, const std::vector<vx_uint8> data, int w, int h, int _operation, ivx::border_t & _border) :
         mask(ivx::Matrix::create(ctx, ivx::TypeToEnum<vx_uint8>::value, w, h)), operation(_operation), border(_border) {
         mask.copyFrom(data);
     }
@@ -679,7 +657,7 @@ int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int src_typ
         kernel_width % 2 == 0 || kernel_height % 2 == 0 || anchor_x != kernel_width / 2 || anchor_y != kernel_height / 2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    vx_border_t border;
+    ivx::border_t border;
     switch (borderType)
     {
     case CV_HAL_BORDER_CONSTANT:
@@ -812,10 +790,10 @@ int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder = ctx.borderMode();
-        ctx.setBorderMode(mat->border);
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(mat->border);
         ivx::IVX_CHECK_STATUS(vxuNonLinearFilter(ctx, mat->operation, ia, mat->mask, ib));
-        ctx.setBorderMode(prevBorder);
+        ctx.setImmediateBorder(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
@@ -1079,7 +1057,6 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
     if (depth != CV_8U || sdepth != CV_32S || c != NULL || d != NULL || cn != 1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     refineStep(w, h, VX_DF_IMAGE_U8, astep);
-    refineStep(w, h, VX_DF_IMAGE_U32, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
