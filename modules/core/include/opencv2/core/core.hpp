@@ -912,6 +912,8 @@ public:
     void points(Point2f pts[]) const;
     //! returns the minimal up-right rectangle containing the rotated rectangle
     Rect boundingRect() const;
+    //! returns the minimal (exact) rectangle containg the rotated floating point rectangle, not intended for use with images
+    Rect_<float> boundingRect2f() const;
     //! conversion to the old-style CvBox2D structure
     operator CvBox2D() const;
 
