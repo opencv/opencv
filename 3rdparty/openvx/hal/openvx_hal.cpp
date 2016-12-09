@@ -95,140 +95,20 @@ inline void refineStep(int w, int h, int imgType, size_t& step)
 }
 
 //==================================================================================================
-// One more OpenVX C++ binding :-)
-// ...
+// ivx::Image wrapped to simplify call to swapHandle prior to release
+// TODO update ivx::Image to handle swapHandle prior to release on the own
 
-template <typename T>
-struct VX_Traits
+class vxImage: public ivx::Image
 {
-    enum {
-        ImgType = 0,
-        DataType = 0
-    };
-};
-
-template <>
-struct VX_Traits<uchar>
-{
-    enum {
-        ImgType = VX_DF_IMAGE_U8,
-        DataType = VX_TYPE_UINT8
-    };
-};
-
-template <>
-struct VX_Traits<ushort>
-{
-    enum {
-        ImgType = VX_DF_IMAGE_U16,
-        DataType = VX_TYPE_UINT16
-    };
-};
-
-template <>
-struct VX_Traits<short>
-{
-    enum {
-        ImgType = VX_DF_IMAGE_S16,
-        DataType = VX_TYPE_INT16
-    };
-};
-
-template <>
-struct VX_Traits<uint>
-{
-    enum {
-        ImgType = VX_DF_IMAGE_U32,
-        DataType = VX_TYPE_UINT32
-    };
-};
-
-template <>
-struct VX_Traits<int>
-{
-    enum {
-        ImgType = VX_DF_IMAGE_S32,
-        DataType = VX_TYPE_INT32
-    };
-};
-
-template <>
-struct VX_Traits<float>
-{
-    enum {
-        ImgType = 0,
-        DataType = VX_TYPE_FLOAT32
-    };
-};
-
-struct vxImage
-{
-    vxImage(const ivx::Image &_img) : img(_img) {}
-
-//    const ivx::Image& operator =(const ivx::Image &_img)
-//    { img = _img; }
-
-    operator vx_image() const
-    { return (vx_image)img; }
+public:
+    vxImage(const ivx::Image &_img) : ivx::Image(_img) {}
 
     ~vxImage()
     {
 #if VX_VERSION > VX_VERSION_1_0
-        img.swapHandle();
+        swapHandle();
 #endif
     }
-
-    vxImage(ivx::Context &ctx, int imgType, uchar *data, size_t step, int w, int h)
-    {
-        std::vector<vx_imagepatch_addressing_t> addr;
-        std::vector<void *> ptrs;
-        switch (imgType)
-        {
-        case VX_DF_IMAGE_U8:
-        case VX_DF_IMAGE_U16:
-        case VX_DF_IMAGE_S16:
-        case VX_DF_IMAGE_U32:
-        case VX_DF_IMAGE_S32:
-        case VX_DF_IMAGE_RGB:
-        case VX_DF_IMAGE_RGBX:
-        case VX_DF_IMAGE_UYVY:
-        case VX_DF_IMAGE_YUYV:
-            addr.push_back(ivx::Image::createAddressing(w, h,
-                imgType == VX_DF_IMAGE_U8 ? 1 :
-                imgType == VX_DF_IMAGE_RGB ? 3 :
-                (imgType == VX_DF_IMAGE_U16 || imgType == VX_DF_IMAGE_S16 ||
-                    imgType == VX_DF_IMAGE_UYVY || imgType == VX_DF_IMAGE_YUYV) ? 2 : 4, (vx_int32)step));
-            ptrs.push_back((void*)data);
-            break;
-        case VX_DF_IMAGE_NV12:
-        case VX_DF_IMAGE_NV21:
-            addr.push_back(ivx::Image::createAddressing(w, h, 1, (vx_int32)step));
-            ptrs.push_back((void*)data);
-            addr.push_back(ivx::Image::createAddressing(w / 2, h / 2, 2, (vx_int32)step));
-            ptrs.push_back((void*)(data + h * step));
-            break;
-        case VX_DF_IMAGE_IYUV:
-        case VX_DF_IMAGE_YUV4:
-            addr.push_back(ivx::Image::createAddressing(w, h, 1, (vx_int32)step));
-            ptrs.push_back((void*)data);
-            if (addr[1].dim_x != (step - addr[1].dim_x))
-                throw ivx::WrapperError("UV planes use variable stride");
-            addr.push_back(ivx::Image::createAddressing(imgType == VX_DF_IMAGE_YUV4 ? w : w / 2,
-                imgType == VX_DF_IMAGE_YUV4 ? h : h / 2,
-                1, imgType == VX_DF_IMAGE_YUV4 ? w : w / 2));
-            ptrs.push_back((void*)(data + h * step));
-            addr.push_back(ivx::Image::createAddressing(imgType == VX_DF_IMAGE_YUV4 ? w : w / 2,
-                imgType == VX_DF_IMAGE_YUV4 ? h : h / 2,
-                1, imgType == VX_DF_IMAGE_YUV4 ? w : w / 2));
-            ptrs.push_back((void*)(data + h * step + addr[1].dim_y * addr[1].stride_y));
-            break;
-        default:
-            throw ivx::WrapperError("Bad image format");
-        }
-        img = ivx::Image::createFromHandle(ctx, imgType, addr, ptrs);
-    }
-private:
-    ivx::Image img;
 };
 
 //==================================================================================================
@@ -241,18 +121,18 @@ int ovx_hal_##hal_func(const T *a, size_t astep, const T *b, size_t bstep, T *c,
 {                                                                                                                   \
     if(dimTooBig(w) || dimTooBig(h))                                                                                \
         return CV_HAL_ERROR_NOT_IMPLEMENTED;                                                                        \
-    refineStep(w, h, VX_Traits<T>::ImgType, astep);                                                                 \
-    refineStep(w, h, VX_Traits<T>::ImgType, bstep);                                                                 \
-    refineStep(w, h, VX_Traits<T>::ImgType, cstep);                                                                 \
+    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, astep);                                                          \
+    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, bstep);                                                          \
+    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, cstep);                                                          \
     try                                                                                                             \
     {                                                                                                               \
         ivx::Context ctx = getOpenVXHALContext();                                                                   \
         vxImage                                                                                                     \
-            ia = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,                                           \
+            ia = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,                                    \
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(astep)), (void*)a),                        \
-            ib = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,                                           \
+            ib = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,                                    \
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(bstep)), (void*)b),                        \
-            ic = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,                                           \
+            ic = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,                                    \
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(cstep)), (void*)c);                        \
         ovx_call                                                                                                    \
     }                                                                                                               \
@@ -283,9 +163,9 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
 {
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    refineStep(w, h, VX_Traits<T>::ImgType, astep);
-    refineStep(w, h, VX_Traits<T>::ImgType, bstep);
-    refineStep(w, h, VX_Traits<T>::ImgType, cstep);
+    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, astep);
+    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, bstep);
+    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, cstep);
 #ifdef _MSC_VER
     const float MAGIC_SCALE = 0x0.01010102;
 #else
@@ -309,11 +189,11 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
         }
         ivx::Context ctx = getOpenVXHALContext();
         vxImage
-            ia = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,
+            ia = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(astep)), (void*)a),
-            ib = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,
+            ib = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(bstep)), (void*)b),
-            ic = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,
+            ic = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(cstep)), (void*)c);
         ivx::IVX_CHECK_STATUS(vxuMultiply(ctx, ia, ib, fscale, VX_CONVERT_POLICY_SATURATE, rounding_policy, ic));
     }
@@ -512,11 +392,10 @@ int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, 
         mtx.copyFrom(data);
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder;
-        ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
-        ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border)));
+        vx_border_t prevBorder = ctx.borderMode();
+        ctx.setBorderMode(border);
         ivx::IVX_CHECK_STATUS(vxuWarpAffine(ctx, ia, mtx, mode, ib));
-        ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+        ctx.setBorderMode(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
@@ -582,11 +461,10 @@ int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int 
         mtx.copyFrom(data);
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder;
-        ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
-        ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border)));
+        vx_border_t prevBorder = ctx.borderMode();
+        ctx.setBorderMode(border);
         ivx::IVX_CHECK_STATUS(vxuWarpPerspective(ctx, ia, mtx, mode, ib));
-        ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+        ctx.setBorderMode(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
@@ -710,11 +588,10 @@ int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar 
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder;
-        ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
-        ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &(cnv->border), sizeof(cnv->border)));
+        vx_border_t prevBorder = ctx.borderMode();
+        ctx.setBorderMode(cnv->border);
         ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv->cnv, ib));
-        ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+        ctx.setBorderMode(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
@@ -828,8 +705,7 @@ int ovx_hal_morphInit(cvhalFilter2D **filter_context, int operation, int src_typ
 
     ivx::Context ctx = getOpenVXHALContext();
 
-    vx_size maxKernelDim;
-    ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_NONLINEAR_MAX_DIMENSION, &maxKernelDim, sizeof(maxKernelDim)));
+    vx_size maxKernelDim = ctx.nonlinearMaxDimension();
     if ((vx_size)kernel_width > maxKernelDim || (vx_size)kernel_height > maxKernelDim)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
@@ -936,11 +812,10 @@ int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder;
-        ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
-        ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &(mat->border), sizeof(mat->border)));
+        vx_border_t prevBorder = ctx.borderMode();
+        ctx.setBorderMode(mat->border);
         ivx::IVX_CHECK_STATUS(vxuNonLinearFilter(ctx, mat->operation, ia, mat->mask, ib));
-        ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
+        ctx.setBorderMode(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
@@ -971,8 +846,11 @@ int ovx_hal_cvtBGRtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, 
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, const_cast<uchar *>(a), astep, w, h);
-        vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
+                ivx::Image::createAddressing(w, h, acn, (vx_int32)astep), (void*)a),
+            ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
+                ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
         ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
@@ -1035,12 +913,21 @@ int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, const_cast<uchar *>(a), astep, w, h);
-        vx_channel_range_e cRange;
-        ivx::IVX_CHECK_STATUS(vxQueryImage(ia, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
-        if (cRange == VX_CHANNEL_RANGE_FULL)
+
+        std::vector<vx_imagepatch_addressing_t> addr;
+        std::vector<void *> ptrs;
+            addr.push_back(ivx::Image::createAddressing(w, h, 1, (vx_int32)astep));
+            ptrs.push_back((void*)a);
+            addr.push_back(ivx::Image::createAddressing(w / 2, h / 2, 2, (vx_int32)astep));
+            ptrs.push_back((void*)(a + h * astep));
+
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, addr, ptrs);
+        if (ia.range() == VX_CHANNEL_RANGE_FULL)
             return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
-        vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxImage
+            ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
+                ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
         ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
@@ -1070,12 +957,25 @@ int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, VX_DF_IMAGE_IYUV, const_cast<uchar *>(a), astep, w, h);
-        vx_channel_range_e cRange;
-        ivx::IVX_CHECK_STATUS(vxQueryImage(ia, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
-        if (cRange == VX_CHANNEL_RANGE_FULL)
+
+        std::vector<vx_imagepatch_addressing_t> addr;
+        std::vector<void *> ptrs;
+        addr.push_back(ivx::Image::createAddressing(w, h, 1, (vx_int32)astep));
+        ptrs.push_back((void*)a);
+        addr.push_back(ivx::Image::createAddressing(w / 2, h / 2, 1, w / 2));
+        ptrs.push_back((void*)(a + h * astep));
+        if (addr[1].dim_x != (astep - addr[1].dim_x))
+            throw ivx::WrapperError("UV planes use variable stride");
+        addr.push_back(ivx::Image::createAddressing(w / 2, h / 2, 1, w / 2));
+        ptrs.push_back((void*)(a + h * astep + addr[1].dim_y * addr[1].stride_y));
+
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_IYUV, addr, ptrs);
+        if (ia.range() == VX_CHANNEL_RANGE_FULL)
             return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
-        vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxImage
+            ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
+                ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
         ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
@@ -1105,8 +1005,23 @@ int ovx_hal_cvtBGRtoThreePlaneYUV(const uchar * a, size_t astep, uchar * b, size
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, const_cast<uchar *>(a), astep, w, h);
-        vxImage ib(ctx, VX_DF_IMAGE_IYUV, b, bstep, w, h);
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
+                ivx::Image::createAddressing(w, h, acn, (vx_int32)astep), (void*)a);
+
+        std::vector<vx_imagepatch_addressing_t> addr;
+        std::vector<void *> ptrs;
+        addr.push_back(ivx::Image::createAddressing(w, h, 1, (vx_int32)bstep));
+        ptrs.push_back((void*)b);
+        addr.push_back(ivx::Image::createAddressing(w / 2, h / 2, 1, w / 2));
+        ptrs.push_back((void*)(b + h * bstep));
+        if (addr[1].dim_x != (bstep - addr[1].dim_x))
+            throw ivx::WrapperError("UV planes use variable stride");
+        addr.push_back(ivx::Image::createAddressing(w / 2, h / 2, 1, w / 2));
+        ptrs.push_back((void*)(b + h * bstep + addr[1].dim_y * addr[1].stride_y));
+
+        vxImage
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_IYUV, addr, ptrs);
         ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
@@ -1136,12 +1051,14 @@ int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, ycn ? VX_DF_IMAGE_UYVY : VX_DF_IMAGE_YUYV, const_cast<uchar *>(a), astep, w, h);
-        vx_channel_range_e cRange;
-        ivx::IVX_CHECK_STATUS(vxQueryImage(ia, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
-        if (cRange == VX_CHANNEL_RANGE_FULL)
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, ycn ? VX_DF_IMAGE_UYVY : VX_DF_IMAGE_YUYV,
+                ivx::Image::createAddressing(w, h, 2, (vx_int32)astep), (void*)a);
+        if (ia.range() == VX_CHANNEL_RANGE_FULL)
             return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
-        vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
+        vxImage
+            ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
+                ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
         ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
