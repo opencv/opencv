@@ -49,7 +49,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   function(ocv_doc_add_file_to_fake_root source destination)
     add_custom_command(
       OUTPUT "${DOC_FAKE_ROOT}/${destination}"
-      COMMAND "${CMAKE_COMMAND}" -E copy "${source}" "${DOC_FAKE_ROOT}/${destination}"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${source}" "${DOC_FAKE_ROOT}/${destination}"
       DEPENDS "${source}"
       COMMENT "Copying ${destination} to fake root..."
       VERBATIM
@@ -184,4 +184,16 @@ if(HAVE_DOC_GENERATOR)
   foreach(f ${OPTIONAL_DOC_LIST})
     install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" OPTIONAL COMPONENT docs)
   endforeach()
+
+  # Alias to build/install docs only
+  set(__deps "")
+  foreach(target docs html_docs doxygen)
+    if(TARGET ${target})
+      list(APPEND __deps ${target})
+    endif()
+  endforeach()
+  add_custom_target(install_docs
+      DEPENDS ${__deps}
+      COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=docs -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  )
 endif(HAVE_DOC_GENERATOR)
