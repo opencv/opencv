@@ -62,6 +62,8 @@ protected:
     double threshold1, threshold2;
     bool test_cpp;
     bool test_custom_deriv;
+
+    Mat img;
 };
 
 
@@ -77,6 +79,9 @@ CV_CannyTest::CV_CannyTest(bool custom_deriv)
 
     test_cpp = false;
     test_custom_deriv = custom_deriv;
+
+    const char imgPath[] = "shared/fruits.png";
+    img = cv::imread(cvtest::TS::ptr()->get_data_path() + imgPath, IMREAD_GRAYSCALE);
 }
 
 
@@ -112,8 +117,21 @@ int CV_CannyTest::prepare_test_case( int test_case_idx )
     int code = cvtest::ArrayTest::prepare_test_case( test_case_idx );
     if( code > 0 )
     {
+        RNG& rng = ts->get_rng();
         Mat& src = test_mat[INPUT][0];
-        GaussianBlur(src, src, Size(11, 11), 5, 5);
+        //GaussianBlur(src, src, Size(11, 11), 5, 5);
+        if(src.cols > img.cols || src.rows > img.rows)
+            resize(img, src, src.size());
+        else
+            img(
+                Rect(
+                    cvtest::randInt(rng) % (img.cols-src.cols),
+                    cvtest::randInt(rng) % (img.rows-src.rows),
+                    src.cols,
+                    src.rows
+                )
+            ).copyTo(src);
+        GaussianBlur(src, src, Size(5, 5), 0);
     }
 
     return code;
@@ -302,9 +320,8 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
     return code;
 }
 
-// disabling, since testing on a white noise seems having too few sense...
-TEST(DISABLED_Imgproc_Canny, accuracy) { CV_CannyTest test; test.safe_run(); }
-TEST(DISABLED_Imgproc_Canny, accuracy_deriv) { CV_CannyTest test(true); test.safe_run(); }
+TEST(Imgproc_Canny, accuracy) { CV_CannyTest test; test.safe_run(); }
+TEST(Imgproc_Canny, accuracy_deriv) { CV_CannyTest test(true); test.safe_run(); }
 
 
 /*
@@ -366,7 +383,7 @@ TEST_P(CannyVX, Accuracy)
         Mat cannyVX;
         cv::Canny(src, cannyVX, 100, 150, 3);
 
-        setUseOpenVX(false);
+        // 'smart' diff check (excluding isolated pixels)
         Mat diff, diff1;
         absdiff(canny, cannyVX, diff);
         boxFilter(diff, diff1, -1, Size(3,3));
@@ -374,7 +391,7 @@ TEST_P(CannyVX, Accuracy)
         diff1 = diff1 > 255/9 * minPixelsAroud;
         erode(diff1, diff1, Mat());
         double error = cv::norm(diff1, NORM_L1) / 255;
-        const int maxError = 10; // empirical number
+        const int maxError = std::min(10, diff.size().area()/100); // empirical number
         if(error > maxError)
         {
             string outPath =
