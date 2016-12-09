@@ -190,14 +190,14 @@ inline vx_size enumToTypeSize(vx_enum type)
 template<typename T> struct TypeToEnum {};
 template<> struct TypeToEnum<vx_char>     { static const vx_enum value = VX_TYPE_CHAR; };
 template<> struct TypeToEnum<vx_int8>     { static const vx_enum value = VX_TYPE_INT8; };
-template<> struct TypeToEnum<vx_uint8>    { static const vx_enum value = VX_TYPE_UINT8; };
-template<> struct TypeToEnum<vx_int16>    { static const vx_enum value = VX_TYPE_INT16; };
-template<> struct TypeToEnum<vx_uint16>   { static const vx_enum value = VX_TYPE_UINT16; };
-template<> struct TypeToEnum<vx_int32>    { static const vx_enum value = VX_TYPE_INT32; };
-template<> struct TypeToEnum<vx_uint32>   { static const vx_enum value = VX_TYPE_UINT32; };
+template<> struct TypeToEnum<vx_uint8>    { static const vx_enum value = VX_TYPE_UINT8, imgValue = VX_DF_IMAGE_U8; };
+template<> struct TypeToEnum<vx_int16>    { static const vx_enum value = VX_TYPE_INT16, imgValue = VX_DF_IMAGE_S16; };
+template<> struct TypeToEnum<vx_uint16>   { static const vx_enum value = VX_TYPE_UINT16, imgValue = VX_DF_IMAGE_U16; };
+template<> struct TypeToEnum<vx_int32>    { static const vx_enum value = VX_TYPE_INT32, imgValue = VX_DF_IMAGE_S32; };
+template<> struct TypeToEnum<vx_uint32>   { static const vx_enum value = VX_TYPE_UINT32, imgValue = VX_DF_IMAGE_U32; };
 template<> struct TypeToEnum<vx_int64>    { static const vx_enum value = VX_TYPE_INT64; };
 template<> struct TypeToEnum<vx_uint64>   { static const vx_enum value = VX_TYPE_UINT64; };
-template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32; };
+template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32, imgValue = VX_DF_IMAGE('F', '0', '3', '2'); };
 template<> struct TypeToEnum<vx_float64>  { static const vx_enum value = VX_TYPE_FLOAT64; };
 template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE_BOOL; };
 template<> struct TypeToEnum<vx_keypoint_t> {static const vx_enum value = VX_TYPE_KEYPOINT; };
@@ -1389,6 +1389,25 @@ public:
     static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const void* value)
     { return Image(vxCreateUniformImage(context, width, height, format, value)); }
 #endif
+    template <typename T>
+    static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, const T value)
+    {
+#if VX_VERSION > VX_VERSION_1_0
+        vx_pixel_value_t pixel;
+        switch ((int)(TypeToEnum<T>::value))
+        {
+        case VX_TYPE_UINT8:pixel.U8 = value; break;
+        case VX_TYPE_INT16:pixel.S16 = value; break;
+        case VX_TYPE_UINT16:pixel.U16 = value; break;
+        case VX_TYPE_INT32:pixel.S32 = value; break;
+        case VX_TYPE_UINT32:pixel.U32 = value; break;
+        default:throw ivx::WrapperError("unknown uniform image type");
+        }
+        return Image(vxCreateUniformImage(context, width, height, TypeToEnum<T>::imgValue, &pixel));
+#else
+        return Image(vxCreateUniformImage(context, width, height, TypeToEnum<T>::imgValue, &value));
+#endif
+    }
 
     /// Planes number for the specified image format (fourcc)
     /// \return 0 for unknown formats

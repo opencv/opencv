@@ -22,9 +22,12 @@
 #if 0
 #include <cstdio>
 #define PRINT(...) printf(__VA_ARGS__)
+#define PRINT_HALERR_MSG(type) PRINT("OpenVX HAL impl "#type" error: %s\n", e.what())
 #else
 #define PRINT(...)
+#define PRINT_HALERR_MSG(type) (void)e
 #endif
+
 
 #if __cplusplus >= 201103L
 #include <chrono>
@@ -79,6 +82,16 @@ inline void setConstantBorder(vx_border_t &border, vx_uint8 val)
 #else
     border.constant_value = val;
 #endif
+}
+
+inline void refineStep(int w, int h, int imgType, size_t& step)
+{
+    if (h == 1)
+        step = w * ((imgType == VX_DF_IMAGE_RGBX ||
+                     imgType == VX_DF_IMAGE_U32 || imgType == VX_DF_IMAGE_S32) ? 4 :
+                     imgType == VX_DF_IMAGE_RGB ? 3 :
+                    (imgType == VX_DF_IMAGE_U16 || imgType == VX_DF_IMAGE_S16 ||
+                     imgType == VX_DF_IMAGE_UYVY || imgType == VX_DF_IMAGE_YUYV) ? 2 : 1);
 }
 
 //==================================================================================================
@@ -150,46 +163,23 @@ struct VX_Traits<float>
 
 struct vxImage
 {
-    ivx::Image img;
+    vxImage(const ivx::Image &_img) : img(_img) {}
 
-    template <typename T>
-    vxImage(ivx::Context &ctx, T *data, size_t step, int w, int h)
-    {
-        if (h == 1)
-            step = w * sizeof(T);
+//    const ivx::Image& operator =(const ivx::Image &_img)
+//    { img = _img; }
 
-        img = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,
-            ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(step)), (void*)data);
+    operator vx_image() const
+    { return (vx_image)img; }
 
-        swapMemory = true;
-    }
-    template <typename T>
-    vxImage(ivx::Context &ctx, T value, int w, int h)
+    ~vxImage()
     {
 #if VX_VERSION > VX_VERSION_1_0
-        vx_pixel_value_t pixel;
-        switch ((int)(VX_Traits<T>::DataType))
-        {
-        case VX_TYPE_UINT8:pixel.U8 = value; break;
-        case VX_TYPE_UINT16:pixel.U16 = value; break;
-        case VX_TYPE_INT16:pixel.S16 = value; break;
-        default:throw ivx::WrapperError("uniform image creation");
-        }
-        img = ivx::Image::createUniform(ctx, w, h, VX_Traits<T>::ImgType, pixel);
-#else
-        img = ivx::Image::createUniform(ctx, w, h, VX_Traits<T>::ImgType, &value);
+        img.swapHandle();
 #endif
-        swapMemory = false;
     }
+
     vxImage(ivx::Context &ctx, int imgType, uchar *data, size_t step, int w, int h)
     {
-        if (h == 1)
-            step = w * ((imgType == VX_DF_IMAGE_RGBX ||
-                imgType == VX_DF_IMAGE_U32 || imgType == VX_DF_IMAGE_S32) ? 4 :
-                imgType == VX_DF_IMAGE_RGB ? 3 :
-                (imgType == VX_DF_IMAGE_U16 || imgType == VX_DF_IMAGE_S16 ||
-                    imgType == VX_DF_IMAGE_UYVY || imgType == VX_DF_IMAGE_YUYV) ? 2 : 1);
-
         std::vector<vx_imagepatch_addressing_t> addr;
         std::vector<void *> ptrs;
         switch (imgType)
@@ -236,17 +226,9 @@ struct vxImage
             throw ivx::WrapperError("Bad image format");
         }
         img = ivx::Image::createFromHandle(ctx, imgType, addr, ptrs);
-        swapMemory = true;
-    }
-    ~vxImage()
-    {
-#if VX_VERSION > VX_VERSION_1_0
-        if (swapMemory)
-            img.swapHandle();
-#endif
     }
 private:
-    bool swapMemory;
+    ivx::Image img;
 };
 
 //==================================================================================================
@@ -259,41 +241,51 @@ int ovx_hal_##hal_func(const T *a, size_t astep, const T *b, size_t bstep, T *c,
 {                                                                                                                   \
     if(dimTooBig(w) || dimTooBig(h))                                                                                \
         return CV_HAL_ERROR_NOT_IMPLEMENTED;                                                                        \
+    refineStep(w, h, VX_Traits<T>::ImgType, astep);                                                                 \
+    refineStep(w, h, VX_Traits<T>::ImgType, bstep);                                                                 \
+    refineStep(w, h, VX_Traits<T>::ImgType, cstep);                                                                 \
     try                                                                                                             \
     {                                                                                                               \
         ivx::Context ctx = getOpenVXHALContext();                                                                   \
-        vxImage ia(ctx, a, astep, w, h);                                                                            \
-        vxImage ib(ctx, b, bstep, w, h);                                                                            \
-        vxImage ic(ctx, c, cstep, w, h);                                                                            \
+        vxImage                                                                                                     \
+            ia = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,                                           \
+                ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(astep)), (void*)a),                        \
+            ib = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,                                           \
+                ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(bstep)), (void*)b),                        \
+            ic = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,                                           \
+                ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(cstep)), (void*)c);                        \
         ovx_call                                                                                                    \
     }                                                                                                               \
     catch (ivx::RuntimeError & e)                                                                                   \
     {                                                                                                               \
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());                                                     \
+        PRINT_HALERR_MSG(runtime);                                                                                  \
         return CV_HAL_ERROR_UNKNOWN;                                                                                \
     }                                                                                                               \
     catch (ivx::WrapperError & e)                                                                                   \
     {                                                                                                               \
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());                                                     \
+        PRINT_HALERR_MSG(wrapper);                                                                                  \
         return CV_HAL_ERROR_UNKNOWN;                                                                                \
     }                                                                                                               \
     return CV_HAL_ERROR_OK;                                                                                         \
 }
 
-OVX_BINARY_OP(add, { ivx::IVX_CHECK_STATUS(vxuAdd(ctx, ia.img, ib.img, VX_CONVERT_POLICY_SATURATE, ic.img)); })
-OVX_BINARY_OP(sub, { ivx::IVX_CHECK_STATUS(vxuSubtract(ctx, ia.img, ib.img, VX_CONVERT_POLICY_SATURATE, ic.img)); })
+OVX_BINARY_OP(add, { ivx::IVX_CHECK_STATUS(vxuAdd(ctx, ia, ib, VX_CONVERT_POLICY_SATURATE, ic)); })
+OVX_BINARY_OP(sub, { ivx::IVX_CHECK_STATUS(vxuSubtract(ctx, ia, ib, VX_CONVERT_POLICY_SATURATE, ic)); })
 
-OVX_BINARY_OP(absdiff, { ivx::IVX_CHECK_STATUS(vxuAbsDiff(ctx, ia.img, ib.img, ic.img)); })
+OVX_BINARY_OP(absdiff, { ivx::IVX_CHECK_STATUS(vxuAbsDiff(ctx, ia, ib, ic)); })
 
-OVX_BINARY_OP(and, { ivx::IVX_CHECK_STATUS(vxuAnd(ctx, ia.img, ib.img, ic.img)); })
-OVX_BINARY_OP(or , { ivx::IVX_CHECK_STATUS(vxuOr(ctx, ia.img, ib.img, ic.img)); })
-OVX_BINARY_OP(xor, { ivx::IVX_CHECK_STATUS(vxuXor(ctx, ia.img, ib.img, ic.img)); })
+OVX_BINARY_OP(and, { ivx::IVX_CHECK_STATUS(vxuAnd(ctx, ia, ib, ic)); })
+OVX_BINARY_OP(or , { ivx::IVX_CHECK_STATUS(vxuOr(ctx, ia, ib, ic)); })
+OVX_BINARY_OP(xor, { ivx::IVX_CHECK_STATUS(vxuXor(ctx, ia, ib, ic)); })
 
 template <typename T>
 int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h, double scale)
 {
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    refineStep(w, h, VX_Traits<T>::ImgType, astep);
+    refineStep(w, h, VX_Traits<T>::ImgType, bstep);
+    refineStep(w, h, VX_Traits<T>::ImgType, cstep);
 #ifdef _MSC_VER
     const float MAGIC_SCALE = 0x0.01010102;
 #else
@@ -316,19 +308,23 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
             rounding_policy = VX_ROUND_POLICY_TO_NEAREST_EVEN;// That's the only rounding that MUST be supported for 1/255 scale
         }
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, w, h);
-        vxImage ib(ctx, b, bstep, w, h);
-        vxImage ic(ctx, c, cstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuMultiply(ctx, ia.img, ib.img, fscale, VX_CONVERT_POLICY_SATURATE, rounding_policy, ic.img));
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,
+                ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(astep)), (void*)a),
+            ib = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,
+                ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(bstep)), (void*)b),
+            ic = ivx::Image::createFromHandle(ctx, VX_Traits<T>::ImgType,
+                ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(cstep)), (void*)c);
+        ivx::IVX_CHECK_STATUS(vxuMultiply(ctx, ia, ib, fscale, VX_CONVERT_POLICY_SATURATE, rounding_policy, ic));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -353,21 +349,26 @@ int ovx_hal_not(const uchar *a, size_t astep, uchar *c, size_t cstep, int w, int
 {
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    refineStep(w, h, VX_DF_IMAGE_U8, astep);
+    refineStep(w, h, VX_DF_IMAGE_U8, cstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, w, h);
-        vxImage ic(ctx, c, cstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuNot(ctx, ia.img, ic.img));
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, 1, (vx_int32)(astep)), (void*)a),
+            ic = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, 1, (vx_int32)(cstep)), (void*)c);
+        ivx::IVX_CHECK_STATUS(vxuNot(ctx, ia, ic));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -382,22 +383,28 @@ int ovx_hal_merge8u(const uchar **src_data, uchar *dst_data, int len, int cn)
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, src_data[0], len, len, 1);
-        vxImage ib(ctx, src_data[1], len, len, 1);
-        vxImage ic(ctx, src_data[2], len, len, 1);
-        vxImage id(ctx, cn == 4 ? VX_DF_IMAGE_RGBX : VX_DF_IMAGE_RGB, dst_data, len, len, 1);
-        ivx::IVX_CHECK_STATUS(vxuChannelCombine(ctx, ia.img, ib.img, ic.img,
-            cn == 4 ? (vx_image)(vxImage(ctx, src_data[3], len, len, 1).img) : NULL,
-            id.img));
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(len, 1, 1, (vx_int32)(len)), (void*)src_data[0]),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(len, 1, 1, (vx_int32)(len)), (void*)src_data[1]),
+            ic = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(len, 1, 1, (vx_int32)(len)), (void*)src_data[2]),
+            id = ivx::Image::createFromHandle(ctx, cn == 4 ? VX_DF_IMAGE_RGBX : VX_DF_IMAGE_RGB,
+                ivx::Image::createAddressing(len, 1, cn, (vx_int32)(len)), (void*)dst_data);
+        ivx::IVX_CHECK_STATUS(vxuChannelCombine(ctx, ia, ib, ic,
+            cn == 4 ? (vx_image)(ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                                     ivx::Image::createAddressing(len, 1, 1, (vx_int32)(len)), (void*)src_data[3])) : NULL,
+            id));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -407,11 +414,16 @@ int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int ah, ucha
 {
     if (dimTooBig(aw) || dimTooBig(ah) || dimTooBig(bw) || dimTooBig(bh))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    refineStep(aw, ah, VX_DF_IMAGE_U8, astep);
+    refineStep(bw, bh, VX_DF_IMAGE_U8, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, aw, ah);
-        vxImage ib(ctx, b, bstep, bw, bh);
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(aw, ah, 1, (vx_int32)(astep)), (void*)a),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(bw, bh, 1, (vx_int32)(bstep)), (void*)b);
 
         if (!((atype == CV_8UC1 || atype == CV_8SC1) &&
             inv_scale_x > 0 && inv_scale_y > 0 &&
@@ -434,16 +446,16 @@ int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int ah, ucha
         else
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-        ivx::IVX_CHECK_STATUS(vxuScaleImage(ctx, ia.img, ib.img, mode));
+        ivx::IVX_CHECK_STATUS(vxuScaleImage(ctx, ia, ib, mode));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -453,11 +465,16 @@ int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, 
 {
     if (dimTooBig(aw) || dimTooBig(ah) || dimTooBig(bw) || dimTooBig(bh))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    refineStep(aw, ah, VX_DF_IMAGE_U8, astep);
+    refineStep(bw, bh, VX_DF_IMAGE_U8, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, aw, ah);
-        vxImage ib(ctx, b, bstep, bw, bh);
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(aw, ah, 1, (vx_int32)(astep)), (void*)a),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(bw, bh, 1, (vx_int32)(bstep)), (void*)b);
 
         if (!(atype == CV_8UC1 || atype == CV_8SC1))
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -498,17 +515,17 @@ int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, 
         vx_border_t prevBorder;
         ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
         ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border)));
-        ivx::IVX_CHECK_STATUS(vxuWarpAffine(ctx, ia.img, mtx, mode, ib.img));
+        ivx::IVX_CHECK_STATUS(vxuWarpAffine(ctx, ia, mtx, mode, ib));
         ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -518,11 +535,16 @@ int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int 
 {
     if (dimTooBig(aw) || dimTooBig(ah) || dimTooBig(bw) || dimTooBig(bh))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    refineStep(aw, ah, VX_DF_IMAGE_U8, astep);
+    refineStep(bw, bh, VX_DF_IMAGE_U8, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, aw, ah);
-        vxImage ib(ctx, b, bstep, bw, bh);
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(aw, ah, 1, (vx_int32)(astep)), (void*)a),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(bw, bh, 1, (vx_int32)(bstep)), (void*)b);
 
         if (!(atype == CV_8UC1 || atype == CV_8SC1))
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -563,17 +585,17 @@ int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int 
         vx_border_t prevBorder;
         ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
         ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border)));
-        ivx::IVX_CHECK_STATUS(vxuWarpPerspective(ctx, ia.img, mtx, mode, ib.img));
+        ivx::IVX_CHECK_STATUS(vxuWarpPerspective(ctx, ia, mtx, mode, ib));
         ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -676,35 +698,32 @@ int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar 
         FilterCtx* cnv = (FilterCtx*)filter_context;
         if (!cnv)
             throw ivx::WrapperError("Bad HAL context");
+        refineStep(w, h, VX_DF_IMAGE_U8, astep);
+        refineStep(w, h, cnv->dst_type == CV_16SC1 ? VX_DF_IMAGE_S16 : VX_DF_IMAGE_U8, bstep);
 
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, w, h);
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, 1, (vx_int32)(astep)), (void*)a),
+            ib = ivx::Image::createFromHandle(ctx, cnv->dst_type == CV_16SC1 ? VX_DF_IMAGE_S16 : VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, cnv->dst_type == CV_16SC1 ? 2 : 1, (vx_int32)(bstep)), (void*)b);
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
         vx_border_t prevBorder;
         ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
         ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &(cnv->border), sizeof(cnv->border)));
-        if (cnv->dst_type == CV_16SC1)
-        {
-            vxImage ib(ctx, (short*)b, bstep, w, h);
-            ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia.img, cnv->cnv, ib.img));
-        }
-        else
-        {
-            vxImage ib(ctx, b, bstep, w, h);
-            ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia.img, cnv->cnv, ib.img));
-        }
+        ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv->cnv, ib));
         ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -900,6 +919,8 @@ int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *
 {
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    refineStep(w, h, VX_DF_IMAGE_U8, astep);
+    refineStep(w, h, VX_DF_IMAGE_U8, bstep);
     try
     {
         MorphCtx* mat = (MorphCtx*)filter_context;
@@ -907,25 +928,28 @@ int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *
             throw ivx::WrapperError("Bad HAL context");
 
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, w, h);
-        vxImage ib(ctx, b, bstep, w, h);
+        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, 1, (vx_int32)(astep)), (void*)a),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, 1, (vx_int32)(bstep)), (void*)b);
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
         vx_border_t prevBorder;
         ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
         ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &(mat->border), sizeof(mat->border)));
-        ivx::IVX_CHECK_STATUS(vxuNonLinearFilter(ctx, mat->operation, ia.img, mat->mask, ib.img));
+        ivx::IVX_CHECK_STATUS(vxuNonLinearFilter(ctx, mat->operation, ia, mat->mask, ib));
         ivx::IVX_CHECK_STATUS(vxSetContextAttribute(ctx, VX_CONTEXT_IMMEDIATE_BORDER, &prevBorder, sizeof(prevBorder)));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -942,22 +966,23 @@ int ovx_hal_cvtBGRtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, 
 
     if (w & 1 || h & 1) // It's strange but sample implementation unable to convert odd sized images
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
+    refineStep(w, h, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, astep);
+    refineStep(w, h, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
         vxImage ia(ctx, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, const_cast<uchar *>(a), astep, w, h);
         vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia.img, ib.img));
+        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -969,24 +994,28 @@ int ovx_hal_cvtGraytoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (depth != CV_8U || (bcn != 3 && bcn != 4))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
+    refineStep(w, h, VX_DF_IMAGE_U8, astep);
+    refineStep(w, h, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, w, h);
-        vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuChannelCombine(ctx, ia.img, ia.img, ia.img,
-            bcn == 4 ? (vx_image)(vxImage(ctx, uchar(255), w, h).img) : NULL,
-            ib.img));
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, 1, (vx_int32)astep), const_cast<uchar*>(a)),
+            ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
+                ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
+        ivx::IVX_CHECK_STATUS(vxuChannelCombine(ctx, ia, ia, ia,
+        bcn == 4 ? (vx_image)(ivx::Image::createUniform(ctx, w, h, vx_uint8(255))) : NULL,
+            ib));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -1001,26 +1030,27 @@ int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
 
     if (w & 1 || h & 1) // It's not described in spec but sample implementation unable to convert odd sized images
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
+    refineStep(w, h, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, astep);
+    refineStep(w, h, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
         vxImage ia(ctx, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, const_cast<uchar *>(a), astep, w, h);
         vx_channel_range_e cRange;
-        ivx::IVX_CHECK_STATUS(vxQueryImage(ia.img, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
+        ivx::IVX_CHECK_STATUS(vxQueryImage(ia, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
         if (cRange == VX_CHANNEL_RANGE_FULL)
             return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
         vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia.img, ib.img));
+        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -1035,26 +1065,27 @@ int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size
 
     if (w & 1 || h & 1) // It's not described in spec but sample implementation unable to convert odd sized images
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
+    refineStep(w, h, VX_DF_IMAGE_IYUV, astep);
+    refineStep(w, h, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
         vxImage ia(ctx, VX_DF_IMAGE_IYUV, const_cast<uchar *>(a), astep, w, h);
         vx_channel_range_e cRange;
-        ivx::IVX_CHECK_STATUS(vxQueryImage(ia.img, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
+        ivx::IVX_CHECK_STATUS(vxQueryImage(ia, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
         if (cRange == VX_CHANNEL_RANGE_FULL)
             return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
         vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia.img, ib.img));
+        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -1069,22 +1100,23 @@ int ovx_hal_cvtBGRtoThreePlaneYUV(const uchar * a, size_t astep, uchar * b, size
 
     if (w & 1 || h & 1) // It's not described in spec but sample implementation unable to convert odd sized images
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
+    refineStep(w, h, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, astep);
+    refineStep(w, h, VX_DF_IMAGE_IYUV, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
         vxImage ia(ctx, acn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, const_cast<uchar *>(a), astep, w, h);
         vxImage ib(ctx, VX_DF_IMAGE_IYUV, b, bstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia.img, ib.img));
+        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -1099,26 +1131,27 @@ int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
 
     if (w & 1) // It's not described in spec but sample implementation unable to convert odd sized images
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
+    refineStep(w, h, ycn ? VX_DF_IMAGE_UYVY : VX_DF_IMAGE_YUYV, astep);
+    refineStep(w, h, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
         vxImage ia(ctx, ycn ? VX_DF_IMAGE_UYVY : VX_DF_IMAGE_YUYV, const_cast<uchar *>(a), astep, w, h);
         vx_channel_range_e cRange;
-        ivx::IVX_CHECK_STATUS(vxQueryImage(ia.img, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
+        ivx::IVX_CHECK_STATUS(vxQueryImage(ia, VX_IMAGE_RANGE, &cRange, sizeof(cRange)));
         if (cRange == VX_CHANNEL_RANGE_FULL)
             return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
         vxImage ib(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, b, bstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia.img, ib.img));
+        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
     return CV_HAL_ERROR_OK;
@@ -1128,13 +1161,17 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
 {
     if (depth != CV_8U || sdepth != CV_32S || c != NULL || d != NULL || cn != 1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
+    refineStep(w, h, VX_DF_IMAGE_U8, astep);
+    refineStep(w, h, VX_DF_IMAGE_U32, bstep);
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
-        vxImage ia(ctx, a, astep, w, h);
-        vxImage ib(ctx, (unsigned int *)(b + bstep + sizeof(unsigned int)), bstep, w, h);
-        ivx::IVX_CHECK_STATUS(vxuIntegralImage(ctx, ia.img, ib.img));
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, 1, (vx_int32)astep), const_cast<uchar*>(a)),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U32,
+                ivx::Image::createAddressing(w, h, 1, (vx_int32)bstep), (unsigned int *)(b + bstep + sizeof(unsigned int)));
+        ivx::IVX_CHECK_STATUS(vxuIntegralImage(ctx, ia, ib));
         memset(b, 0, (w + 1) * sizeof(unsigned int));
         b += bstep;
         for (int i = 0; i < h; i++, b += bstep)
@@ -1144,12 +1181,12 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
     }
     catch (ivx::RuntimeError & e)
     {
-        PRINT("OpenVX HAL impl runtime error: %s\n", e.what());
+        PRINT_HALERR_MSG(runtime);
         return CV_HAL_ERROR_UNKNOWN;
     }
     catch (ivx::WrapperError & e)
     {
-        PRINT("OpenVX HAL impl wrapper error: %s\n", e.what());
+        PRINT_HALERR_MSG(wrapper);
         return CV_HAL_ERROR_UNKNOWN;
     }
 
