@@ -4277,6 +4277,17 @@ Rect RotatedRect::boundingRect() const
     return r;
 }
 
+Rect_<float> RotatedRect::boundingRect2f() const
+{
+    Point2f pt[4];
+    points(pt);
+    Rect_<float> r(min({pt[0].x, pt[1].x, pt[2].x, pt[3].x}),
+           min({pt[0].y, pt[1].y, pt[2].y, pt[3].y}),
+           max({pt[0].x, pt[1].x, pt[2].x, pt[3].x}),
+           max({pt[0].y, pt[1].y, pt[2].y, pt[3].y}));
+    return r;
+}
+
 }
 
 /* End of file. */
