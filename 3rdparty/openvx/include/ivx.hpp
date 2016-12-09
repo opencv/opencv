@@ -2008,6 +2008,14 @@ public:
         IVX_CHECK_STATUS(vxAddArrayItems(ref, count, ptr, stride));
     }
 
+    void truncateArray(vx_size new_count)
+    {
+        if(new_count <= itemCount())
+            IVX_CHECK_STATUS(vxTruncateArray(ref, new_count));
+        else
+            throw WrapperError(std::string(__func__) + "(): array is too small");
+    }
+
     void copyRangeTo(size_t start, size_t end, void* data)
     {
         if (!data) throw WrapperError(std::string(__func__) + "(): output pointer is 0");
