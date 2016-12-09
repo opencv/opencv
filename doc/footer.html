@@ -19,42 +19,6 @@ $generatedby &#160;<a href="http://www.doxygen.org/index.html">
 <!--END !GENERATE_TREEVIEW-->
 <script type="text/javascript">
 //<![CDATA[
-/*
-  StringCompare that treats followed numbers as a single one.
-  Example: "OpenCV 9" would come first than "OpenCV 10"
-*/
-function myStringCompare(ele1, ele2) {
-    var str1 = ele1.innerHTML;
-    var str2 = ele2.innerHTML;
-    var value = -1;
-    var smaller = str1.length;
-    if (str2.length == smaller) {
-        value = 0;
-    } else if (str2.length < smaller) {
-        smaller = str2.length;
-        value = 1;
-    }
-    for (var i = 0; i < smaller; i++) {
-        var str1_tmp_char = str1.charAt(i);
-        var str2_tmp_char = str2.charAt(i);
-        if (isNaN(str1_tmp_char) || isNaN(str2_tmp_char)) {
-            if (str1_tmp_char < str2_tmp_char) {
-                return -1;
-            } else if (str1_tmp_char > str2_tmp_char) {
-                return 1;
-            }
-        } else {
-            var int1 = parseInt(str1.substring(i));
-            var int2 = parseInt(str2.substring(i));
-            if (int1 < int2) {
-                return -1;
-            } else if (int1 > int2) {
-                return 1;
-            }
-        }
-    }
-    return value;
-}
 function addButton(label, buttonName) {
     var b = document.createElement("BUTTON");
     b.innerHTML = buttonName;
@@ -81,7 +45,6 @@ function buttonsToAdd($elements, $heading, $type) {
         $elements = $("" + $type + ":contains(" + $heading.html() + ")").parent().prev("div.newInnerHTML");
     }
     var arr = jQuery.makeArray($elements);
-    arr = arr.sort(myStringCompare);
     var seen = {};
     arr.forEach(function(e) {
         var txt = e.innerHTML;

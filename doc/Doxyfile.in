@@ -31,15 +31,14 @@ MULTILINE_CPP_IS_BRIEF = NO
 INHERIT_DOCS           = YES
 SEPARATE_MEMBER_PAGES  = NO
 TAB_SIZE               = 4
-ALIASES               += addhtml{1}="@htmlonly[block] <div class='newInnerHTML'>\1</div><div> @endhtmlonly"
-ALIASES               += add_toggle{1}="@addhtml{\1} @htmlinclude add_toggle.html \parblock \endparblock"
+ALIASES               += add_toggle{1}="@htmlonly[block] <div class='newInnerHTML'>\1</div><div> <script type="text/javascript"> addToggle(); </script>@endhtmlonly"
+ALIASES               += add_toggle_cpp="@htmlonly[block] <div class='newInnerHTML' title='cpp' style='display: none;'>C++</div><div class='toggleable_div label_cpp' style='display: none;'>@endhtmlonly"
+ALIASES               += add_toggle_java="@htmlonly[block] <div class='newInnerHTML' title='java' style='display: none;'>Java</div><div class='toggleable_div label_java' style='display: none;'>@endhtmlonly"
+ALIASES               += add_toggle_python="@htmlonly[block] <div class='newInnerHTML' title='python' style='display: none;'>Python</div><div class='toggleable_div label_python' style='display: none;'>@endhtmlonly"
 ALIASES               += end_toggle="@htmlonly[block] </div> @endhtmlonly"
 ALIASES               += prev_tutorial{1}="**Prev  Tutorial:** \ref \1 \n"
 ALIASES               += next_tutorial{1}="**Next  Tutorial:** \ref \1 \n"
-ALIASES               += add_youtube_link{1}="@htmlonly[block] <div class='addYoutube'>\1</div> @endhtmlonly"
-ALIASES               += youtube{1}="@add_youtube_link{\1} @htmlinclude add_youtube.html \parblock \endparblock"
-ALIASES               += add_page_identifier{1}="@htmlonly[block] <span class='newPageId'>\1</span> @endhtmlonly"
-ALIASES               += subpage_info{1}="@subpage \1 @add_page_identifier{\1} @htmlinclude subpage_info.html"
+ALIASES               += youtube{1}="@htmlonly[block]<div align='center'><iframe title='my title' width='560' height='349' src='http://www.youtube.com/embed/\1?rel=0' frameborder='0' align='middle' allowfullscreen></iframe></div>@endhtmlonly"
 TCL_SUBST              =
 OPTIMIZE_OUTPUT_FOR_C  = NO
 OPTIMIZE_OUTPUT_JAVA   = YES
@@ -110,9 +109,6 @@ EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp
 EXCLUDE_SYMBOLS        = cv::DataType<*> int void
 EXAMPLE_PATH           = @CMAKE_DOXYGEN_EXAMPLE_PATH@
-EXAMPLE_PATH          += @CMAKE_CURRENT_SOURCE_DIR@/aliases/add_toggle.html
-EXAMPLE_PATH          += @CMAKE_CURRENT_SOURCE_DIR@/aliases/add_youtube.html
-EXAMPLE_PATH          += @CMAKE_CURRENT_SOURCE_DIR@/aliases/subpage_info.html
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = YES
 IMAGE_PATH             = @CMAKE_DOXYGEN_IMAGE_PATH@

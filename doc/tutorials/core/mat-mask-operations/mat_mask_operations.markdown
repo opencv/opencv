@@ -28,17 +28,17 @@ the zero-zero index) on the pixel you want to calculate and sum up the pixel val
 the overlapped matrix values. It's the same thing, however in case of large matrices the latter
 notation is a lot easier to look over.
 
-@add_toggle{C++}
+@add_toggle_cpp
 Now let us see how we can make this happen by using the basic pixel access method or by using the
 @ref cv::filter2D function.
 @end_toggle
 
-@add_toggle{Java}
+@add_toggle_java
 Now let us see how we can make this happen by using the basic pixel access method or by using the
-[Imgproc.filter2D()] function.
+**Imgproc.filter2D()** function.
 @end_toggle
 
-@add_toggle{Python}
+@add_toggle_python
 Now let us see how we can make this happen by using the basic pixel access method or by using the
 **cv2.filter2D()** function.
 @end_toggle
@@ -47,7 +47,7 @@ The Basic Method
 ----------------
 
 Here's a function that will do this:
-@add_toggle{C++}
+@add_toggle_cpp
 @snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp basic_method
 
 At first we make sure that the input images data is in unsigned char format. For this we use the
@@ -55,14 +55,14 @@ At first we make sure that the input images data is in unsigned char format. For
 @snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp 8_bit
 @end_toggle
 
-@add_toggle{Java}
+@add_toggle_java
 @snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java basic_method
 
 At first we make sure that the input images data in unsigned 8 bit format.
 @snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java 8_bit
 @end_toggle
 
-@add_toggle{Python}
+@add_toggle_python
 @snippet samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py basic_method
 
 At first we make sure that the input images data in unsigned 8 bit format.
@@ -76,24 +76,24 @@ We create an output image with the same size and the same type as our input. As 
 @ref tutorial_how_to_scan_images_storing "storing" section, depending on the number of channels we may have one or more
 subcolumns.
 
-@add_toggle{C++}
+@add_toggle_cpp
 We will iterate through them via pointers so the total number of elements depends on
 this number.
 @snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp create_channels
 @end_toggle
 
-@add_toggle{Java}
+@add_toggle_java
 @snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java create_channels
 @end_toggle
 
-@add_toggle{Python}
+@add_toggle_python
 @code{.py}
 height, width, n_channels = my_image.shape
 result = np.zeros(my_image.shape, my_image.dtype)
 @endcode
 @end_toggle
 
-@add_toggle{C++}
+@add_toggle_cpp
 We'll use the plain C [] operator to access pixels. Because we need to access multiple rows at the
 same time we'll acquire the pointers for each of them (a previous, a current and a next line). We
 need another pointer to where we're going to save the calculation. Then simply access the right
@@ -108,7 +108,7 @@ in these points and, for example, set the pixels on the borders to zeros:
 @snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp borders
 @end_toggle
 
-@add_toggle{Java}
+@add_toggle_java
 We need to access multiple rows and columns which can be done by adding or subtracting 1 to the current center (i,j).
 Then we apply the sum and put the new value in the Result matrix.
 @snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java basic_method_loop
@@ -120,7 +120,7 @@ in these points and, for example, set the pixels on the borders to zeros:
 @snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java borders
 @end_toggle
 
-@add_toggle{Python}
+@add_toggle_python
 We need to access multiple rows and columns which can be done by adding or subtracting 1 to the current center (i,j).
 Then we apply the sum and put the new value in the Result matrix.
 @snippet samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py basic_method_loop
@@ -132,7 +132,7 @@ The filter2D function
 Applying such filters are so common in image processing that in OpenCV there exist a function that
 will take care of applying the mask (also called a kernel in some places). For this you first need
 to define an object that holds the mask:
-@add_toggle{C++}
+@add_toggle_cpp
 @snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp kern
 
 Then call the @ref cv::filter2D function specifying the input, the output image and the kernel to
@@ -144,10 +144,10 @@ for adding an optional value to the filtered pixels before storing them in K and
 for determining what to do in the regions where the operation is undefined (borders).
 @end_toggle
 
-@add_toggle{Java}
+@add_toggle_java
 @snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java kern
 
-Then call the [Imgproc.filter2D()] function specifying the input, the output image and the kernel to
+Then call the **Imgproc.filter2D()** function specifying the input, the output image and the kernel to
 use:
 @snippet samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java filter2D
 The function even has a fifth optional argument to specify the center of the kernel, a sixth
@@ -155,7 +155,7 @@ for adding an optional value to the filtered pixels before storing them in K and
 for determining what to do in the regions where the operation is undefined (borders).
 @end_toggle
 
-@add_toggle{Python}
+@add_toggle_python
 @snippet samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py kern
 
 Then call the **cv2.filter2D()** function specifying the input, the output image and the kernell to
@@ -171,26 +171,23 @@ For example:
 
 ![](images/resultMatMaskFilter2D.png)
 
-@add_toggle{C++}
+@add_toggle_cpp
 You can download this source code from [here
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
 OpenCV source code libraries sample directory at
 `samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp`.
 
 Check out an instance of running the program on our [YouTube
 channel](http://www.youtube.com/watch?v=7PF1tAU9se4) .
-@youtube{https://www.youtube.com/watch?v=7PF1tAU9se4}
+@youtube{7PF1tAU9se4}
 @end_toggle
 
-@add_toggle{Java}
+@add_toggle_java
 You can look in the OpenCV source code libraries sample directory at
 `samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java`.
 @end_toggle
 
-@add_toggle{Python}
+@add_toggle_python
 You can look in the OpenCV source code libraries sample directory at
 `samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py`.
 @end_toggle
-
-<!-- invisible references list -->
-[Imgproc.filter2D()]: http://docs.opencv.org/java/3.1.0/org/opencv/imgproc/Imgproc.html#filter2D-org.opencv.core.Mat-org.opencv.core.Mat-int-org.opencv.core.Mat-

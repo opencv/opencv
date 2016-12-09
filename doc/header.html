@@ -72,6 +72,16 @@ function getLabelName(innerHTML) {
     }
     return str;
 }
+function addToggle() {
+    var $getDiv = $('div.newInnerHTML').last();
+    var buttonName = $getDiv.html();
+    var label = getLabelName(buttonName.trim());
+    $getDiv.attr("title", label);
+    $getDiv.hide();
+    $getDiv = $getDiv.next();
+    $getDiv.attr("class", "toggleable_div label_" + label);
+    $getDiv.hide();
+}
 //]]>
 </script>
 <!-- end header part -->
