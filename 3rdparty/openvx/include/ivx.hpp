@@ -100,6 +100,9 @@ Details: TBD
 namespace ivx
 {
 
+inline vx_uint16 compiledWithVersion()
+{ return VX_VERSION; }
+
 /// Exception class for OpenVX runtime errors
 class RuntimeError : public std::runtime_error
 {
@@ -715,8 +718,9 @@ protected:
 #endif // IVX_USE_EXTERNAL_REFCOUNT
 
 #ifndef VX_VERSION_1_1
-//TODO: provide wrapper for border mode
-typedef vx_border_mode_t vx_border_t;
+typedef vx_border_mode_t border_t;
+#else
+typedef vx_border_t border_t;
 #endif
 
 /// vx_context wrapper
@@ -781,7 +785,7 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_UNIQUE_KERNELS) wrapper
-    vx_uint32 uniqueKernels() const
+    vx_uint32 uniqueKernelsNum() const
     {
         vx_uint32 v;
         query(VX_CONTEXT_UNIQUE_KERNELS, v);
@@ -789,7 +793,7 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_MODULES) wrapper
-    vx_uint32 modules() const
+    vx_uint32 modulesNum() const
     {
         vx_uint32 v;
         query(VX_CONTEXT_MODULES, v);
@@ -797,7 +801,7 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_REFERENCES) wrapper
-    vx_uint32 references() const
+    vx_uint32 refsNum() const
     {
         vx_uint32 v;
         query(VX_CONTEXT_REFERENCES, v);
@@ -829,15 +833,15 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_IMMEDIATE_BORDER) wrapper
-    vx_border_t borderMode() const
+    border_t immediateBorder() const
     {
-        vx_border_t v;
+        border_t v;
         query(VX_CONTEXT_IMMEDIATE_BORDER, v);
         return v;
     }
 
     /// vxQueryContext(VX_CONTEXT_IMPLEMENTATION) wrapper
-    std::string implementation() const
+    std::string implName() const
     {
         std::vector<vx_char> v(VX_MAX_IMPLEMENTATION_NAME);
         IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_IMPLEMENTATION, &v[0], v.size() * sizeof(vx_char)));
@@ -845,7 +849,7 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_EXTENSIONS) wrapper
-    std::string extensions() const
+    std::string extensionsStr() const
     {
         std::vector<vx_char> v(extensionsSize());
         IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_EXTENSIONS, &v[0], v.size() * sizeof(vx_char)));
@@ -855,14 +859,14 @@ public:
     /// vxQueryContext(VX_CONTEXT_UNIQUE_KERNEL_TABLE) wrapper
     std::vector<vx_kernel_info_t> kernelTable() const
     {
-        std::vector<vx_kernel_info_t> v(uniqueKernels());
+        std::vector<vx_kernel_info_t> v(uniqueKernelsNum());
         IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_UNIQUE_KERNEL_TABLE, &v[0], v.size() * sizeof(vx_kernel_info_t)));
         return v;
     }
 
 #ifdef VX_VERSION_1_1
     /// vxQueryContext(VX_CONTEXT_IMMEDIATE_BORDER_POLICY) wrapper
-    vx_enum borderPolicy() const
+    vx_enum immediateBorderPolicy() const
     {
         vx_enum v;
         query(VX_CONTEXT_IMMEDIATE_BORDER_POLICY, v);
@@ -878,10 +882,28 @@ public:
     }
 #endif
 
-    /// vxSetContextAttribute(VX_CONTEXT_IMMEDIATE_BORDER) wrapper
-    void setBorderMode(vx_border_t &border)
-    { IVX_CHECK_STATUS(vxSetContextAttribute(ref, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border))); }
+    /// vxSetContextAttribute() wrapper
+    template<typename T>
+    void setAttribute(vx_enum att, const T& value)
+    { IVX_CHECK_STATUS( vxSetContextAttribute(ref, att, &value, sizeof(value)) ); }
 
+    /// vxSetContextAttribute(BORDER) wrapper
+    void setImmediateBorder(const border_t& bm)
+    { setAttribute(VX_CONTEXT_IMMEDIATE_BORDER, bm); }
+
+#ifndef VX_VERSION_1_1
+    /// vxSetContextAttribute(BORDER) wrapper
+    void setImmediateBorder(vx_enum mode, vx_uint32 val = 0)
+    { border_t bm = {mode, val}; setImmediateBorder(bm); }
+#else
+    /// vxSetContextAttribute(BORDER) wrapper
+    void setImmediateBorder(vx_enum mode, const vx_pixel_value_t& val)
+    { border_t bm = {mode, val}; setImmediateBorder(bm); }
+
+    /// vxSetContextAttribute(BORDER) wrapper
+    void setImmediateBorder(vx_enum mode)
+    { vx_pixel_value_t val = {}; setImmediateBorder(mode, val); }
+#endif
 };
 
 /// vx_graph wrapper
@@ -926,7 +948,6 @@ public:
     { return Kernel(vxGetKernelByName(c, name.c_str())); }
 };
 
-#ifdef IVX_USE_CXX98
 
 /// vx_node wrapper
 class Node : public RefWrapper<vx_node>
@@ -952,6 +973,7 @@ public:
     static Node create(vx_graph graph,  vx_enum kernelID, const std::vector<vx_reference>& params)
     { return Node::create(graph, Kernel::getByEnum(Context::getFrom(graph), kernelID), params); }
 
+#ifdef IVX_USE_CXX98
     /// Create node for the kernel ID and set one parameter
     template<typename T0>
     static Node create(vx_graph g, vx_enum kernelID,
@@ -1113,49 +1135,140 @@ public:
         return create(g, Kernel::getByEnum(Context::getFrom(g), kernelID), params);
     }
 
-    /// vxSetParameterByIndex() wrapper
-    void setParameterByIndex(vx_uint32 index, vx_reference value)
-    { IVX_CHECK_STATUS(vxSetParameterByIndex(ref, index, value)); }
-};
-
 #else // not IVX_USE_CXX98
-
-/// vx_node wrapper
-class Node : public RefWrapper<vx_node>
-{
-public:
-    IVX_REF_STD_CTORS_AND_ASSIGNMENT(Node);
-
-    /// vxCreateGenericNode() wrapper
-    static Node create(vx_graph g, vx_kernel k)
-    { return Node(vxCreateGenericNode(g, k)); }
-
-    /// Create node for the kernel and set the parameters
-    static Node create(vx_graph graph, vx_kernel kernel, const std::vector<vx_reference>& params)
-    {
-        Node node = Node::create(graph, kernel);
-        vx_uint32 i = 0;
-        for (const auto& p : params)
-            node.setParameterByIndex(i++, p);
-        return node;
-    }
-
-    /// Create node for the kernel ID and set the parameters
-    static Node create(vx_graph graph,  vx_enum kernelID, const std::vector<vx_reference>& params)
-    { return Node::create(graph, Kernel::getByEnum(Context::getFrom(graph), kernelID), params); }
 
     /// Create node for the kernel ID and set the specified parameters
     template<typename...Ts>
     static Node create(vx_graph g, vx_enum kernelID, const Ts&...args)
     { return create(g, Kernel::getByEnum(Context::getFrom(g), kernelID), { castToReference(args)... }); }
 
+#endif // IVX_USE_CXX98
 
     /// vxSetParameterByIndex() wrapper
     void setParameterByIndex(vx_uint32 index, vx_reference value)
     { IVX_CHECK_STATUS(vxSetParameterByIndex(ref, index, value)); }
+
+    /// vxQueryNode() wrapper
+    template<typename T>
+    void query(vx_enum att, T& value) const
+    { IVX_CHECK_STATUS( vxQueryNode(ref, att, &value, sizeof(value)) ); }
+
+#ifndef VX_VERSION_1_1
+static const vx_enum
+    VX_NODE_STATUS          = VX_NODE_ATTRIBUTE_STATUS,
+    VX_NODE_PERFORMANCE     = VX_NODE_ATTRIBUTE_PERFORMANCE,
+    VX_NODE_BORDER          = VX_NODE_ATTRIBUTE_BORDER_MODE,
+    VX_NODE_LOCAL_DATA_SIZE = VX_NODE_ATTRIBUTE_LOCAL_DATA_SIZE,
+    VX_NODE_LOCAL_DATA_PTR  = VX_NODE_ATTRIBUTE_LOCAL_DATA_PTR,
+    VX_BORDER_UNDEFINED     = VX_BORDER_MODE_UNDEFINED;
+#endif
+
+    /// vxQueryNode(STATUS) wrapper
+    vx_status status() const
+    {
+        vx_status v;
+        query(VX_NODE_STATUS, v);
+        return v;
+    }
+
+    /// vxQueryNode(PERFORMANCE) wrapper
+    vx_perf_t performance() const
+    {
+        vx_perf_t v;
+        query(VX_NODE_PERFORMANCE, v);
+        return v;
+    }
+
+    /// vxQueryNode(BORDER) wrapper
+    border_t border() const
+    {
+        border_t v;
+        v.mode = VX_BORDER_UNDEFINED;
+        query(VX_NODE_BORDER, v);
+        return v;
+    }
+
+    /// vxQueryNode(LOCAL_DATA_SIZE) wrapper
+    vx_size dataSize() const
+    {
+        vx_size v;
+        query(VX_NODE_LOCAL_DATA_SIZE, v);
+        return v;
+    }
+
+    /// vxQueryNode(LOCAL_DATA_PTR) wrapper
+    void* dataPtr() const
+    {
+        void* v;
+        query(VX_NODE_LOCAL_DATA_PTR, v);
+        return v;
+    }
+
+#ifdef VX_VERSION_1_1
+    /// vxQueryNode(PARAMETERS) wrapper
+    vx_uint32 paramsNum() const
+    {
+        vx_uint32 v;
+        query(VX_NODE_PARAMETERS, v);
+        return v;
+    }
+
+    /// vxQueryNode(REPLICATED) wrapper
+    vx_bool isReplicated() const
+    {
+        vx_bool v;
+        query(VX_NODE_IS_REPLICATED, v);
+        return v;
+    }
+
+    /// vxQueryNode(REPLICATE_FLAGS) wrapper
+    void replicateFlags(std::vector<vx_bool>& flags) const
+    {
+        if(flags.empty()) flags.resize(paramsNum(), vx_false_e);
+        IVX_CHECK_STATUS( vxQueryNode(ref, VX_NODE_REPLICATE_FLAGS, &flags[0], flags.size()*sizeof(flags[0])) );
+    }
+
+    /// vxQueryNode(VX_NODE_VALID_RECT_RESET) wrapper
+    vx_bool resetValidRect() const
+    {
+        vx_bool v;
+        query(VX_NODE_VALID_RECT_RESET, v);
+        return v;
+    }
+#endif // VX_VERSION_1_1
+
+    /// vxSetNodeAttribute() wrapper
+    template<typename T>
+    void setAttribute(vx_enum att, const T& value)
+    { IVX_CHECK_STATUS( vxSetNodeAttribute(ref, att, &value, sizeof(value)) ); }
+
+    /// vxSetNodeAttribute(BORDER) wrapper
+    void setBorder(const border_t& bm)
+    { setAttribute(VX_NODE_BORDER, bm); }
+
+#ifndef VX_VERSION_1_1
+    /// vxSetNodeAttribute(BORDER) wrapper
+    void setBorder(vx_enum mode, vx_uint32 val = 0)
+    { vx_border_mode_t bm = {mode, val}; setBorder(bm); }
+#else
+    /// vxSetNodeAttribute(BORDER) wrapper
+    void setBorder(vx_enum mode, const vx_pixel_value_t& val)
+    { vx_border_t bm = {mode, val}; setBorder(bm); }
+
+    /// vxSetNodeAttribute(BORDER) wrapper
+    void setBorder(vx_enum mode)
+    { vx_pixel_value_t val = {}; setBorder(mode, val); }
+#endif
+
+    /// vxSetNodeAttribute(LOCAL_DATA_SIZE) wrapper
+    void setDataSize(vx_size size)
+    { setAttribute(VX_NODE_LOCAL_DATA_SIZE, size); }
+
+    /// vxSetNodeAttribute(LOCAL_DATA_PTR) wrapper
+    void setDataPtr(void* ptr)
+    { setAttribute(VX_NODE_LOCAL_DATA_PTR, ptr); }
 };
 
-#endif // IVX_USE_CXX98
 
 /// vx_image wrapper
 class Image : public RefWrapper<vx_image>
@@ -1326,7 +1439,7 @@ static const vx_enum
     VX_IMAGE_SIZE   = VX_IMAGE_ATTRIBUTE_SIZE;
 #endif
 
-/// vxQueryImage(VX_IMAGE_WIDTH) wrapper
+    /// vxQueryImage(VX_IMAGE_WIDTH) wrapper
     vx_uint32 width() const
     {
         vx_uint32 v;
@@ -1580,13 +1693,18 @@ static const vx_enum
         copyFrom(planeIdx, createAddressing((vx_uint32)m.cols, (vx_uint32)m.rows, (vx_int32)m.elemSize(), (vx_int32)m.step), m.ptr());
     }
 
-    /*
+/*
+private:
+    cv::Mat _mat; // TODO: update copy/move-c-tors, operator=() and swapHandles()
+public:
     static Image createFromHandle(vx_context context, const cv::Mat& mat)
-    { throw WrapperError(std::string(__func__)+"(): NYI"); }
-
-    cv::Mat swapHandle(const cv::Mat& newMat)
-    { throw WrapperError(std::string(__func__)+"(): NYI"); }
-    */
+    {
+        if(mat.empty()) throw WrapperError(std::string(__func__)+"(): empty cv::Mat");
+        Image res = createFromHandle(context, matTypeToFormat(mat.type()), createAddressing(mat), mat.data );
+        res._mat = mat;
+        return res;
+    }
+*/
 #endif //IVX_USE_OPENCV
 
     struct Patch;
