@@ -38,7 +38,6 @@ static double       param_max_outliers;
 static double       param_max_deviation;
 static unsigned int param_min_samples;
 static unsigned int param_force_samples;
-static uint64       param_seed;
 static double       param_time_limit;
 static int          param_threads;
 static bool         param_write_sanity;
