@@ -234,7 +234,7 @@ MatAllocator* Mat::getDefaultAllocator()
     }
     return g_matAllocator;
 }
-void Mat::setDefaultAllocator(MatAllocator* allocator)
+void Mat::setDefaultAllocator(MatAllocator* allocator, bool threadLocal)
 {
     g_matAllocator = allocator;
 }
