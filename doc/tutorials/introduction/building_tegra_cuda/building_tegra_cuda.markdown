@@ -32,7 +32,7 @@ There are two (2) ways to get the OpenCV source code:
 * Direct download from the [OpenCV downloads](http://opencv.org/downloads.html) page
 * Cloning the git repositories hosted on [GitHub](https://github.com/opencv)
 
-For this guide, the focus is on using the git repositories. This is because the 3.1.0 version of OpenCV will not build with CUDA 8.0 without applying a small upstream change from the git repository.
+For this guide, the focus is on using the git repositories. This is because the 3.1.0 version of OpenCV will not build with CUDA 8.0 without applying a few small upstream changes from the git repository.
 
 OpenCV
 ------
@@ -49,7 +49,7 @@ To build the 3.1.0 version (as opposed to building the most-recent source), you 
 
 __Note:__ This operation creates a new local branch in your clone's repository.
 
-If you are building OpenCV with CUDA 8.0, you must execute one additional git command. This is to apply a fix for building specifically with the 8.0 version of CUDA that was not part of the 3.1.0 release. To do this, use the "git cherry-pick" command:
+There are some upstream changes that must be applied via the `git cherry-pick` command. The first of these is to apply a fix for building specifically with the 8.0 version of CUDA that was not part of the 3.1.0 release:
 
     # While still in the opencv directory:
     $ git cherry-pick 10896
@@ -60,7 +60,27 @@ You will see the following output from the command:
      Author: Vladislav Vinogradov <vlad.vinogradov@itseez.com>
      1 file changed, 2 insertions(+), 1 deletion(-)
 
-This step is not needed if you are building with CUDA 7.0 or 7.5.
+Secondly, there is a fix for a CMake macro call that is problematic on some systems:
+
+    $ git cherry pick cdb9c
+
+You should see output similar to:
+
+    [v3.1.0-28613 e5ac2e4] gpu samples: fix REMOVE_ITEM error
+     Author: Alexander Alekhin <alexander.alekhin@itseez.com>
+     1 file changed, 1 insertion(+), 1 deletion(-)
+
+The last upstream fix that is needed deals with the `pkg-config` configuration file that is bundled with the developer package (`libopencv-dev`):
+
+    $ git cherry-pick 24dbb
+
+You should see output similar to:
+
+    [v3.1.0 3a6d7ab] pkg-config: modules list contains only OpenCV modules (fixes #5852)
+     Author: Alexander Alekhin <alexander.alekhin@itseez.com>
+     1 file changed, 7 insertions(+), 4 deletions(-)
+
+At this point, the `opencv` repository is ready for building.
 
 OpenCV Extra
 ------------
