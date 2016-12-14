@@ -44,11 +44,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_USE_OPENCV
-#define IVX_HIDE_INFO_WARNINGS
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 namespace cv
 {
@@ -1308,16 +1304,12 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
         Image dstImg = Image::createFromHandle(context, Image::matTypeToFormat(dstMat.type()),
                                                Image::createAddressing(dstMat), (void*)dstMat.data);
 
-        context.setBorderMode(borderMode);
-        //TODO: wait for Node::setBorderMode() to be merged and uncomment
-//        ivx::Scalar kernelSize = ivx::Scalar::create<VX_TYPE_INT32>(context, 5);
-//        Graph graph = Graph::create(context);
-//        ivx::Node halfNode = ivx::Node::create(graph, VX_KERNEL_HALFSCALE_GAUSSIAN, srcImg, dstImg, kernelSize);
-//        halfNode.setBorderMode(borderMode);
-//        graph.verify();
-//        graph.process();
-
-        IVX_CHECK_STATUS(vxuHalfScaleGaussian(context, srcImg, dstImg, 5));
+        ivx::Scalar kernelSize = ivx::Scalar::create<VX_TYPE_INT32>(context, 5);
+        Graph graph = Graph::create(context);
+        ivx::Node halfNode = ivx::Node::create(graph, VX_KERNEL_HALFSCALE_GAUSSIAN, srcImg, dstImg, kernelSize);
+        halfNode.setBorder(borderMode);
+        graph.verify();
+        graph.process();
 
 #ifdef VX_VERSION_1_1
         //we should take user memory back before release
@@ -1327,11 +1319,11 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
     }
     catch (RuntimeError & e)
     {
-        CV_Error(cv::Error::StsInternal, e.what());
+        VX_DbgThrow(e.what());
     }
     catch (WrapperError & e)
     {
-        CV_Error(cv::Error::StsInternal, e.what());
+        VX_DbgThrow(e.what());
     }
 
     return true;
@@ -1349,13 +1341,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_pyrDown(_src, _dst, _dsz, borderType))
 
-#ifdef HAVE_OPENVX
-    if(_src.dims() <= 2 &&
-       openvx_pyrDown(_src, _dst, _dsz, borderType))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(_src.dims() <= 2,
+               openvx_pyrDown(_src, _dst, _dsz, borderType))
 
     Mat src = _src.getMat();
     Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
