@@ -1505,6 +1505,15 @@ static const vx_enum
     }
 #endif // VX_VERSION_1_1
 
+    /// vxSetImageAttribute() wrapper
+    template<typename T>
+    void setAttribute(vx_enum att, T& value) const
+    { IVX_CHECK_STATUS(vxSetImageAttribute(ref, att, &value, sizeof(value))); }
+
+    /// vxSetImageAttribute(SPACE) wrapper
+    void setColorSpace(const vx_enum& sp)
+    { setAttribute(VX_IMAGE_SPACE, sp); }
+
     /// vxGetValidRegionImage() wrapper
     vx_rectangle_t getValidRegion() const
     {
