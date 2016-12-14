@@ -46,6 +46,16 @@
 #include "opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+// 2016/10 There is observed problem on Tegra TK1 devices
+// (Path_Idx_Cn_NPoints_WSize_OpticalFlowPyrLK_full.OpticalFlowPyrLK* tests)
+// Se we disable NEON optimization on ARM devices to workaround this problem
+#if defined __arm__
+#undef CV_SIMD128
+#define CV_SIMD128 0
+#undef CV_NEON
+#define CV_NEON 0
+#endif
+
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
 namespace
