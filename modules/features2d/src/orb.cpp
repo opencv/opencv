@@ -970,7 +970,9 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     //ROI handling
     const int HARRIS_BLOCK_SIZE = 9;
     int halfPatchSize = patchSize / 2;
-    int border = std::max(edgeThreshold, std::max(halfPatchSize, HARRIS_BLOCK_SIZE/2))+1;
+    // sqrt(2.0) is for handling patch rotation
+    int descPatchSize = cvCeil(halfPatchSize*sqrt(2.0));
+    int border = std::max(edgeThreshold, std::max(descPatchSize, HARRIS_BLOCK_SIZE/2))+1;
 
     bool useOCL = ocl::useOpenCL() && OCL_FORCE_CHECK(_image.isUMat() || _descriptors.isUMat());
 
