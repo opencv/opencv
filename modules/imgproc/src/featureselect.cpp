@@ -42,11 +42,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_USE_OPENCV
-#define IVX_HIDE_INFO_WARNINGS
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -346,13 +342,11 @@ static bool openvx_harris(Mat image, OutputArray _corners,
     }
     catch (RuntimeError & e)
     {
-        CV_Error(cv::Error::StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (WrapperError & e)
     {
-        CV_Error(cv::Error::StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
 
     return true;
@@ -383,15 +377,9 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         return;
     }
 
-#ifdef HAVE_OPENVX
     // Disabled due to bad accuracy
-    if(false &&
-       useHarrisDetector && _mask.empty() &&
-       openvx_harris(image, _corners, maxCorners, qualityLevel, minDistance, blockSize, harrisK))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(false && useHarrisDetector && _mask.empty(),
+               openvx_harris(image, _corners, maxCorners, qualityLevel, minDistance, blockSize, harrisK))
 
     if( useHarrisDetector )
         cornerHarris( image, eig, blockSize, 3, harrisK );
