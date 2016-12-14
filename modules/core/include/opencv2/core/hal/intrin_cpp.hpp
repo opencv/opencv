@@ -130,7 +130,7 @@ Element-wise binary and unary operations.
 @ref v_shl, @ref v_shr
 
 - Bitwise logic:
-@ref operator &(const v_reg &a, const v_reg &b) "&",
+@ref operator&(const v_reg &a, const v_reg &b) "&",
 @ref operator |(const v_reg &a, const v_reg &b) "|",
 @ref operator ^(const v_reg &a, const v_reg &b) "^",
 @ref operator ~(const v_reg &a) "~"
@@ -140,7 +140,7 @@ Element-wise binary and unary operations.
 @ref operator >=(const v_reg &a, const v_reg &b) ">=",
 @ref operator <(const v_reg &a, const v_reg &b) "<",
 @ref operator <=(const v_reg &a, const v_reg &b) "<=",
-@ref operator ==(const v_reg &a, const v_reg &b) "==",
+@ref operator==(const v_reg &a, const v_reg &b) "==",
 @ref operator !=(const v_reg &a, const v_reg &b) "!="
 
 - min/max: @ref v_min, @ref v_max
