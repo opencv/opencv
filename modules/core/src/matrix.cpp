@@ -439,6 +439,11 @@ void Mat::create(int d, const int* _sizes, int _type)
     finalizeHdr(*this);
 }
 
+void Mat::create(const std::vector<int>& _sizes, int _type)
+{
+    create((int)_sizes.size(), _sizes.data(), _type);
+}
+
 void Mat::copySize(const Mat& m)
 {
     setSize(*this, m.dims, 0, 0);
@@ -537,6 +542,17 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
     setSize(*this, _dims, _sizes, _steps, true);
+    finalizeHdr(*this);
+}
+
+
+Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _steps)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
+{
+    flags |= CV_MAT_TYPE(_type);
+    datastart = data = (uchar*)_data;
+    setSize(*this, (int)_sizes.size(), _sizes.data(), _steps, true);
     finalizeHdr(*this);
 }
 
