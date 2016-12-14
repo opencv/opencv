@@ -822,13 +822,11 @@ static bool openvx_canny(const Mat& src, Mat& dst, int loVal, int hiVal, int kSi
     }
     catch(const WrapperError& e)
     {
-        //CV_DbgAssert(!"openvx_canny - WrapperError");
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch(const RuntimeError& e)
     {
-        //CV_DbgAssert(!"openvx_canny - RuntimeError");
-        return false;
+        VX_DbgThrow(e.what());
     }
 
     return true;
@@ -877,7 +875,7 @@ void Canny( InputArray _src, OutputArray _dst,
             cvFloor(low_thresh),
             cvFloor(high_thresh),
             aperture_size,
-            L2gradient ) );
+            L2gradient ) )
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))

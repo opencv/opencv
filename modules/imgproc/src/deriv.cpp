@@ -43,11 +43,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_HIDE_INFO_WARNINGS
-#define IVX_USE_OPENCV
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters
@@ -293,18 +289,17 @@ namespace cv
                 ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
             }
             ctx.setImmediateBorder(prevBorder);
-            return true;
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
+
+        return true;
     }
 }
 #endif
@@ -729,10 +724,8 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-#ifdef HAVE_OPENVX
-    if (openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
 
     CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
 
