@@ -108,6 +108,7 @@ public:
 
     //! default allocator
     static Allocator* defaultAllocator();
+    static Allocator* getStdAllocator();
     static void setDefaultAllocator(Allocator* allocator, bool threadLocal = false);
 
     //! default constructor

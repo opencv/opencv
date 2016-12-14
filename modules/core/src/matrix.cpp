@@ -223,11 +223,20 @@ public:
 namespace
 {
     MatAllocator* g_matAllocator = NULL;
+#ifdef CV_THREAD_LOCAL
+    CV_THREAD_LOCAL MatAllocator* t_matAllocator = NULL;
+#endif
 }
 
 
 MatAllocator* Mat::getDefaultAllocator()
 {
+#ifdef CV_THREAD_LOCAL
+    if(t_matAllocator)
+    {
+        return t_matAllocator;
+    }
+#endif
     if (g_matAllocator == NULL)
     {
         g_matAllocator = getStdAllocator();
@@ -236,6 +245,14 @@ MatAllocator* Mat::getDefaultAllocator()
 }
 void Mat::setDefaultAllocator(MatAllocator* allocator, bool threadLocal)
 {
+    if(threadLocal)
+    {
+#ifdef CV_THREAD_LOCAL
+        t_matAllocator = allocator;
+#else
+        cv::error(Error::StsNotImplemented, "Your platform doesn't support thread local allocators", __FUNCTION__, __FILE__, __LINE__);
+#endif
+    }
     g_matAllocator = allocator;
 }
 MatAllocator* Mat::getStdAllocator()
