@@ -44,11 +44,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_HIDE_INFO_WARNINGS
-#define IVX_USE_OPENCV
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 /*
  * This file includes the code, contributed by Simon Perreault
  * (the function icvMedianBlur_8u_O1)
@@ -1730,13 +1727,11 @@ namespace cv
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
 
         return true;
@@ -1855,10 +1850,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
-#ifdef HAVE_OPENVX
-    if (openvx_boxfilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_boxfilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
 
     Mat src = _src.getMat();
     int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
@@ -2300,13 +2293,11 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     }
     catch (ivx::RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (ivx::WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     return true;
 }
@@ -2433,10 +2424,8 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
     }
 
-#ifdef HAVE_OPENVX
-    if (openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     Mat src = _src.getMat();
@@ -3439,13 +3428,11 @@ namespace cv
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
 
         return true;
@@ -3533,10 +3520,8 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
-#ifdef HAVE_OPENVX
-    if (openvx_medianFilter(_src0, _dst, ksize))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_medianFilter(_src0, _dst, ksize))
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 810 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
 

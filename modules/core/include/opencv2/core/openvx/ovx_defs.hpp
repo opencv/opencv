@@ -30,4 +30,11 @@
     #define CV_OVX_RUN(condition, func, ...)
 #endif // HAVE_OPENVX
 
+// Throw an error in debug mode or try another implementation in release
+#ifdef _DEBUG
+#define VX_DbgThrow(s) CV_Error(cv::Error::StsInternal, (s))
+#else
+#define VX_DbgThrow(s) return false
+#endif
+
 #endif // OPENCV_OVX_DEFS_HPP

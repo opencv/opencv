@@ -47,11 +47,7 @@
 
 #include "opencl_kernels_core.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_HIDE_INFO_WARNINGS
-#define IVX_USE_OPENCV
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 namespace cv
 {
@@ -1706,19 +1702,17 @@ namespace cv
                 for (int c = 1; c < (int)stddev.total(); c++)
                     pstddev[c] = 0;
             }
-
-            return true;
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
+
+        return true;
     }
 }
 #endif
@@ -1848,10 +1842,8 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
 
-#ifdef HAVE_OPENVX
-    if (openvx_meanStdDev(src, _mean, _sdv, mask))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_meanStdDev(src, _mean, _sdv, mask))
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
@@ -2365,19 +2357,17 @@ static bool openvx_minMaxIdx(Mat &src, double* minVal, double* maxVal, int* minI
             size_t maxidx = loc.y * cols + loc.x + 1;
             ofs2idx(src, maxidx, maxIdx);
         }
-
-        return true;
     }
     catch (ivx::RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (ivx::WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
+
+    return true;
 }
 #endif
 
@@ -2505,10 +2495,8 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-#ifdef HAVE_OPENVX
-    if (openvx_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
