@@ -74,6 +74,9 @@ Building OpenCV from Source Using CMake
     -   run: “Configure”
     -   run: “Generate”
 
+    @note
+    Use `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..` , without spaces after -D if the above example doesn't work.
+
 -#  Description of some parameters
     -   build type: `CMAKE_BUILD_TYPE=Release\Debug`
     -   to build with modules from opencv_contrib set OPENCV_EXTRA_MODULES_PATH to \<path to
