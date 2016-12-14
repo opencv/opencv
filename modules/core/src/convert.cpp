@@ -4638,12 +4638,6 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 
 #ifdef HAVE_OPENVX
 
-#ifdef _DEBUG
-#define VX_DbgThrow(s) CV_Error(cv::Error::StsInternal, (s))
-#else
-#define VX_DbgThrow(s) return false;
-#endif
-
 template<typename T, typename DT>
 static bool _openvx_cvt(const T* src, size_t sstep,
                         DT* dst, size_t dstep, Size continuousSize)
@@ -4734,7 +4728,7 @@ cvt_( const T* src, size_t sstep,
     CV_OVX_RUN(
         false,
         openvx_cvt(src, sstep, dst, dstep, size)
-    );
+    )
 
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
@@ -5407,13 +5401,11 @@ static bool openvx_LUT(Mat src, Mat dst, Mat _lut)
     }
     catch (ivx::RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (ivx::WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
 
     return true;
@@ -5685,10 +5677,8 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
-#ifdef HAVE_OPENVX
-    if (openvx_LUT(src, dst, lut))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_LUT(src, dst, lut))
 
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
 

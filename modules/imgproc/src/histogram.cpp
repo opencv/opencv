@@ -1307,13 +1307,11 @@ namespace cv
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
 
         return true;
@@ -1379,7 +1377,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
         nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && _mask.getMat().empty() &&
         (!channels || channels[0] == 0) && !accumulate && uniform &&
         ranges && ranges[0],
-        openvx_calchist(images[0], _hist, histSize[0], ranges[0]));
+        openvx_calchist(images[0], _hist, histSize[0], ranges[0]))
 
     CV_IPP_RUN(nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && channels &&
                 channels[0] == 0 && _mask.getMat().empty() && images[0].dims <= 2 &&
@@ -3791,13 +3789,11 @@ static bool openvx_equalize_hist(Mat srcMat, Mat dstMat)
     }
     catch (RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
 
     return true;
@@ -3821,12 +3817,8 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
 
-#ifdef HAVE_OPENVX
-    if(openvx_equalize_hist(src, dst))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(true,
+               openvx_equalize_hist(src, dst))
 
     Mutex histogramLockInstance;
 
