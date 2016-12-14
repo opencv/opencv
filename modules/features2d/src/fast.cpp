@@ -45,11 +45,7 @@ The references are:
 #include "fast_score.hpp"
 #include "opencl_kernels_features2d.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_USE_OPENCV
-#define IVX_HIDE_INFO_WARNINGS
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 #if defined _MSC_VER
 # pragma warning( disable : 4127)
 #endif
@@ -382,13 +378,11 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
     }
     catch (RuntimeError & e)
     {
-        CV_Error(cv::Error::StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (WrapperError & e)
     {
-        CV_Error(cv::Error::StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
 
     return true;
@@ -410,12 +404,8 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
   }
 #endif
 
-#ifdef HAVE_OPENVX
-    if(openvx_FAST(_img, keypoints, threshold, nonmax_suppression, type))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(true,
+               openvx_FAST(_img, keypoints, threshold, nonmax_suppression, type))
 
   switch(type) {
     case FastFeatureDetector::TYPE_5_8:
