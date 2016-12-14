@@ -46,11 +46,7 @@
 #include "opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_USE_OPENCV
-#define IVX_HIDE_INFO_WARNINGS
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -1200,11 +1196,11 @@ namespace
         }
         catch (RuntimeError & e)
         {
-            CV_Error(cv::Error::StsInternal, e.what());
+            VX_DbgThrow(e.what());
         }
         catch (WrapperError & e)
         {
-            CV_Error(cv::Error::StsInternal, e.what());
+            VX_DbgThrow(e.what());
         }
 
         return true;
@@ -1225,14 +1221,9 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
 
-#ifdef HAVE_OPENVX
     // Disabled due to bad accuracy
-    if(false &&
-       openvx_pyrlk(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(false,
+               openvx_pyrlk(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
 
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;
