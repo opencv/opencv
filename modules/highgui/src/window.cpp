@@ -201,9 +201,14 @@ double cv::getWindowProperty(const String& winname, int prop_id)
     return cvGetWindowProperty(winname.c_str(), prop_id);
 }
 
-int cv::waitKey(int delay)
+int cv::waitKeyCode(int delay)
 {
     return cvWaitKey(delay);
+}
+
+int cv::waitKey(int delay)
+{
+    return cv::waitKeyCode(delay);
 }
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,

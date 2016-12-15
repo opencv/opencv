@@ -6,8 +6,6 @@
 #
 # ----------------------------------------------------------------------------
 
-
-
 include(cmake/OpenCVMinDepVersions.cmake)
 
 if(CMAKE_GENERATOR MATCHES Xcode AND XCODE_VERSION VERSION_GREATER 4.3)
@@ -94,6 +92,8 @@ if(DEFINED CMAKE_BUILD_TYPE)
 endif()
 
 enable_testing()
+
+set(CMAKE_VERBOSE_MAKEFILE ON CACHE INTERNAL "" FORCE)
 
 project(OpenCV CXX C)
 

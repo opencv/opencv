@@ -320,12 +320,19 @@ CV_EXPORTS_W void destroyAllWindows();
 
 CV_EXPORTS_W int startWindowThread();
 
+/** @brief Similar to #waitKey, but returns full key code.
+
+Key code is implementation specific and depends on backend: QT/GTK/Win32/etc
+
+*/
+CV_EXPORTS_W int waitKeyCode(int delay = 0);
+
 /** @brief Waits for a pressed key.
 
 The function waitKey waits for a key event infinitely (when \f$\texttt{delay}\leq 0\f$ ) or for delay
 milliseconds, when it is positive. Since the OS has a minimum time between switching threads, the
 function will not wait exactly delay ms, it will wait at least delay ms, depending on what else is
-running on your computer at that time. It returns the code of the pressed key or -1 if no key was
+running on your computer at that time. It returns the character code of the pressed key or -1 if no key was
 pressed before the specified time had elapsed.
 
 @note
@@ -341,7 +348,21 @@ If there are several HighGUI windows, any of them can be active.
 
 @param delay Delay in milliseconds. 0 is the special value that means "forever".
  */
+#if defined __OPENCV_BUILD
 CV_EXPORTS_W int waitKey(int delay = 0);
+#else
+CV_EXPORTS_W inline int waitKey(int delay = 0)
+{
+#ifdef OPENCV_LEGACY_WAITKEY
+    return waitKeyCode(delay);
+#else
+    int k = waitKeyCode(delay);
+    return k <= 0 ? k : (k & 0xff);
+#endif
+}
+#endif
+
+#undef CV_EXPORTS_INLINE
 
 /** @brief Displays an image in the specified window.
 
