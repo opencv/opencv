@@ -1546,3 +1546,28 @@ TEST(Mat, regression_5917_clone_empty)
 
     ASSERT_NO_THROW(cloned = source.clone());
 }
+
+TEST(Mat, regression_7858_initializer_list)
+{
+    std::vector<int> dims;
+    dims.push_back(12);
+    dims.push_back(2);
+    dims.push_back(3);
+    Mat multiMat(dims, CV_32FC1);
+
+    std::vector<Range> range;
+    range.push_back(Range(1, 2));
+    range.push_back(Range::all());
+    range.push_back(Range::all());
+    Mat copied = multiMat(range);
+
+    ASSERT_EQ(3, multiMat.dims);
+    ASSERT_EQ(12, multiMat.size[0]);
+    ASSERT_EQ(2, multiMat.size[1]);
+    ASSERT_EQ(3, multiMat.size[2]);
+
+    ASSERT_EQ(3, copied.dims);
+    ASSERT_EQ(1, copied.size[0]);
+    ASSERT_EQ(2, copied.size[1]);
+    ASSERT_EQ(3, copied.size[2]);
+}
