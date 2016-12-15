@@ -512,6 +512,11 @@ UMat::UMat(const UMat& m, const Range* ranges)
     updateContinuityFlag(*this);
 }
 
+UMat::UMat(const UMat& m, const std::vector<Range>& ranges)
+    : UMat(m, ranges.data())
+{
+}
+
 UMat UMat::diag(int d) const
 {
     CV_Assert( dims <= 2 );
