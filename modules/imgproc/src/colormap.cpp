@@ -502,7 +502,7 @@ namespace colormap
             this->_lut = c;
         }
         void init(int n) {
-            CV_Error(Error::StsAssert, "unused method in UserColormap.");
+            CV_Error(Error::StsAssert, format("unused method in UserColormap init(%d).",n));
         }
     };
 
