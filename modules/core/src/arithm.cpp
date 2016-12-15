@@ -522,11 +522,19 @@ template<typename T> struct OpNot
     T operator()( T a, T ) const { return ~a; }
 };
 
+
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
 static inline void fixSteps(Size sz, size_t elemSize, size_t& step1, size_t& step2, size_t& step)
 {
     if( sz.height == 1 )
         step1 = step2 = step = sz.width*elemSize;
 }
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 static void add8u( const uchar* src1, size_t step1,
                    const uchar* src2, size_t step2,

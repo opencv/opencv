@@ -89,8 +89,8 @@ public:
         : bufferToClip(bufferToProcess), minValue(min), maxValue(max){}
 
     virtual void operator()( const cv::Range &r ) const {
-        register type *inputOutputBufferPTR=bufferToClip+r.start;
-        for (register int jf = r.start; jf != r.end; ++jf, ++inputOutputBufferPTR)
+        type *inputOutputBufferPTR=bufferToClip+r.start;
+        for (int jf = r.start; jf != r.end; ++jf, ++inputOutputBufferPTR)
         {
             if (*inputOutputBufferPTR>maxValue)
                 *inputOutputBufferPTR=maxValue;
@@ -428,8 +428,8 @@ namespace cv
         type maxValue=inputOutputBuffer[0], minValue=inputOutputBuffer[0];
 
         // get the min and max value
-        register type *inputOutputBufferPTR=inputOutputBuffer;
-        for (register size_t j = 0; j<processedPixels; ++j)
+        type *inputOutputBufferPTR=inputOutputBuffer;
+        for (size_t j = 0; j<processedPixels; ++j)
         {
             type pixValue = *(inputOutputBufferPTR++);
             if (maxValue < pixValue)
@@ -443,7 +443,7 @@ namespace cv
         type offset = (type)(-minValue*factor);
 
         inputOutputBufferPTR=inputOutputBuffer;
-        for (register size_t j = 0; j < processedPixels; ++j, ++inputOutputBufferPTR)
+        for (size_t j = 0; j < processedPixels; ++j, ++inputOutputBufferPTR)
             *inputOutputBufferPTR=*(inputOutputBufferPTR)*factor+offset;
 
     }
@@ -458,10 +458,10 @@ namespace cv
 
         type X0cube=sensitivity*sensitivity*sensitivity;
 
-        register type *inputBufferPTR=inputBuffer;
-        register type *outputBufferPTR=outputBuffer;
+        type *inputBufferPTR=inputBuffer;
+        type *outputBufferPTR=outputBuffer;
 
-        for (register size_t j = 0; j < _NBpixels; ++j, ++inputBufferPTR)
+        for (size_t j = 0; j < _NBpixels; ++j, ++inputBufferPTR)
         {
 
             type currentCubeLuminance=*inputBufferPTR**inputBufferPTR**inputBufferPTR;
@@ -483,10 +483,10 @@ namespace cv
 
         type X0=maxOutputValue/(sensitivity-(type)1.0);
 
-        register type *inputBufferPTR=inputBuffer;
-        register type *outputBufferPTR=outputBuffer;
+        type *inputBufferPTR=inputBuffer;
+        type *outputBufferPTR=outputBuffer;
 
-        for (register size_t j = 0; j < nbPixels; ++j, ++inputBufferPTR)
+        for (size_t j = 0; j < nbPixels; ++j, ++inputBufferPTR)
             *(outputBufferPTR++)=(meanValue+(meanValue+X0)*(*(inputBufferPTR)-meanValue)/(_abs(*(inputBufferPTR)-meanValue)+X0));
 
     }
@@ -501,12 +501,12 @@ namespace cv
         type meanValue=0, stdValue=0;
 
         // compute mean value
-        for (register size_t j = 0; j < _NBpixels; ++j)
+        for (size_t j = 0; j < _NBpixels; ++j)
             meanValue+=inputOutputBuffer[j];
         meanValue/=((type)_NBpixels);
 
         // compute std value
-        register type *inputOutputBufferPTR=inputOutputBuffer;
+        type *inputOutputBufferPTR=inputOutputBuffer;
         for (size_t index=0;index<_NBpixels;++index)
         {
             type inputMinusMean=*(inputOutputBufferPTR++)-meanValue;

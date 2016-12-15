@@ -66,7 +66,6 @@ private:
     string out_img;
     enum {BM, BP, CSBP} method;
     int ndisp; // Max disparity + 1
-    enum {GPU, CPU} type;
 };
 
 int main(int argc, char** argv)

@@ -273,11 +273,7 @@ private:
 
     const oclMat _img; // make a copy for non-image2d_t supported platform
 
-    SURF_OCL_Invoker &operator= (const SURF_OCL_Invoker &right)
-    {
-        (*this) = right;
-        return *this;
-    } // remove warning C4512
+    SURF_OCL_Invoker &operator= (const SURF_OCL_Invoker &right); // = delete;
 };
 
 cv::ocl::SURF_OCL::SURF_OCL()

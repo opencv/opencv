@@ -241,7 +241,7 @@ private:
         float *parvocellularOutputON_PTR= parvocellularOutputON+r.start;
         float *parvocellularOutputOFF_PTR= parvocellularOutputOFF+r.start;
 
-            for (register int IDpixel=r.start ; IDpixel!=r.end ; ++IDpixel)
+            for (int IDpixel=r.start ; IDpixel!=r.end ; ++IDpixel)
         {
         float pixelDifference = *(photoreceptorsOutput_PTR++) -*(horizontalCellsOutput_PTR++);
         // test condition to allow write pixelDifference in ON or OFF buffer and 0 in the over

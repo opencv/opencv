@@ -100,7 +100,6 @@ namespace mog
     const float defaultBackgroundRatio = 0.7f;
     const float defaultVarThreshold = 2.5f * 2.5f;
     const float defaultNoiseSigma = 30.0f * 0.5f;
-    const float defaultInitialWeight = 0.05f;
 }
 void cv::ocl::BackgroundSubtractor::operator()(const oclMat&, oclMat&, float)
 {

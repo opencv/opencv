@@ -286,6 +286,9 @@ else(ANDROID)
 endif(ANDROID)
 
 # step 5: build native part
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable -Woverloaded-virtual)
+
+
 add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")

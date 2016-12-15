@@ -117,7 +117,7 @@ set(OCV_COMPILER_FAIL_REGEX
     "[Uu]nknown option"                         # HP
     "[Ww]arning: [Oo]ption"                     # SunPro
     "command option .* is not recognized"       # XL
-    "not supported in this configuration; ignored"       # AIX
+    "not supported in this configuration, ignored"       # AIX (';' is replaced with ',')
     "File with unknown suffix passed to linker" # PGI
     "WARNING: unknown flag:"                    # Open64
   )
@@ -156,12 +156,25 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
         COMPILE_DEFINITIONS "${FLAG}"
         OUTPUT_VARIABLE OUTPUT)
 
-      FOREACH(_regex ${OCV_COMPILER_FAIL_REGEX})
-        IF("${OUTPUT}" MATCHES "${_regex}")
-          SET(${RESULT} 0)
-          break()
-        ENDIF()
-      ENDFOREACH()
+      if(${RESULT})
+        string(REPLACE ";" "," OUTPUT_LINES "${OUTPUT}")
+        string(REPLACE "\n" ";" OUTPUT_LINES "${OUTPUT_LINES}")
+        foreach(_regex ${OCV_COMPILER_FAIL_REGEX})
+          if(NOT ${RESULT})
+            break()
+          endif()
+          foreach(_line ${OUTPUT_LINES})
+            if("${_line}" MATCHES "${_regex}")
+              file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+                  "Build output check failed:\n"
+                  "    Regex: '${_regex}'\n"
+                  "    Output line: '${_line}'\n")
+              set(${RESULT} 0)
+              break()
+            endif()
+          endforeach()
+        endforeach()
+      endif()
 
       IF(${RESULT})
         SET(${RESULT} 1 CACHE INTERNAL "Test ${RESULT}")
@@ -169,6 +182,13 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
       ELSE(${RESULT})
         MESSAGE(STATUS "Performing Test ${RESULT} - Failed")
         SET(${RESULT} "" CACHE INTERNAL "Test ${RESULT}")
+        file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+            "Compilation failed:\n"
+            "    source file: '${_fname}'\n"
+            "    check option: '${FLAG}'\n"
+            "===== BUILD LOG =====\n"
+            "${OUTPUT}\n"
+            "===== END =====\n\n")
       ENDIF(${RESULT})
     else()
       SET(${RESULT} 0)
@@ -611,16 +631,22 @@ function(ocv_install_target)
 
 #      message(STATUS "Process ${__target} dst=${__dst}...")
       if(DEFINED __dst)
-        get_target_property(fname ${__target} LOCATION_DEBUG)
-        if(fname MATCHES "\\.lib$")
-          string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-          install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Debug)
-        endif()
+        # If CMake version is >=3.1.0 or <2.8.12.
+        if(NOT CMAKE_VERSION VERSION_LESS 3.1.0 OR CMAKE_VERSION VERSION_LESS 2.8.12)
+          get_target_property(fname ${__target} LOCATION_DEBUG)
+          if(fname MATCHES "\\.lib$")
+            string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug)
+          endif()
 
-        get_target_property(fname ${__target} LOCATION_RELEASE)
-        if(fname MATCHES "\\.lib$")
-          string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-          install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Release)
+          get_target_property(fname ${__target} LOCATION_RELEASE)
+          if(fname MATCHES "\\.lib$")
+            string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release)
+          endif()
+        else()
+          # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
+          message(WARNING "PDB's are not supported from this version of CMake, use CMake version later then 3.1.0 or before 2.8.12.")
         endif()
       endif()
     endif()
