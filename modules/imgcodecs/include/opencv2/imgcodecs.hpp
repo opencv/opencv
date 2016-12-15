@@ -158,6 +158,8 @@ Currently, the following file formats are supported:
     then [GDAL](http://www.gdal.org) driver will be used in order to decode the image by supporting
     the following formats: [Raster](http://www.gdal.org/formats_list.html),
     [Vector](http://www.gdal.org/ogr_formats.html).
+-   If EXIF information are embedded in the image file, the EXIF orientation will be taken into account
+    and thus the image will be rotated accordingly except if the flag @ref IMREAD_IGNORE_ORIENTATION is passed.
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes
 */

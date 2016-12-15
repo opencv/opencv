@@ -20,6 +20,7 @@ Details: TBD
 
 
 #include <VX/vx.h>
+#include <VX/vxu.h>
 
 #ifndef IVX_USE_CXX98
     // checking compiler
@@ -99,6 +100,9 @@ Details: TBD
 namespace ivx
 {
 
+inline vx_uint16 compiledWithVersion()
+{ return VX_VERSION; }
+
 /// Exception class for OpenVX runtime errors
 class RuntimeError : public std::runtime_error
 {
@@ -152,6 +156,7 @@ template<> struct EnumToType<VX_TYPE_ENUM>     { typedef vx_enum type;      stat
 template<> struct EnumToType<VX_TYPE_SIZE>     { typedef vx_size type;      static const vx_size bytes = sizeof(type); };
 template<> struct EnumToType<VX_TYPE_DF_IMAGE> { typedef vx_df_image type;  static const vx_size bytes = sizeof(type); };
 template<> struct EnumToType<VX_TYPE_BOOL>     { typedef vx_bool type;      static const vx_size bytes = sizeof(type); };
+template<> struct EnumToType<VX_TYPE_KEYPOINT> { typedef vx_keypoint_t type;static const vx_size bytes = sizeof(type); };
 #ifndef IVX_USE_CXX98
 template <vx_enum E> using EnumToType_t = typename EnumToType<E>::type;
 #endif
@@ -176,6 +181,7 @@ inline vx_size enumToTypeSize(vx_enum type)
     case VX_TYPE_SIZE:      return EnumToType<VX_TYPE_SIZE>::bytes;
     case VX_TYPE_DF_IMAGE:  return EnumToType<VX_TYPE_DF_IMAGE>::bytes;
     case VX_TYPE_BOOL:      return EnumToType<VX_TYPE_BOOL>::bytes;
+    case VX_TYPE_KEYPOINT:  return EnumToType<VX_TYPE_KEYPOINT>::bytes;
     default: throw WrapperError(std::string(__func__) + ": unsupported type enum");
     }
 }
@@ -194,10 +200,16 @@ template<> struct TypeToEnum<vx_uint64>   { static const vx_enum value = VX_TYPE
 template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32; };
 template<> struct TypeToEnum<vx_float64>  { static const vx_enum value = VX_TYPE_FLOAT64; };
 template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE_BOOL; };
+template<> struct TypeToEnum<vx_keypoint_t> {static const vx_enum value = VX_TYPE_KEYPOINT; };
 // the commented types are aliases (of integral tyes) and have conflicts with the types above
 //template<> struct TypeToEnum<vx_enum>     { static const vx_enum val = VX_TYPE_ENUM; };
 //template<> struct TypeToEnum<vx_size>     { static const vx_enum val = VX_TYPE_SIZE; };
 //template<> struct TypeToEnum<vx_df_image> { static const vx_enum val = VX_TYPE_DF_IMAGE; };
+
+inline bool areTypesCompatible(const vx_enum a, const vx_enum b)
+{
+    return enumToTypeSize(a) == enumToTypeSize(b);
+}
 
 #ifdef IVX_USE_OPENCV
 inline int enumToCVType(vx_enum type)
@@ -329,6 +341,15 @@ template <> struct RefTypeTraits <vx_lut>
     typedef LUT wrapperType;
     static const vx_enum vxTypeEnum = VX_TYPE_LUT;
     static vx_status release(vxType& ref) { return vxReleaseLUT(&ref); }
+};
+
+class Distribution;
+template <> struct RefTypeTraits <vx_distribution>
+{
+    typedef vx_distribution vxType;
+    typedef Distribution wrapperType;
+    static const vx_enum vxTypeEnum = VX_TYPE_DISTRIBUTION;
+    static vx_status release(vxType& ref) { return vxReleaseDistribution(&ref); }
 };
 
 #ifdef IVX_USE_CXX98
@@ -706,8 +727,9 @@ protected:
 #endif // IVX_USE_EXTERNAL_REFCOUNT
 
 #ifndef VX_VERSION_1_1
-//TODO: provide wrapper for border mode
-typedef vx_border_mode_t vx_border_t;
+typedef vx_border_mode_t border_t;
+#else
+typedef vx_border_t border_t;
 #endif
 
 /// vx_context wrapper
@@ -772,7 +794,7 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_UNIQUE_KERNELS) wrapper
-    vx_uint32 uniqueKernels() const
+    vx_uint32 uniqueKernelsNum() const
     {
         vx_uint32 v;
         query(VX_CONTEXT_UNIQUE_KERNELS, v);
@@ -780,7 +802,7 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_MODULES) wrapper
-    vx_uint32 modules() const
+    vx_uint32 modulesNum() const
     {
         vx_uint32 v;
         query(VX_CONTEXT_MODULES, v);
@@ -788,7 +810,7 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_REFERENCES) wrapper
-    vx_uint32 references() const
+    vx_uint32 refsNum() const
     {
         vx_uint32 v;
         query(VX_CONTEXT_REFERENCES, v);
@@ -820,15 +842,15 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_IMMEDIATE_BORDER) wrapper
-    vx_border_t borderMode() const
+    border_t immediateBorder() const
     {
-        vx_border_t v;
+        border_t v;
         query(VX_CONTEXT_IMMEDIATE_BORDER, v);
         return v;
     }
 
     /// vxQueryContext(VX_CONTEXT_IMPLEMENTATION) wrapper
-    std::string implementation() const
+    std::string implName() const
     {
         std::vector<vx_char> v(VX_MAX_IMPLEMENTATION_NAME);
         IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_IMPLEMENTATION, &v[0], v.size() * sizeof(vx_char)));
@@ -836,7 +858,7 @@ public:
     }
 
     /// vxQueryContext(VX_CONTEXT_EXTENSIONS) wrapper
-    std::string extensions() const
+    std::string extensionsStr() const
     {
         std::vector<vx_char> v(extensionsSize());
         IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_EXTENSIONS, &v[0], v.size() * sizeof(vx_char)));
@@ -846,14 +868,14 @@ public:
     /// vxQueryContext(VX_CONTEXT_UNIQUE_KERNEL_TABLE) wrapper
     std::vector<vx_kernel_info_t> kernelTable() const
     {
-        std::vector<vx_kernel_info_t> v(uniqueKernels());
+        std::vector<vx_kernel_info_t> v(uniqueKernelsNum());
         IVX_CHECK_STATUS(vxQueryContext(ref, VX_CONTEXT_UNIQUE_KERNEL_TABLE, &v[0], v.size() * sizeof(vx_kernel_info_t)));
         return v;
     }
 
 #ifdef VX_VERSION_1_1
     /// vxQueryContext(VX_CONTEXT_IMMEDIATE_BORDER_POLICY) wrapper
-    vx_enum borderPolicy() const
+    vx_enum immediateBorderPolicy() const
     {
         vx_enum v;
         query(VX_CONTEXT_IMMEDIATE_BORDER_POLICY, v);
@@ -869,10 +891,28 @@ public:
     }
 #endif
 
-    /// vxSetContextAttribute(VX_CONTEXT_IMMEDIATE_BORDER) wrapper
-    void setBorderMode(vx_border_t &border)
-    { IVX_CHECK_STATUS(vxSetContextAttribute(ref, VX_CONTEXT_IMMEDIATE_BORDER, &border, sizeof(border))); }
+    /// vxSetContextAttribute() wrapper
+    template<typename T>
+    void setAttribute(vx_enum att, const T& value)
+    { IVX_CHECK_STATUS( vxSetContextAttribute(ref, att, &value, sizeof(value)) ); }
 
+    /// vxSetContextAttribute(BORDER) wrapper
+    void setImmediateBorder(const border_t& bm)
+    { setAttribute(VX_CONTEXT_IMMEDIATE_BORDER, bm); }
+
+#ifndef VX_VERSION_1_1
+    /// vxSetContextAttribute(BORDER) wrapper
+    void setImmediateBorder(vx_enum mode, vx_uint32 val = 0)
+    { border_t bm = {mode, val}; setImmediateBorder(bm); }
+#else
+    /// vxSetContextAttribute(BORDER) wrapper
+    void setImmediateBorder(vx_enum mode, const vx_pixel_value_t& val)
+    { border_t bm = {mode, val}; setImmediateBorder(bm); }
+
+    /// vxSetContextAttribute(BORDER) wrapper
+    void setImmediateBorder(vx_enum mode)
+    { vx_pixel_value_t val = {}; setImmediateBorder(mode, val); }
+#endif
 };
 
 /// vx_graph wrapper
@@ -917,7 +957,6 @@ public:
     { return Kernel(vxGetKernelByName(c, name.c_str())); }
 };
 
-#ifdef IVX_USE_CXX98
 
 /// vx_node wrapper
 class Node : public RefWrapper<vx_node>
@@ -943,6 +982,7 @@ public:
     static Node create(vx_graph graph,  vx_enum kernelID, const std::vector<vx_reference>& params)
     { return Node::create(graph, Kernel::getByEnum(Context::getFrom(graph), kernelID), params); }
 
+#ifdef IVX_USE_CXX98
     /// Create node for the kernel ID and set one parameter
     template<typename T0>
     static Node create(vx_graph g, vx_enum kernelID,
@@ -1021,49 +1061,223 @@ public:
         return create(g, Kernel::getByEnum(Context::getFrom(g), kernelID), params);
     }
 
-    /// vxSetParameterByIndex() wrapper
-    void setParameterByIndex(vx_uint32 index, vx_reference value)
-    { IVX_CHECK_STATUS(vxSetParameterByIndex(ref, index, value)); }
-};
-
-#else // not IVX_USE_CXX98
-
-/// vx_node wrapper
-class Node : public RefWrapper<vx_node>
-{
-public:
-    IVX_REF_STD_CTORS_AND_ASSIGNMENT(Node);
-
-    /// vxCreateGenericNode() wrapper
-    static Node create(vx_graph g, vx_kernel k)
-    { return Node(vxCreateGenericNode(g, k)); }
-
-    /// Create node for the kernel and set the parameters
-    static Node create(vx_graph graph, vx_kernel kernel, const std::vector<vx_reference>& params)
+    /// Create node for the kernel ID and set seven parameters
+    template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
+             typename T6>
+    static Node create(vx_graph g, vx_enum kernelID,
+                       const T0& arg0, const T1& arg1, const T2& arg2,
+                       const T3& arg3, const T4& arg4, const T5& arg5,
+                       const T6& arg6)
     {
-        Node node = Node::create(graph, kernel);
-        vx_uint32 i = 0;
-        for (const auto& p : params)
-            node.setParameterByIndex(i++, p);
-        return node;
+        std::vector<vx_reference> params;
+        params.push_back(castToReference(arg0));
+        params.push_back(castToReference(arg1));
+        params.push_back(castToReference(arg2));
+        params.push_back(castToReference(arg3));
+        params.push_back(castToReference(arg4));
+        params.push_back(castToReference(arg5));
+        params.push_back(castToReference(arg6));
+        return create(g, Kernel::getByEnum(Context::getFrom(g), kernelID), params);
     }
 
-    /// Create node for the kernel ID and set the parameters
-    static Node create(vx_graph graph,  vx_enum kernelID, const std::vector<vx_reference>& params)
-    { return Node::create(graph, Kernel::getByEnum(Context::getFrom(graph), kernelID), params); }
+    /// Create node for the kernel ID and set eight parameters
+    template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
+             typename T6, typename T7>
+    static Node create(vx_graph g, vx_enum kernelID,
+                       const T0& arg0, const T1& arg1, const T2& arg2,
+                       const T3& arg3, const T4& arg4, const T5& arg5,
+                       const T6& arg6, const T7& arg7)
+    {
+        std::vector<vx_reference> params;
+        params.push_back(castToReference(arg0));
+        params.push_back(castToReference(arg1));
+        params.push_back(castToReference(arg2));
+        params.push_back(castToReference(arg3));
+        params.push_back(castToReference(arg4));
+        params.push_back(castToReference(arg5));
+        params.push_back(castToReference(arg6));
+        params.push_back(castToReference(arg7));
+        return create(g, Kernel::getByEnum(Context::getFrom(g), kernelID), params);
+    }
+
+    /// Create node for the kernel ID and set nine parameters
+    template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
+             typename T6, typename T7, typename T8>
+    static Node create(vx_graph g, vx_enum kernelID,
+                       const T0& arg0, const T1& arg1, const T2& arg2,
+                       const T3& arg3, const T4& arg4, const T5& arg5,
+                       const T6& arg6, const T7& arg7, const T8& arg8)
+    {
+        std::vector<vx_reference> params;
+        params.push_back(castToReference(arg0));
+        params.push_back(castToReference(arg1));
+        params.push_back(castToReference(arg2));
+        params.push_back(castToReference(arg3));
+        params.push_back(castToReference(arg4));
+        params.push_back(castToReference(arg5));
+        params.push_back(castToReference(arg6));
+        params.push_back(castToReference(arg7));
+        params.push_back(castToReference(arg8));
+        return create(g, Kernel::getByEnum(Context::getFrom(g), kernelID), params);
+    }
+
+    /// Create node for the kernel ID and set ten parameters
+    template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5,
+             typename T6, typename T7, typename T8, typename T9>
+    static Node create(vx_graph g, vx_enum kernelID,
+                       const T0& arg0, const T1& arg1, const T2& arg2,
+                       const T3& arg3, const T4& arg4, const T5& arg5,
+                       const T6& arg6, const T7& arg7, const T8& arg8,
+                       const T9& arg9)
+    {
+        std::vector<vx_reference> params;
+        params.push_back(castToReference(arg0));
+        params.push_back(castToReference(arg1));
+        params.push_back(castToReference(arg2));
+        params.push_back(castToReference(arg3));
+        params.push_back(castToReference(arg4));
+        params.push_back(castToReference(arg5));
+        params.push_back(castToReference(arg6));
+        params.push_back(castToReference(arg7));
+        params.push_back(castToReference(arg8));
+        params.push_back(castToReference(arg9));
+        return create(g, Kernel::getByEnum(Context::getFrom(g), kernelID), params);
+    }
+
+#else // not IVX_USE_CXX98
 
     /// Create node for the kernel ID and set the specified parameters
     template<typename...Ts>
     static Node create(vx_graph g, vx_enum kernelID, const Ts&...args)
     { return create(g, Kernel::getByEnum(Context::getFrom(g), kernelID), { castToReference(args)... }); }
 
+#endif // IVX_USE_CXX98
 
     /// vxSetParameterByIndex() wrapper
     void setParameterByIndex(vx_uint32 index, vx_reference value)
     { IVX_CHECK_STATUS(vxSetParameterByIndex(ref, index, value)); }
+
+    /// vxQueryNode() wrapper
+    template<typename T>
+    void query(vx_enum att, T& value) const
+    { IVX_CHECK_STATUS( vxQueryNode(ref, att, &value, sizeof(value)) ); }
+
+#ifndef VX_VERSION_1_1
+static const vx_enum
+    VX_NODE_STATUS          = VX_NODE_ATTRIBUTE_STATUS,
+    VX_NODE_PERFORMANCE     = VX_NODE_ATTRIBUTE_PERFORMANCE,
+    VX_NODE_BORDER          = VX_NODE_ATTRIBUTE_BORDER_MODE,
+    VX_NODE_LOCAL_DATA_SIZE = VX_NODE_ATTRIBUTE_LOCAL_DATA_SIZE,
+    VX_NODE_LOCAL_DATA_PTR  = VX_NODE_ATTRIBUTE_LOCAL_DATA_PTR,
+    VX_BORDER_UNDEFINED     = VX_BORDER_MODE_UNDEFINED;
+#endif
+
+    /// vxQueryNode(STATUS) wrapper
+    vx_status status() const
+    {
+        vx_status v;
+        query(VX_NODE_STATUS, v);
+        return v;
+    }
+
+    /// vxQueryNode(PERFORMANCE) wrapper
+    vx_perf_t performance() const
+    {
+        vx_perf_t v;
+        query(VX_NODE_PERFORMANCE, v);
+        return v;
+    }
+
+    /// vxQueryNode(BORDER) wrapper
+    border_t border() const
+    {
+        border_t v;
+        v.mode = VX_BORDER_UNDEFINED;
+        query(VX_NODE_BORDER, v);
+        return v;
+    }
+
+    /// vxQueryNode(LOCAL_DATA_SIZE) wrapper
+    vx_size dataSize() const
+    {
+        vx_size v;
+        query(VX_NODE_LOCAL_DATA_SIZE, v);
+        return v;
+    }
+
+    /// vxQueryNode(LOCAL_DATA_PTR) wrapper
+    void* dataPtr() const
+    {
+        void* v;
+        query(VX_NODE_LOCAL_DATA_PTR, v);
+        return v;
+    }
+
+#ifdef VX_VERSION_1_1
+    /// vxQueryNode(PARAMETERS) wrapper
+    vx_uint32 paramsNum() const
+    {
+        vx_uint32 v;
+        query(VX_NODE_PARAMETERS, v);
+        return v;
+    }
+
+    /// vxQueryNode(REPLICATED) wrapper
+    vx_bool isReplicated() const
+    {
+        vx_bool v;
+        query(VX_NODE_IS_REPLICATED, v);
+        return v;
+    }
+
+    /// vxQueryNode(REPLICATE_FLAGS) wrapper
+    void replicateFlags(std::vector<vx_bool>& flags) const
+    {
+        if(flags.empty()) flags.resize(paramsNum(), vx_false_e);
+        IVX_CHECK_STATUS( vxQueryNode(ref, VX_NODE_REPLICATE_FLAGS, &flags[0], flags.size()*sizeof(flags[0])) );
+    }
+
+    /// vxQueryNode(VX_NODE_VALID_RECT_RESET) wrapper
+    vx_bool resetValidRect() const
+    {
+        vx_bool v;
+        query(VX_NODE_VALID_RECT_RESET, v);
+        return v;
+    }
+#endif // VX_VERSION_1_1
+
+    /// vxSetNodeAttribute() wrapper
+    template<typename T>
+    void setAttribute(vx_enum att, const T& value)
+    { IVX_CHECK_STATUS( vxSetNodeAttribute(ref, att, &value, sizeof(value)) ); }
+
+    /// vxSetNodeAttribute(BORDER) wrapper
+    void setBorder(const border_t& bm)
+    { setAttribute(VX_NODE_BORDER, bm); }
+
+#ifndef VX_VERSION_1_1
+    /// vxSetNodeAttribute(BORDER) wrapper
+    void setBorder(vx_enum mode, vx_uint32 val = 0)
+    { vx_border_mode_t bm = {mode, val}; setBorder(bm); }
+#else
+    /// vxSetNodeAttribute(BORDER) wrapper
+    void setBorder(vx_enum mode, const vx_pixel_value_t& val)
+    { vx_border_t bm = {mode, val}; setBorder(bm); }
+
+    /// vxSetNodeAttribute(BORDER) wrapper
+    void setBorder(vx_enum mode)
+    { vx_pixel_value_t val = {}; setBorder(mode, val); }
+#endif
+
+    /// vxSetNodeAttribute(LOCAL_DATA_SIZE) wrapper
+    void setDataSize(vx_size size)
+    { setAttribute(VX_NODE_LOCAL_DATA_SIZE, size); }
+
+    /// vxSetNodeAttribute(LOCAL_DATA_PTR) wrapper
+    void setDataPtr(void* ptr)
+    { setAttribute(VX_NODE_LOCAL_DATA_PTR, ptr); }
 };
 
-#endif // IVX_USE_CXX98
 
 /// vx_image wrapper
 class Image : public RefWrapper<vx_image>
@@ -1234,7 +1448,7 @@ static const vx_enum
     VX_IMAGE_SIZE   = VX_IMAGE_ATTRIBUTE_SIZE;
 #endif
 
-/// vxQueryImage(VX_IMAGE_WIDTH) wrapper
+    /// vxQueryImage(VX_IMAGE_WIDTH) wrapper
     vx_uint32 width() const
     {
         vx_uint32 v;
@@ -1488,13 +1702,18 @@ static const vx_enum
         copyFrom(planeIdx, createAddressing((vx_uint32)m.cols, (vx_uint32)m.rows, (vx_int32)m.elemSize(), (vx_int32)m.step), m.ptr());
     }
 
-    /*
+/*
+private:
+    cv::Mat _mat; // TODO: update copy/move-c-tors, operator=() and swapHandles()
+public:
     static Image createFromHandle(vx_context context, const cv::Mat& mat)
-    { throw WrapperError(std::string(__func__)+"(): NYI"); }
-
-    cv::Mat swapHandle(const cv::Mat& newMat)
-    { throw WrapperError(std::string(__func__)+"(): NYI"); }
-    */
+    {
+        if(mat.empty()) throw WrapperError(std::string(__func__)+"(): empty cv::Mat");
+        Image res = createFromHandle(context, matTypeToFormat(mat.type()), createAddressing(mat), mat.data );
+        res._mat = mat;
+        return res;
+    }
+*/
 #endif //IVX_USE_OPENCV
 
     struct Patch;
@@ -1702,7 +1921,8 @@ static const vx_enum VX_SCALAR_TYPE = VX_SCALAR_ATTRIBUTE_TYPE;
     template<typename T>
     void getValue(T& val)
     {
-        if(TypeToEnum<T>::value != type()) throw WrapperError(std::string(__func__)+"(): incompatible types");
+        if (!areTypesCompatible(TypeToEnum<T>::value, type()))
+            throw WrapperError(std::string(__func__)+"(): incompatible types");
 #ifdef VX_VERSION_1_1
         IVX_CHECK_STATUS( vxCopyScalar(ref, &val, VX_READ_ONLY, VX_MEMORY_TYPE_HOST) );
 #else
@@ -1724,7 +1944,8 @@ static const vx_enum VX_SCALAR_TYPE = VX_SCALAR_ATTRIBUTE_TYPE;
     template<typename T>
     void setValue(T val)
     {
-        if (TypeToEnum<T>::value != type()) throw WrapperError(std::string(__func__)+"(): incompatible types");
+        if (!areTypesCompatible(TypeToEnum<T>::value, type()))
+            throw WrapperError(std::string(__func__)+"(): incompatible types");
 #ifdef VX_VERSION_1_1
         IVX_CHECK_STATUS(vxCopyScalar(ref, &val, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
 #else
@@ -1909,6 +2130,19 @@ public:
         return v;
     }
 
+    void addItems(vx_size count, const void* ptr, vx_size stride)
+    {
+        IVX_CHECK_STATUS(vxAddArrayItems(ref, count, ptr, stride));
+    }
+
+    void truncateArray(vx_size new_count)
+    {
+        if(new_count <= itemCount())
+            IVX_CHECK_STATUS(vxTruncateArray(ref, new_count));
+        else
+            throw WrapperError(std::string(__func__) + "(): array is too small");
+    }
+
     void copyRangeTo(size_t start, size_t end, void* data)
     {
         if (!data) throw WrapperError(std::string(__func__) + "(): output pointer is 0");
@@ -1955,15 +2189,29 @@ public:
     void copy(void* data, vx_enum usage, vx_enum memType = VX_MEMORY_TYPE_HOST)
     { copyRange(0, itemCount(), data, usage, memType); }
 
+    template<typename T> void addItem(const T& item)
+    {
+        if (!areTypesCompatible(TypeToEnum<T>::value, itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        addItems(1, &item, sizeof(T));
+    }
+
+    template<typename T> void addItems(const std::vector<T>& data)
+    {
+        if (!areTypesCompatible(TypeToEnum<T>::value, itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        addItems(data.size(), &data[0], itemSize());
+    }
+
     template<typename T> void copyRangeTo(size_t start, size_t end, std::vector<T>& data)
     {
-        if (TypeToEnum<T>::value != itemType()) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
-        if (data.size() != (end - start))
+        if (!areTypesCompatible(TypeToEnum<T>::value, itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (data.empty())
+            data.resize((end - start));
+        else if (data.size() != (end - start))
         {
-            if (data.size() == 0)
-                data.resize((end - start));
-            else
-                throw WrapperError(std::string(__func__) + "(): destination size is wrong");
+            throw WrapperError(std::string(__func__) + "(): destination size is wrong");
         }
         copyRangeTo(start, end, &data[0]);
     }
@@ -1973,7 +2221,8 @@ public:
 
     template<typename T> void copyRangeFrom(size_t start, size_t end, const std::vector<T>& data)
     {
-        if (TypeToEnum<T>::value != itemType()) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, itemType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         if (data.size() != (end - start)) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyRangeFrom(start, end, &data[0]);
     }
@@ -1982,13 +2231,24 @@ public:
     { copyRangeFrom(0, itemCount(), data); }
 
 #ifdef IVX_USE_OPENCV
+    void addItems(cv::InputArray ia)
+    {
+        cv::Mat m = ia.getMat();
+        if (m.type() != enumToCVType(itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        addItems(m.total(), m.isContinuous() ? m.ptr() : m.clone().ptr(),
+                 (vx_size)(m.elemSize()));
+    }
+
     void copyRangeTo(size_t start, size_t end, cv::Mat& m)
     {
-        if (m.type() != enumToCVType(itemType())) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (m.type() != enumToCVType(itemType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
         if (!(
                 ((vx_size)(m.rows) == (end - start) && m.cols == 1) ||
                 ((vx_size)(m.cols) == (end - start) && m.rows == 1)
-            ) && !m.empty()) throw WrapperError(std::string(__func__) + "(): destination size is wrong");
+            ) && !m.empty())
+            throw WrapperError(std::string(__func__) + "(): destination size is wrong");
 
         if (m.isContinuous() && (vx_size)(m.total()) == (end - start))
         {
@@ -2013,8 +2273,10 @@ public:
         if (!(
                 ((vx_size)(m.rows) == (end - start) && m.cols == 1) ||
                 ((vx_size)(m.cols) == (end - start) && m.rows == 1)
-             )) throw WrapperError(std::string(__func__) + "(): source size is wrong");
-        if (m.type() != enumToCVType(itemType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+             ))
+            throw WrapperError(std::string(__func__) + "(): source size is wrong");
+        if (m.type() != enumToCVType(itemType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         copyFrom(m.isContinuous() ? m.ptr() : m.clone().ptr());
     }
 
@@ -2121,7 +2383,8 @@ public:
 
     template<typename T> void copyTo(std::vector<T>& data)
     {
-        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
         if (data.size() != size())
         {
             if (data.size() == 0)
@@ -2134,7 +2397,8 @@ public:
 
     template<typename T> void copyFrom(const std::vector<T>& data)
     {
-        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         if (data.size() != size()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyFrom(&data[0]);
     }
@@ -2281,7 +2545,8 @@ public:
 
     template<typename T> void copyTo(std::vector<T>& data)
     {
-        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
         if (data.size() != size())
         {
             if (data.size() == 0)
@@ -2294,7 +2559,8 @@ public:
 
     template<typename T> void copyFrom(const std::vector<T>& data)
     {
-        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         if (data.size() != size()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyFrom(&data[0]);
     }
@@ -2432,7 +2698,8 @@ public:
 
     template<typename T> void copyTo(std::vector<T>& data)
     {
-        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): destination type is wrong");
         if (data.size() != count())
         {
             if (data.size() == 0)
@@ -2445,7 +2712,8 @@ public:
 
     template<typename T> void copyFrom(const std::vector<T>& data)
     {
-        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
+            throw WrapperError(std::string(__func__) + "(): source type is wrong");
         if (data.size() != count()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyFrom(&data[0]);
     }
@@ -2481,6 +2749,173 @@ public:
                 ((vx_size)(m.rows) == count() && m.cols == 1) ||
                 ((vx_size)(m.cols) == count() && m.rows == 1)
            )) throw WrapperError(std::string(__func__) + "(): source size is wrong");
+        if (m.type() != enumToCVType(dataType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        copyFrom(m.isContinuous() ? m.ptr() : m.clone().ptr());
+    }
+#endif //IVX_USE_OPENCV
+};
+
+/*
+* Distribution
+*/
+class Distribution : public RefWrapper<vx_distribution>
+{
+public:
+    IVX_REF_STD_CTORS_AND_ASSIGNMENT(Distribution);
+
+    static Distribution create(vx_context context, vx_size numBins, vx_int32 offset, vx_uint32 range)
+    {
+        return Distribution(vxCreateDistribution(context, numBins, offset, range));
+    }
+
+#ifndef VX_VERSION_1_1
+    static const vx_enum
+        VX_MEMORY_TYPE_HOST = VX_IMPORT_TYPE_HOST,
+        VX_DISTRIBUTION_DIMENSIONS = VX_DISTRIBUTION_ATTRIBUTE_DIMENSIONS,
+        VX_DISTRIBUTION_OFFSET = VX_DISTRIBUTION_ATTRIBUTE_OFFSET,
+        VX_DISTRIBUTION_RANGE = VX_DISTRIBUTION_ATTRIBUTE_RANGE,
+        VX_DISTRIBUTION_BINS = VX_DISTRIBUTION_ATTRIBUTE_BINS,
+        VX_DISTRIBUTION_WINDOW = VX_DISTRIBUTION_ATTRIBUTE_WINDOW,
+        VX_DISTRIBUTION_SIZE = VX_DISTRIBUTION_ATTRIBUTE_SIZE;
+#endif
+
+    template<typename T>
+    void query(vx_enum att, T& value) const
+    {
+        IVX_CHECK_STATUS(vxQueryDistribution(ref, att, &value, sizeof(value)));
+    }
+
+    vx_size dimensions() const
+    {
+        vx_size v;
+        query(VX_DISTRIBUTION_DIMENSIONS, v);
+        return v;
+    }
+
+    vx_int32 offset() const
+    {
+        vx_int32 v;
+        query(VX_DISTRIBUTION_OFFSET, v);
+        return v;
+    }
+
+    vx_uint32 range() const
+    {
+        vx_uint32 v;
+        query(VX_DISTRIBUTION_RANGE, v);
+        return v;
+    }
+
+    vx_size bins() const
+    {
+        vx_size v;
+        query(VX_DISTRIBUTION_BINS, v);
+        return v;
+    }
+
+    vx_uint32 window() const
+    {
+        vx_uint32 v;
+        query(VX_DISTRIBUTION_WINDOW, v);
+        return v;
+    }
+
+    vx_size size() const
+    {
+        vx_size v;
+        query(VX_DISTRIBUTION_SIZE, v);
+        return v;
+    }
+
+    vx_size dataType() const
+    {
+        return VX_TYPE_UINT32;
+    }
+
+    void copyTo(void* data)
+    {
+        if (!data) throw WrapperError(std::string(__func__) + "(): output pointer is 0");
+#ifdef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxCopyDistribution(ref, data, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
+#else
+        IVX_CHECK_STATUS(vxAccessDistribution(ref, &data, VX_READ_ONLY));
+        IVX_CHECK_STATUS(vxCommitDistribution(ref, data));
+#endif
+    }
+
+    void copyFrom(const void* data)
+    {
+        if (!data) throw WrapperError(std::string(__func__) + "(): input pointer is 0");
+#ifdef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxCopyDistribution(ref, const_cast<void*>(data), VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST));
+#else
+        IVX_CHECK_STATUS(vxAccessDistribution(ref, const_cast<void**>(&data), VX_WRITE_ONLY));
+        IVX_CHECK_STATUS(vxCommitDistribution(ref, data));
+#endif
+    }
+
+    void copy(void* data, vx_enum usage, vx_enum memType = VX_MEMORY_TYPE_HOST)
+    {
+#ifdef VX_VERSION_1_1
+        IVX_CHECK_STATUS(vxCopyDistribution(ref, data, usage, memType));
+#else
+        IVX_CHECK_STATUS(vxAccessDistribution(ref, const_cast<void**>(&data), usage));
+        IVX_CHECK_STATUS(vxCommitDistribution(ref, data));
+        (void)memType;
+#endif
+    }
+
+    template<typename T> void copyTo(std::vector<T>& data)
+    {
+        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (data.size() != bins())
+        {
+            if (data.size() == 0)
+                data.resize(bins());
+            else
+                throw WrapperError(std::string(__func__) + "(): destination size is wrong");
+        }
+        copyTo(&data[0]);
+    }
+
+    template<typename T> void copyFrom(const std::vector<T>& data)
+    {
+        if (TypeToEnum<T>::value != dataType()) throw WrapperError(std::string(__func__) + "(): source type is wrong");
+        if (data.size() != bins()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
+        copyFrom(&data[0]);
+    }
+
+#ifdef IVX_USE_OPENCV
+    void copyTo(cv::Mat& m)
+    {
+        if (m.type() != enumToCVType(dataType())) throw WrapperError(std::string(__func__) + "(): destination type is wrong");
+        if (!(
+            ((vx_size)(m.rows) == bins() && m.cols == 1) ||
+            ((vx_size)(m.cols) == bins() && m.rows == 1)
+            ) && !m.empty())
+            throw WrapperError(std::string(__func__) + "(): destination size is wrong");
+
+        if (m.isContinuous() && (vx_size)(m.total()) == bins())
+        {
+            copyTo(m.ptr());
+        }
+        else
+        {
+            cv::Mat tmp(1, (int)bins(), enumToCVType(dataType()));
+            copyTo(tmp.ptr());
+            if (m.empty())
+                m = tmp;
+            else
+                tmp.copyTo(m);
+        }
+    }
+
+    void copyFrom(const cv::Mat& m)
+    {
+        if (!(
+            ((vx_size)(m.rows) == bins() && m.cols == 1) ||
+            ((vx_size)(m.cols) == bins() && m.rows == 1)
+            )) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         if (m.type() != enumToCVType(dataType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
         copyFrom(m.isContinuous() ? m.ptr() : m.clone().ptr());
     }

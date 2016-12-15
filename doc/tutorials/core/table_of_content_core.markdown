@@ -25,6 +25,8 @@ understanding how to manipulate the images on a pixel level.
 
 -   @subpage tutorial_mat_mask_operations
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Bernát Gábor

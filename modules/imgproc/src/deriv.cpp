@@ -43,11 +43,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_HIDE_INFO_WARNINGS
-#define IVX_USE_OPENCV
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters
@@ -263,8 +259,8 @@ namespace cv
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
-            vx_border_t prevBorder = ctx.borderMode();
-            ctx.setBorderMode(border);
+            vx_border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border);
             if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1)
             {
                 if(dx)
@@ -277,7 +273,7 @@ namespace cv
 #if VX_VERSION <= VX_VERSION_1_0
                 if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
                 {
-                    ctx.setBorderMode(prevBorder);
+                    ctx.setImmediateBorder(prevBorder);
                     return false;
                 }
 #endif
@@ -292,19 +288,18 @@ namespace cv
                 cnv.setScale(cscale);
                 ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
             }
-            ctx.setBorderMode(prevBorder);
-            return true;
+            ctx.setImmediateBorder(prevBorder);
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
+
+        return true;
     }
 }
 #endif
@@ -729,10 +724,8 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-#ifdef HAVE_OPENVX
-    if (openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
 
     CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
 

@@ -44,11 +44,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_HIDE_INFO_WARNINGS
-#define IVX_USE_OPENCV
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 /*
  * This file includes the code, contributed by Simon Perreault
  * (the function icvMedianBlur_8u_O1)
@@ -1703,8 +1700,8 @@ namespace cv
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
-            vx_border_t prevBorder = ctx.borderMode();
-            ctx.setBorderMode(border);
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border);
             if (ddepth == CV_8U && ksize.width == 3 && ksize.height == 3 && normalize)
             {
                 ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
@@ -1714,7 +1711,7 @@ namespace cv
 #if VX_VERSION <= VX_VERSION_1_0
                 if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
                 {
-                    ctx.setBorderMode(prevBorder);
+                    ctx.setImmediateBorder(prevBorder);
                     return false;
                 }
 #endif
@@ -1726,17 +1723,15 @@ namespace cv
                     cnv.setScale(1 << 15);
                 ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
             }
-            ctx.setBorderMode(prevBorder);
+            ctx.setImmediateBorder(prevBorder);
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
 
         return true;
@@ -1855,10 +1850,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
-#ifdef HAVE_OPENVX
-    if (openvx_boxfilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_boxfilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
 
     Mat src = _src.getMat();
     int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
@@ -2135,15 +2128,16 @@ namespace cv
 {
 #ifdef HAVE_OPENCL
 
-static bool ocl_GaussianBlur3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
-                                     InputArray _kernelX, InputArray _kernelY, int borderType)
+static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize, int ddepth,
+                                  InputArray _kernelX, InputArray _kernelY, int borderType)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if ( !(dev.isIntel() && (type == CV_8UC1) &&
          (_src.offset() == 0) && (_src.step() % 4 == 0) &&
-         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) )
+         ((ksize.width == 5 && (_src.cols() % 4 == 0)) ||
+         (ksize.width == 3 && (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)))) )
         return false;
 
     Mat kernelX = _kernelX.getMat().reshape(1, 1);
@@ -2160,8 +2154,16 @@ static bool ocl_GaussianBlur3x3_8UC1(InputArray _src, OutputArray _dst, int ddep
     size_t globalsize[2] = { 0, 0 };
     size_t localsize[2] = { 0, 0 };
 
-    globalsize[0] = size.width / 16;
-    globalsize[1] = size.height / 2;
+    if (ksize.width == 3)
+    {
+        globalsize[0] = size.width / 16;
+        globalsize[1] = size.height / 2;
+    }
+    else if (ksize.width == 5)
+    {
+        globalsize[0] = size.width / 4;
+        globalsize[1] = size.height / 1;
+    }
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
@@ -2169,7 +2171,13 @@ static bool ocl_GaussianBlur3x3_8UC1(InputArray _src, OutputArray _dst, int ddep
             ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
             ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
 
-    ocl::Kernel kernel("gaussianBlur3x3_8UC1_cols16_rows2", cv::ocl::imgproc::gaussianBlur3x3_oclsrc, build_opts);
+    ocl::Kernel kernel;
+
+    if (ksize.width == 3)
+        kernel.create("gaussianBlur3x3_8UC1_cols16_rows2", cv::ocl::imgproc::gaussianBlur3x3_oclsrc, build_opts);
+    else if (ksize.width == 5)
+        kernel.create("gaussianBlur5x5_8UC1_cols4", cv::ocl::imgproc::gaussianBlur5x5_oclsrc, build_opts);
+
     if (kernel.empty())
         return false;
 
@@ -2259,8 +2267,8 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
-        vx_border_t prevBorder = ctx.borderMode();
-        ctx.setBorderMode(border);
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(border);
         if (ksize.width == 3 && ksize.height == 3 && (sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) && (sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON))
         {
             ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
@@ -2270,7 +2278,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 #if VX_VERSION <= VX_VERSION_1_0
             if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(a.cols) <= ctx.convolutionMaxDimension() || (vx_size)(a.rows) <= ctx.convolutionMaxDimension()))
             {
-                ctx.setBorderMode(prevBorder);
+                ctx.setImmediateBorder(prevBorder);
                 return false;
             }
 #endif
@@ -2281,17 +2289,15 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             cnv.setScale(1 << 15);
             ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
         }
-        ctx.setBorderMode(prevBorder);
+        ctx.setImmediateBorder(prevBorder);
     }
     catch (ivx::RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (ivx::WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     return true;
 }
@@ -2418,10 +2424,8 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
     }
 
-#ifdef HAVE_OPENVX
-    if (openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     Mat src = _src.getMat();
@@ -2436,9 +2440,10 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 &&
-               ksize.width == 3 && ksize.height == 3 &&
+               ((ksize.width == 3 && ksize.height == 3) ||
+               (ksize.width == 5 && ksize.height == 5)) &&
                (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
-               ocl_GaussianBlur3x3_8UC1(_src, _dst, CV_MAT_DEPTH(type), kx, ky, borderType));
+               ocl_GaussianBlur_8UC1(_src, _dst, ksize, CV_MAT_DEPTH(type), kx, ky, borderType));
 
     sepFilter2D(_src, _dst, CV_MAT_DEPTH(type), kx, ky, Point(-1,-1), 0, borderType );
 }
@@ -3389,8 +3394,8 @@ namespace cv
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
-            vx_border_t prevBorder = ctx.borderMode();
-            ctx.setBorderMode(border);
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border);
 #ifdef VX_VERSION_1_1
             if (ksize == 3)
 #endif
@@ -3409,7 +3414,7 @@ namespace cv
                     ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_NONLINEAR_MAX_DIMENSION, &supportedSize, sizeof(supportedSize)));
                     if ((vx_size)ksize > supportedSize)
                     {
-                        ctx.setBorderMode(prevBorder);
+                        ctx.setImmediateBorder(prevBorder);
                         return false;
                     }
                     Mat mask(ksize, ksize, CV_8UC1, Scalar(255));
@@ -3419,17 +3424,15 @@ namespace cv
                 ivx::IVX_CHECK_STATUS(vxuNonLinearFilter(ctx, VX_NONLINEAR_FILTER_MEDIAN, ia, mtx, ib));
             }
 #endif
-            ctx.setBorderMode(prevBorder);
+            ctx.setImmediateBorder(prevBorder);
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
 
         return true;
@@ -3517,10 +3520,8 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
-#ifdef HAVE_OPENVX
-    if (openvx_medianFilter(_src0, _dst, ksize))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_medianFilter(_src0, _dst, ksize))
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 810 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
 
