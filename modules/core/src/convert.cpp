@@ -4726,7 +4726,7 @@ cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
 {
     CV_OVX_RUN(
-        false,
+        true,
         openvx_cvt(src, sstep, dst, dstep, size)
     )
 
