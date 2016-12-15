@@ -366,7 +366,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     PixType* tempBuf = (PixType*)(disp2ptr + width);
 
     // add P2 to every C(x,y). it saves a few operations in the inner loops
-    for( k = 0; k < width1*D; k++ )
+    for(k = 0; k < (int)CSBufSize; k++ )
         Cbuf[k] = (CostType)P2;
 
     for( int pass = 1; pass <= npasses; pass++ )
