@@ -565,14 +565,14 @@ namespace colormap
 
     void applyColorMap(InputArray src, OutputArray dst, InputArray userColor)
     {
-        if (userColor.total() != 256)
+        if (userColor.size() != Size(1,256))
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         if (userColor.type() != CV_8UC1 && userColor.type() != CV_8UC3)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables CV_8UC1 or CV_8UC3.");
         colormap::ColorMap* cm = (colormap::ColorMap*) (new colormap::UserColorMap(userColor.getMat()));
 
         if (!cm)
-            CV_Error(Error::StsBadArg, "Unknown colormap id; use one of COLORMAP_*");
+            CV_Error(Error::StsBadArg, "Unknown inputArray");
 
         (*cm)(src, dst);
 
