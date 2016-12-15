@@ -926,6 +926,16 @@ public:
     Mat(const Mat& m, const Range* ranges);
 
     /** @overload
+    @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied
+    by these constructors. Instead, the header pointing to m data or its sub-array is constructed and
+    associated with it. The reference counter, if any, is incremented. So, when you modify the matrix
+    formed using such a constructor, you also modify the corresponding elements of m . If you want to
+    have an independent copy of the sub-array, use Mat::clone() .
+    @param ranges Array of selected ranges of m along each dimensionality.
+    */
+    Mat(const Mat& m, const std::vector<Range>& ranges);
+
+    /** @overload
     @param vec STL vector whose elements form the matrix. The matrix has a single column and the number
     of rows equal to the number of vector elements. Type of the matrix matches the type of vector
     elements. The constructor can handle arbitrary types, for which there is a properly declared
@@ -1516,6 +1526,11 @@ public:
     */
     Mat operator()( const Range* ranges ) const;
 
+    /** @overload
+    @param ranges Array of selected ranges along each array dimension.
+    */
+    Mat operator()(const std::vector<Range>& ranges) const;
+
     // //! converts header to CvMat; no data is copied
     // operator CvMat() const;
     // //! converts header to CvMatND; no data is copied
@@ -2054,6 +2069,8 @@ public:
     Mat_(const Mat_& m, const Rect& roi);
     //! selects a submatrix, n-dim version
     Mat_(const Mat_& m, const Range* ranges);
+    //! selects a submatrix, n-dim version
+    Mat_(const Mat_& m, const std::vector<Range>& ranges);
     //! from a matrix expression
     explicit Mat_(const MatExpr& e);
     //! makes a matrix out of Vec, std::vector, Point_ or Point3_. The matrix will have a single column
@@ -2123,6 +2140,7 @@ public:
     Mat_ operator()( const Range& rowRange, const Range& colRange ) const;
     Mat_ operator()( const Rect& roi ) const;
     Mat_ operator()( const Range* ranges ) const;
+    Mat_ operator()(const std::vector<Range>& ranges) const;
 
     //! more convenient forms of row and element access operators
     _Tp* operator [](int y);
@@ -2227,6 +2245,7 @@ public:
     UMat(const UMat& m, const Range& rowRange, const Range& colRange=Range::all());
     UMat(const UMat& m, const Rect& roi);
     UMat(const UMat& m, const Range* ranges);
+    UMat(const UMat& m, const std::vector<Range>& ranges);
     //! builds matrix from std::vector with or without copying the data
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
     //! builds matrix from cv::Vec; the data is copied by default
@@ -2333,6 +2352,7 @@ public:
     UMat operator()( Range rowRange, Range colRange ) const;
     UMat operator()( const Rect& roi ) const;
     UMat operator()( const Range* ranges ) const;
+    UMat operator()(const std::vector<Range>& ranges) const;
 
     //! returns true iff the matrix data is continuous
     // (i.e. when there are no gaps between successive rows).

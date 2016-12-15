@@ -583,6 +583,10 @@ Mat::Mat(const Mat& m, const Range* ranges)
     updateContinuityFlag(*this);
 }
 
+Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
+    : Mat(m, ranges.data())
+{
+}
 
 static Mat cvMatNDToMat(const CvMatND* m, bool copyData)
 {
