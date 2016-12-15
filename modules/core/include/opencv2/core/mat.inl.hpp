@@ -737,6 +737,12 @@ Mat Mat::operator()(const Range* ranges) const
 }
 
 inline
+Mat Mat::operator()(const std::vector<Range>& ranges) const
+{
+    return Mat(*this, ranges);
+}
+
+inline
 bool Mat::isContinuous() const
 {
     return (flags & CONTINUOUS_FLAG) != 0;
@@ -1384,6 +1390,11 @@ Mat_<_Tp>::Mat_(const Mat_<_Tp>& m, const Range* ranges)
 {}
 
 template<typename _Tp> inline
+Mat_<_Tp>::Mat_(const Mat_<_Tp>& m, const std::vector<Range>& ranges)
+    : Mat(m, ranges)
+{}
+
+template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const Mat& m)
     : Mat()
 {
@@ -1610,6 +1621,12 @@ Mat_<_Tp> Mat_<_Tp>::operator()( const Rect& roi ) const
 
 template<typename _Tp> inline
 Mat_<_Tp> Mat_<_Tp>::operator()( const Range* ranges ) const
+{
+    return Mat_<_Tp>(*this, ranges);
+}
+
+template<typename _Tp> inline
+Mat_<_Tp> Mat_<_Tp>::operator()(const std::vector<Range>& ranges) const
 {
     return Mat_<_Tp>(*this, ranges);
 }
@@ -3536,6 +3553,12 @@ UMat UMat::operator()( const Rect& roi ) const
 
 inline
 UMat UMat::operator()(const Range* ranges) const
+{
+    return UMat(*this, ranges);
+}
+
+inline
+UMat UMat::operator()(const std::vector<Range>& ranges) const
 {
     return UMat(*this, ranges);
 }
