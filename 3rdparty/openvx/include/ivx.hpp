@@ -343,6 +343,15 @@ template <> struct RefTypeTraits <vx_lut>
     static vx_status release(vxType& ref) { return vxReleaseLUT(&ref); }
 };
 
+class Pyramid;
+template <> struct RefTypeTraits <vx_pyramid>
+{
+    typedef vx_pyramid vxType;
+    typedef Pyramid wrapperType;
+    static const vx_enum vxTypeEnum = VX_TYPE_PYRAMID;
+    static vx_status release(vxType& ref) { return vxReleasePyramid(&ref); }
+};
+
 class Distribution;
 template <> struct RefTypeTraits <vx_distribution>
 {
@@ -2753,6 +2762,74 @@ public:
         copyFrom(m.isContinuous() ? m.ptr() : m.clone().ptr());
     }
 #endif //IVX_USE_OPENCV
+};
+
+/*
+ * Pyramid
+ */
+class Pyramid : public RefWrapper<vx_pyramid>
+{
+public:
+    IVX_REF_STD_CTORS_AND_ASSIGNMENT(Pyramid)
+
+    static Pyramid create(vx_context context, vx_size levels, vx_float32 scale,
+                          vx_uint32 width, vx_uint32 height, vx_df_image format)
+    {return Pyramid(vxCreatePyramid(context, levels, scale, width, height, format));}
+
+    static Pyramid createVirtual(vx_graph graph, vx_size levels, vx_float32 scale,
+                                 vx_uint32 width, vx_uint32 height, vx_df_image format)
+    {return Pyramid(vxCreateVirtualPyramid(graph, levels, scale, width, height, format));}
+
+#ifndef VX_VERSION_1_1
+    static const vx_enum
+        VX_PYRAMID_LEVELS = VX_PYRAMID_ATTRIBUTE_LEVELS,
+        VX_PYRAMID_SCALE  = VX_PYRAMID_ATTRIBUTE_SCALE,
+        VX_PYRAMID_WIDTH  = VX_PYRAMID_ATTRIBUTE_WIDTH,
+        VX_PYRAMID_HEIGHT = VX_PYRAMID_ATTRIBUTE_HEIGHT,
+        VX_PYRAMID_FORMAT = VX_PYRAMID_ATTRIBUTE_FORMAT;
+#endif
+
+    template<typename T>
+    void query(vx_enum att, T& value) const
+    { IVX_CHECK_STATUS( vxQueryPyramid(ref, att, &value, sizeof(value)) ); }
+
+    vx_size levels() const
+    {
+        vx_size l;
+        query(VX_PYRAMID_LEVELS, l);
+        return l;
+    }
+
+    vx_float32 scale() const
+    {
+        vx_float32 s;
+        query(VX_PYRAMID_SCALE, s);
+        return s;
+    }
+
+    vx_uint32 width() const
+    {
+        vx_uint32 v;
+        query(VX_PYRAMID_WIDTH, v);
+        return v;
+    }
+
+    vx_uint32 height() const
+    {
+        vx_uint32 v;
+        query(VX_PYRAMID_HEIGHT, v);
+        return v;
+    }
+
+    vx_df_image format() const
+    {
+        vx_df_image f;
+        query(VX_PYRAMID_FORMAT, f);
+        return f;
+    }
+
+    Image getLevel(vx_uint32 index)
+    { return Image(vxGetPyramidLevel(ref, index)); }
 };
 
 /*
