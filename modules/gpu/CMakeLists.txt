@@ -29,7 +29,7 @@ if(HAVE_CUDA)
 
   source_group("Src\\NVidia" FILES ${ncv_files})
   ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations -Wshadow -Wunused-parameter /wd4211 /wd4201 /wd4100 /wd4505 /wd4408)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations -Wshadow -Wunused-parameter -Wstrict-aliasing /wd4211 /wd4201 /wd4100 /wd4505 /wd4408)
 
   if(MSVC)
     if(NOT ENABLE_NOISY_WARNINGS)
