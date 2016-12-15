@@ -490,6 +490,22 @@ namespace colormap
         }
     };
 
+    // UserColormap .
+    class UserColorMap : public ColorMap {
+    public:
+
+        UserColorMap(Mat c) : ColorMap() {
+            init(c);
+        }
+
+        void init(Mat c) {
+            this->_lut = c;
+        }
+        void init(int n) {
+            CV_Error(Error::StsAssert, "unused method in UserColormap.");
+        }
+    };
+
     void ColorMap::operator()(InputArray _src, OutputArray _dst) const
     {
         CV_INSTRUMENT_REGION()
@@ -546,4 +562,21 @@ namespace colormap
 
         delete cm;
     }
+
+    void applyColorMap(InputArray src, OutputArray dst, InputArray userColor)
+    {
+        if (userColor.total() != 256)
+            CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
+        if (userColor.type() != CV_8UC1 && userColor.type() != CV_8UC3)
+            CV_Error(Error::StsAssert, "cv::LUT only supports tables CV_8UC1 or CV_8UC3.");
+        colormap::ColorMap* cm = (colormap::ColorMap*) (new colormap::UserColorMap(userColor.getMat()));
+
+        if (!cm)
+            CV_Error(Error::StsBadArg, "Unknown colormap id; use one of COLORMAP_*");
+
+        (*cm)(src, dst);
+
+        delete cm;
+    }
+
 }
