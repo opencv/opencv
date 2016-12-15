@@ -538,7 +538,7 @@ void func_name( T *array, size_t total, user_data_type aux )                    
     }                                                                               \
     stack[48];                                                                      \
                                                                                     \
-    aux = aux;                                                                      \
+    (void)aux;                                                                      \
                                                                                     \
     if( total <= 1 )                                                                \
         return;                                                                     \

@@ -156,12 +156,12 @@ void MagnoRetinaFilter::_amacrineCellsComputing(const float *OPL_ON, const float
 #ifdef MAKE_PARALLEL
         cv::parallel_for_(cv::Range(0,_filterOutput.getNBpixels()), Parallel_amacrineCellsComputing(OPL_ON, OPL_OFF, &_previousInput_ON[0], &_previousInput_OFF[0], &_amacrinCellsTempOutput_ON[0], &_amacrinCellsTempOutput_OFF[0], _temporalCoefficient));
 #else
-    register const float *OPL_ON_PTR=OPL_ON;
-    register const float *OPL_OFF_PTR=OPL_OFF;
-    register float *previousInput_ON_PTR= &_previousInput_ON[0];
-    register float *previousInput_OFF_PTR= &_previousInput_OFF[0];
-    register float *amacrinCellsTempOutput_ON_PTR= &_amacrinCellsTempOutput_ON[0];
-    register float *amacrinCellsTempOutput_OFF_PTR= &_amacrinCellsTempOutput_OFF[0];
+    const float *OPL_ON_PTR=OPL_ON;
+    const float *OPL_OFF_PTR=OPL_OFF;
+    float *previousInput_ON_PTR= &_previousInput_ON[0];
+    float *previousInput_OFF_PTR= &_previousInput_OFF[0];
+    float *amacrinCellsTempOutput_ON_PTR= &_amacrinCellsTempOutput_ON[0];
+    float *amacrinCellsTempOutput_OFF_PTR= &_amacrinCellsTempOutput_OFF[0];
 
     for (unsigned int IDpixel=0 ; IDpixel<this->getNBpixels(); ++IDpixel)
     {
@@ -198,10 +198,10 @@ const std::valarray<float> &MagnoRetinaFilter::runFilter(const std::valarray<flo
     _localLuminanceAdaptation(&_magnoXOutputOFF[0], &_localProcessBufferOFF[0]);
 
     /* Compute MagnoY */
-    register float *magnoYOutput= &(*_magnoYOutput)[0];
-    register float *magnoXOutputON_PTR= &_magnoXOutputON[0];
-    register float *magnoXOutputOFF_PTR= &_magnoXOutputOFF[0];
-    for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel)
+    float *magnoYOutput= &(*_magnoYOutput)[0];
+    float *magnoXOutputON_PTR= &_magnoXOutputON[0];
+    float *magnoXOutputOFF_PTR= &_magnoXOutputOFF[0];
+    for (unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel)
         *(magnoYOutput++)=*(magnoXOutputON_PTR++)+*(magnoXOutputOFF_PTR++);
 
     return (*_magnoYOutput);

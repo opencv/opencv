@@ -1014,7 +1014,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         {
             if( dpdc_p )
             {
-                dpdc_p[0] = 1; dpdc_p[1] = 0;
+                dpdc_p[0] = 1; dpdc_p[1] = 0; // dp_xdc_x; dp_xdc_y
                 dpdc_p[dpdc_step] = 0;
                 dpdc_p[dpdc_step+1] = 1;
                 dpdc_p += dpdc_step*2;
@@ -1024,7 +1024,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
             {
                 if( fixedAspectRatio )
                 {
-                    dpdf_p[0] = 0; dpdf_p[1] = xd*aspectRatio;
+                    dpdf_p[0] = 0; dpdf_p[1] = xd*aspectRatio; // dp_xdf_x; dp_xdf_y
                     dpdf_p[dpdf_step] = 0;
                     dpdf_p[dpdf_step+1] = yd;
                 }
@@ -1614,6 +1614,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     param[4] = k[0]; param[5] = k[1]; param[6] = k[2]; param[7] = k[3];
     param[8] = k[4]; param[9] = k[5]; param[10] = k[6]; param[11] = k[7];
 
+    if(flags & CALIB_FIX_ASPECT_RATIO)
+        mask[0] = 0;
     if( flags & CV_CALIB_FIX_FOCAL_LENGTH )
         mask[0] = mask[1] = 0;
     if( flags & CV_CALIB_FIX_PRINCIPAL_POINT )

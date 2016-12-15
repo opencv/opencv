@@ -409,7 +409,7 @@ std::valarray<float> &ImageLogPolProjection::runProjection(const std::valarray<f
         _spatiotemporalLPfilter_Irregular(&_irregularLPfilteredFrame[0], &_tempBuffer[0]+_filterOutput.getNBpixels()*2);
 
         // applying image projection/resampling
-        register unsigned int *transformTablePTR=&_transformTable[0];
+        unsigned int *transformTablePTR=&_transformTable[0];
         for (unsigned int i=0 ; i<_usefullpixelIndex ; i+=2, transformTablePTR+=2)
         {
 #ifdef IMAGELOGPOLPROJECTION_DEBUG
@@ -429,7 +429,7 @@ std::valarray<float> &ImageLogPolProjection::runProjection(const std::valarray<f
         _spatiotemporalLPfilter_Irregular(get_data(inputFrame), &_irregularLPfilteredFrame[0]);
         _spatiotemporalLPfilter_Irregular(&_irregularLPfilteredFrame[0], &_irregularLPfilteredFrame[0]);
         // applying image projection/resampling
-        register unsigned int *transformTablePTR=&_transformTable[0];
+        unsigned int *transformTablePTR=&_transformTable[0];
         for (unsigned int i=0 ; i<_usefullpixelIndex ; i+=2, transformTablePTR+=2)
         {
 #ifdef IMAGELOGPOLPROJECTION_DEBUG

@@ -53,6 +53,11 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/ml/ml.hpp"
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
+#endif
+
 namespace cv
 {
     namespace ocl
@@ -1993,6 +1998,10 @@ namespace cv
 #include "opencv2/ocl/matrix_operations.hpp"
 #if defined _MSC_VER && _MSC_VER >= 1200
 #  pragma warning( pop)
+#endif
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
 #endif
 
 #endif /* __OPENCV_OCL_HPP__ */

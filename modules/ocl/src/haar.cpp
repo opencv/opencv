@@ -235,7 +235,6 @@ typedef struct _ALIGNED_ON(64) GpuHidHaarClassifierCascade
 } GpuHidHaarClassifierCascade;
 #endif
 
-const int icv_object_win_border = 1;
 const float icv_stage_threshold_bias = 0.0001f;
 double globaltime = 0;
 

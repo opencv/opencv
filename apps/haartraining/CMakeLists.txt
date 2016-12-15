@@ -10,6 +10,8 @@ project(haartraining)
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
 ocv_include_modules(${OPENCV_HAARTRAINING_DEPS})
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-private-field)
+
 if(WIN32)
   link_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()

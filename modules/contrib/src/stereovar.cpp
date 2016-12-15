@@ -93,7 +93,7 @@ static Mat diffX(Mat &src)
 
 static Mat getGradient(Mat &src)
 {
-    register int x, y;
+    int x, y;
     Mat dst(src.size(), src.type());
     dst.setTo(0);
     for (y = 0; y < src.rows - 1; y++) {
@@ -109,10 +109,10 @@ static Mat getGradient(Mat &src)
 static Mat getG_c(Mat &src, float l)
 {
     Mat dst(src.size(), src.type());
-    for (register int y = 0; y < src.rows; y++) {
+    for (int y = 0; y < src.rows; y++) {
         float *pSrc = src.ptr<float>(y);
         float *pDst = dst.ptr<float>(y);
-        for (register int x = 0; x < src.cols; x++)
+        for (int x = 0; x < src.cols; x++)
             pDst[x] = 0.5f*l / sqrtf(l*l + pSrc[x]*pSrc[x]);
     }
     return dst;
@@ -121,10 +121,10 @@ static Mat getG_c(Mat &src, float l)
 static Mat getG_p(Mat &src, float l)
 {
     Mat dst(src.size(), src.type());
-    for (register int y = 0; y < src.rows; y++) {
+    for (int y = 0; y < src.rows; y++) {
         float *pSrc = src.ptr<float>(y);
         float *pDst = dst.ptr<float>(y);
-        for (register int x = 0; x < src.cols; x++)
+        for (int x = 0; x < src.cols; x++)
             pDst[x] = 0.5f*l*l / (l*l + pSrc[x]*pSrc[x]);
     }
     return dst;
@@ -132,7 +132,7 @@ static Mat getG_p(Mat &src, float l)
 
 void StereoVar::VariationalSolver(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level)
 {
-    register int n, x, y;
+    int n, x, y;
     float gl = 1, gr = 1, gu = 1, gd = 1, gc = 4;
     Mat g_c, g_p;
     Mat U;
