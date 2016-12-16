@@ -1091,11 +1091,10 @@ namespace
         for(size_t i = 0; i < npoints; i++ )
             status[i] = true;
 
-        Mat errMat;
+        // OpenVX doesn't return detection errors
         if( _err.needed() )
         {
-            _err.create((int)npoints, 1, CV_32F, -1, true);
-            errMat = _err.getMat();
+            return false;
         }
 
         try
@@ -1184,8 +1183,6 @@ namespace
                 vx_keypoint_t kp = vxNextPts[i];
                 nextPtsMat.at<Point2f>(i) = Point2f(kp.x, kp.y);
                 statusMat.at<uchar>(i) = (bool)kp.tracking_status;
-                // OpenVX doesn't return detection errors
-                errMat.at<float>(i) = 0;
             }
 
 #ifdef VX_VERSION_1_1
