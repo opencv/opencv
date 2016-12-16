@@ -176,7 +176,7 @@ class App:
             self.rect_sel.draw(vis)
 
             cv2.imshow('frame', vis)
-            ch = cv2.waitKey(10) & 0xFF
+            ch = cv2.waitKey(10)
             if ch == 27:
                 break
             if ch == ord(' '):
