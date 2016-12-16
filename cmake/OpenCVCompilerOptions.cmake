@@ -418,8 +418,13 @@ if(MSVC)
   string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
   string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG}")
 
-  if(NOT ENABLE_NOISY_WARNINGS AND MSVC_VERSION EQUAL 1400)
-    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4510 /wd4610 /wd4312 /wd4201 /wd4244 /wd4328 /wd4267)
+  if(NOT ENABLE_NOISY_WARNINGS)
+    if(MSVC_VERSION EQUAL 1400)
+      ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4510 /wd4610 /wd4312 /wd4201 /wd4244 /wd4328 /wd4267)
+    endif()
+    if(MSVC_VERSION LESS 1900) # MSVS2015
+      ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # warning C4127: conditional expression is constant
+    endif()
   endif()
 
   # allow extern "C" functions throw exceptions
