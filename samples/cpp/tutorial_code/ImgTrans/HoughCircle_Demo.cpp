@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     // and refresh the content of the output image
     // until the user presses q or Q
     int key = 0;
-    while(key != 'q' && key != 'Q')
+    while((char) key != 'q' && (char) key != 'Q')
     {
         // those paramaters cannot be =0
         // so we must check here
