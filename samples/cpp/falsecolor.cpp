@@ -22,9 +22,9 @@ static void TrackColorMap(int x, void *r)
     {
         if (!lutRND)
         {
-            RNG r;
+            RNG ra;
             Mat *palette = new Mat(256, 1, CV_8UC3);
-            r.fill(*palette, RNG::UNIFORM, 0, 256);
+            ra.fill(*palette, RNG::UNIFORM, 0, 256);
             lutRND = Ptr<Mat>(palette);
         }
         applyColorMap(p->img, dst, *lutRND.get());
