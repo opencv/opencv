@@ -3,7 +3,7 @@
 using namespace cv;
 using namespace std;
 
-enum {MyCIRCLE=0,MyRECTANGLE,MyELLIPSE}MyShape;
+enum MyShape{MyCIRCLE=0,MyRECTANGLE,MyELLIPSE};
 
 struct ParamColorMar {
     int iColormap;
