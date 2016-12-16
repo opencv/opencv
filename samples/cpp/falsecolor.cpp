@@ -125,7 +125,7 @@ static Mat DrawMyImage(int thickness,int nbShape)
     return img;
 }
 
-int main(int argc, const char *argv[])
+int main(void)
 {
     ParamColorMar  p;
 
