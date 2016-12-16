@@ -295,10 +295,10 @@ static bool openvx_harris(Mat image, OutputArray _corners,
         ivx::Scalar strengthThresh = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, 0);
 
         //The gradient window size to use on the input.
-        ivx::Scalar gradientSize = ivx::Scalar::create<VX_TYPE_INT32>(context, 3);
+        vx_int32 gradientSize = 3;
 
         //The block window size used to compute the harris corner score
-        ivx::Scalar blockSize = ivx::Scalar::create<VX_TYPE_INT32>(context, _blockSize);
+        vx_int32 blockSize = _blockSize;
 
         //The scalar sensitivity threshold k from the Harris-Stephens equation
         ivx::Scalar sensivity = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, _harrisK);
@@ -311,8 +311,7 @@ static bool openvx_harris(Mat image, OutputArray _corners,
         ivx::Scalar numCorners = ivx::Scalar::create<VX_TYPE_SIZE>(context, 0);
 
         IVX_CHECK_STATUS(vxuHarrisCorners(context, ovxImage, strengthThresh, minDistance, sensivity,
-                                          gradientSize.getValue<vx_int32>(), blockSize.getValue<vx_int32>(),
-                                          corners, numCorners));
+                                          gradientSize, blockSize, corners, numCorners));
 
         std::vector<vx_keypoint_t> vxKeypoints;
         corners.copyTo(vxKeypoints);
