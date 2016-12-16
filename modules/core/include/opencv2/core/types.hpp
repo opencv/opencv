@@ -483,8 +483,10 @@ public:
     @param pts The points array for storing rectangle vertices.
     */
     void points(Point2f pts[]) const;
-    //! returns the minimal up-right rectangle containing the rotated rectangle
+    //! returns the minimal up-right integer rectangle containing the rotated rectangle
     Rect boundingRect() const;
+    //! returns the minimal (exact) floating point rectangle containing the rotated rectangle, not intended for use with images
+    Rect_<float> boundingRect2f() const;
 
     Point2f center; //< the rectangle mass center
     Size2f size;    //< width and height of the rectangle

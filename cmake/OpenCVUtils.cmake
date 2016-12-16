@@ -691,8 +691,11 @@ function(ocv_install_target)
     set(${__package}_TARGETS "${${__package}_TARGETS}" CACHE INTERNAL "List of ${__package} targets")
   endif()
 
-  if(INSTALL_CREATE_DISTRIB)
-    if(MSVC AND NOT BUILD_SHARED_LIBS)
+  if(MSVS)
+    if(NOT INSTALL_IGNORE_PDB AND
+        (INSTALL_PDB OR
+          (INSTALL_CREATE_DISTRIB AND NOT BUILD_SHARED_LIBS)
+        ))
       set(__target "${ARGV0}")
 
       set(isArchive 0)
@@ -720,13 +723,13 @@ function(ocv_install_target)
           get_target_property(fname ${__target} LOCATION_DEBUG)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug OPTIONAL)
           endif()
 
           get_target_property(fname ${__target} LOCATION_RELEASE)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release OPTIONAL)
           endif()
         else()
           # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
