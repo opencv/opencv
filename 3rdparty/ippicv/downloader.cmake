@@ -31,7 +31,7 @@ function(_icv_downloader)
     return() # Not supported
   endif()
 
-  set(OPENCV_ICV_UNPACK_PATH "${CMAKE_CURRENT_LIST_DIR}/unpack")
+  set(OPENCV_ICV_UNPACK_PATH "${CMAKE_BINARY_DIR}/3rdparty/ippicv")
   set(OPENCV_ICV_PATH "${OPENCV_ICV_UNPACK_PATH}${OPENCV_ICV_PACKAGE_SUBDIR}")
 
   if(DEFINED OPENCV_ICV_PACKAGE_DOWNLOADED
