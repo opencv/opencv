@@ -386,6 +386,11 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
     addref();
 }
 
+void UMat::create(const std::vector<int>& _sizes, int _type, UMatUsageFlags _usageFlags)
+{
+    create((int)_sizes.size(), _sizes.data(), _type, _usageFlags);
+}
+
 void UMat::copySize(const UMat& m)
 {
     setSize(*this, m.dims, 0, 0);
