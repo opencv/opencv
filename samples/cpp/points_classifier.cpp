@@ -312,7 +312,7 @@ int main()
 
     for(;;)
     {
-        uchar key = (uchar)waitKey();
+        char key = (char)waitKey();
 
         if( key == 27 ) break;
 

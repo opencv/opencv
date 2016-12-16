@@ -44,8 +44,8 @@ int main( void )
         //-- 3. Apply the classifier to the frame
         detectAndDisplay( frame );
 
-        int c = waitKey(10);
-        if( (char)c == 27 ) { break; } // escape
+        char c = (char)waitKey(10);
+        if( c == 27 ) { break; } // escape
     }
     return 0;
 }
