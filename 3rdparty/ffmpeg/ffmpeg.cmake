@@ -23,3 +23,16 @@ ocv_download(PACKAGE ffmpeg_version.cmake
              DESTINATION_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 include(${CMAKE_CURRENT_LIST_DIR}/ffmpeg_version.cmake)
+
+# Compatibility glue code
+set(FFMPEG_libavcodec_FOUND 1)
+set(FFMPEG_libavformat_FOUND 1)
+set(FFMPEG_libavutil_FOUND 1)
+set(FFMPEG_libswscale_FOUND 1)
+set(FFMPEG_libavresample_FOUND 1)
+
+set(FFMPEG_libavcodec_VERSION ${ALIASOF_libavcodec_VERSION})
+set(FFMPEG_libavformat_VERSION ${ALIASOF_libavformat_VERSION})
+set(FFMPEG_libavutil_VERSION ${ALIASOF_libavutil_VERSION})
+set(FFMPEG_libswscale_VERSION ${ALIASOF_libswscale_VERSION})
+set(FFMPEG_libavresample_VERSION ${ALIASOF_libavresample_VERSION})
