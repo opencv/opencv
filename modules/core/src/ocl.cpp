@@ -49,6 +49,8 @@
 #include <inttypes.h>
 #endif
 
+#include "opencv2/core/ocl_genbase.hpp"
+
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
 #define CV_OPENCL_SHOW_RUN_ERRORS       0
 #define CV_OPENCL_SHOW_SVM_ERROR_LOG    1
@@ -1259,6 +1261,18 @@ static unsigned int getSVMCapabilitiesMask()
 } // namespace
 #endif
 
+static size_t getProgramCountLimit()
+{
+    static bool initialized = false;
+    static size_t count = 0;
+    if (!initialized)
+    {
+        count = getConfigurationParameterForSize("OPENCV_OPENCL_PROGRAM_CACHE", 64);
+        initialized = true;
+    }
+    return count;
+}
+
 struct Context::Impl
 {
     static Context::Impl* get(Context& context) { return context.p; }
@@ -1378,35 +1392,57 @@ struct Context::Impl
     Program getProg(const ProgramSource& src,
                     const String& buildflags, String& errmsg)
     {
-        String prefix = Program::getPrefix(buildflags);
-        HashKey k(src.hash(), crc64((const uchar*)prefix.c_str(), prefix.size()));
-        phash_t::iterator it = phash.find(k);
-        if( it != phash.end() )
-            return it->second;
-        //String filename = format("%08x%08x_%08x%08x.clb2",
+        size_t limit = getProgramCountLimit();
+        String key = Program::getPrefix(buildflags);
+        {
+            cv::AutoLock lock(program_cache_mutex);
+            phash_t::iterator it = phash.find(key);
+            if (it != phash.end())
+            {
+                // TODO LRU cache
+                CacheList::iterator i = std::find(cacheList.begin(), cacheList.end(), key);
+                if (i != cacheList.end() && i != cacheList.begin())
+                {
+                    cacheList.erase(i);
+                    cacheList.push_front(key);
+                }
+                return it->second;
+            }
+            { // cleanup program cache
+                size_t sz = phash.size();
+                if (limit > 0 && sz >= limit)
+                {
+                    while (!cacheList.empty())
+                    {
+                        size_t c = phash.erase(cacheList.back());
+                        cacheList.pop_back();
+                        if (c != 0)
+                            break;
+                    }
+                }
+            }
+        }
         Program prog(src, buildflags, errmsg);
         if(prog.ptr())
-            phash.insert(std::pair<HashKey,Program>(k, prog));
+        {
+            cv::AutoLock lock(program_cache_mutex);
+            phash.insert(std::pair<std::string, Program>(key, prog));
+            cacheList.push_front(key);
+        }
         return prog;
     }
+
 
     IMPLEMENT_REFCOUNTABLE();
 
     cl_context handle;
     std::vector<Device> devices;
 
-    typedef ProgramSource::hash_t hash_t;
-
-    struct HashKey
-    {
-        HashKey(hash_t _a, hash_t _b) : a(_a), b(_b) {}
-        bool operator < (const HashKey& k) const { return a < k.a || (a == k.a && b < k.b); }
-        bool operator == (const HashKey& k) const { return a == k.a && b == k.b; }
-        bool operator != (const HashKey& k) const { return a != k.a || b != k.b; }
-        hash_t a, b;
-    };
-    typedef std::map<HashKey, Program> phash_t;
+    cv::Mutex program_cache_mutex;
+    typedef std::map<std::string, Program> phash_t;
     phash_t phash;
+    typedef std::list<cv::String> CacheList;
+    CacheList cacheList;
 
 #ifdef HAVE_OPENCL_SVM
     bool svmInitialized;
@@ -2580,30 +2616,57 @@ String Program::getPrefix(const String& buildflags)
 
 struct ProgramSource::Impl
 {
-    Impl(const char* _src)
+    Impl(const String& src)
     {
-        init(String(_src));
+        init(cv::String(), cv::String(), src, cv::String());
     }
-    Impl(const String& _src)
+    Impl(const String& module, const String& name, const String& codeStr, const String& codeHash)
     {
-        init(_src);
+        init(module, name, codeStr, codeHash);
     }
-    void init(const String& _src)
+    void init(const String& module, const String& name, const String& codeStr, const String& codeHash)
     {
         refcount = 1;
-        src = _src;
-        h = crc64((uchar*)src.c_str(), src.size());
+        module_ = module;
+        name_ = name;
+        codeStr_ = codeStr;
+        codeHash_ = codeHash;
+
+        isHashUpdated = false;
+        if (codeHash_.empty())
+        {
+            updateHash();
+            codeHash_ = cv::format("%08llx", hash_);
+        }
+    }
+
+    void updateHash()
+    {
+        hash_ = crc64((uchar*)codeStr_.c_str(), codeStr_.size());
+        isHashUpdated = true;
     }
 
     IMPLEMENT_REFCOUNTABLE();
-    String src;
-    ProgramSource::hash_t h;
+
+    String module_;
+    String name_;
+    String codeStr_;
+    String codeHash_;
+    // TODO std::vector<ProgramSource> includes_;
+
+    bool isHashUpdated;
+    ProgramSource::hash_t hash_;
 };
 
 
 ProgramSource::ProgramSource()
 {
     p = 0;
+}
+
+ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash)
+{
+    p = new Impl(module, name, codeStr, codeHash);
 }
 
 ProgramSource::ProgramSource(const char* prog)
@@ -2642,14 +2705,33 @@ ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
 
 const String& ProgramSource::source() const
 {
-    static String dummy;
-    return p ? p->src : dummy;
+    CV_Assert(p);
+    return p->codeStr_;
 }
 
 ProgramSource::hash_t ProgramSource::hash() const
 {
-    return p ? p->h : 0;
+    CV_Assert(p);
+    if (!p->isHashUpdated)
+        p->updateHash();
+    return p->hash_;
 }
+
+
+internal::ProgramEntry::operator ProgramSource&() const
+{
+    if (this->pProgramSource == NULL)
+    {
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (this->pProgramSource == NULL)
+        {
+            ProgramSource* ps = new ProgramSource(this->module, this->name, this->programCode, this->programHash);
+            const_cast<ProgramEntry*>(this)->pProgramSource = ps;
+        }
+    }
+    return *this->pProgramSource;
+}
+
 
 //////////////////////////////////////////// OpenCLAllocator //////////////////////////////////////////////////
 
