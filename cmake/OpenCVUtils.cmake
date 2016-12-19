@@ -1098,16 +1098,16 @@ endfunction()
 
 macro(ocv_add_testdata basedir dest_subdir)
   if(BUILD_TESTS)
-    cmake_parse_arguments(__TESTDATA "" "COMPONENT" "" ${ARGN})
     if(NOT CMAKE_CROSSCOMPILING AND NOT INSTALL_TESTS)
       file(COPY ${basedir}/
            DESTINATION ${CMAKE_BINARY_DIR}/${OPENCV_TEST_DATA_INSTALL_PATH}/${dest_subdir}
-           ${__TESTDATA_UNPARSED_ARGUMENTS}
+           ${ARGN}
       )
     endif()
     if(INSTALL_TESTS)
       install(DIRECTORY ${basedir}/
               DESTINATION ${OPENCV_TEST_DATA_INSTALL_PATH}/contrib/text
+              COMPONENT "tests"
               ${ARGN}
       )
     endif()
