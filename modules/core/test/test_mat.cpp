@@ -1571,3 +1571,31 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(3, sub_mat.size[1]);
     ASSERT_EQ(2, sub_mat.size[2]);
 }
+
+TEST(Mat, regression_XXXX_mat_vector_initialize)
+{
+    std::vector<int> dims;
+    dims.push_back(2);
+    dims.push_back(2);
+    dims.push_back(2);
+    int data[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    Mat mat(dims, CV_32FC1, data);
+
+    ASSERT_EQ(1, mat.at<int>({ 0, 0, 0 }));
+    ASSERT_EQ(2, mat.at<int>({ 0, 0, 1 }));
+    ASSERT_EQ(3, mat.at<int>({ 0, 1, 0 }));
+    ASSERT_EQ(4, mat.at<int>({ 0, 1, 1 }));
+    ASSERT_EQ(5, mat.at<int>({ 1, 0, 0 }));
+    ASSERT_EQ(6, mat.at<int>({ 1, 0, 1 }));
+    ASSERT_EQ(7, mat.at<int>({ 1, 1, 0 }));
+    ASSERT_EQ(8, mat.at<int>({ 1, 1, 1 }));
+
+    ASSERT_EQ(1, *mat.ptr({ 0, 0, 0 }));
+    ASSERT_EQ(2, *mat.ptr({ 0, 0, 1 }));
+    ASSERT_EQ(3, *mat.ptr({ 0, 1, 0 }));
+    ASSERT_EQ(4, *mat.ptr({ 0, 1, 1 }));
+    ASSERT_EQ(5, *mat.ptr({ 1, 0, 0 }));
+    ASSERT_EQ(6, *mat.ptr({ 1, 0, 1 }));
+    ASSERT_EQ(7, *mat.ptr({ 1, 1, 0 }));
+    ASSERT_EQ(8, *mat.ptr({ 1, 1, 1 }));
+}

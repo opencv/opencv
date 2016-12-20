@@ -947,6 +947,20 @@ const uchar* Mat::ptr(const int* idx) const
     return p;
 }
 
+inline
+uchar* Mat::ptr(const std::vector<int>& idx)
+{
+    CV_DbgAssert(idx.size() >= dims);
+    return ptr(idx.data());
+}
+
+inline
+const uchar* Mat::ptr(const std::vector<int>& idx) const
+{
+    CV_DbgAssert(idx.size() >= dims);
+    return ptr(idx.data());
+}
+
 template<typename _Tp> inline
 _Tp& Mat::at(int i0, int i1)
 {
@@ -1046,6 +1060,20 @@ template<typename _Tp> inline
 const _Tp& Mat::at(const int* idx) const
 {
     CV_DbgAssert( elemSize() == CV_ELEM_SIZE(DataType<_Tp>::type) );
+    return *(const _Tp*)ptr(idx);
+}
+
+template<typename _Tp> inline
+_Tp& Mat::at(const std::vector<int>& idx)
+{
+    CV_DbgAssert(elemSize() == CV_ELEM_SIZE(DataType<_Tp>::type));
+    return *(_Tp*)ptr(idx);
+}
+
+template<typename _Tp> inline
+const _Tp& Mat::at(const std::vector<int>& idx) const
+{
+    CV_DbgAssert(elemSize() == CV_ELEM_SIZE(DataType<_Tp>::type));
     return *(const _Tp*)ptr(idx);
 }
 
