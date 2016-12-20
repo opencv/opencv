@@ -183,9 +183,9 @@ int main(int argc, char** argv)
     // display until user presses q
     imshow(winName, reconstruction);
 
-    int key = 0;
+    char key = 0;
     while(key != 'q')
-        key = waitKey();
+        key = (char)waitKey();
 
    return 0;
 }
