@@ -2920,7 +2920,7 @@ computed by stereoRectify can be passed here. If the matrix is empty, the identi
 is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
 @param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
 @param size Undistorted image size.
-@param m1type Type of the first output map that can be CV_32FC1 or CV_16SC2, see cv::convertMaps
+@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see cv::convertMaps
 @param map1 The first output map.
 @param map2 The second output map.
  */
