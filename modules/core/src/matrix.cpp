@@ -243,18 +243,21 @@ MatAllocator* Mat::getDefaultAllocator()
     }
     return g_matAllocator;
 }
-void Mat::setDefaultAllocator(MatAllocator* allocator, bool threadLocal)
+
+void Mat::setDefaultThreadAllocator(MatAllocator* allocator)
 {
-    if(threadLocal)
-    {
 #ifdef CV_THREAD_LOCAL
-        t_matAllocator = allocator;
+    t_matAllocator = allocator;
 #else
-        cv::error(Error::StsNotImplemented, "Your platform doesn't support thread local allocators", __FUNCTION__, __FILE__, __LINE__);
+    cv::error(Error::StsNotImplemented, "Your platform doesn't support thread local allocators", __FUNCTION__, __FILE__, __LINE__);
 #endif
-    }
+}
+
+void Mat::setDefaultAllocator(MatAllocator* allocator)
+{
     g_matAllocator = allocator;
 }
+
 MatAllocator* Mat::getStdAllocator()
 {
     CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())

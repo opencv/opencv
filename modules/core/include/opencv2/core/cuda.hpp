@@ -109,7 +109,8 @@ public:
     //! default allocator
     static Allocator* defaultAllocator();
     static Allocator* getStdAllocator();
-    static void setDefaultAllocator(Allocator* allocator, bool threadLocal = false);
+    static void setDefaultAllocator(Allocator* allocator);
+    static void setDefaultThreadAllocator(Allocator* allocator);
 
     //! default constructor
     explicit GpuMat(Allocator* allocator = defaultAllocator());

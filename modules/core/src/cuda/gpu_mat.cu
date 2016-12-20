@@ -140,10 +140,12 @@ namespace
     CV_THREAD_LOCAL GpuMat::Allocator* t_defaultAllocator = NULL;
 #endif
 }
+
 GpuMat::Allocator* cv::cuda::GpuMat::getStdAllocator()
 {
     return &cudaDefaultAllocator;
 }
+
 GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
 {
 #ifdef CV_THREAD_LOCAL
@@ -153,17 +155,17 @@ GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
     return g_defaultAllocator;
 }
 
-void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator, bool threadLocal)
+void cv::cuda::GpuMat::setDefaultThreadAllocator(Allocator* allocator)
 {
-    if(threadLocal)
-    {
 #ifdef CV_THREAD_LOCAL
-        t_defaultAllocator = allocator;
+    t_defaultAllocator = allocator;
 #else
-        cv::error(Error::StsNotImplemented, "Your platform doesn't support thread local allocators", __FUNCTION__, __FILE__, __LINE__);
+    cv::error(Error::StsNotImplemented, "Your platform doesn't support thread local allocators", __FUNCTION__, __FILE__, __LINE__);
 #endif
-    }
+}
 
+void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
+{
     g_defaultAllocator = allocator;
 }
 

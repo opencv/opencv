@@ -1918,7 +1918,8 @@ public:
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
     static MatAllocator* getDefaultAllocator();
-    static void setDefaultAllocator(MatAllocator* allocator, bool threadLocal = false);
+    static void setDefaultAllocator(MatAllocator* allocator);
+    static void setDefaultThreadAllocator(MatAllocator* allocator);
 
     //! interaction with UMat
     UMatData* u;

@@ -299,7 +299,7 @@ enum CpuFeatures {
 #endif
 
 #ifndef CV_THREAD_LOCAL
-#  if defined __GNUC__ 
+#  if defined __GNUC__
 #    if __GNUC__ > 4 && __GNUC_MINOR__ >= 8
 #      define CV_THREAD_LOCAL thread_local
 #    else

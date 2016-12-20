@@ -421,10 +421,16 @@ GpuMat::Allocator* cv::cuda::GpuMat::getStdAllocator()
 {
     return 0;
 }
-void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator, bool threadLocal)
+
+void cv::cuda::GpuMat::setDefaultThreadAllocator(Allocator* allocator)
+{
+    (void)allocator;
+    throw_no_cuda();
+}
+
+void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
 {
     (void) allocator;
-    (void) threadLocal;
     throw_no_cuda();
 }
 
