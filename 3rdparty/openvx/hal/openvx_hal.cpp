@@ -117,18 +117,18 @@ int ovx_hal_##hal_func(const T *a, size_t astep, const T *b, size_t bstep, T *c,
 {                                                                                                                   \
     if(dimTooBig(w) || dimTooBig(h))                                                                                \
         return CV_HAL_ERROR_NOT_IMPLEMENTED;                                                                        \
-    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, astep);                                                          \
-    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, bstep);                                                          \
-    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, cstep);                                                          \
+    refineStep(w, h, ivx::TypeToEnum<T>::imgType, astep);                                                           \
+    refineStep(w, h, ivx::TypeToEnum<T>::imgType, bstep);                                                           \
+    refineStep(w, h, ivx::TypeToEnum<T>::imgType, cstep);                                                           \
     try                                                                                                             \
     {                                                                                                               \
         ivx::Context ctx = getOpenVXHALContext();                                                                   \
         vxImage                                                                                                     \
-            ia = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,                                    \
+            ia = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgType,                                     \
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(astep)), (void*)a),                        \
-            ib = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,                                    \
+            ib = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgType,                                     \
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(bstep)), (void*)b),                        \
-            ic = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,                                    \
+            ic = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgType,                                     \
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(cstep)), (void*)c);                        \
         ovx_call                                                                                                    \
     }                                                                                                               \
@@ -159,9 +159,9 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
 {
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, astep);
-    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, bstep);
-    refineStep(w, h, ivx::TypeToEnum<T>::imgValue, cstep);
+    refineStep(w, h, ivx::TypeToEnum<T>::imgType, astep);
+    refineStep(w, h, ivx::TypeToEnum<T>::imgType, bstep);
+    refineStep(w, h, ivx::TypeToEnum<T>::imgType, cstep);
 #ifdef _MSC_VER
     const float MAGIC_SCALE = 0x0.01010102;
 #else
@@ -185,11 +185,11 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
         }
         ivx::Context ctx = getOpenVXHALContext();
         vxImage
-            ia = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,
+            ia = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgType,
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(astep)), (void*)a),
-            ib = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,
+            ib = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgType,
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(bstep)), (void*)b),
-            ic = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgValue,
+            ic = ivx::Image::createFromHandle(ctx, ivx::TypeToEnum<T>::imgType,
                 ivx::Image::createAddressing(w, h, sizeof(T), (vx_int32)(cstep)), (void*)c);
         ivx::IVX_CHECK_STATUS(vxuMultiply(ctx, ia, ib, fscale, VX_CONVERT_POLICY_SATURATE, rounding_policy, ic));
     }
@@ -861,7 +861,7 @@ int ovx_hal_cvtGraytoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep,
             ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
                 ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
         ivx::IVX_CHECK_STATUS(vxuChannelCombine(ctx, ia, ia, ia,
-        bcn == 4 ? (vx_image)(ivx::Image::createUniform(ctx, w, h, vx_uint8(255))) : NULL,
+        bcn == 4 ? (vx_image)(ivx::Image::createUniform(ctx, w, h, VX_DF_IMAGE_U8, vx_uint8(255))) : NULL,
             ib));
     }
     catch (ivx::RuntimeError & e)
