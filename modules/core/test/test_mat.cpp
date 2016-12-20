@@ -1572,7 +1572,7 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(2, sub_mat.size[2]);
 }
 
-TEST(Mat, regression_XXXX_mat_vector_initialize)
+TEST(Mat, regression_7907_mat_vector_initialize)
 {
     std::vector<int> dims;
     dims.push_back(2);
