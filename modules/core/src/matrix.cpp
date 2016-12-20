@@ -249,6 +249,7 @@ void Mat::setDefaultThreadAllocator(MatAllocator* allocator)
 #ifdef CV_THREAD_LOCAL
     t_matAllocator = allocator;
 #else
+    (void)allocator;
     cv::error(Error::StsNotImplemented, "Your platform doesn't support thread local allocators", __FUNCTION__, __FILE__, __LINE__);
 #endif
 }

@@ -303,7 +303,13 @@ enum CpuFeatures {
 #    if __GNUC__ > 4 && __GNUC_MINOR__ >= 8
 #      define CV_THREAD_LOCAL thread_local
 #    else
-#      define CV_THREAD_LOCAL __thread
+#      ifdef __APPLE__
+#        if TARGET_OS_MAC
+#          define CV_THREAD_LOCAL __thread
+#        endif
+#      else
+#        define CV_THREAD_LOCAL __thread      
+#      endif
 #   endif
 #  else
 #    if defined _MSC_VER
