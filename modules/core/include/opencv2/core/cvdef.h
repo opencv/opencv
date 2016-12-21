@@ -308,7 +308,7 @@ enum CpuFeatures {
 #          define CV_THREAD_LOCAL __thread
 #        endif
 #      else
-#        define CV_THREAD_LOCAL __thread      
+#        define CV_THREAD_LOCAL __thread
 #      endif
 #   endif
 #  else
