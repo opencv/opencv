@@ -22,6 +22,18 @@ Details: TBD
 #include <VX/vx.h>
 #include <VX/vxu.h>
 
+#ifndef VX_VERSION_1_1
+// 1.1 to 1.0 backward compatibility defines
+
+static const vx_enum VX_INTERPOLATION_BILINEAR = VX_INTERPOLATION_TYPE_BILINEAR;
+static const vx_enum VX_INTERPOLATION_AREA = VX_INTERPOLATION_TYPE_AREA;
+static const vx_enum VX_INTERPOLATION_NEAREST_NEIGHBOR = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
+
+static const vx_enum VX_BORDER_CONSTANT = VX_BORDER_MODE_CONSTANT;
+static const vx_enum VX_BORDER_REPLICATE = VX_BORDER_MODE_REPLICATE;
+
+#endif
+
 #ifndef IVX_USE_CXX98
     // checking compiler
     #if __cplusplus < 201103L && (!defined(_MSC_VER) || _MSC_VER < 1800)
@@ -56,6 +68,7 @@ Details: TBD
 #include <utility>
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 #ifndef IVX_USE_CXX98
     #include <type_traits>
@@ -190,14 +203,14 @@ inline vx_size enumToTypeSize(vx_enum type)
 template<typename T> struct TypeToEnum {};
 template<> struct TypeToEnum<vx_char>     { static const vx_enum value = VX_TYPE_CHAR; };
 template<> struct TypeToEnum<vx_int8>     { static const vx_enum value = VX_TYPE_INT8; };
-template<> struct TypeToEnum<vx_uint8>    { static const vx_enum value = VX_TYPE_UINT8; };
-template<> struct TypeToEnum<vx_int16>    { static const vx_enum value = VX_TYPE_INT16; };
-template<> struct TypeToEnum<vx_uint16>   { static const vx_enum value = VX_TYPE_UINT16; };
-template<> struct TypeToEnum<vx_int32>    { static const vx_enum value = VX_TYPE_INT32; };
-template<> struct TypeToEnum<vx_uint32>   { static const vx_enum value = VX_TYPE_UINT32; };
+template<> struct TypeToEnum<vx_uint8>    { static const vx_enum value = VX_TYPE_UINT8, imgType = VX_DF_IMAGE_U8; };
+template<> struct TypeToEnum<vx_int16>    { static const vx_enum value = VX_TYPE_INT16, imgType = VX_DF_IMAGE_S16; };
+template<> struct TypeToEnum<vx_uint16>   { static const vx_enum value = VX_TYPE_UINT16, imgType = VX_DF_IMAGE_U16; };
+template<> struct TypeToEnum<vx_int32>    { static const vx_enum value = VX_TYPE_INT32, imgType = VX_DF_IMAGE_S32; };
+template<> struct TypeToEnum<vx_uint32>   { static const vx_enum value = VX_TYPE_UINT32, imgType = VX_DF_IMAGE_U32; };
 template<> struct TypeToEnum<vx_int64>    { static const vx_enum value = VX_TYPE_INT64; };
 template<> struct TypeToEnum<vx_uint64>   { static const vx_enum value = VX_TYPE_UINT64; };
-template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32; };
+template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32, imgType = VX_DF_IMAGE('F', '0', '3', '2'); };
 template<> struct TypeToEnum<vx_float64>  { static const vx_enum value = VX_TYPE_FLOAT64; };
 template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE_BOOL; };
 template<> struct TypeToEnum<vx_keypoint_t> {static const vx_enum value = VX_TYPE_KEYPOINT; };
@@ -1376,6 +1389,25 @@ public:
     static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const void* value)
     { return Image(vxCreateUniformImage(context, width, height, format, value)); }
 #endif
+    template <typename T>
+    static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const T value)
+    {
+#if VX_VERSION > VX_VERSION_1_0
+        vx_pixel_value_t pixel;
+        switch (format)
+        {
+        case VX_DF_IMAGE_U8:pixel.U8 = (vx_uint8)value; break;
+        case VX_DF_IMAGE_S16:pixel.S16 = (vx_int16)value; break;
+        case VX_DF_IMAGE_U16:pixel.U16 = (vx_uint16)value; break;
+        case VX_DF_IMAGE_S32:pixel.S32 = (vx_int32)value; break;
+        case VX_DF_IMAGE_U32:pixel.U32 = (vx_uint32)value; break;
+        default:throw ivx::WrapperError("uniform image type unsupported by this call");
+        }
+        return Image(vxCreateUniformImage(context, width, height, format, &pixel));
+#else
+        return Image(vxCreateUniformImage(context, width, height, format, &value));
+#endif
+    }
 
     /// Planes number for the specified image format (fourcc)
     /// \return 0 for unknown formats
@@ -1887,7 +1919,9 @@ public:
         swap(_planeIdx, p._planeIdx);
 #endif
         swap(_img, p._img);
+#ifdef IVX_USE_OPENCV
         swap(_m, p._m);
+#endif
     }
 #endif
 
