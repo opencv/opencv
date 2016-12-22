@@ -36,7 +36,7 @@ if(WITH_LAPACK)
             set(LAPACK_IMPL "Atlas")
         endif()
     endif()
-    
+
     if(NOT LAPACK_LIBRARIES AND APPLE)
         set(LAPACK_INCLUDE_DIR  "Accelerate")
         set(LAPACK_LIBRARIES    "-framework Accelerate")
@@ -44,7 +44,7 @@ if(WITH_LAPACK)
         set(LAPACK_LAPACKE_H    "lapacke.h"    )
         set(LAPACK_IMPL         "Apple")
     endif()
-    
+
     set(LAPACK_INCLUDE_DIR  ${LAPACK_INCLUDE_DIR}            CACHE PATH      "Path to BLAS include dir" FORCE)
     set(LAPACK_CBLAS_H      ${LAPACK_CBLAS_H}     CACHE STRING    "Alternative name of cblas.h" FORCE)
     set(LAPACK_LAPACKE_H    ${LAPACK_LAPACKE_H}   CACHE STRING    "Alternative name of lapacke.h" FORCE)
