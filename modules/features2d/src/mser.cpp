@@ -262,81 +262,72 @@ public:
         }
 
         // add history chunk to a connected component
-        void growHistory( CompHistory*& hptr, WParams& wp, int new_gray_level, bool final, bool force=false )
+        void growHistory(CompHistory*& hptr, WParams& wp, int new_gray_level, bool final)
         {
-            bool update = final;
-            if( new_gray_level < 0 )
+            if (new_gray_level < gray_level)
                 new_gray_level = gray_level;
-            if( !history || (history->size != size && size > 0 &&
-                (gray_level != history->val || force)))
+
+            CompHistory *h;
+            if (history && history->val == gray_level)
             {
-                CompHistory* h;
+                h = history;
+            }
+            else
+            {
+                h = hptr++;
+                h->parent_ = 0;
+                h->child_ = history;
+                h->next_ = 0;
 
-                if (history && gray_level == history->val)
-                    h = history;
-                else
+                if (history)
                 {
-                    h = hptr++;
-                    h->parent_ = 0;
-                    h->child_ = history;
-                    h->next_ = 0;
-                    if (history)
-                        history->parent_ = h;
-                }
-
-                h->val = gray_level;
-                h->size = size;
-                h->head = head;
-
-                history = h;
-                h->var = FLT_MAX;
-                h->checked = true;
-                if (h->size >= wp.p.minArea)
-                {
-                    h->var = -1.f;
-                    h->checked = false;
-                    update = true;
+                    history->parent_ = h;
                 }
             }
+            h->val = gray_level;
+            h->size = size;
+            h->head = head;
+            h->var = FLT_MAX;
+            h->checked = true;
+            if (h->size >= wp.p.minArea)
+            {
+                h->var = -1.f;
+                h->checked = false;
+            }
+
             gray_level = new_gray_level;
-            if( update && history && gray_level != history->val )
+            history = h;
+            if (history && history->val != gray_level)
+            {
                 history->updateTree(wp, 0, 0, final);
+            }
         }
 
         // merging two connected components
         void merge( ConnectedComp* comp1, ConnectedComp* comp2,
                     CompHistory*& hptr, WParams& wp )
         {
-            if( comp1->size < comp2->size )
-                std::swap(comp1, comp2);
-
-            if( comp2->size == 0 )
-            {
-                // only grow comp1's history
-                comp1->growHistory(hptr, wp, -1, false);
-                gray_level = comp1->gray_level;
-                head = comp1->head;
-                tail = comp1->tail;
-                size = comp1->size;
-                history = comp1->history;
-                return;
-            }
-
-            comp1->growHistory( hptr, wp, -1, false );
-            comp2->growHistory( hptr, wp, -1, false );
-
             if (comp1->gray_level < comp2->gray_level)
                 std::swap(comp1, comp2);
 
             gray_level = comp1->gray_level;
-            history = comp1->history;
-            wp.pix0[comp1->tail].setNext(comp2->head);
+            comp1->growHistory(hptr, wp, gray_level, false);
+            comp2->growHistory(hptr, wp, gray_level, false);
 
-            head = comp1->head;
-            tail = comp2->tail;
+            if (comp1->size == 0)
+            {
+                head = comp2->head;
+                tail = comp2->tail;
+            }
+            else
+            {
+                head = comp1->head;
+                wp.pix0[comp1->tail].setNext(comp2->head);
+                tail = comp2->tail;
+            }
+            
             size = comp1->size + comp2->size;
-            // update the history size
-            history->size =size;
+            history = comp1->history;
 
             CompHistory *h1 = history->child_;
             CompHistory *h2 = comp2->history;
@@ -522,25 +513,17 @@ public:
                 else
                 {
                     // keep merging top two comp in stack until the gray level >= pixel_val
-                    for(;;)
-                    {
-                        comptr--;
-                        comptr->merge(comptr, comptr+1, histptr, wp);
-                        if( curr_gray <= comptr[0].gray_level )
-                            break;
-                        if( curr_gray < comptr[-1].gray_level )
-                        {
-                            comptr->growHistory(histptr, wp, curr_gray, false);
-                            break;
-                        }
-                    }
+                    comptr--;
+                    assert(curr_gray == comptr->gray_level);
+                    comptr->merge(comptr, comptr + 1, histptr, wp);
+                    assert(curr_gray == comptr->gray_level);
                 }
             }
         }
 
         for( ; comptr->gray_level != 256; comptr-- )
         {
-            comptr->growHistory(histptr, wp, 256, true, true);
+            comptr->growHistory(histptr, wp, 256, true);
         }
     }
 
@@ -1042,8 +1025,6 @@ extractMSER_8uC3( const Mat& src,
 
 void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, vector<Rect>& bboxes )
 {
-    CV_INSTRUMENT_REGION()
-
     Mat src = _src.getMat();
 
     msers.clear();
@@ -1080,8 +1061,6 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
 
 void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
-
     vector<Rect> bboxes;
     vector<vector<Point> > msers;
     Mat mask = _mask.getMat();
