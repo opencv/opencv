@@ -1267,7 +1267,7 @@ static size_t getProgramCountLimit()
     static size_t count = 0;
     if (!initialized)
     {
-        count = getConfigurationParameterForSize("OPENCV_OPENCL_PROGRAM_CACHE", 64);
+        count = getConfigurationParameterForSize("OPENCV_OPENCL_PROGRAM_CACHE", 0);
         initialized = true;
     }
     return count;
@@ -1412,6 +1412,14 @@ struct Context::Impl
                 size_t sz = phash.size();
                 if (limit > 0 && sz >= limit)
                 {
+                    static bool warningFlag = false;
+                    if (!warningFlag)
+                    {
+                        printf("\nWARNING: OpenCV-OpenCL:\n"
+                            "    In-memory cache for OpenCL programs is full, older programs will be unloaded.\n"
+                            "    You can change cache size via OPENCV_OPENCL_PROGRAM_CACHE environment variable\n\n");
+                        warningFlag = true;
+                    }
                     while (!cacheList.empty())
                     {
                         size_t c = phash.erase(cacheList.back());
