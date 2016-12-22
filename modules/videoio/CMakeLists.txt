@@ -181,7 +181,7 @@ if(HAVE_AVFOUNDATION)
     list(APPEND VIDEOIO_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
   else()
     list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation_mac.mm)
-    list(APPEND VIDEOIO_LIBRARIES "-framework Cocoa" "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore")
+    list(APPEND VIDEOIO_LIBRARIES "-framework Cocoa" "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore")
   endif()
 endif()
 
