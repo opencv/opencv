@@ -3234,54 +3234,20 @@ void cv::composeRT( InputArray _rvec1, InputArray _tvec1,
           c_tvec2 = tvec2, c_rvec3 = rvec3, c_tvec3 = tvec3;
     CvMat c_dr3dr1, c_dr3dt1, c_dr3dr2, c_dr3dt2, c_dt3dr1, c_dt3dt1, c_dt3dr2, c_dt3dt2;
     CvMat *p_dr3dr1=0, *p_dr3dt1=0, *p_dr3dr2=0, *p_dr3dt2=0, *p_dt3dr1=0, *p_dt3dt1=0, *p_dt3dr2=0, *p_dt3dt2=0;
-
-    if( _dr3dr1.needed() )
-    {
-        _dr3dr1.create(3, 3, rtype);
-        p_dr3dr1 = &(c_dr3dr1 = _dr3dr1.getMat());
+#define CV_COMPOSE_RT_PARAM(name) \
+    Mat name; \
+    if (_ ## name.needed())\
+    { \
+        _ ## name.create(3, 3, rtype); \
+        name = _ ## name.getMat(); \
+        p_ ## name = &(c_ ## name = name); \
     }
 
-    if( _dr3dt1.needed() )
-    {
-        _dr3dt1.create(3, 3, rtype);
-        p_dr3dt1 = &(c_dr3dt1 = _dr3dt1.getMat());
-    }
-
-    if( _dr3dr2.needed() )
-    {
-        _dr3dr2.create(3, 3, rtype);
-        p_dr3dr2 = &(c_dr3dr2 = _dr3dr2.getMat());
-    }
-
-    if( _dr3dt2.needed() )
-    {
-        _dr3dt2.create(3, 3, rtype);
-        p_dr3dt2 = &(c_dr3dt2 = _dr3dt2.getMat());
-    }
-
-    if( _dt3dr1.needed() )
-    {
-        _dt3dr1.create(3, 3, rtype);
-        p_dt3dr1 = &(c_dt3dr1 = _dt3dr1.getMat());
-    }
-
-    if( _dt3dt1.needed() )
-    {
-        _dt3dt1.create(3, 3, rtype);
-        p_dt3dt1 = &(c_dt3dt1 = _dt3dt1.getMat());
-    }
-
-    if( _dt3dr2.needed() )
-    {
-        _dt3dr2.create(3, 3, rtype);
-        p_dt3dr2 = &(c_dt3dr2 = _dt3dr2.getMat());
-    }
-
-    if( _dt3dt2.needed() )
-    {
-        _dt3dt2.create(3, 3, rtype);
-        p_dt3dt2 = &(c_dt3dt2 = _dt3dt2.getMat());
-    }
+    CV_COMPOSE_RT_PARAM(dr3dr1); CV_COMPOSE_RT_PARAM(dr3dt1);
+    CV_COMPOSE_RT_PARAM(dr3dr2); CV_COMPOSE_RT_PARAM(dr3dt2);
+    CV_COMPOSE_RT_PARAM(dt3dr1); CV_COMPOSE_RT_PARAM(dt3dt1);
+    CV_COMPOSE_RT_PARAM(dt3dr2); CV_COMPOSE_RT_PARAM(dt3dt2);
+#undef CV_COMPOSE_RT_PARAM
 
     cvComposeRT(&c_rvec1, &c_tvec1, &c_rvec2, &c_tvec2, &c_rvec3, &c_tvec3,
                 p_dr3dr1, p_dr3dt1, p_dr3dr2, p_dr3dt2,
@@ -3306,7 +3272,8 @@ void cv::projectPoints( InputArray _opoints,
     CvMat *pdpdrot=0, *pdpdt=0, *pdpdf=0, *pdpdc=0, *pdpddist=0;
 
     _ipoints.create(npoints, 1, CV_MAKETYPE(depth, 2), -1, true);
-    CvMat c_imagePoints = _ipoints.getMat();
+    Mat imagePoints = _ipoints.getMat();
+    CvMat c_imagePoints(imagePoints);
     CvMat c_objectPoints = opoints;
     Mat cameraMatrix = _cameraMatrix.getMat();
 
@@ -3674,24 +3641,25 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Mmat,
     Mat M = _Mmat.getMat();
     _Rmat.create(3, 3, M.type());
     _Qmat.create(3, 3, M.type());
+    Mat Rmat = _Rmat.getMat();
+    Mat Qmat = _Qmat.getMat();
     Vec3d eulerAngles;
 
-    CvMat matM = M, matR = _Rmat.getMat(), matQ = _Qmat.getMat(), Qx, Qy, Qz, *pQx=0, *pQy=0, *pQz=0;
-    if( _Qx.needed() )
-    {
-        _Qx.create(3, 3, M.type());
-        pQx = &(Qx = _Qx.getMat());
+    CvMat matM = M, matR = Rmat, matQ = Qmat;
+#define CV_RQDecomp3x3_PARAM(name) \
+    Mat name; \
+    CvMat c_ ## name, *p ## name = NULL; \
+    if( _ ## name.needed() ) \
+    { \
+        _ ## name.create(3, 3, M.type()); \
+        name = _ ## name.getMat(); \
+        c_ ## name = name; p ## name = &c_ ## name; \
     }
-    if( _Qy.needed() )
-    {
-        _Qy.create(3, 3, M.type());
-        pQy = &(Qy = _Qy.getMat());
-    }
-    if( _Qz.needed() )
-    {
-        _Qz.create(3, 3, M.type());
-        pQz = &(Qz = _Qz.getMat());
-    }
+
+    CV_RQDecomp3x3_PARAM(Qx);
+    CV_RQDecomp3x3_PARAM(Qy);
+    CV_RQDecomp3x3_PARAM(Qz);
+#undef CV_RQDecomp3x3_PARAM
     cvRQDecomp3x3(&matM, &matR, &matQ, pQx, pQy, pQz, (CvPoint3D64f*)&eulerAngles[0]);
     return eulerAngles;
 }
@@ -3709,28 +3677,28 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
     _cameraMatrix.create(3, 3, type);
     _rotMatrix.create(3, 3, type);
     _transVect.create(4, 1, type);
-    CvMat c_projMatrix = projMatrix, c_cameraMatrix = _cameraMatrix.getMat();
-    CvMat c_rotMatrix = _rotMatrix.getMat(), c_transVect = _transVect.getMat();
-    CvMat c_rotMatrixX, *p_rotMatrixX = 0;
-    CvMat c_rotMatrixY, *p_rotMatrixY = 0;
-    CvMat c_rotMatrixZ, *p_rotMatrixZ = 0;
+    Mat cameraMatrix = _cameraMatrix.getMat();
+    Mat rotMatrix = _rotMatrix.getMat();
+    Mat transVect = _transVect.getMat();
+    CvMat c_projMatrix = projMatrix, c_cameraMatrix = cameraMatrix;
+    CvMat c_rotMatrix = rotMatrix, c_transVect = transVect;
     CvPoint3D64f *p_eulerAngles = 0;
 
-    if( _rotMatrixX.needed() )
-    {
-        _rotMatrixX.create(3, 3, type);
-        p_rotMatrixX = &(c_rotMatrixX = _rotMatrixX.getMat());
+#define CV_decomposeProjectionMatrix_PARAM(name) \
+    Mat name; \
+    CvMat c_ ## name, *p_ ## name = NULL; \
+    if( _ ## name.needed() ) \
+    { \
+        _ ## name.create(3, 3, type); \
+        name = _ ## name.getMat(); \
+        c_ ## name = name; p_ ## name = &c_ ## name; \
     }
-    if( _rotMatrixY.needed() )
-    {
-        _rotMatrixY.create(3, 3, type);
-        p_rotMatrixY = &(c_rotMatrixY = _rotMatrixY.getMat());
-    }
-    if( _rotMatrixZ.needed() )
-    {
-        _rotMatrixZ.create(3, 3, type);
-        p_rotMatrixZ = &(c_rotMatrixZ = _rotMatrixZ.getMat());
-    }
+
+    CV_decomposeProjectionMatrix_PARAM(rotMatrixX);
+    CV_decomposeProjectionMatrix_PARAM(rotMatrixY);
+    CV_decomposeProjectionMatrix_PARAM(rotMatrixZ);
+#undef CV_decomposeProjectionMatrix_PARAM
+
     if( _eulerAngles.needed() )
     {
         _eulerAngles.create(3, 1, CV_64F, -1, true);
