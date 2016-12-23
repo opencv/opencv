@@ -43,10 +43,10 @@ endif(WITH_CUDA)
 if(WITH_EIGEN)
   if(HUNTER_ENABLED)
     hunter_add_package(Eigen)
-    find_package(Eigen REQUIRED)
+    find_package(Eigen3 CONFIG REQUIRED)
     get_target_property(
         EIGEN_INCLUDE_PATH
-        Eigen::eigen
+        Eigen3::Eigen
         INTERFACE_INCLUDE_DIRECTORIES
     )
   else()
