@@ -46,6 +46,8 @@ using namespace std;
 using namespace testing;
 using namespace perf;
 
+namespace { // workaround conflict with DftFlags
+
 //////////////////////////////////////////////////////////////////////
 // GEMM
 
@@ -252,3 +254,5 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+} // namespace

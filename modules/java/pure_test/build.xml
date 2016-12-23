@@ -1,4 +1,5 @@
 <project>
+  <property environment="env"/>
   <property file="ant-${opencv.build.type}.properties"/>
   <property name="test.dir" value="testResults"/>
   <property name="build.dir" value="build"/>
@@ -37,9 +38,9 @@
 
   <target name="test">
     <mkdir dir="${test.dir}"/>
-    <junit printsummary="true" haltonfailure="false" haltonerror="false" showoutput="false" logfailedtests="true" maxmemory="256m">
+    <junit printsummary="true" haltonfailure="false" haltonerror="false" showoutput="true" logfailedtests="true" maxmemory="256m">
       <sysproperty key="java.library.path" path="${opencv.lib.path}"/>
-      <env key="PATH" path="${opencv.lib.path}"/>
+      <env key="PATH" path="${opencv.lib.path}:${env.PATH}:${env.Path}"/>
       <classpath refid="master-classpath"/>
       <classpath>
         <pathelement location="build/classes"/>

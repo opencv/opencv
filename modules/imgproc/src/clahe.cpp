@@ -215,7 +215,7 @@ namespace
                 if (residual != 0)
                 {
                     int residualStep = MAX(histSize / residual, 1);
-                    for (int i = 0; i < histSize; i += residualStep)
+                    for (int i = 0; i < histSize && residual > 0; i += residualStep, residual--)
                         tileHist[i]++;
                 }
             }
@@ -420,7 +420,7 @@ namespace
         if (_src.type() == CV_8UC1)
             calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 256, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else if (_src.type() == CV_16UC1)
-            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 65535, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 65536, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else
             CV_Error( CV_StsBadArg, "Unsupported type" );
 

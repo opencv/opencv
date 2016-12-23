@@ -84,37 +84,30 @@
 */
 
 #if defined HAVE_TBB
+    #include "tbb/tbb.h"
+    #include "tbb/task.h"
     #include "tbb/tbb_stddef.h"
-    #if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
-        #include "tbb/tbb.h"
-        #include "tbb/task.h"
-        #if TBB_INTERFACE_VERSION >= 6100
-            #include "tbb/task_arena.h"
-        #endif
-        #undef min
-        #undef max
-    #else
-        #undef HAVE_TBB
-    #endif // end TBB version
-#endif
-
-#ifndef HAVE_TBB
-    #if defined HAVE_CSTRIPES
-        #include "C=.h"
-        #undef shared
-    #elif defined HAVE_OPENMP
-        #include <omp.h>
-    #elif defined HAVE_GCD
-        #include <dispatch/dispatch.h>
-        #include <pthread.h>
-    #elif defined WINRT && _MSC_VER < 1900
-        #include <ppltasks.h>
-    #elif defined HAVE_CONCURRENCY
-        #include <ppl.h>
+    #if TBB_INTERFACE_VERSION >= 8000
+        #include "tbb/task_arena.h"
     #endif
+    #undef min
+    #undef max
+#elif defined HAVE_CSTRIPES
+    #include "C=.h"
+    #undef shared
+#elif defined HAVE_OPENMP
+    #include <omp.h>
+#elif defined HAVE_GCD
+    #include <dispatch/dispatch.h>
+    #include <pthread.h>
+#elif defined WINRT && _MSC_VER < 1900
+    #include <ppltasks.h>
+#elif defined HAVE_CONCURRENCY
+    #include <ppl.h>
 #endif
 
-#if defined HAVE_TBB && TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+
+#if defined HAVE_TBB
 #  define CV_PARALLEL_FRAMEWORK "tbb"
 #elif defined HAVE_CSTRIPES
 #  define CV_PARALLEL_FRAMEWORK "cstripes"
@@ -144,7 +137,33 @@ namespace cv
 namespace
 {
 #ifdef CV_PARALLEL_FRAMEWORK
-    class ParallelLoopBodyWrapper
+#ifdef ENABLE_INSTRUMENTATION
+    static void SyncNodes(cv::instr::InstrNode *pNode)
+    {
+        std::vector<cv::instr::NodeDataTls*> data;
+        pNode->m_payload.m_tls.gather(data);
+
+        uint64 ticksMax = 0;
+        int    threads  = 0;
+        for(size_t i = 0; i < data.size(); i++)
+        {
+            if(data[i] && data[i]->m_ticksTotal)
+            {
+                ticksMax = MAX(ticksMax, data[i]->m_ticksTotal);
+                pNode->m_payload.m_ticksTotal -= data[i]->m_ticksTotal;
+                data[i]->m_ticksTotal = 0;
+                threads++;
+            }
+        }
+        pNode->m_payload.m_ticksTotal += ticksMax;
+        pNode->m_payload.m_threads = MAX(pNode->m_payload.m_threads, threads);
+
+        for(size_t i = 0; i < pNode->m_childs.size(); i++)
+            SyncNodes(pNode->m_childs[i]);
+    }
+#endif
+
+    class ParallelLoopBodyWrapper : public cv::ParallelLoopBody
     {
     public:
         ParallelLoopBodyWrapper(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes)
@@ -159,6 +178,13 @@ namespace
             pThreadRoot = cv::instr::getInstrumentTLSStruct().pCurrentNode;
 #endif
         }
+#ifdef ENABLE_INSTRUMENTATION
+        ~ParallelLoopBodyWrapper()
+        {
+            for(size_t i = 0; i < pThreadRoot->m_childs.size(); i++)
+                SyncNodes(pThreadRoot->m_childs[i]);
+        }
+#endif
         void operator()(const cv::Range& sr) const
         {
 #ifdef ENABLE_INSTRUMENTATION
@@ -167,6 +193,7 @@ namespace
                 pInstrTLS->pCurrentNode = pThreadRoot; // Initialize TLS node for thread
             }
 #endif
+            CV_INSTRUMENT_REGION()
 
             cv::Range r;
             r.start = (int)(wholeRange.start +
@@ -267,7 +294,9 @@ static SchedPtr pplScheduler;
 
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION_MT_FORK()
+    if (range.empty())
+        return;
 
 #ifdef CV_PARALLEL_FRAMEWORK
 
@@ -326,7 +355,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
 
 #elif defined HAVE_PTHREADS_PF
 
-        parallel_for_pthreads(range, body, nstripes);
+        parallel_for_pthreads(pbody.stripeRange(), pbody, pbody.stripeRange().size());
 
 #else
 
@@ -455,8 +484,10 @@ void cv::setNumThreads( int threads )
 int cv::getThreadNum(void)
 {
 #if defined HAVE_TBB
-    #if TBB_INTERFACE_VERSION >= 6100 && defined TBB_PREVIEW_TASK_ARENA && TBB_PREVIEW_TASK_ARENA
-        return tbb::task_arena::current_slot();
+    #if TBB_INTERFACE_VERSION >= 9100
+        return tbb::this_task_arena::current_thread_index();
+    #elif TBB_INTERFACE_VERSION >= 8000
+        return tbb::task_arena::current_thread_index();
     #else
         return 0;
     #endif

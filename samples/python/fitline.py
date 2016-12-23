@@ -88,7 +88,7 @@ if __name__ == '__main__':
     cv2.createTrackbar('outlier %', 'fit line', 30, 100, update)
     while True:
         update()
-        ch = cv2.waitKey(0) & 0xFF
+        ch = cv2.waitKey(0)
         if ch == ord('f'):
             if PY3:
                 cur_func_name = next(dist_func_names)

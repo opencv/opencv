@@ -447,7 +447,7 @@ int decomposeHomographyMat(InputArray _H,
     Mat K = _K.getMat().reshape(1, 3);
     CV_Assert(K.cols == 3 && K.rows == 3);
 
-    auto_ptr<HomographyDecomp> hdecomp(new HomographyDecompInria);
+    cv::Ptr<HomographyDecomp> hdecomp(new HomographyDecompInria);
 
     vector<CameraMotion> motions;
     hdecomp->decomposeHomography(H, K, motions);

@@ -46,6 +46,7 @@
 #define OPENCV_HAL_SSE_HPP
 
 #include <algorithm>
+#include "opencv2/core/utility.hpp"
 
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 1
@@ -1060,6 +1061,46 @@ inline void v_store_f16(short* ptr, v_float16x4& a)
 { _mm_storel_epi64((__m128i*)ptr, a.val); }
 #endif
 
+#define OPENCV_HAL_IMPL_SSE_REDUCE_OP_8(_Tpvec, scalartype, func, suffix, sbit) \
+inline scalartype v_reduce_##func(const v_##_Tpvec& a) \
+{ \
+    __m128i val = a.val; \
+    val = _mm_##func##_##suffix(val, _mm_srli_si128(val,8)); \
+    val = _mm_##func##_##suffix(val, _mm_srli_si128(val,4)); \
+    val = _mm_##func##_##suffix(val, _mm_srli_si128(val,2)); \
+    return (scalartype)_mm_cvtsi128_si32(val); \
+} \
+inline unsigned scalartype v_reduce_##func(const v_u##_Tpvec& a) \
+{ \
+    __m128i val = a.val; \
+    __m128i smask = _mm_set1_epi16(sbit); \
+    val = _mm_xor_si128(val, smask); \
+    val = _mm_##func##_##suffix(val, _mm_srli_si128(val,8)); \
+    val = _mm_##func##_##suffix(val, _mm_srli_si128(val,4)); \
+    val = _mm_##func##_##suffix(val, _mm_srli_si128(val,2)); \
+    return (unsigned scalartype)(_mm_cvtsi128_si32(val) ^  sbit); \
+}
+#define OPENCV_HAL_IMPL_SSE_REDUCE_OP_8_SUM(_Tpvec, scalartype, suffix) \
+inline scalartype v_reduce_sum(const v_##_Tpvec& a) \
+{ \
+    __m128i val = a.val; \
+    val = _mm_adds_epi##suffix(val, _mm_srli_si128(val, 8)); \
+    val = _mm_adds_epi##suffix(val, _mm_srli_si128(val, 4)); \
+    val = _mm_adds_epi##suffix(val, _mm_srli_si128(val, 2)); \
+    return (scalartype)_mm_cvtsi128_si32(val); \
+} \
+inline unsigned scalartype v_reduce_sum(const v_u##_Tpvec& a) \
+{ \
+    __m128i val = a.val; \
+    val = _mm_adds_epu##suffix(val, _mm_srli_si128(val, 8)); \
+    val = _mm_adds_epu##suffix(val, _mm_srli_si128(val, 4)); \
+    val = _mm_adds_epu##suffix(val, _mm_srli_si128(val, 2)); \
+    return (unsigned scalartype)_mm_cvtsi128_si32(val); \
+}
+OPENCV_HAL_IMPL_SSE_REDUCE_OP_8(int16x8, short, max, epi16, (short)-32768)
+OPENCV_HAL_IMPL_SSE_REDUCE_OP_8(int16x8, short, min, epi16, (short)-32768)
+OPENCV_HAL_IMPL_SSE_REDUCE_OP_8_SUM(int16x8, short, 16)
+
 #define OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(_Tpvec, scalartype, func, scalar_func) \
 inline scalartype v_reduce_##func(const _Tpvec& a) \
 { \
@@ -1685,6 +1726,16 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
     return v_float16x4(_mm_cvtps_ph(a.val, 0));
 }
 #endif
+
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return checkHardwareSupport(CV_CPU_SSE2);
+}
+
+//! @}
 
 //! @endcond
 

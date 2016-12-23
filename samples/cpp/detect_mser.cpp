@@ -73,25 +73,25 @@ struct MSERParams
 static String Legende(MSERParams &pAct)
 {
     String s="";
-    String inf = static_cast<ostringstream*>(&(ostringstream() << pAct.minArea))->str();
-    String sup = static_cast<ostringstream*>(&(ostringstream() << pAct.maxArea))->str();
+    String inf = static_cast<const ostringstream&>(ostringstream() << pAct.minArea).str();
+    String sup = static_cast<const ostringstream&>(ostringstream() << pAct.maxArea).str();
     s = " Area[" + inf + "," + sup + "]";
 
-    inf = static_cast<ostringstream*>(&(ostringstream() << pAct.delta))->str();
+    inf = static_cast<const ostringstream&>(ostringstream() << pAct.delta).str();
     s += " del. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << pAct.maxVariation))->str();
+    inf = static_cast<const ostringstream&>(ostringstream() << pAct.maxVariation).str();
     s += " var. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.minDiversity))->str();
+    inf = static_cast<const ostringstream&>(ostringstream() << (int)pAct.minDiversity).str();
     s += " div. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.pass2Only))->str();
+    inf = static_cast<const ostringstream&>(ostringstream() << (int)pAct.pass2Only).str();
     s += " pas. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.maxEvolution))->str();
+    inf = static_cast<const ostringstream&>(ostringstream() << (int)pAct.maxEvolution).str();
     s += "RGb-> evo. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.areaThreshold))->str();
+    inf = static_cast<const ostringstream&>(ostringstream() << (int)pAct.areaThreshold).str();
     s += " are. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.minMargin))->str();
+    inf = static_cast<const ostringstream&>(ostringstream() << (int)pAct.minMargin).str();
     s += " mar. [" + inf + "]";
-    inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.edgeBlurSize))->str();
+    inf = static_cast<const ostringstream&>(ostringstream() << (int)pAct.edgeBlurSize).str();
     s += " siz. [" + inf + "]";
     return s;
 }
@@ -279,8 +279,8 @@ static void DrawOpenGLMSER(Mat img, Mat result)
     for (;;)
         {
         updateWindow("OpenGL");
-        int key = waitKey(40);
-        if ((key & 0xff) == 27)
+        char key = (char)waitKey(40);
+        if (key == 27)
             break;
         if (key == 0x20)
             rotateEnable = !rotateEnable;

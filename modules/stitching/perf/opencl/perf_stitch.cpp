@@ -7,9 +7,13 @@
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
+#ifdef HAVE_OPENCL
+
+namespace cvtest {
+namespace ocl {
+
 using namespace cv;
 using namespace perf;
-using namespace cvtest::ocl;
 using namespace std;
 using namespace std::tr1;
 
@@ -19,7 +23,7 @@ using namespace std::tr1;
 
 typedef TestBaseWithParam<string> stitch;
 
-#ifdef HAVE_OPENCV_NONFREE_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
+#ifdef HAVE_OPENCV_XFEATURES2D
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
 #define TEST_DETECTORS testing::Values<string>("orb")
@@ -142,3 +146,7 @@ OCL_PERF_TEST_P(stitch, boat, TEST_DETECTORS)
 
     SANITY_CHECK_NOTHING();
 }
+
+} } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL

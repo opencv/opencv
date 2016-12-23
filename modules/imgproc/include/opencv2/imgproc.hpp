@@ -1012,6 +1012,14 @@ public:
      */
     CV_WRAP void getEdgeList(CV_OUT std::vector<Vec4f>& edgeList) const;
 
+    /** @brief Returns a list of the leading edge ID connected to each triangle.
+
+    @param leadingEdgeList – Output vector.
+
+    The function gives one edge ID for each triangle.
+     */
+    CV_WRAP void getLeadingEdgeList(CV_OUT std::vector<int>& leadingEdgeList) const;
+
     /** @brief Returns a list of all triangles.
 
     @param triangleList – Output vector.
@@ -2286,6 +2294,8 @@ not supported by this function.
 borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
+@note
+Due to current implementaion limitations the size of an input and output images should be less than 32767x32767.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
@@ -3732,21 +3742,17 @@ CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labe
 /** @brief Finds contours in a binary image.
 
 The function retrieves contours from the binary image using the algorithm @cite Suzuki85 . The contours
-are a useful tool for shape analysis and object detection and recognition. See squares.c in the
+are a useful tool for shape analysis and object detection and recognition. See squares.cpp in the
 OpenCV sample directory.
 
-@note Source image is modified by this function. Also, the function does not take into account
-1-pixel border of the image (it's filled with 0's and used for neighbor analysis in the algorithm),
-therefore the contours touching the image border will be clipped.
-
 @param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
-pixels remain 0's, so the image is treated as binary . You can use compare , inRange , threshold ,
-adaptiveThreshold , Canny , and others to create a binary image out of a grayscale or color one.
-The function modifies the image while extracting the contours. If mode equals to RETR_CCOMP
-or RETR_FLOODFILL, the input can also be a 32-bit integer image of labels (CV_32SC1).
-@param contours Detected contours. Each contour is stored as a vector of points.
-@param hierarchy Optional output vector, containing information about the image topology. It has
-as many elements as the number of contours. For each i-th contour contours[i] , the elements
+pixels remain 0's, so the image is treated as binary . You can use cv::compare, cv::inRange, cv::threshold ,
+cv::adaptiveThreshold, cv::Canny, and others to create a binary image out of a grayscale or color one.
+If mode equals to cv::RETR_CCOMP or cv::RETR_FLOODFILL, the input can also be a 32-bit integer image of labels (CV_32SC1).
+@param contours Detected contours. Each contour is stored as a vector of points (e.g.
+std::vector<std::vector<cv::Point> >).
+@param hierarchy Optional output vector (e.g. std::vector<cv::Vec4i>), containing information about the image topology. It has
+as many elements as the number of contours. For each i-th contour contours[i], the elements
 hierarchy[i][0] , hiearchy[i][1] , hiearchy[i][2] , and hiearchy[i][3] are set to 0-based indices
 in contours of the next and previous contours at the same hierarchical level, the first child
 contour and the parent contour, respectively. If for the contour i there are no next, previous,
@@ -3924,8 +3930,8 @@ to the right, and its Y axis pointing upwards.
 @param returnPoints Operation flag. In case of a matrix, when the flag is true, the function
 returns convex hull points. Otherwise, it returns indices of the convex hull points. When the
 output array is std::vector, the flag is ignored, and the output depends on the type of the
-vector: std::vector\<int\> implies returnPoints=true, std::vector\<Point\> implies
-returnPoints=false.
+vector: std::vector\<int\> implies returnPoints=false, std::vector\<Point\> implies
+returnPoints=true.
  */
 CV_EXPORTS_W void convexHull( InputArray points, OutputArray hull,
                               bool clockwise = false, bool returnPoints = true );
@@ -4409,6 +4415,13 @@ it returns true .
 CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
 
 /** @overload
+@param imgSize Image size. The image rectangle is Rect(0, 0, imgSize.width, imgSize.height) .
+@param pt1 First line point.
+@param pt2 Second line point.
+*/
+CV_EXPORTS bool clipLine(Size2l imgSize, CV_IN_OUT Point2l& pt1, CV_IN_OUT Point2l& pt2);
+
+/** @overload
 @param imgRect Image rectangle.
 @param pt1 First line point.
 @param pt2 Second line point.
@@ -4432,6 +4445,20 @@ accuracy.
 CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
                                 int arcStart, int arcEnd, int delta,
                                 CV_OUT std::vector<Point>& pts );
+
+/** @overload
+@param center Center of the arc.
+@param axes Half of the size of the ellipse main axes. See the ellipse for details.
+@param angle Rotation angle of the ellipse in degrees. See the ellipse for details.
+@param arcStart Starting angle of the elliptic arc in degrees.
+@param arcEnd Ending angle of the elliptic arc in degrees.
+@param delta Angle between the subsequent polyline vertices. It defines the approximation
+accuracy.
+@param pts Output vector of polyline vertices.
+*/
+CV_EXPORTS void ellipse2Poly(Point2d center, Size2d axes, int angle,
+                             int arcStart, int arcEnd, int delta,
+                             CV_OUT std::vector<Point2d>& pts);
 
 /** @brief Draws a text string.
 

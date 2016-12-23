@@ -201,7 +201,10 @@ __kernel void calcLut(__global __const uchar * src, const int srcStep,
         tHistVal += redistBatch;
 
         int residual = totalClipped - redistBatch * 256;
-        if (tid < residual)
+        int rStep = 256 / residual;
+        if (rStep < 1)
+            rStep = 1;
+        if (tid%rStep == 0 && (tid/rStep)<residual)
             ++tHistVal;
     }
 

@@ -96,6 +96,15 @@ static inline bool cv_isspace(char c)
     return (9 <= c && c <= 13) || c == ' ';
 }
 
+static inline char* cv_skip_BOM(char* ptr)
+{
+    if((uchar)ptr[0] == 0xef && (uchar)ptr[1] == 0xbb && (uchar)ptr[2] == 0xbf) //UTF-8 BOM
+    {
+      return ptr + 3;
+    }
+    return ptr;
+}
+
 static char* icv_itoa( int _val, char* buffer, int /*radix*/ )
 {
     const int radix = 10;
@@ -705,8 +714,8 @@ cvReleaseFileStorage( CvFileStorage** p_fs )
 
         delete fs->outbuf;
         delete fs->base64_writer;
-        delete fs->delayed_struct_key;
-        delete fs->delayed_type_name;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
 
         memset( fs, 0, sizeof(*fs) );
         cvFree( &fs );
@@ -1209,8 +1218,8 @@ static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_typ
         }
 
         /* reset */
-        delete fs->delayed_struct_key;
-        delete fs->delayed_type_name;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
         fs->delayed_struct_key   = 0;
         fs->delayed_struct_flags = 0;
         fs->delayed_type_name    = 0;
@@ -4332,7 +4341,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         else if( fs->fmt == CV_STORAGE_FORMAT_YAML )
         {
             if( !append )
-                icvPuts( fs, "%YAML 1.0\n---\n" );
+                icvPuts( fs, "%YAML:1.0\n---\n" );
             else
                 icvPuts( fs, "...\n---\n" );
             fs->start_write_struct = icvYMLStartWriteStruct;
@@ -4397,15 +4406,22 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         size_t buf_size = 1 << 20;
         const char* yaml_signature = "%YAML";
         const char* json_signature = "{";
+        const char* xml_signature  = "<?xml";
         char buf[16];
         icvGets( fs, buf, sizeof(buf)-2 );
-        fs->fmt
-            = strncmp( buf, yaml_signature, strlen(yaml_signature) ) == 0
-            ? CV_STORAGE_FORMAT_YAML
-            : strncmp( buf, json_signature, strlen(json_signature) ) == 0
-            ? CV_STORAGE_FORMAT_JSON
-            : CV_STORAGE_FORMAT_XML
-            ;
+        char* bufPtr = cv_skip_BOM(buf);
+        size_t bufOffset = bufPtr - buf;
+
+        if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_YAML;
+        else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_JSON;
+        else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_XML;
+        else if(fs->strbufsize  == bufOffset)
+            CV_Error(CV_BADARG_ERR, "Input file is empty");
+        else
+            CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 
         if( !isGZ )
         {
@@ -4420,6 +4436,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
             buf_size = MAX( buf_size, (size_t)(CV_FS_MAX_LEN*2 + 1024) );
         }
         icvRewind(fs);
+        fs->strbufpos = bufOffset;
 
         fs->str_hash = cvCreateMap( 0, sizeof(CvStringHash),
                         sizeof(CvStringHashNode), fs->memstorage, 256 );
@@ -7496,6 +7513,8 @@ bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
         return false;
     if (cnt == 0U)
         cnt = std::strlen(reinterpret_cast<char const *>(src));
+    if (cnt == 0U)
+        return false;
     if (cnt & 0x3U)
         return false;
 

@@ -186,11 +186,11 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_VFW
         TRY_OPEN(capture, cvCreateCameraCapture_VFW(index))
 #endif
-        if (pref) break; // CV_CAP_VFW
 
 #if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
         TRY_OPEN(capture, cvCreateCameraCapture_V4L(index))
 #endif
+        if (pref) break; // CV_CAP_VFW
 
 #ifdef HAVE_GSTREAMER
         TRY_OPEN(capture, cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L2, reinterpret_cast<char *>(index)))
@@ -302,15 +302,15 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         if (apiPreference) break;
 #endif
 
-#ifdef HAVE_VFW
     case CV_CAP_VFW:
+#ifdef HAVE_VFW
         TRY_OPEN(result, cvCreateFileCapture_VFW (filename))
-        if (apiPreference) break;
 #endif
+
 #if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
         TRY_OPEN(result, cvCreateCameraCapture_V4L(filename))
-        if (apiPreference) break;
 #endif
+        if (apiPreference) break;
 
     case CV_CAP_MSMF:
 #ifdef HAVE_MSMF
@@ -605,6 +605,11 @@ bool VideoCapture::open(int index)
         return true;
     cap.reset(cvCreateCameraCapture(index));
     return isOpened();
+}
+bool  VideoCapture::open(int cameraNum, int apiPreference)
+{
+    cameraNum = cameraNum + apiPreference;
+    return open(cameraNum);
 }
 
 bool VideoCapture::isOpened() const

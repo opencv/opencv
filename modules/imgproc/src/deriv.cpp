@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters
 \****************************************************************************************/
@@ -178,6 +180,124 @@ cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
     return createSeparableLinearFilter(srcType, dstType,
         kx, ky, Point(-1,-1), 0, borderType );
 }
+
+#ifdef HAVE_OPENVX
+namespace cv
+{
+    static bool openvx_sobel(InputArray _src, OutputArray _dst,
+                             int dx, int dy, int ksize,
+                             double scale, double delta, int borderType)
+    {
+        int stype = _src.type();
+        int dtype = _dst.type();
+        if (stype != CV_8UC1 || (dtype != CV_16SC1 && dtype != CV_8UC1) ||
+            ksize < 3 || ksize % 2 != 1 || delta != 0.0)
+            return false;
+
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+
+        if (src.cols < ksize || src.rows < ksize)
+            return false;
+
+        int iscale = 1;
+        vx_uint32 cscale = 1;
+        if(scale != 1.0)
+        {
+            iscale = static_cast<int>(scale);
+            if (std::abs(scale - iscale) >= DBL_EPSILON)
+            {
+                int exp = 0;
+                float significand = frexp(scale, &exp);
+                if ((significand == 0.5f) && (exp <= 0))
+                {
+                    iscale = 1;
+                    cscale = 1 << (exp = -exp + 1);
+                }
+                else
+                    return false;
+            }
+        }
+
+        if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
+            return false; //Process isolated borders only
+        vx_enum border;
+        switch (borderType & ~BORDER_ISOLATED)
+        {
+        case BORDER_CONSTANT:
+            border = VX_BORDER_CONSTANT;
+            break;
+        case BORDER_REPLICATE:
+            border = VX_BORDER_REPLICATE;
+            break;
+        default:
+            return false;
+        }
+
+        try
+        {
+            ivx::Context ctx = ivx::Context::create();
+            if ((vx_size)ksize > ctx.convolutionMaxDimension())
+                return false;
+
+            Mat a;
+            if (dst.data != src.data)
+                a = src;
+            else
+                src.copyTo(a);
+
+            ivx::Image
+                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+                ib = ivx::Image::createFromHandle(ctx, dtype == CV_16SC1 ? VX_DF_IMAGE_S16 : VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(dst.cols, dst.rows, dtype == CV_16SC1 ? 2 : 1, (vx_int32)(dst.step)), dst.data);
+
+            //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+            //since OpenVX standart says nothing about thread-safety for now
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border, (vx_uint8)(0));
+            if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1)
+            {
+                if(dx)
+                    ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, ib, NULL));
+                else
+                    ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, NULL, ib));
+            }
+            else
+            {
+#if VX_VERSION <= VX_VERSION_1_0
+                if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
+                {
+                    ctx.setImmediateBorder(prevBorder);
+                    return false;
+                }
+#endif
+                Mat kx, ky;
+                getDerivKernels(kx, ky, dx, dy, ksize, false);
+                flip(kx, kx, 0);
+                flip(ky, ky, 0);
+                Mat convData;
+                cv::Mat(ky*kx.t()).convertTo(convData, CV_16SC1, iscale);
+                ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
+                cnv.copyFrom(convData);
+                cnv.setScale(cscale);
+                ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
+            }
+            ctx.setImmediateBorder(prevBorder);
+        }
+        catch (ivx::RuntimeError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+        catch (ivx::WrapperError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+
+        return true;
+    }
+}
+#endif
 
 #ifdef HAVE_IPP
 namespace cv
@@ -517,6 +637,66 @@ static bool ipp_sobel(InputArray _src, OutputArray _dst, int ddepth, int dx, int
 }
 #endif
 
+#ifdef HAVE_OPENCL
+namespace cv
+{
+static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
+                                  InputArray _kernelX, InputArray _kernelY, double delta, int borderType)
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) && (ddepth == CV_8U) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) )
+        return false;
+
+    Mat kernelX = _kernelX.getMat().reshape(1, 1);
+    if (kernelX.cols % 2 != 1)
+        return false;
+    Mat kernelY = _kernelY.getMat().reshape(1, 1);
+    if (kernelY.cols % 2 != 1)
+        return false;
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s%s", borderMap[borderType],
+            ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
+            ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
+
+    ocl::Kernel kernel("sepFilter3x3_8UC1_cols16_rows2", cv::ocl::imgproc::sepFilter3x3_oclsrc, build_opts);
+    if (kernel.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = kernel.set(idxArg, (int)dst.step);
+    idxArg = kernel.set(idxArg, (int)dst.rows);
+    idxArg = kernel.set(idxArg, (int)dst.cols);
+    idxArg = kernel.set(idxArg, static_cast<float>(delta));
+
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+}
+}
+#endif
+
 void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                 int ksize, double scale, double delta, int borderType )
 {
@@ -539,6 +719,9 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
+    CV_OVX_RUN(true,
+               openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
+
     CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
 
     int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
@@ -554,6 +737,11 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         else
             ky *= scale;
     }
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && ksize == 3 &&
+               (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
+               ocl_sepFilter3x3_8UC1(_src, _dst, ddepth, kx, ky, delta, borderType));
+
     sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
@@ -593,6 +781,11 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         else
             ky *= scale;
     }
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 &&
+               (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
+               ocl_sepFilter3x3_8UC1(_src, _dst, ddepth, kx, ky, delta, borderType));
+
     sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
@@ -737,8 +930,57 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     return k.run(2, globalsize, NULL, false);
 }
 
+static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
+                                InputArray _kernel, double delta, int borderType)
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) && (ddepth == CV_8U) &&
+         (borderType != BORDER_WRAP) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)) )
+        return false;
+
+    Mat kernel = _kernel.getMat().reshape(1, 1);
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s", borderMap[borderType],
+            ocl::kernelToStr(kernel, CV_32F, "KERNEL_MATRIX").c_str());
+
+    ocl::Kernel k("laplacian3_8UC1_cols16_rows2", cv::ocl::imgproc::laplacian3_oclsrc, build_opts);
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = k.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = k.set(idxArg, (int)src.step);
+    idxArg = k.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = k.set(idxArg, (int)dst.step);
+    idxArg = k.set(idxArg, (int)dst.rows);
+    idxArg = k.set(idxArg, (int)dst.cols);
+    idxArg = k.set(idxArg, static_cast<float>(delta));
+
+    return k.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
 }
 
+}
 #endif
 
 #if defined(HAVE_IPP)
@@ -822,6 +1064,22 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
+    if( ksize == 1 || ksize == 3 )
+    {
+        float K[2][9] =
+        {
+            { 0, 1, 0, 1, -4, 1, 0, 1, 0 },
+            { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
+        };
+
+        Mat kernel(3, 3, CV_32F, K[ksize == 3]);
+        if( scale != 1 )
+            kernel *= scale;
+
+        CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+                   ocl_Laplacian3_8UC1(_src, _dst, ddepth, kernel, delta, borderType));
+    }
+
     CV_IPP_RUN((ksize == 3 || ksize == 5) && ((borderType & BORDER_ISOLATED) != 0 || !_src.isSubmatrix()) &&
         ((stype == CV_8UC1 && ddepth == CV_16S) || (ddepth == CV_32F && stype == CV_32FC1)) && (!cv::ocl::useOpenCL()),
         ipp_Laplacian(_src, _dst, ddepth, ksize, scale, delta, borderType));
@@ -850,6 +1108,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         Mat kernel(3, 3, CV_32F, K[ksize == 3]);
         if( scale != 1 )
             kernel *= scale;
+
         filter2D( _src, _dst, ddepth, kernel, Point(-1, -1), delta, borderType );
     }
     else
@@ -864,16 +1123,18 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                    ocl_Laplacian5(_src, _dst, kd, ks, scale,
                                   delta, borderType, wdepth, ddepth))
 
+        Mat src = _src.getMat(), dst = _dst.getMat();
+        Point ofs;
+        Size wsz(src.cols, src.rows);
+        if(!(borderType&BORDER_ISOLATED))
+            src.locateROI( wsz, ofs );
+        borderType = (borderType&~BORDER_ISOLATED);
+
         const size_t STRIPE_SIZE = 1 << 14;
         Ptr<FilterEngine> fx = createSeparableLinearFilter(stype,
             wtype, kd, ks, Point(-1,-1), 0, borderType, borderType, Scalar() );
         Ptr<FilterEngine> fy = createSeparableLinearFilter(stype,
             wtype, ks, kd, Point(-1,-1), 0, borderType, borderType, Scalar() );
-
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        Point ofs;
-        Size wsz(src.cols, src.rows);
-        src.locateROI( wsz, ofs );
 
         int y = fx->start(src, wsz, ofs), dsty = 0, dy = 0;
         fy->start(src, wsz, ofs);

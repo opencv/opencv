@@ -556,6 +556,20 @@ enum { CAP_PROP_GPHOTO2_PREVIEW           = 17001, //!< Capture only preview fro
 
 //! @} gPhoto2
 
+
+/** @name Images backend
+    @{
+*/
+
+/** @brief Images backend properties
+
+*/
+enum { CAP_PROP_IMAGES_BASE = 18000,
+       CAP_PROP_IMAGES_LAST = 19000 // excluding
+     };
+
+//! @} Images
+
 //! @} videoio_flags_others
 
 
@@ -649,6 +663,16 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index);
+
+   /** @brief  Open a camera for video capturing
+
+    @overload
+
+    This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts.
+    Parameters are similar as the constructor VideoCapture(int index),except it takes an additional argument apiPreference.
+    @return open(cameraNum + apiPreference).
+    */
+    CV_WRAP bool open(int cameraNum, int apiPreference);
 
     /** @brief Returns true if video capturing has been initialized already.
 

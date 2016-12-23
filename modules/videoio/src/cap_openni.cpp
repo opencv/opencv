@@ -44,10 +44,6 @@
 
 #ifdef HAVE_OPENNI
 
-#if defined TBB_INTERFACE_VERSION && TBB_INTERFACE_VERSION < 5000
-# undef HAVE_TBB
-#endif
-
 #include <queue>
 
 #ifndef i386

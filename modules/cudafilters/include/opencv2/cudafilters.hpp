@@ -250,7 +250,7 @@ CV_EXPORTS Ptr<Filter> createGaussianFilter(int srcType, int dstType, Size ksize
 -   **MORPH_GRADIENT** morphological gradient
 -   **MORPH_TOPHAT** "top hat"
 -   **MORPH_BLACKHAT** "black hat"
-@param srcType Input/output image type. Only CV_8UC1 and CV_8UC4 are supported.
+@param srcType Input/output image type. Only CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4 are supported.
 @param kernel 2D 8-bit structuring element for the morphological operation.
 @param anchor Anchor position within the structuring element. Negative values mean that the anchor
 is at the center.

@@ -196,7 +196,8 @@ enum WindowPropertyFlags {
        WND_PROP_FULLSCREEN   = 0, //!< fullscreen property    (can be WINDOW_NORMAL or WINDOW_FULLSCREEN).
        WND_PROP_AUTOSIZE     = 1, //!< autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE).
        WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO).
-       WND_PROP_OPENGL       = 3  //!< opengl support.
+       WND_PROP_OPENGL       = 3, //!< opengl support.
+       WND_PROP_VISIBLE      = 4  //!< checks whether the window exists and is visible
      };
 
 //! Mouse Events see cv::MouseCallback
@@ -318,6 +319,15 @@ The function destroyAllWindows destroys all of the opened HighGUI windows.
 CV_EXPORTS_W void destroyAllWindows();
 
 CV_EXPORTS_W int startWindowThread();
+
+/** @brief Similar to #waitKey, but returns full key code.
+
+@note
+
+Key code is implementation specific and depends on used backend: QT/GTK/Win32/etc
+
+*/
+CV_EXPORTS_W int waitKeyEx(int delay = 0);
 
 /** @brief Waits for a pressed key.
 

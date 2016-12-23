@@ -1022,14 +1022,12 @@ around both axes.
 */
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
-
 enum RotateFlags {
-    ROTATE_90 = 0, //Rotate 90 degrees clockwise
+    ROTATE_90_CLOCKWISE = 0, //Rotate 90 degrees clockwise
     ROTATE_180 = 1, //Rotate 180 degrees clockwise
-    ROTATE_270 = 2, //Rotate 270 degrees clockwise
+    ROTATE_90_COUNTERCLOCKWISE = 2, //Rotate 270 degrees clockwise
 };
 /** @brief Rotates a 2D array in multiples of 90 degrees.
-
 The function rotate rotates the array in one of three different ways:
 *   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90).
 *   Rotate by 180 degrees clockwise (rotateCode = ROTATE_180).
@@ -1670,7 +1668,7 @@ m.cols or m.cols-1.
 @param dst output array of the same size and depth as src; it has as
 many channels as m.rows.
 @param m transformation 2x2 or 2x3 floating-point matrix.
-@sa perspectiveTransform, getAffineTransform, estimateRigidTransform, warpAffine, warpPerspective
+@sa perspectiveTransform, getAffineTransform, estimateAffine2D, warpAffine, warpPerspective
 */
 CV_EXPORTS_W void transform(InputArray src, OutputArray dst, InputArray m );
 
@@ -3047,7 +3045,8 @@ public:
 
      This is static template method of Algorithm. It's usage is following (in the case of SVM):
      @code
-     Ptr<SVM> svm = Algorithm::read<SVM>(fn);
+     cv::FileStorage fsRead("example.xml", FileStorage::READ);
+     Ptr<SVM> svm = Algorithm::read<SVM>(fsRead.root());
      @endcode
      In order to make this method work, the derived class must overwrite Algorithm::read(const
      FileNode& fn) and also have static create() method without parameters
@@ -3216,5 +3215,6 @@ template<> struct ParamType<uchar>
 #include "opencv2/core/cvstd.inl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/optim.hpp"
+#include "opencv2/core/ovx.hpp"
 
 #endif /*OPENCV_CORE_HPP*/
