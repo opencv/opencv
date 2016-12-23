@@ -386,6 +386,11 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
     addref();
 }
 
+void UMat::create(const std::vector<int>& _sizes, int _type, UMatUsageFlags _usageFlags)
+{
+    create((int)_sizes.size(), _sizes.data(), _type, _usageFlags);
+}
+
 void UMat::copySize(const UMat& m)
 {
     setSize(*this, m.dims, 0, 0);
@@ -498,6 +503,31 @@ UMat::UMat(const UMat& m, const Range* ranges)
     {
         Range r = ranges[i];
         if( r != Range::all() && r != Range(0, size.p[i]))
+        {
+            size.p[i] = r.end - r.start;
+            offset += r.start*step.p[i];
+            flags |= SUBMATRIX_FLAG;
+        }
+    }
+    updateContinuityFlag(*this);
+}
+
+UMat::UMat(const UMat& m, const std::vector<Range>& ranges)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
+{
+    int i, d = m.dims;
+
+    CV_Assert((int)ranges.size() == d);
+    for (i = 0; i < d; i++)
+    {
+        Range r = ranges[i];
+        CV_Assert(r == Range::all() || (0 <= r.start && r.start < r.end && r.end <= m.size[i]));
+    }
+    *this = m;
+    for (i = 0; i < d; i++)
+    {
+        Range r = ranges[i];
+        if (r != Range::all() && r != Range(0, size.p[i]))
         {
             size.p[i] = r.end - r.start;
             offset += r.start*step.p[i];

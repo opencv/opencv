@@ -69,6 +69,6 @@ if __name__ == '__main__':
         vis = a.copy()
         draw_str(vis, (20, 20), 'frame %d' % frame_i)
         cv2.imshow('a', vis)
-        if 0xFF & cv2.waitKey(5) == 27:
+        if cv2.waitKey(5) == 27:
             break
     cv2.destroyAllWindows()

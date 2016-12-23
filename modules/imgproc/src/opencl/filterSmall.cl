@@ -154,6 +154,7 @@ inline bool isBorder(const struct RectCoords bounds, int2 coord, int numPixels)
 #endif
 
 #define float1 float
+#define double1 double
 #define uchar1 uchar
 #define int1 int
 #define uint1 unit

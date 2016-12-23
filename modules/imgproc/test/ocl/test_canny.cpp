@@ -133,6 +133,8 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
                                 testing::Values(L2gradient(false), L2gradient(true)),
                                 testing::Values(UseRoi(false), UseRoi(true))));
 
-} } // namespace cvtest::ocl
+} // namespace ocl
+
+} // namespace cvtest
 
 #endif // HAVE_OPENCL

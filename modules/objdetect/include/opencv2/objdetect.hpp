@@ -255,7 +255,7 @@ public:
     @param flags Parameter with the same meaning for an old cascade as in the function
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
-    @param maxSize Maximum possible object size. Objects larger than that are ignored.
+    @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
 
     The function is parallelized with the TBB library.
 
@@ -283,7 +283,7 @@ public:
     @param flags Parameter with the same meaning for an old cascade as in the function
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
-    @param maxSize Maximum possible object size. Objects larger than that are ignored.
+    @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
     */
     CV_WRAP_AS(detectMultiScale2) void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,

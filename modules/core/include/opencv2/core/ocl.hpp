@@ -739,6 +739,9 @@ CV_EXPORTS MatAllocator* getOpenCLAllocator();
 #ifdef __OPENCV_BUILD
 namespace internal {
 
+CV_EXPORTS bool isOpenCLForced();
+#define OCL_FORCE_CHECK(condition) (cv::ocl::internal::isOpenCLForced() || (condition))
+
 CV_EXPORTS bool isPerformanceCheckBypassed();
 #define OCL_PERFORMANCE_CHECK(condition) (cv::ocl::internal::isPerformanceCheckBypassed() || (condition))
 

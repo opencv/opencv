@@ -105,6 +105,39 @@
 
 namespace cv
 {
+//constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
+const float B2YF = 0.114f;
+const float G2YF = 0.587f;
+const float R2YF = 0.299f;
+//to YCbCr
+const float YCBF = 0.564f; // == 1/2/(1-B2YF)
+const float YCRF = 0.713f; // == 1/2/(1-R2YF)
+const int YCBI = 9241;  // == YCBF*16384
+const int YCRI = 11682; // == YCRF*16384
+//to YUV
+const float B2UF = 0.492f;
+const float R2VF = 0.877f;
+const int B2UI = 8061;  // == B2UF*16384
+const int R2VI = 14369; // == R2VF*16384
+//from YUV
+const float U2BF = 2.032f;
+const float U2GF = -0.395f;
+const float V2GF = -0.581f;
+const float V2RF = 1.140f;
+const int U2BI = 33292;
+const int U2GI = -6472;
+const int V2GI = -9519;
+const int V2RI = 18678;
+//from YCrCb
+const float CB2BF = 1.773f;
+const float CB2GF = -0.344f;
+const float CR2GF = -0.714f;
+const float CR2RF = 1.403f;
+const int CB2BI = 29049;
+const int CB2GI = -5636;
+const int CR2GI = -11698;
+const int CR2RI = 22987;
+
 
 // computes cubic spline coefficients for a function: (xi=i, yi=f[i]), i=0..n
 template<typename _Tp> static void splineBuild(const _Tp* f, int n, _Tp* tab)
@@ -141,6 +174,64 @@ template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab
     return ((tab[3]*x + tab[2])*x + tab[1])*x + tab[0];
 }
 
+#if CV_NEON
+template<typename _Tp> static inline void splineInterpolate(float32x4_t& v_x, const _Tp* tab, int n)
+{
+    int32x4_t v_ix = vcvtq_s32_f32(vminq_f32(vmaxq_f32(v_x, vdupq_n_f32(0)), vdupq_n_f32(n - 1)));
+    v_x = vsubq_f32(v_x, vcvtq_f32_s32(v_ix));
+    v_ix = vshlq_n_s32(v_ix, 2);
+
+    int CV_DECL_ALIGNED(16) ix[4];
+    vst1q_s32(ix, v_ix);
+
+    float32x4_t v_tab0 = vld1q_f32(tab + ix[0]);
+    float32x4_t v_tab1 = vld1q_f32(tab + ix[1]);
+    float32x4_t v_tab2 = vld1q_f32(tab + ix[2]);
+    float32x4_t v_tab3 = vld1q_f32(tab + ix[3]);
+
+    float32x4x2_t v01 = vtrnq_f32(v_tab0, v_tab1);
+    float32x4x2_t v23 = vtrnq_f32(v_tab2, v_tab3);
+
+    v_tab0 = vcombine_f32(vget_low_f32(v01.val[0]), vget_low_f32(v23.val[0]));
+    v_tab1 = vcombine_f32(vget_low_f32(v01.val[1]), vget_low_f32(v23.val[1]));
+    v_tab2 = vcombine_f32(vget_high_f32(v01.val[0]), vget_high_f32(v23.val[0]));
+    v_tab3 = vcombine_f32(vget_high_f32(v01.val[1]), vget_high_f32(v23.val[1]));
+
+    v_x = vmlaq_f32(v_tab0, vmlaq_f32(v_tab1, vmlaq_f32(v_tab2, v_tab3, v_x), v_x), v_x);
+}
+#elif CV_SSE2
+template<typename _Tp> static inline void splineInterpolate(__m128& v_x, const _Tp* tab, int n)
+{
+    __m128i v_ix = _mm_cvttps_epi32(_mm_min_ps(_mm_max_ps(v_x, _mm_setzero_ps()), _mm_set1_ps(float(n - 1))));
+    v_x = _mm_sub_ps(v_x, _mm_cvtepi32_ps(v_ix));
+    v_ix = _mm_slli_epi32(v_ix, 2);
+
+    int CV_DECL_ALIGNED(16) ix[4];
+    _mm_store_si128((__m128i *)ix, v_ix);
+
+    __m128 v_tab0 = _mm_loadu_ps(tab + ix[0]);
+    __m128 v_tab1 = _mm_loadu_ps(tab + ix[1]);
+    __m128 v_tab2 = _mm_loadu_ps(tab + ix[2]);
+    __m128 v_tab3 = _mm_loadu_ps(tab + ix[3]);
+
+    __m128 v_tmp0 = _mm_unpacklo_ps(v_tab0, v_tab1);
+    __m128 v_tmp1 = _mm_unpacklo_ps(v_tab2, v_tab3);
+    __m128 v_tmp2 = _mm_unpackhi_ps(v_tab0, v_tab1);
+    __m128 v_tmp3 = _mm_unpackhi_ps(v_tab2, v_tab3);
+
+    v_tab0 = _mm_shuffle_ps(v_tmp0, v_tmp1, 0x44);
+    v_tab2 = _mm_shuffle_ps(v_tmp2, v_tmp3, 0x44);
+    v_tab1 = _mm_shuffle_ps(v_tmp0, v_tmp1, 0xee);
+    v_tab3 = _mm_shuffle_ps(v_tmp2, v_tmp3, 0xee);
+
+    __m128 v_l = _mm_mul_ps(v_x, v_tab3);
+    v_l = _mm_add_ps(v_l, v_tab2);
+    v_l = _mm_mul_ps(v_l, v_x);
+    v_l = _mm_add_ps(v_l, v_tab1);
+    v_l = _mm_mul_ps(v_l, v_x);
+    v_x = _mm_add_ps(v_l, v_tab0);
+}
+#endif
 
 template<typename _Tp> struct ColorChannel
 {
@@ -226,8 +317,6 @@ public:
 
     virtual void operator()(const Range& range) const
     {
-        CV_INSTRUMENT_REGION_IPP();
-
         const void *yS = src_data + src_step * range.start;
         void *yD = dst_data + dst_step * range.start;
         if( !cvt(yS, static_cast<int>(src_step), yD, static_cast<int>(dst_step), width, range.end - range.start) )
@@ -443,9 +532,9 @@ struct IPPColor2GrayFunctor
     IPPColor2GrayFunctor(ippiColor2GrayFunc _func) :
         ippiColorToGray(_func)
     {
-        coeffs[0] = 0.114f;
-        coeffs[1] = 0.587f;
-        coeffs[2] = 0.299f;
+        coeffs[0] = B2YF;
+        coeffs[1] = G2YF;
+        coeffs[2] = R2YF;
     }
     bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
     {
@@ -1087,9 +1176,9 @@ enum
 {
     yuv_shift = 14,
     xyz_shift = 12,
-    R2Y = 4899,
-    G2Y = 9617,
-    B2Y = 1868,
+    R2Y = 4899, // == R2YF*16384
+    G2Y = 9617, // == G2YF*16384
+    B2Y = 1868, // == B2YF*16384
     BLOCK_SIZE = 256
 };
 
@@ -1257,7 +1346,7 @@ template<typename _Tp> struct RGB2Gray
 
     RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
+        static const float coeffs0[] = { R2YF, G2YF, B2YF };
         memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
@@ -1404,7 +1493,7 @@ struct RGB2Gray<float>
 
     RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
+        static const float coeffs0[] = { R2YF, G2YF, B2YF };
         memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
@@ -1594,7 +1683,7 @@ struct RGB2Gray<float>
 
     RGB2Gray(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
-        static const float coeffs0[] = { 0.299f, 0.587f, 0.114f };
+        static const float coeffs0[] = { R2YF, G2YF, B2YF };
         memcpy( coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]) );
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
@@ -1716,16 +1805,18 @@ template<typename _Tp> struct RGB2YCrCb_f
 {
     typedef _Tp channel_type;
 
-    RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_f(int _srccn, int _blueIdx, bool _isCrCb) : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const float coeffs_crb[] = { R2YF, G2YF, B2YF, YCRF, YCBF };
+        static const float coeffs_yuv[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int scn = srccn, bidx = blueIdx;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const _Tp delta = ColorChannel<_Tp>::half();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         n *= 3;
@@ -1734,10 +1825,11 @@ template<typename _Tp> struct RGB2YCrCb_f
             _Tp Y = saturate_cast<_Tp>(src[0]*C0 + src[1]*C1 + src[2]*C2);
             _Tp Cr = saturate_cast<_Tp>((src[bidx^2] - Y)*C3 + delta);
             _Tp Cb = saturate_cast<_Tp>((src[bidx] - Y)*C4 + delta);
-            dst[i] = Y; dst[i+1] = Cr; dst[i+2] = Cb;
+            dst[i] = Y; dst[i+1+yuvOrder] = Cr; dst[i+2-yuvOrder] = Cb;
         }
     }
     int srccn, blueIdx;
+    bool isCrCb;
     float coeffs[5];
 };
 
@@ -1748,11 +1840,12 @@ struct RGB2YCrCb_f<float>
 {
     typedef float channel_type;
 
-    RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) :
-        srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_f(int _srccn, int _blueIdx, bool _isCrCb) :
+        srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const float coeffs_crb[] = { R2YF, G2YF, B2YF, YCRF, YCBF };
+        static const float coeffs_yuv[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if(blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -1767,6 +1860,7 @@ struct RGB2YCrCb_f<float>
     void operator()(const float * src, float * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const float delta = ColorChannel<float>::half();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         n *= 3;
@@ -1776,8 +1870,8 @@ struct RGB2YCrCb_f<float>
             {
                 float32x4x3_t v_src = vld3q_f32(src), v_dst;
                 v_dst.val[0] = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], v_c0), v_src.val[1], v_c1), v_src.val[2], v_c2);
-                v_dst.val[1] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx^2], v_dst.val[0]), v_c3);
-                v_dst.val[2] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx], v_dst.val[0]), v_c4);
+                v_dst.val[1+yuvOrder] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx^2], v_dst.val[0]), v_c3);
+                v_dst.val[2-yuvOrder] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx], v_dst.val[0]), v_c4);
 
                 vst3q_f32(dst + i, v_dst);
             }
@@ -1787,8 +1881,8 @@ struct RGB2YCrCb_f<float>
                 float32x4x4_t v_src = vld4q_f32(src);
                 float32x4x3_t v_dst;
                 v_dst.val[0] = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], v_c0), v_src.val[1], v_c1), v_src.val[2], v_c2);
-                v_dst.val[1] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx^2], v_dst.val[0]), v_c3);
-                v_dst.val[2] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx], v_dst.val[0]), v_c4);
+                v_dst.val[1+yuvOrder] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx^2], v_dst.val[0]), v_c3);
+                v_dst.val[2-yuvOrder] = vmlaq_f32(v_delta, vsubq_f32(v_src.val[bidx], v_dst.val[0]), v_c4);
 
                 vst3q_f32(dst + i, v_dst);
             }
@@ -1798,10 +1892,11 @@ struct RGB2YCrCb_f<float>
             float Y = src[0]*C0 + src[1]*C1 + src[2]*C2;
             float Cr = (src[bidx^2] - Y)*C3 + delta;
             float Cb = (src[bidx] - Y)*C4 + delta;
-            dst[i] = Y; dst[i+1] = Cr; dst[i+2] = Cb;
+            dst[i] = Y; dst[i+1+yuvOrder] = Cr; dst[i+2-yuvOrder] = Cb;
         }
     }
     int srccn, blueIdx;
+    bool isCrCb;
     float coeffs[5];
     float32x4_t v_c0, v_c1, v_c2, v_c3, v_c4, v_delta;
 };
@@ -1813,11 +1908,12 @@ struct RGB2YCrCb_f<float>
 {
     typedef float channel_type;
 
-    RGB2YCrCb_f(int _srccn, int _blueIdx, const float* _coeffs) :
-        srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_f(int _srccn, int _blueIdx, bool _isCrCb) :
+        srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const float coeffs_crb[] = { R2YF, G2YF, B2YF, YCRF, YCBF };
+        static const float coeffs_yuv[] = { R2YF, G2YF, B2YF, R2VF, B2UF };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -1845,6 +1941,7 @@ struct RGB2YCrCb_f<float>
     void operator()(const float * src, float * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const float delta = ColorChannel<float>::half();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         n *= 3;
@@ -1878,14 +1975,19 @@ struct RGB2YCrCb_f<float>
                 process(v_r1, v_g1, v_b1,
                         v_y1, v_cr1, v_cb1);
 
-                _mm_interleave_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                if(isCrCb)
+                    _mm_interleave_ps(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                else //YUV
+                {
+                    _mm_interleave_ps(v_y0, v_y1, v_cb0, v_cb1, v_cr0, v_cr1);
+                }
 
                 _mm_storeu_ps(dst + i, v_y0);
                 _mm_storeu_ps(dst + i + 4, v_y1);
-                _mm_storeu_ps(dst + i + 8, v_cr0);
-                _mm_storeu_ps(dst + i + 12, v_cr1);
-                _mm_storeu_ps(dst + i + 16, v_cb0);
-                _mm_storeu_ps(dst + i + 20, v_cb1);
+                _mm_storeu_ps(dst + i + 8  + yuvOrder*8, v_cr0);
+                _mm_storeu_ps(dst + i + 12 + yuvOrder*8, v_cr1);
+                _mm_storeu_ps(dst + i + 16 - yuvOrder*8, v_cb0);
+                _mm_storeu_ps(dst + i + 20 - yuvOrder*8, v_cb1);
             }
         }
 
@@ -1894,10 +1996,11 @@ struct RGB2YCrCb_f<float>
             float Y = src[0]*C0 + src[1]*C1 + src[2]*C2;
             float Cr = (src[bidx^2] - Y)*C3 + delta;
             float Cb = (src[bidx] - Y)*C4 + delta;
-            dst[i] = Y; dst[i+1] = Cr; dst[i+2] = Cb;
+            dst[i] = Y; dst[i+1+yuvOrder] = Cr; dst[i+2-yuvOrder] = Cb;
         }
     }
     int srccn, blueIdx;
+    bool isCrCb;
     float coeffs[5];
     __m128 v_c0, v_c1, v_c2, v_c3, v_c4, v_delta;
     bool haveSIMD;
@@ -1909,16 +2012,18 @@ template<typename _Tp> struct RGB2YCrCb_i
 {
     typedef _Tp channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int scn = srccn, bidx = blueIdx;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<_Tp>::half()*(1 << yuv_shift);
         n *= 3;
@@ -1928,11 +2033,12 @@ template<typename _Tp> struct RGB2YCrCb_i
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<_Tp>(Y);
-            dst[i+1] = saturate_cast<_Tp>(Cr);
-            dst[i+2] = saturate_cast<_Tp>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<_Tp>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<_Tp>(Cb);
         }
     }
     int srccn, blueIdx;
+    bool isCrCb;
     int coeffs[5];
 };
 
@@ -1943,11 +2049,12 @@ struct RGB2YCrCb_i<uchar>
 {
     typedef uchar channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -1963,6 +2070,7 @@ struct RGB2YCrCb_i<uchar>
     void operator()(const uchar * src, uchar * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<uchar>::half()*(1 << yuv_shift);
         n *= 3;
@@ -2011,8 +2119,8 @@ struct RGB2YCrCb_i<uchar>
             v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), yuv_shift);
 
             v_dst.val[0] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Y0), vqmovn_s32(v_Y1)));
-            v_dst.val[1] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cr0), vqmovn_s32(v_Cr1)));
-            v_dst.val[2] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cb0), vqmovn_s32(v_Cb1)));
+            v_dst.val[1+yuvOrder] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cr0), vqmovn_s32(v_Cr1)));
+            v_dst.val[2-yuvOrder] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cb0), vqmovn_s32(v_Cb1)));
 
             vst3_u8(dst + i, v_dst);
         }
@@ -2023,11 +2131,12 @@ struct RGB2YCrCb_i<uchar>
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<uchar>(Y);
-            dst[i+1] = saturate_cast<uchar>(Cr);
-            dst[i+2] = saturate_cast<uchar>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<uchar>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<uchar>(Cb);
         }
     }
     int srccn, blueIdx, coeffs[5];
+    bool isCrCb;
     int16x4_t v_c0, v_c1, v_c2;
     int32x4_t v_c3, v_c4, v_delta, v_delta2;
 };
@@ -2037,11 +2146,12 @@ struct RGB2YCrCb_i<ushort>
 {
     typedef ushort channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -2057,6 +2167,7 @@ struct RGB2YCrCb_i<ushort>
     void operator()(const ushort * src, ushort * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<ushort>::half()*(1 << yuv_shift);
         n *= 3;
@@ -2099,8 +2210,8 @@ struct RGB2YCrCb_i<ushort>
             v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), yuv_shift);
 
             v_dst.val[0] = vcombine_u16(vqmovun_s32(v_Y0), vqmovun_s32(v_Y1));
-            v_dst.val[1] = vcombine_u16(vqmovun_s32(v_Cr0), vqmovun_s32(v_Cr1));
-            v_dst.val[2] = vcombine_u16(vqmovun_s32(v_Cb0), vqmovun_s32(v_Cb1));
+            v_dst.val[1+yuvOrder] = vcombine_u16(vqmovun_s32(v_Cr0), vqmovun_s32(v_Cr1));
+            v_dst.val[2-yuvOrder] = vcombine_u16(vqmovun_s32(v_Cb0), vqmovun_s32(v_Cb1));
 
             vst3q_u16(dst + i, v_dst);
         }
@@ -2133,8 +2244,8 @@ struct RGB2YCrCb_i<ushort>
             v_Cb = vshrq_n_s32(vaddq_s32(v_Cb, v_delta2), yuv_shift);
 
             v_dst.val[0] = vqmovun_s32(v_Y);
-            v_dst.val[1] = vqmovun_s32(v_Cr);
-            v_dst.val[2] = vqmovun_s32(v_Cb);
+            v_dst.val[1+yuvOrder] = vqmovun_s32(v_Cr);
+            v_dst.val[2-yuvOrder] = vqmovun_s32(v_Cb);
 
             vst3_u16(dst + i, v_dst);
         }
@@ -2145,11 +2256,12 @@ struct RGB2YCrCb_i<ushort>
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<ushort>(Y);
-            dst[i+1] = saturate_cast<ushort>(Cr);
-            dst[i+2] = saturate_cast<ushort>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<ushort>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<ushort>(Cb);
         }
     }
     int srccn, blueIdx, coeffs[5];
+    bool isCrCb;
     int32x4_t v_c0, v_c1, v_c2, v_c3, v_c4, v_delta, v_delta2;
 };
 
@@ -2160,11 +2272,12 @@ struct RGB2YCrCb_i<uchar>
 {
     typedef uchar channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -2173,7 +2286,10 @@ struct RGB2YCrCb_i<uchar>
         v_delta_32 = _mm_set1_epi32(delta);
         short delta2 = 1 + ColorChannel<uchar>::half() * 2;
         v_coeff = _mm_set_epi16(delta2, (short)coeffs[4], delta2, (short)coeffs[3], delta2, (short)coeffs[4], delta2, (short)coeffs[3]);
-        v_shuffle2 = _mm_set_epi8(0x0, 0x0, 0x0, 0x0, 0xf, 0xe, 0xc, 0xb, 0xa, 0x8, 0x7, 0x6, 0x4, 0x3, 0x2, 0x0);
+        if(isCrCb)
+            v_shuffle2 = _mm_set_epi8(0x0, 0x0, 0x0, 0x0, 0xf, 0xe, 0xc, 0xb, 0xa, 0x8, 0x7, 0x6, 0x4, 0x3, 0x2, 0x0);
+        else //if YUV
+            v_shuffle2 = _mm_set_epi8(0x0, 0x0, 0x0, 0x0, 0xe, 0xf, 0xc, 0xa, 0xb, 0x8, 0x6, 0x7, 0x4, 0x2, 0x3, 0x0);
         haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1);
     }
 
@@ -2227,6 +2343,7 @@ struct RGB2YCrCb_i<uchar>
     void operator()(const uchar * src, uchar * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<uchar>::half()*(1 << yuv_shift);
         n *= 3;
@@ -2303,8 +2420,8 @@ struct RGB2YCrCb_i<uchar>
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<uchar>(Y);
-            dst[i+1] = saturate_cast<uchar>(Cr);
-            dst[i+2] = saturate_cast<uchar>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<uchar>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<uchar>(Cb);
         }
     }
 
@@ -2312,6 +2429,7 @@ struct RGB2YCrCb_i<uchar>
     __m128i v_coeff;
     __m128i v_shuffle2;
     int srccn, blueIdx, coeffs[5];
+    bool isCrCb;
     bool haveSIMD;
 };
 
@@ -2320,11 +2438,12 @@ struct RGB2YCrCb_i<ushort>
 {
     typedef ushort channel_type;
 
-    RGB2YCrCb_i(int _srccn, int _blueIdx, const int* _coeffs)
-        : srccn(_srccn), blueIdx(_blueIdx)
+    RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
+        : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {R2Y, G2Y, B2Y, 11682, 9241};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 5*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
+        static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -2381,6 +2500,7 @@ struct RGB2YCrCb_i<ushort>
     void operator()(const ushort * src, ushort * dst, int n) const
     {
         int scn = srccn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
         int delta = ColorChannel<ushort>::half()*(1 << yuv_shift);
         n *= 3;
@@ -2415,14 +2535,17 @@ struct RGB2YCrCb_i<ushort>
                 process(v_r1, v_g1, v_b1,
                         v_y1, v_cr1, v_cb1);
 
-                _mm_interleave_epi16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                if(isCrCb)
+                    _mm_interleave_epi16(v_y0, v_y1, v_cr0, v_cr1, v_cb0, v_cb1);
+                else //YUV
+                    _mm_interleave_epi16(v_y0, v_y1, v_cb0, v_cb1, v_cr0, v_cr1);
 
                 _mm_storeu_si128((__m128i *)(dst + i), v_y0);
                 _mm_storeu_si128((__m128i *)(dst + i + 8), v_y1);
-                _mm_storeu_si128((__m128i *)(dst + i + 16), v_cr0);
-                _mm_storeu_si128((__m128i *)(dst + i + 24), v_cr1);
-                _mm_storeu_si128((__m128i *)(dst + i + 32), v_cb0);
-                _mm_storeu_si128((__m128i *)(dst + i + 40), v_cb1);
+                _mm_storeu_si128((__m128i *)(dst + i + 16 + yuvOrder*16), v_cr0);
+                _mm_storeu_si128((__m128i *)(dst + i + 24 + yuvOrder*16), v_cr1);
+                _mm_storeu_si128((__m128i *)(dst + i + 32 - yuvOrder*16), v_cb0);
+                _mm_storeu_si128((__m128i *)(dst + i + 40 - yuvOrder*16), v_cb1);
             }
         }
 
@@ -2432,12 +2555,13 @@ struct RGB2YCrCb_i<ushort>
             int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
             int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
             dst[i] = saturate_cast<ushort>(Y);
-            dst[i+1] = saturate_cast<ushort>(Cr);
-            dst[i+2] = saturate_cast<ushort>(Cb);
+            dst[i+1+yuvOrder] = saturate_cast<ushort>(Cr);
+            dst[i+2-yuvOrder] = saturate_cast<ushort>(Cb);
         }
     }
 
     int srccn, blueIdx, coeffs[5];
+    bool isCrCb;
     __m128i v_c0, v_c1, v_c2;
     __m128i v_c3, v_c4, v_delta, v_delta2;
     __m128i v_zero;
@@ -2450,23 +2574,25 @@ template<typename _Tp> struct YCrCb2RGB_f
 {
     typedef _Tp channel_type;
 
-    YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_f(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {1.403f, -0.714f, -0.344f, 1.773f};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const float coeffs_cbr[] = {CR2RF, CR2GF, CB2GF, CB2BF};
+        static const float coeffs_yuv[] = { V2RF,  V2GF,  U2GF,  U2BF};
+        memcpy(coeffs, isCrCb ? coeffs_cbr : coeffs_yuv, 4*sizeof(coeffs[0]));
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const _Tp delta = ColorChannel<_Tp>::half(), alpha = ColorChannel<_Tp>::max();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
         for(int i = 0; i < n; i += 3, dst += dcn)
         {
             _Tp Y = src[i];
-            _Tp Cr = src[i+1];
-            _Tp Cb = src[i+2];
+            _Tp Cr = src[i+1+yuvOrder];
+            _Tp Cb = src[i+2-yuvOrder];
 
             _Tp b = saturate_cast<_Tp>(Y + (Cb - delta)*C3);
             _Tp g = saturate_cast<_Tp>(Y + (Cb - delta)*C2 + (Cr - delta)*C1);
@@ -2478,6 +2604,7 @@ template<typename _Tp> struct YCrCb2RGB_f
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     float coeffs[4];
 };
 
@@ -2488,11 +2615,12 @@ struct YCrCb2RGB_f<float>
 {
     typedef float channel_type;
 
-    YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_f(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {1.403f, -0.714f, -0.344f, 1.773f};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const float coeffs_cbr[] = {CR2RF, CR2GF, CB2GF, CB2BF};
+        static const float coeffs_yuv[] = { V2RF,  V2GF,  U2GF,  U2BF};
+        memcpy(coeffs, isCrCb ? coeffs_cbr : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_f32(coeffs[0]);
         v_c1 = vdupq_n_f32(coeffs[1]);
@@ -2505,6 +2633,7 @@ struct YCrCb2RGB_f<float>
     void operator()(const float* src, float* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const float delta = ColorChannel<float>::half(), alpha = ColorChannel<float>::max();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -2513,7 +2642,7 @@ struct YCrCb2RGB_f<float>
             for ( ; i <= n - 12; i += 12, dst += 12)
             {
                 float32x4x3_t v_src = vld3q_f32(src + i), v_dst;
-                float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1], v_Cb = v_src.val[2];
+                float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1+yuvOrder], v_Cb = v_src.val[2-yuvOrder];
 
                 v_dst.val[bidx] = vmlaq_f32(v_Y, vsubq_f32(v_Cb, v_delta), v_c3);
                 v_dst.val[1] = vaddq_f32(vmlaq_f32(vmulq_f32(vsubq_f32(v_Cb, v_delta), v_c2), vsubq_f32(v_Cr, v_delta), v_c1), v_Y);
@@ -2526,7 +2655,7 @@ struct YCrCb2RGB_f<float>
             {
                 float32x4x3_t v_src = vld3q_f32(src + i);
                 float32x4x4_t v_dst;
-                float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1], v_Cb = v_src.val[2];
+                float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1+yuvOrder], v_Cb = v_src.val[2-yuvOrder];
 
                 v_dst.val[bidx] = vmlaq_f32(v_Y, vsubq_f32(v_Cb, v_delta), v_c3);
                 v_dst.val[1] = vaddq_f32(vmlaq_f32(vmulq_f32(vsubq_f32(v_Cb, v_delta), v_c2), vsubq_f32(v_Cr, v_delta), v_c1), v_Y);
@@ -2538,7 +2667,7 @@ struct YCrCb2RGB_f<float>
 
         for ( ; i < n; i += 3, dst += dcn)
         {
-            float Y = src[i], Cr = src[i+1], Cb = src[i+2];
+            float Y = src[i], Cr = src[i+1+yuvOrder], Cb = src[i+2-yuvOrder];
 
             float b = Y + (Cb - delta)*C3;
             float g = Y + (Cb - delta)*C2 + (Cr - delta)*C1;
@@ -2550,6 +2679,7 @@ struct YCrCb2RGB_f<float>
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     float coeffs[4];
     float32x4_t v_c0, v_c1, v_c2, v_c3, v_alpha, v_delta;
 };
@@ -2561,11 +2691,12 @@ struct YCrCb2RGB_f<float>
 {
     typedef float channel_type;
 
-    YCrCb2RGB_f(int _dstcn, int _blueIdx, const float* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_f(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const float coeffs0[] = {1.403f, -0.714f, -0.344f, 1.773f};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const float coeffs_cbr[] = {CR2RF, CR2GF, CB2GF, CB2BF};
+        static const float coeffs_yuv[] = { V2RF,  V2GF,  U2GF,  U2BF};
+        memcpy(coeffs, isCrCb ? coeffs_cbr : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = _mm_set1_ps(coeffs[0]);
         v_c1 = _mm_set1_ps(coeffs[1]);
@@ -2583,6 +2714,9 @@ struct YCrCb2RGB_f<float>
         v_cb = _mm_sub_ps(v_cb, v_delta);
         v_cr = _mm_sub_ps(v_cr, v_delta);
 
+        if (!isCrCb)
+            std::swap(v_cb, v_cr);
+
         v_b = _mm_mul_ps(v_cb, v_c3);
         v_g = _mm_add_ps(_mm_mul_ps(v_cb, v_c2), _mm_mul_ps(v_cr, v_c1));
         v_r = _mm_mul_ps(v_cr, v_c0);
@@ -2598,6 +2732,7 @@ struct YCrCb2RGB_f<float>
     void operator()(const float* src, float* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const float delta = ColorChannel<float>::half(), alpha = ColorChannel<float>::max();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -2648,7 +2783,7 @@ struct YCrCb2RGB_f<float>
 
         for ( ; i < n; i += 3, dst += dcn)
         {
-            float Y = src[i], Cr = src[i+1], Cb = src[i+2];
+            float Y = src[i], Cr = src[i+1+yuvOrder], Cb = src[i+2-yuvOrder];
 
             float b = Y + (Cb - delta)*C3;
             float g = Y + (Cb - delta)*C2 + (Cr - delta)*C1;
@@ -2660,6 +2795,7 @@ struct YCrCb2RGB_f<float>
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     float coeffs[4];
 
     __m128 v_c0, v_c1, v_c2, v_c3, v_alpha, v_delta;
@@ -2672,24 +2808,26 @@ template<typename _Tp> struct YCrCb2RGB_i
 {
     typedef _Tp channel_type;
 
-    YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {22987, -11698, -5636, 29049};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const _Tp delta = ColorChannel<_Tp>::half(), alpha = ColorChannel<_Tp>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
         for(int i = 0; i < n; i += 3, dst += dcn)
         {
             _Tp Y = src[i];
-            _Tp Cr = src[i+1];
-            _Tp Cb = src[i+2];
+            _Tp Cr = src[i+1+yuvOrder];
+            _Tp Cb = src[i+2-yuvOrder];
 
             int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
             int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
@@ -2703,6 +2841,7 @@ template<typename _Tp> struct YCrCb2RGB_i
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     int coeffs[4];
 };
 
@@ -2713,11 +2852,12 @@ struct YCrCb2RGB_i<uchar>
 {
     typedef uchar channel_type;
 
-    YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {22987, -11698, -5636, 29049};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_s32(coeffs[0]);
         v_c1 = vdupq_n_s32(coeffs[1]);
@@ -2731,6 +2871,7 @@ struct YCrCb2RGB_i<uchar>
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const uchar delta = ColorChannel<uchar>::half(), alpha = ColorChannel<uchar>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -2744,8 +2885,8 @@ struct YCrCb2RGB_i<uchar>
             v_src16.val[2] = vreinterpretq_s16_u16(vmovl_u8(v_src.val[2]));
 
             int16x4_t v_Y = vget_low_s16(v_src16.val[0]),
-                      v_Cr = vget_low_s16(v_src16.val[1]),
-                      v_Cb = vget_low_s16(v_src16.val[2]);
+                      v_Cr = vget_low_s16(v_src16.val[1+yuvOrder]),
+                      v_Cb = vget_low_s16(v_src16.val[2-yuvOrder]);
 
             int32x4_t v_b0 = vmulq_s32(v_c3, vsubl_s16(v_Cb, v_delta));
             v_b0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), yuv_shift), v_Y);
@@ -2755,8 +2896,8 @@ struct YCrCb2RGB_i<uchar>
             v_r0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), yuv_shift), v_Y);
 
             v_Y = vget_high_s16(v_src16.val[0]);
-            v_Cr = vget_high_s16(v_src16.val[1]);
-            v_Cb = vget_high_s16(v_src16.val[2]);
+            v_Cr = vget_high_s16(v_src16.val[1+yuvOrder]);
+            v_Cb = vget_high_s16(v_src16.val[2-yuvOrder]);
 
             int32x4_t v_b1 = vmulq_s32(v_c3, vsubl_s16(v_Cb, v_delta));
             v_b1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), yuv_shift), v_Y);
@@ -2791,8 +2932,8 @@ struct YCrCb2RGB_i<uchar>
         for ( ; i < n; i += 3, dst += dcn)
         {
             uchar Y = src[i];
-            uchar Cr = src[i+1];
-            uchar Cb = src[i+2];
+            uchar Cr = src[i+1+yuvOrder];
+            uchar Cb = src[i+2-yuvOrder];
 
             int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
             int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
@@ -2806,6 +2947,7 @@ struct YCrCb2RGB_i<uchar>
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     int coeffs[4];
 
     int32x4_t v_c0, v_c1, v_c2, v_c3, v_delta2;
@@ -2818,11 +2960,12 @@ struct YCrCb2RGB_i<ushort>
 {
     typedef ushort channel_type;
 
-    YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {22987, -11698, -5636, 29049};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = vdupq_n_s32(coeffs[0]);
         v_c1 = vdupq_n_s32(coeffs[1]);
@@ -2837,6 +2980,7 @@ struct YCrCb2RGB_i<ushort>
     void operator()(const ushort* src, ushort* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const ushort delta = ColorChannel<ushort>::half(), alpha = ColorChannel<ushort>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -2846,8 +2990,8 @@ struct YCrCb2RGB_i<ushort>
             uint16x8x3_t v_src = vld3q_u16(src + i);
 
             int32x4_t v_Y = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[0]))),
-                      v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[1]))),
-                      v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[2])));
+                      v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[1+yuvOrder]))),
+                      v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[2-yuvOrder])));
 
             int32x4_t v_b0 = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
             v_b0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), yuv_shift), v_Y);
@@ -2857,8 +3001,8 @@ struct YCrCb2RGB_i<ushort>
             v_r0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), yuv_shift), v_Y);
 
             v_Y = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[0]))),
-            v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[1]))),
-            v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[2])));
+            v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[1+yuvOrder]))),
+            v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[2-yuvOrder])));
 
             int32x4_t v_b1 = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
             v_b1 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), yuv_shift), v_Y);
@@ -2895,8 +3039,8 @@ struct YCrCb2RGB_i<ushort>
             uint16x4x3_t v_src = vld3_u16(src + i);
 
             int32x4_t v_Y = vreinterpretq_s32_u32(vmovl_u16(v_src.val[0])),
-                      v_Cr = vreinterpretq_s32_u32(vmovl_u16(v_src.val[1])),
-                      v_Cb = vreinterpretq_s32_u32(vmovl_u16(v_src.val[2]));
+                      v_Cr = vreinterpretq_s32_u32(vmovl_u16(v_src.val[1+yuvOrder])),
+                      v_Cb = vreinterpretq_s32_u32(vmovl_u16(v_src.val[2-yuvOrder]));
 
             int32x4_t v_b = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
             v_b = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b, v_delta2), yuv_shift), v_Y);
@@ -2931,8 +3075,8 @@ struct YCrCb2RGB_i<ushort>
         for ( ; i < n; i += 3, dst += dcn)
         {
             ushort Y = src[i];
-            ushort Cr = src[i+1];
-            ushort Cb = src[i+2];
+            ushort Cr = src[i+1+yuvOrder];
+            ushort Cb = src[i+2-yuvOrder];
 
             int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
             int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
@@ -2946,6 +3090,7 @@ struct YCrCb2RGB_i<ushort>
         }
     }
     int dstcn, blueIdx;
+    bool isCrCb;
     int coeffs[4];
 
     int32x4_t v_c0, v_c1, v_c2, v_c3, v_delta2, v_delta;
@@ -2960,11 +3105,12 @@ struct YCrCb2RGB_i<uchar>
 {
     typedef uchar channel_type;
 
-    YCrCb2RGB_i(int _dstcn, int _blueIdx, const int* _coeffs)
-        : dstcn(_dstcn), blueIdx(_blueIdx)
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
-        static const int coeffs0[] = {22987, -11698, -5636, 29049};
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 4*sizeof(coeffs[0]));
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
 
         v_c0 = _mm_set1_epi16((short)coeffs[0]);
         v_c1 = _mm_set1_epi16((short)coeffs[1]);
@@ -2977,7 +3123,9 @@ struct YCrCb2RGB_i<uchar>
         uchar alpha = ColorChannel<uchar>::max();
         v_alpha = _mm_set1_epi8(*(char *)&alpha);
 
-        useSSE = coeffs[0] <= std::numeric_limits<short>::max();
+        // when using YUV, one of coefficients is bigger than std::numeric_limits<short>::max(),
+        //which is not appropriate for SSE
+        useSSE = isCrCb;
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
     }
 
@@ -3096,6 +3244,7 @@ struct YCrCb2RGB_i<uchar>
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         const uchar delta = ColorChannel<uchar>::half(), alpha = ColorChannel<uchar>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
         n *= 3;
@@ -3260,8 +3409,8 @@ struct YCrCb2RGB_i<uchar>
         for ( ; i < n; i += 3, dst += dcn)
         {
             uchar Y = src[i];
-            uchar Cr = src[i+1];
-            uchar Cb = src[i+2];
+            uchar Cr = src[i+1+yuvOrder];
+            uchar Cb = src[i+2-yuvOrder];
 
             int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
             int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
@@ -3276,6 +3425,7 @@ struct YCrCb2RGB_i<uchar>
     }
     int dstcn, blueIdx;
     int coeffs[4];
+    bool isCrCb;
     bool useSSE, haveSIMD;
 
     __m128i v_c0, v_c1, v_c2, v_c3, v_delta2;
@@ -4410,16 +4560,161 @@ struct HSV2RGB_f
     typedef float channel_type;
 
     HSV2RGB_f(int _dstcn, int _blueIdx, float _hrange)
-    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {}
+    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+    }
+
+    #if CV_SSE2
+    void process(__m128& v_h0, __m128& v_h1, __m128& v_s0,
+                 __m128& v_s1, __m128& v_v0, __m128& v_v1) const
+    {
+        v_h0 = _mm_mul_ps(v_h0, _mm_set1_ps(hscale));
+        v_h1 = _mm_mul_ps(v_h1, _mm_set1_ps(hscale));
+
+        __m128 v_pre_sector0 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_h0));
+        __m128 v_pre_sector1 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_h1));
+
+        v_h0 = _mm_sub_ps(v_h0, v_pre_sector0);
+        v_h1 = _mm_sub_ps(v_h1, v_pre_sector1);
+
+        __m128 v_tab00 = v_v0;
+        __m128 v_tab01 = v_v1;
+        __m128 v_tab10 = _mm_mul_ps(v_v0, _mm_sub_ps(_mm_set1_ps(1.0f), v_s0));
+        __m128 v_tab11 = _mm_mul_ps(v_v1, _mm_sub_ps(_mm_set1_ps(1.0f), v_s1));
+        __m128 v_tab20 = _mm_mul_ps(v_v0, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(v_s0, v_h0)));
+        __m128 v_tab21 = _mm_mul_ps(v_v1, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(v_s1, v_h1)));
+        __m128 v_tab30 = _mm_mul_ps(v_v0, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(v_s0, _mm_sub_ps(_mm_set1_ps(1.0f), v_h0))));
+        __m128 v_tab31 = _mm_mul_ps(v_v1, _mm_sub_ps(_mm_set1_ps(1.0f), _mm_mul_ps(v_s1, _mm_sub_ps(_mm_set1_ps(1.0f), v_h1))));
+
+        __m128 v_sector0 = _mm_div_ps(v_pre_sector0, _mm_set1_ps(6.0f));
+        __m128 v_sector1 = _mm_div_ps(v_pre_sector1, _mm_set1_ps(6.0f));
+        v_sector0 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_sector0));
+        v_sector1 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_sector1));
+        v_sector0 = _mm_mul_ps(v_sector0, _mm_set1_ps(6.0f));
+        v_sector1 = _mm_mul_ps(v_sector1, _mm_set1_ps(6.0f));
+        v_sector0 = _mm_sub_ps(v_pre_sector0, v_sector0);
+        v_sector1 = _mm_sub_ps(v_pre_sector1, v_sector1);
+
+        v_h0 = _mm_and_ps(v_tab10, _mm_cmplt_ps(v_sector0, _mm_set1_ps(2.0f)));
+        v_h1 = _mm_and_ps(v_tab11, _mm_cmplt_ps(v_sector1, _mm_set1_ps(2.0f)));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab30, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab31, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab00, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab01, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab00, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab01, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab20, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab21, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_s0 = _mm_and_ps(v_tab30, _mm_cmplt_ps(v_sector0, _mm_set1_ps(1.0f)));
+        v_s1 = _mm_and_ps(v_tab31, _mm_cmplt_ps(v_sector1, _mm_set1_ps(1.0f)));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab00, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(1.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab01, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(1.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab00, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab01, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab10, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab11, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_v0 = _mm_and_ps(v_tab00, _mm_cmplt_ps(v_sector0, _mm_set1_ps(1.0f)));
+        v_v1 = _mm_and_ps(v_tab01, _mm_cmplt_ps(v_sector1, _mm_set1_ps(1.0f)));
+        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(1.0f))));
+        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(1.0f))));
+        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab10, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab11, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab10, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab11, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab30, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab31, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_v0 = _mm_or_ps(v_v0, _mm_and_ps(v_tab00, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_v1 = _mm_or_ps(v_v1, _mm_and_ps(v_tab01, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(4.0f))));
+    }
+    #endif
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, bidx = blueIdx, dcn = dstcn;
+        int i = 0, bidx = blueIdx, dcn = dstcn;
         float _hscale = hscale;
         float alpha = ColorChannel<float>::max();
         n *= 3;
 
-        for( i = 0; i < n; i += 3, dst += dcn )
+        #if CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, dst += dcn * 8 )
+            {
+                __m128 v_h0 = _mm_loadu_ps(src + i +  0);
+                __m128 v_h1 = _mm_loadu_ps(src + i +  4);
+                __m128 v_s0 = _mm_loadu_ps(src + i +  8);
+                __m128 v_s1 = _mm_loadu_ps(src + i + 12);
+                __m128 v_v0 = _mm_loadu_ps(src + i + 16);
+                __m128 v_v1 = _mm_loadu_ps(src + i + 20);
+
+                _mm_deinterleave_ps(v_h0, v_h1, v_s0, v_s1, v_v0, v_v1);
+
+                process(v_h0, v_h1, v_s0, v_s1, v_v0, v_v1);
+
+                if (dcn == 3)
+                {
+                    if (bidx)
+                    {
+                        _mm_interleave_ps(v_v0, v_v1, v_s0, v_s1, v_h0, v_h1);
+
+                        _mm_storeu_ps(dst +  0, v_v0);
+                        _mm_storeu_ps(dst +  4, v_v1);
+                        _mm_storeu_ps(dst +  8, v_s0);
+                        _mm_storeu_ps(dst + 12, v_s1);
+                        _mm_storeu_ps(dst + 16, v_h0);
+                        _mm_storeu_ps(dst + 20, v_h1);
+                    }
+                    else
+                    {
+                        _mm_interleave_ps(v_h0, v_h1, v_s0, v_s1, v_v0, v_v1);
+
+                        _mm_storeu_ps(dst +  0, v_h0);
+                        _mm_storeu_ps(dst +  4, v_h1);
+                        _mm_storeu_ps(dst +  8, v_s0);
+                        _mm_storeu_ps(dst + 12, v_s1);
+                        _mm_storeu_ps(dst + 16, v_v0);
+                        _mm_storeu_ps(dst + 20, v_v1);
+                    }
+                }
+                else
+                {
+                    __m128 v_a0 = _mm_set1_ps(alpha);
+                    __m128 v_a1 = _mm_set1_ps(alpha);
+                    if (bidx)
+                    {
+                        _mm_interleave_ps(v_v0, v_v1, v_s0, v_s1, v_h0, v_h1, v_a0, v_a1);
+
+                        _mm_storeu_ps(dst +  0, v_v0);
+                        _mm_storeu_ps(dst +  4, v_v1);
+                        _mm_storeu_ps(dst +  8, v_s0);
+                        _mm_storeu_ps(dst + 12, v_s1);
+                        _mm_storeu_ps(dst + 16, v_h0);
+                        _mm_storeu_ps(dst + 20, v_h1);
+                        _mm_storeu_ps(dst + 24, v_a0);
+                        _mm_storeu_ps(dst + 28, v_a1);
+                    }
+                    else
+                    {
+                        _mm_interleave_ps(v_h0, v_h1, v_s0, v_s1, v_v0, v_v1, v_a0, v_a1);
+
+                        _mm_storeu_ps(dst +  0, v_h0);
+                        _mm_storeu_ps(dst +  4, v_h1);
+                        _mm_storeu_ps(dst +  8, v_s0);
+                        _mm_storeu_ps(dst + 12, v_s1);
+                        _mm_storeu_ps(dst + 16, v_v0);
+                        _mm_storeu_ps(dst + 20, v_v1);
+                        _mm_storeu_ps(dst + 24, v_a0);
+                        _mm_storeu_ps(dst + 28, v_a1);
+                    }
+                }
+            }
+        }
+        #endif
+        for( ; i < n; i += 3, dst += dcn )
         {
             float h = src[i], s = src[i+1], v = src[i+2];
             float b, g, r;
@@ -4465,6 +4760,9 @@ struct HSV2RGB_f
 
     int dstcn, blueIdx;
     float hscale;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
 };
 
 
@@ -4694,15 +4992,119 @@ struct RGB2HLS_f
     typedef float channel_type;
 
     RGB2HLS_f(int _srccn, int _blueIdx, float _hrange)
-    : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange) {}
+    : srccn(_srccn), blueIdx(_blueIdx), hscale(_hrange/360.f) {
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+    }
+
+    #if CV_SSE2
+    void process(__m128& v_b0, __m128& v_b1, __m128& v_g0,
+                 __m128& v_g1, __m128& v_r0, __m128& v_r1) const
+    {
+        __m128 v_max0 = _mm_max_ps(_mm_max_ps(v_b0, v_g0), v_r0);
+        __m128 v_max1 = _mm_max_ps(_mm_max_ps(v_b1, v_g1), v_r1);
+        __m128 v_min0 = _mm_min_ps(_mm_min_ps(v_b0, v_g0), v_r0);
+        __m128 v_min1 = _mm_min_ps(_mm_min_ps(v_b1, v_g1), v_r1);
+        __m128 v_diff0 = _mm_sub_ps(v_max0, v_min0);
+        __m128 v_diff1 = _mm_sub_ps(v_max1, v_min1);
+        __m128 v_sum0 = _mm_add_ps(v_max0, v_min0);
+        __m128 v_sum1 = _mm_add_ps(v_max1, v_min1);
+        __m128 v_l0 = _mm_mul_ps(v_sum0, _mm_set1_ps(0.5f));
+        __m128 v_l1 = _mm_mul_ps(v_sum1, _mm_set1_ps(0.5f));
+
+        __m128 v_gel0 = _mm_cmpge_ps(v_l0, _mm_set1_ps(0.5f));
+        __m128 v_gel1 = _mm_cmpge_ps(v_l1, _mm_set1_ps(0.5f));
+        __m128 v_s0 = _mm_and_ps(v_gel0, _mm_sub_ps(_mm_set1_ps(2.0f), v_sum0));
+        __m128 v_s1 = _mm_and_ps(v_gel1, _mm_sub_ps(_mm_set1_ps(2.0f), v_sum1));
+        v_s0 = _mm_or_ps(v_s0, _mm_andnot_ps(v_gel0, v_sum0));
+        v_s1 = _mm_or_ps(v_s1, _mm_andnot_ps(v_gel1, v_sum1));
+        v_s0 = _mm_div_ps(v_diff0, v_s0);
+        v_s1 = _mm_div_ps(v_diff1, v_s1);
+
+        __m128 v_gteps0 = _mm_cmpgt_ps(v_diff0, _mm_set1_ps(FLT_EPSILON));
+        __m128 v_gteps1 = _mm_cmpgt_ps(v_diff1, _mm_set1_ps(FLT_EPSILON));
+
+        v_diff0 = _mm_div_ps(_mm_set1_ps(60.f), v_diff0);
+        v_diff1 = _mm_div_ps(_mm_set1_ps(60.f), v_diff1);
+
+        __m128 v_eqr0 = _mm_cmpeq_ps(v_max0, v_r0);
+        __m128 v_eqr1 = _mm_cmpeq_ps(v_max1, v_r1);
+        __m128 v_h0 = _mm_and_ps(v_eqr0, _mm_mul_ps(_mm_sub_ps(v_g0, v_b0), v_diff0));
+        __m128 v_h1 = _mm_and_ps(v_eqr1, _mm_mul_ps(_mm_sub_ps(v_g1, v_b1), v_diff1));
+        __m128 v_eqg0 = _mm_cmpeq_ps(v_max0, v_g0);
+        __m128 v_eqg1 = _mm_cmpeq_ps(v_max1, v_g1);
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(_mm_andnot_ps(v_eqr0, v_eqg0), _mm_add_ps(_mm_mul_ps(_mm_sub_ps(v_b0, v_r0), v_diff0), _mm_set1_ps(120.f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(_mm_andnot_ps(v_eqr1, v_eqg1), _mm_add_ps(_mm_mul_ps(_mm_sub_ps(v_b1, v_r1), v_diff1), _mm_set1_ps(120.f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_andnot_ps(_mm_or_ps(v_eqr0, v_eqg0), _mm_add_ps(_mm_mul_ps(_mm_sub_ps(v_r0, v_g0), v_diff0), _mm_set1_ps(240.f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_andnot_ps(_mm_or_ps(v_eqr1, v_eqg1), _mm_add_ps(_mm_mul_ps(_mm_sub_ps(v_r1, v_g1), v_diff1), _mm_set1_ps(240.f))));
+        v_h0 = _mm_add_ps(v_h0, _mm_and_ps(_mm_cmplt_ps(v_h0, _mm_setzero_ps()), _mm_set1_ps(360.f)));
+        v_h1 = _mm_add_ps(v_h1, _mm_and_ps(_mm_cmplt_ps(v_h1, _mm_setzero_ps()), _mm_set1_ps(360.f)));
+        v_h0 = _mm_mul_ps(v_h0, _mm_set1_ps(hscale));
+        v_h1 = _mm_mul_ps(v_h1, _mm_set1_ps(hscale));
+
+        v_b0 = _mm_and_ps(v_gteps0, v_h0);
+        v_b1 = _mm_and_ps(v_gteps1, v_h1);
+        v_g0 = v_l0;
+        v_g1 = v_l1;
+        v_r0 = _mm_and_ps(v_gteps0, v_s0);
+        v_r1 = _mm_and_ps(v_gteps1, v_s1);
+    }
+    #endif
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, bidx = blueIdx, scn = srccn;
-        float hscale = hrange*(1.f/360.f);
+        int i = 0, bidx = blueIdx, scn = srccn;
         n *= 3;
 
-        for( i = 0; i < n; i += 3, src += scn )
+        #if CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, src += scn * 8 )
+            {
+                __m128 v_b0 = _mm_loadu_ps(src +  0);
+                __m128 v_b1 = _mm_loadu_ps(src +  4);
+                __m128 v_g0 = _mm_loadu_ps(src +  8);
+                __m128 v_g1 = _mm_loadu_ps(src + 12);
+                __m128 v_r0 = _mm_loadu_ps(src + 16);
+                __m128 v_r1 = _mm_loadu_ps(src + 20);
+
+                if (scn == 3)
+                {
+                    _mm_deinterleave_ps(v_b0, v_b1, v_g0, v_g1, v_r0, v_r1);
+                }
+                else
+                {
+                    __m128 v_a0 = _mm_loadu_ps(src + 24);
+                    __m128 v_a1 = _mm_loadu_ps(src + 28);
+                    _mm_deinterleave_ps(v_b0, v_b1, v_g0, v_g1, v_r0, v_r1, v_a0, v_a1);
+                }
+
+                if (bidx)
+                {
+                    __m128 v_tmp0 = v_b0;
+                    __m128 v_tmp1 = v_b1;
+                    v_b0 = v_r0;
+                    v_b1 = v_r1;
+                    v_r0 = v_tmp0;
+                    v_r1 = v_tmp1;
+                }
+
+                process(v_b0, v_b1, v_g0, v_g1, v_r0, v_r1);
+
+                _mm_interleave_ps(v_b0, v_b1, v_g0, v_g1, v_r0, v_r1);
+
+                _mm_storeu_ps(dst + i +  0, v_b0);
+                _mm_storeu_ps(dst + i +  4, v_b1);
+                _mm_storeu_ps(dst + i +  8, v_g0);
+                _mm_storeu_ps(dst + i + 12, v_g1);
+                _mm_storeu_ps(dst + i + 16, v_r0);
+                _mm_storeu_ps(dst + i + 20, v_r1);
+            }
+        }
+        #endif
+
+        for( ; i < n; i += 3, src += scn )
         {
             float b = src[bidx], g = src[1], r = src[bidx^2];
             float h = 0.f, s = 0.f, l;
@@ -4739,7 +5141,10 @@ struct RGB2HLS_f
     }
 
     int srccn, blueIdx;
-    float hrange;
+    float hscale;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
 };
 
 
@@ -4936,16 +5341,169 @@ struct HLS2RGB_f
     typedef float channel_type;
 
     HLS2RGB_f(int _dstcn, int _blueIdx, float _hrange)
-    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {}
+    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+    }
+
+    #if CV_SSE2
+    void process(__m128& v_h0, __m128& v_h1, __m128& v_l0,
+                 __m128& v_l1, __m128& v_s0, __m128& v_s1) const
+    {
+        __m128 v_lel0 = _mm_cmple_ps(v_l0, _mm_set1_ps(0.5f));
+        __m128 v_lel1 = _mm_cmple_ps(v_l1, _mm_set1_ps(0.5f));
+        __m128 v_p20 = _mm_andnot_ps(v_lel0, _mm_sub_ps(_mm_add_ps(v_l0, v_s0), _mm_mul_ps(v_l0, v_s0)));
+        __m128 v_p21 = _mm_andnot_ps(v_lel1, _mm_sub_ps(_mm_add_ps(v_l1, v_s1), _mm_mul_ps(v_l1, v_s1)));
+        v_p20 = _mm_or_ps(v_p20, _mm_and_ps(v_lel0, _mm_mul_ps(v_l0, _mm_add_ps(_mm_set1_ps(1.0f), v_s0))));
+        v_p21 = _mm_or_ps(v_p21, _mm_and_ps(v_lel1, _mm_mul_ps(v_l1, _mm_add_ps(_mm_set1_ps(1.0f), v_s1))));
+
+        __m128 v_p10 = _mm_sub_ps(_mm_mul_ps(_mm_set1_ps(2.0f), v_l0), v_p20);
+        __m128 v_p11 = _mm_sub_ps(_mm_mul_ps(_mm_set1_ps(2.0f), v_l1), v_p21);
+
+        v_h0 = _mm_mul_ps(v_h0, _mm_set1_ps(hscale));
+        v_h1 = _mm_mul_ps(v_h1, _mm_set1_ps(hscale));
+
+        __m128 v_pre_sector0 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_h0));
+        __m128 v_pre_sector1 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_h1));
+
+        v_h0 = _mm_sub_ps(v_h0, v_pre_sector0);
+        v_h1 = _mm_sub_ps(v_h1, v_pre_sector1);
+
+        __m128 v_p2_p10 = _mm_sub_ps(v_p20, v_p10);
+        __m128 v_p2_p11 = _mm_sub_ps(v_p21, v_p11);
+        __m128 v_tab20 = _mm_add_ps(v_p10, _mm_mul_ps(v_p2_p10, _mm_sub_ps(_mm_set1_ps(1.0f), v_h0)));
+        __m128 v_tab21 = _mm_add_ps(v_p11, _mm_mul_ps(v_p2_p11, _mm_sub_ps(_mm_set1_ps(1.0f), v_h1)));
+        __m128 v_tab30 = _mm_add_ps(v_p10, _mm_mul_ps(v_p2_p10, v_h0));
+        __m128 v_tab31 = _mm_add_ps(v_p11, _mm_mul_ps(v_p2_p11, v_h1));
+
+        __m128 v_sector0 = _mm_div_ps(v_pre_sector0, _mm_set1_ps(6.0f));
+        __m128 v_sector1 = _mm_div_ps(v_pre_sector1, _mm_set1_ps(6.0f));
+        v_sector0 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_sector0));
+        v_sector1 = _mm_cvtepi32_ps(_mm_cvttps_epi32(v_sector1));
+        v_sector0 = _mm_mul_ps(v_sector0, _mm_set1_ps(6.0f));
+        v_sector1 = _mm_mul_ps(v_sector1, _mm_set1_ps(6.0f));
+        v_sector0 = _mm_sub_ps(v_pre_sector0, v_sector0);
+        v_sector1 = _mm_sub_ps(v_pre_sector1, v_sector1);
+
+        v_h0 = _mm_and_ps(v_p10, _mm_cmplt_ps(v_sector0, _mm_set1_ps(2.0f)));
+        v_h1 = _mm_and_ps(v_p11, _mm_cmplt_ps(v_sector1, _mm_set1_ps(2.0f)));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab30, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab31, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_p20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_p21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_p20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_p21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_h0 = _mm_or_ps(v_h0, _mm_and_ps(v_tab20, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_h1 = _mm_or_ps(v_h1, _mm_and_ps(v_tab21, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_l0 = _mm_and_ps(v_tab30, _mm_cmplt_ps(v_sector0, _mm_set1_ps(1.0f)));
+        v_l1 = _mm_and_ps(v_tab31, _mm_cmplt_ps(v_sector1, _mm_set1_ps(1.0f)));
+        v_l0 = _mm_or_ps(v_l0, _mm_and_ps(v_p20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(1.0f))));
+        v_l1 = _mm_or_ps(v_l1, _mm_and_ps(v_p21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(1.0f))));
+        v_l0 = _mm_or_ps(v_l0, _mm_and_ps(v_p20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_l1 = _mm_or_ps(v_l1, _mm_and_ps(v_p21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_l0 = _mm_or_ps(v_l0, _mm_and_ps(v_tab20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_l1 = _mm_or_ps(v_l1, _mm_and_ps(v_tab21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_l0 = _mm_or_ps(v_l0, _mm_and_ps(v_p10, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_l1 = _mm_or_ps(v_l1, _mm_and_ps(v_p11, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_s0 = _mm_and_ps(v_p20, _mm_cmplt_ps(v_sector0, _mm_set1_ps(1.0f)));
+        v_s1 = _mm_and_ps(v_p21, _mm_cmplt_ps(v_sector1, _mm_set1_ps(1.0f)));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab20, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(1.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab21, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(1.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_p10, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(2.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_p11, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(2.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_p10, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(3.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_p11, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(3.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_tab30, _mm_cmpeq_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_tab31, _mm_cmpeq_ps(v_sector1, _mm_set1_ps(4.0f))));
+        v_s0 = _mm_or_ps(v_s0, _mm_and_ps(v_p20, _mm_cmpgt_ps(v_sector0, _mm_set1_ps(4.0f))));
+        v_s1 = _mm_or_ps(v_s1, _mm_and_ps(v_p21, _mm_cmpgt_ps(v_sector1, _mm_set1_ps(4.0f))));
+    }
+    #endif
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, bidx = blueIdx, dcn = dstcn;
+        int i = 0, bidx = blueIdx, dcn = dstcn;
         float _hscale = hscale;
         float alpha = ColorChannel<float>::max();
         n *= 3;
 
-        for( i = 0; i < n; i += 3, dst += dcn )
+        #if CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, dst += dcn * 8 )
+            {
+                __m128 v_h0 = _mm_loadu_ps(src + i +  0);
+                __m128 v_h1 = _mm_loadu_ps(src + i +  4);
+                __m128 v_l0 = _mm_loadu_ps(src + i +  8);
+                __m128 v_l1 = _mm_loadu_ps(src + i + 12);
+                __m128 v_s0 = _mm_loadu_ps(src + i + 16);
+                __m128 v_s1 = _mm_loadu_ps(src + i + 20);
+
+                _mm_deinterleave_ps(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
+
+                process(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
+
+                if (dcn == 3)
+                {
+                    if (bidx)
+                    {
+                        _mm_interleave_ps(v_s0, v_s1, v_l0, v_l1, v_h0, v_h1);
+
+                        _mm_storeu_ps(dst +  0, v_s0);
+                        _mm_storeu_ps(dst +  4, v_s1);
+                        _mm_storeu_ps(dst +  8, v_l0);
+                        _mm_storeu_ps(dst + 12, v_l1);
+                        _mm_storeu_ps(dst + 16, v_h0);
+                        _mm_storeu_ps(dst + 20, v_h1);
+                    }
+                    else
+                    {
+                        _mm_interleave_ps(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1);
+
+                        _mm_storeu_ps(dst +  0, v_h0);
+                        _mm_storeu_ps(dst +  4, v_h1);
+                        _mm_storeu_ps(dst +  8, v_l0);
+                        _mm_storeu_ps(dst + 12, v_l1);
+                        _mm_storeu_ps(dst + 16, v_s0);
+                        _mm_storeu_ps(dst + 20, v_s1);
+                    }
+                }
+                else
+                {
+                    __m128 v_a0 = _mm_set1_ps(alpha);
+                    __m128 v_a1 = _mm_set1_ps(alpha);
+                    if (bidx)
+                    {
+                        _mm_interleave_ps(v_s0, v_s1, v_l0, v_l1, v_h0, v_h1, v_a0, v_a1);
+
+                        _mm_storeu_ps(dst +  0, v_s0);
+                        _mm_storeu_ps(dst +  4, v_s1);
+                        _mm_storeu_ps(dst +  8, v_l0);
+                        _mm_storeu_ps(dst + 12, v_l1);
+                        _mm_storeu_ps(dst + 16, v_h0);
+                        _mm_storeu_ps(dst + 20, v_h1);
+                        _mm_storeu_ps(dst + 24, v_a0);
+                        _mm_storeu_ps(dst + 28, v_a1);
+                    }
+                    else
+                    {
+                        _mm_interleave_ps(v_h0, v_h1, v_l0, v_l1, v_s0, v_s1, v_a0, v_a1);
+
+                        _mm_storeu_ps(dst +  0, v_h0);
+                        _mm_storeu_ps(dst +  4, v_h1);
+                        _mm_storeu_ps(dst +  8, v_l0);
+                        _mm_storeu_ps(dst + 12, v_l1);
+                        _mm_storeu_ps(dst + 16, v_s0);
+                        _mm_storeu_ps(dst + 20, v_s1);
+                        _mm_storeu_ps(dst + 24, v_a0);
+                        _mm_storeu_ps(dst + 28, v_a1);
+                    }
+                }
+            }
+        }
+        #endif
+        for( ; i < n; i += 3, dst += dcn )
         {
             float h = src[i], l = src[i+1], s = src[i+2];
             float b, g, r;
@@ -4992,6 +5550,9 @@ struct HLS2RGB_f
 
     int dstcn, blueIdx;
     float hscale;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
 };
 
 
@@ -5441,11 +6002,106 @@ struct Lab2RGB_f
             coeffs[i+3] = _coeffs[i+3]*_whitept[i];
             coeffs[i+blueIdx*3] = _coeffs[i+6]*_whitept[i];
         }
+
+        lThresh = 0.008856f * 903.3f;
+        fThresh = 7.787f * 0.008856f + 16.0f / 116.0f;
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
     }
+
+    #if CV_SSE2
+    void process(__m128& v_li0, __m128& v_li1, __m128& v_ai0,
+                 __m128& v_ai1, __m128& v_bi0, __m128& v_bi1) const
+    {
+        __m128 v_y00 = _mm_mul_ps(v_li0, _mm_set1_ps(1.0f/903.3f));
+        __m128 v_y01 = _mm_mul_ps(v_li1, _mm_set1_ps(1.0f/903.3f));
+        __m128 v_fy00 = _mm_add_ps(_mm_mul_ps(_mm_set1_ps(7.787f), v_y00), _mm_set1_ps(16.0f/116.0f));
+        __m128 v_fy01 = _mm_add_ps(_mm_mul_ps(_mm_set1_ps(7.787f), v_y01), _mm_set1_ps(16.0f/116.0f));
+
+        __m128 v_fy10 = _mm_mul_ps(_mm_add_ps(v_li0, _mm_set1_ps(16.0f)), _mm_set1_ps(1.0f/116.0f));
+        __m128 v_fy11 = _mm_mul_ps(_mm_add_ps(v_li1, _mm_set1_ps(16.0f)), _mm_set1_ps(1.0f/116.0f));
+        __m128 v_y10 = _mm_mul_ps(_mm_mul_ps(v_fy10, v_fy10), v_fy10);
+        __m128 v_y11 = _mm_mul_ps(_mm_mul_ps(v_fy11, v_fy11), v_fy11);
+
+        __m128 v_cmpli0 = _mm_cmple_ps(v_li0, _mm_set1_ps(lThresh));
+        __m128 v_cmpli1 = _mm_cmple_ps(v_li1, _mm_set1_ps(lThresh));
+        v_y00 = _mm_and_ps(v_cmpli0, v_y00);
+        v_y01 = _mm_and_ps(v_cmpli1, v_y01);
+        v_fy00 = _mm_and_ps(v_cmpli0, v_fy00);
+        v_fy01 = _mm_and_ps(v_cmpli1, v_fy01);
+        v_y10 = _mm_andnot_ps(v_cmpli0, v_y10);
+        v_y11 = _mm_andnot_ps(v_cmpli1, v_y11);
+        v_fy10 = _mm_andnot_ps(v_cmpli0, v_fy10);
+        v_fy11 = _mm_andnot_ps(v_cmpli1, v_fy11);
+        __m128 v_y0 = _mm_or_ps(v_y00, v_y10);
+        __m128 v_y1 = _mm_or_ps(v_y01, v_y11);
+        __m128 v_fy0 = _mm_or_ps(v_fy00, v_fy10);
+        __m128 v_fy1 = _mm_or_ps(v_fy01, v_fy11);
+
+        __m128 v_fxz00 = _mm_add_ps(v_fy0, _mm_mul_ps(v_ai0, _mm_set1_ps(0.002f)));
+        __m128 v_fxz01 = _mm_add_ps(v_fy1, _mm_mul_ps(v_ai1, _mm_set1_ps(0.002f)));
+        __m128 v_fxz10 = _mm_sub_ps(v_fy0, _mm_mul_ps(v_bi0, _mm_set1_ps(0.005f)));
+        __m128 v_fxz11 = _mm_sub_ps(v_fy1, _mm_mul_ps(v_bi1, _mm_set1_ps(0.005f)));
+
+        __m128 v_fxz000 = _mm_mul_ps(_mm_sub_ps(v_fxz00, _mm_set1_ps(16.0f/116.0f)), _mm_set1_ps(1.0f/7.787f));
+        __m128 v_fxz001 = _mm_mul_ps(_mm_sub_ps(v_fxz01, _mm_set1_ps(16.0f/116.0f)), _mm_set1_ps(1.0f/7.787f));
+        __m128 v_fxz010 = _mm_mul_ps(_mm_sub_ps(v_fxz10, _mm_set1_ps(16.0f/116.0f)), _mm_set1_ps(1.0f/7.787f));
+        __m128 v_fxz011 = _mm_mul_ps(_mm_sub_ps(v_fxz11, _mm_set1_ps(16.0f/116.0f)), _mm_set1_ps(1.0f/7.787f));
+
+        __m128 v_fxz100 = _mm_mul_ps(_mm_mul_ps(v_fxz00, v_fxz00), v_fxz00);
+        __m128 v_fxz101 = _mm_mul_ps(_mm_mul_ps(v_fxz01, v_fxz01), v_fxz01);
+        __m128 v_fxz110 = _mm_mul_ps(_mm_mul_ps(v_fxz10, v_fxz10), v_fxz10);
+        __m128 v_fxz111 = _mm_mul_ps(_mm_mul_ps(v_fxz11, v_fxz11), v_fxz11);
+
+        __m128 v_cmpfxz00 = _mm_cmple_ps(v_fxz00, _mm_set1_ps(fThresh));
+        __m128 v_cmpfxz01 = _mm_cmple_ps(v_fxz01, _mm_set1_ps(fThresh));
+        __m128 v_cmpfxz10 = _mm_cmple_ps(v_fxz10, _mm_set1_ps(fThresh));
+        __m128 v_cmpfxz11 = _mm_cmple_ps(v_fxz11, _mm_set1_ps(fThresh));
+        v_fxz000 = _mm_and_ps(v_cmpfxz00, v_fxz000);
+        v_fxz001 = _mm_and_ps(v_cmpfxz01, v_fxz001);
+        v_fxz010 = _mm_and_ps(v_cmpfxz10, v_fxz010);
+        v_fxz011 = _mm_and_ps(v_cmpfxz11, v_fxz011);
+        v_fxz100 = _mm_andnot_ps(v_cmpfxz00, v_fxz100);
+        v_fxz101 = _mm_andnot_ps(v_cmpfxz01, v_fxz101);
+        v_fxz110 = _mm_andnot_ps(v_cmpfxz10, v_fxz110);
+        v_fxz111 = _mm_andnot_ps(v_cmpfxz11, v_fxz111);
+        __m128 v_x0 = _mm_or_ps(v_fxz000, v_fxz100);
+        __m128 v_x1 = _mm_or_ps(v_fxz001, v_fxz101);
+        __m128 v_z0 = _mm_or_ps(v_fxz010, v_fxz110);
+        __m128 v_z1 = _mm_or_ps(v_fxz011, v_fxz111);
+
+        __m128 v_ro0 = _mm_mul_ps(_mm_set1_ps(coeffs[0]), v_x0);
+        __m128 v_ro1 = _mm_mul_ps(_mm_set1_ps(coeffs[0]), v_x1);
+        __m128 v_go0 = _mm_mul_ps(_mm_set1_ps(coeffs[3]), v_x0);
+        __m128 v_go1 = _mm_mul_ps(_mm_set1_ps(coeffs[3]), v_x1);
+        __m128 v_bo0 = _mm_mul_ps(_mm_set1_ps(coeffs[6]), v_x0);
+        __m128 v_bo1 = _mm_mul_ps(_mm_set1_ps(coeffs[6]), v_x1);
+        v_ro0 = _mm_add_ps(v_ro0, _mm_mul_ps(_mm_set1_ps(coeffs[1]), v_y0));
+        v_ro1 = _mm_add_ps(v_ro1, _mm_mul_ps(_mm_set1_ps(coeffs[1]), v_y1));
+        v_go0 = _mm_add_ps(v_go0, _mm_mul_ps(_mm_set1_ps(coeffs[4]), v_y0));
+        v_go1 = _mm_add_ps(v_go1, _mm_mul_ps(_mm_set1_ps(coeffs[4]), v_y1));
+        v_bo0 = _mm_add_ps(v_bo0, _mm_mul_ps(_mm_set1_ps(coeffs[7]), v_y0));
+        v_bo1 = _mm_add_ps(v_bo1, _mm_mul_ps(_mm_set1_ps(coeffs[7]), v_y1));
+        v_ro0 = _mm_add_ps(v_ro0, _mm_mul_ps(_mm_set1_ps(coeffs[2]), v_z0));
+        v_ro1 = _mm_add_ps(v_ro1, _mm_mul_ps(_mm_set1_ps(coeffs[2]), v_z1));
+        v_go0 = _mm_add_ps(v_go0, _mm_mul_ps(_mm_set1_ps(coeffs[5]), v_z0));
+        v_go1 = _mm_add_ps(v_go1, _mm_mul_ps(_mm_set1_ps(coeffs[5]), v_z1));
+        v_bo0 = _mm_add_ps(v_bo0, _mm_mul_ps(_mm_set1_ps(coeffs[8]), v_z0));
+        v_bo1 = _mm_add_ps(v_bo1, _mm_mul_ps(_mm_set1_ps(coeffs[8]), v_z1));
+
+        v_li0 = _mm_min_ps(_mm_max_ps(v_ro0, _mm_setzero_ps()), _mm_set1_ps(1.0f));
+        v_li1 = _mm_min_ps(_mm_max_ps(v_ro1, _mm_setzero_ps()), _mm_set1_ps(1.0f));
+        v_ai0 = _mm_min_ps(_mm_max_ps(v_go0, _mm_setzero_ps()), _mm_set1_ps(1.0f));
+        v_ai1 = _mm_min_ps(_mm_max_ps(v_go1, _mm_setzero_ps()), _mm_set1_ps(1.0f));
+        v_bi0 = _mm_min_ps(_mm_max_ps(v_bo0, _mm_setzero_ps()), _mm_set1_ps(1.0f));
+        v_bi1 = _mm_min_ps(_mm_max_ps(v_bo1, _mm_setzero_ps()), _mm_set1_ps(1.0f));
+    }
+    #endif
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, dcn = dstcn;
+        int i = 0, dcn = dstcn;
         const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -5454,9 +6110,70 @@ struct Lab2RGB_f
         float alpha = ColorChannel<float>::max();
         n *= 3;
 
-        static const float lThresh = 0.008856f * 903.3f;
-        static const float fThresh = 7.787f * 0.008856f + 16.0f / 116.0f;
-        for (i = 0; i < n; i += 3, dst += dcn)
+        #if CV_SSE2
+        if (haveSIMD)
+        {
+            for (; i <= n - 24; i += 24, dst += dcn * 8)
+            {
+                __m128 v_li0 = _mm_loadu_ps(src + i +  0);
+                __m128 v_li1 = _mm_loadu_ps(src + i +  4);
+                __m128 v_ai0 = _mm_loadu_ps(src + i +  8);
+                __m128 v_ai1 = _mm_loadu_ps(src + i + 12);
+                __m128 v_bi0 = _mm_loadu_ps(src + i + 16);
+                __m128 v_bi1 = _mm_loadu_ps(src + i + 20);
+
+                _mm_deinterleave_ps(v_li0, v_li1, v_ai0, v_ai1, v_bi0, v_bi1);
+
+                process(v_li0, v_li1, v_ai0, v_ai1, v_bi0, v_bi1);
+
+                if (gammaTab)
+                {
+                    __m128 v_gscale = _mm_set1_ps(gscale);
+                    v_li0 = _mm_mul_ps(v_li0, v_gscale);
+                    v_li1 = _mm_mul_ps(v_li1, v_gscale);
+                    v_ai0 = _mm_mul_ps(v_ai0, v_gscale);
+                    v_ai1 = _mm_mul_ps(v_ai1, v_gscale);
+                    v_bi0 = _mm_mul_ps(v_bi0, v_gscale);
+                    v_bi1 = _mm_mul_ps(v_bi1, v_gscale);
+
+                    splineInterpolate(v_li0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_li1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_ai0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_ai1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_bi0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_bi1, gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                if( dcn == 4 )
+                {
+                    __m128 v_a0 = _mm_set1_ps(alpha);
+                    __m128 v_a1 = _mm_set1_ps(alpha);
+                    _mm_interleave_ps(v_li0, v_li1, v_ai0, v_ai1, v_bi0, v_bi1, v_a0, v_a1);
+
+                    _mm_storeu_ps(dst +  0, v_li0);
+                    _mm_storeu_ps(dst +  4, v_li1);
+                    _mm_storeu_ps(dst +  8, v_ai0);
+                    _mm_storeu_ps(dst + 12, v_ai1);
+                    _mm_storeu_ps(dst + 16, v_bi0);
+                    _mm_storeu_ps(dst + 20, v_bi1);
+                    _mm_storeu_ps(dst + 24, v_a0);
+                    _mm_storeu_ps(dst + 28, v_a1);
+                }
+                else
+                {
+                    _mm_interleave_ps(v_li0, v_li1, v_ai0, v_ai1, v_bi0, v_bi1);
+
+                    _mm_storeu_ps(dst +  0, v_li0);
+                    _mm_storeu_ps(dst +  4, v_li1);
+                    _mm_storeu_ps(dst +  8, v_ai0);
+                    _mm_storeu_ps(dst + 12, v_ai1);
+                    _mm_storeu_ps(dst + 16, v_bi0);
+                    _mm_storeu_ps(dst + 20, v_bi1);
+                }
+            }
+        }
+        #endif
+        for (; i < n; i += 3, dst += dcn)
         {
             float li = src[i];
             float ai = src[i + 1];
@@ -5507,6 +6224,11 @@ struct Lab2RGB_f
     int dstcn;
     float coeffs[9];
     bool srgb;
+    float lThresh;
+    float fThresh;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
 };
 
 #undef clip
@@ -5766,24 +6488,212 @@ struct RGB2Luv_f
         }
 
         float d = 1.f/(whitept[0] + whitept[1]*15 + whitept[2]*3);
-        un = 4*whitept[0]*d;
-        vn = 9*whitept[1]*d;
+        un = 4*whitept[0]*d*13;
+        vn = 9*whitept[1]*d*13;
+
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
 
         CV_Assert(whitept[1] == 1.f);
     }
 
+    #if CV_NEON
+    void process(float32x4x3_t& v_src) const
+    {
+        float32x4_t v_x = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[0])), v_src.val[1], vdupq_n_f32(coeffs[1])), v_src.val[2], vdupq_n_f32(coeffs[2]));
+        float32x4_t v_y = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[3])), v_src.val[1], vdupq_n_f32(coeffs[4])), v_src.val[2], vdupq_n_f32(coeffs[5]));
+        float32x4_t v_z = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[6])), v_src.val[1], vdupq_n_f32(coeffs[7])), v_src.val[2], vdupq_n_f32(coeffs[8]));
+
+        v_src.val[0] = vmulq_f32(v_y, vdupq_n_f32(LabCbrtTabScale));
+        splineInterpolate(v_src.val[0], LabCbrtTab, LAB_CBRT_TAB_SIZE);
+
+        v_src.val[0] = vmlaq_f32(vdupq_n_f32(-16.f), v_src.val[0], vdupq_n_f32(116.f));
+
+        float32x4_t v_div = vmaxq_f32(vmlaq_f32(vmlaq_f32(v_x, vdupq_n_f32(15.f), v_y), vdupq_n_f32(3.f), v_z), vdupq_n_f32(FLT_EPSILON));
+        float32x4_t v_reciprocal = vrecpeq_f32(v_div);
+        v_reciprocal = vmulq_f32(vrecpsq_f32(v_div, v_reciprocal), v_reciprocal);
+        v_reciprocal = vmulq_f32(vrecpsq_f32(v_div, v_reciprocal), v_reciprocal);
+        float32x4_t v_d = vmulq_f32(vdupq_n_f32(52.f), v_reciprocal);
+
+        v_src.val[1] = vmulq_f32(v_src.val[0], vmlaq_f32(vdupq_n_f32(-un), v_x, v_d));
+        v_src.val[2] = vmulq_f32(v_src.val[0], vmlaq_f32(vdupq_n_f32(-vn), vmulq_f32(vdupq_n_f32(2.25f), v_y), v_d));
+    }
+    #elif CV_SSE2
+    void process(__m128& v_r0, __m128& v_r1, __m128& v_g0,
+                 __m128& v_g1, __m128& v_b0, __m128& v_b1) const
+    {
+        __m128 v_x0 = _mm_mul_ps(v_r0, _mm_set1_ps(coeffs[0]));
+        __m128 v_x1 = _mm_mul_ps(v_r1, _mm_set1_ps(coeffs[0]));
+        __m128 v_y0 = _mm_mul_ps(v_r0, _mm_set1_ps(coeffs[3]));
+        __m128 v_y1 = _mm_mul_ps(v_r1, _mm_set1_ps(coeffs[3]));
+        __m128 v_z0 = _mm_mul_ps(v_r0, _mm_set1_ps(coeffs[6]));
+        __m128 v_z1 = _mm_mul_ps(v_r1, _mm_set1_ps(coeffs[6]));
+
+        v_x0 = _mm_add_ps(v_x0, _mm_mul_ps(v_g0, _mm_set1_ps(coeffs[1])));
+        v_x1 = _mm_add_ps(v_x1, _mm_mul_ps(v_g1, _mm_set1_ps(coeffs[1])));
+        v_y0 = _mm_add_ps(v_y0, _mm_mul_ps(v_g0, _mm_set1_ps(coeffs[4])));
+        v_y1 = _mm_add_ps(v_y1, _mm_mul_ps(v_g1, _mm_set1_ps(coeffs[4])));
+        v_z0 = _mm_add_ps(v_z0, _mm_mul_ps(v_g0, _mm_set1_ps(coeffs[7])));
+        v_z1 = _mm_add_ps(v_z1, _mm_mul_ps(v_g1, _mm_set1_ps(coeffs[7])));
+
+        v_x0 = _mm_add_ps(v_x0, _mm_mul_ps(v_b0, _mm_set1_ps(coeffs[2])));
+        v_x1 = _mm_add_ps(v_x1, _mm_mul_ps(v_b1, _mm_set1_ps(coeffs[2])));
+        v_y0 = _mm_add_ps(v_y0, _mm_mul_ps(v_b0, _mm_set1_ps(coeffs[5])));
+        v_y1 = _mm_add_ps(v_y1, _mm_mul_ps(v_b1, _mm_set1_ps(coeffs[5])));
+        v_z0 = _mm_add_ps(v_z0, _mm_mul_ps(v_b0, _mm_set1_ps(coeffs[8])));
+        v_z1 = _mm_add_ps(v_z1, _mm_mul_ps(v_b1, _mm_set1_ps(coeffs[8])));
+
+        __m128 v_l0 = _mm_mul_ps(v_y0, _mm_set1_ps(LabCbrtTabScale));
+        __m128 v_l1 = _mm_mul_ps(v_y1, _mm_set1_ps(LabCbrtTabScale));
+        splineInterpolate(v_l0, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+        splineInterpolate(v_l1, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+
+        v_l0 = _mm_mul_ps(v_l0, _mm_set1_ps(116.0f));
+        v_l1 = _mm_mul_ps(v_l1, _mm_set1_ps(116.0f));
+        v_r0 = _mm_sub_ps(v_l0, _mm_set1_ps(16.0f));
+        v_r1 = _mm_sub_ps(v_l1, _mm_set1_ps(16.0f));
+
+        v_z0 = _mm_mul_ps(v_z0, _mm_set1_ps(3.0f));
+        v_z1 = _mm_mul_ps(v_z1, _mm_set1_ps(3.0f));
+        v_z0 = _mm_add_ps(v_z0, v_x0);
+        v_z1 = _mm_add_ps(v_z1, v_x1);
+        v_z0 = _mm_add_ps(v_z0, _mm_mul_ps(v_y0, _mm_set1_ps(15.0f)));
+        v_z1 = _mm_add_ps(v_z1, _mm_mul_ps(v_y1, _mm_set1_ps(15.0f)));
+        v_z0 = _mm_max_ps(v_z0, _mm_set1_ps(FLT_EPSILON));
+        v_z1 = _mm_max_ps(v_z1, _mm_set1_ps(FLT_EPSILON));
+        __m128 v_d0 = _mm_div_ps(_mm_set1_ps(52.0f), v_z0);
+        __m128 v_d1 = _mm_div_ps(_mm_set1_ps(52.0f), v_z1);
+
+        v_x0 = _mm_mul_ps(v_x0, v_d0);
+        v_x1 = _mm_mul_ps(v_x1, v_d1);
+        v_x0 = _mm_sub_ps(v_x0, _mm_set1_ps(un));
+        v_x1 = _mm_sub_ps(v_x1, _mm_set1_ps(un));
+        v_g0 = _mm_mul_ps(v_x0, v_r0);
+        v_g1 = _mm_mul_ps(v_x1, v_r1);
+
+        v_y0 = _mm_mul_ps(v_y0, v_d0);
+        v_y1 = _mm_mul_ps(v_y1, v_d1);
+        v_y0 = _mm_mul_ps(v_y0, _mm_set1_ps(2.25f));
+        v_y1 = _mm_mul_ps(v_y1, _mm_set1_ps(2.25f));
+        v_y0 = _mm_sub_ps(v_y0, _mm_set1_ps(vn));
+        v_y1 = _mm_sub_ps(v_y1, _mm_set1_ps(vn));
+        v_b0 = _mm_mul_ps(v_y0, v_r0);
+        v_b1 = _mm_mul_ps(v_y1, v_r1);
+    }
+    #endif
+
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, scn = srccn;
+        int i = 0, scn = srccn;
         float gscale = GammaTabScale;
         const float* gammaTab = srgb ? sRGBGammaTab : 0;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
               C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-        float _un = 13*un, _vn = 13*vn;
         n *= 3;
 
-        for( i = 0; i < n; i += 3, src += scn )
+        #if CV_NEON
+        if (scn == 3)
+        {
+            for( ; i <= n - 12; i += 12, src += scn * 4 )
+            {
+                float32x4x3_t v_src = vld3q_f32(src);
+                if( gammaTab )
+                {
+                    v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
+                    v_src.val[1] = vmulq_f32(v_src.val[1], vdupq_n_f32(gscale));
+                    v_src.val[2] = vmulq_f32(v_src.val[2], vdupq_n_f32(gscale));
+                    splineInterpolate(v_src.val[0], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[1], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[2], gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                process(v_src);
+
+                vst3q_f32(dst + i, v_src);
+            }
+        }
+        else
+        {
+            for( ; i <= n - 12; i += 12, src += scn * 4 )
+            {
+                float32x4x4_t v_src = vld4q_f32(src);
+                if( gammaTab )
+                {
+                    v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
+                    v_src.val[1] = vmulq_f32(v_src.val[1], vdupq_n_f32(gscale));
+                    v_src.val[2] = vmulq_f32(v_src.val[2], vdupq_n_f32(gscale));
+                    splineInterpolate(v_src.val[0], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[1], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[2], gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                float32x4x3_t v_dst;
+                v_dst.val[0] = v_src.val[0];
+                v_dst.val[1] = v_src.val[1];
+                v_dst.val[2] = v_src.val[2];
+                process(v_dst);
+
+                vst3q_f32(dst + i, v_dst);
+            }
+        }
+        #elif CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, src += scn * 8 )
+            {
+                __m128 v_r0 = _mm_loadu_ps(src +  0);
+                __m128 v_r1 = _mm_loadu_ps(src +  4);
+                __m128 v_g0 = _mm_loadu_ps(src +  8);
+                __m128 v_g1 = _mm_loadu_ps(src + 12);
+                __m128 v_b0 = _mm_loadu_ps(src + 16);
+                __m128 v_b1 = _mm_loadu_ps(src + 20);
+
+                if (scn == 3)
+                {
+                    _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                }
+                else
+                {
+                    __m128 v_a0 = _mm_loadu_ps(src + 24);
+                    __m128 v_a1 = _mm_loadu_ps(src + 28);
+
+                    _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
+                }
+
+                if ( gammaTab )
+                {
+                    __m128 v_gscale = _mm_set1_ps(gscale);
+                    v_r0 = _mm_mul_ps(v_r0, v_gscale);
+                    v_r1 = _mm_mul_ps(v_r1, v_gscale);
+                    v_g0 = _mm_mul_ps(v_g0, v_gscale);
+                    v_g1 = _mm_mul_ps(v_g1, v_gscale);
+                    v_b0 = _mm_mul_ps(v_b0, v_gscale);
+                    v_b1 = _mm_mul_ps(v_b1, v_gscale);
+
+                    splineInterpolate(v_r0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_r1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_g0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_g1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_b0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_b1, gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                process(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+
+                _mm_interleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+
+                _mm_storeu_ps(dst + i +  0, v_r0);
+                _mm_storeu_ps(dst + i +  4, v_r1);
+                _mm_storeu_ps(dst + i +  8, v_g0);
+                _mm_storeu_ps(dst + i + 12, v_g1);
+                _mm_storeu_ps(dst + i + 16, v_b0);
+                _mm_storeu_ps(dst + i + 20, v_b1);
+            }
+        }
+        #endif
+        for( ; i < n; i += 3, src += scn )
         {
             float R = src[0], G = src[1], B = src[2];
             if( gammaTab )
@@ -5801,8 +6711,8 @@ struct RGB2Luv_f
             L = 116.f*L - 16.f;
 
             float d = (4*13) / std::max(X + 15 * Y + 3 * Z, FLT_EPSILON);
-            float u = L*(X*d - _un);
-            float v = L*((9*0.25f)*Y*d - _vn);
+            float u = L*(X*d - un);
+            float v = L*((9*0.25f)*Y*d - vn);
 
             dst[i] = L; dst[i+1] = u; dst[i+2] = v;
         }
@@ -5811,6 +6721,9 @@ struct RGB2Luv_f
     int srccn;
     float coeffs[9], un, vn;
     bool srgb;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
 };
 
 
@@ -5837,13 +6750,77 @@ struct Luv2RGB_f
         float d = 1.f/(whitept[0] + whitept[1]*15 + whitept[2]*3);
         un = 4*whitept[0]*d;
         vn = 9*whitept[1]*d;
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
 
         CV_Assert(whitept[1] == 1.f);
     }
 
+    #if CV_SSE2
+    void process(__m128& v_l0, __m128& v_l1, __m128& v_u0,
+                 __m128& v_u1, __m128& v_v0, __m128& v_v1) const
+    {
+        __m128 v_y0 = _mm_mul_ps(_mm_add_ps(v_l0, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
+        __m128 v_y1 = _mm_mul_ps(_mm_add_ps(v_l1, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
+        v_y0 = _mm_mul_ps(_mm_mul_ps(v_y0, v_y0), v_y0);
+        v_y1 = _mm_mul_ps(_mm_mul_ps(v_y1, v_y1), v_y1);
+        __m128 v_d0 = _mm_div_ps(_mm_set1_ps(1.f/13.f), v_l0);
+        __m128 v_d1 = _mm_div_ps(_mm_set1_ps(1.f/13.f), v_l1);
+        v_u0 = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(v_u0, v_d0), _mm_set1_ps(un)), _mm_set1_ps(3.f));
+        v_u1 = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(v_u1, v_d1), _mm_set1_ps(un)), _mm_set1_ps(3.f));
+        v_v0 = _mm_add_ps(_mm_mul_ps(v_v0, v_d0), _mm_set1_ps(vn));
+        v_v1 = _mm_add_ps(_mm_mul_ps(v_v1, v_d1), _mm_set1_ps(vn));
+        __m128 v_iv0 = _mm_div_ps(_mm_set1_ps(0.25f), v_v0);
+        __m128 v_iv1 = _mm_div_ps(_mm_set1_ps(0.25f), v_v1);
+        __m128 v_x0 = _mm_mul_ps(_mm_mul_ps(_mm_set1_ps(3.f), v_u0), v_iv0);
+        __m128 v_x1 = _mm_mul_ps(_mm_mul_ps(_mm_set1_ps(3.f), v_u1), v_iv1);
+        __m128 v_z0 = _mm_mul_ps(_mm_sub_ps(_mm_sub_ps(_mm_set1_ps(12.f), v_u0), _mm_mul_ps(_mm_set1_ps(20.f), v_v0)), v_iv0);
+        __m128 v_z1 = _mm_mul_ps(_mm_sub_ps(_mm_sub_ps(_mm_set1_ps(12.f), v_u1), _mm_mul_ps(_mm_set1_ps(20.f), v_v1)), v_iv1);
+
+        v_l0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[0]));
+        v_l1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[0]));
+        v_u0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[3]));
+        v_u1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[3]));
+        v_v0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[6]));
+        v_v1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[6]));
+        v_l0 = _mm_add_ps(v_l0, _mm_set1_ps(coeffs[1]));
+        v_l1 = _mm_add_ps(v_l1, _mm_set1_ps(coeffs[1]));
+        v_u0 = _mm_add_ps(v_u0, _mm_set1_ps(coeffs[4]));
+        v_u1 = _mm_add_ps(v_u1, _mm_set1_ps(coeffs[4]));
+        v_v0 = _mm_add_ps(v_v0, _mm_set1_ps(coeffs[7]));
+        v_v1 = _mm_add_ps(v_v1, _mm_set1_ps(coeffs[7]));
+        v_l0 = _mm_add_ps(v_l0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[2])));
+        v_l1 = _mm_add_ps(v_l1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[2])));
+        v_u0 = _mm_add_ps(v_u0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[5])));
+        v_u1 = _mm_add_ps(v_u1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[5])));
+        v_v0 = _mm_add_ps(v_v0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[8])));
+        v_v1 = _mm_add_ps(v_v1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[8])));
+        v_l0 = _mm_mul_ps(v_l0, v_y0);
+        v_l1 = _mm_mul_ps(v_l1, v_y1);
+        v_u0 = _mm_mul_ps(v_u0, v_y0);
+        v_u1 = _mm_mul_ps(v_u1, v_y1);
+        v_v0 = _mm_mul_ps(v_v0, v_y0);
+        v_v1 = _mm_mul_ps(v_v1, v_y1);
+
+        v_l0 = _mm_max_ps(v_l0, _mm_setzero_ps());
+        v_l1 = _mm_max_ps(v_l1, _mm_setzero_ps());
+        v_u0 = _mm_max_ps(v_u0, _mm_setzero_ps());
+        v_u1 = _mm_max_ps(v_u1, _mm_setzero_ps());
+        v_v0 = _mm_max_ps(v_v0, _mm_setzero_ps());
+        v_v1 = _mm_max_ps(v_v1, _mm_setzero_ps());
+        v_l0 = _mm_min_ps(v_l0, _mm_set1_ps(1.f));
+        v_l1 = _mm_min_ps(v_l1, _mm_set1_ps(1.f));
+        v_u0 = _mm_min_ps(v_u0, _mm_set1_ps(1.f));
+        v_u1 = _mm_min_ps(v_u1, _mm_set1_ps(1.f));
+        v_v0 = _mm_min_ps(v_v0, _mm_set1_ps(1.f));
+        v_v1 = _mm_min_ps(v_v1, _mm_set1_ps(1.f));
+    }
+    #endif
+
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, dcn = dstcn;
+        int i = 0, dcn = dstcn;
         const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -5853,7 +6830,69 @@ struct Luv2RGB_f
         float _un = un, _vn = vn;
         n *= 3;
 
-        for( i = 0; i < n; i += 3, dst += dcn )
+        #if CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, dst += dcn * 8 )
+            {
+                __m128 v_l0 = _mm_loadu_ps(src + i +  0);
+                __m128 v_l1 = _mm_loadu_ps(src + i +  4);
+                __m128 v_u0 = _mm_loadu_ps(src + i +  8);
+                __m128 v_u1 = _mm_loadu_ps(src + i + 12);
+                __m128 v_v0 = _mm_loadu_ps(src + i + 16);
+                __m128 v_v1 = _mm_loadu_ps(src + i + 20);
+
+                _mm_deinterleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                process(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                if( gammaTab )
+                {
+                    __m128 v_gscale = _mm_set1_ps(gscale);
+                    v_l0 = _mm_mul_ps(v_l0, v_gscale);
+                    v_l1 = _mm_mul_ps(v_l1, v_gscale);
+                    v_u0 = _mm_mul_ps(v_u0, v_gscale);
+                    v_u1 = _mm_mul_ps(v_u1, v_gscale);
+                    v_v0 = _mm_mul_ps(v_v0, v_gscale);
+                    v_v1 = _mm_mul_ps(v_v1, v_gscale);
+                    splineInterpolate(v_l0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_l1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_u0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_u1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_v0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_v1, gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                if( dcn == 4 )
+                {
+                    __m128 v_a0 = _mm_set1_ps(alpha);
+                    __m128 v_a1 = _mm_set1_ps(alpha);
+                    _mm_interleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1, v_a0, v_a1);
+
+                    _mm_storeu_ps(dst +  0, v_l0);
+                    _mm_storeu_ps(dst +  4, v_l1);
+                    _mm_storeu_ps(dst +  8, v_u0);
+                    _mm_storeu_ps(dst + 12, v_u1);
+                    _mm_storeu_ps(dst + 16, v_v0);
+                    _mm_storeu_ps(dst + 20, v_v1);
+                    _mm_storeu_ps(dst + 24, v_a0);
+                    _mm_storeu_ps(dst + 28, v_a1);
+                }
+                else
+                {
+                    _mm_interleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                    _mm_storeu_ps(dst +  0, v_l0);
+                    _mm_storeu_ps(dst +  4, v_l1);
+                    _mm_storeu_ps(dst +  8, v_u0);
+                    _mm_storeu_ps(dst + 12, v_u1);
+                    _mm_storeu_ps(dst + 16, v_v0);
+                    _mm_storeu_ps(dst + 20, v_v1);
+                }
+            }
+        }
+        #endif
+        for( ; i < n; i += 3, dst += dcn )
         {
             float L = src[i], u = src[i+1], v = src[i+2], d, X, Y, Z;
             Y = (L + 16.f) * (1.f/116.f);
@@ -5889,6 +6928,9 @@ struct Luv2RGB_f
     int dstcn;
     float coeffs[9], un, vn;
     bool srgb;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
 };
 
 
@@ -7044,7 +8086,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_RGB2YUV:
     {
         CV_Assert(scn == 3 || scn == 4);
-        bidx = code == COLOR_RGB2YUV ? 0 : 2;
+        bidx = code == COLOR_RGB2YUV ? 2 : 0;
         dcn = 3;
         k.create("RGB2YUV", ocl::imgproc::cvtcolor_oclsrc,
                  opts + format("-D dcn=3 -D bidx=%d", bidx));
@@ -7053,9 +8095,9 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     case COLOR_YUV2BGR:
     case COLOR_YUV2RGB:
     {
-        if(dcn < 0) dcn = 3;
+        if(dcn <= 0) dcn = 3;
         CV_Assert(dcn == 3 || dcn == 4);
-        bidx = code == COLOR_YUV2RGB ? 0 : 2;
+        bidx = code == COLOR_YUV2RGB ? 2 : 0;
         k.create("YUV2RGB", ocl::imgproc::cvtcolor_oclsrc,
                  opts + format("-D dcn=%d -D bidx=%d", dcn, bidx));
         break;
@@ -7910,17 +8952,13 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-    static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
-    const float* coeffs_f = isCbCr ? 0 : yuv_f;
-    const int* coeffs_i = isCbCr ? 0 : yuv_i;
     int blueIdx = swapBlue ? 2 : 0;
     if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<uchar>(scn, blueIdx, coeffs_i));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<uchar>(scn, blueIdx, isCbCr));
     else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<ushort>(scn, blueIdx, coeffs_i));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_i<ushort>(scn, blueIdx, isCbCr));
     else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_f<float>(scn, blueIdx, coeffs_f));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2YCrCb_f<float>(scn, blueIdx, isCbCr));
 }
 
 void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
@@ -7966,17 +9004,13 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
-    static const int yuv_i[] = { 33292, -6472, -9519, 18678 };
-    const float* coeffs_f = isCbCr ? 0 : yuv_f;
-    const int* coeffs_i = isCbCr ? 0 : yuv_i;
     int blueIdx = swapBlue ? 2 : 0;
     if( depth == CV_8U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<uchar>(dcn, blueIdx, coeffs_i));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<uchar>(dcn, blueIdx, isCbCr));
     else if( depth == CV_16U )
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<ushort>(dcn, blueIdx, coeffs_i));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_i<ushort>(dcn, blueIdx, isCbCr));
     else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_f<float>(dcn, blueIdx, coeffs_f));
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_f<float>(dcn, blueIdx, isCbCr));
 }
 
 void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,

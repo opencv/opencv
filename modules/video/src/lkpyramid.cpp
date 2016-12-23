@@ -44,6 +44,9 @@
 #include <stdio.h>
 #include "lkpyramid.hpp"
 #include "opencl_kernels_video.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -66,16 +69,9 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
     deriv_type *trow0 = alignPtr(_tempBuf + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
 
-#if CV_SSE2
-    __m128i z = _mm_setzero_si128(), c3 = _mm_set1_epi16(3), c10 = _mm_set1_epi16(10);
-#endif
-
-#if CV_NEON
-    const uint16x8_t q8 = vdupq_n_u16(3);
-    const uint8x8_t d18 = vdup_n_u8(10);
-
-    const int16x8_t q8i = vdupq_n_s16(3);
-    const int16x8_t q9 = vdupq_n_s16(10);
+#if CV_SIMD128
+    v_int16x8 c3 = v_setall_s16(3), c10 = v_setall_s16(10);
+    bool haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
 #endif
 
     for( y = 0; y < rows; y++ )
@@ -87,33 +83,21 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 
         // do vertical convolution
         x = 0;
-#if CV_SSE2
-        for( ; x <= colsn - 8; x += 8 )
+#if CV_SIMD128
+        if(haveSIMD)
         {
-            __m128i s0 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow0 + x)), z);
-            __m128i s1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow1 + x)), z);
-            __m128i s2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow2 + x)), z);
-            __m128i t0 = _mm_add_epi16(_mm_mullo_epi16(_mm_add_epi16(s0, s2), c3), _mm_mullo_epi16(s1, c10));
-            __m128i t1 = _mm_sub_epi16(s2, s0);
-            _mm_store_si128((__m128i*)(trow0 + x), t0);
-            _mm_store_si128((__m128i*)(trow1 + x), t1);
-        }
-#endif
+            for( ; x <= colsn - 8; x += 8 )
+            {
+                v_int16x8 s0 = v_reinterpret_as_s16(v_load_expand(srow0 + x));
+                v_int16x8 s1 = v_reinterpret_as_s16(v_load_expand(srow1 + x));
+                v_int16x8 s2 = v_reinterpret_as_s16(v_load_expand(srow2 + x));
 
-#if CV_NEON
-        for( ; x <= colsn - 8; x += 8)
-        {
-            uint8x8_t d0 = vld1_u8((const uint8_t*)&srow0[x]);
-            uint8x8_t d1 = vld1_u8((const uint8_t*)&srow1[x]);
-            uint8x8_t d2 = vld1_u8((const uint8_t*)&srow2[x]);
-            uint16x8_t q4 = vaddl_u8(d0, d2);
-            uint16x8_t q11 = vsubl_u8(d2, d0);
-            uint16x8_t q5 = vmulq_u16(q4, q8);
-            uint16x8_t q6 = vmull_u8(d1, d18);
-            uint16x8_t q10 = vaddq_u16(q6, q5);
-            vst1q_u16((uint16_t*)&trow0[x], q10);
-            vst1q_u16((uint16_t*)&trow1[x], q11);
+                v_int16x8 t1 = s2 - s0;
+                v_int16x8 t0 = (s0 + s2) * c3 + s1 * c10;
 
+                v_store(trow0 + x, t0);
+                v_store(trow1 + x, t1);
+            }
         }
 #endif
 
@@ -135,49 +119,22 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 
         // do horizontal convolution, interleave the results and store them to dst
         x = 0;
-#if CV_SSE2
-        for( ; x <= colsn - 8; x += 8 )
+#if CV_SIMD128
+        if(haveSIMD)
         {
-            __m128i s0 = _mm_loadu_si128((const __m128i*)(trow0 + x - cn));
-            __m128i s1 = _mm_loadu_si128((const __m128i*)(trow0 + x + cn));
-            __m128i s2 = _mm_loadu_si128((const __m128i*)(trow1 + x - cn));
-            __m128i s3 = _mm_load_si128((const __m128i*)(trow1 + x));
-            __m128i s4 = _mm_loadu_si128((const __m128i*)(trow1 + x + cn));
+            for( ; x <= colsn - 8; x += 8 )
+            {
+                v_int16x8 s0 = v_load(trow0 + x - cn);
+                v_int16x8 s1 = v_load(trow0 + x + cn);
+                v_int16x8 s2 = v_load(trow1 + x - cn);
+                v_int16x8 s3 = v_load(trow1 + x);
+                v_int16x8 s4 = v_load(trow1 + x + cn);
 
-            __m128i t0 = _mm_sub_epi16(s1, s0);
-            __m128i t1 = _mm_add_epi16(_mm_mullo_epi16(_mm_add_epi16(s2, s4), c3), _mm_mullo_epi16(s3, c10));
-            __m128i t2 = _mm_unpacklo_epi16(t0, t1);
-            t0 = _mm_unpackhi_epi16(t0, t1);
-            // this can probably be replaced with aligned stores if we aligned dst properly.
-            _mm_storeu_si128((__m128i*)(drow + x*2), t2);
-            _mm_storeu_si128((__m128i*)(drow + x*2 + 8), t0);
-        }
-#endif
+                v_int16x8 t0 = s1 - s0;
+                v_int16x8 t1 = ((s2 + s4) * c3) + (s3 * c10);
 
-#if CV_NEON
-        for( ; x <= colsn - 8; x += 8 )
-        {
-
-            int16x8_t q0 = vld1q_s16((const int16_t*)&trow0[x+cn]);
-            int16x8_t q1 = vld1q_s16((const int16_t*)&trow0[x-cn]);
-            int16x8_t q2 = vld1q_s16((const int16_t*)&trow1[x+cn]);
-            int16x8_t q3 = vld1q_s16((const int16_t*)&trow1[x-cn]);
-            int16x8_t q5 = vsubq_s16(q0, q1);
-            int16x8_t q6 = vaddq_s16(q2, q3);
-            int16x8_t q4 = vld1q_s16((const int16_t*)&trow1[x]);
-            int16x8_t q7 = vmulq_s16(q6, q8i);
-            int16x8_t q10 = vmulq_s16(q4, q9);
-            int16x8_t q11 = vaddq_s16(q7, q10);
-            int16x4_t d22 = vget_low_s16(q11);
-            int16x4_t d23 = vget_high_s16(q11);
-            int16x4_t d11 = vget_high_s16(q5);
-            int16x4_t d10 = vget_low_s16(q5);
-            int16x4x2_t q5x2, q11x2;
-            q5x2.val[0] = d10; q5x2.val[1] = d22;
-            q11x2.val[0] = d11; q11x2.val[1] = d23;
-            vst2_s16((int16_t*)&drow[x*2], q5x2);
-            vst2_s16((int16_t*)&drow[(x*2)+8], q11x2);
-
+                v_store_interleave((drow + x*2), t0, t1);
+            }
         }
 #endif
         for( ; x < colsn; x++ )
@@ -429,9 +386,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 q8 = vmulq_s32(q4, q6);
                 q15 = vmulq_s32(q6, q6);
 
-                nq0 = vaddq_f32(nq0, vreinterpretq_f32_s32(q7));
-                nq1 = vaddq_f32(nq1, vreinterpretq_f32_s32(q8));
-                nq2 = vaddq_f32(nq2, vreinterpretq_f32_s32(q15));
+                nq0 = vaddq_f32(nq0, vcvtq_f32_s32(q7));
+                nq1 = vaddq_f32(nq1, vcvtq_f32_s32(q8));
+                nq2 = vaddq_f32(nq2, vcvtq_f32_s32(q15));
 
                 vst1q_f32(nA11, nq0);
                 vst1q_f32(nA12, nq1);
@@ -644,8 +601,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     nq9 = vaddq_s32(nq9, nq10);
                     nq4 = vaddq_s32(nq4, nq5);
 
-                    nB1v = vaddq_f32(nB1v, vreinterpretq_f32_s32(nq9));
-                    nB2v = vaddq_f32(nB2v, vreinterpretq_f32_s32(nq4));
+                    nB1v = vaddq_f32(nB1v, vcvtq_f32_s32(nq9));
+                    nB2v = vaddq_f32(nB2v, vcvtq_f32_s32(nq4));
 
                     vst1q_f32(nB1, nB1v);
                     vst1q_f32(nB2, nB2v);
@@ -1100,7 +1057,155 @@ namespace
         return sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
     }
 #endif
+
+#ifdef HAVE_OPENVX
+    bool openvx_pyrlk(InputArray _prevImg, InputArray _nextImg, InputArray _prevPts, InputOutputArray _nextPts,
+                             OutputArray _status, OutputArray _err)
+    {
+        using namespace ivx;
+
+        // Pyramids as inputs are not acceptable because there's no (direct or simple) way
+        // to build vx_pyramid on user data
+        if(_prevImg.kind() != _InputArray::MAT || _nextImg.kind() != _InputArray::MAT)
+            return false;
+
+        Mat prevImgMat = _prevImg.getMat(), nextImgMat = _nextImg.getMat();
+
+        if(prevImgMat.type() != CV_8UC1 || nextImgMat.type() != CV_8UC1)
+            return false;
+
+        CV_Assert(prevImgMat.size() == nextImgMat.size());
+        Mat prevPtsMat = _prevPts.getMat();
+        int checkPrev = prevPtsMat.checkVector(2, CV_32F, false);
+        CV_Assert( checkPrev >= 0 );
+        size_t npoints = checkPrev;
+
+        if( !(flags & OPTFLOW_USE_INITIAL_FLOW) )
+            _nextPts.create(prevPtsMat.size(), prevPtsMat.type(), -1, true);
+        Mat nextPtsMat = _nextPts.getMat();
+        CV_Assert( nextPtsMat.checkVector(2, CV_32F, false) == (int)npoints );
+
+        _status.create((int)npoints, 1, CV_8U, -1, true);
+        Mat statusMat = _status.getMat();
+        uchar* status = statusMat.ptr();
+        for(size_t i = 0; i < npoints; i++ )
+            status[i] = true;
+
+        // OpenVX doesn't return detection errors
+        if( _err.needed() )
+        {
+            return false;
+        }
+
+        try
+        {
+            Context context = Context::create();
+
+            if(context.vendorID() == VX_ID_KHRONOS)
+            {
+                // PyrLK in OVX 1.0.1 performs vxCommitImagePatch incorrecty and crashes
+                if(VX_VERSION == VX_VERSION_1_0)
+                    return false;
+                // Implementation ignores border mode
+                // So check that minimal size of image in pyramid is big enough
+                int width = prevImgMat.cols, height = prevImgMat.rows;
+                for(int i = 0; i < maxLevel+1; i++)
+                {
+                    if(width < winSize.width + 1 || height < winSize.height + 1)
+                        return false;
+                    else
+                    {
+                        width /= 2; height /= 2;
+                    }
+                }
+            }
+
+            Image prevImg = Image::createFromHandle(context, Image::matTypeToFormat(prevImgMat.type()),
+                                                    Image::createAddressing(prevImgMat), (void*)prevImgMat.data);
+            Image nextImg = Image::createFromHandle(context, Image::matTypeToFormat(nextImgMat.type()),
+                                                    Image::createAddressing(nextImgMat), (void*)nextImgMat.data);
+
+            Graph graph = Graph::create(context);
+
+            Pyramid prevPyr = Pyramid::createVirtual(graph, (vx_size)maxLevel+1, VX_SCALE_PYRAMID_HALF,
+                                                     prevImg.width(), prevImg.height(), prevImg.format());
+            Pyramid nextPyr = Pyramid::createVirtual(graph, (vx_size)maxLevel+1, VX_SCALE_PYRAMID_HALF,
+                                                     nextImg.width(), nextImg.height(), nextImg.format());
+
+            ivx::Node::create(graph, VX_KERNEL_GAUSSIAN_PYRAMID, prevImg, prevPyr);
+            ivx::Node::create(graph, VX_KERNEL_GAUSSIAN_PYRAMID, nextImg, nextPyr);
+
+            Array prevPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+            Array estimatedPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+            Array nextPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+
+            std::vector<vx_keypoint_t> vxPrevPts(npoints), vxEstPts(npoints), vxNextPts(npoints);
+            for(size_t i = 0; i < npoints; i++)
+            {
+                vx_keypoint_t& prevPt = vxPrevPts[i]; vx_keypoint_t& estPt  = vxEstPts[i];
+                prevPt.x = prevPtsMat.at<Point2f>(i).x; prevPt.y = prevPtsMat.at<Point2f>(i).y;
+                 estPt.x = nextPtsMat.at<Point2f>(i).x;  estPt.y = nextPtsMat.at<Point2f>(i).y;
+                prevPt.tracking_status = estPt.tracking_status = vx_true_e;
+            }
+            prevPts.addItems(vxPrevPts); estimatedPts.addItems(vxEstPts);
+
+            if( (criteria.type & TermCriteria::COUNT) == 0 )
+                criteria.maxCount = 30;
+            else
+                criteria.maxCount = std::min(std::max(criteria.maxCount, 0), 100);
+            if( (criteria.type & TermCriteria::EPS) == 0 )
+                criteria.epsilon = 0.01;
+            else
+                criteria.epsilon = std::min(std::max(criteria.epsilon, 0.), 10.);
+            criteria.epsilon *= criteria.epsilon;
+
+            vx_enum termEnum = (criteria.type == TermCriteria::COUNT) ? VX_TERM_CRITERIA_ITERATIONS :
+                               (criteria.type == TermCriteria::EPS) ? VX_TERM_CRITERIA_EPSILON :
+                               VX_TERM_CRITERIA_BOTH;
+
+            //minEigThreshold is fixed to 0.0001f
+            ivx::Scalar termination = ivx::Scalar::create<VX_TYPE_ENUM>(context, termEnum);
+            ivx::Scalar epsilon = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, criteria.epsilon);
+            ivx::Scalar numIterations = ivx::Scalar::create<VX_TYPE_UINT32>(context, criteria.maxCount);
+            ivx::Scalar useInitial = ivx::Scalar::create<VX_TYPE_BOOL>(context, (vx_bool)(flags & OPTFLOW_USE_INITIAL_FLOW));
+            //assume winSize is square
+            ivx::Scalar windowSize = ivx::Scalar::create<VX_TYPE_SIZE>(context, (vx_size)winSize.width);
+
+            ivx::Node::create(graph, VX_KERNEL_OPTICAL_FLOW_PYR_LK, prevPyr, nextPyr, prevPts, estimatedPts,
+                              nextPts, termination, epsilon, numIterations, useInitial, windowSize);
+
+            graph.verify();
+            graph.process();
+
+            nextPts.copyTo(vxNextPts);
+            for(size_t i = 0; i < npoints; i++)
+            {
+                vx_keypoint_t kp = vxNextPts[i];
+                nextPtsMat.at<Point2f>(i) = Point2f(kp.x, kp.y);
+                statusMat.at<uchar>(i) = (bool)kp.tracking_status;
+            }
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        prevImg.swapHandle(); nextImg.swapHandle();
+#endif
+        }
+        catch (RuntimeError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+        catch (WrapperError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+
+        return true;
+    }
+#endif
 };
+
+
 
 void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
@@ -1112,6 +1217,10 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                (_prevImg.isUMat() || _nextImg.isUMat()) &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
+
+    // Disabled due to bad accuracy
+    CV_OVX_RUN(false,
+               openvx_pyrlk(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
 
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;
@@ -1310,8 +1419,6 @@ getRTMatrix( const Point2f* a, const Point2f* b,
             sa[1][1] += a[i].y*a[i].y;
             sa[1][2] += a[i].y;
 
-            sa[2][2] += 1;
-
             sb[0] += a[i].x*b[i].x;
             sb[1] += a[i].y*b[i].x;
             sb[2] += b[i].x;
@@ -1326,7 +1433,7 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
         sa[3][3] = sa[0][0];
         sa[4][4] = sa[1][1];
-        sa[5][5] = sa[2][2];
+        sa[5][5] = sa[2][2] = count;
 
         solve( A, B, MM, DECOMP_EIG );
     }
@@ -1341,14 +1448,6 @@ getRTMatrix( const Point2f* a, const Point2f* b,
             sa[0][0] += a[i].x*a[i].x + a[i].y*a[i].y;
             sa[0][2] += a[i].x;
             sa[0][3] += a[i].y;
-
-
-            sa[2][1] += -a[i].y;
-            sa[2][2] += 1;
-
-            sa[3][0] += a[i].y;
-            sa[3][1] += a[i].x;
-            sa[3][3] += 1;
 
             sb[0] += a[i].x*b[i].x + a[i].y*b[i].y;
             sb[1] += a[i].x*b[i].y - a[i].y*b[i].x;

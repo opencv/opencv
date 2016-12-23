@@ -373,6 +373,62 @@ void sqrt64f(const double* src, double* dst, int len)
         dst[i] = std::sqrt(src[i]);
 }
 
+// Workaround for ICE in MSVS 2015 update 3 (issue #7795)
+// CV_AVX is not used here, because generated code is faster in non-AVX mode.
+// (tested with disabled IPP on i5-6300U)
+#if (defined _MSC_VER && _MSC_VER >= 1900)
+void exp32f(const float *src, float *dst, int n)
+{
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(exp32f, cv_hal_exp32f, src, dst, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_32f_A21, src, dst, n) >= 0);
+
+    for (int i = 0; i < n; i++)
+    {
+        dst[i] = std::exp(src[i]);
+    }
+}
+
+void exp64f(const double *src, double *dst, int n)
+{
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(exp64f, cv_hal_exp64f, src, dst, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_64f_A50, src, dst, n) >= 0);
+
+    for (int i = 0; i < n; i++)
+    {
+        dst[i] = std::exp(src[i]);
+    }
+}
+
+void log32f(const float *src, float *dst, int n)
+{
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(log32f, cv_hal_log32f, src, dst, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_32f_A21, src, dst, n) >= 0);
+
+    for (int i = 0; i < n; i++)
+    {
+        dst[i] = std::log(src[i]);
+    }
+}
+void log64f(const double *src, double *dst, int n)
+{
+    CV_INSTRUMENT_REGION()
+
+    CALL_HAL(log64f, cv_hal_log64f, src, dst, n);
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_64f_A50, src, dst, n) >= 0);
+
+    for (int i = 0; i < n; i++)
+    {
+        dst[i] = std::log(src[i]);
+    }
+}
+#else
+
 ////////////////////////////////////// EXP /////////////////////////////////////
 
 typedef union
@@ -1465,6 +1521,8 @@ void log64f( const double *x, double *y, int n )
         y[i] = y0;
     }
 }
+
+#endif // issue 7795
 
 //=============================================================================
 // for compatibility with 3.0

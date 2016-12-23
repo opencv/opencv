@@ -132,6 +132,7 @@ public slots:
     double getPropWindow(QString name);
     void setPropWindow(QString name, double flags );
     void setWindowTitle(QString name, QString title);
+    double getWindowVisible(QString name);
     double getRatioWindow(QString name);
     void setRatioWindow(QString name, double arg2 );
     void saveWindowParameters(QString name);
@@ -413,7 +414,7 @@ public:
 protected:
     void icvmouseEvent(QMouseEvent* event, type_mouse_event category);
     void icvmouseHandler(QMouseEvent* event, type_mouse_event category, int& cv_event, int& flags);
-    void icvmouseProcessing(QPointF pt, int cv_event, int flags);
+    virtual void icvmouseProcessing(QPointF pt, int cv_event, int flags);
 
     CvMouseCallback mouseCallback;
     void* mouseData;

@@ -1022,6 +1022,24 @@ around both axes.
 */
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
+enum RotateFlags {
+    ROTATE_90_CLOCKWISE = 0, //Rotate 90 degrees clockwise
+    ROTATE_180 = 1, //Rotate 180 degrees clockwise
+    ROTATE_90_COUNTERCLOCKWISE = 2, //Rotate 270 degrees clockwise
+};
+/** @brief Rotates a 2D array in multiples of 90 degrees.
+The function rotate rotates the array in one of three different ways:
+*   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90).
+*   Rotate by 180 degrees clockwise (rotateCode = ROTATE_180).
+*   Rotate by 270 degrees clockwise (rotateCode = ROTATE_270).
+@param src input array.
+@param dst output array of the same type as src.  The size is the same with ROTATE_180,
+and the rows and cols are switched for ROTATE_90 and ROTATE_270.
+@param rotateCode an enum to specify how to rotate the array; see the enum RotateFlags
+@sa transpose , repeat , completeSymm, flip, RotateFlags
+*/
+CV_EXPORTS_W void rotate(InputArray src, OutputArray dst, int rotateCode);
+
 /** @brief Fills the output array with repeated copies of the input array.
 
 The function cv::repeat duplicates the input array one or more times along each of the two axes:
@@ -1650,7 +1668,7 @@ m.cols or m.cols-1.
 @param dst output array of the same size and depth as src; it has as
 many channels as m.rows.
 @param m transformation 2x2 or 2x3 floating-point matrix.
-@sa perspectiveTransform, getAffineTransform, estimateRigidTransform, warpAffine, warpPerspective
+@sa perspectiveTransform, getAffineTransform, estimateAffine2D, warpAffine, warpPerspective
 */
 CV_EXPORTS_W void transform(InputArray src, OutputArray dst, InputArray m );
 
@@ -3027,7 +3045,8 @@ public:
 
      This is static template method of Algorithm. It's usage is following (in the case of SVM):
      @code
-     Ptr<SVM> svm = Algorithm::read<SVM>(fn);
+     cv::FileStorage fsRead("example.xml", FileStorage::READ);
+     Ptr<SVM> svm = Algorithm::read<SVM>(fsRead.root());
      @endcode
      In order to make this method work, the derived class must overwrite Algorithm::read(const
      FileNode& fn) and also have static create() method without parameters
@@ -3196,5 +3215,6 @@ template<> struct ParamType<uchar>
 #include "opencv2/core/cvstd.inl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/optim.hpp"
+#include "opencv2/core/ovx.hpp"
 
 #endif /*OPENCV_CORE_HPP*/

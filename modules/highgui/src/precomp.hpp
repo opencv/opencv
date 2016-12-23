@@ -123,6 +123,7 @@ double cvGetRatioWindow_QT(const char* name);
 void cvSetRatioWindow_QT(const char* name,double prop_value);
 
 double cvGetOpenGlProp_QT(const char* name);
+double cvGetPropVisible_QT(const char* name);
 #endif
 
 #endif /* __HIGHGUI_H_ */

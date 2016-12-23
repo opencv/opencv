@@ -245,7 +245,7 @@ where src[i] and dst[i] are the i-th points in src and dst, respectively
 when fullAffine=false.
 
 @sa
-getAffineTransform, getPerspectiveTransform, findHomography
+estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
  */
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
@@ -306,7 +306,7 @@ sample image_alignment.cpp that demonstrates the use of the function. Note that 
 an exception if algorithm does not converges.
 
 @sa
-estimateRigidTransform, findHomography
+estimateAffine2D, estimateAffinePartial2D, findHomography
  */
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
@@ -465,67 +465,67 @@ class CV_EXPORTS_W DualTVL1OpticalFlow : public DenseOpticalFlow
 public:
     //! @brief Time step of the numerical scheme
     /** @see setTau */
-    virtual double getTau() const = 0;
+    CV_WRAP virtual double getTau() const = 0;
     /** @copybrief getTau @see getTau */
-    virtual void setTau(double val) = 0;
+    CV_WRAP virtual void setTau(double val) = 0;
     //! @brief Weight parameter for the data term, attachment parameter
     /** @see setLambda */
-    virtual double getLambda() const = 0;
+    CV_WRAP virtual double getLambda() const = 0;
     /** @copybrief getLambda @see getLambda */
-    virtual void setLambda(double val) = 0;
+    CV_WRAP virtual void setLambda(double val) = 0;
     //! @brief Weight parameter for (u - v)^2, tightness parameter
     /** @see setTheta */
-    virtual double getTheta() const = 0;
+    CV_WRAP virtual double getTheta() const = 0;
     /** @copybrief getTheta @see getTheta */
-    virtual void setTheta(double val) = 0;
+    CV_WRAP virtual void setTheta(double val) = 0;
     //! @brief coefficient for additional illumination variation term
     /** @see setGamma */
-    virtual double getGamma() const = 0;
+    CV_WRAP virtual double getGamma() const = 0;
     /** @copybrief getGamma @see getGamma */
-    virtual void setGamma(double val) = 0;
+    CV_WRAP virtual void setGamma(double val) = 0;
     //! @brief Number of scales used to create the pyramid of images
     /** @see setScalesNumber */
-    virtual int getScalesNumber() const = 0;
+    CV_WRAP virtual int getScalesNumber() const = 0;
     /** @copybrief getScalesNumber @see getScalesNumber */
-    virtual void setScalesNumber(int val) = 0;
+    CV_WRAP virtual void setScalesNumber(int val) = 0;
     //! @brief Number of warpings per scale
     /** @see setWarpingsNumber */
-    virtual int getWarpingsNumber() const = 0;
+    CV_WRAP virtual int getWarpingsNumber() const = 0;
     /** @copybrief getWarpingsNumber @see getWarpingsNumber */
-    virtual void setWarpingsNumber(int val) = 0;
+    CV_WRAP virtual void setWarpingsNumber(int val) = 0;
     //! @brief Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time
     /** @see setEpsilon */
-    virtual double getEpsilon() const = 0;
+    CV_WRAP virtual double getEpsilon() const = 0;
     /** @copybrief getEpsilon @see getEpsilon */
-    virtual void setEpsilon(double val) = 0;
+    CV_WRAP virtual void setEpsilon(double val) = 0;
     //! @brief Inner iterations (between outlier filtering) used in the numerical scheme
     /** @see setInnerIterations */
-    virtual int getInnerIterations() const = 0;
+    CV_WRAP virtual int getInnerIterations() const = 0;
     /** @copybrief getInnerIterations @see getInnerIterations */
-    virtual void setInnerIterations(int val) = 0;
+    CV_WRAP virtual void setInnerIterations(int val) = 0;
     //! @brief Outer iterations (number of inner loops) used in the numerical scheme
     /** @see setOuterIterations */
-    virtual int getOuterIterations() const = 0;
+    CV_WRAP virtual int getOuterIterations() const = 0;
     /** @copybrief getOuterIterations @see getOuterIterations */
-    virtual void setOuterIterations(int val) = 0;
+    CV_WRAP virtual void setOuterIterations(int val) = 0;
     //! @brief Use initial flow
     /** @see setUseInitialFlow */
-    virtual bool getUseInitialFlow() const = 0;
+    CV_WRAP virtual bool getUseInitialFlow() const = 0;
     /** @copybrief getUseInitialFlow @see getUseInitialFlow */
-    virtual void setUseInitialFlow(bool val) = 0;
+    CV_WRAP virtual void setUseInitialFlow(bool val) = 0;
     //! @brief Step between scales (<1)
     /** @see setScaleStep */
-    virtual double getScaleStep() const = 0;
+    CV_WRAP virtual double getScaleStep() const = 0;
     /** @copybrief getScaleStep @see getScaleStep */
-    virtual void setScaleStep(double val) = 0;
+    CV_WRAP virtual void setScaleStep(double val) = 0;
     //! @brief Median filter kernel size (1 = no filter) (3 or 5)
     /** @see setMedianFiltering */
-    virtual int getMedianFiltering() const = 0;
+    CV_WRAP virtual int getMedianFiltering() const = 0;
     /** @copybrief getMedianFiltering @see getMedianFiltering */
-    virtual void setMedianFiltering(int val) = 0;
+    CV_WRAP virtual void setMedianFiltering(int val) = 0;
 
     /** @brief Creates instance of cv::DualTVL1OpticalFlow*/
-    static Ptr<DualTVL1OpticalFlow> create(
+    CV_WRAP static Ptr<DualTVL1OpticalFlow> create(
                                             double tau = 0.25,
                                             double lambda = 0.15,
                                             double theta = 0.3,
@@ -549,31 +549,31 @@ CV_EXPORTS_W Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
 class CV_EXPORTS_W FarnebackOpticalFlow : public DenseOpticalFlow
 {
 public:
-    virtual int getNumLevels() const = 0;
-    virtual void setNumLevels(int numLevels) = 0;
+    CV_WRAP virtual int getNumLevels() const = 0;
+    CV_WRAP virtual void setNumLevels(int numLevels) = 0;
 
-    virtual double getPyrScale() const = 0;
-    virtual void setPyrScale(double pyrScale) = 0;
+    CV_WRAP virtual double getPyrScale() const = 0;
+    CV_WRAP virtual void setPyrScale(double pyrScale) = 0;
 
-    virtual bool getFastPyramids() const = 0;
-    virtual void setFastPyramids(bool fastPyramids) = 0;
+    CV_WRAP virtual bool getFastPyramids() const = 0;
+    CV_WRAP virtual void setFastPyramids(bool fastPyramids) = 0;
 
-    virtual int getWinSize() const = 0;
-    virtual void setWinSize(int winSize) = 0;
+    CV_WRAP virtual int getWinSize() const = 0;
+    CV_WRAP virtual void setWinSize(int winSize) = 0;
 
-    virtual int getNumIters() const = 0;
-    virtual void setNumIters(int numIters) = 0;
+    CV_WRAP virtual int getNumIters() const = 0;
+    CV_WRAP virtual void setNumIters(int numIters) = 0;
 
-    virtual int getPolyN() const = 0;
-    virtual void setPolyN(int polyN) = 0;
+    CV_WRAP virtual int getPolyN() const = 0;
+    CV_WRAP virtual void setPolyN(int polyN) = 0;
 
-    virtual double getPolySigma() const = 0;
-    virtual void setPolySigma(double polySigma) = 0;
+    CV_WRAP virtual double getPolySigma() const = 0;
+    CV_WRAP virtual void setPolySigma(double polySigma) = 0;
 
-    virtual int getFlags() const = 0;
-    virtual void setFlags(int flags) = 0;
+    CV_WRAP virtual int getFlags() const = 0;
+    CV_WRAP virtual void setFlags(int flags) = 0;
 
-    static Ptr<FarnebackOpticalFlow> create(
+    CV_WRAP static Ptr<FarnebackOpticalFlow> create(
             int numLevels = 5,
             double pyrScale = 0.5,
             bool fastPyramids = false,
@@ -593,25 +593,25 @@ iterative Lucas-Kanade method with pyramids.
 @sa calcOpticalFlowPyrLK
 
 */
-class CV_EXPORTS SparsePyrLKOpticalFlow : public SparseOpticalFlow
+class CV_EXPORTS_W SparsePyrLKOpticalFlow : public SparseOpticalFlow
 {
 public:
-    virtual Size getWinSize() const = 0;
-    virtual void setWinSize(Size winSize) = 0;
+    CV_WRAP virtual Size getWinSize() const = 0;
+    CV_WRAP virtual void setWinSize(Size winSize) = 0;
 
-    virtual int getMaxLevel() const = 0;
-    virtual void setMaxLevel(int maxLevel) = 0;
+    CV_WRAP virtual int getMaxLevel() const = 0;
+    CV_WRAP virtual void setMaxLevel(int maxLevel) = 0;
 
-    virtual TermCriteria getTermCriteria() const = 0;
-    virtual void setTermCriteria(TermCriteria& crit) = 0;
+    CV_WRAP virtual TermCriteria getTermCriteria() const = 0;
+    CV_WRAP virtual void setTermCriteria(TermCriteria& crit) = 0;
 
-    virtual int getFlags() const = 0;
-    virtual void setFlags(int flags) = 0;
+    CV_WRAP virtual int getFlags() const = 0;
+    CV_WRAP virtual void setFlags(int flags) = 0;
 
-    virtual double getMinEigThreshold() const = 0;
-    virtual void setMinEigThreshold(double minEigThreshold) = 0;
+    CV_WRAP virtual double getMinEigThreshold() const = 0;
+    CV_WRAP virtual void setMinEigThreshold(double minEigThreshold) = 0;
 
-    static Ptr<SparsePyrLKOpticalFlow> create(
+    CV_WRAP static Ptr<SparsePyrLKOpticalFlow> create(
             Size winSize = Size(21, 21),
             int maxLevel = 3, TermCriteria crit =
             TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),

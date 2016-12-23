@@ -584,7 +584,7 @@ TEST(Core_InputOutput, FileStorageKey)
     EXPECT_NO_THROW(f << "key1" << "value1");
     EXPECT_NO_THROW(f << "_key2" << "value2");
     EXPECT_NO_THROW(f << "key_3" << "value3");
-    const std::string expected = "%YAML 1.0\n---\nkey1: value1\n_key2: value2\nkey_3: value3\n";
+    const std::string expected = "%YAML:1.0\n---\nkey1: value1\n_key2: value2\nkey_3: value3\n";
     ASSERT_STREQ(f.releaseAndGetString().c_str(), expected.c_str());
 }
 
@@ -927,4 +927,72 @@ TEST(Core_InputOutput, filestorage_json_comment)
     });
 
     EXPECT_EQ(str, String("value"));
+}
+
+TEST(Core_InputOutput, filestorage_utf8_bom)
+{
+    EXPECT_NO_THROW(
+    {
+        String content ="\xEF\xBB\xBF<?xml version=\"1.0\"?>\n<opencv_storage>\n</opencv_storage>\n";
+        cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+        fs.release();
+    });
+    EXPECT_NO_THROW(
+    {
+        String content ="\xEF\xBB\xBF%YAML:1.0\n";
+        cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+        fs.release();
+    });
+    EXPECT_NO_THROW(
+    {
+        String content ="\xEF\xBB\xBF{\n}\n";
+        cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+        fs.release();
+    });
+}
+
+TEST(Core_InputOutput, filestorage_vec_vec_io)
+{
+    std::vector<std::vector<Mat> > outputMats(3);
+    for(size_t i = 0; i < outputMats.size(); i++)
+    {
+        outputMats[i].resize(i+1);
+        for(size_t j = 0; j < outputMats[i].size(); j++)
+        {
+            outputMats[i][j] = Mat::eye((int)i + 1, (int)i + 1, CV_8U);
+        }
+    }
+
+    String fileName = "vec_test.";
+
+    std::vector<String> formats;
+    formats.push_back("xml");
+    formats.push_back("yml");
+    formats.push_back("json");
+
+    for(size_t i = 0; i < formats.size(); i++)
+    {
+        FileStorage writer(fileName + formats[i], FileStorage::WRITE);
+        writer << "vecVecMat" << outputMats;
+        writer.release();
+
+        FileStorage reader(fileName + formats[i], FileStorage::READ);
+        std::vector<std::vector<Mat> > testMats;
+        reader["vecVecMat"] >> testMats;
+
+        ASSERT_EQ(testMats.size(), testMats.size());
+
+        for(size_t j = 0; j < testMats.size(); j++)
+        {
+            ASSERT_EQ(testMats[j].size(), outputMats[j].size());
+
+            for(size_t k = 0; k < testMats[j].size(); k++)
+            {
+                ASSERT_TRUE(norm(outputMats[j][k] - testMats[j][k], NORM_INF) == 0);
+            }
+        }
+
+        reader.release();
+        remove((fileName + formats[i]).c_str());
+    }
 }

@@ -50,6 +50,7 @@ using namespace std;
 using namespace cv;
 
 bool try_use_gpu = false;
+Stitcher::Mode mode = Stitcher::PANORAMA;
 vector<Mat> imgs;
 string result_name = "result.jpg";
 
@@ -62,8 +63,8 @@ int main(int argc, char* argv[])
     if (retval) return -1;
 
     Mat pano;
-    Stitcher stitcher = Stitcher::createDefault(try_use_gpu);
-    Stitcher::Status status = stitcher.stitch(imgs, pano);
+    Ptr<Stitcher> stitcher = Stitcher::create(mode, try_use_gpu);
+    Stitcher::Status status = stitcher->stitch(imgs, pano);
 
     if (status != Stitcher::OK)
     {
@@ -79,12 +80,16 @@ int main(int argc, char* argv[])
 void printUsage()
 {
     cout <<
-        "Rotation model images stitcher.\n\n"
+        "Images stitcher.\n\n"
         "stitching img1 img2 [...imgN]\n\n"
         "Flags:\n"
         "  --try_use_gpu (yes|no)\n"
         "      Try to use GPU. The default value is 'no'. All default values\n"
         "      are for CPU mode.\n"
+        "  --mode (panorama|scans)\n"
+        "      Determines configuration of stitcher. The default is 'panorama',\n"
+        "      mode suitable for creating photo panoramas. Option 'scans' is suitable\n"
+        "      for stitching materials under affine transformation, such as scans.\n"
         "  --output <result_img>\n"
         "      The default is 'result.jpg'.\n";
 }
@@ -120,6 +125,19 @@ int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--output")
         {
             result_name = argv[i + 1];
+            i++;
+        }
+        else if (string(argv[i]) == "--mode")
+        {
+            if (string(argv[i + 1]) == "panorama")
+                mode = Stitcher::PANORAMA;
+            else if (string(argv[i + 1]) == "scans")
+                mode = Stitcher::SCANS;
+            else
+            {
+                cout << "Bad --mode flag value\n";
+                return -1;
+            }
             i++;
         }
         else
