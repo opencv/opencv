@@ -1,9 +1,5 @@
 #include "test_precomp.hpp"
 #include <cmath>
-#ifndef NAN
-#include <limits> // numeric_limits<T>::quiet_NaN()
-#define NAN std::numeric_limits<float>::quiet_NaN()
-#endif
 
 using namespace cv;
 using namespace std;
@@ -1895,7 +1891,7 @@ TEST(MinMaxLoc, regression_4955_nans)
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
     cv::minMaxLoc(one_mat, NULL, NULL, NULL, NULL);
 
-    cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(NAN));
+    cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(std::numeric_limits<float>::quiet_NaN()));
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
 

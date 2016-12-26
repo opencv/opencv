@@ -2085,7 +2085,7 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
     Mat corners = _corners.getMat();
     if( corners.empty() )
         return;
-    Mat image = _image.getMat(); CvMat c_image = _image.getMat();
+    Mat image = _image.getMat(); CvMat c_image = image;
     int nelems = corners.checkVector(2, CV_32F, true);
     CV_Assert(nelems >= 0);
     cvDrawChessboardCorners( &c_image, patternSize, corners.ptr<CvPoint2D32f>(),

@@ -11,6 +11,7 @@
 #include "opencv2/cudacodec.hpp"
 #include "opencv2/highgui.hpp"
 
+using namespace cv;
 int main(int argc, const char* argv[])
 {
     if (argc != 2)

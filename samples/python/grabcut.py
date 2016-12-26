@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
         cv2.imshow('output',output)
         cv2.imshow('input',img)
-        k = 0xFF & cv2.waitKey(1)
+        k = cv2.waitKey(1)
 
         # key bindings
         if k == 27:         # esc to exit

@@ -1662,19 +1662,14 @@ namespace cv
 
         if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
             return false; //Process isolated borders only
-        vx_border_t border;
+        vx_enum border;
         switch (borderType & ~BORDER_ISOLATED)
         {
         case BORDER_CONSTANT:
-            border.mode = VX_BORDER_CONSTANT;
-#if VX_VERSION > VX_VERSION_1_0
-            border.constant_value.U8 = (vx_uint8)(0);
-#else
-            border.constant_value = (vx_uint32)(0);
-#endif
+            border = VX_BORDER_CONSTANT;
             break;
         case BORDER_REPLICATE:
-            border.mode = VX_BORDER_REPLICATE;
+            border = VX_BORDER_REPLICATE;
             break;
         default:
             return false;
@@ -1701,7 +1696,7 @@ namespace cv
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
-            ctx.setImmediateBorder(border);
+            ctx.setImmediateBorder(border, (vx_uint8)(0));
             if (ddepth == CV_8U && ksize.width == 3 && ksize.height == 3 && normalize)
             {
                 ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
@@ -2229,19 +2224,14 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
         return false; //Process isolated borders only
-    vx_border_t border;
+    vx_enum border;
     switch (borderType & ~BORDER_ISOLATED)
     {
     case BORDER_CONSTANT:
-        border.mode = VX_BORDER_CONSTANT;
-#if VX_VERSION > VX_VERSION_1_0
-        border.constant_value.U8 = (vx_uint8)(0);
-#else
-        border.constant_value = (vx_uint32)(0);
-#endif
+        border = VX_BORDER_CONSTANT;
         break;
     case BORDER_REPLICATE:
-        border.mode = VX_BORDER_REPLICATE;
+        border = VX_BORDER_REPLICATE;
         break;
     default:
         return false;
@@ -2268,7 +2258,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
         //since OpenVX standart says nothing about thread-safety for now
         ivx::border_t prevBorder = ctx.immediateBorder();
-        ctx.setImmediateBorder(border);
+        ctx.setImmediateBorder(border, (vx_uint8)(0));
         if (ksize.width == 3 && ksize.height == 3 && (sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) && (sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON))
         {
             ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
@@ -3369,9 +3359,6 @@ namespace cv
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
 
-        vx_border_t border;
-        border.mode = VX_BORDER_REPLICATE;
-
         try
         {
             ivx::Context ctx = ivx::Context::create();
@@ -3395,7 +3382,7 @@ namespace cv
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
-            ctx.setImmediateBorder(border);
+            ctx.setImmediateBorder(VX_BORDER_REPLICATE);
 #ifdef VX_VERSION_1_1
             if (ksize == 3)
 #endif

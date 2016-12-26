@@ -51,8 +51,8 @@ int main( void )
         detectAndDisplay( frame );
 
         //-- bail out if escape was pressed
-        int c = waitKey(10);
-        if( (char)c == 27 ) { break; }
+        char c = (char)waitKey(10);
+        if( c == 27 ) { break; }
     }
     return 0;
 }

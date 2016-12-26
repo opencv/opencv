@@ -795,6 +795,13 @@ public:
     Mat(int ndims, const int* sizes, int type);
 
     /** @overload
+    @param sizes Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    */
+    Mat(const std::vector<int>& sizes, int type);
+
+    /** @overload
     @param ndims Array dimensionality.
     @param sizes Array of integers specifying an n-dimensional array shape.
     @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
@@ -804,6 +811,17 @@ public:
     Mat::operator=(const Scalar& value) .
     */
     Mat(int ndims, const int* sizes, int type, const Scalar& s);
+
+    /** @overload
+    @param sizes Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    @param s An optional value to initialize each matrix element with. To set all the matrix elements to
+    the particular value after the construction, use the assignment operator
+    Mat::operator=(const Scalar& value) .
+    */
+    Mat(const std::vector<int>& sizes, int type, const Scalar& s);
+
 
     /** @overload
     @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied
@@ -862,6 +880,20 @@ public:
     Mat(int ndims, const int* sizes, int type, void* data, const size_t* steps=0);
 
     /** @overload
+    @param sizes Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    @param data Pointer to the user data. Matrix constructors that take data and step parameters do not
+    allocate matrix data. Instead, they just initialize the matrix header that points to the specified
+    data, which means that no data is copied. This operation is very efficient and can be used to
+    process external data using OpenCV functions. The external data is not automatically deallocated, so
+    you should take care of it.
+    @param steps Array of ndims-1 steps in case of a multi-dimensional array (the last step is always
+    set to the element size). If not specified, the matrix is assumed to be continuous.
+    */
+    Mat(const std::vector<int>& sizes, int type, void* data, const size_t* steps=0);
+
+    /** @overload
     @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied
     by these constructors. Instead, the header pointing to m data or its sub-array is constructed and
     associated with it. The reference counter, if any, is incremented. So, when you modify the matrix
@@ -892,6 +924,16 @@ public:
     @param ranges Array of selected ranges of m along each dimensionality.
     */
     Mat(const Mat& m, const Range* ranges);
+
+    /** @overload
+    @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied
+    by these constructors. Instead, the header pointing to m data or its sub-array is constructed and
+    associated with it. The reference counter, if any, is incremented. So, when you modify the matrix
+    formed using such a constructor, you also modify the corresponding elements of m . If you want to
+    have an independent copy of the sub-array, use Mat::clone() .
+    @param ranges Array of selected ranges of m along each dimensionality.
+    */
+    Mat(const Mat& m, const std::vector<Range>& ranges);
 
     /** @overload
     @param vec STL vector whose elements form the matrix. The matrix has a single column and the number
@@ -1328,6 +1370,12 @@ public:
     */
     void create(int ndims, const int* sizes, int type);
 
+    /** @overload
+    @param sizes Array of integers specifying a new array shape.
+    @param type New matrix type.
+    */
+    void create(const std::vector<int>& sizes, int type);
+
     /** @brief Increments the reference counter.
 
     The method increments the reference counter associated with the matrix data. If the matrix header
@@ -1477,6 +1525,11 @@ public:
     @param ranges Array of selected ranges along each array dimension.
     */
     Mat operator()( const Range* ranges ) const;
+
+    /** @overload
+    @param ranges Array of selected ranges along each array dimension.
+    */
+    Mat operator()(const std::vector<Range>& ranges) const;
 
     // //! converts header to CvMat; no data is copied
     // operator CvMat() const;
@@ -2016,6 +2069,8 @@ public:
     Mat_(const Mat_& m, const Rect& roi);
     //! selects a submatrix, n-dim version
     Mat_(const Mat_& m, const Range* ranges);
+    //! selects a submatrix, n-dim version
+    Mat_(const Mat_& m, const std::vector<Range>& ranges);
     //! from a matrix expression
     explicit Mat_(const MatExpr& e);
     //! makes a matrix out of Vec, std::vector, Point_ or Point3_. The matrix will have a single column
@@ -2085,6 +2140,7 @@ public:
     Mat_ operator()( const Range& rowRange, const Range& colRange ) const;
     Mat_ operator()( const Rect& roi ) const;
     Mat_ operator()( const Range* ranges ) const;
+    Mat_ operator()(const std::vector<Range>& ranges) const;
 
     //! more convenient forms of row and element access operators
     _Tp* operator [](int y);
@@ -2189,6 +2245,7 @@ public:
     UMat(const UMat& m, const Range& rowRange, const Range& colRange=Range::all());
     UMat(const UMat& m, const Rect& roi);
     UMat(const UMat& m, const Range* ranges);
+    UMat(const UMat& m, const std::vector<Range>& ranges);
     //! builds matrix from std::vector with or without copying the data
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
     //! builds matrix from cv::Vec; the data is copied by default
@@ -2273,6 +2330,7 @@ public:
     void create(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     void create(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     void create(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(const std::vector<int>& sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! increases the reference counter; use with care to avoid memleaks
     void addref();
@@ -2294,6 +2352,7 @@ public:
     UMat operator()( Range rowRange, Range colRange ) const;
     UMat operator()( const Rect& roi ) const;
     UMat operator()( const Range* ranges ) const;
+    UMat operator()(const std::vector<Range>& ranges) const;
 
     //! returns true iff the matrix data is continuous
     // (i.e. when there are no gaps between successive rows).

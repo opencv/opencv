@@ -22,6 +22,18 @@ Details: TBD
 #include <VX/vx.h>
 #include <VX/vxu.h>
 
+#ifndef VX_VERSION_1_1
+// 1.1 to 1.0 backward compatibility defines
+
+static const vx_enum VX_INTERPOLATION_BILINEAR = VX_INTERPOLATION_TYPE_BILINEAR;
+static const vx_enum VX_INTERPOLATION_AREA = VX_INTERPOLATION_TYPE_AREA;
+static const vx_enum VX_INTERPOLATION_NEAREST_NEIGHBOR = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
+
+static const vx_enum VX_BORDER_CONSTANT = VX_BORDER_MODE_CONSTANT;
+static const vx_enum VX_BORDER_REPLICATE = VX_BORDER_MODE_REPLICATE;
+
+#endif
+
 #ifndef IVX_USE_CXX98
     // checking compiler
     #if __cplusplus < 201103L && (!defined(_MSC_VER) || _MSC_VER < 1800)
@@ -56,6 +68,7 @@ Details: TBD
 #include <utility>
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 #ifndef IVX_USE_CXX98
     #include <type_traits>
@@ -190,14 +203,14 @@ inline vx_size enumToTypeSize(vx_enum type)
 template<typename T> struct TypeToEnum {};
 template<> struct TypeToEnum<vx_char>     { static const vx_enum value = VX_TYPE_CHAR; };
 template<> struct TypeToEnum<vx_int8>     { static const vx_enum value = VX_TYPE_INT8; };
-template<> struct TypeToEnum<vx_uint8>    { static const vx_enum value = VX_TYPE_UINT8; };
-template<> struct TypeToEnum<vx_int16>    { static const vx_enum value = VX_TYPE_INT16; };
-template<> struct TypeToEnum<vx_uint16>   { static const vx_enum value = VX_TYPE_UINT16; };
-template<> struct TypeToEnum<vx_int32>    { static const vx_enum value = VX_TYPE_INT32; };
-template<> struct TypeToEnum<vx_uint32>   { static const vx_enum value = VX_TYPE_UINT32; };
+template<> struct TypeToEnum<vx_uint8>    { static const vx_enum value = VX_TYPE_UINT8, imgType = VX_DF_IMAGE_U8; };
+template<> struct TypeToEnum<vx_int16>    { static const vx_enum value = VX_TYPE_INT16, imgType = VX_DF_IMAGE_S16; };
+template<> struct TypeToEnum<vx_uint16>   { static const vx_enum value = VX_TYPE_UINT16, imgType = VX_DF_IMAGE_U16; };
+template<> struct TypeToEnum<vx_int32>    { static const vx_enum value = VX_TYPE_INT32, imgType = VX_DF_IMAGE_S32; };
+template<> struct TypeToEnum<vx_uint32>   { static const vx_enum value = VX_TYPE_UINT32, imgType = VX_DF_IMAGE_U32; };
 template<> struct TypeToEnum<vx_int64>    { static const vx_enum value = VX_TYPE_INT64; };
 template<> struct TypeToEnum<vx_uint64>   { static const vx_enum value = VX_TYPE_UINT64; };
-template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32; };
+template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32, imgType = VX_DF_IMAGE('F', '0', '3', '2'); };
 template<> struct TypeToEnum<vx_float64>  { static const vx_enum value = VX_TYPE_FLOAT64; };
 template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE_BOOL; };
 template<> struct TypeToEnum<vx_keypoint_t> {static const vx_enum value = VX_TYPE_KEYPOINT; };
@@ -343,6 +356,15 @@ template <> struct RefTypeTraits <vx_lut>
     static vx_status release(vxType& ref) { return vxReleaseLUT(&ref); }
 };
 
+class Pyramid;
+template <> struct RefTypeTraits <vx_pyramid>
+{
+    typedef vx_pyramid vxType;
+    typedef Pyramid wrapperType;
+    static const vx_enum vxTypeEnum = VX_TYPE_PYRAMID;
+    static vx_status release(vxType& ref) { return vxReleasePyramid(&ref); }
+};
+
 class Distribution;
 template <> struct RefTypeTraits <vx_distribution>
 {
@@ -350,6 +372,15 @@ template <> struct RefTypeTraits <vx_distribution>
     typedef Distribution wrapperType;
     static const vx_enum vxTypeEnum = VX_TYPE_DISTRIBUTION;
     static vx_status release(vxType& ref) { return vxReleaseDistribution(&ref); }
+};
+
+class Remap;
+template <> struct RefTypeTraits <vx_remap>
+{
+    typedef vx_remap vxType;
+    typedef Remap wrapperType;
+    static const vx_enum vxTypeEnum = VX_TYPE_REMAP;
+    static vx_status release(vxType& ref) { return vxReleaseRemap(&ref); }
 };
 
 #ifdef IVX_USE_CXX98
@@ -910,6 +941,34 @@ public:
     { border_t bm = {mode, val}; setImmediateBorder(bm); }
 
     /// vxSetContextAttribute(BORDER) wrapper
+    template <typename T>
+    void setImmediateBorder(vx_enum mode, const T& _val)
+    {
+        vx_pixel_value_t val;
+        switch (TypeToEnum<T>::value)
+        {
+        case VX_TYPE_UINT8:
+            val.U8 = _val;
+            break;
+        case VX_TYPE_INT16:
+            val.S16 = _val;
+            break;
+        case VX_TYPE_UINT16:
+            val.U16 = _val;
+            break;
+        case VX_TYPE_INT32:
+            val.S32 = _val;
+            break;
+        case VX_TYPE_UINT32:
+            val.U32 = _val;
+            break;
+        default:
+            throw WrapperError("Unsupported constant border value type");
+        }
+        setImmediateBorder(mode, val);
+    }
+
+    /// vxSetContextAttribute(BORDER) wrapper
     void setImmediateBorder(vx_enum mode)
     { vx_pixel_value_t val = {}; setImmediateBorder(mode, val); }
 #endif
@@ -1265,6 +1324,34 @@ static const vx_enum
     { vx_border_t bm = {mode, val}; setBorder(bm); }
 
     /// vxSetNodeAttribute(BORDER) wrapper
+    template <typename T>
+    void setBorder(vx_enum mode, const T& _val)
+    {
+        vx_pixel_value_t val;
+        switch (TypeToEnum<T>::value)
+        {
+        case VX_TYPE_UINT8:
+            val.U8 = _val;
+            break;
+        case VX_TYPE_INT16:
+            val.S16 = _val;
+            break;
+        case VX_TYPE_UINT16:
+            val.U16 = _val;
+            break;
+        case VX_TYPE_INT32:
+            val.S32 = _val;
+            break;
+        case VX_TYPE_UINT32:
+            val.U32 = _val;
+            break;
+        default:
+            throw WrapperError("Unsupported constant border value type");
+        }
+        setBorder(mode, val);
+    }
+
+    /// vxSetNodeAttribute(BORDER) wrapper
     void setBorder(vx_enum mode)
     { vx_pixel_value_t val = {}; setBorder(mode, val); }
 #endif
@@ -1302,6 +1389,25 @@ public:
     static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const void* value)
     { return Image(vxCreateUniformImage(context, width, height, format, value)); }
 #endif
+    template <typename T>
+    static Image createUniform(vx_context context, vx_uint32 width, vx_uint32 height, vx_df_image format, const T value)
+    {
+#if VX_VERSION > VX_VERSION_1_0
+        vx_pixel_value_t pixel;
+        switch (format)
+        {
+        case VX_DF_IMAGE_U8:pixel.U8 = (vx_uint8)value; break;
+        case VX_DF_IMAGE_S16:pixel.S16 = (vx_int16)value; break;
+        case VX_DF_IMAGE_U16:pixel.U16 = (vx_uint16)value; break;
+        case VX_DF_IMAGE_S32:pixel.S32 = (vx_int32)value; break;
+        case VX_DF_IMAGE_U32:pixel.U32 = (vx_uint32)value; break;
+        default:throw ivx::WrapperError("uniform image type unsupported by this call");
+        }
+        return Image(vxCreateUniformImage(context, width, height, format, &pixel));
+#else
+        return Image(vxCreateUniformImage(context, width, height, format, &value));
+#endif
+    }
 
     /// Planes number for the specified image format (fourcc)
     /// \return 0 for unknown formats
@@ -1513,6 +1619,15 @@ static const vx_enum
         return v;
     }
 #endif // VX_VERSION_1_1
+
+    /// vxSetImageAttribute() wrapper
+    template<typename T>
+    void setAttribute(vx_enum att, T& value) const
+    { IVX_CHECK_STATUS(vxSetImageAttribute(ref, att, &value, sizeof(value))); }
+
+    /// vxSetImageAttribute(SPACE) wrapper
+    void setColorSpace(const vx_enum& sp)
+    { setAttribute(VX_IMAGE_SPACE, sp); }
 
     /// vxGetValidRegionImage() wrapper
     vx_rectangle_t getValidRegion() const
@@ -1804,7 +1919,9 @@ public:
         swap(_planeIdx, p._planeIdx);
 #endif
         swap(_img, p._img);
+#ifdef IVX_USE_OPENCV
         swap(_m, p._m);
+#endif
     }
 #endif
 
@@ -2756,6 +2873,74 @@ public:
 };
 
 /*
+ * Pyramid
+ */
+class Pyramid : public RefWrapper<vx_pyramid>
+{
+public:
+    IVX_REF_STD_CTORS_AND_ASSIGNMENT(Pyramid)
+
+    static Pyramid create(vx_context context, vx_size levels, vx_float32 scale,
+                          vx_uint32 width, vx_uint32 height, vx_df_image format)
+    {return Pyramid(vxCreatePyramid(context, levels, scale, width, height, format));}
+
+    static Pyramid createVirtual(vx_graph graph, vx_size levels, vx_float32 scale,
+                                 vx_uint32 width, vx_uint32 height, vx_df_image format)
+    {return Pyramid(vxCreateVirtualPyramid(graph, levels, scale, width, height, format));}
+
+#ifndef VX_VERSION_1_1
+    static const vx_enum
+        VX_PYRAMID_LEVELS = VX_PYRAMID_ATTRIBUTE_LEVELS,
+        VX_PYRAMID_SCALE  = VX_PYRAMID_ATTRIBUTE_SCALE,
+        VX_PYRAMID_WIDTH  = VX_PYRAMID_ATTRIBUTE_WIDTH,
+        VX_PYRAMID_HEIGHT = VX_PYRAMID_ATTRIBUTE_HEIGHT,
+        VX_PYRAMID_FORMAT = VX_PYRAMID_ATTRIBUTE_FORMAT;
+#endif
+
+    template<typename T>
+    void query(vx_enum att, T& value) const
+    { IVX_CHECK_STATUS( vxQueryPyramid(ref, att, &value, sizeof(value)) ); }
+
+    vx_size levels() const
+    {
+        vx_size l;
+        query(VX_PYRAMID_LEVELS, l);
+        return l;
+    }
+
+    vx_float32 scale() const
+    {
+        vx_float32 s;
+        query(VX_PYRAMID_SCALE, s);
+        return s;
+    }
+
+    vx_uint32 width() const
+    {
+        vx_uint32 v;
+        query(VX_PYRAMID_WIDTH, v);
+        return v;
+    }
+
+    vx_uint32 height() const
+    {
+        vx_uint32 v;
+        query(VX_PYRAMID_HEIGHT, v);
+        return v;
+    }
+
+    vx_df_image format() const
+    {
+        vx_df_image f;
+        query(VX_PYRAMID_FORMAT, f);
+        return f;
+    }
+
+    Image getLevel(vx_uint32 index)
+    { return Image(vxGetPyramidLevel(ref, index)); }
+};
+
+/*
 * Distribution
 */
 class Distribution : public RefWrapper<vx_distribution>
@@ -2918,6 +3103,148 @@ public:
             )) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         if (m.type() != enumToCVType(dataType())) throw WrapperError(std::string(__func__) + "(): source type is wrong");
         copyFrom(m.isContinuous() ? m.ptr() : m.clone().ptr());
+    }
+#endif //IVX_USE_OPENCV
+};
+
+/*
+* Remap
+*/
+class Remap : public RefWrapper<vx_remap>
+{
+public:
+    IVX_REF_STD_CTORS_AND_ASSIGNMENT(Remap);
+
+    static Remap create(vx_context context, vx_uint32 src_width, vx_uint32 src_height, vx_uint32 dst_width, vx_uint32 dst_height)
+    {
+        return Remap(vxCreateRemap(context, src_width, src_height, dst_width, dst_height));
+    }
+
+#ifndef VX_VERSION_1_1
+    static const vx_enum
+        VX_REMAP_SOURCE_WIDTH = VX_REMAP_ATTRIBUTE_SOURCE_WIDTH,
+        VX_REMAP_SOURCE_HEIGHT = VX_REMAP_ATTRIBUTE_SOURCE_HEIGHT,
+        VX_REMAP_DESTINATION_WIDTH = VX_REMAP_ATTRIBUTE_DESTINATION_WIDTH,
+        VX_REMAP_DESTINATION_HEIGHT = VX_REMAP_ATTRIBUTE_DESTINATION_HEIGHT;
+#endif
+
+    template<typename T>
+    void query(vx_enum att, T& value) const
+    { IVX_CHECK_STATUS(vxQueryRemap(ref, att, &value, sizeof(value))); }
+
+    vx_uint32 srcWidth() const
+    {
+        vx_uint32 v;
+        query(VX_REMAP_SOURCE_WIDTH, v);
+        return v;
+    }
+
+    vx_uint32 srcHeight() const
+    {
+        vx_uint32 v;
+        query(VX_REMAP_SOURCE_HEIGHT, v);
+        return v;
+    }
+
+    vx_uint32 dstWidth() const
+    {
+        vx_uint32 v;
+        query(VX_REMAP_DESTINATION_WIDTH, v);
+        return v;
+    }
+
+    vx_uint32 dstHeight() const
+    {
+        vx_uint32 v;
+        query(VX_REMAP_DESTINATION_HEIGHT, v);
+        return v;
+    }
+
+    vx_uint32 srcCoordType() const
+    { return VX_TYPE_FLOAT32; }
+
+    vx_uint32 dstCoordType() const
+    { return VX_TYPE_UINT32; }
+
+    void setMapping(vx_uint32 dst_x, vx_uint32 dst_y, vx_float32 src_x, vx_float32 src_y)
+    { IVX_CHECK_STATUS(vxSetRemapPoint(ref, dst_x, dst_y, src_x, src_y)); }
+
+    void getMapping(vx_uint32 dst_x, vx_uint32 dst_y, vx_float32 &src_x, vx_float32 &src_y) const
+    { IVX_CHECK_STATUS(vxGetRemapPoint(ref, dst_x, dst_y, &src_x, &src_y)); }
+
+#ifdef IVX_USE_OPENCV
+    void setMappings(const cv::Mat& map_x, const cv::Mat& map_y)
+    {
+        if (map_x.type() != enumToCVType(srcCoordType()) || map_y.type() != enumToCVType(srcCoordType()))
+            throw WrapperError(std::string(__func__) + "(): mapping type is wrong");
+        if ((vx_uint32)(map_x.rows) != dstHeight() || (vx_uint32)(map_x.cols) != dstWidth())
+            throw WrapperError(std::string(__func__) + "(): x mapping size is wrong");
+        if ((vx_uint32)(map_y.rows) != dstHeight() || (vx_uint32)(map_y.cols) != dstWidth())
+            throw WrapperError(std::string(__func__) + "(): y mapping size is wrong");
+
+        for (vx_uint32 y = 0; y < dstHeight(); y++)
+        {
+            const vx_float32* map_x_line = map_x.ptr<vx_float32>(y);
+            const vx_float32* map_y_line = map_y.ptr<vx_float32>(y);
+            for (vx_uint32 x = 0; x < dstWidth(); x++)
+                setMapping(x, y, map_x_line[x], map_y_line[x]);
+        }
+    }
+
+    void setMappings(const cv::Mat& map)
+    {
+        if (map.depth() != CV_MAT_DEPTH(enumToCVType(srcCoordType())) || map.channels() != 2)
+            throw WrapperError(std::string(__func__) + "(): mapping type is wrong");
+        if ((vx_uint32)(map.rows) != dstHeight() || (vx_uint32)(map.cols) != dstWidth())
+            throw WrapperError(std::string(__func__) + "(): x mapping size is wrong");
+
+        for (vx_uint32 y = 0; y < dstHeight(); y++)
+        {
+            const vx_float32* map_line = map.ptr<vx_float32>(y);
+            for (vx_uint32 x = 0; x < 2*dstWidth(); x+=2)
+                setMapping(x, y, map_line[x], map_line[x+1]);
+        }
+    }
+
+    void getMappings(cv::Mat& map_x, cv::Mat& map_y) const
+    {
+        if (map_x.type() != enumToCVType(srcCoordType()) || map_y.type() != enumToCVType(srcCoordType()))
+            throw WrapperError(std::string(__func__) + "(): mapping type is wrong");
+        if (((vx_uint32)(map_x.rows) != dstHeight() || (vx_uint32)(map_x.cols) != dstWidth()) && !map_x.empty())
+            throw WrapperError(std::string(__func__) + "(): x mapping size is wrong");
+        if (((vx_uint32)(map_y.rows) != dstHeight() || (vx_uint32)(map_y.cols) != dstWidth()) && !map_y.empty())
+            throw WrapperError(std::string(__func__) + "(): y mapping size is wrong");
+
+        if (map_x.empty())
+            map_x = cv::Mat((int)dstHeight(), (int)dstWidth(), enumToCVType(srcCoordType()));
+        if (map_y.empty())
+            map_y = cv::Mat((int)dstHeight(), (int)dstWidth(), enumToCVType(srcCoordType()));
+
+        for (vx_uint32 y = 0; y < dstHeight(); y++)
+        {
+            vx_float32* map_x_line = map_x.ptr<vx_float32>(y);
+            vx_float32* map_y_line = map_y.ptr<vx_float32>(y);
+            for (vx_uint32 x = 0; x < dstWidth(); x++)
+                getMapping(x, y, map_x_line[x], map_y_line[x]);
+        }
+    }
+
+    void getMappings(cv::Mat& map) const
+    {
+        if (map.depth() != CV_MAT_DEPTH(enumToCVType(srcCoordType())) || map.channels() != 2)
+            throw WrapperError(std::string(__func__) + "(): mapping type is wrong");
+        if (((vx_uint32)(map.rows) != dstHeight() || (vx_uint32)(map.cols) != dstWidth()) && !map.empty())
+            throw WrapperError(std::string(__func__) + "(): x mapping size is wrong");
+
+        if (map.empty())
+            map = cv::Mat((int)dstHeight(), (int)dstWidth(), CV_MAKETYPE(CV_MAT_DEPTH(enumToCVType(srcCoordType())),2));
+
+        for (vx_uint32 y = 0; y < dstHeight(); y++)
+        {
+            vx_float32* map_line = map.ptr<vx_float32>(y);
+            for (vx_uint32 x = 0; x < 2*dstWidth(); x+=2)
+                getMapping(x, y, map_line[x], map_line[x+1]);
+        }
     }
 #endif //IVX_USE_OPENCV
 };
