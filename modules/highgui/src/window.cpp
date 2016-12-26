@@ -201,9 +201,24 @@ double cv::getWindowProperty(const String& winname, int prop_id)
     return cvGetWindowProperty(winname.c_str(), prop_id);
 }
 
-int cv::waitKey(int delay)
+int cv::waitKeyEx(int delay)
 {
     return cvWaitKey(delay);
+}
+
+int cv::waitKey(int delay)
+{
+    int code = waitKeyEx(delay);
+#ifndef HAVE_WINRT
+    static int use_legacy = -1;
+    if (use_legacy < 0)
+    {
+        use_legacy = getenv("OPENCV_LEGACY_WAITKEY") != NULL ? 1 : 0;
+    }
+    if (use_legacy > 0)
+        return code;
+#endif
+    return code & 0xff;
 }
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,

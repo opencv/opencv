@@ -41,7 +41,7 @@ int main()
     createTrackbar("Low B","Object Detection", &low_b, 255, on_low_b_thresh_trackbar);
     createTrackbar("High B","Object Detection", &high_b, 255, on_high_b_thresh_trackbar);
     //! [trackbar]
-    while(char(waitKey(1))!='q'){
+    while((char)waitKey(1)!='q'){
         //! [while]
         cap>>frame;
         if(frame.empty())

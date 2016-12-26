@@ -4644,31 +4644,50 @@ static bool _openvx_cvt(const T* src, size_t sstep,
 {
     using namespace ivx;
 
-    if(!(continuousSize.width > 0 && continuousSize.height > 0 && sstep > 0 && dstep > 0))
+    if(!(continuousSize.width > 0 && continuousSize.height > 0))
     {
         return true;
     }
-
-    CV_Assert(sstep / sizeof(T) == dstep / sizeof(DT));
 
     //.height is for number of continuous pieces
     //.width  is for length of one piece
     Size imgSize = continuousSize;
     if(continuousSize.height == 1)
     {
-        //continuous case
-        imgSize.width  = sstep / sizeof(T);
-        imgSize.height = continuousSize.width / (sstep / sizeof(T));
+        if(sstep / sizeof(T) == dstep / sizeof(DT) && sstep / sizeof(T) > 0 &&
+           continuousSize.width % (sstep / sizeof(T)) == 0)
+        {
+            //continuous n-lines image
+            imgSize.width  = sstep / sizeof(T);
+            imgSize.height = continuousSize.width / (sstep / sizeof(T));
+        }
+        else
+        {
+            //1-row image with possibly incorrect step
+            sstep = continuousSize.width * sizeof(T);
+            dstep = continuousSize.width * sizeof(DT);
+        }
     }
+
+    int srcType = DataType<T>::type, dstType = DataType<DT>::type;
 
     try
     {
         Context context = Context::create();
-        Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(DataType<T>::type),
+
+        // Other conversions are marked as "experimental"
+        if(context.vendorID() == VX_ID_KHRONOS &&
+           !(srcType == CV_8U  && dstType == CV_16S) &&
+           !(srcType == CV_16S && dstType == CV_8U))
+        {
+            return false;
+        }
+
+        Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(srcType),
                                                  Image::createAddressing(imgSize.width, imgSize.height,
                                                                          (vx_uint32)sizeof(T), (vx_uint32)sstep),
                                                  (void*)src);
-        Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(DataType<DT>::type),
+        Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(dstType),
                                                  Image::createAddressing(imgSize.width, imgSize.height,
                                                                          (vx_uint32)sizeof(DT), (vx_uint32)dstep),
                                                  (void*)dst);
@@ -4726,7 +4745,7 @@ cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
 {
     CV_OVX_RUN(
-        false,
+        true,
         openvx_cvt(src, sstep, dst, dstep, size)
     )
 

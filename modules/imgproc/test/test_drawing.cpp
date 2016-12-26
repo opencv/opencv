@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+namespace {
+
 using namespace std;
 using namespace cv;
 
@@ -60,7 +62,7 @@ protected:
 void CV_DrawingTest::run( int )
 {
     Mat testImg, valImg;
-    const string fname = "drawing/image.png";
+    const string fname = "../highgui/drawing/image.png";
     string path = ts->get_data_path(), filename;
     filename = path + fname;
 
@@ -69,9 +71,15 @@ void CV_DrawingTest::run( int )
     valImg = imread( filename );
     if( valImg.empty() )
     {
-        imwrite( filename, testImg );
-        //ts->printf( ts->LOG, "test image can not be read");
-        //ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        //imwrite( filename, testImg );
+        ts->printf( ts->LOG, "test image can not be read");
+#ifdef HAVE_PNG
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+#else
+        ts->printf( ts->LOG, "PNG image support is not available");
+        ts->set_failed_test_info(cvtest::TS::OK);
+#endif
+        return;
     }
     else
     {
@@ -543,11 +551,9 @@ void CV_DrawingTest_Far::draw(Mat& img)
     img = img(Rect(32768, 0, 600, 400)).clone();
 }
 
-#ifdef HAVE_JPEG
-TEST(Imgcodecs_Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
-TEST(Imgcodecs_Drawing,      c_regression) { CV_DrawingTest_C   test; test.safe_run(); }
-TEST(Imgcodecs_Drawing,    far_regression) { CV_DrawingTest_Far test; test.safe_run(); }
-#endif
+TEST(Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
+TEST(Drawing,      c_regression) { CV_DrawingTest_C   test; test.safe_run(); }
+TEST(Drawing,    far_regression) { CV_DrawingTest_Far test; test.safe_run(); }
 
 class CV_FillConvexPolyTest : public cvtest::BaseTest
 {
@@ -581,7 +587,7 @@ protected:
     }
 };
 
-TEST(Imgcodecs_Drawing, fillconvexpoly_clipping) { CV_FillConvexPolyTest test; test.safe_run(); }
+TEST(Drawing, fillconvexpoly_clipping) { CV_FillConvexPolyTest test; test.safe_run(); }
 
 class CV_DrawingTest_UTF8 : public cvtest::BaseTest
 {
@@ -655,8 +661,69 @@ protected:
             img->copyTo(sub);
             shift += img->size().height + 1;
         }
-        imwrite("/tmp/all_fonts.png", result);
+        //imwrite("/tmp/all_fonts.png", result);
     }
 };
 
-TEST(Highgui_Drawing, utf8_support) { CV_DrawingTest_UTF8 test; test.safe_run(); }
+TEST(Drawing, utf8_support) { CV_DrawingTest_UTF8 test; test.safe_run(); }
+
+
+TEST(Drawing, _914)
+{
+    const int rows = 256;
+    const int cols = 256;
+
+    Mat img(rows, cols, CV_8UC1, Scalar(255));
+
+    line(img, Point(0, 10), Point(255, 10), Scalar(0), 2, 4);
+    line(img, Point(-5, 20), Point(260, 20), Scalar(0), 2, 4);
+    line(img, Point(10, 0), Point(10, 255), Scalar(0), 2, 4);
+
+    double x0 = 0.0/pow(2.0, -2.0);
+    double x1 = 255.0/pow(2.0, -2.0);
+    double y = 30.5/pow(2.0, -2.0);
+
+    line(img, Point(int(x0), int(y)), Point(int(x1), int(y)), Scalar(0), 2, 4, 2);
+
+    int pixelsDrawn = rows*cols - countNonZero(img);
+    ASSERT_EQ( (3*rows + cols)*3 - 3*9, pixelsDrawn);
+}
+
+TEST(Drawing, polylines_empty)
+{
+    Mat img(100, 100, CV_8UC1, Scalar(0));
+    vector<Point> pts; // empty
+    polylines(img, pts, false, Scalar(255));
+    int cnt = countNonZero(img);
+    ASSERT_EQ(cnt, 0);
+}
+
+TEST(Drawing, polylines)
+{
+    Mat img(100, 100, CV_8UC1, Scalar(0));
+    vector<Point> pts;
+    pts.push_back(Point(0, 0));
+    pts.push_back(Point(20, 0));
+    polylines(img, pts, false, Scalar(255));
+    int cnt = countNonZero(img);
+    ASSERT_EQ(cnt, 21);
+}
+
+
+TEST(Drawing, putText_no_garbage)
+{
+    Size sz(640, 480);
+    Mat mat = Mat::zeros(sz, CV_8UC1);
+
+    mat = Scalar::all(0);
+    putText(mat, "029", Point(10, 350), 0, 10, Scalar(128), 15);
+
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(0, 0,           10, sz.height))));
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(sz.width-10, 0, 10, sz.height))));
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(205, 0,         10, sz.height))));
+    EXPECT_EQ(0, cv::countNonZero(mat(Rect(405, 0,         10, sz.height))));
+}
+
+
+
+} // namespace
