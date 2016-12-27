@@ -198,7 +198,7 @@ void KNNImpl::initialize(Size _frameSize, int _frameType) {
 
     // Reserve memory for the model
     // for each sample of 3 speed pixel models each pixel bg model we store ...
-    // channels correspond to the colour values and a flag for each pixel 
+    // channels correspond to the colour values and a flag for each pixel
     bgmodel_d.create(nN*3, frameSize.height*frameSize.width, CV_8UC4);
 
     // Model indices, channels correspond to Long, Short, Mid
@@ -303,7 +303,7 @@ void KNNImpl::apply(InputArray _frame, OutputArray _fgmask, double learningRate,
     int nUpdateMid = (Kmid/nN)+1;
     int nUpdateLong = (Klong/nN)+1;
 
-    device::knn::cvCheckPixelBackground_gpu(frame, fgmask, bgmodel_d, include_d, 
+    device::knn::cvCheckPixelBackground_gpu(frame, fgmask, bgmodel_d, include_d,
                                             StreamAccessor::getStream(stream));
 
     device::knn::cvUpdatePixelBackground_gpu(frame, bgmodel_d, aModelIndex, include_d,

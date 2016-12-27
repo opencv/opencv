@@ -154,7 +154,6 @@ __global__ void check_pix_bg(PtrStepSz<uchar3> frame, PtrStepSz<uchar1> fgmask,
                 }
             }
         }
-        
     }
     fgmask(y,x).x = 255;
 }
@@ -232,7 +231,7 @@ void cvCheckPixelBackground_gpu(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb 
 
 void cvUpdatePixelBackground_gpu(PtrStepSzb frame, PtrStepSzb bgmodel,
                                  PtrStepSzb aModelIndex, PtrStepSzb include,
-                                 unsigned char *nCounter, unsigned char *nNextUpdate, 
+                                 unsigned char *nCounter, unsigned char *nNextUpdate,
                                  cudaStream_t stream) {
 
     dim3 block(32, 8);
