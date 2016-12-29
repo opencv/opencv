@@ -91,7 +91,7 @@ projects with custom rules that I do not use it. Go the C++ groups General entry
 *"Additional Include Directories"* add the path to your OpenCV include. If you don't have *"C/C++"*
 group, you should add any .c/.cpp file to the project.
 @code{.bash}
-\f$(OPENCV_DIR)\..\..\include
+$(OPENCV_DIR)\..\..\include
 @endcode
 ![](images/PropertySheetOpenCVInclude.jpg)
 
