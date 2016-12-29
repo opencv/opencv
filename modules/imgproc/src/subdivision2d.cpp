@@ -215,7 +215,7 @@ static double triangleArea( Point2f a, Point2f b, Point2f c )
     return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x);
 }
 
-int Subdiv2D::isRightOf(Point2f pt, int edge) const
+int Subdiv2D::isRightOf(const Point2f &pt, int edge) const
 {
     Point2f org, dst;
     edgeOrg(edge, &org);
@@ -251,7 +251,7 @@ void Subdiv2D::deleteEdge(int edge)
     freeQEdge = edge;
 }
 
-int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
+int Subdiv2D::newPoint(const Point2f &pt, bool isvirtual, int firstEdge)
 {
     if( freePoint == 0 )
     {

@@ -17,7 +17,7 @@ namespace ocl {
 
 struct Vec2fComparator
 {
-    bool operator()(const Vec2f& a, const Vec2f b) const
+    bool operator()(const Vec2f& a, const Vec2f &b) const
     {
         if(a[0] != b[0]) return a[0] < b[0];
         else return a[1] < b[1];
