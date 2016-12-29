@@ -1100,13 +1100,9 @@ namespace
 
         // Note - these are hardcoded in the actual GPU kernel. Do not change these values.
         int histSize=256, histCoarseSize=8;
-        int devHistCols = src.cols*histSize*partitions, devCoarseHistCols = src.cols*histCoarseSize*partitions;
-        if(devHist.empty() || devCoarseHist.empty() || devHist.cols != devHistCols || devCoarseHist.cols != devCoarseHistCols)
-        {
-          BufferPool pool(_stream);
-          devHist = pool.getBuffer(1, devHistCols, CV_32SC1);
-          devCoarseHist = pool.getBuffer(1, devCoarseHistCols, CV_32SC1);
-        }
+
+        devHist.create(1, src.cols*histSize*partitions, CV_32SC1);
+        devCoarseHist.create(1, src.cols*histCoarseSize*partitions, CV_32SC1);
 
         devHist.setTo(0, _stream);
         devCoarseHist.setTo(0, _stream);
