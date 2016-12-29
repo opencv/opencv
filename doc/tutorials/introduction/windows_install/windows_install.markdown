@@ -203,7 +203,7 @@ libraries). If you do not need the support for some of these you can just freely
         @code{.bash}
         nmake
         @endcode
-        After this set the Qt enviroment variables using the following command on Windows 7:
+        After this set the Qt environment variables using the following command on Windows 7:
         @code{.bash}
         setx -m QTDIR D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3
         @endcode
@@ -321,10 +321,10 @@ libraries). If you do not need the support for some of these you can just freely
     caused mostly by old video card drivers. For testing the GPU (if built) run the
     *performance_gpu.exe* sample application.
 
-Set the OpenCV enviroment variable and add it to the systems path {#tutorial_windows_install_path}
+Set the OpenCV environment variable and add it to the systems path {#tutorial_windows_install_path}
 =================================================================
 
-First we set an enviroment variable to make easier our work. This will hold the build directory of
+First we set an environment variable to make easier our work. This will hold the build directory of
 our OpenCV library that we use in our projects. Start up a command window and enter:
 @code
     setx -m OPENCV_DIR D:\OpenCV\Build\x86\vc10     (suggested for Visual Studio 2010 - 32 bit Windows)
