@@ -41,6 +41,8 @@
 #include "old_ml_precomp.hpp"
 #include <ctype.h>
 
+#include <cmath>
+
 using namespace cv;
 
 static const float ord_nan = FLT_MAX*0.5f;
@@ -440,7 +442,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                     {
                         float t = fdata[(size_t)si*step];
                         val = cvRound(t);
-                        if( fabs(t - val) > FLT_EPSILON )
+                        if( std::fabs(t - val) > FLT_EPSILON )
                         {
                             sprintf( err, "%d-th value of %d-th (categorical) "
                                 "variable is not an integer", i, vi );
@@ -555,7 +557,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                     else
                         val = fdata[(size_t)si*step];
 
-                    if( fabs(val) >= ord_nan )
+                    if( std::fabs(val) >= ord_nan )
                     {
                         sprintf( err, "%d-th value of %d-th (ordered) "
                             "variable (=%g) is too large", i, vi, val );

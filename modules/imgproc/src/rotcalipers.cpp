@@ -38,6 +38,8 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+#include <cmath>
+
 #include "precomp.hpp"
 
 namespace cv
@@ -254,9 +256,9 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
             float dist;
 
             if( main_element & 1 )
-                dist = (float)fabs(dx * base_a + dy * base_b);
+                dist = (float)std::fabs(dx * base_a + dy * base_b);
             else
-                dist = (float)fabs(dx * (-base_b) + dy * base_a);
+                dist = (float)std::fabs(dx * (-base_b) + dy * base_a);
 
             if( dist > max_dist )
                 max_dist = dist;

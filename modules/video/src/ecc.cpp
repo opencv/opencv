@@ -39,6 +39,8 @@
 //
 //M*/
 
+#include <cmath>
+
 #include "precomp.hpp"
 
 
@@ -298,7 +300,7 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
     }
     if (motionType == MOTION_EUCLIDEAN) {
         double new_theta = updatePtr[0];
-        new_theta += asin(mapPtr[3]);
+        new_theta += std::asin(mapPtr[3]);
 
         mapPtr[2] += updatePtr[1];
         mapPtr[5] += updatePtr[2];

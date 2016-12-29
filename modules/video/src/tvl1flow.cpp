@@ -1144,8 +1144,8 @@ void EstimateDualVariablesBody::operator() (const Range& range) const
 
         for (int x = 0; x < u1x.cols; ++x)
         {
-            const float g1 = static_cast<float>(hypot(u1xRow[x], u1yRow[x]));
-            const float g2 = static_cast<float>(hypot(u2xRow[x], u2yRow[x]));
+            const float g1 = static_cast<float>(hypotf(u1xRow[x], u1yRow[x]));
+            const float g2 = static_cast<float>(hypotf(u2xRow[x], u2yRow[x]));
 
             const float ng1  = 1.0f + taut * g1;
             const float ng2 =  1.0f + taut * g2;
@@ -1157,7 +1157,7 @@ void EstimateDualVariablesBody::operator() (const Range& range) const
 
             if (use_gamma)
             {
-                const float g3 = static_cast<float>(hypot(u3xRow[x], u3yRow[x]));
+                const float g3 = static_cast<float>(hypotf(u3xRow[x], u3yRow[x]));
                 const float ng3 = 1.0f + taut * g3;
                 p31Row[x] = (p31Row[x] + taut * u3xRow[x]) / ng3;
                 p32Row[x] = (p32Row[x] + taut * u3yRow[x]) / ng3;

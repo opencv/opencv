@@ -56,6 +56,8 @@
     E-Mail: rubner@cs.stanford.edu   URL: http://vision.stanford.edu/~rubner
     ==========================================================================
 */
+#include <cmath>
+
 #include "precomp.hpp"
 
 #define MAX_ITERATIONS 500
@@ -411,7 +413,7 @@ static int icvInitEMD( const float* signature1, int size1,
 
     /* if supply different than the demand, add a zero-cost dummy cluster */
     diff = s_sum - d_sum;
-    if( fabs( diff ) >= CV_EMD_EPS * s_sum )
+    if( std::fabs( diff ) >= CV_EMD_EPS * s_sum )
     {
         equal_sums = 0;
         if( diff < 0 )
@@ -1002,7 +1004,7 @@ icvRussel( CvEMDState * state )
                     /* if needed, adjust the relevant delta[*][j] */
                     diff = max_val - cur_v->val;
                     cur_v->val = max_val;
-                    if( fabs( diff ) < eps )
+                    if( std::fabs( diff ) < eps )
                     {
                         for( cur_u = u_head.next; cur_u != 0; cur_u = cur_u->next )
                             delta[cur_u - u][j] += diff;
@@ -1032,7 +1034,7 @@ icvRussel( CvEMDState * state )
                     diff = max_val - cur_u->val;
                     cur_u->val = max_val;
 
-                    if( fabs( diff ) < eps )
+                    if( std::fabs( diff ) < eps )
                     {
                         for( cur_v = v_head.next; cur_v != 0; cur_v = cur_v->next )
                             delta[i][cur_v - v] += diff;
@@ -1131,7 +1133,7 @@ icvDistC( const float *x, const float *y, void *user_param )
 
     for( i = 0; i < dims; i++ )
     {
-        double t = fabs( x[i] - y[i] );
+        double t = std::fabs( x[i] - y[i] );
 
         if( s < t )
             s = t;

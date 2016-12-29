@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <cmath>
 #include <limits>
 
 using namespace cv;
@@ -364,7 +365,7 @@ static void computeOneToOneMatchedOverlaps( const std::vector<EllipticKeyPoint>&
 
                 //compute the area
                 float dr = (float)mina/50.f;
-                int N = (int)floor((float)(maxx - minx) / dr);
+                int N = (int)std::floor((float)(maxx - minx) / dr);
                 IntersectAreaCounter ac( dr, minx, miny, maxy, diff, keypoint1a.ellipse, keypoint2a.ellipse );
                 parallel_reduce( BlockedRange(0, N+1), ac );
                 if( ac.bna > 0 )

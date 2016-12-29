@@ -47,6 +47,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#include <cmath>
+
 // This file contains code to read and write four byte rgbe file format
 // developed by Greg Ward.  It handles the conversions between rgbe and
 // pixels consisting of floats.  The data is assumed to be an array of floats.
@@ -117,7 +119,7 @@ float2rgbe(unsigned char rgbe[4], float red, float green, float blue)
     rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
   }
   else {
-    v = static_cast<float>(frexp(v,&e) * 256.0/v);
+    v = static_cast<float>(std::frexp(v,&e) * 256.0/v);
     rgbe[0] = (unsigned char) (red * v);
     rgbe[1] = (unsigned char) (green * v);
     rgbe[2] = (unsigned char) (blue * v);

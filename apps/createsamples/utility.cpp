@@ -38,6 +38,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+#include <cmath>
 #include <cstring>
 #include <ctime>
 
@@ -1630,7 +1631,7 @@ void cvShowVecSamples( const char* filename, int winwidth, int winheight,
                 winwidth, winheight, file.vecsize );
             if( file.vecsize > 0 )
             {
-                guessed_w = cvFloor( sqrt( (float) file.vecsize ) );
+                guessed_w = cvFloor( std::sqrt( (float) file.vecsize ) );
                 if( guessed_w > 0 )
                 {
                     guessed_h = file.vecsize / guessed_w;

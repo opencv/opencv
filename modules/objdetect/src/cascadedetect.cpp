@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <cmath>
 #include <cstdio>
 #include <iostream>
 
@@ -451,7 +452,7 @@ bool FeatureEvaluator::updateScaleData( Size imgsz, const std::vector<float>& _s
     for( i = 0; i < nscales; i++ )
     {
         FeatureEvaluator::ScaleData& s = scaleData->at(i);
-        if( !recalcOptFeatures && fabs(s.scale - _scales[i]) > FLT_EPSILON*100*_scales[i] )
+        if( !recalcOptFeatures && std::fabs(s.scale - _scales[i]) > FLT_EPSILON*100*_scales[i] )
             recalcOptFeatures = true;
         float sc = _scales[i];
         Size sz;

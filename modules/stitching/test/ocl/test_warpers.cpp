@@ -39,6 +39,8 @@
 //
 //M*/
 
+#include <cmath>
+
 #include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/stitching/warpers.hpp"
@@ -65,8 +67,8 @@ struct WarperTestBase :
         K = Mat::eye(3, 3, CV_32FC1);
         float angle = (float)(30.0 * CV_PI / 180.0);
         float rotationMatrix[9] = {
-                (float)cos(angle), (float)sin(angle), 0,
-                (float)-sin(angle), (float)cos(angle), 0,
+                (float)std::cos(angle), (float)std::sin(angle), 0,
+                (float)-std::sin(angle), (float)std::cos(angle), 0,
                 0, 0, 1
         };
         Mat(3, 3, CV_32FC1, rotationMatrix).copyTo(R);

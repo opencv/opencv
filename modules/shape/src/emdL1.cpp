@@ -51,6 +51,7 @@
 
 #include "precomp.hpp"
 #include "emdL1_def.hpp"
+#include <cmath>
 #include <limits>
 
 /****************************************************************************************\
@@ -286,7 +287,7 @@ bool EmdL1::greedySolution2()
     for(r=0; r<binsDim1; r++)
     {
         dFlow = D[r][c];
-        bUpward = (r<binsDim1-1) && (fabs(dFlow+d2s[c+1]) > fabs(dFlow+d1s[r+1]));	// Move upward or right
+        bUpward = (r<binsDim1-1) && (std::fabs(dFlow+d2s[c+1]) > std::fabs(dFlow+d1s[r+1]));	// Move upward or right
 
         // modify basic variables, record BV and related values
         if(bUpward)
@@ -308,7 +309,7 @@ bool EmdL1::greedySolution2()
             d2s[c+1] += dFlow;		// auxilary matrix maintanence
         }
         pBV->pParent->pChild = pBV;
-        pBV->flow = fabs(dFlow);
+        pBV->flow = std::fabs(dFlow);
         pBV->iDir = dFlow>0;		// 1:outward, 0:inward
     }
 
@@ -320,7 +321,7 @@ bool EmdL1::greedySolution2()
         pBV = &(m_EdgesUp[r][c]);
         D[r+1][c] += dFlow;		// auxilary matrix maintanence
         pBV->pParent->pChild= pBV;
-        pBV->flow = fabs(dFlow);
+        pBV->flow = std::fabs(dFlow);
         pBV->iDir = dFlow>0;		// 1:outward, 0:inward
     }
     return true;
@@ -393,9 +394,9 @@ bool EmdL1::greedySolution3()
 
                 //- determine which direction to move, either right or upward
                 dFlow = D[i1][i2][i3];
-                f1 = (i1<(binsDim1-1))?fabs(dFlow+d1s[i1+1]):std::numeric_limits<float>::max();
-                f2 = (i2<(binsDim2-1))?fabs(dFlow+d2s[i2+1]):std::numeric_limits<float>::max();
-                f3 = (i3<(binsDim3-1))?fabs(dFlow+d3s[i3+1]):std::numeric_limits<float>::max();
+                f1 = (i1<(binsDim1-1))?std::fabs(dFlow+d1s[i1+1]):std::numeric_limits<float>::max();
+                f2 = (i2<(binsDim2-1))?std::fabs(dFlow+d2s[i2+1]):std::numeric_limits<float>::max();
+                f3 = (i3<(binsDim3-1))?std::fabs(dFlow+d3s[i3+1]):std::numeric_limits<float>::max();
 
                 if(f1<f2 && f1<f3)
                 {
@@ -422,7 +423,7 @@ bool EmdL1::greedySolution3()
                     d3s[i3+1] += dFlow;
                 }
 
-                pBV->flow = fabs(dFlow);
+                pBV->flow = std::fabs(dFlow);
                 pBV->iDir = dFlow>0; // 1:outward, 0:inward
                 pBV->pParent->pChild= pBV;
             }

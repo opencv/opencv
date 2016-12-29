@@ -41,6 +41,7 @@
 //M*/
 
 #include "opencv2/ts/cuda_test.hpp"
+#include <cmath>
 #include <stdexcept>
 
 using namespace cv;
@@ -444,7 +445,7 @@ namespace cvtest
             double dist = cv::norm(p1.pt - p2.pt);
 
             if (dist < maxPtDif &&
-                fabs(p1.size - p2.size) < maxSizeDif &&
+                std::fabs(p1.size - p2.size) < maxSizeDif &&
                 abs(p1.angle - p2.angle) < maxAngleDif &&
                 abs(p1.response - p2.response) < maxResponseDif &&
                 p1.octave == p2.octave &&

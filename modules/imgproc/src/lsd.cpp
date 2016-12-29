@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <cmath>
 #include <vector>
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -660,8 +661,8 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
                     reg.push_back(region_point);
 
                     // Update region's angle
-                    sumdx += cos(float(angle));
-                    sumdy += sin(float(angle));
+                    sumdx += std::cos(float(angle));
+                    sumdy += std::sin(float(angle));
                     // reg_angle is used in the isAligned, so it needs to be updates?
                     reg_angle = fastAtan2(sumdy, sumdx) * DEG_TO_RADS;
                 }

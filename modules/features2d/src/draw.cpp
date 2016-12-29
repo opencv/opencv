@@ -39,6 +39,8 @@
 //
 //M*/
 
+#include <cmath>
+
 #include "precomp.hpp"
 
 const int draw_shift_bits = 4;
@@ -66,8 +68,8 @@ static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const
         if( p.angle != -1 )
         {
             float srcAngleRad = p.angle*(float)CV_PI/180.f;
-            Point orient( cvRound(cos(srcAngleRad)*radius ),
-                          cvRound(sin(srcAngleRad)*radius )
+            Point orient( cvRound(std::cos(srcAngleRad)*radius ),
+                          cvRound(std::sin(srcAngleRad)*radius )
                         );
             line( img, center, center+orient, color, 1, LINE_AA, draw_shift_bits );
         }

@@ -39,6 +39,8 @@
 //
 //M*/
 
+#include <cmath>
+
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking_c.h"
 
@@ -165,7 +167,7 @@ void CV_OptFlowPyrLKTest::run( int )
                 continue;
             }
 
-            err = fabs(v2[i].x - v[i].x) + fabs(v2[i].y - v[i].y);
+            err = std::fabs(v2[i].x - v[i].x) + std::fabs(v2[i].y - v[i].y);
             if( err > max_err )
             {
                 max_err = err;

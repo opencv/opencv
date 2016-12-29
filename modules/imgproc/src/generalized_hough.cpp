@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <cmath>
 #include <functional>
 #include <limits>
 
@@ -56,7 +57,7 @@ namespace
 
     bool notNull(float v)
     {
-        return fabs(v) > std::numeric_limits<float>::epsilon();
+        return std::fabs(v) > std::numeric_limits<float>::epsilon();
     }
 
     class GeneralizedHoughBase
