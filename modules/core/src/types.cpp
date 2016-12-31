@@ -41,8 +41,6 @@
 //
 //M*/
 
-#include <cmath>
-
 #include "precomp.hpp"
 
 namespace cv

@@ -39,11 +39,11 @@
 //
 //M*/
 
-#include <cmath>
 
 #include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/stitching/warpers.hpp"
+#include <cmath>
 
 #ifdef HAVE_OPENCL
 

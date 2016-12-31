@@ -40,8 +40,6 @@
 //
 //M*/
 
-#include <cmath>
-
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 

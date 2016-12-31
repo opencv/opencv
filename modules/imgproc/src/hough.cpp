@@ -41,10 +41,10 @@
 //
 //M*/
 
-#include <cmath>
-
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include <cmath>
+
 
 namespace cv
 {

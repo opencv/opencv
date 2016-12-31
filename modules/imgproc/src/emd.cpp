@@ -56,9 +56,8 @@
     E-Mail: rubner@cs.stanford.edu   URL: http://vision.stanford.edu/~rubner
     ==========================================================================
 */
-#include <cmath>
-
 #include "precomp.hpp"
+#include <cmath>
 
 #define MAX_ITERATIONS 500
 #define CV_EMD_INF   ((float)1e20)

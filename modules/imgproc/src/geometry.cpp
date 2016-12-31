@@ -38,9 +38,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include <cmath>
 
 #include "precomp.hpp"
+#include <cmath>
 
 
 CV_IMPL CvRect

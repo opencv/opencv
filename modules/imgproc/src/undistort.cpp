@@ -40,10 +40,10 @@
 //
 //M*/
 
-#include <cmath>
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/detail/distortion_model.hpp"
+#include <cmath>
 
 cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )

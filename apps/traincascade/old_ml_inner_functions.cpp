@@ -38,9 +38,8 @@
 //
 //M*/
 
-#include <cmath>
-
 #include "old_ml_precomp.hpp"
+#include <cmath>
 
 
 CvStatModel::CvStatModel()
@@ -140,7 +139,7 @@ static void cvChol( CvMat* A, CvMat* S )
         for( k = 0; k < i; k++ )
             sum += CV_MAT_ELEM(*S, float, k, i) * CV_MAT_ELEM(*S, float, k, i);
 
-        CV_MAT_ELEM(*S, float, i, i) = (float)std::sqrt(CV_MAT_ELEM(*A, float, i, i) - sum);
+        CV_MAT_ELEM(*S, float, i, i) = std::sqrt(CV_MAT_ELEM(*A, float, i, i) - sum);
 
         for( j = i + 1; j < dim; j++ )
         {

@@ -40,13 +40,13 @@
 //
 //M*/
 
-#include <cmath>
 
 #include "precomp.hpp"
 #include "opencv2/videostab/motion_stabilizing.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
 #include "clp.hpp"
+#include <cmath>
 
 namespace cv
 {

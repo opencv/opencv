@@ -40,7 +40,6 @@
 
 #include "old_ml_precomp.hpp"
 #include <ctype.h>
-
 #include <cmath>
 
 using namespace cv;

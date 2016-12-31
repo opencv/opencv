@@ -40,12 +40,11 @@
 //
 //M*/
 
-#include <cmath>
-
 #include "precomp.hpp"
 #include "opencv2/core/opencl/ocl_defs.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
+#include <cmath>
 
 /****************************************************************************************\
                                     Base Image Filter

@@ -39,10 +39,10 @@
 //
 //M*/
 
-#include <cmath>
 
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking_c.h"
+#include <cmath>
 
 /* ///////////////////// pyrlk_test ///////////////////////// */
 

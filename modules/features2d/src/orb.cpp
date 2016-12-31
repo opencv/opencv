@@ -228,7 +228,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
         float angle = kpt.angle;
 
         angle *= (float)(CV_PI/180.f);
-        float a = (float)std::cos(angle), b = (float)std::sin(angle);
+        float a = std::cos(angle), b = std::sin(angle);
 
         const uchar* center = &imagePyramid.at<uchar>(cvRound(kpt.pt.y*scale) + layer.y,
                                                       cvRound(kpt.pt.x*scale) + layer.x);

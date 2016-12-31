@@ -38,9 +38,9 @@
 //
 //M*/
 
-#include <cmath>
 
 #include "precomp.hpp"
+#include <cmath>
 
 namespace cv { namespace ml {
 

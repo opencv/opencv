@@ -40,11 +40,11 @@
 //
 //M*/
 
-#include <cmath>
 
 #include "precomp.hpp"
 #include "opencv2/videostab/stabilizer.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
+#include <cmath>
 
 // for debug purposes
 #define SAVE_MOTIONS 0
