@@ -311,7 +311,7 @@ Mat LogisticRegressionImpl::calc_sigmoid(const Mat& data) const
 
 double LogisticRegressionImpl::compute_cost(const Mat& _data, const Mat& _labels, const Mat& _init_theta)
 {
-    int llambda = 0;
+    float llambda = 0;                   /*changed llambda from int to float to solve issue #7924*/
     int m;
     int n;
     double cost = 0;
