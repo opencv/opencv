@@ -4025,7 +4025,7 @@ static void
 icvJSONWriteReal( CvFileStorage* fs, const char* key, double value )
 {
     char buf[128];
-    int len = (int)strlen( icvDoubleToString( buf, value ) );
+    size_t len = strlen( icvDoubleToString( buf, value ) );
     if( len > 0 && buf[len-1] == '.' )
     {
         // append zero if string ends with decimal place to match JSON standard
@@ -4838,7 +4838,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
                 {
                     if( elem_type == CV_32F || elem_type == CV_64F )
                     {
-                        int buf_len = (int)strlen(ptr);
+                        size_t buf_len = strlen(ptr);
                         if( buf_len > 0 && ptr[buf_len-1] == '.' )
                         {
                             // append zero if CV_32F or CV_64F string ends with decimal place to match JSON standard
