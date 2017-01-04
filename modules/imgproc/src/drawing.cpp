@@ -1070,21 +1070,48 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 \****************************************************************************************/
 
 /* helper macros: filling horizontal row */
-#define ICV_HLINE( ptr, xl, xr, color, pix_size )            \
-{                                                            \
-    uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);      \
-    uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);  \
-                                                             \
-    for( ; hline_ptr <= hline_max_ptr; hline_ptr += (pix_size))\
-    {                                                        \
-        int hline_j;                                         \
-        for( hline_j = 0; hline_j < (pix_size); hline_j++ )  \
-        {                                                    \
-            hline_ptr[hline_j] = ((uchar*)color)[hline_j];   \
-        }                                                    \
-    }                                                        \
+#define ICV_HLINE( ptr, xl, xr, color, pix_size )                \
+{                                                                \
+    uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);          \
+    uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);      \
+    {                                                            \
+      for( ; hline_ptr <= hline_max_ptr; hline_ptr += (pix_size))\
+      {                                                          \
+        int hline_j;                                             \
+        for( hline_j = 0; hline_j < (pix_size); hline_j++ )      \
+        {                                                        \
+            hline_ptr[hline_j] = ((uchar*)color)[hline_j];       \
+        }                                                        \
+      }                                                          \
+   }                                                             \
 }
-
+/*
+#define ICV_HLINE( ptr, xl, xr, color, pix_size )                \
+{                                                                \
+    uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);          \
+    uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);      \
+                                                                 \
+    bool uniformColor = (pix_size>0);                            \
+    uchar* color_begin = (uchar*)color;                          \
+    uchar* color_end = color_begin+pix_size;                     \
+    uchar* color_ptr = color_begin+1;                            \
+    while(uniformColor && (color_ptr<color_end))                 \
+      uniformColor &= (*color_ptr++ == *color_begin);            \
+    if (uniformColor)                                            \
+      memset(hline_ptr, *color_begin, hline_max_ptr-hline_ptr);  \
+    else                                                         \
+    {                                                            \
+      for( ; hline_ptr <= hline_max_ptr; hline_ptr += (pix_size))\
+      {                                                          \
+        int hline_j;                                             \
+        for( hline_j = 0; hline_j < (pix_size); hline_j++ )      \
+        {                                                        \
+            hline_ptr[hline_j] = ((uchar*)color)[hline_j];       \
+        }                                                        \
+      }                                                          \
+   }                                                             \
+}
+*/
 
 /* filling convex polygon. v - array of vertices, ntps - number of points */
 static void
