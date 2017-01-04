@@ -51,7 +51,7 @@
 #define OPENCV_VERSION_HPP
 
 #define CV_VERSION_MAJOR    3
-#define CV_VERSION_MINOR    1
+#define CV_VERSION_MINOR    2
 #define CV_VERSION_REVISION 0
 #define CV_VERSION_STATUS   "-dev"
 

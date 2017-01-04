@@ -133,7 +133,7 @@ int main( int argc, const char** argv )
         // Call to update the view
         onTrackbar(0, 0);
 
-        int c = waitKey(0) & 255;
+        char c = (char)waitKey(0);
 
         if( c == 27 )
             break;

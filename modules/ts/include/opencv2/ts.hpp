@@ -539,11 +539,13 @@ protected:
     }
 };
 
+extern uint64 param_seed;
+
 struct CV_EXPORTS DefaultRngAuto
 {
     const uint64 old_state;
 
-    DefaultRngAuto() : old_state(cv::theRNG().state) { cv::theRNG().state = (uint64)-1; }
+    DefaultRngAuto() : old_state(cv::theRNG().state) { cv::theRNG().state = cvtest::param_seed; }
     ~DefaultRngAuto() { cv::theRNG().state = old_state; }
 
     DefaultRngAuto& operator=(const DefaultRngAuto&);

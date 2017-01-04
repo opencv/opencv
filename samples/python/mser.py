@@ -17,9 +17,9 @@ Keys:
 import numpy as np
 import cv2
 import video
+import sys
 
 if __name__ == '__main__':
-    import sys
     try:
         video_src = sys.argv[1]
     except:
@@ -27,16 +27,19 @@ if __name__ == '__main__':
 
     cam = video.create_capture(video_src)
     mser = cv2.MSER_create()
+
     while True:
         ret, img = cam.read()
+        if ret == 0:
+            break
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         vis = img.copy()
 
-        regions = mser.detectRegions(gray, None)
+        regions, _ = mser.detectRegions(gray)
         hulls = [cv2.convexHull(p.reshape(-1, 1, 2)) for p in regions]
         cv2.polylines(vis, hulls, 1, (0, 255, 0))
 
         cv2.imshow('img', vis)
-        if 0xFF & cv2.waitKey(5) == 27:
+        if cv2.waitKey(5) == 27:
             break
     cv2.destroyAllWindows()

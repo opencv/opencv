@@ -101,6 +101,10 @@ if(MINGW)
   endif()
 endif()
 
+if(CV_ICC AND NOT ENABLE_FAST_MATH)
+  add_extra_compiler_option("-fp-model precise")
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX)
   # High level of warnings.
   add_extra_compiler_option(-W)
@@ -414,8 +418,13 @@ if(MSVC)
   string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
   string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG}")
 
-  if(NOT ENABLE_NOISY_WARNINGS AND MSVC_VERSION EQUAL 1400)
-    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4510 /wd4610 /wd4312 /wd4201 /wd4244 /wd4328 /wd4267)
+  if(NOT ENABLE_NOISY_WARNINGS)
+    if(MSVC_VERSION EQUAL 1400)
+      ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4510 /wd4610 /wd4312 /wd4201 /wd4244 /wd4328 /wd4267)
+    endif()
+    if(MSVC_VERSION LESS 1900) # MSVS2015
+      ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # warning C4127: conditional expression is constant
+    endif()
   endif()
 
   # allow extern "C" functions throw exceptions
@@ -431,6 +440,13 @@ if(MSVC)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4324) # 'struct_name' : structure was padded due to __declspec(align())
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4275) # non dll-interface class 'std::exception' used as base for dll-interface class 'cv::Exception'
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4589) # Constructor of abstract class 'cv::ORB' ignores initializer for virtual base class 'cv::Algorithm'
+  endif()
+
+  if(CV_ICC AND NOT ENABLE_NOISY_WARNINGS)
+    foreach(flags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
+      string(REGEX REPLACE "( |^)/W[0-9]+( |$)" "\\1\\2" ${flags} "${${flags}}")
+    endforeach()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qwd673") # PCH warning
   endif()
 endif()
 
