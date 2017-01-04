@@ -1,0 +1,83 @@
+# Target labels
+ Main
+ opencv_ml
+ Module
+# Source files and their labels
+/home/boney/opencvprog/opencv-source/modules/ml/include/opencv2/ml.hpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/include/opencv2/ml/ml.hpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/inner_functions.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/ann_mlp.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/gbt.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/kdtree.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/testset.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/nbayes.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/lr.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/svm.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/svmsgd.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/em.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/knearest.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/data.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/boost.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/tree.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/rtrees.cpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/precomp.hpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/modules/ml/src/kdtree.hpp
+ Main
+ opencv_ml
+ Module
+/home/boney/opencvprog/opencv-source/cvconfig.h
+/home/boney/opencvprog/opencv-source/opencv2/opencv_modules.hpp

@@ -1,0 +1,25 @@
+# Target labels
+ Main
+ opencv_photo
+ PerfTest
+# Source files and their labels
+/home/boney/opencvprog/opencv-source/modules/photo/perf/perf_cuda.cpp
+ Main
+ opencv_photo
+ PerfTest
+/home/boney/opencvprog/opencv-source/modules/photo/perf/perf_main.cpp
+ Main
+ opencv_photo
+ PerfTest
+/home/boney/opencvprog/opencv-source/modules/photo/perf/perf_inpaint.cpp
+ Main
+ opencv_photo
+ PerfTest
+/home/boney/opencvprog/opencv-source/modules/photo/perf/opencl/perf_denoising.cpp
+ Main
+ opencv_photo
+ PerfTest
+/home/boney/opencvprog/opencv-source/modules/photo/perf/perf_precomp.hpp
+ Main
+ opencv_photo
+ PerfTest

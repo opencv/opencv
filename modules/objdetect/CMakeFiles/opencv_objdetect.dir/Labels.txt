@@ -1,0 +1,72 @@
+# Target labels
+ Main
+ opencv_objdetect
+ Module
+# Source files and their labels
+/home/boney/opencvprog/opencv-source/modules/objdetect/include/opencv2/objdetect.hpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/include/opencv2/objdetect/detection_based_tracker.hpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/include/opencv2/objdetect/objdetect.hpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/include/opencv2/objdetect/objdetect_c.h
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/detection_based_tracker.cpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/hog.cpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/cascadedetect_convert.cpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/main.cpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/haar.cpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/cascadedetect.cpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/opencl/cascadedetect.cl
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/opencl/objdetect_hog.cl
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/opencl_kernels_objdetect.cpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/opencl_kernels_objdetect.hpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/precomp.hpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/modules/objdetect/src/cascadedetect.hpp
+ Main
+ opencv_objdetect
+ Module
+/home/boney/opencvprog/opencv-source/cvconfig.h
+/home/boney/opencvprog/opencv-source/opencv2/opencv_modules.hpp
+/home/boney/opencvprog/opencv-source/modules/objdetect/opencl_kernels_objdetect.cpp.rule

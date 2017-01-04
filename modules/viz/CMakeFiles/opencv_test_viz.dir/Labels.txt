@@ -1,0 +1,33 @@
+# Target labels
+ Main
+ opencv_viz
+ AccuracyTest
+# Source files and their labels
+/home/boney/opencvprog/opencv-source/modules/viz/test/test_tutorial2.cpp
+ Main
+ opencv_viz
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/viz/test/test_viz3d.cpp
+ Main
+ opencv_viz
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/viz/test/test_main.cpp
+ Main
+ opencv_viz
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/viz/test/tests_simple.cpp
+ Main
+ opencv_viz
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/viz/test/test_precomp.cpp
+ Main
+ opencv_viz
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/viz/test/test_tutorial3.cpp
+ Main
+ opencv_viz
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/viz/test/test_precomp.hpp
+ Main
+ opencv_viz
+ AccuracyTest
