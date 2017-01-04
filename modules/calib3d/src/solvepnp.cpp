@@ -197,7 +197,7 @@ public:
         float* err = _err.getMat().ptr<float>();
 
         for ( i = 0; i < count; ++i)
-            err[i] = (float)norm( ipoints_ptr[i] - projpoints_ptr[i] );
+            err[i] = (float)norm( Matx21f(ipoints_ptr[i] - projpoints_ptr[i]), NORM_L2SQR );
 
     }
 

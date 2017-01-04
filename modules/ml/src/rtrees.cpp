@@ -382,6 +382,8 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags )
     {
+        if (impl.getCVFolds() != 0)
+            CV_Error(Error::StsBadArg, "Cross validation for RTrees is not implemented");
         return impl.train(trainData, flags);
     }
 

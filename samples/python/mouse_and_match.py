@@ -78,6 +78,6 @@ if __name__ == '__main__':
             drag_start = None
             gray=cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             cv2.imshow("gray",gray)
-            if (cv2.waitKey() & 255) == 27:
+            if cv2.waitKey() == 27:
                 break
     cv2.destroyAllWindows()
