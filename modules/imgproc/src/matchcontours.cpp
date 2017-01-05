@@ -50,6 +50,7 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
     double eps = 1.e-5;
     double mmm;
     double result = 0;
+    bool anyResults = false;
 
     HuMoments( moments(contour1), ma );
     HuMoments( moments(contour2), mb );
@@ -80,6 +81,7 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
                 ama = 1. / (sma * log10( ama ));
                 amb = 1. / (smb * log10( amb ));
                 result += fabs( -ama + amb );
+                anyResults = true;
             }
         }
         break;
@@ -108,6 +110,7 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
                 ama = sma * log10( ama );
                 amb = smb * log10( amb );
                 result += fabs( -ama + amb );
+                anyResults = true;
             }
         }
         break;
@@ -138,12 +141,16 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
                 mmm = fabs( (ama - amb) / ama );
                 if( result < mmm )
                     result = mmm;
+                anyResults = true;
             }
         }
         break;
     default:
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
+
+    if (!anyResults)
+        result = DBL_MAX;
 
     return result;
 }
