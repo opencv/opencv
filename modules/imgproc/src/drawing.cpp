@@ -1082,7 +1082,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
     while(uniformColor && (color_ptr<color_end))                 \
       uniformColor &= (*color_ptr++ == *color_begin);            \
     if (uniformColor)                                            \
-      memset(hline_ptr, *color_begin, hline_max_ptr-hline_ptr);  \
+      memset(hline_ptr, *color_begin, hline_max_ptr+pix_size-hline_ptr);  \
     else                                                         \
     {                                                            \
       for( ; hline_ptr <= hline_max_ptr; hline_ptr += (pix_size))\
