@@ -1171,7 +1171,7 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
     ymin = (ymin + delta) >> shift;
     ymax = (ymax + delta) >> shift;
 
-    if( npts < 3 || (int)xmax < 0 || (int)ymax < 0 || (int)xmin >= size.width || (int)ymin >= size.height )
+    if( npts < 3 || (int)xmax < 0 || (int)ymax < 0 || (int)xmin >= size.width || (int)ymin >= size.height || (xmin >= xmax) || (ymin >= ymax) )
         return;
 
     ymax = MIN( ymax, size.height - 1 );
@@ -1183,79 +1183,76 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
 
     ptr += img.step*y;
 
-    if ((xmin<xmax) && (ymin<ymax))//if the poly is trivially flat, there is no need to fill it further
+    do
     {
-      do
-      {
-          if( line_type < CV_AA || y < (int)ymax || y == (int)ymin )
-          {
-              for( i = 0; i < 2; i++ )
-              {
-                  if( y >= edge[i].ye )
-                  {
-                      int idx0 = edge[i].idx, di = edge[i].di;
-                      int idx = idx0 + di;
-                      if (idx >= npts) idx -= npts;
-                      int ty = 0;
+        if( line_type < CV_AA || y < (int)ymax || y == (int)ymin )
+        {
+            for( i = 0; i < 2; i++ )
+            {
+                if( y >= edge[i].ye )
+                {
+                    int idx0 = edge[i].idx, di = edge[i].di;
+                    int idx = idx0 + di;
+                    if (idx >= npts) idx -= npts;
+                    int ty = 0;
 
-                      for (; edges-- > 0; )
-                      {
-                          ty = (int)((v[idx].y + delta) >> shift);
-                          if (ty > y)
-                          {
-                              int64 xs = v[idx0].x;
-                              int64 xe = v[idx].x;
-                              if (shift != XY_SHIFT)
-                              {
-                                  xs <<= XY_SHIFT - shift;
-                                  xe <<= XY_SHIFT - shift;
-                              }
+                    for (; edges-- > 0; )
+                    {
+                        ty = (int)((v[idx].y + delta) >> shift);
+                        if (ty > y)
+                        {
+                            int64 xs = v[idx0].x;
+                            int64 xe = v[idx].x;
+                            if (shift != XY_SHIFT)
+                            {
+                                xs <<= XY_SHIFT - shift;
+                                xe <<= XY_SHIFT - shift;
+                            }
 
-                              edge[i].ye = ty;
-                              edge[i].dx = ((xe - xs)*2 + (ty - y)) / (2 * (ty - y));
-                              edge[i].x = xs;
-                              edge[i].idx = idx;
-                              break;
-                          }
-                          idx0 = idx;
-                          idx += di;
-                          if (idx >= npts) idx -= npts;
-                      }
-                  }
-              }
-          }
+                            edge[i].ye = ty;
+                            edge[i].dx = ((xe - xs)*2 + (ty - y)) / (2 * (ty - y));
+                            edge[i].x = xs;
+                            edge[i].idx = idx;
+                            break;
+                        }
+                        idx0 = idx;
+                        idx += di;
+                        if (idx >= npts) idx -= npts;
+                    }
+                }
+            }
+        }
 
-          if (y >= 0)
-          {
-              int left = 0, right = 1;
-              if (edge[0].x > edge[1].x)
-              {
-                  left = 1, right = 0;
-              }
+        if (y >= 0)
+        {
+            int left = 0, right = 1;
+            if (edge[0].x > edge[1].x)
+            {
+                left = 1, right = 0;
+            }
 
-              int xx1 = (int)((edge[left].x + delta1) >> XY_SHIFT);
-              int xx2 = (int)((edge[right].x + delta2) >> XY_SHIFT);
+            int xx1 = (int)((edge[left].x + delta1) >> XY_SHIFT);
+            int xx2 = (int)((edge[right].x + delta2) >> XY_SHIFT);
 
-              if( xx2 >= 0 && xx1 < size.width )
-              {
-                  if( xx1 < 0 )
-                      xx1 = 0;
-                  if( xx2 >= size.width )
-                      xx2 = size.width - 1;
-                  ICV_HLINE( ptr, xx1, xx2, color, pix_size );
-              }
-          }
-          else
-          {
-              // TODO optimize scan for negative y
-          }
+            if( xx2 >= 0 && xx1 < size.width )
+            {
+                if( xx1 < 0 )
+                    xx1 = 0;
+                if( xx2 >= size.width )
+                    xx2 = size.width - 1;
+                ICV_HLINE( ptr, xx1, xx2, color, pix_size );
+            }
+        }
+        else
+        {
+            // TODO optimize scan for negative y
+        }
 
-          edge[0].x += edge[0].dx;
-          edge[1].x += edge[1].dx;
-          ptr += img.step;
-      }
-      while( ++y <= (int)ymax );
+        edge[0].x += edge[0].dx;
+        edge[1].x += edge[1].dx;
+        ptr += img.step;
     }
+    while( ++y <= (int)ymax );
 }
 
 
