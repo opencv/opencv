@@ -1181,6 +1181,8 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
     edge[0].ye = edge[1].ye = y = (int)ymin;
     edge[0].di = 1;
     edge[1].di = npts - 1;
+    edge[0].x = edge[1].x = -XY_ONE;
+    edge[0].dx = edge[1].dx = 0;
 
     ptr += img.step*y;
 
@@ -1223,6 +1225,9 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
                 }
             }
         }
+
+        if (edges < 0)
+           break;
 
         if (y >= 0)
         {
