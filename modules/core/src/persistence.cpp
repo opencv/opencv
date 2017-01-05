@@ -67,8 +67,6 @@
 #    define _FILE_OFFSET_BITS 0
 #  endif
 #  include <zlib.h>
-#else
-typedef void* gzFile;
 #endif
 
 /****************************************************************************************\
