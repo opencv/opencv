@@ -15,7 +15,7 @@ int main(){
         0, 255, 0, 255, 0, 0, 255, 0,
         0, 255, 255, 255, 0, 0, 0, 0);
 
-    Mat kernel = (Mat_<uchar>(3, 3) <<
+    Mat kernel = (Mat_<int>(3, 3) << //can't be uchar because of -1
         0, 1, 0,
         1, -1, 1,
         0, 1, 0);
@@ -23,10 +23,20 @@ int main(){
     Mat output_image;
     morphologyEx(input_image, output_image, MORPH_HITMISS, kernel);
 
-    namedWindow("Original", CV_WINDOW_NORMAL);
+    const int rate = 10; //zoom out rate for display
+    
+    kernel = (kernel + 1) * 127;
+    kernel.convertTo(kernel, CV_8U);
+    cv::resize(kernel, kernel, cv::Size(), rate, rate, INTER_NEAREST);
+    imshow("kernel", kernel);
+    
+    cv::resize(input_image, input_image, cv::Size(), rate, rate, INTER_NEAREST);
     imshow("Original", input_image);
-    namedWindow("Hit or Miss", CV_WINDOW_NORMAL);
+    
+    cv::resize(output_image, output_image, cv::Size(), rate, rate, INTER_NEAREST);
     imshow("Hit or Miss", output_image);
+    
     waitKey(0);
+    
     return 0;
 }
