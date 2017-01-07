@@ -43,11 +43,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_HIDE_INFO_WARNINGS
-#define IVX_USE_OPENCV
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters
@@ -225,19 +221,14 @@ namespace cv
 
         if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
             return false; //Process isolated borders only
-        vx_border_t border;
+        vx_enum border;
         switch (borderType & ~BORDER_ISOLATED)
         {
         case BORDER_CONSTANT:
-            border.mode = VX_BORDER_CONSTANT;
-#if VX_VERSION > VX_VERSION_1_0
-            border.constant_value.U8 = (vx_uint8)(0);
-#else
-            border.constant_value = (vx_uint32)(0);
-#endif
+            border = VX_BORDER_CONSTANT;
             break;
         case BORDER_REPLICATE:
-            border.mode = VX_BORDER_REPLICATE;
+            border = VX_BORDER_REPLICATE;
             break;
         default:
             return false;
@@ -263,8 +254,8 @@ namespace cv
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
-            vx_border_t prevBorder = ctx.immediateBorder();
-            ctx.setImmediateBorder(border);
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border, (vx_uint8)(0));
             if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1)
             {
                 if(dx)
@@ -293,18 +284,17 @@ namespace cv
                 ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
             }
             ctx.setImmediateBorder(prevBorder);
-            return true;
         }
         catch (ivx::RuntimeError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
         catch (ivx::WrapperError & e)
         {
-            CV_Error(CV_StsInternal, e.what());
-            return false;
+            VX_DbgThrow(e.what());
         }
+
+        return true;
     }
 }
 #endif
@@ -729,10 +719,8 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     }
 #endif
 
-#ifdef HAVE_OPENVX
-    if (openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
-        return;
-#endif
+    CV_OVX_RUN(true,
+               openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
 
     CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
 

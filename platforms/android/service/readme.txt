@@ -10,14 +10,16 @@ from Google Play.
 If Google Play is not available (i.e. on emulator, developer board, etc), you can install it
 manually using adb tool:
 
-    adb install <path-to-OpenCV-sdk>/apk/OpenCV_3.1.0_Manager_3.10_<platform>.apk
+    adb install <path-to-OpenCV-sdk>/apk/OpenCV_<version>_Manager_<app_version>_<platform>.apk
 
-Use the list below to determine proper OpenCV Manager package for your device:
+Example: OpenCV_3.2.0-dev_Manager_3.20_armeabi-v7a.apk
 
-- OpenCV_3.1.0-dev_Manager_3.10_armeabi.apk - armeabi (ARMv5, ARMv6)
-- OpenCV_3.1.0-dev_Manager_3.10_armeabi-v7a.apk - armeabi-v7a (ARMv7-A + NEON)
-- OpenCV_3.1.0-dev_Manager_3.10_arm64-v8a.apk - arm64-v8a (ARM64-v8a)
-- OpenCV_3.1.0-dev_Manager_3.10_mips.apk - mips (MIPS)
-- OpenCV_3.1.0-dev_Manager_3.10_mips64.apk - mips64 (MIPS64)
-- OpenCV_3.1.0-dev_Manager_3.10_x86.apk - x86
-- OpenCV_3.1.0-dev_Manager_3.10_x86_64.apk - x86_64
+Use the list of platforms below to determine proper OpenCV Manager package for your device:
+
+- armeabi (ARMv5, ARMv6)
+- armeabi-v7a (ARMv7-A + NEON)
+- arm64-v8a
+- mips
+- mips64
+- x86
+- x86_64

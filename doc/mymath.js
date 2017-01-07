@@ -1,4 +1,4 @@
-
+//<![CDATA[
 MathJax.Hub.Config(
 {
   TeX: {
@@ -15,3 +15,4 @@ MathJax.Hub.Config(
   }
 }
 );
+//]]>

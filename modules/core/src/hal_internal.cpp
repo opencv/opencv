@@ -46,15 +46,7 @@
 
 #ifdef HAVE_LAPACK
 
-#ifdef HAVE_LAPACK_MKL
-  #include <mkl_cblas.h>
-  #include <mkl_lapack.h>
-#endif
-
-#ifdef HAVE_LAPACK_GENERIC
-  #include <lapacke.h>
-  #include <cblas.h>
-#endif
+#include "opencv_lapack.h"
 
 #include <cmath>
 #include <algorithm>

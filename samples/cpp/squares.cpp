@@ -167,8 +167,8 @@ int main(int argc, char** argv)
         findSquares(image, squares);
         drawSquares(image, squares);
 
-        int c = waitKey();
-        if( (char)c == 27 )
+        char c = (char)waitKey();
+        if( c == 27 )
             break;
     }
 
