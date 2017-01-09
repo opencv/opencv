@@ -979,8 +979,8 @@ This means that, given ( \f$R_1\f$,\f$T_1\f$ ), it should be possible to compute
 need to know the position and orientation of the second camera relative to the first camera. This is
 what the described function does. It computes ( \f$R\f$,\f$T\f$ ) so that:
 
-\f[R_2=R*R_1
-T_2=R*T_1 + T,\f]
+\f[R_2=R*R_1\f]
+\f[T_2=R*T_1 + T,\f]
 
 Optionally, it computes the essential matrix E:
 
