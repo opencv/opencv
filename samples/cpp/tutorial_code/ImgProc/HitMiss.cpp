@@ -15,7 +15,7 @@ int main(){
         0, 255, 0, 255, 0, 0, 255, 0,
         0, 255, 255, 255, 0, 0, 0, 0);
 
-    Mat kernel = (Mat_<int>(3, 3) << //can't be uchar because of -1
+    Mat kernel = (Mat_<int>(3, 3) <<
         0, 1, 0,
         1, -1, 1,
         0, 1, 0);
@@ -23,7 +23,7 @@ int main(){
     Mat output_image;
     morphologyEx(input_image, output_image, MORPH_HITMISS, kernel);
 
-    const int rate = 10; //zoom out rate for display
+    const int rate = 10;
     
     kernel = (kernel + 1) * 127;
     kernel.convertTo(kernel, CV_8U);
