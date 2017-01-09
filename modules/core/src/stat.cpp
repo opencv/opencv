@@ -4253,6 +4253,7 @@ int normHamming(const uchar* a, int n)
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
 #elif CV_AVX2
+    if (USE_AVX2)
     {
         __m256i _r0 = _mm256_setzero_si256();
         __m256i _0 = _mm256_setzero_si256();
@@ -4303,6 +4304,7 @@ int normHamming(const uchar* a, const uchar* b, int n)
         result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
 #elif CV_AVX2
+    if (USE_AVX2)
     {
         __m256i _r0 = _mm256_setzero_si256();
         __m256i _0 = _mm256_setzero_si256();
