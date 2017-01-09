@@ -67,14 +67,14 @@ of them, you need to download and install them on your system.
 -   [Numpy](http://numpy.scipy.org/) is a scientific computing package for Python. Required for the *Python interface*.
 -   [Intel Threading Building Blocks (*TBB*)](http://threadingbuildingblocks.org/file.php?fid=77) is used inside OpenCV for parallel code
     snippets. Using this will make sure that the OpenCV library will take advantage of all the cores
-    you have in your systems CPU.
+    you have in your system's CPU.
 -   [Intel Integrated Performance Primitives (*IPP*)](http://software.intel.com/en-us/articles/intel-ipp/) may be used to improve the performance
     of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since
     this isn't a free service.
 -   [Intel IPP Asynchronous C/C++](http://software.intel.com/en-us/intel-ipp-preview) is currently focused delivering Intel Graphics
     support for advanced image processing and computer vision functions.
 -   OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one
-    by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer look into the
+    by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer, look into the
     documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of
     the framework is required.
 -   [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) is a C++ template library for linear algebra.
@@ -83,7 +83,7 @@ of them, you need to download and install them on your system.
     more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
 -   [OpenEXR](http://www.openexr.com/downloads.html) source files are required for the library to work with this high dynamic range (HDR)
     image file format.
--   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures and body
+-   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures, and body
     motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
 -   [Miktex]( http://miktex.org/2.9/setup) is the best [TEX](https://secure.wikimedia.org/wikipedia/en/wiki/TeX) implementation on
     the Windows OS. It is required to build the *OpenCV documentation*.
@@ -203,7 +203,7 @@ libraries). If you do not need the support for some of these you can just freely
         @code{.bash}
         nmake
         @endcode
-        After this set the Qt enviroment variables using the following command on Windows 7:
+        After this set the Qt environment variables using the following command on Windows 7:
         @code{.bash}
         setx -m QTDIR D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3
         @endcode
@@ -266,8 +266,8 @@ libraries). If you do not need the support for some of these you can just freely
         fully functional on your computer.
     -   *BUILD_PACKAGE* -\> Prior to version 2.3 with this you could build a project that will
         build an OpenCV installer. With this you can easily install your OpenCV flavor on other
-        systems. For the latest source files of OpenCV it generates a new project that simply
-        creates zip archive with OpenCV sources.
+        systems. For the latest source files of OpenCV, it generates a new project that simply
+        creates a zip archive with OpenCV sources.
     -   *BUILD_SHARED_LIBS* -\> With this you can control to build DLL files (when turned on) or
         static library files (\*.lib) otherwise.
     -   *BUILD_TESTS* -\> Each module of OpenCV has a test project assigned to it. Building these
@@ -291,7 +291,7 @@ libraries). If you do not need the support for some of these you can just freely
 
     ![](images/OpenCVBuildResultWindows.jpg)
 
-    For the documentation you need to explicitly issue the build commands on the *doc* project for
+    For the documentation, you need to explicitly issue the build commands on the *doc* project for
     the PDF files and on the *doc_html* for the HTML ones. Each of these will call *Sphinx* to do
     all the hard work. You can find the generated documentation inside the `Build/Doc/_html` for the
     HTML pages and within the `Build/Doc` the PDF manuals.
@@ -299,7 +299,7 @@ libraries). If you do not need the support for some of these you can just freely
     ![](images/WindowsBuildDoc.png)
 
     To collect the header and the binary files, that you will use during your own projects, into a
-    separate directory (simillary to how the pre-built binaries ship) you need to explicitely build
+    separate directory (simillary to how the pre-built binaries ship) you need to explicitly build
     the *Install* project.
 
     ![](images/WindowsBuildInstall.png)
@@ -321,10 +321,10 @@ libraries). If you do not need the support for some of these you can just freely
     caused mostly by old video card drivers. For testing the GPU (if built) run the
     *performance_gpu.exe* sample application.
 
-Set the OpenCV enviroment variable and add it to the systems path {#tutorial_windows_install_path}
+Set the OpenCV environment variable and add it to the systems path {#tutorial_windows_install_path}
 =================================================================
 
-First we set an enviroment variable to make easier our work. This will hold the build directory of
+First we set an environment variable to make easier our work. This will hold the build directory of
 our OpenCV library that we use in our projects. Start up a command window and enter:
 @code
     setx -m OPENCV_DIR D:\OpenCV\Build\x86\vc10     (suggested for Visual Studio 2010 - 32 bit Windows)
