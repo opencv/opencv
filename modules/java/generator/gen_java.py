@@ -198,37 +198,37 @@ type_dict = {
 
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
 
-    "vector_Point"    : { "j_type" : "MatOfPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point> %(n)s", "suffix" : "J" },
-    "vector_Point2f"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point2f> %(n)s", "suffix" : "J" },
-    #"vector_Point2d"  : { "j_type" : "MatOfPoint2d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point2d> %(n)s", "suffix" : "J" },
-    "vector_Point3i"  : { "j_type" : "MatOfPoint3", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3i> %(n)s", "suffix" : "J" },
-    "vector_Point3f"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3f> %(n)s", "suffix" : "J" },
-    #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3d> %(n)s", "suffix" : "J" },
-    "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<KeyPoint> %(n)s", "suffix" : "J" },
-    "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<DMatch> %(n)s", "suffix" : "J" },
-    "vector_Rect"     : { "j_type" : "MatOfRect",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Rect> %(n)s", "suffix" : "J" },
-    "vector_Rect2d"     : { "j_type" : "MatOfRect2d",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Rect2d> %(n)s", "suffix" : "J" },
-    "vector_uchar"    : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<uchar> %(n)s", "suffix" : "J" },
-    "vector_char"     : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<char> %(n)s", "suffix" : "J" },
-    "vector_int"      : { "j_type" : "MatOfInt",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<int> %(n)s", "suffix" : "J" },
-    "vector_float"    : { "j_type" : "MatOfFloat",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<float> %(n)s", "suffix" : "J" },
-    "vector_double"   : { "j_type" : "MatOfDouble", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<double> %(n)s", "suffix" : "J" },
-    "vector_Vec4i"    : { "j_type" : "MatOfInt4",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec4i> %(n)s", "suffix" : "J" },
-    "vector_Vec4f"    : { "j_type" : "MatOfFloat4",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec4f> %(n)s", "suffix" : "J" },
-    "vector_Vec6f"    : { "j_type" : "MatOfFloat6",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec6f> %(n)s", "suffix" : "J" },
+    "vector_Point"    : { "j_type" : "MatOfPoint", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Point> %(n)s", "suffix" : "J" },
+    "vector_Point2f"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Point2f> %(n)s", "suffix" : "J" },
+    #"vector_Point2d"  : { "j_type" : "MatOfPoint2d", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Point2d> %(n)s", "suffix" : "J" },
+    "vector_Point3i"  : { "j_type" : "MatOfPoint3", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Point3i> %(n)s", "suffix" : "J" },
+    "vector_Point3f"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Point3f> %(n)s", "suffix" : "J" },
+    #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Point3d> %(n)s", "suffix" : "J" },
+    "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<KeyPoint> %(n)s", "suffix" : "J" },
+    "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<DMatch> %(n)s", "suffix" : "J" },
+    "vector_Rect"     : { "j_type" : "MatOfRect",   "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_Rect2d"     : { "j_type" : "MatOfRect2d",   "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Rect2d> %(n)s", "suffix" : "J" },
+    "vector_uchar"    : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<uchar> %(n)s", "suffix" : "J" },
+    "vector_char"     : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<char> %(n)s", "suffix" : "J" },
+    "vector_int"      : { "j_type" : "MatOfInt",    "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<int> %(n)s", "suffix" : "J" },
+    "vector_float"    : { "j_type" : "MatOfFloat",  "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<float> %(n)s", "suffix" : "J" },
+    "vector_double"   : { "j_type" : "MatOfDouble", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<double> %(n)s", "suffix" : "J" },
+    "vector_Vec4i"    : { "j_type" : "MatOfInt4",    "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Vec4i> %(n)s", "suffix" : "J" },
+    "vector_Vec4f"    : { "j_type" : "MatOfFloat4",  "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Vec4f> %(n)s", "suffix" : "J" },
+    "vector_Vec6f"    : { "j_type" : "MatOfFloat6",  "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Vec6f> %(n)s", "suffix" : "J" },
 
-    "vector_Mat"      : { "j_type" : "List<Mat>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Mat> %(n)s", "suffix" : "J" },
+    "vector_Mat"      : { "j_type" : "List<Mat>",   "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector<Mat> %(n)s", "suffix" : "J" },
 
-    "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<KeyPoint> > %(n)s" },
-    "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<DMatch> > %(n)s" },
-    "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<char> > %(n)s" },
-    "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point> > %(n)s" },
-    "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point2f> > %(n)s" },
-    "vector_vector_Point3f" : { "j_type" : "List<MatOfPoint3f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point3f> > %(n)s" },
+    "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector< std::vector<KeyPoint> > %(n)s" },
+    "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector< std::vector<DMatch> > %(n)s" },
+    "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector< std::vector<char> > %(n)s" },
+    "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector< std::vector<Point> > %(n)s" },
+    "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector< std::vector<Point2f> > %(n)s" },
+    "vector_vector_Point3f" : { "j_type" : "List<MatOfPoint3f>",    "jn_type" : "long", "jni_type" : "cv::Mat*", "jni_var" : "std::vector< std::vector<Point3f> > %(n)s" },
 
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
-                  "jni_type" : "jlong", #"jni_name" : "*%(n)s",
+                  "jni_type" : "cv::Mat*", #"jni_name" : "*%(n)s",
                   "suffix" : "J" },
 
     "Point"   : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
@@ -796,8 +796,7 @@ class ClassInfo(GeneralInfo):
                 self.jname = m[1:]
         self.base = ''
         if decl[1]:
-            #self.base = re.sub(r"\b"+self.jname+r"\b", "", decl[1].replace(":", "")).strip()
-            self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.jname, "")
+            self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).replace(" "+self.jname, "").strip()
 
     def __repr__(self):
         return Template("CLASS $namespace::$classpath.$name : $base").substitute(**self.__dict__)
@@ -975,12 +974,12 @@ class JavaWrapperGenerator(object):
         type_dict[name] = \
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "(*("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "jni_name" : "(*("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj->get())", "jni_type" : "Ptr<"+classinfo.fullName(isCPP=True)+">*",
               "suffix" : "J" }
         type_dict[name+'*'] = \
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj", "jni_type" : "jlong",
+              "jni_name" : "("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj->get()", "jni_type" : "Ptr<"+classinfo.fullName(isCPP=True)+">*",
               "suffix" : "J" }
 
         # missing_consts { Module : { public : [[name, val],...], private : [[]...] } }
@@ -1004,7 +1003,7 @@ class JavaWrapperGenerator(object):
         type_dict["Ptr_"+name] = \
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "Ptr<"+classinfo.fullName(isCPP=True)+">(("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "jni_name" : "(*(Ptr<"+classinfo.fullName(isCPP=True)+">*)%(n)s_nativeObj)", "jni_type" : "Ptr<"+classinfo.fullName(isCPP=True)+">*",
               "suffix" : "J" }
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
@@ -1191,7 +1190,7 @@ class JavaWrapperGenerator(object):
             if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
-                jni_args.append( ArgInfo([ "__int64", "self", "", [], "" ]) )
+                jni_args.append( ArgInfo([ "Ptr_"+fi.classname, "self", "", [], "" ]) )
             ci.addImports(fi.ctype)
             for a in args:
                 if not a.ctype: # hidden
@@ -1199,7 +1198,7 @@ class JavaWrapperGenerator(object):
                 ci.addImports(a.ctype)
                 if "vector" in a.ctype: # pass as Mat
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
-                    jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
+                    jni_args.append ( ArgInfo([ a.ctype, "%s_mat_nativeObj" % a.name, "", [], "" ]) )
                     c_prologue.append( type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";" )
                     c_prologue.append( "Mat& %(n)s_mat = *((Mat*)%(n)s_mat_nativeObj)" % {"n" : a.name} + ";" )
                     if "I" in a.out or not a.out:
@@ -1227,7 +1226,7 @@ class JavaWrapperGenerator(object):
                     if "I" in a.out or not a.out or self.isWrapped(a.ctype): # input arg, pass by primitive fields
                         for f in fields:
                             jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
-                            jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
+                            jni_args.append( ArgInfo([ f[0] if f[0] != "__int64" else a.ctype, a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
                     if a.out and not self.isWrapped(a.ctype): # out arg, pass as double[]
                         jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
                         jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
@@ -1364,19 +1363,22 @@ class JavaWrapperGenerator(object):
                 ret = "return;"
                 default = "return;"
             elif not fi.ctype: # c-tor
-                ret = "return (jlong) _retval_;"
+                ret = "return (%(cls)s*) _retval_;" % { "cls" : self.smartWrap(ci, fi.fullClass(isCPP=True))}
             elif fi.ctype.startswith('vector'): # c-tor
-                ret = "return (jlong) _retval_;"
+                ret = "return (%s) _retval_;" % type_dict[fi.ctype].get("jni_type")
             elif fi.ctype == "String":
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif self.isWrapped(fi.ctype): # wrapped class:
-                ret = "return (jlong) new %s(_retval_);" % self.fullTypeName(fi.ctype)
+                if fi.ctype == "Mat":
+                    ret = "return (%s) new %s(_retval_);" % (type_dict[fi.ctype].get("jni_type"), self.fullTypeName(fi.ctype))
+                else:
+                    ret = "return (%s) new Ptr<%s>( new %s(_retval_));" % (type_dict[fi.ctype].get("jni_type"), self.fullTypeName(fi.ctype), self.fullTypeName(fi.ctype))
             elif fi.ctype.startswith('Ptr_'):
                 c_prologue.append("typedef Ptr<%s> %s;" % (self.fullTypeName(fi.ctype[4:]), fi.ctype))
-                ret = "return (jlong)(new %(ctype)s(_retval_));" % { 'ctype':fi.ctype }
+                ret = "return (%s)(new %s(_retval_));" % (type_dict[fi.ctype].get("jni_type"), fi.ctype)
             elif self.isWrapped(ret_type): # pointer to wrapped class:
-                ret = "return (jlong) _retval_;"
+                ret = "return (%s) new Ptr<%s>(_retval_);" % (type_dict[fi.ctype].get("jni_type"), self.fullTypeName(fi.ctype))
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
                 ret = "return _da_retval_;"
 
@@ -1400,8 +1402,12 @@ class JavaWrapperGenerator(object):
                 c_epilogue.append(fi.ctype+"_to_Mat(_ret_val_vector_, *_retval_);")
             if len(fi.classname)>0:
                 if not fi.ctype: # c-tor
-                    retval = fi.fullClass(isCPP=True) + "* _retval_ = "
+                    retval = fi.fullClass(isCPP=True) + "* _tmp_retval_ = "
                     cvname = "new " + fi.fullClass(isCPP=True)
+                    c_epilogue.append(\
+                        "%(cls)s* _retval_ = new %(cls)s(_tmp_retval_); //TODO: check for NULL" \
+                            % { "cls" : self.smartWrap(ci, fi.fullClass(isCPP=True))} \
+                    )
                 elif fi.static:
                     cvname = fi.fullName(isCPP=True)
                 else:
@@ -1429,7 +1435,10 @@ class JavaWrapperGenerator(object):
                     if a.out and "I" not in a.out and not self.isWrapped(a.ctype) and a.ctype:
                         c_prologue.append("%s %s;" % (a.ctype, a.name))
 
-            rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
+            if not fi.ctype: # c-tor
+                rtype = "%(cls)s*" % { "cls" : self.smartWrap(ci, fi.fullClass(isCPP=True))}
+            else:
+                rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
             clazz = ci.jname
             cpp_code.write ( Template( \
 """
@@ -1546,10 +1555,10 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 //  native support for java finalize()
 //  static void %(cls)s::delete( __int64 self )
 //
-JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete(JNIEnv*, jclass, jlong);
+JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete(JNIEnv*, jclass, %(cls)s*);
 
 JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
-  (JNIEnv*, jclass, jlong self)
+  (JNIEnv*, jclass, %(cls)s* self)
 {
     delete (%(cls)s*) self;
 }
@@ -1565,6 +1574,8 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         return name in self.classes
 
     def isSmartClass(self, ci):
+        return True
+
         '''
         Check if class stores Ptr<T>* instead of T* in nativeObj field
         '''
