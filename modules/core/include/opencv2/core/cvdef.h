@@ -188,8 +188,16 @@ enum CpuFeatures {
 #  if defined __POPCNT__ || (defined _MSC_VER && _MSC_VER >= 1500)
 #    ifdef _MSC_VER
 #      include <nmmintrin.h>
+#      if defined(_M_X64)
+#        define CV_POPCNT_U64 _mm_popcnt_u64
+#      endif
+#      define CV_POPCNT_U32 _mm_popcnt_u32
 #    else
 #      include <popcntintrin.h>
+#      if defined(__x86_64__)
+#        define CV_POPCNT_U64 __builtin_popcountll
+#      endif
+#      define CV_POPCNT_U32 __builtin_popcount
 #    endif
 #    define CV_POPCNT 1
 #  endif
