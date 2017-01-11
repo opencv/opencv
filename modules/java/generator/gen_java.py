@@ -207,6 +207,7 @@ type_dict = {
     "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<KeyPoint> %(n)s", "suffix" : "J" },
     "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<DMatch> %(n)s", "suffix" : "J" },
     "vector_Rect"     : { "j_type" : "MatOfRect",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_Rect2d"     : { "j_type" : "MatOfRect2d",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Rect2d> %(n)s", "suffix" : "J" },
     "vector_uchar"    : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<uchar> %(n)s", "suffix" : "J" },
     "vector_char"     : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<char> %(n)s", "suffix" : "J" },
     "vector_int"      : { "j_type" : "MatOfInt",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<int> %(n)s", "suffix" : "J" },
@@ -261,6 +262,9 @@ type_dict = {
     "Rect"    : { "j_type" : "Rect",  "jn_args" : (("int", ".x"), ("int", ".y"), ("int", ".width"), ("int", ".height")),
                   "jni_var" : "Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)", "jni_type" : "jdoubleArray",
                   "suffix" : "IIII"},
+    "Rect2d"    : { "j_type" : "Rect2d",  "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".width"), ("double", ".height")),
+    "jni_var" : "Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)", "jni_type" : "jdoubleArray",
+        "suffix" : "DDDD"},
     "Size"    : { "j_type" : "Size",  "jn_args" : (("double", ".width"), ("double", ".height")),
                   "jni_var" : "Size %(n)s((int)%(n)s_width, (int)%(n)s_height)", "jni_type" : "jdoubleArray",
                   "suffix" : "DD"},
@@ -825,7 +829,7 @@ class ClassInfo(GeneralInfo):
                 j_type = type_dict[ctype]['j_type']
             elif ctype in ("Algorithm"):
                 j_type = ctype
-            if j_type in ( "CvType", "Mat", "Point", "Point3", "Range", "Rect", "RotatedRect", "Scalar", "Size", "TermCriteria", "Algorithm" ):
+            if j_type in ( "CvType", "Mat", "Point", "Point3", "Range", "Rect", "Rect2d", "RotatedRect", "Scalar", "Size", "TermCriteria", "Algorithm" ):
                 self.imports.add("org.opencv.core." + j_type)
             if j_type == 'String':
                 self.imports.add("java.lang.String")
