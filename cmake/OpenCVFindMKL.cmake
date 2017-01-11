@@ -79,12 +79,13 @@ if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
     include(CheckTypeSize)
     CHECK_TYPE_SIZE(int _sizeof_int)
     if (_sizeof_int EQUAL 4)
-        set(MKL_LP64 "lp64")
+        set(MKL_ARCH_SUFFIX "lp64")
     else()
-        set(MKL_LP64 "ilp64")
+        set(MKL_ARCH_SUFFIX "ilp64")
     endif()
 else()
     set(MKL_ARCH "ia32")
+    set(MKL_ARCH_SUFFIX "c")
 endif()
 
 if(${MKL_VERSION_STR} VERSION_GREATER "11.3.0" OR ${MKL_VERSION_STR} VERSION_EQUAL "11.3.0")
@@ -94,7 +95,7 @@ if(${MKL_VERSION_STR} VERSION_GREATER "11.3.0" OR ${MKL_VERSION_STR} VERSION_EQU
 
     set(mkl_lib_list
         mkl_core
-        mkl_intel_${MKL_LP64})
+        mkl_intel_${MKL_ARCH_SUFFIX})
 
     if(MKL_WITH_TBB)
         list(APPEND mkl_lib_list mkl_tbb_thread tbb)
@@ -111,7 +112,6 @@ else()
     message(STATUS "MKL version ${MKL_VERSION_STR} is not supported")
     mkl_fail()
 endif()
-
 
 set(MKL_LIBRARIES "")
 foreach(lib ${mkl_lib_list})
