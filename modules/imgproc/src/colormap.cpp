@@ -569,14 +569,9 @@ namespace colormap
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         if (userColor.type() != CV_8UC1 && userColor.type() != CV_8UC3)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables CV_8UC1 or CV_8UC3.");
-        colormap::ColorMap* cm = (colormap::ColorMap*) (new colormap::UserColorMap(userColor.getMat()));
+        colormap::UserColorMap cm(userColor.getMat());
 
-        if (!cm)
-            CV_Error(Error::StsBadArg, "Unknown inputArray");
-
-        (*cm)(src, dst);
-
-        delete cm;
+        (cm)(src, dst);
     }
 
 }
