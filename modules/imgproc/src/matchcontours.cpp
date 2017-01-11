@@ -50,7 +50,7 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
     double eps = 1.e-5;
     double mmm;
     double result = 0;
-    bool anyResults = false;
+    bool anyA = false, anyB = false;
 
     HuMoments( moments(contour1), ma );
     HuMoments( moments(contour2), mb );
@@ -62,6 +62,11 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
         {
             double ama = fabs( ma[i] );
             double amb = fabs( mb[i] );
+
+            if (ama > 0)
+                anyA = true;
+            if (amb > 0)
+                anyB = true;
 
             if( ma[i] > 0 )
                 sma = 1;
@@ -81,7 +86,6 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
                 ama = 1. / (sma * log10( ama ));
                 amb = 1. / (smb * log10( amb ));
                 result += fabs( -ama + amb );
-                anyResults = true;
             }
         }
         break;
@@ -91,6 +95,11 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
         {
             double ama = fabs( ma[i] );
             double amb = fabs( mb[i] );
+
+            if (ama > 0)
+                anyA = true;
+            if (amb > 0)
+                anyB = true;
 
             if( ma[i] > 0 )
                 sma = 1;
@@ -110,7 +119,6 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
                 ama = sma * log10( ama );
                 amb = smb * log10( amb );
                 result += fabs( -ama + amb );
-                anyResults = true;
             }
         }
         break;
@@ -120,6 +128,11 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
         {
             double ama = fabs( ma[i] );
             double amb = fabs( mb[i] );
+
+            if (ama > 0)
+                anyA = true;
+            if (amb > 0)
+                anyB = true;
 
             if( ma[i] > 0 )
                 sma = 1;
@@ -141,7 +154,6 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
                 mmm = fabs( (ama - amb) / ama );
                 if( result < mmm )
                     result = mmm;
-                anyResults = true;
             }
         }
         break;
@@ -149,7 +161,10 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
 
-    if (!anyResults)
+    //If anyA and anyB are both true, the result is correct.
+    //If anyA and anyB are both false, the distance is 0, perfect match.
+    //If only one is true, then it's a false 0 and return large error.
+    if (anyA != anyB)
         result = DBL_MAX;
 
     return result;
