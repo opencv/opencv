@@ -936,7 +936,7 @@ function(ocv_add_library target)
   endif()
 
   if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
-    message("Setting Apple target properties for " ${target})
+    message(STATUS "Setting Apple target properties for ${target}")
 
     set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
 
@@ -952,6 +952,7 @@ function(ocv_add_library target)
       INSTALL_NAME_DIR "@rpath"
       BUILD_WITH_INSTALL_RPATH 1
       LIBRARY_OUTPUT_NAME "opencv2"
+      XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
       #PUBLIC_HEADER "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h"
       #XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
     )
