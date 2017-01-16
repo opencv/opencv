@@ -24,7 +24,7 @@ The script should handle minor OpenCV updates efficiently
 - it does not recompile the library from scratch each time.
 However, opencv2.framework directory is erased and recreated on each run.
 
-Adding --dymnamic parameter will build opencv2.framework as App Store dynamic framework. Only iOS 8+ versions are supported.
+Adding --dynamic parameter will build opencv2.framework as App Store dynamic framework. Only iOS 8+ versions are supported.
 """
 
 from __future__ import print_function
