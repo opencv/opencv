@@ -45,7 +45,7 @@ def getXCodeMajor():
     return 0
 
 class Builder:
-    def __init__(self, opencv, contrib, dynamic, bitcode, exclude, targets):
+    def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, targets):
         self.opencv = os.path.abspath(opencv)
         self.contrib = None
         if contrib:
@@ -55,7 +55,7 @@ class Builder:
             else:
                 print("Note: contrib repository is bad - modules subfolder not found", file=sys.stderr)
         self.dynamic = dynamic
-        self.bitcode = bitcode
+        self.bitcodedisabled = bitcodedisabled
         self.exclude = exclude
         self.targets = targets
 
@@ -98,7 +98,7 @@ class Builder:
             cmake_flags = []
             if self.contrib:
                 cmake_flags.append("-DOPENCV_EXTRA_MODULES_PATH=%s" % self.contrib)
-            if xcode_ver >= 7 and t[1] == 'iPhoneOS' and self.bitcode == False:
+            if xcode_ver >= 7 and t[1] == 'iPhoneOS' and self.bitcodedisabled == False:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             self.buildOne(t[0], t[1], mainBD, cmake_flags)
@@ -284,10 +284,10 @@ if __name__ == "__main__":
     parser.add_argument('--contrib', metavar='DIR', default=None, help='folder with opencv_contrib repository (default is "None" - build only main framework)')
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     parser.add_argument('--dynamic', default=False, action='store_true', help='build dynamic framework (default is "False" - builds static framework)')
-    parser.add_argument('--disable-bitcode', default=False, dest='bitcode', action='store_true', help='disable bitcode (enabled by default)')
+    parser.add_argument('--disable-bitcode', default=False, dest='bitcodedisabled', action='store_true', help='disable bitcode (enabled by default)')
     args = parser.parse_args()
 
-    b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcode, args.without,
+    b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without,
         [
             (["armv7", "arm64"], "iPhoneOS"),
         ] if os.environ.get('BUILD_PRECOMMIT', None) else
