@@ -996,3 +996,20 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
         remove((fileName + formats[i]).c_str());
     }
 }
+
+TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
+{
+    String content = "%YAML:1.0\n cameraMatrix: !<tag:yaml.org,2002:opencv-matrix>\n"
+            "   rows: 1\n"
+            "   cols: 1\n"
+            "   dt: d\n"
+            "   data: [ 1. ]";
+
+    cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    cv::Mat inputMatrix;
+    cv::Mat actualMatrix = cv::Mat::eye(1, 1, CV_64F);
+    fs["cameraMatrix"] >> inputMatrix;
+
+    ASSERT_EQ(cv::norm(inputMatrix, actualMatrix, NORM_INF), 0.);
+}
