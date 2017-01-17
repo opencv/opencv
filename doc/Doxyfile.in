@@ -41,7 +41,7 @@ ALIASES               += next_tutorial{1}="**Next  Tutorial:** \ref \1 \n"
 ALIASES               += youtube{1}="@htmlonly[block]<div align='center'><iframe title='my title' width='560' height='349' src='http://www.youtube.com/embed/\1?rel=0' frameborder='0' align='middle' allowfullscreen></iframe></div>@endhtmlonly"
 TCL_SUBST              =
 OPTIMIZE_OUTPUT_FOR_C  = NO
-OPTIMIZE_OUTPUT_JAVA   = YES
+OPTIMIZE_OUTPUT_JAVA   = NO
 OPTIMIZE_FOR_FORTRAN   = NO
 OPTIMIZE_OUTPUT_VHDL   = NO
 EXTENSION_MAPPING      =
@@ -106,7 +106,7 @@ FILE_PATTERNS          =
 RECURSIVE              = YES
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
-EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp
+EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp *.m
 EXCLUDE_SYMBOLS        = cv::DataType<*> int void
 EXAMPLE_PATH           = @CMAKE_DOXYGEN_EXAMPLE_PATH@
 EXAMPLE_PATTERNS       = *
