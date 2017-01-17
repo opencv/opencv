@@ -98,7 +98,7 @@ set_value(fptype *dst, size_t dst_ld, fptype value, size_t m, size_t n)
 template <typename fptype> static inline int
 lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int* info)
 {
-    int lda = a_step / sizeof(fptype), sign = 0;
+    int lda = (int)(a_step / sizeof(fptype)), sign = 0;
     int* piv = new int[m];
 
     transpose_square_inplace(a, lda, m);
@@ -114,7 +114,7 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
         }
         else
         {
-            int ldb = b_step / sizeof(fptype);
+            int ldb = (int)(b_step / sizeof(fptype));
             fptype* tmpB = new fptype[m*n];
 
             transpose(b, ldb, tmpB, m, m, n);
@@ -153,7 +153,7 @@ template <typename fptype> static inline int
 lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, bool* info)
 {
     int lapackStatus = 0;
-    int lda = a_step / sizeof(fptype);
+    int lda = (int)(a_step / sizeof(fptype));
     char L[] = {'L', '\0'};
 
     if(b)
@@ -167,7 +167,7 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
         }
         else
         {
-            int ldb = b_step / sizeof(fptype);
+            int ldb = (int)(b_step / sizeof(fptype));
             fptype* tmpB = new fptype[m*n];
             transpose(b, ldb, tmpB, m, m, n);
 
@@ -197,9 +197,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
 template <typename fptype> static inline int
 lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype* vt, size_t v_step, int m, int n, int flags, int* info)
 {
-    int lda = a_step / sizeof(fptype);
-    int ldv = v_step / sizeof(fptype);
-    int ldu = u_step / sizeof(fptype);
+    int lda = (int)(a_step / sizeof(fptype));
+    int ldv = (int)(v_step / sizeof(fptype));
+    int ldu = (int)(u_step / sizeof(fptype));
     int lwork = -1;
     int* iworkBuf = new int[8*std::min(m, n)];
     fptype work1 = 0;
@@ -256,7 +256,7 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
 template <typename fptype> static inline int
 lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_step, fptype* dst, int* info)
 {
-    int lda = a_step / sizeof(fptype);
+    int lda = (int)(a_step / sizeof(fptype));
     char mode[] = { 'N', '\0' };
     if(m < n)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -303,7 +303,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         {
             std::vector<fptype> tmpBMemHolder(m*k);
             fptype* tmpB = &tmpBMemHolder.front();
-            int ldb = b_step / sizeof(fptype);
+            int ldb = (int)(b_step / sizeof(fptype));
             transpose(b, ldb, tmpB, m, m, k);
 
             if (typeid(fptype) == typeid(float))
@@ -357,10 +357,10 @@ template <typename fptype> static inline int
 lapack_gemm(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
             const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int a_m, int a_n, int d_n, int flags)
 {
-    int ldsrc1 = src1_step / sizeof(fptype);
-    int ldsrc2 = src2_step / sizeof(fptype);
-    int ldsrc3 = src3_step / sizeof(fptype);
-    int lddst = dst_step / sizeof(fptype);
+    int ldsrc1 = (int)(src1_step / sizeof(fptype));
+    int ldsrc2 = (int)(src2_step / sizeof(fptype));
+    int ldsrc3 = (int)(src3_step / sizeof(fptype));
+    int lddst = (int)(dst_step / sizeof(fptype));
     int c_m, c_n, d_m;
     CBLAS_TRANSPOSE transA, transB;
 
@@ -434,10 +434,10 @@ template <typename fptype> static inline int
 lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
             const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int a_m, int a_n, int d_n, int flags)
 {
-    int ldsrc1 = src1_step / sizeof(std::complex<fptype>);
-    int ldsrc2 = src2_step / sizeof(std::complex<fptype>);
-    int ldsrc3 = src3_step / sizeof(std::complex<fptype>);
-    int lddst = dst_step / sizeof(std::complex<fptype>);
+    int ldsrc1 = (int)(src1_step / sizeof(std::complex<fptype>));
+    int ldsrc2 = (int)(src2_step / sizeof(std::complex<fptype>));
+    int ldsrc3 = (int)(src3_step / sizeof(std::complex<fptype>));
+    int lddst = (int)(dst_step / sizeof(std::complex<fptype>));
     int c_m, c_n, d_m;
     CBLAS_TRANSPOSE transA, transB;
     std::complex<fptype> cAlpha(alpha, 0.0);
