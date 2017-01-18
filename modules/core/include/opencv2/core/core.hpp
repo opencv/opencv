@@ -407,7 +407,7 @@ public:
   The class is specialized for each fundamental numerical data type supported by OpenCV.
   It provides DataDepth<T>::value constant.
 */
-template<typename _Tp> class DataDepth {};
+template<typename _Tp> class DataDepth { public: enum { value = -1, fmt = 0 }; };
 
 template<> class DataDepth<bool> { public: enum { value = CV_8U, fmt=(int)'u' }; };
 template<> class DataDepth<uchar> { public: enum { value = CV_8U, fmt=(int)'u' }; };
@@ -880,8 +880,10 @@ public:
 
 
 typedef Point_<int> Point2i;
+typedef Point_<int64> Point2l;
 typedef Point2i Point;
 typedef Size_<int> Size2i;
+typedef Size_<int64> Size2l;
 typedef Size_<double> Size2d;
 typedef Size2i Size;
 typedef Rect_<int> Rect;
@@ -2711,6 +2713,7 @@ CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
 
 //! clips the line segment by the rectangle Rect(0, 0, imgSize.width, imgSize.height)
 CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
+CV_EXPORTS bool clipLine(Size2l imgSize, CV_IN_OUT Point2l& pt1, CV_IN_OUT Point2l& pt2);
 
 //! clips the line segment by the rectangle imgRect
 CV_EXPORTS_W bool clipLine(Rect imgRect, CV_OUT CV_IN_OUT Point& pt1, CV_OUT CV_IN_OUT Point& pt2);
@@ -2748,6 +2751,9 @@ public:
 CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
                                 int arcStart, int arcEnd, int delta,
                                 CV_OUT vector<Point>& pts );
+CV_EXPORTS void ellipse2Poly( Point2d center, Size2d axes, int angle,
+                              int arcStart, int arcEnd, int delta,
+                              CV_OUT vector<Point2d>& pts );
 
 enum
 {
