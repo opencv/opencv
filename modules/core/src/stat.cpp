@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include <climits>
 #include <limits>
+#include "opencv2/core/hal/intrin.hpp"
 
 #include "opencl_kernels_core.hpp"
 
@@ -4238,22 +4239,8 @@ int normHamming(const uchar* a, int n)
 {
     int i = 0;
     int result = 0;
-#if CV_NEON
-    {
-        uint32x4_t bits = vmovq_n_u32(0);
-        for (; i <= n - 16; i += 16) {
-            uint8x16_t A_vec = vld1q_u8 (a + i);
-            uint8x16_t bitsSet = vcntq_u8 (A_vec);
-            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
-            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-            bits = vaddq_u32(bits, bitSet4);
-        }
-        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
-        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
-        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
-    }
-#elif CV_AVX2
-    if (USE_AVX2)
+#if CV_AVX2
+    if(USE_AVX2)
     {
         __m256i _r0 = _mm256_setzero_si256();
         __m256i _0 = _mm256_setzero_si256();
@@ -4274,12 +4261,40 @@ int normHamming(const uchar* a, int n)
         _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
         result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
+#elif CV_POPCNT
+    if(checkHardwareSupport(CV_CPU_POPCNT))
+    {
+#  if defined CV_POPCNT_U64
+        for(; i <= n - 8; i += 8)
+        {
+            result += (int)CV_POPCNT_U64(*(uint64*)(a + i));
+        }
+#  endif
+        for(; i <= n - 4; i += 4)
+        {
+            result += CV_POPCNT_U32(*(uint*)(a + i));
+        }
+    }
+#elif CV_SIMD128
+    if(hasSIMD128())
+    {
+        v_uint32x4 t = v_setzero_u32();
+        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
+        {
+            t += v_popcount(v_load(a + i));
+        }
+        result = v_reduce_sum(t);
+    }
 #endif
-        for( ; i <= n - 4; i += 4 )
-            result += popCountTable[a[i]] + popCountTable[a[i+1]] +
-            popCountTable[a[i+2]] + popCountTable[a[i+3]];
-    for( ; i < n; i++ )
+    for(; i <= n - 4; i += 4)
+    {
+        result += popCountTable[a[i]] + popCountTable[a[i+1]] +
+        popCountTable[a[i+2]] + popCountTable[a[i+3]];
+    }
+    for(; i < n; i++)
+    {
         result += popCountTable[a[i]];
+    }
     return result;
 }
 
@@ -4287,24 +4302,8 @@ int normHamming(const uchar* a, const uchar* b, int n)
 {
     int i = 0;
     int result = 0;
-#if CV_NEON
-    {
-        uint32x4_t bits = vmovq_n_u32(0);
-        for (; i <= n - 16; i += 16) {
-            uint8x16_t A_vec = vld1q_u8 (a + i);
-            uint8x16_t B_vec = vld1q_u8 (b + i);
-            uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
-            uint8x16_t bitsSet = vcntq_u8 (AxorB);
-            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
-            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-            bits = vaddq_u32(bits, bitSet4);
-        }
-        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
-        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
-        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
-    }
-#elif CV_AVX2
-    if (USE_AVX2)
+#if CV_AVX2
+    if(USE_AVX2)
     {
         __m256i _r0 = _mm256_setzero_si256();
         __m256i _0 = _mm256_setzero_si256();
@@ -4328,12 +4327,40 @@ int normHamming(const uchar* a, const uchar* b, int n)
         _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
         result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
+#elif CV_POPCNT
+    if(checkHardwareSupport(CV_CPU_POPCNT))
+    {
+#  if defined CV_POPCNT_U64
+        for(; i <= n - 8; i += 8)
+        {
+            result += (int)CV_POPCNT_U64(*(uint64*)(a + i) ^ *(uint64*)(b + i));
+        }
+#  endif
+        for(; i <= n - 4; i += 4)
+        {
+            result += CV_POPCNT_U32(*(uint*)(a + i) ^ *(uint*)(b + i));
+        }
+    }
+#elif CV_SIMD128
+    if(hasSIMD128())
+    {
+        v_uint32x4 t = v_setzero_u32();
+        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
+        {
+            t += v_popcount(v_load(a + i) ^ v_load(b + i));
+        }
+        result = v_reduce_sum(t);
+    }
 #endif
-        for( ; i <= n - 4; i += 4 )
-            result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
-                    popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
-    for( ; i < n; i++ )
+    for(; i <= n - 4; i += 4)
+    {
+        result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
+                popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
+    }
+    for(; i < n; i++)
+    {
         result += popCountTable[a[i] ^ b[i]];
+    }
     return result;
 }
 

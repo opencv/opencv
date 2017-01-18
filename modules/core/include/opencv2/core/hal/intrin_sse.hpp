@@ -1121,6 +1121,28 @@ OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, sum, OPENCV_HAL_ADD)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, max, std::max)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, min, std::min)
 
+#define OPENCV_HAL_IMPL_SSE_POPCOUNT(_Tpvec) \
+inline v_uint32x4 v_popcount(const _Tpvec& a) \
+{ \
+    __m128i m1 = _mm_set1_epi32(0x55555555); \
+    __m128i m2 = _mm_set1_epi32(0x33333333); \
+    __m128i m4 = _mm_set1_epi32(0x0f0f0f0f); \
+    __m128i p = a.val; \
+    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 1), m1), _mm_and_si128(p, m1)); \
+    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 2), m2), _mm_and_si128(p, m2)); \
+    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 4), m4), _mm_and_si128(p, m4)); \
+    p = _mm_adds_epi8(p, _mm_srli_si128(p, 1)); \
+    p = _mm_adds_epi8(p, _mm_srli_si128(p, 2)); \
+    return v_uint32x4(_mm_and_si128(p, _mm_set1_epi32(0x000000ff))); \
+}
+
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_uint8x16)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_uint16x8)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_uint32x4)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_int8x16)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_int16x8)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_int32x4)
+
 #define OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(_Tpvec, suffix, pack_op, and_op, signmask, allmask) \
 inline int v_signmask(const _Tpvec& a) \
 { \

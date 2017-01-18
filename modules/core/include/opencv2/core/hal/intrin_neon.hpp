@@ -813,6 +813,22 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, sum, add, f32)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, max, max, f32)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, min, min, f32)
 
+#define OPENCV_HAL_IMPL_NEON_POPCOUNT(_Tpvec, cast) \
+inline v_uint32x4 v_popcount(const _Tpvec& a) \
+{ \
+    uint8x16_t t = vcntq_u8(cast(a.val)); \
+    uint16x8_t t0 = vpaddlq_u8(t);  /* 16 -> 8 */ \
+    uint32x4_t t1 = vpaddlq_u16(t0); /* 8 -> 4 */ \
+    return v_uint32x4(t1); \
+}
+
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_uint8x16, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_uint16x8, vreinterpretq_u8_u16)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_uint32x4, vreinterpretq_u8_u32)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_int8x16, vreinterpretq_u8_s8)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_int16x8, vreinterpretq_u8_s16)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_int32x4, vreinterpretq_u8_s32)
+
 inline int v_signmask(const v_uint8x16& a)
 {
     int8x8_t m0 = vcreate_s8(CV_BIG_UINT(0x0706050403020100));
