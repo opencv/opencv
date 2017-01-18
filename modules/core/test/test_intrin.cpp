@@ -404,6 +404,18 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_popcount()
+    {
+        static unsigned popcountTable[] = {0, 1, 2, 4, 5, 7, 9, 12, 13, 15, 17, 20, 22, 25, 28, 32, 33};
+        Data<R> dataA;
+        R a = dataA;
+
+        unsigned resB = (unsigned)v_reduce_sum(v_popcount(a));
+        EXPECT_EQ(popcountTable[R::nlanes], resB);
+
+        return *this;
+    }
+
     TheTest & test_absdiff()
     {
         typedef typename V_RegTrait128<LaneType>::u_reg Ru;
@@ -798,6 +810,7 @@ TEST(hal_intrin, uint8x16) {
         .test_min_max()
         .test_absdiff()
         .test_mask()
+        .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
         .test_pack_u<1>().test_pack_u<2>().test_pack_u<3>().test_pack_u<8>()
         .test_unpack()
@@ -819,6 +832,7 @@ TEST(hal_intrin, int8x16) {
         .test_absdiff()
         .test_abs()
         .test_mask()
+        .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
         .test_unpack()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
@@ -844,6 +858,7 @@ TEST(hal_intrin, uint16x8) {
         .test_absdiff()
         .test_reduce()
         .test_mask()
+        .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
         .test_pack_u<1>().test_pack_u<2>().test_pack_u<7>().test_pack_u<16>()
         .test_unpack()
@@ -870,6 +885,7 @@ TEST(hal_intrin, int16x8) {
         .test_abs()
         .test_reduce()
         .test_mask()
+        .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
         .test_unpack()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
@@ -894,6 +910,7 @@ TEST(hal_intrin, uint32x4) {
         .test_absdiff()
         .test_reduce()
         .test_mask()
+        .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
         .test_unpack()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
@@ -910,6 +927,7 @@ TEST(hal_intrin, int32x4) {
         .test_mul()
         .test_abs()
         .test_cmp()
+        .test_popcount()
         .test_shift<1>().test_shift<8>()
         .test_logic()
         .test_min_max()
