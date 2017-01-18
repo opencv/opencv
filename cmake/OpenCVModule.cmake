@@ -233,7 +233,7 @@ macro(ocv_add_module _name)
 endmacro()
 
 # excludes module from current configuration
-macro(ocv_module_disable module)
+macro(ocv_module_disable_ module)
   set(__modname ${module})
   if(NOT __modname MATCHES "^opencv_")
     set(__modname opencv_${module})
@@ -246,9 +246,12 @@ macro(ocv_module_disable module)
     # touch variable controlling build of the module to suppress "unused variable" CMake warning
   endif()
   unset(__modname)
-  return() # leave the current folder
 endmacro()
 
+macro(ocv_module_disable module)
+  ocv_module_disable_(${module})
+  return() # leave the current folder
+endmacro()
 
 # collect modules from specified directories
 # NB: must be called only once!
