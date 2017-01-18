@@ -245,8 +245,8 @@ enum MorphTypes{
                         //!< \f[\texttt{dst} = \mathrm{tophat} ( \texttt{src} , \texttt{element} )= \texttt{src} - \mathrm{open} ( \texttt{src} , \texttt{element} )\f]
     MORPH_BLACKHAT = 6, //!< "black hat"
                         //!< \f[\texttt{dst} = \mathrm{blackhat} ( \texttt{src} , \texttt{element} )= \mathrm{close} ( \texttt{src} , \texttt{element} )- \texttt{src}\f]
-    MORPH_HITMISS  = 7  //!< "hit and miss"
-                        //!<   .- Only supported for CV_8UC1 binary images. Tutorial can be found in [this page](https://web.archive.org/web/20160316070407/http://opencv-code.com/tutorials/hit-or-miss-transform-in-opencv/)
+    MORPH_HITMISS  = 7  //!< "hit or miss"
+                        //!<   .- Only supported for CV_8UC1 binary images. A tutorial can be found in the documentation
 };
 
 //! shape of the structuring element
@@ -3744,6 +3744,7 @@ CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labe
 The function retrieves contours from the binary image using the algorithm @cite Suzuki85 . The contours
 are a useful tool for shape analysis and object detection and recognition. See squares.cpp in the
 OpenCV sample directory.
+@note Since opencv 3.2 source image is not modified by this function.
 
 @param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
 pixels remain 0's, so the image is treated as binary . You can use cv::compare, cv::inRange, cv::threshold ,

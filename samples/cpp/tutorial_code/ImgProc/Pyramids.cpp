@@ -45,26 +45,22 @@ int main( void )
   //![infinite_loop]
   for(;;)
   {
-    int c;
-    c = waitKey(0);
+    char c = (char)waitKey(0);
 
-    if( (char)c == 27 )
+    if( c == 27 )
       { break; }
-    if( (char)c == 'u' )
-      {
-        //![pyrup]
-        pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
-        //![pyrup]
+    //![pyrup]
+    if( c == 'u' )
+      { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
         printf( "** Zoom In: Image x 2 \n" );
       }
-    else if( (char)c == 'd' )
-      {
-        //![pyrdown]
-        pyrDown( tmp, dst, Size( tmp.cols/2, tmp.rows/2 ) );
-        //![pyrdown]
+    //![pyrup]
+    //![pyrdown]
+    else if( c == 'd' )
+      { pyrDown( tmp, dst, Size( tmp.cols/2, tmp.rows/2 ) );
         printf( "** Zoom Out: Image / 2 \n" );
       }
-
+    //![pyrdown]
     imshow( window_name, dst );
 
     //![update_tmp]

@@ -2,6 +2,7 @@
 
 import datetime
 from run_utils import *
+from run_long import LONG_TESTS_DEBUG_VALGRIND, longTestFilter
 
 class TestSuite(object):
     def __init__(self, options, cache):
@@ -99,7 +100,7 @@ class TestSuite(object):
             if self.options.valgrind_supp:
                 res.append("--suppressions=%s" % self.options.valgrind_supp)
             res.extend(self.options.valgrind_opt)
-            return res + cmd
+            return res + cmd + [longTestFilter(LONG_TESTS_DEBUG_VALGRIND)]
         return cmd
 
     def tryCommand(self, cmd):

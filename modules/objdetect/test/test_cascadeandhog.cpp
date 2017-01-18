@@ -1087,7 +1087,7 @@ void HOGDescriptorTester::detect(const Mat& img,
     }
 
     const double eps = FLT_EPSILON * 100;
-    double diff_norm = cvtest::norm(actual_weights, weights, NORM_L2);
+    double diff_norm = cvtest::norm(actual_weights, weights, NORM_L2 + NORM_RELATIVE);
     if (diff_norm > eps)
     {
         ts->printf(cvtest::TS::SUMMARY, "Weights for found locations aren't equal.\n"
@@ -1167,7 +1167,7 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
     std::vector<float> actual_descriptors;
     actual_hog->compute(img, actual_descriptors, winStride, padding, locations);
 
-    double diff_norm = cvtest::norm(actual_descriptors, descriptors, NORM_L2);
+    double diff_norm = cvtest::norm(actual_descriptors, descriptors, NORM_L2 + NORM_RELATIVE);
     const double eps = FLT_EPSILON * 100;
     if (diff_norm > eps)
     {
@@ -1316,7 +1316,7 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     const double eps = FLT_EPSILON * 100;
     for (i = 0; i < 2; ++i)
     {
-       double diff_norm = cvtest::norm(reference_mats[i], actual_mats[i], NORM_L2);
+       double diff_norm = cvtest::norm(actual_mats[i], reference_mats[i], NORM_L2 + NORM_RELATIVE);
        if (diff_norm > eps)
        {
            ts->printf(cvtest::TS::LOG, "%s matrices are not equal\n"

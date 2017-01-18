@@ -108,7 +108,7 @@ if __name__ == '__main__':
         img = render.getNextFrame()
         cv2.imshow('img', img)
 
-        ch = 0xFF & cv2.waitKey(3)
+        ch = cv2.waitKey(3)
         if  ch == 27:
             break
     #import os

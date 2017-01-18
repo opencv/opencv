@@ -45,6 +45,8 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include <queue>
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 #ifdef _MSC_VER
 #pragma warning( disable: 4127 ) // conditional expression is constant
 #endif
@@ -775,6 +777,62 @@ private:
     ptrdiff_t mapstep;
 };
 
+#ifdef HAVE_OPENVX
+static bool openvx_canny(const Mat& src, Mat& dst, int loVal, int hiVal, int kSize, bool useL2)
+{
+    using namespace ivx;
+
+    Context context = Context::create();
+    try
+    {
+    Image _src = Image::createFromHandle(
+                context,
+                Image::matTypeToFormat(src.type()),
+                Image::createAddressing(src),
+                src.data );
+    Image _dst = Image::createFromHandle(
+                context,
+                Image::matTypeToFormat(dst.type()),
+                Image::createAddressing(dst),
+                dst.data );
+    Threshold threshold = Threshold::createRange(context, VX_TYPE_UINT8, saturate_cast<uchar>(loVal), saturate_cast<uchar>(hiVal));
+
+#if 0
+    // the code below is disabled because vxuCannyEdgeDetector()
+    // ignores context attribute VX_CONTEXT_IMMEDIATE_BORDER
+
+    // FIXME: may fail in multithread case
+    border_t prevBorder = context.immediateBorder();
+    context.setImmediateBorder(VX_BORDER_REPLICATE);
+    IVX_CHECK_STATUS( vxuCannyEdgeDetector(context, _src, threshold, kSize, (useL2 ? VX_NORM_L2 : VX_NORM_L1), _dst) );
+    context.setImmediateBorder(prevBorder);
+#else
+    // alternative code without vxuCannyEdgeDetector()
+    Graph graph = Graph::create(context);
+    ivx::Node node = ivx::Node(vxCannyEdgeDetectorNode(graph, _src, threshold, kSize, (useL2 ? VX_NORM_L2 : VX_NORM_L1), _dst) );
+    node.setBorder(VX_BORDER_REPLICATE);
+    graph.verify();
+    graph.process();
+#endif
+
+#ifdef VX_VERSION_1_1
+    _src.swapHandle();
+    _dst.swapHandle();
+#endif
+    }
+    catch(const WrapperError& e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    catch(const RuntimeError& e)
+    {
+        VX_DbgThrow(e.what());
+    }
+
+    return true;
+}
+#endif // HAVE_OPENVX
+
 void Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 int aperture_size, bool L2gradient )
@@ -804,6 +862,20 @@ void Canny( InputArray _src, OutputArray _dst,
                ocl_Canny<false>(_src, UMat(), UMat(), _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
 
     Mat src = _src.getMat(), dst = _dst.getMat();
+
+    CV_OVX_RUN(
+        false && /* disabling due to accuracy issues */
+            src.type() == CV_8UC1 &&
+            !src.isSubmatrix() &&
+            src.cols >= aperture_size &&
+            src.rows >= aperture_size,
+        openvx_canny(
+            src,
+            dst,
+            cvFloor(low_thresh),
+            cvFloor(high_thresh),
+            aperture_size,
+            L2gradient ) )
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))

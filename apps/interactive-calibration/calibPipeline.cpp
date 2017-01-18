@@ -68,7 +68,7 @@ PipelineExitStatus CalibPipeline::start(std::vector<cv::Ptr<FrameProcessor> > pr
         for (std::vector<cv::Ptr<FrameProcessor> >::iterator it = processors.begin(); it != processors.end(); ++it)
             processedFrame = (*it)->processFrame(processedFrame);
         cv::imshow(mainWindowName, processedFrame);
-        int key = cv::waitKey(CAP_DELAY);
+        char key = (char)cv::waitKey(CAP_DELAY);
 
         if(key == 27) // esc
             return Finished;

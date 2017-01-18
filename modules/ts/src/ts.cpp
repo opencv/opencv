@@ -80,6 +80,8 @@
 namespace cvtest
 {
 
+uint64 param_seed = 0x12345678; // real value is passed via parseCustomOptions function
+
 static std::string path_join(const std::string& prefix, const std::string& subpath)
 {
     CV_Assert(subpath.empty() || subpath[0] != '/');
@@ -695,6 +697,7 @@ void parseCustomOptions(int argc, char **argv)
 {
     const char * const command_line_keys =
         "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
+        "{ test_seed          |809564   |seed for random numbers generator }"
         "{ h   help           |false    |print help info                          }";
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
@@ -711,6 +714,8 @@ void parseCustomOptions(int argc, char **argv)
 #else
         test_ipp_check = false;
 #endif
+
+    param_seed = parser.get<unsigned int>("test_seed");
 }
 
 

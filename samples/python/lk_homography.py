@@ -90,7 +90,7 @@ class App:
 
             cv2.imshow('lk_homography', vis)
 
-            ch = 0xFF & cv2.waitKey(1)
+            ch = cv2.waitKey(1)
             if ch == 27:
                 break
             if ch == ord(' '):
