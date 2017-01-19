@@ -20,10 +20,8 @@ macro (mkl_find_lib VAR NAME DIRS)
 endmacro()
 
 macro(mkl_fail)
-    set(HAVE_MKL OFF CACHE BOOL "True if MKL found")
+    set(HAVE_MKL OFF)
     set(MKL_ROOT_DIR ${MKL_ROOT_DIR} CACHE PATH "Path to MKL directory")
-    unset(MKL_INCLUDE_DIRS CACHE)
-    unset(MKL_LIBRARIES CACHE)
     return()
 endmacro()
 
@@ -64,11 +62,16 @@ if(NOT MKL_ROOT_DIR OR NOT EXISTS ${MKL_ROOT_DIR}/include/mkl.h)
     find_path(MKL_ROOT_DIR include/mkl.h PATHS ${mkl_root_paths})
 endif()
 
-if(NOT MKL_ROOT_DIR)
+set(MKL_INCLUDE_DIRS ${MKL_ROOT_DIR}/include CACHE PATH "Path to MKL include directory")
+
+if(NOT MKL_ROOT_DIR
+    OR NOT EXISTS "${MKL_ROOT_DIR}"
+    OR NOT EXISTS "${MKL_INCLUDE_DIRS}"
+    OR NOT EXISTS "${MKL_INCLUDE_DIRS}/mkl_version.h"
+)
     mkl_fail()
 endif()
 
-set(MKL_INCLUDE_DIRS ${MKL_ROOT_DIR}/include)
 get_mkl_version(${MKL_INCLUDE_DIRS}/mkl_version.h)
 
 #determine arch
@@ -124,13 +127,11 @@ foreach(lib ${mkl_lib_list})
 endforeach()
 
 message(STATUS "Found MKL ${MKL_VERSION_STR} at: ${MKL_ROOT_DIR}")
-set(HAVE_MKL ON CACHE BOOL "True if MKL found")
+set(HAVE_MKL ON)
 set(MKL_ROOT_DIR ${MKL_ROOT_DIR} CACHE PATH "Path to MKL directory")
 set(MKL_INCLUDE_DIRS ${MKL_INCLUDE_DIRS} CACHE PATH "Path to MKL include directory")
-if(NOT UNIX)
-    set(MKL_LIBRARIES ${MKL_LIBRARIES} CACHE FILEPATH "MKL libarries")
-else()
+set(MKL_LIBRARIES ${MKL_LIBRARIES} CACHE STRING "MKL libarries")
+if(UNIX AND NOT MKL_LIBRARIES_DONT_HACK)
     #it's ugly but helps to avoid cyclic lib problem
     set(MKL_LIBRARIES ${MKL_LIBRARIES} ${MKL_LIBRARIES} ${MKL_LIBRARIES} "-lpthread" "-lm" "-ldl")
-    set(MKL_LIBRARIES ${MKL_LIBRARIES} CACHE STRING "MKL libarries")
 endif()
