@@ -224,6 +224,10 @@ macro(ocv_add_module _name)
     endif()
     if((NOT OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD AND NOT ${the_module} STREQUAL opencv_world) OR NOT ${BUILD_opencv_world})
       project(${the_module})
+      add_definitions(
+        -D_USE_MATH_DEFINES  # M_PI constant in MSVS
+        -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS  # to use C libraries from C++ code (ffmpeg)
+      )
     endif()
   endif()
 endmacro()
