@@ -2,7 +2,7 @@ set(the_description "All the selected OpenCV modules in a single binary")
 set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
 set(BUILD_opencv_world_INIT OFF)
 
-if(APPLE_FRAMEWORK OR NOT BUILD_SHARED_LIBS)
+if(NOT BUILD_SHARED_LIBS)
   set(OPENCV_MODULE_TYPE STATIC)
   set(OPENCV_WORLD_FLAGS_PROPERTY STATIC_LIBRARY_FLAGS)
 else()

@@ -86,24 +86,52 @@ endif()
 set(CMAKE_MACOSX_BUNDLE YES)
 set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO")
 
-set(CMAKE_OSX_ARCHITECTURES "${IOS_ARCH}" CACHE INTERNAL "Build architecture for iOS" FORCE)
+if(APPLE_FRAMEWORK AND NOT BUILD_SHARED_LIBS)
+  set(CMAKE_OSX_ARCHITECTURES "${IOS_ARCH}" CACHE INTERNAL "Build architecture for iOS" FORCE)
+endif()
 
 if(NOT __IN_TRY_COMPILE)
   set(_xcodebuild_wrapper "${CMAKE_BINARY_DIR}/xcodebuild_wrapper")
   if(NOT CMAKE_MAKE_PROGRAM STREQUAL _xcodebuild_wrapper)
-    set(_xcodebuild_wrapper_tmp "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/xcodebuild_wrapper")
-    file(WRITE "${_xcodebuild_wrapper_tmp}" "#!/bin/sh
+    if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+      set(_xcodebuild_wrapper_tmp "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/xcodebuild_wrapper")
+      file(WRITE "${_xcodebuild_wrapper_tmp}" "#!/bin/sh
+${CMAKE_MAKE_PROGRAM} IPHONEOS_DEPLOYMENT_TARGET=8.0 -sdk ${CMAKE_OSX_SYSROOT} \$*")
+      # Make executable
+      file(COPY "${_xcodebuild_wrapper_tmp}" DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+      set(CMAKE_MAKE_PROGRAM "${_xcodebuild_wrapper}" CACHE INTERNAL "" FORCE)
+    else()
+      set(_xcodebuild_wrapper_tmp "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/xcodebuild_wrapper")
+      file(WRITE "${_xcodebuild_wrapper_tmp}" "#!/bin/sh
 ${CMAKE_MAKE_PROGRAM} IPHONEOS_DEPLOYMENT_TARGET=6.0 ARCHS=${IOS_ARCH} -sdk ${CMAKE_OSX_SYSROOT} \$*")
-    # Make executable
-    file(COPY "${_xcodebuild_wrapper_tmp}" DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-    set(CMAKE_MAKE_PROGRAM "${_xcodebuild_wrapper}" CACHE INTERNAL "" FORCE)
+      # Make executable
+      file(COPY "${_xcodebuild_wrapper_tmp}" DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+      set(CMAKE_MAKE_PROGRAM "${_xcodebuild_wrapper}" CACHE INTERNAL "" FORCE)
+    endif()
   endif()
 endif()
 
 # Standard settings
 set(CMAKE_SYSTEM_NAME iOS)
-set(CMAKE_SYSTEM_VERSION 6.0)
-set(CMAKE_SYSTEM_PROCESSOR "${IOS_ARCH}")
+
+# Apple Framework settings
+if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+  set(CMAKE_SYSTEM_VERSION 8.0)
+  set(CMAKE_C_SIZEOF_DATA_PTR 4)
+  set(CMAKE_CXX_SIZEOF_DATA_PTR 4)
+else()
+  set(CMAKE_SYSTEM_VERSION 6.0)
+  set(CMAKE_SYSTEM_PROCESSOR "${IOS_ARCH}")
+
+  if(AARCH64 OR X86_64)
+    set(CMAKE_C_SIZEOF_DATA_PTR 8)
+    set(CMAKE_CXX_SIZEOF_DATA_PTR 8)
+  else()
+    set(CMAKE_C_SIZEOF_DATA_PTR 4)
+    set(CMAKE_CXX_SIZEOF_DATA_PTR 4)
+  endif()
+endif()
+
 # Include extra modules for the iOS platform files
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/platforms/ios/cmake/Modules")
 
@@ -112,13 +140,6 @@ include(CMakeForceCompiler)
 #CMAKE_FORCE_C_COMPILER (clang GNU)
 #CMAKE_FORCE_CXX_COMPILER (clang++ GNU)
 
-if(AARCH64 OR X86_64)
-  set(CMAKE_C_SIZEOF_DATA_PTR 8)
-  set(CMAKE_CXX_SIZEOF_DATA_PTR 8)
-else()
-  set(CMAKE_C_SIZEOF_DATA_PTR 4)
-  set(CMAKE_CXX_SIZEOF_DATA_PTR 4)
-endif()
 set(CMAKE_C_HAS_ISYSROOT 1)
 set(CMAKE_CXX_HAS_ISYSROOT 1)
 set(CMAKE_C_COMPILER_ABI ELF)
