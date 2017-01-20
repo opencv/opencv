@@ -62,8 +62,9 @@ TEST(Photo_NPR_EdgePreserveSmoothing_RecursiveFilter, regression)
     edgePreservingFilter(source,result,1);
 
     Mat reference = imread(folder + "smoothened_RF_reference.png");
-    double error = cvtest::norm(reference, result, NORM_L1);
-    EXPECT_LE(error, numerical_precision);
+
+    double psnr = cvtest::PSNR(reference, result);
+    EXPECT_GT(psnr, 60.0);
 }
 
 TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
@@ -79,9 +80,9 @@ TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
     edgePreservingFilter(source,result,2);
 
     Mat reference = imread(folder + "smoothened_NCF_reference.png");
-    double error = cvtest::norm(reference, result, NORM_L1);
-    EXPECT_LE(error, numerical_precision);
 
+    double psnr = cvtest::PSNR(reference, result);
+    EXPECT_GT(psnr, 60.0);
 }
 
 TEST(Photo_NPR_DetailEnhance, regression)
@@ -97,8 +98,8 @@ TEST(Photo_NPR_DetailEnhance, regression)
     detailEnhance(source,result);
 
     Mat reference = imread(folder + "detail_enhanced_reference.png");
-    double error = cvtest::norm(reference, result, NORM_L1);
-    EXPECT_LE(error, numerical_precision);
+    double psnr = cvtest::PSNR(reference, result);
+    EXPECT_GT(psnr, 60.0);
 }
 
 TEST(Photo_NPR_PencilSketch, regression)
