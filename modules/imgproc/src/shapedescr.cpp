@@ -661,35 +661,39 @@ cv::RotatedRect cv::fitEllipse(InputArray _points, bool direct)
     }
 
     Matx66d S1;
-    Matx33d C(0., 0., -0.5, 0., 1., 0., -0.5, 0., 0.), tmp1, tmp2, tmp3;
-    Matx31d EigenVal_X, b(1., 1., 1.), EigenVec_Y;
+    Matx33d C(0., 0., -0.5,
+              0., 1., 0.,
+              -0.5, 0., 0.),
+            tmp1, tmp2, tmp3;
+    Matx31d b(1., 1., 1.),
+            eigenVecX, eigenVecY;
 
     gemm(_A, _A, 1, noArray(), 0, S1, GEMM_1_T);
 
     gemm(Mat(S1)(Rect(3, 3, 3, 3)).inv(DECOMP_LU), Mat(S1)(Rect(0, 3, 3, 3)), 1., noArray(), 0, tmp1);
-    gemm(Mat(S1)(Rect(0, 3, 3, 3)), tmp1, 1., Mat(), 1., tmp2, GEMM_1_T);
+    gemm(Mat(S1)(Rect(0, 3, 3, 3)), tmp1, 1., noArray(), 0, tmp2, GEMM_1_T);
     gemm(C, Mat(S1)(Rect(0, 0, 3, 3)) - Mat(tmp2), 1., noArray(), 0., tmp3);
 
-    solve(tmp3, b, EigenVal_X, DECOMP_LU);
-    gemm(tmp1, EigenVal_X, -1., noArray(), 0., EigenVec_Y);
+    solve(tmp3, b, eigenVecX, DECOMP_LU);
+    gemm(tmp1, eigenVecX, -1., noArray(), 0., eigenVecY);
 
     double sxx = scaleVal.x * scaleVal.x, syy = scaleVal.y * scaleVal.y, sxy = scaleVal.x * scaleVal.y;
 
-    Matx61d par(EigenVal_X.val[0] / syy,
-        EigenVal_X.val[1] / sxy,
-        EigenVal_X.val[2] / sxx,
-        -2. * EigenVal_X.val[0] * meanVal.x / syy -
-            EigenVal_X.val[1] * meanVal.y / sxy +
-            EigenVec_Y.val[0] / (syy * scaleVal.x),
-        -EigenVal_X.val[1] * meanVal.x / sxy -
-            2. * EigenVal_X.val[2] * meanVal.y / sxx +
-            EigenVec_Y.val[1] / (sxx * scaleVal.y),
-        EigenVal_X.val[0] * meanVal.x * meanVal.x / syy +
-            EigenVal_X.val[1] * meanVal.x * meanVal.y / sxy +
-            EigenVal_X.val[2] * meanVal.y * meanVal.y / sxx -
-            EigenVec_Y.val[0] * meanVal.x / (scaleVal.x * syy) -
-            EigenVec_Y.val[1] * meanVal.y / (sxx * scaleVal.y) +
-            EigenVec_Y.val[2] / (sxx * syy));
+    Matx61d par(eigenVecX.val[0] / syy,
+        eigenVecX.val[1] / sxy,
+        eigenVecX.val[2] / sxx,
+        -2. * eigenVecX.val[0] * meanVal.x / syy -
+            eigenVecX.val[1] * meanVal.y / sxy +
+            eigenVecY.val[0] / (syy * scaleVal.x),
+        -eigenVecX.val[1] * meanVal.x / sxy -
+            2. * eigenVecX.val[2] * meanVal.y / sxx +
+            eigenVecY.val[1] / (sxx * scaleVal.y),
+        eigenVecX.val[0] * meanVal.x * meanVal.x / syy +
+            eigenVecX.val[1] * meanVal.x * meanVal.y / sxy +
+            eigenVecX.val[2] * meanVal.y * meanVal.y / sxx -
+            eigenVecY.val[0] * meanVal.x / (scaleVal.x * syy) -
+            eigenVecY.val[1] * meanVal.y / (sxx * scaleVal.y) +
+            eigenVecY.val[2] / (sxx * syy));
 
     double theta = atan2(par.val[1], par.val[0] - par.val[2]) / 2.;
     double cost = std::cos(theta), sint = std::sin(theta);
