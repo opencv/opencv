@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -51,8 +52,8 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
 {
     int i, j;
     Size size = _cov.size();
-#if CV_SSE
-    volatile bool simd = checkHardwareSupport(CV_CPU_SSE);
+#if CV_SIMD128
+    bool simd = hasSIMD128();
 #endif
 
     if( _cov.isContinuous() && _dst.isContinuous() )
@@ -66,43 +67,20 @@ static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
         const float* cov = _cov.ptr<float>(i);
         float* dst = _dst.ptr<float>(i);
         j = 0;
-    #if CV_SSE
+    #if CV_SIMD128
         if( simd )
         {
-            __m128 half = _mm_set1_ps(0.5f);
-            for( ; j <= size.width - 4; j += 4 )
+            v_float32x4 half = v_setall_f32(0.5f);
+            for( ; j <= size.width - v_float32x4::nlanes; j += v_float32x4::nlanes )
             {
-                __m128 t0 = _mm_loadu_ps(cov + j*3); // a0 b0 c0 x
-                __m128 t1 = _mm_loadu_ps(cov + j*3 + 3); // a1 b1 c1 x
-                __m128 t2 = _mm_loadu_ps(cov + j*3 + 6); // a2 b2 c2 x
-                __m128 t3 = _mm_loadu_ps(cov + j*3 + 9); // a3 b3 c3 x
-                __m128 a, b, c, t;
-                t = _mm_unpacklo_ps(t0, t1); // a0 a1 b0 b1
-                c = _mm_unpackhi_ps(t0, t1); // c0 c1 x x
-                b = _mm_unpacklo_ps(t2, t3); // a2 a3 b2 b3
-                c = _mm_movelh_ps(c, _mm_unpackhi_ps(t2, t3)); // c0 c1 c2 c3
-                a = _mm_movelh_ps(t, b);
-                b = _mm_movehl_ps(b, t);
-                a = _mm_mul_ps(a, half);
-                c = _mm_mul_ps(c, half);
-                t = _mm_sub_ps(a, c);
-                t = _mm_add_ps(_mm_mul_ps(t, t), _mm_mul_ps(b,b));
-                a = _mm_sub_ps(_mm_add_ps(a, c), _mm_sqrt_ps(t));
-                _mm_storeu_ps(dst + j, a);
+                v_float32x4 v_a, v_b, v_c, v_t;
+                v_load_deinterleave(cov + j*3, v_a, v_b, v_c);
+                v_a *= half;
+                v_c *= half;
+                v_t = v_a - v_c;
+                v_t = v_muladd(v_b, v_b, (v_t * v_t));
+                v_store(dst + j, (v_a + v_c) - v_sqrt(v_t));
             }
-        }
-    #elif CV_NEON
-        float32x4_t v_half = vdupq_n_f32(0.5f);
-        for( ; j <= size.width - 4; j += 4 )
-        {
-            float32x4x3_t v_src = vld3q_f32(cov + j * 3);
-            float32x4_t v_a = vmulq_f32(v_src.val[0], v_half);
-            float32x4_t v_b = v_src.val[1];
-            float32x4_t v_c = vmulq_f32(v_src.val[2], v_half);
-
-            float32x4_t v_t = vsubq_f32(v_a, v_c);
-            v_t = vmlaq_f32(vmulq_f32(v_t, v_t), v_b, v_b);
-            vst1q_f32(dst + j, vsubq_f32(vaddq_f32(v_a, v_c), cv_vsqrtq_f32(v_t)));
         }
     #endif
         for( ; j < size.width; j++ )
@@ -120,8 +98,8 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
 {
     int i, j;
     Size size = _cov.size();
-#if CV_SSE
-    volatile bool simd = checkHardwareSupport(CV_CPU_SSE);
+#if CV_SIMD128
+    bool simd = hasSIMD128();
 #endif
 
     if( _cov.isContinuous() && _dst.isContinuous() )
@@ -136,40 +114,21 @@ static void calcHarris( const Mat& _cov, Mat& _dst, double k )
         float* dst = _dst.ptr<float>(i);
         j = 0;
 
-    #if CV_SSE
+    #if CV_SIMD128
         if( simd )
         {
-            __m128 k4 = _mm_set1_ps((float)k);
-            for( ; j <= size.width - 4; j += 4 )
-            {
-                __m128 t0 = _mm_loadu_ps(cov + j*3); // a0 b0 c0 x
-                __m128 t1 = _mm_loadu_ps(cov + j*3 + 3); // a1 b1 c1 x
-                __m128 t2 = _mm_loadu_ps(cov + j*3 + 6); // a2 b2 c2 x
-                __m128 t3 = _mm_loadu_ps(cov + j*3 + 9); // a3 b3 c3 x
-                __m128 a, b, c, t;
-                t = _mm_unpacklo_ps(t0, t1); // a0 a1 b0 b1
-                c = _mm_unpackhi_ps(t0, t1); // c0 c1 x x
-                b = _mm_unpacklo_ps(t2, t3); // a2 a3 b2 b3
-                c = _mm_movelh_ps(c, _mm_unpackhi_ps(t2, t3)); // c0 c1 c2 c3
-                a = _mm_movelh_ps(t, b);
-                b = _mm_movehl_ps(b, t);
-                t = _mm_add_ps(a, c);
-                a = _mm_sub_ps(_mm_mul_ps(a, c), _mm_mul_ps(b, b));
-                t = _mm_mul_ps(_mm_mul_ps(k4, t), t);
-                a = _mm_sub_ps(a, t);
-                _mm_storeu_ps(dst + j, a);
-            }
-        }
-    #elif CV_NEON
-        float32x4_t v_k = vdupq_n_f32((float)k);
+            v_float32x4 v_k = v_setall_f32((float)k);
 
-        for( ; j <= size.width - 4; j += 4 )
-        {
-            float32x4x3_t v_src = vld3q_f32(cov + j * 3);
-            float32x4_t v_a = v_src.val[0], v_b = v_src.val[1], v_c = v_src.val[2];
-            float32x4_t v_ac_bb = vmlsq_f32(vmulq_f32(v_a, v_c), v_b, v_b);
-            float32x4_t v_ac = vaddq_f32(v_a, v_c);
-            vst1q_f32(dst + j, vmlsq_f32(v_ac_bb, v_k, vmulq_f32(v_ac, v_ac)));
+            for( ; j <= size.width - v_float32x4::nlanes; j += v_float32x4::nlanes )
+            {
+                v_float32x4 v_a, v_b, v_c;
+                v_load_deinterleave(cov + j * 3, v_a, v_b, v_c);
+
+                v_float32x4 v_ac_bb = v_a * v_c - v_b * v_b;
+                v_float32x4 v_ac = v_a + v_c;
+                v_float32x4 v_dst = v_ac_bb - v_k * v_ac * v_ac;
+                v_store(dst + j, v_dst);
+            }
         }
     #endif
 
@@ -272,8 +231,8 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     if (tegra::useTegra() && tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
         return;
 #endif
-#if CV_SSE2
-    bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#if CV_SIMD128
+    bool haveSimd = hasSIMD128();
 #endif
 
     int depth = src.depth();
@@ -309,44 +268,20 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
         const float* dydata = Dy.ptr<float>(i);
         j = 0;
 
-        #if CV_NEON
-        for( ; j <= size.width - 4; j += 4 )
+        #if CV_SIMD128
+        if (haveSimd)
         {
-            float32x4_t v_dx = vld1q_f32(dxdata + j);
-            float32x4_t v_dy = vld1q_f32(dydata + j);
-
-            float32x4x3_t v_dst;
-            v_dst.val[0] = vmulq_f32(v_dx, v_dx);
-            v_dst.val[1] = vmulq_f32(v_dx, v_dy);
-            v_dst.val[2] = vmulq_f32(v_dy, v_dy);
-
-            vst3q_f32(cov_data + j * 3, v_dst);
-        }
-        #elif CV_SSE2
-        if (haveSSE2)
-        {
-            for( ; j <= size.width - 8; j += 8 )
+            for( ; j <= size.width - v_float32x4::nlanes; j += v_float32x4::nlanes )
             {
-                __m128 v_dx_0 = _mm_loadu_ps(dxdata + j);
-                __m128 v_dx_1 = _mm_loadu_ps(dxdata + j + 4);
-                __m128 v_dy_0 = _mm_loadu_ps(dydata + j);
-                __m128 v_dy_1 = _mm_loadu_ps(dydata + j + 4);
+                v_float32x4 v_dx = v_load(dxdata + j);
+                v_float32x4 v_dy = v_load(dydata + j);
 
-                __m128 v_dx2_0 = _mm_mul_ps(v_dx_0, v_dx_0);
-                __m128 v_dxy_0 = _mm_mul_ps(v_dx_0, v_dy_0);
-                __m128 v_dy2_0 = _mm_mul_ps(v_dy_0, v_dy_0);
-                __m128 v_dx2_1 = _mm_mul_ps(v_dx_1, v_dx_1);
-                __m128 v_dxy_1 = _mm_mul_ps(v_dx_1, v_dy_1);
-                __m128 v_dy2_1 = _mm_mul_ps(v_dy_1, v_dy_1);
+                v_float32x4 v_dst0, v_dst1, v_dst2;
+                v_dst0 = v_dx * v_dx;
+                v_dst1 = v_dx * v_dy;
+                v_dst2 = v_dy * v_dy;
 
-                _mm_interleave_ps(v_dx2_0, v_dx2_1, v_dxy_0, v_dxy_1, v_dy2_0, v_dy2_1);
-
-                _mm_storeu_ps(cov_data + j * 3, v_dx2_0);
-                _mm_storeu_ps(cov_data + j * 3 + 4, v_dx2_1);
-                _mm_storeu_ps(cov_data + j * 3 + 8, v_dxy_0);
-                _mm_storeu_ps(cov_data + j * 3 + 12, v_dxy_1);
-                _mm_storeu_ps(cov_data + j * 3 + 16, v_dy2_0);
-                _mm_storeu_ps(cov_data + j * 3 + 20, v_dy2_1);
+                v_store_interleave(cov_data + j * 3, v_dst0, v_dst1, v_dst2);
             }
         }
         #endif
@@ -751,13 +686,10 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     if( src.depth() == CV_8U )
         factor *= 255;
     factor = 1./(factor * factor * factor);
-#if CV_NEON || CV_SSE2
+#if CV_SIMD128
     float factor_f = (float)factor;
-#endif
-
-#if CV_SSE2
-    volatile bool haveSSE2 = cv::checkHardwareSupport(CV_CPU_SSE2);
-    __m128 v_factor = _mm_set1_ps(factor_f), v_m2 = _mm_set1_ps(-2.0f);
+    bool haveSimd = hasSIMD128();
+    v_float32x4 v_factor = v_setall_f32(factor_f), v_m2 = v_setall_f32(-2.0f);
 #endif
 
     Size size = src.size();
@@ -773,29 +705,20 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
 
         j = 0;
 
-#if CV_SSE2
-        if (haveSSE2)
+#if CV_SIMD128
+        if (haveSimd)
         {
-            for( ; j <= size.width - 4; j += 4 )
+            for( ; j <= size.width - v_float32x4::nlanes; j += v_float32x4::nlanes )
             {
-                __m128 v_dx = _mm_loadu_ps((const float *)(dxdata + j));
-                __m128 v_dy = _mm_loadu_ps((const float *)(dydata + j));
+                v_float32x4 v_dx = v_load(dxdata + j);
+                v_float32x4 v_dy = v_load(dydata + j);
 
-                __m128 v_s1 = _mm_mul_ps(_mm_mul_ps(v_dx, v_dx), _mm_loadu_ps((const float *)(d2ydata + j)));
-                __m128 v_s2 = _mm_mul_ps(_mm_mul_ps(v_dy, v_dy), _mm_loadu_ps((const float *)(d2xdata + j)));
-                __m128 v_s3 = _mm_mul_ps(_mm_mul_ps(v_dx, v_dy), _mm_loadu_ps((const float *)(dxydata + j)));
-                v_s1 = _mm_mul_ps(v_factor, _mm_add_ps(v_s1, _mm_add_ps(v_s2, _mm_mul_ps(v_s3, v_m2))));
-                _mm_storeu_ps(dstdata + j, v_s1);
+                v_float32x4 v_s1 = (v_dx * v_dx) * v_load(d2ydata + j);
+                v_float32x4 v_s2 = v_muladd((v_dy * v_dy),  v_load(d2xdata + j), v_s1);
+                v_float32x4 v_s3 = v_muladd((v_dy * v_dx) * v_load(dxydata + j), v_m2, v_s2);
+
+                v_store(dstdata + j, v_s3 * v_factor);
             }
-        }
-#elif CV_NEON
-        for( ; j <= size.width - 4; j += 4 )
-        {
-            float32x4_t v_dx = vld1q_f32(dxdata + j), v_dy = vld1q_f32(dydata + j);
-            float32x4_t v_s = vmulq_f32(v_dx, vmulq_f32(v_dx, vld1q_f32(d2ydata + j)));
-            v_s = vmlaq_f32(v_s, vld1q_f32(d2xdata + j), vmulq_f32(v_dy, v_dy));
-            v_s = vmlaq_f32(v_s, vld1q_f32(dxydata + j), vmulq_n_f32(vmulq_f32(v_dy, v_dx), -2));
-            vst1q_f32(dstdata + j, vmulq_n_f32(v_s, factor_f));
         }
 #endif
 

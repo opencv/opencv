@@ -164,13 +164,13 @@ The following image has been corrected with: \f$ \alpha = 1.3 \f$ and \f$ \beta 
 ![By Visem (Own work) [CC BY-SA 3.0], via Wikimedia Commons](images/Basic_Linear_Transform_Tutorial_linear_transform_correction.jpg)
 
 The overall brightness has been improved but you can notice that the clouds are now greatly saturated due to the numerical saturation
-of the implementation used. A custom method that preserves the original color range can of course be implemented instead.
+of the implementation used ([highlight clipping](https://en.wikipedia.org/wiki/Clipping_(photography)) in photography).
 
 The following image has been corrected with: \f$ \gamma = 0.4 \f$.
 
 ![By Visem (Own work) [CC BY-SA 3.0], via Wikimedia Commons](images/Basic_Linear_Transform_Tutorial_gamma_correction.jpg)
 
-The gamma correction should tend to add less saturation effect but should introduce some other type of color artifacts instead.
+The gamma correction should tend to add less saturation effect as the mapping is non linear and there is no numerical saturation possible as in the previous method.
 
 ![Left: histogram after alpha, beta correction ; Center: histogram of the original image ; Right: histogram after the gamma correction](images/Basic_Linear_Transform_Tutorial_histogram_compare.png)
 
@@ -185,8 +185,15 @@ and are not intended to be used as a replacement of a raster graphics editor!**
 
 ### Code
 
-Code for the tutorial is [here](changing_contrast_brightness_image.cpp). Code for the gamma correction:
+Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/ImgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.cpp).
+Code for the gamma correction:
 
 @snippet changing_contrast_brightness_image.cpp changing-contrast-brightness-gamma-correction
 
 A look-up table is used to improve the performance of the computation as only 256 values needs to be calculated once.
+
+### Additional resources
+
+-   [Gamma correction in graphics rendering](https://learnopengl.com/#!Advanced-Lighting/Gamma-Correction)
+-   [Gamma correction and images displayed on CRT monitors](http://www.graphics.cornell.edu/~westin/gamma/gamma.html)
+-   [Digital exposure techniques](http://www.cambridgeincolour.com/tutorials/digital-exposure-techniques.htm)

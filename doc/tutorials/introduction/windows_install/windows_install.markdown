@@ -85,11 +85,8 @@ of them, you need to download and install them on your system.
     image file format.
 -   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures, and body
     motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
--   [Miktex]( http://miktex.org/2.9/setup) is the best [TEX](https://secure.wikimedia.org/wikipedia/en/wiki/TeX) implementation on
-    the Windows OS. It is required to build the *OpenCV documentation*.
--   [Sphinx](http://sphinx.pocoo.org/) is a python documentation generator and is the tool that will actually create the
-    *OpenCV documentation*. This on its own requires a couple of tools installed, We will cover this
-    in depth at the @ref tutorial_windows_install_sphinx "How to Install Sphinx" section.
+-   [Doxygen](http://www.stack.nl/~dimitri/doxygen/) is a documentation generator and is the tool that will actually create the
+    *OpenCV documentation*.
 
 Now we will describe the steps to follow for a full build (using all the above frameworks, tools and
 libraries). If you do not need the support for some of these you can just freely skip this section.
@@ -122,36 +119,10 @@ libraries). If you do not need the support for some of these you can just freely
         couple other python extensions. Luckily installing all these may be automated by a nice tool
         called [Setuptools](http://pypi.python.org/pypi/setuptools#downloads). Download and install
         again.
-        @anchor tutorial_windows_install_sphinx
-    -#  Installing Sphinx is easy once you have installed *Setuptools*. This contains a little
-        application that will automatically connect to the python databases and download the latest
-        version of many python scripts. Start up a command window (enter *cmd* into the windows
-        start menu and press enter) and use the *CD* command to navigate to your Python folders
-        Script sub-folder. Here just pass to the *easy_install.exe* as argument the name of the
-        program you want to install. Add the *sphinx* argument.
-
-        ![](images/cmsdstartwindows.jpg)
-
-        ![](images/Sphinx_Install.png)
-
-        @note
-        The *CD* navigation command works only inside a drive. For example if you are somewhere in the
-        *C:* drive you cannot use it this to go to another drive (like for example *D:*). To do so you
-        first need to change drives letters. For this simply enter the command *D:*. Then you can use
-        the *CD* to navigate to specific folder inside the drive. Bonus tip: you can clear the screen by
-        using the *CLS* command.
-
-        This will also install its prerequisites [Jinja2](http://jinja.pocoo.org/docs/) and
-        [Pygments](http://pygments.org/).
 
     -#  The easiest way to install Numpy is to just download its binaries from the [sourceforge page](http://sourceforge.net/projects/numpy/files/NumPy/).
         Make sure your download and install
         exactly the binary for your python version (so for version `2.7`).
-    -#  Download the [Miktex](http://miktex.org/2.9/setup) and install it. Again just follow the wizard. At the fourth step make
-        sure you select for the *"Install missing packages on-the-fly"* the *Yes* option, as you can
-        see on the image below. Again this will take quite some time so be patient.
-
-        ![](images/MiktexInstall.png)
 
     -#  For the [Intel Threading Building Blocks (*TBB*)](http://threadingbuildingblocks.org/file.php?fid=77)
         download the source files and extract
@@ -291,12 +262,9 @@ libraries). If you do not need the support for some of these you can just freely
 
     ![](images/OpenCVBuildResultWindows.jpg)
 
-    For the documentation, you need to explicitly issue the build commands on the *doc* project for
-    the PDF files and on the *doc_html* for the HTML ones. Each of these will call *Sphinx* to do
-    all the hard work. You can find the generated documentation inside the `Build/Doc/_html` for the
-    HTML pages and within the `Build/Doc` the PDF manuals.
-
-    ![](images/WindowsBuildDoc.png)
+    For the documentation, you need to explicitly issue the build commands on the *doxygen* project for
+    the HTML docuementation. It will call *Doxygen* to do
+    all the hard work. You can find the generated documentation inside the `build/doc/doxygen/html`.
 
     To collect the header and the binary files, that you will use during your own projects, into a
     separate directory (simillary to how the pre-built binaries ship) you need to explicitly build
