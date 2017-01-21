@@ -464,7 +464,7 @@ cv::RotatedRect cv::fitEllipse(InputArray _points, bool direct)
     CV_Assert((_points.type() == CV_32SC2 || _points.type() == CV_32FC2 || _points.type() == CV_64FC2) &&
         (_points.kind() == _InputArray::MAT || _points.kind() == _InputArray::STD_VECTOR));
 
-    if (_points.rows() < 5)
+    if (_points.total() < 5)
         CV_Error(Error::StsBadSize, "Not enough points to fit an ellipse.");
 
     Mat points = _points.getMat();
@@ -479,7 +479,7 @@ cv::RotatedRect cv::fitEllipse(InputArray _points, bool direct)
         meanVal = p_points[0];
         int i = 1;
 
-#if CV_SIMD128
+#if CV_SIMD128_64F
         if (hasSIMD128()) {
             v_float64x2 v_psum = v_load((const double*)p_points);
             v_float64x2 v_pmin = v_psum, v_pmax = v_psum;
