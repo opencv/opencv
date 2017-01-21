@@ -3980,10 +3980,17 @@ all. It returns the rotated rectangle in which the ellipse is inscribed. The fir
 is used. Developer should keep in mind that it is possible that the returned
 ellipse/rotatedRect data contains negative indices, due to the data points being close to the
 border of the containing Mat element.
+If the flag direct is true a direct ellipse fit algorithm is used decribed by @cite Fitzgibbon99
 
 @param points Input 2D point set, stored in std::vector\<\> or Mat
  */
 CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
+
+/** @overload
+@param points Input 2D point set, stored in std::vector\<\> or Mat
+@param direct Flag to use a direct ellipse fit algorithm
+*/
+CV_EXPORTS_AS(fitEllipse2) RotatedRect fitEllipse( InputArray points, bool direct );
 
 /** @brief Fits a line to a 2D or 3D point set.
 
