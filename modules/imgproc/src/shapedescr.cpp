@@ -468,7 +468,7 @@ cv::RotatedRect cv::fitEllipse(InputArray _points, bool direct)
         CV_Error(Error::StsBadSize, "Not enough points to fit an ellipse.");
 
     Mat points = _points.getMat();
-    const int pointSz = points.total();
+    const int pointSz = (const int)points.total();
     Mat _A(pointSz, 6, CV_64FC1);
     double *p_A = _A.ptr<double>();
     Point2d scaleVal, meanVal;
