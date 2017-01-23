@@ -32,6 +32,8 @@
 #import <ImageIO/ImageIO.h>
 #include "opencv2/core.hpp"
 
+#define OPENCV_OBJC_EXPORT __attribute__((visibility("default")))
+
 //! @addtogroup videoio_ios
 //! @{
 
@@ -39,7 +41,7 @@
 
 @class CvAbstractCamera;
 
-@interface CvAbstractCamera : NSObject
+OPENCV_OBJC_EXPORT @interface CvAbstractCamera : NSObject
 {
     UIDeviceOrientation currentDeviceOrientation;
 
@@ -87,7 +89,7 @@
 
 @class CvVideoCamera;
 
-@protocol CvVideoCameraDelegate <NSObject>
+OPENCV_OBJC_EXPORT @protocol CvVideoCameraDelegate <NSObject>
 
 #ifdef __cplusplus
 // delegate method for processing image frames
@@ -96,7 +98,7 @@
 
 @end
 
-@interface CvVideoCamera : CvAbstractCamera<AVCaptureVideoDataOutputSampleBufferDelegate>
+OPENCV_OBJC_EXPORT @interface CvVideoCamera : CvAbstractCamera<AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     AVCaptureVideoDataOutput *videoDataOutput;
 
@@ -129,14 +131,14 @@
 
 @class CvPhotoCamera;
 
-@protocol CvPhotoCameraDelegate <NSObject>
+OPENCV_OBJC_EXPORT @protocol CvPhotoCameraDelegate <NSObject>
 
 - (void)photoCamera:(CvPhotoCamera*)photoCamera capturedImage:(UIImage *)image;
 - (void)photoCameraCancel:(CvPhotoCamera*)photoCamera;
 
 @end
 
-@interface CvPhotoCamera : CvAbstractCamera
+OPENCV_OBJC_EXPORT @interface CvPhotoCamera : CvAbstractCamera
 {
     AVCaptureStillImageOutput *stillImageOutput;
 }
