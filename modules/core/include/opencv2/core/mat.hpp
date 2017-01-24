@@ -1416,6 +1416,14 @@ public:
      */
     void reserve(size_t sz);
 
+    /** @brief Reserves space for the certain number of bytes.
+
+    The method reserves space for sz bytes. If the matrix already has enough space to store sz bytes,
+    nothing happens. If matrix has to be reallocated its previous content could be lost.
+    @param sz Number of bytes.
+    */
+    void reserveBuffer(size_t sz);
+
     /** @brief Changes the number of matrix rows.
 
     The methods change the number of matrix rows. If the matrix is reallocated, the first
