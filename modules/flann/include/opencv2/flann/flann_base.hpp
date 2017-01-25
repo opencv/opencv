@@ -241,7 +241,7 @@ public:
     /**
      * \brief Returns actual index
      */
-    FLANN_DEPRECATED NNIndex<Distance>* getIndex()
+    CV_DEPRECATED NNIndex<Distance>* getIndex()
     {
         return nnIndex_;
     }
@@ -250,7 +250,7 @@ public:
      * \brief Returns index parameters.
      * \deprecated use getParameters() instead.
      */
-    FLANN_DEPRECATED  const IndexParams* getIndexParameters()
+    CV_DEPRECATED  const IndexParams* getIndexParameters()
     {
         return &index_params_;
     }
