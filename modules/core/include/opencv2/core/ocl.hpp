@@ -578,9 +578,17 @@ public:
     @param localsize work-group size for each dimension.
     @param sync specify whether to wait for OpenCL computation to finish before return.
     @param q command queue
+    @param moreWorkDone specify whether there will the remaining work to be computed (more Kernel::run calls).
+    When a computation requires multiple kernel execution by changing input and output buffer offset to get
+    the final computation results.
+    kernel.setArg(0, ..);
+    kernel.setArg(1, offset);
+    kernel.run(..., q, true);
+    kernel.setArg(1, offset+256);
+    kernel.run(..., q, false);
     */
     bool run(int dims, size_t globalsize[],
-             size_t localsize[], bool sync, const Queue& q=Queue());
+             size_t localsize[], bool sync, const Queue& q=Queue(), bool moreWorkDone = false);
     bool runTask(bool sync, const Queue& q=Queue());
 
     size_t workGroupSize() const;
