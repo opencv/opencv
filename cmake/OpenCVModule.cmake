@@ -852,7 +852,6 @@ macro(_ocv_create_module)
     ${${the_module}_pch}
     ${_VS_VERSION_FILE}
   )
-
   set_target_properties(${the_module} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
   set_source_files_properties(${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES} ${${the_module}_pch}
     PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
@@ -879,7 +878,12 @@ macro(_ocv_create_module)
     COMPILE_PDB_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+    DEFINE_SYMBOL CVAPI_EXPORTS
   )
+
+  if(ANDROID AND BUILD_FAT_JAVA_LIB)
+    target_compile_definitions(${the_module} PRIVATE CVAPI_EXPORTS)
+  endif()
 
   # For dynamic link numbering convenions
   if(NOT ANDROID)
@@ -889,11 +893,6 @@ macro(_ocv_create_module)
       VERSION ${OPENCV_LIBVERSION}
       SOVERSION ${OPENCV_SOVERSION}
     )
-  endif()
-
-  if((NOT DEFINED OPENCV_MODULE_TYPE AND BUILD_SHARED_LIBS)
-      OR (DEFINED OPENCV_MODULE_TYPE AND OPENCV_MODULE_TYPE STREQUAL SHARED))
-    set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
   endif()
 
   if (ENABLE_GNU_STL_DEBUG)
