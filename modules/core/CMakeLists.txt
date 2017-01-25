@@ -33,5 +33,13 @@ ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 ocv_create_module(${extra_libs})
 
+include(GenerateExportHeader)
+generate_export_header(${the_module}
+    BASE_NAME CV
+    EXPORT_MACRO_NAME CV_EXPORTS
+    EXPORT_FILE_NAME "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cv_exports.h"
+)
+install(FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cv_exports.h" DESTINATION ${OPENCV_INCLUDE_INSTALL_PATH} COMPONENT dev)
+
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
