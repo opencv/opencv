@@ -11,6 +11,11 @@ endif()
 
 function(include_one_module m)
   include("${OPENCV_MODULE_${m}_LOCATION}/CMakeLists.txt")
+  foreach(var
+      CMAKE_CXX_FLAGS CMAKE_C_FLAGS # Propagate warnings settings
+  )
+    set(${var} "${${var}}" PARENT_SCOPE)
+  endforeach()
 endfunction()
 
 if(NOT OPENCV_INITIAL_PASS)
@@ -35,12 +40,14 @@ ocv_add_module(world opencv_core)
 set(headers_list "HEADERS")
 set(sources_list "SOURCES")
 set(link_deps "")
-foreach(m ${OPENCV_MODULE_${the_module}_DEPS})
+foreach(m ${OPENCV_MODULE_${the_module}_DEPS} opencv_world)
   if(OPENCV_MODULE_${m}_IS_PART_OF_WORLD)
     set(headers_list "${headers_list};${OPENCV_MODULE_${m}_HEADERS}")
     set(sources_list "${sources_list};${OPENCV_MODULE_${m}_SOURCES}")
   endif()
-  set(link_deps "${link_deps};${OPENCV_MODULE_${m}_LINK_DEPS}")
+  if(NOT " ${OPENCV_MODULE_${m}_LINK_DEPS}" STREQUAL " ")
+    list(APPEND link_deps ${OPENCV_MODULE_${m}_LINK_DEPS})
+  endif()
 endforeach()
 
 ocv_glob_module_sources(${headers_list} ${sources_list})
