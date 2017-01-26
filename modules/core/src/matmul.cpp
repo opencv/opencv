@@ -41,9 +41,11 @@
 //
 //M*/
 
+#include <sstream>
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
+#include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
 namespace cv
 {
@@ -787,6 +789,8 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
 #endif
 
 #ifdef HAVE_OPENCL
+extern bool intel_gpu_gemm(UMat A, Size sizeA, UMat B, Size sizeB, UMat D, Size sizeD,
+       double alpha, double beta, bool atrans, bool btrans);
 
 static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
@@ -805,63 +809,85 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     bool haveC = matC.kind() != cv::_InputArray::NONE;
     Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
     bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
-
-    if (atrans)
-        sizeA = Size(sizeA.height, sizeA.width);
-    if (btrans)
-        sizeB = Size(sizeB.height, sizeB.width);
-    if (haveC && ctrans)
-        sizeC = Size(sizeC.height, sizeC.width);
-
-    Size sizeD(sizeB.width, sizeA.height);
-
+    
     CV_Assert( !haveC || matC.type() == type );
-    CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
 
-    int max_wg_size = (int)dev.maxWorkGroupSize();
-    int block_size = (max_wg_size / (32*cn) < 32) ? (max_wg_size / (16*cn) < 16) ? (max_wg_size / (8*cn) < 8) ? 1 : 8 : 16 : 32;
-
+    Size sizeD(((btrans)? sizeB.height : sizeB.width),
+               ((atrans)? sizeA.width : sizeA.height)); 
     matD.create(sizeD, type);
 
     UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
 
-    if (atrans)
-        A = A.t();
 
-    if (btrans)
-        B = B.t();
+    if (!dev.intelSubgroupsSupport() || (depth == CV_64F) || cn != 1)
+    {
+        String opts;
 
-    if (haveC)
-        ctrans ? transpose(matC, D) : matC.copyTo(D);
+        if (atrans)
+            sizeA = Size(sizeA.height, sizeA.width);
+        if (btrans)
+            sizeB = Size(sizeB.height, sizeB.width);
+        if (haveC && ctrans)
+            sizeC = Size(sizeC.height, sizeC.width);
 
-    int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
-    int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
+        CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
 
-    String opts = format("-D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d %s %s %s",
+        int max_wg_size = (int)dev.maxWorkGroupSize();
+        int block_size = (max_wg_size / (32*cn) < 32) ? (max_wg_size / (16*cn) < 16) ? (max_wg_size / (8*cn) < 8) ? 1 : 8 : 16 : 32;
+
+        if (atrans)
+            A = A.t();
+
+        if (btrans)
+            B = B.t();
+
+        if (haveC)
+            ctrans ? transpose(matC, D) : matC.copyTo(D);
+
+        int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
+        int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
+
+        opts += format(" -D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d %s %s %s",
                           ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)),
                           cn, kercn, block_size,
                           (sizeA.width % block_size !=0) ? "-D NO_MULT" : "",
                           haveC ? "-D HAVE_C" : "",
                           doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
-    ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
-    if (k.empty())
-        return false;
+        ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
+        if (k.empty())
+            return false;
 
-    if (depth == CV_64F)
-        k.args(ocl::KernelArg::ReadOnlyNoSize(A),
-               ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
-               ocl::KernelArg::ReadWrite(D, cn, kercn),
-               sizeA.width, alpha, beta);
+        if (depth == CV_64F)
+            k.args(ocl::KernelArg::ReadOnlyNoSize(A),
+                   ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
+                   ocl::KernelArg::ReadWrite(D, cn, kercn),
+                   sizeA.width, alpha, beta);
+        else
+            k.args(ocl::KernelArg::ReadOnlyNoSize(A),
+                   ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
+                   ocl::KernelArg::ReadWrite(D, cn, kercn),
+                   sizeA.width, (float)alpha, (float)beta);
+
+        size_t globalsize[2] = { (size_t)sizeD.width * cn / kercn, (size_t)sizeD.height};
+        size_t localsize[2] = { (size_t)block_size, (size_t)block_size};
+
+        return k.run(2, globalsize, block_size!=1 ? localsize : NULL, false);
+    }
     else
-        k.args(ocl::KernelArg::ReadOnlyNoSize(A),
-               ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
-               ocl::KernelArg::ReadWrite(D, cn, kercn),
-               sizeA.width, (float)alpha, (float)beta);
+    {
+        if (haveC && beta != 0.0)
+        {
+            ctrans ? transpose(matC, D) : matC.copyTo(D);
+        }
 
-    size_t globalsize[2] = { (size_t)sizeD.width * cn / kercn, (size_t)sizeD.height};
-    size_t localsize[2] = { (size_t)block_size, (size_t)block_size};
-    return k.run(2, globalsize, block_size!=1 ? localsize : NULL, false);
+        return intel_gpu_gemm(A, sizeA,
+                              B, sizeB,
+                              D, sizeD, 
+                              alpha,
+                              beta,
+                              atrans, btrans);
+    }
 }
 #endif
 
