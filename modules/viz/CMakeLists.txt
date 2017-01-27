@@ -3,9 +3,8 @@ if(NOT WITH_VTK OR NOT DEFINED HAVE_VTK OR NOT HAVE_VTK)
 endif()
 
 set(the_description "Viz")
-ocv_define_module(viz opencv_core WRAP python)
-
 include(${VTK_USE_FILE})
+ocv_define_module(viz opencv_core WRAP python)
 ocv_target_link_libraries(${the_module} ${VTK_LIBRARIES})
 
 if(APPLE AND BUILD_opencv_viz)
