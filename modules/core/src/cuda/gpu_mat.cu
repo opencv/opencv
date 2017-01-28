@@ -101,6 +101,29 @@ void cv::cuda::device::ThrustAllocator::setAllocator(cv::cuda::device::ThrustAll
         g_thrustAllocator = allocator;
 }
 
+#ifndef CV_THREAD_LOCAL
+#  if defined __GNUC__
+#    if __GNUC__ > 4 && __GNUC_MINOR__ >= 8
+#      define CV_THREAD_LOCAL thread_local
+#    else
+#      ifdef __APPLE__
+#        if TARGET_OS_MAC
+#          define CV_THREAD_LOCAL __thread
+#        endif
+#      else
+#        define CV_THREAD_LOCAL __thread
+#      endif
+#   endif
+#  else
+#    if defined _MSC_VER
+#      if _MSC_VER >= 1900
+#        define CV_THREAD_LOCAL thread_local
+#      else
+#      endif
+#    endif
+#  endif
+#endif
+
 namespace
 {
     class DefaultAllocator : public GpuMat::Allocator

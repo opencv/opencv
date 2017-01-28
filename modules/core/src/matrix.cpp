@@ -44,6 +44,7 @@
 #include "opencl_kernels_core.hpp"
 
 #include "bufferpool.impl.hpp"
+#include "opencv2/core/utility.hpp"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *
@@ -220,6 +221,30 @@ public:
         delete u;
     }
 };
+
+#ifndef CV_THREAD_LOCAL
+#  if defined __GNUC__
+#    if __GNUC__ > 4 && __GNUC_MINOR__ >= 8
+#      define CV_THREAD_LOCAL thread_local
+#    else
+#      ifdef __APPLE__
+#        if TARGET_OS_MAC
+#          define CV_THREAD_LOCAL __thread
+#        endif
+#      else
+#        define CV_THREAD_LOCAL __thread
+#      endif
+#   endif
+#  else
+#    if defined _MSC_VER
+#      if _MSC_VER >= 1900
+#        define CV_THREAD_LOCAL thread_local
+#      else
+#      endif
+#    endif
+#  endif
+#endif
+
 namespace
 {
     MatAllocator* g_matAllocator = NULL;
