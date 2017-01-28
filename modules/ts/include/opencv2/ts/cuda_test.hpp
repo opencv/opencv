@@ -351,8 +351,10 @@ namespace cv { namespace cuda
 
 #ifdef HAVE_CUDA
 
-#define CV_CUDA_TEST_MAIN(resourcesubdir) \
-    CV_TEST_MAIN(resourcesubdir, cvtest::parseCudaDeviceOptions(argc, argv), cvtest::printCudaInfo(), cv::setUseOptimized(false))
+#define CV_TEST_INIT0_CUDA cvtest::parseCudaDeviceOptions(argc, argv), cvtest::printCudaInfo(), cv::setUseOptimized(false)
+
+#define CV_CUDA_TEST_MAIN(resourcesubdir, ...) \
+    CV_TEST_MAIN_EX(resourcesubdir, CUDA, __VA_ARGS__)
 
 #else // HAVE_CUDA
 

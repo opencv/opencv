@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-
 namespace cv {
 namespace ml {
 
@@ -420,6 +419,12 @@ public:
 Ptr<RTrees> RTrees::create()
 {
     return makePtr<RTreesImpl>();
+}
+
+//Function needed for Python and Java wrappers
+Ptr<RTrees> RTrees::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<RTrees>(filepath, nodeName);
 }
 
 }}
