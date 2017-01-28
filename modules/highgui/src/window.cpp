@@ -218,7 +218,7 @@ int cv::waitKey(int delay)
     if (use_legacy > 0)
         return code;
 #endif
-    return code & 0xff;
+    return (code != -1) ? (code & 0xff) : -1;
 }
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,

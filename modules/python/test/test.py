@@ -123,6 +123,17 @@ class Hackathon244Tests(NewOpenCVTests):
         boost.getMaxDepth() # from ml::DTrees
         boost.isClassifier() # from ml::StatModel
 
+    def test_umat_construct(self):
+        data = np.random.random([512, 512])
+        # UMat constructors
+        data_um = cv2.UMat(data)  # from ndarray
+        data_sub_um = cv2.UMat(data_um, [0, 256], [0, 256])  # from UMat
+        data_dst_um = cv2.UMat(256, 256, cv2.CV_64F)  # from size/type
+
+        # simple test
+        cv2.multiply(data_sub_um, 2., dst=data_dst_um)
+        assert np.allclose(2. * data[:256, :256], data_dst_um.get())
+
     def test_umat_matching(self):
         img1 = self.get_sample("samples/data/right01.jpg")
         img2 = self.get_sample("samples/data/right02.jpg")
