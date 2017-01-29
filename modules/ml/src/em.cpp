@@ -845,6 +845,11 @@ Ptr<EM> EM::create()
     return makePtr<EMImpl>();
 }
 
+Ptr<EM> EM::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<EM>(filepath, nodeName);
+}
+
 }
 } // namespace cv
 

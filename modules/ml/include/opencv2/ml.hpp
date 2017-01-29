@@ -393,6 +393,17 @@ public:
     /** Creates empty model
     Use StatModel::train to train the model after creation. */
     CV_WRAP static Ptr<NormalBayesClassifier> create();
+
+    /** @brief Loads and creates a serialized NormalBayesClassifier from a file
+     *
+     * Use NormalBayesClassifier::save to serialize and store an NormalBayesClassifier to disk.
+     * Load the NormalBayesClassifier from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized NormalBayesClassifier
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<NormalBayesClassifier> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
@@ -927,6 +938,17 @@ public:
     can use one of the EM::train\* methods or load it from file using Algorithm::load\<EM\>(filename).
      */
     CV_WRAP static Ptr<EM> create();
+
+    /** @brief Loads and creates a serialized EM from a file
+     *
+     * Use EM::save to serialize and store an EM to disk.
+     * Load the EM from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized EM
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<EM> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
@@ -1512,6 +1534,17 @@ public:
     Creates Logistic Regression model with parameters given.
      */
     CV_WRAP static Ptr<LogisticRegression> create();
+
+    /** @brief Loads and creates a serialized LogisticRegression from a file
+     *
+     * Use LogisticRegression::save to serialize and store an LogisticRegression to disk.
+     * Load the LogisticRegression from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized LogisticRegression
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<LogisticRegression> load(const String& filepath , const String& nodeName = String());
 };
 
 
@@ -1626,6 +1659,17 @@ public:
      * find the best parameters for your problem or use setOptimalParameters() to set some default parameters.
     */
     CV_WRAP static Ptr<SVMSGD> create();
+
+    /** @brief Loads and creates a serialized SVMSGD from a file
+     *
+     * Use SVMSGD::save to serialize and store an SVMSGD to disk.
+     * Load the SVMSGD from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized SVMSGD
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<SVMSGD> load(const String& filepath , const String& nodeName = String());
 
     /** @brief Function sets optimal parameters values for chosen SVM SGD model.
      * @param svmsgdType is the type of SVMSGD classifier.
