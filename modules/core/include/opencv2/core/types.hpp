@@ -1592,10 +1592,10 @@ Size_<_Tp>& Size_<_Tp>::operator = (const Size_<_Tp>& sz)
 template<typename _Tp> inline
 _Tp Size_<_Tp>::area() const
 {
-    const _Tp area = width * height;
+    const _Tp result = width * height;
     CV_DbgAssert(!std::numeric_limits<_Tp>::is_integer
-        || width == 0 || area / width == height); // make sure the result fits in the return value
-    return area;
+        || width == 0 || result / width == height); // make sure the result fits in the return value
+    return result;
 }
 
 template<typename _Tp> static inline
@@ -1734,10 +1734,10 @@ Size_<_Tp> Rect_<_Tp>::size() const
 template<typename _Tp> inline
 _Tp Rect_<_Tp>::area() const
 {
-    const _Tp area = width * height;
+    const _Tp result = width * height;
     CV_DbgAssert(!std::numeric_limits<_Tp>::is_integer
-        || width == 0 || area / width == height); // make sure the result fits in the return value
-    return area;
+        || width == 0 || result / width == height); // make sure the result fits in the return value
+    return result;
 }
 
 template<typename _Tp> template<typename _Tp2> inline
