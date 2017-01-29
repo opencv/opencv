@@ -1115,6 +1115,17 @@ public:
     file using Algorithm::load\<DTrees\>(filename).
      */
     CV_WRAP static Ptr<DTrees> create();
+
+    /** @brief Loads and creates a serialized DTrees from a file
+     *
+     * Use DTree::save to serialize and store an DTree to disk.
+     * Load the DTree from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized DTree
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<DTrees> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
@@ -1229,6 +1240,17 @@ public:
     /** Creates the empty model.
     Use StatModel::train to train the model, Algorithm::load\<Boost\>(filename) to load the pre-trained model. */
     CV_WRAP static Ptr<Boost> create();
+
+    /** @brief Loads and creates a serialized Boost from a file
+     *
+     * Use Boost::save to serialize and store an RTree to disk.
+     * Load the Boost from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized Boost
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<Boost> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
