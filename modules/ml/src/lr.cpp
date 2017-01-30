@@ -127,6 +127,12 @@ Ptr<LogisticRegression> LogisticRegression::create()
     return makePtr<LogisticRegressionImpl>();
 }
 
+Ptr<LogisticRegression> LogisticRegression::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<LogisticRegression>(filepath, nodeName);
+}
+
+
 bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
 {
     // return value
