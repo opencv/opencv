@@ -829,6 +829,15 @@ public:
      */
     CV_WRAP virtual void getCovs(CV_OUT std::vector<Mat>& covs) const = 0;
 
+    /** @brief Returns posterior probabilities for the provided samples
+
+    @param samples The input samples, floating-point matrix
+    @param results The optional output \f$ nSamples \times nClusters\f$ matrix of results. It contains
+    posterior probabilities for each sample from the input
+    @param flags This parameter will be ignored
+     */
+    CV_WRAP virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
+
     /** @brief Returns a likelihood logarithm value and an index of the most probable mixture component
     for the given sample.
 
