@@ -53,7 +53,7 @@ int main( int /*argc*/, char** /*argv*/ )
 
         randShuffle(points, 1, &rng);
 
-        kmeans(points, clusterCount, labels,
+        double compactness = kmeans(points, clusterCount, labels,
             TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 10, 1.0),
                3, KMEANS_PP_CENTERS, centers);
 
@@ -65,6 +65,12 @@ int main( int /*argc*/, char** /*argv*/ )
             Point ipt = points.at<Point2f>(i);
             circle( img, ipt, 2, colorTab[clusterIdx], FILLED, LINE_AA );
         }
+        for (i = 0; i < centers.rows; ++i)
+        {
+            Point2f c = centers.at<Point2f>(i);
+            circle( img, c, 40, colorTab[i], 1, LINE_AA );
+        }
+        cout << "Compactness: " << compactness << endl;
 
         imshow("clusters", img);
 
