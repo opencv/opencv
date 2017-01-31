@@ -33,6 +33,8 @@
 namespace cv
 {
 
+bool intel_gpu_gemm( UMat A, Size sizeA, UMat B, Size sizeB, UMat D, Size sizeD, double alpha, double beta, bool atrans, bool btrans);
+
 bool intel_gpu_gemm(
     UMat A, Size sizeA,
     UMat B, Size sizeB,
@@ -40,7 +42,7 @@ bool intel_gpu_gemm(
     double alpha, double beta, 
     bool atrans, bool btrans)
 {
-    sizeA; sizeB;
+    CV_UNUSED(sizeA); CV_UNUSED(sizeB);
 
     int M = sizeD.height, N = sizeD.width, K = ((atrans)? sizeA.height : sizeA.width);
 
@@ -105,7 +107,7 @@ bool intel_gpu_gemm(
     ocl::Queue q;
     if(!atrans && btrans)
     {
-        ret = k.run(2, global, local, false, q, false);
+        ret = k.run(2, global, local, false, false, q);
     }
     else
     {
@@ -114,12 +116,12 @@ bool intel_gpu_gemm(
        	    k.set(14, &start_index, sizeof(start_index));
             if ((start_index + stride) < K)
     	    {
-    	        ret = k.run(2, global, local, false, q, true);
+    	        ret = k.run(2, global, local, false, true, q);
                 if (!ret) return ret;
     	    }
     	    else
             {
-                ret = k.run(2, global, local, false, q, false);
+                ret = k.run(2, global, local, false, false, q);
     	    }
         }
     }

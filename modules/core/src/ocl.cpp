@@ -3465,7 +3465,7 @@ int Kernel::set(int i, const KernelArg& arg)
 }
 
 bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
-                 bool sync, const Queue& q, bool moreWorkDone)
+                 bool sync, bool moreWorkDone, const Queue& q)
 {
     CV_INSTRUMENT_REGION_OPENCL_RUN(p->name.c_str());
 
@@ -3509,6 +3509,12 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
         CV_OclDbgAssert(clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
     }
     return retval == CL_SUCCESS;
+}
+
+bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
+                 bool sync, const Queue& q)
+{
+    return run(dims, _globalsize, _localsize, sync, false, q);
 }
 
 bool Kernel::runTask(bool sync, const Queue& q)
