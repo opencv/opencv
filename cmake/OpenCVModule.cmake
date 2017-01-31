@@ -858,8 +858,11 @@ macro(_ocv_create_module)
 
   if((NOT DEFINED OPENCV_MODULE_TYPE AND BUILD_SHARED_LIBS)
       OR (DEFINED OPENCV_MODULE_TYPE AND OPENCV_MODULE_TYPE STREQUAL SHARED))
-    set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS CVAPI_EXPORTS)
     set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+  endif()
+
+  if (ENABLE_GNU_STL_DEBUG)
+    target_compile_definitions(${the_module} PUBLIC _GLIBCXX_DEBUG)
   endif()
 
   if(MSVC)
