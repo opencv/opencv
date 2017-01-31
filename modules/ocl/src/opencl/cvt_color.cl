@@ -115,9 +115,42 @@ enum
     BLOCK_SIZE = 256
 };
 
+//constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
+#define B2YF 0.114f
+#define G2YF 0.587f
+#define R2YF 0.299f
+//to YCbCr
+#define YCBF 0.564f
+#define YCRF 0.713f
+#define YCBI 9241
+#define YCRI 11682
+//to YUV
+#define B2UF 0.492f
+#define R2VF 0.877f
+#define B2UI 8061
+#define R2VI 14369
+//from YUV
+#define U2BF 2.032f
+#define U2GF -0.395f
+#define V2GF -0.581f
+#define V2RF 1.140f
+#define U2BI 33292
+#define U2GI -6472
+#define V2GI -9519
+#define V2RI 18678
+//from YCrCb
+#define CR2RF 1.403f
+#define CB2GF -0.344f
+#define CR2GF -0.714f
+#define CB2BF 1.773f
+#define CR2RI 22987
+#define CB2GI -5636
+#define CR2GI -11698
+#define CB2BI 29049
+
 ///////////////////////////////////// RGB <-> GRAY //////////////////////////////////////
 
-__constant float c_RGB2GrayCoeffs_f[3]  = { 0.114f, 0.587f, 0.299f };
+__constant float c_RGB2GrayCoeffs_f[3]  = { B2YF, G2YF, R2YF };
 __constant int   c_RGB2GrayCoeffs_i[3]  = { B2Y, G2Y, R2Y };
 
 __kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step,
@@ -135,7 +168,7 @@ __kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step,
 #ifndef INTEL_DEVICE
 
 #ifdef DEPTH_5
-        dst[dst_idx] = src[src_idx + bidx] * 0.114f + src[src_idx + 1] * 0.587f + src[src_idx + (bidx^2)] * 0.299f;
+        dst[dst_idx] = src[src_idx + bidx] * B2YF + src[src_idx + 1] * G2YF + src[src_idx + (bidx^2)] * R2YF;
 #else
         dst[dst_idx] = (DATA_TYPE)CV_DESCALE((src[src_idx + bidx] * B2Y + src[src_idx + 1] * G2Y + src[src_idx + (bidx^2)] * R2Y), yuv_shift);
 #endif
@@ -221,8 +254,8 @@ __kernel void Gray2RGB(int cols, int rows, int src_step, int dst_step,
 
 ///////////////////////////////////// RGB <-> YUV //////////////////////////////////////
 
-__constant float c_RGB2YUVCoeffs_f[5]  = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-__constant int   c_RGB2YUVCoeffs_i[5]  = { B2Y, G2Y, R2Y, 8061, 14369 };
+__constant float c_RGB2YUVCoeffs_f[5]  = { B2YF, G2YF, R2YF, B2UF, R2VF };
+__constant int   c_RGB2YUVCoeffs_i[5]  = { B2Y, G2Y, R2Y, B2UI, R2VI };
 
 __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
                       __global const DATA_TYPE* src, __global DATA_TYPE* dst,
@@ -252,13 +285,13 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
             const DATA_TYPE rgb[] = {src_ptr[0], src_ptr[1], src_ptr[2]};
 
 #ifdef DEPTH_5
-            float Y = rgb[0] * coeffs[bidx^2] + rgb[1] * coeffs[1] + rgb[2] * coeffs[bidx];
-            float U = (rgb[bidx^2] - Y) * coeffs[3] + HALF_MAX;
-            float V = (rgb[bidx] - Y) * coeffs[4] + HALF_MAX;
+            float Y = rgb[0] * coeffs[bidx] + rgb[1] * coeffs[1] + rgb[2] * coeffs[bidx^2];
+            float U = (rgb[bidx] - Y) * coeffs[3] + HALF_MAX;
+            float V = (rgb[bidx^2] - Y) * coeffs[4] + HALF_MAX;
 #else
-            int Y = CV_DESCALE(rgb[0] * coeffs[bidx^2] + rgb[1] * coeffs[1] + rgb[2] * coeffs[bidx], yuv_shift);
-            int U = CV_DESCALE((rgb[bidx^2] - Y) * coeffs[3] + delta, yuv_shift);
-            int V = CV_DESCALE((rgb[bidx] - Y) * coeffs[4] + delta, yuv_shift);
+            int Y = CV_DESCALE(rgb[0] * coeffs[bidx] + rgb[1] * coeffs[1] + rgb[2] * coeffs[bidx^2], yuv_shift);
+            int U = CV_DESCALE((rgb[bidx] - Y) * coeffs[3] + delta, yuv_shift);
+            int V = CV_DESCALE((rgb[bidx^2] - Y) * coeffs[4] + delta, yuv_shift);
 #endif
 
             dst_ptr[0] = SAT_CAST( Y );
@@ -274,23 +307,22 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
             const float2 c1 = r0.s15;
             const float2 c2 = r0.s26;
 
-            const float2 Y = (bidx == 0) ? (c0 * coeffs[2] + c1 * coeffs[1] + c2 * coeffs[0]) : (c0 * coeffs[0] + c1 * coeffs[1] + c2 * coeffs[2]);
-            const float2 U = (bidx == 0) ? ((c2 - Y) * coeffs[3] + HALF_MAX) : ((c0 - Y) * coeffs[3] + HALF_MAX);
-            const float2 V = (bidx == 0) ? ((c0 - Y) * coeffs[4] + HALF_MAX) : ((c2 - Y) * coeffs[4] + HALF_MAX);
+            const float2 Y = (bidx == 0) ? (c0 * coeffs[0] + c1 * coeffs[1] + c2 * coeffs[2]) : (c0 * coeffs[2] + c1 * coeffs[1] + c2 * coeffs[0]);
+            const float2 U = (bidx == 0) ? ((c0 - Y) * coeffs[3] + HALF_MAX) : ((c2 - Y) * coeffs[3] + HALF_MAX);
+            const float2 V = (bidx == 0) ? ((c2 - Y) * coeffs[4] + HALF_MAX) : ((c0 - Y) * coeffs[4] + HALF_MAX);
 #else
             const int2 c0 = convert_int2(r0.s04);
             const int2 c1 = convert_int2(r0.s15);
             const int2 c2 = convert_int2(r0.s26);
 
-            const int2 yi = (bidx == 0) ? CV_DESCALE(c0 * coeffs[2] + c1 * coeffs[1] + c2 * coeffs[0], yuv_shift) : CV_DESCALE(c0 * coeffs[0] + c1 * coeffs[1] + c2 * coeffs[2], yuv_shift);
-            const int2 ui = (bidx == 0) ? CV_DESCALE((c2 - yi) * coeffs[3] + delta, yuv_shift) : CV_DESCALE((c0 - yi) * coeffs[3] + delta, yuv_shift);
-            const int2 vi = (bidx == 0) ? CV_DESCALE((c0 - yi) * coeffs[4] + delta, yuv_shift) : CV_DESCALE((c2 - yi) * coeffs[4] + delta, yuv_shift);
+            const int2 yi = (bidx == 0) ? CV_DESCALE(c0 * coeffs[0] + c1 * coeffs[1] + c2 * coeffs[2], yuv_shift) : CV_DESCALE(c0 * coeffs[2] + c1 * coeffs[1] + c2 * coeffs[0], yuv_shift);
+            const int2 ui = (bidx == 0) ? CV_DESCALE((c0 - yi) * coeffs[3] + delta, yuv_shift) : CV_DESCALE((c2 - yi) * coeffs[3] + delta, yuv_shift);
+            const int2 vi = (bidx == 0) ? CV_DESCALE((c2 - yi) * coeffs[4] + delta, yuv_shift) : CV_DESCALE((c0 - yi) * coeffs[4] + delta, yuv_shift);
 
             const VECTOR2 Y = SAT_CAST2(yi);
             const VECTOR2 U = SAT_CAST2(ui);
             const VECTOR2 V = SAT_CAST2(vi);
 #endif
-
             vstore8((VECTOR8)(Y.s0, U.s0, V.s0, 0, Y.s1, U.s1, V.s1, 0), 0, dst_ptr);
         }
 #elif (4 == pixels_per_work_item)
@@ -302,14 +334,13 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
             const int4 c1 = convert_int4(r0.s159d);
             const int4 c2 = convert_int4(r0.s26ae);
 
-            const int4 yi = (bidx == 0) ? CV_DESCALE(c0 * coeffs[2] + c1 * coeffs[1] + c2 * coeffs[0], yuv_shift) : CV_DESCALE(c0 * coeffs[0] + c1 * coeffs[1] + c2 * coeffs[2], yuv_shift);
-            const int4 ui = (bidx == 0) ? CV_DESCALE((c2 - yi) * coeffs[3] + delta, yuv_shift) : CV_DESCALE((c0 - yi) * coeffs[3] + delta, yuv_shift);
-            const int4 vi = (bidx == 0) ? CV_DESCALE((c0 - yi) * coeffs[4] + delta, yuv_shift) : CV_DESCALE((c2 - yi) * coeffs[4] + delta, yuv_shift);
+            const int4 yi = (bidx == 0) ? CV_DESCALE(c0 * coeffs[0] + c1 * coeffs[1] + c2 * coeffs[2], yuv_shift) : CV_DESCALE(c0 * coeffs[2] + c1 * coeffs[1] + c2 * coeffs[0], yuv_shift);
+            const int4 ui = (bidx == 0) ? CV_DESCALE((c0 - yi) * coeffs[3] + delta, yuv_shift) : CV_DESCALE((c2 - yi) * coeffs[3] + delta, yuv_shift);
+            const int4 vi = (bidx == 0) ? CV_DESCALE((c2 - yi) * coeffs[4] + delta, yuv_shift) : CV_DESCALE((c0 - yi) * coeffs[4] + delta, yuv_shift);
 
             const VECTOR4 Y = SAT_CAST4(yi);
             const VECTOR4 U = SAT_CAST4(ui);
             const VECTOR4 V = SAT_CAST4(vi);
-
             vstore16((VECTOR16)(Y.s0, U.s0, V.s0, 0, Y.s1, U.s1, V.s1, 0, Y.s2, U.s2, V.s2, 0, Y.s3, U.s3, V.s3, 0), 0, dst_ptr);
 #endif
         }
@@ -317,8 +348,8 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
     }
 }
 
-__constant float c_YUV2RGBCoeffs_f[5] = { 2.032f, -0.395f, -0.581f, 1.140f };
-__constant int   c_YUV2RGBCoeffs_i[5] = { 33292, -6472, -9519, 18678 };
+__constant float c_YUV2RGBCoeffs_f[5] = { U2BF, U2GF, V2GF, V2RF };
+__constant int   c_YUV2RGBCoeffs_i[5] = { U2BI, U2GI, V2GI, V2RI };
 
 __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
                       __global const DATA_TYPE* src, __global DATA_TYPE* dst,
@@ -347,13 +378,13 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
             const DATA_TYPE yuv[] = {src_ptr[0], src_ptr[1], src_ptr[2]};
 
 #ifdef DEPTH_5
-            float B = yuv[0] + (yuv[2] - HALF_MAX) * coeffs[3];
-            float G = yuv[0] + (yuv[2] - HALF_MAX) * coeffs[2] + (yuv[1] - HALF_MAX) * coeffs[1];
-            float R = yuv[0] + (yuv[1] - HALF_MAX) * coeffs[0];
+            float B = yuv[0] + (yuv[1] - HALF_MAX) * coeffs[0];
+            float G = yuv[0] + (yuv[1] - HALF_MAX) * coeffs[1] + (yuv[2] - HALF_MAX) * coeffs[2];
+            float R = yuv[0] + (yuv[2] - HALF_MAX) * coeffs[3];
 #else
-            int B = yuv[0] + CV_DESCALE((yuv[2] - HALF_MAX) * coeffs[3], yuv_shift);
-            int G = yuv[0] + CV_DESCALE((yuv[2] - HALF_MAX) * coeffs[2] + (yuv[1] - HALF_MAX) * coeffs[1], yuv_shift);
-            int R = yuv[0] + CV_DESCALE((yuv[1] - HALF_MAX) * coeffs[0], yuv_shift);
+            int B = yuv[0] + CV_DESCALE((yuv[1] - HALF_MAX) * coeffs[0], yuv_shift);
+            int G = yuv[0] + CV_DESCALE((yuv[1] - HALF_MAX) * coeffs[1] + (yuv[2] - HALF_MAX) * coeffs[2], yuv_shift);
+            int R = yuv[0] + CV_DESCALE((yuv[2] - HALF_MAX) * coeffs[3], yuv_shift);
 #endif
 
             dst_ptr[bidx]     = SAT_CAST( B );
@@ -372,17 +403,17 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
             const float2 U = r0.s15;
             const float2 V = r0.s26;
 
-            const float2 c0 = (bidx == 0) ? (Y + (V - HALF_MAX) * coeffs[3]) : (Y + (U - HALF_MAX) * coeffs[0]);
+            const float2 c0 = (bidx != 0) ? (Y + (V - HALF_MAX) * coeffs[3]) : (Y + (U - HALF_MAX) * coeffs[0]);
             const float2 c1 = Y + (V - HALF_MAX) * coeffs[2] + (U - HALF_MAX) * coeffs[1];
-            const float2 c2 = (bidx == 0) ? (Y + (U - HALF_MAX) * coeffs[0]) : (Y + (V - HALF_MAX) * coeffs[3]);
+            const float2 c2 = (bidx != 0) ? (Y + (U - HALF_MAX) * coeffs[0]) : (Y + (V - HALF_MAX) * coeffs[3]);
 #else
             const int2 Y = convert_int2(r0.s04);
             const int2 U = convert_int2(r0.s15);
             const int2 V = convert_int2(r0.s26);
 
-            const int2 c0i = (bidx == 0) ? (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift)) : (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift));
+            const int2 c0i = (bidx != 0) ? (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift)) : (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift));
             const int2 c1i = Y + CV_DESCALE((V - HALF_MAX) * coeffs[2] + (U - HALF_MAX) * coeffs[1], yuv_shift);
-            const int2 c2i = (bidx == 0) ? (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift)) : (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift));
+            const int2 c2i = (bidx != 0) ? (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift)) : (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift));
 
             const VECTOR2 c0 = SAT_CAST2(c0i);
             const VECTOR2 c1 = SAT_CAST2(c1i);
@@ -404,9 +435,9 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
             const int4 U = convert_int4(r0.s159d);
             const int4 V = convert_int4(r0.s26ae);
 
-            const int4 c0i = (bidx == 0) ? (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift)) : (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift));
+            const int4 c0i = (bidx != 0) ? (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift)) : (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift));
             const int4 c1i = Y + CV_DESCALE((V - HALF_MAX) * coeffs[2] + (U - HALF_MAX) * coeffs[1], yuv_shift);
-            const int4 c2i = (bidx == 0) ? (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift)) : (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift));
+            const int4 c2i = (bidx != 0) ? (Y + CV_DESCALE((U - HALF_MAX) * coeffs[0], yuv_shift)) : (Y + CV_DESCALE((V - HALF_MAX) * coeffs[3], yuv_shift));
 
             const VECTOR4 c0 = SAT_CAST4(c0i);
             const VECTOR4 c1 = SAT_CAST4(c1i);
@@ -484,8 +515,8 @@ __kernel void YUV2RGBA_NV12(int cols, int rows, int src_step, int dst_step,
 
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
-__constant float c_RGB2YCrCbCoeffs_f[5] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
-__constant int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, 11682, 9241};
+__constant float c_RGB2YCrCbCoeffs_f[5] = {R2YF, G2YF, B2YF, YCRF, YCBF};
+__constant int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, YCRI, YCBI};
 
 __kernel void RGB2YCrCb(int cols, int rows, int src_step, int dst_step,
                       __global const DATA_TYPE* src, __global DATA_TYPE* dst,
@@ -579,8 +610,8 @@ __kernel void RGB2YCrCb(int cols, int rows, int src_step, int dst_step,
     }
 }
 
-__constant float c_YCrCb2RGBCoeffs_f[4] = { 1.403f, -0.714f, -0.344f, 1.773f };
-__constant int   c_YCrCb2RGBCoeffs_i[4] = { 22987, -11698, -5636, 29049 };
+__constant float c_YCrCb2RGBCoeffs_f[4] = { CR2RF, CR2GF, CB2GF, CB2BF };
+__constant int   c_YCrCb2RGBCoeffs_i[4] = { CR2RI, CR2GI, CB2GI, CB2BI };
 
 __kernel void YCrCb2RGB(int cols, int rows, int src_step, int dst_step,
                       __global const DATA_TYPE* src, __global DATA_TYPE* dst,
