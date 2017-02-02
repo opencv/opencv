@@ -62,20 +62,19 @@ int main(int argc, const char** argv)
     namedWindow("foreground mask", WINDOW_NORMAL);
     namedWindow("foreground image", WINDOW_NORMAL);
     namedWindow("mean background image", WINDOW_NORMAL);
-    
+
     Ptr<BackgroundSubtractor> bg_model;
-    
-  
+
     if (method == "MOG2")
     {
         bg_model = createBackgroundSubtractorMOG2();
     }
-    
+
     else if (method == "KNN")
     {
         bg_model = createBackgroundSubtractorKNN();
     }
-    
+
     else if (method == "CNT")
     {
         unsigned int fps = 15;
@@ -86,8 +85,8 @@ int main(int argc, const char** argv)
         bg_model = createBackgroundSubtractorCNT(fps, true, fps*60);
         grayscale = true;
     }
-    
-    
+
+
 #ifdef HAVE_OPENCV_CONTRIB
     else if (method == "GMG")
     {
@@ -98,7 +97,7 @@ int main(int argc, const char** argv)
         bg_model = createBackgroundSubtractorMOG();
     }
 #endif
-    
+
     else
     {
         help();
@@ -118,11 +117,10 @@ int main(int argc, const char** argv)
 
         if( fgimg.empty() )
           fgimg.create(img.size(), img.type());
-        
 
-        if ( grayscale ) 
+        if( grayscale )
           cvtColor(img, img, CV_BGR2GRAY);
-        
+
         //update the model
         bg_model->apply(img, fgmask, update_bg_model ? -1 : 0);
         if( smoothMask )

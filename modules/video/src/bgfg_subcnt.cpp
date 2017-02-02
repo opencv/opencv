@@ -83,8 +83,8 @@ public:
 
     bool getIsParallel() const;
     void setIsParallel(bool value);
-	
-	//! the destructor
+
+    //! the destructor
     virtual ~BackgroundSubtractorCNTImpl() {}
 
 private:
@@ -176,7 +176,7 @@ class CNTFunctor
 {
 public:
     virtual void operator()(Vec4i &vec, uchar currColor, uchar prevColor, uchar &fgMaskPixelRef) = 0;
-	 //! the destructor
+    //! the destructor
     virtual ~CNTFunctor() {}
 };
 
@@ -193,7 +193,7 @@ struct BGSubtractPixel : public CNTFunctor
 
     //! the destructor
     virtual ~BGSubtractPixel() {}
-    
+
     void operator()(Vec4i &vec, uchar currColor, uchar prevColor, uchar &fgMaskPixelRef)
     {
         int &stabilityRef = vec[0];
@@ -237,7 +237,7 @@ struct BGSubtractPixelWithHistory : public CNTFunctor
           prevFrame(_prevFrame),
           fgMask(_fgMask)
     {}
-    
+
     //! the destructor
     virtual ~BGSubtractPixelWithHistory() {}
 
@@ -415,6 +415,7 @@ void BackgroundSubtractorCNTImpl::apply(InputArray image, OutputArray _fgmask, d
     prevFrame = frame;
 }
 
+
 Ptr<BackgroundSubtractorCNT> createBackgroundSubtractorCNT(int minPixelStability, bool useHistory, int maxStability, bool isParallel)
 {
     return makePtr<BackgroundSubtractorCNTImpl>(minPixelStability, useHistory, maxStability, isParallel);
@@ -422,3 +423,4 @@ Ptr<BackgroundSubtractorCNT> createBackgroundSubtractorCNT(int minPixelStability
 
 }
 
+/* End of file. */
