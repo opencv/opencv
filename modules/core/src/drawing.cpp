@@ -1185,8 +1185,12 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
                         edges--;
                     }
 
-                    xs <<= XY_SHIFT - shift;
-                    xe = v[idx].x << (XY_SHIFT - shift);
+                    xe = v[idx].x;
+                    if (XY_SHIFT - shift != 0)
+                    {
+                        xs <<= XY_SHIFT - shift;
+                        xe <<= XY_SHIFT - shift;
+                    }
 
                     /* no more edges */
                     if( y >= ty)
