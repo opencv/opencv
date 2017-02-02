@@ -1,17 +1,13 @@
 #include "opencv2/core.hpp"
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
-#include "opencv2/bgsegm.hpp"
+#include "opencv2/video/background_segm.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include <stdio.h>
 
 using namespace std;
 using namespace cv;
-
-#ifdef HAVE_OPENCV_CONTRIB
-using namespace cv::bgsegm;
-#endif
 
 static void help()
 {
@@ -25,7 +21,7 @@ static void help()
 const char* keys =
 {
     "{c  camera   |         | use camera or not}"
-    "{m  method   |MOG2     | method (MOG2 / KNN / CNT / GMG / MOG) }"
+    "{m  method   |MOG2     | method (MOG2 / KNN / CNT) }"
     "{s  smooth   |         | smooth the mask }"
     "{g  grayscale|         | converts image into grayscale }"
     "{fn file_name|../data/tree.avi | movie file        }"
@@ -85,18 +81,6 @@ int main(int argc, const char** argv)
         bg_model = createBackgroundSubtractorCNT(fps, true, fps*60);
         grayscale = true;
     }
-
-
-#ifdef HAVE_OPENCV_CONTRIB
-    else if (method == "GMG")
-    {
-        bg_model = createBackgroundSubtractorGMG();
-    }
-    else if (method == "MOG")
-    {
-        bg_model = createBackgroundSubtractorMOG();
-    }
-#endif
 
     else
     {
