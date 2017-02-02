@@ -82,6 +82,46 @@ public:
 };
 
 
+/** @brief Background subtraction based on counting.
+ *  About as fast as MOG2 on a high end system.
+ *  More than twice faster than MOG2 on cheap hardware (benchmarked on Raspberry Pi3).
+ *  Algorithm by Sagi Zeevi
+ *  @see createBackgroundSubtractorCNT()
+ */
+class CV_EXPORTS_W BackgroundSubtractorCNT  : public BackgroundSubtractor
+{
+public:
+    // BackgroundSubtractor interface
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
+    CV_WRAP virtual void getBackgroundImage(OutputArray backgroundImage) const = 0;
+
+    /// @see createBackgroundSubtractorCNT()
+    CV_WRAP virtual int getMinPixelStability() const = 0;
+    /// @see createBackgroundSubtractorCNT()
+    CV_WRAP virtual void setMinPixelStability(int value) = 0;
+
+    /// @see createBackgroundSubtractorCNT()
+    CV_WRAP virtual int getMaxPixelStability() const = 0;
+    /// see @see createBackgroundSubtractorCNT()
+    CV_WRAP virtual void setMaxPixelStability(int value) = 0;
+
+    /// @see createBackgroundSubtractorCNT()
+    CV_WRAP virtual bool getUseHistory() const = 0;
+    /// @see createBackgroundSubtractorCNT()
+    CV_WRAP virtual void setUseHistory(bool value) = 0;
+
+    /// @see createBackgroundSubtractorCNT()
+    CV_WRAP virtual bool getIsParallel() const = 0;
+    /// @see createBackgroundSubtractorCNT()
+    CV_WRAP virtual void setIsParallel(bool value) = 0;
+};
+
+CV_EXPORTS_W Ptr<BackgroundSubtractorCNT>
+createBackgroundSubtractorCNT(int minPixelStability = 15,
+                              bool useHistory = true,
+                              int maxPixelStability = 15*60,
+                              bool isParallel = true);
+
 /** @brief Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
 The class implements the Gaussian mixture model background subtraction described in @cite Zivkovic2004
@@ -195,17 +235,6 @@ public:
     /** @brief Sets the shadow threshold
     */
     CV_WRAP virtual void setShadowThreshold(double threshold) = 0;
-
-    /** @brief Computes a foreground mask.
-
-    @param image Next video frame. Floating point frame will be used without scaling and should be in range \f$[0,255]\f$.
-    @param fgmask The output foreground mask as an 8-bit binary image.
-    @param learningRate The value between 0 and 1 that indicates how fast the background model is
-    learnt. Negative parameter value makes the algorithm to use some automatically chosen learning
-    rate. 0 means that the background model is not updated at all, 1 means that the background model
-    is completely reinitialized from the last frame.
-     */
-    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
 };
 
 /** @brief Creates MOG2 Background Subtractor

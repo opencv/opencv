@@ -1,13 +1,17 @@
 #include "opencv2/core.hpp"
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
-#include "opencv2/video/background_segm.hpp"
+#include "opencv2/bgsegm.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include <stdio.h>
 
 using namespace std;
 using namespace cv;
+
+#ifdef HAVE_OPENCV_CONTRIB
+using namespace cv::bgsegm;
+#endif
 
 static void help()
 {
@@ -21,8 +25,9 @@ static void help()
 const char* keys =
 {
     "{c  camera   |         | use camera or not}"
-    "{m  method   |mog2     | method (knn or mog2) }"
+    "{m  method   |MOG2     | method (MOG2 / KNN / CNT / GMG / MOG) }"
     "{s  smooth   |         | smooth the mask }"
+    "{g  grayscale|         | converts image into grayscale }"
     "{fn file_name|../data/tree.avi | movie file        }"
 };
 
@@ -34,6 +39,7 @@ int main(int argc, const char** argv)
     CommandLineParser parser(argc, argv, keys);
     bool useCamera = parser.has("camera");
     bool smoothMask = parser.has("smooth");
+    bool grayscale = parser.has("grayscale");
     string file = parser.get<string>("file_name");
     string method = parser.get<string>("method");
     VideoCapture cap;
@@ -56,10 +62,48 @@ int main(int argc, const char** argv)
     namedWindow("foreground mask", WINDOW_NORMAL);
     namedWindow("foreground image", WINDOW_NORMAL);
     namedWindow("mean background image", WINDOW_NORMAL);
-
-    Ptr<BackgroundSubtractor> bg_model = method == "knn" ?
-            createBackgroundSubtractorKNN().dynamicCast<BackgroundSubtractor>() :
-            createBackgroundSubtractorMOG2().dynamicCast<BackgroundSubtractor>();
+    
+    Ptr<BackgroundSubtractor> bg_model;
+    
+  
+    if (method == "MOG2")
+    {
+        bg_model = createBackgroundSubtractorMOG2();
+    }
+    
+    else if (method == "KNN")
+    {
+        bg_model = createBackgroundSubtractorKNN();
+    }
+    
+    else if (method == "CNT")
+    {
+        unsigned int fps = 15;
+        if (!useCamera)
+        {
+            fps = int(cap.get(CAP_PROP_FPS));
+        }
+        bg_model = createBackgroundSubtractorCNT(fps, true, fps*60);
+        grayscale = true;
+    }
+    
+    
+#ifdef HAVE_OPENCV_CONTRIB
+    else if (method == "GMG")
+    {
+        bg_model = createBackgroundSubtractorGMG();
+    }
+    else if (method == "MOG")
+    {
+        bg_model = createBackgroundSubtractorMOG();
+    }
+#endif
+    
+    else
+    {
+        help();
+        return 1;
+    }
 
     Mat img0, img, fgmask, fgimg;
 
@@ -74,7 +118,11 @@ int main(int argc, const char** argv)
 
         if( fgimg.empty() )
           fgimg.create(img.size(), img.type());
+        
 
+        if ( grayscale ) 
+          cvtColor(img, img, CV_BGR2GRAY);
+        
         //update the model
         bg_model->apply(img, fgmask, update_bg_model ? -1 : 0);
         if( smoothMask )
