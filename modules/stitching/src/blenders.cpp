@@ -111,9 +111,12 @@ void Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
     UMat mask;
     compare(dst_mask_, 0, mask, CMP_EQ);
     dst_.setTo(Scalar::all(0), mask);
+    mask.release();
+
     dst.assign(dst_);
-    dst_mask.assign(dst_mask_);
     dst_.release();
+
+    dst_mask.assign(dst_mask_);
     dst_mask_.release();
 }
 
@@ -316,6 +319,8 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     UMat img_with_border;
     copyMakeBorder(_img, img_with_border, top, bottom, left, right,
                    BORDER_REFLECT);
+    img.release();
+    
     LOGLN("  Add border to the source image, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
     t = getTickCount();
@@ -326,6 +331,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
         createLaplacePyrGpu(img_with_border, num_bands_, src_pyr_laplace);
     else
         createLaplacePyr(img_with_border, num_bands_, src_pyr_laplace);
+    img_with_border.release();
 
     LOGLN("  Create the source image Laplacian pyramid, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
@@ -349,6 +355,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     }
 
     copyMakeBorder(weight_map, weight_pyr_gauss[0], top, bottom, left, right, BORDER_CONSTANT);
+    weight_map.release();
 
     for (int i = 0; i < num_bands_; ++i)
         pyrDown(weight_pyr_gauss[i], weight_pyr_gauss[i + 1]);
@@ -440,13 +447,16 @@ void MultiBandBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
         restoreImageFromLaplacePyr(dst_pyr_laplace_);
 
     Rect dst_rc(0, 0, dst_roi_final_.width, dst_roi_final_.height);
-    dst_ = dst_pyr_laplace_[0](dst_rc);
-    UMat _dst_mask;
-    compare(dst_band_weights_[0](dst_rc), WEIGHT_EPS, dst_mask_, CMP_GT);
-    dst_pyr_laplace_.clear();
+    compare(dst_band_weights_[0](dst_rc), WEIGHT_EPS, dst_mask, CMP_GT);
     dst_band_weights_.clear();
 
-    Blender::blend(dst, dst_mask);
+    //Instead of calling Blender::blend(dst, dst_mask); perform code inline in order to avoid memory intensive copies
+    dst.assign(dst_pyr_laplace_[0](dst_rc));
+    dst_pyr_laplace_.clear();
+
+    UMat mask;
+    compare(dst_mask, 0, mask, CMP_EQ);
+    dst.setTo(Scalar::all(0), mask);
 }
 
 

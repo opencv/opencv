@@ -1,0 +1,66 @@
+apply plugin: 'com.android.model.library'
+
+model {
+    android {
+        compileSdkVersion = 21
+        buildToolsVersion = "21.1.2"
+        defaultConfig {
+            minSdkVersion.apiLevel = 21
+            targetSdkVersion.apiLevel = 21
+            versionCode 3100
+            versionName "3.1.0"
+        }
+    }
+    android.abis {
+        create("arm64-v8a") {
+            ldFlags.add("-Wl,--no-warn-mismatch")
+        }
+        create("armeabi-v7a") {
+            ldFlags.add("-Wl,--no-warn-mismatch")
+        }
+    }
+    android.buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles.add(file('proguard-rules.txt'))
+        }
+        debug {
+            debuggable = true
+            ndk {
+                debuggable = true
+            }
+            renderscriptDebuggable = true
+        }
+    }
+    android.lintOptions {
+        abortOnError = false
+        xmlReport = false
+        quiet = false
+        showAll = true
+    }
+    android.ndk {
+        moduleName = "CVnative"
+        debuggable = true
+        abiFilters.addAll(['armeabi-v7a', 'arm64-v8a'])
+        CFlags.add("-v")
+        cppFlags.add("-v")
+        cppFlags.add("-I" + file("src/main/jni/include").absolutePath)
+        cppFlags.addAll(["-frtti","-fexceptions"])
+        ldFlags.add("--verbose")
+        stl = "gnustl_static"
+    }
+    repositories {
+        libs(PrebuiltLibraries) {
+            opencv_java3 {
+                headers.srcDir "src/main/jni/include"
+                binaries.withType(SharedLibraryBinary) {
+                    sharedLibraryFile = file("src/main/jniLibs/${targetPlatform.getName()}/libopencv_java3.so")
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    compile 'com.android.support:support-v4:21.0.2'
+}

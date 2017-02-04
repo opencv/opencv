@@ -22,4 +22,9 @@ CMakeCache.txt
 *.suo
 *.log
 *.tlog
-build
+build/
+build_*
+lint.xml
+build.gradle
+/src
+/install*
