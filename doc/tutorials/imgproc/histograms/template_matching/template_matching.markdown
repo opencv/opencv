@@ -41,12 +41,34 @@ Theory
 
 ### What is template matching?
 
+@add_toggle_cpp
+
 Template matching is a technique for finding areas of an image that match (are similar) to a
 template image (patch).
 
 While the patch must be a rectangle it may be that not all of the
 rectangle is relevant.  In such a case, a mask can be used to isolate the portion of the patch
 that should be used to find the match.
+
+@end_toggle
+
+@add_toggle_java
+
+Template matching is a technique for finding areas of an image that match (are similar) to a
+template image (patch).
+
+While the patch must be a rectangle it may be that not all of the
+rectangle is relevant.  In such a case, a mask can be used to isolate the portion of the patch
+that should be used to find the match.
+
+@end_toggle
+
+@add_toggle_python
+
+Template matching is a technique for finding areas of an image that match (are similar) to a
+template image (patch).
+
+@end_toggle
 
 ### How does it work?
 
@@ -82,21 +104,36 @@ that should be used to find the match.
 -   In practice, we use the function @ref cv::minMaxLoc to locate the highest value (or lower,
     depending of the type of matching method) in the *R* matrix.
 
+### How does the mask work?
+- If masking is needed for the match, three components are required:
+
+    -#  **Source image (I):** The image in which we expect to find a match to the template image
+    -#  **Template image (T):** The patch image which will be compared to the template image
+    -#  **Mask image (M):** The mask, a grayscale image that masks the template
+
+
+-   Only two matching methods currently accept a mask: CV_TM_SQDIFF and CV_TM_CCORR_NORMED (see
+    below for explanation of all the matching methods available in opencv).
+
+
+-   The mask must have the same dimensions as the template
+
+
+-   The mask should have a CV_8U or CV_32F depth and the same number of channels
+    as the template image. In CV_8U case, the mask values are treated as binary,
+    i.e. zero and non-zero. In CV_32F case, the values should fall into [0..1]
+    range and the template pixels will be multiplied by the corresponding mask pixel
+    values. Since the input images in the sample have the CV_8UC3 type, the mask
+    is also read as color image.
+
+    ![](images/Template_Matching_Mask_Example.jpg)
+
 @end_toggle
 
 @add_toggle_java
 
 -   In practice, we use the function **Core.MinMaxLocResult()** to locate the highest value (or lower,
     depending of the type of matching method) in the *R* matrix.
-
-@end_toggle
-
-@add_toggle_python
-
--   In practice, we use the function **cv2.minMaxLoc()** to locate the highest value (or lower,
-    depending of the type of matching method) in the *R* matrix.
-
-@end_toggle
 
 ### How does the mask work?
 - If masking is needed for the match, three components are required:
@@ -121,6 +158,15 @@ that should be used to find the match.
     is also read as color image.
 
     ![](images/Template_Matching_Mask_Example.jpg)
+
+@end_toggle
+
+@add_toggle_python
+
+-   In practice, we use the function **cv2.minMaxLoc()** to locate the highest value (or lower,
+    depending of the type of matching method) in the *R* matrix.
+
+@end_toggle
 
 ### Which are the matching methods available in OpenCV?
 
@@ -212,6 +258,23 @@ Code
 
 @end_toggle
 
+@add_toggle_python
+
+-   **What does this program do?**
+    -   Loads an input image and a image patch (*template*)
+    -   Perform a template matching procedure by using the OpenCV function **cv2.matchTemplate()**
+        with any of the 6 matching methods described before. The user can choose the method by
+        entering its selection in the Trackbar.
+    -   Normalize the output of the matching procedure
+    -   Localize the location with higher matching probability
+    -   Draw a rectangle around the area corresponding to the highest match
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/match_template/match_template.py)
+-   **Code at glance:**
+    @include samples/python/tutorial_code/imgProc/match_template/match_template.py
+
+@end_toggle
+
 Explanation
 -----------
 
@@ -267,7 +330,7 @@ Explanation
 -#  Declare some global variables, such as the image, template and result matrices, as well as the
     match method and the window names:
     @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java declare
--#  Load the source image and template:
+-#  Load the source image, template, and optionally, if supported for the matching method, a mask:
     @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java load_image
 -#  Create the Trackbar (JSlider) to enter the kind of matching method to be used. When a change is detected
     the callback function **stateChanged** after updating the _match_method_  calls the function **matchingMethod**.
@@ -295,6 +358,47 @@ Explanation
 -#  Display the source image and the result matrix. Draw a rectangle around the highest possible
     matching area:
     @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java imshow
+
+@end_toggle
+
+@add_toggle_python
+
+-#  Declare some global variables, such as the image and template, as well as the
+    match method and the window names:
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py global_variables
+-#  Load the source image and template:
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py load_image
+-#  Create the windows to show the results:
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py create_windows
+-#  Create the Trackbar to enter the kind of matching method to be used. When a change is detected
+    the callback function **MatchingMethod** is called.
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py create_trackbar
+-#  Wait until user exits the program.
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py wait_key
+-#  Let's check out the callback function. First, it makes a copy of the source image:
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py copy_source
+-#  Perform the template matching operation:
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py match_template
+    the arguments are naturally the input image **I**, the template **T** and the
+    match_method (given by the Trackbar)
+-#  We normalize the results:
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py normalize
+-#  We localize the minimum and maximum values in the result matrix **R** by using **cv2.minMaxLoc()**
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py best_match
+    the function calls as arguments:
+
+    -   **result:** The source array
+    -   **minVal** and **maxVal:** Variables to save the minimum and maximum values in **result**
+    -   **minLoc** and **maxLoc:** The Point locations of the minimum and maximum values in the
+        array.
+
+-#  For the first two methods ( TM_SQDIFF and MT_SQDIFF_NORMED ) the best match are the lowest
+    values. For all the others, higher values represent better matches. So, we save the
+    corresponding value in the **matchLoc** variable:
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py match_loc
+-#  Display the source image and the result matrix. Draw a rectangle around the highest possible
+    matching area:
+    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py imshow
 
 @end_toggle
 

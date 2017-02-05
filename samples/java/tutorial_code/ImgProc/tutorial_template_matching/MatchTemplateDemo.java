@@ -40,7 +40,6 @@ class MatchTemplateDemoRun implements ChangeListener{
         templ = Imgcodecs.imread( args[1], Imgcodecs.IMREAD_COLOR );
         //! [load_image]
 
-        // change to yes if you want to use mask
         if(args.length > 2) {
             use_mask = true;
             mask = Imgcodecs.imread( args[2], Imgcodecs.IMREAD_COLOR );
