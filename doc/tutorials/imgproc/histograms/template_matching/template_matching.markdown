@@ -27,6 +27,15 @@ In this tutorial you will learn how to:
 
 @end_toggle
 
+@add_toggle_python
+
+-   Use the OpenCV function **cv2.matchTemplate()** to search for matches between an image patch and
+    an input image
+-   Use the OpenCV function **cv2.minMaxLoc()** to find the maximum and minimum values (as well as
+    their positions) in a given array.
+
+@end_toggle
+
 Theory
 ------
 
@@ -58,7 +67,7 @@ that should be used to find the match.
 -   By **sliding**, we mean moving the patch one pixel at a time (left to right, up to down). At
     each location, a metric is calculated so it represents how "good" or "bad" the match at that
     location is (or how similar the patch is to that particular area of the source image).
--   For each location of **T** over **I**, you *store* the metric in the *result matrix* **(R)**.
+-   For each location of **T** over **I**, you *store* the metric in the *result matrix* **R**.
     Each location \f$(x,y)\f$ in **R** contains the match metric:
 
     ![](images/Template_Matching_Template_Theory_Result.jpg)
@@ -78,6 +87,13 @@ that should be used to find the match.
 @add_toggle_java
 
 -   In practice, we use the function **Core.MinMaxLocResult()** to locate the highest value (or lower,
+    depending of the type of matching method) in the *R* matrix.
+
+@end_toggle
+
+@add_toggle_python
+
+-   In practice, we use the function **cv2.minMaxLoc()** to locate the highest value (or lower,
     depending of the type of matching method) in the *R* matrix.
 
 @end_toggle
@@ -118,6 +134,13 @@ available methods are 6:
 @add_toggle_java
 
 Good question. OpenCV implements Template matching in the function **Imgproc.matchTemplate()** . The
+available methods are 6:
+
+@end_toggle
+
+@add_toggle_python
+
+Good question. OpenCV implements Template matching in the function **cv2.matchTemplate()** . The
 available methods are 6:
 
 @end_toggle
@@ -177,7 +200,8 @@ Code
     -   Loads an input image and a image patch (*template*)
     -   Perform a template matching procedure by using the OpenCV function **Imgproc.matchTemplate()**
         with any of the 6 matching methods described before. The user can choose the method by
-        entering its selection in the Trackbar.
+        entering its selection in the Trackbar.  If a mask is supplied, it will only be used for
+        the methods that support masking
     -   Normalize the output of the matching procedure
     -   Localize the location with higher matching probability
     -   Draw a rectangle around the area corresponding to the highest match

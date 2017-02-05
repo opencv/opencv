@@ -16,7 +16,7 @@ class MatchTemplateDemoRun implements ChangeListener{
 
     //! [declare]
     /// Global Variables
-    Boolean use_mask;
+    Boolean use_mask = false;
     Mat img = new Mat(), templ = new Mat();
     Mat mask = new Mat();
 
@@ -25,19 +25,26 @@ class MatchTemplateDemoRun implements ChangeListener{
     JLabel imgDisplay = new JLabel(), resultDisplay = new JLabel();
     //! [declare]
 
-    public void run() {
+    public void run(String[] args) {
+
+        if (args.length < 2)
+        {
+            System.out.println("Not enough parameters");
+            System.out.println("Program arguments:\n<image_name> <template_name> [<mask_name>]");
+            System.exit(-1);
+        }
 
         //! [load_image]
         /// Load image and template
-        img = Imgcodecs.imread( "../data/plane.jpg", Imgcodecs.IMREAD_COLOR );
-        templ = Imgcodecs.imread( "../data/face.jpg", Imgcodecs.IMREAD_COLOR );
+        img = Imgcodecs.imread( args[0], Imgcodecs.IMREAD_COLOR );
+        templ = Imgcodecs.imread( args[1], Imgcodecs.IMREAD_COLOR );
         //! [load_image]
 
         // change to yes if you want to use mask
-        use_mask = false;
-        if(use_mask)
-            mask = Imgcodecs.imread( "../data/mask.jpg", Imgcodecs.IMREAD_COLOR );
-
+        if(args.length > 2) {
+            use_mask = true;
+            mask = Imgcodecs.imread( args[2], Imgcodecs.IMREAD_COLOR );
+        }
 
         if(img.empty() || templ.empty() || (use_mask && mask.empty()))
         {
@@ -143,7 +150,7 @@ class MatchTemplateDemoRun implements ChangeListener{
 
         String title = "Source image; Control; Result image";
         JFrame frame = new JFrame(title);
-        frame.setLayout(new GridLayout(1, 3));
+        frame.setLayout(new GridLayout(2, 2));
         frame.add(imgDisplay);
 
         //! [create_trackbar]
@@ -179,11 +186,13 @@ class MatchTemplateDemoRun implements ChangeListener{
     }
 }
 
-public class MatchTemplateDemo {
+public class MatchTemplateDemo
+{
     public static void main(String[] args) {
-
-        // Load the native library.
+        // load the native OpenCV library
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        new MatchTemplateDemoRun().run();
+
+        // run code
+        new MatchTemplateDemoRun().run(args);
     }
 }
