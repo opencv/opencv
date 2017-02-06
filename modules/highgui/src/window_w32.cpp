@@ -65,7 +65,7 @@
 #include <vector>
 #include <functional>
 #include "opencv2/highgui.hpp"
-#include <GL\gl.h>
+#include <GL/gl.h>
 #endif
 
 static const char* trackbar_text =
