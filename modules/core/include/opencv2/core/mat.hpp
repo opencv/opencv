@@ -736,6 +736,8 @@ Finally, there are STL-style iterators that are smart enough to skip gaps betwee
 @endcode
 The matrix iterators are random-access iterators, so they can be passed to any STL algorithm,
 including std::sort().
+
+@note Matrix Expressions and arithmetic see MatExpr
 */
 class CV_EXPORTS Mat
 {
