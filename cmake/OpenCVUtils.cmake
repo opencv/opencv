@@ -668,7 +668,11 @@ endfunction()
 
 # add install command
 function(ocv_install_target)
-  install(TARGETS ${ARGN})
+  if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+    install(TARGETS ${ARGN} FRAMEWORK DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH})
+  else()
+    install(TARGETS ${ARGN})
+  endif()
 
   set(isPackage 0)
   unset(__package)
@@ -883,7 +887,14 @@ function(ocv_target_link_libraries target)
   if(";${LINK_DEPS};" MATCHES ";${target};")
     list(REMOVE_ITEM LINK_DEPS "${target}") # prevent "link to itself" warning (world problem)
   endif()
-  target_link_libraries(${target} ${LINK_DEPS})
+  if(NOT TARGET ${target})
+    if(NOT DEFINED OPENCV_MODULE_${target}_LOCATION)
+      message(FATAL_ERROR "ocv_target_link_libraries: invalid target: '${target}'")
+    endif()
+    set(OPENCV_MODULE_${target}_LINK_DEPS ${OPENCV_MODULE_${target}_LINK_DEPS} ${LINK_DEPS} CACHE INTERNAL "" FORCE)
+  else()
+    target_link_libraries(${target} ${LINK_DEPS})
+  endif()
 endfunction()
 
 function(_ocv_append_target_includes target)
@@ -929,6 +940,29 @@ function(ocv_add_library target)
       set_target_properties(${target}_object PROPERTIES FOLDER "object_libraries")
     endif()
     unset(sources)
+  endif()
+
+  if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+    message(STATUS "Setting Apple target properties for ${target}")
+
+    set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
+
+    set_target_properties(${target} PROPERTIES
+      FRAMEWORK TRUE
+      MACOSX_FRAMEWORK_IDENTIFIER org.opencv
+      MACOSX_FRAMEWORK_INFO_PLIST ${CMAKE_BINARY_DIR}/ios/Info.plist
+      # "current version" in semantic format in Mach-O binary file
+      VERSION ${OPENCV_LIBVERSION}
+      # "compatibility version" in semantic format in Mach-O binary file
+      SOVERSION ${OPENCV_LIBVERSION}
+      INSTALL_RPATH ""
+      INSTALL_NAME_DIR "@rpath"
+      BUILD_WITH_INSTALL_RPATH 1
+      LIBRARY_OUTPUT_NAME "opencv2"
+      XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
+      #PUBLIC_HEADER "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h"
+      #XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+    )
   endif()
 
   _ocv_append_target_includes(${target})

@@ -1,4 +1,4 @@
-Using a cv::cuda::GpuMat with thrust
+Using a cv::cuda::GpuMat with thrust {#tutorial_gpu_thrust_interop}
 ===========================================
 
 Goal

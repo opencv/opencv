@@ -417,34 +417,74 @@ typedef struct {
     UMat* um;
 } cv2_UMatWrapperObject;
 
-// UMatWrapper init - takes one optional argument, that converts to Mat, that converts to UMat and stored inside.
-// If no argument given - empty UMat created.
+static bool PyObject_IsUMat(PyObject *o);
+
+// UMatWrapper init - try to map arguments from python to UMat constructors
 static int UMatWrapper_init(cv2_UMatWrapperObject *self, PyObject *args, PyObject *kwds)
 {
-    self->um = new UMat();
-
-    PyObject *np_mat = NULL;
-
-    static char *kwlist[] = {new char[3], NULL};
-    strcpy(kwlist[0], "mat");
-
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &np_mat))
-        return -1;
-
-    if (np_mat) {
-        Mat m;
-        if (!pyopencv_to(np_mat, m, ArgInfo("UMatWrapper.np_mat", 0)))
-            return -1;
-
-        m.copyTo(*self->um);
+    self->um = NULL;
+    {
+        // constructor ()
+        const char *kwlist[] = {NULL};
+        if (PyArg_ParseTupleAndKeywords(args, kwds, "", (char**) kwlist)) {
+            self->um = new UMat();
+            return 0;
+        }
+        PyErr_Clear();
     }
-
-    return 0;
+    {
+        // constructor (rows, cols, type)
+        const char *kwlist[] = {"rows", "cols", "type", NULL};
+        int rows, cols, type;
+        if (PyArg_ParseTupleAndKeywords(args, kwds, "iii", (char**) kwlist, &rows, &cols, &type)) {
+            self->um = new UMat(rows, cols, type);
+            return 0;
+        }
+        PyErr_Clear();
+    }
+    {
+        // constructor (m, rowRange, colRange)
+        const char *kwlist[] = {"m", "rowRange", "colRange", NULL};
+        PyObject *obj = NULL;
+        int y0 = -1, y1 = -1, x0 = -1, x1 = -1;
+        if (PyArg_ParseTupleAndKeywords(args, kwds, "O(ii)|(ii)", (char**) kwlist, &obj, &y0, &y1, &x0, &x1) && PyObject_IsUMat(obj)) {
+            UMat *um_other = ((cv2_UMatWrapperObject *) obj)->um;
+            Range rowRange(y0, y1);
+            Range colRange = (x0 >= 0 && x1 >= 0) ? Range(x0, x1) : Range::all();
+            self->um = new UMat(*um_other, rowRange, colRange);
+            return 0;
+        }
+        PyErr_Clear();
+    }
+    {
+        // constructor (m)
+        const char *kwlist[] = {"m", NULL};
+        PyObject *obj = NULL;
+        if (PyArg_ParseTupleAndKeywords(args, kwds, "O", (char**) kwlist, &obj)) {
+            // constructor (UMat m)
+            if (PyObject_IsUMat(obj)) {
+                UMat *um_other = ((cv2_UMatWrapperObject *) obj)->um;
+                self->um = new UMat(*um_other);
+                return 0;
+            }
+            // python specific constructor from array like object
+            Mat m;
+            if (pyopencv_to(obj, m, ArgInfo("UMatWrapper.np_mat", 0))) {
+                self->um = new UMat();
+                m.copyTo(*self->um);
+                return 0;
+            }
+        }
+        PyErr_Clear();
+    }
+    PyErr_SetString(PyExc_TypeError, "no matching UMat constructor found/supported");
+    return -1;
 }
 
 static void UMatWrapper_dealloc(cv2_UMatWrapperObject* self)
 {
-    delete self->um;
+    if (self->um)
+        delete self->um;
 #if PY_MAJOR_VERSION >= 3
     Py_TYPE(self)->tp_free((PyObject*)self);
 #else
@@ -529,8 +569,12 @@ static PyTypeObject cv2_UMatWrapperType = {
 #endif
 };
 
+static bool PyObject_IsUMat(PyObject *o) {
+    return (o != NULL) && PyObject_TypeCheck(o, &cv2_UMatWrapperType);
+}
+
 static bool pyopencv_to(PyObject* o, UMat& um, const ArgInfo info) {
-    if (o != NULL && PyObject_TypeCheck(o, &cv2_UMatWrapperType) ) {
+    if (PyObject_IsUMat(o)) {
         um = *((cv2_UMatWrapperObject *) o)->um;
         return true;
     }

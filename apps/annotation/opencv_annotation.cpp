@@ -59,12 +59,7 @@ Adapted by: Puttemans Steven - April 2016 - Vectorize the process to enable bett
 
 #include <fstream>
 #include <iostream>
-
-#if defined(_WIN32)
-   #include <direct.h>
-#else
-   #include <sys/stat.h>
-#endif
+#include <map>
 
 using namespace std;
 using namespace cv;
@@ -249,33 +244,19 @@ int main( int argc, const char** argv )
     int resizeFactor = parser.get<int>("resizeFactor");
     int const maxWindowHeight = parser.get<int>("maxWindowHeight") > 0 ? parser.get<int>("maxWindowHeight") : -1;
 
-    // Check if the folder actually exists
-    // If -1 is returned then the folder actually exists, and thus you can continue
-    // In all other cases there was a folder creation and thus the folder did not exist
-    #if defined(_WIN32)
-    if(_mkdir(image_folder.c_str()) != -1){
-        // Generate an error message
-        cerr << "The image folder given does not exist. Please check again!" << endl;
-        // Remove the created folder again, to ensure a second run with same code fails again
-        _rmdir(image_folder.c_str());
-        return 0;
-    }
-    #else
-    if(mkdir(image_folder.c_str(), 0777) != -1){
-        // Generate an error message
-        cerr << "The image folder given does not exist. Please check again!" << endl;
-        // Remove the created folder again, to ensure a second run with same code fails again
-        remove(image_folder.c_str());
-        return 0;
-    }
-    #endif
-
     // Start by processing the data
     // Return the image filenames inside the image folder
-    vector< vector<Rect> > annotations;
+    map< String, vector<Rect> > annotations;
     vector<String> filenames;
     String folder(image_folder);
     glob(folder, filenames);
+
+    // Add key tips on how to use the software when running it
+    cout << "* mark rectangles with the left mouse button," << endl;
+    cout << "* press 'c' to accept a selection," << endl;
+    cout << "* press 'd' to delete the latest selection," << endl;
+    cout << "* press 'n' to proceed with next image," << endl;
+    cout << "* press 'esc' to stop." << endl;
 
     // Loop through each image stored in the images folder
     // Create and temporarily store the annotations
@@ -306,7 +287,7 @@ int main( int argc, const char** argv )
                 current_annotations[j].height = current_annotations[j].height * resizeFactor;
             }
         }
-        annotations.push_back(current_annotations);
+        annotations[filenames[i]] = current_annotations;
 
         // Check if the ESC key was hit, then exit earlier then expected
         if(stop){
@@ -323,10 +304,11 @@ int main( int argc, const char** argv )
     }
 
     // Store the annotations, write to the output file
-    for(int i = 0; i < (int)annotations.size(); i++){
-        output << filenames[i] << " " << annotations[i].size();
-        for(int j=0; j < (int)annotations[i].size(); j++){
-            Rect temp = annotations[i][j];
+    for(map<String, vector<Rect> >::iterator it = annotations.begin(); it != annotations.end(); it++){
+        vector<Rect> &anno = it->second;
+        output << it->first << " " << anno.size();
+        for(size_t j=0; j < anno.size(); j++){
+            Rect temp = anno[j];
             output << " " << temp.x << " " << temp.y << " " << temp.width << " " << temp.height;
         }
         output << endl;
