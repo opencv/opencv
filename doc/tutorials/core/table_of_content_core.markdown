@@ -106,3 +106,10 @@ understanding how to manipulate the images on a pixel level.
     *Author:* Elena Gvozdeva
 
     You will see how to use the IPP Async with OpenCV.
+
+
+-   @subpage tutorial_how_to_use_OpenCV_parallel_for_
+
+    *Compatibility:* \>= OpenCV 2.4.3
+
+    You will see how to use the OpenCV parallel_for_ to easily parallelize your code.

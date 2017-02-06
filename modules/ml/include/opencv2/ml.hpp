@@ -1169,6 +1169,17 @@ public:
     Algorithm::load to load the pre-trained model.
      */
     CV_WRAP static Ptr<RTrees> create();
+
+    /** @brief Loads and creates a serialized RTree from a file
+     *
+     * Use RTree::save to serialize and store an RTree to disk.
+     * Load the RTree from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized RTree
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<RTrees> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
