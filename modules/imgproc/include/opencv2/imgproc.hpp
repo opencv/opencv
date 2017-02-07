@@ -2709,7 +2709,7 @@ CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
 
 /** @brief Applies a fixed-level threshold to each array element.
 
-The function applies fixed-level thresholding to a single-channel array. The function is typically
+The function applies fixed-level thresholding to a multiple-channel array. The function is typically
 used to get a bi-level (binary) image out of a grayscale image ( cv::compare could be also used for
 this purpose) or for removing a noise, that is, filtering out pixels with too small or too large
 values. There are several types of thresholding supported by the function. They are determined by
@@ -2721,8 +2721,10 @@ or Triangle algorithm and uses it instead of the specified thresh . The function
 computed threshold value. Currently, the Otsu's and Triangle methods are implemented only for 8-bit
 images.
 
-@param src input array (single-channel, 8-bit or 32-bit floating point).
-@param dst output array of the same size and type as src.
+@note Input image should be single channel only in case of CV_THRESH_OTSU or CV_THRESH_TRIANGLE flags
+
+@param src input array (multiple-channel, 8-bit or 32-bit floating point).
+@param dst output array of the same size  and type and the same number of channels as src.
 @param thresh threshold value.
 @param maxval maximum value to use with the THRESH_BINARY and THRESH_BINARY_INV thresholding
 types.
