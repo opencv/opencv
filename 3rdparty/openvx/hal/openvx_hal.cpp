@@ -1064,7 +1064,7 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
             ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
                 ivx::Image::createAddressing(w, h, 1, (vx_int32)astep), const_cast<uchar*>(a)),
             ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U32,
-                ivx::Image::createAddressing(w, h, 1, (vx_int32)bstep), (unsigned int *)(b + bstep + sizeof(unsigned int)));
+                ivx::Image::createAddressing(w, h, 4, (vx_int32)bstep), (unsigned int *)(b + bstep + sizeof(unsigned int)));
         ivx::IVX_CHECK_STATUS(vxuIntegralImage(ctx, ia, ib));
         memset(b, 0, (w + 1) * sizeof(unsigned int));
         b += bstep;
