@@ -111,8 +111,9 @@ Building OpenCV from Source Using CMake
     cd ~/opencv/build/doc/
     make -j7 html_docs
     @endcode
--#  To install libraries, from build directory execute
+-#  To link and install libraries, from build directory execute
     @code{.bash}
+    sudo ldconfig
     sudo make install
     @endcode
 -#  [optional] Running tests
