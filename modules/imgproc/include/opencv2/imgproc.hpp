@@ -2721,6 +2721,8 @@ or Triangle algorithm and uses it instead of the specified thresh . The function
 computed threshold value. Currently, the Otsu's and Triangle methods are implemented only for 8-bit
 images.
 
+@note Input image should be single channel only in case of CV_THRESH_OTSU or CV_THRESH_TRIANGLE flags
+
 @param src input array (multiple-channel, 8-bit or 32-bit floating point).
 @param dst output array of the same size  and type and the same number of channels as src.
 @param thresh threshold value.
