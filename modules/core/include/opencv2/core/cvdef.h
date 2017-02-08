@@ -361,7 +361,7 @@ Cv64suf;
 #  define DISABLE_OPENCV_24_COMPATIBILITY
 #endif
 
-#include "cv_exports.h"
+#include "opencv2/cv_exports.h"
 
 #ifndef CV_EXTERN_C
 #  ifdef __cplusplus
