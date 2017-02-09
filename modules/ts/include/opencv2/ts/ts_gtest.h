@@ -720,7 +720,7 @@
 #  include <io.h>
 # endif
 // In order to avoid having to include <windows.h>, use forward declaration
-# if GTEST_OS_WINDOWS_MINGW
+#if GTEST_OS_WINDOWS_MINGW && !defined(__MINGW64_VERSION_MAJOR)
    // MinGW defined _CRITICAL_SECTION and _RTL_CRITICAL_SECTION as two
    // separate (equivalent) structs, instead of using typedef
    typedef struct _CRITICAL_SECTION GTEST_CRITICAL_SECTION;
