@@ -815,7 +815,7 @@ namespace internal
         VecWriterProxy( FileStorage* _fs ) : fs(_fs) {}
         void operator()(const std::vector<_Tp>& vec) const
         {
-            int _fmt = DataType<_Tp>::fmt;
+            int _fmt = traits::SafeFmt<_Tp>::fmt;
             char fmt[] = { (char)((_fmt >> 8) + '1'), (char)_fmt, '\0' };
             fs->writeRaw(fmt, !vec.empty() ? (uchar*)&vec[0] : 0, vec.size() * sizeof(_Tp));
         }
@@ -846,7 +846,7 @@ namespace internal
         {
             size_t remaining = it->remaining;
             size_t cn = DataType<_Tp>::channels;
-            int _fmt = DataType<_Tp>::fmt;
+            int _fmt = traits::SafeFmt<_Tp>::fmt;
             char fmt[] = { (char)((_fmt >> 8)+'1'), (char)_fmt, '\0' };
             size_t remaining1 = remaining / cn;
             count = count < remaining1 ? count : remaining1;
@@ -999,7 +999,7 @@ void write( FileStorage& fs, const std::vector<DMatch>& vec )
 template<typename _Tp> static inline
 void write( FileStorage& fs, const std::vector<_Tp>& vec )
 {
-    cv::internal::VecWriterProxy<_Tp, DataType<_Tp>::fmt != 0> w(&fs);
+    cv::internal::VecWriterProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> w(&fs);
     w(vec);
 }
 
@@ -1076,7 +1076,7 @@ void write(FileStorage& fs, const String& name, const DMatch& r )
 template<typename _Tp> static inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
-    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+(traits::SafeFmt<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
     write(fs, vec);
 }
 
@@ -1086,7 +1086,7 @@ void write( FileStorage& fs, const String& name, const std::vector< std::vector<
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ);
     for(size_t i = 0; i < vec.size(); i++)
     {
-        cv::internal::WriteStructContext ws_(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
+        cv::internal::WriteStructContext ws_(fs, name, FileNode::SEQ+(traits::SafeFmt<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
         write(fs, vec[i]);
     }
 }
@@ -1139,7 +1139,7 @@ void read(const FileNode& node, short& value, short default_value)
 template<typename _Tp> static inline
 void read( FileNodeIterator& it, std::vector<_Tp>& vec, size_t maxCount = (size_t)INT_MAX )
 {
-    cv::internal::VecReaderProxy<_Tp, DataType<_Tp>::fmt != 0> r(&it);
+    cv::internal::VecReaderProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> r(&it);
     r(vec, maxCount);
 }
 
@@ -1228,7 +1228,7 @@ FileNodeIterator& operator >> (FileNodeIterator& it, _Tp& value)
 template<typename _Tp> static inline
 FileNodeIterator& operator >> (FileNodeIterator& it, std::vector<_Tp>& vec)
 {
-    cv::internal::VecReaderProxy<_Tp, DataType<_Tp>::fmt != 0> r(&it);
+    cv::internal::VecReaderProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> r(&it);
     r(vec, (size_t)INT_MAX);
     return it;
 }
