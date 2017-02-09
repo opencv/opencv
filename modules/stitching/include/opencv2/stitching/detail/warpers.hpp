@@ -138,7 +138,7 @@ struct CV_EXPORTS ProjectorBase
 /** @brief Base class for rotation-based warper using a detail::ProjectorBase_ derived class.
  */
 template <class P>
-class CV_EXPORTS RotationWarperBase : public RotationWarper
+class RotationWarperBase : public RotationWarper
 {
 public:
     Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R);
