@@ -1532,6 +1532,11 @@ public:
     template<typename _Tp> void push_back(const Mat_<_Tp>& elem);
 
     /** @overload
+    @param elem Added element(s).
+    */
+    template<typename _Tp> void push_back(const std::vector<_Tp>& elem);
+
+    /** @overload
     @param m Added line(s).
     */
     void push_back(const Mat& m);
