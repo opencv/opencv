@@ -1013,3 +1013,17 @@ TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
 
     ASSERT_EQ(cv::norm(inputMatrix, actualMatrix, NORM_INF), 0.);
 }
+
+TEST(Core_InputOutput, filestorage_matx_write)
+{
+    FileStorage fsWriter("test.xml", FileStorage::WRITE + FileStorage::MEMORY);
+    fsWriter  << "matx" << cv::Matx33f::eye();
+
+    String serializedMatx = fsWriter.releaseAndGetString();
+
+    FileStorage fsReader(serializedMatx, FileStorage::READ + FileStorage::MEMORY);
+    Mat inputMatrix;
+    fsReader["matx"] >> inputMatrix;
+
+    ASSERT_EQ(cv::norm(inputMatrix, cv::Matx33f::eye(), NORM_INF), 0.);;
+}
