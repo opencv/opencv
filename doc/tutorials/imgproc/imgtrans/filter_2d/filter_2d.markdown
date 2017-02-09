@@ -20,8 +20,8 @@ In a very general sense, convolution is an operation between every part of an im
 
 ### What is a kernel?
 
-A kernel is essentially a fixed size array of numerical coefficeints along with an *anchor point* in
-that array, which is tipically located at the center.
+A kernel is essentially a fixed size array of numerical coefficients along with an *anchor point* in
+that array, which is typically located at the center.
 
 ![](images/filter_2d_tutorial_kernel_theory.png)
 
