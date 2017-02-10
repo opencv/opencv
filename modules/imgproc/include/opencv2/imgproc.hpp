@@ -769,8 +769,18 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA,
     COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA,
 
+    //! Demosaicing with alpha channel
+    COLOR_BayerBG2BGRA = 139,
+    COLOR_BayerGB2BGRA = 140,
+    COLOR_BayerRG2BGRA = 141,
+    COLOR_BayerGR2BGRA = 142,
 
-    COLOR_COLORCVT_MAX  = 139
+    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA,
+    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA,
+    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA,
+    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA,
+
+    COLOR_COLORCVT_MAX  = 143
 };
 
 /** types of intersection between rectangles
