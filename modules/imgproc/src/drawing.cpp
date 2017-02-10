@@ -1102,6 +1102,7 @@ static const int opencvOne = 1;
 #    endif
 #  endif
 
+/*
 static inline uint32_t opencvBigToHost32(const uchar* p){
 #if OPENCV_BYTEORDER==4321
   uint32_t x;
@@ -1127,6 +1128,7 @@ static inline uint32_t opencvBigToHost32(uint32_t x){
   return opencvBigToHost32((uchar*)&x);
 #endif
 }
+*/
 
 static inline uint32_t opencvLittleToHost32(const uchar* p){
 #if OPENCV_BYTEORDER==1234
