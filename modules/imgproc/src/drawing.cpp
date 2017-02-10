@@ -40,6 +40,8 @@
 //M*/
 #include "precomp.hpp"
 
+#include <stdint.h>
+
 namespace cv
 {
 
@@ -1069,8 +1071,95 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 *                                Polygons filling                                        *
 \****************************************************************************************/
 
+//Endian macros stolen from SQLITE
+#if (defined(i386)     || defined(__i386__)   || defined(_M_IX86) ||    \
+     defined(__x86_64) || defined(__x86_64__) || defined(_M_X64)  ||    \
+     defined(_M_AMD64) || defined(_M_ARM)     || defined(__x86)   ||    \
+     defined(__arm__))
+# define OPENCV_BYTEORDER    1234
+# define OPENCV_BIGENDIAN    0
+# define OPENCV_LITTLEENDIAN 1
+#elif (defined(sparc)    || defined(__ppc__))
+# define OPENCV_BYTEORDER    4321
+# define OPENCV_BIGENDIAN    1
+# define OPENCV_LITTLEENDIAN 0
+#endif
+
+#if !defined(OPENCV_BYTEORDER)
+static const int opencvOne = 1;
+# define OPENCV_BIGENDIAN    (*(char *)(&opencvOne)==0)
+# define OPENCV_LITTLEENDIAN (*(char *)(&opencvOne)==1)
+#endif
+
+#  if defined(_MSC_VER) && _MSC_VER>=1400
+#    if !defined(_WIN32_WCE)
+#      include <intrin.h>
+#      pragma intrinsic(_byteswap_ushort)
+#      pragma intrinsic(_byteswap_ulong)
+#      pragma intrinsic(_ReadWriteBarrier)
+#    else
+#      include <cmnintrin.h>
+#    endif
+#  endif
+
+static inline uint32_t opencvBigToHost32(const uchar* p){
+#if OPENCV_BYTEORDER==4321
+  uint32_t x;
+  memcpy(&x,p,4);
+  return x;
+#elif OPENCV_BYTEORDER==1234  && defined(__GNUC__) && GCC_VERSION>=4003000
+  uint32_t x;
+  memcpy(&x,p,4);
+  return __builtin_bswap32(x);
+#elif OPENCV_BYTEORDER==1234 && defined(_MSC_VER) && _MSC_VER>=1300
+  uint32_t x;
+  memcpy(&x,p,4);
+  return _byteswap_ulong(x);
+#else
+  return ((unsigned)p[0]<<24) | (p[1]<<16) | (p[2]<<8) | p[3];
+#endif
+}
+
+static inline uint32_t opencvBigToHost32(uint32_t x){
+#if OPENCV_BYTEORDER==4321
+  return x;
+#else
+  return opencvBigToHost32((uchar*)&x);
+#endif
+}
+
+static inline uint32_t opencvLittleToHost32(const uchar* p){
+#if OPENCV_BYTEORDER==1234
+  uint32_t x;
+  memcpy(&x,p,4);
+  return x;
+#elif OPENCV_BYTEORDER==4321 && defined(__GNUC__) && GCC_VERSION>=4003000
+  uint32_t x;
+  memcpy(&x,p,4);
+  return __builtin_bswap32(x);
+#elif OPENCV_BYTEORDER==4321 && defined(_MSC_VER) && _MSC_VER>=1300
+  uint32_t x;
+  memcpy(&x,p,4);
+  return _byteswap_ulong(x);
+#else
+  return ((unsigned)p[0]<<24) | (p[1]<<16) | (p[2]<<8) | p[3];
+#endif
+}
+
+static inline uint32_t opencvLittleToHost32(uint32_t x){
+#if OPENCV_BYTEORDER==1234
+  return x;
+#else
+  return opencvLittleToHost32((uchar*)&x);
+#endif
+}
+
+
+
 /* helper macros: filling horizontal row */
-#define ICV_HLINE( ptr, xl, xr, color, pix_size )            \
+#define is_aligned(POINTER, BYTE_COUNT) (((uintptr_t)(const void *)(POINTER)) % (BYTE_COUNT) == 0)
+
+/*#define ICV_HLINE( ptr, xl, xr, color, pix_size )            \
 {                                                            \
     uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);      \
     uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);  \
@@ -1083,8 +1172,80 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
             hline_ptr[hline_j] = ((uchar*)color)[hline_j];   \
         }                                                    \
     }                                                        \
-}
+}*/
 
+#define ICV_HLINE( ptr, xl, xr, color, pix_size )                 \
+if((pix_size) == 1)                                               \
+{                                                                 \
+    uchar* hline_ptr = (uchar*)(ptr) + (xl);                      \
+    uchar* hline_max_ptr = (uchar*)(ptr) + (xr);                  \
+    uchar hline_c = *(const uchar*)(color);                       \
+                                                                  \
+    memset(hline_ptr, hline_c, (hline_max_ptr - hline_ptr) + 1);  \
+}                                                                 \
+else if((pix_size) == 3)                                          \
+{                                                                 \
+    uchar* hline_ptr = (uchar*)(ptr) + (xl)*3;                    \
+    uchar* hline_end   = (uchar*)(ptr) + (xr+1)*3;                \
+    uchar* hbody12_start = std::min(hline_end, (uchar*)(12*(((uintptr_t)(hline_ptr)+11)/12)));  \
+    uchar* hbody12_end = std::min(hline_end, (uchar*)(12*(((uintptr_t)(hline_end))/12))); \
+    if ((hbody12_start < hbody12_end))                       \
+    {                                                        \
+      int offset = ((uintptr_t)(hbody12_start-hline_ptr))%3; \
+      uint32_t c4[3];                                        \
+      uchar* ptrC4 = reinterpret_cast<uchar*>(&c4);          \
+      ptrC4[0]  = ((uchar*)(color))[(offset++)%3];           \
+      ptrC4[1]  = ((uchar*)(color))[(offset++)%3];           \
+      ptrC4[2]  = ((uchar*)(color))[(offset++)%3];           \
+      memcpy(&ptrC4[3], &ptrC4[0], 3);                       \
+      memcpy(&ptrC4[6], &ptrC4[0], 6);                       \
+      c4[0] = opencvLittleToHost32(c4[0]);                   \
+      c4[1] = opencvLittleToHost32(c4[1]);                   \
+      c4[2] = opencvLittleToHost32(c4[2]);                   \
+      for(offset = 0 ; hline_ptr < hbody12_start; offset = (offset+1)%3)\
+         *hline_ptr++ = ((uchar*)(color))[offset];           \
+      for(uint32_t* ptr32 = reinterpret_cast<uint32_t*>(hbody12_start), *ptr32End = reinterpret_cast<uint32_t*>(hbody12_end) ; ptr32<ptr32End ; ) \
+      {                                                       \
+          *ptr32++ = c4[0];                                   \
+          *ptr32++ = c4[1];                                   \
+          *ptr32++ = c4[2];                                   \
+      }                                                       \
+      for(offset = ((uintptr_t)(hbody12_end-(uchar*)(ptr)))%3, hline_ptr = hbody12_end ; hline_ptr < hline_end ; offset = (offset+1)%3) \
+          *hline_ptr++ = ((uchar*)(color))[offset];           \
+    }                                                         \
+    else                                                      \
+    {                                                         \
+      for( ; hline_ptr < hline_end ; )                        \
+      {                                                       \
+          *hline_ptr++ = ((uchar*)(color))[0];                \
+          *hline_ptr++ = ((uchar*)(color))[1];                \
+          *hline_ptr++ = ((uchar*)(color))[2];                \
+      }                                                       \
+    }                                                         \
+}                                                             \
+else if(((pix_size) == 4) && is_aligned(((uchar*)(ptr) + (xl)*4), 0x4)) \
+{                                                              \
+    uint32_t c = opencvLittleToHost32((uchar*)(color));        \
+    uint32_t* hline_ptr = (uint32_t*)(ptr) + xl;               \
+    uint32_t* hline_max_ptr = (uint32_t*)(ptr) + xr;           \
+                                                               \
+    for( ; hline_ptr <= hline_max_ptr; ++hline_ptr   )         \
+        *hline_ptr = c;                                        \
+}                                                              \
+else                                                           \
+{                                                              \
+    uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);        \
+    uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);    \
+                                                               \
+    for( ; hline_ptr <= hline_max_ptr; hline_ptr += (pix_size))\
+    {                                                          \
+        int hline_j;                                           \
+        for( hline_j = 0; hline_j < (pix_size); hline_j++ )    \
+        {                                                      \
+            hline_ptr[hline_j] = ((uchar*)color)[hline_j];     \
+        }                                                      \
+    }                                                          \
+}
 
 /* filling convex polygon. v - array of vertices, ntps - number of points */
 static void
