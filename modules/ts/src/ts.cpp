@@ -491,9 +491,6 @@ void TS::init( const string& modulename )
     if( ::testing::GTEST_FLAG(catch_exceptions) )
     {
 #if defined WIN32 || defined _WIN32
-#ifdef _MSC_VER
-        _set_se_translator( SEHTranslator );
-#endif
 #else
         for( int i = 0; tsSigId[i] >= 0; i++ )
             signal( tsSigId[i], signalHandler );
@@ -502,9 +499,6 @@ void TS::init( const string& modulename )
     else
     {
 #if defined WIN32 || defined _WIN32
-#ifdef _MSC_VER
-        _set_se_translator( 0 );
-#endif
 #else
         for( int i = 0; tsSigId[i] >= 0; i++ )
             signal( tsSigId[i], SIG_DFL );

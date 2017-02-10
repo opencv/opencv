@@ -43,16 +43,6 @@ if(MINGW OR (X86 AND UNIX AND NOT APPLE))
   endif()
 endif()
 
-if(MSVC)
-  string(REGEX REPLACE "^  *| * $" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  string(REGEX REPLACE "^  *| * $" "" CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT}")
-  if(CMAKE_CXX_FLAGS STREQUAL CMAKE_CXX_FLAGS_INIT)
-    # override cmake default exception handling option
-    string(REPLACE "/EHsc" "/EHa" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}"  CACHE STRING "Flags used by the compiler during all build types." FORCE)
-  endif()
-endif()
-
 set(OPENCV_EXTRA_FLAGS "")
 set(OPENCV_EXTRA_C_FLAGS "")
 set(OPENCV_EXTRA_CXX_FLAGS "")
