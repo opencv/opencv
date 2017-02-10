@@ -1107,7 +1107,7 @@ static inline uint32_t opencvBigToHost32(const uchar* p){
   uint32_t x;
   memcpy(&x,p,4);
   return x;
-#elif OPENCV_BYTEORDER==1234  && defined(__GNUC__) && GCC_VERSION>=4003000
+#elif OPENCV_BYTEORDER==1234  && defined(__GNUC__)
   uint32_t x;
   memcpy(&x,p,4);
   return __builtin_bswap32(x);
@@ -1133,7 +1133,7 @@ static inline uint32_t opencvLittleToHost32(const uchar* p){
   uint32_t x;
   memcpy(&x,p,4);
   return x;
-#elif OPENCV_BYTEORDER==4321 && defined(__GNUC__) && GCC_VERSION>=4003000
+#elif OPENCV_BYTEORDER==4321 && defined(__GNUC__)
   uint32_t x;
   memcpy(&x,p,4);
   return __builtin_bswap32(x);
