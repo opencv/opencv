@@ -151,7 +151,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                         params.setPreviewFormat(ImageFormat.YV12);  // "generic" or "android" = android emulator
                     else
                         params.setPreviewFormat(ImageFormat.NV21);
-                    
+
                     mPreviewFormat = params.getPreviewFormat();
 
                     Log.d(TAG, "Set preview size to " + Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
