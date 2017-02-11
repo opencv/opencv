@@ -1086,6 +1086,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 #endif
 
 #if !defined(OPENCV_BYTEORDER)
+# define OPENCV_BYTEORDER 0
 static const int opencvOne = 1;
 # define OPENCV_BIGENDIAN    (*(char *)(&opencvOne)==0)
 # define OPENCV_LITTLEENDIAN (*(char *)(&opencvOne)==1)
@@ -1143,13 +1144,15 @@ static inline uint32_t opencvLittleToHost32(const uchar* p){
   uint32_t x;
   memcpy(&x,p,4);
   return _byteswap_ulong(x);
+#elif OPENCV_LITTLEENDIAN
+  return x;
 #else
   return ((unsigned)p[0]<<24) | (p[1]<<16) | (p[2]<<8) | p[3];
 #endif
 }
 
 static inline uint32_t opencvLittleToHost32(uint32_t x){
-#if OPENCV_BYTEORDER==1234
+#if OPENCV_LITTLEENDIAN
   return x;
 #else
   return opencvLittleToHost32((uchar*)&x);
