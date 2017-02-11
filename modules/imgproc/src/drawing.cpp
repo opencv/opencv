@@ -1075,7 +1075,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 #if (defined(i386)     || defined(__i386__)   || defined(_M_IX86) ||    \
      defined(__x86_64) || defined(__x86_64__) || defined(_M_X64)  ||    \
      defined(_M_AMD64) || defined(_M_ARM)     || defined(__x86)   ||    \
-     defined(__arm__))
+     defined(__arm__) || defined(__aarch64__))
 # define OPENCV_BYTEORDER    1234
 # define OPENCV_BIGENDIAN    0
 # define OPENCV_LITTLEENDIAN 1
