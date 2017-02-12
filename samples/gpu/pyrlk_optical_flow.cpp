@@ -268,15 +268,6 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    if(is_sparse)
-    {
-        namedWindow("PyrLK [Sparse]", WINDOW_NORMAL);
-    }
-    else
-    {
-        namedWindow("PyrLK [Dense] Flow Field", WINDOW_NORMAL);
-    }
-
     cout << "Image size : " << frame0.cols << " x " << frame0.rows << endl;
     cout << "Points count : " << points << endl;
 
@@ -318,6 +309,7 @@ int main(int argc, const char* argv[])
         vector<uchar> status(d_status.cols);
         download(d_status, status);
 
+        namedWindow("PyrLK [Sparse]", WINDOW_NORMAL);
         drawArrows(frame0, prevPts, nextPts, status, Scalar(255, 0, 0));
         imshow("PyrLK [Sparse]", frame0);
     }
@@ -329,6 +321,7 @@ int main(int argc, const char* argv[])
         d_pyrLK_dense->calc(d_frame0Gray, d_frame1Gray, d_flow);
 
         // Draw flows
+        namedWindow("PyrLK [Dense] Flow Field", WINDOW_NORMAL);
         showFlow("PyrLK [Dense] Flow Field", d_flow);
     }
 
