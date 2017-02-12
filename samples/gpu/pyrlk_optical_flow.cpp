@@ -207,15 +207,16 @@ template <typename T> inline T mapValue(T x, T a, T b, T c, T d)
 int main(int argc, const char* argv[])
 {
     const char* keys =
-        "{ h             help   |       | print help message }"
+        "{ h             help   |        | print help message }"
         "{ l             left   | ../data/pic1.png       | specify left image }"
         "{ r             right  | ../data/pic2.png       | specify right image }"
-        "{ gray                 |       | use grayscale sources [PyrLK Sparse] }"
-        "{ win_size             | 21    | specify windows size [PyrLK] }"
-        "{ max_level            | 3     | specify max level [PyrLK] }"
-        "{ iters                | 30    | specify iterations count [PyrLK] }"
-        "{ points               | 4000  | specify points count [GoodFeatureToTrack] }"
-        "{ min_dist             | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
+        "{ flow                 | sparse | specify flow type [PyrLK] }"
+        "{ gray                 |        | use grayscale sources [PyrLK Sparse] }"
+        "{ win_size             | 21     | specify windows size [PyrLK] }"
+        "{ max_level            | 3      | specify max level [PyrLK] }"
+        "{ iters                | 30     | specify iterations count [PyrLK] }"
+        "{ points               | 4000   | specify points count [GoodFeatureToTrack] }"
+        "{ min_dist             | 0      | specify minimal distance between points [GoodFeatureToTrack] }";
 
     CommandLineParser cmd(argc, argv, keys);
 
@@ -235,6 +236,22 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
+    string flow_type = cmd.get<string>("flow");
+    bool is_sparse = true;
+    if (flow_type == "sparse")
+    {
+        is_sparse = true;
+    }
+    else if (flow_type == "dense")
+    {
+        is_sparse = false;
+    }
+    else
+    {
+        cerr << "please specify 'sparse' or 'dense' as flow type" << endl;
+        return -1;
+    }
+
     bool useGray = cmd.has("gray");
     int winSize = cmd.get<int>("win_size");
     int maxLevel = cmd.get<int>("max_level");
@@ -251,8 +268,14 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    namedWindow("PyrLK [Sparse]", WINDOW_NORMAL);
-    namedWindow("PyrLK [Dense] Flow Field", WINDOW_NORMAL);
+    if(is_sparse)
+    { 
+        namedWindow("PyrLK [Sparse]", WINDOW_NORMAL);
+    }
+    else
+    {
+        namedWindow("PyrLK [Dense] Flow Field", WINDOW_NORMAL);
+    }
 
     cout << "Image size : " << frame0.cols << " x " << frame0.rows << endl;
     cout << "Points count : " << points << endl;
@@ -265,55 +288,50 @@ int main(int argc, const char* argv[])
     cv::cvtColor(frame1, frame1Gray, COLOR_BGR2GRAY);
 
     // goodFeaturesToTrack
-
     GpuMat d_frame0Gray(frame0Gray);
     GpuMat d_prevPts;
 
     Ptr<cuda::CornersDetector> detector = cuda::createGoodFeaturesToTrackDetector(d_frame0Gray.type(), points, 0.01, minDist);
-
     detector->detect(d_frame0Gray, d_prevPts);
-
-    // Sparse
-
-    Ptr<cuda::SparsePyrLKOpticalFlow> d_pyrLK_sparse = cuda::SparsePyrLKOpticalFlow::create(
-                Size(winSize, winSize), maxLevel, iters);
 
     GpuMat d_frame0(frame0);
     GpuMat d_frame1(frame1);
     GpuMat d_frame1Gray(frame1Gray);
     GpuMat d_nextPts;
     GpuMat d_status;
-
-    d_pyrLK_sparse->calc(useGray ? d_frame0Gray : d_frame0, useGray ? d_frame1Gray : d_frame1, d_prevPts, d_nextPts, d_status);
-
-    // Dense
-
-    Ptr<cuda::DensePyrLKOpticalFlow> d_pyrLK_dense = cuda::DensePyrLKOpticalFlow::create(
-                Size(winSize, winSize), maxLevel, iters);
-
     GpuMat d_flow(frame0.size(), CV_32FC2);
 
-    d_pyrLK_dense->calc(d_frame0Gray, d_frame1Gray, d_flow);
+    if (is_sparse)
+    {
+        // Sparse
+        Ptr<cuda::SparsePyrLKOpticalFlow> d_pyrLK_sparse = cuda::SparsePyrLKOpticalFlow::create(
+            Size(winSize, winSize), maxLevel, iters);
+        d_pyrLK_sparse->calc(useGray ? d_frame0Gray : d_frame0, useGray ? d_frame1Gray : d_frame1, d_prevPts, d_nextPts, d_status);
 
-    // Draw arrows
+        // Draw arrows
+        vector<Point2f> prevPts(d_prevPts.cols);
+        download(d_prevPts, prevPts);
 
-    vector<Point2f> prevPts(d_prevPts.cols);
-    download(d_prevPts, prevPts);
+        vector<Point2f> nextPts(d_nextPts.cols);
+        download(d_nextPts, nextPts);
 
-    vector<Point2f> nextPts(d_nextPts.cols);
-    download(d_nextPts, nextPts);
+        vector<uchar> status(d_status.cols);
+        download(d_status, status);
 
-    vector<uchar> status(d_status.cols);
-    download(d_status, status);
+        drawArrows(frame0, prevPts, nextPts, status, Scalar(255, 0, 0));
+        imshow("PyrLK [Sparse]", frame0);
+    }
+    else {
+        // Dense
+        Ptr<cuda::DensePyrLKOpticalFlow> d_pyrLK_dense = cuda::DensePyrLKOpticalFlow::create(
+            Size(winSize, winSize), maxLevel, iters);
+        d_pyrLK_dense->calc(d_frame0Gray, d_frame1Gray, d_flow);
 
-    drawArrows(frame0, prevPts, nextPts, status, Scalar(255, 0, 0));
-    imshow("PyrLK [Sparse]", frame0);
+        // Draw flows
+        showFlow("PyrLK [Dense] Flow Field", d_flow);
+    }
 
-    // Draw flows
-
-    showFlow("PyrLK [Dense] Flow Field", d_flow);
-
-    waitKey();
+    waitKey(0);
 
     return 0;
 }
