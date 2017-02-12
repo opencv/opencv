@@ -269,7 +269,7 @@ int main(int argc, const char* argv[])
     }
 
     if(is_sparse)
-    { 
+    {
         namedWindow("PyrLK [Sparse]", WINDOW_NORMAL);
     }
     else
@@ -321,7 +321,8 @@ int main(int argc, const char* argv[])
         drawArrows(frame0, prevPts, nextPts, status, Scalar(255, 0, 0));
         imshow("PyrLK [Sparse]", frame0);
     }
-    else {
+    else
+    {
         // Dense
         Ptr<cuda::DensePyrLKOpticalFlow> d_pyrLK_dense = cuda::DensePyrLKOpticalFlow::create(
             Size(winSize, winSize), maxLevel, iters);
