@@ -244,10 +244,6 @@ if(APPLE)
   add_apple_compiler_options(the_module)
 endif()
 
-if(BUILD_SHARED_LIBS)
-  add_definitions(-DVIDEOIO_EXPORTS)
-endif()
-
 if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
