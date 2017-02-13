@@ -102,7 +102,7 @@ CV_EXPORTS void setUseCollection(bool flag); // set implementation collection st
  \code
  void my_func(const cv::Mat& m)
  {
-    cv::AutoBuffer<float> buf; // create automatic buffer containing 1000 floats
+    cv::AutoBuffer<float> buf(1000); // create automatic buffer containing 1000 floats
 
     buf.allocate(m.rows); // if m.rows <= 1000, the pre-allocated buffer is used,
                           // otherwise the buffer of "m.rows" floats will be allocated
