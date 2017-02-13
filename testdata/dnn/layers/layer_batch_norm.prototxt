@@ -1,0 +1,14 @@
+name: "test_BatchNorm"
+input: "input"
+
+input_dim: 2
+input_dim: 6
+input_dim: 75
+input_dim: 113
+
+layer {
+  type: "BatchNorm"
+  name: "output"
+  bottom: "input"
+  top: "output"
+}
