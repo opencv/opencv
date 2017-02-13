@@ -137,9 +137,9 @@ public:
     void resize(size_t _size);
     //! returns the current buffer size
     size_t size() const;
-    //! returns pointer to the real buffer, stack-allocated or head-allocated
+    //! returns pointer to the real buffer, stack-allocated or heap-allocated
     operator _Tp* ();
-    //! returns read-only pointer to the real buffer, stack-allocated or head-allocated
+    //! returns read-only pointer to the real buffer, stack-allocated or heap-allocated
     operator const _Tp* () const;
 
 protected:
@@ -147,7 +147,7 @@ protected:
     _Tp* ptr;
     //! size of the real buffer
     size_t sz;
-    //! pre-allocated buffer. At least 1 element to confirm C++ standard reqirements
+    //! pre-allocated buffer. At least 1 element to confirm C++ standard requirements
     _Tp buf[(fixed_size > 0) ? fixed_size : 1];
 };
 
