@@ -1099,7 +1099,7 @@ namespace
 
         try
         {
-            Context context = Context::create();
+            Context context = ovx::getOpenVXContext();
 
             if(context.vendorID() == VX_ID_KHRONOS)
             {
