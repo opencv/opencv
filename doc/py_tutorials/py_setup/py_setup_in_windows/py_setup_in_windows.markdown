@@ -99,28 +99,28 @@ Building OpenCV from source
 -#  You will see all the fields are marked in red. Click on the **WITH** field to expand it. It
     decides what extra features you need. So mark appropriate fields. See the below image:
 
-    ![image](images/Capture3.png)
+![image](images/Capture3.png)
 
 -#  Now click on **BUILD** field to expand it. First few fields configure the build method. See the
     below image:
 
-    ![image](images/Capture5.png)
+![image](images/Capture5.png)
 
 -#  Remaining fields specify what modules are to be built. Since GPU modules are not yet supported
     by OpenCV-Python, you can completely avoid it to save time (But if you work with them, keep it
     there). See the image below:
 
-    ![image](images/Capture6.png)
+![image](images/Capture6.png)
 
 -#  Now click on **ENABLE** field to expand it. Make sure **ENABLE_SOLUTION_FOLDERS** is unchecked
     (Solution folders are not supported by Visual Studio Express edition). See the image below:
 
-    ![image](images/Capture7.png)
+![image](images/Capture7.png)
 
 -#  Also make sure that in the **PYTHON** field, everything is filled. (Ignore
     PYTHON_DEBUG_LIBRARY). See image below:
 
-    ![image](images/Capture80.png)
+![image](images/Capture80.png)
 
 -#  Finally click the **Generate** button.
 
@@ -134,7 +134,7 @@ Building OpenCV from source
 
 -#  Again, right-click on **INSTALL** and build it. Now OpenCV-Python will be installed.
 
-    ![image](images/Capture8.png)
+![image](images/Capture8.png)
 
 -#  Open Python IDLE and enter import cv2. If no error, it is installed correctly.
 

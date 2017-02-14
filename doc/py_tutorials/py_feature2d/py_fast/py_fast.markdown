@@ -27,7 +27,7 @@ paper for more details (All the images are taken from original paper).
 2.  Select appropriate threshold value \f$t\f$.
 3.  Consider a circle of 16 pixels around the pixel under test. (See the image below)
 
-    ![image](images/fast_speedtest.jpg)
+![image](images/fast_speedtest.jpg)
 
 -#  Now the pixel \f$p\f$ is a corner if there exists a set of \f$n\f$ contiguous pixels in the circle (of
     16 pixels) which are all brighter than \f$I_p + t\f$, or all darker than \f$I_p − t\f$. (Shown as white
@@ -57,7 +57,7 @@ non-maximal suppression.
     get feature vector \f$P\f$.
 4.  Each pixel (say \f$x\f$) in these 16 pixels can have one of the following three states:
 
-    ![image](images/fast_eqns.jpg)
+![image](images/fast_eqns.jpg)
 
 -#  Depending on these states, the feature vector \f$P\f$ is subdivided into 3 subsets, \f$P_d\f$, \f$P_s\f$,
     \f$P_b\f$.
