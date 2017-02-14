@@ -409,9 +409,143 @@ int CV_DrawingTest_C::checkLineIterator( Mat& _img )
     return 0;
 }
 
+class CV_DrawingTest_Far : public CV_DrawingTest_CPP
+{
+public:
+    CV_DrawingTest_Far() {}
+protected:
+    virtual void draw(Mat& img);
+};
+
+void CV_DrawingTest_Far::draw(Mat& img)
+{
+    Size imgSize(32768 + 600, 400);
+    img.create(imgSize, CV_8UC3);
+
+    vector<Point> polyline(4);
+    polyline[0] = Point(32768 + 0, 0);
+    polyline[1] = Point(imgSize.width, 0);
+    polyline[2] = Point(imgSize.width, imgSize.height);
+    polyline[3] = Point(32768 + 0, imgSize.height);
+    const Point* pts = &polyline[0];
+    int n = (int)polyline.size();
+    fillPoly(img, &pts, &n, 1, Scalar::all(255));
+
+    Point p1(32768 + 1, 1), p2(32768 + 3, 3);
+    if (clipLine(Rect(32768 + 0, 0, imgSize.width, imgSize.height), p1, p2) && clipLine(imgSize, p1, p2))
+        circle(img, Point(32768 + 300, 100), 40, Scalar(0, 0, 255), 3); // draw
+
+    p2 = Point(32768 + 3, imgSize.height + 1000);
+    if (clipLine(Rect(32768 + 0, 0, imgSize.width, imgSize.height), p1, p2) && clipLine(imgSize, p1, p2))
+        circle(img, Point(65536 + 500, 300), 50, cvColorToScalar(255, CV_8UC3), 5, 8, 1); // draw
+
+    p1 = Point(imgSize.width, 1), p2 = Point(imgSize.width, 3);
+    if (clipLine(Rect(32768 + 0, 0, imgSize.width, imgSize.height), p1, p2) && clipLine(imgSize, p1, p2))
+        circle(img, Point(32768 + 390, 100), 10, Scalar(0, 0, 255), 3); // not draw
+
+    p1 = Point(imgSize.width - 1, 1), p2 = Point(imgSize.width, 3);
+    if (clipLine(Rect(32768 + 0, 0, imgSize.width, imgSize.height), p1, p2) && clipLine(imgSize, p1, p2))
+        ellipse(img, Point(32768 + 390, 100), Size(20, 30), 60, 0, 220.0, Scalar(0, 200, 0), 4); //draw
+
+    ellipse(img, RotatedRect(Point(32768 + 100, 200), Size(200, 100), 160), Scalar(200, 200, 255), 5);
+
+    polyline.clear();
+    ellipse2Poly(Point(32768 + 430, 180), Size(100, 150), 30, 0, 150, 20, polyline);
+    pts = &polyline[0];
+    n = (int)polyline.size();
+    polylines(img, &pts, &n, 1, false, Scalar(0, 0, 150), 4, CV_AA);
+    n = 0;
+    for (vector<Point>::const_iterator it = polyline.begin(); n < (int)polyline.size() - 1; ++it, n++)
+    {
+        line(img, *it, *(it + 1), Scalar(50, 250, 100));
+    }
+
+    polyline.clear();
+    ellipse2Poly(Point(32768 + 500, 300), Size(50, 80), 0, 0, 180, 10, polyline);
+    pts = &polyline[0];
+    n = (int)polyline.size();
+    polylines(img, &pts, &n, 1, true, Scalar(100, 200, 100), 20);
+    fillConvexPoly(img, pts, n, Scalar(0, 80, 0));
+
+    polyline.resize(8);
+    // external rectengular
+    polyline[0] = Point(32768 + 0, 0);
+    polyline[1] = Point(32768 + 80, 0);
+    polyline[2] = Point(32768 + 80, 80);
+    polyline[3] = Point(32768 + 0, 80);
+    // internal rectangular
+    polyline[4] = Point(32768 + 20, 20);
+    polyline[5] = Point(32768 + 60, 20);
+    polyline[6] = Point(32768 + 60, 60);
+    polyline[7] = Point(32768 + 20, 60);
+    const Point* ppts[] = { &polyline[0], &polyline[0] + 4 };
+    int pn[] = { 4, 4 };
+    fillPoly(img, ppts, pn, 2, Scalar(100, 100, 0), 8, 0, Point(500, 20));
+
+    rectangle(img, Point(32768 + 0, 300), Point(32768 + 50, 398), Scalar(0, 0, 255));
+
+    string text1 = "OpenCV";
+    int baseline = 0, thickness = 3, fontFace = FONT_HERSHEY_SCRIPT_SIMPLEX;
+    float fontScale = 2;
+    Size textSize = getTextSize(text1, fontFace, fontScale, thickness, &baseline);
+    baseline += thickness;
+    Point textOrg((32768 + img.cols - textSize.width) / 2, (img.rows + textSize.height) / 2);
+    rectangle(img, textOrg + Point(0, baseline), textOrg + Point(textSize.width, -textSize.height), Scalar(0, 0, 255));
+    line(img, textOrg + Point(0, thickness), textOrg + Point(textSize.width, thickness), Scalar(0, 0, 255));
+    putText(img, text1, textOrg, fontFace, fontScale, Scalar(150, 0, 150), thickness, 8);
+
+    string text2 = "abcdefghijklmnopqrstuvwxyz1234567890";
+    Scalar color(200, 0, 0);
+    fontScale = 0.5, thickness = 1;
+    int dist = 5;
+
+    textSize = getTextSize(text2, FONT_HERSHEY_SIMPLEX, fontScale, thickness, &baseline);
+    textOrg = Point(32768 + 5, 5) + Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, CV_AA);
+
+    fontScale = 1;
+    textSize = getTextSize(text2, FONT_HERSHEY_PLAIN, fontScale, thickness, &baseline);
+    textOrg += Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, CV_AA);
+
+    fontScale = 0.5;
+    textSize = getTextSize(text2, FONT_HERSHEY_DUPLEX, fontScale, thickness, &baseline);
+    textOrg += Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, CV_AA);
+
+    textSize = getTextSize(text2, FONT_HERSHEY_COMPLEX, fontScale, thickness, &baseline);
+    textOrg += Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, CV_AA);
+
+    textSize = getTextSize(text2, FONT_HERSHEY_TRIPLEX, fontScale, thickness, &baseline);
+    textOrg += Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, CV_AA);
+
+    fontScale = 1;
+    textSize = getTextSize(text2, FONT_HERSHEY_COMPLEX_SMALL, fontScale, thickness, &baseline);
+    textOrg += Point(0, 180) + Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, CV_AA);
+
+    textSize = getTextSize(text2, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, &baseline);
+    textOrg += Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, CV_AA);
+
+    textSize = getTextSize(text2, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, thickness, &baseline);
+    textOrg += Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, CV_AA);
+
+    dist = 15, fontScale = 0.5;
+    textSize = getTextSize(text2, FONT_ITALIC, fontScale, thickness, &baseline);
+    textOrg += Point(0, textSize.height + dist);
+    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, CV_AA);
+
+    img = img(Rect(32768, 0, 600, 400)).clone();
+}
+
 #ifdef HAVE_JPEG
 TEST(Highgui_Drawing,    cpp_regression) { CV_DrawingTest_CPP test; test.safe_run(); }
 TEST(Highgui_Drawing,      c_regression) { CV_DrawingTest_C   test; test.safe_run(); }
+TEST(Highgui_Drawing,    far_regression) { CV_DrawingTest_Far test; test.safe_run(); }
 #endif
 
 class CV_FillConvexPolyTest : public cvtest::BaseTest
