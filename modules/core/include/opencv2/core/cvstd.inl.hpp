@@ -186,8 +186,7 @@ std::ostream& operator << (std::ostream& out, const Mat& mtx)
 template<typename _Tp> static inline
 std::ostream& operator << (std::ostream& out, const Complex<_Tp>& c)
 {
-	out << "(" << c.re << "," << c.im << ")";
-	return out;
+    return out << "(" << c.re << "," << c.im << ")";
 }    
 
 template<typename _Tp> static inline
