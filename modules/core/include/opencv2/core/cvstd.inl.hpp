@@ -182,6 +182,13 @@ std::ostream& operator << (std::ostream& out, const Mat& mtx)
 {
     return out << Formatter::get()->format(mtx);
 }
+    
+template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const Complex<_Tp>& c)
+{
+	out << "(" << c.re << ", " << c.im << ")";
+	return out;
+}    
 
 template<typename _Tp> static inline
 std::ostream& operator << (std::ostream& out, const std::vector<Point_<_Tp> >& vec)
