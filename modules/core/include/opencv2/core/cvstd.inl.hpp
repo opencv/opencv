@@ -204,6 +204,13 @@ std::ostream& operator << (std::ostream& out, const Matx<_Tp, m, n>& matx)
 }
 
 template<typename _Tp> static inline
+std::ostream& operator << (std::ostream& out, const Complex<_Tp>& c)
+{
+	out << "(" << c.re << ", " << c.im << ")";
+	return out;
+}    
+    
+template<typename _Tp> static inline
 std::ostream& operator << (std::ostream& out, const Point_<_Tp>& p)
 {
     out << "[" << p.x << ", " << p.y << "]";
