@@ -96,9 +96,7 @@ if(${MKL_VERSION_STR} VERSION_GREATER "11.3.0" OR ${MKL_VERSION_STR} VERSION_EQU
         ${MKL_ROOT_DIR}/lib
         ${MKL_ROOT_DIR}/lib/${MKL_ARCH} ${MKL_ROOT_DIR}/../tbb/lib/${MKL_ARCH})
 
-    set(mkl_lib_list
-        mkl_core
-        mkl_intel_${MKL_ARCH_SUFFIX})
+    set(mkl_lib_list "mkl_intel_${MKL_ARCH_SUFFIX}")
 
     if(MKL_WITH_TBB)
         list(APPEND mkl_lib_list mkl_tbb_thread tbb)
@@ -111,6 +109,8 @@ if(${MKL_VERSION_STR} VERSION_GREATER "11.3.0" OR ${MKL_VERSION_STR} VERSION_EQU
     else()
         list(APPEND mkl_lib_list mkl_sequential)
     endif()
+
+    list(APPEND mkl_lib_list mkl_core)
 else()
     message(STATUS "MKL version ${MKL_VERSION_STR} is not supported")
     mkl_fail()
