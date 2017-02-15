@@ -66,7 +66,7 @@ namespace cv
 namespace Error {
 //! error codes
 enum Code {
-    StsOk=                       0,  //!< everithing is ok
+    StsOk=                       0,  //!< everything is ok
     StsBackTrace=               -1,  //!< pseudo error for back trace
     StsError=                   -2,  //!< unknown /unspecified error
     StsInternal=                -3,  //!< internal error (bad state)
@@ -97,7 +97,7 @@ enum Code {
     StsVecLengthErr=           -28,  //!< incorrect vector length
     StsFilterStructContentErr= -29,  //!< incorr. filter structure content
     StsKernelStructContentErr= -30,  //!< incorr. transform kernel content
-    StsFilterOffsetErr=        -31,  //!< incorrect filter ofset value
+    StsFilterOffsetErr=        -31,  //!< incorrect filter offset value
     StsBadSize=                -201, //!< the input/output structure size is incorrect
     StsDivByZero=              -202, //!< division by zero
     StsInplaceNotSupported=    -203, //!< in-place operation is not supported
@@ -338,8 +338,8 @@ It is possible to alternate error processing by using redirectError().
 @param _code - error code (Error::Code)
 @param _err - error description
 @param _func - function name. Available only when the compiler supports getting it
-@param _file - source file name where the error has occured
-@param _line - line number in the source file where the error has occured
+@param _file - source file name where the error has occurred
+@param _line - line number in the source file where the error has occurred
 @see CV_Error, CV_Error_, CV_ErrorNoReturn, CV_ErrorNoReturn_, CV_Assert, CV_DbgAssert
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
