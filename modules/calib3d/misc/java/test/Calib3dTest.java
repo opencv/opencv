@@ -499,7 +499,7 @@ public class Calib3dTest extends OpenCVTestCase {
     }
 
     public void testSolvePnPListOfPoint3ListOfPointMatMatMatMat() {
-        Mat intrinsics = Mat.eye(3, 3, CvType.CV_32F);
+        Mat intrinsics = Mat.eye(3, 3, CvType.CV_64F);
         intrinsics.put(0, 0, 400);
         intrinsics.put(1, 1, 400);
         intrinsics.put(0, 2, 640 / 2);

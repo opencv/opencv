@@ -172,3 +172,13 @@ elseif(MINGW)
     set(OpenCV_ARCH x86)
   endif()
 endif()
+
+# Fix handling of duplicated files in the same static library:
+# https://public.kitware.com/Bug/view.php?id=14874
+if(CMAKE_VERSION VERSION_LESS "3.1")
+  foreach(var CMAKE_C_ARCHIVE_APPEND CMAKE_CXX_ARCHIVE_APPEND)
+    if(${var} MATCHES "^<CMAKE_AR> r")
+      string(REPLACE "<CMAKE_AR> r" "<CMAKE_AR> q" ${var} "${${var}}")
+    endif()
+  endforeach()
+endif()

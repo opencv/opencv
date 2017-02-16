@@ -129,7 +129,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
     int i_start = 0;
     int j_start = 0;
-#if CV_SIMD128 && CV_SSE2
+#if CV_SIMD128
     if(hasSIMD128())
     {
         uchar *m_src;
@@ -160,18 +160,13 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             n_dx = dx.ptr<short>(i+1);
             n_dy = dy.ptr<short>(i+1);
 
-            v_uint8x16 v_select_m = v_uint8x16(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                               0, 0, 0, 0xFF);
-
             // Process rest of columns 16-column chunks at a time
             for ( j = 1; j < W - 16; j += 16 )
             {
                 // Load top row for 3x3 Sobel filter
                 v_uint8x16 v_um = v_load(&p_src[j-1]);
+                v_uint8x16 v_un = v_load(&p_src[j]);
                 v_uint8x16 v_up = v_load(&p_src[j+1]);
-                // TODO: Replace _mm_slli_si128 with hal method
-                v_uint8x16 v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
-                                                       v_uint8x16(_mm_srli_si128(v_um.val, 1)));
                 v_uint16x8 v_um1, v_um2, v_un1, v_un2, v_up1, v_up2;
                 v_expand(v_um, v_um1, v_um2);
                 v_expand(v_un, v_un1, v_un2);
@@ -185,10 +180,8 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
                 // Load second row for 3x3 Sobel filter
                 v_um = v_load(&c_src[j-1]);
+                v_un = v_load(&c_src[j]);
                 v_up = v_load(&c_src[j+1]);
-                // TODO: Replace _mm_slli_si128 with hal method
-                v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
-                                            v_uint8x16(_mm_srli_si128(v_um.val, 1)));
                 v_expand(v_um, v_um1, v_um2);
                 v_expand(v_un, v_un1, v_un2);
                 v_expand(v_up, v_up1, v_up2);
@@ -201,10 +194,8 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
                 // Load third row for 3x3 Sobel filter
                 v_um = v_load(&n_src[j-1]);
+                v_un = v_load(&n_src[j]);
                 v_up = v_load(&n_src[j+1]);
-                // TODO: Replace _mm_slli_si128 with hal method
-                v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
-                                            v_uint8x16(_mm_srli_si128(v_um.val, 1)));
                 v_expand(v_um, v_um1, v_um2);
                 v_expand(v_un, v_un1, v_un2);
                 v_expand(v_up, v_up1, v_up2);
@@ -236,10 +227,8 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
                 // Load fourth row for 3x3 Sobel filter
                 v_um = v_load(&m_src[j-1]);
+                v_un = v_load(&m_src[j]);
                 v_up = v_load(&m_src[j+1]);
-                // TODO: Replace _mm_slli_si128 with hal method
-                v_un = v_select(v_select_m, v_uint8x16(_mm_slli_si128(v_up.val, 1)),
-                                            v_uint8x16(_mm_srli_si128(v_um.val, 1)));
                 v_expand(v_um, v_um1, v_um2);
                 v_expand(v_un, v_un1, v_un2);
                 v_expand(v_up, v_up1, v_up2);

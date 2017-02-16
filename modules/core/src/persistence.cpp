@@ -1475,6 +1475,26 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
             ptr++;
             value_type |= CV_NODE_USER;
         }
+        if ( d == '<') //support of full type heading from YAML 1.2
+        {
+            const char* yamlTypeHeading = "<tag:yaml.org,2002:";
+            const size_t headingLenght = strlen(yamlTypeHeading);
+
+            char* typeEndPtr = ++ptr;
+
+            do d = *++typeEndPtr;
+            while( cv_isprint(d) && d != ' ' && d != '>' );
+
+            if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLenght )
+            {
+                if ( memcmp(ptr, yamlTypeHeading, headingLenght) == 0 )
+                {
+                    value_type |= CV_NODE_USER;
+                    *typeEndPtr = ' ';
+                    ptr += headingLenght - 1;
+                }
+            }
+        }
 
         endptr = ptr++;
         do d = *++endptr;

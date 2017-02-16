@@ -2709,7 +2709,7 @@ CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
 
 /** @brief Applies a fixed-level threshold to each array element.
 
-The function applies fixed-level thresholding to a single-channel array. The function is typically
+The function applies fixed-level thresholding to a multiple-channel array. The function is typically
 used to get a bi-level (binary) image out of a grayscale image ( cv::compare could be also used for
 this purpose) or for removing a noise, that is, filtering out pixels with too small or too large
 values. There are several types of thresholding supported by the function. They are determined by
@@ -2721,8 +2721,10 @@ or Triangle algorithm and uses it instead of the specified thresh . The function
 computed threshold value. Currently, the Otsu's and Triangle methods are implemented only for 8-bit
 images.
 
-@param src input array (single-channel, 8-bit or 32-bit floating point).
-@param dst output array of the same size and type as src.
+@note Input image should be single channel only in case of CV_THRESH_OTSU or CV_THRESH_TRIANGLE flags
+
+@param src input array (multiple-channel, 8-bit or 32-bit floating point).
+@param dst output array of the same size  and type and the same number of channels as src.
 @param thresh threshold value.
 @param maxval maximum value to use with the THRESH_BINARY and THRESH_BINARY_INV thresholding
 types.
@@ -2920,7 +2922,7 @@ computed by stereoRectify can be passed here. If the matrix is empty, the identi
 is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
 @param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
 @param size Undistorted image size.
-@param m1type Type of the first output map that can be CV_32FC1 or CV_16SC2, see cv::convertMaps
+@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see cv::convertMaps
 @param map1 The first output map.
 @param map2 The second output map.
  */
@@ -3744,6 +3746,7 @@ CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labe
 The function retrieves contours from the binary image using the algorithm @cite Suzuki85 . The contours
 are a useful tool for shape analysis and object detection and recognition. See squares.cpp in the
 OpenCV sample directory.
+@note Since opencv 3.2 source image is not modified by this function.
 
 @param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
 pixels remain 0's, so the image is treated as binary . You can use cv::compare, cv::inRange, cv::threshold ,

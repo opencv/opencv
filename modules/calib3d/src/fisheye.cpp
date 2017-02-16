@@ -548,19 +548,6 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
     pptr[6] = Vec2d(0, h);
     pptr[7] = Vec2d(0, h/2);
 
-#if 0
-    const int N = 10;
-    cv::Mat points(1, N * 4, CV_64FC2);
-    Vec2d* pptr = points.ptr<Vec2d>();
-    for(int i = 0, k = 0; i < 10; ++i)
-    {
-        pptr[k++] = Vec2d(w/2,   0) - Vec2d(w/8,   0) + Vec2d(w/4/N*i,   0);
-        pptr[k++] = Vec2d(w/2, h-1) - Vec2d(w/8, h-1) + Vec2d(w/4/N*i, h-1);
-        pptr[k++] = Vec2d(0,   h/2) - Vec2d(0,   h/8) + Vec2d(0,   h/4/N*i);
-        pptr[k++] = Vec2d(w-1, h/2) - Vec2d(w-1, h/8) + Vec2d(w-1, h/4/N*i);
-    }
-#endif
-
     fisheye::undistortPoints(points, points, K, D, R);
     cv::Scalar center_mass = mean(points);
     cv::Vec2d cn(center_mass.val);
@@ -585,17 +572,6 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
         maxy = std::max(maxy, std::abs(pptr[i][1]-cn[1]));
         maxx = std::max(maxx, std::abs(pptr[i][0]-cn[0]));
     }
-
-#if 0
-    double minx = -DBL_MAX, miny = -DBL_MAX, maxx = DBL_MAX, maxy = DBL_MAX;
-    for(size_t i = 0; i < points.total(); ++i)
-    {
-        if (i % 4 == 0) miny = std::max(miny, pptr[i][1]);
-        if (i % 4 == 1) maxy = std::min(maxy, pptr[i][1]);
-        if (i % 4 == 2) minx = std::max(minx, pptr[i][0]);
-        if (i % 4 == 3) maxx = std::min(maxx, pptr[i][0]);
-    }
-#endif
 
     double f1 = w * 0.5/(minx);
     double f2 = w * 0.5/(maxx);

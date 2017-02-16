@@ -1101,6 +1101,15 @@ OPENCV_HAL_IMPL_SSE_REDUCE_OP_8(int16x8, short, max, epi16, (short)-32768)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_8(int16x8, short, min, epi16, (short)-32768)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_8_SUM(int16x8, short, 16)
 
+#define OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(_Tpvec, scalartype, regtype, suffix, cast_from, cast_to, extract) \
+inline scalartype v_reduce_sum(const _Tpvec& a) \
+{ \
+    regtype val = a.val; \
+    val = _mm_add_##suffix(val, cast_to(_mm_srli_si128(cast_from(val), 8))); \
+    val = _mm_add_##suffix(val, cast_to(_mm_srli_si128(cast_from(val), 4))); \
+    return (scalartype)_mm_cvt##extract(val); \
+}
+
 #define OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(_Tpvec, scalartype, func, scalar_func) \
 inline scalartype v_reduce_##func(const _Tpvec& a) \
 { \
@@ -1111,15 +1120,38 @@ inline scalartype v_reduce_##func(const _Tpvec& a) \
     return scalar_func(s0, s1); \
 }
 
-OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_uint32x4, unsigned, sum, OPENCV_HAL_ADD)
+OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_uint32x4, unsigned, __m128i, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP, si128_si32)
+OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_int32x4, int, __m128i, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP, si128_si32)
+OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_float32x4, float, __m128, ps, _mm_castps_si128, _mm_castsi128_ps, ss_f32)
+
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_uint32x4, unsigned, max, std::max)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_uint32x4, unsigned, min, std::min)
-OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_int32x4, int, sum, OPENCV_HAL_ADD)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_int32x4, int, max, std::max)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_int32x4, int, min, std::min)
-OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, sum, OPENCV_HAL_ADD)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, max, std::max)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, min, std::min)
+
+#define OPENCV_HAL_IMPL_SSE_POPCOUNT(_Tpvec) \
+inline v_uint32x4 v_popcount(const _Tpvec& a) \
+{ \
+    __m128i m1 = _mm_set1_epi32(0x55555555); \
+    __m128i m2 = _mm_set1_epi32(0x33333333); \
+    __m128i m4 = _mm_set1_epi32(0x0f0f0f0f); \
+    __m128i p = a.val; \
+    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 1), m1), _mm_and_si128(p, m1)); \
+    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 2), m2), _mm_and_si128(p, m2)); \
+    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 4), m4), _mm_and_si128(p, m4)); \
+    p = _mm_adds_epi8(p, _mm_srli_si128(p, 1)); \
+    p = _mm_adds_epi8(p, _mm_srli_si128(p, 2)); \
+    return v_uint32x4(_mm_and_si128(p, _mm_set1_epi32(0x000000ff))); \
+}
+
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_uint8x16)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_uint16x8)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_uint32x4)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_int8x16)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_int16x8)
+OPENCV_HAL_IMPL_SSE_POPCOUNT(v_int32x4)
 
 #define OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(_Tpvec, suffix, pack_op, and_op, signmask, allmask) \
 inline int v_signmask(const _Tpvec& a) \

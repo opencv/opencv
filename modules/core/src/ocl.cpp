@@ -1935,7 +1935,7 @@ String Device::OpenCL_C_Version() const
 { return p ? p->getStrProp(CL_DEVICE_OPENCL_C_VERSION) : String(); }
 
 String Device::OpenCLVersion() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? p->getStrProp(CL_DEVICE_VERSION) : String(); }
 
 int Device::deviceVersionMajor() const
 { return p ? p->deviceVersionMajor_ : 0; }
@@ -5528,7 +5528,7 @@ struct PlatformInfo::Impl
         getDevices(devices, handle);
     }
 
-    String getStrProp(cl_device_info prop) const
+    String getStrProp(cl_platform_info prop) const
     {
         char buf[1024];
         size_t sz=0;
