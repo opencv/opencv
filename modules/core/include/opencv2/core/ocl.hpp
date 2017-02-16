@@ -94,7 +94,6 @@ public:
     String version() const;
     String vendorName() const;
     String OpenCL_C_Version() const;
-    String OpenCLVersion() const;
     int deviceVersionMajor() const;
     int deviceVersionMinor() const;
     String driverVersion() const;
