@@ -1081,9 +1081,9 @@ public:
     single-column matrix. Similarly to Mat::row and Mat::col, this is an O(1) operation.
     @param d index of the diagonal, with the following values:
     - `d=0` is the main diagonal.
-    - `d>0` is a diagonal from the lower half. For example, d=1 means the diagonal is set
+    - `d<0` is a diagonal from the lower half. For example, d=-1 means the diagonal is set
       immediately below the main one.
-    - `d<0` is a diagonal from the upper half. For example, d=-1 means the diagonal is set
+    - `d>0` is a diagonal from the upper half. For example, d=1 means the diagonal is set
       immediately above the main one.
      */
     Mat diag(int d=0) const;
