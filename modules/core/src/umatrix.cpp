@@ -986,7 +986,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
-            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE(d) * scalarcn);
+            ocl::KernelArg scalararg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, CV_ELEM_SIZE(d) * scalarcn);
             UMat mask;
 
             if( haveMask )

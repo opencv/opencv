@@ -138,7 +138,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             convertAndUnrollScalar(src2sc, srctype, (uchar*)buf, 1);
         }
 
-        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
+        ocl::KernelArg scalararg = ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, esz);
 
         if( !haveMask )
             k.args(src1arg, dstarg, scalararg);
@@ -550,7 +550,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         if( !src2sc.empty() )
             convertAndUnrollScalar(src2sc, wtype, (uchar*)buf, 1);
-        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
+        ocl::KernelArg scalararg = ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, esz);
 
         if( !haveMask )
         {
@@ -558,7 +558,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 k.args(src1arg, dstarg, scalararg);
             else if(n == 1)
                 k.args(src1arg, dstarg, scalararg,
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz));
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p, usrdata_esz));
             else
                 CV_Error(Error::StsNotImplemented, "unsupported number of extra parameters");
         }
@@ -576,12 +576,12 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 k.args(src1arg, src2arg, dstarg);
             else if (n == 1)
                 k.args(src1arg, src2arg, dstarg,
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz));
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p, usrdata_esz));
             else if (n == 3)
                 k.args(src1arg, src2arg, dstarg,
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz),
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p + usrdata_esz, usrdata_esz),
-                       ocl::KernelArg(0, 0, 0, 0, usrdata_p + usrdata_esz*2, usrdata_esz));
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p, usrdata_esz),
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p + usrdata_esz, usrdata_esz),
+                       ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, usrdata_p + usrdata_esz*2, usrdata_esz));
             else
                 CV_Error(Error::StsNotImplemented, "unsupported number of extra parameters");
         }
@@ -1204,7 +1204,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
             convertAndUnrollScalar(Mat(1, 1, CV_32S, &ival), depth1, (uchar *)buf, kercn);
         }
 
-        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
+        ocl::KernelArg scalararg = ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, esz);
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(src1, cn, kercn),
                ocl::KernelArg::WriteOnly(dst, cn, kercn), scalararg);

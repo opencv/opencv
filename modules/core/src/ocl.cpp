@@ -3155,6 +3155,7 @@ KernelArg::KernelArg()
 KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, int _iwscale, const void* _obj, size_t _sz)
     : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale), iwscale(_iwscale)
 {
+    CV_Assert(_flags == LOCAL || _flags == CONSTANT || _m != NULL);
 }
 
 KernelArg KernelArg::Constant(const Mat& m)
