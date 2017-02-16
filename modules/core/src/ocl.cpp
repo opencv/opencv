@@ -5528,7 +5528,7 @@ struct PlatformInfo::Impl
         getDevices(devices, handle);
     }
 
-    String getStrProp(cl_device_info prop) const
+    String getStrProp(cl_platform_info prop) const
     {
         char buf[1024];
         size_t sz=0;
