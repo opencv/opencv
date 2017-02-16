@@ -1935,7 +1935,7 @@ String Device::OpenCL_C_Version() const
 { return p ? p->getStrProp(CL_DEVICE_OPENCL_C_VERSION) : String(); }
 
 String Device::OpenCLVersion() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? p->getStrProp(CL_DEVICE_VERSION) : String(); }
 
 int Device::deviceVersionMajor() const
 { return p ? p->deviceVersionMajor_ : 0; }
