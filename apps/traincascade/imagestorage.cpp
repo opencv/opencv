@@ -3,7 +3,6 @@
 
 #include "cv.h"
 #include "imagestorage.h"
-#include "common.h"
 #include <stdio.h>
 #include <iostream>
 #include <fstream>

@@ -5,10 +5,13 @@
 #include "traincascade_features.h"
 #include "haarfeatures.h"
 #include "lbpfeatures.h"
-#include "HOGfeatures.h" //new
+#include "HOGfeatures.h" 
+#include "MBLBPfeatures.h" // new
 #include "boost.h"
 #include "cv.h"
 #include "cxcore.h"
+#include "common.h"
+#include "imagestorage.h"
 
 #define CC_CASCADE_FILENAME "cascade.xml"
 #define CC_PARAMS_FILENAME "params.xml"
@@ -53,6 +56,7 @@
 #define CC_TILTED      "tilted"
 
 #define CC_LBP  "LBP"
+#define CC_MBLBP "MBLBP"
 #define CC_RECT "rect"
 
 #define CC_HOG "HOG"
@@ -82,6 +86,10 @@ public:
     int stageType;
     int featureType;
     cv::Size winSize;
+    // MBLBP Parameters
+    MBLBPWeakf *features;
+    bool *featuresMask;
+    // cascade Parameters
 };
 
 class CvCascadeClassifier
