@@ -73,9 +73,6 @@ namespace
             {
             case gl::INVALID_ENUM:
                 msg = "An unacceptable value is specified for an enumerated argument";
-#if _MSC_VER >= 1700 && _DEBUG
-                return true;
-#endif
                 break;
 
             case gl::INVALID_VALUE:
