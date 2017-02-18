@@ -1893,7 +1893,7 @@ public:
 
         // first. raw pointer access.
         for (int r = 0; r < image.rows; ++r) {
-            Pixel* ptr = image.ptr<Pixel>(0, r);
+            Pixel* ptr = image.ptr<Pixel>(r, 0);
             const Pixel* ptr_end = ptr + image.cols;
             for (; ptr != ptr_end; ++ptr) {
                 ptr->x = 255;
