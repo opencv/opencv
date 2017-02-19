@@ -14,12 +14,12 @@ max_Trackbar = 5
 
 def main(argv):
 
-   ## [load_image]
    if (len(sys.argv) < 3):
       print 'Not enough parameters'
       print 'Usage:\nmatch_template_demo.py <image_name> <template_name>'
       return -1
 
+   ## [load_image]
    global img
    global templ
    img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
@@ -63,7 +63,7 @@ def MatchingMethod(param):
    cv2.normalize( result, result, 0, 1, cv2.NORM_MINMAX, -1 )
    ## [normalize]
    ## [best_match]
-   minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(result)
+   minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(result, None)
    ## [best_match]
 
    ## [match_loc]
