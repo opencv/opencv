@@ -63,7 +63,7 @@ def MatchingMethod(param):
    cv2.normalize( result, result, 0, 1, cv2.NORM_MINMAX, -1 )
    ## [normalize]
    ## [best_match]
-   minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(result, None)
+   minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(result)
    ## [best_match]
 
    ## [match_loc]
