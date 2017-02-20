@@ -1368,6 +1368,24 @@ OPENCV_HAL_IMPL_SSE_TRANSPOSE4x4(v_int32x4, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NO
 OPENCV_HAL_IMPL_SSE_TRANSPOSE4x4(v_float32x4, ps, _mm_castps_si128, _mm_castsi128_ps)
 
 // adopted from sse_utils.hpp
+inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b)
+{
+    __m128i t00 = _mm_loadu_si128((const __m128i*)ptr);
+    __m128i t01 = _mm_loadu_si128((const __m128i*)(ptr + 16));
+
+    __m128i t10 = _mm_unpacklo_epi8(t00, t01);
+    __m128i t11 = _mm_unpackhi_epi8(t00, t01);
+
+    __m128i t20 = _mm_unpacklo_epi8(t10, t11);
+    __m128i t21 = _mm_unpackhi_epi8(t10, t11);
+
+    __m128i t30 = _mm_unpacklo_epi8(t20, t21);
+    __m128i t31 = _mm_unpackhi_epi8(t20, t21);
+
+    a.val = _mm_unpacklo_epi8(t30, t31);
+    b.val = _mm_unpackhi_epi8(t30, t31);
+}
+
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, v_uint8x16& c)
 {
     __m128i t00 = _mm_loadu_si128((const __m128i*)ptr);
@@ -1505,6 +1523,15 @@ inline void v_store_interleave( short* ptr, const v_int16x8& a, const v_int16x8&
     t1 = _mm_unpackhi_epi16(a.val, b.val);
     _mm_storeu_si128((__m128i*)(ptr), t0);
     _mm_storeu_si128((__m128i*)(ptr + 8), t1);
+}
+
+inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b)
+{
+    __m128i v0 = _mm_unpacklo_epi8(a.val, b.val);
+    __m128i v1 = _mm_unpackhi_epi8(a.val, b.val);
+
+    _mm_storeu_si128((__m128i*)(ptr), v0);
+    _mm_storeu_si128((__m128i*)(ptr + 16), v1);
 }
 
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
