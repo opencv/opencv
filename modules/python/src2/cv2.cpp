@@ -1362,7 +1362,7 @@ static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
     PyObject *userdata = NULL;
     char* button_name;
     int button_type = 0;
-    bool initial_button_state = false;
+    int initial_button_state = 0;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|Oii", (char**)keywords, &button_name, &on_change, &userdata, &button_type, &initial_button_state))
         return NULL;
@@ -1374,7 +1374,7 @@ static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
         userdata = Py_None;
     }
 
-    ERRWRAP2(createButton(button_name, OnButtonChange, Py_BuildValue("OO", on_change, userdata), button_type, initial_button_state));
+    ERRWRAP2(createButton(button_name, OnButtonChange, Py_BuildValue("OO", on_change, userdata), button_type, initial_button_state != 0));
     Py_RETURN_NONE;
 }
 #endif
