@@ -6,7 +6,7 @@ CONFIGURE_FILE(
   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
   @ONLY)
 
-ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+ADD_CUSTOM_TARGET(cmake_uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(uninstall PROPERTIES FOLDER "CMakeTargets")
 endif()
