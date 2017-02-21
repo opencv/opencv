@@ -411,6 +411,11 @@ PyObject* pyopencv_from(const Mat& m)
     return o;
 }
 
+template<typename _Tp, int m, int n>
+PyObject* pyopencv_from(const Matx<_Tp, m, n>& matx)
+{
+    return pyopencv_from(Mat(matx));
+}
 
 typedef struct {
     PyObject_HEAD
