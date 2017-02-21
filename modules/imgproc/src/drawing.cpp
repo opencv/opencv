@@ -1075,11 +1075,11 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 #if (defined(i386)     || defined(__i386__)   || defined(_M_IX86) ||    \
      defined(__x86_64) || defined(__x86_64__) || defined(_M_X64)  ||    \
      defined(_M_AMD64) || defined(_M_ARM)     || defined(__x86)   ||    \
-     defined(__arm__))
+     defined(__arm__)  || defined(_LITTLE_ENDIAN) || defined(LITTLE_ENDIAN))
 # define OPENCV_BYTEORDER    1234
 # define OPENCV_BIGENDIAN    0
 # define OPENCV_LITTLEENDIAN 1
-#elif (defined(sparc)    || defined(__ppc__))
+#elif (defined(sparc) || defined(__ppc__) || defined(_BIG_ENDIAN) || defined(BIG_ENDIAN))
 # define OPENCV_BYTEORDER    4321
 # define OPENCV_BIGENDIAN    1
 # define OPENCV_LITTLEENDIAN 0
@@ -1087,8 +1087,8 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 
 #if !defined(OPENCV_BYTEORDER)
 static const int opencvOne = 1;
-# define OPENCV_BIGENDIAN    (*(char *)(&opencvOne)==0)
-# define OPENCV_LITTLEENDIAN (*(char *)(&opencvOne)==1)
+# define OPENCV_BIGENDIAN    (*((const char *)(&opencvOne))==0)
+# define OPENCV_LITTLEENDIAN (*((const char *)(&opencvOne))==1)
 #endif
 
 #  if defined(_MSC_VER) && _MSC_VER>=1400
