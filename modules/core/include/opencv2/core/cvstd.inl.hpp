@@ -183,6 +183,12 @@ std::ostream& operator << (std::ostream& out, const Mat& mtx)
     return out << Formatter::get()->format(mtx);
 }
 
+static inline
+std::ostream& operator << (std::ostream& out, const UMat& m)
+{
+    return out << m.getMat(ACCESS_READ);
+}
+
 template<typename _Tp> static inline
 std::ostream& operator << (std::ostream& out, const Complex<_Tp>& c)
 {
