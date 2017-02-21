@@ -1,10 +1,11 @@
 import sys
 import cv2
-import numpy as np
 
 ## [global_variables]
-img = cv2.imread('', 0)
-templ = cv2.imread('', 0)
+use_mask = False
+img = None
+templ = None
+mask = None
 image_window = "Source Image"
 result_window = "Result window"
 
@@ -16,7 +17,7 @@ def main(argv):
 
    if (len(sys.argv) < 3):
       print 'Not enough parameters'
-      print 'Usage:\nmatch_template_demo.py <image_name> <template_name>'
+      print 'Usage:\nmatch_template_demo.py <image_name> <template_name> [<mask_name>]'
       return -1
 
    ## [load_image]
@@ -25,7 +26,13 @@ def main(argv):
    img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
    templ = cv2.imread(sys.argv[2], cv2.IMREAD_COLOR)
 
-   if ((img is None) or (templ is None)):
+   if (len(sys.argv) > 3):
+      global use_mask
+      use_mask = True
+      global mask
+      mask = cv2.imread( sys.argv[3], cv2.IMREAD_COLOR )
+
+   if ((img is None) or (templ is None) or (use_mask and (mask is None))):
       print 'Can\'t read one of the images'
       return -1
    ## [load_image]
@@ -56,14 +63,18 @@ def MatchingMethod(param):
    img_display = img.copy()
    ## [copy_source]
    ## [match_template]
-   result = cv2.matchTemplate(img, templ, match_method)
+   method_accepts_mask = (cv2.TM_SQDIFF == match_method or match_method == cv2.TM_CCORR_NORMED)
+   if (use_mask and method_accepts_mask):
+       result = cv2.matchTemplate(img, templ, match_method, None, mask)
+   else:
+       result = cv2.matchTemplate(img, templ, match_method)
    ## [match_template]
 
    ## [normalize]
    cv2.normalize( result, result, 0, 1, cv2.NORM_MINMAX, -1 )
    ## [normalize]
    ## [best_match]
-   minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(result)
+   minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(result, None)
    ## [best_match]
 
    ## [match_loc]
