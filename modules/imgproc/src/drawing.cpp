@@ -1075,7 +1075,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 #if (defined(i386)     || defined(__i386__)   || defined(_M_IX86) ||    \
      defined(__x86_64) || defined(__x86_64__) || defined(_M_X64)  ||    \
      defined(_M_AMD64) || defined(_M_ARM)     || defined(__x86)   ||    \
-     defined(__arm__)  || defined(_LITTLE_ENDIAN) || defined(LITTLE_ENDIAN))
+     defined(__arm__) || defined(__aarch64__)  || defined(_LITTLE_ENDIAN) || defined(LITTLE_ENDIAN))
 # define OPENCV_BYTEORDER    1234
 # define OPENCV_BIGENDIAN    0
 # define OPENCV_LITTLEENDIAN 1
@@ -1086,6 +1086,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 #endif
 
 #if !defined(OPENCV_BYTEORDER)
+# define OPENCV_BYTEORDER 0
 static const int opencvOne = 1;
 # define OPENCV_BIGENDIAN    (*((const char *)(&opencvOne))==0)
 # define OPENCV_LITTLEENDIAN (*((const char *)(&opencvOne))==1)
@@ -1102,12 +1103,13 @@ static const int opencvOne = 1;
 #    endif
 #  endif
 
+/*
 static inline uint32_t opencvBigToHost32(const uchar* p){
 #if OPENCV_BYTEORDER==4321
   uint32_t x;
   memcpy(&x,p,4);
   return x;
-#elif OPENCV_BYTEORDER==1234  && defined(__GNUC__) && GCC_VERSION>=4003000
+#elif OPENCV_BYTEORDER==1234  && defined(__GNUC__)
   uint32_t x;
   memcpy(&x,p,4);
   return __builtin_bswap32(x);
@@ -1127,13 +1129,14 @@ static inline uint32_t opencvBigToHost32(uint32_t x){
   return opencvBigToHost32((uchar*)&x);
 #endif
 }
+*/
 
 static inline uint32_t opencvLittleToHost32(const uchar* p){
 #if OPENCV_BYTEORDER==1234
   uint32_t x;
   memcpy(&x,p,4);
   return x;
-#elif OPENCV_BYTEORDER==4321 && defined(__GNUC__) && GCC_VERSION>=4003000
+#elif OPENCV_BYTEORDER==4321 && defined(__GNUC__)
   uint32_t x;
   memcpy(&x,p,4);
   return __builtin_bswap32(x);
@@ -1141,13 +1144,15 @@ static inline uint32_t opencvLittleToHost32(const uchar* p){
   uint32_t x;
   memcpy(&x,p,4);
   return _byteswap_ulong(x);
+#elif OPENCV_LITTLEENDIAN
+  return x;
 #else
   return ((unsigned)p[0]<<24) | (p[1]<<16) | (p[2]<<8) | p[3];
 #endif
 }
 
 static inline uint32_t opencvLittleToHost32(uint32_t x){
-#if OPENCV_BYTEORDER==1234
+#if OPENCV_LITTLEENDIAN
   return x;
 #else
   return opencvLittleToHost32((uchar*)&x);
