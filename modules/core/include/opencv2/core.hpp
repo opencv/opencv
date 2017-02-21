@@ -114,7 +114,7 @@ public:
      */
     Exception();
     /*!
-     Full constructor. Normally the constuctor is not called explicitly.
+     Full constructor. Normally the constructor is not called explicitly.
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
     Exception(int _code, const String& _err, const String& _func, const String& _file, int _line);
@@ -131,8 +131,8 @@ public:
     int code; ///< error code @see CVStatus
     String err; ///< error description
     String func; ///< function name. Available only when the compiler supports getting it
-    String file; ///< source file name where the error has occured
-    int line; ///< line number in the source file where the error has occured
+    String file; ///< source file name where the error has occurred
+    int line; ///< line number in the source file where the error has occurred
 };
 
 /*! @brief Signals an error and raises the exception.

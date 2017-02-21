@@ -416,7 +416,7 @@ Cv64suf;
 #define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
 
 /** Size of each channel item,
-   0x124489 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
+   0x8442211 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
 #define CV_ELEM_SIZE1(type) \
     ((((sizeof(size_t)<<28)|0x8442211) >> CV_MAT_DEPTH(type)*4) & 15)
 

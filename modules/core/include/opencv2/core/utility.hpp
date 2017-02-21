@@ -61,8 +61,8 @@ namespace cv
 #ifdef CV_COLLECT_IMPL_DATA
 CV_EXPORTS void setImpl(int flags); // set implementation flags and reset storage arrays
 CV_EXPORTS void addImpl(int flag, const char* func = 0); // add implementation and function name to storage arrays
-// Get stored implementation flags and fucntions names arrays
-// Each implementation entry correspond to function name entry, so you can find which implementation was executed in which fucntion
+// Get stored implementation flags and functions names arrays
+// Each implementation entry correspond to function name entry, so you can find which implementation was executed in which function
 CV_EXPORTS int getImpl(std::vector<int> &impl, std::vector<String> &funName);
 
 CV_EXPORTS bool useCollection(); // return implementation collection state
@@ -196,7 +196,7 @@ be called outside of parallel region.
 OpenCV will try to run it's functions with specified threads number, but some behaviour differs from
 framework:
 -   `TBB` – User-defined parallel constructions will run with the same threads number, if
-    another does not specified. If late on user creates own scheduler, OpenCV will be use it.
+    another does not specified. If later on user creates own scheduler, OpenCV will use it.
 -   `OpenMP` – No special defined behaviour.
 -   `Concurrency` – If threads == 1, OpenCV will disable threading optimizations and run it's
     functions sequentially.
@@ -229,7 +229,7 @@ CV_EXPORTS_W int getNumThreads();
 returns 0 if called outside of parallel region.
 
 The exact meaning of return value depends on the threading framework used by OpenCV library:
-- `TBB` – Unsupported with current 4.1 TBB release. May be will be supported in future.
+- `TBB` – Unsupported with current 4.1 TBB release. Maybe will be supported in future.
 - `OpenMP` – The thread number, within the current team, of the calling thread.
 - `Concurrency` – An ID for the virtual processor that the current context is executing on (0
   for master thread and unique number for others, but not necessary 1,2,3,...).
@@ -636,7 +636,7 @@ class TLSData : protected TLSDataContainer
 public:
     inline TLSData()        {}
     inline ~TLSData()       { release();            } // Release key and delete associated data
-    inline T* get() const   { return (T*)getData(); } // Get data assosiated with key
+    inline T* get() const   { return (T*)getData(); } // Get data associated with key
 
      // Get data from all threads
     inline void gather(std::vector<T*> &data) const
@@ -687,7 +687,7 @@ The sample below demonstrates how to use CommandLineParser:
 
 ### Keys syntax
 
-The keys parameter is a string containing several blocks, each one is enclosed in curley braces and
+The keys parameter is a string containing several blocks, each one is enclosed in curly braces and
 describes one argument. Each argument contains three parts separated by the `|` symbol:
 
 -# argument names is a space-separated list of option synonyms (to mark argument as positional, prefix it with the `@` symbol)
@@ -845,7 +845,7 @@ public:
 
     /** @brief Check for parsing errors
 
-    Returns true if error occured while accessing the parameters (bad conversion, missing arguments,
+    Returns true if error occurred while accessing the parameters (bad conversion, missing arguments,
     etc.). Call @ref printErrors to print error messages list.
      */
     bool check() const;
