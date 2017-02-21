@@ -8,33 +8,32 @@ Goal
 ----
 
 In this tutorial you will learn how to:
--   Search for matches between an image patch and an input image, using the OpenCV function:
 
 @add_toggle_cpp
-    <CENTER> <code> @ref cv::matchTemplate </code> </CENTER>
+
+-   Use the OpenCV function @ref cv::matchTemplate to search for matches between an image patch and
+    an input image
+-   Use the OpenCV function @ref cv::minMaxLoc to find the maximum and minimum values (as well as
+    their positions) in a given array.
+
 @end_toggle
 
 @add_toggle_java
-    <CENTER> <code> **Imgproc.matchTemplate()** </code> </CENTER>
+
+-   Use the OpenCV function **Imgproc.matchTemplate()** to search for matches between an image patch and
+    an input image
+-   Use the OpenCV function **Core.MinMaxLocResult()** to find the maximum and minimum values (as well as
+    their positions) in a given array.
+
 @end_toggle
 
 @add_toggle_python
-    <CENTER> <code> **cv2.matchTemplate()** </code> </CENTER>
-@end_toggle
 
--   Find the maximum and minimum values (as well as their positions) in a given array, using
-    the OpenCV function:
+-   Use the OpenCV function **cv2.matchTemplate()** to search for matches between an image patch and
+    an input image
+-   Use the OpenCV function **cv2.minMaxLoc()** to find the maximum and minimum values (as well as
+    their positions) in a given array.
 
-@add_toggle_cpp
-    <CENTER> <code> @ref cv::minMaxLoc </code> </CENTER>
-@end_toggle
-
-@add_toggle_java
-    <CENTER> <code> **Core.MinMaxLocResult()** </code> </CENTER>
-@end_toggle
-
-@add_toggle_python
-    <CENTER> <code> **cv2.minMaxLoc()** </code> </CENTER>
 @end_toggle
 
 Theory
@@ -78,21 +77,27 @@ that should be used to find the match.
     red circle is probably the one with the highest value, so that location (the rectangle formed by
     that point as a corner and width and height equal to the patch image) is considered the match.
 
--   In practice, we locate the highest value (or lower, depending of the type of matching method)
-    in the *R* matrix. Using the function:
-
 @add_toggle_cpp
-    <CENTER> <code> @ref cv::minMaxLoc </code> </CENTER>
+
+-   In practice, we use the function @ref cv::minMaxLoc to locate the highest value (or lower,
+    depending of the type of matching method) in the *R* matrix.
+
 @end_toggle
 
 @add_toggle_java
-    <CENTER> <code> **Core.MinMaxLocResult()** </code> </CENTER>
+
+-   In practice, we use the function **Core.MinMaxLocResult()** to locate the highest value (or lower,
+    depending of the type of matching method) in the *R* matrix.
+
+
 @end_toggle
 
 @add_toggle_python
-    <CENTER> <code> **cv2.minMaxLoc()** </code> </CENTER>
-@end_toggle
 
+-   In practice, we use the function **cv2.minMaxLoc()** to locate the highest value (or lower,
+    depending of the type of matching method) in the *R* matrix.
+
+@end_toggle
 
 ### How does the mask work?
 - If masking is needed for the match, three components are required:
@@ -120,21 +125,26 @@ that should be used to find the match.
 
 ### Which are the matching methods available in OpenCV?
 
-Good question. OpenCV implements Template matching in the function:
-
 @add_toggle_cpp
-    <CENTER> <code> @ref cv::matchTemplate </code> </CENTER>
+
+Good question. OpenCV implements Template matching in the function @ref cv::matchTemplate . The
+available methods are 6:
+
 @end_toggle
 
 @add_toggle_java
-    <CENTER> <code> **Imgproc.matchTemplate()** </code> </CENTER>
+
+Good question. OpenCV implements Template matching in the function **Imgproc.matchTemplate()** . The
+available methods are 6:
+
 @end_toggle
 
 @add_toggle_python
-    <CENTER> <code> **cv2.matchTemplate()** </code> </CENTER>
-@end_toggle
 
-The available methods are 6:
+Good question. OpenCV implements Template matching in the function **cv2.matchTemplate()** . The
+available methods are 6:
+
+@end_toggle
 
 -#  **method=CV_TM_SQDIFF**
 
@@ -167,34 +177,58 @@ The available methods are 6:
 Code
 ----
 
+@add_toggle_cpp
+
 -   **What does this program do?**
     -   Loads an input image, an image patch (*template*), and optionally a mask
-    -   Perform a template matching procedure with any of the 6 matching methods described before.
-        The user can choose the method by entering its selection in the Trackbar.
-        If a mask is supplied, it will only be used for the methods that support masking
+    -   Perform a template matching procedure by using the OpenCV function @ref cv::matchTemplate
+        with any of the 6 matching methods described before. The user can choose the method by
+        entering its selection in the Trackbar.  If a mask is supplied, it will only be used for
+        the methods that support masking
     -   Normalize the output of the matching procedure
     -   Localize the location with higher matching probability
     -   Draw a rectangle around the area corresponding to the highest match
-
-@add_toggle_cpp
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp)
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
+
 @end_toggle
 
 @add_toggle_java
+
+-   **What does this program do?**
+    -   Loads an input image, an image patch (*template*), and optionally a mask
+    -   Perform a template matching procedure by using the OpenCV function **Imgproc.matchTemplate()**
+        with any of the 6 matching methods described before. The user can choose the method by
+        entering its selection in the Trackbar.  If a mask is supplied, it will only be used for
+        the methods that support masking
+    -   Normalize the output of the matching procedure
+    -   Localize the location with higher matching probability
+    -   Draw a rectangle around the area corresponding to the highest match
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java)
 -   **Code at glance:**
     @include samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java
+
 @end_toggle
 
 @add_toggle_python
+
+-   **What does this program do?**
+    -   Loads an input image, an image patch (*template*), and optionally a mask
+    -   Perform a template matching procedure by using the OpenCV function **cv2.matchTemplate()**
+        with any of the 6 matching methods described before. The user can choose the method by
+        entering its selection in the Trackbar.  If a mask is supplied, it will only be used for
+        the methods that support masking
+    -   Normalize the output of the matching procedure
+    -   Localize the location with higher matching probability
+    -   Draw a rectangle around the area corresponding to the highest match
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/match_template/match_template.py)
 -   **Code at glance:**
     @include samples/python/tutorial_code/imgProc/match_template/match_template.py
+
 @end_toggle
 
 Explanation
@@ -325,7 +359,6 @@ Explanation
     @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py imshow
 
 @end_toggle
-
 
 Results
 -------
