@@ -90,7 +90,7 @@ namespace cv { namespace cuda { namespace device
 
             if (x < width && y < height)
             {
-                static const float WEIGHT_EPS = 1e-5f;
+                const float WEIGHT_EPS = 1e-5f;
                 const short3 v = ((short3*)src.ptr(y))[x];
                 float w = weight.ptr(y)[x];
                 ((short3*)src.ptr(y))[x] = make_short3(static_cast<short>(v.x / (w + WEIGHT_EPS)),
