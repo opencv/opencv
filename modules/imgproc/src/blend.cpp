@@ -98,16 +98,16 @@ static inline void load_expand_u8tof32(const uchar* ptr, v_float32x4& dst0, v_fl
     v_uint8x16 a = v_load((ptr));
     expand_u8tof32(a, dst0, dst1, dst2, dst3);
 }
+int blendLinearSimd128(const uchar* src1, const uchar* src2, const float* weights1, const float* weights2, uchar* dst, int x, int width, int cn);
+int blendLinearSimd128(const float* src1, const float* src2, const float* weights1, const float* weights2, float* dst, int x, int width, int cn);
 int blendLinearSimd128(const uchar* src1, const uchar* src2, const float* weights1, const float* weights2, uchar* dst, int x, int width, int cn)
 {
-    const v_float32x4 v_eps = v_setall_f32(1e-5f);
-    int weight_offset = 0;
     int step = v_uint8x16::nlanes * cn;
-    int weight_step = v_uint8x16::nlanes*cn;
+    int weight_step = v_uint8x16::nlanes;
     switch(cn)
     {
     case 1:
-        for( ; x <= width - step; x += step, weight_offset += weight_step)
+        for(int weight_offset = 0 ; x <= width - step; x += step, weight_offset += weight_step)
         {
             v_float32x4 v_src10, v_src11, v_src12, v_src13;
             v_float32x4 v_src20, v_src21, v_src22, v_src23;
@@ -123,7 +123,7 @@ int blendLinearSimd128(const uchar* src1, const uchar* src2, const float* weight
         }
         break;
     case 2:
-        for( ; x <= width - step; x += step, weight_offset += weight_step)
+        for(int weight_offset = 0 ; x <= width - step; x += step, weight_offset += weight_step)
         {
             v_uint8x16 v_src10, v_src11, v_src20, v_src21;
             v_load_deinterleave(src1 + x, v_src10, v_src11);
@@ -150,7 +150,7 @@ int blendLinearSimd128(const uchar* src1, const uchar* src2, const float* weight
         }
         break;
     case 3:
-        for( ; x <= width - step; x += step, weight_offset += weight_step)
+        for(int weight_offset = 0 ; x <= width - step; x += step, weight_offset += weight_step)
         {
             v_uint8x16 v_src10, v_src11, v_src12, v_src20, v_src21, v_src22;
             v_load_deinterleave(src1 + x, v_src10, v_src11, v_src12);
@@ -190,32 +190,31 @@ int blendLinearSimd128(const uchar* src1, const uchar* src2, const float* weight
             v_uint8x16 v_dst0 = pack_f32tou8(v_src100, v_src101, v_src102, v_src103);
             v_uint8x16 v_dst1 = pack_f32tou8(v_src110, v_src111, v_src112, v_src113);
             v_uint8x16 v_dst2 = pack_f32tou8(v_src120, v_src121, v_src122, v_src123);
-
             v_store_interleave(dst + x, v_dst0, v_dst1, v_dst2);
         }
         break;
     case 4:
         step = v_uint8x16::nlanes;
         weight_step = v_float32x4::nlanes;
-        for( ; x <= width - step; x += step, weight_offset += weight_step)
+        for(int weight_offset = 0 ; x <= width - step; x += step, weight_offset += weight_step)
         {
             v_float32x4 v_src10, v_src11, v_src12, v_src13, v_src14, v_src15, v_src16, v_src17;
             v_float32x4 v_src20, v_src21, v_src22, v_src23, v_src24, v_src25, v_src26, v_src27;
             load_expand_u8tof32(src1 + x, v_src10, v_src11, v_src12, v_src13);
             load_expand_u8tof32(src2 + x, v_src20, v_src21, v_src22, v_src23);
+
             v_transpose4x4(v_src10, v_src11, v_src12, v_src13, v_src14, v_src15, v_src16, v_src17);
             v_transpose4x4(v_src20, v_src21, v_src22, v_src23, v_src24, v_src25, v_src26, v_src27);
 
             v_float32x4 v_w1 = v_load(weights1 + weight_offset);
             v_float32x4 v_w2 = v_load(weights2 + weight_offset);
-            v_float32x4 v_denom = v_w1 + v_w2 + v_eps;
-            v_src10 = (v_src14 * v_w1 + v_src24 * v_w2) / v_denom;
-            v_src11 = (v_src15 * v_w1 + v_src25 * v_w2) / v_denom;
-            v_src12 = (v_src16 * v_w1 + v_src26 * v_w2) / v_denom;
-            v_src13 = (v_src17 * v_w1 + v_src27 * v_w2) / v_denom;
+            v_src10 = blend(v_src14, v_src24, v_w1, v_w2);
+            v_src11 = blend(v_src15, v_src25, v_w1, v_w2);
+            v_src12 = blend(v_src16, v_src26, v_w1, v_w2);
+            v_src13 = blend(v_src17, v_src27, v_w1, v_w2);
+
             v_float32x4 v_dst0, v_dst1, v_dst2, v_dst3;
             v_transpose4x4(v_src10, v_src11, v_src12, v_src13, v_dst0, v_dst1, v_dst2, v_dst3);
-
             store_pack_f32tou8(dst + x, v_dst0, v_dst1, v_dst2, v_dst3);
         }
         break;
@@ -227,68 +226,66 @@ int blendLinearSimd128(const uchar* src1, const uchar* src2, const float* weight
 
 int blendLinearSimd128(const float* src1, const float* src2, const float* weights1, const float* weights2, float* dst, int x, int width, int cn)
 {
-    const v_float32x4 v_eps = v_setall_f32(1e-5f);
-    int weight_offset = 0;
     int step = v_float32x4::nlanes*cn;
     switch(cn)
     {
     case 1:
-        for( ; x <= width - step; x += step, weight_offset += v_float32x4::nlanes)
+        for(int weight_offset = 0 ; x <= width - step; x += step, weight_offset += v_float32x4::nlanes)
         {
             v_float32x4 v_src1 = v_load(src1 + x);
             v_float32x4 v_src2 = v_load(src2 + x);
             v_float32x4 v_w1 = v_load(weights1 + weight_offset);
             v_float32x4 v_w2 = v_load(weights2 + weight_offset);
-            v_float32x4 v_denom = v_w1 + v_w2 + v_eps;
-            v_float32x4 v_dst = (v_src1 * v_w1 + v_src2 * v_w2) / v_denom;
+
+            v_float32x4 v_dst = blend(v_src1, v_src2, v_w1, v_w2);
 
             v_store(dst + x, v_dst);
         }
         break;
     case 2:
-        for( ; x <= width - step; x += step, weight_offset += v_float32x4::nlanes)
+        for(int weight_offset = 0 ; x <= width - step; x += step, weight_offset += v_float32x4::nlanes)
         {
             v_float32x4 v_src10, v_src11, v_src20, v_src21;
             v_load_deinterleave(src1 + x, v_src10, v_src11);
             v_load_deinterleave(src2 + x, v_src20, v_src21);
             v_float32x4 v_w1 = v_load(weights1 + weight_offset);
             v_float32x4 v_w2 = v_load(weights2 + weight_offset);
-            v_float32x4 v_denom = v_w1 + v_w2 + v_eps;
-            v_float32x4 v_dst0 = (v_src10 * v_w1 + v_src20 * v_w2) / v_denom;
-            v_float32x4 v_dst1 = (v_src11 * v_w1 + v_src21 * v_w2) / v_denom;
+
+            v_float32x4 v_dst0 = blend(v_src10, v_src20, v_w1, v_w2);
+            v_float32x4 v_dst1 = blend(v_src11, v_src21, v_w1, v_w2);
 
             v_store_interleave(dst + x, v_dst0, v_dst1);
         }
         break;
     case 3:
-        for( ; x <= width - step; x += step, weight_offset += v_float32x4::nlanes)
+        for(int weight_offset = 0 ; x <= width - step; x += step, weight_offset += v_float32x4::nlanes)
         {
             v_float32x4 v_src10, v_src11, v_src12, v_src20, v_src21, v_src22;
             v_load_deinterleave(src1 + x, v_src10, v_src11, v_src12);
             v_load_deinterleave(src2 + x, v_src20, v_src21, v_src22);
             v_float32x4 v_w1 = v_load(weights1 + weight_offset);
             v_float32x4 v_w2 = v_load(weights2 + weight_offset);
-            v_float32x4 v_denom = v_w1 + v_w2 + v_eps;
-            v_float32x4 v_dst0 = (v_src10 * v_w1 + v_src20 * v_w2) / v_denom;
-            v_float32x4 v_dst1 = (v_src11 * v_w1 + v_src21 * v_w2) / v_denom;
-            v_float32x4 v_dst2 = (v_src12 * v_w1 + v_src22 * v_w2) / v_denom;
+
+            v_float32x4 v_dst0 = blend(v_src10, v_src20, v_w1, v_w2);
+            v_float32x4 v_dst1 = blend(v_src11, v_src21, v_w1, v_w2);
+            v_float32x4 v_dst2 = blend(v_src12, v_src22, v_w1, v_w2);
 
             v_store_interleave(dst + x, v_dst0, v_dst1, v_dst2);
         }
         break;
     case 4:
-        for( ; x <= width - step; x += step, weight_offset += v_float32x4::nlanes)
+        for(int weight_offset = 0 ; x <= width - step; x += step, weight_offset += v_float32x4::nlanes)
         {
             v_float32x4 v_src10, v_src11, v_src12, v_src13, v_src20, v_src21, v_src22, v_src23;
             v_load_deinterleave(src1 + x, v_src10, v_src11, v_src12, v_src13);
             v_load_deinterleave(src2 + x, v_src20, v_src21, v_src22, v_src23);
             v_float32x4 v_w1 = v_load(weights1 + weight_offset);
             v_float32x4 v_w2 = v_load(weights2 + weight_offset);
-            v_float32x4 v_denom = v_w1 + v_w2 + v_eps;
-            v_float32x4 v_dst0 = (v_src10 * v_w1 + v_src20 * v_w2) / v_denom;
-            v_float32x4 v_dst1 = (v_src11 * v_w1 + v_src21 * v_w2) / v_denom;
-            v_float32x4 v_dst2 = (v_src12 * v_w1 + v_src22 * v_w2) / v_denom;
-            v_float32x4 v_dst3 = (v_src13 * v_w1 + v_src23 * v_w2) / v_denom;
+
+            v_float32x4 v_dst0 = blend(v_src10, v_src20, v_w1, v_w2);
+            v_float32x4 v_dst1 = blend(v_src11, v_src21, v_w1, v_w2);
+            v_float32x4 v_dst2 = blend(v_src12, v_src22, v_w1, v_w2);
+            v_float32x4 v_dst3 = blend(v_src13, v_src23, v_w1, v_w2);
 
             v_store_interleave(dst + x, v_dst0, v_dst1, v_dst2, v_dst3);
         }
