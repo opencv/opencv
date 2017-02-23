@@ -33,9 +33,7 @@
 namespace cv
 {
 
-bool intel_gpu_gemm( UMat A, Size sizeA, UMat B, Size sizeB, UMat D, Size sizeD, double alpha, double beta, bool atrans, bool btrans);
-
-bool intel_gpu_gemm(
+static bool intel_gpu_gemm(
     UMat A, Size sizeA,
     UMat B, Size sizeB,
     UMat D, Size sizeD,

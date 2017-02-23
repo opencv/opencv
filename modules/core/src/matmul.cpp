@@ -46,6 +46,7 @@
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
+#include "intel_gpu_gemm.inl.hpp"
 
 namespace cv
 {
@@ -789,9 +790,6 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
 #endif
 
 #ifdef HAVE_OPENCL
-extern bool intel_gpu_gemm(UMat A, Size sizeA, UMat B, Size sizeB, UMat D, Size sizeD,
-       double alpha, double beta, bool atrans, bool btrans);
-
 static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
 {
