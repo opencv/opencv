@@ -353,7 +353,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
     if( buffer.empty() || !buffer.isContinuous() ||
         buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-        buffer.create(1, (int)totalBufSize, CV_8U);
+        buffer.reserveBuffer(totalBufSize);
 
     // summary cost over different (nDirs) directions
     CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), ALIGN);
@@ -939,7 +939,7 @@ void getBufferPointers(Mat& buffer, int width, int width1, int D, int num_ch, in
                           16;  //to compensate for the alignPtr shifts
 
     if( buffer.empty() || !buffer.isContinuous() || buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-        buffer.create(1, (int)totalBufSize, CV_8U);
+        buffer.reserveBuffer(totalBufSize);
 
     // set up all the pointers:
     curCostVolumeLine  = (CostType*)alignPtr(buffer.ptr(), 16);
@@ -1615,7 +1615,7 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
     int width = img.cols, height = img.rows, npixels = width*height;
     size_t bufSize = npixels*(int)(sizeof(Point2s) + sizeof(int) + sizeof(uchar));
     if( !_buf.isContinuous() || _buf.empty() || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
-        _buf.create(1, (int)bufSize, CV_8U);
+        _buf.reserveBuffer(bufSize);
 
     uchar* buf = _buf.ptr();
     int i, j, dstep = (int)(img.step/sizeof(T));

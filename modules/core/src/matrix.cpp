@@ -830,6 +830,32 @@ void Mat::reserve(size_t nelems)
     dataend = data + step.p[0]*r;
 }
 
+void Mat::reserveBuffer(size_t nbytes)
+{
+    size_t esz = 1;
+    int mtype = CV_8UC1;
+    if (!empty())
+    {
+        if (!isSubmatrix() && data + nbytes <= dataend)//Should it be datalimit?
+            return;
+        esz = elemSize();
+        mtype = type();
+    }
+
+    size_t nelems = (nbytes - 1) / esz + 1;
+
+#if SIZE_MAX > UINT_MAX
+    CV_Assert(nelems <= size_t(INT_MAX)*size_t(INT_MAX));
+    int newrows = nelems > size_t(INT_MAX) ? nelems > 0x400*size_t(INT_MAX) ? nelems > 0x100000 * size_t(INT_MAX) ? nelems > 0x40000000 * size_t(INT_MAX) ?
+                  size_t(INT_MAX) : 0x40000000 : 0x100000 : 0x400 : 1;
+#else
+    int newrows = nelems > size_t(INT_MAX) ? 2 : 1;
+#endif
+    int newcols = (int)((nelems - 1) / newrows + 1);
+
+    create(newrows, newcols, mtype);
+}
+
 
 void Mat::resize(size_t nelems)
 {
