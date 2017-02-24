@@ -10,7 +10,7 @@ As always, we would be happy to hear your comments and receive your contribution
 
 -   @subpage tutorial_table_of_content_introduction
 
-    You will learn how to setup OpenCV on your computer!
+    You will learn how to setup OpenCV on your computer
 
 -   @subpage tutorial_table_of_content_core
 
