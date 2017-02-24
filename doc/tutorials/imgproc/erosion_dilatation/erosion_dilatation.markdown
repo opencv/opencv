@@ -6,12 +6,12 @@ Goal
 
 In this tutorial you will learn how to:
 
--   Apply two very common morphology operators: Dilation and Erosion. For this purpose, you will use
+-   Apply two very common morphological operators: Erosion and Dilation. For this purpose, you will use
     the following OpenCV functions:
     -   @ref cv::erode
     -   @ref cv::dilate
 
-Cool Theory
+Interesting fact
 -----------
 
 @note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
@@ -21,7 +21,7 @@ Morphological Operations
 
 -   In short: A set of operations that process images based on shapes. Morphological operations
     apply a *structuring element* to an input image and generate an output image.
--   The most basic morphological operations are two: Erosion and Dilation. They have a wide array of
+-   The most basic morphological operations are: Erosion and Dilation. They have a wide array of
     uses, i.e. :
     -   Removing noise
     -   Isolation of individual elements and joining disparate elements in an image.
@@ -32,19 +32,19 @@ Morphological Operations
 
 ### Dilation
 
--   This operations consists of convoluting an image \f$A\f$ with some kernel (\f$B\f$), which can have any
+-   This operations consists of convolving an image \f$A\f$ with some kernel (\f$B\f$), which can have any
     shape or size, usually a square or circle.
 -   The kernel \f$B\f$ has a defined *anchor point*, usually being the center of the kernel.
 -   As the kernel \f$B\f$ is scanned over the image, we compute the maximal pixel value overlapped by
     \f$B\f$ and replace the image pixel in the anchor point position with that maximal value. As you can
     deduce, this maximizing operation causes bright regions within an image to "grow" (therefore the
-    name *dilation*). Take as an example the image above. Applying dilation we can get:
+    name *dilation*). Take the above image as an example. Applying dilation we can get:
 
     ![](images/Morphology_1_Tutorial_Theory_Dilation.png)
 
 The background (bright) dilates around the black regions of the letter.
 
-To better grasp the idea and avoid possible confusion, in this another example we have inverted the original
+To better grasp the idea and avoid possible confusion, in this other example we have inverted the original
 image such as the object in white is now the letter. We have performed two dilatations with a rectangular
 structuring element of size `3x3`.
 
@@ -54,8 +54,8 @@ The dilatation makes the object in white bigger.
 
 ### Erosion
 
--   This operation is the sister of dilation. What this does is to compute a local minimum over the
-    area of the kernel.
+-   This operation is the sister of dilation. It computes a local minimum over the
+    area of given kernel.
 -   As the kernel \f$B\f$ is scanned over the image, we compute the minimal pixel value overlapped by
     \f$B\f$ and replace the image pixel under the anchor point with that minimal value.
 -   Analagously to the example for dilation, we can apply the erosion operator to the original image
@@ -64,7 +64,7 @@ The dilatation makes the object in white bigger.
 
     ![](images/Morphology_1_Tutorial_Theory_Erosion.png)
 
-In the same manner, the corresponding image resulting of the erosion operation on the inverted original image (two erosions
+In similar manner, the corresponding image results by applying erosion operation on the inverted original image (two erosions
 with a rectangular structuring element of size `3x3`):
 
 ![Left image: original image inverted, right image: resulting erosion](images/Morphology_1_Tutorial_Theory_Erosion_2.png)
@@ -74,14 +74,14 @@ The erosion makes the object in white smaller.
 Code
 ----
 
-This tutorial code's is shown lines below. You can also download it from
+This tutorial's code is shown below. You can also download it
 [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp
 
 Explanation
 -----------
 
--#  Most of the stuff shown is known by you (if you have any doubt, please refer to the tutorials in
+-#  Most of the material shown here is trivial (if you have any doubt, please refer to the tutorials in
     previous sections). Let's check the general structure of the program:
 
     -   Load an image (can be BGR or grayscale)
@@ -118,8 +118,8 @@ Explanation
 
     -   That is all. We are ready to perform the erosion of our image.
 @note Additionally, there is another parameter that allows you to perform multiple erosions
-(iterations) at once. We are not using it in this simple tutorial, though. You can check out the
-Reference for more details.
+(iterations) at once. However, We haven't used it in this simple tutorial. You can check out the
+reference for more details.
 
 -#  **dilation:**
 
