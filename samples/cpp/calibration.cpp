@@ -111,20 +111,21 @@ static double computeReprojectionErrors(
 static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners, Pattern patternType = CHESSBOARD)
 {
     corners.resize(0);
-
+    int i, j;
+    
     switch(patternType)
     {
       case CHESSBOARD:
       case CIRCLES_GRID:
-        for( int i = 0; i < boardSize.height; i++ )
-            for( int j = 0; j < boardSize.width; j++ )
+        for( i = 0; i < boardSize.height; i++ )
+            for( j = 0; j < boardSize.width; j++ )
                 corners.push_back(Point3f(float(j*squareSize),
                                           float(i*squareSize), 0));
         break;
 
       case ASYMMETRIC_CIRCLES_GRID:
-        for( int i = 0; i < boardSize.height; i++ )
-            for( int j = 0; j < boardSize.width; j++ )
+        for( i = 0; i < boardSize.height; i++ )
+            for( j = 0; j < boardSize.width; j++ )
                 corners.push_back(Point3f(float((2*j + i % 2)*squareSize),
                                           float(i*squareSize), 0));
         break;
@@ -140,7 +141,7 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
                     int flags, Mat& cameraMatrix, Mat& distCoeffs,
                     vector<Mat>& rvecs, vector<Mat>& tvecs,
                     vector<float>& reprojErrs,
-                    double& totalAvgErr)
+                    double& totalAvgErr )
 {
     cameraMatrix = Mat::eye(3, 3, CV_64F);
     if( flags & CALIB_FIX_ASPECT_RATIO )
@@ -204,7 +205,7 @@ static void saveCameraParams( const string& filename,
             flags & CALIB_FIX_ASPECT_RATIO ? "+fix_aspectRatio" : "",
             flags & CALIB_FIX_PRINCIPAL_POINT ? "+fix_principal_point" : "",
             flags & CALIB_ZERO_TANGENT_DIST ? "+zero_tangent_dist" : "" );
-        //cvWriteComment( *fs, buf, 0 );
+            //cvWriteComment( *fs, buf, 0 );
     }
 
     fs << "flags" << flags;
@@ -264,7 +265,7 @@ static bool readStringList( const string& filename, vector<string>& l )
 }
 
 
-static bool runAndSave(const string& outputFilename,
+static bool runAndSave( const string& outputFilename,
                 const vector<vector<Point2f> >& imagePoints,
                 Size imageSize, Size boardSize, Pattern patternType, float squareSize,
                 float aspectRatio, int flags, Mat& cameraMatrix,
@@ -277,7 +278,7 @@ static bool runAndSave(const string& outputFilename,
     bool ok = runCalibration(imagePoints, imageSize, boardSize, patternType, squareSize,
                    aspectRatio, flags, cameraMatrix, distCoeffs,
                    rvecs, tvecs, reprojErrs, totalAvgErr);
-    printf("%s. avg reprojection error = %.2f\n",
+    printf("%s. average reprojection error = %.2f\n",
            ok ? "Calibration succeeded" : "Calibration failed",
            totalAvgErr);
 
@@ -341,6 +342,7 @@ int main( int argc, char** argv )
         else
             return fprintf( stderr, "Invalid pattern type: must be chessboard or circles\n" ), -1;
     }
+    
     squareSize = parser.get<float>("s");
     nframes = parser.get<int>("n");
     aspectRatio = parser.get<float>("a");
@@ -451,7 +453,7 @@ int main( int argc, char** argv )
                 return fprintf( stderr, "Unknown pattern type\n" ), -1;
         }
 
-       // improve the found corners' coordinate accuracy
+        // improve the found corners' coordinate accuracy
         if( pattern == CHESSBOARD && found) cornerSubPix( viewGray, pointbuf, Size(11,11),
             Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.1 ));
 
