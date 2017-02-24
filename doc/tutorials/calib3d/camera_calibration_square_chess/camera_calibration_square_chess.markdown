@@ -52,4 +52,4 @@ image.
     opencv/samples/cpp/calibration.cpp, function computeReprojectionErrors).
 
 Question: how would you calculate distance from the camera origin to any one of the corners?
-Answer: As our image lies in a 3D space, firstly we would calculate the relative camera pose. This would give us 3D to 2D correspondences. Next, we can apply a simple L2 norm to calculate distance between any point (end point for corners). 
+Answer: As our image lies in a 3D space, firstly we would calculate the relative camera pose. This would give us 3D to 2D correspondences. Next, we can apply a simple L2 norm to calculate distance between any point (end point for corners).
