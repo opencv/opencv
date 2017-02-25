@@ -411,11 +411,77 @@ PyObject* pyopencv_from(const Mat& m)
     return o;
 }
 
-template<typename _Tp, int m, int n>
-PyObject* pyopencv_from(const Matx<_Tp, m, n>& matx)
-{
-    return pyopencv_from(Mat(matx));
+#define PYOBJ_FROM(_Tp) \
+inline PyObject* pyopencv_from(const _Tp& src) \
+{ \
+    return pyopencv_from(Mat(src)); \
 }
+
+#define PYOBJ_TO(_Tp) \
+inline bool pyopencv_to(PyObject* obj, _Tp& dst, const ArgInfo info) \
+{ \
+    Mat src; \
+    Size dstSize = Mat(_Tp()).size(); \
+ \
+    if (!pyopencv_to(obj, src, info)) \
+        return false; \
+    if (src.size() != dstSize) \
+    { \
+        /* A Scalar vector with < 4 elements needs augmentation */ \
+        if (dstSize.area() == 4 && min(dstSize.width, dstSize.height) == 1 && src.size().area() < dstSize.area()) \
+        { \
+            Mat augMat(1, dstSize.area() - src.size().area(), src.type()); \
+            /* Avoid setting value in the constructor in case 1x1 size */ \
+            augMat.setTo(0); \
+            hconcat(src.reshape(src.channels(), 1), augMat, src); \
+        } \
+        /* This is an error if not just transposed */ \
+        /*if (src.size().area() != dstSize.area())*/ \
+        if (src.size().width != dstSize.height || src.size().height != dstSize.width) \
+        { \
+            failmsg("Size for argument '%s' is not [%u x %u]", info.name, dstSize.height, dstSize.width); \
+            return false; \
+        } \
+        /*src = src.reshape(src.channels(), dstSize.height);*/ \
+        transpose(src, src); \
+    } \
+    src.copyTo(dst);\
+    return true; \
+}
+
+PYOBJ_FROM(Matx44d)
+PYOBJ_FROM(Matx44f)
+PYOBJ_FROM(Matx34d)
+PYOBJ_FROM(Matx34f)
+PYOBJ_FROM(Matx33d)
+PYOBJ_FROM(Matx33f)
+PYOBJ_FROM(Matx23d)
+PYOBJ_FROM(Matx23f)
+PYOBJ_FROM(Matx22d)
+PYOBJ_FROM(Matx22f)
+PYOBJ_FROM(Vec4d)
+PYOBJ_FROM(Vec4f)
+//PYOBJ_FROM(Vec3d)
+PYOBJ_FROM(Vec3f)
+//PYOBJ_FROM(Vec2d)
+PYOBJ_FROM(Vec2f)
+
+PYOBJ_TO(Matx44d)
+PYOBJ_TO(Matx44f)
+PYOBJ_TO(Matx34d)
+PYOBJ_TO(Matx34f)
+PYOBJ_TO(Matx33d)
+PYOBJ_TO(Matx33f)
+PYOBJ_TO(Matx23d)
+PYOBJ_TO(Matx23f)
+PYOBJ_TO(Matx22d)
+PYOBJ_TO(Matx22f)
+//PYOBJ_TO(Vec4d) //Conflicts with: pyopencv_to(PyObject *, Scalar&, const char *)
+PYOBJ_TO(Vec4f)
+//PYOBJ_TO(Vec3d)
+PYOBJ_TO(Vec3f)
+PYOBJ_TO(Vec2d)
+PYOBJ_TO(Vec2f)
 
 typedef struct {
     PyObject_HEAD
