@@ -45,6 +45,8 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 namespace cv
 {
 
@@ -1930,6 +1932,75 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
 }
 #endif
 
+#ifdef HAVE_OPENVX
+namespace cv
+{
+enum
+{
+    VX_ACCUMULATE_OP = 0,
+    VX_ACCUMULATE_SQUARE_OP = 1,
+    VX_ACCUMULATE_WEIGHTED_OP = 2
+};
+
+static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray _mask, double _weight, int opType)
+{
+    Mat srcMat = _src.getMat(), dstMat = _dst.getMat();
+    if(!_mask.empty() ||
+       (opType == VX_ACCUMULATE_WEIGHTED_OP && dstMat.type() != CV_8UC1  ) ||
+       (opType != VX_ACCUMULATE_WEIGHTED_OP && dstMat.type() != CV_16SC1 ) ||
+       srcMat.type() != CV_8UC1)
+    {
+        return false;
+    }
+    //TODO: handle different number of channels (channel extract && channel combine)
+    //TODO: handle mask (threshold mask to 0xff && bitwise AND with src)
+    //(both things can be done by creating a graph)
+
+    try
+    {
+        ivx::Context context = ivx::Context::create();
+        ivx::Image srcImage = ivx::Image::createFromHandle(context, ivx::Image::matTypeToFormat(srcMat.type()),
+                                                           ivx::Image::createAddressing(srcMat), srcMat.data);
+        ivx::Image dstImage = ivx::Image::createFromHandle(context, ivx::Image::matTypeToFormat(dstMat.type()),
+                                                           ivx::Image::createAddressing(dstMat), dstMat.data);
+        ivx::Scalar shift = ivx::Scalar::create<VX_TYPE_UINT32>(context, 0);
+        ivx::Scalar alpha = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, _weight);
+
+        switch (opType)
+        {
+        case VX_ACCUMULATE_OP:
+            ivx::IVX_CHECK_STATUS(vxuAccumulateImage(context, srcImage, dstImage));
+            break;
+        case VX_ACCUMULATE_SQUARE_OP:
+            ivx::IVX_CHECK_STATUS(vxuAccumulateSquareImage(context, srcImage, shift, dstImage));
+            break;
+        case VX_ACCUMULATE_WEIGHTED_OP:
+            ivx::IVX_CHECK_STATUS(vxuAccumulateWeightedImage(context, srcImage, alpha, dstImage));
+            break;
+        default:
+            break;
+        }
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        srcImage.swapHandle(); dstImage.swapHandle();
+#endif
+    }
+    catch (ivx::RuntimeError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    catch (ivx::WrapperError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+
+    return true;
+}
+}
+#endif
+
 void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
     CV_INSTRUMENT_REGION()
@@ -1945,6 +2016,9 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 
     CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))),
         ipp_accumulate(_src, _dst, _mask));
+
+    CV_OVX_RUN(_src.dims() <= 2,
+               openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_OP))
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -2041,6 +2115,9 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
 
     CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))),
         ipp_accumulate_square(_src, _dst, _mask));
+
+    CV_OVX_RUN(_src.dims() <= 2,
+               openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_SQUARE_OP))
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -2243,6 +2320,8 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 
     CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && _mask.isContinuous())), ipp_accumulate_weighted(_src, _dst, alpha, _mask));
 
+    CV_OVX_RUN(_src.dims() <= 2,
+               openvx_accumulate(_src, _dst, _mask, alpha, VX_ACCUMULATE_WEIGHTED_OP))
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 

@@ -619,9 +619,13 @@ CV_IMPL int cvStartWindowThread(){
     // conditional that indicates a key has been pressed
     cond_have_key = g_cond_new();
 
+#if !GLIB_CHECK_VERSION(2, 32, 0)
     // this is the window update thread
     window_thread = g_thread_create((GThreadFunc) icvWindowThreadLoop,
                     NULL, TRUE, NULL);
+#else
+    window_thread = g_thread_new("OpenCV window update", (GThreadFunc)icvWindowThreadLoop, NULL);
+#endif
     }
     thread_started = window_thread!=NULL;
     return thread_started;
@@ -1983,7 +1987,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
             break;
 #endif //GTK_VERSION3_4
         case GDK_SCROLL_LEFT:  cv_event = CV_EVENT_MOUSEHWHEEL;
-        case GDK_SCROLL_UP:    flags |= ((-(int)1 << 16));
+        case GDK_SCROLL_UP:    flags |= ~0xffff;
             break;
         case GDK_SCROLL_RIGHT: cv_event = CV_EVENT_MOUSEHWHEEL;
         case GDK_SCROLL_DOWN:  flags |= (((int)1 << 16));

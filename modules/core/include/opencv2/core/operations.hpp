@@ -82,7 +82,7 @@ template<typename _Tp> struct Matx_FastInvOp<_Tp, 2>
 {
     bool operator()(const Matx<_Tp, 2, 2>& a, Matx<_Tp, 2, 2>& b, int) const
     {
-        _Tp d = determinant(a);
+        _Tp d = (_Tp)determinant(a);
         if( d == 0 )
             return false;
         d = 1/d;
@@ -137,7 +137,7 @@ template<typename _Tp> struct Matx_FastSolveOp<_Tp, 2, 1>
     bool operator()(const Matx<_Tp, 2, 2>& a, const Matx<_Tp, 2, 1>& b,
                     Matx<_Tp, 2, 1>& x, int) const
     {
-        _Tp d = determinant(a);
+        _Tp d = (_Tp)determinant(a);
         if( d == 0 )
             return false;
         d = 1/d;

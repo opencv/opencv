@@ -751,7 +751,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_StsAutoTrace :           return "Autotrace call";
     case CV_StsBadSize :             return "Incorrect size of input array";
     case CV_StsNullPtr :             return "Null pointer";
-    case CV_StsDivByZero :           return "Division by zero occured";
+    case CV_StsDivByZero :           return "Division by zero occurred";
     case CV_BadStep :                return "Image step is wrong";
     case CV_StsInplaceNotSupported : return "Inplace operation is not supported";
     case CV_StsObjectNotFound :      return "Requested object was not found";
@@ -1035,7 +1035,7 @@ public:
         {
             if(threads[i])
             {
-                /* Current architecture doesn't allow proper global objects relase, so this check can cause crashes
+                /* Current architecture doesn't allow proper global objects release, so this check can cause crashes
 
                 // Check if all slots were properly cleared
                 for(size_t j = 0; j < threads[i]->slots.size(); j++)
@@ -1085,7 +1085,7 @@ public:
         return (tlsSlots.size()-1);
     }
 
-    // Release TLS storage index and pass assosiated data to caller
+    // Release TLS storage index and pass associated data to caller
     void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec)
     {
         AutoLock guard(mtxGlobalAccess);
@@ -1196,7 +1196,7 @@ void TLSDataContainer::release()
     std::vector<void*> data;
     data.reserve(32);
     getTlsStorage().releaseSlot(key_, data); // Release key and get stored data for proper destruction
-    for(size_t i = 0; i < data.size(); i++)  // Delete all assosiated data
+    for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
     key_ = -1;
 }

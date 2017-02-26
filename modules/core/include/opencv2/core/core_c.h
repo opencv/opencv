@@ -2654,7 +2654,7 @@ CVAPI(int)  cvGetErrMode( void );
 /** Sets error processing mode, returns previously used mode */
 CVAPI(int) cvSetErrMode( int mode );
 
-/** Sets error status and performs some additonal actions (displaying message box,
+/** Sets error status and performs some additional actions (displaying message box,
  writing message to stderr, terminating application etc.)
  depending on the current error mode */
 CVAPI(void) cvError( int status, const char* func_name,
@@ -2663,7 +2663,7 @@ CVAPI(void) cvError( int status, const char* func_name,
 /** Retrieves textual description of the error given its code */
 CVAPI(const char*) cvErrorStr( int status );
 
-/** Retrieves detailed information about the last error occured */
+/** Retrieves detailed information about the last error occurred */
 CVAPI(int) cvGetErrInfo( const char** errcode_desc, const char** description,
                         const char** filename, int* line );
 

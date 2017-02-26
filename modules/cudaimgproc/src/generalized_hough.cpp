@@ -684,28 +684,6 @@ namespace
         std::vector<int> h_buf_;
     };
 
-    double toRad(double a)
-    {
-        return a * CV_PI / 180.0;
-    }
-
-    double clampAngle(double a)
-    {
-        double res = a;
-
-        while (res > 360.0)
-            res -= 360.0;
-        while (res < 0)
-            res += 360.0;
-
-        return res;
-    }
-
-    bool angleEq(double a, double b, double eps = 1.0)
-    {
-        return (fabs(clampAngle(a - b)) <= eps);
-    }
-
     GeneralizedHoughGuilImpl::GeneralizedHoughGuilImpl()
     {
         maxBufferSize_ = 1000;

@@ -77,8 +77,14 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else
     {
-        _rvec.create(3, 1, CV_64F);
-        _tvec.create(3, 1, CV_64F);
+        int mtype = CV_64F;
+        // use CV_32F if all PnP inputs are CV_32F and outputs are empty
+        if (_ipoints.depth() == _cameraMatrix.depth() && _ipoints.depth() == _opoints.depth() &&
+            _rvec.empty() && _tvec.empty())
+            mtype = _opoints.depth();
+
+        _rvec.create(3, 1, mtype);
+        _tvec.create(3, 1, mtype);
     }
     rvec = _rvec.getMat();
     tvec = _tvec.getMat();
@@ -197,7 +203,7 @@ public:
         float* err = _err.getMat().ptr<float>();
 
         for ( i = 0; i < count; ++i)
-            err[i] = (float)norm( ipoints_ptr[i] - projpoints_ptr[i] );
+            err[i] = (float)norm( Matx21f(ipoints_ptr[i] - projpoints_ptr[i]), NORM_L2SQR );
 
     }
 

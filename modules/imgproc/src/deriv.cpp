@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters
 \****************************************************************************************/
@@ -178,6 +180,124 @@ cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
     return createSeparableLinearFilter(srcType, dstType,
         kx, ky, Point(-1,-1), 0, borderType );
 }
+
+#ifdef HAVE_OPENVX
+namespace cv
+{
+    static bool openvx_sobel(InputArray _src, OutputArray _dst,
+                             int dx, int dy, int ksize,
+                             double scale, double delta, int borderType)
+    {
+        int stype = _src.type();
+        int dtype = _dst.type();
+        if (stype != CV_8UC1 || (dtype != CV_16SC1 && dtype != CV_8UC1) ||
+            ksize < 3 || ksize % 2 != 1 || delta != 0.0)
+            return false;
+
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+
+        if (src.cols < ksize || src.rows < ksize)
+            return false;
+
+        int iscale = 1;
+        vx_uint32 cscale = 1;
+        if(scale != 1.0)
+        {
+            iscale = static_cast<int>(scale);
+            if (std::abs(scale - iscale) >= DBL_EPSILON)
+            {
+                int exp = 0;
+                float significand = frexp(scale, &exp);
+                if ((significand == 0.5f) && (exp <= 0))
+                {
+                    iscale = 1;
+                    cscale = 1 << (exp = -exp + 1);
+                }
+                else
+                    return false;
+            }
+        }
+
+        if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
+            return false; //Process isolated borders only
+        vx_enum border;
+        switch (borderType & ~BORDER_ISOLATED)
+        {
+        case BORDER_CONSTANT:
+            border = VX_BORDER_CONSTANT;
+            break;
+        case BORDER_REPLICATE:
+            border = VX_BORDER_REPLICATE;
+            break;
+        default:
+            return false;
+        }
+
+        try
+        {
+            ivx::Context ctx = ivx::Context::create();
+            if ((vx_size)ksize > ctx.convolutionMaxDimension())
+                return false;
+
+            Mat a;
+            if (dst.data != src.data)
+                a = src;
+            else
+                src.copyTo(a);
+
+            ivx::Image
+                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+                ib = ivx::Image::createFromHandle(ctx, dtype == CV_16SC1 ? VX_DF_IMAGE_S16 : VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(dst.cols, dst.rows, dtype == CV_16SC1 ? 2 : 1, (vx_int32)(dst.step)), dst.data);
+
+            //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+            //since OpenVX standart says nothing about thread-safety for now
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border, (vx_uint8)(0));
+            if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1)
+            {
+                if(dx)
+                    ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, ib, NULL));
+                else
+                    ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, NULL, ib));
+            }
+            else
+            {
+#if VX_VERSION <= VX_VERSION_1_0
+                if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
+                {
+                    ctx.setImmediateBorder(prevBorder);
+                    return false;
+                }
+#endif
+                Mat kx, ky;
+                getDerivKernels(kx, ky, dx, dy, ksize, false);
+                flip(kx, kx, 0);
+                flip(ky, ky, 0);
+                Mat convData;
+                cv::Mat(ky*kx.t()).convertTo(convData, CV_16SC1, iscale);
+                ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
+                cnv.copyFrom(convData);
+                cnv.setScale(cscale);
+                ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
+            }
+            ctx.setImmediateBorder(prevBorder);
+        }
+        catch (ivx::RuntimeError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+        catch (ivx::WrapperError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+
+        return true;
+    }
+}
+#endif
 
 #ifdef HAVE_IPP
 namespace cv
@@ -598,6 +718,9 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
             return;
     }
 #endif
+
+    CV_OVX_RUN(true,
+               openvx_sobel(_src, _dst, dx, dy, ksize, scale, delta, borderType))
 
     CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_sobel(_src, _dst, ddepth, dx, dy, ksize, scale, delta, borderType));
 

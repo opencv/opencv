@@ -483,8 +483,10 @@ public:
     @param pts The points array for storing rectangle vertices.
     */
     void points(Point2f pts[]) const;
-    //! returns the minimal up-right rectangle containing the rotated rectangle
+    //! returns the minimal up-right integer rectangle containing the rotated rectangle
     Rect boundingRect() const;
+    //! returns the minimal (exact) floating point rectangle containing the rotated rectangle, not intended for use with images
+    Rect_<float> boundingRect2f() const;
 
     Point2f center; //< the rectangle mass center
     Size2f size;    //< width and height of the rectangle
@@ -1590,7 +1592,10 @@ Size_<_Tp>& Size_<_Tp>::operator = (const Size_<_Tp>& sz)
 template<typename _Tp> inline
 _Tp Size_<_Tp>::area() const
 {
-    return width * height;
+    const _Tp result = width * height;
+    CV_DbgAssert(!std::numeric_limits<_Tp>::is_integer
+        || width == 0 || result / width == height); // make sure the result fits in the return value
+    return result;
 }
 
 template<typename _Tp> static inline
@@ -1729,7 +1734,10 @@ Size_<_Tp> Rect_<_Tp>::size() const
 template<typename _Tp> inline
 _Tp Rect_<_Tp>::area() const
 {
-    return width * height;
+    const _Tp result = width * height;
+    CV_DbgAssert(!std::numeric_limits<_Tp>::is_integer
+        || width == 0 || result / width == height); // make sure the result fits in the return value
+    return result;
 }
 
 template<typename _Tp> template<typename _Tp2> inline

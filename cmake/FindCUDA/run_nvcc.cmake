@@ -72,7 +72,7 @@ set(generated_cubin_file_internal "@generated_cubin_file@") # path
 set(CUDA_NVCC_EXECUTABLE "@CUDA_NVCC_EXECUTABLE@") # path
 set(CUDA_NVCC_FLAGS @CUDA_NVCC_FLAGS@ ;; @CUDA_WRAP_OPTION_NVCC_FLAGS@) # list
 @CUDA_NVCC_FLAGS_CONFIG@
-set(nvcc_flags @nvcc_flags@) # list
+set(nvcc_flags "@nvcc_flags@") # list
 set(CUDA_NVCC_INCLUDE_ARGS "@CUDA_NVCC_INCLUDE_ARGS@") # list (needs to be in quotes to handle spaces properly).
 set(format_flag "@format_flag@") # string
 

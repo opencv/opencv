@@ -78,9 +78,9 @@ int main( int argc, const char** argv )
 
     if( inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1) )
     {
-        int c = inputName.empty() ? 0 : inputName[0] - '0';
-        if(!capture.open(c))
-            cout << "Capture from camera #" <<  c << " didn't work" << endl;
+        int camera = inputName.empty() ? 0 : inputName[0] - '0';
+        if(!capture.open(camera))
+            cout << "Capture from camera #" <<  camera << " didn't work" << endl;
     }
     else
     {
@@ -105,7 +105,7 @@ int main( int argc, const char** argv )
 
             detectAndDraw( frame, canvas, cascade, nestedCascade, scale, tryflip );
 
-            int c = waitKey(10);
+            char c = (char)waitKey(10);
             if( c == 27 || c == 'q' || c == 'Q' )
                 break;
         }
@@ -128,7 +128,7 @@ int main( int argc, const char** argv )
                 char buf[1000+1];
                 while( fgets( buf, 1000, f ) )
                 {
-                    int len = (int)strlen(buf), c;
+                    int len = (int)strlen(buf);
                     while( len > 0 && isspace(buf[len-1]) )
                         len--;
                     buf[len] = '\0';
@@ -137,7 +137,7 @@ int main( int argc, const char** argv )
                     if( !image.empty() )
                     {
                         detectAndDraw( image, canvas, cascade, nestedCascade, scale, tryflip );
-                        c = waitKey(0);
+                        char c = (char)waitKey(0);
                         if( c == 27 || c == 'q' || c == 'Q' )
                             break;
                     }

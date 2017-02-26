@@ -46,6 +46,8 @@
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 #ifdef __APPLE__
 #undef CV_NEON
 #define CV_NEON 0
@@ -4634,10 +4636,119 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
     }
 }
 
+#ifdef HAVE_OPENVX
+
+template<typename T, typename DT>
+static bool _openvx_cvt(const T* src, size_t sstep,
+                        DT* dst, size_t dstep, Size continuousSize)
+{
+    using namespace ivx;
+
+    if(!(continuousSize.width > 0 && continuousSize.height > 0))
+    {
+        return true;
+    }
+
+    //.height is for number of continuous pieces
+    //.width  is for length of one piece
+    Size imgSize = continuousSize;
+    if(continuousSize.height == 1)
+    {
+        if(sstep / sizeof(T) == dstep / sizeof(DT) && sstep / sizeof(T) > 0 &&
+           continuousSize.width % (sstep / sizeof(T)) == 0)
+        {
+            //continuous n-lines image
+            imgSize.width  = sstep / sizeof(T);
+            imgSize.height = continuousSize.width / (sstep / sizeof(T));
+        }
+        else
+        {
+            //1-row image with possibly incorrect step
+            sstep = continuousSize.width * sizeof(T);
+            dstep = continuousSize.width * sizeof(DT);
+        }
+    }
+
+    int srcType = DataType<T>::type, dstType = DataType<DT>::type;
+
+    try
+    {
+        Context context = Context::create();
+
+        // Other conversions are marked as "experimental"
+        if(context.vendorID() == VX_ID_KHRONOS &&
+           !(srcType == CV_8U  && dstType == CV_16S) &&
+           !(srcType == CV_16S && dstType == CV_8U))
+        {
+            return false;
+        }
+
+        Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(srcType),
+                                                 Image::createAddressing(imgSize.width, imgSize.height,
+                                                                         (vx_uint32)sizeof(T), (vx_uint32)sstep),
+                                                 (void*)src);
+        Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(dstType),
+                                                 Image::createAddressing(imgSize.width, imgSize.height,
+                                                                         (vx_uint32)sizeof(DT), (vx_uint32)dstep),
+                                                 (void*)dst);
+
+        IVX_CHECK_STATUS(vxuConvertDepth(context, srcImage, dstImage, VX_CONVERT_POLICY_SATURATE, 0));
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        srcImage.swapHandle(); dstImage.swapHandle();
+#endif
+    }
+    catch (RuntimeError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    catch (WrapperError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+
+    return true;
+}
+
+template<typename T, typename DT>
+static bool openvx_cvt(const T* src, size_t sstep,
+                       DT* dst, size_t dstep, Size size)
+{
+    (void)src; (void)sstep; (void)dst; (void)dstep; (void)size;
+    return false;
+}
+
+#define DEFINE_OVX_CVT_SPECIALIZATION(T, DT) \
+template<>                                                                    \
+bool openvx_cvt(const T *src, size_t sstep, DT *dst, size_t dstep, Size size) \
+{                                                                             \
+    return _openvx_cvt<T, DT>(src, sstep, dst, dstep, size);                  \
+}
+
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, ushort)
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, short)
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, int)
+DEFINE_OVX_CVT_SPECIALIZATION(ushort, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(ushort, int)
+DEFINE_OVX_CVT_SPECIALIZATION(short, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(short, int)
+DEFINE_OVX_CVT_SPECIALIZATION(int, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(int, ushort)
+DEFINE_OVX_CVT_SPECIALIZATION(int, short)
+
+#endif
+
 template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
 {
+    CV_OVX_RUN(
+        true,
+        openvx_cvt(src, sstep, dst, dstep, size)
+    )
+
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
     Cvt_SIMD<T, DT> vop;
@@ -5287,6 +5398,39 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 
 #endif
 
+#ifdef HAVE_OPENVX
+static bool openvx_LUT(Mat src, Mat dst, Mat _lut)
+{
+    if (src.type() != CV_8UC1 || dst.type() != src.type() || _lut.type() != src.type() || !_lut.isContinuous())
+        return false;
+
+    try
+    {
+        ivx::Context ctx = ivx::Context::create();
+
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(src.cols, src.rows, 1, (vx_int32)(src.step)), src.data),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+        ivx::LUT lut = ivx::LUT::create(ctx);
+        lut.copyFrom(_lut);
+        ivx::IVX_CHECK_STATUS(vxuTableLookup(ctx, ia, lut, ib));
+    }
+    catch (ivx::RuntimeError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    catch (ivx::WrapperError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+
+    return true;
+}
+#endif
+
 #if defined(HAVE_IPP)
 namespace ipp {
 
@@ -5552,6 +5696,9 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
+    CV_OVX_RUN(true,
+               openvx_LUT(src, dst, lut))
+
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
 
     if (_src.dims() <= 2)
@@ -5692,7 +5839,7 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
     {
         double smin = 0, smax = 0;
         double dmin = MIN( a, b ), dmax = MAX( a, b );
-        minMaxLoc( _src, &smin, &smax, 0, 0, _mask );
+        minMaxIdx( _src, &smin, &smax, 0, 0, _mask );
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
         shift = dmin - smin*scale;
     }

@@ -46,6 +46,8 @@
 
 using namespace cvtest;
 
+namespace {
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HistEven
 
@@ -211,5 +213,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CLAHE, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(0.0, 40.0)));
+
+} // namespace
 
 #endif // HAVE_CUDA

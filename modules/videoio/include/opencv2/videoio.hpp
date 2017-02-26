@@ -118,6 +118,9 @@ enum VideoCaptureAPIs {
      };
 
 /** @brief %VideoCapture generic properties identifier.
+
+ Reading / writing properties involves many layers. Some unexpected result might happens along this chain.
+ Effective behaviour depends from device hardware, driver and API Backend.
  @sa videoio_flags_others, VideoCapture::get(), VideoCapture::set()
 */
 enum VideoCaptureProperties {
@@ -131,12 +134,12 @@ enum VideoCaptureProperties {
        CAP_PROP_FRAME_COUNT    =7, //!< Number of frames in the video file.
        CAP_PROP_FORMAT         =8, //!< Format of the %Mat objects returned by VideoCapture::retrieve().
        CAP_PROP_MODE           =9, //!< Backend-specific value indicating the current capture mode.
-       CAP_PROP_BRIGHTNESS    =10, //!< Brightness of the image (only for cameras).
+       CAP_PROP_BRIGHTNESS    =10, //!< Brightness of the image (only for those cameras that support).
        CAP_PROP_CONTRAST      =11, //!< Contrast of the image (only for cameras).
        CAP_PROP_SATURATION    =12, //!< Saturation of the image (only for cameras).
        CAP_PROP_HUE           =13, //!< Hue of the image (only for cameras).
-       CAP_PROP_GAIN          =14, //!< Gain of the image (only for cameras).
-       CAP_PROP_EXPOSURE      =15, //!< Exposure (only for cameras).
+       CAP_PROP_GAIN          =14, //!< Gain of the image (only for those cameras that support).
+       CAP_PROP_EXPOSURE      =15, //!< Exposure (only for those cameras that support).
        CAP_PROP_CONVERT_RGB   =16, //!< Boolean flags indicating whether images should be converted to RGB.
        CAP_PROP_WHITE_BALANCE_BLUE_U =17, //!< Currently unsupported.
        CAP_PROP_RECTIFICATION =18, //!< Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently).
@@ -157,7 +160,7 @@ enum VideoCaptureProperties {
        CAP_PROP_TILT          =34,
        CAP_PROP_ROLL          =35,
        CAP_PROP_IRIS          =36,
-       CAP_PROP_SETTINGS      =37, //! Pop up video/camera filter dialog (note: only supported by DSHOW backend currently. Property value is ignored)
+       CAP_PROP_SETTINGS      =37, //!< Pop up video/camera filter dialog (note: only supported by DSHOW backend currently. The property value is ignored)
        CAP_PROP_BUFFERSIZE    =38,
        CAP_PROP_AUTOFOCUS     =39
      };
@@ -556,6 +559,20 @@ enum { CAP_PROP_GPHOTO2_PREVIEW           = 17001, //!< Capture only preview fro
 
 //! @} gPhoto2
 
+
+/** @name Images backend
+    @{
+*/
+
+/** @brief Images backend properties
+
+*/
+enum { CAP_PROP_IMAGES_BASE = 18000,
+       CAP_PROP_IMAGES_LAST = 19000 // excluding
+     };
+
+//! @} Images
+
 //! @} videoio_flags_others
 
 
@@ -654,9 +671,9 @@ public:
 
     @overload
 
-    This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts.
     Parameters are similar as the constructor VideoCapture(int index),except it takes an additional argument apiPreference.
-    @return open(cameraNum + apiPreference).
+    Definitely, is same as open(int index) where `index=cameraNum + apiPreference`
+    @return `true` if the camera has been successfully opened.
     */
     CV_WRAP bool open(int cameraNum, int apiPreference);
 

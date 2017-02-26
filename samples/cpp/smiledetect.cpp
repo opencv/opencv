@@ -99,7 +99,7 @@ int main( int argc, const char** argv )
             Mat frame1 = frame.clone();
             detectAndDraw( frame1, cascade, nestedCascade, scale, tryflip );
 
-            int c = waitKey(10);
+            char c = (char)waitKey(10);
             if( c == 27 || c == 'q' || c == 'Q' )
                 break;
         }

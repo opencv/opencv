@@ -453,7 +453,7 @@ int main()
 
     for(;;)
     {
-        char key = (char) waitKey(0);
+        char key = (char)waitKey(0);
 
         if(key == 'd' && flag3 == 0)
         {

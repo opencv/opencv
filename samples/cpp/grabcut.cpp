@@ -306,8 +306,8 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        int c = waitKey(0);
-        switch( (char) c )
+        char c = (char)waitKey(0);
+        switch( c )
         {
         case '\x1b':
             cout << "Exiting ..." << endl;

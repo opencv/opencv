@@ -574,6 +574,9 @@ projections, as well as the camera matrix and the distortion coefficients.
         - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
+   -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
+       unstable and sometimes give completly wrong results. If you pass one of these two flags,
+       **SOLVEPNP_EPNP** method will be used instead.
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
@@ -784,7 +787,7 @@ space, that is, a real position of the calibration pattern in the k-th pattern v
 @param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
  Order of deviations values: \f$(R_1, T_1, \dotsc , R_M, T_M)\f$ where M is number of pattern views,
  \f$R_i, T_i\f$ are concatenated 1x3 vectors.
- @param perViewErrors Output vector of average re-projection errors estimated for each pattern view.
+ @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
 -   **CV_CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
@@ -823,6 +826,8 @@ the optimization. If CV_CALIB_USE_INTRINSIC_GUESS is set, the coefficient from t
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
+@return the overall RMS re-projection error.
+
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
 views. The algorithm is based on @cite Zhang2000 and @cite BouguetMCT . The coordinates of 3D object
 points and their corresponding 2D projections in each view must be specified. That may be achieved
@@ -846,8 +851,6 @@ The algorithm performs the following steps:
     that is, the total sum of squared distances between the observed feature points imagePoints and
     the projected (using the current estimates for camera parameters and the poses) object points
     objectPoints. See projectPoints for details.
-
-The function returns the final re-projection error.
 
 @note
    If you use a non-square (=non-NxN) grid and findChessboardCorners for calibration, and
@@ -976,8 +979,8 @@ This means that, given ( \f$R_1\f$,\f$T_1\f$ ), it should be possible to compute
 need to know the position and orientation of the second camera relative to the first camera. This is
 what the described function does. It computes ( \f$R\f$,\f$T\f$ ) so that:
 
-\f[R_2=R*R_1
-T_2=R*T_1 + T,\f]
+\f[R_2=R*R_1\f]
+\f[T_2=R*T_1 + T,\f]
 
 Optionally, it computes the essential matrix E:
 

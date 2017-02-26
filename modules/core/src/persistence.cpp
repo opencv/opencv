@@ -714,8 +714,8 @@ cvReleaseFileStorage( CvFileStorage** p_fs )
 
         delete fs->outbuf;
         delete fs->base64_writer;
-        delete fs->delayed_struct_key;
-        delete fs->delayed_type_name;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
 
         memset( fs, 0, sizeof(*fs) );
         cvFree( &fs );
@@ -1218,8 +1218,8 @@ static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_typ
         }
 
         /* reset */
-        delete fs->delayed_struct_key;
-        delete fs->delayed_type_name;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
         fs->delayed_struct_key   = 0;
         fs->delayed_struct_flags = 0;
         fs->delayed_type_name    = 0;
@@ -1474,6 +1474,26 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
         {
             ptr++;
             value_type |= CV_NODE_USER;
+        }
+        if ( d == '<') //support of full type heading from YAML 1.2
+        {
+            const char* yamlTypeHeading = "<tag:yaml.org,2002:";
+            const size_t headingLenght = strlen(yamlTypeHeading);
+
+            char* typeEndPtr = ++ptr;
+
+            do d = *++typeEndPtr;
+            while( cv_isprint(d) && d != ' ' && d != '>' );
+
+            if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLenght )
+            {
+                if ( memcmp(ptr, yamlTypeHeading, headingLenght) == 0 )
+                {
+                    value_type |= CV_NODE_USER;
+                    *typeEndPtr = ' ';
+                    ptr += headingLenght - 1;
+                }
+            }
         }
 
         endptr = ptr++;
@@ -4025,7 +4045,14 @@ static void
 icvJSONWriteReal( CvFileStorage* fs, const char* key, double value )
 {
     char buf[128];
-    icvJSONWrite( fs, key, icvDoubleToString( buf, value ));
+    size_t len = strlen( icvDoubleToString( buf, value ) );
+    if( len > 0 && buf[len-1] == '.' )
+    {
+        // append zero if string ends with decimal place to match JSON standard
+        buf[len] = '0';
+        buf[len+1] = '\0';
+    }
+    icvJSONWrite( fs, key, buf );
 }
 
 
@@ -4829,6 +4856,17 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
                 }
                 else
                 {
+                    if( elem_type == CV_32F || elem_type == CV_64F )
+                    {
+                        size_t buf_len = strlen(ptr);
+                        if( buf_len > 0 && ptr[buf_len-1] == '.' )
+                        {
+                            // append zero if CV_32F or CV_64F string ends with decimal place to match JSON standard
+                            // ptr will point to buf, so can write to buf given ptr is const
+                            buf[buf_len] = '0';
+                            buf[buf_len+1] = '\0';
+                        }
+                    }
                     icvJSONWrite( fs, 0, ptr );
                 }
             }
@@ -7513,6 +7551,8 @@ bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
         return false;
     if (cnt == 0U)
         cnt = std::strlen(reinterpret_cast<char const *>(src));
+    if (cnt == 0U)
+        return false;
     if (cnt & 0x3U)
         return false;
 

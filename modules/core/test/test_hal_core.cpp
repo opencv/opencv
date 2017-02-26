@@ -120,15 +120,20 @@ TEST(Core_HAL, mathfuncs)
     }
 }
 
+namespace {
+
 enum
 {
     HAL_LU = 0,
     HAL_CHOL = 1
 };
 
-TEST(Core_HAL, mat_decomp)
+typedef testing::TestWithParam<int> HAL;
+
+TEST_P(HAL, mat_decomp)
 {
-    for( int hcase = 0; hcase < 16; hcase++ )
+    int hcase = GetParam();
+    SCOPED_TRACE(cv::format("hcase=%d", hcase));
     {
         int depth = hcase % 2 == 0 ? CV_32F : CV_64F;
         int size = (hcase / 2) % 4;
@@ -137,7 +142,7 @@ TEST(Core_HAL, mat_decomp)
         double eps = depth == CV_32F ? 1e-5 : 1e-10;
 
         if( size == 3 )
-            continue;
+            return; // TODO ???
 
         Mat a0(size, size, depth), a(size, size, depth), b(size, 1, depth), x(size, 1, depth), x0(size, 1, depth);
         randu(a0, -1, 1);
@@ -175,14 +180,19 @@ TEST(Core_HAL, mat_decomp)
             min_hal_t = std::min(min_hal_t, t);
 
             t = (double)getTickCount();
-            solve(a0, b, x0, (nfunc == HAL_LU ? DECOMP_LU : DECOMP_CHOLESKY));
+            bool solveStatus = solve(a0, b, x0, (nfunc == HAL_LU ? DECOMP_LU : DECOMP_CHOLESKY));
             t = (double)getTickCount() - t;
+            EXPECT_TRUE(solveStatus);
             min_ocv_t = std::min(min_ocv_t, t);
         }
         //std::cout << "x: " << Mat(x.t()) << std::endl;
         //std::cout << "x0: " << Mat(x0.t()) << std::endl;
 
-        EXPECT_LE(norm(x, x0, NORM_INF | NORM_RELATIVE), eps);
+        EXPECT_LE(norm(x, x0, NORM_INF | NORM_RELATIVE), eps)
+            << "x:  " << Mat(x.t())
+            << "\nx0: " << Mat(x0.t())
+            << "\na0: " << a0
+            << "\nb: " << b;
 
         double freq = getTickFrequency();
         printf("%s (%d x %d, %s): hal time=%.2fusec, ocv time=%.2fusec\n",
@@ -192,3 +202,7 @@ TEST(Core_HAL, mat_decomp)
                min_hal_t*1e6/freq, min_ocv_t*1e6/freq);
     }
 }
+
+INSTANTIATE_TEST_CASE_P(Core, HAL, testing::Range(0, 16));
+
+} // namespace

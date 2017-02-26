@@ -23,9 +23,6 @@ RNG rng(12345);
  */
 int main( int, char** argv )
 {
-
-  int c;
-
   //![load]
   src = imread( argv[1], IMREAD_COLOR ); // Load an image
 
@@ -59,13 +56,12 @@ int main( int, char** argv )
   for(;;)
        {
          //![check_keypress]
-         c = waitKey(500);
-
-         if( (char)c == 27 )
+         char c = (char)waitKey(500);
+         if( c == 27 )
            { break; }
-         else if( (char)c == 'c' )
+         else if( c == 'c' )
            { borderType = BORDER_CONSTANT; }
-         else if( (char)c == 'r' )
+         else if( c == 'r' )
            { borderType = BORDER_REPLICATE; }
          //![check_keypress]
 

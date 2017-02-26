@@ -15,10 +15,10 @@ class OSXBuilder(Builder):
     def getToolchain(self, arch, target):
         return None
 
-    def getBuildCommand(self, arch, target):
+    def getBuildCommand(self, archs, target):
         buildcmd = [
             "xcodebuild",
-            "ARCHS=%s" % arch,
+            "ARCHS=%s" % archs[0],
             "-sdk", target.lower(),
             "-configuration", "Release",
             "-parallelizeTargets",
@@ -39,8 +39,8 @@ if __name__ == "__main__":
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     args = parser.parse_args()
 
-    b = OSXBuilder(args.opencv, args.contrib, args.without,
+    b = OSXBuilder(args.opencv, args.contrib, False, False, args.without,
         [
-            ("x86_64", "MacOSX")
+            (["x86_64"], "MacOSX")
         ])
     b.build(args.out)
