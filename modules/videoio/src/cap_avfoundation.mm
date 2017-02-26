@@ -317,7 +317,8 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     capture = [[CaptureDelegate alloc] init];
 
     AVCaptureDevice *device;
-    NSArray* devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    NSArray* devices = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]
+            arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
     if ([devices count] == 0) {
         std::cout << "AV Foundation didn't find any attached Video Input Devices!" << std::endl;
         [localpool drain];
