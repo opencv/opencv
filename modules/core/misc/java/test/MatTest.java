@@ -494,7 +494,7 @@ public class MatTest extends OpenCVTestCase {
 
     public void testIsSubmatrix() {
         assertFalse(gray0.isSubmatrix());
-        Mat subMat = gray0.submat(0, 0, gray0.rows() / 2, gray0.cols() / 2);
+        Mat subMat = gray0.submat(0, gray0.rows() / 2, 0, gray0.cols() / 2);
         assertTrue(subMat.isSubmatrix());
     }
 

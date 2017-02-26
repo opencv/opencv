@@ -51,6 +51,8 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 using namespace cv;
 
 namespace cv
@@ -4750,6 +4752,94 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
 }
 #endif
 
+#ifdef HAVE_OPENVX
+static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation, const Scalar& borderValue)
+{
+    vx_interpolation_type_e inter_type;
+    switch (interpolation)
+    {
+    case INTER_LINEAR:
+#if VX_VERSION > VX_VERSION_1_0
+        inter_type = VX_INTERPOLATION_BILINEAR;
+#else
+        inter_type = VX_INTERPOLATION_TYPE_BILINEAR;
+#endif
+        break;
+    case INTER_NEAREST:
+/* NEAREST_NEIGHBOR mode disabled since OpenCV round half to even while OpenVX sample implementation round half up
+#if VX_VERSION > VX_VERSION_1_0
+        inter_type = VX_INTERPOLATION_NEAREST_NEIGHBOR;
+#else
+        inter_type = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
+#endif
+        if (!map1.empty())
+            for (int y = 0; y < map1.rows; ++y)
+            {
+                float* line = map1.ptr<float>(y);
+                for (int x = 0; x < map1.cols; ++x)
+                    line[x] = cvRound(line[x]);
+            }
+        if (!map2.empty())
+            for (int y = 0; y < map2.rows; ++y)
+            {
+                float* line = map2.ptr<float>(y);
+                for (int x = 0; x < map2.cols; ++x)
+                    line[x] = cvRound(line[x]);
+            }
+        break;
+*/
+    case INTER_AREA://AREA interpolation mode is unsupported
+    default:
+        return false;
+    }
+
+    try
+    {
+        ivx::Context ctx = ivx::Context::create();
+
+        Mat a;
+        if (dst.data != src.data)
+            a = src;
+        else
+            src.copyTo(a);
+
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+        //since OpenVX standart says nothing about thread-safety for now
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(VX_BORDER_CONSTANT, (vx_uint8)(borderValue[0]));
+
+        ivx::Remap map = ivx::Remap::create(ctx, src.cols, src.rows, dst.cols, dst.rows);
+        if (map1.empty()) map.setMappings(map2);
+        else if (map2.empty()) map.setMappings(map1);
+        else map.setMappings(map1, map2);
+        ivx::IVX_CHECK_STATUS(vxuRemap(ctx, ia, map, inter_type, ib));
+#ifdef VX_VERSION_1_1
+        ib.swapHandle();
+        ia.swapHandle();
+#endif
+
+        ctx.setImmediateBorder(prevBorder);
+    }
+    catch (ivx::RuntimeError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    catch (ivx::WrapperError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    return true;
+}
+#endif
+
 #if defined HAVE_IPP && IPP_DISABLE_BLOCK
 
 typedef IppStatus (CV_STDCALL * ippiRemap)(const void * pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
@@ -4852,6 +4942,17 @@ void cv::remap( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
+
+
+    CV_OVX_RUN(
+        src.type() == CV_8UC1 && dst.type() == CV_8UC1 &&
+        (borderType& ~BORDER_ISOLATED) == BORDER_CONSTANT &&
+        ((map1.type() == CV_32FC2 && map2.empty() && map1.size == dst.size) ||
+         (map1.type() == CV_32FC1 && map2.type() == CV_32FC1 && map1.size == dst.size && map2.size == dst.size) ||
+         (map1.empty() && map2.type() == CV_32FC2 && map2.size == dst.size)) &&
+        ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()),
+        openvx_remap(src, dst, map1, map2, interpolation, borderValue));
+
     CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
 
     if( dst.data == src.data )
@@ -5647,6 +5748,81 @@ private:
 
 enum { OCL_OP_PERSPECTIVE = 1, OCL_OP_AFFINE = 0 };
 
+static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArray _M0,
+                                    Size dsize, int flags, int borderType, const Scalar& borderValue,
+                                    int op_type)
+{
+    CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), dtype = _dst.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    int interpolation = flags & INTER_MAX;
+    if( interpolation == INTER_AREA )
+        interpolation = INTER_LINEAR;
+
+    if ( !dev.isIntel() || !(type == CV_8UC1) ||
+         !(dtype == CV_8UC1) || !(_dst.cols() % 4 == 0) ||
+         !(borderType == cv::BORDER_CONSTANT &&
+          (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)))
+        return false;
+
+    const char * const warp_op[2] = { "Affine", "Perspective" };
+    const char * const interpolationMap[3] = { "nearest", "linear", "cubic" };
+    ocl::ProgramSource program = ocl::imgproc::warp_transform_oclsrc;
+    String kernelName = format("warp%s_%s_8u", warp_op[op_type], interpolationMap[interpolation]);
+
+    bool is32f = (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
+    int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
+    int sctype = CV_MAKETYPE(wdepth, cn);
+
+    ocl::Kernel k;
+    String opts = format("-D ST=%s", ocl::typeToStr(sctype));
+
+    k.create(kernelName.c_str(), program, opts);
+    if (k.empty())
+        return false;
+
+    float borderBuf[] = { 0, 0, 0, 0 };
+    scalarToRawData(borderValue, borderBuf, sctype);
+
+    UMat src = _src.getUMat(), M0;
+    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    UMat dst = _dst.getUMat();
+
+    float M[9];
+    int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
+    Mat matM(matRows, 3, CV_32F, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) && M1.rows == matRows && M1.cols == 3 );
+    M1.convertTo(matM, matM.type());
+
+    if( !(flags & WARP_INVERSE_MAP) )
+    {
+        if (op_type == OCL_OP_PERSPECTIVE)
+            invert(matM, matM);
+        else
+        {
+            float D = M[0]*M[4] - M[1]*M[3];
+            D = D != 0 ? 1.f/D : 0;
+            float A11 = M[4]*D, A22=M[0]*D;
+            M[0] = A11; M[1] *= -D;
+            M[3] *= -D; M[4] = A22;
+            float b1 = -M[0]*M[2] - M[1]*M[5];
+            float b2 = -M[3]*M[2] - M[4]*M[5];
+            M[2] = b1; M[5] = b2;
+        }
+    }
+    matM.convertTo(M0, CV_32F);
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
+           ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
+
+    size_t globalThreads[2];
+    globalThreads[0] = (size_t)(dst.cols / 4);
+    globalThreads[1] = (size_t)dst.rows;
+
+    return k.run(2, globalThreads, NULL, false);
+}
+
 static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                               Size dsize, int flags, int borderType, const Scalar& borderValue,
                               int op_type)
@@ -5737,7 +5913,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     matM.convertTo(M0, doubleSupport ? CV_64F : CV_32F);
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
-           ocl::KernelArg(0, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
+           ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
 
     size_t globalThreads[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalThreads, NULL, false);
@@ -5785,6 +5961,11 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      int flags, int borderType, const Scalar& borderValue )
 {
     CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
+               ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
+                                       borderValue, OCL_OP_AFFINE))
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
@@ -6311,6 +6492,11 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     CV_INSTRUMENT_REGION()
 
     CV_Assert( _src.total() > 0 );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
+               ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType, borderValue,
+                                       OCL_OP_PERSPECTIVE))
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,

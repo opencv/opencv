@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-
 namespace cv {
 namespace ml {
 
@@ -382,6 +381,8 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags )
     {
+        if (impl.getCVFolds() != 0)
+            CV_Error(Error::StsBadArg, "Cross validation for RTrees is not implemented");
         return impl.train(trainData, flags);
     }
 
@@ -418,6 +419,12 @@ public:
 Ptr<RTrees> RTrees::create()
 {
     return makePtr<RTreesImpl>();
+}
+
+//Function needed for Python and Java wrappers
+Ptr<RTrees> RTrees::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<RTrees>(filepath, nodeName);
 }
 
 }}

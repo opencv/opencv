@@ -645,6 +645,7 @@ namespace cv{
         }
     };//End struct LabelingWuParallel
 
+
     //Based on "Two Strategies to Speed up Connected Components Algorithms", the SAUF (Scan array union find) variant
     //using decision trees
     //Kesheng Wu, et al
@@ -816,7 +817,7 @@ namespace cv{
     };//End struct LabelingWu
 
 
-    // Based on “Optimized  Block-based Connected Components Labeling with Decision Trees”, Costantino Grana et al
+    // Based on "Optimized  Block-based Connected Components Labeling with Decision Trees", Costantino Grana et al
     // Only for 8-connectivity
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGranaParallel{
@@ -2581,7 +2582,7 @@ namespace cv{
         }
     };//End struct LabelingGranaParallel
 
-    // Based on “Optimized  Block-based Connected Components Labeling with Decision Trees”, Costantino Grana et al
+    // Based on ï¿½Optimized  Block-based Connected Components Labeling with Decision Treesï¿½, Costantino Grana et al
     // Only for 8-connectivity
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGrana{

@@ -68,6 +68,6 @@ if __name__ == '__main__':
         draw_str(vis, (20, 20), 'time: %.1f ms' % (dt*1000))
         cv2.imshow('facedetect', vis)
 
-        if 0xFF & cv2.waitKey(5) == 27:
+        if cv2.waitKey(5) == 27:
             break
     cv2.destroyAllWindows()

@@ -950,3 +950,66 @@ TEST(Core_InputOutput, filestorage_utf8_bom)
         fs.release();
     });
 }
+
+TEST(Core_InputOutput, filestorage_vec_vec_io)
+{
+    std::vector<std::vector<Mat> > outputMats(3);
+    for(size_t i = 0; i < outputMats.size(); i++)
+    {
+        outputMats[i].resize(i+1);
+        for(size_t j = 0; j < outputMats[i].size(); j++)
+        {
+            outputMats[i][j] = Mat::eye((int)i + 1, (int)i + 1, CV_8U);
+        }
+    }
+
+    String fileName = "vec_test.";
+
+    std::vector<String> formats;
+    formats.push_back("xml");
+    formats.push_back("yml");
+    formats.push_back("json");
+
+    for(size_t i = 0; i < formats.size(); i++)
+    {
+        FileStorage writer(fileName + formats[i], FileStorage::WRITE);
+        writer << "vecVecMat" << outputMats;
+        writer.release();
+
+        FileStorage reader(fileName + formats[i], FileStorage::READ);
+        std::vector<std::vector<Mat> > testMats;
+        reader["vecVecMat"] >> testMats;
+
+        ASSERT_EQ(testMats.size(), testMats.size());
+
+        for(size_t j = 0; j < testMats.size(); j++)
+        {
+            ASSERT_EQ(testMats[j].size(), outputMats[j].size());
+
+            for(size_t k = 0; k < testMats[j].size(); k++)
+            {
+                ASSERT_TRUE(norm(outputMats[j][k] - testMats[j][k], NORM_INF) == 0);
+            }
+        }
+
+        reader.release();
+        remove((fileName + formats[i]).c_str());
+    }
+}
+
+TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
+{
+    String content = "%YAML:1.0\n cameraMatrix: !<tag:yaml.org,2002:opencv-matrix>\n"
+            "   rows: 1\n"
+            "   cols: 1\n"
+            "   dt: d\n"
+            "   data: [ 1. ]";
+
+    cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    cv::Mat inputMatrix;
+    cv::Mat actualMatrix = cv::Mat::eye(1, 1, CV_64F);
+    fs["cameraMatrix"] >> inputMatrix;
+
+    ASSERT_EQ(cv::norm(inputMatrix, actualMatrix, NORM_INF), 0.);
+}

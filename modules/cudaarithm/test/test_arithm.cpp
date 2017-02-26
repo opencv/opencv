@@ -46,6 +46,8 @@
 
 using namespace cvtest;
 
+namespace {
+
 //////////////////////////////////////////////////////////////////////////////
 // GEMM
 
@@ -400,5 +402,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Convolve, testing::Combine(
     testing::Values(Ccorr(false), Ccorr(true))));
 
 #endif // HAVE_CUBLAS
+
+} // namespace
 
 #endif // HAVE_CUDA

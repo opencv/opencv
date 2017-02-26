@@ -161,7 +161,7 @@ int main(int argc, const char** argv)
         if (!bgimg.empty())
             imshow("mean background image", bgimg);
 
-        int key = waitKey(30);
+        char key = (char)waitKey(30);
         if (key == 27)
             break;
     }

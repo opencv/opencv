@@ -302,6 +302,7 @@ macro(ocv_warnings_disable)
     set(_flag_vars "")
     set(_msvc_warnings "")
     set(_gxx_warnings "")
+    set(_icc_warnings "")
     foreach(arg ${ARGN})
       if(arg MATCHES "^CMAKE_")
         list(APPEND _flag_vars ${arg})
@@ -309,6 +310,8 @@ macro(ocv_warnings_disable)
         list(APPEND _msvc_warnings ${arg})
       elseif(arg MATCHES "^-W")
         list(APPEND _gxx_warnings ${arg})
+      elseif(arg MATCHES "^-wd" OR arg MATCHES "^-Qwd" OR arg MATCHES "^/Qwd")
+        list(APPEND _icc_warnings ${arg})
       endif()
     endforeach()
     if(MSVC AND _msvc_warnings AND _flag_vars)
@@ -331,9 +334,25 @@ macro(ocv_warnings_disable)
         endforeach()
       endforeach()
     endif()
+    if(CV_ICC AND _icc_warnings AND _flag_vars)
+      foreach(var ${_flag_vars})
+        foreach(warning ${_icc_warnings})
+          if(UNIX)
+            string(REPLACE "-Qwd" "-wd" warning "${warning}")
+          else()
+            string(REPLACE "-wd" "-Qwd" warning "${warning}")
+          endif()
+          ocv_check_flag_support(${var} "${warning}" _varname)
+          if(${_varname})
+            set(${var} "${${var}} ${warning}")
+          endif()
+        endforeach()
+      endforeach()
+    endif()
     unset(_flag_vars)
     unset(_msvc_warnings)
     unset(_gxx_warnings)
+    unset(_icc_warnings)
   endif(NOT ENABLE_NOISY_WARNINGS)
 endmacro()
 
@@ -396,6 +415,44 @@ macro(OCV_OPTION variable description value)
   endif()
   unset(__condition)
   unset(__value)
+endmacro()
+
+# Usage: ocv_append_build_options(HIGHGUI FFMPEG)
+macro(ocv_append_build_options var_prefix pkg_prefix)
+  foreach(suffix INCLUDE_DIRS LIBRARIES LIBRARY_DIRS)
+    if(${pkg_prefix}_${suffix})
+      list(APPEND ${var_prefix}_${suffix} ${${pkg_prefix}_${suffix}})
+      list(REMOVE_DUPLICATES ${var_prefix}_${suffix})
+    endif()
+  endforeach()
+endmacro()
+
+# Usage is similar to CMake 'pkg_check_modules' command
+# It additionally controls HAVE_${define} and ${define}_${modname}_FOUND variables
+macro(ocv_check_modules define)
+  unset(HAVE_${define})
+  foreach(m ${ARGN})
+    if (m MATCHES "(.*[^><])(>=|=|<=)(.*)")
+      set(__modname "${CMAKE_MATCH_1}")
+    else()
+      set(__modname "${m}")
+    endif()
+    unset(${define}_${__modname}_FOUND)
+  endforeach()
+  pkg_check_modules(${define} ${ARGN})
+  if(${define}_FOUND)
+    set(HAVE_${define} 1)
+  endif()
+  foreach(m ${ARGN})
+    if (m MATCHES "(.*[^><])(>=|=|<=)(.*)")
+      set(__modname "${CMAKE_MATCH_1}")
+    else()
+      set(__modname "${m}")
+    endif()
+    if(NOT DEFINED ${define}_${__modname}_FOUND AND ${define}_FOUND)
+      set(${define}_${__modname}_FOUND 1)
+    endif()
+  endforeach()
 endmacro()
 
 
@@ -611,7 +668,11 @@ endfunction()
 
 # add install command
 function(ocv_install_target)
-  install(TARGETS ${ARGN})
+  if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+    install(TARGETS ${ARGN} FRAMEWORK DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH})
+  else()
+    install(TARGETS ${ARGN})
+  endif()
 
   set(isPackage 0)
   unset(__package)
@@ -634,8 +695,11 @@ function(ocv_install_target)
     set(${__package}_TARGETS "${${__package}_TARGETS}" CACHE INTERNAL "List of ${__package} targets")
   endif()
 
-  if(INSTALL_CREATE_DISTRIB)
-    if(MSVC AND NOT BUILD_SHARED_LIBS)
+  if(MSVS)
+    if(NOT INSTALL_IGNORE_PDB AND
+        (INSTALL_PDB OR
+          (INSTALL_CREATE_DISTRIB AND NOT BUILD_SHARED_LIBS)
+        ))
       set(__target "${ARGV0}")
 
       set(isArchive 0)
@@ -663,13 +727,13 @@ function(ocv_install_target)
           get_target_property(fname ${__target} LOCATION_DEBUG)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug OPTIONAL)
           endif()
 
           get_target_property(fname ${__target} LOCATION_RELEASE)
           if(fname MATCHES "\\.lib$")
             string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release)
+            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release OPTIONAL)
           endif()
         else()
           # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
@@ -687,9 +751,9 @@ macro(ocv_parse_header FILENAME FILE_VAR)
   set(__parnet_scope OFF)
   set(__add_cache OFF)
   foreach(name ${ARGN})
-    if("${name}" STREQUAL "PARENT_SCOPE")
+    if(${name} STREQUAL "PARENT_SCOPE")
       set(__parnet_scope ON)
-    elseif("${name}" STREQUAL "CACHE")
+    elseif(${name} STREQUAL "CACHE")
       set(__add_cache ON)
     elseif(vars_regex)
       set(vars_regex "${vars_regex}|${name}")
@@ -703,7 +767,7 @@ macro(ocv_parse_header FILENAME FILE_VAR)
     unset(${FILE_VAR})
   endif()
   foreach(name ${ARGN})
-    if(NOT "${name}" STREQUAL "PARENT_SCOPE" AND NOT "${name}" STREQUAL "CACHE")
+    if(NOT ${name} STREQUAL "PARENT_SCOPE" AND NOT ${name} STREQUAL "CACHE")
       if(${FILE_VAR})
         if(${FILE_VAR} MATCHES ".+[ \t]${name}[ \t]+([0-9]+).*")
           string(REGEX REPLACE ".+[ \t]${name}[ \t]+([0-9]+).*" "\\1" ${name} "${${FILE_VAR}}")
@@ -823,7 +887,14 @@ function(ocv_target_link_libraries target)
   if(";${LINK_DEPS};" MATCHES ";${target};")
     list(REMOVE_ITEM LINK_DEPS "${target}") # prevent "link to itself" warning (world problem)
   endif()
-  target_link_libraries(${target} ${LINK_DEPS})
+  if(NOT TARGET ${target})
+    if(NOT DEFINED OPENCV_MODULE_${target}_LOCATION)
+      message(FATAL_ERROR "ocv_target_link_libraries: invalid target: '${target}'")
+    endif()
+    set(OPENCV_MODULE_${target}_LINK_DEPS ${OPENCV_MODULE_${target}_LINK_DEPS} ${LINK_DEPS} CACHE INTERNAL "" FORCE)
+  else()
+    target_link_libraries(${target} ${LINK_DEPS})
+  endif()
 endfunction()
 
 function(_ocv_append_target_includes target)
@@ -869,6 +940,29 @@ function(ocv_add_library target)
       set_target_properties(${target}_object PROPERTIES FOLDER "object_libraries")
     endif()
     unset(sources)
+  endif()
+
+  if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+    message(STATUS "Setting Apple target properties for ${target}")
+
+    set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
+
+    set_target_properties(${target} PROPERTIES
+      FRAMEWORK TRUE
+      MACOSX_FRAMEWORK_IDENTIFIER org.opencv
+      MACOSX_FRAMEWORK_INFO_PLIST ${CMAKE_BINARY_DIR}/ios/Info.plist
+      # "current version" in semantic format in Mach-O binary file
+      VERSION ${OPENCV_LIBVERSION}
+      # "compatibility version" in semantic format in Mach-O binary file
+      SOVERSION ${OPENCV_LIBVERSION}
+      INSTALL_RPATH ""
+      INSTALL_NAME_DIR "@rpath"
+      BUILD_WITH_INSTALL_RPATH 1
+      LIBRARY_OUTPUT_NAME "opencv2"
+      XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
+      #PUBLIC_HEADER "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h"
+      #XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+    )
   endif()
 
   _ocv_append_target_includes(${target})
@@ -1035,3 +1129,21 @@ function(ocv_add_test_from_target test_name test_kind the_target)
     endif()
   endif()
 endfunction()
+
+macro(ocv_add_testdata basedir dest_subdir)
+  if(BUILD_TESTS)
+    if(NOT CMAKE_CROSSCOMPILING AND NOT INSTALL_TESTS)
+      file(COPY ${basedir}/
+           DESTINATION ${CMAKE_BINARY_DIR}/${OPENCV_TEST_DATA_INSTALL_PATH}/${dest_subdir}
+           ${ARGN}
+      )
+    endif()
+    if(INSTALL_TESTS)
+      install(DIRECTORY ${basedir}/
+              DESTINATION ${OPENCV_TEST_DATA_INSTALL_PATH}/contrib/text
+              COMPONENT "tests"
+              ${ARGN}
+      )
+    endif()
+  endif()
+endmacro()

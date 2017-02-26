@@ -46,6 +46,8 @@
 #include "opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
 namespace
@@ -1055,7 +1057,155 @@ namespace
         return sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
     }
 #endif
+
+#ifdef HAVE_OPENVX
+    bool openvx_pyrlk(InputArray _prevImg, InputArray _nextImg, InputArray _prevPts, InputOutputArray _nextPts,
+                             OutputArray _status, OutputArray _err)
+    {
+        using namespace ivx;
+
+        // Pyramids as inputs are not acceptable because there's no (direct or simple) way
+        // to build vx_pyramid on user data
+        if(_prevImg.kind() != _InputArray::MAT || _nextImg.kind() != _InputArray::MAT)
+            return false;
+
+        Mat prevImgMat = _prevImg.getMat(), nextImgMat = _nextImg.getMat();
+
+        if(prevImgMat.type() != CV_8UC1 || nextImgMat.type() != CV_8UC1)
+            return false;
+
+        CV_Assert(prevImgMat.size() == nextImgMat.size());
+        Mat prevPtsMat = _prevPts.getMat();
+        int checkPrev = prevPtsMat.checkVector(2, CV_32F, false);
+        CV_Assert( checkPrev >= 0 );
+        size_t npoints = checkPrev;
+
+        if( !(flags & OPTFLOW_USE_INITIAL_FLOW) )
+            _nextPts.create(prevPtsMat.size(), prevPtsMat.type(), -1, true);
+        Mat nextPtsMat = _nextPts.getMat();
+        CV_Assert( nextPtsMat.checkVector(2, CV_32F, false) == (int)npoints );
+
+        _status.create((int)npoints, 1, CV_8U, -1, true);
+        Mat statusMat = _status.getMat();
+        uchar* status = statusMat.ptr();
+        for(size_t i = 0; i < npoints; i++ )
+            status[i] = true;
+
+        // OpenVX doesn't return detection errors
+        if( _err.needed() )
+        {
+            return false;
+        }
+
+        try
+        {
+            Context context = Context::create();
+
+            if(context.vendorID() == VX_ID_KHRONOS)
+            {
+                // PyrLK in OVX 1.0.1 performs vxCommitImagePatch incorrecty and crashes
+                if(VX_VERSION == VX_VERSION_1_0)
+                    return false;
+                // Implementation ignores border mode
+                // So check that minimal size of image in pyramid is big enough
+                int width = prevImgMat.cols, height = prevImgMat.rows;
+                for(int i = 0; i < maxLevel+1; i++)
+                {
+                    if(width < winSize.width + 1 || height < winSize.height + 1)
+                        return false;
+                    else
+                    {
+                        width /= 2; height /= 2;
+                    }
+                }
+            }
+
+            Image prevImg = Image::createFromHandle(context, Image::matTypeToFormat(prevImgMat.type()),
+                                                    Image::createAddressing(prevImgMat), (void*)prevImgMat.data);
+            Image nextImg = Image::createFromHandle(context, Image::matTypeToFormat(nextImgMat.type()),
+                                                    Image::createAddressing(nextImgMat), (void*)nextImgMat.data);
+
+            Graph graph = Graph::create(context);
+
+            Pyramid prevPyr = Pyramid::createVirtual(graph, (vx_size)maxLevel+1, VX_SCALE_PYRAMID_HALF,
+                                                     prevImg.width(), prevImg.height(), prevImg.format());
+            Pyramid nextPyr = Pyramid::createVirtual(graph, (vx_size)maxLevel+1, VX_SCALE_PYRAMID_HALF,
+                                                     nextImg.width(), nextImg.height(), nextImg.format());
+
+            ivx::Node::create(graph, VX_KERNEL_GAUSSIAN_PYRAMID, prevImg, prevPyr);
+            ivx::Node::create(graph, VX_KERNEL_GAUSSIAN_PYRAMID, nextImg, nextPyr);
+
+            Array prevPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+            Array estimatedPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+            Array nextPts = Array::create(context, VX_TYPE_KEYPOINT, npoints);
+
+            std::vector<vx_keypoint_t> vxPrevPts(npoints), vxEstPts(npoints), vxNextPts(npoints);
+            for(size_t i = 0; i < npoints; i++)
+            {
+                vx_keypoint_t& prevPt = vxPrevPts[i]; vx_keypoint_t& estPt  = vxEstPts[i];
+                prevPt.x = prevPtsMat.at<Point2f>(i).x; prevPt.y = prevPtsMat.at<Point2f>(i).y;
+                 estPt.x = nextPtsMat.at<Point2f>(i).x;  estPt.y = nextPtsMat.at<Point2f>(i).y;
+                prevPt.tracking_status = estPt.tracking_status = vx_true_e;
+            }
+            prevPts.addItems(vxPrevPts); estimatedPts.addItems(vxEstPts);
+
+            if( (criteria.type & TermCriteria::COUNT) == 0 )
+                criteria.maxCount = 30;
+            else
+                criteria.maxCount = std::min(std::max(criteria.maxCount, 0), 100);
+            if( (criteria.type & TermCriteria::EPS) == 0 )
+                criteria.epsilon = 0.01;
+            else
+                criteria.epsilon = std::min(std::max(criteria.epsilon, 0.), 10.);
+            criteria.epsilon *= criteria.epsilon;
+
+            vx_enum termEnum = (criteria.type == TermCriteria::COUNT) ? VX_TERM_CRITERIA_ITERATIONS :
+                               (criteria.type == TermCriteria::EPS) ? VX_TERM_CRITERIA_EPSILON :
+                               VX_TERM_CRITERIA_BOTH;
+
+            //minEigThreshold is fixed to 0.0001f
+            ivx::Scalar termination = ivx::Scalar::create<VX_TYPE_ENUM>(context, termEnum);
+            ivx::Scalar epsilon = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, criteria.epsilon);
+            ivx::Scalar numIterations = ivx::Scalar::create<VX_TYPE_UINT32>(context, criteria.maxCount);
+            ivx::Scalar useInitial = ivx::Scalar::create<VX_TYPE_BOOL>(context, (vx_bool)(flags & OPTFLOW_USE_INITIAL_FLOW));
+            //assume winSize is square
+            ivx::Scalar windowSize = ivx::Scalar::create<VX_TYPE_SIZE>(context, (vx_size)winSize.width);
+
+            ivx::Node::create(graph, VX_KERNEL_OPTICAL_FLOW_PYR_LK, prevPyr, nextPyr, prevPts, estimatedPts,
+                              nextPts, termination, epsilon, numIterations, useInitial, windowSize);
+
+            graph.verify();
+            graph.process();
+
+            nextPts.copyTo(vxNextPts);
+            for(size_t i = 0; i < npoints; i++)
+            {
+                vx_keypoint_t kp = vxNextPts[i];
+                nextPtsMat.at<Point2f>(i) = Point2f(kp.x, kp.y);
+                statusMat.at<uchar>(i) = (bool)kp.tracking_status;
+            }
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        prevImg.swapHandle(); nextImg.swapHandle();
+#endif
+        }
+        catch (RuntimeError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+        catch (WrapperError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+
+        return true;
+    }
+#endif
 };
+
+
 
 void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
@@ -1067,6 +1217,10 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
                (_prevImg.isUMat() || _nextImg.isUMat()) &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
                ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
+
+    // Disabled due to bad accuracy
+    CV_OVX_RUN(false,
+               openvx_pyrlk(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err))
 
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;
@@ -1265,8 +1419,6 @@ getRTMatrix( const Point2f* a, const Point2f* b,
             sa[1][1] += a[i].y*a[i].y;
             sa[1][2] += a[i].y;
 
-            sa[2][2] += 1;
-
             sb[0] += a[i].x*b[i].x;
             sb[1] += a[i].y*b[i].x;
             sb[2] += b[i].x;
@@ -1281,7 +1433,7 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
         sa[3][3] = sa[0][0];
         sa[4][4] = sa[1][1];
-        sa[5][5] = sa[2][2];
+        sa[5][5] = sa[2][2] = count;
 
         solve( A, B, MM, DECOMP_EIG );
     }
@@ -1296,14 +1448,6 @@ getRTMatrix( const Point2f* a, const Point2f* b,
             sa[0][0] += a[i].x*a[i].x + a[i].y*a[i].y;
             sa[0][2] += a[i].x;
             sa[0][3] += a[i].y;
-
-
-            sa[2][1] += -a[i].y;
-            sa[2][2] += 1;
-
-            sa[3][0] += a[i].y;
-            sa[3][1] += a[i].x;
-            sa[3][3] += 1;
 
             sb[0] += a[i].x*b[i].x + a[i].y*b[i].y;
             sb[1] += a[i].x*b[i].y - a[i].y*b[i].x;

@@ -320,6 +320,15 @@ CV_EXPORTS_W void destroyAllWindows();
 
 CV_EXPORTS_W int startWindowThread();
 
+/** @brief Similar to #waitKey, but returns full key code.
+
+@note
+
+Key code is implementation specific and depends on used backend: QT/GTK/Win32/etc
+
+*/
+CV_EXPORTS_W int waitKeyEx(int delay = 0);
+
 /** @brief Waits for a pressed key.
 
 The function waitKey waits for a key event infinitely (when \f$\texttt{delay}\leq 0\f$ ) or for delay

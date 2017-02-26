@@ -171,4 +171,10 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     DESTINATION "${OPENCV_DOC_INSTALL_PATH}"
     COMPONENT "docs" OPTIONAL
   )
+
+  # Alias to build/install docs only
+  add_custom_target(install_docs
+      DEPENDS doxygen
+      COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=docs -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  )
 endif()

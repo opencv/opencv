@@ -134,6 +134,12 @@ Ptr<SVMSGD> SVMSGD::create()
     return makePtr<SVMSGDImpl>();
 }
 
+Ptr<SVMSGD> SVMSGD::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<SVMSGD>(filepath, nodeName);
+}
+
+
 void SVMSGDImpl::normalizeSamples(Mat &samples, Mat &average, float &multiplier)
 {
     int featuresCount = samples.cols;

@@ -386,6 +386,11 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
     addref();
 }
 
+void UMat::create(const std::vector<int>& _sizes, int _type, UMatUsageFlags _usageFlags)
+{
+    create((int)_sizes.size(), _sizes.data(), _type, _usageFlags);
+}
+
 void UMat::copySize(const UMat& m)
 {
     setSize(*this, m.dims, 0, 0);
@@ -507,6 +512,31 @@ UMat::UMat(const UMat& m, const Range* ranges)
     updateContinuityFlag(*this);
 }
 
+UMat::UMat(const UMat& m, const std::vector<Range>& ranges)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
+{
+    int i, d = m.dims;
+
+    CV_Assert((int)ranges.size() == d);
+    for (i = 0; i < d; i++)
+    {
+        Range r = ranges[i];
+        CV_Assert(r == Range::all() || (0 <= r.start && r.start < r.end && r.end <= m.size[i]));
+    }
+    *this = m;
+    for (i = 0; i < d; i++)
+    {
+        Range r = ranges[i];
+        if (r != Range::all() && r != Range(0, size.p[i]))
+        {
+            size.p[i] = r.end - r.start;
+            offset += r.start*step.p[i];
+            flags |= SUBMATRIX_FLAG;
+        }
+    }
+    updateContinuityFlag(*this);
+}
+
 UMat UMat::diag(int d) const
 {
     CV_Assert( dims <= 2 );
@@ -569,8 +599,13 @@ UMat& UMat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     Size wholeSize; Point ofs;
     size_t esz = elemSize();
     locateROI( wholeSize, ofs );
-    int row1 = std::max(ofs.y - dtop, 0), row2 = std::min(ofs.y + rows + dbottom, wholeSize.height);
-    int col1 = std::max(ofs.x - dleft, 0), col2 = std::min(ofs.x + cols + dright, wholeSize.width);
+    int row1 = std::min(std::max(ofs.y - dtop, 0), wholeSize.height), row2 = std::max(0, std::min(ofs.y + rows + dbottom, wholeSize.height));
+    int col1 = std::min(std::max(ofs.x - dleft, 0), wholeSize.width), col2 = std::max(0, std::min(ofs.x + cols + dright, wholeSize.width));
+    if(row1 > row2)
+        std::swap(row1, row2);
+    if(col1 > col2)
+        std::swap(col1, col2);
+
     offset += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
     rows = row2 - row1; cols = col2 - col1;
     size.p[0] = rows; size.p[1] = cols;
@@ -956,7 +991,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
-            ocl::KernelArg scalararg(0, 0, 0, 0, buf, CV_ELEM_SIZE(d) * scalarcn);
+            ocl::KernelArg scalararg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, CV_ELEM_SIZE(d) * scalarcn);
             UMat mask;
 
             if( haveMask )
