@@ -154,8 +154,7 @@ class MatchTemplateDemoRun implements ChangeListener{
 
         //! [create_trackbar]
         int min = 0, max = 5;
-        JSlider slider = new JSlider(JSlider.VERTICAL,
-                min, max, match_method);
+        JSlider slider = new JSlider(JSlider.VERTICAL, min, max, match_method);
         //! [create_trackbar]
 
         slider.setPaintTicks(true);

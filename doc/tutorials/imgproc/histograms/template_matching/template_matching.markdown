@@ -9,32 +9,10 @@ Goal
 
 In this tutorial you will learn how to:
 
-@add_toggle_cpp
-
--   Use the OpenCV function @ref cv::matchTemplate to search for matches between an image patch and
+-   Use the OpenCV function **matchTemplate()** to search for matches between an image patch and
     an input image
--   Use the OpenCV function @ref cv::minMaxLoc to find the maximum and minimum values (as well as
+-   Use the OpenCV function **minMaxLoc()** to find the maximum and minimum values (as well as
     their positions) in a given array.
-
-@end_toggle
-
-@add_toggle_java
-
--   Use the OpenCV function **Imgproc.matchTemplate()** to search for matches between an image patch and
-    an input image
--   Use the OpenCV function **Core.MinMaxLocResult()** to find the maximum and minimum values (as well as
-    their positions) in a given array.
-
-@end_toggle
-
-@add_toggle_python
-
--   Use the OpenCV function **cv2.matchTemplate()** to search for matches between an image patch and
-    an input image
--   Use the OpenCV function **cv2.minMaxLoc()** to find the maximum and minimum values (as well as
-    their positions) in a given array.
-
-@end_toggle
 
 Theory
 ------
@@ -76,28 +54,8 @@ that should be used to find the match.
     The brightest locations indicate the highest matches. As you can see, the location marked by the
     red circle is probably the one with the highest value, so that location (the rectangle formed by
     that point as a corner and width and height equal to the patch image) is considered the match.
-
-@add_toggle_cpp
-
--   In practice, we use the function @ref cv::minMaxLoc to locate the highest value (or lower,
-    depending of the type of matching method) in the *R* matrix.
-
-@end_toggle
-
-@add_toggle_java
-
--   In practice, we use the function **Core.MinMaxLocResult()** to locate the highest value (or lower,
-    depending of the type of matching method) in the *R* matrix.
-
-
-@end_toggle
-
-@add_toggle_python
-
--   In practice, we use the function **cv2.minMaxLoc()** to locate the highest value (or lower,
-    depending of the type of matching method) in the *R* matrix.
-
-@end_toggle
+-   In practice, we locate the highest value (or lower, depending of the type of matching method) in
+    the *R* matrix, using the function **minMaxLoc()**
 
 ### How does the mask work?
 - If masking is needed for the match, three components are required:
@@ -125,26 +83,8 @@ that should be used to find the match.
 
 ### Which are the matching methods available in OpenCV?
 
-@add_toggle_cpp
-
-Good question. OpenCV implements Template matching in the function @ref cv::matchTemplate . The
+Good question. OpenCV implements Template matching in the function **matchTemplate()**. The
 available methods are 6:
-
-@end_toggle
-
-@add_toggle_java
-
-Good question. OpenCV implements Template matching in the function **Imgproc.matchTemplate()** . The
-available methods are 6:
-
-@end_toggle
-
-@add_toggle_python
-
-Good question. OpenCV implements Template matching in the function **cv2.matchTemplate()** . The
-available methods are 6:
-
-@end_toggle
 
 -#  **method=CV_TM_SQDIFF**
 
@@ -177,17 +117,18 @@ available methods are 6:
 Code
 ----
 
-@add_toggle_cpp
-
 -   **What does this program do?**
     -   Loads an input image, an image patch (*template*), and optionally a mask
-    -   Perform a template matching procedure by using the OpenCV function @ref cv::matchTemplate
+    -   Perform a template matching procedure by using the OpenCV function **matchTemplate()**
         with any of the 6 matching methods described before. The user can choose the method by
         entering its selection in the Trackbar.  If a mask is supplied, it will only be used for
         the methods that support masking
     -   Normalize the output of the matching procedure
     -   Localize the location with higher matching probability
     -   Draw a rectangle around the area corresponding to the highest match
+
+@add_toggle_cpp
+
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp)
 -   **Code at glance:**
@@ -197,15 +138,6 @@ Code
 
 @add_toggle_java
 
--   **What does this program do?**
-    -   Loads an input image, an image patch (*template*), and optionally a mask
-    -   Perform a template matching procedure by using the OpenCV function **Imgproc.matchTemplate()**
-        with any of the 6 matching methods described before. The user can choose the method by
-        entering its selection in the Trackbar.  If a mask is supplied, it will only be used for
-        the methods that support masking
-    -   Normalize the output of the matching procedure
-    -   Localize the location with higher matching probability
-    -   Draw a rectangle around the area corresponding to the highest match
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java)
 -   **Code at glance:**
@@ -215,15 +147,6 @@ Code
 
 @add_toggle_python
 
--   **What does this program do?**
-    -   Loads an input image, an image patch (*template*), and optionally a mask
-    -   Perform a template matching procedure by using the OpenCV function **cv2.matchTemplate()**
-        with any of the 6 matching methods described before. The user can choose the method by
-        entering its selection in the Trackbar.  If a mask is supplied, it will only be used for
-        the methods that support masking
-    -   Normalize the output of the matching procedure
-    -   Localize the location with higher matching probability
-    -   Draw a rectangle around the area corresponding to the highest match
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/match_template/match_template.py)
 -   **Code at glance:**
@@ -234,131 +157,138 @@ Code
 Explanation
 -----------
 
-@add_toggle_cpp
-
--#  Declare some global variables, such as the image, template and result matrices, as well as the
+-  Declare some global variables, such as the image, template and result matrices, as well as the
     match method and the window names:
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp declare
--#  Load the source image, template, and optionally, if supported for the matching method, a mask:
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp load_image
--#  Create the windows to show the results:
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp create_windows
--#  Create the Trackbar to enter the kind of matching method to be used. When a change is detected
-    the callback function **MatchingMethod** is called.
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp create_trackbar
--#  Wait until user exits the program.
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp wait_key
--#  Let's check out the callback function. First, it makes a copy of the source image:
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp copy_source
--#  Next, it creates the result matrix that will store the matching results for each template
-    location. Observe in detail the size of the result matrix (which matches all possible locations
-    for it)
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp create_result_matrix
--#  Perform the template matching operation:
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp match_template
-    the arguments are naturally the input image **I**, the template **T**, the result **R** and the
-    match_method (given by the Trackbar), and optionally the mask image **M**
--#  We normalize the results:
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp normalize
--#  We localize the minimum and maximum values in the result matrix **R** by using @ref
-    cv::minMaxLoc .
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp best_match
-    the function calls as arguments:
 
-    -   **result:** The source array
-    -   **&minVal** and **&maxVal:** Variables to save the minimum and maximum values in **result**
-    -   **&minLoc** and **&maxLoc:** The Point locations of the minimum and maximum values in the
-        array.
-    -   **Mat():** Optional mask
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp declare
+    @end_toggle
 
--#  For the first two methods ( TM_SQDIFF and MT_SQDIFF_NORMED ) the best match are the lowest
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java declare
+    @end_toggle
+
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py global_variables
+    @end_toggle
+
+-  Load the source image, template, and optionally, if supported for the matching method, a mask:
+
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp load_image
+    @end_toggle
+
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java load_image
+    @end_toggle
+
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py load_image
+    @end_toggle
+
+-  Create the Trackbar to enter the kind of matching method to be used. When a change is detected
+    the callback function is called.
+
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp create_trackbar
+    @end_toggle
+
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java create_trackbar
+    @end_toggle
+
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py create_trackbar
+    @end_toggle
+
+-  Let's check out the callback function. First, it makes a copy of the source image:
+
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp copy_source
+    @end_toggle
+
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java copy_source
+    @end_toggle
+
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py copy_source
+    @end_toggle
+
+-  Perform the template matching operation. The arguments are naturally the input image **I**,
+    the template **T**, the result **R** and the match_method (given by the Trackbar),
+    and optionally the mask image **M**.
+
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp match_template
+    @end_toggle
+
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java match_template
+    @end_toggle
+
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py match_template
+    @end_toggle
+
+-  We normalize the results:
+
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp normalize
+    @end_toggle
+
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java normalize
+    @end_toggle
+
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py normalize
+    @end_toggle
+
+-  We localize the minimum and maximum values in the result matrix **R** by using **minMaxLoc()**.
+
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp best_match
+    @end_toggle
+
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java best_match
+    @end_toggle
+
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py best_match
+    @end_toggle
+
+-  For the first two methods ( TM_SQDIFF and MT_SQDIFF_NORMED ) the best match are the lowest
     values. For all the others, higher values represent better matches. So, we save the
     corresponding value in the **matchLoc** variable:
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp match_loc
--#  Display the source image and the result matrix. Draw a rectangle around the highest possible
+
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp match_loc
+    @end_toggle
+
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java match_loc
+    @end_toggle
+
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py match_loc
+    @end_toggle
+
+-  Display the source image and the result matrix. Draw a rectangle around the highest possible
     matching area:
-    @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp imshow
 
-@end_toggle
+    @add_toggle_cpp
+        @snippet samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp imshow
+    @end_toggle
 
-@add_toggle_java
+    @add_toggle_java
+        @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java imshow
+    @end_toggle
 
--#  Declare some global variables, such as the image, template and result matrices, as well as the
-    match method and the window names:
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java declare
--#  Load the source image, template, and optionally, if supported for the matching method, a mask:
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java load_image
--#  Create the Trackbar (JSlider) to enter the kind of matching method to be used. When a change is detected
-    the callback function **stateChanged** after updating the _match_method_  calls the function **matchingMethod**.
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java create_trackbar
--#  Let's check out the **matchingMethod** function. First, it makes a copy of the source image:
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java copy_source
--#  Next, it creates the result matrix that will store the matching results for each template
-    location. Observe in detail the size of the result matrix (which matches all possible locations
-    for it)
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java create_result_matrix
--#  Perform the template matching operation:
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java match_template
-    the arguments are naturally the input image **I**, the template **T**, the result **R** and the
-    match_method (given by the Trackbar)
--#  We normalize the results:
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java normalize
--#  We localize the minimum and maximum values in the result matrix **R** by using **Core.MinMaxLocResult()** .
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java best_match
-    the function calls as arguments:
-    -   **result:** The source array
--#  For the first two methods ( TM_SQDIFF and MT_SQDIFF_NORMED ) the best match are the lowest
-    values. For all the others, higher values represent better matches. So, we save the
-    corresponding value in the **matchLoc** variable:
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java match_loc
--#  Display the source image and the result matrix. Draw a rectangle around the highest possible
-    matching area:
-    @snippet samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java imshow
-
-@end_toggle
-
-@add_toggle_python
-
--#  Declare some global variables, such as the image and template, as well as the
-    match method and the window names:
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py global_variables
--#  Load the source image, template, and optionally, if supported for the matching method, a mask:
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py load_image
--#  Create the windows to show the results:
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py create_windows
--#  Create the Trackbar to enter the kind of matching method to be used. When a change is detected
-    the callback function **MatchingMethod** is called.
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py create_trackbar
--#  Wait until user exits the program.
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py wait_key
--#  Let's check out the callback function. First, it makes a copy of the source image:
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py copy_source
--#  Perform the template matching operation:
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py match_template
-    the arguments are naturally the input image **I**, the template **T**, the result **R** and the
-    match_method (given by the Trackbar), and optionally the mask image **M**
--#  We normalize the results:
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py normalize
--#  We localize the minimum and maximum values in the result matrix **R** by using **cv2.minMaxLoc()**
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py best_match
-    the function calls as arguments:
-
-    -   **result:** The source array
-    -   **minVal** and **maxVal:** Variables to save the minimum and maximum values in **result**
-    -   **minLoc** and **maxLoc:** The Point locations of the minimum and maximum values in the
-        array.
-    -   **None:** Optional mask
-
-
--#  For the first two methods ( TM_SQDIFF and MT_SQDIFF_NORMED ) the best match are the lowest
-    values. For all the others, higher values represent better matches. So, we save the
-    corresponding value in the **matchLoc** variable:
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py match_loc
--#  Display the source image and the result matrix. Draw a rectangle around the highest possible
-    matching area:
-    @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py imshow
-
-@end_toggle
+    @add_toggle_python
+        @snippet samples/python/tutorial_code/imgProc/match_template/match_template.py imshow
+    @end_toggle
 
 Results
 -------
