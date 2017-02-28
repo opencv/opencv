@@ -109,7 +109,7 @@ public:
             }
             else
             {
-                if (readStringList(input, imageList))
+                if (isListOfImages(input) && readStringList(input, imageList))
                 {
                     inputType = IMAGE_LIST;
                     nrFrames = (nrFrames < (int)imageList.size()) ? nrFrames : (int)imageList.size();
@@ -189,6 +189,16 @@ public:
         for( ; it != it_end; ++it )
             l.push_back((string)*it);
         return true;
+    }
+
+    static bool isListOfImages( const string& filename)
+    {
+        string s(filename);
+        // Look for file extension
+        if( s.find(".xml") == string::npos && s.find(".yaml") == string::npos && s.find(".yml") == string::npos )
+            return false;
+        else
+            return true;
     }
 public:
     Size boardSize;              // The size of the board -> Number of items by width and height
