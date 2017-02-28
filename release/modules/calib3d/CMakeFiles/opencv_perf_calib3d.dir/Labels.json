@@ -1,0 +1,46 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/opencl/perf_stereobm.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_affine2d.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_cicrlesGrid.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_main.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_pnp.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_stereosgbm.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_precomp.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_calib3d", "PerfTest" ],
+		"name" : "opencv_perf_calib3d"
+	}
+}

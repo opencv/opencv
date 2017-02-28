@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/perf/opencl/perf_retina.ocl.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/perf/perf_main.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/perf/perf_precomp.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_bioinspired", "PerfTest" ],
+		"name" : "opencv_perf_bioinspired"
+	}
+}

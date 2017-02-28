@@ -1,0 +1,79 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/include/opencv2/face.hpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/include/opencv2/face/bif.hpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/include/opencv2/face/facerec.hpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/include/opencv2/face/predict_collector.hpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/bif.cpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/eigen_faces.cpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/facerec.cpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/fisher_faces.cpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/lbph_faces.cpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/predict_collector.cpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/face_basic.hpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_face", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_face", "Module" ],
+		"name" : "opencv_face"
+	}
+}

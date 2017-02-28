@@ -1,0 +1,39 @@
+# Target labels
+ Extra
+ opencv_aruco
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/include/opencv2/aruco.hpp
+ Extra
+ opencv_aruco
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/include/opencv2/aruco/charuco.hpp
+ Extra
+ opencv_aruco
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/include/opencv2/aruco/dictionary.hpp
+ Extra
+ opencv_aruco
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/aruco.cpp
+ Extra
+ opencv_aruco
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/charuco.cpp
+ Extra
+ opencv_aruco
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/dictionary.cpp
+ Extra
+ opencv_aruco
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/precomp.hpp
+ Extra
+ opencv_aruco
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/predefined_dictionaries.hpp
+ Extra
+ opencv_aruco
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

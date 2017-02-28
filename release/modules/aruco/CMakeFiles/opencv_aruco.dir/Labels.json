@@ -1,0 +1,59 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/include/opencv2/aruco.hpp",
+			"labels" : [ "Extra", "opencv_aruco", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/include/opencv2/aruco/charuco.hpp",
+			"labels" : [ "Extra", "opencv_aruco", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/include/opencv2/aruco/dictionary.hpp",
+			"labels" : [ "Extra", "opencv_aruco", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/aruco.cpp",
+			"labels" : [ "Extra", "opencv_aruco", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/charuco.cpp",
+			"labels" : [ "Extra", "opencv_aruco", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/dictionary.cpp",
+			"labels" : [ "Extra", "opencv_aruco", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_aruco", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/src/predefined_dictionaries.hpp",
+			"labels" : [ "Extra", "opencv_aruco", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_aruco", "Module" ],
+		"name" : "opencv_aruco"
+	}
+}

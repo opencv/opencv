@@ -1,0 +1,57 @@
+# Target labels
+ Extra
+ opencv_ximgproc
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_adaptive_manifold.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_bilateral_texture_filter.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_disparity_wls_filter.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_domain_transform.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_fast_hough_transform.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_fgs_filter.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_guided_filter.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_l0_smooth.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_main.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_rolling_guidance_filter.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_weighted_median_filter.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/pref_joint_bilateral_filter.cpp
+ Extra
+ opencv_ximgproc
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/perf/perf_precomp.hpp
+ Extra
+ opencv_ximgproc
+ PerfTest

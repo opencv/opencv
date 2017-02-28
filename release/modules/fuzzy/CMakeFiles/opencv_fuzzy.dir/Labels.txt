@@ -1,0 +1,35 @@
+# Target labels
+ Extra
+ opencv_fuzzy
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/include/opencv2/fuzzy.hpp
+ Extra
+ opencv_fuzzy
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/include/opencv2/fuzzy/fuzzy_F0_math.hpp
+ Extra
+ opencv_fuzzy
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/include/opencv2/fuzzy/fuzzy_image.hpp
+ Extra
+ opencv_fuzzy
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/include/opencv2/fuzzy/types.hpp
+ Extra
+ opencv_fuzzy
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/src/fuzzy_F0_math.cpp
+ Extra
+ opencv_fuzzy
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/src/fuzzy_image.cpp
+ Extra
+ opencv_fuzzy
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/src/precomp.hpp
+ Extra
+ opencv_fuzzy
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

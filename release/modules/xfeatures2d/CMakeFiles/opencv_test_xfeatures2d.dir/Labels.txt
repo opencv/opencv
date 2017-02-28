@@ -1,0 +1,37 @@
+# Target labels
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_detectors.cpp
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_features2d.cpp
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_keypoints.cpp
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_main.cpp
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_rotation_and_scale_invariance.cpp
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_surf.cuda.cpp
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_surf.ocl.cpp
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_precomp.hpp
+ Extra
+ opencv_xfeatures2d
+ AccuracyTest

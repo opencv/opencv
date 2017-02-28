@@ -1,0 +1,21 @@
+# Target labels
+ Main
+ opencv_videoio
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/perf/perf_input.cpp
+ Main
+ opencv_videoio
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/perf/perf_main.cpp
+ Main
+ opencv_videoio
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/perf/perf_output.cpp
+ Main
+ opencv_videoio
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/perf/perf_precomp.hpp
+ Main
+ opencv_videoio
+ PerfTest

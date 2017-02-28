@@ -1,0 +1,171 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_arithm.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_channels.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_dft.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_gemm.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_image2d.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_matrix_expr.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_matrix_operation.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_arithm.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_concatenation.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_conjugate_gradient.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_countnonzero.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_downhill_simplex.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_ds.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_dxt.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_eigen.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_hal_core.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_intrin.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_io.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_ippasync.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_lpsolver.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_mat.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_math.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_misc.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_operations.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_ptr.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_rand.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_rotatedrect.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_umat.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_utils.cpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_intrin_utils.hpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_core", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_core", "AccuracyTest" ],
+		"name" : "opencv_test_core"
+	}
+}

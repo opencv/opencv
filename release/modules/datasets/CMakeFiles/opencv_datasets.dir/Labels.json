@@ -1,0 +1,319 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/ar_hmdb.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/ar_sports.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/dataset.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/fr_adience.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/fr_lfw.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/gr_chalearn.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/gr_skig.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/hpe_humaneva.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/hpe_parse.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/ir_affine.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/ir_robot.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/is_bsds.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/is_weizmann.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/msm_epfl.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/msm_middlebury.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/or_imagenet.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/or_mnist.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/or_pascal.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/or_sun.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/pd_caltech.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/pd_inria.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/slam_kitti.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/slam_tumindoor.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/tr_chars.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/tr_icdar.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/tr_svt.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/track_alov.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/track_vot.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/include/opencv2/datasets/util.hpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/ar_hmdb.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/ar_sports.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/dataset.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/fr_adience.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/fr_lfw.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/gr_chalearn.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/gr_skig.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/hpe_humaneva.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/hpe_parse.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/ir_affine.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/ir_robot.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/is_bsds.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/is_weizmann.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/msm_epfl.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/msm_middlebury.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/or_imagenet.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/or_mnist.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/or_pascal.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/or_sun.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/pd_caltech.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/pd_inria.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/slam_kitti.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/slam_tumindoor.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/tinyxml2/tinyxml2.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/tr_chars.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/tr_icdar.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/tr_svt.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/track_alov.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/track_vot.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/util.cpp",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/datasets/src/tinyxml2/tinyxml2.h",
+			"labels" : [ "Extra", "opencv_datasets", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_datasets", "Module" ],
+		"name" : "opencv_datasets"
+	}
+}

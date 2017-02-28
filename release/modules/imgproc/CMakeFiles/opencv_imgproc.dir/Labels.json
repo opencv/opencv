@@ -1,0 +1,563 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/imgproc.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/imgproc_c.h",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/types_c.h",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/hal/hal.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/hal/interface.h",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/detail/distortion_model.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/accum.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/approx.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/blend.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/canny.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/clahe.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/color.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/colormap.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/connectedcomponents.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/contours.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/convhull.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/corner.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/cornersubpix.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/demosaicing.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/deriv.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/distransform.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/drawing.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/emd.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/featureselect.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/filter.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/floodfill.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/gabor.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/generalized_hough.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/geometry.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/grabcut.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/hershey_fonts.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/histogram.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/hough.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/imgwarp.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/intersection.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/linefit.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/lsd.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/main.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/matchcontours.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/min_enclosing_triangle.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/moments.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/morph.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/phasecorr.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/pyramids.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/rotcalipers.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/samplers.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/segmentation.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/shapedescr.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/smooth.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/spatialgradient.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/subdivision2d.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/sumpixels.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/tables.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/templmatch.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/thresh.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/undistort.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/utils.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/accumulate.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/bilateral.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/blend_linear.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/boxFilter.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/boxFilter3x3.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/calc_back_project.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/canny.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/clahe.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/corner.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/covardata.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/cvtcolor.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filter2D.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filter2DSmall.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filterSepCol.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filterSepRow.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filterSep_singlePass.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filterSmall.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/gaussianBlur3x3.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/gaussianBlur5x5.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/gftt.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/histogram.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/hough_lines.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/integral_sum.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/laplacian3.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/laplacian5.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/linearPolar.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/logPolar.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/match_template.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/medianFilter.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/moments.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/morph.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/morph3x3.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/precornerdetect.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/pyr_down.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/pyr_up.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/pyramid_up.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/remap.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/resize.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/sepFilter3x3.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/threshold.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/warp_affine.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/warp_perspective.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/warp_transform.cl",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/imgproc/opencl_kernels_imgproc.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/imgproc/opencl_kernels_imgproc.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/filterengine.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/gcgraph.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/hal_replacement.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/_geom.h",
+			"labels" : [ "Main", "opencv_imgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/imgproc/opencl_kernels_imgproc.cpp.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_imgproc", "Module" ],
+		"name" : "opencv_imgproc"
+	}
+}

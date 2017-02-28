@@ -1,0 +1,51 @@
+# Target labels
+ Extra
+ opencv_xobjdetect
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/include/opencv2/xobjdetect.hpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/feature_evaluator.cpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/lbpfeatures.cpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/waldboost.cpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/wbdetector.cpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/feature_evaluator.hpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/precomp.hpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/waldboost.hpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/wbdetector.hpp
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/cascadeclassifier.h
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/lbpfeatures.h
+ Extra
+ opencv_xobjdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

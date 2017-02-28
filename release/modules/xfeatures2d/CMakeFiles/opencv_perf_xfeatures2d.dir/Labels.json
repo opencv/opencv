@@ -1,0 +1,56 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_daisy.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_latch.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_main.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_msd.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_surf.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_surf.cuda.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_surf.ocl.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_vgg.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_precomp.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_xfeatures2d", "PerfTest" ],
+		"name" : "opencv_perf_xfeatures2d"
+	}
+}

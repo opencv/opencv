@@ -1,0 +1,17 @@
+# Target labels
+ Extra
+ opencv_face
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/test/test_bif.cpp
+ Extra
+ opencv_face
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/test/test_main.cpp
+ Extra
+ opencv_face
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/test/test_precomp.hpp
+ Extra
+ opencv_face
+ AccuracyTest

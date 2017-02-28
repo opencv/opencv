@@ -1,0 +1,69 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/include/opencv2/videoio.hpp",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/include/opencv2/videoio/videoio.hpp",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/include/opencv2/videoio/cap_ios.h",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/include/opencv2/videoio/videoio_c.h",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap.cpp",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap_images.cpp",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap_mjpeg_encoder.cpp",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap_mjpeg_decoder.cpp",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap_avfoundation_mac.mm",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_videoio", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_videoio", "Module" ],
+		"name" : "opencv_videoio"
+	}
+}

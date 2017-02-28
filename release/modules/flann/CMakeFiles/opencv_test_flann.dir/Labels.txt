@@ -1,0 +1,17 @@
+# Target labels
+ Main
+ opencv_flann
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/flann/test/test_lshtable_badarg.cpp
+ Main
+ opencv_flann
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/flann/test/test_main.cpp
+ Main
+ opencv_flann
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/flann/test/test_precomp.hpp
+ Main
+ opencv_flann
+ AccuracyTest

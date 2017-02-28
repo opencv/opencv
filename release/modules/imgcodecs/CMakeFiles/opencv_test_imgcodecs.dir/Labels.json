@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/test/test_grfmt.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_imgcodecs", "AccuracyTest" ],
+		"name" : "opencv_test_imgcodecs"
+	}
+}

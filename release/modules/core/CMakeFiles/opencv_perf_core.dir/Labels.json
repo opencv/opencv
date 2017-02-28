@@ -1,0 +1,166 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/cuda/perf_gpumat.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_arithm.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_bufferpool.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_channels.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_dxt.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_gemm.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_matop.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_usage_flags.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_abs.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_addWeighted.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_arithm.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_bitwise.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_compare.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_convertTo.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_cvround.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_dft.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_dot.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_inRange.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_io_base64.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_main.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_mat.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_math.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_merge.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_minmaxloc.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_norm.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_reduce.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_sort.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_split.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_stat.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_umat.cpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_precomp.hpp",
+			"labels" : [ "Main", "opencv_core", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_core", "PerfTest" ],
+		"name" : "opencv_perf_core"
+	}
+}

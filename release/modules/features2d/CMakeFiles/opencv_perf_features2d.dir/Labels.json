@@ -1,0 +1,56 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/opencl/perf_brute_force_matcher.cpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/opencl/perf_fast.cpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/opencl/perf_orb.cpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/perf_agast.cpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/perf_batchDistance.cpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/perf_fast.cpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/perf_main.cpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/perf_orb.cpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/perf/perf_precomp.hpp",
+			"labels" : [ "Main", "opencv_features2d", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_features2d", "PerfTest" ],
+		"name" : "opencv_perf_features2d"
+	}
+}

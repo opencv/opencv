@@ -1,0 +1,134 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/map.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapaffine.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapper.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradaffine.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradeuclid.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradproj.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradshift.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradsimilar.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapperpyramid.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapprojec.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapshift.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/map.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapaffine.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapper.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradaffine.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradeuclid.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradproj.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradshift.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradsimilar.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapperpyramid.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapprojec.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapshift.cpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_reg", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_reg", "Module" ],
+		"name" : "opencv_reg"
+	}
+}

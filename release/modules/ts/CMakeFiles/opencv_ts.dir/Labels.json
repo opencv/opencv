@@ -1,0 +1,109 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/include/opencv2/ts.hpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/include/opencv2/ts/cuda_perf.hpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/include/opencv2/ts/cuda_test.hpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/include/opencv2/ts/ocl_perf.hpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/include/opencv2/ts/ocl_test.hpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/include/opencv2/ts/ts_ext.hpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/include/opencv2/ts/ts_perf.hpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/include/opencv2/ts/ts_gtest.h",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/cuda_perf.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/cuda_test.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/ocl_perf.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/ocl_test.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/ts.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/ts_arrtest.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/ts_func.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/ts_gtest.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/ts_perf.cpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ts/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_ts", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_ts", "Module" ],
+		"name" : "opencv_ts"
+	}
+}

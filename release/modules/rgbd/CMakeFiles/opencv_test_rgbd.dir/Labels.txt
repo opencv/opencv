@@ -1,0 +1,29 @@
+# Target labels
+ Extra
+ opencv_rgbd
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/test/test_main.cpp
+ Extra
+ opencv_rgbd
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/test/test_normal.cpp
+ Extra
+ opencv_rgbd
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/test/test_odometry.cpp
+ Extra
+ opencv_rgbd
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/test/test_registration.cpp
+ Extra
+ opencv_rgbd
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/test/test_utils.cpp
+ Extra
+ opencv_rgbd
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/test/test_precomp.hpp
+ Extra
+ opencv_rgbd
+ AccuracyTest

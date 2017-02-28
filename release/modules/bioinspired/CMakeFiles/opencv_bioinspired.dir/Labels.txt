@@ -1,0 +1,116 @@
+# Target labels
+ Extra
+ opencv_bioinspired
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired/bioinspired.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired/retina.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired/retinafasttonemapping.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired/transientareassegmentationmodule.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/basicretinafilter.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/imagelogpolprojection.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/magnoretinafilter.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/parvoretinafilter.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retina.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retina_ocl.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinacolor.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinafasttonemapping.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinafilter.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/transientareassegmentationmodule.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/opencl/retina_kernel.cl
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/bioinspired/opencl_kernels_bioinspired.cpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/bioinspired/opencl_kernels_bioinspired.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/basicretinafilter.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/imagelogpolprojection.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/magnoretinafilter.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/parvoretinafilter.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/precomp.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retina_ocl.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinacolor.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinafilter.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/templatebuffer.hpp
+ Extra
+ opencv_bioinspired
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
+/Users/chihiro/Programs/opencv/opencv/release/modules/bioinspired/opencl_kernels_bioinspired.cpp.rule

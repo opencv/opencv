@@ -1,0 +1,17 @@
+# Target labels
+ Extra
+ opencv_reg
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/test/test_main.cpp
+ Extra
+ opencv_reg
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/test/test_reg.cpp
+ Extra
+ opencv_reg
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/test/test_precomp.hpp
+ Extra
+ opencv_reg
+ AccuracyTest

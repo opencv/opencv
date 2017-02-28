@@ -1,0 +1,84 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/include/opencv2/rgbd.hpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/include/opencv2/rgbd/linemod.hpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/depth_cleaner.cpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/depth_registration.cpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/depth_to_3d.cpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/linemod.cpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/normal.cpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/odometry.cpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/plane.cpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/utils.cpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/depth_to_3d.h",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/utils.h",
+			"labels" : [ "Extra", "opencv_rgbd", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_rgbd", "Module" ],
+		"name" : "opencv_rgbd"
+	}
+}

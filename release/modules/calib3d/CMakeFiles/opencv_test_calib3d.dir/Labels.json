@@ -1,0 +1,166 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/opencl/test_stereobm.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_affine2d_estimator.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_affine3.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_affine3d_estimator.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_affine_partial2d_estimator.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_cameracalibration.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_cameracalibration_artificial.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_cameracalibration_badarg.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_cameracalibration_tilt.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_chessboardgenerator.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_chesscorners.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_chesscorners_badarg.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_chesscorners_timing.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_compose_rt.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_cornerssubpix.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_decompose_projection.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_fisheye.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_fundam.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_homography.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_homography_decomp.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_modelest.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_posit.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_reproject_image_to_3d.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_solvepnp_ransac.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_stereomatching.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_undistort.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_undistort_badarg.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_undistort_points.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_chessboardgenerator.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_calib3d", "AccuracyTest" ],
+		"name" : "opencv_test_calib3d"
+	}
+}

@@ -1,0 +1,41 @@
+# Target labels
+ Main
+ opencv_videoio
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_basic_props.cpp
+ Main
+ opencv_videoio
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_ffmpeg.cpp
+ Main
+ opencv_videoio
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_fourcc.cpp
+ Main
+ opencv_videoio
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_framecount.cpp
+ Main
+ opencv_videoio
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_main.cpp
+ Main
+ opencv_videoio
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_positioning.cpp
+ Main
+ opencv_videoio
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_video_io.cpp
+ Main
+ opencv_videoio
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_video_pos.cpp
+ Main
+ opencv_videoio
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_precomp.hpp
+ Main
+ opencv_videoio
+ AccuracyTest

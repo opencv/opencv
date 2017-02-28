@@ -1,0 +1,293 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/include/opencv2/tracking.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/include/opencv2/tracking/feature.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/include/opencv2/tracking/kalman_filters.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/include/opencv2/tracking/onlineBoosting.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/include/opencv2/tracking/onlineMIL.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/include/opencv2/tracking/tldDataset.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/include/opencv2/tracking/tracker.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/include/opencv2/tracking/tracking.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/augmented_unscented_kalman.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/feature.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/featureColorName.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/gtrTracker.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/gtrUtils.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/multiTracker.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/multiTracker_alt.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/onlineBoosting.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/onlineMIL.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/roiSelector.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldDataset.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldDetector.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldEnsembleClassifier.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldModel.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldTracker.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldUtils.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tracker.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerBoosting.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerBoostingModel.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerFeature.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerFeatureSet.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerKCF.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerMIL.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerMILModel.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerMedianFlow.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerModel.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerSampler.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerSamplerAlgorithm.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerStateEstimator.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/unscented_kalman.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/opencl/tldDetector.cl",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/tracking/opencl_kernels_tracking.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/tracking/opencl_kernels_tracking.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/PFSolver.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/TrackingFunctionPF.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/gtrTracker.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/gtrUtils.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/multiTracker.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldDetector.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldEnsembleClassifier.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldModel.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldTracker.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/tldUtils.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerBoostingModel.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/src/trackerMILModel.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/tracking/opencl_kernels_tracking.cpp.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_tracking", "Module" ],
+		"name" : "opencv_tracking"
+	}
+}

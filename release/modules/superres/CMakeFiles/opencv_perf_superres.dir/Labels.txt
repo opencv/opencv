@@ -1,0 +1,17 @@
+# Target labels
+ Main
+ opencv_superres
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/superres/perf/perf_main.cpp
+ Main
+ opencv_superres
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/superres/perf/perf_superres.cpp
+ Main
+ opencv_superres
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/superres/perf/perf_precomp.hpp
+ Main
+ opencv_superres
+ PerfTest

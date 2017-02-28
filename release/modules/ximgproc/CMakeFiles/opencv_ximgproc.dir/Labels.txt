@@ -1,0 +1,191 @@
+# Target labels
+ Extra
+ opencv_ximgproc
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/deriche_filter.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/edge_filter.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/estimated_covariance.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/fast_hough_transform.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/fast_line_detector.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/lsc.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/paillou_filter.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/seeds.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/segmentation.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/slic.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/sparse_match_interpolator.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/structured_edge_detection.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/weighted_median_filter.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/adaptive_manifold_filter_n.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/bilateral_texture_filter.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/deriche_filter.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/disparity_filters.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/domain_transform.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/dtfilter_cpu.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/edgeaware_filters_common.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/estimated_covariance.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/fast_hough_transform.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/fast_line_detector.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/fgs_filter.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/graphsegmentation.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/guided_filter.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/joint_bilateral_filter.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/l0_smooth.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/lsc.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/niblack_thresholding.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/paillou_filter.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/rolling_guidance_filter.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/seeds.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/selectivesearchsegmentation.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/slic.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/sparse_match_interpolators.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/structured_edge_detection.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/thinning.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/weighted_median_filter.cpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/advanced_types.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/dtfilter_cpu.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/dtfilter_cpu.inl.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/edgeaware_filters_common.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/precomp.hpp
+ Extra
+ opencv_ximgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
