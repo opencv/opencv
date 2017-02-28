@@ -2834,6 +2834,8 @@ public:
     double gaussian(double sigma);
 
     uint64 state;
+
+    bool operator ==(const RNG& other) const;
 };
 
 /** @brief Mersenne Twister random number generator
