@@ -1,0 +1,159 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/include/opencv2/xphoto.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/include/opencv2/xphoto/bm3d_image_denoising.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/include/opencv2/xphoto/dct_image_denoising.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/include/opencv2/xphoto/inpainting.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/include/opencv2/xphoto/white_balance.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_image_denoising.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/dct_image_denoising.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/grayworld_white_balance.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/inpainting.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/learning_based_color_balance.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/simple_color_balance.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/advanced_types.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/annf.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/blending.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_denoising_invoker_commons.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_denoising_invoker_step1.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_denoising_invoker_step2.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_denoising_invoker_structs.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_denoising_transforms.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_denoising_transforms_1D.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_denoising_transforms_2D.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/bm3d_denoising_transforms_haar.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/gcgraph.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/kaiser_window.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/learning_based_color_balance_model.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/norm2.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/photomontage.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/src/whs.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_xphoto", "Module" ],
+		"name" : "opencv_xphoto"
+	}
+}

@@ -1,0 +1,93 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/include/opencv2/superres.hpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/include/opencv2/superres/optical_flow.hpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/btv_l1.cpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/btv_l1_cuda.cpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/frame_source.cpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/input_array_utility.cpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/optical_flow.cpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/super_resolution.cpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/opencl/superres_btvl1.cl",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/superres/opencl_kernels_superres.cpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/superres/opencl_kernels_superres.hpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/input_array_utility.hpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/src/ring_buffer.hpp",
+			"labels" : [ "Main", "opencv_superres", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/superres/opencl_kernels_superres.cpp.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_superres", "Module" ],
+		"name" : "opencv_superres"
+	}
+}

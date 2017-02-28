@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/test/test_retina_ocl.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_bioinspired", "AccuracyTest" ],
+		"name" : "opencv_test_bioinspired"
+	}
+}

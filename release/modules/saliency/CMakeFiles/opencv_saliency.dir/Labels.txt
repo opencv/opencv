@@ -1,0 +1,87 @@
+# Target labels
+ Extra
+ opencv_saliency
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/include/opencv2/saliency.hpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/include/opencv2/saliency/saliencyBaseClasses.hpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/include/opencv2/saliency/saliencySpecializedClasses.hpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/CmFile.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/CmShow.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/FilterTIG.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/ValStructVec.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/objectnessBING.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/motionSaliency.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/motionSaliencyBinWangApr2014.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/objectness.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/saliency.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/staticSaliency.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/staticSaliencyFineGrained.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/staticSaliencySpectralResidual.cpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/CmFile.hpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/CmShow.hpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/CmTimer.hpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/BING/kyheader.hpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/saliency/src/precomp.hpp
+ Extra
+ opencv_saliency
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

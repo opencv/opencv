@@ -1,0 +1,17 @@
+# Target labels
+ Main
+ opencv_imgcodecs
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/test/test_grfmt.cpp
+ Main
+ opencv_imgcodecs
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/test/test_main.cpp
+ Main
+ opencv_imgcodecs
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/test/test_precomp.hpp
+ Main
+ opencv_imgcodecs
+ AccuracyTest

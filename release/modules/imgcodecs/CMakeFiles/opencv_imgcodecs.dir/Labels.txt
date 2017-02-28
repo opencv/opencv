@@ -1,0 +1,179 @@
+# Target labels
+ Main
+ opencv_imgcodecs
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/include/opencv2/imgcodecs/imgcodecs.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/include/opencv2/imgcodecs/imgcodecs_c.h
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/include/opencv2/imgcodecs/ios.h
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/loadsave.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/utils.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/precomp.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/utils.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_base.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_bmp.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_exr.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_gdal.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_gdcm.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_hdr.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_jpeg.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_jpeg2000.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_pam.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_png.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_pxm.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_sunras.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_tiff.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_webp.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/bitstrm.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/rgbe.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/exif.cpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_base.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_bmp.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_exr.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_gdal.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_gdcm.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_hdr.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_jpeg.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_jpeg2000.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_pam.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_png.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_pxm.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_sunras.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_tiff.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_webp.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmts.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/bitstrm.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/rgbe.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/exif.hpp
+ Main
+ opencv_imgcodecs
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

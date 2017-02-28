@@ -1,0 +1,45 @@
+# Target labels
+ Main
+ opencv_video
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/opencl/perf_bgfg_mog2.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/opencl/perf_motempl.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/opencl/perf_optflow_dualTVL1.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/opencl/perf_optflow_farneback.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/opencl/perf_optflow_pyrlk.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/perf_ecc.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/perf_main.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/perf_optflowpyrlk.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/perf_tvl1optflow.cpp
+ Main
+ opencv_video
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/video/perf/perf_precomp.hpp
+ Main
+ opencv_video
+ PerfTest

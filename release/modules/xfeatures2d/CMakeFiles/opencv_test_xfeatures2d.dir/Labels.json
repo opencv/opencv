@@ -1,0 +1,51 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_detectors.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_features2d.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_keypoints.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_rotation_and_scale_invariance.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_surf.cuda.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_surf.ocl.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_xfeatures2d", "AccuracyTest" ],
+		"name" : "opencv_test_xfeatures2d"
+	}
+}

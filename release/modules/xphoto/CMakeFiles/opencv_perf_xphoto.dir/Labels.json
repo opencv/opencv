@@ -1,0 +1,31 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/perf/perf_grayworld.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/perf/perf_learning_based_color_balance.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/perf/perf_main.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/perf/perf_precomp.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_xphoto", "PerfTest" ],
+		"name" : "opencv_perf_xphoto"
+	}
+}

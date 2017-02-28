@@ -1,0 +1,99 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/include/opencv2/surface_matching.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/include/opencv2/surface_matching/icp.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/include/opencv2/surface_matching/pose_3d.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/include/opencv2/surface_matching/ppf_helpers.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/include/opencv2/surface_matching/ppf_match_3d.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/include/opencv2/surface_matching/t_hash_int.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/icp.cpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/pose_3d.cpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/ppf_helpers.cpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/ppf_match_3d.cpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/t_hash_int.cpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/c_utils.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/hash_murmur.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/hash_murmur64.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/hash_murmur86.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/surface_matching/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_surface_matching", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_surface_matching", "Module" ],
+		"name" : "opencv_surface_matching"
+	}
+}

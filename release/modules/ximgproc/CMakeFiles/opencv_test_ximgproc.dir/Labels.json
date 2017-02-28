@@ -1,0 +1,101 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_adaptive_manifold.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_adaptive_manifold_ref_impl.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_bilateral_texture_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_disparity_wls_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_domain_transform.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_fast_hough_transform.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_fgs_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_fld.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_guided_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_joint_bilateral_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_l0_smooth.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_rolling_guidance_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_sparse_match_interpolator.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_structured_edge_detection.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_thinning.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_weighted_median_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_ximgproc", "AccuracyTest" ],
+		"name" : "opencv_test_ximgproc"
+	}
+}

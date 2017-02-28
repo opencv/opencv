@@ -1,0 +1,59 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/include/opencv2/stereo.hpp",
+			"labels" : [ "Extra", "opencv_stereo", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/include/opencv2/stereo/descriptor.hpp",
+			"labels" : [ "Extra", "opencv_stereo", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/include/opencv2/stereo/matching.hpp",
+			"labels" : [ "Extra", "opencv_stereo", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/include/opencv2/stereo/stereo.hpp",
+			"labels" : [ "Extra", "opencv_stereo", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/src/descriptor.cpp",
+			"labels" : [ "Extra", "opencv_stereo", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/src/stereo_binary_bm.cpp",
+			"labels" : [ "Extra", "opencv_stereo", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/src/stereo_binary_sgbm.cpp",
+			"labels" : [ "Extra", "opencv_stereo", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_stereo", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_stereo", "Module" ],
+		"name" : "opencv_stereo"
+	}
+}

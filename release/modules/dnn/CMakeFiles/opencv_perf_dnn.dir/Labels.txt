@@ -1,0 +1,17 @@
+# Target labels
+ Extra
+ opencv_dnn
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/perf/perf_convolution.cpp
+ Extra
+ opencv_dnn
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/perf/perf_main.cpp
+ Extra
+ opencv_dnn
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/perf/perf_precomp.hpp
+ Extra
+ opencv_dnn
+ PerfTest

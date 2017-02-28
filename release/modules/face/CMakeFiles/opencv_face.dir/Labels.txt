@@ -1,0 +1,55 @@
+# Target labels
+ Extra
+ opencv_face
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/include/opencv2/face.hpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/include/opencv2/face/bif.hpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/include/opencv2/face/facerec.hpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/include/opencv2/face/predict_collector.hpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/bif.cpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/eigen_faces.cpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/facerec.cpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/fisher_faces.cpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/lbph_faces.cpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/predict_collector.cpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/face_basic.hpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/face/src/precomp.hpp
+ Extra
+ opencv_face
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

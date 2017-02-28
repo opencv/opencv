@@ -1,0 +1,29 @@
+# Target labels
+ Extra
+ opencv_tracking
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_aukf.cpp
+ Extra
+ opencv_tracking
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_main.cpp
+ Extra
+ opencv_tracking
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_trackerParametersIO.cpp
+ Extra
+ opencv_tracking
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_trackers.cpp
+ Extra
+ opencv_tracking
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_ukf.cpp
+ Extra
+ opencv_tracking
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_precomp.hpp
+ Extra
+ opencv_tracking
+ AccuracyTest

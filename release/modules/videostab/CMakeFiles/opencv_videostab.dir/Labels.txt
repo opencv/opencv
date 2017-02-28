@@ -1,0 +1,119 @@
+# Target labels
+ Main
+ opencv_videostab
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/deblurring.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/fast_marching.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/fast_marching_inl.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/frame_source.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/global_motion.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/inpainting.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/log.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/motion_core.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/motion_stabilizing.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/optical_flow.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/outlier_rejection.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/ring_buffer.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/stabilizer.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/wobble_suppression.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/deblurring.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/fast_marching.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/frame_source.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/global_motion.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/inpainting.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/log.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/motion_stabilizing.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/optical_flow.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/outlier_rejection.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/stabilizer.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/wobble_suppression.cpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/clp.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/precomp.hpp
+ Main
+ opencv_videostab
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

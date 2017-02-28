@@ -1,0 +1,64 @@
+# Target labels
+ Main
+ opencv_superres
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/superres/include/opencv2/superres.hpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/include/opencv2/superres/optical_flow.hpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/btv_l1.cpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/btv_l1_cuda.cpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/frame_source.cpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/input_array_utility.cpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/optical_flow.cpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/super_resolution.cpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/opencl/superres_btvl1.cl
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/superres/opencl_kernels_superres.cpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/superres/opencl_kernels_superres.hpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/input_array_utility.hpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/precomp.hpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/superres/src/ring_buffer.hpp
+ Main
+ opencv_superres
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
+/Users/chihiro/Programs/opencv/opencv/release/modules/superres/opencl_kernels_superres.cpp.rule

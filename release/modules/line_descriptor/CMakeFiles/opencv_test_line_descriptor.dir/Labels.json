@@ -1,0 +1,36 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/test/test_descriptors_regression.cpp",
+			"labels" : [ "Extra", "opencv_line_descriptor", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/test/test_detector_regression.cpp",
+			"labels" : [ "Extra", "opencv_line_descriptor", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_line_descriptor", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/test/test_matcher_regression.cpp",
+			"labels" : [ "Extra", "opencv_line_descriptor", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_line_descriptor", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_line_descriptor", "AccuracyTest" ],
+		"name" : "opencv_test_line_descriptor"
+	}
+}

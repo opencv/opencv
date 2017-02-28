@@ -1,0 +1,114 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/include/opencv2/ml.hpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/include/opencv2/ml/ml.hpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/ann_mlp.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/boost.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/data.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/em.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/gbt.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/inner_functions.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/kdtree.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/knearest.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/lr.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/nbayes.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/rtrees.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/svm.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/svmsgd.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/testset.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/tree.cpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/kdtree.hpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/ml/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_ml", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_ml", "Module" ],
+		"name" : "opencv_ml"
+	}
+}

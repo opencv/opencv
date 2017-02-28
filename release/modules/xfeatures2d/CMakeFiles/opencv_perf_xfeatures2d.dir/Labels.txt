@@ -1,0 +1,41 @@
+# Target labels
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_daisy.cpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_latch.cpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_main.cpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_msd.cpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_surf.cpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_surf.cuda.cpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_surf.ocl.cpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_vgg.cpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/perf/perf_precomp.hpp
+ Extra
+ opencv_xfeatures2d
+ PerfTest

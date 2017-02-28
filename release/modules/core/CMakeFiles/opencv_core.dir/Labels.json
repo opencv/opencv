@@ -1,0 +1,838 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/block.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/border_interpolate.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/color.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/common.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/datamov_utils.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/dynamic_smem.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/emulation.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/filters.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/funcattrib.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/functional.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/limits.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/reduce.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/saturate_cast.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/scan.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/simd_functions.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/transform.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/type_traits.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/utility.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/vec_distance.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/vec_math.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/vec_traits.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/warp.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/warp_reduce.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/warp_shuffle.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/color_detail.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/reduce.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/reduce_key_val.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/transform_detail.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/type_traits_detail.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/vec_distance_detail.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/affine.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/base.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/bufferpool.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/core.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda.inl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda_stream_accessor.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda_types.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cvstd.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cvstd.inl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/directx.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/eigen.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/fast_math.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ippasync.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/mat.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/mat.inl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/matx.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/neon_utils.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ocl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ocl_genbase.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/opengl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/operations.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/optim.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ovx.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/persistence.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/private.cuda.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/private.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ptr.inl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/saturate.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/sse_utils.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/traits.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/types.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/utility.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/va_intel.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/version.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/wimage.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/core_c.h",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cvdef.h",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/types_c.h",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/hal.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/intrin.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/intrin_cpp.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/intrin_neon.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/intrin_sse.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/interface.h",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/core/version_string.inc",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/algorithm.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/alloc.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/arithm.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/array.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/command_line_parser.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/conjugate_gradient.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/convert.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/copy.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/cuda_gpu_mat.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/cuda_host_mem.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/cuda_info.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/cuda_stream.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/datastructs.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/directx.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/downhill_simplex.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/dxt.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/gl_core_3_1.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/glob.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/hal_internal.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/kmeans.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/lapack.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/lda.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/lpsolver.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/mathfuncs.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/mathfuncs_core.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/matmul.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/matop.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/matrix.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/matrix_decomp.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/merge.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/ocl.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/opencl_clamdblas.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/opencl_clamdfft.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/opencl_core.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opengl.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/out.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/ovx.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/parallel.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/parallel_pthreads.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/pca.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/persistence.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/rand.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/split.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/stat.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/stl.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/system.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/tables.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/types.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/umatrix.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/va_intel.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/arithm.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/convert.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/copymakeborder.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/copyset.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/cvtclr_dx.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/fft.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/flip.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/gemm.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/inrange.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/lut.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/meanstddev.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/minmaxloc.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/mixchannels.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/mulspectrums.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/normalize.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/reduce.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/reduce2.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/repeat.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/set_identity.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/split_merge.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/transpose.cl",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/core/opencl_kernels_core.cpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/core/opencl_kernels_core.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/arithm_core.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/arithm_simd.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/bufferpool.impl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/directx.inc.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/gl_core_3_1.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/hal_internal.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/hal_replacement.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/autogenerated/opencl_clamdblas_impl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/autogenerated/opencl_clamdfft_impl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/autogenerated/opencl_core_impl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/autogenerated/opencl_gl_impl.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/runtime_common.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/core/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_core", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/core/opencl_kernels_core.cpp.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_core", "Module" ],
+		"name" : "opencv_core"
+	}
+}

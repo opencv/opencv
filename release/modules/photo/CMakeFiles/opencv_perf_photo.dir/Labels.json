@@ -1,0 +1,36 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/opencl/perf_denoising.cpp",
+			"labels" : [ "Main", "opencv_photo", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/perf_cuda.cpp",
+			"labels" : [ "Main", "opencv_photo", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/perf_inpaint.cpp",
+			"labels" : [ "Main", "opencv_photo", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/perf_main.cpp",
+			"labels" : [ "Main", "opencv_photo", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/perf_precomp.hpp",
+			"labels" : [ "Main", "opencv_photo", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_photo", "PerfTest" ],
+		"name" : "opencv_perf_photo"
+	}
+}

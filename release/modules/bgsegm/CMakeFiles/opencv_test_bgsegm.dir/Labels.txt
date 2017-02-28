@@ -1,0 +1,17 @@
+# Target labels
+ Extra
+ opencv_bgsegm
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/test/test_backgroundsubtractor_gbh.cpp
+ Extra
+ opencv_bgsegm
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/test/test_main.cpp
+ Extra
+ opencv_bgsegm
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/test/test_precomp.hpp
+ Extra
+ opencv_bgsegm
+ AccuracyTest

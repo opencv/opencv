@@ -1,0 +1,31 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/perf/perf_bm.cpp",
+			"labels" : [ "Extra", "opencv_stereo", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/perf/perf_descriptor.cpp",
+			"labels" : [ "Extra", "opencv_stereo", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/perf/perf_main.cpp",
+			"labels" : [ "Extra", "opencv_stereo", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/perf/perf_precomp.hpp",
+			"labels" : [ "Extra", "opencv_stereo", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_stereo", "PerfTest" ],
+		"name" : "opencv_perf_stereo"
+	}
+}

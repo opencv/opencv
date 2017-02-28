@@ -1,0 +1,99 @@
+# Target labels
+ Extra
+ opencv_reg
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/map.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapaffine.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapper.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradaffine.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradeuclid.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradproj.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradshift.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mappergradsimilar.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapperpyramid.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapprojec.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/include/opencv2/reg/mapshift.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/map.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapaffine.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapper.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradaffine.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradeuclid.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradproj.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradshift.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mappergradsimilar.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapperpyramid.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapprojec.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/mapshift.cpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/reg/src/precomp.hpp
+ Extra
+ opencv_reg
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

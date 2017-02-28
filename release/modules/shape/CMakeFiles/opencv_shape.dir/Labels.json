@@ -1,0 +1,94 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/emdL1.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/hist_cost.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/shape.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/shape_distance.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/shape_transformer.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/aff_trans.cpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/emdL1.cpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/haus_dis.cpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/hist_cost.cpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/sc_dis.cpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/tps_trans.cpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/emdL1_def.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/shape/src/scd_def.hpp",
+			"labels" : [ "Main", "opencv_shape", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_shape", "Module" ],
+		"name" : "opencv_shape"
+	}
+}

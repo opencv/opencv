@@ -1,0 +1,17 @@
+# Target labels
+ Extra
+ opencv_bioinspired
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/test/test_main.cpp
+ Extra
+ opencv_bioinspired
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/test/test_retina_ocl.cpp
+ Extra
+ opencv_bioinspired
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/test/test_precomp.hpp
+ Extra
+ opencv_bioinspired
+ AccuracyTest

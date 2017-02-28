@@ -1,0 +1,47 @@
+# Target labels
+ Main
+ opencv_videoio
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/include/opencv2/videoio.hpp
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/include/opencv2/videoio/videoio.hpp
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/include/opencv2/videoio/cap_ios.h
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/include/opencv2/videoio/videoio_c.h
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap.cpp
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap_images.cpp
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap_mjpeg_encoder.cpp
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap_mjpeg_decoder.cpp
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/cap_avfoundation_mac.mm
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/videoio/src/precomp.hpp
+ Main
+ opencv_videoio
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

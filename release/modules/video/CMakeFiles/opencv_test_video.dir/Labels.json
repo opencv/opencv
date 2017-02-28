@@ -1,0 +1,76 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/ocl/test_bgfg_mog2.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/ocl/test_optflow_farneback.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/ocl/test_optflow_tvl1flow.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/ocl/test_optflowpyrlk.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_accum.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_camshift.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_ecc.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_estimaterigid.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_kalman.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_optflowpyrlk.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_tvl1optflow.cpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/video/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_video", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_video", "AccuracyTest" ],
+		"name" : "opencv_test_video"
+	}
+}

@@ -1,0 +1,583 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/attr_value.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/function.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/graph.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/op_def.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/tensor.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/tensor_shape.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/types.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/versions.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/caffe/caffe.pb.cc",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/attr_value.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/function.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/graph.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/op_def.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/tensor.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/tensor_shape.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/types.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/tensorflow/versions.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/misc/caffe/caffe.pb.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv_lapack.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn/all_layers.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn/blob.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn/blob.inl.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn/dict.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn/dnn.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn/dnn.inl.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn/layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/include/opencv2/dnn/shape_utils.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/blob.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/caffe/caffe_importer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/caffe/caffe_io.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/caffe/layer_loaders.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/dnn.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/init.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/batch_norm_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/concat_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/convolution_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/crop_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/detection_output_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/elementwise_layers.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/eltwise_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/flatten_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/fully_connected_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/layers_common.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/lrn_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/max_unpooling_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/mvn_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/normalize_bbox_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/op_blas.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/op_im2col.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/padding_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/permute_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/pooling_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/prior_box_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/recurrent_layers.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/reshape_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/scale_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/shift_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/slice_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/softmax_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/split_layer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/tensorflow/tf_importer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/tensorflow/tf_io.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/torch/THDiskFile.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/torch/THFile.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/torch/THGeneral.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/torch/torch_importer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/opencl/activations.cl",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/opencl/col2im.cl",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/opencl/im2col.cl",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/opencl/lrn.cl",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/opencl/pooling.cl",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/opencl/softmax.cl",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/dnn/opencl_kernels_dnn.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/dnn/opencl_kernels_dnn.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/caffe/caffe_io.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/caffe/glog_emulator.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/caffe/layer_loaders.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/batch_norm_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/blank_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/concat_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/convolution_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/crop_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/detection_output_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/elementwise_layers.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/eltwise_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/flatten_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/fully_connected_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/layers_common.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/lrn_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/max_unpooling_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/mvn_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/normalize_bbox_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/op_blas.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/op_im2col.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/padding_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/permute_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/pooling_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/prior_box_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/recurrent_layers.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/reshape_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/scale_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/shift_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/slice_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/softmax_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/layers/split_layer.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/tensorflow/tf_io.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/torch/THDiskFile.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/torch/THFile.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/torch/THFilePrivate.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/src/torch/THGeneral.h",
+			"labels" : [ "Extra", "opencv_dnn", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/dnn/opencl_kernels_dnn.cpp.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_dnn", "Module" ],
+		"name" : "opencv_dnn"
+	}
+}

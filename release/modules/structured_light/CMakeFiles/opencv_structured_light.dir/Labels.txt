@@ -1,0 +1,35 @@
+# Target labels
+ Extra
+ opencv_structured_light
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/include/opencv2/structured_light.hpp
+ Extra
+ opencv_structured_light
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/include/opencv2/structured_light/graycodepattern.hpp
+ Extra
+ opencv_structured_light
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/include/opencv2/structured_light/sinusoidalpattern.hpp
+ Extra
+ opencv_structured_light
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/include/opencv2/structured_light/structured_light.hpp
+ Extra
+ opencv_structured_light
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/src/graycodepattern.cpp
+ Extra
+ opencv_structured_light
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/src/sinusoidalpattern.cpp
+ Extra
+ opencv_structured_light
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/src/precomp.hpp
+ Extra
+ opencv_structured_light
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

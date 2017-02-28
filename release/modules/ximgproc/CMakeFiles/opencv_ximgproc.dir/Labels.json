@@ -1,0 +1,249 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/deriche_filter.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/edge_filter.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/estimated_covariance.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/fast_hough_transform.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/fast_line_detector.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/lsc.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/paillou_filter.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/seeds.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/segmentation.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/slic.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/sparse_match_interpolator.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/structured_edge_detection.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/include/opencv2/ximgproc/weighted_median_filter.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/adaptive_manifold_filter_n.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/bilateral_texture_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/deriche_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/disparity_filters.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/domain_transform.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/dtfilter_cpu.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/edgeaware_filters_common.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/estimated_covariance.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/fast_hough_transform.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/fast_line_detector.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/fgs_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/graphsegmentation.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/guided_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/joint_bilateral_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/l0_smooth.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/lsc.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/niblack_thresholding.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/paillou_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/rolling_guidance_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/seeds.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/selectivesearchsegmentation.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/slic.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/sparse_match_interpolators.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/structured_edge_detection.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/thinning.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/weighted_median_filter.cpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/advanced_types.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/dtfilter_cpu.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/dtfilter_cpu.inl.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/edgeaware_filters_common.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/ximgproc/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_ximgproc", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_ximgproc", "Module" ],
+		"name" : "opencv_ximgproc"
+	}
+}
