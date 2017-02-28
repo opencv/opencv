@@ -174,6 +174,9 @@ namespace
             double len = wholeRange.end - wholeRange.start;
             nstripes = cvRound(_nstripes <= 0 ? len : MIN(MAX(_nstripes, 1.), len));
 
+            // propagate main thread state
+            rng = cv::theRNG();
+
 #ifdef ENABLE_INSTRUMENTATION
             pThreadRoot = cv::instr::getInstrumentTLSStruct().pCurrentNode;
 #endif
@@ -195,6 +198,9 @@ namespace
 #endif
             CV_INSTRUMENT_REGION()
 
+            // propagate main thread state
+            cv::theRNG() = rng;
+
             cv::Range r;
             r.start = (int)(wholeRange.start +
                             ((uint64)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
@@ -208,6 +214,7 @@ namespace
         const cv::ParallelLoopBody* body;
         cv::Range wholeRange;
         int nstripes;
+        cv::RNG rng;
 #ifdef ENABLE_INSTRUMENTATION
         cv::instr::InstrNode *pThreadRoot;
 #endif
