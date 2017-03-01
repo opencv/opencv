@@ -1086,7 +1086,7 @@ public:
     }
 
     // Release TLS storage index and pass associated data to caller
-    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec)
+    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec, bool keepSlot = false)
     {
         AutoLock guard(mtxGlobalAccess);
         CV_Assert(tlsSlots.size() > slotIdx);
@@ -1099,12 +1099,13 @@ public:
                 if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
                 {
                     dataVec.push_back(thread_slots[slotIdx]);
-                    threads[i]->slots[slotIdx] = 0;
+                    thread_slots[slotIdx] = NULL;
                 }
             }
         }
 
-        tlsSlots[slotIdx] = 0;
+        if (!keepSlot)
+            tlsSlots[slotIdx] = 0;
     }
 
     // Get data by TLS storage index
@@ -1196,9 +1197,18 @@ void TLSDataContainer::release()
     std::vector<void*> data;
     data.reserve(32);
     getTlsStorage().releaseSlot(key_, data); // Release key and get stored data for proper destruction
+    key_ = -1;
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
-    key_ = -1;
+}
+
+void TLSDataContainer::cleanup()
+{
+    std::vector<void*> data;
+    data.reserve(32);
+    getTlsStorage().releaseSlot(key_, data, true); // Extract stored data with removal from TLS tables
+    for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
+        deleteDataInstance(data[i]);
 }
 
 void* TLSDataContainer::getData() const

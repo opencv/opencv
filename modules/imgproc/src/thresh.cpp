@@ -1301,7 +1301,7 @@ static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
 
     try
     {
-        ivx::Context ctx = ivx::Context::create();
+        ivx::Context ctx = ovx::getOpenVXContext();
 
         ivx::Threshold thh = ivx::Threshold::createBinary(ctx, VX_TYPE_UINT8, thresh);
         thh.setValueTrue(trueVal);

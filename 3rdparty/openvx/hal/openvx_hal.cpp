@@ -52,8 +52,17 @@ struct Tick
 
 inline ivx::Context& getOpenVXHALContext()
 {
-    // not thread safe
-    static ivx::Context instance = ivx::Context::create();
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
+    //CXX11
+    static thread_local ivx::Context instance = ivx::Context::create();
+#else //__cplusplus >= 201103L || _MSC_VER >= 1800
+    //CXX98
+#ifdef WIN32
+        static __declspec(thread) ivx::Context instance = ivx::Context::create();
+#else
+        static __thread ivx::Context instance = ivx::Context::create();
+#endif
+#endif
     return instance;
 }
 

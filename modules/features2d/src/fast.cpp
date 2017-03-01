@@ -354,7 +354,7 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
 
     try
     {
-        Context context = Context::create();
+        Context context = ovx::getOpenVXContext();
         Image img = Image::createFromHandle(context, Image::matTypeToFormat(imgMat.type()),
                                             Image::createAddressing(imgMat), (void*)imgMat.data);
         ivx::Scalar threshold = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, _threshold);
