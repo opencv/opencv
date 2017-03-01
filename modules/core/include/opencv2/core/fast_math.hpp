@@ -54,12 +54,14 @@
 *                                      fast math                                         *
 \****************************************************************************************/
 
-#if defined __BORLANDC__
-#  include <fastmath.h>
-#elif defined __cplusplus
+#ifdef __cplusplus
 #  include <cmath>
 #else
-#  include <math.h>
+#  ifdef __BORLANDC__
+#    include <fastmath.h>
+#  else
+#    include <math.h>
+#  endif
 #endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
