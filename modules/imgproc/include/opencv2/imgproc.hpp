@@ -416,7 +416,7 @@ enum ConnectedComponentsTypes {
 //! connected components algorithm
 enum ConnectedComponentsAlgorithmsTypes {
     CCL_WU      = 0,  //!< SAUF algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
-    CCL_DEFAULT = -1, //!< BBDT algortihm for 8-way connectivity, SAUF algorithm for 4-way connectivity
+    CCL_DEFAULT = -1, //!< BBDT algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
     CCL_GRANA   = 1   //!< BBDT algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
 };
 
@@ -816,7 +816,7 @@ public:
 };
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Detects position only without traslation and rotation
+//! Detects position only without translation and rotation
 class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
 {
 public:
@@ -830,7 +830,7 @@ public:
 };
 
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-//! Detects position, traslation and rotation
+//! Detects position, translation and rotation
 class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
 {
 public:
@@ -985,7 +985,7 @@ public:
     -  The point is outside the subdivision reference rectangle. The function returns PTLOC_OUTSIDE_RECT
        and no pointers are filled.
     -  One of input arguments is invalid. A runtime error is raised or, if silent or “parent” error
-       processing mode is selected, CV_PTLOC_ERROR is returnd.
+       processing mode is selected, CV_PTLOC_ERROR is returned.
      */
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
@@ -1397,7 +1397,7 @@ CV_EXPORTS_W void bilateralFilter( InputArray src, OutputArray dst, int d,
 
 /** @brief Blurs an image using the box filter.
 
-The function smoothes an image using the kernel:
+The function smooths an image using the kernel:
 
 \f[\texttt{K} =  \alpha \begin{bmatrix} 1 & 1 & 1 &  \cdots & 1 & 1  \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \hdotsfor{6} \\ 1 & 1 & 1 &  \cdots & 1 & 1 \end{bmatrix}\f]
 
@@ -1449,7 +1449,7 @@ CV_EXPORTS_W void sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
 /** @brief Blurs an image using the normalized box filter.
 
-The function smoothes an image using the kernel:
+The function smooths an image using the kernel:
 
 \f[\texttt{K} =  \frac{1}{\texttt{ksize.width*ksize.height}} \begin{bmatrix} 1 & 1 & 1 &  \cdots & 1 & 1  \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \hdotsfor{6} \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \end{bmatrix}\f]
 
@@ -3574,7 +3574,7 @@ CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn
 
 //! @} imgproc_misc
 
-// main function for all demosaicing procceses
+// main function for all demosaicing processes
 CV_EXPORTS_W void demosaicing(InputArray _src, OutputArray _dst, int code, int dcn = 0);
 
 //! @addtogroup imgproc_shape
@@ -3756,7 +3756,7 @@ If mode equals to cv::RETR_CCOMP or cv::RETR_FLOODFILL, the input can also be a 
 std::vector<std::vector<cv::Point> >).
 @param hierarchy Optional output vector (e.g. std::vector<cv::Vec4i>), containing information about the image topology. It has
 as many elements as the number of contours. For each i-th contour contours[i], the elements
-hierarchy[i][0] , hiearchy[i][1] , hiearchy[i][2] , and hiearchy[i][3] are set to 0-based indices
+hierarchy[i][0] , hierarchy[i][1] , hierarchy[i][2] , and hierarchy[i][3] are set to 0-based indices
 in contours of the next and previous contours at the same hierarchical level, the first child
 contour and the parent contour, respectively. If for the contour i there are no next, previous,
 parent, or nested contours, the corresponding elements of hierarchy[i] will be negative.
@@ -4044,7 +4044,7 @@ CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measu
 
 /** @brief Finds out if there is any intersection between two rotated rectangles.
 
-If there is then the vertices of the interesecting region are returned as well.
+If there is then the vertices of the intersecting region are returned as well.
 
 Below are some examples of intersection configurations. The hatched pattern indicates the
 intersecting region and the red vertices are returned by the function.
@@ -4064,11 +4064,11 @@ CV_EXPORTS_W int rotatedRectangleIntersection( const RotatedRect& rect1, const R
 CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Detects position only without traslation and rotation
+//! Detects position only without translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-//! Detects position, traslation and rotation
+//! Detects position, translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
 //! Performs linear blending of two images
