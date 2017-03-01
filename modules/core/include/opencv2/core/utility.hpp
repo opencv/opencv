@@ -627,6 +627,9 @@ public:
     virtual void  deleteDataInstance(void* pData) const = 0;
 
     int key_;
+
+public:
+    void cleanup(); //! Release created TLS data container objects. It is similar to release() call, but it keeps TLS container valid.
 };
 
 // Main TLS data class
@@ -638,12 +641,14 @@ public:
     inline ~TLSData()       { release();            } // Release key and delete associated data
     inline T* get() const   { return (T*)getData(); } // Get data associated with key
 
-     // Get data from all threads
+    // Get data from all threads
     inline void gather(std::vector<T*> &data) const
     {
         std::vector<void*> &dataVoid = reinterpret_cast<std::vector<void*>&>(data);
         gatherData(dataVoid);
     }
+
+    inline void cleanup() { TLSDataContainer::cleanup(); }
 
 private:
     virtual void* createDataInstance() const {return new T;}                // Wrapper to allocate data by template
