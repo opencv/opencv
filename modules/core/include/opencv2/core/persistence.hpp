@@ -696,6 +696,7 @@ CV_EXPORTS void write( FileStorage& fs, const String& name, float value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, double value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const String& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const Mat& value );
+CV_EXPORTS void write( FileStorage& fs, const String& name, InputArray value);
 CV_EXPORTS void write( FileStorage& fs, const String& name, const SparseMat& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<KeyPoint>& value);
 CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<DMatch>& value);

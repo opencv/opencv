@@ -7202,6 +7202,11 @@ void write( FileStorage& fs, const String& name, const Mat& value )
     }
 }
 
+void write( FileStorage& fs, const String& name, InputArray value )
+{
+    write(fs, name, value.getMat());
+}
+
 // TODO: the 4 functions below need to be implemented more efficiently
 void write( FileStorage& fs, const String& name, const SparseMat& value )
 {
