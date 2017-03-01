@@ -5,6 +5,8 @@
 
 using namespace std;
 
+// This algorithm is from "Tong Ke, Stergios Roumeliotis, An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (Accepted by CVPR 2017)
+// See https://arxiv.org/pdf/1701.08237.pdf
 // featureVectors: The 3 bearing measurements (normalized) stored as column vectors
 // worldPoints: The positions of the 3 feature points stored as column vectors
 // solutions: Output of this function. Column i (i=0,4,8,12) is the solution for the camera position, and column i+1 to
