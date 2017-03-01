@@ -945,10 +945,51 @@ void write(FileStorage& fs, const Scalar_<_Tp>& s )
 }
 
 static inline
+void write(FileStorage& fs, const KeyPoint& kpt )
+{
+    write(fs, kpt.pt.x);
+    write(fs, kpt.pt.y);
+    write(fs, kpt.size);
+    write(fs, kpt.angle);
+    write(fs, kpt.response);
+    write(fs, kpt.octave);
+    write(fs, kpt.class_id);
+}
+
+static inline
+void write(FileStorage& fs, const DMatch& m )
+{
+    write(fs, m.queryIdx);
+    write(fs, m.trainIdx);
+    write(fs, m.imgIdx);
+    write(fs, m.distance);
+}
+
+static inline
 void write(FileStorage& fs, const Range& r )
 {
     write(fs, r.start);
     write(fs, r.end);
+}
+
+static inline
+void write( FileStorage& fs, const std::vector<KeyPoint>& vec )
+{
+    size_t npoints = vec.size();
+    for(size_t i = 0; i < npoints; i++ )
+    {
+        write(fs, vec[i]);
+    }
+}
+
+static inline
+void write( FileStorage& fs, const std::vector<DMatch>& vec )
+{
+    size_t npoints = vec.size();
+    for(size_t i = 0; i < npoints; i++ )
+    {
+        write(fs, vec[i]);
+    }
 }
 
 template<typename _Tp> static inline
@@ -1094,6 +1135,24 @@ void read( const FileNode& node, std::vector<_Tp>& vec, const std::vector<_Tp>& 
         FileNodeIterator it = node.begin();
         read( it, vec );
     }
+}
+
+static inline
+void read( const FileNode& node, std::vector<KeyPoint>& vec, const std::vector<KeyPoint>& default_value )
+{
+    if(!node.node)
+        vec = default_value;
+    else
+        read(node, vec);
+}
+
+static inline
+void read( const FileNode& node, std::vector<DMatch>& vec, const std::vector<DMatch>& default_value )
+{
+    if(!node.node)
+        vec = default_value;
+    else
+        read(node, vec);
 }
 
 //! @} FileNode
