@@ -7283,14 +7283,7 @@ void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& 
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )
     {
-        const KeyPoint& kpt = keypoints[i];
-        cv::write(fs, kpt.pt.x);
-        cv::write(fs, kpt.pt.y);
-        cv::write(fs, kpt.size);
-        cv::write(fs, kpt.angle);
-        cv::write(fs, kpt.response);
-        cv::write(fs, kpt.octave);
-        cv::write(fs, kpt.class_id);
+        write(fs, keypoints[i]);
     }
 }
 
@@ -7315,11 +7308,7 @@ void write(FileStorage& fs, const String& objname, const std::vector<DMatch>& ma
     int i, n = (int)matches.size();
     for( i = 0; i < n; i++ )
     {
-        const DMatch& m = matches[i];
-        cv::write(fs, m.queryIdx);
-        cv::write(fs, m.trainIdx);
-        cv::write(fs, m.imgIdx);
-        cv::write(fs, m.distance);
+        write(fs, matches[i]);
     }
 }
 
