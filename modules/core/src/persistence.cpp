@@ -7697,7 +7697,7 @@ std::string base64::make_base64_header(const char * dt)
 bool base64::read_base64_header(std::vector<char> const & header, std::string & dt)
 {
     std::istringstream iss(header.data());
-    return static_cast<bool>(iss >> dt);
+    return !!(iss >> dt);//the "std::basic_ios::operator bool" differs between C++98 and C++11. The "double not" syntax is portable and covers both cases with equivalent meaning
 }
 
 /****************************************************************************
