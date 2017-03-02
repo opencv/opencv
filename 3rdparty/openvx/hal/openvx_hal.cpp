@@ -1,4 +1,5 @@
 #include "openvx_hal.hpp"
+#include "opencv2/imgproc/hal/interface.h"
 
 #define IVX_HIDE_INFO_WARNINGS
 #include "ivx.hpp"

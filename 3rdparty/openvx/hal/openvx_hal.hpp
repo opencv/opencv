@@ -2,7 +2,6 @@
 #define OPENCV_OPENVX_HAL_HPP_INCLUDED
 
 #include "opencv2/core/hal/interface.h"
-#include "opencv2/imgproc/hal/interface.h"
 
 #include "VX/vx.h"
 
