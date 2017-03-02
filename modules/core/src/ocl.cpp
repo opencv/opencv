@@ -3203,7 +3203,7 @@ struct Kernel::Impl
 
     void cleanupUMats()
     {
-        for( int i = 0; i < nu; i++ )
+        for( int i = 0; i < MAX_ARRS; i++ )
             if( u[i] )
             {
                 if( CV_XADD(&u[i]->urefcount, -1) == 1 )
@@ -3464,8 +3464,9 @@ int Kernel::set(int i, const KernelArg& arg)
     return i+1;
 }
 
+
 bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
-                 bool sync, const Queue& q, bool moreWorkDone)
+                 bool sync, const Queue& q)
 {
     CV_INSTRUMENT_REGION_OPENCL_RUN(p->name.c_str());
 
@@ -3486,11 +3487,11 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     }
     if( total == 0 )
         return true;
-    if( p->haveTempDstUMats && !moreWorkDone)
+    if( p->haveTempDstUMats )
         sync = true;
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
                                            offset, globalsize, _localsize, 0, 0,
-                                           sync ? 0 : (moreWorkDone? 0: &p->e ));
+                                           sync ? 0 : &p->e);
 #if CV_OPENCL_SHOW_RUN_ERRORS
     if (retval != CL_SUCCESS)
     {
@@ -3501,9 +3502,9 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     if( sync || retval != CL_SUCCESS )
     {
         CV_OclDbgAssert(clFinish(qq) == CL_SUCCESS);
-        if (!moreWorkDone) p->cleanupUMats();
+        p->cleanupUMats();
     }
-    else if (!moreWorkDone)
+    else
     {
         p->addref();
         CV_OclDbgAssert(clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
