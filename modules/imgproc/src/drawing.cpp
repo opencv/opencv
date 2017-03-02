@@ -1097,6 +1097,7 @@ static const int opencvOne = 1;
 #      include <intrin.h>
 #      pragma intrinsic(_byteswap_ushort)
 #      pragma intrinsic(_byteswap_ulong)
+#      pragma intrinsic(_byteswap_uint64)
 #      pragma intrinsic(_ReadWriteBarrier)
 #    else
 #      include <cmnintrin.h>
@@ -1134,20 +1135,20 @@ static inline uint32_t opencvBigToHost32(uint32_t x){
 static inline uint32_t opencvLittleToHost32(const uchar* p){
 #if OPENCV_BYTEORDER==1234
   uint32_t x;
-  memcpy(&x,p,4);
+  memcpy(&x,p,sizeof(x));
   return x;
 #elif OPENCV_BYTEORDER==4321 && defined(__GNUC__)
   uint32_t x;
-  memcpy(&x,p,4);
+  memcpy(&x,p,sizeof(x));
   return __builtin_bswap32(x);
 #elif OPENCV_BYTEORDER==4321 && defined(_MSC_VER) && _MSC_VER>=1300
   uint32_t x;
-  memcpy(&x,p,4);
+  memcpy(&x,p,sizeof(x));
   return _byteswap_ulong(x);
 #elif OPENCV_LITTLEENDIAN
   return x;
 #else
-  return ((unsigned)p[0]<<24) | (p[1]<<16) | (p[2]<<8) | p[3];
+  return (p[0]<<24) | (p[1]<<16) | (p[2]<<8) | p[3];
 #endif
 }
 
@@ -1159,7 +1160,33 @@ static inline uint32_t opencvLittleToHost32(uint32_t x){
 #endif
 }
 
+static inline uint64_t opencvLittleToHost64(const uchar* p){
+#if OPENCV_BYTEORDER==1234
+  uint64_t x;
+  memcpy(&x,p,sizeof(x));
+  return x;
+#elif OPENCV_BYTEORDER==4321 && defined(__GNUC__)
+  uint64_t x;
+  memcpy(&x,p,sizeof(x));
+  return __builtin_bswap64(x);
+#elif OPENCV_BYTEORDER==4321 && defined(_MSC_VER) && _MSC_VER>=1300
+  uint64_t x;
+  memcpy(&x,p,sizeof(x));
+  return _byteswap_uint64(x);
+#elif OPENCV_LITTLEENDIAN
+  return x;
+#else
+  return (p[0]<<56) | (p[1]<<40) | (p[2]<<24) | (p[3]<<8) | (p[4]>>8) | (p[5]>>24) | (p[6]>>40) | (p[7]>>56);
+#endif
+}
 
+static inline uint64_t opencvLittleToHost64(uint64_t x){
+#if OPENCV_LITTLEENDIAN
+  return x;
+#else
+  return opencvLittleToHost64((uchar*)&x);
+#endif
+}
 
 /* helper macros: filling horizontal row */
 #define is_aligned(POINTER, BYTE_COUNT) (((uintptr_t)(const void *)(POINTER)) % (BYTE_COUNT) == 0)
@@ -1179,6 +1206,38 @@ static inline uint32_t opencvLittleToHost32(uint32_t x){
     }                                                        \
 }*/
 
+/*
+template <unsigned pix_size_forced>
+static inline void icv_hline_impl(uchar* ptr, size_t xl, size_t xr, const uchar* color, unsigned pix_size_)
+{
+    const unsigned pix_size = pix_size_forced ? pix_size_forced : pix_size_;
+
+    uchar* hline_ptr = ptr + xl*pix_size;
+    uchar* hline_max_ptr = ptr + xr*pix_size;
+
+    for ( ; hline_ptr <= hline_max_ptr; hline_ptr += pix_size)
+    {
+        for (unsigned c = 0; c < pix_size; c++)
+        {
+            hline_ptr[c] = color[c];
+        }
+    }
+}
+
+#define ICV_HLINE( ptr, xl, xr, color, pix_size ) \
+{ \
+    if (pix_size == 1) \
+        icv_hline_impl<1>((uchar*)ptr, (xl), (xr), (const uchar*)color,pix_size); \
+    else if (pix_size == 3) \
+        icv_hline_impl<3>((uchar*)ptr, (xl), (xr), (const uchar*)color, pix_size); \
+    else if (pix_size == 4) \
+        icv_hline_impl<4>((uchar*)ptr, (xl), (xr), (const uchar*)color, pix_size); \
+    else \
+        icv_hline_impl<0>((uchar*)ptr, (xl), (xr), (const uchar*)color, pix_size); \
+}
+*/
+
+/*
 #define ICV_HLINE( ptr, xl, xr, color, pix_size )                 \
 if((pix_size) == 1)                                               \
 {                                                                 \
@@ -1192,9 +1251,36 @@ else if((pix_size) == 3)                                          \
 {                                                                 \
     uchar* hline_ptr = (uchar*)(ptr) + (xl)*3;                    \
     uchar* hline_end   = (uchar*)(ptr) + (xr+1)*3;                \
+    uchar* hbody24_start = std::min(hline_end, (uchar*)(24*(((uintptr_t)(hline_ptr)+23)/24)));  \
+    uchar* hbody24_end = std::min(hline_end, (uchar*)(24*(((uintptr_t)(hline_end))/24)));       \
     uchar* hbody12_start = std::min(hline_end, (uchar*)(12*(((uintptr_t)(hline_ptr)+11)/12)));  \
-    uchar* hbody12_end = std::min(hline_end, (uchar*)(12*(((uintptr_t)(hline_end))/12))); \
-    if ((hbody12_start < hbody12_end))                       \
+    uchar* hbody12_end = std::min(hline_end, (uchar*)(12*(((uintptr_t)(hline_end))/12)));       \
+    if (hbody24_start < hbody24_end)                         \
+    {                                                        \
+      int offset = ((uintptr_t)(hbody24_start-hline_ptr))%3; \
+      uint64_t c4[3];                                        \
+      uchar* ptrC4 = reinterpret_cast<uchar*>(&c4);          \
+      ptrC4[0]  = ((uchar*)(color))[(offset++)%3];           \
+      ptrC4[1]  = ((uchar*)(color))[(offset++)%3];           \
+      ptrC4[2]  = ((uchar*)(color))[(offset++)%3];           \
+      memcpy(&ptrC4[3], &ptrC4[0], 3);                       \
+      memcpy(&ptrC4[6], &ptrC4[0], 6);                       \
+      memcpy(&ptrC4[12], &ptrC4[0], 12);                     \
+      c4[0] = opencvLittleToHost64(c4[0]);                   \
+      c4[1] = opencvLittleToHost64(c4[1]);                   \
+      c4[2] = opencvLittleToHost64(c4[2]);                   \
+      for(offset = 0 ; hline_ptr < hbody24_start; offset = (offset+1)%3)\
+         *hline_ptr++ = ((uchar*)(color))[offset];           \
+      for(uint64_t* ptr64 = reinterpret_cast<uint64_t*>(hbody24_start), *ptr64End = reinterpret_cast<uint64_t*>(hbody24_end) ; ptr64<ptr64End ; ) \
+      {                                                       \
+          *ptr64++ = c4[0];                                   \
+          *ptr64++ = c4[1];                                   \
+          *ptr64++ = c4[2];                                   \
+      }                                                       \
+      for(offset = ((uintptr_t)(hbody24_end-(uchar*)(ptr)))%3, hline_ptr = hbody24_end ; hline_ptr < hline_end ; offset = (offset+1)%3) \
+          *hline_ptr++ = ((uchar*)(color))[offset];           \
+    }                                                         \
+    else if (hbody12_start < hbody12_end)                     \
     {                                                        \
       int offset = ((uintptr_t)(hbody12_start-hline_ptr))%3; \
       uint32_t c4[3];                                        \
@@ -1233,9 +1319,8 @@ else if(((pix_size) == 4) && is_aligned(((uchar*)(ptr) + (xl)*4), 0x4)) \
     uint32_t c = opencvLittleToHost32((uchar*)(color));        \
     uint32_t* hline_ptr = (uint32_t*)(ptr) + xl;               \
     uint32_t* hline_max_ptr = (uint32_t*)(ptr) + xr;           \
-                                                               \
-    for( ; hline_ptr <= hline_max_ptr; ++hline_ptr   )         \
-        *hline_ptr = c;                                        \
+    for( ; hline_ptr <= hline_max_ptr; )                       \
+        *hline_ptr++ = c;                                      \
 }                                                              \
 else                                                           \
 {                                                              \
@@ -1251,6 +1336,138 @@ else                                                           \
         }                                                      \
     }                                                          \
 }
+*/
+
+static inline void ICV_HLINE_0(uchar* ptr, int xl, int xr, const uchar* color, int pix_size)
+{
+    uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);
+    uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);
+    for( ; hline_ptr <= hline_max_ptr; hline_ptr += (pix_size))
+    {
+        int hline_j;
+        for( hline_j = 0; hline_j < (4); hline_j++ )
+        {
+            hline_ptr[hline_j] = ((uchar*)color)[hline_j];
+        }
+    }
+}
+//end ICV_HLINE_0()
+
+static inline void ICV_HLINE_1(uchar* ptr, int xl, int xr, const uchar* color)
+{
+    uchar* hline_ptr = (uchar*)(ptr) + (xl);
+    uchar* hline_max_ptr = (uchar*)(ptr) + (xr);
+    uchar hline_c = *(const uchar*)(color);
+    memset(hline_ptr, hline_c, (hline_max_ptr - hline_ptr) + 1);
+}
+
+static inline void ICV_HLINE_3(uchar* ptr, int xl, int xr, const uchar* color)
+{
+    uchar* hline_ptr = (uchar*)(ptr) + (xl)*3;
+    uchar* hline_end   = (uchar*)(ptr) + (xr+1)*3;
+    uchar* hbody24_start = std::min(hline_end, (uchar*)(24*(((uintptr_t)(hline_ptr)+23)/24)));
+    uchar* hbody24_end = std::min(hline_end, (uchar*)(24*(((uintptr_t)(hline_end))/24)));
+    uchar* hbody12_start = std::min(hline_end, (uchar*)(12*(((uintptr_t)(hline_ptr)+11)/12)));
+    uchar* hbody12_end = std::min(hline_end, (uchar*)(12*(((uintptr_t)(hline_end))/12)));
+    if (hbody24_start < hbody24_end)
+    {
+      int offset = ((uintptr_t)(hbody24_start-hline_ptr))%3;
+      uint64_t c4[3];
+      uchar* ptrC4 = reinterpret_cast<uchar*>(&c4);
+      ptrC4[0]  = ((uchar*)(color))[(offset++)%3];
+      ptrC4[1]  = ((uchar*)(color))[(offset++)%3];
+      ptrC4[2]  = ((uchar*)(color))[(offset++)%3];
+      memcpy(&ptrC4[3], &ptrC4[0], 3);
+      memcpy(&ptrC4[6], &ptrC4[0], 6);
+      memcpy(&ptrC4[12], &ptrC4[0], 12);
+      c4[0] = opencvLittleToHost64(c4[0]);
+      c4[1] = opencvLittleToHost64(c4[1]);
+      c4[2] = opencvLittleToHost64(c4[2]);
+      for(offset = 0 ; hline_ptr < hbody24_start; offset = (offset+1)%3)
+         *hline_ptr++ = ((uchar*)(color))[offset];
+      for(uint64_t* ptr64 = reinterpret_cast<uint64_t*>(hbody24_start), *ptr64End = reinterpret_cast<uint64_t*>(hbody24_end) ; ptr64<ptr64End ; )
+      {
+          *ptr64++ = c4[0];
+          *ptr64++ = c4[1];
+          *ptr64++ = c4[2];
+      }
+      for(offset = ((uintptr_t)(hbody24_end-(uchar*)(ptr)))%3, hline_ptr = hbody24_end ; hline_ptr < hline_end ; offset = (offset+1)%3)
+          *hline_ptr++ = ((uchar*)(color))[offset];
+    }
+    else if (hbody12_start < hbody12_end)
+    {
+      int offset = ((uintptr_t)(hbody12_start-hline_ptr))%3;
+      uint32_t c4[3];
+      uchar* ptrC4 = reinterpret_cast<uchar*>(&c4);
+      ptrC4[0]  = ((uchar*)(color))[(offset++)%3];
+      ptrC4[1]  = ((uchar*)(color))[(offset++)%3];
+      ptrC4[2]  = ((uchar*)(color))[(offset++)%3];
+      memcpy(&ptrC4[3], &ptrC4[0], 3);
+      memcpy(&ptrC4[6], &ptrC4[0], 6);
+      c4[0] = opencvLittleToHost32(c4[0]);
+      c4[1] = opencvLittleToHost32(c4[1]);
+      c4[2] = opencvLittleToHost32(c4[2]);
+      for(offset = 0 ; hline_ptr < hbody12_start; offset = (offset+1)%3)
+         *hline_ptr++ = ((uchar*)(color))[offset];
+      for(uint32_t* ptr32 = reinterpret_cast<uint32_t*>(hbody12_start), *ptr32End = reinterpret_cast<uint32_t*>(hbody12_end) ; ptr32<ptr32End ; )
+      {
+          *ptr32++ = c4[0];
+          *ptr32++ = c4[1];
+          *ptr32++ = c4[2];
+      }
+      for(offset = ((uintptr_t)(hbody12_end-(uchar*)(ptr)))%3, hline_ptr = hbody12_end ; hline_ptr < hline_end ; offset = (offset+1)%3)
+          *hline_ptr++ = ((uchar*)(color))[offset];
+    }
+    else
+    {
+      for( ; hline_ptr < hline_end ; )
+      {
+          *hline_ptr++ = ((uchar*)(color))[0];
+          *hline_ptr++ = ((uchar*)(color))[1];
+          *hline_ptr++ = ((uchar*)(color))[2];
+      }
+    }
+}
+//end ICV_HLINE_3()
+
+static inline void ICV_HLINE_4(uchar* ptr, int xl, int xr, const uchar* color)
+{
+  if (is_aligned(((uchar*)(ptr) + (xl)*4), 0x4))
+  {
+      uint32_t c = opencvLittleToHost32((uchar*)(color));
+      uint32_t* hline_ptr = (uint32_t*)(ptr) + xl;
+      uint32_t* hline_max_ptr = (uint32_t*)(ptr) + xr;
+      for( ; hline_ptr <= hline_max_ptr; )
+          *hline_ptr++ = c;
+  }
+  else
+  {
+      uchar* hline_ptr = (uchar*)(ptr) + (xl)*(4);
+      uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(4);
+      for( ; hline_ptr <= hline_max_ptr; hline_ptr += (4))
+      {
+          int hline_j;
+          for( hline_j = 0; hline_j < (4); hline_j++ )
+          {
+              hline_ptr[hline_j] = ((uchar*)color)[hline_j];
+          }
+      }
+  }
+}
+//end ICV_HLINE_4()
+
+static inline void ICV_HLINE(uchar* ptr, int xl, int xr, const void* color, int pix_size)
+{
+  if (pix_size == 1)
+    ICV_HLINE_1(ptr, xl, xr, reinterpret_cast<const uchar*>(color));
+  else if (pix_size == 3)
+    ICV_HLINE_3(ptr, xl, xr, reinterpret_cast<const uchar*>(color));
+  else if (pix_size == 4)
+    ICV_HLINE_4(ptr, xl, xr, reinterpret_cast<const uchar*>(color));
+  else
+    ICV_HLINE_0(ptr, xl, xr, reinterpret_cast<const uchar*>(color), pix_size);
+}
+//end ICV_HLINE()
 
 /* filling convex polygon. v - array of vertices, ntps - number of points */
 static void
