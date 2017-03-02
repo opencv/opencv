@@ -166,7 +166,8 @@ namespace
     class ParallelLoopBodyWrapper : public cv::ParallelLoopBody
     {
     public:
-        ParallelLoopBodyWrapper(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes)
+        ParallelLoopBodyWrapper(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes) :
+            is_rng_used(false)
         {
 
             body = &_body;
@@ -174,17 +175,30 @@ namespace
             double len = wholeRange.end - wholeRange.start;
             nstripes = cvRound(_nstripes <= 0 ? len : MIN(MAX(_nstripes, 1.), len));
 
+            // propagate main thread state
+            rng = cv::theRNG();
+
 #ifdef ENABLE_INSTRUMENTATION
             pThreadRoot = cv::instr::getInstrumentTLSStruct().pCurrentNode;
 #endif
         }
-#ifdef ENABLE_INSTRUMENTATION
         ~ParallelLoopBodyWrapper()
         {
+#ifdef ENABLE_INSTRUMENTATION
             for(size_t i = 0; i < pThreadRoot->m_childs.size(); i++)
                 SyncNodes(pThreadRoot->m_childs[i]);
-        }
 #endif
+            if (is_rng_used)
+            {
+                // Some parallel backends execute nested jobs in the main thread,
+                // so we need to restore initial RNG state here.
+                cv::theRNG() = rng;
+                // We can't properly update RNG state based on RNG usage in worker threads,
+                // so lets just change main thread RNG state to the next value.
+                // Note: this behaviour is not equal to single-threaded mode.
+                cv::theRNG().next();
+            }
+        }
         void operator()(const cv::Range& sr) const
         {
 #ifdef ENABLE_INSTRUMENTATION
@@ -195,12 +209,18 @@ namespace
 #endif
             CV_INSTRUMENT_REGION()
 
+            // propagate main thread state
+            cv::theRNG() = rng;
+
             cv::Range r;
             r.start = (int)(wholeRange.start +
                             ((uint64)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
             r.end = sr.end >= nstripes ? wholeRange.end : (int)(wholeRange.start +
                             ((uint64)sr.end*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
             (*body)(r);
+
+            if (!is_rng_used && !(cv::theRNG() == rng))
+                is_rng_used = true;
         }
         cv::Range stripeRange() const { return cv::Range(0, nstripes); }
 
@@ -208,6 +228,8 @@ namespace
         const cv::ParallelLoopBody* body;
         cv::Range wholeRange;
         int nstripes;
+        cv::RNG rng;
+        mutable bool is_rng_used;
 #ifdef ENABLE_INSTRUMENTATION
         cv::instr::InstrNode *pThreadRoot;
 #endif
