@@ -1013,3 +1013,74 @@ TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
 
     ASSERT_EQ(cv::norm(inputMatrix, actualMatrix, NORM_INF), 0.);
 }
+
+TEST(Core_InputOutput, filestorage_keypoints_io)
+{
+    vector<vector<KeyPoint> > kptsVec;
+    vector<KeyPoint> kpts;
+    kpts.push_back(KeyPoint(0, 0, 1.1f));
+    kpts.push_back(KeyPoint(1, 1, 1.1f));
+    kptsVec.push_back(kpts);
+    kpts.clear();
+    kpts.push_back(KeyPoint(0, 0, 1.1f, 10.1f, 34.5f, 10, 11));
+    kptsVec.push_back(kpts);
+
+    FileStorage writer("", FileStorage::WRITE + FileStorage::MEMORY + FileStorage::FORMAT_XML);
+    writer << "keypoints" << kptsVec;
+    String content = writer.releaseAndGetString();
+
+    FileStorage reader(content, FileStorage::READ + FileStorage::MEMORY);
+    vector<vector<KeyPoint> > readKptsVec;
+    reader["keypoints"] >> readKptsVec;
+
+    ASSERT_EQ(kptsVec.size(), readKptsVec.size());
+
+    for(size_t i = 0; i < kptsVec.size(); i++)
+    {
+        ASSERT_EQ(kptsVec[i].size(), readKptsVec[i].size());
+        for(size_t j = 0; j < kptsVec[i].size(); j++)
+        {
+            ASSERT_FLOAT_EQ(kptsVec[i][j].pt.x, readKptsVec[i][j].pt.x);
+            ASSERT_FLOAT_EQ(kptsVec[i][j].pt.y, readKptsVec[i][j].pt.y);
+            ASSERT_FLOAT_EQ(kptsVec[i][j].angle, readKptsVec[i][j].angle);
+            ASSERT_FLOAT_EQ(kptsVec[i][j].size, readKptsVec[i][j].size);
+            ASSERT_FLOAT_EQ(kptsVec[i][j].response, readKptsVec[i][j].response);
+            ASSERT_EQ(kptsVec[i][j].octave, readKptsVec[i][j].octave);
+            ASSERT_EQ(kptsVec[i][j].class_id, readKptsVec[i][j].class_id);
+        }
+    }
+}
+
+TEST(Core_InputOutput, filestorage_dmatch_io)
+{
+    vector<vector<DMatch> > matchesVec;
+    vector<DMatch> matches;
+    matches.push_back(DMatch(1, 0, 10, 11.5f));
+    matches.push_back(DMatch(2, 1, 11, 21.5f));
+    matchesVec.push_back(matches);
+    matches.clear();
+    matches.push_back(DMatch(22, 10, 1, 1.5f));
+    matchesVec.push_back(matches);
+
+    FileStorage writer("", FileStorage::WRITE + FileStorage::MEMORY + FileStorage::FORMAT_XML);
+    writer << "dmatches" << matchesVec;
+    String content = writer.releaseAndGetString();
+
+    FileStorage reader(content, FileStorage::READ + FileStorage::MEMORY);
+    vector<vector<DMatch> > readKptsVec;
+    reader["dmatches"] >> readKptsVec;
+
+    ASSERT_EQ(matchesVec.size(), readKptsVec.size());
+
+    for(size_t i = 0; i < matchesVec.size(); i++)
+    {
+        ASSERT_EQ(matchesVec[i].size(), readKptsVec[i].size());
+        for(size_t j = 0; j < matchesVec[i].size(); j++)
+        {
+            ASSERT_FLOAT_EQ(matchesVec[i][j].distance, readKptsVec[i][j].distance);
+            ASSERT_EQ(matchesVec[i][j].imgIdx, readKptsVec[i][j].imgIdx);
+            ASSERT_EQ(matchesVec[i][j].queryIdx, readKptsVec[i][j].queryIdx);
+            ASSERT_EQ(matchesVec[i][j].trainIdx, readKptsVec[i][j].trainIdx);
+        }
+    }
+}
