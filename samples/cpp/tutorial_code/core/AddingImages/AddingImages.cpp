@@ -9,6 +9,7 @@
 #include <iostream>
 
 using namespace cv;
+using namespace std;
 
 /**
  * @function main
@@ -21,10 +22,10 @@ int main( void )
    Mat src1, src2, dst;
 
    /// Ask the user enter alpha
-   std::cout<<" Simple Linear Blender "<<std::endl;
-   std::cout<<"-----------------------"<<std::endl;
-   std::cout<<"* Enter alpha [0-1]: ";
-   std::cin>>input;
+   cout << " Simple Linear Blender " << endl;
+   cout << "-----------------------" << endl;
+   cout << "* Enter alpha [0-1]: ";
+   cin >> input;
 
    // We use the alpha provided by the user if it is between 0 and 1
    if( input >= 0 && input <= 1 )
@@ -32,12 +33,12 @@ int main( void )
 
    //![load]
    /// Read images ( both have to be of the same size and type )
-   src1 = imread("../data/LinuxLogo.jpg");
-   src2 = imread("../data/WindowsLogo.jpg");
+   src1 = imread( "../data/LinuxLogo.jpg" );
+   src2 = imread( "../data/WindowsLogo.jpg" );
    //![load]
 
-   if( src1.empty() ) { std::cout<< "Error loading src1"<<std::endl; return -1; }
-   if( src2.empty() ) { std::cout<< "Error loading src2"<<std::endl; return -1; }
+   if( src1.empty() ) { cout << "Error loading src1" << endl; return -1; }
+   if( src2.empty() ) { cout << "Error loading src2" << endl; return -1; }
 
    //![blend_images]
    beta = ( 1.0 - alpha );
