@@ -580,20 +580,6 @@ public:
     @param localsize work-group size for each dimension.
     @param sync specify whether to wait for OpenCL computation to finish before return.
     @param q command queue
-    */
-    bool run(int dims, size_t globalsize[],
-             size_t localsize[], bool sync, const Queue& q=Queue());
-    /**
-    Run the OpenCL kernel.
-    @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
-    @param globalsize work items for each dimension.
-    It is not the final globalsize passed to OpenCL.
-    Each dimension will be adjusted to the nearest integer divisible by the corresponding value in localsize.
-    If localsize is NULL, it will still be adjusted depending on dims.
-    The adjusted values are greater than or equal to the original values.
-    @param localsize work-group size for each dimension.
-    @param sync specify whether to wait for OpenCL computation to finish before return.
-    @param q command queue
     @param moreWorkDone specify whether there will the remaining work to be computed (more Kernel::run calls).
     When a computation requires multiple kernel execution by changing input and output buffer offset to get
     the final computation results.
@@ -604,8 +590,7 @@ public:
     kernel.run(..., q, false);
     */
     bool run(int dims, size_t globalsize[],
-             size_t localsize[], bool sync, bool moreWorkDone, const Queue& q);
-
+             size_t localsize[], bool sync, const Queue& q=Queue(), bool moreWorkDone = false);
     bool runTask(bool sync, const Queue& q=Queue());
 
     size_t workGroupSize() const;

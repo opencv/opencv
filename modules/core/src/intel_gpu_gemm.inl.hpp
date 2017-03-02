@@ -40,7 +40,7 @@ static bool intel_gpu_gemm(
     double alpha, double beta, 
     bool atrans, bool btrans)
 {
-    CV_UNUSED(sizeA); CV_UNUSED(sizeB);
+    sizeA; sizeB;
 
     int M = sizeD.height, N = sizeD.width, K = ((atrans)? sizeA.height : sizeA.width);
 
@@ -105,7 +105,7 @@ static bool intel_gpu_gemm(
     ocl::Queue q;
     if(!atrans && btrans)
     {
-        ret = k.run(2, global, local, false, false, q);
+        ret = k.run(2, global, local, false, q, false);
     }
     else
     {
@@ -114,12 +114,12 @@ static bool intel_gpu_gemm(
        	    k.set(14, &start_index, sizeof(start_index));
             if ((start_index + stride) < K)
     	    {
-    	        ret = k.run(2, global, local, false, true, q);
+    	        ret = k.run(2, global, local, false, q, true);
                 if (!ret) return ret;
     	    }
     	    else
             {
-                ret = k.run(2, global, local, false, false, q);
+                ret = k.run(2, global, local, false, q, false);
     	    }
         }
     }
