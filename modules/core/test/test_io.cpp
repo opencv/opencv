@@ -1014,7 +1014,7 @@ TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
     ASSERT_EQ(cv::norm(inputMatrix, actualMatrix, NORM_INF), 0.);
 }
 
-TEST(Core_InputOutput, filestorage_keypoints_io)
+TEST(Core_InputOutput, filestorage_keypoints_vec_vec_io)
 {
     vector<vector<KeyPoint> > kptsVec;
     vector<KeyPoint> kpts;
@@ -1051,41 +1051,6 @@ TEST(Core_InputOutput, filestorage_keypoints_io)
     }
 }
 
-TEST(Core_InputOutput, filestorage_dmatch_io)
-{
-    vector<vector<DMatch> > matchesVec;
-    vector<DMatch> matches;
-    matches.push_back(DMatch(1, 0, 10, 11.5f));
-    matches.push_back(DMatch(2, 1, 11, 21.5f));
-    matchesVec.push_back(matches);
-    matches.clear();
-    matches.push_back(DMatch(22, 10, 1, 1.5f));
-    matchesVec.push_back(matches);
-
-    FileStorage writer("", FileStorage::WRITE + FileStorage::MEMORY + FileStorage::FORMAT_XML);
-    writer << "dmatches" << matchesVec;
-    String content = writer.releaseAndGetString();
-
-    FileStorage reader(content, FileStorage::READ + FileStorage::MEMORY);
-    vector<vector<DMatch> > readKptsVec;
-    reader["dmatches"] >> readKptsVec;
-
-    ASSERT_EQ(matchesVec.size(), readKptsVec.size());
-
-    for(size_t i = 0; i < matchesVec.size(); i++)
-    {
-        ASSERT_EQ(matchesVec[i].size(), readKptsVec[i].size());
-        for(size_t j = 0; j < matchesVec[i].size(); j++)
-        {
-            ASSERT_FLOAT_EQ(matchesVec[i][j].distance, readKptsVec[i][j].distance);
-            ASSERT_EQ(matchesVec[i][j].imgIdx, readKptsVec[i][j].imgIdx);
-            ASSERT_EQ(matchesVec[i][j].queryIdx, readKptsVec[i][j].queryIdx);
-            ASSERT_EQ(matchesVec[i][j].trainIdx, readKptsVec[i][j].trainIdx);
-        }
-    }
-}
-
-#if 0
 TEST(Core_InputOutput, FileStorage_DMatch)
 {
     cv::FileStorage fs("dmatch.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
@@ -1106,7 +1071,6 @@ TEST(Core_InputOutput, FileStorage_DMatch)
     EXPECT_EQ(d.imgIdx, d_read.imgIdx);
     EXPECT_EQ(d.distance, d_read.distance);
 }
-#endif
 
 TEST(Core_InputOutput, FileStorage_DMatch_vector)
 {
@@ -1125,15 +1089,8 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
-#if 0
-"dv:\n"
-"   - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-"   - [ 2, 3, 4, 1.5000000000000000e+00 ]\n"
-"   - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-#else
 "dv: [ 1, 2, 3, -1.5000000000000000e+00, 2, 3, 4, 1.5000000000000000e+00,\n"
 "    3, 2, 1, 5.0000000000000000e-01 ]\n"
-#endif
 );
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
@@ -1177,19 +1134,9 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
 "%YAML:1.0\n"
 "---\n"
 "dvv:\n"
-#if 0
-"   -\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-"      - [ 2, 3, 4, 1.5000000000000000e+00 ]\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-"   -\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-#else
 "   - [ 1, 2, 3, -1.5000000000000000e+00, 2, 3, 4, 1.5000000000000000e+00,\n"
 "       3, 2, 1, 5.0000000000000000e-01 ]\n"
 "   - [ 3, 2, 1, 5.0000000000000000e-01, 1, 2, 3, -1.5000000000000000e+00 ]\n"
-#endif
 );
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
