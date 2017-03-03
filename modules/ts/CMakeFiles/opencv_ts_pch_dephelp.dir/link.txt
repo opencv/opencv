@@ -1,0 +1,2 @@
+/usr/bin/ar cr ../../lib/libopencv_ts_pch_dephelp.a  CMakeFiles/opencv_ts_pch_dephelp.dir/opencv_ts_pch_dephelp.cxx.o
+/usr/bin/ranlib ../../lib/libopencv_ts_pch_dephelp.a

@@ -1,0 +1,63 @@
+# Target labels
+ Main
+ opencv_videoio
+ Module
+# Source files and their labels
+/home/boney/opencvprog/opencv-source/modules/videoio/include/opencv2/videoio.hpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/include/opencv2/videoio/videoio.hpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/include/opencv2/videoio/videoio_c.h
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/include/opencv2/videoio/cap_ios.h
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap.cpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap_images.cpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap_mjpeg_encoder.cpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap_mjpeg_decoder.cpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap_dc1394_v2.cpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap_gstreamer.cpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap_v4l.cpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap_ffmpeg.cpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/precomp.hpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/modules/videoio/src/cap_ffmpeg_impl.hpp
+ Main
+ opencv_videoio
+ Module
+/home/boney/opencvprog/opencv-source/cvconfig.h
+/home/boney/opencvprog/opencv-source/opencv2/opencv_modules.hpp

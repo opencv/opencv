@@ -1,0 +1,77 @@
+opencv_test_core 0 0
+opencv_perf_core 0 0
+opencv_sanity_core 0 0
+opencv_test_flann 0 0
+opencv_test_imgproc 0 0
+opencv_perf_imgproc 0 0
+opencv_sanity_imgproc 0 0
+opencv_test_ml 0 0
+opencv_test_photo 0 0
+opencv_perf_photo 0 0
+opencv_sanity_photo 0 0
+opencv_test_video 0 0
+opencv_perf_video 0 0
+opencv_sanity_video 0 0
+opencv_test_viz 0 0
+opencv_test_imgcodecs 0 0
+opencv_perf_imgcodecs 0 0
+opencv_sanity_imgcodecs 0 0
+opencv_test_shape 0 0
+opencv_test_videoio 0 0
+opencv_perf_videoio 0 0
+opencv_sanity_videoio 0 0
+opencv_test_highgui 0 0
+opencv_test_objdetect 0 0
+opencv_perf_objdetect 0 0
+opencv_sanity_objdetect 0 0
+opencv_test_superres 0 0
+opencv_perf_superres 0 0
+opencv_sanity_superres 0 0
+opencv_test_features2d 0 0
+opencv_perf_features2d 0 0
+opencv_sanity_features2d 0 0
+opencv_test_calib3d 0 0
+opencv_perf_calib3d 0 0
+opencv_sanity_calib3d 0 0
+opencv_test_stitching 0 0
+opencv_perf_stitching 0 0
+opencv_sanity_stitching 0 0
+---
+opencv_test_core
+opencv_perf_core
+opencv_sanity_core
+opencv_test_flann
+opencv_test_imgproc
+opencv_perf_imgproc
+opencv_sanity_imgproc
+opencv_test_ml
+opencv_test_photo
+opencv_perf_photo
+opencv_sanity_photo
+opencv_test_video
+opencv_perf_video
+opencv_sanity_video
+opencv_test_viz
+opencv_test_imgcodecs
+opencv_perf_imgcodecs
+opencv_sanity_imgcodecs
+opencv_test_shape
+opencv_test_videoio
+opencv_perf_videoio
+opencv_sanity_videoio
+opencv_test_highgui
+opencv_test_objdetect
+opencv_perf_objdetect
+opencv_sanity_objdetect
+opencv_test_superres
+opencv_perf_superres
+opencv_sanity_superres
+opencv_test_features2d
+opencv_perf_features2d
+opencv_sanity_features2d
+opencv_test_calib3d
+opencv_perf_calib3d
+opencv_sanity_calib3d
+opencv_test_stitching
+opencv_perf_stitching
+opencv_sanity_stitching

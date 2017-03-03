@@ -1,0 +1,21 @@
+# Target labels
+ Main
+ opencv_imgcodecs
+ AccuracyTest
+# Source files and their labels
+/home/boney/opencvprog/opencv-source/modules/imgcodecs/test/test_main.cpp
+ Main
+ opencv_imgcodecs
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/imgcodecs/test/test_drawing.cpp
+ Main
+ opencv_imgcodecs
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/imgcodecs/test/test_grfmt.cpp
+ Main
+ opencv_imgcodecs
+ AccuracyTest
+/home/boney/opencvprog/opencv-source/modules/imgcodecs/test/test_precomp.hpp
+ Main
+ opencv_imgcodecs
+ AccuracyTest

@@ -1,0 +1,14 @@
+# Package Information for pkg-config
+
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir_old=${prefix}/include/opencv
+includedir_new=${prefix}/include
+
+Name: OpenCV
+Description: Open Source Computer Vision Library
+Version: 3.1.0
+Libs: -L${exec_prefix}/lib -lopencv_shape -lopencv_stitching -lopencv_objdetect -lopencv_superres -lopencv_videostab -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_video -lopencv_photo -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_viz -lopencv_core
+Libs.private: -L/usr/lib/x86_64-linux-gnu -lpng -lz -ltiff -ljasper -ljpeg -lImath -lIlmImf -lIex -lHalf -lIlmThread -lgtk-3 -lgdk-3 -lpangocairo-1.0 -lpango-1.0 -latk-1.0 -lcairo-gobject -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lgobject-2.0 -lglib-2.0 -lgthread-2.0 -lgstbase-0.10 -lgstreamer-0.10 -lgmodule-2.0 -lxml2 -lgstvideo-0.10 -lgstapp-0.10 -lgstriff-0.10 -lgstpbutils-0.10 -ldc1394 -lavcodec -lavformat -lavutil -lswscale -lavresample -L/usr/lib -lvtkCommon -lvtkFiltering -lvtkImaging -lvtkGraphics -lvtkGenericFiltering -lvtkIO -lvtkRendering -lvtkVolumeRendering -lvtkHybrid -lvtkWidgets -lvtkParallel -lvtkInfovis -lvtkGeovis -lvtkViews -lvtkCharts -ldl -lm -lpthread -lrt
+Cflags: -I${includedir_old} -I${includedir_new}

@@ -1,0 +1,17 @@
+# Target labels
+ Main
+ opencv_superres
+ PerfTest
+# Source files and their labels
+/home/boney/opencvprog/opencv-source/modules/superres/perf/perf_superres.cpp
+ Main
+ opencv_superres
+ PerfTest
+/home/boney/opencvprog/opencv-source/modules/superres/perf/perf_main.cpp
+ Main
+ opencv_superres
+ PerfTest
+/home/boney/opencvprog/opencv-source/modules/superres/perf/perf_precomp.hpp
+ Main
+ opencv_superres
+ PerfTest

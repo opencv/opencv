@@ -225,6 +225,7 @@ static int icvAddOuterQuad(CvCBQuad *quad, CvCBQuad **quads, int quad_count,
 static void icvRemoveQuadFromGroup(CvCBQuad **quads, int count, CvCBQuad *q0);
 
 static int icvCheckBoardMonotony( CvPoint2D32f* corners, CvSize pattern_size );
+bool CircleGrid(int flags, bool isAsymmetricGrid, std::vector<Point2f> points, Size patternSize, std::vector<Point2f> centers, OutputArray _centers);
 
 /***************************************************************************************************/
 //COMPUTE INTENSITY HISTOGRAM OF INPUT IMAGE
@@ -2112,7 +2113,13 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
       points.push_back (keypoints[i].pt);
     }
 
-    if(flags & CALIB_CB_CLUSTERING)
+    return CircleGrid(flags, isAsymmetricGrid, points, patternSize, centers, _centers);
+    
+}
+
+bool CircleGrid(int flags, bool isAsymmetricGrid, std::vector<Point2f> points, Size patternSize, std::vector<Point2f> centers, OutputArray _centers)
+{
+	if(flags & CALIB_CB_CLUSTERING)
     {
       CirclesGridClusterFinder circlesGridClusterFinder(isAsymmetricGrid);
       circlesGridClusterFinder.findGrid(points, patternSize, centers);
@@ -2191,5 +2198,4 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
     Mat(centers).copyTo(_centers);
     return false;
 }
-
 /* End of file. */

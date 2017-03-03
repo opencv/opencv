@@ -1,0 +1,361 @@
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = OpenCV
+PROJECT_NUMBER         = 3.1.0-dev
+PROJECT_BRIEF          = "Open Source Computer Vision"
+PROJECT_LOGO           = /home/boney/opencvprog/opencv-source/doc/opencv-logo-small.png
+OUTPUT_DIRECTORY       = doxygen
+CREATE_SUBDIRS         = YES
+OUTPUT_LANGUAGE        = English
+BRIEF_MEMBER_DESC      = YES
+REPEAT_BRIEF           = YES
+ABBREVIATE_BRIEF       = "The $name class" \
+                         "The $name widget" \
+                         "The $name file" \
+                         is \
+                         provides \
+                         specifies \
+                         contains \
+                         represents \
+                         a \
+                         an \
+                         the
+ALWAYS_DETAILED_SEC    = NO
+INLINE_INHERITED_MEMB  = NO
+FULL_PATH_NAMES        = YES
+STRIP_FROM_PATH        = /home/boney/opencvprog/opencv-source/modules
+STRIP_FROM_INC_PATH    =
+SHORT_NAMES            = NO
+JAVADOC_AUTOBRIEF      = NO
+QT_AUTOBRIEF           = NO
+MULTILINE_CPP_IS_BRIEF = NO
+INHERIT_DOCS           = YES
+SEPARATE_MEMBER_PAGES  = NO
+TAB_SIZE               = 4
+ALIASES                =
+TCL_SUBST              =
+OPTIMIZE_OUTPUT_FOR_C  = NO
+OPTIMIZE_OUTPUT_JAVA   = NO
+OPTIMIZE_FOR_FORTRAN   = NO
+OPTIMIZE_OUTPUT_VHDL   = NO
+EXTENSION_MAPPING      =
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+BUILTIN_STL_SUPPORT    = YES
+CPP_CLI_SUPPORT        = NO
+SIP_SUPPORT            = NO
+IDL_PROPERTY_SUPPORT   = YES
+DISTRIBUTE_GROUP_DOC   = NO
+SUBGROUPING            = YES
+INLINE_GROUPED_CLASSES = NO
+INLINE_SIMPLE_STRUCTS  = NO
+TYPEDEF_HIDES_STRUCT   = YES
+LOOKUP_CACHE_SIZE      = 0
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_PACKAGE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = NO
+EXTRACT_LOCAL_METHODS  = NO
+EXTRACT_ANON_NSPACES   = NO
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+HIDE_FRIEND_COMPOUNDS  = NO
+HIDE_IN_BODY_DOCS      = NO
+INTERNAL_DOCS          = NO
+CASE_SENSE_NAMES       = YES
+HIDE_SCOPE_NAMES       = NO
+SHOW_INCLUDE_FILES     = YES
+SHOW_GROUPED_MEMB_INC  = NO
+FORCE_LOCAL_INCLUDES   = YES
+INLINE_INFO            = YES
+SORT_MEMBER_DOCS       = YES
+SORT_BRIEF_DOCS        = YES
+SORT_MEMBERS_CTORS_1ST = YES
+SORT_GROUP_NAMES       = NO
+SORT_BY_SCOPE_NAME     = NO
+STRICT_PROTO_MATCHING  = NO
+GENERATE_TODOLIST      = YES
+GENERATE_TESTLIST      = YES
+GENERATE_BUGLIST       = YES
+GENERATE_DEPRECATEDLIST= YES
+ENABLED_SECTIONS       =
+MAX_INITIALIZER_LINES  = 30
+SHOW_USED_FILES        = YES
+SHOW_FILES             = YES
+SHOW_NAMESPACES        = YES
+FILE_VERSION_FILTER    =
+LAYOUT_FILE            = /home/boney/opencvprog/opencv-source/doc/DoxygenLayout.xml
+CITE_BIB_FILES         = /home/boney/opencvprog/opencv-source/doc/opencv.bib  /home/boney/opencvprog/opencv-source/modules/calib3d/doc/calib3d.bib
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+WARN_FORMAT            = "$file:$line: $text"
+WARN_LOGFILE           =
+INPUT                  = /home/boney/opencvprog/opencv-source/doc/root.markdown  \
+ /home/boney/opencvprog/opencv-source/doc/faq.markdown  \
+ /home/boney/opencvprog/opencv-source/modules/core/include \
+/home/boney/opencvprog/opencv-source/modules/imgproc/include \
+/home/boney/opencvprog/opencv-source/modules/imgcodecs/include \
+/home/boney/opencvprog/opencv-source/modules/videoio/include \
+/home/boney/opencvprog/opencv-source/modules/highgui/include \
+/home/boney/opencvprog/opencv-source/modules/video/include \
+/home/boney/opencvprog/opencv-source/modules/calib3d/include \
+/home/boney/opencvprog/opencv-source/modules/features2d/include \
+/home/boney/opencvprog/opencv-source/modules/objdetect/include \
+/home/boney/opencvprog/opencv-source/modules/ml/include \
+/home/boney/opencvprog/opencv-source/modules/flann/include \
+/home/boney/opencvprog/opencv-source/modules/photo/include \
+/home/boney/opencvprog/opencv-source/modules/stitching/include \
+/home/boney/opencvprog/opencv-source/modules/cudaarithm/include \
+/home/boney/opencvprog/opencv-source/modules/cudabgsegm/include \
+/home/boney/opencvprog/opencv-source/modules/cudacodec/include \
+/home/boney/opencvprog/opencv-source/modules/cudafeatures2d/include \
+/home/boney/opencvprog/opencv-source/modules/cudafilters/include \
+/home/boney/opencvprog/opencv-source/modules/cudaimgproc/include \
+/home/boney/opencvprog/opencv-source/modules/cudalegacy/include \
+/home/boney/opencvprog/opencv-source/modules/cudaobjdetect/include \
+/home/boney/opencvprog/opencv-source/modules/cudaoptflow/include \
+/home/boney/opencvprog/opencv-source/modules/cudastereo/include \
+/home/boney/opencvprog/opencv-source/modules/cudawarping/include \
+/home/boney/opencvprog/opencv-source/modules/cudev/include \
+/home/boney/opencvprog/opencv-source/modules/shape/include \
+/home/boney/opencvprog/opencv-source/modules/superres/include \
+/home/boney/opencvprog/opencv-source/modules/videostab/include \
+/home/boney/opencvprog/opencv-source/modules/viz/include  \
+ /home/boney/opencvprog/opencv-source/modules/core/src/hal_replacement.hpp \
+/home/boney/opencvprog/opencv-source/modules/imgproc/src/hal_replacement.hpp  \
+ /home/boney/opencvprog/opencv-source/modules/core/doc \
+/home/boney/opencvprog/opencv-source/modules/imgproc/doc \
+/home/boney/opencvprog/opencv-source/modules/videoio/doc \
+/home/boney/opencvprog/opencv-source/modules/highgui/doc \
+/home/boney/opencvprog/opencv-source/modules/calib3d/doc \
+/home/boney/opencvprog/opencv-source/modules/features2d/doc \
+/home/boney/opencvprog/opencv-source/modules/objdetect/doc \
+/home/boney/opencvprog/opencv-source/modules/ml/doc \
+/home/boney/opencvprog/opencv-source/modules/stitching/doc \
+/home/boney/opencvprog/opencv-source/modules/viz/doc  \
+ /home/boney/opencvprog/opencv-source/doc/tutorials  \
+ /home/boney/opencvprog/opencv-source/doc/py_tutorials  \
+   \
+ 
+INPUT_ENCODING         = UTF-8
+FILE_PATTERNS          =
+RECURSIVE              = YES
+EXCLUDE                =
+EXCLUDE_SYMLINKS       = NO
+EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp
+EXCLUDE_SYMBOLS        = cv::DataType<*> int void
+EXAMPLE_PATH           = /home/boney/opencvprog/opencv-source/samples  \
+ /home/boney/opencvprog/opencv-source/modules/core/doc \
+/home/boney/opencvprog/opencv-source/modules/imgproc/doc \
+/home/boney/opencvprog/opencv-source/modules/videoio/doc \
+/home/boney/opencvprog/opencv-source/modules/highgui/doc \
+/home/boney/opencvprog/opencv-source/modules/calib3d/doc \
+/home/boney/opencvprog/opencv-source/modules/features2d/doc \
+/home/boney/opencvprog/opencv-source/modules/objdetect/doc \
+/home/boney/opencvprog/opencv-source/modules/ml/doc \
+/home/boney/opencvprog/opencv-source/modules/stitching/doc \
+/home/boney/opencvprog/opencv-source/modules/viz/doc  \
+ 
+EXAMPLE_PATTERNS       = *
+EXAMPLE_RECURSIVE      = YES
+IMAGE_PATH             = /home/boney/opencvprog/opencv-source/modules/core/doc \
+/home/boney/opencvprog/opencv-source/modules/imgproc/doc \
+/home/boney/opencvprog/opencv-source/modules/videoio/doc \
+/home/boney/opencvprog/opencv-source/modules/highgui/doc \
+/home/boney/opencvprog/opencv-source/modules/calib3d/doc \
+/home/boney/opencvprog/opencv-source/modules/features2d/doc \
+/home/boney/opencvprog/opencv-source/modules/objdetect/doc \
+/home/boney/opencvprog/opencv-source/modules/ml/doc \
+/home/boney/opencvprog/opencv-source/modules/stitching/doc \
+/home/boney/opencvprog/opencv-source/modules/viz/doc  \
+ /home/boney/opencvprog/opencv-source/doc/tutorials  \
+ /home/boney/opencvprog/opencv-source/doc/py_tutorials  \
+ 
+INPUT_FILTER           =
+FILTER_PATTERNS        =
+FILTER_SOURCE_FILES    = NO
+FILTER_SOURCE_PATTERNS =
+USE_MDFILE_AS_MAINPAGE =
+SOURCE_BROWSER         = NO
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = YES
+REFERENCED_BY_RELATION = NO
+REFERENCES_RELATION    = NO
+REFERENCES_LINK_SOURCE = YES
+SOURCE_TOOLTIPS        = YES
+USE_HTAGS              = NO
+VERBATIM_HEADERS       = NO
+ALPHABETICAL_INDEX     = YES
+COLS_IN_ALPHA_INDEX    = 5
+IGNORE_PREFIX          =
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_HEADER            = /home/boney/opencvprog/opencv-source/doc/header.html
+HTML_FOOTER            = /home/boney/opencvprog/opencv-source/doc/footer.html
+HTML_STYLESHEET        =
+HTML_EXTRA_STYLESHEET  = /home/boney/opencvprog/opencv-source/doc/stylesheet.css
+HTML_EXTRA_FILES       = /home/boney/opencvprog/opencv-source/doc/opencv.ico \
+/home/boney/opencvprog/opencv-source/doc/pattern.png \
+/home/boney/opencvprog/opencv-source/doc/acircles_pattern.png \
+/home/boney/opencvprog/opencv-source/doc/bodybg.png \
+/home/boney/opencvprog/opencv-source/doc/mymath.sty
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
+HTML_TIMESTAMP         = YES
+HTML_DYNAMIC_SECTIONS  = NO
+HTML_INDEX_NUM_ENTRIES = 100
+GENERATE_DOCSET        = NO
+DOCSET_FEEDNAME        = "Doxygen generated docs"
+DOCSET_BUNDLE_ID       = org.doxygen.Project
+DOCSET_PUBLISHER_ID    = org.doxygen.Publisher
+DOCSET_PUBLISHER_NAME  = Publisher
+GENERATE_HTMLHELP      = NO
+CHM_FILE               =
+HHC_LOCATION           =
+GENERATE_CHI           = NO
+CHM_INDEX_ENCODING     =
+BINARY_TOC             = NO
+TOC_EXPAND             = NO
+GENERATE_QHP           = NO
+QCH_FILE               = ../opencv-3.1.0-dev.qch
+QHP_NAMESPACE          = org.opencv.3.1.0-dev
+QHP_VIRTUAL_FOLDER     = opencv
+QHP_CUST_FILTER_NAME   =
+QHP_CUST_FILTER_ATTRS  =
+QHP_SECT_FILTER_ATTRS  =
+QHG_LOCATION           =
+GENERATE_ECLIPSEHELP   = NO
+ECLIPSE_DOC_ID         = org.doxygen.Project
+DISABLE_INDEX          = NO
+GENERATE_TREEVIEW      = NO
+ENUM_VALUES_PER_LINE   = 1
+TREEVIEW_WIDTH         = 250
+EXT_LINKS_IN_WINDOW    = YES
+FORMULA_FONTSIZE       = 14
+FORMULA_TRANSPARENT    = YES
+USE_MATHJAX            = YES
+MATHJAX_FORMAT         = HTML-CSS
+MATHJAX_RELPATH        = http://cdn.mathjax.org/mathjax/latest
+MATHJAX_EXTENSIONS     = TeX/AMSmath TeX/AMSsymbols
+MATHJAX_CODEFILE       = /home/boney/opencvprog/opencv-source/doc/mymath.js
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+EXTERNAL_SEARCH        = NO
+SEARCHENGINE_URL       =
+SEARCHDATA_FILE        = searchdata.xml
+EXTERNAL_SEARCH_ID     =
+EXTRA_SEARCH_MAPPINGS  =
+GENERATE_LATEX         = NO
+LATEX_OUTPUT           = latex
+LATEX_CMD_NAME         = latex
+MAKEINDEX_CMD_NAME     = makeindex
+COMPACT_LATEX          = NO
+PAPER_TYPE             = a4
+EXTRA_PACKAGES         = mymath
+LATEX_HEADER           =
+LATEX_FOOTER           =
+LATEX_EXTRA_FILES      =
+PDF_HYPERLINKS         = YES
+USE_PDFLATEX           = YES
+LATEX_BATCHMODE        = NO
+LATEX_HIDE_INDICES     = NO
+LATEX_SOURCE_CODE      = NO
+LATEX_BIB_STYLE        = plain
+GENERATE_RTF           = NO
+RTF_OUTPUT             = rtf
+COMPACT_RTF            = NO
+RTF_HYPERLINKS         = NO
+RTF_STYLESHEET_FILE    =
+RTF_EXTENSIONS_FILE    =
+GENERATE_MAN           = NO
+MAN_OUTPUT             = man
+MAN_EXTENSION          = .3
+MAN_LINKS              = NO
+GENERATE_XML           = NO
+XML_OUTPUT             = xml
+XML_PROGRAMLISTING     = YES
+GENERATE_DOCBOOK       = NO
+DOCBOOK_OUTPUT         = docbook
+GENERATE_AUTOGEN_DEF   = NO
+GENERATE_PERLMOD       = NO
+PERLMOD_LATEX          = NO
+PERLMOD_PRETTY         = YES
+PERLMOD_MAKEVAR_PREFIX =
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+SEARCH_INCLUDES        = YES
+INCLUDE_PATH           =
+INCLUDE_FILE_PATTERNS  =
+PREDEFINED             = __cplusplus=1 \
+                         HAVE_IPP_A=1 \
+                         CVAPI(x)=x \
+                         CV_DOXYGEN= \
+                         CV_EXPORTS= \
+                         CV_EXPORTS_W= \
+                         CV_EXPORTS_W_SIMPLE= \
+                         CV_EXPORTS_AS(x)= \
+                         CV_EXPORTS_W_MAP= \
+                         CV_IN_OUT= \
+                         CV_OUT= \
+                         CV_PROP= \
+                         CV_PROP_RW= \
+                         CV_WRAP= \
+                         CV_WRAP_AS(x)= \
+                         CV_CDECL= \
+                         CV_Func = \
+                         CV_DO_PRAGMA(x)= \
+                         CV_SUPPRESS_DEPRECATED_START= \
+                         CV_SUPPRESS_DEPRECATED_END= \
+                         CV_INLINE= \
+                         CV_NORETURN= \
+                         CV_DEFAULT(x)=" = x" \
+                         CV_NEON=1 \
+                         CV_SSE2=1 \
+                         FLANN_DEPRECATED=
+EXPAND_AS_DEFINED      =
+SKIP_FUNCTION_MACROS   = YES
+TAGFILES               =
+GENERATE_TAGFILE       =
+ALLEXTERNALS           = NO
+EXTERNAL_GROUPS        = YES
+EXTERNAL_PAGES         = YES
+PERL_PATH              = /usr/bin/perl
+CLASS_DIAGRAMS         = YES
+MSCGEN_PATH            =
+DIA_PATH               =
+HIDE_UNDOC_RELATIONS   = NO
+HAVE_DOT               = NO
+DOT_NUM_THREADS        = 0
+DOT_FONTNAME           = Helvetica
+DOT_FONTSIZE           = 10
+DOT_FONTPATH           =
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+UML_LOOK               = YES
+UML_LIMIT_NUM_FIELDS   = 10
+TEMPLATE_RELATIONS     = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = NO
+GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+DOT_PATH               =
+DOTFILE_DIRS           =
+MSCFILE_DIRS           =
+DIAFILE_DIRS           =
+DOT_GRAPH_MAX_NODES    = 50
+MAX_DOT_GRAPH_DEPTH    = 0
+DOT_TRANSPARENT        = NO
+DOT_MULTI_TARGETS      = NO
+GENERATE_LEGEND        = YES
+DOT_CLEANUP            = YES
