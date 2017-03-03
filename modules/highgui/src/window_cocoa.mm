@@ -708,7 +708,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 @synthesize firstContent;
 @synthesize sliders;
 @synthesize status;
-#else
+#else // 32-bit Obj-C does not have automatic synthesize
 @synthesize mouseCallback = _mouseCallback;
 @synthesize mouseParam = _mouseParam;
 @synthesize autosize = _autosize;
@@ -745,7 +745,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 
 - (void)cvMouseEvent:(NSEvent *)event {
     //cout << "cvMouseEvent" << endl;
-    
+
     if([self mouseCallback] == nil)
         return;
 
@@ -864,7 +864,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 @implementation CVView
 #if defined(__LP64__)
 @synthesize image;
-#else
+#else // 32-bit Obj-C does not have automatic synthesize
 @synthesize image = _image;
 #endif
 
@@ -1000,8 +1000,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 @synthesize userData;
 @synthesize callback;
 @synthesize callback2;
-#else
-// 32-bit Obj-C does not have automatic synthesize
+#else // 32-bit Obj-C does not have automatic synthesize
 @synthesize slider = _slider;
 @synthesize name = _name;
 @synthesize value = _value;
