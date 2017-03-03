@@ -1001,6 +1001,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 @synthesize callback;
 @synthesize callback2;
 #else
+// 32-bit Obj-C does not have automatic synthesize
 @synthesize slider = _slider;
 @synthesize name = _name;
 @synthesize value = _value;
