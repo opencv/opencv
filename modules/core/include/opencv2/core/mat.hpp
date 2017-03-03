@@ -1970,9 +1970,11 @@ public:
     //! pointer to the data
     uchar* data;
 
-    //! helper fields used in locateROI and adjustROI
+    //! beginning of (parent) matrix -> needed when submatrix
     const uchar* datastart;
+    //! end of (parent) matrix -> needed when submatrix
     const uchar* dataend;
+    //! end of allocated data (might be after dataend because of alignment area)
     const uchar* datalimit;
 
     //! custom allocator
