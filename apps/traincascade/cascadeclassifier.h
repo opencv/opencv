@@ -6,7 +6,7 @@
 #include "haarfeatures.h"
 #include "lbpfeatures.h"
 #include "HOGfeatures.h" 
-#include "MBLBPfeatures.h" // new
+#include "mblbpfeatures.h" // new
 #include "boost.h"
 #include "cv.h"
 #include "cxcore.h"
@@ -104,6 +104,9 @@ public:
                 const CvCascadeParams& _cascadeParams,
                 const CvFeatureParams& _featureParams,
                 const CvCascadeBoostParams& _stageParams,
+                cv::Size _winSize,
+                int _maxWeakCount,
+                float _minHitRate,
                 bool baseFormatSave = false,
                 double acceptanceRatioBreakValue = -1.0 );
 private:
@@ -130,6 +133,9 @@ private:
     CvCascadeImageReader imgReader;
     int numStages, curNumSamples;
     int numPos, numNeg;
+    cv::Size winSize;
+    int maxWeakCount;
+    float minHitRate;
 };
 
 #endif

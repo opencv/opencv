@@ -138,8 +138,11 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                                 const CvCascadeParams& _cascadeParams,
                                 const CvFeatureParams& _featureParams,
                                 const CvCascadeBoostParams& _stageParams,
+                                cv::Size _winSize,
+                                int _maxWeakCount,
+                                float _minHitRate,
                                 bool baseFormatSave,
-                                double acceptanceRatioBreakValue)
+                                double acceptanceRatioBreakValue  )
 {
     // Start recording clock ticks for training time output
     const clock_t begin_time = clock();
@@ -156,6 +159,10 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     numPos = _numPos;
     numNeg = _numNeg;
     numStages = _numStages;
+    winSize=_winSize;
+    maxWeakCount=MIN(_maxWeakCount,MAX_NUM_WEAKS);
+    minHitRate = _minHitRate;
+
     if ( !imgReader.create( _posFilename, _negFilename, _cascadeParams.winSize ) )
     {
         cout << "Image reader can not be created from -vec " << _posFilename

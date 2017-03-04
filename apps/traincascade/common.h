@@ -24,10 +24,8 @@ using namespace cv;
 #define CC_HEIGHT "height"
 #define CC_WIDTH  "width"
 #define CC_MINHITRATE       "minHitRate"
-#define CC_STAGE_NUM    "stageCount"
 #define CC_STAGES       "stages"
 #define CC_FALSE_ALARM "falseAlarm"
-#define CC_WEAK_COUNT       "weakCount"
 #define CC_STAGE_THRESHOLD  "stageThreshold"
 #define CC_WEAK_CLASSIFIERS "weakClassifiers"
 #define CC_WEAK_THRESHOLD  "weakThreshold"
@@ -36,6 +34,12 @@ using namespace cv;
 #define CC_LUT_LENGTH  "lutlength"
 #define CC_LUT		   "lut"
 
+#ifndef CC_WEAK_COUNT
+#define CC_WEAK_COUNT       "weakCount"
+#endif
+#ifndef CC_STAGE_NUM
+#define CC_STAGE_NUM    "stageCount"
+#endif
 #if MBLBP_LUTLENGTH == 59
 
 static unsigned char LBPMAP[256] = {1,   2,   3,   4,   5,   0,   6,   7,   8,   0,   0,   0,   9,   0,  10,  11,
@@ -73,7 +77,8 @@ static unsigned char LBPMAP[256] = {
 192,  193,  194,  195,  196,  197,  198,  199,  200,  201,  202,  203,  204,  205,  206,  207,  
 208,  209,  210,  211,  212,  213,  214,  215,  216,  217,  218,  219,  220,  221,  222,  223,  
 224,  225,  226,  227,  228,  229,  230,  231,  232,  233,  234,  235,  236,  237,  238,  239,  
-240,  241,  242,  243,  244,  245,  246,  247,  248,  249,  250,  251,  252,  253,  254,  255};
+240,  241,  242,  243,  244,  245,  246,  247,  248,  249,  250,  251,  252,  253,  254,  255
+};
 
 #else
   #error "LBPMAP is not defined."

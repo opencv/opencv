@@ -25,7 +25,7 @@ int updateCascade(MBLBPCascadef * pCascade, int stepWidth)
             pWeak->offsets[ 1] = y * stepWidth + (x + w  );
             pWeak->offsets[ 2] = y * stepWidth + (x + w*2);
             pWeak->offsets[ 3] = y * stepWidth + (x + w*3);
-        
+
             pWeak->offsets[ 4] = (y+h) * stepWidth + (x      );
             pWeak->offsets[ 5] = (y+h) * stepWidth + (x + w  );
             pWeak->offsets[ 6] = (y+h) * stepWidth + (x + w*2);
