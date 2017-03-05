@@ -3976,11 +3976,13 @@ CV_EXPORTS_W float intersectConvexConvex( InputArray _p1, InputArray _p2,
 /** @brief Fits an ellipse around a set of 2D points.
 
 The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of
-all. It returns the rotated rectangle in which the ellipse is inscribed. The first algorithm described by @cite Fitzgibbon95
-is used. Developer should keep in mind that it is possible that the returned
+all. It returns the rotated rectangle in which the ellipse is inscribed.
+The default algorithm which is used is described in @cite Halir98numericallystable (method: ELLIPSEFIT_HALIR).
+Aside of this an alternative algorithm, provided by @cite Fitzgibbon95 can be choosen by setting the ELLIPSEFIT_FITZGIBBON method.
+The default algorithm is a direct ellipse fit and has a better numerical stability.
+Developer should keep in mind that it is possible that the returned
 ellipse/rotatedRect data contains negative indices, due to the data points being close to the
 border of the containing Mat element.
-If the flag direct is true a direct ellipse fit algorithm is used decribed by @cite Fitzgibbon99
 
 @param points Input 2D point set, stored in std::vector\<\> or Mat
  */
@@ -3988,9 +3990,9 @@ CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
 
 /** @overload
 @param points Input 2D point set, stored in std::vector\<\> or Mat
-@param direct Flag to use a direct ellipse fit algorithm
+@param method Flag to select ellipse fit algorithm. (ELLIPSEFIT_HALIR, ELLIPSEFIT_FITZGIBBON)
 */
-CV_EXPORTS_AS(fitEllipse2) RotatedRect fitEllipse( InputArray points, bool direct );
+CV_EXPORTS_AS(fitEllipseMethod) RotatedRect fitEllipse( InputArray points, int method );
 
 /** @brief Fits a line to a 2D or 3D point set.
 

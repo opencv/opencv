@@ -23,8 +23,8 @@ static bool check_pt_in_ellipse(const Point2f& pt, const RotatedRect& el) {
 }
 
 // Return true if mass center of fitted points lies inside ellipse
-static bool fit_and_check_ellipse(const vector<Point2f>& pts) {
-    RotatedRect ellipse = fitEllipse(pts);
+static bool fit_and_check_ellipse(const vector<Point2f>& pts, int method) {
+    RotatedRect ellipse = fitEllipse(pts, method);
 
     Point2f mass_center;
     for (size_t i = 0; i < pts.size(); i++) {
@@ -50,7 +50,7 @@ TEST(Imgproc_FitEllipse_Issue_4515, DISABLED_accuracy) {
     pts.push_back(Point2f(333, 319));
     pts.push_back(Point2f(333, 320));
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    EXPECT_TRUE(fit_and_check_ellipse(pts, ELLIPSEFIT_FITZGIBBON));
 }
 
 TEST(Imgproc_FitEllipse_Issue_6544, DISABLED_accuracy) {
@@ -66,5 +66,39 @@ TEST(Imgproc_FitEllipse_Issue_6544, DISABLED_accuracy) {
     pts.push_back(Point2f(929.145f, 744.976f));
     pts.push_back(Point2f(917.474f, 791.823f));
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    EXPECT_TRUE(fit_and_check_ellipse(pts, ELLIPSEFIT_FITZGIBBON));
+}
+
+TEST(Imgproc_FitEllipse_Direct_Issue_4515, DISABLED_accuracy) {
+    vector<Point2f> pts;
+    pts.push_back(Point2f(327, 317));
+    pts.push_back(Point2f(328, 316));
+    pts.push_back(Point2f(329, 315));
+    pts.push_back(Point2f(330, 314));
+    pts.push_back(Point2f(331, 314));
+    pts.push_back(Point2f(332, 314));
+    pts.push_back(Point2f(333, 315));
+    pts.push_back(Point2f(333, 316));
+    pts.push_back(Point2f(333, 317));
+    pts.push_back(Point2f(333, 318));
+    pts.push_back(Point2f(333, 319));
+    pts.push_back(Point2f(333, 320));
+
+    EXPECT_TRUE(fit_and_check_ellipse(pts, ELLIPSEFIT_HALIR));
+}
+
+TEST(Imgproc_FitEllipse_Direct_Issue_6544, accuracy) {
+    vector<Point2f> pts;
+    pts.push_back(Point2f(924.784f, 764.160f));
+    pts.push_back(Point2f(928.388f, 615.903f));
+    pts.push_back(Point2f(847.4f,   888.014f));
+    pts.push_back(Point2f(929.406f, 741.675f));
+    pts.push_back(Point2f(904.564f, 825.605f));
+    pts.push_back(Point2f(926.742f, 760.746f));
+    pts.push_back(Point2f(863.479f, 873.406f));
+    pts.push_back(Point2f(910.987f, 808.863f));
+    pts.push_back(Point2f(929.145f, 744.976f));
+    pts.push_back(Point2f(917.474f, 791.823f));
+
+    EXPECT_TRUE(fit_and_check_ellipse(pts, ELLIPSEFIT_HALIR));
 }

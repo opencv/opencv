@@ -38,6 +38,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
@@ -202,10 +203,9 @@ static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, fl
         }
     }
 }
-} // namespace cv
 
 // see Welzl, Emo. Smallest enclosing disks (balls and ellipsoids). Springer Berlin Heidelberg, 1991.
-void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radius )
+void minEnclosingCircle( InputArray _points, Point2f& _center, float& _radius )
 {
     CV_INSTRUMENT_REGION()
 
@@ -276,7 +276,7 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
 
 
 // calculates length of a curve (e.g. contour perimeter)
-double cv::arcLength( InputArray _curve, bool is_closed )
+double arcLength( InputArray _curve, bool is_closed )
 {
     CV_INSTRUMENT_REGION()
 
@@ -311,7 +311,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
 }
 
 // area of a whole sequence
-double cv::contourArea( InputArray _contour, bool oriented )
+double contourArea( InputArray _contour, bool oriented )
 {
     CV_INSTRUMENT_REGION()
 
@@ -343,7 +343,381 @@ double cv::contourArea( InputArray _contour, bool oriented )
     return a00;
 }
 
-cv::RotatedRect cv::fitEllipse( InputArray _points )
+static RotatedRect fitEllipseHalir98Impl(InputArray _points)
+{
+    CV_INSTRUMENT_REGION()
+
+    CV_Assert((_points.type() == CV_32SC2 || _points.type() == CV_32FC2 || _points.type() == CV_64FC2) &&
+        (_points.kind() == _InputArray::MAT || _points.kind() == _InputArray::STD_VECTOR));
+
+    if (_points.total() < 5)
+        CV_Error(Error::StsBadSize, "Not enough points to fit an ellipse.");
+
+    Mat points = _points.getMat();
+    const int pointSz = (const int)points.total();
+    Mat D1(pointSz, 3, CV_64FC1), D2(pointSz, 3, CV_64FC1);
+    Matx33d S1, S2, S3, T, M;
+    Matx31d eigenValX, eigenVecY;
+
+    double *p_D1 = D1.ptr<double>(), *p_D2 = D2.ptr<double>();
+    Point2d meanVal;
+    int i = 1, j = 0;
+
+#if CV_SIMD128
+    bool haveSimd = hasSIMD128();
+#endif
+
+    if (points.depth() == CV_64F)
+    {
+        Point2d *p_points = points.ptr<Point2d>();
+        meanVal = p_points[0];
+
+#if CV_SIMD128_64F
+        if (haveSimd)
+        {
+            v_float64x2 v_psum1 = v_load((const double*)p_points),
+                    v_psum2 = v_load((const double*)(p_points + 1));
+
+            for (i = 2; i <= pointSz - 2; i += 2)
+            {
+                v_psum1 += v_load((const double*)(p_points + i));
+                v_psum2 += v_load((const double*)(p_points + i + 1));
+            }
+
+            v_psum1 += v_psum2;
+            v_store((double*)&meanVal, v_psum1);
+        }
+#endif
+        for (; i < pointSz; ++i)
+            meanVal += p_points[i];
+
+        meanVal.x /= (double)pointSz;
+        meanVal.y /= (double)pointSz;
+
+        i = 0;
+#if CV_SIMD128_64F
+        if (haveSimd)
+        {
+            v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_px, v_py, v_ps1, v_ps2;
+
+            for (; i <= pointSz - 2; i += 2, j += 6)
+            {
+                v_p1 = v_load((const double*)(p_points + i)) - v_mean;
+                v_p2 = v_load((const double*)(p_points + i + 1)) - v_mean;
+
+                v_zip(v_p1, v_p2, v_px, v_py);
+                v_ps1 = v_p1 * v_p1;
+
+                v_ps2 = v_p2 * v_p2;
+                v_px *= v_py;
+
+                v_store((double*)(p_D1 + j), v_combine_low(v_ps1, v_px));
+                v_store((double*)(p_D1 + j + 2), v_combine_low(v_combine_high(v_ps1, v_ps1), v_ps2));
+                v_store((double*)(p_D1 + j + 4), v_combine_high(v_px, v_ps2));
+            }
+        }
+#endif
+        for(; i < pointSz; ++i, j += 3)
+        {
+            Point2d pt = p_points[i] - meanVal;
+            p_D1[j] = pt.x * pt.x;
+            p_D1[j + 1] = pt.x * pt.y;
+            p_D1[j + 2] = pt.y * pt.y;
+        }
+
+        j = i = 0;
+#if CV_SIMD128_64F
+        if (haveSimd)
+        {
+            v_float64x2 v_mean(meanVal.x, meanVal.y), v_1 = v_setall_f64(1.);
+
+            for (; i <= pointSz - 2; i += 2, j += 6)
+            {
+                v_float64x2 v_p1 = v_load((const double*)(p_points + i)) - v_mean;
+                v_float64x2 v_p2 = v_load((const double*)(p_points + i + 1)) - v_mean;
+
+                v_store((double*)(p_D2 + j), v_p1);
+                v_store((double*)(p_D2 + j + 2), v_combine_low(v_1, v_p2));
+                v_store((double*)(p_D2 + j + 4), v_combine_high(v_p2, v_1));
+            }
+        }
+#endif
+        for(; i < pointSz; ++i, j += 3)
+        {
+            Point2d pt = p_points[i] - meanVal;
+            p_D2[j] = pt.x;
+            p_D2[j + 1] = pt.y;
+            p_D2[j + 2] = 1.;
+        }
+
+    }
+    else if (points.depth() == CV_32F)
+    {
+        Point2f *p_points = points.ptr<Point2f>();
+        meanVal = (Point2d)p_points[0];
+
+#if CV_SIMD128
+        if (haveSimd)
+        {
+            v_float32x4 v_psum1 = v_load((const float*)p_points),
+                    v_psum2 = v_load((const float*)(p_points + 2));
+
+            for (i = 4; i <= pointSz - 4; i += 4)
+            {
+                v_psum1 += v_load((const float*)(p_points + i));
+                v_psum2 += v_load((const float*)(p_points + i + 2));
+            }
+
+            v_psum1 += v_psum2;
+            float sumTmp[4];
+            v_store((float*)sumTmp, v_psum1);
+            meanVal.x = (double)sumTmp[0] + sumTmp[2];
+            meanVal.y = (double)sumTmp[1] + sumTmp[3];
+        }
+#endif
+
+        for (; i < pointSz; ++i)
+            meanVal += (Point2d)p_points[i];
+
+        meanVal.x /= (double)pointSz;
+        meanVal.y /= (double)pointSz;
+
+        i = 0;
+#if CV_SIMD128
+        if (haveSimd)
+        {
+            v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_px, v_py, v_ps1, v_ps2;
+
+            for (; i <= pointSz - 2; i += 2, j += 6)
+            {
+                v_float32x4 v_p_float = v_load((const float*)(p_points + i));
+                v_p1 = v_cvt_f64(v_p_float) - v_mean;
+                v_p2 = v_cvt_f64_high(v_p_float) - v_mean;
+
+                v_zip(v_p1, v_p2, v_px, v_py);
+                v_ps1 = v_p1 * v_p1;
+
+                v_ps2 = v_p2 * v_p2;
+                v_px *= v_py;
+
+                v_store((double*)(p_D1 + j), v_combine_low(v_ps1, v_px));
+                v_store((double*)(p_D1 + j + 2), v_combine_low(v_combine_high(v_ps1, v_ps1), v_ps2));
+                v_store((double*)(p_D1 + j + 4), v_combine_high(v_px, v_ps2));
+            }
+
+        }
+#endif
+        for(; i < pointSz; ++i, j += 3)
+        {
+            Point2d pt = (Point2d)p_points[i] - meanVal;
+            p_D1[j] = pt.x * pt.x;
+            p_D1[j + 1] = pt.x * pt.y;
+            p_D1[j + 2] = pt.y * pt.y;
+        }
+
+        j = i = 0;
+#if CV_SIMD128
+        if (haveSimd)
+        {
+            v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_1 = v_setall_f64(1.);
+
+            for (; i <= pointSz - 2; i += 2, j += 6)
+            {
+                v_float32x4 v_p_float = v_load((const float*)(p_points + i));
+                v_p1 = v_cvt_f64(v_p_float) - v_mean;
+                v_p2 = v_cvt_f64_high(v_p_float) - v_mean;
+
+                v_store((double*)(p_D2 + j), v_p1);
+                v_store((double*)(p_D2 + j + 2), v_combine_low(v_1, v_p2));
+                v_store((double*)(p_D2 + j + 4), v_combine_high(v_p2, v_1));
+            }
+        }
+#endif
+        for(; i < pointSz; ++i, j += 3)
+        {
+            Point2d pt = (Point2d)p_points[i] - meanVal;
+            p_D2[j] = pt.x;
+            p_D2[j + 1] = pt.y;
+            p_D2[j + 2] = 1.;
+        }
+    }
+    else
+    {
+        const Point *p_points = points.ptr<Point>();
+        meanVal = (Point2d)p_points[0];
+
+#if CV_SIMD128
+        if (haveSimd)
+        {
+            v_float32x4 v_psum1 = v_cvt_f32(v_load((const int*)p_points)),
+                    v_psum2 = v_cvt_f32(v_load((const int*)(p_points + 2)));
+
+            for (i = 4; i <= pointSz - 4; i += 4)
+            {
+                v_psum1 += v_cvt_f32(v_load((const int*)(p_points + i)));
+                v_psum2 += v_cvt_f32(v_load((const int*)(p_points + i + 2)));
+            }
+
+            v_psum1 += v_psum2;
+            float sumTmp[4];
+            v_store((float*)sumTmp, v_psum1);
+            meanVal.x = (double)(sumTmp[0] + sumTmp[2]);
+            meanVal.y = (double)(sumTmp[1] + sumTmp[3]);
+        }
+#endif
+
+        for (; i < pointSz; ++i)
+            meanVal += (Point2d)p_points[i];
+
+        meanVal.x /= (double)pointSz;
+        meanVal.y /= (double)pointSz;
+
+        i = 0;
+#if CV_SIMD128
+        if (haveSimd)
+        {
+            v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_px, v_py, v_ps1, v_ps2;
+
+            for (; i <= pointSz - 2; i += 2, j += 6)
+            {
+                v_int32x4 v_p_int = v_load((const int*)(p_points + i));
+                v_p1 = v_cvt_f64(v_p_int) - v_mean;
+                v_p2 = v_cvt_f64_high(v_p_int) - v_mean;
+
+                v_zip(v_p1, v_p2, v_px, v_py);
+                v_ps1 = v_p1 * v_p1;
+
+                v_ps2 = v_p2 * v_p2;
+                v_px *= v_py;
+
+                v_store((double*)(p_D1 + j), v_combine_low(v_ps1, v_px));
+                v_store((double*)(p_D1 + j + 2), v_combine_low(v_combine_high(v_ps1, v_ps1), v_ps2));
+                v_store((double*)(p_D1 + j + 4), v_combine_high(v_px, v_ps2));
+            }
+        }
+#endif
+        for(; i < pointSz; ++i, j += 3)
+        {
+            Point2d pt = (Point2d)p_points[i] - meanVal;
+            p_D1[j] = pt.x * pt.x;
+            p_D1[j + 1] = pt.x * pt.y;
+            p_D1[j + 2] = pt.y * pt.y;
+        }
+
+        j = i = 0;
+#if CV_SIMD128
+        if (haveSimd)
+        {
+            v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_1 = v_setall_f64(1.);
+
+            for (; i <= pointSz - 2; i += 2, j += 6) {
+                v_int32x4 v_p_int = v_load((const int*)(p_points + i));
+                v_p1 = v_cvt_f64(v_p_int) - v_mean;
+                v_p2 = v_cvt_f64_high(v_p_int) - v_mean;
+
+                v_store((double*)(p_D2 + j), v_p1);
+                v_store((double*)(p_D2 + j + 2), v_combine_low(v_1, v_p2));
+                v_store((double*)(p_D2 + j + 4), v_combine_high(v_p2, v_1));
+            }
+        }
+#endif
+        for(; i < pointSz; ++i, j += 3)
+        {
+            Point2d pt = (Point2d)p_points[i] - meanVal;
+            p_D2[j] = pt.x;
+            p_D2[j + 1] = pt.y;
+            p_D2[j + 2] = 1.;
+        }
+    }
+
+    gemm(D1, D1, 1, noArray(), 0, S1, GEMM_1_T);
+    gemm(D1, D2, 1, noArray(), 0, S2, GEMM_1_T);
+    gemm(D2, D2, 1, noArray(), 0, S3, GEMM_1_T);
+
+    gemm(S3.inv(DECOMP_LU), S2, -1., noArray(), 0, T, GEMM_2_T);
+    gemm(S2, T, 1., S1, 1., M);
+
+    M.val[0] /= 2.;
+    M.val[1] /= 2.;
+    M.val[2] /= 2.;
+    M.val[3] *= -1.;
+    M.val[4] *= -1.;
+    M.val[5] *= -1.;
+    M.val[6] /= 2.;
+    M.val[7] /= 2.;
+    M.val[8] /= 2.;
+
+//    // Not stable in some situations, but sometimes results looks better than with solve() ...
+//    Mat evalx, evecx;
+//    Matx31d cond;
+//    eigen(M, evalx, evecx);
+//    cond.val[0] = 4 * evecx.at<double>(0) * evecx.at<double>(6) - evecx.at<double>(3) * evecx.at<double>(3);
+//    cond.val[1] = 4 * evecx.at<double>(1) * evecx.at<double>(7) - evecx.at<double>(4) * evecx.at<double>(4);
+//    cond.val[2] = 4 * evecx.at<double>(2) * evecx.at<double>(8) - evecx.at<double>(5) * evecx.at<double>(5);
+
+//    double minVal = DBL_MAX;
+//    for(i = 0, j = -1; i < 3; ++i)
+//    {
+//        if(cond.val[i] > 0. && cond.val[i] < minVal)
+//        {
+//            j = i;
+//            minVal = cond.val[i];
+//        }
+//    }
+
+//    eigenValX.val[0] = evecx.at<double>(j);
+//    eigenValX.val[1] = evecx.at<double>(3 + j);
+//    eigenValX.val[2] = evecx.at<double>(6 + j);
+
+    // Seems to be more stable than DECOMP_SVD
+    solve(M, Matx31d(1., 1., 1.), eigenValX, DECOMP_LU);
+
+    if(std::abs(eigenValX.val[0]) < DBL_MIN && std::abs(eigenValX.val[2]) < DBL_MIN)
+    {
+        // If this is true points are on a circle, add some large value to eigenVal[0] and [1], but not too large
+        eigenValX.val[2] = eigenValX.val[0] = (double)FLT_MAX;
+    }
+
+    gemm(T, eigenValX, 1., noArray(), 0, eigenVecY);
+
+    Matx61d par(eigenValX.val[0], eigenValX.val[1], eigenValX.val[2],
+        -2. * eigenValX.val[0] * meanVal.x - eigenValX.val[1] * meanVal.y + eigenVecY.val[0],
+        -eigenValX.val[1] * meanVal.x - 2. * eigenValX.val[2] * meanVal.y + eigenVecY.val[1],
+        eigenValX.val[0] * meanVal.x * meanVal.x + eigenValX.val[1] * meanVal.x * meanVal.y +
+            eigenValX.val[2] * meanVal.y * meanVal.y - eigenVecY.val[0] * meanVal.x -
+            eigenVecY.val[1] * meanVal.y + eigenVecY.val[2]);
+
+    double theta = atan2(par.val[1], par.val[0] - par.val[2]) / 2.;
+
+    double cost = std::cos(theta), sint = std::sin(theta);
+    double sint_sq = sint * sint, cost_sq = cost * cost, cost_sint = cost * sint;
+
+    double Ao = par.val[5];
+    double Au = par.val[3] * cost + par.val[4] * sint;
+    double Av = par.val[4] * cost - par.val[3] * sint;
+    double Auu = par.val[0] * cost_sq + par.val[2] * sint_sq + par.val[1] * cost_sint;
+    double Avv = par.val[0] * sint_sq + par.val[2] * cost_sq - par.val[1] * cost_sint;
+
+    double tuCenter = -Au / (2. * Auu), tvCenter = -Av / (2. * Avv);
+    double wCenter = Ao - Auu * tuCenter * tuCenter - Avv * tvCenter * tvCenter;
+
+    double uCenter = tuCenter * cost - tvCenter * sint, vCenter = tuCenter * sint + tvCenter * cost;
+    double Ru = -wCenter / Auu, Rv = -wCenter / Avv;
+
+    Ru = std::sqrt(std::abs(Ru));
+    Rv = std::sqrt(std::abs(Rv));
+
+    Point2f xy = Point2f((float)uCenter, (float)vCenter);
+    Size2f wh = Size2f((float)(2. * Ru), (float)(2. * Rv));
+
+    if (wh.height <= 0. || wh.width <= 0. || wh.height != wh.height ||
+            wh.width != wh.width || xy.x != xy.x || xy.y != xy.y)
+        CV_Error(Error::StsBadSize, "Could not fit ellipse to given points.");
+
+    return RotatedRect(xy, wh, (float)(theta * 180. / CV_PI));
+}
+
+static RotatedRect fitEllipseFitz95Impl(InputArray _points )
 {
     CV_INSTRUMENT_REGION()
 
@@ -454,283 +828,25 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     return box;
 }
 
-cv::RotatedRect cv::fitEllipse(InputArray _points, bool direct)
+RotatedRect fitEllipse(InputArray points)
 {
-    if(!direct)
-        return cv::fitEllipse(_points);
-
-    CV_INSTRUMENT_REGION()
-
-    CV_Assert((_points.type() == CV_32SC2 || _points.type() == CV_32FC2 || _points.type() == CV_64FC2) &&
-        (_points.kind() == _InputArray::MAT || _points.kind() == _InputArray::STD_VECTOR));
-
-    if (_points.total() < 5)
-        CV_Error(Error::StsBadSize, "Not enough points to fit an ellipse.");
-
-    Mat points = _points.getMat();
-    const int pointSz = (const int)points.total();
-    Mat _A(pointSz, 6, CV_64FC1);
-    double *p_A = _A.ptr<double>();
-    Point2d scaleVal, meanVal;
-
-    if (points.depth() == CV_64F) {
-        Point2d *p_points = points.ptr<Point2d>();
-        Point2d maxVal = p_points[0], minVal = p_points[0];
-        meanVal = p_points[0];
-        int i = 1;
-
-#if CV_SIMD128_64F
-        if (hasSIMD128()) {
-            v_float64x2 v_psum = v_load((const double*)p_points);
-            v_float64x2 v_pmin = v_psum, v_pmax = v_psum;
-
-            for (; i <= pointSz - 2; i += 2) {
-                v_float64x2 v_p1 = v_load((const double*)(p_points + i));
-                v_float64x2 v_p2 = v_load((const double*)(p_points + i + 1));
-
-                v_pmax = v_max(v_pmax, v_p1);
-                v_pmin = v_min(v_pmin, v_p1);
-                v_psum += v_p1;
-
-                v_pmax = v_max(v_pmax, v_p2);
-                v_pmin = v_min(v_pmin, v_p2);
-                v_psum += v_p2;
-            }
-
-            v_store((double*)&maxVal, v_pmax);
-            v_store((double*)&minVal, v_pmin);
-            v_store((double*)&meanVal, v_psum);
-        }
-#endif
-
-        for (; i < pointSz; ++i) {
-            meanVal += p_points[i];
-            maxVal.x = std::max(maxVal.x, p_points[i].x);
-            maxVal.y = std::max(maxVal.y, p_points[i].y);
-            minVal.x = std::min(minVal.x, p_points[i].x);
-            minVal.y = std::min(minVal.y, p_points[i].y);
-        }
-
-        meanVal.x /= (double)pointSz;
-        meanVal.y /= (double)pointSz;
-        scaleVal.x = 2. / ((double)maxVal.x - minVal.x);
-        scaleVal.y = 2. / ((double)maxVal.y - minVal.y);
-
-        i = 0;
-        for (int j = 0; i < pointSz; ++i, j += 6) {
-            Point2d dScaled = p_points[i] - meanVal;
-            dScaled.x *= scaleVal.x;
-            dScaled.y *= scaleVal.y;
-
-            p_A[j] = dScaled.x * dScaled.x;
-            p_A[j + 1] = dScaled.x * dScaled.y;
-            p_A[j + 2] = dScaled.y * dScaled.y;
-            p_A[j + 3] = dScaled.x;
-            p_A[j + 4] = dScaled.y;
-            p_A[j + 5] = 1.;
-        }
-    } else if (points.depth() == CV_32F) {
-        Point2f *p_points = points.ptr<Point2f>();
-        Point2f maxVal, minVal;
-        maxVal = minVal = p_points[0];
-        meanVal = (Point2d)p_points[0];
-        int i = 1;
-
-#if CV_SIMD128
-        if (hasSIMD128()) {
-            v_float32x4 v_psum = v_load((const float*)p_points);
-            v_float32x4 v_pmin = v_psum, v_pmax = v_psum;
-
-            for (i = 2; i <= pointSz - 4; i += 4) {
-                v_float32x4 v_p1 = v_load((const float*)(p_points + i));
-                v_float32x4 v_p2 = v_load((const float*)(p_points + i + 2));
-
-                v_pmax = v_max(v_pmax, v_p1);
-                v_pmin = v_min(v_pmin, v_p1);
-                v_psum += v_p1;
-
-                v_pmax = v_max(v_pmax, v_p2);
-                v_pmin = v_min(v_pmin, v_p2);
-                v_psum += v_p2;
-            }
-
-            float sumTmp[4], minTmp[4], maxTmp[4];
-            v_store((float*)maxTmp, v_pmax);
-            v_store((float*)minTmp, v_pmin);
-            v_store((float*)sumTmp, v_psum);
-
-            meanVal.x = (double)sumTmp[0] + sumTmp[2];
-            meanVal.y = (double)sumTmp[1] + sumTmp[3];
-            maxVal.x = std::max(maxTmp[0], maxTmp[2]);
-            maxVal.y = std::max(maxTmp[1], maxTmp[3]);
-            minVal.x = std::min(minTmp[0], minTmp[2]);
-            minVal.y = std::min(minTmp[1], minTmp[3]);
-        }
-#endif
-
-        for (; i < pointSz; ++i) {
-            meanVal += (Point2d)p_points[i];
-            maxVal.x = std::max(maxVal.x, p_points[i].x);
-            maxVal.y = std::max(maxVal.y, p_points[i].y);
-            minVal.x = std::min(minVal.x, p_points[i].x);
-            minVal.y = std::min(minVal.y, p_points[i].y);
-        }
-
-        meanVal.x /= (double)pointSz;
-        meanVal.y /= (double)pointSz;
-        scaleVal.x = 2. / ((double)maxVal.x - minVal.x);
-        scaleVal.y = 2. / ((double)maxVal.y - minVal.y);
-
-        i = 0;
-        for (int j = 0; i < pointSz; ++i, j += 6) {
-            Point2d dScaled = (Point2d)p_points[i] - meanVal;
-            dScaled.x *= scaleVal.x;
-            dScaled.y *= scaleVal.y;
-
-            p_A[j] = dScaled.x * dScaled.x;
-            p_A[j + 1] = dScaled.x * dScaled.y;
-            p_A[j + 2] = dScaled.y * dScaled.y;
-            p_A[j + 3] = dScaled.x;
-            p_A[j + 4] = dScaled.y;
-            p_A[j + 5] = 1.;
-        }
-    } else {
-        const Point *p_points = points.ptr<Point>();
-        Point minVal, maxVal;
-        minVal = maxVal = p_points[0];
-        meanVal = (Point2d)minVal;
-        int i = 1;
-
-#if CV_SIMD128
-        if (hasSIMD128()) {
-            v_float32x4 v_psum = v_cvt_f32(v_load((const int*)p_points));
-            v_float32x4 v_pmin = v_psum, v_pmax = v_psum;
-
-            for (i = 2; i <= pointSz - 4; i += 4) {
-                v_float32x4 v_p1 = v_cvt_f32(v_load((const int*)(p_points + i)));
-                v_float32x4 v_p2 = v_cvt_f32(v_load((const int*)(p_points + i + 2)));
-
-                v_pmax = v_max(v_pmax, v_p1);
-                v_pmin = v_min(v_pmin, v_p1);
-                v_psum += v_p1;
-
-                v_pmax = v_max(v_pmax, v_p2);
-                v_pmin = v_min(v_pmin, v_p2);
-                v_psum += v_p2;
-            }
-
-            float sumTmp[4], minTmp[4], maxTmp[4];
-            v_store((float*)maxTmp, v_pmax);
-            v_store((float*)minTmp, v_pmin);
-            v_store((float*)sumTmp, v_psum);
-            meanVal.x = (double)(sumTmp[0] + sumTmp[2]);
-            meanVal.y = (double)(sumTmp[1] + sumTmp[3]);
-            maxVal.x = cvRound(std::max(maxTmp[0], maxTmp[2]));
-            maxVal.y = cvRound(std::max(maxTmp[1], maxTmp[3]));
-            minVal.x = cvRound(std::min(minTmp[0], minTmp[2]));
-            minVal.y = cvRound(std::min(minTmp[1], minTmp[3]));
-        }
-#endif
-
-        for (; i < pointSz; ++i) {
-            meanVal += (Point2d)p_points[i];
-            maxVal.x = std::max(maxVal.x, p_points[i].x);
-            maxVal.y = std::max(maxVal.y, p_points[i].y);
-            minVal.x = std::min(minVal.x, p_points[i].x);
-            minVal.y = std::min(minVal.y, p_points[i].y);
-        }
-
-        meanVal.x /= (double)pointSz;
-        meanVal.y /= (double)pointSz;
-        scaleVal.x = 2. / (double)(maxVal.x - minVal.x);
-        scaleVal.y = 2. / (double)(maxVal.y - minVal.y);
-
-        i = 0;
-        for (int j = 0; i < pointSz; ++i, j += 6) {
-            Point2d dScaled = (Point2d)p_points[i] - meanVal;
-            dScaled.x *= scaleVal.x;
-            dScaled.y *= scaleVal.y;
-
-            p_A[j] = dScaled.x * dScaled.x;
-            p_A[j + 1] = dScaled.x * dScaled.y;
-            p_A[j + 2] = dScaled.y * dScaled.y;
-            p_A[j + 3] = dScaled.x;
-            p_A[j + 4] = dScaled.y;
-            p_A[j + 5] = 1.;
-        }
-    }
-
-    Matx66d S1;
-    Matx33d C(0., 0., -0.5,
-              0., 1., 0.,
-              -0.5, 0., 0.),
-            tmp1, tmp2, tmp3;
-    Matx31d b(1., 1., 1.),
-            eigenVecX, eigenVecY;
-
-    gemm(_A, _A, 1, noArray(), 0, S1, GEMM_1_T);
-
-    gemm(Mat(S1)(Rect(3, 3, 3, 3)).inv(DECOMP_LU), Mat(S1)(Rect(0, 3, 3, 3)), 1., noArray(), 0, tmp1);
-    gemm(Mat(S1)(Rect(0, 3, 3, 3)), tmp1, 1., noArray(), 0, tmp2, GEMM_1_T);
-    gemm(C, Mat(S1)(Rect(0, 0, 3, 3)) - Mat(tmp2), 1., noArray(), 0., tmp3);
-
-    solve(tmp3, b, eigenVecX, DECOMP_LU);
-    gemm(tmp1, eigenVecX, -1., noArray(), 0., eigenVecY);
-
-    double sxx = scaleVal.x * scaleVal.x, syy = scaleVal.y * scaleVal.y, sxy = scaleVal.x * scaleVal.y;
-
-    Matx61d par(eigenVecX.val[0] / syy,
-        eigenVecX.val[1] / sxy,
-        eigenVecX.val[2] / sxx,
-        -2. * eigenVecX.val[0] * meanVal.x / syy -
-            eigenVecX.val[1] * meanVal.y / sxy +
-            eigenVecY.val[0] / (syy * scaleVal.x),
-        -eigenVecX.val[1] * meanVal.x / sxy -
-            2. * eigenVecX.val[2] * meanVal.y / sxx +
-            eigenVecY.val[1] / (sxx * scaleVal.y),
-        eigenVecX.val[0] * meanVal.x * meanVal.x / syy +
-            eigenVecX.val[1] * meanVal.x * meanVal.y / sxy +
-            eigenVecX.val[2] * meanVal.y * meanVal.y / sxx -
-            eigenVecY.val[0] * meanVal.x / (scaleVal.x * syy) -
-            eigenVecY.val[1] * meanVal.y / (sxx * scaleVal.y) +
-            eigenVecY.val[2] / (sxx * syy));
-
-    double theta = atan2(par.val[1], par.val[0] - par.val[2]) / 2.;
-    double cost = std::cos(theta), sint = std::sin(theta);
-    double sint_sq = sint * sint, cost_sq = cost * cost, cost_sint = cost * sint;
-
-    double Ao = par.val[5];
-    double Au = par.val[3] * cost + par.val[4] * sint;
-    double Av = par.val[4] * cost - par.val[3] * sint;
-    double Auu = par.val[0] * cost_sq + par.val[2] * sint_sq + par.val[1] * cost_sint;
-    double Avv = par.val[0] * sint_sq + par.val[2] * cost_sq - par.val[1] * cost_sint;
-
-    double tuCenter = -Au / (2. * Auu), tvCenter = -Av / (2. * Avv);
-    double wCenter = Ao - Auu * tuCenter * tuCenter - Avv * tvCenter * tvCenter;
-
-    double uCenter = tuCenter * cost - tvCenter * sint, vCenter = tuCenter * sint + tvCenter * cost;
-    double Ru = -wCenter / Auu, Rv = -wCenter / Avv;
-
-    Ru = std::sqrt(abs(Ru));
-    Rv = std::sqrt(abs(Rv));
-
-    if (theta < -CV_PI / 2.)
-        theta += CV_PI;
-    if (theta > CV_PI / 2.)
-        theta -= CV_PI;
-
-    Point2f xy = Point2f((float)uCenter, (float)vCenter);
-    Size2f wh = Size2f((float)(2. * max(Ru, Rv)), (float)(2. * min(Ru, Rv)));
-
-    if (wh.height <= 0. || wh.width <= 0. || wh.height != wh.height || wh.width != wh.width || xy.x != xy.x || xy.y != xy.y) {
-        CV_Error(Error::StsBadSize, "Could not fit ellipse to given points.");
-    }
-
-    return RotatedRect(xy, wh, (float)(theta * 180. / CV_PI));
+    return fitEllipseHalir98Impl(points);
 }
 
-namespace cv
+RotatedRect fitEllipse(InputArray points, int method)
 {
+    switch(method)
+    {
+    case ELLIPSEFIT_HALIR:
+        return fitEllipseHalir98Impl(points);
+    case ELLIPSEFIT_FITZGIBBON:
+        return fitEllipseFitz95Impl(points);
+    default:
+        CV_Error(Error::StsBadArg, "Ellipse fitting method not known/supported.");
+    }
+
+    return RotatedRect();
+}
 
 // Calculates bounding rectagnle of a point set or retrieves already calculated
 static Rect pointSetBoundingRect( const Mat& points )
@@ -852,7 +968,6 @@ static Rect pointSetBoundingRect( const Mat& points )
     return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
 }
 
-
 static Rect maskBoundingRect( const Mat& img )
 {
     CV_Assert( img.depth() <= CV_8S && img.channels() == 1 );
@@ -946,9 +1061,7 @@ static Rect maskBoundingRect( const Mat& img )
     return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
 }
 
-}
-
-cv::Rect cv::boundingRect(InputArray array)
+Rect boundingRect(InputArray array)
 {
     CV_INSTRUMENT_REGION()
 
@@ -956,6 +1069,7 @@ cv::Rect cv::boundingRect(InputArray array)
     return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
 }
 
+} // \namespace cv
 ////////////////////////////////////////////// C API ///////////////////////////////////////////
 
 CV_IMPL int
