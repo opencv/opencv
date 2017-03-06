@@ -350,7 +350,11 @@ inline LshTable<unsigned char>::LshTable(unsigned int feature_size, unsigned int
     // A bit brutal but fast to code
     std::vector<size_t> indices(feature_size * CHAR_BIT);
     for (size_t i = 0; i < feature_size * CHAR_BIT; ++i) indices[i] = i;
+#ifndef OPENCV_FLANN_USE_STD_RAND
+    cv::randShuffle(indices);
+#else
     std::random_shuffle(indices.begin(), indices.end());
+#endif
 
     // Generate a random set of order of subsignature_size_ bits
     for (unsigned int i = 0; i < key_size_; ++i) {
