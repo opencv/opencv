@@ -8,7 +8,7 @@ Learn to:
 
 -   Access pixel values and modify them
 -   Access image properties
--   Setting Region of Image (ROI)
+-   Setting Region of Interest (ROI)
 -   Splitting and Merging images
 
 Almost all the operations in this section is mainly related to Numpy rather than OpenCV. A good
