@@ -56,14 +56,14 @@ void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const G
 
 namespace
 {
-    template <typename SrcType, typename ScalarType> struct AbsDiffScalarOp : unary_function<SrcType, SrcType>
+    template <typename SrcType, typename ScalarType, typename DstType> struct AbsDiffScalarOp : unary_function<SrcType, DstType>
     {
         ScalarType val;
 
-        __device__ __forceinline__ SrcType operator ()(SrcType a) const
+        __device__ __forceinline__ DstType operator ()(SrcType a) const
         {
             abs_func<ScalarType> f;
-            return saturate_cast<SrcType>(f(saturate_cast<ScalarType>(a) - val));
+            return saturate_cast<DstType>(f(saturate_cast<ScalarType>(a) - val));
         }
     };
 
@@ -84,7 +84,7 @@ namespace
 
         cv::Scalar_<ScalarDepth> value_ = value;
 
-        AbsDiffScalarOp<SrcType, ScalarType> op;
+        AbsDiffScalarOp<SrcType, ScalarType, SrcType> op;
         op.val = VecTraits<ScalarType>::make(value_.val);
         gridTransformUnary_< TransformPolicy<ScalarDepth> >(globPtr<SrcType>(src), globPtr<SrcType>(dst), op, stream);
     }
@@ -96,22 +96,22 @@ void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const G
     static const func_t funcs[7][4] =
     {
         {
-            absDiffScalarImpl<uchar, double>, absDiffScalarImpl<uchar2, double>, absDiffScalarImpl<uchar3, double>, absDiffScalarImpl<uchar4, double>
+            absDiffScalarImpl<uchar, float>, absDiffScalarImpl<uchar2, float>, absDiffScalarImpl<uchar3, float>, absDiffScalarImpl<uchar4, float>
         },
         {
-            absDiffScalarImpl<schar, double>, absDiffScalarImpl<char2, double>, absDiffScalarImpl<char3, double>, absDiffScalarImpl<char4, double>
+            absDiffScalarImpl<schar, float>, absDiffScalarImpl<char2, float>, absDiffScalarImpl<char3, float>, absDiffScalarImpl<char4, float>
         },
         {
-            absDiffScalarImpl<ushort, double>, absDiffScalarImpl<ushort2, double>, absDiffScalarImpl<ushort3, double>, absDiffScalarImpl<ushort4, double>
+            absDiffScalarImpl<ushort, float>, absDiffScalarImpl<ushort2, float>, absDiffScalarImpl<ushort3, float>, absDiffScalarImpl<ushort4, float>
         },
         {
-            absDiffScalarImpl<short, double>, absDiffScalarImpl<short2, double>, absDiffScalarImpl<short3, double>, absDiffScalarImpl<short4, double>
+            absDiffScalarImpl<short, float>, absDiffScalarImpl<short2, float>, absDiffScalarImpl<short3, float>, absDiffScalarImpl<short4, float>
         },
         {
-            absDiffScalarImpl<int, double>, absDiffScalarImpl<int2, double>, absDiffScalarImpl<int3, double>, absDiffScalarImpl<int4, double>
+            absDiffScalarImpl<int, float>, absDiffScalarImpl<int2, float>, absDiffScalarImpl<int3, float>, absDiffScalarImpl<int4, float>
         },
         {
-          absDiffScalarImpl<float, double>, absDiffScalarImpl<float2, double>, absDiffScalarImpl<float3, double>, absDiffScalarImpl<float4, double>
+          absDiffScalarImpl<float, float>, absDiffScalarImpl<float2, float>, absDiffScalarImpl<float3, float>, absDiffScalarImpl<float4, float>
         },
         {
           absDiffScalarImpl<double, double>, absDiffScalarImpl<double2, double>, absDiffScalarImpl<double3, double>, absDiffScalarImpl<double4, double>
