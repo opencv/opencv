@@ -92,6 +92,9 @@
 /* GTK+ 2.x toolkit */
 #cmakedefine HAVE_GTK
 
+/* Halide support */
+#cmakedefine HAVE_HALIDE
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
