@@ -1055,6 +1055,20 @@ void write(FileStorage& fs, const String& name, const Range& r )
     write(fs, r);
 }
 
+static inline
+void write(FileStorage& fs, const String& name, const KeyPoint& r )
+{
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
+    write(fs, r);
+}
+
+static inline
+void write(FileStorage& fs, const String& name, const DMatch& r )
+{
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
+    write(fs, r);
+}
+
 template<typename _Tp> static inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
@@ -1245,6 +1259,14 @@ void operator >> (const FileNode& n, std::vector<KeyPoint>& vec)
 {
     read(n, vec);
 }
+
+static inline
+void operator >> (const FileNode& n, KeyPoint& kpt)
+{
+    FileNodeIterator it = n.begin();
+    it >> kpt.pt.x >> kpt.pt.y >> kpt.size >> kpt.angle >> kpt.response >> kpt.octave >> kpt.class_id;
+}
+
 /** @brief Reads DMatch from a file storage.
 */
 //It needs special handling because it contains two types of fields, int & float.
@@ -1252,6 +1274,13 @@ static inline
 void operator >> (const FileNode& n, std::vector<DMatch>& vec)
 {
     read(n, vec);
+}
+
+static inline
+void operator >> (const FileNode& n, DMatch& m)
+{
+    FileNodeIterator it = n.begin();
+    it >> m.queryIdx >> m.trainIdx >> m.imgIdx >> m.distance;
 }
 
 //! @} FileNode
