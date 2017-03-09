@@ -275,7 +275,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             synchronized (this) {
                 this.notify();
             }
-            Log.d(TAG, "Wating for thread");
+            Log.d(TAG, "Waiting for thread");
             if (mThread != null)
                 mThread.join();
         } catch (InterruptedException e) {
