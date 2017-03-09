@@ -1184,7 +1184,7 @@ static inline uint64_t opencvLittleToHost64(uint64_t x){
 #if OPENCV_LITTLEENDIAN
   return x;
 #else
-  return opencvLittleToHost64((uchar*)&x);
+  return opencvLittleToHost64((const uchar*)&x);
 #endif
 }
 
@@ -1552,7 +1552,7 @@ static inline void ICV_HLINE_8(uchar* ptr, int xl, int xr, const uchar* color)
 {
   if (is_aligned(((uchar*)(ptr) + (xl)*8), 0x8))
   {
-      uint64_t c = opencvLittleToHost64((uchar*)(color));
+      uint64_t c = opencvLittleToHost64(color);
       uint64_t* hline_ptr = (uint64_t*)((uchar*)(ptr) + (xl)*(8));
       uint64_t* hline_max_ptr = (uint64_t*)((uchar*)(ptr) + (xr)*(8));
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1604,8 +1604,8 @@ static inline void ICV_HLINE_16(uchar* ptr, int xl, int xr, const uchar* color)
 {
   if (is_aligned(((uchar*)(ptr) + (xl)*16), 0x8))
   {
-      uint64_t c[2] = {opencvLittleToHost64((uchar*)(color)+0x00),
-                       opencvLittleToHost64((uchar*)(color)+0x08)};
+      uint64_t c[2] = {opencvLittleToHost64(color+0x00),
+                       opencvLittleToHost64(color+0x08)};
       uint64_t* hline_ptr = (uint64_t*)((uchar*)(ptr) + (xl)*(16));
       uint64_t* hline_max_ptr = (uint64_t*)((uchar*)(ptr) + (xr)*(16));
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1641,9 +1641,9 @@ static inline void ICV_HLINE_24(uchar* ptr, int xl, int xr, const uchar* color)
 {
   if (is_aligned(((uchar*)(ptr) + (xl)*24), 0x8))
   {
-      uint64_t c[3] = {opencvLittleToHost64((uchar*)(color)+0x00),
-                       opencvLittleToHost64((uchar*)(color)+0x08),
-                       opencvLittleToHost64((uchar*)(color)+0x10)};
+      uint64_t c[3] = {opencvLittleToHost64(color+0x00),
+                       opencvLittleToHost64(color+0x08),
+                       opencvLittleToHost64(color+0x10)};
       uint64_t* hline_ptr = (uint64_t*)((uchar*)(ptr) + (xl)*(24));
       uint64_t* hline_max_ptr = (uint64_t*)((uchar*)(ptr) + (xr)*(24));
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1684,10 +1684,10 @@ static inline void ICV_HLINE_32(uchar* ptr, int xl, int xr, const uchar* color)
 {
   if (is_aligned(((uchar*)(ptr) + (xl)*32), 0x8))
   {
-      uint64_t c[4] = {opencvLittleToHost64((uchar*)(color)+0x00),
-                       opencvLittleToHost64((uchar*)(color)+0x08),
-                       opencvLittleToHost64((uchar*)(color)+0x10),
-                       opencvLittleToHost64((uchar*)(color)+0x18)};
+      uint64_t c[4] = {opencvLittleToHost64(color+0x00),
+                       opencvLittleToHost64(color+0x08),
+                       opencvLittleToHost64(color+0x10),
+                       opencvLittleToHost64(color+0x18)};
       uint64_t* hline_ptr = (uint64_t*)((uchar*)(ptr) + (xl)*(32));
       uint64_t* hline_max_ptr = (uint64_t*)((uchar*)(ptr) + (xr)*(32));
       for( ; hline_ptr <= hline_max_ptr; )
