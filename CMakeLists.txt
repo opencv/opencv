@@ -620,6 +620,9 @@ if(WITH_OPENVX)
   include(cmake/FindOpenVX.cmake)
 endif()
 
+# --- HASKELL ---
+include(cmake/OpenCVDetectHaskell.cmake)
+
 # ----------------------------------------------------------------------------
 # OpenCV HAL
 # ----------------------------------------------------------------------------
@@ -1333,6 +1336,12 @@ if(MATLAB_FOUND)
 else()
   status("  Matlab:"        WITH_MATLAB AND NOT MATLAB_FOUND THEN "Matlab not found or implicitly disabled" ELSE NO)
 endif()
+
+# ========================== Haskell ================================
+status("")
+status("  Haskell")
+status("    ghc:"        GHC_EXECUTABLE      THEN "${GHC_EXECUTABLE} (ver ${GHC_VERSION})"       ELSE NO)
+status("    cabal:"      CABAL_EXECUTABLE    THEN "${CABAL_EXECUTABLE} (ver ${CABAL_VERSION})"   ELSE NO)
 
 # ========================== documentation ==========================
 if(BUILD_DOCS)

@@ -1,0 +1,33 @@
+name:                opencv
+version:             3.0.0
+synopsis:            Haskell Bindings for OpenCV
+homepage:            www.github.com/itseez/opencv.git
+license:             BSD3
+license-file:        LICENSE
+author:              Arjun Comar
+maintainer:          nrujac@gmail.com
+category:            AI, Machine Vision
+build-type:          Custom
+cabal-version:       >=1.10
+
+source-repository head
+    type: git
+    location: git://github.com/itseez/opencv.git
+
+library
+    extra-libraries:        opencv_c
+    if os(linux)
+      cc-options:           -fpermissive -std=c++11
+    else
+      cc-options:           -fpermissive
+    ghc-options:            -pgml g++
+    exposed-modules:        OpenCV
+    other-modules:          OpenCV.Types
+                          , OpenCV.Consts
+                          , OpenCV.Funcs
+                          , OpenCV.Mat
+                          , OpenCV.Point
+    build-depends:          base >=4.6 && <5
+                          , bindings-DSL >= 1.0.20 && < 1.1
+                          , Cabal >=1.10
+    default-language:       Haskell2010
