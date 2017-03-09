@@ -1124,13 +1124,15 @@ static inline uint16_t opencvLittleToHost16(const uchar* p){
 #endif
 }
 
+/*
 static inline uint16_t opencvLittleToHost16(uint16_t x){
 #if OPENCV_LITTLEENDIAN
   return x;
 #else
-  return opencvLittleToHost16((uchar*)&x);
+  return opencvLittleToHost16((const uchar*)&x);
 #endif
 }
+*/
 
 static inline uint32_t opencvLittleToHost32(const uchar* p){
 #if OPENCV_BYTEORDER==1234
@@ -1156,7 +1158,7 @@ static inline uint32_t opencvLittleToHost32(uint32_t x){
 #if OPENCV_LITTLEENDIAN
   return x;
 #else
-  return opencvLittleToHost32((uchar*)&x);
+  return opencvLittleToHost32((const uchar*)&x);
 #endif
 }
 
@@ -1386,7 +1388,7 @@ static inline void ICV_HLINE_2(uchar* ptr, int xl, int xr, const uchar* color)
 {
   if (is_aligned(((uchar*)(ptr) + (xl)*2), 0x2))
   {
-      uint16_t c = opencvLittleToHost16((uchar*)(color));
+      uint16_t c = opencvLittleToHost16(color);
       uint16_t* hline_ptr = (uint16_t*)(ptr) + xl;
       uint16_t* hline_max_ptr = (uint16_t*)(ptr) + xr;
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1467,7 +1469,7 @@ static inline void ICV_HLINE_4(uchar* ptr, int xl, int xr, const uchar* color)
 {
   if (is_aligned(((uchar*)(ptr) + (xl)*4), 0x4))
   {
-      uint32_t c = opencvLittleToHost32((uchar*)(color));
+      uint32_t c = opencvLittleToHost32(color);
       uint32_t* hline_ptr = (uint32_t*)(ptr) + xl;
       uint32_t* hline_max_ptr = (uint32_t*)(ptr) + xr;
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1560,8 +1562,8 @@ static inline void ICV_HLINE_8(uchar* ptr, int xl, int xr, const uchar* color)
   }
   else if (is_aligned(((uchar*)(ptr) + (xl)*8), 0x4))
   {
-      uint32_t c[2] = {opencvLittleToHost32((uchar*)(color)+0x00),
-                       opencvLittleToHost32((uchar*)(color)+0x04)};
+      uint32_t c[2] = {opencvLittleToHost32(color+0x00),
+                       opencvLittleToHost32(color+0x04)};
       uint32_t* hline_ptr = (uint32_t*)((uchar*)(ptr) + (xl)*(8));
       uint32_t* hline_max_ptr = (uint32_t*)((uchar*)(ptr) + (xr)*(8));
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1577,13 +1579,14 @@ static inline void ICV_HLINE_8(uchar* ptr, int xl, int xr, const uchar* color)
 }
 //end ICV_HLINE_8()
 
+/*
 static inline void ICV_HLINE_12(uchar* ptr, int xl, int xr, const uchar* color)
 {
   if (is_aligned(((uchar*)(ptr) + (xl)*12), 0x4))
   {
-      uint32_t c[3] = {opencvLittleToHost32((uchar*)(color)+0x00),
-                       opencvLittleToHost32((uchar*)(color)+0x04),
-                       opencvLittleToHost32((uchar*)(color)+0x08)};
+      uint32_t c[3] = {opencvLittleToHost32(color+0x00),
+                       opencvLittleToHost32(color+0x04),
+                       opencvLittleToHost32(color+0x08)};
       uint32_t* hline_ptr = (uint32_t*)((uchar*)(ptr) + (xl)*(12));
       uint32_t* hline_max_ptr = (uint32_t*)((uchar*)(ptr) + (xr)*(12));
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1616,10 +1619,10 @@ static inline void ICV_HLINE_16(uchar* ptr, int xl, int xr, const uchar* color)
   }
   else if (is_aligned(((uchar*)(ptr) + (xl)*16), 0x4))
   {
-      uint32_t c[4] = {opencvLittleToHost32((uchar*)(color)+0x00),
-                       opencvLittleToHost32((uchar*)(color)+0x04),
-                       opencvLittleToHost32((uchar*)(color)+0x08),
-                       opencvLittleToHost32((uchar*)(color)+0x0C)};
+      uint32_t c[4] = {opencvLittleToHost32(color+0x00),
+                       opencvLittleToHost32(color+0x04),
+                       opencvLittleToHost32(color+0x08),
+                       opencvLittleToHost32(color+0x0C)};
       uint32_t* hline_ptr = (uint32_t*)((uchar*)(ptr) + (xl)*(16));
       uint32_t* hline_max_ptr = (uint32_t*)((uchar*)(ptr) + (xr)*(16));
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1655,12 +1658,12 @@ static inline void ICV_HLINE_24(uchar* ptr, int xl, int xr, const uchar* color)
   }
   else if (is_aligned(((uchar*)(ptr) + (xl)*24), 0x4))
   {
-      uint32_t c[6] = {opencvLittleToHost32((uchar*)(color)+0x00),
-                       opencvLittleToHost32((uchar*)(color)+0x04),
-                       opencvLittleToHost32((uchar*)(color)+0x08),
-                       opencvLittleToHost32((uchar*)(color)+0x0C),
-                       opencvLittleToHost32((uchar*)(color)+0x10),
-                       opencvLittleToHost32((uchar*)(color)+0x14)};
+      uint32_t c[6] = {opencvLittleToHost32(color+0x00),
+                       opencvLittleToHost32(color+0x04),
+                       opencvLittleToHost32(color+0x08),
+                       opencvLittleToHost32(color+0x0C),
+                       opencvLittleToHost32(color+0x10),
+                       opencvLittleToHost32(color+0x14)};
       uint32_t* hline_ptr = (uint32_t*)((uchar*)(ptr) + (xl)*(24));
       uint32_t* hline_max_ptr = (uint32_t*)((uchar*)(ptr) + (xr)*(24));
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1700,14 +1703,14 @@ static inline void ICV_HLINE_32(uchar* ptr, int xl, int xr, const uchar* color)
   }
   else if (is_aligned(((uchar*)(ptr) + (xl)*2324), 0x4))
   {
-      uint32_t c[8] = {opencvLittleToHost32((uchar*)(color)+0x00),
-                       opencvLittleToHost32((uchar*)(color)+0x04),
-                       opencvLittleToHost32((uchar*)(color)+0x08),
-                       opencvLittleToHost32((uchar*)(color)+0x0C),
-                       opencvLittleToHost32((uchar*)(color)+0x10),
-                       opencvLittleToHost32((uchar*)(color)+0x14),
-                       opencvLittleToHost32((uchar*)(color)+0x18),
-                       opencvLittleToHost32((uchar*)(color)+0x1C)};
+      uint32_t c[8] = {opencvLittleToHost32(color+0x00),
+                       opencvLittleToHost32(color+0x04),
+                       opencvLittleToHost32(color+0x08),
+                       opencvLittleToHost32(color+0x0C),
+                       opencvLittleToHost32(color+0x10),
+                       opencvLittleToHost32(color+0x14),
+                       opencvLittleToHost32(color+0x18),
+                       opencvLittleToHost32(color+0x1C)};
       uint32_t* hline_ptr = (uint32_t*)((uchar*)(ptr) + (xl)*(32));
       uint32_t* hline_max_ptr = (uint32_t*)((uchar*)(ptr) + (xr)*(32));
       for( ; hline_ptr <= hline_max_ptr; )
@@ -1728,6 +1731,7 @@ static inline void ICV_HLINE_32(uchar* ptr, int xl, int xr, const uchar* color)
   }
 }
 //end ICV_HLINE_32()
+*/
 
 static const bool ICV_HLINE_OPTIMIZATION = true;
 static inline void ICV_HLINE(uchar* ptr, int xl, int xr, const void* color, int pix_size)
