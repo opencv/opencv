@@ -49,7 +49,7 @@ if __name__ == '__main__':
         vis = np.uint8(vis/2.)
         vis[edge != 0] = (0, 255, 0)
         cv2.imshow('edge', vis)
-        ch = cv2.waitKey(5) & 0xFF
+        ch = cv2.waitKey(5)
         if ch == 27:
             break
     cv2.destroyAllWindows()

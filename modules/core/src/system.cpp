@@ -621,7 +621,7 @@ String tempfile( const char* suffix )
     return fname;
 }
 
-static CvErrorCallback customErrorCallback = 0;
+static ErrorCallback customErrorCallback = 0;
 static void* customErrorCallbackData = 0;
 static bool breakOnError = false;
 
@@ -666,13 +666,13 @@ void error(int _code, const String& _err, const char* _func, const char* _file, 
     error(cv::Exception(_code, _err, _func, _file, _line));
 }
 
-CvErrorCallback
-redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
+ErrorCallback
+redirectError( ErrorCallback errCallback, void* userdata, void** prevUserdata)
 {
     if( prevUserdata )
         *prevUserdata = customErrorCallbackData;
 
-    CvErrorCallback prevCallback = customErrorCallback;
+    ErrorCallback prevCallback = customErrorCallback;
 
     customErrorCallback     = errCallback;
     customErrorCallbackData = userdata;
@@ -751,7 +751,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_StsAutoTrace :           return "Autotrace call";
     case CV_StsBadSize :             return "Incorrect size of input array";
     case CV_StsNullPtr :             return "Null pointer";
-    case CV_StsDivByZero :           return "Division by zero occured";
+    case CV_StsDivByZero :           return "Division by zero occurred";
     case CV_BadStep :                return "Image step is wrong";
     case CV_StsInplaceNotSupported : return "Inplace operation is not supported";
     case CV_StsObjectNotFound :      return "Requested object was not found";
@@ -1035,7 +1035,7 @@ public:
         {
             if(threads[i])
             {
-                /* Current architecture doesn't allow proper global objects relase, so this check can cause crashes
+                /* Current architecture doesn't allow proper global objects release, so this check can cause crashes
 
                 // Check if all slots were properly cleared
                 for(size_t j = 0; j < threads[i]->slots.size(); j++)
@@ -1085,8 +1085,8 @@ public:
         return (tlsSlots.size()-1);
     }
 
-    // Release TLS storage index and pass assosiated data to caller
-    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec)
+    // Release TLS storage index and pass associated data to caller
+    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec, bool keepSlot = false)
     {
         AutoLock guard(mtxGlobalAccess);
         CV_Assert(tlsSlots.size() > slotIdx);
@@ -1099,12 +1099,13 @@ public:
                 if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
                 {
                     dataVec.push_back(thread_slots[slotIdx]);
-                    threads[i]->slots[slotIdx] = 0;
+                    thread_slots[slotIdx] = NULL;
                 }
             }
         }
 
-        tlsSlots[slotIdx] = 0;
+        if (!keepSlot)
+            tlsSlots[slotIdx] = 0;
     }
 
     // Get data by TLS storage index
@@ -1196,9 +1197,18 @@ void TLSDataContainer::release()
     std::vector<void*> data;
     data.reserve(32);
     getTlsStorage().releaseSlot(key_, data); // Release key and get stored data for proper destruction
-    for(size_t i = 0; i < data.size(); i++)  // Delete all assosiated data
-        deleteDataInstance(data[i]);
     key_ = -1;
+    for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
+        deleteDataInstance(data[i]);
+}
+
+void TLSDataContainer::cleanup()
+{
+    std::vector<void*> data;
+    data.reserve(32);
+    getTlsStorage().releaseSlot(key_, data, true); // Extract stored data with removal from TLS tables
+    for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
+        deleteDataInstance(data[i]);
 }
 
 void* TLSDataContainer::getData() const
@@ -1340,7 +1350,7 @@ void resetTrace()
 void setFlags(FLAGS modeFlags)
 {
 #ifdef ENABLE_INSTRUMENTATION
-    getInstrumentStruct().enableMapping = (modeFlags & FLAGS_MAPPING);
+    getInstrumentStruct().flags = modeFlags;
 #else
     CV_UNUSED(modeFlags);
 #endif
@@ -1348,31 +1358,27 @@ void setFlags(FLAGS modeFlags)
 FLAGS getFlags()
 {
 #ifdef ENABLE_INSTRUMENTATION
-    int flags = 0;
-    if(getInstrumentStruct().enableMapping)
-        flags |= FLAGS_MAPPING;
-    return (FLAGS)flags;
+    return (FLAGS)getInstrumentStruct().flags;
 #else
     return (FLAGS)0;
 #endif
 }
 
-NodeData::NodeData(const char* funName, const char* fileName, int lineNum, cv::instr::TYPE instrType, cv::instr::IMPL implType)
+NodeData::NodeData(const char* funName, const char* fileName, int lineNum, void* retAddress, bool alwaysExpand, cv::instr::TYPE instrType, cv::instr::IMPL implType)
 {
-    m_instrType = TYPE_GENERAL;
-    m_implType  = IMPL_PLAIN;
+    m_funName       = funName;
+    m_instrType     = instrType;
+    m_implType      = implType;
+    m_fileName      = fileName;
+    m_lineNum       = lineNum;
+    m_retAddress    = retAddress;
+    m_alwaysExpand  = alwaysExpand;
 
-    m_funName     = funName;
-    m_instrType   = instrType;
-    m_implType    = implType;
-    m_fileName    = fileName;
-    m_lineNum     = lineNum;
-
-    m_counter = 0;
+    m_threads    = 1;
+    m_counter    = 0;
     m_ticksTotal = 0;
 
-    m_funError = false;
-    m_stopPoint = false;
+    m_funError  = false;
 }
 NodeData::NodeData(NodeData &ref)
 {
@@ -1380,15 +1386,20 @@ NodeData::NodeData(NodeData &ref)
 }
 NodeData& NodeData::operator=(const NodeData &right)
 {
-    this->m_funName     = right.m_funName;
-    this->m_instrType   = right.m_instrType;
-    this->m_implType    = right.m_implType;
-    this->m_fileName    = right.m_fileName;
-    this->m_lineNum     = right.m_lineNum;
+    this->m_funName      = right.m_funName;
+    this->m_instrType    = right.m_instrType;
+    this->m_implType     = right.m_implType;
+    this->m_fileName     = right.m_fileName;
+    this->m_lineNum      = right.m_lineNum;
+    this->m_retAddress   = right.m_retAddress;
+    this->m_alwaysExpand = right.m_alwaysExpand;
+
+    this->m_threads     = right.m_threads;
     this->m_counter     = right.m_counter;
     this->m_ticksTotal  = right.m_ticksTotal;
+
     this->m_funError    = right.m_funError;
-    this->m_stopPoint   = right.m_stopPoint;
+
     return *this;
 }
 NodeData::~NodeData()
@@ -1397,7 +1408,10 @@ NodeData::~NodeData()
 bool operator==(const NodeData& left, const NodeData& right)
 {
     if(left.m_lineNum == right.m_lineNum && left.m_funName == right.m_funName && left.m_fileName == right.m_fileName)
-        return true;
+    {
+        if(left.m_retAddress == right.m_retAddress || !(cv::instr::getFlags()&cv::instr::FLAGS_EXPAND_SAME_NAMES || left.m_alwaysExpand))
+            return true;
+    }
     return false;
 }
 
@@ -1418,7 +1432,7 @@ InstrNode* getCurrentNode()
     return getInstrumentTLSStruct().pCurrentNode;
 }
 
-IntrumentationRegion::IntrumentationRegion(const char* funName, const char* fileName, int lineNum, TYPE instrType, IMPL implType)
+IntrumentationRegion::IntrumentationRegion(const char* funName, const char* fileName, int lineNum, void *retAddress, bool alwaysExpand, TYPE instrType, IMPL implType)
 {
     m_disabled    = false;
     m_regionTicks = 0;
@@ -1435,14 +1449,17 @@ IntrumentationRegion::IntrumentationRegion(const char* funName, const char* file
             return;
         }
 
-        m_disabled = pTLS->pCurrentNode->m_payload.m_stopPoint;
-        if(m_disabled)
+        int depth = pTLS->pCurrentNode->getDepth();
+        if(pStruct->maxDepth && pStruct->maxDepth <= depth)
+        {
+            m_disabled = true;
             return;
+        }
 
-        NodeData payload(funName, fileName, lineNum, instrType, implType);
+        NodeData payload(funName, fileName, lineNum, retAddress, alwaysExpand, instrType, implType);
         Node<NodeData>* pChild = NULL;
 
-        if(pStruct->enableMapping)
+        if(pStruct->flags&FLAGS_MAPPING)
         {
             // Critical section
             cv::AutoLock guard(pStruct->mutexCreate); // Guard from concurrent child creation
@@ -1458,7 +1475,7 @@ IntrumentationRegion::IntrumentationRegion(const char* funName, const char* file
             pChild = pTLS->pCurrentNode->findChild(payload);
             if(!pChild)
             {
-                pTLS->pCurrentNode->m_payload.m_stopPoint = true;
+                m_disabled = true;
                 return;
             }
         }
@@ -1476,28 +1493,23 @@ IntrumentationRegion::~IntrumentationRegion()
         if(!m_disabled)
         {
             InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
-            if(pTLS->pCurrentNode->m_payload.m_stopPoint)
-            {
-                pTLS->pCurrentNode->m_payload.m_stopPoint = false;
-            }
-            else
-            {
-                if (pTLS->pCurrentNode->m_payload.m_implType == cv::instr::IMPL_OPENCL &&
-                    (pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_FUN ||
-                        pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_WRAPPER))
-                {
-                    cv::ocl::finish(); // TODO Support "async" OpenCL instrumentation
-                }
 
-                uint64 ticks = (getTickCount() - m_regionTicks);
-                {
-                    cv::AutoLock guard(pStruct->mutexCount); // Concurrent ticks accumulation
-                    pTLS->pCurrentNode->m_payload.m_counter++;
-                    pTLS->pCurrentNode->m_payload.m_ticksTotal += ticks;
-                }
-
-                pTLS->pCurrentNode = pTLS->pCurrentNode->m_pParent;
+            if (pTLS->pCurrentNode->m_payload.m_implType == cv::instr::IMPL_OPENCL &&
+                (pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_FUN ||
+                    pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_WRAPPER))
+            {
+                cv::ocl::finish(); // TODO Support "async" OpenCL instrumentation
             }
+
+            uint64 ticks = (getTickCount() - m_regionTicks);
+            {
+                cv::AutoLock guard(pStruct->mutexCount); // Concurrent ticks accumulation
+                pTLS->pCurrentNode->m_payload.m_counter++;
+                pTLS->pCurrentNode->m_payload.m_ticksTotal += ticks;
+                pTLS->pCurrentNode->m_payload.m_tls.get()->m_ticksTotal += ticks;
+            }
+
+            pTLS->pCurrentNode = pTLS->pCurrentNode->m_pParent;
         }
     }
 }

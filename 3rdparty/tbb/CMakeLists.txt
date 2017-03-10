@@ -70,20 +70,6 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
 #set(tbb_md5 "4669e7d4adee018de7a7b8b972987218")
 #set(tbb_version_file "version_string.tmp")
 
-# 4.0 update 2 - works fine
-#set(tbb_ver "tbb40_20111130oss")
-#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20111130oss_src.tgz")
-#set(tbb_md5 "1e6926b21e865e79772119cd44fc3ad8")
-#set(tbb_version_file "version_string.tmp")
-#set(tbb_need_GENERIC_DWORD_LOAD_STORE TRUE)
-
-# 4.0 update 1 - works fine
-#set(tbb_ver "tbb40_20111003oss")
-#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20111003oss_src.tgz")
-#set(tbb_md5 "7b5d94eb35a563b29ef402e0fd8f15c9")
-#set(tbb_version_file "version_string.tmp")
-#set(tbb_need_GENERIC_DWORD_LOAD_STORE TRUE)
-
 set(tbb_tarball "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_ver}_src.tgz")
 set(tbb_src_dir "${CMAKE_CURRENT_BINARY_DIR}/${tbb_ver}")
 
@@ -126,8 +112,6 @@ if(NOT EXISTS "${tbb_src_dir}")
     message(FATAL_ERROR "Failed to unpack TBB sources from ${tbb_tarball} to ${tbb_src_dir} with error ${tbb_untar_RESULT}")
   endif()
 endif()
-
-set(TBB_INCLUDE_DIRS "${tbb_src_dir}/include" PARENT_SCOPE)
 
 ocv_include_directories("${tbb_src_dir}/include"
                         "${tbb_src_dir}/src/"
@@ -173,17 +157,14 @@ endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
   add_definitions(-DTBB_USE_GCC_BUILTINS=1) #required for ARM GCC
+  if (NOT CMAKE_OPENCV_GCC_VERSION_NUM LESS 600)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flifetime-dse=1") # workaround for GCC 6.x
+  endif()
 endif()
 
 if(ANDROID_COMPILER_IS_CLANG)
   add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-prototypes)
-endif()
-
-if(tbb_need_GENERIC_DWORD_LOAD_STORE)
-  #needed by TBB 4.0 update 1,2; fixed in TBB 4.0 update 3 but it has 2 new problems
-  add_definitions(-D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1)
-  set(tbb_need_GENERIC_DWORD_LOAD_STORE ON PARENT_SCOPE)
 endif()
 
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
@@ -199,6 +180,8 @@ endif()
 set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
 
 add_library(tbb ${TBB_SOURCE_FILES})
+target_compile_definitions(tbb PUBLIC TBB_USE_GCC_BUILTINS=1 __TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
+target_include_directories(tbb SYSTEM PUBLIC $<BUILD_INTERFACE:${tbb_src_dir}/include>)
 
 if (WIN32)
   if (ARM)
@@ -251,5 +234,4 @@ ocv_install_target(tbb EXPORT OpenCVModules
     ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev
     )
 
-# get TBB version
-ocv_parse_header("${tbb_src_dir}/include/tbb/tbb_stddef.h" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION CACHE)
+ocv_tbb_read_version("${tbb_src_dir}/include")

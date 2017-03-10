@@ -16,7 +16,7 @@ const char* keys =
     "{ help h      |                     | print help message }"
     "{ image i     |                     | specify input image}"
     "{ camera c    |                     | enable camera capturing }"
-    "{ video v     | ../data/768x576.avi | use video as input }"
+    "{ video v     | ../data/vtest.avi   | use video as input }"
     "{ directory d |                     | images directory}"
 };
 
@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     namedWindow("people detector", 1);
 
     string pattern_glob = "";
-    string video_filename = "../data/768x576.avi";
+    string video_filename = "../data/vtest.avi";
     int camera_id = -1;
     if (parser.has("directory"))
     {

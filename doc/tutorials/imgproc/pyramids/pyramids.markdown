@@ -93,6 +93,7 @@ Let's check the general structure of the program:
 
 -   Perform an infinite loop waiting for user input.
     @snippet cpp/tutorial_code/ImgProc/Pyramids.cpp infinite_loop
+
     Our program exits if the user presses *ESC*. Besides, it has two options:
 
     -   **Perform upsampling (after pressing 'u')**

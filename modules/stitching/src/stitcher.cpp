@@ -226,14 +226,18 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
-    std::vector<UMat> images_warped_f(imgs_.size());
-    for (size_t i = 0; i < imgs_.size(); ++i)
-        images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    // Find seams
+    // Compensate exposure before finding seams
     exposure_comp_->feed(corners, images_warped, masks_warped);
+    for (size_t i = 0; i < imgs_.size(); ++i)
+        exposure_comp_->apply(int(i), corners[i], images_warped[i], masks_warped[i]);
+
+    // Find seams
+    std::vector<UMat> images_warped_f(imgs_.size());
+    for (size_t i = 0; i < imgs_.size(); ++i)
+        images_warped[i].convertTo(images_warped_f[i], CV_32F);
     seam_finder_->find(images_warped_f, corners, masks_warped);
 
     // Release unused memory

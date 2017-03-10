@@ -186,22 +186,17 @@ __kernel void calcLut(__global __const uchar * src, const int srcStep,
 #else
         clipped = smem[0];
 #endif
-
-        // broadcast evaluated value
-
-        __local int totalClipped;
-
-        if (tid == 0)
-            totalClipped = clipped;
         barrier(CLK_LOCAL_MEM_FENCE);
 
         // redistribute clipped samples evenly
-
-        int redistBatch = totalClipped / 256;
+        int redistBatch = clipped / 256;
         tHistVal += redistBatch;
 
-        int residual = totalClipped - redistBatch * 256;
-        if (tid < residual)
+        int residual = clipped - redistBatch * 256;
+        int rStep = 256 / residual;
+        if (rStep < 1)
+            rStep = 1;
+        if (tid%rStep == 0 && (tid/rStep)<residual)
             ++tHistVal;
     }
 

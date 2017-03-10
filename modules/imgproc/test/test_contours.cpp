@@ -63,13 +63,24 @@ protected:
     int blob_count, max_log_blob_count;
     int retr_mode, approx_method;
 
-    int min_log_img_size, max_log_img_size;
+    int min_log_img_width, max_log_img_width;
+    int min_log_img_height, max_log_img_height;
     CvSize img_size;
     int count, count2;
 
     IplImage* img[NUM_IMG];
     CvMemStorage* storage;
     CvSeq *contours, *contours2, *chain;
+
+    static const bool useVeryWideImages =
+#if SIZE_MAX <= 0xffffffff
+        // 32-bit: don't even try the very wide images
+        false
+#else
+        // 64-bit: test with very wide images
+        true
+#endif
+        ;
 };
 
 
@@ -77,13 +88,16 @@ CV_FindContourTest::CV_FindContourTest()
 {
     int i;
 
-    test_case_count    = 300;
+    test_case_count    = useVeryWideImages ? 10 : 300;
     min_blob_size      = 1;
     max_blob_size      = 50;
     max_log_blob_count = 10;
 
-    min_log_img_size   = 3;
-    max_log_img_size   = 10;
+    min_log_img_width  = useVeryWideImages ? 17 : 3;
+    max_log_img_width  = useVeryWideImages ? 17 : 10;
+
+    min_log_img_height = 3;
+    max_log_img_height = 10;
 
     for( i = 0; i < NUM_IMG; i++ )
         img[i] = 0;
@@ -122,8 +136,10 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
     min_blob_size      = cvReadInt( find_param( fs, "min_blob_size" ), min_blob_size );
     max_blob_size      = cvReadInt( find_param( fs, "max_blob_size" ), max_blob_size );
     max_log_blob_count = cvReadInt( find_param( fs, "max_log_blob_count" ), max_log_blob_count );
-    min_log_img_size   = cvReadInt( find_param( fs, "min_log_img_size" ), min_log_img_size );
-    max_log_img_size   = cvReadInt( find_param( fs, "max_log_img_size" ), max_log_img_size );
+    min_log_img_width  = cvReadInt( find_param( fs, "min_log_img_width" ), min_log_img_width );
+    max_log_img_width  = cvReadInt( find_param( fs, "max_log_img_width" ), max_log_img_width );
+    min_log_img_height = cvReadInt( find_param( fs, "min_log_img_height"), min_log_img_height );
+    max_log_img_height = cvReadInt( find_param( fs, "max_log_img_height"), max_log_img_height );
 
     min_blob_size = cvtest::clipInt( min_blob_size, 1, 100 );
     max_blob_size = cvtest::clipInt( max_blob_size, 1, 100 );
@@ -133,11 +149,16 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
 
     max_log_blob_count = cvtest::clipInt( max_log_blob_count, 1, 10 );
 
-    min_log_img_size = cvtest::clipInt( min_log_img_size, 1, 10 );
-    max_log_img_size = cvtest::clipInt( max_log_img_size, 1, 10 );
+    min_log_img_width  = cvtest::clipInt( min_log_img_width, 1, useVeryWideImages ? 17 : 10 );
+    min_log_img_width  = cvtest::clipInt( max_log_img_width, 1, useVeryWideImages ? 17 : 10 );
+    min_log_img_height = cvtest::clipInt( min_log_img_height, 1, 10 );
+    min_log_img_height = cvtest::clipInt( max_log_img_height, 1, 10 );
 
-    if( min_log_img_size > max_log_img_size )
-        CV_SWAP( min_log_img_size, max_log_img_size, t );
+    if( min_log_img_width > max_log_img_width )
+        std::swap( min_log_img_width, max_log_img_width );
+
+    if (min_log_img_height > max_log_img_height)
+        std::swap(min_log_img_height, max_log_img_height);
 
     return 0;
 }
@@ -215,9 +236,9 @@ int CV_FindContourTest::prepare_test_case( int test_case_idx )
     blob_count = cvRound(exp(cvtest::randReal(rng)*max_log_blob_count*CV_LOG2));
 
     img_size.width = cvRound(exp((cvtest::randReal(rng)*
-        (max_log_img_size - min_log_img_size) + min_log_img_size)*CV_LOG2));
+        (max_log_img_width - min_log_img_width) + min_log_img_width)*CV_LOG2));
     img_size.height = cvRound(exp((cvtest::randReal(rng)*
-        (max_log_img_size - min_log_img_size) + min_log_img_size)*CV_LOG2));
+        (max_log_img_height - min_log_img_height) + min_log_img_height)*CV_LOG2));
 
     approx_method = cvtest::randInt( rng ) % 4 + 1;
     retr_mode = cvtest::randInt( rng ) % 4;
@@ -389,47 +410,6 @@ _exit_:
 
 TEST(Imgproc_FindContours, accuracy) { CV_FindContourTest test; test.safe_run(); }
 
-TEST(Core_Drawing, _914)
-{
-    const int rows = 256;
-    const int cols = 256;
-
-    Mat img(rows, cols, CV_8UC1, Scalar(255));
-
-    line(img, Point(0, 10), Point(255, 10), Scalar(0), 2, 4);
-    line(img, Point(-5, 20), Point(260, 20), Scalar(0), 2, 4);
-    line(img, Point(10, 0), Point(10, 255), Scalar(0), 2, 4);
-
-    double x0 = 0.0/pow(2.0, -2.0);
-    double x1 = 255.0/pow(2.0, -2.0);
-    double y = 30.5/pow(2.0, -2.0);
-
-    line(img, Point(int(x0), int(y)), Point(int(x1), int(y)), Scalar(0), 2, 4, 2);
-
-    int pixelsDrawn = rows*cols - countNonZero(img);
-    ASSERT_EQ( (3*rows + cols)*3 - 3*9, pixelsDrawn);
-}
-
-TEST(Core_Drawing, polylines_empty)
-{
-    Mat img(100, 100, CV_8UC1, Scalar(0));
-    vector<Point> pts; // empty
-    polylines(img, pts, false, Scalar(255));
-    int cnt = countNonZero(img);
-    ASSERT_EQ(cnt, 0);
-}
-
-TEST(Core_Drawing, polylines)
-{
-    Mat img(100, 100, CV_8UC1, Scalar(0));
-    vector<Point> pts;
-    pts.push_back(Point(0, 0));
-    pts.push_back(Point(20, 0));
-    polylines(img, pts, false, Scalar(255));
-    int cnt = countNonZero(img);
-    ASSERT_EQ(cnt, 21);
-}
-
 //rotate/flip a quadrant appropriately
 static void rot(int n, int *x, int *y, int rx, int ry)
 {
@@ -483,10 +463,26 @@ TEST(Imgproc_FindContours, hilbert)
     img.setTo(Scalar::all(0));
 
     drawContours(img, contours, 0, Scalar::all(255), 1);
-    //imshow("hilbert", img);
-    //waitKey();
+
     ASSERT_EQ(1, (int)contours.size());
     ASSERT_EQ(9832, (int)contours[0].size());
+}
+
+TEST(Imgproc_FindContours, border)
+{
+    Mat img;
+    copyMakeBorder(Mat::zeros(8, 10, CV_8U), img, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(1));
+
+    std::vector<std::vector<cv::Point> > contours;
+    findContours(img, contours, RETR_LIST, CHAIN_APPROX_NONE);
+
+    Mat img_draw_contours = Mat::zeros(img.size(), CV_8U);
+    for (size_t cpt = 0; cpt < contours.size(); cpt++)
+    {
+      drawContours(img_draw_contours, contours, static_cast<int>(cpt), cv::Scalar(255));
+    }
+
+    ASSERT_TRUE(norm(img - img_draw_contours, NORM_INF) == 0.0);
 }
 
 /* End of file. */

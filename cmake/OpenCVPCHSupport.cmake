@@ -303,9 +303,11 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 
 MACRO(GET_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
+  if(ENABLE_PRECOMPILED_HEADERS)
     if(CMAKE_GENERATOR MATCHES "^Visual.*$")
         set(${_targetName}_pch ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch.cpp)
     endif()
+  endif()
 
 ENDMACRO(GET_NATIVE_PRECOMPILED_HEADER)
 
