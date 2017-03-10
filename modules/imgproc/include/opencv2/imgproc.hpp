@@ -2588,9 +2588,8 @@ The function supports multi-channel images. Each channel is processed independen
 The functions accumulate\* can be used, for example, to collect statistics of a scene background
 viewed by a still camera and for the further foreground-background segmentation.
 
-@param src Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
-@param dst %Accumulator image with the same number of channels as input image, 32-bit or 64-bit
-floating-point.
+@param src Input image of type CV_8UC(n), CV_16UC(n), CV_32FC(n) or CV_64FC(n), where n is a positive integer.
+@param dst %Accumulator image with the same number of channels as input image, and a depth of CV_32F or CV_64F.
 @param mask Optional operation mask.
 
 @sa  accumulateSquare, accumulateProduct, accumulateWeighted
