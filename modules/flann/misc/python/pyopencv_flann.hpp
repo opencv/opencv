@@ -23,6 +23,9 @@ bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
     PyObject* item = NULL;
     Py_ssize_t pos = 0;
 
+    if (!o || o == Py_None)
+        return true;
+
     if(PyDict_Check(o)) {
         while(PyDict_Next(o, &pos, &key, &item)) {
             if( !PyString_Check(key) ) {
