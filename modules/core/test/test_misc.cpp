@@ -3,6 +3,32 @@
 using namespace cv;
 using namespace std;
 
+namespace {
+
+static void helper_InputArray_validate_invariants(InputArray src_, OutputArray dst_)
+{
+    Size sz0 = src_.size();
+    int type0 = src_.type();
+
+    dst_.create(Size(200, 250), CV_32FC1);
+
+    Size sz1 = src_.size();
+    int type1 = src_.type();
+
+    EXPECT_EQ(sz0.width, sz1.width);
+    EXPECT_EQ(sz0.height, sz1.height);
+    EXPECT_EQ(type0, type1);
+}
+
+TEST(Core_InputArray, invariant)
+{
+    Mat m(Size(100, 100), CV_8UC3, Scalar::all(255));
+    helper_InputArray_validate_invariants(m, m);
+    EXPECT_EQ(200, m.cols);
+    EXPECT_EQ(250, m.rows);
+    EXPECT_EQ(CV_32FC1, m.type());
+}
+
 TEST(Core_OutputArrayCreate, _1997)
 {
     struct local {
@@ -145,3 +171,6 @@ TEST(Core_String, end_method_regression)
     cv::String new_string(old_string.begin(), old_string.end());
     EXPECT_EQ(6u, new_string.size());
 }
+
+
+} // namespace
