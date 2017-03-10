@@ -467,11 +467,11 @@ PYOBJ_FROM_MAT(Matx23d)
 PYOBJ_FROM_MAT(Matx23f)
 PYOBJ_FROM_MAT(Matx22d)
 PYOBJ_FROM_MAT(Matx22f)
-PYOBJ_FROM_MAT(Vec4d)
+PYOBJ_FROM_MAT(Scalar) //Vec4d
 PYOBJ_FROM_MAT(Vec4f)
-//PYOBJ_FROM_MAT(Vec3d)
+PYOBJ_FROM_MAT(Vec3d)
 PYOBJ_FROM_MAT(Vec3f)
-//PYOBJ_FROM_MAT(Vec2d)
+PYOBJ_FROM_MAT(Vec2d)
 PYOBJ_FROM_MAT(Vec2f)
 
 PYOBJ_TO_MAT(Matx44d)
@@ -484,9 +484,9 @@ PYOBJ_TO_MAT(Matx23d)
 PYOBJ_TO_MAT(Matx23f)
 PYOBJ_TO_MAT(Matx22d)
 PYOBJ_TO_MAT(Matx22f)
-//PYOBJ_TO_MAT(Vec4d) //Conflicts with: pyopencv_to(PyObject *, Scalar&, const char *)
+PYOBJ_TO_MAT(Scalar) //Vec4d
 PYOBJ_TO_MAT(Vec4f)
-//PYOBJ_TO_MAT(Vec3d)
+PYOBJ_TO_MAT(Vec3d)
 PYOBJ_TO_MAT(Vec3f)
 PYOBJ_TO_MAT(Vec2d)
 PYOBJ_TO_MAT(Vec2f)
@@ -678,47 +678,6 @@ PyObject* pyopencv_from(const UMat& m) {
     PyObject *o = PyObject_CallObject((PyObject *) &cv2_UMatWrapperType, NULL);
     *((cv2_UMatWrapperObject *) o)->um = m;
     return o;
-}
-
-template<>
-bool pyopencv_to(PyObject *o, Scalar& s, const char *name)
-{
-    if(!o || o == Py_None)
-        return true;
-    if (PySequence_Check(o)) {
-        PyObject *fi = PySequence_Fast(o, name);
-        if (fi == NULL)
-            return false;
-        if (4 < PySequence_Fast_GET_SIZE(fi))
-        {
-            failmsg("Scalar value for argument '%s' is longer than 4", name);
-            return false;
-        }
-        for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
-            PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
-            if (PyFloat_Check(item) || PyInt_Check(item)) {
-                s[(int)i] = PyFloat_AsDouble(item);
-            } else {
-                failmsg("Scalar value for argument '%s' is not numeric", name);
-                return false;
-            }
-        }
-        Py_DECREF(fi);
-    } else {
-        if (PyFloat_Check(o) || PyInt_Check(o)) {
-            s[0] = PyFloat_AsDouble(o);
-        } else {
-            failmsg("Scalar value for argument '%s' is not numeric", name);
-            return false;
-        }
-    }
-    return true;
-}
-
-template<>
-PyObject* pyopencv_from(const Scalar& src)
-{
-    return Py_BuildValue("(dddd)", src[0], src[1], src[2], src[3]);
 }
 
 template<>
@@ -1004,27 +963,6 @@ template<>
 PyObject* pyopencv_from(const Point3f& p)
 {
     return Py_BuildValue("(ddd)", p.x, p.y, p.z);
-}
-
-template<>
-bool pyopencv_to(PyObject* obj, Vec3d& v, const char* name)
-{
-    (void)name;
-    if(!obj)
-        return true;
-    return PyArg_ParseTuple(obj, "ddd", &v[0], &v[1], &v[2]) > 0;
-}
-
-template<>
-PyObject* pyopencv_from(const Vec3d& v)
-{
-    return Py_BuildValue("(ddd)", v[0], v[1], v[2]);
-}
-
-template<>
-PyObject* pyopencv_from(const Vec2d& v)
-{
-    return Py_BuildValue("(dd)", v[0], v[1]);
 }
 
 template<>
