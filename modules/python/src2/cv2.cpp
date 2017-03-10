@@ -411,11 +411,85 @@ PyObject* pyopencv_from(const Mat& m)
     return o;
 }
 
-template<typename _Tp, int m, int n>
-PyObject* pyopencv_from(const Matx<_Tp, m, n>& matx)
-{
-    return pyopencv_from(Mat(matx));
+#define PYOBJ_FROM_MAT(_Tp) \
+static PyObject* pyopencv_from(const _Tp& src) \
+{ \
+    return pyopencv_from(Mat(src)); \
 }
+
+#define PYOBJ_TO_MAT(_Tp) \
+static bool pyopencv_to(PyObject* obj, _Tp& dst, const ArgInfo info) \
+{ \
+    Mat src; \
+    Size dstSize = Mat(_Tp()).size(); \
+ \
+    /* TODO: utilize ArgInfo to indicate "optional" arguments */ \
+    if(!obj || obj == Py_None) \
+        return true; \
+    if (!pyopencv_to(obj, src, info)) \
+        return false; \
+    if (src.size() != dstSize) \
+    { \
+        /* A Scalar vector with < 4 elements */ \
+        if (dstSize == Size(1, 4) && src.size().area() < 4) \
+        { \
+            src = src.reshape(src.channels(), src.size().area()); \
+            src.push_back(Mat::zeros(4 - src.size().area(), 1, src.type())); \
+            src.copyTo(dst); \
+            return true; \
+        } \
+        /* This is an error if not just transposed */ \
+        /*if (src.size().area() != dstSize.area())*/ \
+        if (src.size().width != dstSize.height || src.size().height != dstSize.width) \
+        { \
+            failmsg("Size for argument '%s' is not [%u x %u]", info.name, dstSize.height, dstSize.width); \
+            return false; \
+        } \
+        /*src = src.reshape(src.channels(), dstSize.height);*/ \
+        transpose(src, src); \
+    } \
+    src.copyTo(dst);\
+    return true; \
+} \
+ \
+static bool pyopencv_to(PyObject* obj, _Tp& dst, const char* name = "<unknown>") \
+{ \
+    return pyopencv_to(obj, dst, ArgInfo(name, 0)); \
+}
+
+PYOBJ_FROM_MAT(Matx44d)
+PYOBJ_FROM_MAT(Matx44f)
+PYOBJ_FROM_MAT(Matx34d)
+PYOBJ_FROM_MAT(Matx34f)
+PYOBJ_FROM_MAT(Matx33d)
+PYOBJ_FROM_MAT(Matx33f)
+PYOBJ_FROM_MAT(Matx23d)
+PYOBJ_FROM_MAT(Matx23f)
+PYOBJ_FROM_MAT(Matx22d)
+PYOBJ_FROM_MAT(Matx22f)
+PYOBJ_FROM_MAT(Vec4d)
+PYOBJ_FROM_MAT(Vec4f)
+//PYOBJ_FROM_MAT(Vec3d)
+PYOBJ_FROM_MAT(Vec3f)
+//PYOBJ_FROM_MAT(Vec2d)
+PYOBJ_FROM_MAT(Vec2f)
+
+PYOBJ_TO_MAT(Matx44d)
+PYOBJ_TO_MAT(Matx44f)
+PYOBJ_TO_MAT(Matx34d)
+PYOBJ_TO_MAT(Matx34f)
+PYOBJ_TO_MAT(Matx33d)
+PYOBJ_TO_MAT(Matx33f)
+PYOBJ_TO_MAT(Matx23d)
+PYOBJ_TO_MAT(Matx23f)
+PYOBJ_TO_MAT(Matx22d)
+PYOBJ_TO_MAT(Matx22f)
+//PYOBJ_TO_MAT(Vec4d) //Conflicts with: pyopencv_to(PyObject *, Scalar&, const char *)
+PYOBJ_TO_MAT(Vec4f)
+//PYOBJ_TO_MAT(Vec3d)
+PYOBJ_TO_MAT(Vec3f)
+PYOBJ_TO_MAT(Vec2d)
+PYOBJ_TO_MAT(Vec2f)
 
 typedef struct {
     PyObject_HEAD
