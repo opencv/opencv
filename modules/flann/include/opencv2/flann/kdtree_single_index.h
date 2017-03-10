@@ -209,7 +209,7 @@ public:
      * \param[in] knn Number of nearest neighbors to return
      * \param[in] params Search parameters
      */
-    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params)
+    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params) const
     {
         assert(queries.cols == veclen());
         assert(indices.rows >= queries.rows);
@@ -238,7 +238,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     maxCheck = the maximum number of restarts (in a best-bin-first manner)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
     {
         float epsError = 1+get_param(searchParams,"eps",0.0f);
 
@@ -518,7 +518,7 @@ private:
         lim2 = left;
     }
 
-    DistanceType computeInitialDistances(const ElementType* vec, std::vector<DistanceType>& dists)
+    DistanceType computeInitialDistances(const ElementType* vec, std::vector<DistanceType>& dists) const
     {
         DistanceType distsq = 0.0;
 
@@ -540,7 +540,7 @@ private:
      * Performs an exact search in the tree starting from a node.
      */
     void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, const NodePtr node, DistanceType mindistsq,
-                     std::vector<DistanceType>& dists, const float epsError)
+                     std::vector<DistanceType>& dists, const float epsError) const
     {
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == NULL)&&(node->child2 == NULL)) {

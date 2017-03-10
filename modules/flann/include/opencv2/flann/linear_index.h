@@ -103,7 +103,7 @@ public:
         index_params_["algorithm"] = getType();
     }
 
-    void findNeighbors(ResultSet<DistanceType>& resultSet, const ElementType* vec, const SearchParams& /*searchParams*/)
+    void findNeighbors(ResultSet<DistanceType>& resultSet, const ElementType* vec, const SearchParams& /*searchParams*/) const
     {
         ElementType* data = dataset_.data;
         for (size_t i = 0; i < dataset_.rows; ++i, data += dataset_.cols) {

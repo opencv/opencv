@@ -187,7 +187,7 @@ public:
      * \param[in] knn Number of nearest neighbors to return
      * \param[in] params Search parameters
      */
-    virtual void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params)
+    virtual void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params) const
     {
         assert(queries.cols == veclen());
         assert(indices.rows >= queries.rows);
@@ -217,7 +217,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     maxCheck = the maximum number of restarts (in a best-bin-first manner)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& /*searchParams*/)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& /*searchParams*/) const
     {
         getNeighbors(vec, result);
     }
@@ -261,7 +261,7 @@ private:
      * @param checked_average used for debugging
      */
     void getNeighbors(const ElementType* vec, bool /*do_radius*/, float radius, bool do_k, unsigned int k_nn,
-                      float& /*checked_average*/)
+                      float& /*checked_average*/) const
     {
         static std::vector<ScoreIndexPair> score_index_heap;
 
@@ -336,7 +336,7 @@ private:
      * This is a slower version than the above as it uses the ResultSet
      * @param vec the feature to analyze
      */
-    void getNeighbors(const ElementType* vec, ResultSet<DistanceType>& result)
+    void getNeighbors(const ElementType* vec, ResultSet<DistanceType>& result) const
     {
         typename std::vector<lsh::LshTable<ElementType> >::const_iterator table = tables_.begin();
         typename std::vector<lsh::LshTable<ElementType> >::const_iterator table_end = tables_.end();

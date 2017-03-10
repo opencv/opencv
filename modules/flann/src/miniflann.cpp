@@ -475,7 +475,7 @@ void Index::release()
 }
 
 template<typename Distance, typename IndexType>
-void runKnnSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
+void runKnnSearch_(const void* const index, const Mat& query, Mat& indices, Mat& dists,
                   int knn, const SearchParams& params)
 {
     typedef typename Distance::ElementType ElementType;
@@ -494,14 +494,14 @@ void runKnnSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
 }
 
 template<typename Distance>
-void runKnnSearch(void* index, const Mat& query, Mat& indices, Mat& dists,
+void runKnnSearch(const void* const index, const Mat& query, Mat& indices, Mat& dists,
                   int knn, const SearchParams& params)
 {
     runKnnSearch_<Distance, ::cvflann::Index<Distance> >(index, query, indices, dists, knn, params);
 }
 
 template<typename Distance, typename IndexType>
-int runRadiusSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
+int runRadiusSearch_(const void* const index, const Mat& query, Mat& indices, Mat& dists,
                     double radius, const SearchParams& params)
 {
     typedef typename Distance::ElementType ElementType;
@@ -521,7 +521,7 @@ int runRadiusSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
 }
 
 template<typename Distance>
-int runRadiusSearch(void* index, const Mat& query, Mat& indices, Mat& dists,
+int runRadiusSearch(const void* const index, const Mat& query, Mat& indices, Mat& dists,
                      double radius, const SearchParams& params)
 {
     return runRadiusSearch_<Distance, ::cvflann::Index<Distance> >(index, query, indices, dists, radius, params);
@@ -565,7 +565,7 @@ static void createIndicesDists(OutputArray _indices, OutputArray _dists,
 
 
 void Index::knnSearch(InputArray _query, OutputArray _indices,
-               OutputArray _dists, int knn, const SearchParams& params)
+               OutputArray _dists, int knn, const SearchParams& params) const
 {
     CV_INSTRUMENT_REGION()
 
@@ -609,7 +609,7 @@ void Index::knnSearch(InputArray _query, OutputArray _indices,
 
 int Index::radiusSearch(InputArray _query, OutputArray _indices,
                         OutputArray _dists, double radius, int maxResults,
-                        const SearchParams& params)
+                        const SearchParams& params) const
 {
     CV_INSTRUMENT_REGION()
 

@@ -544,7 +544,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     searchParams = parameters that influence the search algorithm (checks)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
     {
 
         int maxChecks = get_param(searchParams,"checks",32);
@@ -744,7 +744,7 @@ private:
 
 
     void findNN(NodePtr node, ResultSet<DistanceType>& result, const ElementType* vec, int& checks, int maxChecks,
-                Heap<BranchSt>* heap, std::vector<bool>& checked)
+                Heap<BranchSt>* heap, std::vector<bool>& checked) const
     {
         if (node->childs==NULL) {
             if (checks>=maxChecks) {
