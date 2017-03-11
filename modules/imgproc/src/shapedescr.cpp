@@ -347,8 +347,8 @@ static RotatedRect fitEllipseHalir98Impl(InputArray _points)
 {
     CV_INSTRUMENT_REGION()
 
-    CV_Assert((_points.type() == CV_32SC2 || _points.type() == CV_32FC2 || _points.type() == CV_64FC2) &&
-        (_points.kind() == _InputArray::MAT || _points.kind() == _InputArray::STD_VECTOR));
+    CV_Assert((_points.type() == CV_32SC2 || _points.type() == CV_32FC2 || _points.type() == CV_64FC2));
+//        && (_points.kind() == _InputArray::MAT || _points.kind() == _InputArray::STD_VECTOR));
 
     if (_points.total() < 5)
         CV_Error(Error::StsBadSize, "Not enough points to fit an ellipse.");
@@ -483,7 +483,7 @@ static RotatedRect fitEllipseHalir98Impl(InputArray _points)
         meanVal.y /= (double)pointSz;
 
         i = 0;
-#if CV_SIMD128
+#if CV_SIMD128_64F
         if (haveSimd)
         {
             v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_px, v_py, v_ps1, v_ps2;
@@ -516,7 +516,7 @@ static RotatedRect fitEllipseHalir98Impl(InputArray _points)
         }
 
         j = i = 0;
-#if CV_SIMD128
+#if CV_SIMD128_64F
         if (haveSimd)
         {
             v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_1 = v_setall_f64(1.);
@@ -573,7 +573,7 @@ static RotatedRect fitEllipseHalir98Impl(InputArray _points)
         meanVal.y /= (double)pointSz;
 
         i = 0;
-#if CV_SIMD128
+#if CV_SIMD128_64F
         if (haveSimd)
         {
             v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_px, v_py, v_ps1, v_ps2;
@@ -605,7 +605,7 @@ static RotatedRect fitEllipseHalir98Impl(InputArray _points)
         }
 
         j = i = 0;
-#if CV_SIMD128
+#if CV_SIMD128_64F
         if (haveSimd)
         {
             v_float64x2 v_mean(meanVal.x, meanVal.y), v_p1, v_p2, v_1 = v_setall_f64(1.);
@@ -669,8 +669,8 @@ static RotatedRect fitEllipseHalir98Impl(InputArray _points)
 //    eigenValX.val[1] = evecx.at<double>(3 + j);
 //    eigenValX.val[2] = evecx.at<double>(6 + j);
 
-    // Seems to be more stable than DECOMP_SVD
-    solve(M, Matx31d(1., 1., 1.), eigenValX, DECOMP_LU);
+    // Must be DECOMP_SVD, DECOMP_LU failed in feature2d tests
+    solve(M, Matx31d(1., 1., 1.), eigenValX, DECOMP_SVD);
 
     if(std::abs(eigenValX.val[0]) < DBL_MIN && std::abs(eigenValX.val[2]) < DBL_MIN)
     {
@@ -712,7 +712,9 @@ static RotatedRect fitEllipseHalir98Impl(InputArray _points)
 
     if (wh.height <= 0. || wh.width <= 0. || wh.height != wh.height ||
             wh.width != wh.width || xy.x != xy.x || xy.y != xy.y)
+    {
         CV_Error(Error::StsBadSize, "Could not fit ellipse to given points.");
+    }
 
     return RotatedRect(xy, wh, (float)(theta * 180. / CV_PI));
 }

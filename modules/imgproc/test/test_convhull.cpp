@@ -1403,7 +1403,7 @@ void CV_FitEllipseParallelTest::generate_point_set( void* )
 
     if( box0.size.width < box0.size.height )
     {
-        int t;
+        float t;
         CV_SWAP( box0.size.width, box0.size.height, t );
         box0.angle += 90;
     }
