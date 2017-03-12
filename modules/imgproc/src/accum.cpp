@@ -45,11 +45,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_USE_OPENCV
-#define IVX_HIDE_INFO_WARNINGS
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 namespace cv
 {
@@ -1962,7 +1958,7 @@ static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray
 
     try
     {
-        ivx::Context context = ivx::Context::create();
+        ivx::Context context = ovx::getOpenVXContext();
         ivx::Image srcImage = ivx::Image::createFromHandle(context, ivx::Image::matTypeToFormat(srcMat.type()),
                                                            ivx::Image::createAddressing(srcMat), srcMat.data);
         ivx::Image dstImage = ivx::Image::createFromHandle(context, ivx::Image::matTypeToFormat(dstMat.type()),
@@ -1993,13 +1989,11 @@ static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray
     }
     catch (ivx::RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (ivx::WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
 
     return true;
@@ -2023,12 +2017,8 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))),
         ipp_accumulate(_src, _dst, _mask));
 
-#ifdef HAVE_OPENVX
-    if(openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_OP))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(_src.dims() <= 2,
+               openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_OP))
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -2126,12 +2116,8 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && (_mask.empty() || _mask.isContinuous()))),
         ipp_accumulate_square(_src, _dst, _mask));
 
-#ifdef HAVE_OPENVX
-    if(openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_SQUARE_OP))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(_src.dims() <= 2,
+               openvx_accumulate(_src, _dst, _mask, 0.0, VX_ACCUMULATE_SQUARE_OP))
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -2334,12 +2320,8 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 
     CV_IPP_RUN((_src.dims() <= 2 || (_src.isContinuous() && _dst.isContinuous() && _mask.isContinuous())), ipp_accumulate_weighted(_src, _dst, alpha, _mask));
 
-#ifdef HAVE_OPENVX
-    if(openvx_accumulate(_src, _dst, _mask, alpha, VX_ACCUMULATE_WEIGHTED_OP))
-    {
-        return;
-    }
-#endif
+    CV_OVX_RUN(_src.dims() <= 2,
+               openvx_accumulate(_src, _dst, _mask, alpha, VX_ACCUMULATE_WEIGHTED_OP))
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 

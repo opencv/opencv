@@ -271,7 +271,7 @@ static void DrawOpenGLMSER(Mat img, Mat result)
     data->tex.bind();
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvi(GL_TEXTURE_2D, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
     glDisable(GL_CULL_FACE);
     setOpenGlDrawCallback("OpenGL", draw, data);
@@ -279,8 +279,8 @@ static void DrawOpenGLMSER(Mat img, Mat result)
     for (;;)
         {
         updateWindow("OpenGL");
-        int key = waitKey(40);
-        if ((key & 0xff) == 27)
+        char key = (char)waitKey(40);
+        if (key == 27)
             break;
         if (key == 0x20)
             rotateEnable = !rotateEnable;

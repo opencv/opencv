@@ -188,8 +188,16 @@ enum CpuFeatures {
 #  if defined __POPCNT__ || (defined _MSC_VER && _MSC_VER >= 1500)
 #    ifdef _MSC_VER
 #      include <nmmintrin.h>
+#      if defined(_M_X64)
+#        define CV_POPCNT_U64 _mm_popcnt_u64
+#      endif
+#      define CV_POPCNT_U32 _mm_popcnt_u32
 #    else
 #      include <popcntintrin.h>
+#      if defined(__x86_64__)
+#        define CV_POPCNT_U64 __builtin_popcountll
+#      endif
+#      define CV_POPCNT_U32 __builtin_popcount
 #    endif
 #    define CV_POPCNT 1
 #  endif
@@ -361,6 +369,16 @@ Cv64suf;
 #  define CV_EXPORTS
 #endif
 
+#ifndef CV_DEPRECATED
+#  if defined(__GNUC__)
+#    define CV_DEPRECATED __attribute__ ((deprecated))
+#  elif defined(_MSC_VER)
+#    define CV_DEPRECATED __declspec(deprecated)
+#  else
+#    define CV_DEPRECATED
+#  endif
+#endif
+
 #ifndef CV_EXTERN_C
 #  ifdef __cplusplus
 #    define CV_EXTERN_C extern "C"
@@ -398,7 +416,7 @@ Cv64suf;
 #define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
 
 /** Size of each channel item,
-   0x124489 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
+   0x8442211 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
 #define CV_ELEM_SIZE1(type) \
     ((((sizeof(size_t)<<28)|0x8442211) >> CV_MAT_DEPTH(type)*4) & 15)
 
@@ -420,7 +438,7 @@ Cv64suf;
 
 #ifdef CV_XADD
   // allow to use user-defined macro
-#elif defined __GNUC__
+#elif defined __GNUC__ || defined __clang__
 #  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)
 #    ifdef __ATOMIC_ACQ_REL
 #      define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)

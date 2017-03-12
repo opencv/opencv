@@ -1643,6 +1643,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         break;
 
     case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
+    case CV_BayerBG2BGRA: case CV_BayerGB2BGRA: case CV_BayerRG2BGRA: case CV_BayerGR2BGRA:
     case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
         {
             if (dcn <= 0)
@@ -1652,8 +1653,10 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
             _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
             Mat dst_ = _dst.getMat();
 
-            if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
-                code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
+            if( code == CV_BayerBG2BGR || code == CV_BayerBG2BGRA ||
+                code == CV_BayerGB2BGR || code == CV_BayerGB2BGRA ||
+                code == CV_BayerRG2BGR || code == CV_BayerRG2BGRA ||
+                code == CV_BayerGR2BGR || code == CV_BayerGR2BGRA )
             {
                 if( depth == CV_8U )
                     Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);

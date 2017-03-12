@@ -1,9 +1,5 @@
 #include "test_precomp.hpp"
 #include <cmath>
-#ifndef NAN
-#include <limits> // numeric_limits<T>::quiet_NaN()
-#define NAN std::numeric_limits<float>::quiet_NaN()
-#endif
 
 using namespace cv;
 using namespace std;
@@ -1496,7 +1492,7 @@ TEST(Core_ArithmMask, uninitialized)
                 int depth = rng.uniform(CV_8U, CV_64F+1);
                 int cn = rng.uniform(1, 6);
                 int type = CV_MAKETYPE(depth, cn);
-                int op = rng.uniform(0, 5);
+                int op = rng.uniform(0, depth < CV_32F ? 5 : 2); // don't run binary operations between floating-point values
                 int depth1 = op <= 1 ? CV_64F : depth;
                 for (int k = 0; k < MAX_DIM; k++)
                 {
@@ -1895,7 +1891,7 @@ TEST(MinMaxLoc, regression_4955_nans)
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
     cv::minMaxLoc(one_mat, NULL, NULL, NULL, NULL);
 
-    cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(NAN));
+    cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(std::numeric_limits<float>::quiet_NaN()));
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
 

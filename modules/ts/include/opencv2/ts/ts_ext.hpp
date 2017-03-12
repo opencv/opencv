@@ -12,7 +12,9 @@ namespace cvtest {
 void checkIppStatus();
 }
 
-#define CV_TEST_INIT cv::ipp::setIppStatus(0);
+#define CV_TEST_INIT \
+    cv::ipp::setIppStatus(0); \
+    cv::theRNG().state = cvtest::param_seed;
 #define CV_TEST_CLEANUP ::cvtest::checkIppStatus();
 #define CV_TEST_BODY_IMPL \
     { \

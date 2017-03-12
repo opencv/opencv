@@ -25,19 +25,21 @@ endif()
 # Following block can broke build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
-if(NOT CMAKE_TOOLCHAIN_FILE)
-  # it _must_ go before project(OpenCV) in order to work
-  if(WIN32)
+if(NOT DEFINED CMAKE_INSTALL_PREFIX)
+  if(NOT CMAKE_TOOLCHAIN_FILE)
+    # it _must_ go before project(OpenCV) in order to work
+    if(WIN32)
+      set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
+    else()
+      set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
+    endif()
+  else(NOT CMAKE_TOOLCHAIN_FILE)
+    #Android: set output folder to ${CMAKE_BINARY_DIR}
+    set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
+    # any crosscompiling
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
-  else()
-    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
-  endif()
-else(NOT CMAKE_TOOLCHAIN_FILE)
-  #Android: set output folder to ${CMAKE_BINARY_DIR}
-  set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
-  # any crosscompiling
-  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
-endif(NOT CMAKE_TOOLCHAIN_FILE)
+  endif(NOT CMAKE_TOOLCHAIN_FILE)
+endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
   set(WINRT TRUE)
@@ -74,6 +76,10 @@ endif()
 
 if(POLICY CMP0022)
   cmake_policy(SET CMP0022 OLD)
+endif()
+
+if(POLICY CMP0023)
+  cmake_policy(SET CMP0023 NEW)
 endif()
 
 if(POLICY CMP0026)
@@ -187,7 +193,7 @@ OCV_OPTION(WITH_GTK_2_X        "Use GTK version 2"                           OFF
 OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   NOT MINGW IF (X86_64 OR X86) AND NOT WINRT )
 OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON   IF (NOT IOS) )
 OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON)
-OCV_OPTION(WITH_WEBP           "Include WebP support"                        ON   IF (NOT IOS AND NOT WINRT) )
+OCV_OPTION(WITH_WEBP           "Include WebP support"                        ON   IF (NOT WINRT) )
 OCV_OPTION(WITH_OPENEXR        "Include ILM support via OpenEXR"             ON   IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID AND NOT WINRT) )
 OCV_OPTION(WITH_OPENVX         "Include OpenVX support"                      OFF)
@@ -227,7 +233,7 @@ OCV_OPTION(WITH_VA             "Include VA support"                          OFF
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID) )
-OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              ON   IF (NOT ANDROID) )
+OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              ON   IF (NOT ANDROID AND NOT IOS) )
 
 # OpenCV build components
 # ===================================================
@@ -291,6 +297,7 @@ OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                
 OCV_OPTION(ANDROID_EXAMPLES_WITH_LIBS "Build binaries of Android examples with native libraries" OFF  IF ANDROID )
 OCV_OPTION(ENABLE_IMPL_COLLECTION     "Collect implementation data on function call"             OFF )
 OCV_OPTION(ENABLE_INSTRUMENTATION     "Instrument functions to collect calls trace and performance" OFF )
+OCV_OPTION(ENABLE_GNU_STL_DEBUG       "Enable GNU STL Debug mode (defines _GLIBCXX_DEBUG)"       OFF IF ((NOT CMAKE_VERSION VERSION_LESS "2.8.11") AND CMAKE_COMPILER_IS_GNUCXX) )
 OCV_OPTION(GENERATE_ABI_DESCRIPTOR    "Generate XML file for abi_compliance_checker tool" OFF IF UNIX)
 
 OCV_OPTION(DOWNLOAD_EXTERNAL_TEST_DATA "Download external test data (Python executable and OPENCV_TEST_DATA_PATH environment variable may be required)" OFF )
@@ -512,7 +519,9 @@ endif(WIN32 AND NOT MINGW)
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
 if(UNIX)
-  find_package(PkgConfig QUIET)
+  if(NOT APPLE_FRAMEWORK)
+    find_package(PkgConfig QUIET)
+  endif()
   include(CheckFunctionExists)
   include(CheckIncludeFile)
 
@@ -556,6 +565,7 @@ include(cmake/OpenCVFindLibsGrfmt.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
+include(cmake/OpenCVFindLAPACK.cmake)
 
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
@@ -1222,7 +1232,7 @@ status("    Use Intel VA-API/OpenCL:"  HAVE_VA_INTEL       THEN "YES (MSDK: ${VA
 endif(DEFINED WITH_VA_INTEL)
 
 if(DEFINED WITH_LAPACK)
-status("    Use Lapack:"      HAVE_LAPACK     THEN "YES" ELSE NO)
+status("    Use Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_LIBRARIES})" ELSE NO)
 endif(DEFINED WITH_LAPACK)
 
 status("    Use Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)

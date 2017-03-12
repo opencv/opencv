@@ -539,11 +539,13 @@ protected:
     }
 };
 
+extern uint64 param_seed;
+
 struct CV_EXPORTS DefaultRngAuto
 {
     const uint64 old_state;
 
-    DefaultRngAuto() : old_state(cv::theRNG().state) { cv::theRNG().state = (uint64)-1; }
+    DefaultRngAuto() : old_state(cv::theRNG().state) { cv::theRNG().state = cvtest::param_seed; }
     ~DefaultRngAuto() { cv::theRNG().state = old_state; }
 
     DefaultRngAuto& operator=(const DefaultRngAuto&);
@@ -602,12 +604,17 @@ void dumpOpenCLDevice();
 
 void parseCustomOptions(int argc, char **argv);
 
-#define CV_TEST_MAIN(resourcesubdir, ...) \
+#define CV_TEST_INIT0_NOOP (void)0
+
+#define CV_TEST_MAIN(resourcesubdir, ...) CV_TEST_MAIN_EX(resourcesubdir, NOOP, __VA_ARGS__)
+
+#define CV_TEST_MAIN_EX(resourcesubdir, INIT0, ...) \
 int main(int argc, char **argv) \
 { \
     using namespace cvtest; \
     TS* ts = TS::ptr(); \
     ts->init(resourcesubdir); \
+    __CV_TEST_EXEC_ARGS(CV_TEST_INIT0_ ## INIT0) \
     ::testing::InitGoogleTest(&argc, argv); \
     cvtest::printVersionInfo(); \
     TEST_DUMP_OCL_INFO \

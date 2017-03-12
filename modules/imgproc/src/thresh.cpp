@@ -44,11 +44,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#ifdef HAVE_OPENVX
-#define IVX_HIDE_INFO_WARNINGS
-#define IVX_USE_OPENCV
-#include "ivx.hpp"
-#endif
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 namespace cv
 {
@@ -1305,7 +1301,7 @@ static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
 
     try
     {
-        ivx::Context ctx = ivx::Context::create();
+        ivx::Context ctx = ovx::getOpenVXContext();
 
         ivx::Threshold thh = ivx::Threshold::createBinary(ctx, VX_TYPE_UINT8, thresh);
         thh.setValueTrue(trueVal);
@@ -1330,13 +1326,11 @@ static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
     }
     catch (ivx::RuntimeError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
     catch (ivx::WrapperError & e)
     {
-        CV_Error(CV_StsInternal, e.what());
-        return false;
+        VX_DbgThrow(e.what());
     }
 
     return true;
@@ -1396,10 +1390,8 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
             return thresh;
         }
 
-#ifdef HAVE_OPENVX
-        if (openvx_threshold(src, dst, ithresh, imaxval, type))
-            return thresh;
-#endif
+       CV_OVX_RUN(true,
+                  openvx_threshold(src, dst, ithresh, imaxval, type), (double)ithresh)
 
         thresh = ithresh;
         maxval = imaxval;

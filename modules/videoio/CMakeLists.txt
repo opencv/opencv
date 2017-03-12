@@ -181,7 +181,7 @@ if(HAVE_AVFOUNDATION)
     list(APPEND VIDEOIO_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
   else()
     list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation_mac.mm)
-    list(APPEND VIDEOIO_LIBRARIES "-framework Cocoa" "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore")
+    list(APPEND VIDEOIO_LIBRARIES "-framework Cocoa" "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore")
   endif()
 endif()
 
@@ -208,7 +208,11 @@ if(IOS)
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_abstract_camera.mm
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_video_camera.mm)
+
   list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework AssetsLibrary")
+  if(APPLE_FRAMEWORK)
+    list(APPEND VIDEOIO_LIBRARIES "-framework UIKit")
+  endif()
 endif()
 
 if(WIN32)
@@ -238,10 +242,6 @@ ocv_create_module(${VIDEOIO_LIBRARIES})
 macro(ocv_videoio_configure_target)
 if(APPLE)
   add_apple_compiler_options(the_module)
-endif()
-
-if(BUILD_SHARED_LIBS)
-  add_definitions(-DVIDEOIO_EXPORTS)
 endif()
 
 if(MSVC)

@@ -9852,6 +9852,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
         case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
         case CV_BayerBG2BGR_EA: case CV_BayerGB2BGR_EA: case CV_BayerRG2BGR_EA: case CV_BayerGR2BGR_EA:
+        case CV_BayerBG2BGRA: case CV_BayerGB2BGRA: case CV_BayerRG2BGRA: case CV_BayerGR2BGRA:
             demosaicing(src, _dst, code, dcn);
             break;
 
