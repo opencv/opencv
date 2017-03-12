@@ -84,6 +84,23 @@ class Arguments(NewOpenCVTests):
         self.assertEqual(res4, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=3 dims(-1)=1 size(-1)=3x1 type(0)=CV_32FC2 dims(0)=2 size(0)=3x1 type(0)=CV_32FC2")
 
 
+class SamplesFindFile(NewOpenCVTests):
+
+    def test_ExistedFile(self):
+        res = cv.samples.findFile('lena.jpg', False)
+        self.assertNotEqual(res, '')
+
+    def test_MissingFile(self):
+        res = cv.samples.findFile('non_existed.file', False)
+        self.assertEqual(res, '')
+
+    def test_MissingFileException(self):
+        try:
+            res = cv.samples.findFile('non_existed.file', True)
+            self.assertEqual("Dead code", 0)
+        except cv.error as _e:
+            pass
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
