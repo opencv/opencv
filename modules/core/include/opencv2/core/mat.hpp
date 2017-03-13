@@ -1006,7 +1006,7 @@ public:
 
     //! retrieve UMat from Mat
     //! @param accessFlags It indicates which kind of permission the device has to access the data.
-    //! @param usageFlags It controls how the memory on the device is allocated. For example, use 
+    //! @param usageFlags It controls how the memory on the device is allocated. For example, use
     //! UMatUsageFlags::USAGE_ALLOCATE_HOST_MEMORY to set the flag `CL_MEM_ALLOC_HOST_PTR` while creating a memory buffer
     //! in OpenCL.
     //! @sa cv::ACCESS_READ, cv::ACCESS_WRITE, cv::ACCESS_RW, OpenCLAllocator::allocate
