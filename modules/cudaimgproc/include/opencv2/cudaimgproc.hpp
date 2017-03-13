@@ -205,7 +205,7 @@ CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stre
 
 @param src Source image with CV_8UC1 type.
 @param hist Destination histogram with one row, 256 columns, and the CV_32SC1 type.
-@param mask A mask image same size as @src and of type CV_8UC1.
+@param mask A mask image same size as src and of type CV_8UC1.
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS void calcHist(InputArray src, InputArray mask, OutputArray hist, Stream& stream = Stream::Null());
