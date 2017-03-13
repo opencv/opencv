@@ -1254,3 +1254,11 @@ TEST(MatTestRoi, adjustRoiOverflow)
 
     ASSERT_EQ(roi.rows, m.rows);
 }
+
+TEST(MatxTestConstructor, inplace_8374)
+{
+    Mat_<double> a = (Mat_<double>(2,2) << 3, 5, 7, 11);
+    Matx22d b(a.ptr<double>(), false);
+    b *= 13;
+    ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
+}
