@@ -660,7 +660,7 @@ sub-matrices.
 
 - Use MATLAB-style array initializers, zeros(), ones(), eye(), for example:
 @code
-    // create a double-precision identity martix and add it to M.
+    // create a double-precision identity matrix and add it to M.
     M += Mat::eye(M.rows, M.cols, CV_64F);
 @endcode
 
@@ -693,7 +693,7 @@ If you need to process a whole row of a 2D array, the most efficient way is to g
 the row first, and then just use the plain C operator [] :
 @code
     // compute sum of positive matrix elements
-    // (assuming that M isa double-precision matrix)
+    // (assuming that M is a double-precision matrix)
     double sum=0;
     for(int i = 0; i < M.rows; i++)
     {
