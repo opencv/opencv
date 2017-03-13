@@ -362,6 +362,12 @@ static void sortSamplesByClasses( const Mat& _samples, const Mat& _responses,
 
 //////////////////////// SVM implementation //////////////////////////////
 
+Ptr<ParamGrid> SVM::getDefaultGridPtr( int param_id)
+{
+  ParamGrid grid = getDefaultGrid(param_id); // this is not a nice solution..
+  return makePtr<ParamGrid>(grid.minVal, grid.maxVal, grid.logStep);
+}
+
 ParamGrid SVM::getDefaultGrid( int param_id )
 {
     ParamGrid grid;
@@ -1919,6 +1925,24 @@ public:
         Mat* results;
         bool returnDFVal;
     };
+
+    bool trainAuto(InputArray samples, int layout,
+            InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
+            Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
+            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
+    {
+        Ptr<TrainData> data = TrainData::create(samples, layout, responses);
+        return this->trainAuto(
+                data, kfold,
+                *Cgrid.get(),
+                *gammaGrid.get(),
+                *pGrid.get(),
+                *nuGrid.get(),
+                *coeffGrid.get(),
+                *degreeGrid.get(),
+                balanced);
+    }
+
 
     float predict( InputArray _samples, OutputArray _results, int flags ) const
     {
