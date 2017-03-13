@@ -129,9 +129,9 @@ extern "C" {
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
-    #include <sys/sysctl.h>
     #include <sys/time.h>
 #if defined __APPLE__
+    #include <sys/sysctl.h>
     #include <mach/clock.h>
     #include <mach/mach.h>
 #endif
