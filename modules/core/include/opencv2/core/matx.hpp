@@ -125,6 +125,8 @@ public:
          _Tp v12, _Tp v13, _Tp v14, _Tp v15); //!< 1x16, 4x4 or 16x1 matrix
     explicit Matx(const _Tp* vals, bool copyData = true); //!< initialize from a plain array or point to it
 
+    Matx(const Matx<_Tp, m, n>& matx, bool copyData = true);
+
     static Matx all(_Tp alpha);
     static Matx zeros();
     static Matx ones();
@@ -635,6 +637,18 @@ Matx<_Tp, m, n>::Matx(const _Tp* values, bool copyData)
         return;
     }
     for( int i = 0; i < channels; i++ ) val[i] = values[i];
+}
+
+template<typename _Tp, int m, int n> inline
+Matx<_Tp, m, n>::Matx(const Matx<_Tp, m, n>& matx, bool copyData)
+    : val(_val)
+{
+    if (!copyData)
+    {
+        val = const_cast<_Tp*>(matx.val);
+        return;
+    }
+    for (int i = 0; i < channels; i++) val[i] = matx.val[i];
 }
 
 template<typename _Tp, int m, int n> inline

@@ -1263,6 +1263,14 @@ TEST(MatxTestConstructor, inplace_8374)
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
+TEST(MatxTestConstructor, inplaceMatx_8374)
+{
+    Matx22d a(5, 7, 13, 3);
+    Matx22d b(a, false);
+    b *= 11;
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}
+
 TEST(VecTestConstructor, inplace_8374)
 {
     Mat_<double> a = (Mat_<double>(4, 1) << 13, 11, 7, 5);
