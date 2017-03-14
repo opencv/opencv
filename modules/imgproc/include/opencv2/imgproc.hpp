@@ -4081,6 +4081,13 @@ CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
 //! Performs linear blending of two images
+//! @param src1 It has a type of CV_8UC(n) or CV_32FC(n), where n is a positive integer.
+//! @param src2 It has the same type and size as src1.
+//! @param weights1 It has a type of CV_32FC1 and the same size with src1.
+//! @param weights2 It has a type of CV_32FC1 and the same size with src1.
+//! @param dst It is created if it does not have the same size and type with src1.
+//! It performs:
+//! \f[ dst(i,j) = weights1(i,j)*src1(i,j) + weights2(i,j)*src2(i,j) \f]
 CV_EXPORTS void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
 
 //! @addtogroup imgproc_colormap
