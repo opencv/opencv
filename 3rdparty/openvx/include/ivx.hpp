@@ -32,6 +32,12 @@ static const vx_enum VX_INTERPOLATION_NEAREST_NEIGHBOR = VX_INTERPOLATION_TYPE_N
 static const vx_enum VX_BORDER_CONSTANT = VX_BORDER_MODE_CONSTANT;
 static const vx_enum VX_BORDER_REPLICATE = VX_BORDER_MODE_REPLICATE;
 
+#else
+
+    #ifdef IVX_RENAMED_REFS
+        static const vx_enum VX_REF_ATTRIBUTE_TYPE = VX_REFERENCE_TYPE;
+    #endif
+
 #endif
 
 #ifndef IVX_USE_CXX98

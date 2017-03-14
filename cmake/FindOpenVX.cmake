@@ -25,6 +25,20 @@ endif()
 
 if(OPENVX_INCLUDE_DIR AND OPENVX_LIBRARIES)
   set(HAVE_OPENVX TRUE)
+
+  try_compile(OPENVX_RENAMED_REF
+      "${OpenCV_BINARY_DIR}"
+      "${OpenCV_SOURCE_DIR}/cmake/checks/openvx_refenum_test.cpp"
+      CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${OPENVX_INCLUDE_DIR}"
+      LINK_LIBRARIES ${OPENVX_LIBRARIES}
+      OUTPUT_VARIABLE OUTPUT
+  )
+  if(OPENVX_RENAMED_REF)
+      add_definitions(-DIVX_RENAMED_REFS=1)
+      message(STATUS "OpenVX: Checking reference attribute name convention... New")
+  else()
+      message(STATUS "OpenVX: Checking reference attribute name convention... Old")
+  endif()
 endif()
 
 if(NOT HAVE_OPENVX)
