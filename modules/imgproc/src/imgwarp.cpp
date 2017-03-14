@@ -5019,10 +5019,14 @@ void cv::remap( InputArray _src, OutputArray _dst,
     {
         if( interpolation == INTER_LINEAR )
             ifunc = linear_tab[depth];
-        else if( interpolation == INTER_CUBIC )
+        else if( interpolation == INTER_CUBIC ){
             ifunc = cubic_tab[depth];
-        else if( interpolation == INTER_LANCZOS4 )
+            CV_Assert( _src.channels() <= 4 );
+        }
+        else if( interpolation == INTER_LANCZOS4 ){
             ifunc = lanczos4_tab[depth];
+            CV_Assert( _src.channels() <= 4 );
+        }
         else
             CV_Error( CV_StsBadArg, "Unknown interpolation method" );
         CV_Assert( ifunc != 0 );
@@ -5960,6 +5964,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
+    CV_Assert( _src.channels() <= 4 || !(flags & (INTER_LANCZOS4 | INTER_CUBIC) ) );
+
     CV_INSTRUMENT_REGION()
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
