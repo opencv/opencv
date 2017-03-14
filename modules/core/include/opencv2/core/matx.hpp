@@ -329,7 +329,7 @@ public:
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13); //!< 14-element vector constructor
     explicit Vec(const _Tp* values, bool copyData = true);
 
-    Vec(const Vec<_Tp, cn>& v);
+    Vec(const Vec<_Tp, cn>& v, bool copyData = true);
 
     static Vec all(_Tp alpha);
 
@@ -986,8 +986,8 @@ Vec<_Tp, cn>::Vec(const _Tp* values, bool copyData)
     : Matx<_Tp, cn, 1>(values, copyData) {}
 
 template<typename _Tp, int cn> inline
-Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& m)
-    : Matx<_Tp, cn, 1>(m.val) {}
+Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& m, bool copyData)
+    : Matx<_Tp, cn, 1>(m.val, copyData) {}
 
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_AddOp op)

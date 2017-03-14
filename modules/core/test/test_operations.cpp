@@ -1270,3 +1270,11 @@ TEST(VecTestConstructor, inplace_8374)
     b *= 3;
     ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
 }
+
+TEST(VecTestConstructor, inplaceVec_8374)
+{
+    Vec4d a(3, 5, 7, 11);
+    Vec4d b(a, false);
+    b *= 13;
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}
