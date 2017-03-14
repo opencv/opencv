@@ -2287,9 +2287,9 @@ public:
     UMat colRange(int startcol, int endcol) const;
     UMat colRange(const Range& r) const;
     //! ... for the specified diagonal
-    // (d=0 - the main diagonal,
-    //  >0 - a diagonal from the lower half,
-    //  <0 - a diagonal from the upper half)
+    //! (d=0 - the main diagonal,
+    //!  >0 - a diagonal from the upper half,
+    //!  <0 - a diagonal from the lower half)
     UMat diag(int d=0) const;
     //! constructs a square diagonal matrix which main diagonal is vector "d"
     static UMat diag(const UMat& d);
