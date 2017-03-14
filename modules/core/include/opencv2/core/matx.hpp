@@ -327,7 +327,7 @@ public:
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8); //!< 9-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9); //!< 10-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13); //!< 14-element vector constructor
-    explicit Vec(const _Tp* values);
+    explicit Vec(const _Tp* values, bool copyData = true);
 
     Vec(const Vec<_Tp, cn>& v);
 
@@ -982,8 +982,8 @@ Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7
     : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) {}
 
 template<typename _Tp, int cn> inline
-Vec<_Tp, cn>::Vec(const _Tp* values)
-    : Matx<_Tp, cn, 1>(values) {}
+Vec<_Tp, cn>::Vec(const _Tp* values, bool copyData)
+    : Matx<_Tp, cn, 1>(values, copyData) {}
 
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& m)
