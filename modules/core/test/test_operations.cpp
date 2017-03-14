@@ -1254,3 +1254,43 @@ TEST(MatTestRoi, adjustRoiOverflow)
 
     ASSERT_EQ(roi.rows, m.rows);
 }
+
+TEST(MatxTestCopyTo, matx_8381)
+{
+    Matx22d a(13, 11, 7, 5);
+    Matx22d b(a.val);
+    b *= 3;
+    b.copyTo(a);
+
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}
+
+TEST(MatxTestCopyTo, arr_8381)
+{
+    Matx22d a(3, 5, 13, 11);
+    Matx22d b(a.val);
+    b *= 7;
+    b.copyTo(a.val);
+
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}
+
+TEST(VecTestCopyTo, vec_8381)
+{
+    Vec4d a(5, 3, 11, 7);
+    Vec4d b(a);
+    b *= 13;
+    b.copyTo(a);
+
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}
+
+TEST(VecTestCopyTo, arr_8381)
+{
+    Vec4d a(7, 13, 5, 3);
+    Vec4d b(a);
+    b *= 11;
+    b.copyTo(a.val);
+
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}
