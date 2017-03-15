@@ -1,9 +1,32 @@
-#include "p3p_alg.h"
+#include "ap3p.h"
 
 #include <cmath>
 #include <complex>
 
 using namespace std;
+
+void ap3p::init_inverse_parameters() {
+    inv_fx = 1. / fx;
+    inv_fy = 1. / fy;
+    cx_fx = cx / fx;
+    cy_fy = cy / fy;
+}
+
+ap3p::ap3p(cv::Mat cameraMatrix) {
+    if (cameraMatrix.depth() == CV_32F)
+        init_camera_parameters<float>(cameraMatrix);
+    else
+        init_camera_parameters<double>(cameraMatrix);
+    init_inverse_parameters();
+}
+
+ap3p::ap3p(double _fx, double _fy, double _cx, double _cy) {
+    fx = _fx;
+    fy = _fy;
+    cx = _cx;
+    cy = _cy;
+    init_inverse_parameters();
+}
 
 // This algorithm is from "Tong Ke, Stergios Roumeliotis, An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (Accepted by CVPR 2017)
 // See https://arxiv.org/pdf/1701.08237.pdf
@@ -11,9 +34,9 @@ using namespace std;
 // worldPoints: The positions of the 3 feature points stored as column vectors
 // solutions: Output of this function. Column i (i=0,4,8,12) is the solution for the camera position, and column i+1 to
 //            i+3 h
-int P3p::computePoses(const double featureVectors[3][3],
-                      const double worldPoints[3][3],
-                      double solutions[3][16]) {
+int ap3p::computePoses(const double featureVectors[3][3],
+                       const double worldPoints[3][3],
+                       double solutions[3][16]) {
 
     //world point vectors
     double w1[3] = {worldPoints[0][0], worldPoints[1][0], worldPoints[2][0]};
@@ -155,7 +178,7 @@ int P3p::computePoses(const double featureVectors[3][3],
     return 0;
 }
 
-int P3p::solveQuartic(const double *factors, double *realRoots) {
+int ap3p::solveQuartic(const double *factors, double *realRoots) {
     const double &a4 = factors[0];
     const double &a3 = factors[1];
     const double &a2 = factors[2];
@@ -177,9 +200,9 @@ int P3p::solveQuartic(const double *factors, double *realRoots) {
     double t; // *=2
     complex<double> w;
     if (q3 >= 0)
-        w = -sqrt(static_cast<complex<double>>(q3 * q3 - p3 * p3 * p3)) - q3;
+        w = -sqrt(static_cast<complex<double> >(q3 * q3 - p3 * p3 * p3)) - q3;
     else
-        w = sqrt(static_cast<complex<double>>(q3 * q3 - p3 * p3 * p3)) - q3;
+        w = sqrt(static_cast<complex<double> >(q3 * q3 - p3 * p3 * p3)) - q3;
     if (w.imag() == 0.0) {
         w.real(cbrt(w.real()));
         t = 2.0 * (w.real() + p3 / w.real());
@@ -188,7 +211,7 @@ int P3p::solveQuartic(const double *factors, double *realRoots) {
         t = 4.0 * w.real();
     }
 
-    complex<double> sqrt_2m = sqrt(static_cast<complex<double>>(-2 * p4 / 3 + t));
+    complex<double> sqrt_2m = sqrt(static_cast<complex<double> >(-2 * p4 / 3 + t));
     double B_4A = -a3 / (4 * a4);
     double complex1 = 4 * p4 / 3 + t;
     complex<double> complex2 = 2 * q4 / sqrt_2m;
@@ -203,7 +226,7 @@ int P3p::solveQuartic(const double *factors, double *realRoots) {
     return 0;
 }
 
-void P3p::polishQuarticRoots(const double *coeffs, double *roots) {
+void ap3p::polishQuarticRoots(const double *coeffs, double *roots) {
     const int iterations = 2;
     for (int i = 0; i < iterations; ++i) {
         for (int j = 0; j < 4; ++j) {
@@ -218,39 +241,39 @@ void P3p::polishQuarticRoots(const double *coeffs, double *roots) {
     }
 }
 
-inline void P3p::vect_cross(const double *a, const double *b, double *result) {
+inline void ap3p::vect_cross(const double *a, const double *b, double *result) {
     result[0] = a[1] * b[2] - a[2] * b[1];
     result[1] = -(a[0] * b[2] - a[2] * b[0]);
     result[2] = a[0] * b[1] - a[1] * b[0];
 }
 
-inline double P3p::vect_dot(const double *a, const double *b) {
+inline double ap3p::vect_dot(const double *a, const double *b) {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-inline double P3p::vect_norm(const double *a) {
+inline double ap3p::vect_norm(const double *a) {
     return sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
 }
 
-inline void P3p::vect_scale(const double s, const double *a, double *result) {
+inline void ap3p::vect_scale(const double s, const double *a, double *result) {
     result[0] = a[0] * s;
     result[1] = a[1] * s;
     result[2] = a[2] * s;
 }
 
-inline void P3p::vect_sub(const double *a, const double *b, double *result) {
+inline void ap3p::vect_sub(const double *a, const double *b, double *result) {
     result[0] = a[0] - b[0];
     result[1] = a[1] - b[1];
     result[2] = a[2] - b[2];
 }
 
-inline void P3p::vect_divide(const double *a, const double d, double *result) {
+inline void ap3p::vect_divide(const double *a, const double d, double *result) {
     result[0] = a[0] / d;
     result[1] = a[1] / d;
     result[2] = a[2] / d;
 }
 
-inline void P3p::mat_mult(const double a[3][3], const double b[3][3], double result[3][3]) {
+inline void ap3p::mat_mult(const double a[3][3], const double b[3][3], double result[3][3]) {
     result[0][0] = a[0][0] * b[0][0] + a[0][1] * b[1][0] + a[0][2] * b[2][0];
     result[0][1] = a[0][0] * b[0][1] + a[0][1] * b[1][1] + a[0][2] * b[2][1];
     result[0][2] = a[0][0] * b[0][2] + a[0][1] * b[1][2] + a[0][2] * b[2][2];
@@ -262,5 +285,61 @@ inline void P3p::mat_mult(const double a[3][3], const double b[3][3], double res
     result[2][0] = a[2][0] * b[0][0] + a[2][1] * b[1][0] + a[2][2] * b[2][0];
     result[2][1] = a[2][0] * b[0][1] + a[2][1] * b[1][1] + a[2][2] * b[2][1];
     result[2][2] = a[2][0] * b[0][2] + a[2][1] * b[1][2] + a[2][2] * b[2][2];
+}
+
+bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Mat &ipoints) {
+    CV_INSTRUMENT_REGION()
+
+    double rotation_matrix[3][3], translation[3];
+    std::vector<double> points;
+    if (opoints.depth() == ipoints.depth()) {
+        if (opoints.depth() == CV_32F)
+            extract_points<cv::Point3f, cv::Point2f>(opoints, ipoints, points);
+        else
+            extract_points<cv::Point3d, cv::Point2d>(opoints, ipoints, points);
+    } else if (opoints.depth() == CV_32F)
+        extract_points<cv::Point3f, cv::Point2d>(opoints, ipoints, points);
+    else
+        extract_points<cv::Point3d, cv::Point2f>(opoints, ipoints, points);
+
+    bool result = solve(rotation_matrix, translation, points[0], points[1], points[2], points[3], points[4], points[5],
+                        points[6], points[7], points[8], points[9], points[10], points[11], points[12], points[13],
+                        points[14],
+                        points[15], points[16], points[17], points[18], points[19]);
+    cv::Mat(3, 1, CV_64F, translation).copyTo(tvec);
+    cv::Mat(3, 3, CV_64F, rotation_matrix).copyTo(R);
+    return result;
+}
+
+bool
+ap3p::solve(double (*R)[3], double *t, double mu0, double mv0, double X0, double Y0, double Z0, double mu1, double mv1,
+            double X1, double Y1, double Z1, double mu2, double mv2, double X2, double Y2, double Z2, double mu3,
+            double mv3, double X3, double Y3, double Z3) {
+    double Rs[4][3][3], ts[4][3];
+
+//    int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0, mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2);
+
+    int ns = 0;
+    double min_reproj = 0;
+    for (int i = 0; i < 4; i++) {
+        double X3p = Rs[i][0][0] * X3 + Rs[i][0][1] * Y3 + Rs[i][0][2] * Z3 + ts[i][0];
+        double Y3p = Rs[i][1][0] * X3 + Rs[i][1][1] * Y3 + Rs[i][1][2] * Z3 + ts[i][1];
+        double Z3p = Rs[i][2][0] * X3 + Rs[i][2][1] * Y3 + Rs[i][2][2] * Z3 + ts[i][2];
+        double mu3p = cx + fx * X3p / Z3p;
+        double mv3p = cy + fy * Y3p / Z3p;
+        double reproj = (mu3p - mu3) * (mu3p - mu3) + (mv3p - mv3) * (mv3p - mv3);
+        if (i == 0 || min_reproj > reproj) {
+            ns = i;
+            min_reproj = reproj;
+        }
+    }
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++)
+            R[i][j] = Rs[ns][i][j];
+        t[i] = ts[ns][i];
+    }
+
+    return true;
 }
 
