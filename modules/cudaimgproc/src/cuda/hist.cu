@@ -106,7 +106,7 @@ namespace hist
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    __global__ void histogram256Kernel(const uchar* src, int cols, int rows, size_t step, const uchar* mask, int* hist)
+    __global__ void histogram256Kernel(const uchar* src, int cols, int rows, size_t srcStep, const uchar* mask, size_t maskStep, int* hist)
     {
         __shared__ int shist[256];
 
@@ -118,8 +118,8 @@ namespace hist
 
         if (y < rows)
         {
-            const unsigned int* rowPtr = (const unsigned int*) (src + y * step);
-            const unsigned int* maskRowPtr = (const unsigned int*) (mask + y * step);
+            const unsigned int* rowPtr = (const unsigned int*) (src + y * srcStep);
+            const unsigned int* maskRowPtr = (const unsigned int*) (mask + y * maskStep);
 
             const int cols_4 = cols / 4;
             for (int x = threadIdx.x; x < cols_4; x += blockDim.x)
@@ -165,7 +165,7 @@ namespace hist
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.rows, block.y));
 
-        histogram256Kernel<<<grid, block, 0, stream>>>(src.data, src.cols, src.rows, src.step, mask.data, hist);
+        histogram256Kernel<<<grid, block, 0, stream>>>(src.data, src.cols, src.rows, src.step, mask.data, mask.step, hist);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
