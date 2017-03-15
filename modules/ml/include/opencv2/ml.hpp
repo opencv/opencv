@@ -721,7 +721,7 @@ public:
     regression (SVM::EPS_SVR or SVM::NU_SVR). If it is SVM::ONE_CLASS, no optimization is made and
     the usual %SVM with parameters specified in params is executed.
     */
-    CV_WRAP virtual bool trainAuto(InputArray samples,
+    CV_WRAP bool trainAuto(InputArray samples,
             int layout,
             InputArray responses,
             int kFold = 10,
@@ -731,7 +731,7 @@ public:
             Ptr<ParamGrid> nuGrid     = SVM::getDefaultGridPtr(SVM::NU),
             Ptr<ParamGrid> coeffGrid  = SVM::getDefaultGridPtr(SVM::COEF),
             Ptr<ParamGrid> degreeGrid = SVM::getDefaultGridPtr(SVM::DEGREE),
-            bool balanced=false) = 0;
+            bool balanced=false);
 
     /** @brief Retrieves all the support vectors
 

@@ -1926,7 +1926,7 @@ public:
         bool returnDFVal;
     };
 
-    bool trainAuto(InputArray samples, int layout,
+    bool trainAuto_(InputArray samples, int layout,
             InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
             Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
             Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
@@ -2303,6 +2303,19 @@ Mat SVM::getUncompressedSupportVectors() const
     if(!this_)
         CV_Error(Error::StsNotImplemented, "the class is not SVMImpl");
     return this_->getUncompressedSupportVectors_();
+}
+
+bool SVM::trainAuto(InputArray samples, int layout,
+            InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
+            Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
+            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
+{
+  SVMImpl* this_ = dynamic_cast<SVMImpl*>(this);
+  if (!this_) {
+    CV_Error(Error::StsNotImplemented, "the class is not SVMImpl");
+  }
+  return this_->trainAuto_(samples, layout, responses,
+    kfold, Cgrid, gammaGrid, pGrid, nuGrid, coeffGrid, degreeGrid, balanced);
 }
 
 }
