@@ -239,6 +239,10 @@ enum DftFlags {
         into a real array and inverse transformation is executed, the function treats the input as a
         packed complex-conjugate symmetrical array, and the output will also be a real array). */
     DFT_REAL_OUTPUT    = 32,
+    /** specifies that input is complex input. If this flag is set, the input must have 2 channels.
+        On the other hand, for backwards compatibility reason, if input has 2 channels, input is
+        already considered complex. */
+    DFT_COMPLEX_INPUT  = 64,
     /** performs an inverse 1D or 2D transform instead of the default forward transform. */
     DCT_INVERSE        = DFT_INVERSE,
     /** performs a forward or inverse transform of every individual row of the input
