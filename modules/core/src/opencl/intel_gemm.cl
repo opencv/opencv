@@ -835,7 +835,6 @@ __kernel void intelblas_gemm_buffer_TT(
     int ldC,
     int start_index,
     int stride)
-
 {
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);

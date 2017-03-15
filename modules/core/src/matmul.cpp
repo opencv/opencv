@@ -878,7 +878,11 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
         {
             ctrans ? transpose(matC, D) : matC.copyTo(D);
         }
-
+        else
+        {
+            beta = 0.0;
+        }
+        
         return intel_gpu_gemm(A, sizeA,
                               B, sizeB,
                               D, sizeD, 
