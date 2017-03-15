@@ -207,6 +207,9 @@ enum
     CV_CAP_PROP_AUTOFOCUS     =39,
     CV_CAP_PROP_SAR_NUM       =40,
     CV_CAP_PROP_SAR_DEN       =41,
+    CV_CAP_PROP_STREAM        =42,  // V4L2 STREAM chooser bwteeen BGR24,Y16,YVUV,
+    CV_CAP_PROP_DEPTH         =43,  // 8 or 16 for 8U or 16U
+
 
     CV_CAP_PROP_AUTOGRAB      =1024, // property for videoio class CvCapture_Android only
     CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
