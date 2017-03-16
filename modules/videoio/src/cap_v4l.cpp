@@ -283,8 +283,8 @@ namespace cv {
 /* V4L2 structure */
 struct buffer
 {
-	void *  start;
-	size_t  length;
+ void *  start;
+ size_t  length;
 };
 
 static unsigned int n_buffers = 0;
@@ -311,9 +311,7 @@ struct CvCaptureCAM_V4L : public CvCapture
 	bool convert_rgb;
 	bool frame_allocated;
 
-
-
-	/* V4L2 variables */
+        /* V4L2 variables */
 	buffer buffers[MAX_V4L_BUFFERS + 1];
 	v4l2_capability cap;
 	v4l2_input inp;
@@ -324,30 +322,10 @@ struct CvCaptureCAM_V4L : public CvCapture
 	v4l2_buf_type type;
 	v4l2_queryctrl queryctrl;
 
-
-
-
-
-
 	timeval timestamp;
-
-
-
-
-
-
-
-
-
-
 
 	/* V4L2 control variables */
 	Range focus, brightness, contrast, saturation, hue, gain, exposure;
-
-
-
-
-
 	bool open(int _index);
 	bool open(const char* deviceName);
 
@@ -808,17 +786,6 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
 		icvCloseCAM_V4L(capture);
 		return -1;
 	}
-
-
-
-
-
-
-
-
-
-
-
 
 	if (autosetup_capture_mode_v4l2(capture) == -1)
 		return -1;
@@ -1885,13 +1852,6 @@ static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
 			return matrix_depth;
 		}
 
-
-
-
-
-
-
-
 		if(property_id == CV_CAP_PROP_FPS) {
 			v4l2_streamparm sp = v4l2_streamparm();
 			sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -1914,8 +1874,6 @@ static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
 				return 1000 * capture->timestamp.tv_sec + ((double) capture->timestamp.tv_usec) / 1000;
 			}
 		}
-
-
 
 		__u32 v4l2id = capPropertyToV4L2(property_id);
 
@@ -2110,49 +2068,6 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 
 		retval = true;
 		break;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 		default:
 			retval = icvSetControl(capture, property_id, value);
