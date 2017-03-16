@@ -706,6 +706,12 @@ public:
     @param responses vector of responses associated with the training samples.
     @param kFold Cross-validation parameter. The training set is divided into kFold subsets. One
         subset is used to test the model, the others form the train set. So, the %SVM algorithm is
+    @param Cgrid grid for C
+    @param gammaGrid grid for gamma
+    @param pGrid grid for p
+    @param nuGrid grid for nu
+    @param coeffGrid grid for coeff
+    @param degreeGrid grid for degree
     @param balanced If true and the problem is 2-class classification then the method creates more
         balanced cross-validation subsets that is proportions between classes in subsets are close
         to such proportion in the whole train dataset.
