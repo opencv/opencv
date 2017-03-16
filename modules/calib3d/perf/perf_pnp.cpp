@@ -10,7 +10,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS, SOLVEPNP_UPNP)
+CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS, SOLVEPNP_UPNP, SOLVEPNP_AP3P)
 
 typedef std::tr1::tuple<int, pnpAlgo> PointsNum_Algo_t;
 typedef perf::TestBaseWithParam<PointsNum_Algo_t> PointsNum_Algo;
@@ -65,13 +65,13 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
             testing::Combine(
                 testing::Values(5),
-                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
+                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP, (int)SOLVEPNP_AP3P)
                 )
             )
 {
     int pointsNum = get<0>(GetParam());
     pnpAlgo algo = get<1>(GetParam());
-    if( algo == SOLVEPNP_P3P )
+    if( algo == SOLVEPNP_P3P || algo == SOLVEPNP_AP3P)
         pointsNum = 4;
 
     vector<Point2f> points2d(pointsNum);

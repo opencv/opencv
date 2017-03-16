@@ -317,11 +317,11 @@ ap3p::solve(double (*R)[3], double *t, double mu0, double mv0, double X0, double
             double mv3, double X3, double Y3, double Z3) {
     double Rs[4][3][3], ts[4][3];
 
-//    int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0, mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2);
+    int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0, mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2);
 
     int ns = 0;
     double min_reproj = 0;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < n; i++) {
         double X3p = Rs[i][0][0] * X3 + Rs[i][0][1] * Y3 + Rs[i][0][2] * Z3 + ts[i][0];
         double Y3p = Rs[i][1][0] * X3 + Rs[i][1][1] * Y3 + Rs[i][1][2] * Z3 + ts[i][1];
         double Z3p = Rs[i][2][0] * X3 + Rs[i][2][1] * Y3 + Rs[i][2][2] * Z3 + ts[i][2];
@@ -341,5 +341,55 @@ ap3p::solve(double (*R)[3], double *t, double mu0, double mv0, double X0, double
     }
 
     return true;
+}
+
+int ap3p::solve(double (*R)[3][3], double (*t)[3], double mu0, double mv0, double X0, double Y0, double Z0, double mu1,
+                double mv1, double X1, double Y1, double Z1, double mu2, double mv2, double X2, double Y2, double Z2) {
+    double mk0, mk1, mk2;
+    double norm;
+
+    mu0 = inv_fx * mu0 - cx_fx;
+    mv0 = inv_fy * mv0 - cy_fy;
+    norm = sqrt(mu0 * mu0 + mv0 * mv0 + 1);
+    mk0 = 1. / norm;
+    mu0 *= mk0;
+    mv0 *= mk0;
+
+    mu1 = inv_fx * mu1 - cx_fx;
+    mv1 = inv_fy * mv1 - cy_fy;
+    norm = sqrt(mu1 * mu1 + mv1 * mv1 + 1);
+    mk1 = 1. / norm;
+    mu1 *= mk1;
+    mv1 *= mk1;
+
+    mu2 = inv_fx * mu2 - cx_fx;
+    mv2 = inv_fy * mv2 - cy_fy;
+    norm = sqrt(mu2 * mu2 + mv2 * mv2 + 1);
+    mk2 = 1. / norm;
+    mu2 *= mk2;
+    mv2 *= mk2;
+
+    double featureVectors[3][3] = {mu0, mv0, mk0, mu1, mv1, mk1, mu2, mv2, mk2};
+    double worldPoints[3][3] = {X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2};
+    double solutions[3][16];
+    computePoses(featureVectors, worldPoints, solutions);
+
+    for (int i = 0; i < 4; ++i) {
+        R[i][0][0] = solutions[0][i * 4 + 1];
+        R[i][0][1] = solutions[0][i * 4 + 2];
+        R[i][0][2] = solutions[0][i * 4 + 3];
+        R[i][1][0] = solutions[1][i * 4 + 1];
+        R[i][1][1] = solutions[1][i * 4 + 2];
+        R[i][1][2] = solutions[1][i * 4 + 3];
+        R[i][2][0] = solutions[2][i * 4 + 1];
+        R[i][2][1] = solutions[2][i * 4 + 2];
+        R[i][2][2] = solutions[2][i * 4 + 3];
+        t[i][0] = solutions[0][i * 4];
+        t[i][1] = solutions[1][i * 4];
+        t[i][2] = solutions[2][i * 4];
+    }
+
+
+    return 4;
 }
 

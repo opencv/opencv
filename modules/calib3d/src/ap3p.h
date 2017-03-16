@@ -52,6 +52,10 @@ public:
     ap3p(cv::Mat cameraMatrix);
 
     bool solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat& ipoints);
+    int solve(double R[4][3][3], double t[4][3],
+              double mu0, double mv0,   double X0, double Y0, double Z0,
+              double mu1, double mv1,   double X1, double Y1, double Z1,
+              double mu2, double mv2,   double X2, double Y2, double Z2);
     bool solve(double R[3][3], double t[3],
                double mu0, double mv0,   double X0, double Y0, double Z0,
                double mu1, double mv1,   double X1, double Y1, double Z1,
