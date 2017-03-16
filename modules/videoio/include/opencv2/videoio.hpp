@@ -167,7 +167,7 @@ enum VideoCaptureProperties {
        CAP_PROP_BUFFERSIZE    =38,
        CAP_PROP_AUTOFOCUS     =39,
        CAP_PROP_STREAM        =42,  // V4L2 STREAM chooser bwteeen BGR24,Y16,YVUV,
-   	   CAP_PROP_DEPTH         =43  // 8 or 16 for 8U or 16U
+       CAP_PROP_DEPTH         =43  // 8 or 16 for 8U or 16U
 
      };
 
