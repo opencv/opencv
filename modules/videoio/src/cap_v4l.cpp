@@ -377,7 +377,7 @@ static int numCameras = 0;
 static int indexList = 0;
 
 CvCaptureCAM_V4L::~CvCaptureCAM_V4L() {
-	icvCloseCAM_V4L(this);
+icvCloseCAM_V4L(this);
 }
 
 /* Simple test program: Find number of Video Sources available.
