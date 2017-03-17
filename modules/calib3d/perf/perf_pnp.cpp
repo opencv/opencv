@@ -65,7 +65,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
             testing::Combine(
                 testing::Values(5),
-                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP, (int)SOLVEPNP_AP3P)
+                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_AP3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
                 )
             )
 {
