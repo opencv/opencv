@@ -65,13 +65,13 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
             testing::Combine(
                 testing::Values(5),
-                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_AP3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
+                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
                 )
             )
 {
     int pointsNum = get<0>(GetParam());
     pnpAlgo algo = get<1>(GetParam());
-    if( algo == SOLVEPNP_P3P || algo == SOLVEPNP_AP3P)
+    if( algo == SOLVEPNP_P3P)
         pointsNum = 4;
 
     vector<Point2f> points2d(pointsNum);
