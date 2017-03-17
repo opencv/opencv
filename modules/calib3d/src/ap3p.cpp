@@ -60,7 +60,6 @@ int ap3p::computePoses(const double featureVectors[3][3],
   double nk3 = this->vect_norm(k3);
   this->vect_divide(k3, nk3, k3);
 
-
   double tz[3];
   this->vect_cross(b1, k3, tz);
   // ui,vi
@@ -111,7 +110,6 @@ int ap3p::computePoses(const double featureVectors[3][3],
   this->solveQuartic(coeffs, s);
   this->polishQuarticRoots(coeffs, s);
 
-
   double temp[3];
   this->vect_cross(k1, nl, temp);
 
@@ -150,32 +148,32 @@ int ap3p::computePoses(const double featureVectors[3][3],
     this->mat_mult(Ck1nl, C13, temp_matrix);
     this->mat_mult(temp_matrix, Cb1k3tzT, R);
 
-    // R * b3p
-    double p[3] =
-        {b3p[0] * R[0][0] + b3p[1] * R[0][1] + b3p[2] * R[0][2],
-         b3p[0] * R[1][0] + b3p[1] * R[1][1] + b3p[2] * R[1][2],
-         b3p[0] * R[2][0] + b3p[1] * R[2][1] + b3p[2] * R[2][2]};
+    // R' * p3
+    double rp3[3] =
+        {w3[0] * R[0][0] + w3[1] * R[1][0] + w3[2] * R[2][0],
+         w3[0] * R[0][1] + w3[1] * R[1][1] + w3[2] * R[2][1],
+         w3[0] * R[0][2] + w3[1] * R[1][2] + w3[2] * R[2][2]};
 
     double pxstheta1p[3];
-    this->vect_scale(stheta1p, p, pxstheta1p);
+    this->vect_scale(stheta1p, b3p, pxstheta1p);
 
-    this->vect_sub(w3, pxstheta1p, solutionsT[i]);
+    this->vect_sub(pxstheta1p, rp3, solutionsT[i]);
 
     solutionsR[i][0][0] = R[0][0];
-    solutionsR[i][1][0] = R[1][0];
-    solutionsR[i][2][0] = R[2][0];
-    solutionsR[i][0][1] = R[0][1];
+    solutionsR[i][1][0] = R[0][1];
+    solutionsR[i][2][0] = R[0][2];
+    solutionsR[i][0][1] = R[1][0];
     solutionsR[i][1][1] = R[1][1];
-    solutionsR[i][2][1] = R[2][1];
-    solutionsR[i][0][2] = R[0][2];
-    solutionsR[i][1][2] = R[1][2];
+    solutionsR[i][2][1] = R[1][2];
+    solutionsR[i][0][2] = R[2][0];
+    solutionsR[i][1][2] = R[2][1];
     solutionsR[i][2][2] = R[2][2];
   }
 
   return 0;
 }
 
-int ap3p::solveQuartic(const double *factors, double *realRoots) {
+void ap3p::solveQuartic(const double *factors, double *realRoots) {
   const double &a4 = factors[0];
   const double &a3 = factors[1];
   const double &a2 = factors[2];
@@ -219,8 +217,6 @@ int ap3p::solveQuartic(const double *factors, double *realRoots) {
   double sqrt2 = sqrt(-(complex1 - complex2)).real() / 2;
   realRoots[2] = B_4A - sqrt_2m_rh + sqrt2;
   realRoots[3] = B_4A - sqrt_2m_rh - sqrt2;
-
-  return 0;
 }
 
 void ap3p::polishQuarticRoots(const double *coeffs, double *roots) {
@@ -370,7 +366,6 @@ int ap3p::solve(double (*R)[3][3], double (*t)[3], double mu0, double mv0, doubl
   double featureVectors[3][3] = {mu0, mu1, mu2, mv0, mv1, mv2, mk0, mk1, mk2};
   double worldPoints[3][3] = {X0, X1, X2, Y0, Y1, Y2, Z0, Z1, Z2};
 //    double worldPoints[3][3] = {X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2};
-//  double solutions[3][16];
   computePoses(featureVectors, worldPoints, R, t);
   return 4;
 }

@@ -21,6 +21,8 @@ class ap3p {
 
   inline void mat_mult(const double a[3][3], const double b[3][3], double result[3][3]);
 
+  void solveQuartic(const double *factors, double *realRoots);
+
   template<typename T>
   void init_camera_parameters(const cv::Mat &cameraMatrix) {
     cx = cameraMatrix.at<T>(0, 2);
@@ -59,10 +61,13 @@ class ap3p {
              double mu2, double mv2, double X2, double Y2, double Z2,
              double mu3, double mv3, double X3, double Y3, double Z3);
 
+  // featureVectors: 3 bearing measurements (normalized) stored as column vectors
+  // worldPoints: Positions of the 3 feature points stored as column vectors
+  // solutionsR: 4 possible solutions of rotation matrix of the world w.r.t the camera frame
+  // solutionsT: 4 possible solutions of translation of the world origin w.r.t the camera frame
   int computePoses(const double featureVectors[3][3], const double worldPoints[3][3], double solutionsR[4][3][3],
                    double solutionsT[4][3]);
 
-  int solveQuartic(const double *factors, double *realRoots);
 };
 
 

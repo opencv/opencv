@@ -205,7 +205,7 @@ public:
         eps[SOLVEPNP_AP3P] = 1.0e-4;
         eps[SOLVEPNP_DLS] = 1.0e-4;
         eps[SOLVEPNP_UPNP] = 1.0e-4;
-        totalTestsCount = 1;
+        totalTestsCount = 1000;
     }
 
     ~CV_solvePnP_Test() {}
@@ -224,11 +224,8 @@ protected:
         generatePose(trueRvec, trueTvec, rng);
 
         std::vector<Point3f> opoints;
-        if (method == 2)
+        if (method == 2 || method == 5)
         {
-            opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
-        }
-        else if (method == 5){
             opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
         }
         else if(method == 3)
@@ -242,16 +239,9 @@ protected:
         projectedPoints.resize(opoints.size());
         projectPoints(Mat(opoints), trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
 
-      if (method == 5){
-        cout << trueTvec << endl;
-        cout << trueRvec << endl;
-      }
         solvePnP(opoints, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
             false, method);
-        if (method == 5){
-            cout << tvec << endl;
-            cout << rvec << endl;
-        }
+
         double rvecDiff = norm(rvec-trueRvec), tvecDiff = norm(tvec-trueTvec);
         bool isTestSuccess = rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
 
