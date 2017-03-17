@@ -57,6 +57,7 @@ public:
         eps[SOLVEPNP_ITERATIVE] = 1.0e-2;
         eps[SOLVEPNP_EPNP] = 1.0e-2;
         eps[SOLVEPNP_P3P] = 1.0e-2;
+        eps[SOLVEPNP_AP3P] = 1.0e-2;
         eps[SOLVEPNP_DLS] = 1.0e-2;
         eps[SOLVEPNP_UPNP] = 1.0e-2;
         totalTestsCount = 10;
@@ -161,7 +162,7 @@ protected:
         points.resize(pointsCount);
         generate3DPointCloud(points);
 
-        const int methodsCount = 5;
+        const int methodsCount = 6;
         RNG rng = ts->get_rng();
 
 
@@ -189,7 +190,7 @@ protected:
             }
         }
     }
-    double eps[5];
+    double eps[6];
     int totalTestsCount;
 };
 
@@ -201,9 +202,10 @@ public:
         eps[SOLVEPNP_ITERATIVE] = 1.0e-6;
         eps[SOLVEPNP_EPNP] = 1.0e-6;
         eps[SOLVEPNP_P3P] = 1.0e-4;
+        eps[SOLVEPNP_AP3P] = 1.0e-4;
         eps[SOLVEPNP_DLS] = 1.0e-4;
         eps[SOLVEPNP_UPNP] = 1.0e-4;
-        totalTestsCount = 1000;
+        totalTestsCount = 1;
     }
 
     ~CV_solvePnP_Test() {}
@@ -226,6 +228,9 @@ protected:
         {
             opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
         }
+        else if (method == 5){
+            opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
+        }
         else if(method == 3)
         {
             opoints = std::vector<Point3f>(points.begin(), points.begin()+50);
@@ -237,9 +242,16 @@ protected:
         projectedPoints.resize(opoints.size());
         projectPoints(Mat(opoints), trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
 
+      if (method == 5){
+        cout << trueTvec << endl;
+        cout << trueRvec << endl;
+      }
         solvePnP(opoints, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
             false, method);
-
+        if (method == 5){
+            cout << tvec << endl;
+            cout << rvec << endl;
+        }
         double rvecDiff = norm(rvec-trueRvec), tvecDiff = norm(tvec-trueTvec);
         bool isTestSuccess = rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
 
