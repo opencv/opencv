@@ -32,8 +32,8 @@ ap3p::ap3p(double _fx, double _fy, double _cx, double _cy) {
 // See https://arxiv.org/pdf/1701.08237.pdf
 // featureVectors: The 3 bearing measurements (normalized) stored as column vectors
 // worldPoints: The positions of the 3 feature points stored as column vectors
-// solutions: Output of this function. Column i (i=0,4,8,12) is the solution for the camera position, and column i+1 to
-//            i+3 h
+// solutionsR: 4 possible solutions of rotation matrix of the world w.r.t the camera frame
+// solutionsT: 4 possible solutions of translation of the world origin w.r.t the camera frame
 int ap3p::computePoses(const double featureVectors[3][3],
                        const double worldPoints[3][3],
                        double solutionsR[4][3][3],
@@ -45,50 +45,50 @@ int ap3p::computePoses(const double featureVectors[3][3],
   double w3[3] = {worldPoints[0][2], worldPoints[1][2], worldPoints[2][2]};
   // k1
   double u0[3];
-  this->vect_sub(w1, w2, u0);
+  vect_sub(w1, w2, u0);
 
-  double nu0 = this->vect_norm(u0);
+  double nu0 = vect_norm(u0);
   double k1[3];
-  this->vect_divide(u0, nu0, k1);
+  vect_divide(u0, nu0, k1);
   // bi
   double b1[3] = {featureVectors[0][0], featureVectors[1][0], featureVectors[2][0]};
   double b2[3] = {featureVectors[0][1], featureVectors[1][1], featureVectors[2][1]};
   double b3[3] = {featureVectors[0][2], featureVectors[1][2], featureVectors[2][2]};
   // k3,tz
   double k3[3];
-  this->vect_cross(b1, b2, k3);
-  double nk3 = this->vect_norm(k3);
-  this->vect_divide(k3, nk3, k3);
+  vect_cross(b1, b2, k3);
+  double nk3 = vect_norm(k3);
+  vect_divide(k3, nk3, k3);
 
   double tz[3];
-  this->vect_cross(b1, k3, tz);
+  vect_cross(b1, k3, tz);
   // ui,vi
   double v1[3];
-  this->vect_cross(b1, b3, v1);
+  vect_cross(b1, b3, v1);
   double v2[3];
-  this->vect_cross(b2, b3, v2);
+  vect_cross(b2, b3, v2);
 
   double u1[3];
-  this->vect_sub(w1, w3, u1);
+  vect_sub(w1, w3, u1);
   // coefficients related terms
-  double u1k1 = this->vect_dot(u1, k1);
-  double k3b3 = this->vect_dot(k3, b3);
+  double u1k1 = vect_dot(u1, k1);
+  double k3b3 = vect_dot(k3, b3);
   // f1i
   double f11 = k3b3;
-  double f13 = this->vect_dot(k3, v1);
+  double f13 = vect_dot(k3, v1);
   double f15 = -u1k1 * f11;
   //delta
   double nl[3];
-  this->vect_cross(u1, k1, nl);
-  double delta = this->vect_norm(nl);
-  this->vect_divide(nl, delta, nl);
+  vect_cross(u1, k1, nl);
+  double delta = vect_norm(nl);
+  vect_divide(nl, delta, nl);
   f11 *= delta;
   f13 *= delta;
   // f2i
   double u2k1 = u1k1 - nu0;
-  double f21 = this->vect_dot(tz, v2);
+  double f21 = vect_dot(tz, v2);
   double f22 = nk3 * k3b3;
-  double f23 = this->vect_dot(k3, v2);
+  double f23 = vect_dot(k3, v2);
   double f24 = u2k1 * f22;
   double f25 = -u2k1 * f21;
   f21 *= delta;
@@ -107,11 +107,11 @@ int ap3p::computePoses(const double featureVectors[3][3],
                       2 * (g6 * g7 - g1 * g2 - g3 * g4),
                       g7 * g7 - g2 * g2 - g4 * g4};
   double s[4];
-  this->solveQuartic(coeffs, s);
-  this->polishQuarticRoots(coeffs, s);
+  solveQuartic(coeffs, s);
+  polishQuarticRoots(coeffs, s);
 
   double temp[3];
-  this->vect_cross(k1, nl, temp);
+  vect_cross(k1, nl, temp);
 
   double Ck1nl[3][3] =
       {{k1[0], nl[0], temp[0]},
@@ -124,7 +124,7 @@ int ap3p::computePoses(const double featureVectors[3][3],
        {tz[0], tz[1], tz[2]}};
 
   double b3p[3];
-  this->vect_scale((delta / k3b3), b3, b3p);
+  vect_scale((delta / k3b3), b3, b3p);
 
   for (int i = 0; i < 4; ++i) {
     double ctheta1p = s[i];
@@ -145,8 +145,8 @@ int ap3p::computePoses(const double featureVectors[3][3],
 
     double temp_matrix[3][3];
     double R[3][3];
-    this->mat_mult(Ck1nl, C13, temp_matrix);
-    this->mat_mult(temp_matrix, Cb1k3tzT, R);
+    mat_mult(Ck1nl, C13, temp_matrix);
+    mat_mult(temp_matrix, Cb1k3tzT, R);
 
     // R' * p3
     double rp3[3] =
@@ -155,9 +155,9 @@ int ap3p::computePoses(const double featureVectors[3][3],
          w3[0] * R[0][2] + w3[1] * R[1][2] + w3[2] * R[2][2]};
 
     double pxstheta1p[3];
-    this->vect_scale(stheta1p, b3p, pxstheta1p);
+    vect_scale(stheta1p, b3p, pxstheta1p);
 
-    this->vect_sub(pxstheta1p, rp3, solutionsT[i]);
+    vect_sub(pxstheta1p, rp3, solutionsT[i]);
 
     solutionsR[i][0][0] = R[0][0];
     solutionsR[i][1][0] = R[0][1];

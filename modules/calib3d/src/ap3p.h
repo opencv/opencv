@@ -61,6 +61,8 @@ class ap3p {
              double mu2, double mv2, double X2, double Y2, double Z2,
              double mu3, double mv3, double X3, double Y3, double Z3);
 
+  // This algorithm is from "Tong Ke, Stergios Roumeliotis, An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (Accepted by CVPR 2017)
+  // See https://arxiv.org/pdf/1701.08237.pdf
   // featureVectors: 3 bearing measurements (normalized) stored as column vectors
   // worldPoints: Positions of the 3 feature points stored as column vectors
   // solutionsR: 4 possible solutions of rotation matrix of the world w.r.t the camera frame
