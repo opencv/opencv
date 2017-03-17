@@ -362,11 +362,8 @@ int ap3p::solve(double (*R)[3][3], double (*t)[3], double mu0, double mv0, doubl
   mu2 *= mk2;
   mv2 *= mk2;
 
-//    double featureVectors[3][3] = {mu0, mv0, mk0, mu1, mv1, mk1, mu2, mv2, mk2};
-  double featureVectors[3][3] = {mu0, mu1, mu2, mv0, mv1, mv2, mk0, mk1, mk2};
-  double worldPoints[3][3] = {X0, X1, X2, Y0, Y1, Y2, Z0, Z1, Z2};
-//    double worldPoints[3][3] = {X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2};
+  double featureVectors[3][3] = {{mu0, mu1, mu2}, {mv0, mv1, mv2}, {mk0, mk1, mk2}};
+  double worldPoints[3][3] = {{X0, X1, X2}, {Y0, Y1, Y2}, {Z0, Z1, Z2}};
   computePoses(featureVectors, worldPoints, R, t);
   return 4;
 }
-
