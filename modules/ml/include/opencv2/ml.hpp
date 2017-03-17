@@ -112,8 +112,8 @@ public:
     /** @brief Constructor with parameters */
     ParamGrid(double _minVal, double _maxVal, double _logStep);
 
-    double minVal; //!< Minimum value of the statmodel parameter. Default value is 0.
-    double maxVal; //!< Maximum value of the statmodel parameter. Default value is 0.
+    CV_PROP_RW double minVal; //!< Minimum value of the statmodel parameter. Default value is 0.
+    CV_PROP_RW double maxVal; //!< Maximum value of the statmodel parameter. Default value is 0.
     /** @brief Logarithmic step for iterating the statmodel parameter.
 
     The grid determines the following iteration sequence of the statmodel parameter values:
@@ -122,7 +122,7 @@ public:
     \f[\texttt{minVal} * \texttt{logStep} ^n <  \texttt{maxVal}\f]
     The grid is logarithmic, so logStep must always be greater then 1. Default value is 1.
     */
-    double logStep;
+    CV_PROP_RW double logStep;
 
     /** @brief Creates a ParamGrid Ptr that can be given to the %SVM::trainAuto method
 
