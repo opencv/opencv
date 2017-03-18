@@ -1712,8 +1712,11 @@ int cv::connectedComponents(InputArray _img, OutputArray _labels, int connectivi
     cv::Mat labels = _labels.getMat();
     connectedcomponents::NoOp sop;
     int nbComponents=0;
-    if (ltype == CV_16U) {
-        nbComponents =  connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
+    if (ltype == CV_8U) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
+    }
+    else if (ltype == CV_16U) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
     }
     else if (ltype == CV_32S) {
         nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
@@ -1728,7 +1731,10 @@ int cv::connectedComponents(InputArray _img, OutputArray _labels, int connectivi
     Mat labelsnot(img.size(), CV_MAT_DEPTH(ltype));
     connectedcomponents::NoOp sop2;
     int nbComponentsNot=0;
-    if (ltype == CV_16U) {
+    if (ltype == CV_8U) {
+        nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
+    }
+    else if (ltype == CV_16U) {
         nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
     }
     else if (ltype == CV_32S) {
@@ -1756,7 +1762,10 @@ int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, Outpu
     cv::Mat labels = _labels.getMat();
     connectedcomponents::CCStatsOp sop(statsv, centroids);
     int nbComponents;
-    if (ltype == CV_16U) {
+    if (ltype == CV_8U) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
+    }
+    else if (ltype == CV_16U) {
         nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
     }
     else if (ltype == CV_32S) {
@@ -1773,7 +1782,10 @@ int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, Outpu
     Mat statsv2, centroids2;
     connectedcomponents::CCStatsOp sop2(statsv2, centroids2);
     int nbComponentsNot=0;
-    if (ltype == CV_16U) {
+    if (ltype == CV_8U) {
+        nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
+    }
+    else if (ltype == CV_16U) {
         nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
     }
     else if (ltype == CV_32S) {
