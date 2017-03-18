@@ -1,5 +1,5 @@
 set(the_description "High-level GUI and Media I/O")
-ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python)
+ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
 
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
@@ -136,10 +136,6 @@ ocv_create_module(${HIGHGUI_LIBRARIES})
 macro(ocv_highgui_configure_target)
 if(APPLE)
   add_apple_compiler_options(the_module)
-endif()
-
-if(BUILD_SHARED_LIBS)
-  add_definitions(-DHIGHGUI_EXPORTS)
 endif()
 
 if(MSVC)

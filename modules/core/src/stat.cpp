@@ -1665,7 +1665,7 @@ namespace cv
 
         try
         {
-            ivx::Context ctx = ivx::Context::create();
+            ivx::Context ctx = ovx::getOpenVXContext();
 #ifndef VX_VERSION_1_1
             if (ctx.vendorID() == VX_ID_KHRONOS)
                 return false; // Do not use OpenVX meanStdDev estimation for sample 1.0.1 implementation due to lack of accuracy
@@ -2312,7 +2312,7 @@ static bool openvx_minMaxIdx(Mat &src, double* minVal, double* maxVal, int* minI
 
     try
     {
-        ivx::Context ctx = ivx::Context::create();
+        ivx::Context ctx = ovx::getOpenVXContext();
         ivx::Image
             ia = ivx::Image::createFromHandle(ctx, stype == CV_8UC1 ? VX_DF_IMAGE_U8 : VX_DF_IMAGE_S16,
                 ivx::Image::createAddressing(cols, rows, stype == CV_8UC1 ? 1 : 2, (vx_int32)(src.step[0])), src.ptr());
@@ -4261,7 +4261,9 @@ int normHamming(const uchar* a, int n)
         _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
         result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
-#elif CV_POPCNT
+#endif // CV_AVX2
+
+#if CV_POPCNT
     if(checkHardwareSupport(CV_CPU_POPCNT))
     {
 #  if defined CV_POPCNT_U64
@@ -4275,7 +4277,9 @@ int normHamming(const uchar* a, int n)
             result += CV_POPCNT_U32(*(uint*)(a + i));
         }
     }
-#elif CV_SIMD128
+#endif // CV_POPCNT
+
+#if CV_SIMD128
     if(hasSIMD128())
     {
         v_uint32x4 t = v_setzero_u32();
@@ -4283,9 +4287,10 @@ int normHamming(const uchar* a, int n)
         {
             t += v_popcount(v_load(a + i));
         }
-        result = v_reduce_sum(t);
+        result += v_reduce_sum(t);
     }
-#endif
+#endif // CV_SIMD128
+
     for(; i <= n - 4; i += 4)
     {
         result += popCountTable[a[i]] + popCountTable[a[i+1]] +
@@ -4327,7 +4332,9 @@ int normHamming(const uchar* a, const uchar* b, int n)
         _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
         result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
     }
-#elif CV_POPCNT
+#endif // CV_AVX2
+
+#if CV_POPCNT
     if(checkHardwareSupport(CV_CPU_POPCNT))
     {
 #  if defined CV_POPCNT_U64
@@ -4341,7 +4348,9 @@ int normHamming(const uchar* a, const uchar* b, int n)
             result += CV_POPCNT_U32(*(uint*)(a + i) ^ *(uint*)(b + i));
         }
     }
-#elif CV_SIMD128
+#endif // CV_POPCNT
+
+#if CV_SIMD128
     if(hasSIMD128())
     {
         v_uint32x4 t = v_setzero_u32();
@@ -4349,9 +4358,10 @@ int normHamming(const uchar* a, const uchar* b, int n)
         {
             t += v_popcount(v_load(a + i) ^ v_load(b + i));
         }
-        result = v_reduce_sum(t);
+        result += v_reduce_sum(t);
     }
-#endif
+#endif // CV_SIMD128
+
     for(; i <= n - 4; i += 4)
     {
         result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +

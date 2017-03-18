@@ -65,6 +65,9 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         ocv_is_opencv_directory(__result ${item})
         if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
+        elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+               item MATCHES "/usr/include$")
+          # workaround for GCC 6.x bug
         else()
           LIST(APPEND ${_out_compile_flags} "${_PCH_isystem_prefix}\"${item}\"")
         endif()
@@ -75,6 +78,9 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
         ocv_is_opencv_directory(__result ${item})
         if(__result)
           LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
+        elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+               item MATCHES "/usr/include$")
+          # workaround for GCC 6.x bug
         else()
           LIST(APPEND ${_out_compile_flags} "${_PCH_isystem_prefix}\"${item}\"")
         endif()
@@ -303,9 +309,11 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 
 MACRO(GET_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
+  if(ENABLE_PRECOMPILED_HEADERS)
     if(CMAKE_GENERATOR MATCHES "^Visual.*$")
         set(${_targetName}_pch ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch.cpp)
     endif()
+  endif()
 
 ENDMACRO(GET_NATIVE_PRECOMPILED_HEADER)
 

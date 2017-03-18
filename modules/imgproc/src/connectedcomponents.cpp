@@ -336,7 +336,7 @@ namespace cv{
     }//End function LabelingWu operator()
     };//End struct LabelingWu
 
-    // Based on “Optimized  Block-based Connected Components Labeling with Decision Trees”, Costantino Grana et al
+    // Based on "Optimized  Block-based Connected Components Labeling with Decision Trees", Costantino Grana et al
     // Only for 8-connectivity
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGrana{

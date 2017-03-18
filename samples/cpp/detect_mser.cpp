@@ -271,7 +271,7 @@ static void DrawOpenGLMSER(Mat img, Mat result)
     data->tex.bind();
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvi(GL_TEXTURE_2D, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
     glDisable(GL_CULL_FACE);
     setOpenGlDrawCallback("OpenGL", draw, data);

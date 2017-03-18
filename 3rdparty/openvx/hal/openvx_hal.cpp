@@ -1,4 +1,5 @@
 #include "openvx_hal.hpp"
+#include "opencv2/imgproc/hal/interface.h"
 
 #define IVX_HIDE_INFO_WARNINGS
 #include "ivx.hpp"
@@ -52,8 +53,17 @@ struct Tick
 
 inline ivx::Context& getOpenVXHALContext()
 {
-    // not thread safe
-    static ivx::Context instance = ivx::Context::create();
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
+    //CXX11
+    static thread_local ivx::Context instance = ivx::Context::create();
+#else //__cplusplus >= 201103L || _MSC_VER >= 1800
+    //CXX98
+#ifdef WIN32
+        static __declspec(thread) ivx::Context instance = ivx::Context::create();
+#else
+        static __thread ivx::Context instance = ivx::Context::create();
+#endif
+#endif
     return instance;
 }
 
@@ -1064,7 +1074,7 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
             ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
                 ivx::Image::createAddressing(w, h, 1, (vx_int32)astep), const_cast<uchar*>(a)),
             ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U32,
-                ivx::Image::createAddressing(w, h, 1, (vx_int32)bstep), (unsigned int *)(b + bstep + sizeof(unsigned int)));
+                ivx::Image::createAddressing(w, h, 4, (vx_int32)bstep), (unsigned int *)(b + bstep + sizeof(unsigned int)));
         ivx::IVX_CHECK_STATUS(vxuIntegralImage(ctx, ia, ib));
         memset(b, 0, (w + 1) * sizeof(unsigned int));
         b += bstep;

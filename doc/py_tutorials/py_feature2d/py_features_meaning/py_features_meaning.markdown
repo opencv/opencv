@@ -10,7 +10,7 @@ corners are important etc.
 Explanation
 -----------
 
-Most of you will have played the jigsaw puzzle games. You get a lot of small pieces of a images,
+Most of you will have played the jigsaw puzzle games. You get a lot of small pieces of an image,
 where you need to assemble them correctly to form a big real image. **The question is, how you do
 it?** What about the projecting the same theory to a computer program so that computer can play
 jigsaw puzzles? If the computer can play jigsaw puzzles, why can't we give a lot of real-life images

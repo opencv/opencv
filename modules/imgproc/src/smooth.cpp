@@ -1677,7 +1677,7 @@ namespace cv
 
         try
         {
-            ivx::Context ctx = ivx::Context::create();
+            ivx::Context ctx = ovx::getOpenVXContext();
             if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
                 return false;
 
@@ -2239,7 +2239,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     try
     {
-        ivx::Context ctx = ivx::Context::create();
+        ivx::Context ctx = ovx::getOpenVXContext();
         if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
             return false;
 
@@ -3361,7 +3361,7 @@ namespace cv
 
         try
         {
-            ivx::Context ctx = ivx::Context::create();
+            ivx::Context ctx = ovx::getOpenVXContext();
 #ifdef VX_VERSION_1_1
             if ((vx_size)ksize > ctx.nonlinearMaxDimension())
                 return false;
@@ -3494,7 +3494,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
     CV_Assert( (ksize % 2 == 1) && (_src0.dims() <= 2 ));
 
-    if( ksize <= 1 )
+    if( ksize <= 1 || _src0.empty() )
     {
         _src0.copyTo(_dst);
         return;

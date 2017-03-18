@@ -67,6 +67,8 @@
 #    define _FILE_OFFSET_BITS 0
 #  endif
 #  include <zlib.h>
+#else
+typedef void* gzFile;
 #endif
 
 /****************************************************************************************\
@@ -7283,14 +7285,7 @@ void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& 
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )
     {
-        const KeyPoint& kpt = keypoints[i];
-        cv::write(fs, kpt.pt.x);
-        cv::write(fs, kpt.pt.y);
-        cv::write(fs, kpt.size);
-        cv::write(fs, kpt.angle);
-        cv::write(fs, kpt.response);
-        cv::write(fs, kpt.octave);
-        cv::write(fs, kpt.class_id);
+        write(fs, keypoints[i]);
     }
 }
 
@@ -7315,11 +7310,7 @@ void write(FileStorage& fs, const String& objname, const std::vector<DMatch>& ma
     int i, n = (int)matches.size();
     for( i = 0; i < n; i++ )
     {
-        const DMatch& m = matches[i];
-        cv::write(fs, m.queryIdx);
-        cv::write(fs, m.trainIdx);
-        cv::write(fs, m.imgIdx);
-        cv::write(fs, m.distance);
+        write(fs, matches[i]);
     }
 }
 
@@ -7697,7 +7688,7 @@ std::string base64::make_base64_header(const char * dt)
 bool base64::read_base64_header(std::vector<char> const & header, std::string & dt)
 {
     std::istringstream iss(header.data());
-    return static_cast<bool>(iss >> dt);
+    return !!(iss >> dt);//the "std::basic_ios::operator bool" differs between C++98 and C++11. The "double not" syntax is portable and covers both cases with equivalent meaning
 }
 
 /****************************************************************************

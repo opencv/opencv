@@ -70,9 +70,12 @@ struct MatchPairsBody : ParallelLoopBody
 
     void operator ()(const Range &r) const
     {
+        cv::RNG rng = cv::theRNG(); // save entry rng state
         const int num_images = static_cast<int>(features.size());
         for (int i = r.start; i < r.end; ++i)
         {
+            cv::theRNG() = cv::RNG(rng.state + i); // force "stable" RNG seed for each processed pair
+
             int from = near_pairs[i].first;
             int to = near_pairs[i].second;
             int pair_idx = from*num_images + to;

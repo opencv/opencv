@@ -4673,7 +4673,7 @@ static bool _openvx_cvt(const T* src, size_t sstep,
 
     try
     {
-        Context context = Context::create();
+        Context context = ovx::getOpenVXContext();
 
         // Other conversions are marked as "experimental"
         if(context.vendorID() == VX_ID_KHRONOS &&
@@ -5406,7 +5406,7 @@ static bool openvx_LUT(Mat src, Mat dst, Mat _lut)
 
     try
     {
-        ivx::Context ctx = ivx::Context::create();
+        ivx::Context ctx = ovx::getOpenVXContext();
 
         ivx::Image
             ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,

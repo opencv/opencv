@@ -1,7 +1,7 @@
 Installation in Linux {#tutorial_linux_install}
 =====================
 
-These steps have been tested for Ubuntu 10.04 but should work with other distros as well.
+The following steps have been tested for Ubuntu 10.04 but should work with other distros as well.
 
 Required Packages
 -----------------
@@ -39,7 +39,7 @@ repository](https://github.com/opencv/opencv.git).
 ### Getting the Cutting-edge OpenCV from the Git Repository
 
 Launch Git client and clone [OpenCV repository](http://github.com/opencv/opencv). If you need
-modules from [OpenCV contrib repository](http://github.com/opencv/opencv_contrib) then clone it too.
+modules from [OpenCV contrib repository](http://github.com/opencv/opencv_contrib) then clone it as well.
 
 For example
 @code{.bash}
@@ -97,7 +97,7 @@ Building OpenCV from Source Using CMake
     -   It is useful also to unset BUILD_EXAMPLES, BUILD_TESTS, BUILD_PERF_TESTS - as they all
         will be statically linked with OpenCV and can take a lot of memory.
 
--#  Build. From build directory execute make, recomend to do it in several threads
+-#  Build. From build directory execute *make*, it is recommended to do this in several threads
 
     For example
     @code{.bash}
@@ -111,7 +111,7 @@ Building OpenCV from Source Using CMake
     cd ~/opencv/build/doc/
     make -j7 html_docs
     @endcode
--#  To install libraries, from build directory execute
+-#  To install libraries, execute the following command from build directory
     @code{.bash}
     sudo make install
     @endcode
@@ -134,6 +134,6 @@ Building OpenCV from Source Using CMake
 
 @note
    If the size of the created library is a critical issue (like in case of an Android build) you
-    can use the install/strip command to get the smallest size as possible. The *stripped* version
+    can use the install/strip command to get the smallest size possible. The *stripped* version
     appears to be twice as small. However, we do not recommend using this unless those extra
     megabytes do really matter.

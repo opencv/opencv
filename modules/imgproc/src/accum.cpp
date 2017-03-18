@@ -1958,7 +1958,7 @@ static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray
 
     try
     {
-        ivx::Context context = ivx::Context::create();
+        ivx::Context context = ovx::getOpenVXContext();
         ivx::Image srcImage = ivx::Image::createFromHandle(context, ivx::Image::matTypeToFormat(srcMat.type()),
                                                            ivx::Image::createAddressing(srcMat), srcMat.data);
         ivx::Image dstImage = ivx::Image::createFromHandle(context, ivx::Image::matTypeToFormat(dstMat.type()),
