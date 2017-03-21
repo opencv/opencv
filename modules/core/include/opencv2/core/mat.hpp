@@ -165,7 +165,8 @@ public:
         UMAT              =10 << KIND_SHIFT,
         STD_VECTOR_UMAT   =11 << KIND_SHIFT,
         STD_BOOL_VECTOR   =12 << KIND_SHIFT,
-        STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT
+        STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT,
+        STD_BOOL_VECTOR_VECTOR = 14 << KIND_SHIFT
     };
 
     _InputArray();
@@ -177,6 +178,7 @@ public:
     template<typename _Tp> _InputArray(const std::vector<_Tp>& vec);
     _InputArray(const std::vector<bool>& vec);
     template<typename _Tp> _InputArray(const std::vector<std::vector<_Tp> >& vec);
+    _InputArray(const std::vector<std::vector<bool> >& vec);
     template<typename _Tp> _InputArray(const std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _InputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
