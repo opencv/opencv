@@ -668,20 +668,33 @@ void cv::cuda::setBufferPoolConfig(int deviceId, size_t stackSize, int stackCoun
 #endif
 }
 
-#ifdef HAVE_CUDA
-
-cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->stackAllocator.get())
+#ifndef HAVE_CUDA
+cv::cuda::BufferPool::BufferPool(Stream& stream)
+{
+    (void) stream;
+    throw_no_cuda();
+}
+#else
+cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->stackAllocator)
 {
 }
+#endif
 
 GpuMat cv::cuda::BufferPool::getBuffer(int rows, int cols, int type)
 {
+#ifndef HAVE_CUDA
+    (void) rows;
+    (void) cols;
+    (void) type;
+    throw_no_cuda();
+    return GpuMat();
+#else
     GpuMat buf(allocator_);
     buf.create(rows, cols, type);
     return buf;
+#endif
 }
 
-#endif
 
 ////////////////////////////////////////////////////////////////
 // Event
