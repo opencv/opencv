@@ -192,7 +192,7 @@ using perf::MatType;
 
 #define OCL_RNG_SEED 123456
 
-struct CV_EXPORTS TestUtils
+struct TestUtils
 {
     cv::RNG rng;
 
@@ -319,7 +319,7 @@ do \
 #define UMAT_UPLOAD_OUTPUT_PARAMETER(name) UMAT_UPLOAD_INPUT_PARAMETER(name)
 
 template <typename T>
-struct CV_EXPORTS TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
+struct TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
 {
 
 };

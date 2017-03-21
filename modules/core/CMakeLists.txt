@@ -36,3 +36,19 @@ ocv_target_link_libraries(${the_module} ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}" 
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
+
+# ----------------------------------------------------------------------------
+# generate export definintions file
+# ----------------------------------------------------------------------------
+
+include(GenerateExportHeader)
+generate_export_header(opencv_core
+    BASE_NAME "CV"
+    EXPORT_FILE_NAME "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/cv_exports.h"
+    EXPORT_MACRO_NAME "CV_EXPORTS"
+    DEPRECATED_MACRO_NAME "CV_DEPRECATED"
+    NO_EXPORT_MACRO_NAME "CV_NO_EXPORTS"
+    NO_DEPRECATED_MACRO_NAME "CV_NO_DEPRECATED"
+    STATIC_DEFINE "CV_USE_STATIC"
+)
+install(FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/cv_exports.h" DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/opencv2" COMPONENT dev)

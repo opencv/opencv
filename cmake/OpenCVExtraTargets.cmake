@@ -20,7 +20,6 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(opencv_modules PROPERTIES FOLDER "extra")
 endif()
 
-
 # ----------------------------------------------------------------------------
 # targets building all tests
 # ----------------------------------------------------------------------------

@@ -168,9 +168,6 @@ if(CUDA_FOUND)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
 
-      # we remove /EHa as it generates warnings under windows
-      string(REPLACE "/EHa" "" ${var} "${${var}}")
-
       # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
       string(REPLACE "-ggdb3" "" ${var} "${${var}}")
 

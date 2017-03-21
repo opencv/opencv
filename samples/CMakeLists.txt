@@ -55,6 +55,8 @@ find_package(OpenCV REQUIRED)
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
+  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /wd4251 /wd4275 /EHs") #   /wd4577 /wd4530
+
   if(NOT OpenCV_SHARED)
     foreach(flag_var
             CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
