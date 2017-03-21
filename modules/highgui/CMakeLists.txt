@@ -65,7 +65,7 @@ elseif(HAVE_QT)
 
   list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES})
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES})
-  ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag)
+  ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag "")
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()

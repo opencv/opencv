@@ -1,5 +1,14 @@
+#ifndef OPENCV_CVCONFIG_H_INCLUDED
+#define OPENCV_CVCONFIG_H_INCLUDED
+
 /* OpenCV compiled as static or dynamic libs */
 #cmakedefine BUILD_SHARED_LIBS
+
+/* OpenCV intrinsics optimized code */
+#cmakedefine CV_ENABLE_INTRINSICS
+
+/* OpenCV additional optimized code */
+#cmakedefine CV_DISABLE_OPTIMIZATION
 
 /* Compile for 'real' NVIDIA GPU architectures */
 #define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
@@ -206,3 +215,7 @@
 
 /* OpenVX */
 #cmakedefine HAVE_OPENVX
+
+
+
+#endif // OPENCV_CVCONFIG_H_INCLUDED
