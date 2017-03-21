@@ -507,6 +507,9 @@ public:
     //! creates a new asynchronous stream
     Stream();
 
+    //! creates a new asynchronous stream with custom allocator
+    Stream(const Ptr<GpuMat::Allocator>& allocator);
+
     /** @brief Returns true if the current stream queue is finished. Otherwise, it returns false.
     */
     bool queryIfComplete() const;
