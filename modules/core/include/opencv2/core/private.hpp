@@ -540,7 +540,7 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro
-#define CV_INSTRUMENT_REGION()              CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
+#define CV_INSTRUMENT_REGION_()             CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
 // Custom OpenCV region instrumentation macro
 #define CV_INSTRUMENT_REGION_NAME(NAME)     CV_INSTRUMENT_REGION_CUSTOM_META(NAME,  false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
 // Instrumentation for parallel_for_ or other regions which forks and gathers threads
@@ -566,7 +566,7 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #else
 #define CV_INSTRUMENT_REGION_META(...)
 
-#define CV_INSTRUMENT_REGION()
+#define CV_INSTRUMENT_REGION_()
 #define CV_INSTRUMENT_REGION_NAME(...)
 #define CV_INSTRUMENT_REGION_MT_FORK()
 
@@ -578,6 +578,12 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #define CV_INSTRUMENT_REGION_OPENCL_COMPILE(...)
 #define CV_INSTRUMENT_REGION_OPENCL_RUN(...)
 #define CV_INSTRUMENT_MARK_OPENCL(...)
+#endif
+
+#ifdef __CV_AVX_GUARD
+#define CV_INSTRUMENT_REGION() __CV_AVX_GUARD CV_INSTRUMENT_REGION_()
+#else
+#define CV_INSTRUMENT_REGION() CV_INSTRUMENT_REGION_()
 #endif
 
 //! @endcond

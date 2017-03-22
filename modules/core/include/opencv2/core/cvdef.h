@@ -52,6 +52,17 @@
 #include "cvconfig.h"
 #endif
 
+#ifndef __CV_EXPAND
+#define __CV_EXPAND(x) x
+#endif
+
+#ifndef __CV_CAT
+#define __CV_CAT__(x, y) x ## y
+#define __CV_CAT_(x, y) __CV_CAT__(x, y)
+#define __CV_CAT(x, y) __CV_CAT_(x, y)
+#endif
+
+
 #if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
 #  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
 #endif
