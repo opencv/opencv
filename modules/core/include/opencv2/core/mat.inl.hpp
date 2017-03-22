@@ -85,6 +85,10 @@ template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }
 
+inline
+_InputArray::_InputArray(const std::vector<std::vector<bool> >&)
+{ CV_Error(Error::StsUnsupportedFormat, "std::vector<std::vector<bool> > is not supported!\n"); }
+
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<Mat_<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_MAT + DataType<_Tp>::type + ACCESS_READ, &vec); }
