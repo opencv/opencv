@@ -294,6 +294,7 @@ public:
     template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
     _OutputArray(std::vector<bool>& vec);
     template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
+    _OutputArray(std::vector<std::vector<bool> >&);
     template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
