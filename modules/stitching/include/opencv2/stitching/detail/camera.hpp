@@ -66,7 +66,6 @@ struct CV_EXPORTS CameraParams
     double aspect; // Aspect ratio
     double ppx; // Principal point X
     double ppy; // Principal point Y
-    double scale; // Scale factor
     Mat R; // Rotation
     Mat t; // Translation
 };
