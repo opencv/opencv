@@ -1,46 +1,29 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
-#include "precomp.hpp"
+namespace cv { namespace hal {
+
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+
+// forward declarations
+void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
+void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees);
+void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
+void magnitude32f(const float* x, const float* y, float* mag, int len);
+void magnitude64f(const double* x, const double* y, double* mag, int len);
+void invSqrt32f(const float* src, float* dst, int len);
+void invSqrt64f(const double* src, double* dst, int len);
+void sqrt32f(const float* src, float* dst, int len);
+void sqrt64f(const double* src, double* dst, int len);
+void exp32f(const float *src, float *dst, int n);
+void exp64f(const double *src, double *dst, int n);
+void log32f(const float *src, float *dst, int n);
+void log64f(const double *src, double *dst, int n);
+float fastAtan2(float y, float x);
+
+
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 using namespace std;
 
@@ -197,23 +180,17 @@ static inline void atanImpl(const T *Y, const T *X, T *angle, int len, bool angl
 
 } // anonymous::
 
-namespace cv { namespace hal {
-
 ///////////////////////////////////// ATAN2 ////////////////////////////////////
 
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(fastAtan32f, cv_hal_fastAtan32f, Y, X, angle, len, angleInDegrees);
     atanImpl<float>(Y, X, angle, len, angleInDegrees);
 }
 
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(fastAtan64f, cv_hal_fastAtan64f, Y, X, angle, len, angleInDegrees);
     atanImpl<double>(Y, X, angle, len, angleInDegrees);
 }
 
@@ -221,16 +198,12 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION()
-
     fastAtan32f(Y, X, angle, len, angleInDegrees);
 }
 
 void magnitude32f(const float* x, const float* y, float* mag, int len)
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(magnitude32f, cv_hal_magnitude32f, x, y, mag, len);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0);
 
     int i = 0;
 
@@ -256,9 +229,6 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
 void magnitude64f(const double* x, const double* y, double* mag, int len)
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(magnitude64f, cv_hal_magnitude64f, x, y, mag, len);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64f, x, y, mag, len) >= 0);
 
     int i = 0;
 
@@ -286,9 +256,6 @@ void invSqrt32f(const float* src, float* dst, int len)
 {
     CV_INSTRUMENT_REGION()
 
-    CALL_HAL(invSqrt32f, cv_hal_invSqrt32f, src, dst, len);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsInvSqrt_32f_A21, src, dst, len) >= 0);
-
     int i = 0;
 
 #if CV_SIMD128
@@ -310,9 +277,6 @@ void invSqrt64f(const double* src, double* dst, int len)
 {
     CV_INSTRUMENT_REGION()
 
-    CALL_HAL(invSqrt64f, cv_hal_invSqrt64f, src, dst, len);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsInvSqrt_64f_A50, src, dst, len) >= 0);
-
     int i = 0;
 
 #if CV_SSE2
@@ -329,9 +293,6 @@ void invSqrt64f(const double* src, double* dst, int len)
 void sqrt32f(const float* src, float* dst, int len)
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(sqrt32f, cv_hal_sqrt32f, src, dst, len);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsSqrt_32f_A21, src, dst, len) >= 0);
 
     int i = 0;
 
@@ -353,9 +314,6 @@ void sqrt32f(const float* src, float* dst, int len)
 void sqrt64f(const double* src, double* dst, int len)
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(sqrt64f, cv_hal_sqrt64f, src, dst, len);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsSqrt_64f_A50, src, dst, len) >= 0);
 
     int i = 0;
 
@@ -381,9 +339,6 @@ void exp32f(const float *src, float *dst, int n)
 {
     CV_INSTRUMENT_REGION()
 
-    CALL_HAL(exp32f, cv_hal_exp32f, src, dst, n);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_32f_A21, src, dst, n) >= 0);
-
     for (int i = 0; i < n; i++)
     {
         dst[i] = std::exp(src[i]);
@@ -393,9 +348,6 @@ void exp32f(const float *src, float *dst, int n)
 void exp64f(const double *src, double *dst, int n)
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(exp64f, cv_hal_exp64f, src, dst, n);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_64f_A50, src, dst, n) >= 0);
 
     for (int i = 0; i < n; i++)
     {
@@ -407,9 +359,6 @@ void log32f(const float *src, float *dst, int n)
 {
     CV_INSTRUMENT_REGION()
 
-    CALL_HAL(log32f, cv_hal_log32f, src, dst, n);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_32f_A21, src, dst, n) >= 0);
-
     for (int i = 0; i < n; i++)
     {
         dst[i] = std::log(src[i]);
@@ -418,9 +367,6 @@ void log32f(const float *src, float *dst, int n)
 void log64f(const double *src, double *dst, int n)
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(log64f, cv_hal_log64f, src, dst, n);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_64f_A50, src, dst, n) >= 0);
 
     for (int i = 0; i < n; i++)
     {
@@ -534,9 +480,6 @@ void exp32f( const float *_x, float *y, int n )
 {
     CV_INSTRUMENT_REGION()
 
-    CALL_HAL(exp32f, cv_hal_exp32f, _x, y, n);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_32f_A21, _x, y, n) >= 0);
-
     static const float
     A4 = (float)(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
     A3 = (float)(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
@@ -569,7 +512,6 @@ void exp32f( const float *_x, float *y, int n )
 
         for( ; i <= n - 8; i += 8 )
         {
-            __m256 xf;
             __m128i xi0, xi1;
 
             __m256d xd0 = _mm256_cvtps_pd(_mm_min_ps(_mm_max_ps(_mm_loadu_ps(&x[i].f), minval4), maxval4));
@@ -586,8 +528,7 @@ void exp32f( const float *_x, float *y, int n )
 
             // gcc does not support _mm256_set_m128
             //xf = _mm256_set_m128(_mm256_cvtpd_ps(xd1), _mm256_cvtpd_ps(xd0));
-            xf = _mm256_insertf128_ps(xf, _mm256_cvtpd_ps(xd0), 0);
-            xf = _mm256_insertf128_ps(xf, _mm256_cvtpd_ps(xd1), 1);
+            __m256 xf = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(xd0)), _mm256_cvtpd_ps(xd1), 1);
 
             xf = _mm256_mul_ps(xf, postscale8);
 
@@ -606,14 +547,10 @@ void exp32f( const float *_x, float *y, int n )
 
             // gcc does not support _mm256_set_m128
             //__m256 yf = _mm256_set_m128(_mm256_cvtpd_ps(yd1), _mm256_cvtpd_ps(yd0));
-            __m256 yf;
-            yf = _mm256_insertf128_ps(yf, _mm256_cvtpd_ps(yd0), 0);
-            yf = _mm256_insertf128_ps(yf, _mm256_cvtpd_ps(yd1), 1);
+            __m256 yf = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(yd0)), _mm256_cvtpd_ps(yd1), 1);
 
             //_mm256_set_m128i(xi1, xi0)
-            __m256i temp;
-            temp = _mm256_inserti128_si256(temp, xi0, 0);
-            temp = _mm256_inserti128_si256(temp, xi1, 1);
+            __m256i temp = (__m256i)_mm256_insertf128_ps(_mm256_castps128_ps256((__m128)xi0), (__m128)xi1, 1);
 
             yf = _mm256_mul_ps(yf, _mm256_castsi256_ps(_mm256_slli_epi32(temp, 23)));
 
@@ -826,9 +763,6 @@ void exp32f( const float *_x, float *y, int n )
 void exp64f( const double *_x, double *y, int n )
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(exp64f, cv_hal_exp64f, _x, y, n);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsExp_64f_A50, _x, y, n) >= 0);
 
     static const double
     A5 = .99999999999999999998285227504999 / EXPPOLY_32F_A0,
@@ -1276,9 +1210,6 @@ void log32f( const float *_x, float *y, int n )
 {
     CV_INSTRUMENT_REGION()
 
-    CALL_HAL(log32f, cv_hal_log32f, _x, y, n);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_32f_A21, _x, y, n) >= 0);
-
     static const float shift[] = { 0, -1.f/512 };
     static const float
     A0 = 0.3333333333333333333333333f,
@@ -1424,9 +1355,6 @@ void log32f( const float *_x, float *y, int n )
 void log64f( const double *x, double *y, int n )
 {
     CV_INSTRUMENT_REGION()
-
-    CALL_HAL(log64f, cv_hal_log64f, x, y, n);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsLn_64f_A50, x, y, n) >= 0);
 
     static const double shift[] = { 0, -1./512 };
     static const double
@@ -1613,64 +1541,13 @@ void log64f( const double *x, double *y, int n )
 
 #endif // issue 7795
 
-//=============================================================================
-// for compatibility with 3.0
-
-void exp(const float* src, float* dst, int n)
-{
-    exp32f(src, dst, n);
-}
-
-void exp(const double* src, double* dst, int n)
-{
-    exp64f(src, dst, n);
-}
-
-void log(const float* src, float* dst, int n)
-{
-    log32f(src, dst, n);
-}
-
-void log(const double* src, double* dst, int n)
-{
-    log64f(src, dst, n);
-}
-
-void magnitude(const float* x, const float* y, float* dst, int n)
-{
-    magnitude32f(x, y, dst, n);
-}
-
-void magnitude(const double* x, const double* y, double* dst, int n)
-{
-    magnitude64f(x, y, dst, n);
-}
-
-void sqrt(const float* src, float* dst, int len)
-{
-    sqrt32f(src, dst, len);
-}
-
-void sqrt(const double* src, double* dst, int len)
-{
-    sqrt64f(src, dst, len);
-}
-
-void invSqrt(const float* src, float* dst, int len)
-{
-    invSqrt32f(src, dst, len);
-}
-
-void invSqrt(const double* src, double* dst, int len)
-{
-    invSqrt64f(src, dst, len);
-}
-
-
-} // cv::hal::
-} // cv::
-
-float cv::fastAtan2( float y, float x )
+float fastAtan2( float y, float x )
 {
     return atanImpl<float>(y, x);
 }
+
+#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+
+}} // namespace cv::hal
