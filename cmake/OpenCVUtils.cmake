@@ -260,6 +260,7 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
       TRY_COMPILE(${RESULT}
         "${CMAKE_BINARY_DIR}"
         "${_fname}"
+        CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}"   # CMP0056 do this on new CMake
         COMPILE_DEFINITIONS "${FLAG}"
         OUTPUT_VARIABLE OUTPUT)
 
