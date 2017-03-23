@@ -97,7 +97,7 @@ UIImage* MatToUIImage(const cv::Mat& image) {
 void UIImageToMat(const UIImage* image,
                          cv::Mat& m, bool alphaExist) {
     CGColorSpaceRef colorSpace = CGImageGetColorSpace(image.CGImage);
-    CGFloat cols = image.size.width, rows = image.size.height;
+    CGFloat cols = CGImageGetWidth(image.CGImage), rows = CGImageGetHeight(image.CGImage);
     CGContextRef contextRef;
     CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedLast;
     if (CGColorSpaceGetModel(colorSpace) == kCGColorSpaceModelMonochrome)
