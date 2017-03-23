@@ -281,17 +281,15 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
             //compose_seam_aspect = compose_scale / seam_scale_;
             compose_work_aspect = compose_scale / work_scale_;
 
-            // Update warped image scale
-            warped_image_scale_ *= static_cast<float>(compose_work_aspect);
-            w = warper_->create((float)warped_image_scale_);
+            // Calculate temporary warp scale
+            float warp_scale = warped_image_scale_ * static_cast<float>(compose_work_aspect);
+            w = warper_->create(warp_scale);
 
             // Update corners and sizes
             for (size_t i = 0; i < imgs_.size(); ++i)
             {
                 // Update intrinsics
-                cameras_[i].focal *= compose_work_aspect;
-                cameras_[i].ppx *= compose_work_aspect;
-                cameras_[i].ppy *= compose_work_aspect;
+                cameras_[i].scale = compose_work_aspect;
 
                 // Update corner and size
                 Size sz = full_img_sizes_[i];
