@@ -43,6 +43,11 @@
 #include "cap_intelperc.hpp"
 #include "cap_dshow.hpp"
 
+#ifdef HAVE_MFX
+#include "cap_mfx_reader.hpp"
+#include "cap_mfx_writer.hpp"
+#endif
+
 // All WinRT versions older than 8.0 should provide classes used for video support
 #if defined(WINRT) && !defined(WINRT_8_0) && defined(__cplusplus_winrt)
 #   include "cap_winrt_capture.hpp"
@@ -526,6 +531,9 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
 #ifdef HAVE_GPHOTO2
         CV_CAP_GPHOTO2,
 #endif
+#ifdef HAVE_MFX
+        CAP_INTEL_MFX,
+#endif
         -1, -1
     };
 
@@ -544,6 +552,11 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
             capture = createGPhoto2Capture(filename);
             break;
 #endif
+#ifdef HAVE_MFX
+        case CAP_INTEL_MFX:
+            capture = makePtr<VideoCapture_IntelMFX>(filename);
+            break;
+#endif
         }
 
         if (capture && capture->isOpened())
@@ -558,9 +571,19 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
 static Ptr<IVideoWriter> IVideoWriter_create(int apiPreference, const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
     Ptr<IVideoWriter> iwriter;
+#ifdef HAVE_MFX
+    if (apiPreference == CAP_INTEL_MFX || apiPreference == CAP_ANY)
+    {
+        iwriter = VideoWriter_IntelMFX::create(filename, _fourcc, fps, frameSize, isColor);
+        if (!iwriter.empty())
+            return iwriter;
+    }
+#endif
+
     if( (apiPreference == CAP_OCV_MJPEG || apiPreference == CAP_ANY)
             && _fourcc == CV_FOURCC('M', 'J', 'P', 'G') )
         iwriter = createMotionJpegWriter(filename, fps, frameSize, isColor);
+
     return iwriter;
 }
 

@@ -205,6 +205,9 @@
 /* Intel VA-API/OpenCL */
 #cmakedefine HAVE_VA_INTEL
 
+/* Intel Media SDK */
+#cmakedefine HAVE_MFX
+
 /* Lapack */
 #cmakedefine HAVE_LAPACK
 
