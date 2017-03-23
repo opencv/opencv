@@ -601,7 +601,7 @@ int ovx_hal_sepFilterInit(cvhalFilter2D **filter_context, int src_type, int dst_
 {
     if (!filter_context || !kernelx_data || !kernely_data || delta != 0 ||
         src_type != CV_8UC1 || (dst_type != CV_8UC1 && dst_type != CV_16SC1) ||
-        kernelx_length % 2 == 0 || kernely_length % 2 == 0 || anchor_x != kernelx_length / 2 || anchor_y != kernely_length / 2)
+        kernelx_length != 3 || kernely_length != 3 || anchor_x != 1 || anchor_y != 1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     ivx::border_t border;
