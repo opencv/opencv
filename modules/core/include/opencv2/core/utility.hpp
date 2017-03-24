@@ -507,7 +507,7 @@ void Mat::forEach_impl(const Functor& operation) {
                     this->rowCall2(row, COLS);
                 }
             } else {
-                std::vector<int> idx(COLS); /// idx is modified in this->rowCall
+                std::vector<int> idx(DIMS); /// idx is modified in this->rowCall
                 idx[DIMS - 2] = range.start - 1;
 
                 for (int line_num = range.start; line_num < range.end; ++line_num) {
