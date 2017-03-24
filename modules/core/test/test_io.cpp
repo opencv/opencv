@@ -1014,7 +1014,7 @@ TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
     ASSERT_EQ(cv::norm(inputMatrix, actualMatrix, NORM_INF), 0.);
 }
 
-TEST(Core_InputOutput, filestorage_keypoints_io)
+TEST(Core_InputOutput, filestorage_keypoints_vec_vec_io)
 {
     vector<vector<KeyPoint> > kptsVec;
     vector<KeyPoint> kpts;
@@ -1051,36 +1051,111 @@ TEST(Core_InputOutput, filestorage_keypoints_io)
     }
 }
 
-TEST(Core_InputOutput, filestorage_dmatch_io)
+TEST(Core_InputOutput, FileStorage_DMatch)
 {
-    vector<vector<DMatch> > matchesVec;
-    vector<DMatch> matches;
-    matches.push_back(DMatch(1, 0, 10, 11.5f));
-    matches.push_back(DMatch(2, 1, 11, 21.5f));
-    matchesVec.push_back(matches);
-    matches.clear();
-    matches.push_back(DMatch(22, 10, 1, 1.5f));
-    matchesVec.push_back(matches);
+    cv::FileStorage fs("dmatch.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
 
-    FileStorage writer("", FileStorage::WRITE + FileStorage::MEMORY + FileStorage::FORMAT_XML);
-    writer << "dmatches" << matchesVec;
-    String content = writer.releaseAndGetString();
+    cv::DMatch d(1, 2, 3, -1.5f);
 
-    FileStorage reader(content, FileStorage::READ + FileStorage::MEMORY);
-    vector<vector<DMatch> > readKptsVec;
-    reader["dmatches"] >> readKptsVec;
+    EXPECT_NO_THROW(fs << "d" << d);
+    cv::String fs_result = fs.releaseAndGetString();
+    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+00 ]\n");
 
-    ASSERT_EQ(matchesVec.size(), readKptsVec.size());
+    cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
-    for(size_t i = 0; i < matchesVec.size(); i++)
+    cv::DMatch d_read;
+    ASSERT_NO_THROW(fs_read["d"] >> d_read);
+
+    EXPECT_EQ(d.queryIdx, d_read.queryIdx);
+    EXPECT_EQ(d.trainIdx, d_read.trainIdx);
+    EXPECT_EQ(d.imgIdx, d_read.imgIdx);
+    EXPECT_EQ(d.distance, d_read.distance);
+}
+
+TEST(Core_InputOutput, FileStorage_DMatch_vector)
+{
+    cv::FileStorage fs("dmatch.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+
+    cv::DMatch d1(1, 2, 3, -1.5f);
+    cv::DMatch d2(2, 3, 4, 1.5f);
+    cv::DMatch d3(3, 2, 1, 0.5f);
+    std::vector<cv::DMatch> dv;
+    dv.push_back(d1);
+    dv.push_back(d2);
+    dv.push_back(d3);
+
+    EXPECT_NO_THROW(fs << "dv" << dv);
+    cv::String fs_result = fs.releaseAndGetString();
+    EXPECT_STREQ(fs_result.c_str(),
+"%YAML:1.0\n"
+"---\n"
+"dv: [ 1, 2, 3, -1.5000000000000000e+00, 2, 3, 4, 1.5000000000000000e+00,\n"
+"    3, 2, 1, 5.0000000000000000e-01 ]\n"
+);
+
+    cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    std::vector<cv::DMatch> dv_read;
+    ASSERT_NO_THROW(fs_read["dv"] >> dv_read);
+
+    ASSERT_EQ(dv.size(), dv_read.size());
+    for (size_t i = 0; i < dv.size(); i++)
     {
-        ASSERT_EQ(matchesVec[i].size(), readKptsVec[i].size());
-        for(size_t j = 0; j < matchesVec[i].size(); j++)
+        EXPECT_EQ(dv[i].queryIdx, dv_read[i].queryIdx);
+        EXPECT_EQ(dv[i].trainIdx, dv_read[i].trainIdx);
+        EXPECT_EQ(dv[i].imgIdx, dv_read[i].imgIdx);
+        EXPECT_EQ(dv[i].distance, dv_read[i].distance);
+    }
+}
+
+TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
+{
+    cv::FileStorage fs("dmatch.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+
+    cv::DMatch d1(1, 2, 3, -1.5f);
+    cv::DMatch d2(2, 3, 4, 1.5f);
+    cv::DMatch d3(3, 2, 1, 0.5f);
+    std::vector<cv::DMatch> dv1;
+    dv1.push_back(d1);
+    dv1.push_back(d2);
+    dv1.push_back(d3);
+
+    std::vector<cv::DMatch> dv2;
+    dv2.push_back(d3);
+    dv2.push_back(d1);
+
+    std::vector< std::vector<cv::DMatch> > dvv;
+    dvv.push_back(dv1);
+    dvv.push_back(dv2);
+
+    EXPECT_NO_THROW(fs << "dvv" << dvv);
+    cv::String fs_result = fs.releaseAndGetString();
+    EXPECT_STREQ(fs_result.c_str(),
+"%YAML:1.0\n"
+"---\n"
+"dvv:\n"
+"   - [ 1, 2, 3, -1.5000000000000000e+00, 2, 3, 4, 1.5000000000000000e+00,\n"
+"       3, 2, 1, 5.0000000000000000e-01 ]\n"
+"   - [ 3, 2, 1, 5.0000000000000000e-01, 1, 2, 3, -1.5000000000000000e+00 ]\n"
+);
+
+    cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    std::vector< std::vector<cv::DMatch> > dvv_read;
+    ASSERT_NO_THROW(fs_read["dvv"] >> dvv_read);
+
+    ASSERT_EQ(dvv.size(), dvv_read.size());
+    for (size_t j = 0; j < dvv.size(); j++)
+    {
+        const std::vector<cv::DMatch>& dv = dvv[j];
+        const std::vector<cv::DMatch>& dv_read = dvv_read[j];
+        ASSERT_EQ(dvv.size(), dvv_read.size());
+        for (size_t i = 0; i < dv.size(); i++)
         {
-            ASSERT_FLOAT_EQ(matchesVec[i][j].distance, readKptsVec[i][j].distance);
-            ASSERT_EQ(matchesVec[i][j].imgIdx, readKptsVec[i][j].imgIdx);
-            ASSERT_EQ(matchesVec[i][j].queryIdx, readKptsVec[i][j].queryIdx);
-            ASSERT_EQ(matchesVec[i][j].trainIdx, readKptsVec[i][j].trainIdx);
+            EXPECT_EQ(dv[i].queryIdx, dv_read[i].queryIdx);
+            EXPECT_EQ(dv[i].trainIdx, dv_read[i].trainIdx);
+            EXPECT_EQ(dv[i].imgIdx, dv_read[i].imgIdx);
+            EXPECT_EQ(dv[i].distance, dv_read[i].distance);
         }
     }
 }

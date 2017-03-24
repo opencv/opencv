@@ -14,7 +14,8 @@ class_ignore_list = (
     #core
     "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
     #features2d
-    "SimpleBlobDetector"
+    "SimpleBlobDetector",
+    "CirclesGridFinderParameters"
 )
 
 const_ignore_list = (
@@ -862,10 +863,13 @@ class ClassInfo(GeneralInfo):
         self.j_code = StringIO()
         self.jn_code = StringIO()
         self.cpp_code = StringIO();
-        if self.name != Module:
-            self.j_code.write(T_JAVA_START_INHERITED if self.base else T_JAVA_START_ORPHAN)
+        if self.base:
+            self.j_code.write(T_JAVA_START_INHERITED)
         else:
-            self.j_code.write(T_JAVA_START_MODULE)
+            if self.name != Module:
+                self.j_code.write(T_JAVA_START_ORPHAN)
+            else:
+                self.j_code.write(T_JAVA_START_MODULE)
         # misc handling
         if self.name == 'Core':
             self.imports.add("java.lang.String")
@@ -962,11 +966,11 @@ class JavaWrapperGenerator(object):
             logging.info('ignored: %s', classinfo)
             return
         name = classinfo.name
-        if self.isWrapped(name):
+        if self.isWrapped(name) and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
             return
         self.classes[name] = classinfo
-        if name in type_dict:
+        if name in type_dict and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
             return
         type_dict[name] = \
@@ -1520,7 +1524,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
                 ci.jn_code.write( ManualFuncs[ci.name][func]["jn_code"] )
                 ci.cpp_code.write( ManualFuncs[ci.name][func]["cpp_code"] )
 
-        if ci.name != self.Module:
+        if ci.name != self.Module or ci.base:
             # finalize()
             ci.j_code.write(
 """

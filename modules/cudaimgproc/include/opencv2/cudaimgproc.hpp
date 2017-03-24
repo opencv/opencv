@@ -201,6 +201,15 @@ CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int
  */
 CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null());
 
+/** @brief Calculates histogram for one channel 8-bit image confined in given mask.
+
+@param src Source image with CV_8UC1 type.
+@param hist Destination histogram with one row, 256 columns, and the CV_32SC1 type.
+@param mask A mask image same size as src and of type CV_8UC1.
+@param stream Stream for the asynchronous version.
+ */
+CV_EXPORTS void calcHist(InputArray src, InputArray mask, OutputArray hist, Stream& stream = Stream::Null());
+
 /** @brief Equalizes the histogram of a grayscale image.
 
 @param src Source image with CV_8UC1 type.

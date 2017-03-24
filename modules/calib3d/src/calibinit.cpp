@@ -442,7 +442,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
 
     Mat img = cvarrToMat((CvMat*)arr).clone();
 
-    if( img.depth() != CV_8U || (img.channels() != 1 && img.channels() != 3) )
+    if( img.depth() != CV_8U || (img.channels() != 1 && img.channels() != 3 && img.channels() != 4) )
        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit grayscale or color images are supported" );
 
     if( pattern_size.width <= 2 || pattern_size.height <= 2 )
@@ -2093,7 +2093,8 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
 }
 
 bool cv::findCirclesGrid( InputArray _image, Size patternSize,
-                          OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector )
+                          OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
+                          CirclesGridFinderParameters parameters)
 {
     CV_INSTRUMENT_REGION()
 
@@ -2119,13 +2120,6 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
       Mat(centers).copyTo(_centers);
       return !centers.empty();
     }
-
-    CirclesGridFinderParameters parameters;
-    parameters.vertexPenalty = -0.6f;
-    parameters.vertexGain = 1;
-    parameters.existingVertexGain = 10000;
-    parameters.edgeGain = 1;
-    parameters.edgePenalty = -0.6f;
 
     if(flags & CALIB_CB_ASYMMETRIC_GRID)
       parameters.gridType = CirclesGridFinderParameters::ASYMMETRIC_GRID;
@@ -2190,6 +2184,12 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
     }
     Mat(centers).copyTo(_centers);
     return false;
+}
+
+bool cv::findCirclesGrid( InputArray _image, Size patternSize,
+                          OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector)
+{
+    return cv::findCirclesGrid(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters());
 }
 
 /* End of file. */

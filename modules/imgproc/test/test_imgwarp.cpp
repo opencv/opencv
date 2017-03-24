@@ -1686,22 +1686,35 @@ TEST(Resize, Area_half)
 
 TEST(Imgproc_Warp, multichannel)
 {
+    static const int inter_types[] = {INTER_NEAREST, INTER_AREA, INTER_CUBIC,
+                                      INTER_LANCZOS4, INTER_LINEAR};
+    static const int inter_n = sizeof(inter_types) / sizeof(int);
+
+    static const int border_types[] = {BORDER_CONSTANT, BORDER_DEFAULT,
+                                       BORDER_REFLECT, BORDER_REPLICATE,
+                                       BORDER_WRAP, BORDER_WRAP};
+    static const int border_n = sizeof(border_types) / sizeof(int);
+
     RNG& rng = theRNG();
-    for( int iter = 0; iter < 30; iter++ )
+    for( int iter = 0; iter < 100; iter++ )
     {
+        int inter = inter_types[rng.uniform(0, inter_n)];
+        int border = border_types[rng.uniform(0, border_n)];
         int width = rng.uniform(3, 333);
         int height = rng.uniform(3, 333);
-        int cn = rng.uniform(1, 10);
+        int cn = rng.uniform(1, 15);
+        if(inter == INTER_CUBIC || inter == INTER_LANCZOS4)
+            cn = rng.uniform(1, 5);
         Mat src(height, width, CV_8UC(cn)), dst;
         //randu(src, 0, 256);
         src.setTo(0.);
 
-        Mat rot = getRotationMatrix2D(Point2f(0.f, 0.f), 1, 1);
-        warpAffine(src, dst, rot, src.size());
+        Mat rot = getRotationMatrix2D(Point2f(0.f, 0.f), 1.0, 1.0);
+        warpAffine(src, dst, rot, src.size(), inter, border);
         ASSERT_EQ(0.0, norm(dst, NORM_INF));
         Mat rot2 = Mat::eye(3, 3, rot.type());
         rot.copyTo(rot2.rowRange(0, 2));
-        warpPerspective(src, dst, rot2, src.size());
+        warpPerspective(src, dst, rot2, src.size(), inter, border);
         ASSERT_EQ(0.0, norm(dst, NORM_INF));
     }
 }

@@ -476,8 +476,6 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
 
 static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
 {
-    static int avgiter = 0, avgn = 0;
-
     double eps = 1e-12;
     Vec2d p(_p.x, _p.y), q(_p.x, _p.y), err;
     Vec4d J;
@@ -500,14 +498,6 @@ static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
         q -= Vec2d(iJtJ[0]*JtErr[0] + iJtJ[1]*JtErr[1], iJtJ[2]*JtErr[0] + iJtJ[3]*JtErr[1]);
         //Matx22d J(kx*x + k, kx*y, ky*x, ky*y + k);
         //q -= Vec2d((J.t()*J).inv()*(J.t()*err));
-    }
-
-    if( i < maxiter )
-    {
-        avgiter += i;
-        avgn++;
-        if( avgn == 1500 )
-            printf("avg iters = %g\n", (double)avgiter/avgn);
     }
 
     return i < maxiter ? Point2f((float)q[0], (float)q[1]) : Point2f(-FLT_MAX, -FLT_MAX);

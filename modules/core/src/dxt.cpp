@@ -3342,6 +3342,9 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
 
+    // Fail if DFT_COMPLEX_INPUT is specified, but src is not 2 channels.
+    CV_Assert( !((flags & DFT_COMPLEX_INPUT) && src.channels() != 2) );
+
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
         _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
     else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )

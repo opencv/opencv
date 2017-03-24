@@ -799,6 +799,21 @@ PyObject* pyopencv_from(const Size& sz)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, Size_<float>& sz, const char* name)
+{
+    (void)name;
+    if(!obj || obj == Py_None)
+        return true;
+    return PyArg_ParseTuple(obj, "ff", &sz.width, &sz.height) > 0;
+}
+
+template<>
+PyObject* pyopencv_from(const Size_<float>& sz)
+{
+    return Py_BuildValue("(ff)", sz.width, sz.height);
+}
+
+template<>
 bool pyopencv_to(PyObject* obj, Rect& r, const char* name)
 {
     (void)name;

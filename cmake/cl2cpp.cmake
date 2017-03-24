@@ -9,7 +9,7 @@ if (NOT cl_list)
   message(FATAL_ERROR "Can't find OpenCL kernels in directory: ${CL_DIR}")
 endif()
 
-string(REPLACE ".cpp" ".hpp" OUTPUT_HPP "${OUTPUT}")
+string(REGEX REPLACE "\\.cpp$" ".hpp" OUTPUT_HPP "${OUTPUT}")
 get_filename_component(OUTPUT_HPP_NAME "${OUTPUT_HPP}" NAME)
 
 if("${MODULE_NAME}" STREQUAL "ocl")

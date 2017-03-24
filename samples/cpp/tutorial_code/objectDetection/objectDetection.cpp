@@ -13,15 +13,25 @@ using namespace cv;
 void detectAndDisplay( Mat frame );
 
 /** Global variables */
-String face_cascade_name = "haarcascade_frontalface_alt.xml";
-String eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
+String face_cascade_name, eyes_cascade_name;
 CascadeClassifier face_cascade;
 CascadeClassifier eyes_cascade;
 String window_name = "Capture - Face detection";
 
 /** @function main */
-int main( void )
+int main( int argc, const char** argv )
 {
+    CommandLineParser parser(argc, argv,
+        "{help h||}"
+        "{face_cascade|../../data/haarcascades/haarcascade_frontalface_alt.xml|}"
+        "{eyes_cascade|../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|}");
+
+    cout << "\nThis program demonstrates using the cv::CascadeClassifier class to detect objects (Face + eyes) in a video stream.\n"
+            "You can use Haar or LBP features.\n\n";
+    parser.printMessage();
+
+    face_cascade_name = parser.get<string>("face_cascade");
+    eyes_cascade_name = parser.get<string>("eyes_cascade");
     VideoCapture capture;
     Mat frame;
 
@@ -30,7 +40,7 @@ int main( void )
     if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading eyes cascade\n"); return -1; };
 
     //-- 2. Read the video stream
-    capture.open( -1 );
+    capture.open( 0 );
     if ( ! capture.isOpened() ) { printf("--(!)Error opening video capture\n"); return -1; }
 
     while ( capture.read(frame) )
