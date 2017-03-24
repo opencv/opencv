@@ -64,14 +64,14 @@ __kernel void intelblas_gemm_buffer_NN_sp(
 
     const __global float *src1_read0 = src1 + local_x * VEC_SIZE + ( group_x * TILE_N ) + start_index * ldB + off1;
 
-    float4 dot00 = (start_index != 0) ? vload4(0, dst_write0) : (float)beta * vload4(0, dst_write0);
-    float4 dot01 = (start_index != 0) ? vload4(0, dst_write0 + 1 * ldC) : (float)beta * vload4(0, dst_write0 + 1 * ldC);
-    float4 dot02 = (start_index != 0) ? vload4(0, dst_write0 + 2 * ldC) : (float)beta * vload4(0, dst_write0 + 2 * ldC);
-    float4 dot03 = (start_index != 0) ? vload4(0, dst_write0 + 3 * ldC) : (float)beta * vload4(0, dst_write0 + 3 * ldC);
-    float4 dot04 = (start_index != 0) ? vload4(0, dst_write0 + 4 * ldC) : (float)beta * vload4(0, dst_write0 + 4 * ldC);
-    float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : (float)beta * vload4(0, dst_write0 + 5 * ldC);
-    float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : (float)beta * vload4(0, dst_write0 + 6 * ldC);
-    float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : (float)beta * vload4(0, dst_write0 + 7 * ldC);
+    float4 dot00 = (start_index != 0) ? vload4(0, dst_write0)           : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0          )) : (float4)(0.0));
+    float4 dot01 = (start_index != 0) ? vload4(0, dst_write0 + 1 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 1 * ldC)) : (float4)(0.0));
+    float4 dot02 = (start_index != 0) ? vload4(0, dst_write0 + 2 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 2 * ldC)) : (float4)(0.0));
+    float4 dot03 = (start_index != 0) ? vload4(0, dst_write0 + 3 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 3 * ldC)) : (float4)(0.0));
+    float4 dot04 = (start_index != 0) ? vload4(0, dst_write0 + 4 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 4 * ldC)) : (float4)(0.0));
+    float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 5 * ldC)) : (float4)(0.0));
+    float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 6 * ldC)) : (float4)(0.0));
+    float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 7 * ldC)) : (float4)(0.0));
    
     int end_index = min(start_index + stride, K);
     int w = start_index;
@@ -183,14 +183,14 @@ __kernel void intelblas_gemm_buffer_NN(
     int row6 = mad24(global_y, TILE_M, 6) < M ? 6 : border;
     int row7 = mad24(global_y, TILE_M, 7) < M ? 7 : border;
 
-    float4 dot00 = (start_index != 0) ? vload4(0, dst_write0) : (float)beta * vload4(0, dst_write0);
-    float4 dot01 = (start_index != 0) ? vload4(0, dst_write0 + 1 * ldC) : (float)beta * vload4(0, dst_write0 + 1 * ldC);
-    float4 dot02 = (start_index != 0) ? vload4(0, dst_write0 + 2 * ldC) : (float)beta * vload4(0, dst_write0 + 2 * ldC);
-    float4 dot03 = (start_index != 0) ? vload4(0, dst_write0 + 3 * ldC) : (float)beta * vload4(0, dst_write0 + 3 * ldC);
-    float4 dot04 = (start_index != 0) ? vload4(0, dst_write0 + 4 * ldC) : (float)beta * vload4(0, dst_write0 + 4 * ldC);
-    float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : (float)beta * vload4(0, dst_write0 + 5 * ldC);
-    float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : (float)beta * vload4(0, dst_write0 + 6 * ldC);
-    float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : (float)beta * vload4(0, dst_write0 + 7 * ldC);
+    float4 dot00 = (start_index != 0) ? vload4(0, dst_write0)           : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0          )) : (float4)(0.0));
+    float4 dot01 = (start_index != 0) ? vload4(0, dst_write0 + 1 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 1 * ldC)) : (float4)(0.0));
+    float4 dot02 = (start_index != 0) ? vload4(0, dst_write0 + 2 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 2 * ldC)) : (float4)(0.0));
+    float4 dot03 = (start_index != 0) ? vload4(0, dst_write0 + 3 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 3 * ldC)) : (float4)(0.0));
+    float4 dot04 = (start_index != 0) ? vload4(0, dst_write0 + 4 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 4 * ldC)) : (float4)(0.0));
+    float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 5 * ldC)) : (float4)(0.0));
+    float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 6 * ldC)) : (float4)(0.0));
+    float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 7 * ldC)) : (float4)(0.0));
    
     int end_index = min(start_index + stride, K);
     int w = start_index;
@@ -572,7 +572,10 @@ __kernel void intelblas_gemm_buffer_NT(
     output = (local_x == 5) ? _dot.s5 : output; \
     output = (local_x == 6) ? _dot.s6 : output; \
     output = (local_x == 7) ? _dot.s7 : output; \
-    dst_write0[0] = mad(output, (float)alpha, (float)beta * dst_write0[0]); \
+    if (beta != 0.0) \
+        dst_write0[0] = mad(output, (float)alpha, ((float)beta * dst_write0[0])); \
+    else \
+        dst_write0[0] = output * (float)alpha; \
     dst_write0 += ldC;
 
     if(global_x < N && global_y * 8 < M) {
@@ -633,14 +636,14 @@ __kernel void intelblas_gemm_buffer_TN(
 
     const __global float *src1_read0 = src1 + local_x * VEC_SIZE + ( group_x * TILE_N ) + start_index * ldB + off1;
 
-    float4 dot00 = (start_index != 0) ? vload4(0, dst_write0): (float)beta * vload4(0, dst_write0);
-    float4 dot01 = (start_index != 0) ? vload4(0, dst_write0 + 1 * ldC) : (float)beta * vload4(0, dst_write0 + 1 * ldC);
-    float4 dot02 = (start_index != 0) ? vload4(0, dst_write0 + 2 * ldC) : (float)beta * vload4(0, dst_write0 + 2 * ldC);
-    float4 dot03 = (start_index != 0) ? vload4(0, dst_write0 + 3 * ldC) : (float)beta * vload4(0, dst_write0 + 3 * ldC);
-    float4 dot04 = (start_index != 0) ? vload4(0, dst_write0 + 4 * ldC) : (float)beta * vload4(0, dst_write0 + 4 * ldC);
-    float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : (float)beta * vload4(0, dst_write0 + 5 * ldC);
-    float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : (float)beta * vload4(0, dst_write0 + 6 * ldC);
-    float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : (float)beta * vload4(0, dst_write0 + 7 * ldC);
+    float4 dot00 = (start_index != 0) ? vload4(0, dst_write0)           : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0          )) : (float4)(0.0));
+    float4 dot01 = (start_index != 0) ? vload4(0, dst_write0 + 1 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 1 * ldC)) : (float4)(0.0));
+    float4 dot02 = (start_index != 0) ? vload4(0, dst_write0 + 2 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 2 * ldC)) : (float4)(0.0));
+    float4 dot03 = (start_index != 0) ? vload4(0, dst_write0 + 3 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 3 * ldC)) : (float4)(0.0));
+    float4 dot04 = (start_index != 0) ? vload4(0, dst_write0 + 4 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 4 * ldC)) : (float4)(0.0));
+    float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 5 * ldC)) : (float4)(0.0));
+    float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 6 * ldC)) : (float4)(0.0));
+    float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 7 * ldC)) : (float4)(0.0));
 
     int end_index = min(start_index + stride, K);
     while( start_index + TILE_K <= end_index ) {
@@ -859,14 +862,14 @@ __kernel void intelblas_gemm_buffer_TT(
 
     const __global float *src1_read0 = src1 + (local_x * VEC_SIZE + ( group_x * TILE_N )) * ldB + start_index + off1;
 
-    float4 dot00 = (start_index != 0) ? vload4(0, dst_write0) : (float)beta * vload4(0, dst_write0);
-    float4 dot01 = (start_index != 0) ? vload4(0, dst_write0 + ldC) : (float)beta * vload4(0, dst_write0 + ldC);
-    float4 dot02 = (start_index != 0) ? vload4(0, dst_write0 + 2 * ldC) : (float)beta * vload4(0, dst_write0 + 2 * ldC);
-    float4 dot03 = (start_index != 0) ? vload4(0, dst_write0 + 3 * ldC) : (float)beta * vload4(0, dst_write0 + 3 * ldC);
-    float4 dot04 = (start_index != 0) ? vload4(0, dst_write0 + 4 * ldC) : (float)beta * vload4(0, dst_write0 + 4 * ldC);
-    float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : (float)beta * vload4(0, dst_write0 + 5 * ldC);
-    float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : (float)beta * vload4(0, dst_write0 + 6 * ldC);
-    float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : (float)beta * vload4(0, dst_write0 + 7 * ldC);
+    float4 dot00 = (start_index != 0) ? vload4(0, dst_write0)           : ((beta != 0.0)? ((float)beta * vload4(0, dst_write0          )) : (float4)(0.0));
+    float4 dot01 = (start_index != 0) ? vload4(0, dst_write0 + ldC)     : ((beta != 0.0)? ((float)beta * vload4(0, dst_write0 + ldC    )) : (float4)(0.0));
+    float4 dot02 = (start_index != 0) ? vload4(0, dst_write0 + 2 * ldC) : ((beta != 0.0)? ((float)beta * vload4(0, dst_write0 + 2 * ldC)) : (float4)(0.0));
+    float4 dot03 = (start_index != 0) ? vload4(0, dst_write0 + 3 * ldC) : ((beta != 0.0)? ((float)beta * vload4(0, dst_write0 + 3 * ldC)) : (float4)(0.0));
+    float4 dot04 = (start_index != 0) ? vload4(0, dst_write0 + 4 * ldC) : ((beta != 0.0)? ((float)beta * vload4(0, dst_write0 + 4 * ldC)) : (float4)(0.0));
+    float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : ((beta != 0.0)? ((float)beta * vload4(0, dst_write0 + 5 * ldC)) : (float4)(0.0));
+    float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : ((beta != 0.0)? ((float)beta * vload4(0, dst_write0 + 6 * ldC)) : (float4)(0.0));
+    float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : ((beta != 0.0)? ((float)beta * vload4(0, dst_write0 + 7 * ldC)) : (float4)(0.0));
 
     int end_index = min(start_index + stride, K);
     while( start_index + TILE_K <= end_index ) {
