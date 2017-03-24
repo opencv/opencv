@@ -84,10 +84,22 @@ inline bool dimTooBig(int size)
 inline bool skipSmallImages(int w, int h, int kernel_id)
 {
 //OpenVX calls have essential overhead so it make sense to skip them for small images
-    if (w*h < 1920 * 1080)
-        return true;
-    else
-        return false;
+    switch (kernel_id)
+    {
+    case VX_KERNEL_MULTIPLY:
+        if (w*h < 640 * 480)
+            return true;
+        break;
+    case VX_KERNEL_COLOR_CONVERT:
+        if (w*h < 2048 * 1536)
+            return true;
+        break;
+    default:
+        if (w*h < 3840 * 2160)
+            return true;
+        break;
+    }
+    return false;
 }
 
 inline void setConstantBorder(ivx::border_t &border, vx_uint8 val)
