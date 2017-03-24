@@ -714,6 +714,30 @@ found, or as colored corners connected with lines if the board was found.
 CV_EXPORTS_W void drawChessboardCorners( InputOutputArray image, Size patternSize,
                                          InputArray corners, bool patternWasFound );
 
+struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters
+{
+    CV_WRAP CirclesGridFinderParameters();
+    CV_PROP_RW cv::Size2f densityNeighborhoodSize;
+    CV_PROP_RW float minDensity;
+    CV_PROP_RW int kmeansAttempts;
+    CV_PROP_RW int minDistanceToAddKeypoint;
+    CV_PROP_RW int keypointScale;
+    CV_PROP_RW float minGraphConfidence;
+    CV_PROP_RW float vertexGain;
+    CV_PROP_RW float vertexPenalty;
+    CV_PROP_RW float existingVertexGain;
+    CV_PROP_RW float edgeGain;
+    CV_PROP_RW float edgePenalty;
+    CV_PROP_RW float convexHullFactor;
+    CV_PROP_RW float minRNGEdgeSwitchDist;
+
+    enum GridType
+    {
+      SYMMETRIC_GRID, ASYMMETRIC_GRID
+    };
+    GridType gridType;
+};
+
 /** @brief Finds centers in the grid of circles.
 
 @param image grid view of input circles; it must be an 8-bit grayscale or color image.
@@ -726,6 +750,7 @@ CV_EXPORTS_W void drawChessboardCorners( InputOutputArray image, Size patternSiz
 -   **CALIB_CB_CLUSTERING** uses a special algorithm for grid detection. It is more robust to
 perspective distortions but much more sensitive to background clutter.
 @param blobDetector feature detector that finds blobs like dark circles on light background.
+@param parameters struct for finding circles in a grid pattern.
 
 The function attempts to determine whether the input image contains a grid of circles. If it is, the
 function locates centers of the circles. The function returns a non-zero value if all of the centers
@@ -745,6 +770,12 @@ Sample usage of detecting and drawing the centers of circles: :
 @note The function requires white space (like a square-thick border, the wider the better) around
 the board to make the detection more robust in various environments.
  */
+CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
+                                   OutputArray centers, int flags,
+                                   const Ptr<FeatureDetector> &blobDetector,
+                                   CirclesGridFinderParameters parameters);
+
+/** @overload */
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags = CALIB_CB_SYMMETRIC_GRID,
                                    const Ptr<FeatureDetector> &blobDetector = SimpleBlobDetector::create());
@@ -1432,6 +1463,28 @@ CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray point
                             OutputArray R, OutputArray t,
                             double focal = 1.0, Point2d pp = Point2d(0, 0),
                             InputOutputArray mask = noArray() );
+
+/** @overload
+@param E The input essential matrix.
+@param points1 Array of N 2D points from the first image. The point coordinates should be
+floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1.
+@param cameraMatrix Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+Note that this function assumes that points1 and points2 are feature points from cameras with the
+same camera matrix.
+@param R Recovered relative rotation.
+@param t Recoverd relative translation.
+@param distanceThresh threshold distance which is used to filter out far away points (i.e. infinite points).
+@param mask Input/output mask for inliers in points1 and points2.
+:   If it is not empty, then it marks inliers in points1 and points2 for then given essential
+matrix E. Only these inliers will be used to recover pose. In the output mask only inliers
+which pass the cheirality check.
+@param triangulatedPoints 3d points which were reconstructed by triangulation.
+ */
+
+CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
+                            InputArray cameraMatrix, OutputArray R, OutputArray t, double distanceThresh, InputOutputArray mask = noArray(),
+                            OutputArray triangulatedPoints = noArray());
 
 /** @brief For points in an image of a stereo pair, computes the corresponding epilines in the other image.
 

@@ -3434,7 +3434,7 @@ int Kernel::set(int i, const KernelArg& arg)
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
                 int cols = u3d.cols*arg.wscale/arg.iwscale;
-                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows) == CL_SUCCESS);
+                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.slices) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols) == CL_SUCCESS);
                 i += 3;

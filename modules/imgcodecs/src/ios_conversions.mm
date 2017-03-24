@@ -53,7 +53,7 @@ void UIImageToMat(const UIImage* image, cv::Mat& m, bool alphaExist);
 UIImage* MatToUIImage(const cv::Mat& image) {
 
     NSData *data = [NSData dataWithBytes:image.data
-                                  length:image.elemSize()*image.total()];
+                                  length:image.step.p[0] * image.rows];
 
     CGColorSpaceRef colorSpace;
 
@@ -73,7 +73,7 @@ UIImage* MatToUIImage(const cv::Mat& image) {
     // Creating CGImage from cv::Mat
     CGImageRef imageRef = CGImageCreate(image.cols,
                                         image.rows,
-                                        8,
+                                        8 * image.elemSize1(),
                                         8 * image.elemSize(),
                                         image.step.p[0],
                                         colorSpace,
@@ -97,7 +97,7 @@ UIImage* MatToUIImage(const cv::Mat& image) {
 void UIImageToMat(const UIImage* image,
                          cv::Mat& m, bool alphaExist) {
     CGColorSpaceRef colorSpace = CGImageGetColorSpace(image.CGImage);
-    CGFloat cols = image.size.width, rows = image.size.height;
+    CGFloat cols = CGImageGetWidth(image.CGImage), rows = CGImageGetHeight(image.CGImage);
     CGContextRef contextRef;
     CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedLast;
     if (CGColorSpaceGetModel(colorSpace) == kCGColorSpaceModelMonochrome)

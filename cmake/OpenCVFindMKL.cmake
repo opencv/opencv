@@ -48,7 +48,7 @@ endif()
 #check current MKL_ROOT_DIR
 if(NOT MKL_ROOT_DIR OR NOT EXISTS ${MKL_ROOT_DIR}/include/mkl.h)
     set(mkl_root_paths ${MKL_ROOT_DIR})
-    if(DEFINED $ENV{MKLROOT})
+    if(DEFINED ENV{MKLROOT})
         list(APPEND mkl_root_paths $ENV{MKLROOT})
     endif()
     if(WIN32)

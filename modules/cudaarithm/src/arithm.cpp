@@ -286,111 +286,146 @@ void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// dft
+// DFT function
 
 void cv::cuda::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, Stream& stream)
 {
+    if (getInputMat(_src, stream).channels() == 2)
+        flags |= DFT_COMPLEX_INPUT;
+
+    Ptr<DFT> dft = createDFT(dft_size, flags);
+    dft->compute(_src, _dst, stream);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// DFT algorithm
+
+#ifdef HAVE_CUFFT
+
+namespace
+{
+
+    class DFTImpl : public DFT
+    {
+        Size dft_size, dft_size_opt;
+        bool is_1d_input, is_row_dft, is_scaled_dft, is_inverse, is_complex_input, is_complex_output;
+
+        cufftType dft_type;
+        cufftHandle plan;
+
+    public:
+        DFTImpl(Size dft_size, int flags)
+            : dft_size(dft_size),
+              dft_size_opt(dft_size),
+              is_1d_input((dft_size.height == 1) || (dft_size.width == 1)),
+              is_row_dft((flags & DFT_ROWS) != 0),
+              is_scaled_dft((flags & DFT_SCALE) != 0),
+              is_inverse((flags & DFT_INVERSE) != 0),
+              is_complex_input((flags & DFT_COMPLEX_INPUT) != 0),
+              is_complex_output(!(flags & DFT_REAL_OUTPUT)),
+              dft_type(!is_complex_input ? CUFFT_R2C : (is_complex_output ? CUFFT_C2C : CUFFT_C2R))
+        {
+            // We don't support unpacked output (in the case of real input)
+            CV_Assert( !(flags & DFT_COMPLEX_OUTPUT) );
+
+            // We don't support real-to-real transform
+            CV_Assert( is_complex_input || is_complex_output );
+
+            if (is_1d_input && !is_row_dft)
+            {
+                // If the source matrix is single column handle it as single row
+                dft_size_opt.width = std::max(dft_size.width, dft_size.height);
+                dft_size_opt.height = std::min(dft_size.width, dft_size.height);
+            }
+
+            CV_Assert( dft_size_opt.width > 1 );
+
+            if (is_1d_input || is_row_dft)
+                cufftSafeCall( cufftPlan1d(&plan, dft_size_opt.width, dft_type, dft_size_opt.height) );
+            else
+                cufftSafeCall( cufftPlan2d(&plan, dft_size_opt.height, dft_size_opt.width, dft_type) );
+        }
+
+        ~DFTImpl()
+        {
+            cufftSafeCall( cufftDestroy(plan) );
+        }
+
+        void compute(InputArray _src, OutputArray _dst, Stream& stream)
+        {
+            GpuMat src = getInputMat(_src, stream);
+
+            CV_Assert( src.type() == CV_32FC1 || src.type() == CV_32FC2 );
+            CV_Assert( is_complex_input == (src.channels() == 2) );
+
+            // Make sure here we work with the continuous input,
+            // as CUFFT can't handle gaps
+            GpuMat src_cont;
+            if (src.isContinuous())
+            {
+                src_cont = src;
+            }
+            else
+            {
+                BufferPool pool(stream);
+                src_cont.allocator = pool.getAllocator();
+                createContinuous(src.rows, src.cols, src.type(), src_cont);
+                src.copyTo(src_cont, stream);
+            }
+
+            cufftSafeCall( cufftSetStream(plan, StreamAccessor::getStream(stream)) );
+
+            if (is_complex_input)
+            {
+                if (is_complex_output)
+                {
+                    createContinuous(dft_size, CV_32FC2, _dst);
+                    GpuMat dst = _dst.getGpuMat();
+
+                    cufftSafeCall(cufftExecC2C(
+                            plan, src_cont.ptr<cufftComplex>(), dst.ptr<cufftComplex>(),
+                            is_inverse ? CUFFT_INVERSE : CUFFT_FORWARD));
+                }
+                else
+                {
+                    createContinuous(dft_size, CV_32F, _dst);
+                    GpuMat dst = _dst.getGpuMat();
+
+                    cufftSafeCall(cufftExecC2R(
+                            plan, src_cont.ptr<cufftComplex>(), dst.ptr<cufftReal>()));
+                }
+            }
+            else
+            {
+                // We could swap dft_size for efficiency. Here we must reflect it
+                if (dft_size == dft_size_opt)
+                    createContinuous(Size(dft_size.width / 2 + 1, dft_size.height), CV_32FC2, _dst);
+                else
+                    createContinuous(Size(dft_size.width, dft_size.height / 2 + 1), CV_32FC2, _dst);
+
+                GpuMat dst = _dst.getGpuMat();
+
+                cufftSafeCall(cufftExecR2C(
+                                  plan, src_cont.ptr<cufftReal>(), dst.ptr<cufftComplex>()));
+            }
+
+            if (is_scaled_dft)
+                cuda::multiply(_dst, Scalar::all(1. / dft_size.area()), _dst, 1, -1, stream);
+        }
+    };
+}
+
+#endif
+
+Ptr<DFT> cv::cuda::createDFT(Size dft_size, int flags)
+{
 #ifndef HAVE_CUFFT
-    (void) _src;
-    (void) _dst;
     (void) dft_size;
     (void) flags;
-    (void) stream;
-    throw_no_cuda();
+    CV_Error(Error::StsNotImplemented, "The library was build without CUFFT");
+    return Ptr<DFT>();
 #else
-    GpuMat src = getInputMat(_src, stream);
-
-    CV_Assert( src.type() == CV_32FC1 || src.type() == CV_32FC2 );
-
-    // We don't support unpacked output (in the case of real input)
-    CV_Assert( !(flags & DFT_COMPLEX_OUTPUT) );
-
-    const bool is_1d_input       = (dft_size.height == 1) || (dft_size.width == 1);
-    const bool is_row_dft        = (flags & DFT_ROWS) != 0;
-    const bool is_scaled_dft     = (flags & DFT_SCALE) != 0;
-    const bool is_inverse        = (flags & DFT_INVERSE) != 0;
-    const bool is_complex_input  = src.channels() == 2;
-    const bool is_complex_output = !(flags & DFT_REAL_OUTPUT);
-
-    // We don't support real-to-real transform
-    CV_Assert( is_complex_input || is_complex_output );
-
-    // Make sure here we work with the continuous input,
-    // as CUFFT can't handle gaps
-    GpuMat src_cont;
-    if (src.isContinuous())
-    {
-        src_cont = src;
-    }
-    else
-    {
-        BufferPool pool(stream);
-        src_cont.allocator = pool.getAllocator();
-        createContinuous(src.rows, src.cols, src.type(), src_cont);
-        src.copyTo(src_cont, stream);
-    }
-
-    Size dft_size_opt = dft_size;
-    if (is_1d_input && !is_row_dft)
-    {
-        // If the source matrix is single column handle it as single row
-        dft_size_opt.width = std::max(dft_size.width, dft_size.height);
-        dft_size_opt.height = std::min(dft_size.width, dft_size.height);
-    }
-
-    CV_Assert( dft_size_opt.width > 1 );
-
-    cufftType dft_type = CUFFT_R2C;
-    if (is_complex_input)
-        dft_type = is_complex_output ? CUFFT_C2C : CUFFT_C2R;
-
-    cufftHandle plan;
-    if (is_1d_input || is_row_dft)
-        cufftSafeCall( cufftPlan1d(&plan, dft_size_opt.width, dft_type, dft_size_opt.height) );
-    else
-        cufftSafeCall( cufftPlan2d(&plan, dft_size_opt.height, dft_size_opt.width, dft_type) );
-
-    cufftSafeCall( cufftSetStream(plan, StreamAccessor::getStream(stream)) );
-
-    if (is_complex_input)
-    {
-        if (is_complex_output)
-        {
-            createContinuous(dft_size, CV_32FC2, _dst);
-            GpuMat dst = _dst.getGpuMat();
-
-            cufftSafeCall(cufftExecC2C(
-                    plan, src_cont.ptr<cufftComplex>(), dst.ptr<cufftComplex>(),
-                    is_inverse ? CUFFT_INVERSE : CUFFT_FORWARD));
-        }
-        else
-        {
-            createContinuous(dft_size, CV_32F, _dst);
-            GpuMat dst = _dst.getGpuMat();
-
-            cufftSafeCall(cufftExecC2R(
-                    plan, src_cont.ptr<cufftComplex>(), dst.ptr<cufftReal>()));
-        }
-    }
-    else
-    {
-        // We could swap dft_size for efficiency. Here we must reflect it
-        if (dft_size == dft_size_opt)
-            createContinuous(Size(dft_size.width / 2 + 1, dft_size.height), CV_32FC2, _dst);
-        else
-            createContinuous(Size(dft_size.width, dft_size.height / 2 + 1), CV_32FC2, _dst);
-
-        GpuMat dst = _dst.getGpuMat();
-
-        cufftSafeCall(cufftExecR2C(
-                plan, src_cont.ptr<cufftReal>(), dst.ptr<cufftComplex>()));
-    }
-
-    cufftSafeCall( cufftDestroy(plan) );
-
-    if (is_scaled_dft)
-        cuda::multiply(_dst, Scalar::all(1. / dft_size.area()), _dst, 1, -1, stream);
-
+    return makePtr<DFTImpl>(dft_size, flags);
 #endif
 }
 

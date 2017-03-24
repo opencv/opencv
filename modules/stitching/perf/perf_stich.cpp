@@ -2,6 +2,8 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/opencv_modules.hpp"
 
+#include "opencv2/core/ocl.hpp"
+
 using namespace std;
 using namespace cv;
 using namespace perf;
@@ -160,6 +162,9 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
     {
         Ptr<Stitcher> stitcher = Stitcher::create(Stitcher::SCANS, false);
         stitcher->setFeaturesFinder(featuresFinder);
+
+        if (cv::ocl::useOpenCL())
+            cv::theRNG() = cv::RNG(12345); // prevent fails of Windows OpenCL builds (see #8294)
 
         startTimer();
         stitcher->stitch(imgs, pano);
