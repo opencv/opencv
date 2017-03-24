@@ -696,7 +696,7 @@ public:
                 // Renormalize weights. In the special case that the pixel does
                 // not agree with any modes, set weights to zero (a new mode will be added below).
                 float invWeight = 0.f;
-                if (fabs(totalWeight) > DBL_EPSILON) {
+                if (std::abs(totalWeight) > FLT_EPSILON) {
                     invWeight = 1.f/totalWeight;
                 }
 
@@ -906,7 +906,7 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage_intern(OutputArray backgro
                     break;
             }
             float invWeight = 0.f;
-            if (fabs(totalWeight) > DBL_EPSILON) {
+            if (std::abs(totalWeight) > FLT_EPSILON) {
                 invWeight = 1.f/totalWeight;
             }
 
