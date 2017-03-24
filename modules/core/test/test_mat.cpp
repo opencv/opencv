@@ -659,6 +659,18 @@ struct InitializerFunctor{
     }
 };
 
+template<typename Pixel>
+struct InitializerFunctor5D{
+    /// Initializer for cv::Mat::forEach test (5 dimensional case)
+    void operator()(Pixel & pixel, const int * idx) const {
+        pixel[0] = idx[0];
+        pixel[1] = idx[1];
+        pixel[2] = idx[2];
+        pixel[3] = idx[3];
+        pixel[4] = idx[4];
+    }
+};
+
 void Core_ArrayOpTest::run( int /* start_from */)
 {
     int errcount = 0;
@@ -729,6 +741,57 @@ void Core_ArrayOpTest::run( int /* start_from */)
         uint64 total2 = 0;
         for (size_t i = 0; i < sizeof(dims) / sizeof(dims[0]); ++i) {
             total2 += ((dims[i] - 1) * dims[i] / 2) * dims[0] * dims[1] * dims[2] / dims[i];
+        }
+        if (total != total2) {
+            ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
+            errcount++;
+        }
+    }
+
+    // test cv::Mat::forEach
+    // with a matrix that has more dimensions than columns
+    // See https://github.com/opencv/opencv/issues/8447
+    {
+        const int dims[5] = { 2, 2, 2, 2, 2 };
+        typedef cv::Vec<int, 5> Pixel;
+
+        cv::Mat a = cv::Mat::zeros(5, dims, CV_32SC(5));
+        InitializerFunctor5D<Pixel> initializer;
+
+        a.forEach<Pixel>(initializer);
+
+        uint64 total = 0;
+        bool error_reported = false;
+        for (int i0 = 0; i0 < dims[0]; ++i0) {
+            for (int i1 = 0; i1 < dims[1]; ++i1) {
+                for (int i2 = 0; i2 < dims[2]; ++i2) {
+                    for (int i3 = 0; i3 < dims[3]; ++i3) {
+                        for (int i4 = 0; i4 < dims[4]; ++i4) {
+                            const int i[5] = { i0, i1, i2, i3, i4 };
+                            Pixel& pixel = a.at<Pixel>(i);
+                            if (pixel[0] != i0 || pixel[1] != i1 || pixel[2] != i2 || pixel[3] != i3 || pixel[4] != i4) {
+                                if (!error_reported) {
+                                    ts->printf(cvtest::TS::LOG, "forEach is not correct.\n"
+                                        "First error detected at position (%d, %d, %d, %d, %d), got value (%d, %d, %d, %d, %d).\n",
+                                        i0, i1, i2, i3, i4,
+                                        pixel[0], pixel[1], pixel[2], pixel[3], pixel[4]);
+                                    error_reported = true;
+                                }
+                                errcount++;
+                            }
+                            total += pixel[0];
+                            total += pixel[1];
+                            total += pixel[2];
+                            total += pixel[3];
+                            total += pixel[4];
+                        }
+                    }
+                }
+            }
+        }
+        uint64 total2 = 0;
+        for (size_t i = 0; i < sizeof(dims) / sizeof(dims[0]); ++i) {
+            total2 += ((dims[i] - 1) * dims[i] / 2) * dims[0] * dims[1] * dims[2] * dims[3] * dims[4] / dims[i];
         }
         if (total != total2) {
             ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
