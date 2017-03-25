@@ -1,10 +1,16 @@
 set(the_description "The ts module")
 
-if(NOT BUILD_opencv_ts AND NOT BUILD_TESTS AND NOT BUILD_PERF_TESTS)
+if(NOT BUILD_opencv_ts
+    AND NOT BUILD_TESTS
+    AND NOT BUILD_PERF_TESTS
+    AND NOT OPENCV_EXPORT_TS
+)
   ocv_module_disable(ts)
 endif()
 
-set(OPENCV_MODULE_TYPE STATIC)
+if(NOT OPENCV_EXPORT_TS)
+  set(OPENCV_MODULE_TYPE STATIC)
+endif()
 set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
 
 if(WINRT)
@@ -40,4 +46,20 @@ if(EXISTS "${OPENCV_TESTS_CONFIG_FILE}")
 endif()
 if(NOT OPENCV_TESTS_CONFIG_STR STREQUAL "${__content}")
   file(WRITE "${OPENCV_TESTS_CONFIG_FILE}" "${OPENCV_TESTS_CONFIG_STR}")
+endif()
+
+if(OPENCV_EXPORT_TS)
+  set(m ${the_module})
+  foreach(hdr ${OPENCV_MODULE_${m}_HEADERS})
+    string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
+    if(NOT hdr2 MATCHES "opencv2/${m}/private.*" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
+      install(FILES ${hdr} OPTIONAL DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT dev)
+    endif()
+  endforeach()
+
+  ocv_install_target(${the_module} EXPORT OpenCVTest OPTIONAL
+    RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT dev
+    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT dev NAMELINK_SKIP
+    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT dev
+  )
 endif()

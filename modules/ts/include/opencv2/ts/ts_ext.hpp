@@ -9,7 +9,7 @@
 #define OPENCV_TS_EXT_HPP
 
 namespace cvtest {
-void checkIppStatus();
+CV_EXPORTS void checkIppStatus();
 }
 
 #define CV_TEST_INIT \

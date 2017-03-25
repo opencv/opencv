@@ -1,0 +1,108 @@
+# ===================================================================================
+#  The OpenCV Test framework CMake configuration file (opencv_ts module)
+#
+#             ** File generated automatically, do not modify **
+#
+#  Usage from an external project:
+#    In your CMakeLists.txt, add these lines:
+#
+#    find_package(OpenCVTest REQUIRED)
+#    target_link_libraries(MY_TEST_TARGET_NAME ${OpenCVTest_LIBS})
+#
+#    This file will define the following variables:
+#      - OpenCVTest_LIBS                     : The list of all imported targets for OpenCV modules.
+#      - OpenCVTest_INCLUDE_DIRS             : The OpenCV include directories (for CMake < 2.8.11)
+#
+# ===================================================================================
+
+SET(OpenCVTest_VERSION @OPENCV_VERSION_PLAIN@)
+SET(OpenCVTest_VERSION_MAJOR  @OPENCV_VERSION_MAJOR@)
+SET(OpenCVTest_VERSION_MINOR  @OPENCV_VERSION_MINOR@)
+SET(OpenCVTest_VERSION_PATCH  @OPENCV_VERSION_PATCH@)
+SET(OpenCVTest_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
+
+include(FindPackageHandleStandardArgs)
+
+find_package(OpenCV ${OpenCVTest_VERSION} EXACT REQUIRED QUIET)
+
+# Extract the directory where *this* file has been installed (determined at cmake run-time)
+# Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
+set(OpenCVTest_CONFIG_PATH "${CMAKE_CURRENT_LIST_DIR}")
+if(NOT DEFINED OpenCV_INSTALL_PATH)
+  get_filename_component(OpenCV_INSTALL_PATH "${OpenCVTest_CONFIG_PATH}/@OpenCV_INSTALL_PATH_RELATIVE_CONFIGCMAKE@" REALPATH)
+endif()
+set(OpenCVTest_INSTALL_PATH "${OpenCV_INSTALL_PATH}")
+
+# Some additional settings are required if OpenCV is built as static libs
+set(OpenCVTest_SHARED @BUILD_SHARED_LIBS@)
+
+# Enables mangled install paths, that help with side by side installs
+set(OpenCVTest_USE_MANGLED_PATHS @OpenCV_USE_MANGLED_PATHS_CONFIGCMAKE@)
+
+set(OpenCVTest_LIB_COMPONENTS @OPENCV_TEST_MODULES_CONFIGCMAKE@)
+set(OpenCVTest_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
+
+if(NOT TARGET opencv_ts)
+  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVTestModules${OpenCVTest_MODULES_SUFFIX}.cmake)
+endif()
+
+if(NOT CMAKE_VERSION VERSION_LESS "2.8.11")
+  # Target property INTERFACE_INCLUDE_DIRECTORIES available since 2.8.11:
+  # * http://www.cmake.org/cmake/help/v2.8.11/cmake.html#prop_tgt:INTERFACE_INCLUDE_DIRECTORIES
+  foreach(__component ${OpenCVTest_LIB_COMPONENTS})
+    if(TARGET ${__component})
+      set_target_properties(
+          ${__component}
+          PROPERTIES
+          INTERFACE_INCLUDE_DIRECTORIES "${OpenCVTest_INCLUDE_DIRS}"
+      )
+    endif()
+  endforeach()
+endif()
+
+# ==============================================================
+#  Form list of modules (components) to find
+# ==============================================================
+if(NOT OpenCVTest_FIND_COMPONENTS)
+  set(OpenCVTest_FIND_COMPONENTS ${OpenCVTest_LIB_COMPONENTS})
+endif()
+
+# expand short module names and see if requested components exist
+foreach(__cvcomponent ${OpenCVTest_FIND_COMPONENTS})
+  # Store the name of the original component so we can set the
+  # OpenCVTest_<component>_FOUND variable which can be checked by the user.
+  set (__original_cvcomponent ${__cvcomponent})
+  if(NOT __cvcomponent MATCHES "^opencv_")
+    set(__cvcomponent opencv_${__cvcomponent})
+  endif()
+  list(FIND OpenCVTest_LIB_COMPONENTS ${__cvcomponent} __cvcomponentIdx)
+  if(__cvcomponentIdx LESS 0)
+      # Either the component is required or the user did not set any components at
+      # all. In the latter case, the OpenCVTest_FIND_REQUIRED_<component> variable
+      # will not be defined since it is not set by this config. So let's assume
+      # the implicitly set components are always required.
+      if(NOT DEFINED OpenCVTest_FIND_REQUIRED_${__original_cvcomponent} OR
+          OpenCVTest_FIND_REQUIRED_${__original_cvcomponent})
+        message(FATAL_ERROR "${__cvcomponent} is required but was not found")
+      elseif(NOT OpenCVTest_FIND_QUIETLY)
+        # The component was marked as optional using OPTIONAL_COMPONENTS
+        message(WARNING "Optional component ${__cvcomponent} was not found")
+      endif()
+    #indicate that module is NOT found
+    string(TOUPPER "${__cvcomponent}" __cvcomponentUP)
+    set(${__cvcomponentUP}_FOUND "${__cvcomponentUP}_FOUND-NOTFOUND")
+    set(OpenCVTest_${__original_cvcomponent}_FOUND FALSE)
+  else()
+    # Not using list(APPEND) here, because OpenCVTest_LIBS may not exist yet.
+    # Also not clearing OpenCVTest_LIBS anywhere, so that multiple calls
+    # to find_package(OpenCV) with different component lists add up.
+    set(OpenCVTest_LIBS ${OpenCVTest_LIBS} "${__cvcomponent}")
+    #indicate that module is found
+    string(TOUPPER "${__cvcomponent}" __cvcomponentUP)
+    set(${__cvcomponentUP}_FOUND 1)
+    set(OpenCVTest_${__original_cvcomponent}_FOUND TRUE)
+  endif()
+endforeach()
+
+find_package_handle_standard_args(OpenCVTest REQUIRED_VARS OpenCVTest_INSTALL_PATH
+                                  VERSION_VAR OpenCVTest_VERSION)

@@ -118,6 +118,7 @@ endif()
 ocv_cmake_eval(DEBUG_PRE ONCE)
 
 ocv_clear_vars(OpenCVModules_TARGETS)
+ocv_clear_vars(OpenCVTest_TARGETS)
 
 # ----------------------------------------------------------------------------
 # Break in case of popular CMake configuration mistakes

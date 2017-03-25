@@ -84,7 +84,7 @@ inline UMat ToUMat(InputArray src)
     return dst;
 }
 
-extern int test_loop_times;
+extern CV_EXPORTS int test_loop_times;
 
 #define MAX_VALUE 357
 
