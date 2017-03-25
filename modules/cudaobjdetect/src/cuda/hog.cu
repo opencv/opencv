@@ -518,8 +518,10 @@ namespace cv { namespace cuda { namespace device
 
 
         template <int nthreads>
-        __global__ void extract_descrs_by_rows_kernel(const int img_block_width, const int win_block_stride_x, const int win_block_stride_y,
-                                                      const float* block_hists, PtrStepf descriptors)
+        __global__ void extract_descrs_by_rows_kernel(const int img_block_width,
+                                                      const int win_block_stride_x, const int win_block_stride_y,
+                                                      const float* block_hists,
+                                                      PtrStepf descriptors)
         {
             // Get left top corner of the window in src
             const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
@@ -538,8 +540,14 @@ namespace cv { namespace cuda { namespace device
         }
 
 
-        void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, int win_stride_y, int win_stride_x,
-                                    int height, int width, float* block_hists, int cell_size_x, int ncells_block_x, PtrStepSzf descriptors)
+        void extract_descrs_by_rows(int win_height, int win_width,
+                                    int block_stride_y, int block_stride_x,
+                                    int win_stride_y, int win_stride_x,
+                                    int height, int width,
+                                    float* block_hists, int cell_size_x,
+                                    int ncells_block_x,
+                                    PtrStepSzf descriptors,
+                                    const cudaStream_t& stream)
         {
             const int nthreads = 256;
 
@@ -551,17 +559,16 @@ namespace cv { namespace cuda { namespace device
             dim3 grid(img_win_width, img_win_height);
 
             int img_block_width = (width - ncells_block_x * cell_size_x + block_stride_x) / block_stride_x;
-            extract_descrs_by_rows_kernel<nthreads><<<grid, threads>>>(
-                img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
-            cudaSafeCall( cudaGetLastError() );
+            extract_descrs_by_rows_kernel<nthreads><<<grid, threads, 0, stream>>>(img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
 
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cudaSafeCall( cudaGetLastError() );
         }
 
 
         template <int nthreads>
-        __global__ void extract_descrs_by_cols_kernel(const int img_block_width, const int win_block_stride_x,
-                                                      const int win_block_stride_y, const float* block_hists,
+        __global__ void extract_descrs_by_cols_kernel(const int img_block_width,
+                                                      const int win_block_stride_x, const int win_block_stride_y,
+                                                      const float* block_hists,
                                                       PtrStepf descriptors)
         {
             // Get left top corner of the window in src
@@ -792,8 +799,12 @@ namespace cv { namespace cuda { namespace device
         }
 
 
-        void compute_gradients_8UC1(int nbins, int height, int width, const PtrStepSzb& img,
-                                    float angle_scale, PtrStepSzf grad, PtrStepSzb qangle, bool correct_gamma)
+        void compute_gradients_8UC1(int nbins,
+                                    int height, int width, const PtrStepSzb& img,
+                                    float angle_scale,
+                                    PtrStepSzf grad, PtrStepSzb qangle,
+                                    bool correct_gamma,
+                                    const cudaStream_t& stream)
         {
             (void)nbins;
             const int nthreads = 256;
@@ -802,13 +813,11 @@ namespace cv { namespace cuda { namespace device
             dim3 gdim(divUp(width, bdim.x), divUp(height, bdim.y));
 
             if (correct_gamma)
-                compute_gradients_8UC1_kernel<nthreads, 1><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
+                compute_gradients_8UC1_kernel<nthreads, 1><<<gdim, bdim, 0, stream>>>(height, width, img, angle_scale, grad, qangle);
             else
-                compute_gradients_8UC1_kernel<nthreads, 0><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
+                compute_gradients_8UC1_kernel<nthreads, 0><<<gdim, bdim, 0, stream>>>(height, width, img, angle_scale, grad, qangle);
 
             cudaSafeCall( cudaGetLastError() );
-
-            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
 
