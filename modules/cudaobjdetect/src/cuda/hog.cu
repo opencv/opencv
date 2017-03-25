@@ -52,7 +52,6 @@ namespace cv { namespace cuda { namespace device
 
     namespace hog
     {
-
         __constant__ int cnbins;
         __constant__ int cblock_stride_x;
         __constant__ int cblock_stride_y;
@@ -99,8 +98,10 @@ namespace cv { namespace cuda { namespace device
         }
 
 
-        void set_up_constants(int nbins, int block_stride_x, int block_stride_y,
-                              int nblocks_win_x, int nblocks_win_y, int ncells_block_x, int ncells_block_y,
+        void set_up_constants(int nbins,
+                              int block_stride_x, int block_stride_y,
+                              int nblocks_win_x, int nblocks_win_y,
+                              int ncells_block_x, int ncells_block_y,
                               const cudaStream_t& stream)
         {
             cudaSafeCall(cudaMemcpyToSymbolAsync(cnbins,               &nbins,               sizeof(nbins),               0, cudaMemcpyHostToDevice, stream));
@@ -232,10 +233,14 @@ namespace cv { namespace cuda { namespace device
         }
 
         //declaration of variables and invoke the kernel with the calculated number of blocks
-        void compute_hists(int nbins, int block_stride_x, int block_stride_y,
-                           int height, int width, const PtrStepSzf& grad,
-                           const PtrStepSzb& qangle, float sigma, float* block_hists,
-                           int cell_size_x, int cell_size_y, int ncells_block_x, int ncells_block_y,
+        void compute_hists(int nbins,
+                           int block_stride_x, int block_stride_y,
+                           int height, int width,
+                           const PtrStepSzf& grad, const PtrStepSzb& qangle,
+                           float sigma,
+                           float* block_hists,
+                           int cell_size_x, int cell_size_y,
+                           int ncells_block_x, int ncells_block_y,
                            const cudaStream_t& stream)
         {
             const int ncells_block = ncells_block_x * ncells_block_y;
@@ -345,8 +350,13 @@ namespace cv { namespace cuda { namespace device
         }
 
 
-        void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
-                             int height, int width, float* block_hists, float threshold, int cell_size_x, int cell_size_y, int ncells_block_x, int ncells_block_y,
+        void normalize_hists(int nbins,
+                             int block_stride_x, int block_stride_y,
+                             int height, int width,
+                             float* block_hists,
+                             float threshold,
+                             int cell_size_x, int cell_size_y,
+                             int ncells_block_x, int ncells_block_y,
                              const cudaStream_t& stream)
         {
             const int nblocks = 1;
@@ -576,8 +586,12 @@ namespace cv { namespace cuda { namespace device
         }
 
 
-        void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x,
-                                    int win_stride_y, int win_stride_x, int height, int width, float* block_hists, int cell_size_x, int ncells_block_x,
+        void extract_descrs_by_cols(int win_height, int win_width,
+                                    int block_stride_y, int block_stride_x,
+                                    int win_stride_y, int win_stride_x,
+                                    int height, int width,
+                                    float* block_hists,
+                                    int cell_size_x, int ncells_block_x,
                                     PtrStepSzf descriptors,
                                     const cudaStream_t& stream)
         {
@@ -703,8 +717,11 @@ namespace cv { namespace cuda { namespace device
         }
 
 
-        void compute_gradients_8UC4(int nbins, int height, int width, const PtrStepSzb& img,
-                                    float angle_scale, PtrStepSzf grad, PtrStepSzb qangle, bool correct_gamma,
+        void compute_gradients_8UC4(int nbins,
+                                    int height, int width, const PtrStepSzb& img,
+                                    float angle_scale,
+                                    PtrStepSzf grad, PtrStepSzb qangle,
+                                    bool correct_gamma,
                                     const cudaStream_t& stream)
         {
             (void)nbins;

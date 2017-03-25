@@ -515,15 +515,25 @@ namespace
         GpuMat grad       = pool.getBuffer(img.size(), CV_32FC2);
         GpuMat qangle     = pool.getBuffer(img.size(), CV_8UC2);
 
-        hog::set_up_constants(nbins_, block_stride_.width, block_stride_.height, blocks_per_win.width, blocks_per_win.height, cells_per_block_.width, cells_per_block_.height, StreamAccessor::getStream(stream));
+        hog::set_up_constants(nbins_,
+                              block_stride_.width, block_stride_.height,
+                              blocks_per_win.width, blocks_per_win.height,
+                              cells_per_block_.width, cells_per_block_.height,
+                              StreamAccessor::getStream(stream));
 
         switch (img.type())
         {
             case CV_8UC1:
-                hog::compute_gradients_8UC1(nbins_, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction_);
+                hog::compute_gradients_8UC1(nbins_, img.rows, img.cols, img,
+                                            angleScale, grad, qangle, gamma_correction_);
                 break;
             case CV_8UC4:
-                hog::compute_gradients_8UC4(nbins_, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction_, StreamAccessor::getStream(stream));
+                hog::compute_gradients_8UC4(nbins_,
+                                            img.rows, img.cols, img,
+                                            angleScale,
+                                            grad, qangle,
+                                            gamma_correction_,
+                                            StreamAccessor::getStream(stream));
                 break;
         }
 
