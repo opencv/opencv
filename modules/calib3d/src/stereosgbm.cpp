@@ -513,6 +513,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
              6: r=(1, -dy*2)
              7: r=(2, -dy)
              */
+
             for( x = x1; x != x2; x += dx )
             {
                 int xm = x*NR2, xd = xm*D2;
@@ -853,6 +854,7 @@ TODO: Don't forget to rewrire this commentaries after
  disp2cost also has the same size as img1 (or img2).
  It contains the minimum current cost, used to find the best disparity, corresponding to the minimal cost.
  */
+#include<stdio.h>  //TODO: DUBUG!!!
 static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
                                  Mat& disp1, const StereoSGBMParams& params,
                                  Mat& buffer )
@@ -1005,7 +1007,7 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
                         if( y > 0 )                 //4e: We calculate horizontal sums and forming full block sums for y coord by adding this horsums to previous line's sums and subtracting stored lowest
                         {                           //4e: horsum in hsumBuf. Exception is case y=0, where we need many iterations per lines to create full blocking sum.
                             const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
-                            const CostType* Cprev = !fullDP || y == 0 ? C : C - costBufSize;    //4e: Well, actually y>0, so we don't need this check: y==0
+                            const CostType* Cprev = C - costBufSize;    //4e: Well, actually y>0, so we don't need this check: y==0
 
                             for( x = D; x < width1*D; x += D )
                             {
@@ -1089,11 +1091,11 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
              6: r=(1, -dy*2)
              7: r=(2, -dy)
              */
-            for( x = 0; x != width; x++ )
+            for( x = 0; x != width1; x++ )
             {
                 int xd = x*D2;
 
-                int delta = minLr[1][x];
+                int delta = minLr[1][x] + P2;
 
                 CostType* Lr_ppr = Lr[1] + xd;
 
@@ -1189,9 +1191,9 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
                         L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
 
                         Lr_p[d] = (CostType)L;
-                        minL0 = std::min(minL, L);
+                        minL = std::min(minL, L);
 
-                        Sp[d] = saturate_cast<CostType>(Sp[d] + L0);
+                        Sp[d] = saturate_cast<CostType>(Sp[d] + L);
                     }
                     minLr[0][x] = (CostType)minL;
                 }
@@ -1224,8 +1226,8 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
         {
             int x, d;
             DispType* disp1ptr = disp1.ptr<DispType>(y);
-            CostType* C = Cbuf + costBufSize;
-            CostType* S = Sbuf + costBufSize;
+            CostType* C = Cbuf + y*costBufSize;
+            CostType* S = Sbuf + y*costBufSize;
 
             for( x = 0; x < width; x++ )
             {
@@ -1233,7 +1235,7 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
                 disp2cost[x] = MAX_COST;
             }
 
-            // clear the left and the right borders                             //TODO: Well, two of that memsets we could delete, but rest of them is direction-dependent
+            // clear the left and the right borders
             memset( Lr - D2*LrBorder - 8, 0, D2*LrBorder*sizeof(CostType) );     //4e: To understand this "8" shifts and how they could work it's simpler to imagine pixel dislocation in memory
             memset( Lr + width1*D2 - 8, 0, D2*LrBorder*sizeof(CostType) );       //4e: ...00000000|D2-16 of real costs value(and some of them are zeroes too)|00000000...
             memset( minLr - LrBorder, 0, LrBorder*sizeof(CostType) );
@@ -1261,7 +1263,7 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
             {
                 int xd = x*D2;
 
-                int delta = minLr[x - 1];
+                int delta = minLr[x - 1] + P2;
 
                 CostType* Lr_ppr = Lr + xd - D2;
 
@@ -1354,14 +1356,14 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
                     {
                         int Cpd = Cp[d], L;   //4e: Remember, that every Cp is increased on P2 in line number 369. That's why next 4 lines are paper-like actually
 
-                        L0 = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+                        L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
 
                         Lr_p[d] = (CostType)L;
-                        minL0 = std::min(minL, L);
+                        minL = std::min(minL, L);
 
                         Sp[d] = saturate_cast<CostType>(Sp[d] + L);
                     }
-                    minLr[x] = (CostType)minL0;
+                    minLr[x] = (CostType)minL;
                 }
             }
 
@@ -1369,7 +1371,7 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
             {
                 int xd = x*D2;
 
-                int delta = minLr[x + 1];
+                int delta = minLr[x + 1] + P2;
 
                 CostType* Lr_ppr = Lr + xd + D2;
 
@@ -1489,10 +1491,10 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
                     {
                         int Cpd = Cp[d], L;   //4e: Remember, that every Cp is increased on P2 in line number 369. That's why next 4 lines are paper-like actually
 
-                        L0 = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+                        L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
 
                         Lr_p[d] = (CostType)L;
-                        minL0 = std::min(minL, L);
+                        minL = std::min(minL, L);
 
                         Sp[d] = saturate_cast<CostType>(Sp[d] + L);
                         if( Sp[d] < minS )
@@ -1501,7 +1503,7 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
                             bestDisp = d;
                         }
                     }
-                    minLr[x] = (CostType)minL0;
+                    minLr[x] = (CostType)minL;
                 }
                 //Some postprocessing procedures and saving
                 for( d = 0; d < D; d++ )
@@ -2206,6 +2208,8 @@ public:
 
         if(params.mode==MODE_SGBM_3WAY)
             computeDisparity3WaySGBM( left, right, disp, params, buffers, num_stripes );
+        else if(params.mode==MODE_HH4)
+            computeDisparitySGBMParallel( left, right, disp, params, buffer );
         else
             computeDisparitySGBM( left, right, disp, params, buffer );
 
