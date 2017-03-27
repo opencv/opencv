@@ -4,7 +4,11 @@
 #include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list
 
+#if __OPENCV_BUILD
 #include "cvconfig.h"
+#else
+#include "opencv2/cvconfig.h"
+#endif
 
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model

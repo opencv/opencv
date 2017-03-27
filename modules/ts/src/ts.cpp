@@ -74,8 +74,9 @@
 # include <sys/stat.h>
 #endif
 
-
+#if __OPENCV_BUILD
 #include "opencv_tests_config.hpp"
+#endif
 
 namespace cvtest
 {
