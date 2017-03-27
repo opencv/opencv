@@ -784,3 +784,33 @@ protected:
 
 TEST(Calib3d_StereoBM, regression) { CV_StereoBMTest test; test.safe_run(); }
 TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
+
+TEST(Calib3d_StereoSGBMPar, idontknowhowtotesthere)
+{
+//	<!-- caseName, datasetName, numDisp, winSize, mode -->
+//	case_teddy_2 teddy "48" "3" "MODE_HH"
+
+//Ptr<StereoSGBM> StereoSGBM::create(int minDisparity, int numDisparities, int SADWindowSize,
+//                                 int P1, int P2, int disp12MaxDiff,
+//                                 int preFilterCap, int uniquenessRatio,
+//                                 int speckleWindowSize, int speckleRange,
+//                                 int mode)
+    Mat leftImg = imread("/home/q/Work/GitVault/opencv_extra/testdata/cv/stereomatching/datasets/teddy/im2.png");
+    Mat rightImg = imread("/home/q/Work/GitVault/opencv_extra/testdata/cv/stereomatching/datasets/teddy/im6.png");
+    {
+        Mat leftDisp;
+        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH);
+        sgbm->compute( leftImg, rightImg, leftDisp );
+        CV_Assert( leftDisp.type() == CV_16SC1 );
+        leftDisp/=8;
+        imwrite( "/home/q/Work/GitVault/modehh.jpg", leftDisp);
+    }
+    {
+        Mat leftDisp;
+        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4);
+        sgbm->compute( leftImg, rightImg, leftDisp );
+        CV_Assert( leftDisp.type() == CV_16SC1 );
+        leftDisp/=8;
+        imwrite( "/home/q/Work/GitVault/modehh4.jpg", leftDisp);
+    }
+}
