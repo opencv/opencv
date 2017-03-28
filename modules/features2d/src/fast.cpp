@@ -352,6 +352,9 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
     if(imgMat.empty() || imgMat.type() != CV_8UC1)
         return false;
 
+    if (ovx::skipSmallImages<VX_KERNEL_FAST_CORNERS>(imgMat.cols, imgMat.rows))
+        return false;
+
     try
     {
         Context context = ovx::getOpenVXContext();

@@ -1265,6 +1265,9 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
     Mat srcMat = _src.getMat();
 
+    if (ovx::skipSmallImages<VX_KERNEL_HALFSCALE_GAUSSIAN>(srcMat.cols, srcMat.rows))
+        return false;
+
     CV_Assert(!srcMat.empty());
 
     Size ssize = _src.size();

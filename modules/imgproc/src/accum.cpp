@@ -1945,6 +1945,8 @@ enum
 static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray _mask, double _weight, int opType)
 {
     Mat srcMat = _src.getMat(), dstMat = _dst.getMat();
+    if (ovx::skipSmallImages<VX_KERNEL_ACCUMULATE>(srcMat.cols, srcMat.rows))
+        return false;
     if(!_mask.empty() ||
        (opType == VX_ACCUMULATE_WEIGHTED_OP && dstMat.type() != CV_8UC1  ) ||
        (opType != VX_ACCUMULATE_WEIGHTED_OP && dstMat.type() != CV_16SC1 ) ||

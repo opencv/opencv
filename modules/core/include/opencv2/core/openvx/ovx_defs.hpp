@@ -24,6 +24,16 @@ namespace cv{
 namespace ovx{
 // Get common thread local OpenVX context
 CV_EXPORTS_W ivx::Context& getOpenVXContext();
+
+template <int kernel_id> inline bool skipSmallImages(int w, int h)     { return w*h < 3840 * 2160; }
+template <> inline bool skipSmallImages<VX_KERNEL_MINMAXLOC>(int w, int h) { return w*h < 1280*720; }
+template <> inline bool skipSmallImages<VX_KERNEL_MEDIAN_3x3>(int w, int h) { return w*h < 1280 * 720; }
+template <> inline bool skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(int w, int h) { return w*h < 1280 * 720; }
+template <> inline bool skipSmallImages<VX_KERNEL_BOX_3x3>(int w, int h) { return w*h < 1280 * 720; }
+template <> inline bool skipSmallImages<VX_KERNEL_HISTOGRAM>(int w, int h) { return w*h < 2048 * 1536; }
+template <> inline bool skipSmallImages<VX_KERNEL_SOBEL_3x3>(int w, int h) { return w*h < 640 * 480; }
+template <> inline bool skipSmallImages<VX_KERNEL_CUSTOM_CONVOLUTION>(int w, int h) { return w*h < 1280 * 720; }
+
 }}
 
 #define CV_OVX_RUN(condition, func, ...)          \

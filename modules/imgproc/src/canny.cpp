@@ -868,7 +868,8 @@ void Canny( InputArray _src, OutputArray _dst,
             src.type() == CV_8UC1 &&
             !src.isSubmatrix() &&
             src.cols >= aperture_size &&
-            src.rows >= aperture_size,
+            src.rows >= aperture_size &&
+            !ovx::skipSmallImages<VX_KERNEL_CANNY_EDGE_DETECTOR>(src.cols, src.rows),
         openvx_canny(
             src,
             dst,
