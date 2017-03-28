@@ -191,13 +191,19 @@ namespace cv
         int stype = _src.type();
         int dtype = _dst.type();
         if (stype != CV_8UC1 || (dtype != CV_16SC1 && dtype != CV_8UC1) ||
-            ksize < 3 || ksize % 2 != 1 || delta != 0.0)
+            ksize != 3 || delta != 0.0)//Restrict to 3x3 kernels since otherwise convolution would be slower than separable filter
             return false;
 
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
 
         if (src.cols < ksize || src.rows < ksize)
+            return false;
+
+        if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1 ?
+            ovx::skipSmallImages<VX_KERNEL_SOBEL_3x3>(src.cols, src.rows) :
+            ovx::skipSmallImages<VX_KERNEL_CUSTOM_CONVOLUTION>(src.cols, src.rows)
+            )
             return false;
 
         int iscale = 1;
@@ -237,8 +243,8 @@ namespace cv
         try
         {
             ivx::Context ctx = ovx::getOpenVXContext();
-            if ((vx_size)ksize > ctx.convolutionMaxDimension())
-                return false;
+            //if ((vx_size)ksize > ctx.convolutionMaxDimension())
+            //    return false;
 
             Mat a;
             if (dst.data != src.data)

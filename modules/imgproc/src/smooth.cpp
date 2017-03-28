@@ -1649,11 +1649,17 @@ namespace cv
         if (stype != CV_8UC1 || (ddepth != CV_8U && ddepth != CV_16S) ||
             (anchor.x >= 0 && anchor.x != ksize.width / 2) ||
             (anchor.y >= 0 && anchor.y != ksize.height / 2) ||
-            ksize.width % 2 != 1 || ksize.height % 2 != 1 ||
-            ksize.width < 3 || ksize.height < 3)
+            ksize.width != 3 || ksize.height != 3)
             return false;
 
         Mat src = _src.getMat();
+
+        if (ddepth == CV_8U && ksize.width == 3 && ksize.height == 3 && normalize ?
+            ovx::skipSmallImages<VX_KERNEL_BOX_3x3>(src.cols, src.rows) :
+            ovx::skipSmallImages<VX_KERNEL_CUSTOM_CONVOLUTION>(src.cols, src.rows)
+            )
+            return false;
+
         _dst.create(src.size(), CV_MAKETYPE(ddepth, 1));
         Mat dst = _dst.getMat();
 
@@ -1678,8 +1684,8 @@ namespace cv
         try
         {
             ivx::Context ctx = ovx::getOpenVXContext();
-            if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
-                return false;
+            //if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
+            //    return false;
 
             Mat a;
             if (dst.data != src.data)
@@ -2210,6 +2216,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     if (stype != CV_8UC1 ||
         ksize.width < 3 || ksize.height < 3 ||
+        ksize.width > 5 || ksize.height > 5 ||
         ksize.width % 2 != 1 || ksize.height % 2 != 1)
         return false;
 
@@ -2218,6 +2225,12 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     Mat src = _src.getMat();
     Mat dst = _dst.getMat();
+
+    if (ksize.width == 3 && ksize.height == 3 && (sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) && (sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON) ?
+        ovx::skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(src.cols, src.rows) :
+        ovx::skipSmallImages<VX_KERNEL_CUSTOM_CONVOLUTION>(src.cols, src.rows)
+        )
+        return false;
 
     if (src.cols < ksize.width || src.rows < ksize.height)
         return false;
@@ -3358,6 +3371,14 @@ namespace cv
 
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
+
+        if (
+#ifdef VX_VERSION_1_1
+             ksize != 3 ? ovx::skipSmallImages<VX_KERNEL_NON_LINEAR_FILTER>(src.cols, src.rows) :
+#endif
+             ovx::skipSmallImages<VX_KERNEL_MEDIAN_3x3>(src.cols, src.rows)
+           )
+            return false;
 
         try
         {
