@@ -21,6 +21,7 @@ ocv_download(FILENAME ${tbb_filename}
                "$ENV{OPENCV_TBB_URL}"
                "https://github.com/01org/tbb/archive/"
              DESTINATION_DIR ${tbb_src_dir}
+             ID TBB
              STATUS res
              UNPACK RELATIVE_URL)
 if(NOT res)
