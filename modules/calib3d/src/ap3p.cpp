@@ -126,6 +126,7 @@ int ap3p::computePoses(const double featureVectors[3][3],
   double b3p[3];
   vect_scale((delta / k3b3), b3, b3p);
 
+  int nb_solutions = 0;
   for (int i = 0; i < 4; ++i) {
     double ctheta1p = s[i];
     if (abs(ctheta1p) > 1)
@@ -157,20 +158,22 @@ int ap3p::computePoses(const double featureVectors[3][3],
     double pxstheta1p[3];
     vect_scale(stheta1p, b3p, pxstheta1p);
 
-    vect_sub(pxstheta1p, rp3, solutionsT[i]);
+    vect_sub(pxstheta1p, rp3, solutionsT[nb_solutions]);
 
-    solutionsR[i][0][0] = R[0][0];
-    solutionsR[i][1][0] = R[0][1];
-    solutionsR[i][2][0] = R[0][2];
-    solutionsR[i][0][1] = R[1][0];
-    solutionsR[i][1][1] = R[1][1];
-    solutionsR[i][2][1] = R[1][2];
-    solutionsR[i][0][2] = R[2][0];
-    solutionsR[i][1][2] = R[2][1];
-    solutionsR[i][2][2] = R[2][2];
+    solutionsR[nb_solutions][0][0] = R[0][0];
+    solutionsR[nb_solutions][1][0] = R[0][1];
+    solutionsR[nb_solutions][2][0] = R[0][2];
+    solutionsR[nb_solutions][0][1] = R[1][0];
+    solutionsR[nb_solutions][1][1] = R[1][1];
+    solutionsR[nb_solutions][2][1] = R[1][2];
+    solutionsR[nb_solutions][0][2] = R[2][0];
+    solutionsR[nb_solutions][1][2] = R[2][1];
+    solutionsR[nb_solutions][2][2] = R[2][2];
+
+    nb_solutions++;
   }
 
-  return 0;
+  return nb_solutions;
 }
 
 void ap3p::solveQuartic(const double *factors, double *realRoots) {
@@ -305,12 +308,14 @@ bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Ma
 }
 
 bool
-ap3p::solve(double (*R)[3], double *t, double mu0, double mv0, double X0, double Y0, double Z0, double mu1, double mv1,
+ap3p::solve(double R[3][3], double t[3], double mu0, double mv0, double X0, double Y0, double Z0, double mu1, double mv1,
             double X1, double Y1, double Z1, double mu2, double mv2, double X2, double Y2, double Z2, double mu3,
             double mv3, double X3, double Y3, double Z3) {
   double Rs[4][3][3], ts[4][3];
 
   int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0, mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2);
+  if (n == 0)
+    return false;
 
   int ns = 0;
   double min_reproj = 0;
@@ -336,7 +341,7 @@ ap3p::solve(double (*R)[3], double *t, double mu0, double mv0, double X0, double
   return true;
 }
 
-int ap3p::solve(double (*R)[3][3], double (*t)[3], double mu0, double mv0, double X0, double Y0, double Z0, double mu1,
+int ap3p::solve(double R[4][3][3], double t[4][3], double mu0, double mv0, double X0, double Y0, double Z0, double mu1,
                 double mv1, double X1, double Y1, double Z1, double mu2, double mv2, double X2, double Y2, double Z2) {
   double mk0, mk1, mk2;
   double norm;
@@ -364,6 +369,6 @@ int ap3p::solve(double (*R)[3][3], double (*t)[3], double mu0, double mv0, doubl
 
   double featureVectors[3][3] = {{mu0, mu1, mu2}, {mv0, mv1, mv2}, {mk0, mk1, mk2}};
   double worldPoints[3][3] = {{X0, X1, X2}, {Y0, Y1, Y2}, {Z0, Z1, Z2}};
-  computePoses(featureVectors, worldPoints, R, t);
-  return 4;
+
+  return computePoses(featureVectors, worldPoints, R, t);
 }
