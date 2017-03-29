@@ -82,9 +82,10 @@ inline bool dimTooBig(int size)
 }
 
 //OpenVX calls have essential overhead so it make sense to skip them for small images
-template <int kernel_id> inline bool             skipSmallImages(int w, int h) { return w*h < 7680 * 4320; }
-template <> inline bool      skipSmallImages<VX_KERNEL_MULTIPLY>(int w, int h) { return w*h <  640 *  480; }
-template <> inline bool skipSmallImages<VX_KERNEL_COLOR_CONVERT>(int w, int h) { return w*h < 2048 * 1536; }
+template <int kernel_id> inline bool              skipSmallImages(int w, int h) { return w*h < 7680 * 4320; }
+template <> inline bool       skipSmallImages<VX_KERNEL_MULTIPLY>(int w, int h) { return w*h <  640 *  480; }
+template <> inline bool  skipSmallImages<VX_KERNEL_COLOR_CONVERT>(int w, int h) { return w*h < 2048 * 1536; }
+template <> inline bool skipSmallImages<VX_KERNEL_INTEGRAL_IMAGE>(int w, int h) { return w*h <  640 *  480; }
 
 inline void setConstantBorder(ivx::border_t &border, vx_uint8 val)
 {

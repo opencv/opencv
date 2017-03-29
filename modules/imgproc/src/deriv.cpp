@@ -234,8 +234,8 @@ namespace cv
             border = VX_BORDER_CONSTANT;
             break;
         case BORDER_REPLICATE:
-            border = VX_BORDER_REPLICATE;
-            break;
+//            border = VX_BORDER_REPLICATE;
+//            break;
         default:
             return false;
         }
