@@ -82,7 +82,7 @@ inline bool dimTooBig(int size)
 }
 
 //OpenVX calls have essential overhead so it make sense to skip them for small images
-template <int kernel_id> inline bool             skipSmallImages(int w, int h) { return w*h < 3840 * 2160; }
+template <int kernel_id> inline bool             skipSmallImages(int w, int h) { return w*h < 7680 * 4320; }
 template <> inline bool      skipSmallImages<VX_KERNEL_MULTIPLY>(int w, int h) { return w*h <  640 *  480; }
 template <> inline bool skipSmallImages<VX_KERNEL_COLOR_CONVERT>(int w, int h) { return w*h < 2048 * 1536; }
 
@@ -175,7 +175,9 @@ OVX_BINARY_OP(xor, { ivx::IVX_CHECK_STATUS(vxuXor(ctx, ia, ib, ic)); }, VX_KERNE
 template <typename T>
 int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h, double scale)
 {
-    if(skipSmallImages<VX_KERNEL_MULTIPLY>(w, h))
+    if(scale == 1.0 || sizeof(T) > 1 ?
+       skipSmallImages<VX_KERNEL_ADD>(w, h) : /*actually it could be any kernel with generic minimum size*/
+       skipSmallImages<VX_KERNEL_MULTIPLY>(w, h) )
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
