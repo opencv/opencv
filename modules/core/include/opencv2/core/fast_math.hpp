@@ -74,7 +74,7 @@
 #  include "tegra_round.hpp"
 #endif
 
-#if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__
+#if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__ && !defined(__CUDACC__)
     // 1. general scheme
     #define ARM_ROUND(_value, _asm_string) \
         int res; \
