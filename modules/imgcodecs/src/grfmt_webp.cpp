@@ -62,6 +62,7 @@ namespace cv
 WebPDecoder::WebPDecoder()
 {
     m_buf_supported = true;
+    m_description = "WEBP";
 }
 
 WebPDecoder::~WebPDecoder() {}
@@ -88,7 +89,7 @@ bool WebPDecoder::checkSignature(const String & signature) const
     return ret;
 }
 
-ImageDecoder WebPDecoder::newDecoder() const
+Ptr<ImageDecoder> WebPDecoder::newDecoder() const
 {
     return makePtr<WebPDecoder>();
 }
@@ -199,7 +200,7 @@ WebPEncoder::WebPEncoder()
 
 WebPEncoder::~WebPEncoder() { }
 
-ImageEncoder WebPEncoder::newEncoder() const
+Ptr<ImageEncoder> WebPEncoder::newEncoder() const
 {
     return makePtr<WebPEncoder>();
 }

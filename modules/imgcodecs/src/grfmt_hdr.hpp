@@ -63,7 +63,7 @@ public:
     bool readHeader();
     bool readData( Mat& img );
     bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder> newDecoder() const;
     size_t signatureLength() const;
 protected:
     String m_signature_alt;
@@ -77,7 +77,7 @@ public:
     HdrEncoder();
     ~HdrEncoder();
     bool write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder> newEncoder() const;
     bool isFormatSupported( int depth ) const;
 protected:
 

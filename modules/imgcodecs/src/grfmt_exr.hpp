@@ -75,7 +75,7 @@ public:
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder> newDecoder() const;
 
 protected:
     void  UpSample( uchar *data, int xstep, int ystep, int xsample, int ysample );
@@ -107,7 +107,7 @@ public:
 
     bool  isFormatSupported( int depth ) const;
     bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder> newEncoder() const;
 };
 
 }

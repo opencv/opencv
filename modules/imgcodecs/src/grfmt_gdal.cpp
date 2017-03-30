@@ -175,6 +175,7 @@ GdalDecoder::GdalDecoder(){
 
     m_driver = NULL;
     m_dataset = NULL;
+    m_description = "GDAL";
 }
 
 /**
@@ -548,7 +549,7 @@ void GdalDecoder::close(){
 /**
  * Create a new decoder
 */
-ImageDecoder GdalDecoder::newDecoder()const{
+Ptr<ImageDecoder> GdalDecoder::newDecoder()const{
     return makePtr<GdalDecoder>();
 }
 

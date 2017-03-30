@@ -62,7 +62,7 @@ public:
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder> newDecoder() const;
 
 protected:
 
@@ -87,7 +87,7 @@ public:
     bool  isFormatSupported( int depth ) const;
     bool  write( const Mat& img, const std::vector<int>& params );
 
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder> newEncoder() const;
 
 protected:
     static void writeDataToBuf(void* png_ptr, uchar* src, size_t size);

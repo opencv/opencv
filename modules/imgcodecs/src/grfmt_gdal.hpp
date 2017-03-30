@@ -135,7 +135,7 @@ class GdalDecoder : public BaseImageDecoder{
         /**
          * Create a new decoder
         */
-        ImageDecoder newDecoder() const;
+        Ptr<ImageDecoder> newDecoder() const;
 
         /**
          * Test the file signature
