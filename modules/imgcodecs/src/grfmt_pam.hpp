@@ -47,7 +47,7 @@
 //
 //M*/
 
-//Based on "imgcodecs/src/grfmt_pxm.hpp"
+//d on "imgcodecs/src/grfmt_pxm.hpp"
 //Written by Dimitrios Katsaros <patcherwork@gmail.com>
 
 #ifndef _OPENCV_PAM_HPP_
@@ -59,7 +59,7 @@
 namespace cv
 {
 
-class PAMDecoder : public BaseImageDecoder
+class PAMDecoder : public ImageDecoder::Impl
 {
 public:
 
@@ -71,7 +71,7 @@ public:
 
     size_t signatureLength() const;
     bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
 
@@ -82,16 +82,16 @@ protected:
 };
 
 
-class PAMEncoder : public BaseImageEncoder
+class PAMEncoder : public ImageEncoder::Impl
 {
 public:
     PAMEncoder();
     virtual ~PAMEncoder();
 
     bool  isFormatSupported( int depth ) const;
-    bool  write( const Mat& img, const std::vector<int>& params );
+    bool  write( const Mat& img, InputArray params );
 
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 };
 
 }

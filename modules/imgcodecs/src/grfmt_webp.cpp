@@ -62,6 +62,7 @@ namespace cv
 WebPDecoder::WebPDecoder()
 {
     m_buf_supported = true;
+    m_description = "WEBP";
 }
 
 WebPDecoder::~WebPDecoder() {}
@@ -88,7 +89,7 @@ bool WebPDecoder::checkSignature(const String & signature) const
     return ret;
 }
 
-ImageDecoder WebPDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> WebPDecoder::newDecoder() const
 {
     return makePtr<WebPDecoder>();
 }
@@ -205,13 +206,14 @@ WebPEncoder::WebPEncoder()
 
 WebPEncoder::~WebPEncoder() { }
 
-ImageEncoder WebPEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> WebPEncoder::newEncoder() const
 {
     return makePtr<WebPEncoder>();
 }
 
-bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
+bool WebPEncoder::write(const Mat& img, InputArray _params)
 {
+    Mat_<int> params(_params.getMat());
     int channels = img.channels(), depth = img.depth();
     int width = img.cols, height = img.rows;
 
@@ -222,12 +224,14 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     bool comp_lossless = true;
     float quality = 100.0f;
 
-    if (params.size() > 1)
+
+    if (std::distance(params.begin(), params.end()) > 1)
     {
-        if (params[0] == CV_IMWRITE_WEBP_QUALITY)
+        MatIterator_<int> it = params.begin();
+        if (*it == CV_IMWRITE_WEBP_QUALITY)
         {
             comp_lossless = false;
-            quality = static_cast<float>(params[1]);
+            quality = static_cast<float>(*(++it));
             if (quality < 1.0f)
             {
                 quality = 1.0f;
@@ -285,7 +289,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         if(m_buf)
         {
             m_buf->resize(size);
-            memcpy(&(*m_buf)[0], out, size);
+            memcpy(&m_buf->data[0], out, size);
         }
         else
         {

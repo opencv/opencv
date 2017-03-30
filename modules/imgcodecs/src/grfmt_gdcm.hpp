@@ -53,13 +53,13 @@ namespace cv
 {
 
 // DICOM image reader using GDCM
-class DICOMDecoder : public BaseImageDecoder
+class DICOMDecoder : public ImageDecoder::Impl
 {
 public:
     DICOMDecoder();
     bool  readData( Mat& img );
     bool  readHeader();
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
     virtual bool checkSignature( const String& signature ) const;
 };
 

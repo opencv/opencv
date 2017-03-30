@@ -375,9 +375,9 @@ void  WBaseStream::writeBlock()
 
     if( m_buf )
     {
-        size_t sz = m_buf->size();
+        size_t sz = m_buf->total() * m_buf->elemSize();
         m_buf->resize( sz + size );
-        memcpy( &(*m_buf)[sz], m_start, size );
+        memcpy( &m_buf->data[sz], m_start, size );
     }
     else
     {
@@ -403,7 +403,7 @@ bool  WBaseStream::open( const String& filename )
     return m_file != 0;
 }
 
-bool  WBaseStream::open( std::vector<uchar>& buf )
+bool  WBaseStream::open( Mat& buf )
 {
     close();
     allocate();

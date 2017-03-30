@@ -64,7 +64,7 @@ enum SunRasMapType
 
 
 // Sun Raster Reader
-class SunRasterDecoder : public BaseImageDecoder
+class SunRasterDecoder : public ImageDecoder::Impl
 {
 public:
 
@@ -75,7 +75,7 @@ public:
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
 
@@ -89,15 +89,15 @@ protected:
 };
 
 
-class SunRasterEncoder : public BaseImageEncoder
+class SunRasterEncoder : public ImageEncoder::Impl
 {
 public:
     SunRasterEncoder();
     virtual ~SunRasterEncoder();
 
-    bool write( const Mat& img, const std::vector<int>& params );
+    bool write( const Mat& img, InputArray params );
 
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 };
 
 }

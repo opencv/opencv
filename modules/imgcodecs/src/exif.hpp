@@ -132,24 +132,6 @@ struct ExifEntry_t
 };
 
 /**
- * @brief Picture orientation which may be taken from EXIF
- *      Orientation usually matters when the picture is taken by
- *      smartphone or other camera with orientation sensor support
- *      Corresponds to EXIF 2.3 Specification
- */
-enum ImageOrientation
-{
-    IMAGE_ORIENTATION_TL = 1, ///< Horizontal (normal)
-    IMAGE_ORIENTATION_TR = 2, ///< Mirrored horizontal
-    IMAGE_ORIENTATION_BR = 3, ///< Rotate 180
-    IMAGE_ORIENTATION_BL = 4, ///< Mirrored vertical
-    IMAGE_ORIENTATION_LT = 5, ///< Mirrored horizontal & rotate 270 CW
-    IMAGE_ORIENTATION_RT = 6, ///< Rotate 90 CW
-    IMAGE_ORIENTATION_RB = 7, ///< Mirrored horizontal & rotate 90 CW
-    IMAGE_ORIENTATION_LB = 8  ///< Rotate 270 CW
-};
-
-/**
  * @brief Reading exif information from Jpeg file
  *
  * Usage example for getting the orientation of the image:

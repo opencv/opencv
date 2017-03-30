@@ -51,7 +51,7 @@
 namespace cv
 {
 
-class PngDecoder : public BaseImageDecoder
+class PngDecoder : public ImageDecoder::Impl
 {
 public:
 
@@ -62,7 +62,7 @@ public:
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
 
@@ -78,16 +78,16 @@ protected:
 };
 
 
-class PngEncoder : public BaseImageEncoder
+class PngEncoder : public ImageEncoder::Impl
 {
 public:
     PngEncoder();
     virtual ~PngEncoder();
 
     bool  isFormatSupported( int depth ) const;
-    bool  write( const Mat& img, const std::vector<int>& params );
+    bool  write( const Mat& img, InputArray params );
 
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 
 protected:
     static void writeDataToBuf(void* png_ptr, uchar* src, size_t size);

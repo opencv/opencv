@@ -324,6 +324,7 @@ PAMDecoder::PAMDecoder()
     m_buf_supported = true;
     bit_mode = false;
     selected_fmt = CV_IMWRITE_PAM_FORMAT_NULL;
+    m_description = "PAM";
 }
 
 
@@ -344,7 +345,7 @@ bool PAMDecoder::checkSignature( const String& signature ) const
            isspace(signature[2]);
 }
 
-ImageDecoder PAMDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> PAMDecoder::newDecoder() const
 {
     return makePtr<PAMDecoder>();
 }
@@ -485,6 +486,12 @@ bool  PAMDecoder::readData( Mat& img )
     PaletteEntry palette[256];
     const struct pam_format *fmt = NULL;
     struct channel_layout layout;
+
+    int dst_type = CV_MAKETYPE( img.depth(), target_channels );
+    if( !checkDest( img, dst_type ) )
+    {
+        return false;
+    }
 
     /* setting buffer to max data size so scaling up is possible */
     AutoBuffer<uchar> _src(src_elems_per_row * 2);
@@ -631,7 +638,7 @@ PAMEncoder::~PAMEncoder()
 }
 
 
-ImageEncoder PAMEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> PAMEncoder::newEncoder() const
 {
     return makePtr<PAMEncoder>();
 }
@@ -643,9 +650,9 @@ bool PAMEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
+bool PAMEncoder::write( const Mat& img, InputArray _params )
 {
-
+    Mat_<int> params(_params.getMat());
     WLByteStream strm;
 
     int width = img.cols, height = img.rows;
@@ -655,11 +662,11 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
     int x, y, tmp, bufsize = 256;
 
     /* parse save file type */
-    for( size_t i = 0; i < params.size(); i += 2 )
-        if( params[i] == CV_IMWRITE_PAM_TUPLETYPE ) {
-            if ( params[i+1] > CV_IMWRITE_PAM_FORMAT_NULL &&
-                 params[i+1] < (int) PAM_FORMATS_NO)
-                fmt = &formats[params[i+1]];
+    for( MatIterator_<int> it = params.begin(); it + 1 < params.end(); it += 2 )
+        if( *it == CV_IMWRITE_PAM_TUPLETYPE ) {
+            if ( *(it+1) > CV_IMWRITE_PAM_FORMAT_NULL &&
+                 *(it+1) < (int) PAM_FORMATS_NO)
+                fmt = &formats[*(it+1)];
         }
 
     if( m_buf )

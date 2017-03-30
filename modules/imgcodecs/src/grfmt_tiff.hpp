@@ -91,7 +91,7 @@ enum TiffFieldType
 
 // libtiff based TIFF codec
 
-class TiffDecoder : public BaseImageDecoder
+class TiffDecoder : public ImageDecoder::Impl
 {
 public:
     TiffDecoder();
@@ -104,7 +104,7 @@ public:
 
     size_t signatureLength() const;
     bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
     void* m_tif;
@@ -116,7 +116,7 @@ protected:
 #endif
 
 // ... and writer
-class TiffEncoder : public BaseImageEncoder
+class TiffEncoder : public ImageEncoder::Impl
 {
 public:
     TiffEncoder();
@@ -124,15 +124,15 @@ public:
 
     bool isFormatSupported( int depth ) const;
 
-    bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    bool  write( const Mat& img, InputArray params );
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 
 protected:
     void  writeTag( WLByteStream& strm, TiffTag tag,
                     TiffFieldType fieldType,
                     int count, int value );
 
-    bool writeLibTiff( const Mat& img, const std::vector<int>& params );
+    bool writeLibTiff( const Mat& img, InputArray params );
     bool writeHdr( const Mat& img );
 };
 

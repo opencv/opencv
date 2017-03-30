@@ -46,7 +46,6 @@
 #include "precomp.hpp"
 #include "grfmts.hpp"
 #include "utils.hpp"
-#include "exif.hpp"
 #undef min
 #undef max
 #include <iostream>
@@ -55,224 +54,12 @@
 /****************************************************************************************\
 *                                      Image Codecs                                      *
 \****************************************************************************************/
-namespace {
-
-class ByteStreamBuffer: public std::streambuf
-{
-public:
-    ByteStreamBuffer(char* base, size_t length)
-    {
-        setg(base, base, base + length);
-    }
-
-protected:
-    virtual pos_type seekoff( off_type offset,
-                              std::ios_base::seekdir dir,
-                              std::ios_base::openmode )
-    {
-        char* whence = eback();
-        if (dir == std::ios_base::cur)
-        {
-            whence = gptr();
-        }
-        else if (dir == std::ios_base::end)
-        {
-            whence = egptr();
-        }
-        char* to = whence + offset;
-
-        // check limits
-        if (to >= eback() && to <= egptr())
-        {
-            setg(eback(), to, egptr());
-            return gptr() - eback();
-        }
-
-        return -1;
-    }
-};
-
-}
-
 namespace cv
 {
 
-/**
- * @struct ImageCodecInitializer
- *
- * Container which stores the registered codecs to be used by OpenCV
-*/
-struct ImageCodecInitializer
-{
-    /**
-     * Default Constructor for the ImageCodeInitializer
-    */
-    ImageCodecInitializer()
-    {
-        /// BMP Support
-        decoders.push_back( makePtr<BmpDecoder>() );
-        encoders.push_back( makePtr<BmpEncoder>() );
-
-        decoders.push_back( makePtr<HdrDecoder>() );
-        encoders.push_back( makePtr<HdrEncoder>() );
-    #ifdef HAVE_JPEG
-        decoders.push_back( makePtr<JpegDecoder>() );
-        encoders.push_back( makePtr<JpegEncoder>() );
-    #endif
-    #ifdef HAVE_WEBP
-        decoders.push_back( makePtr<WebPDecoder>() );
-        encoders.push_back( makePtr<WebPEncoder>() );
-    #endif
-        decoders.push_back( makePtr<SunRasterDecoder>() );
-        encoders.push_back( makePtr<SunRasterEncoder>() );
-        decoders.push_back( makePtr<PxMDecoder>() );
-        encoders.push_back( makePtr<PxMEncoder>() );
-    #ifdef HAVE_TIFF
-        decoders.push_back( makePtr<TiffDecoder>() );
-    #endif
-        encoders.push_back( makePtr<TiffEncoder>() );
-    #ifdef HAVE_PNG
-        decoders.push_back( makePtr<PngDecoder>() );
-        encoders.push_back( makePtr<PngEncoder>() );
-    #endif
-    #ifdef HAVE_GDCM
-        decoders.push_back( makePtr<DICOMDecoder>() );
-    #endif
-    #ifdef HAVE_JASPER
-        decoders.push_back( makePtr<Jpeg2KDecoder>() );
-        encoders.push_back( makePtr<Jpeg2KEncoder>() );
-    #endif
-    #ifdef HAVE_OPENEXR
-        decoders.push_back( makePtr<ExrDecoder>() );
-        encoders.push_back( makePtr<ExrEncoder>() );
-    #endif
-
-    #ifdef HAVE_GDAL
-        /// Attach the GDAL Decoder
-        decoders.push_back( makePtr<GdalDecoder>() );
-    #endif/*HAVE_GDAL*/
-        decoders.push_back( makePtr<PAMDecoder>() );
-        encoders.push_back( makePtr<PAMEncoder>() );
-    }
-
-    std::vector<ImageDecoder> decoders;
-    std::vector<ImageEncoder> encoders;
-};
-
-static ImageCodecInitializer codecs;
-
-/**
- * Find the decoders
- *
- * @param[in] filename File to search
- *
- * @return Image decoder to parse image file.
-*/
-static ImageDecoder findDecoder( const String& filename ) {
-
-    size_t i, maxlen = 0;
-
-    /// iterate through list of registered codecs
-    for( i = 0; i < codecs.decoders.size(); i++ )
-    {
-        size_t len = codecs.decoders[i]->signatureLength();
-        maxlen = std::max(maxlen, len);
-    }
-
-    /// Open the file
-    FILE* f= fopen( filename.c_str(), "rb" );
-
-    /// in the event of a failure, return an empty image decoder
-    if( !f )
-        return ImageDecoder();
-
-    // read the file signature
-    String signature(maxlen, ' ');
-    maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
-    fclose(f);
-    signature = signature.substr(0, maxlen);
-
-    /// compare signature against all decoders
-    for( i = 0; i < codecs.decoders.size(); i++ )
-    {
-        if( codecs.decoders[i]->checkSignature(signature) )
-            return codecs.decoders[i]->newDecoder();
-    }
-
-    /// If no decoder was found, return base type
-    return ImageDecoder();
-}
-
-static ImageDecoder findDecoder( const Mat& buf )
-{
-    size_t i, maxlen = 0;
-
-    if( buf.rows*buf.cols < 1 || !buf.isContinuous() )
-        return ImageDecoder();
-
-    for( i = 0; i < codecs.decoders.size(); i++ )
-    {
-        size_t len = codecs.decoders[i]->signatureLength();
-        maxlen = std::max(maxlen, len);
-    }
-
-    String signature(maxlen, ' ');
-    size_t bufSize = buf.rows*buf.cols*buf.elemSize();
-    maxlen = std::min(maxlen, bufSize);
-    memcpy( (void*)signature.c_str(), buf.data, maxlen );
-
-    for( i = 0; i < codecs.decoders.size(); i++ )
-    {
-        if( codecs.decoders[i]->checkSignature(signature) )
-            return codecs.decoders[i]->newDecoder();
-    }
-
-    return ImageDecoder();
-}
-
-static ImageEncoder findEncoder( const String& _ext )
-{
-    if( _ext.size() <= 1 )
-        return ImageEncoder();
-
-    const char* ext = strrchr( _ext.c_str(), '.' );
-    if( !ext )
-        return ImageEncoder();
-    int len = 0;
-    for( ext++; len < 128 && isalnum(ext[len]); len++ )
-        ;
-
-    for( size_t i = 0; i < codecs.encoders.size(); i++ )
-    {
-        String description = codecs.encoders[i]->getDescription();
-        const char* descr = strchr( description.c_str(), '(' );
-
-        while( descr )
-        {
-            descr = strchr( descr + 1, '.' );
-            if( !descr )
-                break;
-            int j = 0;
-            for( descr++; j < len && isalnum(descr[j]) ; j++ )
-            {
-                int c1 = tolower(ext[j]);
-                int c2 = tolower(descr[j]);
-                if( c1 != c2 )
-                    break;
-            }
-            if( j == len && !isalnum(descr[j]))
-                return codecs.encoders[i]->newEncoder();
-            descr += j;
-        }
-    }
-
-    return ImageEncoder();
-}
-
-
 enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
 
-static void ExifTransform(int orientation, Mat& img)
+void OrientationTransform(int orientation, Mat& img)
 {
     switch( orientation )
     {
@@ -309,50 +96,6 @@ static void ExifTransform(int orientation, Mat& img)
     }
 }
 
-static void ApplyExifOrientation(const String& filename, Mat& img)
-{
-    int orientation = IMAGE_ORIENTATION_TL;
-
-    if (filename.size() > 0)
-    {
-        std::ifstream stream( filename.c_str(), std::ios_base::in | std::ios_base::binary );
-        ExifReader reader( stream );
-        if( reader.parse() )
-        {
-            ExifEntry_t entry = reader.getTag( ORIENTATION );
-            if (entry.tag != INVALID_TAG)
-            {
-                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-            }
-        }
-        stream.close();
-    }
-
-    ExifTransform(orientation, img);
-}
-
-static void ApplyExifOrientation(const Mat& buf, Mat& img)
-{
-    int orientation = IMAGE_ORIENTATION_TL;
-
-    if( buf.isContinuous() )
-    {
-        ByteStreamBuffer bsb( reinterpret_cast<char*>(buf.data), buf.total() * buf.elemSize() );
-        std::istream stream( &bsb );
-        ExifReader reader( stream );
-        if( reader.parse() )
-        {
-            ExifEntry_t entry = reader.getTag( ORIENTATION );
-            if (entry.tag != INVALID_TAG)
-            {
-                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-            }
-        }
-    }
-
-    ExifTransform(orientation, img);
-}
-
 /**
  * Read an image into memory and return the information
  *
@@ -378,10 +121,10 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
-        decoder = GdalDecoder().newDecoder();
+        decoder = ImageDecoder(filename, GdalDecoder().newDecoder());
     }else{
 #endif
-        decoder = findDecoder( filename );
+        decoder = ImageDecoder( filename );
 #ifdef HAVE_GDAL
     }
 #endif
@@ -403,22 +146,19 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     }
 
     /// set the scale_denom in the driver
-    decoder->setScale( scale_denom );
-
-    /// set the filename in the driver
-    decoder->setSource( filename );
+    decoder.setScale( scale_denom );
 
    // read the header to make sure it succeeds
-   if( !decoder->readHeader() )
+   if( !decoder.readHeader() )
         return 0;
 
     // established the required input image size
     CvSize size;
-    size.width = decoder->width();
-    size.height = decoder->height();
+    size.width = decoder.width();
+    size.height = decoder.height();
 
     // grab the decoded type
-    int type = decoder->type();
+    int type = decoder.type();
     if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
@@ -451,7 +191,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     }
 
     // read the image data
-    if( !decoder->readData( *data ))
+    if( !decoder.readData( *data ))
     {
         cvReleaseImage( &image );
         cvReleaseMat( &matrix );
@@ -460,7 +200,13 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         return 0;
     }
 
-    if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    // optionally rotate the data if EXIF' orientation flag says so
+    if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    {
+        OrientationTransform(decoder.orientation(), *mat);
+    }
+
+    if( decoder.setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder.setScale always returns 1
     {
         resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ) );
     }
@@ -486,11 +232,11 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
 
 #ifdef HAVE_GDAL
     if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL){
-        decoder = GdalDecoder().newDecoder();
+        decoder = ImageDecoder(filename, GdalDecoder().newDecoder());
     }
     else{
 #endif
-        decoder = findDecoder(filename);
+        decoder = ImageDecoder(filename);
 #ifdef HAVE_GDAL
     }
 #endif
@@ -500,17 +246,14 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         return 0;
     }
 
-    /// set the filename in the driver
-    decoder->setSource(filename);
-
     // read the header to make sure it succeeds
-    if (!decoder->readHeader())
+    if (!decoder.readHeader())
         return 0;
 
     for (;;)
     {
         // grab the decoded type
-        int type = decoder->type();
+        int type = decoder.type();
         if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
         {
             if ((flags & CV_LOAD_IMAGE_ANYDEPTH) == 0)
@@ -524,20 +267,20 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         }
 
         // read the image data
-        Mat mat(decoder->height(), decoder->width(), type);
-        if (!decoder->readData(mat))
+        Mat mat(decoder.height(), decoder.width(), type);
+        if (!decoder.readData(mat))
         {
             // optionally rotate the data if EXIF' orientation flag says so
             if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
             {
-                ApplyExifOrientation(filename, mat);
+                OrientationTransform(decoder.orientation(), mat);
             }
 
             break;
         }
 
         mats.push_back(mat);
-        if (!decoder->nextPage())
+        if (!decoder.nextPage())
         {
             break;
         }
@@ -561,12 +304,6 @@ Mat imread( const String& filename, int flags )
 
     /// load the data
     imread_( filename, flags, LOAD_MAT, &img );
-
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(filename, img);
-    }
 
     /// return a reference to the data
     return img;
@@ -595,12 +332,12 @@ static bool imwrite_( const String& filename, const Mat& image,
 
     CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
 
-    ImageEncoder encoder = findEncoder( filename );
+    ImageEncoder encoder( filename, filename );
     if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
-    if( !encoder->isFormatSupported(image.depth()) )
+    if( !encoder.isFormatSupported(image.depth()) )
     {
-        CV_Assert( encoder->isFormatSupported(CV_8U) );
+        CV_Assert( encoder.isFormatSupported(CV_8U) );
         image.convertTo( temp, CV_8U );
         pimage = &temp;
     }
@@ -611,8 +348,7 @@ static bool imwrite_( const String& filename, const Mat& image,
         pimage = &temp;
     }
 
-    encoder->setDestination( filename );
-    bool code = encoder->write( *pimage, params );
+    bool code = encoder.write( *pimage, params );
 
     //    CV_Assert( code );
     return code;
@@ -634,11 +370,8 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     Mat temp, *data = &temp;
     String filename;
 
-    ImageDecoder decoder = findDecoder(buf);
+    ImageDecoder decoder(buf);
     if( !decoder )
-        return 0;
-
-    if( !decoder->setSource(buf) )
     {
         filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
@@ -647,12 +380,16 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         size_t bufSize = buf.cols*buf.rows*buf.elemSize();
         fwrite( buf.ptr(), 1, bufSize, f );
         fclose(f);
-        decoder->setSource(filename);
+        decoder = ImageDecoder(filename);
     }
 
-    if( !decoder->readHeader() )
+    if( !decoder )
+       return 0;
+
+    if( !decoder.readHeader() )
     {
-        decoder.release();
+        // release impl associated with decoder
+        decoder = ImageDecoder();
         if ( !filename.empty() )
         {
             if ( remove(filename.c_str()) != 0 )
@@ -664,10 +401,11 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     CvSize size;
-    size.width = decoder->width();
-    size.height = decoder->height();
+    size.width = decoder.width();
+    size.height = decoder.height();
+    int orientation = decoder.orientation();
 
-    int type = decoder->type();
+    int type = decoder.type();
     if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
@@ -699,10 +437,11 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         temp = cvarrToMat(image);
     }
 
-    bool code = decoder->readData( *data );
-    decoder.release();
+    bool code = decoder.readData( *data );
     if ( !filename.empty() )
     {
+        // release impl associated with decoder
+        decoder = ImageDecoder();
         if ( remove(filename.c_str()) != 0 )
         {
             CV_Error( CV_StsError, "unable to remove temporary file" );
@@ -718,6 +457,12 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         return 0;
     }
 
+    // optionally rotate the data if EXIF' orientation flag says so
+    if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    {
+        OrientationTransform(orientation, *mat);
+    }
+
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
@@ -728,12 +473,6 @@ Mat imdecode( InputArray _buf, int flags )
     Mat buf = _buf.getMat(), img;
     imdecode_( buf, flags, LOAD_MAT, &img );
 
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(buf, img);
-    }
-
     return img;
 }
 
@@ -743,62 +482,59 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     dst = dst ? dst : &img;
     imdecode_( buf, flags, LOAD_MAT, dst );
 
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !dst->empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(buf, *dst);
-    }
-
     return *dst;
 }
 
 bool imencode( const String& ext, InputArray _image,
-               std::vector<uchar>& buf, const std::vector<int>& params )
+               std::vector<uchar>& _buf, const std::vector<int>& params )
 {
+    String filename;
     Mat image = _image.getMat();
+    Mat buf(0, 1, CV_8U);
 
     int channels = image.channels();
     CV_Assert( channels == 1 || channels == 3 || channels == 4 );
 
-    ImageEncoder encoder = findEncoder( ext );
+    ImageEncoder encoder = ImageEncoder( ext, buf );
+    if( !encoder )
+    {
+        filename = tempfile();
+        encoder = ImageEncoder( ext, filename );
+    }
+
     if( !encoder )
         CV_Error( CV_StsError, "could not find encoder for the specified extension" );
 
-    if( !encoder->isFormatSupported(image.depth()) )
+    if( !encoder.isFormatSupported(image.depth()) )
     {
-        CV_Assert( encoder->isFormatSupported(CV_8U) );
+        CV_Assert( encoder.isFormatSupported(CV_8U) );
         Mat temp;
         image.convertTo(temp, CV_8U);
         image = temp;
     }
 
-    bool code;
-    if( encoder->setDestination(buf) )
-    {
-        code = encoder->write(image, params);
-        encoder->throwOnEror();
-        CV_Assert( code );
-    }
-    else
-    {
-        String filename = tempfile();
-        code = encoder->setDestination(filename);
-        CV_Assert( code );
+     bool code = encoder.write(image, params);
+     encoder.throwOnEror();
+     CV_Assert( code );
 
-        code = encoder->write(image, params);
-        encoder->throwOnEror();
-        CV_Assert( code );
-
+     if( !filename.empty() )
+     {
         FILE* f = fopen( filename.c_str(), "rb" );
         CV_Assert(f != 0);
         fseek( f, 0, SEEK_END );
         long pos = ftell(f);
-        buf.resize((size_t)pos);
+        _buf.resize((size_t)pos);
         fseek( f, 0, SEEK_SET );
-        buf.resize(fread( &buf[0], 1, buf.size(), f ));
+        _buf.resize(fread( &_buf[0], 1, _buf.size(), f ));
         fclose(f);
         remove(filename.c_str());
     }
+    else
+    {
+        _buf.resize(buf.total() * buf.elemSize());
+        std::copy(&buf.data[0], &buf.data[buf.total() * buf.elemSize()], &_buf[0]);
+    }
+
     return code;
 }
 
@@ -811,13 +547,13 @@ bool imencode( const String& ext, InputArray _image,
 CV_IMPL int
 cvHaveImageReader( const char* filename )
 {
-    cv::ImageDecoder decoder = cv::findDecoder(filename);
+    cv::ImageDecoder decoder(filename);
     return !decoder.empty();
 }
 
 CV_IMPL int cvHaveImageWriter( const char* filename )
 {
-    cv::ImageEncoder encoder = cv::findEncoder(filename);
+    cv::ImageEncoder encoder(filename, filename);
     return !encoder.empty();
 }
 

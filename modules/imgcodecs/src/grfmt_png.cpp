@@ -91,6 +91,7 @@ PngDecoder::PngDecoder()
     m_f = 0;
     m_buf_supported = true;
     m_buf_pos = 0;
+    m_description = "PNG";
 }
 
 
@@ -99,7 +100,7 @@ PngDecoder::~PngDecoder()
     close();
 }
 
-ImageDecoder PngDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> PngDecoder::newDecoder() const
 {
     return makePtr<PngDecoder>();
 }
@@ -227,7 +228,19 @@ bool  PngDecoder::readData( Mat& img )
     uchar** buffer = _buffer;
     int color = img.channels() > 1;
 
-    if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
+    int dst_type;
+    if( img.channels() == 1 )
+    {
+        dst_type = CV_MAKETYPE( img.depth(), 1 );
+    } else if( img.channels() == 4 )
+    {
+        dst_type = CV_MAKETYPE( img.depth(), 4 );
+    } else
+    {
+        dst_type = CV_MAKETYPE( img.depth(), 3 );
+    }
+
+    if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height && checkDest( img, dst_type ) )
     {
         png_structp png_ptr = (png_structp)m_png_ptr;
         png_infop info_ptr = (png_infop)m_info_ptr;
@@ -312,7 +325,7 @@ bool  PngEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U || depth == CV_16U;
 }
 
-ImageEncoder PngEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> PngEncoder::newEncoder() const
 {
     return makePtr<PngEncoder>();
 }
@@ -325,9 +338,9 @@ void PngEncoder::writeDataToBuf(void* _png_ptr, uchar* src, size_t size)
     png_structp png_ptr = (png_structp)_png_ptr;
     PngEncoder* encoder = (PngEncoder*)(png_get_io_ptr(png_ptr));
     CV_Assert( encoder && encoder->m_buf );
-    size_t cursz = encoder->m_buf->size();
+    size_t cursz = encoder->m_buf->total() * encoder->m_buf->elemSize();
     encoder->m_buf->resize(cursz + size);
-    memcpy( &(*encoder->m_buf)[cursz], src, size );
+    memcpy( &encoder->m_buf->data[cursz], src, size );
 }
 
 
@@ -335,8 +348,9 @@ void PngEncoder::flushBuf(void*)
 {
 }
 
-bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
+bool  PngEncoder::write( const Mat& img, InputArray _params )
 {
+    Mat_<int> params(_params.getMat());
     png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
     png_infop info_ptr = 0;
     FILE * volatile f = 0;
@@ -372,22 +386,22 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                 int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
                 bool isBilevel = false;
 
-                for( size_t i = 0; i < params.size(); i += 2 )
+                for( MatIterator_<int> it = params.begin(); it + 1 < params.end(); it += 2 )
                 {
-                    if( params[i] == IMWRITE_PNG_COMPRESSION )
+                    if( *it == IMWRITE_PNG_COMPRESSION )
                     {
                         compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-                        compression_level = params[i+1];
+                        compression_level = *(it+1);
                         compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
                     }
-                    if( params[i] == IMWRITE_PNG_STRATEGY )
+                    if( *it == IMWRITE_PNG_STRATEGY )
                     {
-                        compression_strategy = params[i+1];
+                        compression_strategy =  *(it+1);
                         compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
                     }
-                    if( params[i] == IMWRITE_PNG_BILEVEL )
+                    if( *it == IMWRITE_PNG_BILEVEL )
                     {
-                        isBilevel = params[i+1] != 0;
+                        isBilevel = *(it+1) != 0;
                     }
                 }
 

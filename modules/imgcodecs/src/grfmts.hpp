@@ -42,6 +42,7 @@
 #ifndef _GRFMTS_H_
 #define _GRFMTS_H_
 
+#include "precomp.hpp"
 #include "grfmt_base.hpp"
 #include "grfmt_bmp.hpp"
 #include "grfmt_sunras.hpp"

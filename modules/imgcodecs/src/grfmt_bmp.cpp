@@ -55,6 +55,7 @@ BmpDecoder::BmpDecoder()
     m_signature = fmtSignBmp;
     m_offset = -1;
     m_buf_supported = true;
+    m_description = "BMP";
 }
 
 
@@ -68,7 +69,7 @@ void  BmpDecoder::close()
     m_strm.close();
 }
 
-ImageDecoder BmpDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> BmpDecoder::newDecoder() const
 {
     return makePtr<BmpDecoder>();
 }
@@ -199,6 +200,13 @@ bool  BmpDecoder::readData( Mat& img )
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
+
+    int dst_type = color ? CV_8UC3 : CV_8UC1;
+
+    if( !checkDest( img, dst_type ) )
+    {
+        return false;
+    }
 
     if( m_origin == IPL_ORIGIN_BL )
     {
@@ -499,12 +507,12 @@ BmpEncoder::~BmpEncoder()
 {
 }
 
-ImageEncoder BmpEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> BmpEncoder::newEncoder() const
 {
     return makePtr<BmpEncoder>();
 }
 
-bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
+bool  BmpEncoder::write( const Mat& img, InputArray )
 {
     int width = img.cols, height = img.rows, channels = img.channels();
     int fileStep = (width*channels + 3) & -4;

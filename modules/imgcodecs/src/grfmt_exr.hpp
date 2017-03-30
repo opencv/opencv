@@ -63,7 +63,7 @@ using namespace Imath;
 
 /* libpng version only */
 
-class ExrDecoder : public BaseImageDecoder
+class ExrDecoder : public ImageDecoder::Impl
 {
 public:
 
@@ -75,7 +75,7 @@ public:
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
     void  UpSample( uchar *data, int xstep, int ystep, int xsample, int ysample );
@@ -99,15 +99,15 @@ protected:
 };
 
 
-class ExrEncoder : public BaseImageEncoder
+class ExrEncoder : public ImageEncoder::Impl
 {
 public:
     ExrEncoder();
     ~ExrEncoder();
 
     bool  isFormatSupported( int depth ) const;
-    bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    bool  write( const Mat& img, InputArray params );
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 };
 
 }

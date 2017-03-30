@@ -124,7 +124,7 @@ public:
     virtual ~WBaseStream();
 
     virtual bool  open( const String& filename );
-    virtual bool  open( std::vector<uchar>& buf );
+    virtual bool  open( Mat& buf );
     virtual void  close();
     bool          isOpened();
     int           getPos();
@@ -138,7 +138,7 @@ protected:
     int     m_block_pos;
     FILE*   m_file;
     bool    m_is_opened;
-    std::vector<uchar>* m_buf;
+    Mat* m_buf;
 
     virtual void  writeBlock();
     virtual void  release();

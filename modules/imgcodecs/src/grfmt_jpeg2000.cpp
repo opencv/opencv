@@ -80,6 +80,7 @@ Jpeg2KDecoder::Jpeg2KDecoder()
     m_signature = '\0' + String() + '\0' + String() + '\0' + String("\x0cjP  \r\n\x87\n");
     m_stream = 0;
     m_image = 0;
+    m_description = "JPEG2000";
 }
 
 
@@ -87,7 +88,7 @@ Jpeg2KDecoder::~Jpeg2KDecoder()
 {
 }
 
-ImageDecoder Jpeg2KDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> Jpeg2KDecoder::newDecoder() const
 {
     return makePtr<Jpeg2KDecoder>();
 }
@@ -159,6 +160,14 @@ bool  Jpeg2KDecoder::readData( Mat& img )
     int step = (int)img.step;
     jas_stream_t* stream = (jas_stream_t*)m_stream;
     jas_image_t* image = (jas_image_t*)m_image;
+
+    int dst_width = color ? 3 : 1;
+    int dst_type = CV_MAKE_TYPE( img.depth(), dst_width );
+    if( !checkDest( img, dst_type ) )
+    {
+        close();
+        return false;
+    }
 
 #ifndef WIN32
     // At least on some Linux instances the
@@ -424,7 +433,7 @@ Jpeg2KEncoder::~Jpeg2KEncoder()
 {
 }
 
-ImageEncoder Jpeg2KEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> Jpeg2KEncoder::newEncoder() const
 {
     return makePtr<Jpeg2KEncoder>();
 }
@@ -435,7 +444,7 @@ bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
+bool  Jpeg2KEncoder::write( const Mat& _img, InputArray )
 {
     int width = _img.cols, height = _img.rows;
     int depth = _img.depth(), channels = _img.channels();

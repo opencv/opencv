@@ -42,7 +42,7 @@
 #ifndef __GRFMT_GDAL_HPP__
 #define __GRFMT_GDAL_HPP__
 
-/// OpenCV FMT Base Type
+/// OpenCV FMT  Type
 #include "grfmt_base.hpp"
 
 /// Macro to make sure we specified GDAL in CMake
@@ -103,7 +103,7 @@ void write_ctable_pixel( const double& pixelValue,
 /**
  * Loader for GDAL
 */
-class GdalDecoder : public BaseImageDecoder{
+class GdalDecoder : public ImageDecoder::Impl{
 
     public:
 
@@ -135,7 +135,7 @@ class GdalDecoder : public BaseImageDecoder{
         /**
          * Create a new decoder
         */
-        ImageDecoder newDecoder() const;
+        Ptr<ImageDecoder::Impl> newDecoder() const;
 
         /**
          * Test the file signature

@@ -49,7 +49,7 @@
 namespace cv
 {
 
-class PxMDecoder : public BaseImageDecoder
+class PxMDecoder : public ImageDecoder::Impl
 {
 public:
 
@@ -62,7 +62,7 @@ public:
 
     size_t signatureLength() const;
     bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
 
@@ -75,16 +75,16 @@ protected:
 };
 
 
-class PxMEncoder : public BaseImageEncoder
+class PxMEncoder : public ImageEncoder::Impl
 {
 public:
     PxMEncoder();
     virtual ~PxMEncoder();
 
     bool  isFormatSupported( int depth ) const;
-    bool  write( const Mat& img, const std::vector<int>& params );
+    bool  write( const Mat& img, InputArray params );
 
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 };
 
 }

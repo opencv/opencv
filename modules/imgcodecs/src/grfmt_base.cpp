@@ -47,7 +47,7 @@
 namespace cv
 {
 
-BaseImageDecoder::BaseImageDecoder()
+ImageDecoder::Impl::Impl()
 {
     m_width = m_height = 0;
     m_type = -1;
@@ -55,14 +55,14 @@ BaseImageDecoder::BaseImageDecoder()
     m_scale_denom = 1;
 }
 
-bool BaseImageDecoder::setSource( const String& filename )
+bool ImageDecoder::Impl::setSource( const String& filename )
 {
     m_filename = filename;
     m_buf.release();
     return true;
 }
 
-bool BaseImageDecoder::setSource( const Mat& buf )
+bool ImageDecoder::Impl::setSource( const Mat& buf )
 {
     if( !m_buf_supported )
         return false;
@@ -71,67 +71,79 @@ bool BaseImageDecoder::setSource( const Mat& buf )
     return true;
 }
 
-size_t BaseImageDecoder::signatureLength() const
+size_t ImageDecoder::Impl::signatureLength() const
 {
     return m_signature.size();
 }
 
-bool BaseImageDecoder::checkSignature( const String& signature ) const
+bool ImageDecoder::Impl::checkSignature( const String& signature ) const
 {
     size_t len = signatureLength();
     return signature.size() >= len && memcmp( signature.c_str(), m_signature.c_str(), len ) == 0;
 }
 
-int BaseImageDecoder::setScale( const int& scale_denom )
+int ImageDecoder::Impl::setScale( const int& scale_denom )
 {
     int temp = m_scale_denom;
     m_scale_denom = scale_denom;
     return temp;
 }
 
-ImageDecoder BaseImageDecoder::newDecoder() const
+bool ImageDecoder::Impl::checkDest( const Mat& dst, int dst_type ) const
 {
-    return ImageDecoder();
+    size_t have_size = dst.total() * dst.elemSize();
+    size_t want_size = m_width * m_height * CV_ELEM_SIZE(dst_type);
+    return have_size >= want_size;
 }
 
-BaseImageEncoder::BaseImageEncoder()
-{
-    m_buf_supported = false;
-}
-
-bool  BaseImageEncoder::isFormatSupported( int depth ) const
-{
-    return depth == CV_8U;
-}
-
-String BaseImageEncoder::getDescription() const
+String ImageDecoder::Impl::getDescription() const
 {
     return m_description;
 }
 
-bool BaseImageEncoder::setDestination( const String& filename )
+Ptr<ImageDecoder::Impl> ImageDecoder::Impl::newDecoder() const
+{
+    return Ptr<ImageDecoder::Impl>();
+}
+
+ImageEncoder::Impl::Impl()
+{
+    m_buf_supported = false;
+}
+
+bool  ImageEncoder::Impl::isFormatSupported( int depth ) const
+{
+    return depth == CV_8U;
+}
+
+String ImageEncoder::Impl::getDescription() const
+{
+    return m_description;
+}
+
+bool ImageEncoder::Impl::setDestination( const String& filename )
 {
     m_filename = filename;
     m_buf = 0;
     return true;
 }
 
-bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
+bool ImageEncoder::Impl::setDestination( Mat& buf )
 {
     if( !m_buf_supported )
         return false;
     m_buf = &buf;
-    m_buf->clear();
+    memset(m_buf->data, 0, m_buf->total() * m_buf->elemSize());
     m_filename = String();
     return true;
 }
 
-ImageEncoder BaseImageEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> ImageEncoder::Impl::newEncoder() const
 {
-    return ImageEncoder();
+    return Ptr<ImageEncoder::Impl>();
 }
 
-void BaseImageEncoder::throwOnEror() const
+void ImageEncoder::Impl::throwOnEror() const
 {
     if(!m_last_error.empty())
     {

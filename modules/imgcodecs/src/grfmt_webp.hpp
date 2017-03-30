@@ -52,7 +52,7 @@
 namespace cv
 {
 
-class WebPDecoder : public BaseImageDecoder
+class WebPDecoder : public ImageDecoder::Impl
 {
 public:
 
@@ -66,22 +66,22 @@ public:
     size_t signatureLength() const;
     bool checkSignature( const String& signature) const;
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
     Mat data;
     int channels;
 };
 
-class WebPEncoder : public BaseImageEncoder
+class WebPEncoder : public ImageEncoder::Impl
 {
 public:
     WebPEncoder();
     ~WebPEncoder();
 
-    bool write(const Mat& img, const std::vector<int>& params);
+    bool write(const Mat& img, InputArray params);
 
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 };
 
 }

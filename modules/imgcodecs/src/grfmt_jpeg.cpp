@@ -41,6 +41,8 @@
 
 #include "precomp.hpp"
 #include "grfmt_jpeg.hpp"
+#include "exif.hpp"
+#include <fstream>
 
 #ifdef HAVE_JPEG
 
@@ -73,6 +75,45 @@ typedef unsigned char boolean;
 
 extern "C" {
 #include "jpeglib.h"
+}
+
+namespace {
+
+class ByteStreamBuffer: public std::streambuf
+{
+public:
+    ByteStreamBuffer(char* base, size_t length)
+    {
+        setg(base, base, base + length);
+    }
+
+protected:
+    virtual pos_type seekoff( off_type offset,
+                              std::ios_base::seekdir dir,
+                              std::ios_base::openmode )
+    {
+        char* whence = eback();
+        if (dir == std::ios_base::cur)
+        {
+            whence = gptr();
+        }
+        else if (dir == std::ios_base::end)
+        {
+            whence = egptr();
+        }
+        char* to = whence + offset;
+
+        // check limits
+        if (to >= eback() && to <= egptr())
+        {
+            setg(eback(), to, egptr());
+            return gptr() - eback();
+        }
+
+        return -1;
+    }
+};
+
 }
 
 namespace cv
@@ -176,7 +217,9 @@ JpegDecoder::JpegDecoder()
     m_signature = "\xFF\xD8\xFF";
     m_state = 0;
     m_f = 0;
+    m_orientation = IMAGE_ORIENTATION_TL;
     m_buf_supported = true;
+    m_description = "JPEG";
 }
 
 
@@ -206,7 +249,7 @@ void  JpegDecoder::close()
     m_type = -1;
 }
 
-ImageDecoder JpegDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> JpegDecoder::newDecoder() const
 {
     return makePtr<JpegDecoder>();
 }
@@ -255,6 +298,37 @@ bool  JpegDecoder::readHeader()
 
     if( !result )
         close();
+
+    // set a default in case we don't find the tag
+    m_orientation = IMAGE_ORIENTATION_TL;
+    if( !m_buf.empty() )
+    {
+       ByteStreamBuffer bsb( reinterpret_cast<char*>(m_buf.data), m_buf.total() * m_buf.elemSize() );
+       std::istream stream( &bsb );
+       ExifReader reader( stream );
+       if( reader.parse() )
+       {
+           ExifEntry_t entry = reader.getTag( ORIENTATION );
+           if (entry.tag != INVALID_TAG)
+           {
+               m_orientation = int(entry.field_u16); //orientation is unsigned short, so check field_u16
+           }
+       }
+    }
+    else
+    {
+       std::ifstream stream( m_filename.c_str(), std::ios_base::in | std::ios_base::binary );
+       ExifReader reader( stream );
+       if( reader.parse() )
+       {
+           ExifEntry_t entry = reader.getTag( ORIENTATION );
+           if (entry.tag != INVALID_TAG)
+           {
+               m_orientation = int(entry.field_u16); //orientation is unsigned short, so check field_u16
+           }
+       }
+       stream.close();
+    }
 
     return result;
 }
@@ -398,8 +472,9 @@ bool  JpegDecoder::readData( Mat& img )
     volatile bool result = false;
     int step = (int)img.step;
     bool color = img.channels() > 1;
+    int dst_type = color ? CV_8UC3 : CV_8UC1;
 
-    if( m_state && m_width && m_height )
+    if( m_state && m_width && m_height && checkDest( img, dst_type ) )
     {
         jpeg_decompress_struct* cinfo = &((JpegState*)m_state)->cinfo;
         JpegErrorMgr* jerr = &((JpegState*)m_state)->jerr;
@@ -488,7 +563,8 @@ bool  JpegDecoder::readData( Mat& img )
 struct JpegDestination
 {
     struct jpeg_destination_mgr pub;
-    std::vector<uchar> *buf, *dst;
+    std::vector<uchar>* buf;
+    Mat* dst;
 };
 
 METHODDEF(void)
@@ -500,11 +576,11 @@ METHODDEF(void)
 term_destination (j_compress_ptr cinfo)
 {
     JpegDestination* dest = (JpegDestination*)cinfo->dest;
-    size_t sz = dest->dst->size(), bufsz = dest->buf->size() - dest->pub.free_in_buffer;
+    size_t sz = dest->dst->total() * dest->dst->elemSize(), bufsz = dest->buf->size() - dest->pub.free_in_buffer;
     if( bufsz > 0 )
     {
         dest->dst->resize(sz + bufsz);
-        memcpy( &(*dest->dst)[0] + sz, &(*dest->buf)[0], bufsz);
+        memcpy( &dest->dst->data[0] + sz, &(*dest->buf)[0], bufsz);
     }
 }
 
@@ -512,9 +588,9 @@ METHODDEF(boolean)
 empty_output_buffer (j_compress_ptr cinfo)
 {
     JpegDestination* dest = (JpegDestination*)cinfo->dest;
-    size_t sz = dest->dst->size(), bufsz = dest->buf->size();
+    size_t sz = dest->dst->total() * dest->dst->elemSize(), bufsz = dest->buf->size();
     dest->dst->resize(sz + bufsz);
-    memcpy( &(*dest->dst)[0] + sz, &(*dest->buf)[0], bufsz);
+    memcpy( &dest->dst->data[0] + sz, &(*dest->buf)[0], bufsz);
 
     dest->pub.next_output_byte = &(*dest->buf)[0];
     dest->pub.free_in_buffer = bufsz;
@@ -542,13 +618,14 @@ JpegEncoder::~JpegEncoder()
 {
 }
 
-ImageEncoder JpegEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> JpegEncoder::newEncoder() const
 {
     return makePtr<JpegEncoder>();
 }
 
-bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
+bool JpegEncoder::write( const Mat& img, InputArray _params )
 {
+    Mat_<int> params(_params.getMat());
     m_last_error.clear();
 
     struct fileWrapper
@@ -609,29 +686,29 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         int luma_quality = -1;
         int chroma_quality = -1;
 
-        for( size_t i = 0; i < params.size(); i += 2 )
+        for( MatIterator_<int> it = params.begin(); it < params.end(); it += 2 )
         {
-            if( params[i] == CV_IMWRITE_JPEG_QUALITY )
+            if( *it == CV_IMWRITE_JPEG_QUALITY )
             {
-                quality = params[i+1];
+                quality = *(it+1);
                 quality = MIN(MAX(quality, 0), 100);
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_PROGRESSIVE )
+            if( *it == CV_IMWRITE_JPEG_PROGRESSIVE )
             {
-                progressive = params[i+1];
+                progressive = *(it+1);
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_OPTIMIZE )
+            if( *it == CV_IMWRITE_JPEG_OPTIMIZE )
             {
-                optimize = params[i+1];
+                optimize = *(it+1);
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_LUMA_QUALITY )
+            if( *it == CV_IMWRITE_JPEG_LUMA_QUALITY )
             {
-                if (params[i+1] >= 0)
+                if (*(it+1) >= 0)
                 {
-                    luma_quality = MIN(MAX(params[i+1], 0), 100);
+                    luma_quality = MIN(MAX(*(it+1), 0), 100);
 
                     quality = luma_quality;
 
@@ -642,17 +719,17 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 }
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_CHROMA_QUALITY )
+            if( *it == CV_IMWRITE_JPEG_CHROMA_QUALITY )
             {
-                if (params[i+1] >= 0)
+                if (*(it+1) >= 0)
                 {
-                    chroma_quality = MIN(MAX(params[i+1], 0), 100);
+                    chroma_quality = MIN(MAX(*(it+1), 0), 100);
                 }
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_RST_INTERVAL )
+            if( *it == CV_IMWRITE_JPEG_RST_INTERVAL )
             {
-                rst_interval = params[i+1];
+                rst_interval = *(it+1);
                 rst_interval = MIN(MAX(rst_interval, 0), 65535L);
             }
         }

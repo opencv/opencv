@@ -55,7 +55,7 @@ enum HdrCompression
 };
 
 // Radiance rgbe (.hdr) reader
-class HdrDecoder : public BaseImageDecoder
+class HdrDecoder : public ImageDecoder::Impl
 {
 public:
     HdrDecoder();
@@ -63,7 +63,7 @@ public:
     bool readHeader();
     bool readData( Mat& img );
     bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
     size_t signatureLength() const;
 protected:
     String m_signature_alt;
@@ -71,13 +71,13 @@ protected:
 };
 
 // ... writer
-class HdrEncoder : public BaseImageEncoder
+class HdrEncoder : public ImageEncoder::Impl
 {
 public:
     HdrEncoder();
     ~HdrEncoder();
-    bool write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    bool write( const Mat& img, InputArray params );
+    Ptr<ImageEncoder::Impl> newEncoder() const;
     bool isFormatSupported( int depth ) const;
 protected:
 

@@ -58,7 +58,7 @@ enum BmpCompression
 
 
 // Windows Bitmap reader
-class BmpDecoder : public BaseImageDecoder
+class BmpDecoder : public ImageDecoder::Impl
 {
 public:
 
@@ -69,7 +69,7 @@ public:
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
 
@@ -83,15 +83,15 @@ protected:
 
 
 // ... writer
-class BmpEncoder : public BaseImageEncoder
+class BmpEncoder : public ImageEncoder::Impl
 {
 public:
     BmpEncoder();
     ~BmpEncoder();
 
-    bool  write( const Mat& img, const std::vector<int>& params );
+    bool  write( const Mat& img, InputArray params );
 
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 };
 
 }

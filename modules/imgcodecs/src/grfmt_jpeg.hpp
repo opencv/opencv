@@ -53,34 +53,37 @@
 namespace cv
 {
 
-class JpegDecoder : public BaseImageDecoder
+class JpegDecoder : public ImageDecoder::Impl
 {
 public:
 
     JpegDecoder();
     virtual ~JpegDecoder();
 
+    int orientation() const { return m_orientation; }
+
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
 
     FILE* m_f;
     void* m_state;
+    int m_orientation;
 };
 
 
-class JpegEncoder : public BaseImageEncoder
+class JpegEncoder : public ImageEncoder::Impl
 {
 public:
     JpegEncoder();
     virtual ~JpegEncoder();
 
-    bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    bool  write( const Mat& img, InputArray params );
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 };
 
 }

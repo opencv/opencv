@@ -68,6 +68,7 @@ DICOMDecoder::DICOMDecoder()
     // DICOM preamble is 128 bytes (can have any value, defaults to 0) + 4 bytes magic number (DICM)
     m_signature = String(preamble_skip, (char)'\x0') + getMagic();
     m_buf_supported = false;
+    m_description = "GDCM";
 }
 
 bool DICOMDecoder::checkSignature( const String& signature ) const
@@ -83,7 +84,7 @@ bool DICOMDecoder::checkSignature( const String& signature ) const
     return false;
 }
 
-ImageDecoder DICOMDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> DICOMDecoder::newDecoder() const
 {
     return makePtr<DICOMDecoder>();
 }

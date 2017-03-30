@@ -75,6 +75,7 @@ TiffDecoder::TiffDecoder()
         TIFFSetWarningHandler( GrFmtSilentTIFFErrorHandler );
     }
     m_hdr = false;
+    m_description = "TIFF";
 }
 
 
@@ -110,7 +111,7 @@ int TiffDecoder::normalizeChannelsNumber(int channels) const
     return channels > 4 ? 4 : channels;
 }
 
-ImageDecoder TiffDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> TiffDecoder::newDecoder() const
 {
     return makePtr<TiffDecoder>();
 }
@@ -221,6 +222,13 @@ bool  TiffDecoder::readData( Mat& img )
         const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         int wanted_channels = normalizeChannelsNumber(img.channels());
+
+        int dst_type = CV_MAKE_TYPE( img.depth(), wanted_channels );
+        if( !checkDest( img, dst_type ) )
+        {
+            close();
+            return false;
+        }
 
         if(dst_bpp == 8)
         {
@@ -483,7 +491,7 @@ TiffEncoder::~TiffEncoder()
 {
 }
 
-ImageEncoder TiffEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> TiffEncoder::newEncoder() const
 {
     return makePtr<TiffEncoder>();
 }
@@ -509,17 +517,18 @@ void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
 
 #ifdef HAVE_TIFF
 
-static void readParam(const std::vector<int>& params, int key, int& value)
+static void readParam(InputArray _params, int key, int& value)
 {
-    for(size_t i = 0; i + 1 < params.size(); i += 2)
-        if(params[i] == key)
+    Mat_<int> params(_params.getMat());
+    for(MatIterator_<int> it = params.begin(); it + 1 < params.end(); it += 2)
+        if(*it == key)
         {
-            value = params[i+1];
+            value = *(it+1);
             break;
         }
 }
 
-bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
+bool  TiffEncoder::writeLibTiff( const Mat& img, InputArray params)
 {
     int channels = img.channels();
     int width = img.cols, height = img.rows;
@@ -681,9 +690,9 @@ bool TiffEncoder::writeHdr(const Mat& _img)
 #endif
 
 #ifdef HAVE_TIFF
-bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
+bool  TiffEncoder::write( const Mat& img, InputArray params)
 #else
-bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
+bool  TiffEncoder::write( const Mat& img, InputArray /*params*/)
 #endif
 {
     int channels = img.channels();
@@ -856,10 +865,10 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
 
     if( m_buf )
     {
-        (*m_buf)[4] = (uchar)directoryOffset;
-        (*m_buf)[5] = (uchar)(directoryOffset >> 8);
-        (*m_buf)[6] = (uchar)(directoryOffset >> 16);
-        (*m_buf)[7] = (uchar)(directoryOffset >> 24);
+        m_buf->data[4] = (uchar)directoryOffset;
+        m_buf->data[5] = (uchar)(directoryOffset >> 8);
+        m_buf->data[6] = (uchar)(directoryOffset >> 16);
+        m_buf->data[7] = (uchar)(directoryOffset >> 24);
     }
     else
     {

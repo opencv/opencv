@@ -50,7 +50,7 @@
 namespace cv
 {
 
-class Jpeg2KDecoder : public BaseImageDecoder
+class Jpeg2KDecoder : public ImageDecoder::Impl
 {
 public:
 
@@ -60,7 +60,7 @@ public:
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder::Impl> newDecoder() const;
 
 protected:
     bool  readComponent8u( uchar *data, void *buffer, int step, int cmpt,
@@ -73,15 +73,15 @@ protected:
 };
 
 
-class Jpeg2KEncoder : public BaseImageEncoder
+class Jpeg2KEncoder : public ImageEncoder::Impl
 {
 public:
     Jpeg2KEncoder();
     virtual ~Jpeg2KEncoder();
 
     bool  isFormatSupported( int depth ) const;
-    bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    bool  write( const Mat& img, InputArray params );
+    Ptr<ImageEncoder::Impl> newEncoder() const;
 
 protected:
     bool  writeComponent8u( void *img, const Mat& _img );

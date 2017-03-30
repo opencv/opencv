@@ -119,6 +119,175 @@ enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
      };
 
+/**
+ * @brief Picture orientation which may be taken from EXIF
+ *      Orientation usually matters when the picture is taken by
+ *      smartphone or other camera with orientation sensor support
+ *      Corresponds to EXIF 2.3 Specification
+ */
+enum ImageOrientation
+{
+    IMAGE_ORIENTATION_TL = 1, ///< Horizontal (normal)
+    IMAGE_ORIENTATION_TR = 2, ///< Mirrored horizontal
+    IMAGE_ORIENTATION_BR = 3, ///< Rotate 180
+    IMAGE_ORIENTATION_BL = 4, ///< Mirrored vertical
+    IMAGE_ORIENTATION_LT = 5, ///< Mirrored horizontal & rotate 270 CW
+    IMAGE_ORIENTATION_RT = 6, ///< Rotate 90 CW
+    IMAGE_ORIENTATION_RB = 7, ///< Mirrored horizontal & rotate 90 CW
+    IMAGE_ORIENTATION_LB = 8  ///< Rotate 270 CW
+};
+
+/** @brief Decodes an image so that it can be rendered as pixels
+ *
+ * This class should not be constructed directly. Instead, use
+ * one of the findDecoder methods to create a new decoder.
+ *
+ * Once created, the decoder should have setSource called
+ * with the source of the image.
+ *
+ * Next, call readHeader() to load the image metadata. This
+ * populates the height/width/type fields.
+ *
+ * Finally, use readData() to decode the image into a
+ * Mat where the pixels should be stored
+ */
+class CV_EXPORTS ImageDecoder
+{
+public:
+    ImageDecoder();
+    ImageDecoder(const ImageDecoder& d);
+    ImageDecoder& operator = (const ImageDecoder& d);
+
+    /** @brief Create an ImageDecoder that can decode the contents pointed at by filename
+     * @param[in] filename File to search
+     *
+     * This method *does not* inspect the extension of the filename, only the contents
+     * in the file itself. So if image.jpg actually contains PNG data, then the
+     * appropriate PNG decoder will be returned when ImageDecoder("image.jpg") is called.
+     *
+     * @return Image decoder to parse image file.
+    */
+    ImageDecoder( const String& filename );
+
+    /** @brief Create an ImageDecoder that can decode the encoded contents of buf
+     * @param[in] buf vector of encoded bytes
+     *
+     * @return Image decoder to parse image file.
+    */
+    ImageDecoder( const Mat& buf );
+
+    ~ImageDecoder();
+
+    /** Read the image metadata from the decoder source.
+     * Call after setSource has been called
+     * Sets decoder width, height, type
+     * Returns true on success
+     */
+    bool readHeader();
+
+    /** Read the image data from the decoder source.
+     * Loads deserialized pixels into img, which should be large enough
+     * to store entire image.
+     * Returns true on success
+     */
+    bool readData( Mat& img );
+
+    /** Get image width. Only returns successfully after readHeader() has been called.
+     */
+    int width() const;
+
+    /** Get image height. Only returns successfully after readHeader() has been called.
+     */
+    int height() const;
+
+    /** Get image pixel data type. Only returns successfully after readHeader() has been called.
+     */
+    int type() const;
+
+    /** Get the image's orientation, as set by its metadata, if any
+     */
+    int orientation() const;
+
+    int setScale( const int& scale_denom );
+
+    /// Called after readData to advance to the next page, if any.
+    bool nextPage();
+
+    /* Get the description for this instance of ImageDecoder */
+    String getDescription() const;
+
+    bool empty() const;
+    operator bool() const;
+    bool operator!() const;
+
+    class Impl;
+    ImageDecoder(const String& filename, Ptr<Impl> i);
+    ImageDecoder(const Mat& buf, Ptr<Impl> i);
+
+protected:
+    Ptr<Impl> p;
+};
+
+/** @brief Encodes pixels into an image format
+ *
+ * This class should not be constructed directly. Instead, use
+ * findEncoder to construct an Encoder for a particular type of image.
+ */
+class CV_EXPORTS ImageEncoder
+{
+public:
+    ImageEncoder();
+    ImageEncoder(const ImageEncoder& d);
+    ImageEncoder& operator = (const ImageEncoder& d);
+
+    /** @brief Create an ImageEncoder that can encode pixels into a specific format
+     * @param[in] _ext hint for encoder type
+     * @param[in] filename where to save encoded image
+     *
+     * @return Image encoder to encode image file.
+    */
+    ImageEncoder( const String& _ext, const String& filename );
+
+    /** @brief Create an ImageEncoder that can encode pixels into a specific format
+     * @param[in] _ext hint for encoder type
+     * @param[in] buf where to save encoded image
+     *
+     * @return Image encoder to encode image file.
+    */
+    ImageEncoder( const String& _ext, Mat& buf );
+
+    ~ImageEncoder();
+
+    bool isFormatSupported( int depth ) const;
+
+    /** Write the pixels contained by img into the image destination.
+     * params accepts the same params as imwrite
+     */
+    bool write( const Mat& img, InputArray params );
+
+    /* Get the description for this instance of ImageEncoder */
+    String getDescription() const;
+
+    void throwOnEror() const;
+
+    bool empty() const;
+    operator bool() const;
+    bool operator!() const;
+
+    class Impl;
+    ImageEncoder(const String& filename, Ptr<Impl> i);
+    ImageEncoder(Mat& buf, Ptr<Impl> i);
+
+protected:
+    Ptr<Impl> p;
+};
+
+/** @brief Applies the orientation transform specified by orientation
+ * @param[in] orientation a valid orientation value
+ * @param[in] img a Mat containing an image to orient
+*/
+CV_EXPORTS_W void OrientationTransform(int orientation, Mat& img);
+
 /** @brief Loads an image from a file.
 
 @anchor imread

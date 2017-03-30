@@ -54,6 +54,7 @@ SunRasterDecoder::SunRasterDecoder()
 {
     m_offset = -1;
     m_signature = fmtSignSunRas;
+    m_description = "SUNRAS";
 }
 
 
@@ -61,7 +62,7 @@ SunRasterDecoder::~SunRasterDecoder()
 {
 }
 
-ImageDecoder SunRasterDecoder::newDecoder() const
+Ptr<ImageDecoder::Impl> SunRasterDecoder::newDecoder() const
 {
     return makePtr<SunRasterDecoder>();
 }
@@ -163,6 +164,13 @@ bool  SunRasterDecoder::readData( Mat& img )
     int  nch = color ? 3 : 1;
     int  width3 = m_width*nch;
     int  y;
+
+    int dst_width = color ? 3 : 1;
+    int dst_type = CV_MAKE_TYPE( img.depth(), dst_width );
+    if( !checkDest( img, dst_type ) )
+    {
+        return false;
+    }
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
@@ -386,7 +394,7 @@ SunRasterEncoder::SunRasterEncoder()
 }
 
 
-ImageEncoder SunRasterEncoder::newEncoder() const
+Ptr<ImageEncoder::Impl> SunRasterEncoder::newEncoder() const
 {
     return makePtr<SunRasterEncoder>();
 }
@@ -395,7 +403,7 @@ SunRasterEncoder::~SunRasterEncoder()
 {
 }
 
-bool  SunRasterEncoder::write( const Mat& img, const std::vector<int>& )
+bool  SunRasterEncoder::write( const Mat& img, InputArray )
 {
     bool result = false;
     int y, width = img.cols, height = img.rows, channels = img.channels();
