@@ -8,6 +8,8 @@ endif()
 project(traincascade)
 set(the_target opencv_traincascade)
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Woverloaded-virtual)
+
 ocv_target_include_directories(${the_target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
 ocv_target_include_modules_recurse(${the_target} ${OPENCV_TRAINCASCADE_DEPS})
 
@@ -23,7 +25,6 @@ set_target_properties(${the_target} PROPERTIES
                       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
                       ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
                       RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-                      INSTALL_NAME_DIR lib
                       OUTPUT_NAME "opencv_traincascade")
 
 if(ENABLE_SOLUTION_FOLDERS)

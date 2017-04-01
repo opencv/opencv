@@ -1913,4 +1913,61 @@ TEST(Imgproc_ContourMoments, accuracy) { CV_ContourMomentsTest test; test.safe_r
 TEST(Imgproc_ContourPerimeterSlice, accuracy) { CV_PerimeterAreaSliceTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, small) { CV_FitEllipseSmallTest test; test.safe_run(); }
 
+
+
+PARAM_TEST_CASE(ConvexityDefects_regression_5908, bool, int)
+{
+public:
+    int start_index;
+    bool clockwise;
+
+    Mat contour;
+
+    virtual void SetUp()
+    {
+        clockwise = GET_PARAM(0);
+        start_index = GET_PARAM(1);
+
+        const int N = 11;
+        const Point2i points[N] = {
+            Point2i(154, 408),
+            Point2i(45, 223),
+            Point2i(115, 275), // inner
+            Point2i(104, 166),
+            Point2i(154, 256), // inner
+            Point2i(169, 144),
+            Point2i(185, 256), // inner
+            Point2i(235, 170),
+            Point2i(240, 320), // inner
+            Point2i(330, 287),
+            Point2i(224, 390)
+        };
+
+        contour = Mat(N, 1, CV_32SC2);
+        for (int i = 0; i < N; i++)
+        {
+            contour.at<Point2i>(i) = (!clockwise) // image and convexHull coordinate systems are different
+                    ? points[(start_index + i) % N]
+                    : points[N - 1 - ((start_index + i) % N)];
+        }
+    }
+};
+
+TEST_P(ConvexityDefects_regression_5908, simple)
+{
+    std::vector<int> hull;
+    cv::convexHull(contour, hull, clockwise, false);
+
+    std::vector<Vec4i> result;
+    cv::convexityDefects(contour, hull, result);
+
+    EXPECT_EQ(4, (int)result.size());
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, ConvexityDefects_regression_5908,
+        testing::Combine(
+                testing::Bool(),
+                testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+        ));
+
 /* End of file. */

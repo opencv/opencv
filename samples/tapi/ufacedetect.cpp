@@ -78,9 +78,9 @@ int main( int argc, const char** argv )
 
     if( inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1) )
     {
-        int c = inputName.empty() ? 0 : inputName[0] - '0';
-        if(!capture.open(c))
-            cout << "Capture from camera #" <<  c << " didn't work" << endl;
+        int camera = inputName.empty() ? 0 : inputName[0] - '0';
+        if(!capture.open(camera))
+            cout << "Capture from camera #" <<  camera << " didn't work" << endl;
     }
     else
     {
@@ -105,7 +105,7 @@ int main( int argc, const char** argv )
 
             detectAndDraw( frame, canvas, cascade, nestedCascade, scale, tryflip );
 
-            int c = waitKey(10);
+            char c = (char)waitKey(10);
             if( c == 27 || c == 'q' || c == 'Q' )
                 break;
         }
@@ -128,7 +128,7 @@ int main( int argc, const char** argv )
                 char buf[1000+1];
                 while( fgets( buf, 1000, f ) )
                 {
-                    int len = (int)strlen(buf), c;
+                    int len = (int)strlen(buf);
                     while( len > 0 && isspace(buf[len-1]) )
                         len--;
                     buf[len] = '\0';
@@ -137,7 +137,7 @@ int main( int argc, const char** argv )
                     if( !image.empty() )
                     {
                         detectAndDraw( image, canvas, cascade, nestedCascade, scale, tryflip );
-                        c = waitKey(0);
+                        char c = (char)waitKey(0);
                         if( c == 27 || c == 'q' || c == 'Q' )
                             break;
                     }
@@ -195,7 +195,7 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
                                  //|CASCADE_DO_ROUGH_SEARCH
                                  |CASCADE_SCALE_IMAGE,
                                  Size(30, 30) );
-        for( vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); r++ )
+        for( vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); ++r )
         {
             faces.push_back(Rect(smallImg.cols - r->x - r->width, r->y, r->width, r->height));
         }

@@ -183,6 +183,7 @@ public:
 
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
         << "history" << history
         << "nsamples" << nN
@@ -318,7 +319,7 @@ CV_INLINE void
     {
         m_nNextShortUpdate[pixel] = (uchar)( rand() % m_nShortUpdate );
     };
-};
+}
 
 CV_INLINE int
         _cvCheckPixelBackgroundNP(long pixel,
@@ -435,7 +436,7 @@ CV_INLINE int
         };
     }
     return 0;
-};
+}
 
 CV_INLINE void
         icvUpdatePixelBackgroundNP(const Mat& _src, Mat& _dst,
@@ -553,12 +554,14 @@ CV_INLINE void
             i++;
         }
     }
-};
+}
 
 
 
 void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
 
@@ -597,6 +600,8 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
+    CV_INSTRUMENT_REGION()
+
     int nchannels = CV_MAT_CN(frameType);
     //CV_Assert( nchannels == 3 );
     Mat meanBackground(frameSize, CV_8UC3, Scalar::all(0));

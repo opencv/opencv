@@ -5,10 +5,30 @@
 // Copyright (C) 2014, Intel, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef __OPENCV_TS_EXT_HPP__
-#define __OPENCV_TS_EXT_HPP__
+#ifndef OPENCV_TS_EXT_HPP
+#define OPENCV_TS_EXT_HPP
 
+namespace cvtest {
 void checkIppStatus();
+}
+
+#define CV_TEST_INIT \
+    cv::ipp::setIppStatus(0); \
+    cv::theRNG().state = cvtest::param_seed;
+#define CV_TEST_CLEANUP ::cvtest::checkIppStatus();
+#define CV_TEST_BODY_IMPL \
+    { \
+       try { \
+          CV_TEST_INIT \
+          Body(); \
+          CV_TEST_CLEANUP \
+       } \
+       catch (cvtest::SkipTestException& e) \
+       { \
+          printf("[     SKIP ] %s\n", e.what()); \
+       } \
+    } \
+
 
 #undef TEST
 #define TEST(test_case_name, test_name) \
@@ -27,12 +47,13 @@ void checkIppStatus();
       ::test_info_ =\
         ::testing::internal::MakeAndRegisterTestInfo(\
             #test_case_name, #test_name, NULL, NULL, \
+            ::testing::internal::CodeLocation(__FILE__, __LINE__), \
             (::testing::internal::GetTestTypeId()), \
             ::testing::Test::SetUpTestCase, \
             ::testing::Test::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV_TEST_BODY_IMPL \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
 #undef TEST_F
@@ -52,12 +73,13 @@ void checkIppStatus();
       ::test_info_ =\
         ::testing::internal::MakeAndRegisterTestInfo(\
             #test_fixture, #test_name, NULL, NULL, \
+            ::testing::internal::CodeLocation(__FILE__, __LINE__), \
             (::testing::internal::GetTypeId<test_fixture>()), \
             test_fixture::SetUpTestCase, \
             test_fixture::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_fixture, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
+    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() CV_TEST_BODY_IMPL \
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
 #undef TEST_P
@@ -72,21 +94,24 @@ void checkIppStatus();
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\
-              #test_case_name, __FILE__, __LINE__)->AddTestPattern(\
-                  #test_case_name, \
-                  #test_name, \
-                  new ::testing::internal::TestMetaFactory< \
-                      GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>()); \
+              #test_case_name, \
+              ::testing::internal::CodeLocation(\
+                  __FILE__, __LINE__))->AddTestPattern(\
+                      #test_case_name, \
+                      #test_name, \
+                      new ::testing::internal::TestMetaFactory< \
+                          GTEST_TEST_CLASS_NAME_(\
+                              test_case_name, test_name)>()); \
       return 0; \
     } \
-    static int gtest_registering_dummy_; \
+    static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_; \
     GTEST_DISALLOW_COPY_AND_ASSIGN_(\
         GTEST_TEST_CLASS_NAME_(test_case_name, test_name)); \
   }; \
   int GTEST_TEST_CLASS_NAME_(test_case_name, \
                              test_name)::gtest_registering_dummy_ = \
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() { cv::ipp::setIppStatus(0); Body(); checkIppStatus(); } \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV_TEST_BODY_IMPL \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
-#endif  // __OPENCV_TS_EXT_HPP__
+#endif  // OPENCV_TS_EXT_HPP

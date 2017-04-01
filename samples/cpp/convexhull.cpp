@@ -1,6 +1,5 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <fstream>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include <iostream>
 
 using namespace cv;
@@ -26,7 +25,6 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        char key;
         int i, count = (unsigned)rng%100 + 1;
 
         vector<Point> points;
@@ -59,7 +57,7 @@ int main( int argc, char** argv )
 
         imshow("hull", img);
 
-        key = (char)waitKey();
+        char key = (char)waitKey();
         if( key == 27 || key == 'q' || key == 'Q' ) // 'ESC'
             break;
     }

@@ -38,8 +38,8 @@
 // the use of this software, even if advised of the possibility of such damage.
 
 
-#ifndef __OPENCV_OLD_WIMAGE_HPP__
-#define __OPENCV_OLD_WIMAGE_HPP__
+#ifndef OPENCV_OLD_WIMAGE_HPP
+#define OPENCV_OLD_WIMAGE_HPP
 
 #include "opencv2/core/wimage.hpp"
 

@@ -75,7 +75,7 @@
 #include <cstring>
 #include <cassert>
 
-#define USE_SSE2  (cv::checkHardwareSupport(CV_CPU_SSE))
+#define USE_SSE2  (cv::checkHardwareSupport(CV_CPU_SSE2))
 #define USE_SSE4_2  (cv::checkHardwareSupport(CV_CPU_SSE4_2))
 #define USE_AVX  (cv::checkHardwareSupport(CV_CPU_AVX))
 #define USE_AVX2  (cv::checkHardwareSupport(CV_CPU_AVX2))
@@ -135,6 +135,7 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, int width, int height,
                        void*);
 
+BinaryFunc getConvertFuncFp16(int ddepth);
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
@@ -261,21 +262,26 @@ struct CoreTLSData
         device(0), useOpenCL(-1),
 //#endif
         useIPP(-1)
-    {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-        useTegra = -1;
+        ,useTegra(-1)
 #endif
-    }
+#ifdef HAVE_OPENVX
+        ,useOpenVX(-1)
+#endif
+    {}
 
     RNG rng;
 //#ifdef HAVE_OPENCL
-    int device;
-    ocl::Queue oclQueue;
+    int device; // device index of an array of devices in a context, see also Device::getDefault
+    ocl::Queue oclQueue; // the queue used for running a kernel, see also getQueue, Kernel::run
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 //#endif
     int useIPP; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #ifdef HAVE_TEGRA_OPTIMIZATION
     int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
+#endif
+#ifdef HAVE_OPENVX
+    int useOpenVX; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #endif
 };
 

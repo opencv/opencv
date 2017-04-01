@@ -2,10 +2,10 @@
  * 3calibration.cpp -- Calibrate 3 cameras in a horizontal line together.
  */
 
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgcodecs/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/core/utility.hpp"
 
 #include <stdio.h>
@@ -351,7 +351,7 @@ int main( int argc, char** argv )
         for( k = 0; k < small_canvas.rows; k += 16 )
             line(small_canvas, Point(0, k), Point(small_canvas.cols, k), Scalar(0,255,0), 1);
         imshow("rectified", small_canvas);
-        int c = waitKey(0);
+        char c = (char)waitKey(0);
         if( c == 27 || c == 'q' || c == 'Q' )
             break;
     }

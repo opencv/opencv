@@ -517,30 +517,32 @@ DescriptorMatcher::~DescriptorMatcher()
 
 void DescriptorMatcher::add( InputArrayOfArrays _descriptors )
 {
-    if(_descriptors.isUMatVector())
+    if( _descriptors.isUMatVector() )
     {
         std::vector<UMat> descriptors;
-        _descriptors.getUMatVector(descriptors);
+        _descriptors.getUMatVector( descriptors );
         utrainDescCollection.insert( utrainDescCollection.end(), descriptors.begin(), descriptors.end() );
     }
-    else if(_descriptors.isUMat())
+    else if( _descriptors.isUMat() )
     {
         std::vector<UMat> descriptors = std::vector<UMat>(1, _descriptors.getUMat());
         utrainDescCollection.insert( utrainDescCollection.end(), descriptors.begin(), descriptors.end() );
     }
-    else if(_descriptors.isMatVector())
+    else if( _descriptors.isMatVector() )
     {
         std::vector<Mat> descriptors;
         _descriptors.getMatVector(descriptors);
         trainDescCollection.insert( trainDescCollection.end(), descriptors.begin(), descriptors.end() );
     }
-    else if(_descriptors.isMat())
+    else if( _descriptors.isMat() )
     {
         std::vector<Mat> descriptors = std::vector<Mat>(1, _descriptors.getMat());
         trainDescCollection.insert( trainDescCollection.end(), descriptors.begin(), descriptors.end() );
     }
     else
+    {
         CV_Assert( _descriptors.isUMat() || _descriptors.isUMatVector() || _descriptors.isMat() || _descriptors.isMatVector() );
+    }
 }
 
 const std::vector<Mat>& DescriptorMatcher::getTrainDescriptors() const
@@ -565,6 +567,8 @@ void DescriptorMatcher::train()
 void DescriptorMatcher::match( InputArray queryDescriptors, InputArray trainDescriptors,
                               std::vector<DMatch>& matches, InputArray mask ) const
 {
+    CV_INSTRUMENT_REGION()
+
     Ptr<DescriptorMatcher> tempMatcher = clone(true);
     tempMatcher->add(trainDescriptors);
     tempMatcher->match( queryDescriptors, matches, std::vector<Mat>(1, mask.getMat()) );
@@ -574,6 +578,8 @@ void DescriptorMatcher::knnMatch( InputArray queryDescriptors, InputArray trainD
                                   std::vector<std::vector<DMatch> >& matches, int knn,
                                   InputArray mask, bool compactResult ) const
 {
+    CV_INSTRUMENT_REGION()
+
     Ptr<DescriptorMatcher> tempMatcher = clone(true);
     tempMatcher->add(trainDescriptors);
     tempMatcher->knnMatch( queryDescriptors, matches, knn, std::vector<Mat>(1, mask.getMat()), compactResult );
@@ -583,6 +589,8 @@ void DescriptorMatcher::radiusMatch( InputArray queryDescriptors, InputArray tra
                                      std::vector<std::vector<DMatch> >& matches, float maxDistance, InputArray mask,
                                      bool compactResult ) const
 {
+    CV_INSTRUMENT_REGION()
+
     Ptr<DescriptorMatcher> tempMatcher = clone(true);
     tempMatcher->add(trainDescriptors);
     tempMatcher->radiusMatch( queryDescriptors, matches, maxDistance, std::vector<Mat>(1, mask.getMat()), compactResult );
@@ -590,6 +598,8 @@ void DescriptorMatcher::radiusMatch( InputArray queryDescriptors, InputArray tra
 
 void DescriptorMatcher::match( InputArray queryDescriptors, std::vector<DMatch>& matches, InputArrayOfArrays masks )
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<std::vector<DMatch> > knnMatches;
     knnMatch( queryDescriptors, knnMatches, 1, masks, true /*compactResult*/ );
     convertMatches( knnMatches, matches );
@@ -611,8 +621,7 @@ void DescriptorMatcher::checkMasks( InputArrayOfArrays _masks, int queryDescript
             {
                 int rows = trainDescCollection[i].empty() ? utrainDescCollection[i].rows : trainDescCollection[i].rows;
                     CV_Assert( masks[i].rows == queryDescriptorsCount &&
-                        (masks[i].cols == rows || masks[i].cols == rows) &&
-                        masks[i].type() == CV_8UC1 );
+                        masks[i].cols == rows && masks[i].type() == CV_8UC1);
             }
         }
     }
@@ -621,6 +630,8 @@ void DescriptorMatcher::checkMasks( InputArrayOfArrays _masks, int queryDescript
 void DescriptorMatcher::knnMatch( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int knn,
                                   InputArrayOfArrays masks, bool compactResult )
 {
+    CV_INSTRUMENT_REGION()
+
     if( empty() || queryDescriptors.empty() )
         return;
 
@@ -635,6 +646,8 @@ void DescriptorMatcher::knnMatch( InputArray queryDescriptors, std::vector<std::
 void DescriptorMatcher::radiusMatch( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                      InputArrayOfArrays masks, bool compactResult )
 {
+    CV_INSTRUMENT_REGION()
+
     matches.clear();
     if( empty() || queryDescriptors.empty() )
         return;
@@ -681,6 +694,11 @@ BFMatcher::BFMatcher( int _normType, bool _crossCheck )
 {
     normType = _normType;
     crossCheck = _crossCheck;
+}
+
+Ptr<BFMatcher> BFMatcher::create(int _normType, bool _crossCheck )
+{
+    return makePtr<BFMatcher>(_normType, _crossCheck);
 }
 
 Ptr<DescriptorMatcher> BFMatcher::clone( bool emptyTrainData ) const
@@ -1018,6 +1036,41 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatche
     return dm;
 }
 
+Ptr<DescriptorMatcher> DescriptorMatcher::create(int matcherType)
+{
+
+
+    String name;
+
+    switch(matcherType)
+    {
+    case FLANNBASED:
+        name = "FlannBased";
+        break;
+    case BRUTEFORCE:
+        name = "BruteForce";
+        break;
+    case BRUTEFORCE_L1:
+        name = "BruteForce-L1";
+        break;
+    case BRUTEFORCE_HAMMING:
+        name = "BruteForce-Hamming";
+        break;
+    case BRUTEFORCE_HAMMINGLUT:
+        name = "BruteForce-HammingLUT";
+        break;
+    case BRUTEFORCE_SL2:
+        name = "BruteForce-SL2";
+        break;
+    default:
+        CV_Error( Error::StsBadArg, "Specified descriptor matcher type is not supported." );
+        break;
+    }
+
+    return DescriptorMatcher::create(name);
+
+}
+
 
 /*
  * Flann based matcher
@@ -1029,15 +1082,45 @@ FlannBasedMatcher::FlannBasedMatcher( const Ptr<flann::IndexParams>& _indexParam
     CV_Assert( _searchParams );
 }
 
+Ptr<FlannBasedMatcher> FlannBasedMatcher::create()
+{
+    return makePtr<FlannBasedMatcher>();
+}
+
 void FlannBasedMatcher::add( InputArrayOfArrays _descriptors )
 {
     DescriptorMatcher::add( _descriptors );
-    std::vector<UMat> descriptors;
-    _descriptors.getUMatVector(descriptors);
 
-    for( size_t i = 0; i < descriptors.size(); i++ )
+    if( _descriptors.isUMatVector() )
     {
-        addedDescCount += descriptors[i].rows;
+        std::vector<UMat> descriptors;
+        _descriptors.getUMatVector( descriptors );
+
+        for( size_t i = 0; i < descriptors.size(); i++ )
+        {
+            addedDescCount += descriptors[i].rows;
+        }
+    }
+    else if( _descriptors.isUMat() )
+    {
+        addedDescCount += _descriptors.getUMat().rows;
+    }
+    else if( _descriptors.isMatVector() )
+    {
+        std::vector<Mat> descriptors;
+        _descriptors.getMatVector(descriptors);
+        for( size_t i = 0; i < descriptors.size(); i++ )
+        {
+            addedDescCount += descriptors[i].rows;
+        }
+    }
+    else if( _descriptors.isMat() )
+    {
+        addedDescCount += _descriptors.getMat().rows;
+    }
+    else
+    {
+        CV_Assert( _descriptors.isUMat() || _descriptors.isUMatVector() || _descriptors.isMat() || _descriptors.isMatVector() );
     }
 }
 
@@ -1053,6 +1136,8 @@ void FlannBasedMatcher::clear()
 
 void FlannBasedMatcher::train()
 {
+    CV_INSTRUMENT_REGION()
+
     if( !flannIndex || mergedDescriptors.size() < addedDescCount )
     {
         // FIXIT: Workaround for 'utrainDescCollection' issue (PR #2142)
@@ -1152,6 +1237,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
 
 void FlannBasedMatcher::write( FileStorage& fs) const
 {
+     writeFormat(fs);
      fs << "indexParams" << "[";
 
      if (indexParams)
@@ -1304,6 +1390,8 @@ void FlannBasedMatcher::convertToDMatches( const DescriptorCollection& collectio
 void FlannBasedMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vector<DMatch> >& matches, int knn,
                                      InputArrayOfArrays /*masks*/, bool /*compactResult*/ )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat queryDescriptors = _queryDescriptors.getMat();
     Mat indices( queryDescriptors.rows, knn, CV_32SC1 );
     Mat dists( queryDescriptors.rows, knn, CV_32FC1);
@@ -1315,6 +1403,8 @@ void FlannBasedMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<
 void FlannBasedMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                          InputArrayOfArrays /*masks*/, bool /*compactResult*/ )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat queryDescriptors = _queryDescriptors.getMat();
     const int count = mergedDescriptors.size(); // TODO do count as param?
     Mat indices( queryDescriptors.rows, count, CV_32SC1, Scalar::all(-1) );
@@ -1329,5 +1419,4 @@ void FlannBasedMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vect
 
     convertToDMatches( mergedDescriptors, indices, dists, matches );
 }
-
 }

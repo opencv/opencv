@@ -87,8 +87,11 @@ class App:
         for fn in glob('*.py'):
             name = splitfn(fn)[1]
             if fn[0] != '_' and name not in exclude_list:
-                demos_lb.insert(tk.END, name)
                 self.samples[name] = fn
+
+        for name in sorted(self.samples):
+            demos_lb.insert(tk.END, name)
+
         demos_lb.bind('<<ListboxSelect>>', self.on_demo_select)
 
         self.cmd_entry = cmd_entry = tk.Entry(right)

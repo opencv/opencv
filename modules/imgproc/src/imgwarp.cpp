@@ -49,6 +49,11 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "hal_replacement.hpp"
+
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
+using namespace cv;
 
 namespace cv
 {
@@ -66,6 +71,8 @@ namespace cv
     template <int channels, typename Type>
     bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size, ippiSetFunc func)
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         Type values[channels];
         for( int i = 0; i < channels; i++ )
             values[i] = saturate_cast<Type>(value[i]);
@@ -74,16 +81,18 @@ namespace cv
 
     static bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, int depth)
     {
+        CV_INSTRUMENT_REGION_IPP()
+
         if( channels == 1 )
         {
             switch( depth )
             {
             case CV_8U:
-                return ippiSet_8u_C1R(saturate_cast<Ipp8u>(value[0]), (Ipp8u *)dataPointer, step, size) >= 0;
+                return CV_INSTRUMENT_FUN_IPP(ippiSet_8u_C1R,(saturate_cast<Ipp8u>(value[0]), (Ipp8u *)dataPointer, step, size)) >= 0;
             case CV_16U:
-                return ippiSet_16u_C1R(saturate_cast<Ipp16u>(value[0]), (Ipp16u *)dataPointer, step, size) >= 0;
+                return CV_INSTRUMENT_FUN_IPP(ippiSet_16u_C1R,(saturate_cast<Ipp16u>(value[0]), (Ipp16u *)dataPointer, step, size)) >= 0;
             case CV_32F:
-                return ippiSet_32f_C1R(saturate_cast<Ipp32f>(value[0]), (Ipp32f *)dataPointer, step, size) >= 0;
+                return CV_INSTRUMENT_FUN_IPP(ippiSet_32f_C1R,(saturate_cast<Ipp32f>(value[0]), (Ipp32f *)dataPointer, step, size)) >= 0;
             }
         }
         else
@@ -1640,7 +1649,7 @@ struct VResizeLanczos4
     {
         CastOp castOp;
         VecOp vecOp;
-        int k, x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
@@ -1648,7 +1657,7 @@ struct VResizeLanczos4
             const WT* S = src[0];
             WT s0 = S[x]*b, s1 = S[x+1]*b, s2 = S[x+2]*b, s3 = S[x+3]*b;
 
-            for( k = 1; k < 8; k++ )
+            for( int k = 1; k < 8; k++ )
             {
                 b = beta[k]; S = src[k];
                 s0 += S[x]*b; s1 += S[x+1]*b;
@@ -2709,7 +2718,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
 #define CHECK_IPP_STATUS(STATUS) if (STATUS < 0) { *ok = false; return; }
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN) \
-    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \
+    ippiResize = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \
     CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
@@ -2717,7 +2726,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(TYPE, CN) \
     if (mode == (int)ippCubic) { *ok = false; return; } \
-    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \
+    ippiResize = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; \
     CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
@@ -2726,7 +2735,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     getSrcOffsetFunc =  (ippiResizeGetSrcOffset) ippiResizeGetSrcOffset_##TYPE;
 
 #define SET_IPP_RESIZE_CUBIC_FUNC_PTR(TYPE, CN) \
-    func = (ippiResizeFunc)ippiResizeCubic_##TYPE##_##CN##R; \
+    ippiResize = (ippiResizeFunc)ippiResizeCubic_##TYPE##_##CN##R; \
     CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
@@ -2749,7 +2758,7 @@ public:
     IPPresizeInvoker(const Mat & _src, Mat & _dst, double _inv_scale_x, double _inv_scale_y, int _mode, bool *_ok) :
         ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x),
         inv_scale_y(_inv_scale_y), pSpec(NULL), mode(_mode),
-        func(NULL), getBufferSizeFunc(NULL), getSrcOffsetFunc(NULL), ok(_ok)
+        ippiResize(NULL), getBufferSizeFunc(NULL), getSrcOffsetFunc(NULL), ok(_ok)
     {
         *ok = true;
         IppiSize srcSize, dstSize;
@@ -2809,7 +2818,7 @@ public:
         AutoBuffer<uchar> buf(bufsize + 64);
         uchar* bufptr = alignPtr((uchar*)buf, 32);
 
-        if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
+        if( CV_INSTRUMENT_FUN_IPP(ippiResize, pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr) < 0 )
             *ok = false;
         else
         {
@@ -2824,7 +2833,7 @@ private:
     void *pSpec;
     AutoBuffer<uchar> specBuf;
     int mode;
-    ippiResizeFunc func;
+    ippiResizeFunc ippiResize;
     ippiResizeGetBufferSize getBufferSizeFunc;
     ippiResizeGetSrcOffset getSrcOffsetFunc;
     bool *ok;
@@ -3089,9 +3098,11 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 #endif
 
 #if IPP_VERSION_X100 >= 710
-static bool ipp_resize_mt(    Mat src, Mat dst,
-                        double inv_scale_x, double inv_scale_y, int interpolation)
+static bool ipp_resize_mt(Mat & src, Mat & dst,
+                          double inv_scale_x, double inv_scale_y, int interpolation)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int mode = -1;
     if (interpolation == INTER_LINEAR && src.rows >= 2 && src.cols >= 2)
         mode = ippLinear;
@@ -3111,15 +3122,26 @@ static bool ipp_resize_mt(    Mat src, Mat dst,
 }
 #endif
 
-}
+//==================================================================================================
 
+namespace hal {
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
-void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
-                 double inv_scale_x, double inv_scale_y, int interpolation )
+void resize(int src_type,
+            const uchar * src_data, size_t src_step, int src_width, int src_height,
+            uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+            double inv_scale_x, double inv_scale_y, int interpolation)
 {
+    CV_INSTRUMENT_REGION()
+
+    CV_Assert((dst_width * dst_height > 0) || (inv_scale_x > 0 && inv_scale_y > 0));
+    if (inv_scale_x < DBL_EPSILON || inv_scale_y < DBL_EPSILON)
+    {
+        inv_scale_x = static_cast<double>(dst_width) / src_width;
+        inv_scale_y = static_cast<double>(dst_height) / src_height;
+    }
+
+    CALL_HAL(resize, cv_hal_resize, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
+
     static ResizeFunc linear_tab[] =
     {
         resizeGeneric_<
@@ -3224,24 +3246,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         resizeArea_<double, double>, 0
     };
 
-    Size ssize = _src.size();
-
-    CV_Assert( ssize.area() > 0 );
-    CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
-    if( dsize.area() == 0 )
-    {
-        dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
-                     saturate_cast<int>(ssize.height*inv_scale_y));
-        CV_Assert( dsize.area() > 0 );
-    }
-    else
-    {
-        inv_scale_x = (double)dsize.width/ssize.width;
-        inv_scale_y = (double)dsize.height/ssize.height;
-    }
-
-
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int depth = CV_MAT_DEPTH(src_type), cn = CV_MAT_CN(src_type);
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
 
     int iscale_x = saturate_cast<int>(scale_x);
@@ -3250,42 +3255,30 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     bool is_area_fast = std::abs(scale_x - iscale_x) < DBL_EPSILON &&
             std::abs(scale_y - iscale_y) < DBL_EPSILON;
 
+    Size dsize = Size(saturate_cast<int>(src_width*inv_scale_x),
+                      saturate_cast<int>(src_height*inv_scale_y));
+    CV_Assert( dsize.area() > 0 );
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
-               ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
-
-    Mat src = _src.getMat();
-    _dst.create(dsize, src.type());
-    Mat dst = _dst.getMat();
-
-    if (dsize == ssize) {
-      // Source and destination are of same size. Use simple copy.
-      src.copyTo(dst);
-      return;
-    }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::resize(src, dst, (float)inv_scale_x, (float)inv_scale_y, interpolation))
-        return;
-#endif
+    Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
+    Mat dst(dsize, src_type, dst_data, dst_step);
 
 #ifdef HAVE_IPP
     int mode = -1;
-    if (interpolation == INTER_LINEAR && _src.rows() >= 2 && _src.cols() >= 2)
+    if (interpolation == INTER_LINEAR && src_height >= 2 && src_width >= 2)
         mode = INTER_LINEAR;
-    else if (interpolation == INTER_CUBIC && _src.rows() >= 4 && _src.cols() >= 4)
+    else if (interpolation == INTER_CUBIC && src_height >= 4 && src_width >= 4)
         mode = INTER_CUBIC;
 
     const double IPP_RESIZE_EPS = 1e-10;
-    double ex = fabs((double)dsize.width / _src.cols()  - inv_scale_x) / inv_scale_x;
-    double ey = fabs((double)dsize.height / _src.rows() - inv_scale_y) / inv_scale_y;
+    double ex = fabs((double)dsize.width / src_width  - inv_scale_x) / inv_scale_x;
+    double ey = fabs((double)dsize.height / src_height - inv_scale_y) / inv_scale_y;
 #endif
     CV_IPP_RUN(IPP_VERSION_X100 >= 710 && ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) || (ex == 0 && ey == 0 && depth == CV_64F)) &&
         (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
         !(interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 && depth == CV_8U) &&
         mode >= 0 && (cn == 1 || cn == 3 || cn == 4) && (depth == CV_16U || depth == CV_16S || depth == CV_32F ||
-        (depth == CV_64F && mode == INTER_LINEAR)), ipp_resize_mt(src, dst, inv_scale_x, inv_scale_y, interpolation))
-
+        (depth == CV_64F && mode == INTER_LINEAR)),
+        ipp_resize_mt(src, dst, inv_scale_x, inv_scale_y, interpolation))
 
     if( interpolation == INTER_NEAREST )
     {
@@ -3309,7 +3302,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             if( is_area_fast )
             {
                 int area = iscale_x*iscale_y;
-                size_t srcstep = src.step / src.elemSize1();
+                size_t srcstep = src_step / src.elemSize1();
                 AutoBuffer<int> _ofs(area + dsize.width*cn);
                 int* ofs = _ofs;
                 int* xofs = ofs + area;
@@ -3335,11 +3328,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             ResizeAreaFunc func = area_tab[depth];
             CV_Assert( func != 0 && cn <= 4 );
 
-            AutoBuffer<DecimateAlpha> _xytab((ssize.width + ssize.height)*2);
-            DecimateAlpha* xtab = _xytab, *ytab = xtab + ssize.width*2;
+            AutoBuffer<DecimateAlpha> _xytab((src_width + src_height)*2);
+            DecimateAlpha* xtab = _xytab, *ytab = xtab + src_width*2;
 
-            int xtab_size = computeResizeAreaTab(ssize.width, dsize.width, cn, scale_x, xtab);
-            int ytab_size = computeResizeAreaTab(ssize.height, dsize.height, 1, scale_y, ytab);
+            int xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
+            int ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
 
             AutoBuffer<int> _tabofs(dsize.height + 1);
             int* tabofs = _tabofs;
@@ -3407,11 +3400,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                 fx = 0, sx = 0;
         }
 
-        if( sx + ksize2 >= ssize.width )
+        if( sx + ksize2 >= src_width )
         {
             xmax = std::min( xmax, dx );
-            if( sx >= ssize.width-1 && (interpolation != INTER_CUBIC && interpolation != INTER_LANCZOS4))
-                fx = 0, sx = ssize.width-1;
+            if( sx >= src_width-1 && (interpolation != INTER_CUBIC && interpolation != INTER_LANCZOS4))
+                fx = 0, sx = src_width-1;
         }
 
         for( k = 0, sx *= cn; k < cn; k++ )
@@ -3484,6 +3477,49 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
           fixpt ? (void*)ibeta : (void*)beta, xmin, xmax, ksize );
 }
 
+} // cv::hal::
+} // cv::
+
+//==================================================================================================
+
+void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
+                 double inv_scale_x, double inv_scale_y, int interpolation )
+{
+    CV_INSTRUMENT_REGION()
+
+    Size ssize = _src.size();
+
+    CV_Assert( ssize.width > 0 && ssize.height > 0 );
+    CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
+    if( dsize.area() == 0 )
+    {
+        dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
+                     saturate_cast<int>(ssize.height*inv_scale_y));
+        CV_Assert( dsize.area() > 0 );
+    }
+    else
+    {
+        inv_scale_x = (double)dsize.width/ssize.width;
+        inv_scale_y = (double)dsize.height/ssize.height;
+    }
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
+               ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
+
+    Mat src = _src.getMat();
+    _dst.create(dsize, src.type());
+    Mat dst = _dst.getMat();
+
+    if (dsize == ssize)
+    {
+        // Source and destination are of same size. Use simple copy.
+        src.copyTo(dst);
+        return;
+    }
+
+    hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
+}
+
 
 /****************************************************************************************\
 *                       General warping (affine, perspective, remap)                     *
@@ -3497,14 +3533,13 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                           int borderType, const Scalar& _borderValue )
 {
     Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels();
+    const int cn = _src.channels();
     const T* S0 = _src.ptr<T>();
+    T cval[CV_CN_MAX];
     size_t sstep = _src.step/sizeof(S0[0]);
-    Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
-        saturate_cast<T>(_borderValue[1]),
-        saturate_cast<T>(_borderValue[2]),
-        saturate_cast<T>(_borderValue[3]));
-    int dx, dy;
+
+    for(int k = 0; k < cn; k++ )
+        cval[k] = saturate_cast<T>(_borderValue[k & 3]);
 
     unsigned width1 = ssize.width, height1 = ssize.height;
 
@@ -3514,14 +3549,14 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
         dsize.height = 1;
     }
 
-    for( dy = 0; dy < dsize.height; dy++ )
+    for(int dy = 0; dy < dsize.height; dy++ )
     {
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
 
         if( cn == 1 )
         {
-            for( dx = 0; dx < dsize.width; dx++ )
+            for(int dx = 0; dx < dsize.width; dx++ )
             {
                 int sx = XY[dx*2], sy = XY[dx*2+1];
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
@@ -3547,9 +3582,9 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
         }
         else
         {
-            for( dx = 0; dx < dsize.width; dx++, D += cn )
+            for(int dx = 0; dx < dsize.width; dx++, D += cn )
             {
-                int sx = XY[dx*2], sy = XY[dx*2+1], k;
+                int sx = XY[dx*2], sy = XY[dx*2+1];
                 const T *S;
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
                 {
@@ -3566,7 +3601,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                     else
                     {
                         S = S0 + sy*sstep + sx*cn;
-                        for( k = 0; k < cn; k++ )
+                        for(int k = 0; k < cn; k++ )
                             D[k] = S[k];
                     }
                 }
@@ -3586,7 +3621,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                         sy = borderInterpolate(sy, ssize.height, borderType);
                         S = S0 + sy*sstep + sx*cn;
                     }
-                    for( k = 0; k < cn; k++ )
+                    for(int k = 0; k < cn; k++ )
                         D[k] = S[k];
                 }
             }
@@ -3816,16 +3851,15 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    int k, cn = _src.channels();
+    const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
     size_t sstep = _src.step/sizeof(S0[0]);
     T cval[CV_CN_MAX];
-    int dx, dy;
     CastOp castOp;
     VecOp vecOp;
 
-    for( k = 0; k < cn; k++ )
+    for(int k = 0; k < cn; k++ )
         cval[k] = saturate_cast<T>(_borderValue[k & 3]);
 
     unsigned width1 = std::max(ssize.width-1, 0), height1 = std::max(ssize.height-1, 0);
@@ -3835,7 +3869,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
         width1 = std::max(ssize.width-2, 0);
 #endif
 
-    for( dy = 0; dy < dsize.height; dy++ )
+    for(int dy = 0; dy < dsize.height; dy++ )
     {
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
@@ -3843,7 +3877,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
         int X0 = 0;
         bool prevInlier = false;
 
-        for( dx = 0; dx <= dsize.width; dx++ )
+        for(int dx = 0; dx <= dsize.width; dx++ )
         {
             bool curInlier = dx < dsize.width ?
                 (unsigned)XY[dx*2] < width1 &&
@@ -3912,7 +3946,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         int sx = XY[dx*2], sy = XY[dx*2+1];
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*cn;
-                        for( k = 0; k < cn; k++ )
+                        for(int k = 0; k < cn; k++ )
                         {
                             WT t0 = S[k]*w[0] + S[k+cn]*w[1] + S[sstep+k]*w[2] + S[sstep+k+cn]*w[3];
                             D[k] = castOp(t0);
@@ -3976,7 +4010,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                             (sx >= ssize.width || sx+1 < 0 ||
                              sy >= ssize.height || sy+1 < 0) )
                         {
-                            for( k = 0; k < cn; k++ )
+                            for(int k = 0; k < cn; k++ )
                                 D[k] = cval[k];
                         }
                         else
@@ -4010,7 +4044,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                                 v2 = sx0 >= 0 && sy1 >= 0 ? S0 + sy1*sstep + sx0*cn : &cval[0];
                                 v3 = sx1 >= 0 && sy1 >= 0 ? S0 + sy1*sstep + sx1*cn : &cval[0];
                             }
-                            for( k = 0; k < cn; k++ )
+                            for(int k = 0; k < cn; k++ )
                                 D[k] = castOp(WT(v0[k]*w[0] + v1[k]*w[1] + v2[k]*w[2] + v3[k]*w[3]));
                         }
                     }
@@ -4028,16 +4062,16 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels();
+    const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
     size_t sstep = _src.step/sizeof(S0[0]);
-    Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
-        saturate_cast<T>(_borderValue[1]),
-        saturate_cast<T>(_borderValue[2]),
-        saturate_cast<T>(_borderValue[3]));
-    int dx, dy;
+    T cval[CV_CN_MAX];
     CastOp castOp;
+
+    for(int k = 0; k < cn; k++ )
+        cval[k] = saturate_cast<T>(_borderValue[k & 3]);
+
     int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
 
     unsigned width1 = std::max(ssize.width-3, 0), height1 = std::max(ssize.height-3, 0);
@@ -4048,21 +4082,20 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
         dsize.height = 1;
     }
 
-    for( dy = 0; dy < dsize.height; dy++ )
+    for(int dy = 0; dy < dsize.height; dy++ )
     {
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
         const ushort* FXY = _fxy.ptr<ushort>(dy);
 
-        for( dx = 0; dx < dsize.width; dx++, D += cn )
+        for(int dx = 0; dx < dsize.width; dx++, D += cn )
         {
             int sx = XY[dx*2]-1, sy = XY[dx*2+1]-1;
             const AT* w = wtab + FXY[dx]*16;
-            int i, k;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
                 const T* S = S0 + sy*sstep + sx*cn;
-                for( k = 0; k < cn; k++ )
+                for(int k = 0; k < cn; k++ )
                 {
                     WT sum = S[0]*w[0] + S[cn]*w[1] + S[cn*2]*w[2] + S[cn*3]*w[3];
                     S += sstep;
@@ -4087,21 +4120,21 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                     (sx >= ssize.width || sx+4 <= 0 ||
                     sy >= ssize.height || sy+4 <= 0))
                 {
-                    for( k = 0; k < cn; k++ )
+                    for(int k = 0; k < cn; k++ )
                         D[k] = cval[k];
                     continue;
                 }
 
-                for( i = 0; i < 4; i++ )
+                for(int i = 0; i < 4; i++ )
                 {
                     x[i] = borderInterpolate(sx + i, ssize.width, borderType1)*cn;
                     y[i] = borderInterpolate(sy + i, ssize.height, borderType1);
                 }
 
-                for( k = 0; k < cn; k++, S0++, w -= 16 )
+                for(int k = 0; k < cn; k++, S0++, w -= 16 )
                 {
                     WT cv = cval[k], sum = cv*ONE;
-                    for( i = 0; i < 4; i++, w += 4 )
+                    for(int i = 0; i < 4; i++, w += 4 )
                     {
                         int yi = y[i];
                         const T* S = S0 + yi*sstep;
@@ -4133,16 +4166,16 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
     typedef typename CastOp::rtype T;
     typedef typename CastOp::type1 WT;
     Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels();
+    const int cn = _src.channels();
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr<T>();
     size_t sstep = _src.step/sizeof(S0[0]);
-    Scalar_<T> cval(saturate_cast<T>(_borderValue[0]),
-        saturate_cast<T>(_borderValue[1]),
-        saturate_cast<T>(_borderValue[2]),
-        saturate_cast<T>(_borderValue[3]));
-    int dx, dy;
+    T cval[CV_CN_MAX];
     CastOp castOp;
+
+    for(int k = 0; k < cn; k++ )
+        cval[k] = saturate_cast<T>(_borderValue[k & 3]);
+
     int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
 
     unsigned width1 = std::max(ssize.width-7, 0), height1 = std::max(ssize.height-7, 0);
@@ -4153,21 +4186,20 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
         dsize.height = 1;
     }
 
-    for( dy = 0; dy < dsize.height; dy++ )
+    for(int dy = 0; dy < dsize.height; dy++ )
     {
         T* D = _dst.ptr<T>(dy);
         const short* XY = _xy.ptr<short>(dy);
         const ushort* FXY = _fxy.ptr<ushort>(dy);
 
-        for( dx = 0; dx < dsize.width; dx++, D += cn )
+        for(int dx = 0; dx < dsize.width; dx++, D += cn )
         {
             int sx = XY[dx*2]-3, sy = XY[dx*2+1]-3;
             const AT* w = wtab + FXY[dx]*64;
             const T* S = S0 + sy*sstep + sx*cn;
-            int i, k;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
-                for( k = 0; k < cn; k++ )
+                for(int k = 0; k < cn; k++ )
                 {
                     WT sum = 0;
                     for( int r = 0; r < 8; r++, S += sstep, w += 8 )
@@ -4190,21 +4222,21 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                     (sx >= ssize.width || sx+8 <= 0 ||
                     sy >= ssize.height || sy+8 <= 0))
                 {
-                    for( k = 0; k < cn; k++ )
+                    for(int k = 0; k < cn; k++ )
                         D[k] = cval[k];
                     continue;
                 }
 
-                for( i = 0; i < 8; i++ )
+                for(int i = 0; i < 8; i++ )
                 {
                     x[i] = borderInterpolate(sx + i, ssize.width, borderType1)*cn;
                     y[i] = borderInterpolate(sy + i, ssize.height, borderType1);
                 }
 
-                for( k = 0; k < cn; k++, S0++, w -= 64 )
+                for(int k = 0; k < cn; k++, S0++, w -= 64 )
                 {
                     WT cv = cval[k], sum = cv*ONE;
-                    for( i = 0; i < 8; i++, w += 8 )
+                    for(int i = 0; i < 8; i++, w += 8 )
                     {
                         int yi = y[i];
                         const T* S1 = S0 + yi*sstep;
@@ -4576,9 +4608,235 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     return k.run(2, globalThreads, NULL, false);
 }
 
+static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
+    Point2f center, double maxRadius, int flags)
+{
+    UMat src_with_border; // don't scope this variable (it holds image data)
+
+    UMat mapx, mapy, r, cp_sp;
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), src.type());
+    Size dsize = src.size();
+    r.create(Size(1, dsize.width), CV_32F);
+    cp_sp.create(Size(1, dsize.height), CV_32FC2);
+
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+    size_t w = dsize.width;
+    size_t h = dsize.height;
+    String buildOptions;
+    unsigned mem_size = 32;
+    if (flags & CV_WARP_INVERSE_MAP)
+    {
+        buildOptions = "-D InverseMap";
+    }
+    else
+    {
+        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
+    }
+    String retval;
+    ocl::Program p(ocl::imgproc::linearPolar_oclsrc, buildOptions, retval);
+    ocl::Kernel k("linearPolar", p);
+    ocl::KernelArg ocl_mapx = ocl::KernelArg::PtrReadWrite(mapx), ocl_mapy = ocl::KernelArg::PtrReadWrite(mapy);
+    ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
+    ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+
+
+
+        ocl::Kernel computeAngleRadius_Kernel("computeAngleRadius", p);
+        float PI2_height = (float) CV_2PI / dsize.height;
+        float maxRadius_width = (float) maxRadius / dsize.width;
+        computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, maxRadius_width, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
+        size_t max_dim = max(h, w);
+        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
+        k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
+    }
+    else
+    {
+        const int ANGLE_BORDER = 1;
+
+        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        src = src_with_border;
+        Size ssize = src_with_border.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+        float ascale =  ssize.height / ((float)CV_2PI);
+        float pscale =  ssize.width / ((float) maxRadius);
+
+        k.args(ocl_mapx, ocl_mapy, ascale, pscale, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
+
+
+    }
+    size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
+    size_t localThreads[2] = { mem_size , mem_size };
+    k.run(2, globalThreads, localThreads, false);
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    return true;
+}
+static bool ocl_logPolar(InputArray _src, OutputArray _dst,
+    Point2f center, double M, int flags)
+{
+    if (M <= 0)
+        CV_Error(CV_StsOutOfRange, "M should be >0");
+    UMat src_with_border; // don't scope this variable (it holds image data)
+
+    UMat mapx, mapy, r, cp_sp;
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), src.type());
+    Size dsize = src.size();
+    r.create(Size(1, dsize.width), CV_32F);
+    cp_sp.create(Size(1, dsize.height), CV_32FC2);
+
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+    size_t w = dsize.width;
+    size_t h = dsize.height;
+    String buildOptions;
+    unsigned mem_size = 32;
+    if (flags & CV_WARP_INVERSE_MAP)
+    {
+        buildOptions = "-D InverseMap";
+    }
+    else
+    {
+        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
+    }
+    String retval;
+    ocl::Program p(ocl::imgproc::logPolar_oclsrc, buildOptions, retval);
+    //ocl::Program p(ocl::imgproc::my_linearPolar_oclsrc, buildOptions, retval);
+    //printf("%s\n", retval);
+    ocl::Kernel k("logPolar", p);
+    ocl::KernelArg ocl_mapx = ocl::KernelArg::PtrReadWrite(mapx), ocl_mapy = ocl::KernelArg::PtrReadWrite(mapy);
+    ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
+    ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+
+
+
+        ocl::Kernel computeAngleRadius_Kernel("computeAngleRadius", p);
+        float PI2_height = (float) CV_2PI / dsize.height;
+
+        computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, (float)M, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
+        size_t max_dim = max(h, w);
+        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
+        k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
+    }
+    else
+    {
+        const int ANGLE_BORDER = 1;
+
+        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        src = src_with_border;
+        Size ssize = src_with_border.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+        float ascale =  ssize.height / ((float)CV_2PI);
+
+
+        k.args(ocl_mapx, ocl_mapy, ascale, (float)M, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
+
+
+    }
+    size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
+    size_t localThreads[2] = { mem_size , mem_size };
+    k.run(2, globalThreads, localThreads, false);
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    return true;
+}
 #endif
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
+#ifdef HAVE_OPENVX
+static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation, const Scalar& borderValue)
+{
+    vx_interpolation_type_e inter_type;
+    switch (interpolation)
+    {
+    case INTER_LINEAR:
+#if VX_VERSION > VX_VERSION_1_0
+        inter_type = VX_INTERPOLATION_BILINEAR;
+#else
+        inter_type = VX_INTERPOLATION_TYPE_BILINEAR;
+#endif
+        break;
+    case INTER_NEAREST:
+/* NEAREST_NEIGHBOR mode disabled since OpenCV round half to even while OpenVX sample implementation round half up
+#if VX_VERSION > VX_VERSION_1_0
+        inter_type = VX_INTERPOLATION_NEAREST_NEIGHBOR;
+#else
+        inter_type = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
+#endif
+        if (!map1.empty())
+            for (int y = 0; y < map1.rows; ++y)
+            {
+                float* line = map1.ptr<float>(y);
+                for (int x = 0; x < map1.cols; ++x)
+                    line[x] = cvRound(line[x]);
+            }
+        if (!map2.empty())
+            for (int y = 0; y < map2.rows; ++y)
+            {
+                float* line = map2.ptr<float>(y);
+                for (int x = 0; x < map2.cols; ++x)
+                    line[x] = cvRound(line[x]);
+            }
+        break;
+*/
+    case INTER_AREA://AREA interpolation mode is unsupported
+    default:
+        return false;
+    }
+
+    try
+    {
+        ivx::Context ctx = ovx::getOpenVXContext();
+
+        Mat a;
+        if (dst.data != src.data)
+            a = src;
+        else
+            src.copyTo(a);
+
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+        //since OpenVX standart says nothing about thread-safety for now
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(VX_BORDER_CONSTANT, (vx_uint8)(borderValue[0]));
+
+        ivx::Remap map = ivx::Remap::create(ctx, src.cols, src.rows, dst.cols, dst.rows);
+        if (map1.empty()) map.setMappings(map2);
+        else if (map2.empty()) map.setMappings(map1);
+        else map.setMappings(map1, map2);
+        ivx::IVX_CHECK_STATUS(vxuRemap(ctx, ia, map, inter_type, ib));
+#ifdef VX_VERSION_1_1
+        ib.swapHandle();
+        ia.swapHandle();
+#endif
+
+        ctx.setImmediateBorder(prevBorder);
+    }
+    catch (ivx::RuntimeError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    catch (ivx::WrapperError & e)
+    {
+        CV_Error(CV_StsInternal, e.what());
+        return false;
+    }
+    return true;
+}
+#endif
+
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
 
 typedef IppStatus (CV_STDCALL * ippiRemap)(const void * pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
                                            const Ipp32f* pxMap, int xMapStep, const Ipp32f* pyMap, int yMapStep,
@@ -4610,9 +4868,9 @@ public:
             return;
         }
 
-        if (ippFunc(src.ptr(), ippiSize(src.size()), (int)src.step, srcRoiRect,
+        if (CV_INSTRUMENT_FUN_PTR_CALL_IPP(ippFunc,(src.ptr(), ippiSize(src.size()), (int)src.step, srcRoiRect,
                     map1.ptr<Ipp32f>(), (int)map1.step, map2.ptr<Ipp32f>(), (int)map2.step,
-                    dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, ippInterpolation) < 0)
+                    dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, ippInterpolation)) < 0)
             *ok = false;
         else
         {
@@ -4636,6 +4894,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
                 InputArray _map1, InputArray _map2,
                 int interpolation, int borderType, const Scalar& borderValue )
 {
+    CV_INSTRUMENT_REGION()
+
     static RemapNNFunc nn_tab[] =
     {
         remapNearest<uchar>, remapNearest<schar>, remapNearest<ushort>, remapNearest<short>,
@@ -4678,6 +4938,19 @@ void cv::remap( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
+
+
+    CV_OVX_RUN(
+        src.type() == CV_8UC1 && dst.type() == CV_8UC1 &&
+        (borderType& ~BORDER_ISOLATED) == BORDER_CONSTANT &&
+        ((map1.type() == CV_32FC2 && map2.empty() && map1.size == dst.size) ||
+         (map1.type() == CV_32FC1 && map2.type() == CV_32FC1 && map1.size == dst.size && map2.size == dst.size) ||
+         (map1.empty() && map2.type() == CV_32FC2 && map2.size == dst.size)) &&
+        ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()),
+        openvx_remap(src, dst, map1, map2, interpolation, borderValue));
+
+    CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
+
     if( dst.data == src.data )
         src = src.clone();
 
@@ -4686,7 +4959,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
 
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
     {
         if ((interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_NEAREST) &&
@@ -4778,6 +5051,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                       OutputArray _dstmap1, OutputArray _dstmap2,
                       int dstm1type, bool nninterpolate )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat map1 = _map1.getMat(), map2 = _map2.getMat(), dstmap1, dstmap2;
     Size size = map1.size();
     const Mat *m1 = &map1, *m2 = &map2;
@@ -5230,7 +5505,7 @@ class WarpAffineInvoker :
 {
 public:
     WarpAffineInvoker(const Mat &_src, Mat &_dst, int _interpolation, int _borderType,
-                      const Scalar &_borderValue, int *_adelta, int *_bdelta, double *_M) :
+                      const Scalar &_borderValue, int *_adelta, int *_bdelta, const double *_M) :
         ParallelLoopBody(), src(_src), dst(_dst), interpolation(_interpolation),
         borderType(_borderType), borderValue(_borderValue), adelta(_adelta), bdelta(_bdelta),
         M(_M)
@@ -5408,7 +5683,7 @@ private:
     int interpolation, borderType;
     Scalar borderValue;
     int *adelta, *bdelta;
-    double *M;
+    const double *M;
 };
 
 
@@ -5443,8 +5718,8 @@ public:
         }
 
         // Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
-        IppStatus status = func( src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(),
-                                (int)dst.step[0], dstroi, coeffs, mode );
+        IppStatus status = CV_INSTRUMENT_FUN_PTR_CALL_IPP(func,( src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(),
+                                (int)dst.step[0], dstroi, coeffs, mode ));
         if( status < 0)
             *ok = false;
         else
@@ -5468,6 +5743,81 @@ private:
 #ifdef HAVE_OPENCL
 
 enum { OCL_OP_PERSPECTIVE = 1, OCL_OP_AFFINE = 0 };
+
+static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArray _M0,
+                                    Size dsize, int flags, int borderType, const Scalar& borderValue,
+                                    int op_type)
+{
+    CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), dtype = _dst.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    int interpolation = flags & INTER_MAX;
+    if( interpolation == INTER_AREA )
+        interpolation = INTER_LINEAR;
+
+    if ( !dev.isIntel() || !(type == CV_8UC1) ||
+         !(dtype == CV_8UC1) || !(_dst.cols() % 4 == 0) ||
+         !(borderType == cv::BORDER_CONSTANT &&
+          (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)))
+        return false;
+
+    const char * const warp_op[2] = { "Affine", "Perspective" };
+    const char * const interpolationMap[3] = { "nearest", "linear", "cubic" };
+    ocl::ProgramSource program = ocl::imgproc::warp_transform_oclsrc;
+    String kernelName = format("warp%s_%s_8u", warp_op[op_type], interpolationMap[interpolation]);
+
+    bool is32f = (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
+    int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
+    int sctype = CV_MAKETYPE(wdepth, cn);
+
+    ocl::Kernel k;
+    String opts = format("-D ST=%s", ocl::typeToStr(sctype));
+
+    k.create(kernelName.c_str(), program, opts);
+    if (k.empty())
+        return false;
+
+    float borderBuf[] = { 0, 0, 0, 0 };
+    scalarToRawData(borderValue, borderBuf, sctype);
+
+    UMat src = _src.getUMat(), M0;
+    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    UMat dst = _dst.getUMat();
+
+    float M[9];
+    int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
+    Mat matM(matRows, 3, CV_32F, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) && M1.rows == matRows && M1.cols == 3 );
+    M1.convertTo(matM, matM.type());
+
+    if( !(flags & WARP_INVERSE_MAP) )
+    {
+        if (op_type == OCL_OP_PERSPECTIVE)
+            invert(matM, matM);
+        else
+        {
+            float D = M[0]*M[4] - M[1]*M[3];
+            D = D != 0 ? 1.f/D : 0;
+            float A11 = M[4]*D, A22=M[0]*D;
+            M[0] = A11; M[1] *= -D;
+            M[3] *= -D; M[4] = A22;
+            float b1 = -M[0]*M[2] - M[1]*M[5];
+            float b2 = -M[3]*M[2] - M[4]*M[5];
+            M[2] = b1; M[5] = b2;
+        }
+    }
+    matM.convertTo(M0, CV_32F);
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
+           ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
+
+    size_t globalThreads[2];
+    globalThreads[0] = (size_t)(dst.cols / 4);
+    globalThreads[1] = (size_t)dst.rows;
+
+    return k.run(2, globalThreads, NULL, false);
+}
 
 static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                               Size dsize, int flags, int borderType, const Scalar& borderValue,
@@ -5559,7 +5909,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     matM.convertTo(M0, doubleSupport ? CV_64F : CV_32F);
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
-           ocl::KernelArg(0, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
+           ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
 
     size_t globalThreads[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalThreads, NULL, false);
@@ -5567,13 +5917,52 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
 #endif
 
+namespace hal {
+
+void warpAffine(int src_type,
+                const uchar * src_data, size_t src_step, int src_width, int src_height,
+                uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                const double M[6], int interpolation, int borderType, const double borderValue[4])
+{
+    CALL_HAL(warpAffine, cv_hal_warpAffine, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+
+    Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
+    Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
+
+    int x;
+    AutoBuffer<int> _abdelta(dst.cols*2);
+    int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
+    const int AB_BITS = MAX(10, (int)INTER_BITS);
+    const int AB_SCALE = 1 << AB_BITS;
+
+    for( x = 0; x < dst.cols; x++ )
+    {
+        adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
+        bdelta[x] = saturate_cast<int>(M[3]*x*AB_SCALE);
+    }
+
+    Range range(0, dst.rows);
+    WarpAffineInvoker invoker(src, dst, interpolation, borderType,
+                              Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]),
+                              adelta, bdelta, M);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
+
+} // hal::
+} // cv::
 
 
 void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
+    CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
+               ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
+                                       borderValue, OCL_OP_AFFINE))
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
                                  borderValue, OCL_OP_AFFINE))
@@ -5594,11 +5983,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::useTegra() && tegra::warpAffine(src, dst, M, flags, borderType, borderValue) )
-        return;
-#endif
-
     if( !(flags & WARP_INVERSE_MAP) )
     {
         double D = M[0]*M[4] - M[1]*M[3];
@@ -5610,12 +5994,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         double b2 = -M[3]*M[2] - M[4]*M[5];
         M[2] = b1; M[5] = b2;
     }
-
-    int x;
-    AutoBuffer<int> _abdelta(dst.cols*2);
-    int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
-    const int AB_SCALE = 1 << AB_BITS;
 
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
@@ -5681,16 +6059,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     }
 #endif
 
-    for( x = 0; x < dst.cols; x++ )
-    {
-        adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
-        bdelta[x] = saturate_cast<int>(M[3]*x*AB_SCALE);
-    }
-
-    Range range(0, dst.rows);
-    WarpAffineInvoker invoker(src, dst, interpolation, borderType,
-                              borderValue, adelta, bdelta, M);
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+    hal::warpAffine(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                    M, interpolation, borderType, borderValue.val);
 }
 
 
@@ -5701,7 +6071,7 @@ class WarpPerspectiveInvoker :
     public ParallelLoopBody
 {
 public:
-    WarpPerspectiveInvoker(const Mat &_src, Mat &_dst, double *_M, int _interpolation,
+    WarpPerspectiveInvoker(const Mat &_src, Mat &_dst, const double *_M, int _interpolation,
                            int _borderType, const Scalar &_borderValue) :
         ParallelLoopBody(), src(_src), dst(_dst), M(_M), interpolation(_interpolation),
         borderType(_borderType), borderValue(_borderValue)
@@ -6035,11 +6405,10 @@ public:
 private:
     Mat src;
     Mat dst;
-    double* M;
+    const double* M;
     int interpolation, borderType;
     Scalar borderValue;
 };
-
 
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
 class IPPWarpPerspectiveInvoker :
@@ -6072,7 +6441,7 @@ public:
             }
         }
 
-        IppStatus status = func(src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(), (int)dst.step[0], dstroi, coeffs, mode);
+        IppStatus status = CV_INSTRUMENT_FUN_PTR_CALL_IPP(func,(src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(), (int)dst.step[0], dstroi, coeffs, mode));
         if (status != ippStsNoErr)
             *ok = false;
         else
@@ -6093,12 +6462,37 @@ private:
     const IPPWarpPerspectiveInvoker& operator= (const IPPWarpPerspectiveInvoker&);
 };
 #endif
+
+namespace hal {
+
+void warpPerspectve(int src_type,
+                    const uchar * src_data, size_t src_step, int src_width, int src_height,
+                    uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                    const double M[9], int interpolation, int borderType, const double borderValue[4])
+{
+    CALL_HAL(warpPerspective, cv_hal_warpPerspective, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+    Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
+    Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
+
+    Range range(0, dst.rows);
+    WarpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]));
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
+
+} // hal::
+} // cv::
 
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                           Size dsize, int flags, int borderType, const Scalar& borderValue )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _src.total() > 0 );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
+               ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType, borderValue,
+                                       OCL_OP_PERSPECTIVE))
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
@@ -6119,12 +6513,6 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 3 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::useTegra() && tegra::warpPerspective(src, dst, M, flags, borderType, borderValue) )
-        return;
-#endif
-
 
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
     CV_IPP_CHECK()
@@ -6188,14 +6576,15 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if( !(flags & WARP_INVERSE_MAP) )
         invert(matM, matM);
 
-    Range range(0, dst.rows);
-    WarpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+    hal::warpPerspectve(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                        matM.ptr<double>(), interpolation, borderType, borderValue.val);
 }
 
 
 cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
 {
+    CV_INSTRUMENT_REGION()
+
     angle *= CV_PI/180;
     double alpha = cos(angle)*scale;
     double beta = sin(angle)*scale;
@@ -6239,6 +6628,8 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
  */
 cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.ptr());
     double a[8][8], b[8];
     Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
@@ -6475,11 +6866,13 @@ CV_IMPL void
 cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
             CvPoint2D32f center, double M, int flags )
 {
+    Mat src_with_border; // don't scope this variable (it holds image data)
+
     cv::Ptr<CvMat> mapx, mapy;
 
     CvMat srcstub, *src = cvGetMat(srcarr, &srcstub);
     CvMat dststub, *dst = cvGetMat(dstarr, &dststub);
-    CvSize ssize, dsize;
+    CvSize dsize;
 
     if( !CV_ARE_TYPES_EQ( src, dst ))
         CV_Error( CV_StsUnmatchedFormats, "" );
@@ -6487,7 +6880,6 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
     if( M <= 0 )
         CV_Error( CV_StsOutOfRange, "M should be >0" );
 
-    ssize = cvGetMatSize(src);
     dsize = cvGetMatSize(dst);
 
     mapx.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
@@ -6500,7 +6892,7 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
         double* exp_tab = _exp_tab;
 
         for( rho = 0; rho < dst->width; rho++ )
-            exp_tab[rho] = std::exp(rho/M);
+            exp_tab[rho] = std::exp(rho/M) - 1.0;
 
         for( phi = 0; phi < dsize.height; phi++ )
         {
@@ -6522,6 +6914,13 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
     }
     else
     {
+        const int ANGLE_BORDER = 1;
+        Mat src_ = cv::cvarrToMat(src);
+        cv::copyMakeBorder(src_, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        srcstub = src_with_border; src = &srcstub;
+        CvSize ssize = cvGetMatSize(src);
+        ssize.height -= 2*ANGLE_BORDER;
+
         int x, y;
         CvMat bufx, bufy, bufp, bufa;
         double ascale = ssize.height/(2*CV_PI);
@@ -6558,7 +6957,7 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
                 double phi = bufa.data.fl[x]*ascale;
 
                 mx[x] = (float)rho;
-                my[x] = (float)phi;
+                my[x] = (float)phi + ANGLE_BORDER;
             }
 #else
             for( x = 0; x < dsize.width; x++ )
@@ -6585,10 +6984,115 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
 void cv::logPolar( InputArray _src, OutputArray _dst,
                    Point2f center, double M, int flags )
 {
-    Mat src = _src.getMat();
-    _dst.create( src.size(), src.type() );
-    CvMat c_src = src, c_dst = _dst.getMat();
-    cvLogPolar( &c_src, &c_dst, center, M, flags );
+    CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_src.isUMat() && _dst.isUMat(),
+        ocl_logPolar(_src, _dst, center, M, flags));
+    Mat src_with_border; // don't scope this variable (it holds image data)
+
+    Mat mapx, mapy;
+
+    Mat srcstub, src = _src.getMat();
+    _dst.create(src.size(), src.type());
+    Size dsize = src.size();
+
+    if (M <= 0)
+        CV_Error(CV_StsOutOfRange, "M should be >0");
+
+
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+        int phi, rho;
+        cv::AutoBuffer<double> _exp_tab(dsize.width);
+        double* exp_tab = _exp_tab;
+
+        for (rho = 0; rho < dsize.width; rho++)
+            exp_tab[rho] = std::exp(rho / M) - 1.0;
+
+        for (phi = 0; phi < dsize.height; phi++)
+        {
+            double cp = cos(phi * 2 * CV_PI / dsize.height);
+            double sp = sin(phi * 2 * CV_PI / dsize.height);
+            float* mx = (float*)(mapx.data + phi*mapx.step);
+            float* my = (float*)(mapy.data + phi*mapy.step);
+
+            for (rho = 0; rho < dsize.width; rho++)
+            {
+                double r = exp_tab[rho];
+                double x = r*cp + center.x;
+                double y = r*sp + center.y;
+
+                mx[rho] = (float)x;
+                my[rho] = (float)y;
+            }
+        }
+    }
+    else
+    {
+        const int ANGLE_BORDER = 1;
+        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        srcstub = src_with_border; src = srcstub;
+        Size ssize = src.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+
+        int x, y;
+        Mat bufx, bufy, bufp, bufa;
+        double ascale = ssize.height / (2 * CV_PI);
+
+        bufx = Mat(1, dsize.width, CV_32F);
+        bufy = Mat(1, dsize.width, CV_32F);
+        bufp = Mat(1, dsize.width, CV_32F);
+        bufa = Mat(1, dsize.width, CV_32F);
+
+        for (x = 0; x < dsize.width; x++)
+            bufx.at<float>(0, x) = (float)x - center.x;
+
+        for (y = 0; y < dsize.height; y++)
+        {
+            float* mx = (float*)(mapx.data + y*mapx.step);
+            float* my = (float*)(mapy.data + y*mapy.step);
+
+            for (x = 0; x < dsize.width; x++)
+                bufy.at<float>(0, x) = (float)y - center.y;
+
+#if 1
+            cartToPolar(bufx, bufy, bufp, bufa);
+
+            for (x = 0; x < dsize.width; x++)
+                bufp.at<float>(0, x) += 1.f;
+
+            log(bufp, bufp);
+
+            for (x = 0; x < dsize.width; x++)
+            {
+                double rho = bufp.at<float>(0, x) * M;
+                double phi = bufa.at<float>(0, x) * ascale;
+
+                mx[x] = (float)rho;
+                my[x] = (float)phi + ANGLE_BORDER;
+            }
+#else
+            for (x = 0; x < dsize.width; x++)
+            {
+                double xx = bufx.at<float>(0, x);
+                double yy = bufy.at<float>(0, x);
+                double p = log(std::sqrt(xx*xx + yy*yy) + 1.)*M;
+                double a = atan2(yy, xx);
+                if (a < 0)
+                    a = 2 * CV_PI + a;
+                a *= ascale;
+                mx[x] = (float)p;
+                my[x] = (float)a;
+            }
+#endif
+        }
+    }
+
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
+        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
 }
 
 /****************************************************************************************
@@ -6599,11 +7103,13 @@ CV_IMPL
 void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
             CvPoint2D32f center, double maxRadius, int flags )
 {
+    Mat src_with_border; // don't scope this variable (it holds image data)
+
     cv::Ptr<CvMat> mapx, mapy;
 
     CvMat srcstub, *src = (CvMat*)srcarr;
     CvMat dststub, *dst = (CvMat*)dstarr;
-    CvSize ssize, dsize;
+    CvSize dsize;
 
     src = cvGetMat( srcarr, &srcstub,0,0 );
     dst = cvGetMat( dstarr, &dststub,0,0 );
@@ -6611,10 +7117,7 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     if( !CV_ARE_TYPES_EQ( src, dst ))
         CV_Error( CV_StsUnmatchedFormats, "" );
 
-    ssize.width = src->cols;
-    ssize.height = src->rows;
-    dsize.width = dst->cols;
-    dsize.height = dst->rows;
+    dsize = cvGetMatSize(dst);
 
     mapx.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
     mapy.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
@@ -6632,7 +7135,7 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
 
             for( rho = 0; rho < dsize.width; rho++ )
             {
-                double r = maxRadius*(rho+1)/dsize.width;
+                double r = maxRadius*rho/dsize.width;
                 double x = r*cp + center.x;
                 double y = r*sp + center.y;
 
@@ -6643,6 +7146,13 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     }
     else
     {
+        const int ANGLE_BORDER = 1;
+        Mat src_ = cv::cvarrToMat(src);
+        cv::copyMakeBorder(src_, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        srcstub = src_with_border; src = &srcstub;
+        CvSize ssize = cvGetMatSize(src);
+        ssize.height -= 2*ANGLE_BORDER;
+
         int x, y;
         CvMat bufx, bufy, bufp, bufa;
         const double ascale = ssize.height/(2*CV_PI);
@@ -6670,14 +7180,11 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
             cvCartToPolar( &bufx, &bufy, &bufp, &bufa, 0 );
 
             for( x = 0; x < dsize.width; x++ )
-                bufp.data.fl[x] += 1.f;
-
-            for( x = 0; x < dsize.width; x++ )
             {
                 double rho = bufp.data.fl[x]*pscale;
                 double phi = bufa.data.fl[x]*ascale;
                 mx[x] = (float)rho;
-                my[x] = (float)phi;
+                my[x] = (float)phi + ANGLE_BORDER;
             }
         }
     }
@@ -6688,10 +7195,88 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
 void cv::linearPolar( InputArray _src, OutputArray _dst,
                       Point2f center, double maxRadius, int flags )
 {
-    Mat src = _src.getMat();
-    _dst.create( src.size(), src.type() );
-    CvMat c_src = src, c_dst = _dst.getMat();
-    cvLinearPolar( &c_src, &c_dst, center, maxRadius, flags );
+    CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_src.isUMat() && _dst.isUMat(),
+        ocl_linearPolar(_src, _dst, center, maxRadius, flags));
+    Mat src_with_border; // don't scope this variable (it holds image data)
+
+    Mat mapx, mapy;
+    Mat srcstub, src = _src.getMat();
+    _dst.create(src.size(), src.type());
+    Size dsize = src.size();
+
+
+    mapx.create(dsize, CV_32F);
+    mapy.create(dsize, CV_32F);
+
+    if (!(flags & CV_WARP_INVERSE_MAP))
+    {
+        int phi, rho;
+
+        for (phi = 0; phi < dsize.height; phi++)
+        {
+            double cp = cos(phi * 2 * CV_PI / dsize.height);
+            double sp = sin(phi * 2 * CV_PI / dsize.height);
+            float* mx = (float*)(mapx.data + phi*mapx.step);
+            float* my = (float*)(mapy.data + phi*mapy.step);
+
+            for (rho = 0; rho < dsize.width; rho++)
+            {
+                double r = maxRadius*rho / dsize.width;
+                double x = r*cp + center.x;
+                double y = r*sp + center.y;
+
+                mx[rho] = (float)x;
+                my[rho] = (float)y;
+            }
+        }
+    }
+    else
+    {
+        const int ANGLE_BORDER = 1;
+
+        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        src = src_with_border;
+        Size ssize = src_with_border.size();
+        ssize.height -= 2 * ANGLE_BORDER;
+
+        int x, y;
+        Mat bufx, bufy, bufp, bufa;
+        const double ascale = ssize.height / (2 * CV_PI);
+        const double pscale = ssize.width / maxRadius;
+
+
+
+        bufx = Mat(1, dsize.width, CV_32F);
+        bufy = Mat(1, dsize.width, CV_32F);
+        bufp = Mat(1, dsize.width, CV_32F);
+        bufa = Mat(1, dsize.width, CV_32F);
+
+        for (x = 0; x < dsize.width; x++)
+            bufx.at<float>(0, x) = (float)x - center.x;
+
+        for (y = 0; y < dsize.height; y++)
+        {
+            float* mx = (float*)(mapx.data + y*mapx.step);
+            float* my = (float*)(mapy.data + y*mapy.step);
+
+            for (x = 0; x < dsize.width; x++)
+                bufy.at<float>(0, x) = (float)y - center.y;
+
+            cartToPolar(bufx, bufy, bufp, bufa, 0);
+
+            for (x = 0; x < dsize.width; x++)
+            {
+                double rho = bufp.at<float>(0, x) * pscale;
+                double phi = bufa.at<float>(0, x) * ascale;
+                mx[x] = (float)rho;
+                my[x] = (float)phi + ANGLE_BORDER;
+            }
+        }
+    }
+
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
 }
 
 /* End of file. */

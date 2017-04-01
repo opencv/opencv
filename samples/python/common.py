@@ -173,6 +173,7 @@ class RectSelector:
         x, y = np.int16([x, y]) # BUG
         if event == cv2.EVENT_LBUTTONDOWN:
             self.drag_start = (x, y)
+            return
         if self.drag_start:
             if flags & cv2.EVENT_FLAG_LBUTTON:
                 xo, yo = self.drag_start

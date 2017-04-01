@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_WARPERS_HPP__
-#define __OPENCV_STITCHING_WARPERS_HPP__
+#ifndef OPENCV_STITCHING_WARPERS_HPP
+#define OPENCV_STITCHING_WARPERS_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda.hpp"
@@ -205,6 +205,34 @@ protected:
 };
 
 
+/** @brief Affine warper that uses rotations and translations
+
+ Uses affine transformation in homogeneous coordinates to represent both rotation and
+ translation in camera rotation matrix.
+ */
+class CV_EXPORTS AffineWarper : public PlaneWarper
+{
+public:
+    /** @brief Construct an instance of the affine warper class.
+
+    @param scale Projected image scale multiplier
+     */
+    AffineWarper(float scale = 1.f) : PlaneWarper(scale) {}
+
+    Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R);
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
+    Point warp(InputArray src, InputArray K, InputArray R,
+               int interp_mode, int border_mode, OutputArray dst);
+    Rect warpRoi(Size src_size, InputArray K, InputArray R);
+
+protected:
+    /** @brief Extracts rotation and translation matrices from matrix H representing
+        affine transformation in homogeneous coordinates
+     */
+    void getRTfromHomogeneous(InputArray H, Mat &R, Mat &T);
+};
+
+
 struct CV_EXPORTS SphericalProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
@@ -214,7 +242,8 @@ struct CV_EXPORTS SphericalProjector : ProjectorBase
 
 /** @brief Warper that maps an image onto the unit sphere located at the origin.
 
- Projects image onto unit sphere with origin at (0, 0, 0).
+ Projects image onto unit sphere with origin at (0, 0, 0) and radius scale, measured in pixels.
+ A 360° panorama would therefore have a resulting width of 2 * scale * PI pixels.
  Poles are located at (0, -1, 0) and (0, 1, 0) points.
 */
 class CV_EXPORTS SphericalWarper : public RotationWarperBase<SphericalProjector>
@@ -222,7 +251,8 @@ class CV_EXPORTS SphericalWarper : public RotationWarperBase<SphericalProjector>
 public:
     /** @brief Construct an instance of the spherical warper class.
 
-    @param scale Projected image scale multiplier
+    @param scale Radius of the projected sphere, in pixels. An image spanning the
+                 whole sphere will have a width of 2 * scale * PI pixels.
      */
     SphericalWarper(float scale) { projector_.scale = scale; }
 
@@ -583,4 +613,4 @@ protected:
 
 #include "warpers_inl.hpp"
 
-#endif // __OPENCV_STITCHING_WARPERS_HPP__
+#endif // OPENCV_STITCHING_WARPERS_HPP

@@ -312,8 +312,16 @@ CvCapture* cvCreateFileCapture_VFW (const char* filename)
 class CvCaptureCAM_VFW : public CvCapture
 {
 public:
-    CvCaptureCAM_VFW() { init(); }
-    virtual ~CvCaptureCAM_VFW() { close(); }
+    CvCaptureCAM_VFW()
+    {
+        CoInitialize(NULL);
+        init();
+    }
+    virtual ~CvCaptureCAM_VFW()
+    {
+        close();
+        CoUninitialize();
+    }
 
     virtual bool open( int index );
     virtual void close();
@@ -498,8 +506,17 @@ IplImage* CvCaptureCAM_VFW::retrieveFrame(int)
         frame = cvCreateImage( cvSize( vfmt0.biWidth, vfmt0.biHeight ), 8, 3 );
     }
 
-    if( vfmt0.biCompression != BI_RGB ||
-        vfmt0.biBitCount != 24 )
+    if ( vfmt0.biCompression == MAKEFOURCC('N','V','1','2') )
+    {
+        // Frame is in YUV 4:2:0 NV12 format, convert to BGR color space
+        // See https://msdn.microsoft.com/en-us/library/windows/desktop/dd206750(v=vs.85).aspx#nv12)
+        IplImage src;
+        cvInitImageHeader( &src, cvSize( vfmt0.biWidth, vfmt0.biHeight * 3 / 2 ), IPL_DEPTH_8U, 1, IPL_ORIGIN_BL, 4 );
+        cvSetData( &src, hdr->lpData, src.widthStep );
+        cvCvtColor( &src, frame, CV_YUV2BGR_NV12 );
+    }
+    else if( vfmt0.biCompression != BI_RGB ||
+             vfmt0.biBitCount != 24 )
     {
         BITMAPINFOHEADER vfmt1 = icvBitmapHeader( vfmt0.biWidth, vfmt0.biHeight, 24 );
 
@@ -664,8 +681,16 @@ CvCapture* cvCreateCameraCapture_VFW( int index )
 class CvVideoWriter_VFW : public CvVideoWriter
 {
 public:
-    CvVideoWriter_VFW() { init(); }
-    virtual ~CvVideoWriter_VFW() { close(); }
+    CvVideoWriter_VFW()
+    {
+        CoInitialize(NULL);
+        init();
+    }
+    virtual ~CvVideoWriter_VFW()
+    {
+        close();
+        CoUninitialize();
+    }
 
     virtual bool open( const char* filename, int fourcc,
                        double fps, CvSize frameSize, bool isColor );

@@ -30,8 +30,9 @@ import cv2
 import video
 import common
 from plane_tracker import PlaneTracker
+from video import presets
 
-
+# Simple model of a house - cube with a triangular prism "roof"
 ar_verts = np.float32([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0],
                        [0, 0, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1],
                        [0, 0.5, 2], [1, 0.5, 2]])
@@ -42,7 +43,7 @@ ar_edges = [(0, 1), (1, 2), (2, 3), (3, 0),
 
 class App:
     def __init__(self, src):
-        self.cap = video.create_capture(src)
+        self.cap = video.create_capture(src, presets['book'])
         self.frame = None
         self.paused = False
         self.tracker = PlaneTracker()
@@ -74,7 +75,7 @@ class App:
 
             self.rect_sel.draw(vis)
             cv2.imshow('plane', vis)
-            ch = cv2.waitKey(1) & 0xFF
+            ch = cv2.waitKey(1)
             if ch == ord(' '):
                 self.paused = not self.paused
             if ch == ord('c'):

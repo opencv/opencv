@@ -82,42 +82,26 @@ static NSAutoreleasePool *pool = nil;
 static NSMutableDictionary *windows = nil;
 static bool wasInitialized = false;
 
-@interface CVView : NSView {
-    NSImage *image;
-}
-@property(retain) NSImage *image;
+@interface CVView : NSView
+@property(strong) NSImage *image;
 - (void)setImageData:(CvArr *)arr;
 @end
 
-@interface CVSlider : NSView {
-    NSSlider *slider;
-    NSTextField *name;
-    int *value;
-    void *userData;
-    CvTrackbarCallback callback;
-    CvTrackbarCallback2 callback2;
-}
-@property(retain) NSSlider *slider;
-@property(retain) NSTextField *name;
+@interface CVSlider : NSView
+@property(strong) NSSlider *slider;
+@property(strong) NSTextField *name;
 @property(assign) int *value;
 @property(assign) void *userData;
 @property(assign) CvTrackbarCallback callback;
 @property(assign) CvTrackbarCallback2 callback2;
 @end
 
-@interface CVWindow : NSWindow {
-    NSMutableDictionary *sliders;
-    CvMouseCallback mouseCallback;
-    void *mouseParam;
-    BOOL autosize;
-    BOOL firstContent;
-    int status;
-}
+@interface CVWindow : NSWindow
 @property(assign) CvMouseCallback mouseCallback;
 @property(assign) void *mouseParam;
 @property(assign) BOOL autosize;
 @property(assign) BOOL firstContent;
-@property(retain) NSMutableDictionary *sliders;
+@property(strong) NSMutableDictionary *sliders;
 @property(readwrite) int status;
 - (CVView *)contentView;
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags;
@@ -230,8 +214,10 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
             //Set new view size considering sliders (reserve height and min width)
             NSRect vrectNew = vrectOld;
             int slider_height = 0;
-            for(NSString *key in [window sliders]) {
-                slider_height += [[[window sliders] valueForKey:key] frame].size.height;
+            if ([window respondsToSelector:@selector(sliders)]) {
+                for(NSString *key in [window sliders]) {
+                    slider_height += [[[window sliders] valueForKey:key] frame].size.height;
+                }
             }
             vrectNew.size.height = [[[window contentView] image] size].height + slider_height;
             vrectNew.size.width = std::max<int>([[[window contentView] image] size].width, MIN_SLIDER_WIDTH);
@@ -331,9 +317,12 @@ CV_IMPL int cvCreateTrackbar2(const char* trackbar_name,
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     int res = cvCreateTrackbar(trackbar_name, window_name, val, count, NULL);
     if(res) {
-        CVSlider *slider = [[cvGetWindow(window_name) sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
-        [slider setCallback2:on_notify2];
-        [slider setUserData:userdata];
+        CVWindow *window = cvGetWindow(window_name);
+        if (window && [window respondsToSelector:@selector(sliders)]) {
+            CVSlider *slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
+            [slider setCallback2:on_notify2];
+            [slider setUserData:userdata];
+        }
     }
     [localpool drain];
     return res;
@@ -383,7 +372,7 @@ cvSetMouseCallback( const char* name, CvMouseCallback function, void* info)
     localpool4 = [[NSAutoreleasePool alloc] init];
 
     window = cvGetWindow(window_name);
-    if(window) {
+    if(window && [window respondsToSelector:@selector(sliders)]) {
         CVSlider *slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             pos = [[slider slider] intValue];
@@ -414,7 +403,7 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     localpool5 = [[NSAutoreleasePool alloc] init];
 
     window = cvGetWindow(window_name);
-    if(window) {
+    if(window && [window respondsToSelector:@selector(sliders)]) {
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             [[slider slider] setIntValue:pos];
@@ -442,7 +431,7 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
     localpool5 = [[NSAutoreleasePool alloc] init];
 
     window = cvGetWindow(window_name);
-    if(window) {
+    if(window && [window respondsToSelector:@selector(sliders)]) {
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             if(maxval >= 0) {
@@ -473,7 +462,7 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     localpool5 = [[NSAutoreleasePool alloc] init];
 
     window = cvGetWindow(window_name);
-    if(window) {
+    if(window && [window respondsToSelector:@selector(sliders)]) {
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             if(minval >= 0) {
@@ -709,9 +698,11 @@ void cv::setWindowTitle(const String& winname, const String& title)
     double viewHeight = [self contentView].frame.size.height;
     double viewWidth = [self contentView].frame.size.width;
     CVWindow *window = (CVWindow *)[[self contentView] window];
-    for(NSString *key in [window sliders]) {
-        NSSlider *slider = [[window sliders] valueForKey:key];
-        viewHeight = std::min(viewHeight, (double)([slider frame].origin.y));
+    if ([window respondsToSelector:@selector(sliders)]) {
+        for(NSString *key in [window sliders]) {
+            NSSlider *slider = [[window sliders] valueForKey:key];
+            viewHeight = std::min(viewHeight, (double)([slider frame].origin.y));
+        }
     }
     viewHeight -= TOP_BORDER;
     mp.y = viewHeight - mp.y;
@@ -929,13 +920,15 @@ void cv::setWindowTitle(const String& winname, const String& title)
     int height = size.height;
 
     CVWindow *cvwindow = (CVWindow *)[self window];
-    for(NSString *key in [cvwindow sliders]) {
-        NSSlider *slider = [[cvwindow sliders] valueForKey:key];
-        NSRect r = [slider frame];
-        r.origin.y = height - r.size.height;
-        r.size.width = [[cvwindow contentView] frame].size.width;
-        [slider setFrame:r];
-        height -= r.size.height;
+    if ([cvwindow respondsToSelector:@selector(sliders)]) {
+        for(NSString *key in [cvwindow sliders]) {
+            NSSlider *slider = [[cvwindow sliders] valueForKey:key];
+            NSRect r = [slider frame];
+            r.origin.y = height - r.size.height;
+            r.size.width = [[cvwindow contentView] frame].size.width;
+            [slider setFrame:r];
+            height -= r.size.height;
+        }
     }
     [localpool drain];
 }

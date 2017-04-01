@@ -285,8 +285,8 @@ static int select3DBox(const string& windowname, const string& selWinName, const
         imshow(windowname, shownFrame);
         imshow(selWinName, selectedObjFrame);
 
-        int c = waitKey(30);
-        if( (c & 255) == 27 )
+        char c = (char)waitKey(30);
+        if( c == 27 )
         {
             nobjpt = 0;
         }
@@ -593,7 +593,7 @@ int main(int argc, char** argv)
 
         imshow("View", shownFrame);
         imshow("Selected Object", selectedObjFrame);
-        int c = waitKey(imageList.empty() && !box.empty() ? 30 : 300);
+        char c = (char)waitKey(imageList.empty() && !box.empty() ? 30 : 300);
         if( c == 'q' || c == 'Q' )
             break;
         if( c == '\r' || c == '\n' )

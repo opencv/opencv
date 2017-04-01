@@ -21,7 +21,9 @@ endif()
 #
 # Check for unistd.h
 #
-check_include_file(unistd.h Z_HAVE_UNISTD_H)
+if(NOT MSVC)
+  check_include_file(unistd.h Z_HAVE_UNISTD_H)
+endif()
 
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
@@ -82,7 +84,7 @@ if(UNIX)
   endif()
 endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wshorten-64-to-32 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wshorten-64-to-32 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wshift-negative-value)
 
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES
         OUTPUT_NAME ${ZLIB_LIBRARY}

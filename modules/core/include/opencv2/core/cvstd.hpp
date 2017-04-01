@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CVSTD_HPP__
-#define __OPENCV_CORE_CVSTD_HPP__
+#ifndef OPENCV_CORE_CVSTD_HPP
+#define OPENCV_CORE_CVSTD_HPP
 
 #ifndef __cplusplus
 #  error cvstd.hpp header must be compiled as C++
@@ -67,6 +67,11 @@
 
 namespace cv
 {
+    static inline uchar abs(uchar a) { return a; }
+    static inline ushort abs(ushort a) { return a; }
+    static inline unsigned abs(unsigned a) { return a; }
+    static inline uint64 abs(uint64 a) { return a; }
+
     using std::min;
     using std::max;
     using std::abs;
@@ -75,14 +80,6 @@ namespace cv
     using std::exp;
     using std::pow;
     using std::log;
-}
-
-namespace std
-{
-    static inline uchar abs(uchar a) { return a; }
-    static inline ushort abs(ushort a) { return a; }
-    static inline unsigned abs(unsigned a) { return a; }
-    static inline uint64 abs(uint64 a) { return a; }
 }
 
 #else
@@ -751,7 +748,7 @@ const char* String::begin() const
 inline
 const char* String::end() const
 {
-    return len_ ? cstr_ + 1 : 0;
+    return len_ ? cstr_ + len_ : NULL;
 }
 
 inline
@@ -1066,4 +1063,4 @@ namespace cv
 
 #include "opencv2/core/ptr.inl.hpp"
 
-#endif //__OPENCV_CORE_CVSTD_HPP__
+#endif //OPENCV_CORE_CVSTD_HPP

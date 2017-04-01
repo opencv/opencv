@@ -43,11 +43,14 @@
 
 double cv::matchShapes(InputArray contour1, InputArray contour2, int method, double)
 {
+    CV_INSTRUMENT_REGION()
+
     double ma[7], mb[7];
     int i, sma, smb;
     double eps = 1.e-5;
     double mmm;
     double result = 0;
+    bool anyA = false, anyB = false;
 
     HuMoments( moments(contour1), ma );
     HuMoments( moments(contour2), mb );
@@ -59,6 +62,11 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
         {
             double ama = fabs( ma[i] );
             double amb = fabs( mb[i] );
+
+            if (ama > 0)
+                anyA = true;
+            if (amb > 0)
+                anyB = true;
 
             if( ma[i] > 0 )
                 sma = 1;
@@ -88,6 +96,11 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
             double ama = fabs( ma[i] );
             double amb = fabs( mb[i] );
 
+            if (ama > 0)
+                anyA = true;
+            if (amb > 0)
+                anyB = true;
+
             if( ma[i] > 0 )
                 sma = 1;
             else if( ma[i] < 0 )
@@ -116,6 +129,11 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
             double ama = fabs( ma[i] );
             double amb = fabs( mb[i] );
 
+            if (ama > 0)
+                anyA = true;
+            if (amb > 0)
+                anyB = true;
+
             if( ma[i] > 0 )
                 sma = 1;
             else if( ma[i] < 0 )
@@ -142,6 +160,12 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
     default:
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
+
+    //If anyA and anyB are both true, the result is correct.
+    //If anyA and anyB are both false, the distance is 0, perfect match.
+    //If only one is true, then it's a false 0 and return large error.
+    if (anyA != anyB)
+        result = DBL_MAX;
 
     return result;
 }

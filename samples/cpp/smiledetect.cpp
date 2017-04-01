@@ -99,7 +99,7 @@ int main( int argc, const char** argv )
             Mat frame1 = frame.clone();
             detectAndDraw( frame1, cascade, nestedCascade, scale, tryflip );
 
-            int c = waitKey(10);
+            char c = (char)waitKey(10);
             if( c == 27 || c == 'q' || c == 'Q' )
                 break;
         }
@@ -153,7 +153,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
                                  //|CASCADE_DO_ROUGH_SEARCH
                                  |CASCADE_SCALE_IMAGE,
                                  Size(30, 30) );
-        for( vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); r++ )
+        for( vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); ++r )
         {
             faces.push_back(Rect(smallImg.cols - r->x - r->width, r->y, r->width, r->height));
         }

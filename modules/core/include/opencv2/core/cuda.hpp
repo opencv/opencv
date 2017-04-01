@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_CUDA_HPP__
-#define __OPENCV_CORE_CUDA_HPP__
+#ifndef OPENCV_CORE_CUDA_HPP
+#define OPENCV_CORE_CUDA_HPP
 
 #ifndef __cplusplus
 #  error cuda.hpp header must be compiled as C++
@@ -327,6 +327,34 @@ The function does not reallocate memory if the matrix has proper attributes alre
  */
 CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
 
+/** @brief BufferPool for use with CUDA streams
+
+ * BufferPool utilizes cuda::Stream's allocator to create new buffers. It is
+ * particularly useful when BufferPoolUsage is set to true, or a custom
+ * allocator is specified for the cuda::Stream, and you want to implement your
+ * own stream based functions utilizing the same underlying GPU memory
+ * management.
+ */
+class CV_EXPORTS BufferPool
+{
+public:
+
+    //! Gets the BufferPool for the given stream.
+    explicit BufferPool(Stream& stream);
+
+    //! Allocates a new GpuMat of given size and type.
+    GpuMat getBuffer(int rows, int cols, int type);
+
+    //! Allocates a new GpuMat of given size and type.
+    GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+
+    //! Returns the allocator associated with the stream.
+    Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
+
+private:
+    Ptr<GpuMat::Allocator> allocator_;
+};
+
 //! BufferPool management (must be called before Stream creation)
 CV_EXPORTS void setBufferPoolUsage(bool on);
 CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount);
@@ -447,7 +475,26 @@ CV_EXPORTS void unregisterPageLocked(Mat& m);
 functions use the constant GPU memory, and next call may update the memory before the previous one
 has been finished. But calling different operations asynchronously is safe because each operation
 has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are
-also safe. :
+also safe.
+
+@note The Stream class is not thread-safe. Please use different Stream objects for different CPU threads.
+
+@code
+void thread1()
+{
+    cv::cuda::Stream stream1;
+    cv::cuda::func1(..., stream1);
+}
+
+void thread2()
+{
+    cv::cuda::Stream stream2;
+    cv::cuda::func2(..., stream2);
+}
+@endcode
+
+@note By default all CUDA routines are launched in Stream::Null() object, if the stream is not specified by user.
+In multi-threading environment the stream objects must be passed explicitly (see previous note).
  */
 class CV_EXPORTS Stream
 {
@@ -459,6 +506,9 @@ public:
 
     //! creates a new asynchronous stream
     Stream();
+
+    //! creates a new asynchronous stream with custom allocator
+    Stream(const Ptr<GpuMat::Allocator>& allocator);
 
     /** @brief Returns true if the current stream queue is finished. Otherwise, it returns false.
     */
@@ -836,6 +886,15 @@ private:
 CV_EXPORTS void printCudaDeviceInfo(int device);
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
+/** @brief Converts an array to half precision floating number.
+
+@param _src input array.
+@param _dst output array.
+@param stream Stream for the asynchronous version.
+@sa convertFp16
+*/
+CV_EXPORTS void convertFp16(InputArray _src, OutputArray _dst, Stream& stream = Stream::Null());
+
 //! @} cudacore_init
 
 }} // namespace cv { namespace cuda {
@@ -843,4 +902,4 @@ CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
 #include "opencv2/core/cuda.inl.hpp"
 
-#endif /* __OPENCV_CORE_CUDA_HPP__ */
+#endif /* OPENCV_CORE_CUDA_HPP */

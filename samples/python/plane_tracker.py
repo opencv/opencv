@@ -38,6 +38,7 @@ from collections import namedtuple
 # local modules
 import video
 import common
+from video import presets
 
 
 FLANN_INDEX_KDTREE = 1
@@ -139,7 +140,7 @@ class PlaneTracker:
 
 class App:
     def __init__(self, src):
-        self.cap = video.create_capture(src)
+        self.cap = video.create_capture(src, presets['book'])
         self.frame = None
         self.paused = False
         self.tracker = PlaneTracker()
@@ -169,7 +170,7 @@ class App:
 
             self.rect_sel.draw(vis)
             cv2.imshow('plane', vis)
-            ch = cv2.waitKey(1) & 0xFF
+            ch = cv2.waitKey(1)
             if ch == ord(' '):
                 self.paused = not self.paused
             if ch == ord('c'):

@@ -103,7 +103,7 @@
 #ifdef HAVE_CONCURRENCY
 #include <concrt.h>
 #ifndef __cplusplus_winrt
-#include "wrl.h
+#include "wrl.h"
 #endif
 #include "ppltasks_winrt.hpp"
 #endif
@@ -1986,13 +1986,17 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
                 &vd_pFriendlyName,
                 NULL
                 );
-        hr = pActivate->ActivateObject(
-            __uuidof(IMFMediaSource),
-            (void**)&pSource
-            );
-        enumerateCaptureFormats(pSource);
-        buildLibraryofTypes();
-        SafeRelease(&pSource);
+        if (SUCCEEDED(hr))
+          hr = pActivate->ActivateObject(
+              __uuidof(IMFMediaSource),
+              (void**)&pSource
+              );
+        if (SUCCEEDED(hr) && pSource)
+        {
+          enumerateCaptureFormats(pSource);
+          buildLibraryofTypes();
+          SafeRelease(&pSource);
+        }//end if (SUCCEEDED(hr) && pSource)
         if(FAILED(hr))
         {
             vd_pFriendlyName = NULL;
@@ -2580,7 +2584,7 @@ bool videoDevice::setupDevice(unsigned int id)
 
 bool videoDevice::setupDevice(unsigned int w, unsigned int h, unsigned int idealFramerate)
 {
-    unsigned int id = findType(w * h, idealFramerate);
+    int id = findType(w * h, idealFramerate);
     if( id < 0 )
         return false;
 
@@ -2638,7 +2642,12 @@ HRESULT videoDevice::enumerateCaptureFormats(IMFMediaSource *pSource)
     _ComPtr<IMFStreamDescriptor> pSD = NULL;
     _ComPtr<IMFMediaTypeHandler> pHandler = NULL;
     _ComPtr<IMFMediaType> pType = NULL;
-    HRESULT hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf());
+    HRESULT hr = !pSource ? E_POINTER : S_OK;
+    if (FAILED(hr))
+    {
+        goto done;
+    }
+    hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf());
     if (FAILED(hr))
     {
         goto done;
@@ -3815,7 +3824,12 @@ HRESULT CvCaptureFile_MSMF::enumerateCaptureFormats(IMFMediaSource *pSource)
     _ComPtr<IMFStreamDescriptor> pSD = NULL;
     _ComPtr<IMFMediaTypeHandler> pHandler = NULL;
     _ComPtr<IMFMediaType> pType = NULL;
-    HRESULT hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf());
+    HRESULT hr = !pSource ? E_POINTER : S_OK;
+    if (FAILED(hr))
+    {
+        goto done;
+    }
+    hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf());
     if (FAILED(hr))
     {
         goto done;

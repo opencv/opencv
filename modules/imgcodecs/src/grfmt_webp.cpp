@@ -116,7 +116,7 @@ bool WebPDecoder::readHeader()
             return false;
         }
 
-        data.create(1, wfile_size, CV_8U);
+        data.create(1, (int)wfile_size, CV_8U);
 
         size_t data_size = fread(data.ptr(), 1, wfile_size, wfile);
 

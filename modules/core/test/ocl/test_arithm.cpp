@@ -134,7 +134,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         use_roi = GET_PARAM(2);
     }
 
-    virtual void generateTestData(bool with_val_in_range = false)
+    void generateTestData(bool with_val_in_range = false)
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -897,7 +897,7 @@ struct RepeatTestCase :
 {
     int nx, ny;
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -1495,7 +1495,7 @@ PARAM_TEST_CASE(InRange, MatDepth, Channels, bool /*Scalar or not*/, bool /*Roi*
         use_roi = GET_PARAM(3);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -1574,7 +1574,7 @@ PARAM_TEST_CASE(ConvertScaleAbs, MatDepth, Channels, bool)
         use_roi = GET_PARAM(2);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int stype = CV_MAKE_TYPE(depth, cn);
         const int dtype = CV_MAKE_TYPE(CV_8U, cn);
@@ -1647,7 +1647,7 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
         use_roi = GET_PARAM(1);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int type = CV_MAKE_TYPE(CV_32F, cn);
 
@@ -1727,7 +1727,7 @@ PARAM_TEST_CASE(Reduce, std::pair<MatDepth, MatDepth>, Channels, int, bool)
         use_roi = GET_PARAM(3);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int stype = CV_MAKE_TYPE(sdepth, cn);
         dtype = CV_MAKE_TYPE(ddepth, cn);
@@ -1884,6 +1884,22 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceMin, Combine(testing::Values(std::make
                                                                        std::make_pair<MatDepth, MatDepth>(CV_64F, CV_64F)),
                                                        OCL_ALL_CHANNELS, testing::Values(0, 1), Bool()));
 
+
+// T-API BUG (haveOpenCL() is false): modules/core/src/matrix.cpp:212: error: (-215) u->refcount == 0 in function deallocate
+OCL_TEST(Normalize, DISABLED_regression_5876_inplace_change_type)
+{
+    double initial_values[] = {1, 2, 5, 4, 3};
+    float result_values[] = {0, 0.25, 1, 0.75, 0.5};
+    Mat m(Size(5, 1), CV_64FC1, initial_values);
+    Mat result(Size(5, 1), CV_32FC1, result_values);
+
+    UMat um; m.copyTo(um);
+    UMat uresult; result.copyTo(uresult);
+
+    OCL_ON(normalize(um, um, 1, 0, NORM_MINMAX, CV_32F));
+
+    EXPECT_EQ(0, cvtest::norm(um, uresult, NORM_INF));
+}
 
 } } // namespace cvtest::ocl
 

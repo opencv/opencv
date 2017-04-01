@@ -55,7 +55,7 @@ namespace cv { namespace cuda { namespace device
 {
     namespace orb
     {
-        int cull_gpu(int* loc, float* response, int size, int n_points);
+        int cull_gpu(int* loc, float* response, int size, int n_points, cudaStream_t stream);
 
         void HarrisResponses_gpu(PtrStepSzb img, const short2* loc, float* response, const int npoints, int blockSize, float harris_k, cudaStream_t stream);
 
@@ -401,10 +401,10 @@ namespace
         bool blurForDescriptor_;
 
     private:
-        void buildScalePyramids(InputArray _image, InputArray _mask);
-        void computeKeyPointsPyramid();
-        void computeDescriptors(OutputArray _descriptors);
-        void mergeKeyPoints(OutputArray _keypoints);
+        void buildScalePyramids(InputArray _image, InputArray _mask, Stream& stream);
+        void computeKeyPointsPyramid(Stream& stream);
+        void computeDescriptors(OutputArray _descriptors, Stream& stream);
+        void mergeKeyPoints(OutputArray _keypoints, Stream& stream);
 
     private:
         Ptr<cv::cuda::FastFeatureDetector> fastDetector_;
@@ -570,33 +570,95 @@ namespace
         blurFilter_ = cuda::createGaussianFilter(CV_8UC1, -1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
     }
 
-    void ORB_Impl::detectAndCompute(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints, OutputArray _descriptors, bool useProvidedKeypoints)
-    {
-        CV_Assert( useProvidedKeypoints == false );
-
-        detectAndComputeAsync(_image, _mask, d_keypoints_, _descriptors, false, Stream::Null());
-        convert(d_keypoints_, keypoints);
-    }
-
-    void ORB_Impl::detectAndComputeAsync(InputArray _image, InputArray _mask, OutputArray _keypoints, OutputArray _descriptors, bool useProvidedKeypoints, Stream& stream)
-    {
-        CV_Assert( useProvidedKeypoints == false );
-
-        buildScalePyramids(_image, _mask);
-        computeKeyPointsPyramid();
-        if (_descriptors.needed())
-        {
-            computeDescriptors(_descriptors);
-        }
-        mergeKeyPoints(_keypoints);
-    }
-
     static float getScale(float scaleFactor, int firstLevel, int level)
     {
         return pow(scaleFactor, level - firstLevel);
     }
 
-    void ORB_Impl::buildScalePyramids(InputArray _image, InputArray _mask)
+    void ORB_Impl::detectAndCompute(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints, OutputArray _descriptors, bool useProvidedKeypoints)
+    {
+        using namespace cv::cuda::device::orb;
+        if (useProvidedKeypoints)
+        {
+            d_keypoints_.release();
+            keyPointsPyr_.clear();
+
+            int j, level, nkeypoints = (int)keypoints.size();
+            nLevels_ = 0;
+            for( j = 0; j < nkeypoints; j++ )
+            {
+                level = keypoints[j].octave;
+                CV_Assert(level >= 0);
+                nLevels_ = std::max(nLevels_, level);
+            }
+            nLevels_ ++;
+            std::vector<std::vector<KeyPoint> > oKeypoints(nLevels_);
+            for( j = 0; j < nkeypoints; j++ )
+            {
+                level = keypoints[j].octave;
+                oKeypoints[level].push_back(keypoints[j]);
+            }
+            if (!keypoints.empty())
+            {
+                keyPointsPyr_.resize(nLevels_);
+                keyPointsCount_.resize(nLevels_);
+                int t;
+                for(t = 0; t < nLevels_; t++) {
+                    const std::vector<KeyPoint>& ks = oKeypoints[t];
+                    if (!ks.empty()){
+
+                        Mat h_keypoints(ROWS_COUNT, static_cast<int>(ks.size()), CV_32FC1);
+
+                        float sf = getScale(scaleFactor_, firstLevel_, t);
+                        float locScale = t != firstLevel_ ? sf : 1.0f;
+                        float scale = 1.f/locScale;
+
+                        short2* x_loc_row = h_keypoints.ptr<short2>(0);
+                        float* x_kp_hessian = h_keypoints.ptr<float>(1);
+                        float* x_kp_dir = h_keypoints.ptr<float>(2);
+
+                        for (size_t i = 0, size = ks.size(); i < size; ++i)
+                        {
+                            const KeyPoint& kp = ks[i];
+                            x_kp_hessian[i] = kp.response;
+                            x_loc_row[i].x = cvRound(kp.pt.x * scale);
+                            x_loc_row[i].y = cvRound(kp.pt.y * scale);
+                            x_kp_dir[i] = kp.angle;
+
+                        }
+
+                        keyPointsPyr_[t].upload(h_keypoints.rowRange(0,3));
+                        keyPointsCount_[t] = h_keypoints.cols;
+                    }
+                }
+            }
+        }
+
+        detectAndComputeAsync(_image, _mask, d_keypoints_, _descriptors, useProvidedKeypoints, Stream::Null());
+
+        if (!useProvidedKeypoints) {
+            convert(d_keypoints_, keypoints);
+        }
+    }
+
+    void ORB_Impl::detectAndComputeAsync(InputArray _image, InputArray _mask, OutputArray _keypoints, OutputArray _descriptors, bool useProvidedKeypoints, Stream& stream)
+    {
+        buildScalePyramids(_image, _mask, stream);
+        if (!useProvidedKeypoints)
+        {
+           computeKeyPointsPyramid(stream);
+        }
+        if (_descriptors.needed())
+        {
+            computeDescriptors(_descriptors, stream);
+        }
+        if (!useProvidedKeypoints)
+        {
+            mergeKeyPoints(_keypoints, stream);
+        }
+    }
+
+    void ORB_Impl::buildScalePyramids(InputArray _image, InputArray _mask, Stream& stream)
     {
         const GpuMat image = _image.getGpuMat();
         const GpuMat mask = _mask.getGpuMat();
@@ -622,42 +684,42 @@ namespace
             {
                 if (level < firstLevel_)
                 {
-                    cuda::resize(image, imagePyr_[level], sz, 0, 0, INTER_LINEAR);
+                    cuda::resize(image, imagePyr_[level], sz, 0, 0, INTER_LINEAR, stream);
 
                     if (!mask.empty())
-                        cuda::resize(mask, maskPyr_[level], sz, 0, 0, INTER_LINEAR);
+                        cuda::resize(mask, maskPyr_[level], sz, 0, 0, INTER_LINEAR, stream);
                 }
                 else
                 {
-                    cuda::resize(imagePyr_[level - 1], imagePyr_[level], sz, 0, 0, INTER_LINEAR);
+                    cuda::resize(imagePyr_[level - 1], imagePyr_[level], sz, 0, 0, INTER_LINEAR, stream);
 
                     if (!mask.empty())
                     {
-                        cuda::resize(maskPyr_[level - 1], maskPyr_[level], sz, 0, 0, INTER_LINEAR);
-                        cuda::threshold(maskPyr_[level], maskPyr_[level], 254, 0, THRESH_TOZERO);
+                        cuda::resize(maskPyr_[level - 1], maskPyr_[level], sz, 0, 0, INTER_LINEAR, stream);
+                        cuda::threshold(maskPyr_[level], maskPyr_[level], 254, 0, THRESH_TOZERO, stream);
                     }
                 }
             }
             else
             {
-                image.copyTo(imagePyr_[level]);
+                image.copyTo(imagePyr_[level], stream);
 
                 if (!mask.empty())
-                    mask.copyTo(maskPyr_[level]);
+                    mask.copyTo(maskPyr_[level], stream);
             }
 
             // Filter keypoints by image border
             ensureSizeIsEnough(sz, CV_8UC1, buf_);
-            buf_.setTo(Scalar::all(0));
+            buf_.setTo(Scalar::all(0), stream);
             Rect inner(edgeThreshold_, edgeThreshold_, sz.width - 2 * edgeThreshold_, sz.height - 2 * edgeThreshold_);
-            buf_(inner).setTo(Scalar::all(255));
+            buf_(inner).setTo(Scalar::all(255), stream);
 
-            cuda::bitwise_and(maskPyr_[level], buf_, maskPyr_[level]);
+            cuda::bitwise_and(maskPyr_[level], buf_, maskPyr_[level], cv::noArray(), stream);
         }
     }
 
     // takes keypoints and culls them by the response
-    static void cull(GpuMat& keypoints, int& count, int n_points)
+    static void cull(GpuMat& keypoints, int& count, int n_points, Stream& stream)
     {
         using namespace cv::cuda::device::orb;
 
@@ -670,11 +732,11 @@ namespace
                 return;
             }
 
-            count = cull_gpu(keypoints.ptr<int>(cuda::FastFeatureDetector::LOCATION_ROW), keypoints.ptr<float>(cuda::FastFeatureDetector::RESPONSE_ROW), count, n_points);
+            count = cull_gpu(keypoints.ptr<int>(cuda::FastFeatureDetector::LOCATION_ROW), keypoints.ptr<float>(cuda::FastFeatureDetector::RESPONSE_ROW), count, n_points, StreamAccessor::getStream(stream));
         }
     }
 
-    void ORB_Impl::computeKeyPointsPyramid()
+    void ORB_Impl::computeKeyPointsPyramid(Stream& stream)
     {
         using namespace cv::cuda::device::orb;
 
@@ -690,7 +752,7 @@ namespace
             fastDetector_->setMaxNumPoints(0.05 * imagePyr_[level].size().area());
 
             GpuMat fastKpRange;
-            fastDetector_->detectAsync(imagePyr_[level], fastKpRange, maskPyr_[level], Stream::Null());
+            fastDetector_->detectAsync(imagePyr_[level], fastKpRange, maskPyr_[level], stream);
 
             keyPointsCount_[level] = fastKpRange.cols;
 
@@ -698,28 +760,28 @@ namespace
                 continue;
 
             ensureSizeIsEnough(3, keyPointsCount_[level], fastKpRange.type(), keyPointsPyr_[level]);
-            fastKpRange.copyTo(keyPointsPyr_[level].rowRange(0, 2));
+            fastKpRange.copyTo(keyPointsPyr_[level].rowRange(0, 2), stream);
 
             const int n_features = static_cast<int>(n_features_per_level_[level]);
 
             if (scoreType_ == ORB::HARRIS_SCORE)
             {
                 // Keep more points than necessary as FAST does not give amazing corners
-                cull(keyPointsPyr_[level], keyPointsCount_[level], 2 * n_features);
+                cull(keyPointsPyr_[level], keyPointsCount_[level], 2 * n_features, stream);
 
                 // Compute the Harris cornerness (better scoring than FAST)
-                HarrisResponses_gpu(imagePyr_[level], keyPointsPyr_[level].ptr<short2>(0), keyPointsPyr_[level].ptr<float>(1), keyPointsCount_[level], 7, HARRIS_K, 0);
+                HarrisResponses_gpu(imagePyr_[level], keyPointsPyr_[level].ptr<short2>(0), keyPointsPyr_[level].ptr<float>(1), keyPointsCount_[level], 7, HARRIS_K, StreamAccessor::getStream(stream));
             }
 
             //cull to the final desired level, using the new Harris scores or the original FAST scores.
-            cull(keyPointsPyr_[level], keyPointsCount_[level], n_features);
+            cull(keyPointsPyr_[level], keyPointsCount_[level], n_features, stream);
 
             // Compute orientation
-            IC_Angle_gpu(imagePyr_[level], keyPointsPyr_[level].ptr<short2>(0), keyPointsPyr_[level].ptr<float>(2), keyPointsCount_[level], half_patch_size, 0);
+            IC_Angle_gpu(imagePyr_[level], keyPointsPyr_[level].ptr<short2>(0), keyPointsPyr_[level].ptr<float>(2), keyPointsCount_[level], half_patch_size, StreamAccessor::getStream(stream));
         }
     }
 
-    void ORB_Impl::computeDescriptors(OutputArray _descriptors)
+    void ORB_Impl::computeDescriptors(OutputArray _descriptors, Stream& stream)
     {
         using namespace cv::cuda::device::orb;
 
@@ -750,17 +812,17 @@ namespace
             {
                 // preprocess the resized image
                 ensureSizeIsEnough(imagePyr_[level].size(), imagePyr_[level].type(), buf_);
-                blurFilter_->apply(imagePyr_[level], buf_);
+                blurFilter_->apply(imagePyr_[level], buf_, stream);
             }
 
             computeOrbDescriptor_gpu(blurForDescriptor_ ? buf_ : imagePyr_[level], keyPointsPyr_[level].ptr<short2>(0), keyPointsPyr_[level].ptr<float>(2),
-                keyPointsCount_[level], pattern_.ptr<int>(0), pattern_.ptr<int>(1), descRange, descriptorSize(), WTA_K_, 0);
+                keyPointsCount_[level], pattern_.ptr<int>(0), pattern_.ptr<int>(1), descRange, descriptorSize(), WTA_K_, StreamAccessor::getStream(stream));
 
             offset += keyPointsCount_[level];
         }
     }
 
-    void ORB_Impl::mergeKeyPoints(OutputArray _keypoints)
+    void ORB_Impl::mergeKeyPoints(OutputArray _keypoints, Stream& stream)
     {
         using namespace cv::cuda::device::orb;
 
@@ -791,13 +853,13 @@ namespace
 
             float locScale = level != firstLevel_ ? sf : 1.0f;
 
-            mergeLocation_gpu(keyPointsPyr_[level].ptr<short2>(0), keyPointsRange.ptr<float>(0), keyPointsRange.ptr<float>(1), keyPointsCount_[level], locScale, 0);
+            mergeLocation_gpu(keyPointsPyr_[level].ptr<short2>(0), keyPointsRange.ptr<float>(0), keyPointsRange.ptr<float>(1), keyPointsCount_[level], locScale, StreamAccessor::getStream(stream));
 
             GpuMat range = keyPointsRange.rowRange(2, 4);
-            keyPointsPyr_[level](Range(1, 3), Range(0, keyPointsCount_[level])).copyTo(range);
+            keyPointsPyr_[level](Range(1, 3), Range(0, keyPointsCount_[level])).copyTo(range, stream);
 
-            keyPointsRange.row(4).setTo(Scalar::all(level));
-            keyPointsRange.row(5).setTo(Scalar::all(patchSize_ * sf));
+            keyPointsRange.row(4).setTo(Scalar::all(level), stream);
+            keyPointsRange.row(5).setTo(Scalar::all(patchSize_ * sf), stream);
 
             offset += keyPointsCount_[level];
         }

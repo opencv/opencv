@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_OPENCL_HPP__
-#define __OPENCV_OPENCL_HPP__
+#ifndef OPENCV_OPENCL_HPP
+#define OPENCV_OPENCL_HPP
 
 #include "opencv2/core.hpp"
 
@@ -567,7 +567,18 @@ public:
         i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
         i = set(i, a12); i = set(i, a13); i = set(i, a14); set(i, a15); return *this;
     }
-
+    /*
+    Run the OpenCL kernel.
+    @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
+    @param globalsize work items for each dimension.
+    It is not the final globalsize passed to OpenCL.
+    Each dimension will be adjusted to the nearest integer divisible by the corresponding value in localsize.
+    If localsize is NULL, it will still be adjusted depending on dims.
+    The adjusted values are greater than or equal to the original values.
+    @param localsize work-group size for each dimension.
+    @param sync specify whether to wait for OpenCL computation to finish before return.
+    @param q command queue
+    */
     bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
     bool runTask(bool sync, const Queue& q=Queue());
@@ -727,6 +738,9 @@ CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
 #ifdef __OPENCV_BUILD
 namespace internal {
+
+CV_EXPORTS bool isOpenCLForced();
+#define OCL_FORCE_CHECK(condition) (cv::ocl::internal::isOpenCLForced() || (condition))
 
 CV_EXPORTS bool isPerformanceCheckBypassed();
 #define OCL_PERFORMANCE_CHECK(condition) (cv::ocl::internal::isPerformanceCheckBypassed() || (condition))

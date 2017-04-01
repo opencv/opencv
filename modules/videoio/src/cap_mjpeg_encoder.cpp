@@ -720,7 +720,7 @@ public:
         strm.putInt(height);
         strm.putShort(1); // planes (1 means interleaved data (after decompression))
 
-        strm.putShort(channels); // bits per pixel
+        strm.putShort(8 * channels); // bits per pixel
         strm.putInt(fourCC('M', 'J', 'P', 'G'));
         strm.putInt(width * height * channels);
         strm.putInt(0);

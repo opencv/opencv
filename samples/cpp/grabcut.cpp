@@ -1,6 +1,6 @@
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <iostream>
 
@@ -306,8 +306,8 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        int c = waitKey(0);
-        switch( (char) c )
+        char c = (char)waitKey(0);
+        switch( c )
         {
         case '\x1b':
             cout << "Exiting ..." << endl;

@@ -4,11 +4,9 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
@@ -32,7 +30,7 @@ void Dilation( int, void* );
 int main( int, char** argv )
 {
   /// Load an image
-  src = imread( argv[1] );
+  src = imread( argv[1], IMREAD_COLOR );
 
   if( src.empty() )
     { return -1; }
@@ -68,6 +66,7 @@ int main( int, char** argv )
   return 0;
 }
 
+//![erosion]
 /**
  * @function Erosion
  */
@@ -78,14 +77,19 @@ void Erosion( int, void* )
   else if( erosion_elem == 1 ){ erosion_type = MORPH_CROSS; }
   else if( erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
 
+  //![kernel]
   Mat element = getStructuringElement( erosion_type,
                        Size( 2*erosion_size + 1, 2*erosion_size+1 ),
                        Point( erosion_size, erosion_size ) );
+  //![kernel]
+
   /// Apply the erosion operation
   erode( src, erosion_dst, element );
   imshow( "Erosion Demo", erosion_dst );
 }
+//![erosion]
 
+//![dilation]
 /**
  * @function Dilation
  */
@@ -99,7 +103,9 @@ void Dilation( int, void* )
   Mat element = getStructuringElement( dilation_type,
                        Size( 2*dilation_size + 1, 2*dilation_size+1 ),
                        Point( dilation_size, dilation_size ) );
+
   /// Apply the dilation operation
   dilate( src, dilation_dst, element );
   imshow( "Dilation Demo", dilation_dst );
 }
+//![dilation]

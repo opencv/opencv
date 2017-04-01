@@ -27,6 +27,7 @@ import numpy as np
 import cv2
 import video
 from common import draw_str
+from video import presets
 
 lk_params = dict( winSize  = (19, 19),
                   maxLevel = 2,
@@ -49,7 +50,7 @@ red = (0, 0, 255)
 
 class App:
     def __init__(self, video_src):
-        self.cam = video.create_capture(video_src)
+        self.cam = self.cam = video.create_capture(video_src, presets['book'])
         self.p0 = None
         self.use_ransac = True
 
@@ -89,7 +90,7 @@ class App:
 
             cv2.imshow('lk_homography', vis)
 
-            ch = 0xFF & cv2.waitKey(1)
+            ch = cv2.waitKey(1)
             if ch == 27:
                 break
             if ch == ord(' '):

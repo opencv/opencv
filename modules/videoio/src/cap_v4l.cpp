@@ -16,7 +16,7 @@ For Release:  OpenCV-Linux Beta4  opencv-0.9.6
 Tested On:    LMLBT44 with 8 video inputs
 Problems?     Post your questions at answers.opencv.org,
               Report bugs at code.opencv.org,
-              Submit your fixes at https://github.com/Itseez/opencv/
+              Submit your fixes at https://github.com/opencv/opencv/
 Patched Comments:
 
 TW: The cv cam utils that came with the initial release of OpenCV for LINUX Beta4
@@ -270,12 +270,12 @@ struct CvCaptureCAM_V4L : public CvCapture
     int deviceHandle;
     int bufferIndex;
     int FirstCapture;
+    String deviceName;
 
     char *memoryMap;
     IplImage frame;
 
    __u32 palette;
-   int index;
    int width, height;
    __u32 fps;
    bool convert_rgb;
@@ -298,6 +298,7 @@ struct CvCaptureCAM_V4L : public CvCapture
    Range focus, brightness, contrast, saturation, hue, gain, exposure;
 
    bool open(int _index);
+   bool open(const char* deviceName);
 
    virtual double getProperty(int) const;
    virtual bool setProperty(int, double);
@@ -322,6 +323,8 @@ struct CvCaptureCAM_V4L : public CvCapture
            return focus;
        case CV_CAP_PROP_AUTOFOCUS:
            return Range(0, 1);
+       case CV_CAP_PROP_AUTO_EXPOSURE:
+           return Range(0, 4);
        default:
            return Range(0, 255);
        }
@@ -371,8 +374,8 @@ static void icvInitCapture_V4L() {
     }
     if (deviceHandle != -1)
       close(deviceHandle);
-      /* Set up to test the next /dev/video source in line */
-      CameraNumber++;
+    /* Set up to test the next /dev/video source in line */
+    CameraNumber++;
    } /* End while */
 
 }; /* End icvInitCapture_V4L */
@@ -392,7 +395,7 @@ static bool try_palette_v4l2(CvCaptureCAM_V4L* capture)
   return capture->palette == capture->form.fmt.pix.pixelformat;
 }
 
-static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
+static int try_init_v4l2(CvCaptureCAM_V4L* capture, const char *deviceName)
 {
   // Test device for V4L2 compability
   // Return value:
@@ -450,6 +453,10 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, char *deviceName)
 }
 
 static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
+    //in case palette is already set and works, no need to setup.
+    if(capture->palette != 0 and try_palette_v4l2(capture)){
+        return 0;
+    }
     __u32 try_order[] = {
             V4L2_PIX_FMT_BGR24,
             V4L2_PIX_FMT_YVU420,
@@ -463,7 +470,8 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
             V4L2_PIX_FMT_SN9C10X,
             V4L2_PIX_FMT_SBGGR8,
             V4L2_PIX_FMT_SGBRG8,
-            V4L2_PIX_FMT_RGB24
+            V4L2_PIX_FMT_RGB24,
+            V4L2_PIX_FMT_Y16
     };
 
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
@@ -512,7 +520,7 @@ static void v4l2_control_range(CvCaptureCAM_V4L* cap, __u32 id)
     case V4L2_CID_GAIN:
         cap->gain = range;
         break;
-    case V4L2_CID_EXPOSURE:
+    case V4L2_CID_EXPOSURE_ABSOLUTE:
         cap->exposure = range;
         break;
     case V4L2_CID_FOCUS_ABSOLUTE:
@@ -555,6 +563,7 @@ static int v4l2_num_channels(__u32 palette) {
     case V4L2_PIX_FMT_YVU420:
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
+    case V4L2_PIX_FMT_Y16:
         return 1;
     case V4L2_PIX_FMT_YUYV:
     case V4L2_PIX_FMT_UYVY:
@@ -570,6 +579,7 @@ static int v4l2_num_channels(__u32 palette) {
 static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
     CvSize size(capture->form.fmt.pix.width, capture->form.fmt.pix.height);
     int channels = 3;
+    int depth = IPL_DEPTH_8U;
 
     if (!capture->convert_rgb) {
         channels = v4l2_num_channels(capture->palette);
@@ -582,11 +592,16 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
         case V4L2_PIX_FMT_YVU420:
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
+        case V4L2_PIX_FMT_Y16:
+            if(!capture->convert_rgb){
+                depth = IPL_DEPTH_16U;
+            }
+            break;
         }
     }
 
     /* Set up Image data */
-    cvInitImageHeader(&capture->frame, size, IPL_DEPTH_8U, channels);
+    cvInitImageHeader(&capture->frame, size, depth, channels);
 
     /* Allocate space for pixelformat we convert to.
      * If we do not convert frame is just points to the buffer
@@ -600,10 +615,7 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
 
 static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
 {
-   char deviceName[MAX_DEVICE_DRIVER_NAME];
-   /* Print the CameraNumber at the end of the string with a width of one character */
-   sprintf(deviceName, "/dev/video%1d", capture->index);
-
+   const char* deviceName = capture->deviceName.c_str();
    if (try_init_v4l2(capture, deviceName) != 1) {
        /* init of the v4l2 device is not OK */
        return -1;
@@ -761,17 +773,16 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
  * this also causes buffers to be reallocated if the frame size was changed.
  */
 static bool v4l2_reset( CvCaptureCAM_V4L* capture) {
-    int index = capture->index;
+    String deviceName = capture->deviceName;
     icvCloseCAM_V4L(capture);
-    capture->index = index;
+    capture->deviceName = deviceName;
     return _capture_V4L2(capture) == 1;
 }
 
 bool CvCaptureCAM_V4L::open(int _index)
 {
    int autoindex = 0;
-
-   index = -1; // set the capture to closed state
+   char _deviceName[MAX_DEVICE_DRIVER_NAME];
 
    if (!numCameras)
       icvInitCapture_V4L(); /* Havent called icvInitCapture yet - do it now! */
@@ -796,14 +807,21 @@ bool CvCaptureCAM_V4L::open(int _index)
      autoindex++;// i can recall icvOpenCAM_V4l with index=-1 for next camera
    }
 
-   index = _index;
-   FirstCapture = 1;
-   width = DEFAULT_V4L_WIDTH;
-   height = DEFAULT_V4L_HEIGHT;
-   fps = DEFAULT_V4L_FPS;
-   convert_rgb = true;
+   /* Print the CameraNumber at the end of the string with a width of one character */
+   sprintf(_deviceName, "/dev/video%1d", _index);
+   return open(_deviceName);
+}
 
-   return _capture_V4L2(this) == 1;
+bool CvCaptureCAM_V4L::open(const char* _deviceName)
+{
+    FirstCapture = 1;
+    width = DEFAULT_V4L_WIDTH;
+    height = DEFAULT_V4L_HEIGHT;
+    fps = DEFAULT_V4L_FPS;
+    convert_rgb = true;
+    deviceName = _deviceName;
+
+    return _capture_V4L2(this) == 1;
 }
 
 static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
@@ -830,7 +848,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
         default:
             /* display the error and stop processing */
             perror ("VIDIOC_DQBUF");
-            return 1;
+            return -1;
         }
    }
 
@@ -852,7 +870,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
    return 1;
 }
 
-static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
+static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
     unsigned int count;
 
     count = 1;
@@ -886,10 +904,14 @@ static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
                 break;
             }
 
-            if (read_frame_v4l2 (capture))
+            int returnCode = read_frame_v4l2 (capture);
+            if(returnCode == -1)
+                return -1;
+            if(returnCode == 1)
                 break;
         }
     }
+    return 0;
 }
 
 static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
@@ -931,14 +953,15 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 #if defined(V4L_ABORT_BADJPEG)
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
-        mainloop_v4l2(capture);
+        if(mainloop_v4l2(capture) == -1)
+                return false;
 #endif
 
       /* preparation is ok */
       capture->FirstCapture = 0;
    }
 
-   mainloop_v4l2(capture);
+   if(mainloop_v4l2(capture) == -1) return false;
 
    return true;
 }
@@ -1078,6 +1101,15 @@ uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
     cvtColor(Mat(height, width, CV_8UC2, src), Mat(height, width, CV_8UC3, dst),
              COLOR_YUV2BGR_UYVY);
 }
+
+static inline void
+y16_to_rgb24 (int width, int height, unsigned char* src, unsigned char* dst)
+{
+    Mat gray8;
+    Mat(height, width, CV_16UC1, src).convertTo(gray8, CV_8U, 0.00390625);
+    cvtColor(gray8,Mat(height, width, CV_8UC3, dst),COLOR_GRAY2BGR);
+}
+
 #ifdef HAVE_JPEG
 
 /* convert from mjpeg to rgb24 */
@@ -1535,6 +1567,18 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
                 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
                 (unsigned char*)capture->frame.imageData);
         break;
+    case V4L2_PIX_FMT_Y16:
+        if(capture->convert_rgb){
+            y16_to_rgb24(capture->form.fmt.pix.width,
+                         capture->form.fmt.pix.height,
+                         (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                         (unsigned char*)capture->frame.imageData);
+        }else{
+            memcpy((char *)capture->frame.imageData,
+                   (char *)capture->buffers[capture->bufferIndex].start,
+                   capture->frame.imageSize);
+        }
+        break;
     }
 
     return(&capture->frame);
@@ -1552,8 +1596,10 @@ static inline __u32 capPropertyToV4L2(int prop) {
         return V4L2_CID_HUE;
     case CV_CAP_PROP_GAIN:
         return V4L2_CID_GAIN;
+    case CV_CAP_PROP_AUTO_EXPOSURE:
+        return V4L2_CID_EXPOSURE_AUTO;
     case CV_CAP_PROP_EXPOSURE:
-        return V4L2_CID_EXPOSURE;
+        return V4L2_CID_EXPOSURE_ABSOLUTE;
     case CV_CAP_PROP_AUTOFOCUS:
         return V4L2_CID_FOCUS_AUTO;
     case CV_CAP_PROP_FOCUS:
@@ -1567,6 +1613,7 @@ static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
                                      int property_id ) {
   {
       v4l2_format form;
+      memset(&form, 0, sizeof(v4l2_format));
       form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
       if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &form)) {
           /* display an error message, and return an error code */
@@ -1640,6 +1687,9 @@ static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
           case CV_CAP_PROP_GAIN:
               fprintf (stderr, "Gain");
               break;
+          case CV_CAP_PROP_AUTO_EXPOSURE:
+              fprintf (stderr, "Auto Exposure");
+              break;
           case CV_CAP_PROP_EXPOSURE:
               fprintf (stderr, "Exposure");
               break;
@@ -1699,6 +1749,13 @@ static bool icvSetControl (CvCaptureCAM_V4L* capture,
         return false;
     }
 
+    if(control.id == V4L2_CID_EXPOSURE_AUTO && control.value == V4L2_EXPOSURE_MANUAL) {
+        // update the control range for expose after disabling autoexposure
+        // as it is not read correctly at startup
+        // TODO check this again as it might be fixed with Linux 4.5
+        v4l2_control_range(capture, V4L2_CID_EXPOSURE_ABSOLUTE);
+    }
+
     /* all was OK */
     return true;
 }
@@ -1741,6 +1798,20 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
         capture->convert_rgb = bool(value) && possible;
         retval = possible || !bool(value);
         break;
+    case CV_CAP_PROP_FOURCC:
+        {
+            __u32 old_palette = capture->palette;
+            __u32 new_palette = static_cast<__u32>(value);
+            capture->palette = new_palette;
+            if (v4l2_reset(capture)) {
+                retval = true;
+            } else {
+                capture->palette = old_palette;
+                v4l2_reset(capture);
+                retval = false;
+            }
+        }
+        break;
     default:
         retval = icvSetControl(capture, property_id, value);
         break;
@@ -1753,7 +1824,7 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
    /* Deallocate space - Hopefully, no leaks */
 
-   if (capture->index > -1)
+   if (!capture->deviceName.empty())
    {
        if (capture->deviceHandle != -1)
        {
@@ -1779,10 +1850,10 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
      if (capture->deviceHandle != -1)
        close(capture->deviceHandle);
 
-     if (capture->frame.imageData)
+     if (capture->frame_allocated && capture->frame.imageData)
          cvFree(&capture->frame.imageData);
 
-     capture->index = -1; // flag that the capture is closed
+     capture->deviceName.clear(); // flag that the capture is closed
    }
 };
 
@@ -1813,6 +1884,17 @@ CvCapture* cvCreateCameraCapture_V4L( int index )
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
     if(capture->open(index))
+        return capture;
+
+    delete capture;
+    return NULL;
+}
+
+CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
+{
+    cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
+
+    if(capture->open( deviceName ))
         return capture;
 
     delete capture;

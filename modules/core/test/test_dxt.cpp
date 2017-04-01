@@ -419,9 +419,6 @@ static void fixCCS( Mat& mat, int cols, int flags )
     }
 }
 
-#if defined _MSC_VER &&  _MSC_VER >= 1700
-#pragma optimize("", off)
-#endif
 static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
 {
     dst.create(src1.rows, src1.cols, src1.type());
@@ -430,12 +427,27 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
     CV_Assert( src1.size == src2.size && src1.type() == src2.type() &&
               (src1.type() == CV_32FC2 || src1.type() == CV_64FC2) );
 
+    const Mat* src1_ = &src1;
+    Mat src1_tmp;
+    if (dst.data == src1.data)
+    {
+        src1_tmp = src1.clone();
+        src1_ = &src1_tmp;
+    }
+    const Mat* src2_ = &src2;
+    Mat src2_tmp;
+    if (dst.data == src2.data)
+    {
+        src2_tmp = src2.clone();
+        src2_ = &src2_tmp;
+    }
+
     for( i = 0; i < dst.rows; i++ )
     {
         if( depth == CV_32F )
         {
-            const float* a = src1.ptr<float>(i);
-            const float* b = src2.ptr<float>(i);
+            const float* a = src1_->ptr<float>(i);
+            const float* b = src2_->ptr<float>(i);
             float* c = dst.ptr<float>(i);
 
             if( !(flags & CV_DXT_MUL_CONJ) )
@@ -459,8 +471,8 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
         }
         else
         {
-            const double* a = src1.ptr<double>(i);
-            const double* b = src2.ptr<double>(i);
+            const double* a = src1_->ptr<double>(i);
+            const double* b = src2_->ptr<double>(i);
             double* c = dst.ptr<double>(i);
 
             if( !(flags & CV_DXT_MUL_CONJ) )
@@ -484,9 +496,6 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
         }
     }
 }
-#if defined _MSC_VER &&  _MSC_VER >= 1700
-#pragma optimize("", on)
-#endif
 
 }
 
@@ -778,6 +787,7 @@ public:
 protected:
     void run_func();
     void prepare_to_validation( int test_case_idx );
+    double get_success_error_level( int test_case_idx, int i, int j );
 };
 
 
@@ -785,6 +795,19 @@ CxCore_MulSpectrumsTest::CxCore_MulSpectrumsTest() : CxCore_DXTBaseTest( true, t
 {
 }
 
+double CxCore_MulSpectrumsTest::get_success_error_level( int test_case_idx, int i, int j )
+{
+    (void)test_case_idx;
+    CV_Assert(i == OUTPUT);
+    CV_Assert(j == 0);
+    int elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
+    CV_Assert(elem_depth == CV_32F || elem_depth == CV_64F);
+
+    element_wise_relative_error = false;
+    double maxInputValue = 1000; // ArrayTest::get_minmax_bounds
+    double err = 8 * maxInputValue;  // result = A*B + C*D
+    return (elem_depth == CV_32F ? FLT_EPSILON : DBL_EPSILON) * err;
+}
 
 void CxCore_MulSpectrumsTest::run_func()
 {
@@ -887,3 +910,79 @@ TEST(Core_DFT, complex_output2)
         }
     }
 }
+
+class Core_DXTReverseTest : public cvtest::BaseTest
+{
+public:
+    enum Mode
+    {
+        ModeDFT,
+        ModeDCT
+    };
+    Core_DXTReverseTest(Mode m) : mode(m) {}
+private:
+    Mode mode;
+protected:
+    void run(int)
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            if (mode == ModeDCT && i != 0)
+                continue;
+            int flags = 0;
+            int flags_inv = DFT_INVERSE | DFT_SCALE;
+            int cn_in = 0;
+            int cn_out = 0;
+            switch (i)
+            {
+                case 0: cn_in = 1; cn_out = 1; break;
+                case 1: cn_in = 1; cn_out = 2; flags |= DFT_COMPLEX_OUTPUT; flags_inv |= DFT_REAL_OUTPUT; break;
+                case 2: cn_in = 2; cn_out = 2; break;
+            };
+            for (int j = 0; j < 100; ++j)
+            {
+                RNG& rng = ts->get_rng();
+                int type = rng.uniform(0, 2) ? CV_64F : CV_32F;
+                int m = rng.uniform(1, 10);
+                int n = rng.uniform(1, 10);
+                if (mode == ModeDCT)
+                {
+                    m *= 2;
+                    n *= 2;
+                }
+                Mat one(m, n, CV_MAKETYPE(type, cn_in));
+                cvtest::randUni(rng, one, Scalar::all(-1.), Scalar::all(1.));
+                Mat out;
+                Mat two;
+                if (mode == ModeDFT)
+                {
+                    cv::dft(one, out, flags);
+                    cv::dft(out, two, flags_inv);
+                }
+                else if (mode == ModeDCT)
+                {
+                    cv::dct(one, out, flags);
+                    cv::dct(out, two, flags_inv);
+                }
+                if (out.channels() != cn_out || two.channels() != cn_in || cvtest::norm(one, two, NORM_INF) > 1e-5)
+                {
+                    cout << "Test #" << j + 1 << " - "
+                        << "elements: " << m << " x " << n << ", "
+                        << "channels: "
+                        << one.channels() << " (" << cn_in << ")" << " -> "
+                        << out.channels() << " (" << cn_out << ")" << " -> "
+                        << two.channels() << " (" << cn_in << ")"
+                        << endl;
+                    cout << "signal:\n" << one << endl << endl;
+                    cout << "spectrum:\n" << out << endl << endl;
+                    cout << "inverse:\n" << two << endl << endl;
+                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                    break;
+                }
+            }
+        }
+    }
+};
+
+TEST(Core_DFT, reverse) { Core_DXTReverseTest test(Core_DXTReverseTest::ModeDFT); test.safe_run(); }
+TEST(Core_DCT, reverse) { Core_DXTReverseTest test(Core_DXTReverseTest::ModeDCT); test.safe_run(); }

@@ -42,6 +42,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(paths_bib)
   set(paths_sample)
   set(paths_tutorial)
+  set(paths_hal_interface)
   set(refs_main)
   set(refs_extra)
   set(deps)
@@ -87,6 +88,11 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
           file(APPEND "${tutorial_contrib_root}" "- ${m}. @subpage ${tutorial_id}\n")
         endforeach()
       endif()
+      # HAL replacement file
+      set(replacement_header "${OPENCV_MODULE_opencv_${m}_LOCATION}/src/hal_replacement.hpp")
+      if(EXISTS "${replacement_header}")
+        list(APPEND paths_hal_interface "${replacement_header}")
+      endif()
 
       # BiBTeX file
       set(bib_file "${docs_dir}/${m}.bib")
@@ -131,7 +137,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
 
   # set export variables
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_hal_interface} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial}")
   # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${example_path} ; ${paths_doc} ; ${paths_sample}")
@@ -153,12 +159,6 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
 
-  if(PLANTUML_JAR)
-    set(CMAKE_DOXYGEN_PLANTUML_SUPPORT "PLANTUML_JAR_PATH      = ${PLANTUML_JAR}\n")
-  else()
-    set(CMAKE_DOXYGEN_PLANTUML_SUPPORT "ALIASES               += startuml{1}=\"@warning __No plantuml!__ \\n \\n @if DUMMY_PLANTUML_CODE\" enduml=\"@endif\"\n")
-  endif()
-
   # writing file
   configure_file(Doxyfile.in ${doxyfile} @ONLY)
   configure_file(root.markdown.in ${rootfile} @ONLY)
@@ -170,5 +170,11 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
     DESTINATION "${OPENCV_DOC_INSTALL_PATH}"
     COMPONENT "docs" OPTIONAL
+  )
+
+  # Alias to build/install docs only
+  add_custom_target(install_docs
+      DEPENDS doxygen
+      COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=docs -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   )
 endif()

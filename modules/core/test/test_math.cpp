@@ -2384,7 +2384,7 @@ TEST(Core_SolvePoly, regression_5599)
         double prec;
         prec = cv::solvePoly(coefs, r);
         EXPECT_LE(prec, 1e-6);
-        EXPECT_EQ(4, r.total());
+        EXPECT_EQ(4u, r.total());
         //std::cout << "Preciseness = " << prec << std::endl;
         //std::cout << "roots:\n" << r << "\n" << std::endl;
         ASSERT_EQ(CV_32FC2, r.type());
@@ -2400,7 +2400,7 @@ TEST(Core_SolvePoly, regression_5599)
         double prec;
         prec = cv::solvePoly(coefs, r);
         EXPECT_LE(prec, 1e-6);
-        EXPECT_EQ(2, r.total());
+        EXPECT_EQ(2u, r.total());
         //std::cout << "Preciseness = " << prec << std::endl;
         //std::cout << "roots:\n" << r << "\n" << std::endl;
         ASSERT_EQ(CV_32FC2, r.type());
@@ -2411,8 +2411,9 @@ TEST(Core_SolvePoly, regression_5599)
 
 class Core_PhaseTest : public cvtest::BaseTest
 {
+    int t;
 public:
-    Core_PhaseTest() {}
+    Core_PhaseTest(int t_) : t(t_) {}
     ~Core_PhaseTest() {}
 protected:
     virtual void run(int)
@@ -2421,9 +2422,9 @@ protected:
         const int axisCount = 8;
         const int dim = theRNG().uniform(1,10);
         const float scale = theRNG().uniform(1.f, 100.f);
-        Mat x(axisCount + 1, dim, CV_32FC1),
-            y(axisCount + 1, dim, CV_32FC1);
-        Mat anglesInDegrees(axisCount + 1, dim, CV_32FC1);
+        Mat x(axisCount + 1, dim, t),
+            y(axisCount + 1, dim, t);
+        Mat anglesInDegrees(axisCount + 1, dim, t);
 
         // fill the data
         x.row(0).setTo(Scalar(0));
@@ -2696,8 +2697,8 @@ TEST(Core_SVD, accuracy) { Core_SVDTest test; test.safe_run(); }
 TEST(Core_SVBkSb, accuracy) { Core_SVBkSbTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
-TEST(Core_Phase, accuracy) { Core_PhaseTest test; test.safe_run(); }
-
+TEST(Core_Phase, accuracy32f) { Core_PhaseTest test(CV_32FC1); test.safe_run(); }
+TEST(Core_Phase, accuracy64f) { Core_PhaseTest test(CV_64FC1); test.safe_run(); }
 
 TEST(Core_SVD, flt)
 {
@@ -2747,20 +2748,22 @@ public:
 protected:
     void run(int inVariant)
     {
+        RNG& rng = ts->get_rng();
         int i, iter = 0, N = 0, N0 = 0, K = 0, dims = 0;
         Mat labels;
-        try
+
         {
-            RNG& rng = theRNG();
             const int MAX_DIM=5;
             int MAX_POINTS = 100, maxIter = 100;
             for( iter = 0; iter < maxIter; iter++ )
             {
                 ts->update_context(this, iter, true);
                 dims = rng.uniform(inVariant == MAT_1_N_CDIM ? 2 : 1, MAX_DIM+1);
-                N = rng.uniform(1, MAX_POINTS+1);
+                N = rng.uniform(2, MAX_POINTS+1);
                 N0 = rng.uniform(1, MAX(N/10, 2));
                 K = rng.uniform(1, N+1);
+
+                Mat centers;
 
                 if (inVariant == VECTOR)
                 {
@@ -2774,7 +2777,7 @@ protected:
                         data[i] = data0[rng.uniform(0, N0)];
 
                     kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
-                           5, KMEANS_PP_CENTERS);
+                           5, KMEANS_PP_CENTERS, centers);
                 }
                 else
                 {
@@ -2819,27 +2822,23 @@ protected:
                     }
 
                     kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
-                           5, KMEANS_PP_CENTERS);
+                           5, KMEANS_PP_CENTERS, centers);
                 }
+
+                ASSERT_EQ(centers.rows, K);
+                ASSERT_EQ(labels.rows, N);
 
                 Mat hist(K, 1, CV_32S, Scalar(0));
                 for( i = 0; i < N; i++ )
                 {
                     int l = labels.at<int>(i);
-                    CV_Assert(0 <= l && l < K);
+                    ASSERT_GE(l, 0);
+                    ASSERT_LT(l, K);
                     hist.at<int>(l)++;
                 }
                 for( i = 0; i < K; i++ )
-                    CV_Assert( hist.at<int>(i) != 0 );
+                    ASSERT_GT(hist.at<int>(i), 0);
             }
-        }
-        catch(...)
-        {
-            ts->printf(cvtest::TS::LOG,
-                       "context: iteration=%d, N=%d, N0=%d, K=%d\n",
-                       iter, N, N0, K);
-            std::cout << labels << std::endl;
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         }
     }
 };
@@ -2857,6 +2856,35 @@ TEST_P(Core_KMeans_InputVariants, singular)
 }
 
 INSTANTIATE_TEST_CASE_P(AllVariants, Core_KMeans_InputVariants, KMeansInputVariant::all());
+
+TEST(Core_KMeans, compactness)
+{
+    const int N = 1024;
+    const int attempts = 4;
+    const TermCriteria crit = TermCriteria(TermCriteria::COUNT, 5, 0); // low number of iterations
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    for (int K = 1; K <= N; K *= 2)
+    {
+        Mat data(N, 1, CV_32FC2);
+        cvtest::randUni(ts.get_rng(), data, Scalar(-200, -200), Scalar(200, 200));
+        Mat labels, centers;
+        double compactness = kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers);
+        centers = centers.reshape(2);
+        EXPECT_EQ(labels.rows, N);
+        EXPECT_EQ(centers.rows, K);
+        EXPECT_GE(compactness, 0.0);
+        double expected = 0.0;
+        for (int i = 0; i < N; ++i)
+        {
+            int l = labels.at<int>(i);
+            Point2f d = data.at<Point2f>(i) - centers.at<Point2f>(l);
+            expected += d.x * d.x + d.y * d.y;
+        }
+        EXPECT_NEAR(expected, compactness, expected * 1e-8);
+        if (K == N)
+            EXPECT_DOUBLE_EQ(compactness, 0.0);
+    }
+}
 
 TEST(CovariationMatrixVectorOfMat, accuracy)
 {
@@ -2974,6 +3002,70 @@ TEST(Core_Pow, special)
             }
         }
     }
+}
+
+TEST(Core_Cholesky, accuracy64f)
+{
+    const int n = 5;
+    Mat A(n, n, CV_64F), refA;
+    Mat mean(1, 1, CV_64F);
+    *mean.ptr<double>() = 10.0;
+    Mat dev(1, 1, CV_64F);
+    *dev.ptr<double>() = 10.0;
+    RNG rng(10);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    A = A*A.t();
+    A.copyTo(refA);
+    Cholesky(A.ptr<double>(), A.step, n, NULL, 0, 0);
+
+   for (int i = 0; i < A.rows; i++)
+       for (int j = i + 1; j < A.cols; j++)
+           A.at<double>(i, j) = 0.0;
+   EXPECT_LE(norm(refA, A*A.t(), CV_RELATIVE_L2), FLT_EPSILON);
+}
+
+TEST(Core_QR_Solver, accuracy64f)
+{
+    int m = 20, n = 18;
+    Mat A(m, m, CV_64F);
+    Mat B(m, n, CV_64F);
+    Mat mean(1, 1, CV_64F);
+    *mean.ptr<double>() = 10.0;
+    Mat dev(1, 1, CV_64F);
+    *dev.ptr<double>() = 10.0;
+    RNG rng(10);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+    A = A*A.t();
+    Mat solutionQR;
+
+    //solve system with square matrix
+    solve(A, B, solutionQR, DECOMP_QR);
+    EXPECT_LE(norm(A*solutionQR, B, CV_RELATIVE_L2), FLT_EPSILON);
+
+    A = Mat(m, n, CV_64F);
+    B = Mat(m, n, CV_64F);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+
+    //solve normal system
+    solve(A, B, solutionQR, DECOMP_QR | DECOMP_NORMAL);
+    EXPECT_LE(norm(A.t()*(A*solutionQR), A.t()*B, CV_RELATIVE_L2), FLT_EPSILON);
+
+    //solve overdeterminated system as a least squares problem
+    Mat solutionSVD;
+    solve(A, B, solutionQR, DECOMP_QR);
+    solve(A, B, solutionSVD, DECOMP_SVD);
+    EXPECT_LE(norm(solutionQR, solutionSVD, CV_RELATIVE_L2), FLT_EPSILON);
+
+    //solve system with singular matrix
+    A = Mat(10, 10, CV_64F);
+    B = Mat(10, 1, CV_64F);
+    rng.fill(A, RNG::NORMAL, mean, dev);
+    rng.fill(B, RNG::NORMAL, mean, dev);
+    for (int i = 0; i < A.cols; i++)
+      A.at<double>(0, i) = A.at<double>(1, i);
+    ASSERT_FALSE(solve(A, B, solutionQR, DECOMP_QR));
 }
 
 /* End of file. */

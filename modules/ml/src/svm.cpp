@@ -362,6 +362,12 @@ static void sortSamplesByClasses( const Mat& _samples, const Mat& _responses,
 
 //////////////////////// SVM implementation //////////////////////////////
 
+Ptr<ParamGrid> SVM::getDefaultGridPtr( int param_id)
+{
+  ParamGrid grid = getDefaultGrid(param_id); // this is not a nice solution..
+  return makePtr<ParamGrid>(grid.minVal, grid.maxVal, grid.logStep);
+}
+
 ParamGrid SVM::getDefaultGrid( int param_id )
 {
     ParamGrid grid;
@@ -1442,7 +1448,7 @@ public:
             //check that while cross-validation there were the samples from all the classes
             if( class_ranges[class_count] <= 0 )
                 CV_Error( CV_StsBadArg, "While cross-validation one or more of the classes have "
-                "been fell out of the sample. Try to enlarge <Params::k_fold>" );
+                "been fell out of the sample. Try to reduce <Params::k_fold>" );
 
             if( svmType == NU_SVC )
             {
@@ -1920,6 +1926,24 @@ public:
         bool returnDFVal;
     };
 
+    bool trainAuto_(InputArray samples, int layout,
+            InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
+            Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
+            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
+    {
+        Ptr<TrainData> data = TrainData::create(samples, layout, responses);
+        return this->trainAuto(
+                data, kfold,
+                *Cgrid.get(),
+                *gammaGrid.get(),
+                *pGrid.get(),
+                *nuGrid.get(),
+                *coeffGrid.get(),
+                *degreeGrid.get(),
+                balanced);
+    }
+
+
     float predict( InputArray _samples, OutputArray _results, int flags ) const
     {
         float result = 0;
@@ -2037,6 +2061,7 @@ public:
         if( !isTrained() )
             CV_Error( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
+        writeFormat(fs);
         write_params( fs );
 
         fs << "var_count" << var_count;
@@ -2092,7 +2117,7 @@ public:
                << "alpha" << "[:";
             fs.writeRaw("d", (const uchar*)&df_alpha[df.ofs], sv_count*sizeof(df_alpha[0]));
             fs << "]";
-            if( class_count > 2 )
+            if( class_count >= 2 )
             {
                 fs << "index" << "[:";
                 fs.writeRaw("i", (const uchar*)&df_index[df.ofs], sv_count*sizeof(df_index[0]));
@@ -2234,11 +2259,11 @@ public:
             df_index.resize(ofs + sv_count);
             df_alpha.resize(ofs + sv_count);
             dfi["alpha"].readRaw("d", (uchar*)&df_alpha[ofs], sv_count*sizeof(df_alpha[0]));
-            if( class_count > 2 )
+            if( class_count >= 2 )
                 dfi["index"].readRaw("i", (uchar*)&df_index[ofs], sv_count*sizeof(df_index[0]));
             decision_func.push_back(df);
         }
-        if( class_count <= 2 )
+        if( class_count < 2 )
             setRangeVector(df_index, sv_total);
         if( (int)fn["optimize_linear"] != 0 )
             optimize_linear_svm();
@@ -2261,12 +2286,36 @@ Ptr<SVM> SVM::create()
     return makePtr<SVMImpl>();
 }
 
+Ptr<SVM> SVM::load(const String& filepath)
+{
+    FileStorage fs;
+    fs.open(filepath, FileStorage::READ);
+
+    Ptr<SVM> svm = makePtr<SVMImpl>();
+
+    ((SVMImpl*)svm.get())->read(fs.getFirstTopLevelNode());
+    return svm;
+}
+
 Mat SVM::getUncompressedSupportVectors() const
 {
     const SVMImpl* this_ = dynamic_cast<const SVMImpl*>(this);
     if(!this_)
         CV_Error(Error::StsNotImplemented, "the class is not SVMImpl");
     return this_->getUncompressedSupportVectors_();
+}
+
+bool SVM::trainAuto(InputArray samples, int layout,
+            InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
+            Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
+            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
+{
+  SVMImpl* this_ = dynamic_cast<SVMImpl*>(this);
+  if (!this_) {
+    CV_Error(Error::StsNotImplemented, "the class is not SVMImpl");
+  }
+  return this_->trainAuto_(samples, layout, responses,
+    kfold, Cgrid, gammaGrid, pGrid, nuGrid, coeffGrid, degreeGrid, balanced);
 }
 
 }

@@ -123,7 +123,7 @@ In case of 8-bit and 16-bit images, R, G, and B are converted to the floating-po
 scaled to fit 0 to 1 range.
 
 \f[\vecthree{X}{Y}{Z} \leftarrow \vecthreethree{0.412453}{0.357580}{0.180423}{0.212671}{0.715160}{0.072169}{0.019334}{0.119193}{0.950227} \cdot \vecthree{R}{G}{B}\f]
-\f[L  \leftarrow \fork{116 Y^{1/3}}{for \(Y>0.008856\)}{903.3 Y}{for \(Y\leq 0.008856\)}\f]
+\f[L  \leftarrow \fork{116*Y^{1/3} - 16}{for \(Y>0.008856\)}{903.3 Y}{for \(Y\leq 0.008856\)}\f]
 \f[u'  \leftarrow 4*X/(X + 15*Y + 3 Z)\f]
 \f[v'  \leftarrow 9*Y/(X + 15*Y + 3 Z)\f]
 \f[u  \leftarrow 13*L*(u' - u_n)  \quad \text{where} \quad u_n=0.19793943\f]

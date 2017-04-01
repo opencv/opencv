@@ -65,6 +65,7 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   unset(OPENCV_MODULE_${mod}_PRIVATE_OPT_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_LINK_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_WRAPPERS CACHE)
+  unset(OPENCV_DEPENDANT_TARGETS_${mod} CACHE)
 endforeach()
 
 # clean modules info which needs to be recalculated
@@ -182,7 +183,7 @@ macro(ocv_add_module _name)
     # add self to the world dependencies
     if((NOT DEFINED OPENCV_MODULE_IS_PART_OF_WORLD
         AND NOT OPENCV_MODULE_${the_module}_CLASS STREQUAL "BINDINGS"
-        AND NOT OPENCV_PROCESSING_EXTRA_MODULES
+        AND (NOT OPENCV_PROCESSING_EXTRA_MODULES OR NOT OPENCV_WORLD_EXCLUDE_EXTRA_MODULES)
         AND (NOT BUILD_SHARED_LIBS OR NOT "x${OPENCV_MODULE_TYPE}" STREQUAL "xSTATIC"))
         OR OPENCV_MODULE_IS_PART_OF_WORLD
         )
@@ -224,12 +225,16 @@ macro(ocv_add_module _name)
     endif()
     if((NOT OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD AND NOT ${the_module} STREQUAL opencv_world) OR NOT ${BUILD_opencv_world})
       project(${the_module})
+      add_definitions(
+        -D_USE_MATH_DEFINES  # M_PI constant in MSVS
+        -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS  # to use C libraries from C++ code (ffmpeg)
+      )
     endif()
   endif()
 endmacro()
 
 # excludes module from current configuration
-macro(ocv_module_disable module)
+macro(ocv_module_disable_ module)
   set(__modname ${module})
   if(NOT __modname MATCHES "^opencv_")
     set(__modname opencv_${module})
@@ -242,9 +247,12 @@ macro(ocv_module_disable module)
     # touch variable controlling build of the module to suppress "unused variable" CMake warning
   endif()
   unset(__modname)
-  return() # leave the current folder
 endmacro()
 
+macro(ocv_module_disable module)
+  ocv_module_disable_(${module})
+  return() # leave the current folder
+endmacro()
 
 # collect modules from specified directories
 # NB: must be called only once!
@@ -641,6 +649,8 @@ macro(ocv_set_module_sources)
   # use full paths for module to be independent from the module location
   ocv_convert_to_full_paths(OPENCV_MODULE_${the_module}_HEADERS)
 
+  ocv_compiler_optimization_process_sources(OPENCV_MODULE_${the_module}_SOURCES OPENCV_MODULE_${the_module}_DEPS_EXT ${the_module})
+
   set(OPENCV_MODULE_${the_module}_HEADERS ${OPENCV_MODULE_${the_module}_HEADERS} CACHE INTERNAL "List of header files for ${the_module}")
   set(OPENCV_MODULE_${the_module}_SOURCES ${OPENCV_MODULE_${the_module}_SOURCES} CACHE INTERNAL "List of source files for ${the_module}")
 endmacro()
@@ -701,7 +711,6 @@ macro(ocv_glob_module_sources)
   )
   if(cl_kernels)
     set(OCL_NAME opencl_kernels_${name})
-    ocv_include_directories(${OPENCL_INCLUDE_DIRS})
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.hpp"
       COMMAND ${CMAKE_COMMAND} "-DMODULE_NAME=${name}" "-DCL_DIR=${CMAKE_CURRENT_LIST_DIR}/src/opencl" "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
@@ -721,8 +730,10 @@ endmacro()
 #   ocv_create_module(<extra link dependencies>)
 #   ocv_create_module()
 macro(ocv_create_module)
-  ocv_debug_message("ocv_create_module(" ${ARGN} ")")
-  set(OPENCV_MODULE_${the_module}_LINK_DEPS "${OPENCV_MODULE_${the_module}_LINK_DEPS};${ARGN}" CACHE INTERNAL "")
+  ocv_debug_message("${the_module}: ocv_create_module(" ${ARGN} ")")
+  if(NOT " ${ARGN}" STREQUAL " ")
+    set(OPENCV_MODULE_${the_module}_LINK_DEPS "${OPENCV_MODULE_${the_module}_LINK_DEPS};${ARGN}" CACHE INTERNAL "")
+  endif()
   if(${BUILD_opencv_world} AND OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD)
     # nothing
     set(the_module_target opencv_world)
@@ -780,6 +791,8 @@ macro(_ocv_create_module)
     endforeach()
   endif()
 
+  source_group("Include" FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp")
+  source_group("Src" FILES "${${the_module}_pch}")
   ocv_add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
     "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
     ${${the_module}_pch} ${sub_objs})
@@ -834,7 +847,6 @@ macro(_ocv_create_module)
     COMPILE_PDB_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-    INSTALL_NAME_DIR lib
   )
 
   # For dynamic link numbering convenions
@@ -849,8 +861,11 @@ macro(_ocv_create_module)
 
   if((NOT DEFINED OPENCV_MODULE_TYPE AND BUILD_SHARED_LIBS)
       OR (DEFINED OPENCV_MODULE_TYPE AND OPENCV_MODULE_TYPE STREQUAL SHARED))
-    set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS CVAPI_EXPORTS)
     set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+  endif()
+
+  if (ENABLE_GNU_STL_DEBUG)
+    target_compile_definitions(${the_module} PUBLIC _GLIBCXX_DEBUG)
   endif()
 
   if(MSVC)
@@ -861,7 +876,8 @@ macro(_ocv_create_module)
   endif()
 
   get_target_property(_target_type ${the_module} TYPE)
-  if("${_target_type}" STREQUAL "SHARED_LIBRARY" OR (NOT BUILD_SHARED_LIBS OR NOT INSTALL_CREATE_DISTRIB))
+  if(OPENCV_MODULE_${the_module}_CLASS STREQUAL "PUBLIC" AND
+      ("${_target_type}" STREQUAL "SHARED_LIBRARY" OR (NOT BUILD_SHARED_LIBS OR NOT INSTALL_CREATE_DISTRIB)))
     ocv_install_target(${the_module} EXPORT OpenCVModules OPTIONAL
       RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs
       LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs NAMELINK_SKIP
@@ -1016,6 +1032,7 @@ function(ocv_add_perf_tests)
         get_native_precompiled_header(${the_target} perf_precomp.hpp)
       endif()
 
+      source_group("Src" FILES "${${the_target}_pch}")
       ocv_add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES} ${${the_target}_pch})
       ocv_target_include_modules(${the_target} ${perf_deps} "${perf_path}")
       ocv_target_link_libraries(${the_target} ${perf_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
@@ -1092,6 +1109,7 @@ function(ocv_add_accuracy_tests)
         get_native_precompiled_header(${the_target} test_precomp.hpp)
       endif()
 
+      source_group("Src" FILES "${${the_target}_pch}")
       ocv_add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
       ocv_target_include_modules(${the_target} ${test_deps} "${test_path}")
       ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
@@ -1109,6 +1127,10 @@ function(ocv_add_accuracy_tests)
 
       if(ENABLE_SOLUTION_FOLDERS)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
+      endif()
+
+      if(OPENCV_TEST_BIGDATA)
+        ocv_append_target_property(${the_target} COMPILE_DEFINITIONS "OPENCV_TEST_BIGDATA=1")
       endif()
 
       if(NOT BUILD_opencv_world)

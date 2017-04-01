@@ -47,29 +47,6 @@
 namespace cv
 {
 
-static bool haveCollinearPoints( const Mat& m, int count )
-{
-    int j, k, i = count-1;
-    const Point2f* ptr = m.ptr<Point2f>();
-
-    // check that the i-th selected point does not belong
-    // to a line connecting some previously selected points
-    for( j = 0; j < i; j++ )
-    {
-        double dx1 = ptr[j].x - ptr[i].x;
-        double dy1 = ptr[j].y - ptr[i].y;
-        for( k = 0; k < j; k++ )
-        {
-            double dx2 = ptr[k].x - ptr[i].x;
-            double dy2 = ptr[k].y - ptr[i].y;
-            if( fabs(dx2*dy1 - dy2*dx1) <= FLT_EPSILON*(fabs(dx1) + fabs(dy1) + fabs(dx2) + fabs(dy2)))
-                return true;
-        }
-    }
-    return false;
-}
-
-
 class HomographyEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:
@@ -343,6 +320,8 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                             int method, double ransacReprojThreshold, OutputArray _mask,
                             const int maxIters, const double confidence)
 {
+    CV_INSTRUMENT_REGION()
+
     const double defaultRANSACReprojThreshold = 3;
     bool result = false;
 
@@ -411,7 +390,13 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             tempMask.copyTo(_mask);
     }
     else
+    {
         H.release();
+        if(_mask.needed() ) {
+            tempMask = Mat::zeros(npoints >= 0 ? npoints : 0, 1, CV_8U);
+            tempMask.copyTo(_mask);
+        }
+    }
 
     return H;
 }
@@ -708,6 +693,8 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
                                 int method, double param1, double param2,
                                 OutputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
     Mat m1, m2, F;
     int npoints = -1;
@@ -777,6 +764,8 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
 void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
                                     InputArray _Fmat, OutputArray _lines )
 {
+    CV_INSTRUMENT_REGION()
+
     double f[9];
     Mat tempF(3, 3, CV_64F, f);
     Mat points = _points.getMat(), F = _Fmat.getMat();
@@ -850,6 +839,8 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
 
 void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     if( !src.isContinuous() )
         src = src.clone();
@@ -949,6 +940,8 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 
 void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
     if( !src.isContinuous() )
         src = src.clone();
@@ -961,7 +954,7 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     }
     CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F || depth == CV_64F));
 
-    int dtype = CV_MAKETYPE(depth <= CV_32F ? CV_32F : CV_64F, cn+1);
+    int dtype = CV_MAKETYPE(depth, cn+1);
     _dst.create(npoints, 1, dtype);
     Mat dst = _dst.getMat();
     if( !dst.isContinuous() )
@@ -1030,6 +1023,8 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
 
 void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), dtype = _dst.type();
     CV_Assert( _dst.fixedType() );
 
@@ -1039,8 +1034,11 @@ void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
         convertPointsToHomogeneous(_src, _dst);
 }
 
-double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F) {
-    CV_Assert(_pt1.type() == CV_64F && _pt1.type() == CV_64F && _F.type() == CV_64F);
+double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F)
+{
+    CV_INSTRUMENT_REGION()
+
+    CV_Assert(_pt1.type() == CV_64F && _pt2.type() == CV_64F && _F.type() == CV_64F);
     CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
 
     Mat pt1(_pt1.getMat());

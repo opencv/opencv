@@ -31,7 +31,14 @@ MULTILINE_CPP_IS_BRIEF = NO
 INHERIT_DOCS           = YES
 SEPARATE_MEMBER_PAGES  = NO
 TAB_SIZE               = 4
-ALIASES                =
+ALIASES               += add_toggle{1}="@htmlonly[block] <div class='newInnerHTML'>\1</div><div> <script type="text/javascript"> addToggle(); </script>@endhtmlonly"
+ALIASES               += add_toggle_cpp="@htmlonly[block] <div class='newInnerHTML' title='cpp' style='display: none;'>C++</div><div class='toggleable_div label_cpp' style='display: none;'>@endhtmlonly"
+ALIASES               += add_toggle_java="@htmlonly[block] <div class='newInnerHTML' title='java' style='display: none;'>Java</div><div class='toggleable_div label_java' style='display: none;'>@endhtmlonly"
+ALIASES               += add_toggle_python="@htmlonly[block] <div class='newInnerHTML' title='python' style='display: none;'>Python</div><div class='toggleable_div label_python' style='display: none;'>@endhtmlonly"
+ALIASES               += end_toggle="@htmlonly[block] </div> @endhtmlonly"
+ALIASES               += prev_tutorial{1}="**Prev  Tutorial:** \ref \1 \n"
+ALIASES               += next_tutorial{1}="**Next  Tutorial:** \ref \1 \n"
+ALIASES               += youtube{1}="@htmlonly[block]<div align='center'><iframe title='my title' width='560' height='349' src='http://www.youtube.com/embed/\1?rel=0' frameborder='0' align='middle' allowfullscreen></iframe></div>@endhtmlonly"
 TCL_SUBST              =
 OPTIMIZE_OUTPUT_FOR_C  = NO
 OPTIMIZE_OUTPUT_JAVA   = NO
@@ -99,7 +106,7 @@ FILE_PATTERNS          =
 RECURSIVE              = YES
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
-EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp
+EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp *.m
 EXCLUDE_SYMBOLS        = cv::DataType<*> int void
 EXAMPLE_PATH           = @CMAKE_DOXYGEN_EXAMPLE_PATH@
 EXAMPLE_PATTERNS       = *
@@ -150,7 +157,7 @@ BINARY_TOC             = NO
 TOC_EXPAND             = NO
 GENERATE_QHP           = @CMAKE_DOXYGEN_GENERATE_QHP@
 QCH_FILE               = ../opencv-@OPENCV_VERSION@.qch
-QHP_NAMESPACE          = org.itseez.opencv.@OPENCV_VERSION@
+QHP_NAMESPACE          = org.opencv.@OPENCV_VERSION@
 QHP_VIRTUAL_FOLDER     = opencv
 QHP_CUST_FILTER_NAME   =
 QHP_CUST_FILTER_ATTRS  =
@@ -244,7 +251,7 @@ PREDEFINED             = __cplusplus=1 \
                          CV_DEFAULT(x)=" = x" \
                          CV_NEON=1 \
                          CV_SSE2=1 \
-                         FLANN_DEPRECATED=
+                         CV_DEPRECATED=
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
 TAGFILES               =
@@ -286,4 +293,3 @@ DOT_TRANSPARENT        = NO
 DOT_MULTI_TARGETS      = NO
 GENERATE_LEGEND        = YES
 DOT_CLEANUP            = YES
-@CMAKE_DOXYGEN_PLANTUML_SUPPORT@

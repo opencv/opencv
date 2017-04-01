@@ -387,6 +387,7 @@ public:
         if( roots.empty() )
             CV_Error( CV_StsBadArg, "RTrees have not been trained" );
 
+        writeFormat(fs);
         writeParams(fs);
 
         int k, ntrees = (int)roots.size();
@@ -504,6 +505,11 @@ public:
 Ptr<Boost> Boost::create()
 {
     return makePtr<BoostImpl>();
+}
+
+Ptr<Boost> Boost::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<Boost>(filepath, nodeName);
 }
 
 }}

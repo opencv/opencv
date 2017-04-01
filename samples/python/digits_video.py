@@ -27,9 +27,12 @@ def main():
     if not os.path.exists(classifier_fn):
         print('"%s" not found, run digits.py first' % classifier_fn)
         return
-    model = SVM()
-    model.load(classifier_fn)
 
+    if True:
+        model = cv2.ml.SVM_load(classifier_fn)
+    else:
+        model = cv2.ml.SVM_create()
+        model.load_(classifier_fn) #Known bug: https://github.com/opencv/opencv/issues/4969
 
     while True:
         ret, frame = cap.read()
@@ -89,7 +92,7 @@ def main():
 
         cv2.imshow('frame', frame)
         cv2.imshow('bin', bin)
-        ch = cv2.waitKey(1) & 0xFF
+        ch = cv2.waitKey(1)
         if ch == 27:
             break
 

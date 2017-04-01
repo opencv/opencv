@@ -79,6 +79,7 @@ public:
     //! write/read
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
            << "affine_type" << int(fullAffine);
     }
@@ -101,6 +102,8 @@ protected:
 void AffineTransformerImpl::warpImage(InputArray transformingImage, OutputArray output,
                                       int flags, int borderMode, const Scalar& borderValue) const
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(!affineMat.empty());
     warpAffine(transformingImage, output, affineMat, transformingImage.getMat().size(), flags, borderMode, borderValue);
 }
@@ -182,6 +185,8 @@ static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::v
 
 void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray _pts2, std::vector<DMatch>& _matches)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
     CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
@@ -227,6 +232,8 @@ void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray 
 
 float AffineTransformerImpl::applyTransformation(InputArray inPts, OutputArray outPts)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat pts1 = inPts.getMat();
     CV_Assert((pts1.channels()==2) && (pts1.cols>0));
 

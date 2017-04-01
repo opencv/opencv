@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP__
-#define __OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP__
+#ifndef OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP
+#define OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/opencv_modules.hpp"

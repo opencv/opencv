@@ -156,6 +156,9 @@ void dumpOpenCLDevice()
         DUMP_MESSAGE_STDOUT("    Version = " << device.version());
         DUMP_PROPERTY_XML("cv_ocl_current_deviceVersion", device.version());
 
+        DUMP_MESSAGE_STDOUT("    Driver version = " << device.driverVersion());
+        DUMP_PROPERTY_XML("cv_ocl_current_driverVersion", device.driverVersion());
+
         DUMP_MESSAGE_STDOUT("    Compute units = "<< device.maxComputeUnits());
         DUMP_PROPERTY_XML("cv_ocl_current_maxComputeUnits", device.maxComputeUnits());
 
@@ -267,7 +270,7 @@ double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, s
         cv::Mat cpu_result(sz, CV_8UC1);
         cpu_result.setTo(0);
 
-        for (vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
+        for (vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); ++r)
         {
             cv::Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
@@ -277,7 +280,7 @@ double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, s
 
         cv::Mat gpu_result(sz, CV_8UC1);
         gpu_result.setTo(0);
-        for(vector<Rect>::const_iterator r2 = ob2.begin(); r2 != ob2.end(); r2++)
+        for(vector<Rect>::const_iterator r2 = ob2.begin(); r2 != ob2.end(); ++r2)
         {
             cv::Mat gpu_result_roi(gpu_result, *r2);
             gpu_result_roi.setTo(1);

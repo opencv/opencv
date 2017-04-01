@@ -1,11 +1,11 @@
-#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
+#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID) || (defined(_MSC_VER) && _MSC_VER>=1800)
 
-#include <opencv2/imgproc/imgproc.hpp>  // Gaussian Blur
-#include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat, Scalar)
-#include <opencv2/videoio/videoio.hpp>
-#include <opencv2/highgui/highgui.hpp>  // OpenCV window I/O
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/imgproc.hpp>  // Gaussian Blur
+#include <opencv2/core.hpp>        // Basic OpenCV structures (cv::Mat, Scalar)
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>  // OpenCV window I/O
+#include <opencv2/features2d.hpp>
+#include <opencv2/objdetect.hpp>
 
 #include <stdio.h>
 #include <string>
@@ -54,9 +54,19 @@ int main(int , char** )
     std::string cascadeFrontalfilename = "../../data/lbpcascades/lbpcascade_frontalface.xml";
     cv::Ptr<cv::CascadeClassifier> cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = makePtr<CascadeDetectorAdapter>(cascade);
+    if ( cascade->empty() )
+    {
+      printf("Error: Cannot load %s\n", cascadeFrontalfilename.c_str());
+      return 2;
+    }
 
     cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = makePtr<CascadeDetectorAdapter>(cascade);
+    if ( cascade->empty() )
+    {
+      printf("Error: Cannot load %s\n", cascadeFrontalfilename.c_str());
+      return 2;
+    }
 
     DetectionBasedTracker::Parameters params;
     DetectionBasedTracker Detector(MainDetector, TrackingDetector, params);
@@ -71,7 +81,7 @@ int main(int , char** )
     Mat GrayFrame;
     vector<Rect> Faces;
 
-    while(true)
+    do
     {
         VideoStream >> ReferenceFrame;
         cvtColor(ReferenceFrame, GrayFrame, COLOR_RGB2GRAY);
@@ -84,9 +94,7 @@ int main(int , char** )
         }
 
         imshow(WindowName, ReferenceFrame);
-
-        if (waitKey(30) >= 0) break;
-    }
+    } while (waitKey(30) < 0);
 
     Detector.stop();
 
@@ -98,7 +106,7 @@ int main(int , char** )
 #include <stdio.h>
 int main()
 {
-    printf("This sample works for UNIX or ANDROID only\n");
+    printf("This sample works for UNIX or ANDROID or Visual Studio 2013+ only\n");
     return 0;
 }
 

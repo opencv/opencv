@@ -33,17 +33,19 @@ foreach(mod ${OPENCV_MODULES_BUILD})
       list(APPEND OPENCV_ABI_SKIP_HEADERS "${h}")
     endforeach()
     # libraries
-    set(lib_name "")
-    get_target_property(lib_name opencv_${mod} LOCATION)
-    get_filename_component(lib_name "${lib_name}" NAME)
-    list(APPEND OPENCV_ABI_SKIP_LIBRARIES "${lib_name}")
+    if(TARGET opencv_${mod}) # opencv_world
+      set(lib_name "")
+      get_target_property(lib_name opencv_${mod} LOCATION)
+      get_filename_component(lib_name "${lib_name}" NAME)
+      list(APPEND OPENCV_ABI_SKIP_LIBRARIES "${lib_name}")
+    endif()
   endif()
 endforeach()
 string(REPLACE ";" "\n    " OPENCV_ABI_SKIP_HEADERS "${OPENCV_ABI_SKIP_HEADERS}")
 string(REPLACE ";" "\n    " OPENCV_ABI_SKIP_LIBRARIES "${OPENCV_ABI_SKIP_LIBRARIES}")
 
 # Options
-set(OPENCV_ABI_GCC_OPTIONS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
+set(OPENCV_ABI_GCC_OPTIONS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} -DOPENCV_ABI_CHECK=1")
 string(REGEX REPLACE "([^ ]) +([^ ])" "\\1\\n    \\2" OPENCV_ABI_GCC_OPTIONS "${OPENCV_ABI_GCC_OPTIONS}")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_abi.xml.in" "${path1}")

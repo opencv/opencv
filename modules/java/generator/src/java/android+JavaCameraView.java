@@ -12,6 +12,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.ViewGroup.LayoutParams;
 
+import org.opencv.BuildConfig;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
@@ -40,6 +41,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     protected Camera mCamera;
     protected JavaCameraFrame[] mCameraFrame;
     private SurfaceTexture mSurfaceTexture;
+    private int mPreviewFormat = ImageFormat.NV21;
 
     public static class JavaCameraSizeAccessor implements ListItemAccessor {
 
@@ -144,7 +146,14 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                     /* Select the size that fits surface considering maximum size allowed */
                     Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
 
-                    params.setPreviewFormat(ImageFormat.NV21);
+                    /* Image format NV21 causes issues in the Android emulators */
+                    if (Build.BRAND.equalsIgnoreCase("generic") || Build.BRAND.equalsIgnoreCase("Android"))
+                        params.setPreviewFormat(ImageFormat.YV12);  // "generic" or "android" = android emulator
+                    else
+                        params.setPreviewFormat(ImageFormat.NV21);
+
+                    mPreviewFormat = params.getPreviewFormat();
+
                     Log.d(TAG, "Set preview size to " + Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
                     params.setPreviewSize((int)frameSize.width, (int)frameSize.height);
 
@@ -266,7 +275,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             synchronized (this) {
                 this.notify();
             }
-            Log.d(TAG, "Wating for thread");
+            Log.d(TAG, "Waiting for thread");
             if (mThread != null)
                 mThread.join();
         } catch (InterruptedException e) {
@@ -283,7 +292,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
     @Override
     public void onPreviewFrame(byte[] frame, Camera arg1) {
-        Log.d(TAG, "Preview Frame received. Frame size: " + frame.length);
+        if (BuildConfig.DEBUG)
+            Log.d(TAG, "Preview Frame received. Frame size: " + frame.length);
         synchronized (this) {
             mFrameChain[mChainIdx].put(0, 0, frame);
             mCameraFrameReady = true;
@@ -301,7 +311,13 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
         @Override
         public Mat rgba() {
-            Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21, 4);
+            if (mPreviewFormat == ImageFormat.NV21)
+                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21, 4);
+            else if (mPreviewFormat == ImageFormat.YV12)
+                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_I420, 4);  // COLOR_YUV2RGBA_YV12 produces inverted colors
+            else
+                throw new IllegalArgumentException("Preview Format can be NV21 or YV12");
+
             return mRgba;
         }
 

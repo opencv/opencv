@@ -898,6 +898,8 @@ public:
     // National Institute of Standards and Technology (NIST).
     void compute(InputArray src)
     {
+        CV_INSTRUMENT_REGION()
+
         if(isSymmetric(src)) {
             // Fall back to OpenCV for a symmetric matrix!
             cv::eigen(src, _eigenvalues, _eigenvectors);
@@ -960,7 +962,7 @@ void LDA::save(const String& filename) const
 void LDA::load(const String& filename) {
     FileStorage fs(filename, FileStorage::READ);
     if (!fs.isOpened())
-       CV_Error(Error::StsError, "File can't be opened for writing!");
+       CV_Error(Error::StsError, "File can't be opened for reading!");
     this->load(fs);
     fs.release();
 }

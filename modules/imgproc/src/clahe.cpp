@@ -212,8 +212,12 @@ namespace
                 for (int i = 0; i < histSize; ++i)
                     tileHist[i] += redistBatch;
 
-                for (int i = 0; i < residual; ++i)
-                    tileHist[i]++;
+                if (residual != 0)
+                {
+                    int residualStep = MAX(histSize / residual, 1);
+                    for (int i = 0; i < histSize && residual > 0; i += residualStep, residual--)
+                        tileHist[i]++;
+                }
             }
 
             // calc Lut
@@ -227,7 +231,7 @@ namespace
         }
     }
 
-    template <class T>
+    template <class T, int shift>
     class CLAHE_Interpolation_Body : public cv::ParallelLoopBody
     {
     public:
@@ -277,8 +281,8 @@ namespace
         float * xa_p, * xa1_p;
     };
 
-    template <class T>
-    void CLAHE_Interpolation_Body<T>::operator ()(const cv::Range& range) const
+    template <class T, int shift>
+    void CLAHE_Interpolation_Body<T, shift>::operator ()(const cv::Range& range) const
     {
         float inv_th = 1.0f / tileSize_.height;
 
@@ -302,7 +306,7 @@ namespace
 
             for (int x = 0; x < src_.cols; ++x)
             {
-                int srcVal = srcRow[x];
+                int srcVal = srcRow[x] >> shift;
 
                 int ind1 = ind1_p[x] + srcVal;
                 int ind2 = ind2_p[x] + srcVal;
@@ -310,7 +314,7 @@ namespace
                 float res = (lutPlane1[ind1] * xa1_p[x] + lutPlane1[ind2] * xa_p[x]) * ya1 +
                             (lutPlane2[ind1] * xa1_p[x] + lutPlane2[ind2] * xa_p[x]) * ya;
 
-                dstRow[x] = cv::saturate_cast<T>(res);
+                dstRow[x] = cv::saturate_cast<T>(res) << shift;
             }
         }
     }
@@ -351,13 +355,15 @@ namespace
 
     void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
     {
+        CV_INSTRUMENT_REGION()
+
         CV_Assert( _src.type() == CV_8UC1 || _src.type() == CV_16UC1 );
 
 #ifdef HAVE_OPENCL
         bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.dims()<=2 && _src.type() == CV_8UC1;
 #endif
 
-        int histSize = _src.type() == CV_8UC1 ? 256 : 4096;
+        int histSize = _src.type() == CV_8UC1 ? 256 : 65536;
 
         cv::Size tileSize;
         cv::_InputArray _srcForLut;
@@ -414,7 +420,7 @@ namespace
         if (_src.type() == CV_8UC1)
             calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 256, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else if (_src.type() == CV_16UC1)
-            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 4096, 4> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 65536, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else
             CV_Error( CV_StsBadArg, "Unsupported type" );
 
@@ -422,9 +428,9 @@ namespace
 
         cv::Ptr<cv::ParallelLoopBody> interpolationBody;
         if (_src.type() == CV_8UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
         else if (_src.type() == CV_16UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
 
         cv::parallel_for_(cv::Range(0, src.rows), *interpolationBody);
     }

@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_BLOCK_BLOCK_HPP__
-#define __OPENCV_CUDEV_BLOCK_BLOCK_HPP__
+#ifndef OPENCV_CUDEV_BLOCK_BLOCK_HPP
+#define OPENCV_CUDEV_BLOCK_BLOCK_HPP
 
 #include "../common.hpp"
 

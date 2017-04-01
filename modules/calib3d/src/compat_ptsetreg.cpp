@@ -241,6 +241,8 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
         cvNorm(param, prevParam, CV_RELATIVE_L2) < criteria.epsilon )
     {
         _param = param;
+        _JtJ = JtJ;
+        _JtErr = JtErr;
         state = DONE;
         return false;
     }
@@ -311,11 +313,7 @@ void CvLevMarq::step()
     if( !err )
         completeSymm( _JtJN, completeSymmFlag );
 
-#if 1
     _JtJN.diag() *= 1. + lambda;
-#else
-    _JtJN.diag() += lambda;
-#endif
     solve(_JtJN, _JtErr, nonzero_param, solveMethod);
 
     int j = 0;

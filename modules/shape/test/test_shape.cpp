@@ -299,3 +299,22 @@ TEST(Hauss, regression)
     ShapeBaseTest<int, computeShapeDistance_Haussdorf> test(NSN_val, NP_val, CURRENT_MAX_ACCUR_val);
     test.safe_run();
 }
+
+TEST(computeDistance, regression_4976)
+{
+    Mat a = imread(cvtest::findDataFile("shape/samples/1.png"), 0);
+    Mat b = imread(cvtest::findDataFile("shape/samples/2.png"), 0);
+
+    vector<vector<Point> > ca,cb;
+    findContours(a, ca, cv::RETR_CCOMP, cv::CHAIN_APPROX_TC89_KCOS);
+    findContours(b, cb, cv::RETR_CCOMP, cv::CHAIN_APPROX_TC89_KCOS);
+
+    Ptr<HausdorffDistanceExtractor> hd = createHausdorffDistanceExtractor();
+    Ptr<ShapeContextDistanceExtractor> sd = createShapeContextDistanceExtractor();
+
+    double d1 = hd->computeDistance(ca[0],cb[0]);
+    double d2 = sd->computeDistance(ca[0],cb[0]);
+
+    EXPECT_NEAR(d1, 26.4196891785, 1e-3) << "HausdorffDistanceExtractor";
+    EXPECT_NEAR(d2, 0.25804194808, 1e-3) << "ShapeContextDistanceExtractor";
+}

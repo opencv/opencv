@@ -566,6 +566,8 @@ typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, c
 
 static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     IppStatus status;
 
     IppiSize srcRoiSize = {src.cols,src.rows};
@@ -576,11 +578,11 @@ static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst)
 
     int depth = src.depth();
 
-    ippimatchTemplate ippFunc =
+    ippimatchTemplate ippiCrossCorrNorm =
             depth==CV_8U ? (ippimatchTemplate)ippiCrossCorrNorm_8u32f_C1R:
             depth==CV_32F? (ippimatchTemplate)ippiCrossCorrNorm_32f_C1R: 0;
 
-    if (ippFunc==0)
+    if (ippiCrossCorrNorm==0)
         return false;
 
     IppEnum funCfg = (IppEnum)(ippAlgAuto | ippiNormNone | ippiROIValid);
@@ -591,7 +593,7 @@ static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst)
 
     pBuffer = ippsMalloc_8u( bufSize );
 
-    status = ippFunc(src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, pBuffer);
+    status = CV_INSTRUMENT_FUN_IPP(ippiCrossCorrNorm, src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, pBuffer);
 
     ippsFree( pBuffer );
     return status >= 0;
@@ -599,6 +601,8 @@ static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst)
 
 static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     IppStatus status;
 
     IppiSize srcRoiSize = {src.cols,src.rows};
@@ -609,11 +613,11 @@ static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 
     int depth = src.depth();
 
-    ippimatchTemplate ippFunc =
+    ippimatchTemplate ippiSqrDistanceNorm =
             depth==CV_8U ? (ippimatchTemplate)ippiSqrDistanceNorm_8u32f_C1R:
             depth==CV_32F? (ippimatchTemplate)ippiSqrDistanceNorm_32f_C1R: 0;
 
-    if (ippFunc==0)
+    if (ippiSqrDistanceNorm==0)
         return false;
 
     IppEnum funCfg = (IppEnum)(ippAlgAuto | ippiNormNone | ippiROIValid);
@@ -624,13 +628,15 @@ static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 
     pBuffer = ippsMalloc_8u( bufSize );
 
-    status = ippFunc(src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, pBuffer);
+    status = CV_INSTRUMENT_FUN_IPP(ippiSqrDistanceNorm, src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, pBuffer);
 
     ippsFree( pBuffer );
     return status >= 0;
 }
 
 #endif
+
+#include "opencv2/core/hal/hal.hpp"
 
 void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 Size corrsize, int ctype,
@@ -698,6 +704,8 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
     buf.resize(bufSize);
 
+    Ptr<hal::DFT2D> c = hal::DFT2D::create(dftsize.width, dftsize.height, dftTempl.depth(), 1, 1, CV_HAL_DFT_IS_INPLACE, templ.rows);
+
     // compute DFT of each template plane
     for( k = 0; k < tcn; k++ )
     {
@@ -721,7 +729,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             Mat part(dst, Range(0, templ.rows), Range(templ.cols, dst.cols));
             part = Scalar::all(0);
         }
-        dft(dst, dst, 0, templ.rows);
+        c->apply(dst.data, (int)dst.step, dst.data, (int)dst.step);
     }
 
     int tileCountX = (corr.cols + blocksize.width - 1)/blocksize.width;
@@ -739,6 +747,12 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                        roiofs.x, wholeSize.width-img.cols-roiofs.x);
     }
     borderType |= BORDER_ISOLATED;
+
+    Ptr<hal::DFT2D> cF, cR;
+    int f = CV_HAL_DFT_IS_INPLACE;
+    int f_inv = f | CV_HAL_DFT_INVERSE | CV_HAL_DFT_SCALE;
+    cF = hal::DFT2D::create(dftsize.width, dftsize.height, maxDepth, 1, 1, f, blocksize.height + templ.rows - 1);
+    cR = hal::DFT2D::create(dftsize.width, dftsize.height, maxDepth, 1, 1, f_inv, blocksize.height);
 
     // calculate correlation by blocks
     for( i = 0; i < tileCount; i++ )
@@ -777,11 +791,19 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 copyMakeBorder(dst1, dst, y1-y0, dst.rows-dst1.rows-(y1-y0),
                                x1-x0, dst.cols-dst1.cols-(x1-x0), borderType);
 
-            dft( dftImg, dftImg, 0, dsz.height );
+            if (bsz.height == blocksize.height)
+                cF->apply(dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+            else
+                dft( dftImg, dftImg, 0, dsz.height );
+
             Mat dftTempl1(dftTempl, Rect(0, tcn > 1 ? k*dftsize.height : 0,
                                          dftsize.width, dftsize.height));
             mulSpectrums(dftImg, dftTempl1, dftImg, 0, true);
-            dft( dftImg, dftImg, DFT_INVERSE + DFT_SCALE, bsz.height );
+
+            if (bsz.height == blocksize.height)
+                cR->apply(dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+            else
+                dft( dftImg, dftImg, DFT_INVERSE + DFT_SCALE, bsz.height );
 
             src = dftImg(Rect(0, 0, bsz.width, bsz.height));
 
@@ -1023,6 +1045,8 @@ namespace cv
 {
 static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method, int cn )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     bool useIppMT = (templ.rows < img.rows/2 && templ.cols < img.cols/2);
 
     if(cn == 1 && useIppMT)
@@ -1051,6 +1075,8 @@ static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method, in
 
 void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     if (!_mask.empty())
     {
         cv::matchTemplateMask(_img, _templ, _result, method, _mask);

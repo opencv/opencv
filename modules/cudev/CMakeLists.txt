@@ -10,13 +10,16 @@ ocv_add_module(cudev)
 
 ocv_module_include_directories(opencv_core opencv_hal)
 
-file(GLOB_RECURSE lib_hdrs "include/opencv2/*.hpp")
-file(GLOB         lib_srcs "src/*.cpp")
+file(GLOB_RECURSE lib_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp")
+file(GLOB         lib_srcs "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp")
 
-ocv_set_module_sources(HEADERS ${lib_hdrs} SOURCES ${lib_srcs})
+source_group("Include" FILES ${lib_hdrs})
+source_group("Src" FILES ${lib_srcs})
+
+ocv_glob_module_sources(HEADERS ${lib_hdrs} SOURCES ${lib_srcs})
 
 ocv_create_module()
 
-if(BUILD_TESTS)
+if(BUILD_TESTS AND NOT BUILD_opencv_world)
   add_subdirectory(test)
 endif()

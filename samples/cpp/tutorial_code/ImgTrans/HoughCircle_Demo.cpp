@@ -5,8 +5,8 @@
  */
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
 
 using namespace std;
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
     }
 
     // Read the image
-    src = imread( argv[1], 1 );
+    src = imread( argv[1], IMREAD_COLOR );
 
     if( src.empty() )
     {
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
     // infinite loop to display
     // and refresh the content of the output image
     // until the user presses q or Q
-    int key = 0;
+    char key = 0;
     while(key != 'q' && key != 'Q')
     {
         // those paramaters cannot be =0
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
         HoughDetection(src_gray, src, cannyThreshold, accumulatorThreshold);
 
         // get user key
-        key = waitKey(10);
+        key = (char)waitKey(10);
     }
 
     return 0;

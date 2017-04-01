@@ -43,7 +43,7 @@ These videos above are long-obsolete and contain inaccurate information. Be care
 solutions described in those videos are no longer supported and may even break your install.
 
 If you are building your own libraries you can take the source files from our [Git
-repository](https://github.com/Itseez/opencv.git).
+repository](https://github.com/opencv/opencv.git).
 
 Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
@@ -67,14 +67,14 @@ of them, you need to download and install them on your system.
 -   [Numpy](http://numpy.scipy.org/) is a scientific computing package for Python. Required for the *Python interface*.
 -   [Intel Threading Building Blocks (*TBB*)](http://threadingbuildingblocks.org/file.php?fid=77) is used inside OpenCV for parallel code
     snippets. Using this will make sure that the OpenCV library will take advantage of all the cores
-    you have in your systems CPU.
+    you have in your system's CPU.
 -   [Intel Integrated Performance Primitives (*IPP*)](http://software.intel.com/en-us/articles/intel-ipp/) may be used to improve the performance
     of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since
     this isn't a free service.
 -   [Intel IPP Asynchronous C/C++](http://software.intel.com/en-us/intel-ipp-preview) is currently focused delivering Intel Graphics
     support for advanced image processing and computer vision functions.
 -   OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one
-    by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer look into the
+    by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer, look into the
     documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of
     the framework is required.
 -   [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) is a C++ template library for linear algebra.
@@ -83,14 +83,10 @@ of them, you need to download and install them on your system.
     more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
 -   [OpenEXR](http://www.openexr.com/downloads.html) source files are required for the library to work with this high dynamic range (HDR)
     image file format.
--   The [OpenNI Framework](http://www.openni.org/) contains a set of open source APIs that provide support for natural
-    interaction with devices via methods such as voice command recognition, hand gestures and body
-    motion tracking.
--   [Miktex]( http://miktex.org/2.9/setup) is the best [TEX](https://secure.wikimedia.org/wikipedia/en/wiki/TeX) implementation on
-    the Windows OS. It is required to build the *OpenCV documentation*.
--   [Sphinx](http://sphinx.pocoo.org/) is a python documentation generator and is the tool that will actually create the
-    *OpenCV documentation*. This on its own requires a couple of tools installed, We will cover this
-    in depth at the @ref tutorial_windows_install_sphinx "How to Install Sphinx" section.
+-   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures, and body
+    motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
+-   [Doxygen](http://www.stack.nl/~dimitri/doxygen/) is a documentation generator and is the tool that will actually create the
+    *OpenCV documentation*.
 
 Now we will describe the steps to follow for a full build (using all the above frameworks, tools and
 libraries). If you do not need the support for some of these you can just freely skip this section.
@@ -114,7 +110,7 @@ libraries). If you do not need the support for some of these you can just freely
     you're doing -- it's OK.
     -#  Clone the repository to the selected directory. After clicking *Clone* button, a window will
         appear where you can select from what repository you want to download source files
-        (<https://github.com/Itseez/opencv.git>) and to what directory (`D:/OpenCV`).
+        (<https://github.com/opencv/opencv.git>) and to what directory (`D:/OpenCV`).
     -#  Push the OK button and be patient as the repository is quite a heavy download. It will take
         some time depending on your Internet connection.
 
@@ -123,36 +119,10 @@ libraries). If you do not need the support for some of these you can just freely
         couple other python extensions. Luckily installing all these may be automated by a nice tool
         called [Setuptools](http://pypi.python.org/pypi/setuptools#downloads). Download and install
         again.
-        @anchor tutorial_windows_install_sphinx
-    -#  Installing Sphinx is easy once you have installed *Setuptools*. This contains a little
-        application that will automatically connect to the python databases and download the latest
-        version of many python scripts. Start up a command window (enter *cmd* into the windows
-        start menu and press enter) and use the *CD* command to navigate to your Python folders
-        Script sub-folder. Here just pass to the *easy_install.exe* as argument the name of the
-        program you want to install. Add the *sphinx* argument.
-
-        ![](images/cmsdstartwindows.jpg)
-
-        ![](images/Sphinx_Install.png)
-
-        @note
-        The *CD* navigation command works only inside a drive. For example if you are somewhere in the
-        *C:* drive you cannot use it this to go to another drive (like for example *D:*). To do so you
-        first need to change drives letters. For this simply enter the command *D:*. Then you can use
-        the *CD* to navigate to specific folder inside the drive. Bonus tip: you can clear the screen by
-        using the *CLS* command.
-
-        This will also install its prerequisites [Jinja2](http://jinja.pocoo.org/docs/) and
-        [Pygments](http://pygments.org/).
 
     -#  The easiest way to install Numpy is to just download its binaries from the [sourceforge page](http://sourceforge.net/projects/numpy/files/NumPy/).
         Make sure your download and install
         exactly the binary for your python version (so for version `2.7`).
-    -#  Download the [Miktex](http://miktex.org/2.9/setup) and install it. Again just follow the wizard. At the fourth step make
-        sure you select for the *"Install missing packages on-the-fly"* the *Yes* option, as you can
-        see on the image below. Again this will take quite some time so be patient.
-
-        ![](images/MiktexInstall.png)
 
     -#  For the [Intel Threading Building Blocks (*TBB*)](http://threadingbuildingblocks.org/file.php?fid=77)
         download the source files and extract
@@ -204,7 +174,7 @@ libraries). If you do not need the support for some of these you can just freely
         @code{.bash}
         nmake
         @endcode
-        After this set the Qt enviroment variables using the following command on Windows 7:
+        After this set the Qt environment variables using the following command on Windows 7:
         @code{.bash}
         setx -m QTDIR D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3
         @endcode
@@ -267,8 +237,8 @@ libraries). If you do not need the support for some of these you can just freely
         fully functional on your computer.
     -   *BUILD_PACKAGE* -\> Prior to version 2.3 with this you could build a project that will
         build an OpenCV installer. With this you can easily install your OpenCV flavor on other
-        systems. For the latest source files of OpenCV it generates a new project that simply
-        creates zip archive with OpenCV sources.
+        systems. For the latest source files of OpenCV, it generates a new project that simply
+        creates a zip archive with OpenCV sources.
     -   *BUILD_SHARED_LIBS* -\> With this you can control to build DLL files (when turned on) or
         static library files (\*.lib) otherwise.
     -   *BUILD_TESTS* -\> Each module of OpenCV has a test project assigned to it. Building these
@@ -292,15 +262,12 @@ libraries). If you do not need the support for some of these you can just freely
 
     ![](images/OpenCVBuildResultWindows.jpg)
 
-    For the documentation you need to explicitly issue the build commands on the *doc* project for
-    the PDF files and on the *doc_html* for the HTML ones. Each of these will call *Sphinx* to do
-    all the hard work. You can find the generated documentation inside the `Build/Doc/_html` for the
-    HTML pages and within the `Build/Doc` the PDF manuals.
-
-    ![](images/WindowsBuildDoc.png)
+    For the documentation, you need to explicitly issue the build commands on the *doxygen* project for
+    the HTML docuementation. It will call *Doxygen* to do
+    all the hard work. You can find the generated documentation inside the `build/doc/doxygen/html`.
 
     To collect the header and the binary files, that you will use during your own projects, into a
-    separate directory (simillary to how the pre-built binaries ship) you need to explicitely build
+    separate directory (simillary to how the pre-built binaries ship) you need to explicitly build
     the *Install* project.
 
     ![](images/WindowsBuildInstall.png)
@@ -322,10 +289,10 @@ libraries). If you do not need the support for some of these you can just freely
     caused mostly by old video card drivers. For testing the GPU (if built) run the
     *performance_gpu.exe* sample application.
 
-Set the OpenCV enviroment variable and add it to the systems path {#tutorial_windows_install_path}
+Set the OpenCV environment variable and add it to the systems path {#tutorial_windows_install_path}
 =================================================================
 
-First we set an enviroment variable to make easier our work. This will hold the build directory of
+First we set an environment variable to make easier our work. This will hold the build directory of
 our OpenCV library that we use in our projects. Start up a command window and enter:
 @code
     setx -m OPENCV_DIR D:\OpenCV\Build\x86\vc10     (suggested for Visual Studio 2010 - 32 bit Windows)

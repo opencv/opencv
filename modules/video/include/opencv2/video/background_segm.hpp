@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_BACKGROUND_SEGM_HPP__
-#define __OPENCV_BACKGROUND_SEGM_HPP__
+#ifndef OPENCV_BACKGROUND_SEGM_HPP
+#define OPENCV_BACKGROUND_SEGM_HPP
 
 #include "opencv2/core.hpp"
 
@@ -195,6 +195,17 @@ public:
     /** @brief Sets the shadow threshold
     */
     CV_WRAP virtual void setShadowThreshold(double threshold) = 0;
+
+    /** @brief Computes a foreground mask.
+
+    @param image Next video frame. Floating point frame will be used without scaling and should be in range \f$[0,255]\f$.
+    @param fgmask The output foreground mask as an 8-bit binary image.
+    @param learningRate The value between 0 and 1 that indicates how fast the background model is
+    learnt. Negative parameter value makes the algorithm to use some automatically chosen learning
+    rate. 0 means that the background model is not updated at all, 1 means that the background model
+    is completely reinitialized from the last frame.
+     */
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
 };
 
 /** @brief Creates MOG2 Background Subtractor

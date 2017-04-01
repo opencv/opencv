@@ -62,6 +62,8 @@ public:
 
     void process(InputArray _src, OutputArray _dst)
     {
+        CV_INSTRUMENT_REGION()
+
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
@@ -83,6 +85,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma;
     }
@@ -117,6 +120,8 @@ public:
 
     void process(InputArray _src, OutputArray _dst)
     {
+        CV_INSTRUMENT_REGION()
+
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
@@ -161,6 +166,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "bias" << bias
@@ -201,6 +207,8 @@ public:
 
     void process(InputArray _src, OutputArray _dst)
     {
+        CV_INSTRUMENT_REGION()
+
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
@@ -242,6 +250,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "contrast" << contrast
@@ -285,6 +294,8 @@ public:
 
     void process(InputArray _src, OutputArray _dst)
     {
+        CV_INSTRUMENT_REGION()
+
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
@@ -339,6 +350,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "intensity" << intensity
@@ -379,6 +391,8 @@ public:
 
     void process(InputArray _src, OutputArray _dst)
     {
+        CV_INSTRUMENT_REGION()
+
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
@@ -446,6 +460,7 @@ public:
 
     void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name
            << "gamma" << gamma
            << "scale" << scale

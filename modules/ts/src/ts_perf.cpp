@@ -19,6 +19,7 @@
 # include <sys/time.h>
 #endif
 
+using namespace cvtest;
 using namespace perf;
 
 int64 TestBase::timeLimitDefault = 0;
@@ -37,7 +38,6 @@ static double       param_max_outliers;
 static double       param_max_deviation;
 static unsigned int param_min_samples;
 static unsigned int param_force_samples;
-static uint64       param_seed;
 static double       param_time_limit;
 static int          param_threads;
 static bool         param_write_sanity;
@@ -45,7 +45,13 @@ static bool         param_verify_sanity;
 #ifdef CV_COLLECT_IMPL_DATA
 static bool         param_collect_impl;
 #endif
+#ifdef ENABLE_INSTRUMENTATION
+static int          param_instrument;
+#endif
+
+namespace cvtest {
 extern bool         test_ipp_check;
+}
 
 #ifdef HAVE_CUDA
 static int          param_cuda_device;
@@ -57,6 +63,7 @@ static bool         log_power_checkpoints;
 
 #include <sys/syscall.h>
 #include <pthread.h>
+#include <cerrno>
 static void setCurrentThreadAffinityMask(int mask)
 {
     pid_t pid=gettid();
@@ -727,7 +734,210 @@ public:
     }
 };
 
+#ifdef ENABLE_INSTRUMENTATION
+static void printShift(cv::instr::InstrNode *pNode, cv::instr::InstrNode* pRoot)
+{
+    // Print empty line for a big tree nodes
+    if(pNode->m_pParent)
+    {
+        int parendIdx = pNode->m_pParent->findChild(pNode);
+        if(parendIdx > 0 && pNode->m_pParent->m_childs[parendIdx-1]->m_childs.size())
+        {
+            printShift(pNode->m_pParent->m_childs[parendIdx-1]->m_childs[0], pRoot);
+            printf("\n");
+        }
+    }
 
+    // Check if parents have more childes
+    std::vector<cv::instr::InstrNode*> cache;
+    cv::instr::InstrNode *pTmpNode = pNode;
+    while(pTmpNode->m_pParent && pTmpNode->m_pParent != pRoot)
+    {
+        cache.push_back(pTmpNode->m_pParent);
+        pTmpNode = pTmpNode->m_pParent;
+    }
+    for(int i = (int)cache.size()-1; i >= 0; i--)
+    {
+        if(cache[i]->m_pParent)
+        {
+            if(cache[i]->m_pParent->findChild(cache[i]) == (int)cache[i]->m_pParent->m_childs.size()-1)
+                printf("    ");
+            else
+                printf("|   ");
+        }
+    }
+}
+
+static double calcLocalWeight(cv::instr::InstrNode *pNode)
+{
+    if(pNode->m_pParent && pNode->m_pParent->m_pParent)
+        return ((double)pNode->m_payload.m_ticksTotal*100/pNode->m_pParent->m_payload.m_ticksTotal);
+    else
+        return 100;
+}
+
+static double calcGlobalWeight(cv::instr::InstrNode *pNode)
+{
+    cv::instr::InstrNode* globNode = pNode;
+
+    while(globNode->m_pParent && globNode->m_pParent->m_pParent)
+        globNode = globNode->m_pParent;
+
+    return ((double)pNode->m_payload.m_ticksTotal*100/(double)globNode->m_payload.m_ticksTotal);
+}
+
+static void printNodeRec(cv::instr::InstrNode *pNode, cv::instr::InstrNode *pRoot)
+{
+    printf("%s", (pNode->m_payload.m_funName.substr(0, 40) + ((pNode->m_payload.m_funName.size()>40)?"...":"")).c_str());
+
+    // Write instrumentation flags
+    if(pNode->m_payload.m_instrType != cv::instr::TYPE_GENERAL || pNode->m_payload.m_implType != cv::instr::IMPL_PLAIN)
+    {
+        printf("<");
+        if(pNode->m_payload.m_instrType == cv::instr::TYPE_WRAPPER)
+            printf("W");
+        else if(pNode->m_payload.m_instrType == cv::instr::TYPE_FUN)
+            printf("F");
+        else if(pNode->m_payload.m_instrType == cv::instr::TYPE_MARKER)
+            printf("MARK");
+
+        if(pNode->m_payload.m_instrType != cv::instr::TYPE_GENERAL && pNode->m_payload.m_implType != cv::instr::IMPL_PLAIN)
+            printf("_");
+
+        if(pNode->m_payload.m_implType == cv::instr::IMPL_IPP)
+            printf("IPP");
+        else if(pNode->m_payload.m_implType == cv::instr::IMPL_OPENCL)
+            printf("OCL");
+
+        printf(">");
+    }
+
+    if(pNode->m_pParent)
+    {
+        printf(" - TC:%d C:%d", pNode->m_payload.m_threads, pNode->m_payload.m_counter);
+        printf(" T:%.2fms", pNode->m_payload.getTotalMs());
+        if(pNode->m_pParent->m_pParent)
+            printf(" L:%.0f%% G:%.0f%%", calcLocalWeight(pNode), calcGlobalWeight(pNode));
+    }
+    printf("\n");
+
+    {
+        // Group childes by name
+        for(size_t i = 1; i < pNode->m_childs.size(); i++)
+        {
+            if(pNode->m_childs[i-1]->m_payload.m_funName == pNode->m_childs[i]->m_payload.m_funName )
+                continue;
+            for(size_t j = i+1; j < pNode->m_childs.size(); j++)
+            {
+                if(pNode->m_childs[i-1]->m_payload.m_funName == pNode->m_childs[j]->m_payload.m_funName )
+                {
+                    cv::swap(pNode->m_childs[i], pNode->m_childs[j]);
+                    i++;
+                }
+            }
+        }
+    }
+
+    for(size_t i = 0; i < pNode->m_childs.size(); i++)
+    {
+        printShift(pNode->m_childs[i], pRoot);
+
+        if(i == pNode->m_childs.size()-1)
+            printf("\\---");
+        else
+            printf("|---");
+        printNodeRec(pNode->m_childs[i], pRoot);
+    }
+}
+
+template <typename T>
+std::string to_string_with_precision(const T value, const int p = 3)
+{
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(p) << value;
+    return out.str();
+}
+
+static cv::String nodeToString(cv::instr::InstrNode *pNode)
+{
+    cv::String string;
+    if (pNode->m_payload.m_funName == "ROOT")
+        string = pNode->m_payload.m_funName;
+    else
+    {
+        string = "#";
+        string += std::to_string((int)pNode->m_payload.m_instrType);
+        string += pNode->m_payload.m_funName;
+        string += " - L:";
+        string += to_string_with_precision(calcLocalWeight(pNode));
+        string += ", G:";
+        string += to_string_with_precision(calcGlobalWeight(pNode));
+    }
+    string += "(";
+    for(size_t i = 0; i < pNode->m_childs.size(); i++)
+        string += nodeToString(pNode->m_childs[i]);
+    string += ")";
+
+    return string;
+}
+
+static uint64 getNodeTimeRec(cv::instr::InstrNode *pNode, cv::instr::TYPE type, cv::instr::IMPL impl)
+{
+    uint64 ticks = 0;
+
+    if (pNode->m_pParent && (type < 0 || pNode->m_payload.m_instrType == type) && pNode->m_payload.m_implType == impl)
+    {
+        ticks = pNode->m_payload.m_ticksTotal;
+        return ticks;
+    }
+
+    for(size_t i = 0; i < pNode->m_childs.size(); i++)
+        ticks += getNodeTimeRec(pNode->m_childs[i], type, impl);
+
+    return ticks;
+}
+
+static uint64 getImplTime(cv::instr::IMPL impl)
+{
+    uint64 ticks = 0;
+    cv::instr::InstrNode *pRoot = cv::instr::getTrace();
+
+    ticks = getNodeTimeRec(pRoot, cv::instr::TYPE_FUN, impl);
+
+    return ticks;
+}
+
+static uint64 getTotalTime()
+{
+    uint64 ticks = 0;
+    cv::instr::InstrNode *pRoot = cv::instr::getTrace();
+
+    for(size_t i = 0; i < pRoot->m_childs.size(); i++)
+        ticks += pRoot->m_childs[i]->m_payload.m_ticksTotal;
+
+    return ticks;
+}
+
+::cv::String InstumentData::treeToString()
+{
+    cv::String string = nodeToString(cv::instr::getTrace());
+    return string;
+}
+
+void InstumentData::printTree()
+{
+    printf("[ TRACE    ]\n");
+    printNodeRec(cv::instr::getTrace(), cv::instr::getTrace());
+#ifdef HAVE_IPP
+    printf("\nIPP weight: %.1f%%", ((double)getImplTime(cv::instr::IMPL_IPP)*100/(double)getTotalTime()));
+#endif
+#ifdef HAVE_OPENCL
+    printf("\nOPENCL weight: %.1f%%", ((double)getImplTime(cv::instr::IMPL_OPENCL)*100/(double)getTotalTime()));
+#endif
+    printf("\n[/TRACE    ]\n");
+    fflush(stdout);
+}
+#endif
 
 /*****************************************************************************************\
 *                                   ::perf::TestBase
@@ -774,6 +984,9 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #endif
 #ifdef CV_COLLECT_IMPL_DATA
         "{   perf_collect_impl           |false    |collect info about executed implementations}"
+#endif
+#ifdef ENABLE_INSTRUMENTATION
+        "{   perf_instrument             |0        |instrument code to collect implementations trace: 1 - perform instrumentation; 2 - separate functions with the same name }"
 #endif
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
@@ -826,6 +1039,9 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #ifdef CV_COLLECT_IMPL_DATA
     param_collect_impl  = args.get<bool>("perf_collect_impl");
 #endif
+#ifdef ENABLE_INSTRUMENTATION
+    param_instrument    = args.get<int>("perf_instrument");
+#endif
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
@@ -855,6 +1071,16 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         cv::setUseCollection(1);
     else
         cv::setUseCollection(0);
+#endif
+#ifdef ENABLE_INSTRUMENTATION
+    if(param_instrument > 0)
+    {
+        if(param_instrument == 2)
+            cv::instr::setFlags(cv::instr::getFlags()|cv::instr::FLAGS_EXPAND_SAME_NAMES);
+        cv::instr::setUseInstrumentation(true);
+    }
+    else
+        cv::instr::setUseInstrumentation(false);
 #endif
 
 #ifdef HAVE_CUDA
@@ -969,13 +1195,13 @@ int64 TestBase::_calibrate()
             cv::Mat b(2048, 2048, CV_32S, cv::Scalar(2));
             declare.time(30);
             double s = 0;
-            for(declare.iterations(20); startTimer(), next(); stopTimer())
+            for(declare.iterations(20); next() && startTimer(); stopTimer())
                 s+=a.dot(b);
             declare.time(s);
 
             //self calibration
             SetUp();
-            for(declare.iterations(1000); startTimer(), next(); stopTimer()){}
+            for(declare.iterations(1000); next() && startTimer(); stopTimer()){}
         }
     };
 
@@ -1242,8 +1468,6 @@ bool TestBase::next()
     }
 #endif
 
-    if (has_next)
-        startTimer(); // really we should measure activity from this moment, so reset start time
     return has_next;
 }
 
@@ -1281,9 +1505,17 @@ unsigned int TestBase::getTotalOutputSize() const
     return res;
 }
 
-void TestBase::startTimer()
+bool TestBase::startTimer()
 {
+#ifdef ENABLE_INSTRUMENTATION
+    if(currentIter == 0)
+    {
+        cv::instr::setFlags(cv::instr::getFlags()|cv::instr::FLAGS_MAPPING); // enable mapping for the first run
+        cv::instr::resetTrace();
+    }
+#endif
     lastTime = cv::getTickCount();
+    return true; // dummy true for conditional loop
 }
 
 void TestBase::stopTimer()
@@ -1297,6 +1529,10 @@ void TestBase::stopTimer()
     if (lastTime < 0) lastTime = 0;
     times.push_back(lastTime);
     lastTime = 0;
+
+#ifdef ENABLE_INSTRUMENTATION
+    cv::instr::setFlags(cv::instr::getFlags()&~cv::instr::FLAGS_MAPPING); // disable mapping to decrease overhead for +1 run
+#endif
 }
 
 performance_metrics& TestBase::calcMetrics()
@@ -1469,6 +1705,16 @@ void TestBase::reportMetrics(bool toJUnitXML)
         RecordProperty("gstddev", cv::format("%.6f", m.gstddev).c_str());
         RecordProperty("mean", cv::format("%.0f", m.mean).c_str());
         RecordProperty("stddev", cv::format("%.0f", m.stddev).c_str());
+#ifdef ENABLE_INSTRUMENTATION
+        if(cv::instr::useInstrumentation())
+        {
+            cv::String tree = InstumentData::treeToString();
+            RecordProperty("functions_hierarchy", tree.c_str());
+            RecordProperty("total_ipp_weight",    cv::format("%.1f", ((double)getImplTime(cv::instr::IMPL_IPP)*100/(double)getTotalTime())));
+            RecordProperty("total_opencl_weight", cv::format("%.1f", ((double)getImplTime(cv::instr::IMPL_OPENCL)*100/(double)getTotalTime())));
+            cv::instr::resetTrace();
+        }
+#endif
 #ifdef CV_COLLECT_IMPL_DATA
         if(param_collect_impl)
         {
@@ -1606,6 +1852,11 @@ void TestBase::TearDown()
         if (HasFailure())
         {
             reportMetrics(false);
+
+#ifdef ENABLE_INSTRUMENTATION
+            if(cv::instr::useInstrumentation())
+                InstumentData::printTree();
+#endif
             return;
         }
     }
@@ -1639,6 +1890,12 @@ void TestBase::TearDown()
         fflush(stdout);
     }
 #endif
+
+#ifdef ENABLE_INSTRUMENTATION
+    if(cv::instr::useInstrumentation())
+        InstumentData::printTree();
+#endif
+
     reportMetrics(true);
 }
 

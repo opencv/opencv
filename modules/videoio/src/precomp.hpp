@@ -66,7 +66,7 @@
         #ifdef HAVE_MSMF
             #define _WIN32_WINNT 0x0600 // Windows Vista
         #else
-            #define _WIN32_WINNT 0x0500 // Windows 2000
+            #define _WIN32_WINNT 0x0501 // Windows XP
         #endif
     #endif
 
@@ -102,6 +102,7 @@ struct CvVideoWriter
 };
 
 CvCapture * cvCreateCameraCapture_V4L( int index );
+CvCapture * cvCreateCameraCapture_V4L( const char* deviceName );
 CvCapture * cvCreateCameraCapture_DC1394( int index );
 CvCapture * cvCreateCameraCapture_DC1394_2( int index );
 CvCapture* cvCreateCameraCapture_MIL( int index );
@@ -123,9 +124,11 @@ CvVideoWriter* cvCreateVideoWriter_MSMF( const char* filename, int fourcc,
 CvCapture* cvCreateCameraCapture_OpenNI( int index );
 CvCapture* cvCreateCameraCapture_OpenNI2( int index );
 CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
+CvCapture* cvCreateFileCapture_OpenNI2( const char* filename );
 CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
+CvCapture* cvCreateCameraCapture_Aravis( int index );
 
 CvCapture* cvCreateFileCapture_Images(const char* filename);
 CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
@@ -191,6 +194,6 @@ namespace cv
 
     Ptr<IVideoCapture> createGPhoto2Capture(int index);
     Ptr<IVideoCapture> createGPhoto2Capture(const String& deviceName);
-};
+}
 
 #endif /* __VIDEOIO_H_ */

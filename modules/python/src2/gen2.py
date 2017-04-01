@@ -30,7 +30,7 @@ gen_template_call_constructor = Template("""self->v.reset(new ${cname}${args})""
 gen_template_simple_call_constructor_prelude = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
         if(self) """)
 
-gen_template_simple_call_constructor = Template("""self->v = ${cname}${args}""")
+gen_template_simple_call_constructor = Template("""new (&(self->v)) ${cname}${args}""")
 
 gen_template_parse_args = Template("""const char* keywords[] = { $kw_list, NULL };
     if( PyArg_ParseTupleAndKeywords(args, kw, "$fmtspec", (char**)keywords, $parse_arglist)$code_cvt )""")
@@ -44,6 +44,14 @@ gen_template_func_body = Template("""$code_decl
 """)
 
 py_major_version = sys.version_info[0]
+if __name__ == "__main__":
+    if len(sys.argv) > 3:
+        if sys.argv[3] == 'PYTHON3':
+            py_major_version = 3
+        elif sys.argv[3] == 'PYTHON2':
+            py_major_version = 2
+        else:
+            raise Exception('Incorrect argument: expected PYTHON2 or PYTHON3, received: ' + sys.argv[3])
 if py_major_version >= 3:
     head_init_str = "PyVarObject_HEAD_INIT(&PyType_Type, 0)"
 else:
@@ -66,13 +74,14 @@ static PyTypeObject pyopencv_${name}_Type =
 
 static void pyopencv_${name}_dealloc(PyObject* self)
 {
+    ((pyopencv_${name}_t*)self)->v.${cname}::~${sname}();
     PyObject_Del(self);
 }
 
 template<> PyObject* pyopencv_from(const ${cname}& r)
 {
     pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-    m->v = r;
+    new (&m->v) ${cname}(r); //Copy constructor
     return (PyObject*)m;
 }
 
@@ -228,6 +237,7 @@ gen_template_rw_prop_init = Template("""
 
 simple_argtype_mapping = {
     "bool": ("bool", "b", "0"),
+    "size_t": ("size_t", "I", "0"),
     "int": ("int", "i", "0"),
     "float": ("float", "f", "0.f"),
     "double": ("double", "d", "0"),
@@ -249,6 +259,7 @@ class ClassInfo(object):
     def __init__(self, name, decl=None):
         self.cname = name.replace(".", "::")
         self.name = self.wname = normalize_class_name(name)
+        self.sname = name[name.rfind('.') + 1:]
         self.ismap = False
         self.issimple = False
         self.isalgorithm = False
@@ -381,7 +392,8 @@ class ArgInfo(object):
         self.py_outputarg = False
 
     def isbig(self):
-        return self.tp == "Mat" or self.tp == "vector_Mat"# or self.tp.startswith("vector")
+        return self.tp == "Mat" or self.tp == "vector_Mat"\
+               or self.tp == "UMat" or self.tp == "vector_UMat" # or self.tp.startswith("vector")
 
     def crepr(self):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
@@ -623,6 +635,10 @@ class FuncInfo(object):
                 defval = a.defval
                 if not defval:
                     defval = amapping[2]
+                else:
+                    if "UMat" in tp:
+                        if "Mat" in defval and "UMat" not in defval:
+                            defval = defval.replace("Mat", "UMat")
                 # "tp arg = tp();" is equivalent to "tp arg;" in the case of complex types
                 if defval == tp + "()" and amapping[1] == "O":
                     defval = ""
@@ -845,7 +861,7 @@ class PythonWrapperGenerator(object):
 
     def gen(self, srcfiles, output_path):
         self.clear()
-        self.parser = hdr_parser.CppHeaderParser()
+        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True)
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
@@ -895,7 +911,7 @@ class PythonWrapperGenerator(object):
                     templ = gen_template_simple_type_decl
                 else:
                     templ = gen_template_type_decl
-                self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname,
+                self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname, sname=classinfo.sname,
                                       cname1=("cv::Algorithm" if classinfo.isalgorithm else classinfo.cname)))
 
         # register classes in the same order as they have been declared.

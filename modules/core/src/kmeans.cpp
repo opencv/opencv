@@ -165,11 +165,13 @@ public:
     KMeansDistanceComputer( double *_distances,
                             int *_labels,
                             const Mat& _data,
-                            const Mat& _centers )
+                            const Mat& _centers,
+                            bool _onlyDistance = false )
         : distances(_distances),
           labels(_labels),
           data(_data),
-          centers(_centers)
+          centers(_centers),
+          onlyDistance(_onlyDistance)
     {
     }
 
@@ -183,6 +185,12 @@ public:
         for( int i = begin; i<end; ++i)
         {
             const float *sample = data.ptr<float>(i);
+            if (onlyDistance)
+            {
+                const float* center = centers.ptr<float>(labels[i]);
+                distances[i] = normL2Sqr(sample, center, dims);
+                continue;
+            }
             int k_best = 0;
             double min_dist = DBL_MAX;
 
@@ -210,6 +218,7 @@ private:
     int *labels;
     const Mat& data;
     const Mat& centers;
+    bool onlyDistance;
 };
 
 }
@@ -219,6 +228,8 @@ double cv::kmeans( InputArray _data, int K,
                    TermCriteria criteria, int attempts,
                    int flags, OutputArray _centers )
 {
+    CV_INSTRUMENT_REGION()
+
     const int SPP_TRIALS = 3;
     Mat data0 = _data.getMat();
     bool isrow = data0.rows == 1;
@@ -257,6 +268,7 @@ double cv::kmeans( InputArray _data, int K,
     Mat centers(K, dims, type), old_centers(K, dims, type), temp(1, dims, type);
     std::vector<int> counters(K);
     std::vector<Vec2f> _box(dims);
+    Mat dists(1, N, CV_64F);
     Vec2f* box = &_box[0];
     double best_compactness = DBL_MAX, compactness = 0;
     RNG& rng = theRNG();
@@ -428,19 +440,16 @@ double cv::kmeans( InputArray _data, int K,
                 }
             }
 
-            if( ++iter == MAX(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon )
-                break;
+            bool isLastIter = (++iter == MAX(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon);
 
             // assign labels
-            Mat dists(1, N, CV_64F);
+            dists = 0;
             double* dist = dists.ptr<double>(0);
-            parallel_for_(Range(0, N),
-                         KMeansDistanceComputer(dist, labels, data, centers));
-            compactness = 0;
-            for( i = 0; i < N; i++ )
-            {
-                compactness += dist[i];
-            }
+            parallel_for_(Range(0, N), KMeansDistanceComputer(dist, labels, data, centers, isLastIter));
+            compactness = sum(dists)[0];
+
+            if (isLastIter)
+                break;
         }
 
         if( compactness < best_compactness )

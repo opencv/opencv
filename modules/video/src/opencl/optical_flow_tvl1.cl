@@ -148,7 +148,7 @@ __kernel void warpBackwardKernel(__global const float* I0, int I0_step, int I0_c
     }
 }
 
-inline float readImage(__global float *image,  int x,  int y,  int rows,  int cols, int elemCntPerRow)
+inline float readImage(__global const float *image,  int x,  int y,  int rows,  int cols, int elemCntPerRow)
 {
     int i0 = clamp(x, 0, cols - 1);
     int j0 = clamp(y, 0, rows - 1);

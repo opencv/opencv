@@ -4,11 +4,9 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 
@@ -34,39 +32,42 @@ void Threshold_Demo( int, void* );
  */
 int main( int, char** argv )
 {
-  /// Load an image
-  src = imread( argv[1], 1 );
+  //! [load]
+  src = imread( argv[1], IMREAD_COLOR ); // Load an image
 
-  /// Convert the image to Gray
-  cvtColor( src, src_gray, COLOR_RGB2GRAY );
+  if( src.empty() )
+    { return -1; }
 
-  /// Create a window to display results
-  namedWindow( window_name, WINDOW_AUTOSIZE );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY ); // Convert the image to Gray
+  //! [load]
 
-  /// Create Trackbar to choose type of Threshold
+  //! [window]
+  namedWindow( window_name, WINDOW_AUTOSIZE ); // Create a window to display results
+  //! [window]
+
+  //! [trackbar]
   createTrackbar( trackbar_type,
                   window_name, &threshold_type,
-                  max_type, Threshold_Demo );
+                  max_type, Threshold_Demo ); // Create Trackbar to choose type of Threshold
 
   createTrackbar( trackbar_value,
                   window_name, &threshold_value,
-                  max_value, Threshold_Demo );
+                  max_value, Threshold_Demo ); // Create Trackbar to choose Threshold value
+  //! [trackbar]
 
-  /// Call the function to initialize
-  Threshold_Demo( 0, 0 );
+  Threshold_Demo( 0, 0 ); // Call the function to initialize
 
   /// Wait until user finishes program
   for(;;)
     {
-      int c;
-      c = waitKey( 20 );
-      if( (char)c == 27 )
+      char c = (char)waitKey( 20 );
+      if( c == 27 )
     { break; }
     }
 
 }
 
-
+//![Threshold_Demo]
 /**
  * @function Threshold_Demo
  */
@@ -83,3 +84,4 @@ void Threshold_Demo( int, void* )
 
   imshow( window_name, dst );
 }
+//![Threshold_Demo]

@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAL_INTRIN_CPP_HPP__
-#define __OPENCV_HAL_INTRIN_CPP_HPP__
+#ifndef OPENCV_HAL_INTRIN_CPP_HPP
+#define OPENCV_HAL_INTRIN_CPP_HPP
 
 #include <limits>
 #include <cstring>
@@ -103,7 +103,7 @@ block and to save contents of the register to memory block.
 
 These operations allow to reorder or recombine elements in one or multiple vectors.
 
-- Interleave, deinterleave (3 and 4 channels): @ref v_load_deinterleave, @ref v_store_interleave
+- Interleave, deinterleave (2, 3 and 4 channels): @ref v_load_deinterleave, @ref v_store_interleave
 - Expand: @ref v_load_expand, @ref v_load_expand_q, @ref v_expand
 - Pack: @ref v_pack, @ref v_pack_u, @ref v_rshr_pack, @ref v_rshr_pack_u,
 @ref v_pack_store, @ref v_pack_u_store, @ref v_rshr_pack_store, @ref v_rshr_pack_u_store
@@ -116,32 +116,32 @@ These operations allow to reorder or recombine elements in one or multiple vecto
 Element-wise binary and unary operations.
 
 - Arithmetics:
-@ref operator+(const v_reg &a, const v_reg &b) "+",
-@ref operator-(const v_reg &a, const v_reg &b) "-",
-@ref operator*(const v_reg &a, const v_reg &b) "*",
-@ref operator/(const v_reg &a, const v_reg &b) "/",
+@ref operator +(const v_reg &a, const v_reg &b) "+",
+@ref operator -(const v_reg &a, const v_reg &b) "-",
+@ref operator *(const v_reg &a, const v_reg &b) "*",
+@ref operator /(const v_reg &a, const v_reg &b) "/",
 @ref v_mul_expand
 
 - Non-saturating arithmetics: @ref v_add_wrap, @ref v_sub_wrap
 
 - Bitwise shifts:
-@ref operator<<(const v_reg &a, int s) "<<",
-@ref operator>>(const v_reg &a, int s) ">>",
+@ref operator <<(const v_reg &a, int s) "<<",
+@ref operator >>(const v_reg &a, int s) ">>",
 @ref v_shl, @ref v_shr
 
 - Bitwise logic:
 @ref operator&(const v_reg &a, const v_reg &b) "&",
-@ref operator|(const v_reg &a, const v_reg &b) "|",
-@ref operator^(const v_reg &a, const v_reg &b) "^",
-@ref operator~(const v_reg &a) "~"
+@ref operator |(const v_reg &a, const v_reg &b) "|",
+@ref operator ^(const v_reg &a, const v_reg &b) "^",
+@ref operator ~(const v_reg &a) "~"
 
 - Comparison:
-@ref operator>(const v_reg &a, const v_reg &b) ">",
-@ref operator>=(const v_reg &a, const v_reg &b) ">=",
-@ref operator<(const v_reg &a, const v_reg &b) "<",
-@ref operator<=(const v_reg &a, const v_reg &b) "<=",
+@ref operator >(const v_reg &a, const v_reg &b) ">",
+@ref operator >=(const v_reg &a, const v_reg &b) ">=",
+@ref operator <(const v_reg &a, const v_reg &b) "<",
+@ref operator <=(const v_reg &a, const v_reg &b) "<=",
 @ref operator==(const v_reg &a, const v_reg &b) "==",
-@ref operator!=(const v_reg &a, const v_reg &b) "!="
+@ref operator !=(const v_reg &a, const v_reg &b) "!="
 
 - min/max: @ref v_min, @ref v_max
 
@@ -149,7 +149,7 @@ Element-wise binary and unary operations.
 
 Most of these operations return only one value.
 
-- Reduce: @ref v_reduce_min, @ref v_reduce_max, @ref v_reduce_sum
+- Reduce: @ref v_reduce_min, @ref v_reduce_max, @ref v_reduce_sum, @ref v_popcount
 - Mask: @ref v_signmask, @ref v_check_all, @ref v_check_any, @ref v_select
 
 ### Other math
@@ -455,8 +455,10 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> operator ~ (const v_reg<_Tp, 
 {
     v_reg<_Tp, n> c;
     for( int i = 0; i < n; i++ )
+    {
         c.s[i] = V_TypeTraits<_Tp>::reinterpret_from_int(~V_TypeTraits<_Tp>::reinterpret_int(a.s[i]));
-        return c;
+    }
+    return c;
 }
 
 //! @brief Helper macro
@@ -571,6 +573,49 @@ Scheme:
 @endcode
 For 32-bit integer and 32-bit floating point types. */
 OPENCV_HAL_IMPL_REDUCE_MINMAX_FUNC(v_reduce_max, std::max)
+
+static const unsigned char popCountTable[] =
+{
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
+};
+/** @brief Count the 1 bits in the vector and return 4 values
+
+Scheme:
+@code
+{A1 A2 A3 ...} => popcount(A1)
+@endcode
+Any types but result will be in v_uint32x4*/
+template<typename _Tp, int n> inline v_uint32x4 v_popcount(const v_reg<_Tp, n>& a)
+{
+    v_uint8x16 b;
+    b = v_reinterpret_as_u8(a);
+    for( int i = 0; i < v_uint8x16::nlanes; i++ )
+    {
+        b.s[i] = popCountTable[b.s[i]];
+    }
+    v_uint32x4 c;
+    for( int i = 0; i < v_uint32x4::nlanes; i++ )
+    {
+        c.s[i] = b.s[i*4] + b.s[i*4+1] + b.s[i*4+2] + b.s[i*4+3];
+    }
+    return c;
+}
+
 
 //! @cond IGNORED
 template<typename _Tp, int n>
@@ -1075,12 +1120,31 @@ v_load_expand_q(const _Tp* ptr)
     return c;
 }
 
-/** @brief Load and deinterleave (4 channels)
+/** @brief Load and deinterleave (2 channels)
 
-Load data from memory deinterleave and store to 4 registers.
+Load data from memory deinterleave and store to 2 registers.
 Scheme:
 @code
-{A1 B1 C1 D1 A2 B2 C2 D2 ...} ==> {A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}, {D1 D2 ...}
+{A1 B1 A2 B2 ...} ==> {A1 A2 ...}, {B1 B2 ...}
+@endcode
+For all types except 64-bit. */
+template<typename _Tp, int n> inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
+                                                            v_reg<_Tp, n>& b)
+{
+    int i, i2;
+    for( i = i2 = 0; i < n; i++, i2 += 2 )
+    {
+        a.s[i] = ptr[i2];
+        b.s[i] = ptr[i2+1];
+    }
+}
+
+/** @brief Load and deinterleave (3 channels)
+
+Load data from memory deinterleave and store to 3 registers.
+Scheme:
+@code
+{A1 B1 C1 A2 B2 C2 ...} ==> {A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}
 @endcode
 For all types except 64-bit. */
 template<typename _Tp, int n> inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
@@ -1095,12 +1159,12 @@ template<typename _Tp, int n> inline void v_load_deinterleave(const _Tp* ptr, v_
     }
 }
 
-/** @brief Load and deinterleave (3 channels)
+/** @brief Load and deinterleave (4 channels)
 
-Load data from memory deinterleave and store to 3 registers.
+Load data from memory deinterleave and store to 4 registers.
 Scheme:
 @code
-{A1 B1 C1 A2 B2 C2 ...} ==> {A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}
+{A1 B1 C1 D1 A2 B2 C2 D2 ...} ==> {A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}, {D1 D2 ...}
 @endcode
 For all types except 64-bit. */
 template<typename _Tp, int n>
@@ -1118,12 +1182,32 @@ inline void v_load_deinterleave(const _Tp* ptr, v_reg<_Tp, n>& a,
     }
 }
 
+/** @brief Interleave and store (2 channels)
+
+Interleave and store data from 2 registers to memory.
+Scheme:
+@code
+{A1 A2 ...}, {B1 B2 ...} ==> {A1 B1 A2 B2 ...}
+@endcode
+For all types except 64-bit. */
+template<typename _Tp, int n>
+inline void v_store_interleave( _Tp* ptr, const v_reg<_Tp, n>& a,
+                               const v_reg<_Tp, n>& b)
+{
+    int i, i2;
+    for( i = i2 = 0; i < n; i++, i2 += 2 )
+    {
+        ptr[i2] = a.s[i];
+        ptr[i2+1] = b.s[i];
+    }
+}
+
 /** @brief Interleave and store (3 channels)
 
 Interleave and store data from 3 registers to memory.
 Scheme:
 @code
-{A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...}, {D1 D2 ...} ==> {A1 B1 C1 D1 A2 B2 C2 D2 ...}
+{A1 A2 ...}, {B1 B2 ...}, {C1 C2 ...} ==> {A1 B1 C1 A2 B2 C2 ...}
 @endcode
 For all types except 64-bit. */
 template<typename _Tp, int n>
@@ -1732,6 +1816,17 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
 }
 
 //! @}
+
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return false;
+}
+
+//! @}
+
 
 }
 

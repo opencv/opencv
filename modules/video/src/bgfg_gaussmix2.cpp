@@ -196,7 +196,9 @@ public:
         if (ocl::useOpenCL() && opencl_ON)
         {
             create_ocl_apply_kernel();
-            kernel_getBg.create("getBackgroundImage2_kernel", ocl::video::bgfg_mog2_oclsrc, format( "-D CN=%d -D NMIXTURES=%d", nchannels, nmixtures));
+
+            bool isFloat = CV_MAKETYPE(CV_32F,nchannels) == frameType;
+            kernel_getBg.create("getBackgroundImage2_kernel", ocl::video::bgfg_mog2_oclsrc, format( "-D CN=%d -D FL=%d -D NMIXTURES=%d", nchannels, isFloat, nmixtures));
 
             if (kernel_apply.empty() || kernel_getBg.empty())
                 opencl_ON = false;
@@ -284,6 +286,7 @@ public:
 
     virtual void write(FileStorage& fs) const
     {
+        writeFormat(fs);
         fs << "name" << name_
         << "history" << history
         << "nmixtures" << nmixtures
@@ -386,6 +389,9 @@ protected:
     //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
 
     String name_;
+
+    template <typename T, int CN>
+    void getBackgroundImage_intern(OutputArray backgroundImage) const;
 
 #ifdef HAVE_OPENCL
     bool ocl_getBackgroundImage(OutputArray backgroundImage) const;
@@ -588,7 +594,7 @@ public:
 
                 //internal:
                 bool fitsPDF = false;//if it remains zero a new GMM mode will be added
-                int nmodes = modesUsed[x], nNewModes = nmodes;//current number of modes in GMM
+                int nmodes = modesUsed[x];//current number of modes in GMM
                 float totalWeight = 0.f;
 
                 float* mean_m = mean;
@@ -693,8 +699,6 @@ public:
                 {
                     gmm[mode].weight *= totalWeight;
                 }
-
-                nmodes = nNewModes;
 
                 //make new mode if needed and exit
                 if( !fitsPDF && alphaT > 0.f )
@@ -803,8 +807,6 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
 
 bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroundImage) const
 {
-    CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3);
-
     _backgroundImage.create(frameSize, frameType);
     UMat dst = _backgroundImage.getUMat();
 
@@ -823,7 +825,8 @@ bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroun
 void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
 {
     int nchannels = CV_MAT_CN(frameType);
-    String opts = format("-D CN=%d -D NMIXTURES=%d%s", nchannels, nmixtures, bShadowDetection ? " -D SHADOW_DETECT" : "");
+    bool isFloat = CV_MAKETYPE(CV_32F,nchannels) == frameType;
+    String opts = format("-D CN=%d -D FL=%d -D NMIXTURES=%d%s", nchannels, isFloat, nmixtures, bShadowDetection ? " -D SHADOW_DETECT" : "");
     kernel_apply.create("mog2_kernel", ocl::video::bgfg_mog2_oclsrc, opts);
 }
 
@@ -831,6 +834,8 @@ void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
 
 void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
+    CV_INSTRUMENT_REGION()
+
     bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
 
     if( needToInitialize )
@@ -839,7 +844,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 #ifdef HAVE_OPENCL
     if (opencl_ON)
     {
-        CV_OCL_RUN(opencl_ON, ocl_apply(_image, _fgmask, learningRate))
+        CV_OCL_RUN(_image.isUMat(), ocl_apply(_image, _fgmask, learningRate))
 
         opencl_ON = false;
         initialize(_image.size(), _image.type());
@@ -866,25 +871,16 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
                               image.total()/(double)(1 << 16));
 }
 
-void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImage) const
+template <typename T, int CN>
+void BackgroundSubtractorMOG2Impl::getBackgroundImage_intern(OutputArray backgroundImage) const
 {
-#ifdef HAVE_OPENCL
-    if (opencl_ON)
-    {
-        CV_OCL_RUN(opencl_ON, ocl_getBackgroundImage(backgroundImage))
+    CV_INSTRUMENT_REGION()
 
-        opencl_ON = false;
-        return;
-    }
-#endif
-
-    int nchannels = CV_MAT_CN(frameType);
-    CV_Assert(nchannels == 1 || nchannels == 3);
-    Mat meanBackground(frameSize, CV_MAKETYPE(CV_8U, nchannels), Scalar::all(0));
+    Mat meanBackground(frameSize, frameType, Scalar::all(0));
     int firstGaussianIdx = 0;
     const GMM* gmm = bgmodel.ptr<GMM>();
     const float* mean = reinterpret_cast<const float*>(gmm + frameSize.width*frameSize.height*nmixtures);
-    std::vector<float> meanVal(nchannels, 0.f);
+    Vec<float,CN> meanVal(0.f);
     for(int row=0; row<meanBackground.rows; row++)
     {
         for(int col=0; col<meanBackground.cols; col++)
@@ -894,10 +890,10 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
             for(int gaussianIdx = firstGaussianIdx; gaussianIdx < firstGaussianIdx + nmodes; gaussianIdx++)
             {
                 GMM gaussian = gmm[gaussianIdx];
-                size_t meanPosition = gaussianIdx*nchannels;
-                for(int chn = 0; chn < nchannels; chn++)
+                size_t meanPosition = gaussianIdx*CN;
+                for(int chn = 0; chn < CN; chn++)
                 {
-                    meanVal[chn] += gaussian.weight * mean[meanPosition + chn];
+                    meanVal(chn) += gaussian.weight * mean[meanPosition + chn];
                 }
                 totalWeight += gaussian.weight;
 
@@ -905,22 +901,44 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
                     break;
             }
             float invWeight = 1.f/totalWeight;
-            switch(nchannels)
-            {
-            case 1:
-                meanBackground.at<uchar>(row, col) = (uchar)(meanVal[0] * invWeight);
-                meanVal[0] = 0.f;
-                break;
-            case 3:
-                Vec3f& meanVec = *reinterpret_cast<Vec3f*>(&meanVal[0]);
-                meanBackground.at<Vec3b>(row, col) = Vec3b(meanVec * invWeight);
-                meanVec = 0.f;
-                break;
-            }
+
+            meanBackground.at<Vec<T,CN> >(row, col) = Vec<T,CN>(meanVal * invWeight);
+            meanVal = 0.f;
+
             firstGaussianIdx += nmixtures;
         }
     }
     meanBackground.copyTo(backgroundImage);
+}
+
+void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImage) const
+{
+    CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_32FC1 || frameType == CV_32FC3);
+
+#ifdef HAVE_OPENCL
+    if (opencl_ON)
+    {
+        CV_OCL_RUN(opencl_ON, ocl_getBackgroundImage(backgroundImage))
+
+        opencl_ON = false;
+    }
+#endif
+
+    switch(frameType)
+    {
+    case CV_8UC1:
+        getBackgroundImage_intern<uchar,1>(backgroundImage);
+        break;
+    case CV_8UC3:
+        getBackgroundImage_intern<uchar,3>(backgroundImage);
+        break;
+    case CV_32FC1:
+        getBackgroundImage_intern<float,1>(backgroundImage);
+        break;
+    case CV_32FC3:
+        getBackgroundImage_intern<float,3>(backgroundImage);
+        break;
+    }
 }
 
 Ptr<BackgroundSubtractorMOG2> createBackgroundSubtractorMOG2(int _history, double _varThreshold,

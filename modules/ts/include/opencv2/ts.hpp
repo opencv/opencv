@@ -1,5 +1,5 @@
-#ifndef __OPENCV_GTESTCV_HPP__
-#define __OPENCV_GTESTCV_HPP__
+#ifndef OPENCV_TS_HPP
+#define OPENCV_TS_HPP
 
 #include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list
@@ -35,6 +35,9 @@
 #  define GTEST_USES_POSIX_RE 0
 #endif
 
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+#define GET_PARAM(k) std::tr1::get< k >(GetParam())
+
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 
@@ -51,6 +54,14 @@ using cv::Point;
 using cv::Rect;
 using cv::InputArray;
 using cv::noArray;
+
+class SkipTestException: public cv::Exception
+{
+public:
+    int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
+    SkipTestException() : dummy(0) {}
+    SkipTestException(const cv::String& message) : dummy(0) { this->msg = message; }
+};
 
 class CV_EXPORTS TS;
 
@@ -161,7 +172,7 @@ CV_EXPORTS void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop);
 CV_EXPORTS void compare(const Mat& src, double s, Mat& dst, int cmpop);
 CV_EXPORTS void gemm(const Mat& src1, const Mat& src2, double alpha,
                      const Mat& src3, double beta, Mat& dst, int flags);
-    CV_EXPORTS void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& shift );
+CV_EXPORTS void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& shift );
 CV_EXPORTS double crossCorr(const Mat& src1, const Mat& src2);
 CV_EXPORTS void threshold( const Mat& src, Mat& dst, double thresh, double maxval, int thresh_type );
 CV_EXPORTS void minMaxIdx( InputArray _img, double* minVal, double* maxVal,
@@ -417,6 +428,8 @@ public:
     // returns textual description of failure code
     static string str_from_code( const TS::FailureCode code );
 
+    std::vector<std::string> data_search_path;
+    std::vector<std::string> data_search_subdir;
 protected:
 
     // these are allocated within a test to try keep them valid in case of stack corruption
@@ -526,27 +539,49 @@ protected:
     }
 };
 
+extern uint64 param_seed;
+
 struct CV_EXPORTS DefaultRngAuto
 {
     const uint64 old_state;
 
-    DefaultRngAuto() : old_state(cv::theRNG().state) { cv::theRNG().state = (uint64)-1; }
+    DefaultRngAuto() : old_state(cv::theRNG().state) { cv::theRNG().state = cvtest::param_seed; }
     ~DefaultRngAuto() { cv::theRNG().state = old_state; }
 
     DefaultRngAuto& operator=(const DefaultRngAuto&);
 };
 
-}
-
-namespace cvtest
-{
 
 // test images generation functions
 CV_EXPORTS void fillGradient(Mat& img, int delta = 5);
 CV_EXPORTS void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 
 CV_EXPORTS void printVersionInfo(bool useStdOut = true);
-} //namespace cvtest
+
+
+// Utility functions
+
+CV_EXPORTS void addDataSearchPath(const std::string& path);
+CV_EXPORTS void addDataSearchSubDirectory(const std::string& subdir);
+
+/*! @brief Try to find requested data file
+
+  Search directories:
+
+  0. TS::data_search_path (search sub-directories are not used)
+  1. OPENCV_TEST_DATA_PATH environment variable
+  2. One of these:
+     a. OpenCV testdata based on build location: "./" + "share/OpenCV/testdata"
+     b. OpenCV testdata at install location: CMAKE_INSTALL_PREFIX + "share/OpenCV/testdata"
+
+  Search sub-directories:
+
+  - addDataSearchSubDirectory()
+  - modulename from TS::init()
+
+ */
+CV_EXPORTS std::string findDataFile(const std::string& relative_path, bool required = true);
+
 
 #ifndef __CV_TEST_EXEC_ARGS
 #if defined(_MSC_VER) && (_MSC_VER <= 1400)
@@ -559,9 +594,9 @@ CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 #endif
 
 #ifdef HAVE_OPENCL
-namespace cvtest { namespace ocl {
+namespace ocl {
 void dumpOpenCLDevice();
-} }
+}
 #define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
 #else
 #define TEST_DUMP_OCL_INFO
@@ -569,14 +604,21 @@ void dumpOpenCLDevice();
 
 void parseCustomOptions(int argc, char **argv);
 
-#define CV_TEST_MAIN(resourcesubdir, ...) \
+#define CV_TEST_INIT0_NOOP (void)0
+
+#define CV_TEST_MAIN(resourcesubdir, ...) CV_TEST_MAIN_EX(resourcesubdir, NOOP, __VA_ARGS__)
+
+#define CV_TEST_MAIN_EX(resourcesubdir, INIT0, ...) \
 int main(int argc, char **argv) \
 { \
-    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
-    cvtest::TS::ptr()->init(resourcesubdir); \
+    using namespace cvtest; \
+    TS* ts = TS::ptr(); \
+    ts->init(resourcesubdir); \
+    __CV_TEST_EXEC_ARGS(CV_TEST_INIT0_ ## INIT0) \
     ::testing::InitGoogleTest(&argc, argv); \
     cvtest::printVersionInfo(); \
     TEST_DUMP_OCL_INFO \
+    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     parseCustomOptions(argc, argv); \
     return RUN_ALL_TESTS(); \
 }
@@ -588,7 +630,9 @@ int main(int argc, char **argv) \
     FAIL() << "No equivalent implementation."; \
 } while (0)
 
-#endif
+} //namespace cvtest
+
+#endif // OPENCV_TS_HPP
 
 #include "opencv2/ts/ts_perf.hpp"
 

@@ -190,16 +190,14 @@ bool  PngDecoder::readHeader()
                         switch(color_type)
                         {
                             case PNG_COLOR_TYPE_RGB:
-                                m_type = CV_8UC3;
-                                break;
                             case PNG_COLOR_TYPE_PALETTE:
-                                png_get_tRNS( png_ptr, info_ptr, &trans, &num_trans, &trans_values);
-                                //Check if there is a transparency value in the palette
-                                if ( num_trans > 0 )
+                                png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, &trans_values);
+                                if( num_trans > 0 )
                                     m_type = CV_8UC4;
                                 else
                                     m_type = CV_8UC3;
                                 break;
+                            case PNG_COLOR_TYPE_GRAY_ALPHA:
                             case PNG_COLOR_TYPE_RGB_ALPHA:
                                 m_type = CV_8UC4;
                                 break;
@@ -228,8 +226,6 @@ bool  PngDecoder::readData( Mat& img )
     AutoBuffer<uchar*> _buffer(m_height);
     uchar** buffer = _buffer;
     int color = img.channels() > 1;
-    uchar* data = img.ptr();
-    int step = (int)img.step;
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
@@ -257,12 +253,13 @@ bool  PngDecoder::readData( Mat& img )
                  * stripping alpha..  18.11.2004 Axel Walthelm
                  */
                  png_set_strip_alpha( png_ptr );
-            }
+            } else
+                png_set_tRNS_to_alpha( png_ptr );
 
             if( m_color_type == PNG_COLOR_TYPE_PALETTE )
                 png_set_palette_to_rgb( png_ptr );
 
-            if( m_color_type == PNG_COLOR_TYPE_GRAY && m_bit_depth < 8 )
+            if( (m_color_type & PNG_COLOR_MASK_COLOR) == 0 && m_bit_depth < 8 )
 #if (PNG_LIBPNG_VER_MAJOR*10000 + PNG_LIBPNG_VER_MINOR*100 + PNG_LIBPNG_VER_RELEASE >= 10209) || \
     (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR == 0 && PNG_LIBPNG_VER_RELEASE >= 18)
                 png_set_expand_gray_1_2_4_to_8( png_ptr );
@@ -270,7 +267,7 @@ bool  PngDecoder::readData( Mat& img )
                 png_set_gray_1_2_4_to_8( png_ptr );
 #endif
 
-            if( CV_MAT_CN(m_type) > 1 && color )
+            if( (m_color_type & PNG_COLOR_MASK_COLOR) && color )
                 png_set_bgr( png_ptr ); // convert RGB to BGR
             else if( color )
                 png_set_gray_to_rgb( png_ptr ); // Gray->RGB
@@ -281,7 +278,7 @@ bool  PngDecoder::readData( Mat& img )
             png_read_update_info( png_ptr, info_ptr );
 
             for( y = 0; y < m_height; y++ )
-                buffer[y] = data + y*step;
+                buffer[y] = img.data + y*img.step;
 
             png_read_image( png_ptr, buffer );
             png_read_end( png_ptr, end_info );
@@ -372,22 +369,23 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                 }
 
                 int compression_level = -1; // Invalid value to allow setting 0-9 as valid
-                int compression_strategy = Z_RLE; // Default strategy
+                int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
                 bool isBilevel = false;
 
                 for( size_t i = 0; i < params.size(); i += 2 )
                 {
-                    if( params[i] == CV_IMWRITE_PNG_COMPRESSION )
+                    if( params[i] == IMWRITE_PNG_COMPRESSION )
                     {
+                        compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
                         compression_level = params[i+1];
                         compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
                     }
-                    if( params[i] == CV_IMWRITE_PNG_STRATEGY )
+                    if( params[i] == IMWRITE_PNG_STRATEGY )
                     {
                         compression_strategy = params[i+1];
                         compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
                     }
-                    if( params[i] == CV_IMWRITE_PNG_BILEVEL )
+                    if( params[i] == IMWRITE_PNG_BILEVEL )
                     {
                         isBilevel = params[i+1] != 0;
                     }

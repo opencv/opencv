@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDAWARPING_HPP__
-#define __OPENCV_CUDAWARPING_HPP__
+#ifndef OPENCV_CUDAWARPING_HPP
+#define OPENCV_CUDAWARPING_HPP
 
 #ifndef __cplusplus
 #  error cudawarping.hpp header must be compiled as C++
@@ -213,4 +213,4 @@ CV_EXPORTS void pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_CUDAWARPING_HPP__ */
+#endif /* OPENCV_CUDAWARPING_HPP */

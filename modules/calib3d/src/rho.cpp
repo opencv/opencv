@@ -44,7 +44,7 @@
  */
 
 /* Includes */
-#include <precomp.hpp>
+#include "precomp.hpp"
 #include <opencv2/core.hpp>
 #include <stdlib.h>
 #include <stdio.h>
@@ -2370,7 +2370,7 @@ static inline float  sacLMGain(const float*  dH,
 static inline int    sacChol8x8Damped(const float (*A)[8],
                                       float         lambda,
                                       float       (*L)[8]){
-    const register int N = 8;
+    const int N = 8;
     int i, j, k;
     float  lambdap1 = lambda + 1.0f;
     float  x;

@@ -41,6 +41,7 @@ import cv2
 from time import clock
 
 # local modules
+from tst_scene_render import TestSceneRender
 import common
 
 class VideoSynthBase(object):
@@ -80,6 +81,30 @@ class VideoSynthBase(object):
 
     def isOpened(self):
         return True
+
+class Book(VideoSynthBase):
+    def __init__(self, **kw):
+        super(Book, self).__init__(**kw)
+        backGr = cv2.imread('../data/graf1.png')
+        fgr = cv2.imread('../data/box.png')
+        self.render = TestSceneRender(backGr, fgr, speed = 1)
+
+    def read(self, dst=None):
+        noise = np.zeros(self.render.sceneBg.shape, np.int8)
+        cv2.randn(noise, np.zeros(3), np.ones(3)*255*self.noise)
+
+        return True, cv2.add(self.render.getNextFrame(), noise, dtype=cv2.CV_8UC3)
+
+class Cube(VideoSynthBase):
+    def __init__(self, **kw):
+        super(Cube, self).__init__(**kw)
+        self.render = TestSceneRender(cv2.imread('../data/pca_test1.jpg'), deformation = True,  speed = 1)
+
+    def read(self, dst=None):
+        noise = np.zeros(self.render.sceneBg.shape, np.int8)
+        cv2.randn(noise, np.zeros(3), np.ones(3)*255*self.noise)
+
+        return True, cv2.add(self.render.getNextFrame(), noise, dtype=cv2.CV_8UC3)
 
 class Chess(VideoSynthBase):
     def __init__(self, **kw):
@@ -129,12 +154,14 @@ class Chess(VideoSynthBase):
         self.draw_quads(dst, self.black_quads, (10, 10, 10))
 
 
-classes = dict(chess=Chess)
+classes = dict(chess=Chess, book=Book, cube=Cube)
 
 presets = dict(
     empty = 'synth:',
     lena = 'synth:bg=../data/lena.jpg:noise=0.1',
-    chess = 'synth:class=chess:bg=../data/lena.jpg:noise=0.1:size=640x480'
+    chess = 'synth:class=chess:bg=../data/lena.jpg:noise=0.1:size=640x480',
+    book = 'synth:class=book:bg=../data/graf1.png:noise=0.1:size=640x480',
+    cube = 'synth:class=cube:bg=../data/pca_test1.jpg:noise=0.0:size=640x480'
 )
 
 
@@ -190,7 +217,7 @@ if __name__ == '__main__':
             ret, img = cap.read()
             imgs.append(img)
             cv2.imshow('capture %d' % i, img)
-        ch = 0xFF & cv2.waitKey(1)
+        ch = cv2.waitKey(1)
         if ch == 27:
             break
         if ch == ord(' '):

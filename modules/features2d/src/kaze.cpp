@@ -110,6 +110,8 @@ namespace cv
                               OutputArray descriptors,
                               bool useProvidedKeypoints)
         {
+            CV_INSTRUMENT_REGION()
+
             cv::Mat img = image.getMat();
             if (img.channels() > 1)
                 cvtColor(image, img, COLOR_BGR2GRAY);
@@ -159,6 +161,7 @@ namespace cv
 
         void write(FileStorage& fs) const
         {
+            writeFormat(fs);
             fs << "extended" << (int)extended;
             fs << "upright" << (int)upright;
             fs << "threshold" << threshold;

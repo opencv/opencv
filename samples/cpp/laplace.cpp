@@ -1,6 +1,6 @@
-#include "opencv2/videoio/videoio.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -83,10 +83,10 @@ int main( int argc, char** argv )
         convertScaleAbs(laplace, result, (sigma+1)*0.25);
         imshow("Laplacian", result);
 
-        int c = waitKey(30);
+        char c = (char)waitKey(30);
         if( c == ' ' )
             smoothType = smoothType == GAUSSIAN ? BLUR : smoothType == BLUR ? MEDIAN : GAUSSIAN;
-        if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+        if( c == 'q' || c == 'Q' || c == 27 )
             break;
     }
 

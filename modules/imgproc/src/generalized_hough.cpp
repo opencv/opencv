@@ -415,6 +415,8 @@ namespace
 
     void GeneralizedHoughBallardImpl::calcHist()
     {
+        CV_INSTRUMENT_REGION()
+
         CV_Assert( imageEdges_.type() == CV_8UC1 );
         CV_Assert( imageDx_.type() == CV_32FC1 && imageDx_.size() == imageSize_);
         CV_Assert( imageDy_.type() == imageDx_.type() && imageDy_.size() == imageSize_);
