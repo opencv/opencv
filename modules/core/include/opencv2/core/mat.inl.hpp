@@ -1818,7 +1818,7 @@ Mat_<_Tp>::Mat_(Mat_&& m)
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (Mat_&& m)
 {
-    Mat::operator = (m);
+    Mat::operator = (std::move(m));
     return *this;
 }
 
