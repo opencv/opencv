@@ -1704,10 +1704,6 @@ public:
         CV_Assert(ksize <= MAX_ESIZE);
     }
 
-#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Warray-bounds"
-#endif
     virtual void operator() (const Range& range) const
     {
         int dy, cn = src.channels();
@@ -1737,7 +1733,7 @@ public:
                 int sy = clip(sy0 - ksize2 + 1 + k, 0, ssize.height);
                 for( k1 = std::max(k1, k); k1 < ksize; k1++ )
                 {
-                    if( sy == prev_sy[k1] ) // if the sy-th row has been computed already, reuse it.
+                    if( k1 < MAX_ESIZE && sy == prev_sy[k1] ) // if the sy-th row has been computed already, reuse it.
                     {
                         if( k1 > k )
                             memcpy( rows[k], rows[k1], bufstep*sizeof(rows[0][0]) );
@@ -1756,9 +1752,6 @@ public:
             vresize( (const WT**)rows, (T*)(dst.data + dst.step*dy), beta, dsize.width );
         }
     }
-#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
-# pragma GCC diagnostic pop
-#endif
 
 private:
     Mat src;
