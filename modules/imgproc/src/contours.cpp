@@ -39,6 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 /* initializes 8-element array for fast access to 3x3 neighborhood of a pixel */
 #define  CV_INIT_3X3_DELTAS( deltas, step, nch )            \
@@ -49,33 +50,6 @@
 
 static const CvPoint icvCodeDeltas[8] =
     { CvPoint(1, 0), CvPoint(1, -1), CvPoint(0, -1), CvPoint(-1, -1), CvPoint(-1, 0), CvPoint(-1, 1), CvPoint(0, 1), CvPoint(1, 1) };
-
-#if CV_SSE2
-static
-inline unsigned int trailingZeros(unsigned int value) {
-    CV_DbgAssert(value != 0); // undefined for zero input (https://en.wikipedia.org/wiki/Find_first_set)
-#if defined(_MSC_VER)
-#if (_MSC_VER < 1700)
-    unsigned long index = 0;
-    _BitScanForward(&index, value);
-    return (unsigned int)index;
-#else
-    return _tzcnt_u32(value);
-#endif
-#elif defined(__GNUC__) || defined(__GNUG__)
-    return __builtin_ctz(value);
-#elif defined(__ICC) || defined(__INTEL_COMPILER)
-    return _bit_scan_forward(value);
-#elif defined(__clang__)
-    return llvm.cttz.i32(value, true);
-#else
-    static const int MultiplyDeBruijnBitPosition[32] = {
-        0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
-        31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
-    return MultiplyDeBruijnBitPosition[((uint32_t)((value & -value) * 0x077CB531U)) >> 27];
-#endif
-}
-#endif
 
 CV_IMPL void
 cvStartReadChainPoints( CvChain * chain, CvChainPtReader * reader )
@@ -1097,12 +1071,12 @@ cvFindNextContour( CvContourScanner scanner )
                         mask2 ^= 0x0000ffff;
 
                         if (mask1) {
-                            p = img[(x += trailingZeros(mask1))];
+                            p = img[(x += cv::trailingZeros32(mask1))];
                             goto _next_contour;
                         }
 
                         if (mask2) {
-                            p = img[(x += trailingZeros(mask2 << 16))];
+                            p = img[(x += cv::trailingZeros32(mask2 << 16))];
                             goto _next_contour;
                         }
                     }
@@ -1113,7 +1087,7 @@ cvFindNextContour( CvContourScanner scanner )
                         unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_prev)) ^ 0x0000ffff;
 
                         if (mask) {
-                            p = img[(x += trailingZeros(mask))];
+                            p = img[(x += cv::trailingZeros32(mask))];
                             goto _next_contour;
                         }
                         x += 16;
@@ -1394,12 +1368,12 @@ inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j, bool h
             mask2 ^= 0x0000ffff;
 
             if (mask1) {
-                j += trailingZeros(mask1);
+                j += cv::trailingZeros32(mask1);
                 return j;
             }
 
             if (mask2) {
-                j += trailingZeros(mask2 << 16);
+                j += cv::trailingZeros32(mask2 << 16);
                 return j;
             }
         }
@@ -1410,7 +1384,7 @@ inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j, bool h
             unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_zero)) ^ 0x0000ffff;
 
             if (mask) {
-                j += trailingZeros(mask);
+                j += cv::trailingZeros32(mask);
                 return j;
             }
             j += 16;
@@ -1443,12 +1417,12 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j, bool hav
             unsigned int mask2 = _mm_movemask_epi8(v_cmp2);
 
             if (mask1) {
-                j += trailingZeros(mask1);
+                j += cv::trailingZeros32(mask1);
                 return j;
             }
 
             if (mask2) {
-                j += trailingZeros(mask2 << 16);
+                j += cv::trailingZeros32(mask2 << 16);
                 return j;
             }
         }
@@ -1459,7 +1433,7 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j, bool hav
             unsigned int mask = _mm_movemask_epi8(_mm_cmpeq_epi8(v_p, v_zero));
 
             if (mask) {
-                j += trailingZeros(mask);
+                j += cv::trailingZeros32(mask);
                 return j;
             }
             j += 16;
