@@ -3280,6 +3280,10 @@ CV_EXPORTS float EMD( InputArray signature1, InputArray signature2,
                       int distType, InputArray cost=noArray(),
                       float* lowerBound = 0, OutputArray flow = noArray() );
 
+CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature2,
+                      int distType, InputArray cost=noArray(),
+                      CV_IN_OUT Ptr<float> lowerBound = Ptr<float>(), OutputArray flow = noArray() );
+
 //! @} imgproc_hist
 
 /** @example watershed.cpp
