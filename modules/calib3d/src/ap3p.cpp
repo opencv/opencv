@@ -5,6 +5,115 @@
 
 using namespace std;
 
+namespace {
+void solveQuartic(const double *factors, double *realRoots) {
+    const double &a4 = factors[0];
+    const double &a3 = factors[1];
+    const double &a2 = factors[2];
+    const double &a1 = factors[3];
+    const double &a0 = factors[4];
+
+    double a4_2 = a4 * a4;
+    double a3_2 = a3 * a3;
+    double a4_3 = a4_2 * a4;
+    double a2a4 = a2 * a4;
+
+    double p4 = (8 * a2a4 - 3 * a3_2) / (8 * a4_2);
+    double q4 = (a3_2 * a3 - 4 * a2a4 * a3 + 8 * a1 * a4_2) / (8 * a4_3);
+    double r4 = (256 * a0 * a4_3 - 3 * (a3_2 * a3_2) - 64 * a1 * a3 * a4_2 + 16 * a2a4 * a3_2) / (256 * (a4_3 * a4));
+
+    double p3 = ((p4 * p4) / 12 + r4) / 3; // /=-3
+    double q3 = (72 * r4 * p4 - 2 * p4 * p4 * p4 - 27 * q4 * q4) / 432; // /=2
+
+    double t; // *=2
+    complex<double> w;
+    if (q3 >= 0)
+        w = -sqrt(static_cast<complex<double> >(q3 * q3 - p3 * p3 * p3)) - q3;
+    else
+        w = sqrt(static_cast<complex<double> >(q3 * q3 - p3 * p3 * p3)) - q3;
+    if (w.imag() == 0.0) {
+        w.real(cbrt(w.real()));
+        t = 2.0 * (w.real() + p3 / w.real());
+    } else {
+        w = pow(w, 1.0 / 3);
+        t = 4.0 * w.real();
+    }
+
+    complex<double> sqrt_2m = sqrt(static_cast<complex<double> >(-2 * p4 / 3 + t));
+    double B_4A = -a3 / (4 * a4);
+    double complex1 = 4 * p4 / 3 + t;
+    complex<double> complex2 = 2 * q4 / sqrt_2m;
+    double sqrt_2m_rh = sqrt_2m.real() / 2;
+    double sqrt1 = sqrt(-(complex1 + complex2)).real() / 2;
+    realRoots[0] = B_4A + sqrt_2m_rh + sqrt1;
+    realRoots[1] = B_4A + sqrt_2m_rh - sqrt1;
+    double sqrt2 = sqrt(-(complex1 - complex2)).real() / 2;
+    realRoots[2] = B_4A - sqrt_2m_rh + sqrt2;
+    realRoots[3] = B_4A - sqrt_2m_rh - sqrt2;
+}
+
+void polishQuarticRoots(const double *coeffs, double *roots) {
+    const int iterations = 2;
+    for (int i = 0; i < iterations; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            double error =
+                    (((coeffs[0] * roots[j] + coeffs[1]) * roots[j] + coeffs[2]) * roots[j] + coeffs[3]) * roots[j] +
+                    coeffs[4];
+            double
+                    derivative =
+                    ((4 * coeffs[0] * roots[j] + 3 * coeffs[1]) * roots[j] + 2 * coeffs[2]) * roots[j] + coeffs[3];
+            roots[j] -= error / derivative;
+        }
+    }
+}
+
+inline void vect_cross(const double *a, const double *b, double *result) {
+    result[0] = a[1] * b[2] - a[2] * b[1];
+    result[1] = -(a[0] * b[2] - a[2] * b[0]);
+    result[2] = a[0] * b[1] - a[1] * b[0];
+}
+
+inline double vect_dot(const double *a, const double *b) {
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+inline double vect_norm(const double *a) {
+    return sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+}
+
+inline void vect_scale(const double s, const double *a, double *result) {
+    result[0] = a[0] * s;
+    result[1] = a[1] * s;
+    result[2] = a[2] * s;
+}
+
+inline void vect_sub(const double *a, const double *b, double *result) {
+    result[0] = a[0] - b[0];
+    result[1] = a[1] - b[1];
+    result[2] = a[2] - b[2];
+}
+
+inline void vect_divide(const double *a, const double d, double *result) {
+    result[0] = a[0] / d;
+    result[1] = a[1] / d;
+    result[2] = a[2] / d;
+}
+
+inline void mat_mult(const double a[3][3], const double b[3][3], double result[3][3]) {
+    result[0][0] = a[0][0] * b[0][0] + a[0][1] * b[1][0] + a[0][2] * b[2][0];
+    result[0][1] = a[0][0] * b[0][1] + a[0][1] * b[1][1] + a[0][2] * b[2][1];
+    result[0][2] = a[0][0] * b[0][2] + a[0][1] * b[1][2] + a[0][2] * b[2][2];
+
+    result[1][0] = a[1][0] * b[0][0] + a[1][1] * b[1][0] + a[1][2] * b[2][0];
+    result[1][1] = a[1][0] * b[0][1] + a[1][1] * b[1][1] + a[1][2] * b[2][1];
+    result[1][2] = a[1][0] * b[0][2] + a[1][1] * b[1][2] + a[1][2] * b[2][2];
+
+    result[2][0] = a[2][0] * b[0][0] + a[2][1] * b[1][0] + a[2][2] * b[2][0];
+    result[2][1] = a[2][0] * b[0][1] + a[2][1] * b[1][1] + a[2][2] * b[2][1];
+    result[2][2] = a[2][0] * b[0][2] + a[2][1] * b[1][2] + a[2][2] * b[2][2];
+}
+}
+
 namespace cv {
 void ap3p::init_inverse_parameters() {
     inv_fx = 1. / fx;
@@ -175,113 +284,6 @@ int ap3p::computePoses(const double featureVectors[3][3],
     }
 
     return nb_solutions;
-}
-
-void ap3p::solveQuartic(const double *factors, double *realRoots) {
-    const double &a4 = factors[0];
-    const double &a3 = factors[1];
-    const double &a2 = factors[2];
-    const double &a1 = factors[3];
-    const double &a0 = factors[4];
-
-    double a4_2 = a4 * a4;
-    double a3_2 = a3 * a3;
-    double a4_3 = a4_2 * a4;
-    double a2a4 = a2 * a4;
-
-    double p4 = (8 * a2a4 - 3 * a3_2) / (8 * a4_2);
-    double q4 = (a3_2 * a3 - 4 * a2a4 * a3 + 8 * a1 * a4_2) / (8 * a4_3);
-    double r4 = (256 * a0 * a4_3 - 3 * (a3_2 * a3_2) - 64 * a1 * a3 * a4_2 + 16 * a2a4 * a3_2) / (256 * (a4_3 * a4));
-
-    double p3 = ((p4 * p4) / 12 + r4) / 3; // /=-3
-    double q3 = (72 * r4 * p4 - 2 * p4 * p4 * p4 - 27 * q4 * q4) / 432; // /=2
-
-    double t; // *=2
-    complex<double> w;
-    if (q3 >= 0)
-        w = -sqrt(static_cast<complex<double> >(q3 * q3 - p3 * p3 * p3)) - q3;
-    else
-        w = sqrt(static_cast<complex<double> >(q3 * q3 - p3 * p3 * p3)) - q3;
-    if (w.imag() == 0.0) {
-        w.real(cbrt(w.real()));
-        t = 2.0 * (w.real() + p3 / w.real());
-    } else {
-        w = pow(w, 1.0 / 3);
-        t = 4.0 * w.real();
-    }
-
-    complex<double> sqrt_2m = sqrt(static_cast<complex<double> >(-2 * p4 / 3 + t));
-    double B_4A = -a3 / (4 * a4);
-    double complex1 = 4 * p4 / 3 + t;
-    complex<double> complex2 = 2 * q4 / sqrt_2m;
-    double sqrt_2m_rh = sqrt_2m.real() / 2;
-    double sqrt1 = sqrt(-(complex1 + complex2)).real() / 2;
-    realRoots[0] = B_4A + sqrt_2m_rh + sqrt1;
-    realRoots[1] = B_4A + sqrt_2m_rh - sqrt1;
-    double sqrt2 = sqrt(-(complex1 - complex2)).real() / 2;
-    realRoots[2] = B_4A - sqrt_2m_rh + sqrt2;
-    realRoots[3] = B_4A - sqrt_2m_rh - sqrt2;
-}
-
-void ap3p::polishQuarticRoots(const double *coeffs, double *roots) {
-    const int iterations = 2;
-    for (int i = 0; i < iterations; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            double error =
-                    (((coeffs[0] * roots[j] + coeffs[1]) * roots[j] + coeffs[2]) * roots[j] + coeffs[3]) * roots[j] +
-                    coeffs[4];
-            double
-                    derivative =
-                    ((4 * coeffs[0] * roots[j] + 3 * coeffs[1]) * roots[j] + 2 * coeffs[2]) * roots[j] + coeffs[3];
-            roots[j] -= error / derivative;
-        }
-    }
-}
-
-inline void ap3p::vect_cross(const double *a, const double *b, double *result) {
-    result[0] = a[1] * b[2] - a[2] * b[1];
-    result[1] = -(a[0] * b[2] - a[2] * b[0]);
-    result[2] = a[0] * b[1] - a[1] * b[0];
-}
-
-inline double ap3p::vect_dot(const double *a, const double *b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-inline double ap3p::vect_norm(const double *a) {
-    return sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-}
-
-inline void ap3p::vect_scale(const double s, const double *a, double *result) {
-    result[0] = a[0] * s;
-    result[1] = a[1] * s;
-    result[2] = a[2] * s;
-}
-
-inline void ap3p::vect_sub(const double *a, const double *b, double *result) {
-    result[0] = a[0] - b[0];
-    result[1] = a[1] - b[1];
-    result[2] = a[2] - b[2];
-}
-
-inline void ap3p::vect_divide(const double *a, const double d, double *result) {
-    result[0] = a[0] / d;
-    result[1] = a[1] / d;
-    result[2] = a[2] / d;
-}
-
-inline void ap3p::mat_mult(const double a[3][3], const double b[3][3], double result[3][3]) {
-    result[0][0] = a[0][0] * b[0][0] + a[0][1] * b[1][0] + a[0][2] * b[2][0];
-    result[0][1] = a[0][0] * b[0][1] + a[0][1] * b[1][1] + a[0][2] * b[2][1];
-    result[0][2] = a[0][0] * b[0][2] + a[0][1] * b[1][2] + a[0][2] * b[2][2];
-
-    result[1][0] = a[1][0] * b[0][0] + a[1][1] * b[1][0] + a[1][2] * b[2][0];
-    result[1][1] = a[1][0] * b[0][1] + a[1][1] * b[1][1] + a[1][2] * b[2][1];
-    result[1][2] = a[1][0] * b[0][2] + a[1][1] * b[1][2] + a[1][2] * b[2][2];
-
-    result[2][0] = a[2][0] * b[0][0] + a[2][1] * b[1][0] + a[2][2] * b[2][0];
-    result[2][1] = a[2][0] * b[0][1] + a[2][1] * b[1][1] + a[2][2] * b[2][1];
-    result[2][2] = a[2][0] * b[0][2] + a[2][1] * b[1][2] + a[2][2] * b[2][2];
 }
 
 bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Mat &ipoints) {

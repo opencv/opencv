@@ -6,24 +6,6 @@
 namespace cv {
 class ap3p {
 private:
-    inline void polishQuarticRoots(const double *coeffs, double *roots);
-
-    inline void vect_cross(const double *a, const double *b, double *result);
-
-    inline double vect_dot(const double *a, const double *b);
-
-    inline double vect_norm(const double *a);
-
-    inline void vect_scale(const double s, const double *a, double *result);
-
-    inline void vect_sub(const double *a, const double *b, double *result);
-
-    inline void vect_divide(const double *a, const double d, double *result);
-
-    inline void mat_mult(const double a[3][3], const double b[3][3], double result[3][3]);
-
-    static void solveQuartic(const double *factors, double *realRoots);
-
     template<typename T>
     void init_camera_parameters(const cv::Mat &cameraMatrix) {
         cx = cameraMatrix.at<T>(0, 2);
