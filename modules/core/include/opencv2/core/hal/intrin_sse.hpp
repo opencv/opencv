@@ -56,6 +56,8 @@ namespace cv
 
 //! @cond IGNORED
 
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+
 struct v_uint8x16
 {
     typedef uchar lane_type;
@@ -1791,10 +1793,12 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
 //! @brief Check CPU capability of SIMD operation
 static inline bool hasSIMD128()
 {
-    return checkHardwareSupport(CV_CPU_SSE2);
+    return (CV_CPU_HAS_SUPPORT_SSE2) ? true : false;
 }
 
 //! @}
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond
 
