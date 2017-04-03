@@ -22,7 +22,7 @@ private:
 
     inline void mat_mult(const double a[3][3], const double b[3][3], double result[3][3]);
 
-    void solveQuartic(const double *factors, double *realRoots);
+    static void solveQuartic(const double *factors, double *realRoots);
 
     template<typename T>
     void init_camera_parameters(const cv::Mat &cameraMatrix) {
