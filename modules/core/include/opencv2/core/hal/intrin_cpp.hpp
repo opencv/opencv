@@ -53,6 +53,10 @@
 namespace cv
 {
 
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
+
 /** @addtogroup core_hal_intrin
 
 "Universal intrinsics" is a types and functions set intended to simplify vectorization of code on
@@ -1827,7 +1831,9 @@ static inline bool hasSIMD128()
 
 //! @}
 
-
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+#endif
 }
 
 #endif

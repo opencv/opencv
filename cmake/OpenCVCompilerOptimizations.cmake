@@ -275,6 +275,11 @@ set(CPU_BASELINE_FLAGS "")
 set(CPU_BASELINE_FINAL "")
 set(CPU_DISPATCH_FINAL "")
 
+if(CV_DISABLE_OPTIMIZATION)
+  set(CPU_DISPATCH "")
+  set(CPU_DISPATCH_REQUIRE "")
+endif()
+
 macro(ocv_check_compiler_optimization OPT)
   if(NOT DEFINED CPU_${OPT}_SUPPORTED)
     if((DEFINED CPU_${OPT}_FLAGS_ON AND NOT "x${CPU_${OPT}_FLAGS_ON}" STREQUAL "x") OR CPU_${OPT}_TEST_FILE)
@@ -319,7 +324,7 @@ macro(ocv_check_compiler_optimization OPT)
 endmacro()
 
 foreach(OPT ${CPU_KNOWN_OPTIMIZATIONS})
-  set(CPU_${OPT}_USAGE_COUNT 0 CACHE INTERNAL "" FORCE)
+  set(CPU_${OPT}_USAGE_COUNT 0 CACHE INTERNAL "")
   if(NOT DEFINED CPU_${OPT}_FORCE)
     set(CPU_${OPT}_FORCE "${CPU_${OPT}_IMPLIES}")
   endif()
@@ -515,15 +520,27 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
   endforeach()
   foreach(fname ${${SOURCES_VAR_NAME}})
     string(TOLOWER "${fname}" fname_LOWER)
-    if(fname_LOWER MATCHES "[.]opt_.*[.]cpp$")
-      if(CV_DISABLE_OPTIMIZATION OR NOT CV_ENABLE_INTRINSICS)
-        message(STATUS "Excluding from source files list: ${fname}")
+    if(fname_LOWER MATCHES "\\.(.*)\\.cpp$")
+      string(TOUPPER "${CMAKE_MATCH_1}" OPT_)
+      if(OPT_ MATCHES "(CUDA.*|DISPATCH.*|OCL)") # don't touch files like filename.cuda.cpp
+        list(APPEND __result "${fname}")
+        #continue()
+      elseif(CV_DISABLE_OPTIMIZATION OR NOT CV_ENABLE_INTRINSICS)
+        message(STATUS "Excluding from source files list (optimization is disabled): ${fname}")
         #continue()
       else()
+        get_source_file_property(__definitions "${fname}" COMPILE_DEFINITIONS)
+        if(__definitions)
+          list(APPEND __definitions "CV_CPU_DISPATCH_MODE=${OPT_}")
+        else()
+          set(__definitions "CV_CPU_DISPATCH_MODE=${OPT_}")
+        endif()
+        set_source_files_properties("${fname}" PROPERTIES COMPILE_DEFINITIONS "${__definitions}")
+
         set(__opt_found 0)
         foreach(OPT ${CPU_BASELINE_FINAL})
           string(TOLOWER "${OPT}" OPT_LOWER)
-          if(fname_LOWER MATCHES "_${OPT_LOWER}[.]cpp$")
+          if(fname_LOWER MATCHES "\\.${OPT_LOWER}\\.cpp$")
 #message("${fname} BASELINE-${OPT}")
             set(__opt_found 1)
             list(APPEND __result "${fname}")
@@ -533,11 +550,11 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
         foreach(OPT ${CPU_DISPATCH_FINAL})
           foreach(OPT2 ${CPU_DISPATCH_${OPT}_FORCED})
             string(TOLOWER "${OPT2}" OPT2_LOWER)
-            if(fname_LOWER MATCHES "_${OPT2_LOWER}[.]cpp$")
+            if(fname_LOWER MATCHES "\\.${OPT2_LOWER}\\.cpp$")
               list(APPEND __result_${OPT} "${fname}")
               math(EXPR CPU_${OPT}_USAGE_COUNT "${CPU_${OPT}_USAGE_COUNT}+1")
               set(CPU_${OPT}_USAGE_COUNT "${CPU_${OPT}_USAGE_COUNT}" CACHE INTERNAL "" FORCE)
-#message("${fname} ${OPT}")
+#message("(${CPU_${OPT}_USAGE_COUNT})${fname} ${OPT}")
 #message("    ${CPU_DISPATCH_${OPT}_INCLUDED}")
 #message("    ${CPU_DISPATCH_DEFINITIONS_${OPT}}")
 #message("    ${CPU_DISPATCH_FLAGS_${OPT}}")
@@ -573,7 +590,13 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
         list(APPEND __result "$<TARGET_OBJECTS:${TARGET_BASE_NAME}_${OPT}>")
       else()
         foreach(fname ${__result_${OPT}})
-          set_source_files_properties("${fname}" PROPERTIES COMPILE_DEFINITIONS "${CPU_DISPATCH_DEFINITIONS_${OPT}}")
+          get_source_file_property(__definitions "${fname}" COMPILE_DEFINITIONS)
+          if(__definitions)
+            list(APPEND __definitions "${CPU_DISPATCH_DEFINITIONS_${OPT}}")
+          else()
+            set(__definitions "${CPU_DISPATCH_DEFINITIONS_${OPT}}")
+          endif()
+          set_source_files_properties("${fname}" PROPERTIES COMPILE_DEFINITIONS "${__definitions}")
           set_source_files_properties("${fname}" PROPERTIES COMPILE_FLAGS "${CPU_DISPATCH_FLAGS_${OPT}}")
         endforeach()
         list(APPEND __result ${__result_${OPT}})
@@ -620,17 +643,24 @@ macro(ocv_compiler_optimization_fill_cpu_config)
       set(OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE "${OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE}
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_${OPT}
 #  define CV_CPU_HAS_SUPPORT_${OPT} 1
-#  define CV_CPU_CALL_${OPT}(...) return __VA_ARGS__
+#  define CV_CPU_CALL_${OPT}(fn, args) return (opt_${OPT}::fn args)
 #elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_${OPT}
 #  define CV_CPU_HAS_SUPPORT_${OPT} (cv::checkHardwareSupport(CV_CPU_${OPT}))
-#  define CV_CPU_CALL_${OPT}(...) if (CV_CPU_HAS_SUPPORT_${OPT}) return __VA_ARGS__
+#  define CV_CPU_CALL_${OPT}(fn, args) if (CV_CPU_HAS_SUPPORT_${OPT}) return (opt_${OPT}::fn args)
 #else
 #  define CV_CPU_HAS_SUPPORT_${OPT} 0
-#  define CV_CPU_CALL_${OPT}(...)
+#  define CV_CPU_CALL_${OPT}(fn, args)
 #endif
+#define __CV_CPU_DISPATCH_CHAIN_${OPT}(fn, args, mode, ...)  CV_CPU_CALL_${OPT}(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 ")
     endif()
   endforeach()
+
+  set(OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE "${OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE}
+#define CV_CPU_CALL_BASELINE(fn, args) return (cpu_baseline::fn args)
+#define __CV_CPU_DISPATCH_CHAIN_BASELINE(fn, args, mode, ...)  CV_CPU_CALL_BASELINE(fn, args) /* last in sequence */
+")
+
 
   set(__file "${CMAKE_SOURCE_DIR}/modules/core/include/opencv2/core/cv_cpu_helper.h")
   if(EXISTS "${__file}")
@@ -641,6 +671,57 @@ macro(ocv_compiler_optimization_fill_cpu_config)
   else()
     file(WRITE "${__file}" "${OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE}")
     message(WARNING "${__file} is updated")
+  endif()
+endmacro()
+
+macro(ocv_add_dispatched_file filename)
+  if(NOT OPENCV_INITIAL_PASS)
+    set(__codestr "
+#include \"precomp.hpp\"
+#include \"${filename}.simd.hpp\"
+")
+
+    set(__declarations_str "#define CV_CPU_SIMD_FILENAME \"${filename}.simd.hpp\"")
+    set(__dispatch_modes "BASELINE")
+
+    set(__optimizations "${ARGN}")
+    if(CV_DISABLE_OPTIMIZATION OR NOT CV_ENABLE_INTRINSICS)
+      set(__optimizations "")
+    endif()
+
+    foreach(OPT ${__optimizations})
+      string(TOLOWER "${OPT}" OPT_LOWER)
+      set(__file "${CMAKE_CURRENT_BINARY_DIR}/${filename}.${OPT_LOWER}.cpp")
+      if(EXISTS "${__file}")
+        file(READ "${__file}" __content)
+      endif()
+      if(__content STREQUAL __codestr)
+        #message(STATUS "${__file} contains up-to-date content")
+      else()
+        file(WRITE "${__file}" "${__codestr}")
+      endif()
+      list(APPEND OPENCV_MODULE_${the_module}_SOURCES_DISPATCHED "${__file}")
+
+      set(__declarations_str "${__declarations_str}
+#define CV_CPU_DISPATCH_MODE ${OPT}
+#include \"opencv2/core/private/cv_cpu_include_simd_declarations.hpp\"
+")
+      set(__dispatch_modes "${OPT}, ${__dispatch_modes}")
+    endforeach()
+
+    set(__declarations_str "${__declarations_str}
+#define CV_CPU_DISPATCH_MODES_ALL ${__dispatch_modes}
+")
+
+    set(__file "${CMAKE_CURRENT_BINARY_DIR}/${filename}.simd_declarations.hpp")
+    if(EXISTS "${__file}")
+      file(READ "${__file}" __content)
+    endif()
+    if(__content STREQUAL __declarations_str)
+      #message(STATUS "${__file} contains up-to-date content")
+    else()
+      file(WRITE "${__file}" "${__declarations_str}")
+    endif()
   endif()
 endmacro()
 

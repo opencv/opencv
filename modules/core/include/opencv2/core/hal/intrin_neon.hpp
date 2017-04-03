@@ -53,6 +53,8 @@ namespace cv
 
 //! @cond IGNORED
 
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+
 #define CV_SIMD128 1
 #if defined(__aarch64__)
 #define CV_SIMD128_64F 1
@@ -1238,10 +1240,12 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
 //! @brief Check CPU capability of SIMD operation
 static inline bool hasSIMD128()
 {
-    return checkHardwareSupport(CV_CPU_NEON);
+    return (CV_CPU_HAS_SUPPORT_NEON) ? true : false;
 }
 
 //! @}
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond
 

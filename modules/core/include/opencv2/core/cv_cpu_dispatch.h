@@ -7,6 +7,23 @@
 #include "cv_cpu_config.h"
 #include "cv_cpu_helper.h"
 
+#ifdef CV_CPU_DISPATCH_MODE
+#define CV_CPU_OPTIMIZATION_NAMESPACE __CV_CAT(opt_, CV_CPU_DISPATCH_MODE)
+#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace __CV_CAT(opt_, CV_CPU_DISPATCH_MODE) {
+#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#else
+#define CV_CPU_OPTIMIZATION_NAMESPACE cpu_baseline
+#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
+#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#endif
+
+
+#define __CV_CPU_DISPATCH_CHAIN_END(fn, args, mode, ...)  /* done */
+#define __CV_CPU_DISPATCH(fn, args, mode, ...) __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+#define __CV_CPU_DISPATCH_EXPAND(fn, args, ...) __CV_EXPAND(__CV_CPU_DISPATCH(fn, args, __VA_ARGS__))
+#define CV_CPU_DISPATCH(fn, args, ...) __CV_CPU_DISPATCH_EXPAND(fn, args, __VA_ARGS__, END) // expand macros
+
+
 #if defined CV_ENABLE_INTRINSICS \
     && !defined CV_DISABLE_OPTIMIZATION \
     && !defined __CUDACC__ /* do not include SSE/AVX/NEON headers for NVCC compiler */ \
@@ -75,6 +92,16 @@
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
+
+#if defined CV_CPU_COMPILE_AVX && !defined CV_CPU_BASELINE_COMPILE_AVX
+struct VZeroUpperGuard {
+#ifdef __GNUC__
+    __attribute__((always_inline))
+#endif
+    inline ~VZeroUpperGuard() { _mm256_zeroupper(); }
+};
+#define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard;
+#endif
 
 #endif // __OPENCV_BUILD
 
