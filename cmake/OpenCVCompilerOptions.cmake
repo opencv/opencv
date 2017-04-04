@@ -273,35 +273,6 @@ if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_OPENCV_GCC_VERSION_NUM GREATER 399)
   add_extra_compiler_option(-fvisibility-inlines-hidden)
 endif()
 
-# TODO !!!!!
-if(NOT OPENCV_FP16_DISABLE AND NOT IOS)
-  if(ARM AND ENABLE_NEON)
-    set(FP16_OPTION "-mfpu=neon-fp16")
-  elseif((X86 OR X86_64) AND NOT MSVC AND ENABLE_AVX)
-    set(FP16_OPTION "-mf16c")
-  endif()
-  try_compile(__VALID_FP16
-    "${OpenCV_BINARY_DIR}"
-    "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp"
-    COMPILE_DEFINITIONS "-DCHECK_FP16" "${FP16_OPTION}"
-    OUTPUT_VARIABLE TRY_OUT
-    )
-  if(NOT __VALID_FP16)
-    if((X86 OR X86_64) AND NOT MSVC AND NOT ENABLE_AVX)
-      # GCC enables AVX when mf16c is passed
-      message(STATUS "FP16: Feature disabled")
-    else()
-      message(STATUS "FP16: Compiler support is not available")
-    endif()
-  else()
-    message(STATUS "FP16: Compiler support is available")
-    set(HAVE_FP16 1)
-    if(NOT ${FP16_OPTION} STREQUAL "")
-      add_extra_compiler_option(${FP16_OPTION})
-    endif()
-  endif()
-endif()
-
 #combine all "extra" options
 set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
 set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}")
