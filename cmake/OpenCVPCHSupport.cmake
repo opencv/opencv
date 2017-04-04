@@ -196,18 +196,20 @@ MACRO(ADD_PRECOMPILED_HEADER_TO_TARGET _targetName _input _pch_output_to_use )
 
     _PCH_GET_TARGET_COMPILE_FLAGS(_target_cflags ${_name} ${_pch_output_to_use} ${_dowarn})
     #MESSAGE("Add flags ${_target_cflags} to ${_targetName} " )
+    if(CMAKE_COMPILER_IS_GNUCXX)
+      set(_target_cflags "${_target_cflags} -include \"${CMAKE_CURRENT_BINARY_DIR}/${_name}\"")
+    endif()
 
     GET_TARGET_PROPERTY(_sources ${_targetName} SOURCES)
     FOREACH(src ${_sources})
       if(NOT "${src}" MATCHES "\\.mm$")
         get_source_file_property(_flags "${src}" COMPILE_FLAGS)
-        if(_flags)
-          set(_flags "${_flags} ${_target_cflags}")
+        get_source_file_property(_flags2 "${src}" COMPILE_DEFINITIONS)
+        if(NOT _flags AND NOT _flags2)
+          set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${_target_cflags}")
         else()
-          set(_flags "${_target_cflags}")
+          #ocv_debug_message("Skip PCH, flags: ${oldProps} defines: ${oldProps2}, file: ${src}")
         endif()
-
-        set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${_flags}")
       endif()
     ENDFOREACH()
 
@@ -283,20 +285,6 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
       DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
       DEPENDS ${_targetName}_pch_dephelp
       )
-
-    get_target_property(_sources ${_targetName} SOURCES)
-    foreach(src ${_sources})
-      if(NOT "${src}" MATCHES "\\.mm$")
-        get_source_file_property(oldProps "${src}" COMPILE_FLAGS)
-        get_source_file_property(oldProps2 "${src}" COMPILE_DEFINITIONS)
-        if(NOT oldProps AND NOT oldProps2)
-          set(newProperties "-include \"${CMAKE_CURRENT_BINARY_DIR}/${_name}\"")
-          set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${newProperties}")
-        else()
-          ocv_debug_message("Skip PCH, flags: ${oldProps} defines: ${oldProps2}, file: ${src}")
-        endif()
-      endif()
-    endforeach()
 
     ADD_PRECOMPILED_HEADER_TO_TARGET(${_targetName} ${_input}  ${_output} ${_dowarn})
 
