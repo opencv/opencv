@@ -743,7 +743,7 @@ template<typename R> struct TheTest
 
     TheTest & test_loadstore_fp16()
     {
-#if CV_FP16
+#if CV_FP16 && CV_SIMD128
         AlignedData<R> data;
         AlignedData<R> out;
 
@@ -775,7 +775,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_cvt_fp16()
     {
-#if CV_FP16
+#if CV_FP16 && CV_SIMD128
         AlignedData<v_float32x4> data;
 
         if(checkHardwareSupport(CV_CPU_FP16))
@@ -1008,7 +1008,7 @@ TEST(hal_intrin, float64x2) {
 }
 #endif
 
-#if CV_FP16
+#if CV_FP16 && CV_SIMD128
 TEST(hal_intrin, float16x4) {
     TheTest<v_float16x4>()
         .test_loadstore_fp16()
