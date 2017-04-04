@@ -278,7 +278,7 @@ struct v_float64x2
 };
 #endif
 
-#if defined (HAVE_FP16)
+#if CV_FP16
 // Workaround for old comiplers
 template <typename T> static inline int16x4_t vreinterpret_s16_f16(T a)
 { return (int16x4_t)a; }
@@ -775,7 +775,7 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
 #endif
 
-#if defined (HAVE_FP16)
+#if CV_FP16
 // Workaround for old comiplers
 inline v_float16x4 v_load_f16(const short* ptr)
 { return v_float16x4(vld1_f16(ptr)); }
@@ -1223,7 +1223,7 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 }
 #endif
 
-#if defined (HAVE_FP16)
+#if CV_FP16
 inline v_float32x4 v_cvt_f32(const v_float16x4& a)
 {
     return v_float32x4(vcvt_f32_f16(a.val));
