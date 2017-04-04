@@ -1772,6 +1772,7 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
     switch (property_id) {
     case CV_CAP_PROP_FRAME_WIDTH:
         width = cvRound(value);
+        retval = width != 0;
         if(width !=0 && height != 0) {
             capture->width = width;
             capture->height = height;
@@ -1781,6 +1782,7 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
         break;
     case CV_CAP_PROP_FRAME_HEIGHT:
         height = cvRound(value);
+        retval = height != 0;
         if(width !=0 && height != 0) {
             capture->width = width;
             capture->height = height;
