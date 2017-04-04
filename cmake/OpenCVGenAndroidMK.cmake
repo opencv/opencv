@@ -63,7 +63,7 @@ if(ANDROID)
   set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/3rdparty/lib/\$(OPENCV_TARGET_ARCH_ABI)")
 
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/OpenCV.mk" @ONLY)
-  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV-abi.mk.in" "${CMAKE_BINARY_DIR}/OpenCV-${ANDROID_NDK_ABI_NAME}.mk" @ONLY)
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV-abi.mk.in" "${CMAKE_BINARY_DIR}/OpenCV-${CMAKE_ANDROID_ARCH_ABI}.mk" @ONLY)
 
   # -------------------------------------------------------------------------------------------
   #  Part 2/2: ${BIN_DIR}/unix-install/OpenCV.mk -> For use with "make install"
@@ -75,7 +75,7 @@ if(ANDROID)
   set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../3rdparty/libs/\$(OPENCV_TARGET_ARCH_ABI)")
 
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" @ONLY)
-  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV-abi.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV-${ANDROID_NDK_ABI_NAME}.mk" @ONLY)
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV-abi.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV-${CMAKE_ANDROID_ARCH_ABI}.mk" @ONLY)
   install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH} COMPONENT dev)
-  install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV-${ANDROID_NDK_ABI_NAME}.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH} COMPONENT dev)
+  install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV-${CMAKE_ANDROID_ARCH_ABI}.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH} COMPONENT dev)
 endif(ANDROID)

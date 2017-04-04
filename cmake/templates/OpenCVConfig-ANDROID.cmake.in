@@ -4,7 +4,7 @@ set(OpenCV_ANDROID_NATIVE_API_LEVEL "@OpenCV_ANDROID_NATIVE_API_LEVEL_CONFIGCMAK
 # ==============================================================
 #  Check OpenCV availability
 # ==============================================================
-if(OpenCV_ANDROID_NATIVE_API_LEVEL GREATER ANDROID_NATIVE_API_LEVEL)
+if(OpenCV_ANDROID_NATIVE_API_LEVEL GREATER CMAKE_SYSTEM_VERSION)
   if(NOT OpenCV_FIND_QUIETLY)
     message(WARNING "Minimum required by OpenCV API level is android-${OpenCV_ANDROID_NATIVE_API_LEVEL}")
   endif()

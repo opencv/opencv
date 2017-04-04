@@ -110,10 +110,10 @@ macro(add_android_project target path)
   endforeach()
 
   # get compatible SDK target
-  android_get_compatible_target(android_proj_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${android_proj_SDK_TARGET})
+  android_get_compatible_target(android_proj_sdk_target ${CMAKE_SYSTEM_VERSION} ${android_proj_SDK_TARGET})
 
   if(NOT android_proj_sdk_target)
-    message(WARNING "Can not find any SDK target compatible with: ${ANDROID_NATIVE_API_LEVEL} ${android_proj_SDK_TARGET}
+    message(WARNING "Can not find any SDK target compatible with: ${CMAKE_SYSTEM_VERSION} ${android_proj_SDK_TARGET}
                      The project ${target} will not be build")
   endif()
 
@@ -128,7 +128,7 @@ macro(add_android_project target path)
     # find if native_app_glue is used
     file(STRINGS "${path}/jni/Android.mk" NATIVE_APP_GLUE REGEX ".*(call import-module,android/native_app_glue)" )
     if(NATIVE_APP_GLUE)
-      if(ANDROID_NATIVE_API_LEVEL LESS 9 OR NOT EXISTS "${ANDROID_NDK}/sources/android/native_app_glue")
+      if(CMAKE_SYSTEM_VERSION LESS 9 OR NOT EXISTS "${CMAKE_ANDROID_NDK}/sources/android/native_app_glue")
         set(OCV_DEPENDENCIES_FOUND FALSE)
       endif()
     endif()
@@ -185,8 +185,8 @@ macro(add_android_project target path)
 
       if(JNI_LIB_NAME)
         if(NATIVE_APP_GLUE)
-          include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
-          list(APPEND android_proj_jni_files ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
+          include_directories(${CMAKE_ANDROID_NDK}/sources/android/native_app_glue)
+          list(APPEND android_proj_jni_files ${CMAKE_ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
           ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes -Wunused-parameter -Wmissing-prototypes)
           set(android_proj_NATIVE_DEPS ${android_proj_NATIVE_DEPS} android)
         endif()
@@ -198,7 +198,7 @@ macro(add_android_project target path)
 
         set_target_properties(${JNI_LIB_NAME} PROPERTIES
             OUTPUT_NAME "${JNI_LIB_NAME}"
-            LIBRARY_OUTPUT_DIRECTORY "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}"
+            LIBRARY_OUTPUT_DIRECTORY "${android_proj_bin_dir}/libs/${CMAKE_ANDROID_ARCH_ABI}"
             )
 
         if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
