@@ -1005,7 +1005,7 @@ class JavaWrapperGenerator(object):
         type_dict["Ptr_"+name] = \
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "Ptr<"+classinfo.fullName(isCPP=True)+">(("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "jni_name" : "*((Ptr<"+classinfo.fullName(isCPP=True)+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
@@ -1575,7 +1575,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         # if parents are smart (we hope) then children are!
         # if not we believe the class is smart if it has "create" method
         ci.smart = False
-        if ci.base:
+        if ci.base or ci.name == 'Algorithm':
             ci.smart = True
         else:
             for fi in ci.methods:
