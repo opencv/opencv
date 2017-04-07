@@ -1235,7 +1235,7 @@ Mat _InputArray::getMat_(int i) const
         return (Mat)*((const MatExpr*)obj);
     }
 
-    if( k == MATX )
+    if( k == MATX || k == STD_ARRAY )
     {
         CV_Assert( i < 0 );
         return Mat(sz, flags, obj);
@@ -1381,7 +1381,7 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         return;
     }
 
-    if( k == MATX )
+    if( k == MATX || k == STD_ARRAY )
     {
         size_t n = sz.height, esz = CV_ELEM_SIZE(flags);
         mv.resize(n);
@@ -1584,7 +1584,7 @@ Size _InputArray::size(int i) const
         return ((const UMat*)obj)->size();
     }
 
-    if( k == MATX )
+    if( k == MATX || k == STD_ARRAY )
     {
         CV_Assert( i < 0 );
         return sz;
@@ -1789,7 +1789,7 @@ int _InputArray::dims(int i) const
         return ((const UMat*)obj)->dims;
     }
 
-    if( k == MATX )
+    if( k == MATX || k == STD_ARRAY )
     {
         CV_Assert( i < 0 );
         return 2;
@@ -1908,7 +1908,7 @@ int _InputArray::type(int i) const
     if( k == EXPR )
         return ((const MatExpr*)obj)->type();
 
-    if( k == MATX || k == STD_VECTOR || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
+    if( k == MATX || k == STD_VECTOR || k == STD_ARRAY || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return CV_MAT_TYPE(flags);
 
     if( k == NONE )
@@ -1986,7 +1986,7 @@ bool _InputArray::empty() const
     if( k == EXPR )
         return false;
 
-    if( k == MATX )
+    if( k == MATX || k == STD_ARRAY )
         return false;
 
     if( k == STD_VECTOR )
@@ -2051,7 +2051,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == UMAT )
         return i < 0 ? ((const UMat*)obj)->isContinuous() : true;
 
-    if( k == EXPR || k == MATX || k == STD_VECTOR ||
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == STD_ARRAY ||
         k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return true;
 
@@ -2086,7 +2086,7 @@ bool _InputArray::isSubmatrix(int i) const
     if( k == UMAT )
         return i < 0 ? ((const UMat*)obj)->isSubmatrix() : false;
 
-    if( k == EXPR || k == MATX || k == STD_VECTOR ||
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == STD_ARRAY ||
         k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return false;
 
@@ -2125,7 +2125,7 @@ size_t _InputArray::offset(int i) const
         return ((const UMat*)obj)->offset;
     }
 
-    if( k == EXPR || k == MATX || k == STD_VECTOR ||
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == STD_ARRAY ||
         k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return 0;
 
@@ -2180,7 +2180,7 @@ size_t _InputArray::step(int i) const
         return ((const UMat*)obj)->step;
     }
 
-    if( k == EXPR || k == MATX || k == STD_VECTOR ||
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == STD_ARRAY ||
         k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return 0;
 
@@ -2222,7 +2222,7 @@ void _InputArray::copyTo(const _OutputArray& arr) const
 
     if( k == NONE )
         arr.release();
-    else if( k == MAT || k == MATX || k == STD_VECTOR || k == STD_BOOL_VECTOR )
+    else if( k == MAT || k == MATX || k == STD_VECTOR || k == STD_ARRAY || k == STD_BOOL_VECTOR )
     {
         Mat m = getMat();
         m.copyTo(arr);
@@ -2247,7 +2247,7 @@ void _InputArray::copyTo(const _OutputArray& arr, const _InputArray & mask) cons
 
     if( k == NONE )
         arr.release();
-    else if( k == MAT || k == MATX || k == STD_VECTOR || k == STD_BOOL_VECTOR )
+    else if( k == MAT || k == MATX || k == STD_VECTOR || k == STD_ARRAY || k == STD_BOOL_VECTOR )
     {
         Mat m = getMat();
         m.copyTo(arr, mask);
@@ -2433,6 +2433,14 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
         CV_Assert( d == 2 && ((sizes[0] == sz.height && sizes[1] == sz.width) ||
                                  (allowTransposed && sizes[0] == sz.width && sizes[1] == sz.height)));
+        return;
+    }
+
+    if( k == STD_ARRAY )
+    {
+        int type0 = CV_MAT_TYPE(flags);
+        CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
+        CV_Assert( d == 2 && sz.area() == sizes[0]*sizes[1]);
         return;
     }
 
@@ -2807,7 +2815,7 @@ void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
 
     if( k == NONE )
         ;
-    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    else if( k == MAT || k == MATX || k == STD_VECTOR || k == STD_ARRAY )
     {
         Mat m = getMat();
         m.setTo(arr, mask);

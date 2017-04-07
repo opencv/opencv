@@ -1536,101 +1536,71 @@ TEST(Core_Mat_vector, copyTo_roi_row)
     EXPECT_EQ(5, (int)dst2[4]);
 }
 
-TEST(Mat, regression_5991)
+TEST(Core_Mat_array, outputArray_create_getMat)
 {
-    int sz[] = {2,3,2};
-    Mat mat(3, sz, CV_32F, Scalar(1));
-    ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
-    EXPECT_EQ(sz[0], mat.size[0]);
-    EXPECT_EQ(sz[1], mat.size[1]);
-    EXPECT_EQ(sz[2], mat.size[2]);
-    EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+    cv::Mat_<uchar> src_base(5, 1);
+    std::array<uchar, 5> dst8;
+
+    src_base << 1, 2, 3, 4, 5;
+
+    Mat src(src_base);
+    OutputArray _dst(dst8);
+
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
 }
 
-#ifdef OPENCV_TEST_BIGDATA
-TEST(Mat, regression_6696_BigData_8Gb)
+TEST(Core_Mat_array, copyTo_roi_column)
 {
-    int width = 60000;
-    int height = 10000;
+    cv::Mat_<uchar> src_base(5, 2);
 
-    Mat destImageBGR = Mat(height, width, CV_8UC3, Scalar(1, 2, 3, 0));
-    Mat destImageA = Mat(height, width, CV_8UC1, Scalar::all(4));
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
 
-    vector<Mat> planes;
-    split(destImageBGR, planes);
-    planes.push_back(destImageA);
-    merge(planes, destImageBGR);
+    Mat src_full(src_base);
+    Mat src(src_full.col(0));
 
-    EXPECT_EQ(1, destImageBGR.at<Vec4b>(0)[0]);
-    EXPECT_EQ(2, destImageBGR.at<Vec4b>(0)[1]);
-    EXPECT_EQ(3, destImageBGR.at<Vec4b>(0)[2]);
-    EXPECT_EQ(4, destImageBGR.at<Vec4b>(0)[3]);
-
-    EXPECT_EQ(1, destImageBGR.at<Vec4b>(height-1, width-1)[0]);
-    EXPECT_EQ(2, destImageBGR.at<Vec4b>(height-1, width-1)[1]);
-    EXPECT_EQ(3, destImageBGR.at<Vec4b>(height-1, width-1)[2]);
-    EXPECT_EQ(4, destImageBGR.at<Vec4b>(height-1, width-1)[3]);
-}
-#endif
-
-TEST(Reduce, regression_should_fail_bug_4594)
-{
-    cv::Mat src = cv::Mat::eye(4, 4, CV_8U);
-    std::vector<int> dst;
-
-    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MIN, CV_32S), cv::Exception);
-    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MAX, CV_32S), cv::Exception);
-    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
-    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
+    std::array<uchar, 5> dst1;
+    src.copyTo(dst1);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst1) << std::endl;
+    EXPECT_EQ((size_t)5, dst1.size());
+    EXPECT_EQ(1, (int)dst1[0]);
+    EXPECT_EQ(3, (int)dst1[1]);
+    EXPECT_EQ(5, (int)dst1[2]);
+    EXPECT_EQ(7, (int)dst1[3]);
+    EXPECT_EQ(9, (int)dst1[4]);
 }
 
-TEST(Mat, push_back_vector)
+TEST(Core_Mat_array, copyTo_roi_row)
 {
-    cv::Mat result(1, 5, CV_32FC1);
+    cv::Mat_<uchar> src_base(2, 5);
+    std::array<uchar, 5> dst1;
 
-    std::vector<float> vec1(result.cols + 1);
-    std::vector<int> vec2(result.cols);
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
 
-    EXPECT_THROW(result.push_back(vec1), cv::Exception);
-    EXPECT_THROW(result.push_back(vec2), cv::Exception);
+    Mat src_full(src_base);
+    Mat src(src_full.row(0));
+    OutputArray _dst(dst1);
+    {
+        _dst.create(5, 1, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(1, dst.cols);
+        EXPECT_EQ(5, dst.rows);
+    }
 
-    vec1.resize(result.cols);
-
-    for (int i = 0; i < 5; ++i)
-        result.push_back(cv::Mat(vec1).reshape(1, 1));
-
-    ASSERT_EQ(6, result.rows);
-}
-
-TEST(Mat, regression_5917_clone_empty)
-{
-    Mat cloned;
-    Mat_<Point2f> source(5, 0);
-
-    ASSERT_NO_THROW(cloned = source.clone());
-}
-
-TEST(Mat, regression_7873_mat_vector_initialize)
-{
-    std::vector<int> dims;
-    dims.push_back(12);
-    dims.push_back(3);
-    dims.push_back(2);
-    Mat multi_mat(dims, CV_32FC1, cv::Scalar(0));
-
-    ASSERT_EQ(3, multi_mat.dims);
-    ASSERT_EQ(12, multi_mat.size[0]);
-    ASSERT_EQ(3, multi_mat.size[1]);
-    ASSERT_EQ(2, multi_mat.size[2]);
-
-    std::vector<Range> ranges;
-    ranges.push_back(Range(1, 2));
-    ranges.push_back(Range::all());
-    ranges.push_back(Range::all());
-    Mat sub_mat = multi_mat(ranges);
-
-    ASSERT_EQ(3, sub_mat.dims);
-    ASSERT_EQ(1, sub_mat.size[0]);
-    ASSERT_EQ(3, sub_mat.size[1]);
-    ASSERT_EQ(2, sub_mat.size[2]);
+    std::array<uchar, 5> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(2, (int)dst2[1]);
+    EXPECT_EQ(3, (int)dst2[2]);
+    EXPECT_EQ(4, (int)dst2[3]);
+    EXPECT_EQ(5, (int)dst2[4]);
 }
