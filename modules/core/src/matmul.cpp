@@ -2551,7 +2551,7 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
 {
     CV_INSTRUMENT_REGION()
 
-    if(_src.kind() == _InputArray::STD_VECTOR_MAT)
+    if(_src.kind() == _InputArray::STD_VECTOR_MAT || _src.kind() == _InputArray::STD_ARRAY_MAT)
     {
         std::vector<cv::Mat> src;
         _src.getMatVector(src);

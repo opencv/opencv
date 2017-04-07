@@ -1704,4 +1704,25 @@ TEST(Core_Mat_array, copyTo_roi_row)
     EXPECT_EQ(4, (int)dst2[3]);
     EXPECT_EQ(5, (int)dst2[4]);
 }
+
+TEST(Core_Mat_array, SplitMerge)
+{
+    std::array<cv::Mat, 3> src;
+    for(size_t i=0; i<src.size(); ++i) {
+        src[i].create(10, 10, CV_8U);
+        src[i] = 127 * i;
+    }
+
+    Mat merged;
+    merge(src, merged);
+
+    std::array<cv::Mat, 3> dst;
+    split(merged, dst);
+
+    Mat diff;
+    for(size_t i=0; i<dst.size(); ++i) {
+        absdiff(src[i], dst[i], diff);
+        EXPECT_EQ(0, countNonZero(diff));
+    }
+}
 #endif

@@ -166,7 +166,8 @@ public:
         STD_VECTOR_UMAT   =11 << KIND_SHIFT,
         STD_BOOL_VECTOR   =12 << KIND_SHIFT,
         STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT,
-        STD_ARRAY         =14 << KIND_SHIFT
+        STD_ARRAY         =14 << KIND_SHIFT,
+        STD_ARRAY_MAT     =15 << KIND_SHIFT
     };
 
     _InputArray();
@@ -192,6 +193,7 @@ public:
 
 #ifdef CV_CXX_STD_ARRAY
     template<typename _Tp, std::size_t _N> _InputArray(const std::array<_Tp, _N>& arr);
+    template<std::size_t _N> _InputArray(const std::array<Mat, _N>& arr);
 #endif
 
     Mat getMat(int idx=-1) const;
@@ -231,7 +233,6 @@ public:
     bool isUMatVector() const;
     bool isMatx() const;
     bool isVector() const;
-    bool isArray() const;
     bool isGpuMatVector() const;
     ~_InputArray();
 
@@ -325,6 +326,8 @@ public:
 #ifdef CV_CXX_STD_ARRAY
     template<typename _Tp, std::size_t _N> _OutputArray(std::array<_Tp, _N>& arr);
     template<typename _Tp, std::size_t _N> _OutputArray(const std::array<_Tp, _N>& arr);
+    template<std::size_t _N> _OutputArray(std::array<Mat, _N>& arr);
+    template<std::size_t _N> _OutputArray(const std::array<Mat, _N>& arr);
 #endif
 
     bool fixedSize() const;
@@ -389,6 +392,8 @@ public:
 #ifdef CV_CXX_STD_ARRAY
     template<typename _Tp, std::size_t _N> _InputOutputArray(std::array<_Tp, _N>& arr);
     template<typename _Tp, std::size_t _N> _InputOutputArray(const std::array<_Tp, _N>& arr);
+    template<std::size_t _N> _InputOutputArray(std::array<Mat, _N>& arr);
+    template<std::size_t _N> _InputOutputArray(const std::array<Mat, _N>& arr);
 #endif
 
 };

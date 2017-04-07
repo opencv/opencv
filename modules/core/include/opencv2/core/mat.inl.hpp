@@ -81,6 +81,10 @@ _InputArray::_InputArray(const std::vector<_Tp>& vec)
 template<typename _Tp, std::size_t _N> inline
 _InputArray::_InputArray(const std::array<_Tp, _N>& arr)
 { init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_READ, arr.data(), Size(1, _N)); }
+
+template<std::size_t _N> inline
+_InputArray::_InputArray(const std::array<Mat, _N>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_READ, arr.data(), Size(1, _N)); }
 #endif
 
 inline
@@ -139,8 +143,9 @@ inline bool _InputArray::isUMat() const  { return kind() == _InputArray::UMAT; }
 inline bool _InputArray::isMatVector() const { return kind() == _InputArray::STD_VECTOR_MAT; }
 inline bool _InputArray::isUMatVector() const  { return kind() == _InputArray::STD_VECTOR_UMAT; }
 inline bool _InputArray::isMatx() const { return kind() == _InputArray::MATX; }
-inline bool _InputArray::isVector() const { return kind() == _InputArray::STD_VECTOR || kind() == _InputArray::STD_BOOL_VECTOR; }
-inline bool _InputArray::isArray() const { return kind() == _InputArray::STD_ARRAY; }
+inline bool _InputArray::isVector() const { return kind() == _InputArray::STD_VECTOR ||
+                                                   kind() == _InputArray::STD_BOOL_VECTOR ||
+                                                   kind() == _InputArray::STD_ARRAY; }
 inline bool _InputArray::isGpuMatVector() const { return kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT; }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -160,6 +165,10 @@ _OutputArray::_OutputArray(std::vector<_Tp>& vec)
 template<typename _Tp, std::size_t _N> inline
 _OutputArray::_OutputArray(std::array<_Tp, _N>& arr)
 { init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _N)); }
+
+template<std::size_t _N> inline
+_OutputArray::_OutputArray(std::array<Mat, _N>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _N)); }
 #endif
 
 inline
@@ -194,6 +203,10 @@ _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
 template<typename _Tp, std::size_t _N> inline
 _OutputArray::_OutputArray(const std::array<_Tp, _N>& arr)
 { init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _N)); }
+
+template<std::size_t _N> inline
+_OutputArray::_OutputArray(const std::array<Mat, _N>& arr)
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _N)); }
 #endif
 
 template<typename _Tp> inline
@@ -267,6 +280,10 @@ _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
 template<typename _Tp, std::size_t _N> inline
 _InputOutputArray::_InputOutputArray(std::array<_Tp, _N>& arr)
 { init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _N)); }
+
+template<std::size_t _N> inline
+_InputOutputArray::_InputOutputArray(std::array<Mat, _N>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _N)); }
 #endif
 
 inline _InputOutputArray::_InputOutputArray(std::vector<bool>&)
@@ -300,6 +317,10 @@ _InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
 template<typename _Tp, std::size_t _N> inline
 _InputOutputArray::_InputOutputArray(const std::array<_Tp, _N>& arr)
 { init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _N)); }
+
+template<std::size_t _N> inline
+_InputOutputArray::_InputOutputArray(const std::array<Mat, _N>& arr)
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _N)); }
 #endif
 
 template<typename _Tp> inline

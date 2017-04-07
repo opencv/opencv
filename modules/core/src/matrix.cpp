@@ -1286,6 +1286,14 @@ Mat _InputArray::getMat_(int i) const
         return v[i];
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* v = (const Mat*)obj;
+        CV_Assert( 0 <= i && i < sz.height );
+
+        return v[i];
+    }
+
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
@@ -1436,6 +1444,17 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         return;
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* v = (const Mat*)obj;
+        size_t n = sz.height;
+        mv.resize(n);
+
+        for( size_t i = 0; i < n; i++ )
+            mv[i] = v[i];
+        return;
+    }
+
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
@@ -1465,6 +1484,17 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
         size_t n = v.size();
+        umv.resize(n);
+
+        for( size_t i = 0; i < n; i++ )
+            umv[i] = v[i].getUMat(accessFlags);
+        return;
+    }
+
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* v = (const Mat*)obj;
+        size_t n = sz.height;
         umv.resize(n);
 
         for( size_t i = 0; i < n; i++ )
@@ -1631,6 +1661,16 @@ Size _InputArray::size(int i) const
         return vv[i].size();
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* vv = (const Mat*)obj;
+        if( i < 0 )
+            return sz.height==0 ? Size() : Size(sz.height, 1);
+        CV_Assert( i < sz.height );
+
+        return vv[i].size();
+    }
+
     if (k == STD_VECTOR_CUDA_GPU_MAT)
     {
         const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
@@ -1703,6 +1743,16 @@ int _InputArray::sizend(int* arrsz, int i) const
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
         CV_Assert( i < (int)vv.size() );
+        const Mat& m = vv[i];
+        d = m.dims;
+        if(arrsz)
+            for(j = 0; j < d; j++)
+                arrsz[j] = m.size.p[j];
+    }
+    else if( k == STD_ARRAY_MAT && i >= 0 )
+    {
+        const Mat* vv = (const Mat*)obj;
+        CV_Assert( i < sz.height );
         const Mat& m = vv[i];
         d = m.dims;
         if(arrsz)
@@ -1823,6 +1873,16 @@ int _InputArray::dims(int i) const
         return vv[i].dims;
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* vv = (const Mat*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < sz.height );
+
+        return vv[i].dims;
+    }
+
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
@@ -1881,6 +1941,15 @@ size_t _InputArray::total(int i) const
         return vv[i].total();
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* vv = (const Mat*)obj;
+        if( i < 0 )
+            return sz.height;
+
+        CV_Assert( i < sz.height );
+        return vv[i].total();
+    }
 
     if( k == STD_VECTOR_UMAT )
     {
@@ -1935,6 +2004,18 @@ int _InputArray::type(int i) const
             return CV_MAT_TYPE(flags);
         }
         CV_Assert( i < (int)vv.size() );
+        return vv[i >= 0 ? i : 0].type();
+    }
+
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* vv = (const Mat*)obj;
+        if( sz.height == 0 )
+        {
+            CV_Assert((flags & FIXED_TYPE) != 0);
+            return CV_MAT_TYPE(flags);
+        }
+        CV_Assert( i < sz.height );
         return vv[i >= 0 ? i : 0].type();
     }
 
@@ -2016,6 +2097,11 @@ bool _InputArray::empty() const
         return vv.empty();
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        return sz.height == 0;
+    }
+
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
@@ -2062,6 +2148,13 @@ bool _InputArray::isContinuous(int i) const
         return vv[i].isContinuous();
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* vv = (const Mat*)obj;
+        CV_Assert(i < sz.height);
+        return vv[i].isContinuous();
+    }
+
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
@@ -2094,6 +2187,13 @@ bool _InputArray::isSubmatrix(int i) const
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
         CV_Assert((size_t)i < vv.size());
+        return vv[i].isSubmatrix();
+    }
+
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* vv = (const Mat*)obj;
+        CV_Assert(i < sz.height);
         return vv[i].isSubmatrix();
     }
 
@@ -2136,6 +2236,15 @@ size_t _InputArray::offset(int i) const
             return 1;
         CV_Assert( i < (int)vv.size() );
 
+        return (size_t)(vv[i].ptr() - vv[i].datastart);
+    }
+
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* vv = (const Mat*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < sz.height );
         return (size_t)(vv[i].ptr() - vv[i].datastart);
     }
 
@@ -2190,6 +2299,15 @@ size_t _InputArray::step(int i) const
         if( i < 0 )
             return 1;
         CV_Assert( i < (int)vv.size() );
+        return vv[i].step;
+    }
+
+    if( k == STD_ARRAY_MAT )
+    {
+        const Mat* vv = (const Mat*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < sz.height );
         return vv[i].step;
     }
 
@@ -2591,6 +2709,65 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         return;
     }
 
+    if( k == STD_ARRAY_MAT )
+    {
+        Mat* v = (Mat*)obj;
+
+        if( i < 0 )
+        {
+            CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
+            size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0, len0 = sz.height;
+
+            CV_Assert(len == len0);
+            if( fixedType() )
+            {
+                int _type = CV_MAT_TYPE(flags);
+                for( size_t j = len0; j < len; j++ )
+                {
+                    if( v[j].type() == _type )
+                        continue;
+                    CV_Assert( v[j].empty() );
+                    v[j].flags = (v[j].flags & ~CV_MAT_TYPE_MASK) | _type;
+                }
+            }
+            return;
+        }
+
+        CV_Assert( i < sz.height );
+        Mat& m = v[i];
+
+        if( allowTransposed )
+        {
+            if( !m.isContinuous() )
+            {
+                CV_Assert(!fixedType() && !fixedSize());
+                m.release();
+            }
+
+            if( d == 2 && m.dims == 2 && m.data &&
+                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
+                return;
+        }
+
+        if(fixedType())
+        {
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+                mtype = m.type();
+            else
+                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
+        }
+
+        if(fixedSize())
+        {
+            CV_Assert(m.dims == d);
+            for(int j = 0; j < d; ++j)
+                CV_Assert(m.size[j] == sizes[j]);
+        }
+
+        m.create(d, sizes, mtype);
+        return;
+    }
+
     if( k == STD_VECTOR_UMAT )
     {
         std::vector<UMat>& v = *(std::vector<UMat>*)obj;
@@ -2756,11 +2933,19 @@ Mat& _OutputArray::getMatRef(int i) const
         CV_Assert( k == MAT );
         return *(Mat*)obj;
     }
-    else
+
+    CV_Assert( k == STD_VECTOR_MAT || k == STD_ARRAY_MAT );
+
+    if( k == STD_VECTOR_MAT )
     {
-        CV_Assert( k == STD_VECTOR_MAT );
         std::vector<Mat>& v = *(std::vector<Mat>*)obj;
         CV_Assert( i < (int)v.size() );
+        return v[i];
+    }
+    else
+    {
+        Mat* v = (Mat*)obj;
+        CV_Assert( 0 <= i && i < sz.height );
         return v[i];
     }
 }
