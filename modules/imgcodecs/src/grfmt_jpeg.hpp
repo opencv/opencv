@@ -60,6 +60,8 @@ public:
     JpegDecoder();
     virtual ~JpegDecoder();
 
+    ImageOrientation orientation() const { return m_orientation; }
+
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
@@ -70,6 +72,7 @@ protected:
 
     FILE* m_f;
     void* m_state;
+    ImageOrientation m_orientation;
 };
 
 

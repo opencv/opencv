@@ -119,6 +119,24 @@ enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
      };
 
+/**
+ * @brief Picture orientation which may be taken from EXIF
+ *      Orientation usually matters when the picture is taken by
+ *      smartphone or other camera with orientation sensor support
+ *      Corresponds to EXIF 2.3 Specification
+ */
+enum ImageOrientation
+{
+    IMAGE_ORIENTATION_TL = 1, ///< Horizontal (normal)
+    IMAGE_ORIENTATION_TR = 2, ///< Mirrored horizontal
+    IMAGE_ORIENTATION_BR = 3, ///< Rotate 180
+    IMAGE_ORIENTATION_BL = 4, ///< Mirrored vertical
+    IMAGE_ORIENTATION_LT = 5, ///< Mirrored horizontal & rotate 270 CW
+    IMAGE_ORIENTATION_RT = 6, ///< Rotate 90 CW
+    IMAGE_ORIENTATION_RB = 7, ///< Mirrored horizontal & rotate 90 CW
+    IMAGE_ORIENTATION_LB = 8  ///< Rotate 270 CW
+};
+
 /** @brief Decodes an image so that it can be rendered as pixels
  *
  * This class should not be constructed directly. Instead, use
@@ -149,6 +167,10 @@ public:
     /** Get image pixel data type. Only returns successfully after readHeader() has been called.
      */
     CV_WRAP virtual int type() const = 0;
+
+    /** Get the image's orientation, as set by its metadata, if any
+     */
+    CV_WRAP virtual ImageOrientation orientation() const = 0;
 
     /** Set decoder to decode file with filename. Returns true on success
      */
@@ -242,6 +264,11 @@ CV_EXPORTS_W Ptr<ImageDecoder> findDecoder( const Mat& buf );
 */
 CV_EXPORTS_W Ptr<ImageEncoder> findEncoder( const String& _ext );
 
+/** @brief Applies the orientation transform specified by orientation
+ * @param[in] orientation a valid orientation value
+ * @param[in] img a Mat containing an image to orient
+*/
+CV_EXPORTS_W void OrientationTransform(ImageOrientation orientation, Mat& img);
 
 /** @brief Loads an image from a file.
 
