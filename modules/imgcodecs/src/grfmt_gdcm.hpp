@@ -59,7 +59,7 @@ public:
     DICOMDecoder();
     bool  readData( Mat& img );
     bool  readHeader();
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder> newDecoder() const;
     virtual bool checkSignature( const String& signature ) const;
 };
 

@@ -64,7 +64,7 @@ public:
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder> newDecoder() const;
 
 protected:
 
@@ -80,7 +80,7 @@ public:
     virtual ~JpegEncoder();
 
     bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder> newEncoder() const;
 };
 
 }

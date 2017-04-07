@@ -324,6 +324,7 @@ PAMDecoder::PAMDecoder()
     m_buf_supported = true;
     bit_mode = false;
     selected_fmt = CV_IMWRITE_PAM_FORMAT_NULL;
+    m_description = "PAM";
 }
 
 
@@ -344,7 +345,7 @@ bool PAMDecoder::checkSignature( const String& signature ) const
            isspace(signature[2]);
 }
 
-ImageDecoder PAMDecoder::newDecoder() const
+Ptr<ImageDecoder> PAMDecoder::newDecoder() const
 {
     return makePtr<PAMDecoder>();
 }
@@ -485,6 +486,12 @@ bool  PAMDecoder::readData( Mat& img )
     PaletteEntry palette[256];
     const struct pam_format *fmt = NULL;
     struct channel_layout layout;
+
+    int dst_type = CV_MAKETYPE( img.depth(), target_channels );
+    if( !checkDest( img, dst_type ) )
+    {
+        return false;
+    }
 
     /* setting buffer to max data size so scaling up is possible */
     AutoBuffer<uchar> _src(src_elems_per_row * 2);
@@ -631,7 +638,7 @@ PAMEncoder::~PAMEncoder()
 }
 
 
-ImageEncoder PAMEncoder::newEncoder() const
+Ptr<ImageEncoder> PAMEncoder::newEncoder() const
 {
     return makePtr<PAMEncoder>();
 }

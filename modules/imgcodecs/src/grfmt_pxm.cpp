@@ -94,6 +94,7 @@ PxMDecoder::PxMDecoder()
 {
     m_offset = -1;
     m_buf_supported = true;
+    m_description = "PXM";
 }
 
 
@@ -114,7 +115,7 @@ bool PxMDecoder::checkSignature( const String& signature ) const
            isspace(signature[2]);
 }
 
-ImageDecoder PxMDecoder::newDecoder() const
+Ptr<ImageDecoder> PxMDecoder::newDecoder() const
 {
     return makePtr<PxMDecoder>();
 }
@@ -197,6 +198,13 @@ bool  PxMDecoder::readData( Mat& img )
     int  nch = CV_MAT_CN(m_type);
     int  width3 = m_width*nch;
     int  i, x, y;
+
+    int dst_width = color ? 3 : 1;
+    int dst_type = CV_MAKE_TYPE( img.depth(), dst_width );
+    if( !checkDest( img, dst_type ) )
+    {
+        return false;
+    }
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
@@ -354,7 +362,7 @@ PxMEncoder::~PxMEncoder()
 }
 
 
-ImageEncoder  PxMEncoder::newEncoder() const
+Ptr<ImageEncoder>  PxMEncoder::newEncoder() const
 {
     return makePtr<PxMEncoder>();
 }

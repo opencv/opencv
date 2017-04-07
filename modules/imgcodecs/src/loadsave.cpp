@@ -160,8 +160,8 @@ struct ImageCodecInitializer
         encoders.push_back( makePtr<PAMEncoder>() );
     }
 
-    std::vector<ImageDecoder> decoders;
-    std::vector<ImageEncoder> encoders;
+    std::vector<Ptr<BaseImageDecoder> > decoders;
+    std::vector<Ptr<BaseImageEncoder> > encoders;
 };
 
 static ImageCodecInitializer codecs;
@@ -173,7 +173,7 @@ static ImageCodecInitializer codecs;
  *
  * @return Image decoder to parse image file.
 */
-static ImageDecoder findDecoder( const String& filename ) {
+Ptr<ImageDecoder> findDecoder( const String& filename ) {
 
     size_t i, maxlen = 0;
 
@@ -189,7 +189,7 @@ static ImageDecoder findDecoder( const String& filename ) {
 
     /// in the event of a failure, return an empty image decoder
     if( !f )
-        return ImageDecoder();
+        return Ptr<BaseImageDecoder>();
 
     // read the file signature
     String signature(maxlen, ' ');
@@ -205,15 +205,15 @@ static ImageDecoder findDecoder( const String& filename ) {
     }
 
     /// If no decoder was found, return base type
-    return ImageDecoder();
+    return Ptr<BaseImageDecoder>();
 }
 
-static ImageDecoder findDecoder( const Mat& buf )
+Ptr<ImageDecoder> findDecoder( const Mat& buf )
 {
     size_t i, maxlen = 0;
 
     if( buf.rows*buf.cols < 1 || !buf.isContinuous() )
-        return ImageDecoder();
+        return Ptr<ImageDecoder>();
 
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
@@ -232,17 +232,17 @@ static ImageDecoder findDecoder( const Mat& buf )
             return codecs.decoders[i]->newDecoder();
     }
 
-    return ImageDecoder();
+    return Ptr<ImageDecoder>();
 }
 
-static ImageEncoder findEncoder( const String& _ext )
+Ptr<ImageEncoder> findEncoder( const String& _ext )
 {
     if( _ext.size() <= 1 )
-        return ImageEncoder();
+        return Ptr<ImageEncoder>();
 
     const char* ext = strrchr( _ext.c_str(), '.' );
     if( !ext )
-        return ImageEncoder();
+        return Ptr<ImageEncoder>();
     int len = 0;
     for( ext++; len < 128 && isalnum(ext[len]); len++ )
         ;
@@ -271,7 +271,7 @@ static ImageEncoder findEncoder( const String& _ext )
         }
     }
 
-    return ImageEncoder();
+    return Ptr<ImageEncoder>();
 }
 
 
@@ -379,7 +379,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     Mat temp, *data = &temp;
 
     /// Search for the relevant decoder to handle the imagery
-    ImageDecoder decoder;
+    Ptr<ImageDecoder> decoder;
 
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
@@ -487,7 +487,7 @@ static bool
 imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
 {
     /// Search for the relevant decoder to handle the imagery
-    ImageDecoder decoder;
+    Ptr<ImageDecoder> decoder;
 
 #ifdef HAVE_GDAL
     if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL){
@@ -600,7 +600,7 @@ static bool imwrite_( const String& filename, const Mat& image,
 
     CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
 
-    ImageEncoder encoder = findEncoder( filename );
+    Ptr<ImageEncoder> encoder = findEncoder( filename );
     if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
     if( !encoder->isFormatSupported(image.depth()) )
@@ -639,7 +639,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     Mat temp, *data = &temp;
     String filename;
 
-    ImageDecoder decoder = findDecoder(buf);
+    Ptr<ImageDecoder> decoder = findDecoder(buf);
     if( !decoder )
         return 0;
 
@@ -765,7 +765,7 @@ bool imencode( const String& ext, InputArray _image,
     int channels = image.channels();
     CV_Assert( channels == 1 || channels == 3 || channels == 4 );
 
-    ImageEncoder encoder = findEncoder( ext );
+    Ptr<ImageEncoder> encoder = findEncoder( ext );
     if( !encoder )
         CV_Error( CV_StsError, "could not find encoder for the specified extension" );
 
@@ -816,13 +816,13 @@ bool imencode( const String& ext, InputArray _image,
 CV_IMPL int
 cvHaveImageReader( const char* filename )
 {
-    cv::ImageDecoder decoder = cv::findDecoder(filename);
+    cv::Ptr<cv::ImageDecoder> decoder = cv::findDecoder(filename);
     return !decoder.empty();
 }
 
 CV_IMPL int cvHaveImageWriter( const char* filename )
 {
-    cv::ImageEncoder encoder = cv::findEncoder(filename);
+    cv::Ptr<cv::ImageEncoder> encoder = cv::findEncoder(filename);
     return !encoder.empty();
 }
 

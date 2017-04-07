@@ -75,6 +75,7 @@ TiffDecoder::TiffDecoder()
         TIFFSetWarningHandler( GrFmtSilentTIFFErrorHandler );
     }
     m_hdr = false;
+    m_description = "TIFF";
 }
 
 
@@ -110,7 +111,7 @@ int TiffDecoder::normalizeChannelsNumber(int channels) const
     return channels > 4 ? 4 : channels;
 }
 
-ImageDecoder TiffDecoder::newDecoder() const
+Ptr<ImageDecoder> TiffDecoder::newDecoder() const
 {
     return makePtr<TiffDecoder>();
 }
@@ -221,6 +222,13 @@ bool  TiffDecoder::readData( Mat& img )
         const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         int wanted_channels = normalizeChannelsNumber(img.channels());
+
+        int dst_type = CV_MAKE_TYPE( img.depth(), wanted_channels );
+        if( !checkDest( img, dst_type ) )
+        {
+            close();
+            return false;
+        }
 
         if(dst_bpp == 8)
         {
@@ -483,7 +491,7 @@ TiffEncoder::~TiffEncoder()
 {
 }
 
-ImageEncoder TiffEncoder::newEncoder() const
+Ptr<ImageEncoder> TiffEncoder::newEncoder() const
 {
     return makePtr<TiffEncoder>();
 }

@@ -62,7 +62,7 @@ public:
 
     size_t signatureLength() const;
     bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder> newDecoder() const;
 
 protected:
 
@@ -84,7 +84,7 @@ public:
     bool  isFormatSupported( int depth ) const;
     bool  write( const Mat& img, const std::vector<int>& params );
 
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder> newEncoder() const;
 };
 
 }

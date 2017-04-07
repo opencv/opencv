@@ -91,6 +91,7 @@ PngDecoder::PngDecoder()
     m_f = 0;
     m_buf_supported = true;
     m_buf_pos = 0;
+    m_description = "PNG";
 }
 
 
@@ -99,7 +100,7 @@ PngDecoder::~PngDecoder()
     close();
 }
 
-ImageDecoder PngDecoder::newDecoder() const
+Ptr<ImageDecoder> PngDecoder::newDecoder() const
 {
     return makePtr<PngDecoder>();
 }
@@ -227,7 +228,19 @@ bool  PngDecoder::readData( Mat& img )
     uchar** buffer = _buffer;
     int color = img.channels() > 1;
 
-    if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
+    int dst_type;
+    if( img.channels() == 1 )
+    {
+        dst_type = CV_MAKETYPE( img.depth(), 1 );
+    } else if( img.channels() == 4 )
+    {
+        dst_type = CV_MAKETYPE( img.depth(), 4 );
+    } else
+    {
+        dst_type = CV_MAKETYPE( img.depth(), 3 );
+    }
+
+    if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height && checkDest( img, dst_type ) )
     {
         png_structp png_ptr = (png_structp)m_png_ptr;
         png_infop info_ptr = (png_infop)m_info_ptr;
@@ -312,7 +325,7 @@ bool  PngEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U || depth == CV_16U;
 }
 
-ImageEncoder PngEncoder::newEncoder() const
+Ptr<ImageEncoder> PngEncoder::newEncoder() const
 {
     return makePtr<PngEncoder>();
 }

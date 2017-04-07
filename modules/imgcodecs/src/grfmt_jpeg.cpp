@@ -177,6 +177,7 @@ JpegDecoder::JpegDecoder()
     m_state = 0;
     m_f = 0;
     m_buf_supported = true;
+    m_description = "JPEG";
 }
 
 
@@ -206,7 +207,7 @@ void  JpegDecoder::close()
     m_type = -1;
 }
 
-ImageDecoder JpegDecoder::newDecoder() const
+Ptr<ImageDecoder> JpegDecoder::newDecoder() const
 {
     return makePtr<JpegDecoder>();
 }
@@ -398,8 +399,9 @@ bool  JpegDecoder::readData( Mat& img )
     volatile bool result = false;
     int step = (int)img.step;
     bool color = img.channels() > 1;
+    int dst_type = color ? CV_8UC3 : CV_8UC1;
 
-    if( m_state && m_width && m_height )
+    if( m_state && m_width && m_height && checkDest( img, dst_type ) )
     {
         jpeg_decompress_struct* cinfo = &((JpegState*)m_state)->cinfo;
         JpegErrorMgr* jerr = &((JpegState*)m_state)->jerr;
@@ -542,7 +544,7 @@ JpegEncoder::~JpegEncoder()
 {
 }
 
-ImageEncoder JpegEncoder::newEncoder() const
+Ptr<ImageEncoder> JpegEncoder::newEncoder() const
 {
     return makePtr<JpegEncoder>();
 }
