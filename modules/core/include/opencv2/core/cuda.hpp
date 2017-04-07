@@ -595,7 +595,8 @@ private:
 /** @brief Returns the number of installed CUDA-enabled devices.
 
 Use this function before any other CUDA functions calls. If OpenCV is compiled without CUDA support,
-this function returns 0.
+this function returns 0. If the CUDA driver is not installed, or is incompatible, this function
+returns -1.
  */
 CV_EXPORTS int getCudaEnabledDeviceCount();
 
