@@ -364,6 +364,21 @@ Cv64suf;
 #  endif
 #endif
 
+/****************************************************************************************\
+*                                    C++11 std::array                                    *
+\****************************************************************************************/
+
+#ifndef CV_CXX_STD_ARRAY
+#  if __cplusplus >= 201103L
+#    define CV_CXX_STD_ARRAY 1
+#    include <array>
+#  endif
+#else
+#  if CV_CXX_STD_ARRAY == 0
+#    undef CV_CXX_STD_ARRAY
+#  endif
+#endif
+
 //! @}
 
 #endif // OPENCV_CORE_CVDEF_H
