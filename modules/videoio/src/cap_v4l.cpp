@@ -1991,10 +1991,12 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 	/* two subsequent calls setting WIDTH and HEIGHT will change
        the video size */
 
+
 	switch (property_id) {
 	case CV_CAP_PROP_FRAME_WIDTH:
 		width = cvRound(value);
-		if(width !=0 && height != 0) {
+		if(width !=0 && height != 0) 
+    {
 			capture->width = width;
 			capture->height = height;
 			retval = v4l2_reset(capture);
@@ -2003,7 +2005,8 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 		break;
 	case CV_CAP_PROP_FRAME_HEIGHT:
 		height = cvRound(value);
-		if(width !=0 && height != 0) {
+		if(width !=0 && height != 0) 
+    {
 			capture->width = width;
 			capture->height = height;
 			retval = v4l2_reset(capture);
@@ -2025,9 +2028,12 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 		__u32 old_palette = capture->palette;
 		__u32 new_palette = static_cast<__u32>(value);
 		capture->palette = new_palette;
-		if (v4l2_reset(capture)) {
+		if (v4l2_reset(capture)) 
+    {
 			retval = true;
-		} else {
+		}
+    else 
+    {
 			capture->palette = old_palette;
 			v4l2_reset(capture);
 			retval = false;
@@ -2036,10 +2042,7 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 	break;
 
 	case CV_CAP_PROP_STREAM:
-
-
-
-		stream_format=int(value);
+    stream_format=int(value);
 		printf("stream_prop %d\n",stream_format);
 
 		retval = true;
@@ -2076,6 +2079,65 @@ static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
 
 	/* return the the status */
 	return retval;
+
+    switch (property_id) {
+    case CV_CAP_PROP_FRAME_WIDTH:
+        width = cvRound(value);
+        retval = width != 0;
+        if(width !=0 && height != 0) 
+        {
+            capture->width = width;
+            capture->height = height;
+            retval = v4l2_reset(capture);
+            width = height = 0;
+        }
+        break;
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        height = cvRound(value);
+        retval = height != 0;
+        if(width !=0 && height != 0) 
+        {
+            capture->width = width;
+            capture->height = height;
+            retval = v4l2_reset(capture);
+            width = height = 0;
+        }
+        break;
+    case CV_CAP_PROP_FPS:
+        capture->fps = value;
+        retval = v4l2_reset(capture);
+        break;
+    case CV_CAP_PROP_CONVERT_RGB:
+        // returns "0" for formats we do not know how to map to IplImage
+        possible = v4l2_num_channels(capture->palette);
+        capture->convert_rgb = bool(value) && possible;
+        retval = possible || !bool(value);
+        break;
+    case CV_CAP_PROP_FOURCC:
+        {
+            __u32 old_palette = capture->palette;
+            __u32 new_palette = static_cast<__u32>(value);
+            capture->palette = new_palette;
+            if (v4l2_reset(capture)) 
+            {
+                retval = true;
+            } 
+            else 
+            {
+                capture->palette = old_palette;
+                v4l2_reset(capture);
+                retval = false;
+            }
+        }
+        break;
+    default:
+        retval = icvSetControl(capture, property_id, value);
+        break;
+    }
+
+    /* return the the status */
+    return retval;
+
 }
 
 static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){

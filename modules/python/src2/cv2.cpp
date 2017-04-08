@@ -1271,9 +1271,19 @@ PyObject* pyopencv_from(const Moments& m)
                          "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
 }
 
+template<typename T>
+PyObject* pyopencv_from(const cv::Ptr<T>& p)
+{
+    if (!p)
+        Py_RETURN_NONE;
+    return pyopencv_from(*p);
+}
+
 template <typename T>
 bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
 {
+    if (!o || o == Py_None)
+        return true;
     p = makePtr<T>();
     return pyopencv_to(o, *p, name);
 }
