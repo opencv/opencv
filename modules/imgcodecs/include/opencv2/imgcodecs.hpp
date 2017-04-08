@@ -170,7 +170,7 @@ public:
 
     /** Get the image's orientation, as set by its metadata, if any
      */
-    CV_WRAP virtual ImageOrientation orientation() const = 0;
+    CV_WRAP virtual int orientation() const = 0;
 
     /** Set decoder to decode file with filename. Returns true on success
      */
@@ -268,7 +268,7 @@ CV_EXPORTS_W Ptr<ImageEncoder> findEncoder( const String& _ext );
  * @param[in] orientation a valid orientation value
  * @param[in] img a Mat containing an image to orient
 */
-CV_EXPORTS_W void OrientationTransform(ImageOrientation orientation, Mat& img);
+CV_EXPORTS_W void OrientationTransform(int orientation, Mat& img);
 
 /** @brief Loads an image from a file.
 

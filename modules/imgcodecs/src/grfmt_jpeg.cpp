@@ -315,7 +315,7 @@ bool  JpegDecoder::readHeader()
            ExifEntry_t entry = reader.getTag( ORIENTATION );
            if (entry.tag != INVALID_TAG)
            {
-               m_orientation = ImageOrientation(entry.field_u16); //orientation is unsigned short, so check field_u16
+               m_orientation = int(entry.field_u16); //orientation is unsigned short, so check field_u16
            }
        }
     }
@@ -328,7 +328,7 @@ bool  JpegDecoder::readHeader()
            ExifEntry_t entry = reader.getTag( ORIENTATION );
            if (entry.tag != INVALID_TAG)
            {
-               m_orientation = ImageOrientation(entry.field_u16); //orientation is unsigned short, so check field_u16
+               m_orientation = int(entry.field_u16); //orientation is unsigned short, so check field_u16
            }
        }
        stream.close();

@@ -231,7 +231,7 @@ Ptr<ImageEncoder> findEncoder( const String& _ext )
 
 enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
 
-void OrientationTransform(ImageOrientation orientation, Mat& img)
+void OrientationTransform(int orientation, Mat& img)
 {
     switch( orientation )
     {
@@ -581,7 +581,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     CvSize size;
     size.width = decoder->width();
     size.height = decoder->height();
-    ImageOrientation orientation = decoder->orientation();
+    int orientation = decoder->orientation();
 
     int type = decoder->type();
     if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
