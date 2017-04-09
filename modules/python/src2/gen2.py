@@ -452,7 +452,7 @@ class FuncVariant(object):
             if a.tp in ignored_arg_types:
                 continue
             if a.returnarg:
-                outlist.append((a.name, argno))
+                outlist.append((a.name, argno, a.tp))
             if (not a.inputarg) and a.isbig():
                 outarr_list.append((a.name, argno))
                 continue
@@ -480,10 +480,10 @@ class FuncVariant(object):
         argstr = "[, ".join([argstr] + argnamelist[firstoptarg:])
         argstr += "]" * noptargs
         if self.rettype:
-            outlist = [("retval", -1)] + outlist
+            outlist = [("retval", -1, self.rettype)] + outlist
         elif self.isconstructor:
             assert outlist == []
-            outlist = [("self", -1)]
+            outlist = [("self", -1, self.classname)]
         if self.isconstructor:
             classname = self.classname
             if classname.startswith("Cv"):
@@ -499,7 +499,7 @@ class FuncVariant(object):
         self.py_arglist = arglist
         for aname, argno in arglist:
             self.args[argno].py_inputarg = True
-        for aname, argno in outlist:
+        for aname, argno, atype in outlist:
             if argno >= 0:
                 self.args[argno].py_outputarg = True
         self.py_outlist = outlist
@@ -599,7 +599,7 @@ class FuncInfo(object):
                 if a.tp in ignored_arg_types:
                     defval = a.defval
                     if not defval and a.tp.endswith("*"):
-                        defval = 0
+                        defval = "0"
                     assert defval
                     if not code_args.endswith("("):
                         code_args += ", "
@@ -610,11 +610,8 @@ class FuncInfo(object):
                 amp = ""
                 defval0 = ""
                 if tp.endswith("*"):
-                    tp = tp1 = tp[:-1]
-                    amp = "&"
-                    if tp.endswith("*"):
-                        defval0 = "0"
-                        tp1 = tp.replace("*", "_ptr")
+                    defval0 = "0"
+                    tp1 = tp.replace("*", "_ptr")
                 if tp1.endswith("*"):
                     print("Error: type with star: a.tp=%s, tp=%s, tp1=%s" % (a.tp, tp, tp1))
                     sys.exit(-1)
@@ -628,7 +625,8 @@ class FuncInfo(object):
                         if a.tp == 'char':
                             code_cvt_list.append("convert_to_char(pyobj_%s, &%s, %s)"% (a.name, a.name, a.crepr()))
                         else:
-                            code_cvt_list.append("pyopencv_to(pyobj_%s, %s, %s)" % (a.name, a.name, a.crepr()))
+                            code_cvt_list.append("pyopencv_to%s(pyobj_%s, %s, %s)" % (
+                                '_ptr' if a.tp.endswith("*") else '', a.name, a.name, a.crepr()))
 
                 all_cargs.append([amapping, parse_name])
 
@@ -642,10 +640,10 @@ class FuncInfo(object):
                 # "tp arg = tp();" is equivalent to "tp arg;" in the case of complex types
                 if defval == tp + "()" and amapping[1] == "O":
                     defval = ""
-                if a.outputarg and not a.inputarg:
+                if a.outputarg and not a.inputarg and not amapping[0].endswith("*"):
                     defval = ""
                 if defval:
-                    code_decl += "    %s %s=%s;\n" % (amapping[0], a.name, defval)
+                    code_decl += "    %s %s = %s;\n" % (amapping[0], a.name, defval)
                 else:
                     code_decl += "    %s %s;\n" % (amapping[0], a.name)
 
@@ -682,7 +680,7 @@ class FuncInfo(object):
                 code_cvt_list = [""] + code_cvt_list
 
             # add info about return value, if any, to all_cargs. if there non-void return value,
-            # it is encoded in v.py_outlist as ("retval", -1) pair.
+            # it is encoded in v.py_outlist as ("retval", -1, rettype) triple.
             # As [-1] in Python accesses the last element of a list, we automatically handle the return value by
             # adding the necessary info to the end of all_cargs list.
             if v.rettype:
@@ -716,17 +714,20 @@ class FuncInfo(object):
                 if self.isconstructor:
                     code_ret = "return (PyObject*)self"
                 else:
-                    aname, argno = v.py_outlist[0]
-                    code_ret = "return pyopencv_from(%s)" % (aname,)
+                    aname, argno, atype = v.py_outlist[0]
+                    code_ret = "return pyopencv_from%s(%s)" % (
+                        '_ptr' if atype.endswith("*") else '', aname,)
             else:
                 # ther is more than 1 return parameter; form the tuple out of them
                 fmtspec = "N"*len(v.py_outlist)
                 backcvt_arg_list = []
-                for aname, argno in v.py_outlist:
+                for aname, argno, atype in v.py_outlist:
                     amapping = all_cargs[argno][0]
                     backcvt_arg_list.append("%s(%s)" % (amapping[2], aname))
                 code_ret = "return Py_BuildValue(\"(%s)\", %s)" % \
-                    (fmtspec, ", ".join(["pyopencv_from(" + aname + ")" for aname, argno in v.py_outlist]))
+                    (fmtspec, ", ".join(["pyopencv_from%s(%s)" % (
+                        '_ptr' if atype.endswith("*") else '', aname
+                    ) for aname, argno, atype in v.py_outlist]))
 
             all_code_variants.append(gen_template_func_body.substitute(code_decl=code_decl,
                 code_parse=code_parse, code_prelude=code_prelude, code_fcall=code_fcall, code_ret=code_ret))
