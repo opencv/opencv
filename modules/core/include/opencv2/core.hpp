@@ -2762,7 +2762,7 @@ public:
     double a1 = rng.uniform((double)0, (double)1);
 
     // produces float from [0, 1)
-    double b = rng.uniform(0.f, 1.f);
+    float b = rng.uniform(0.f, 1.f);
 
     // produces double from [0, 1)
     double c = rng.uniform(0., 1.);
@@ -2778,8 +2778,8 @@ public:
     want a floating-point random number, but the range boundaries are
     integer numbers, either put dots in the end, if they are constants, or
     use explicit type cast operators, as in the a1 initialization above.
-    @param a lower inclusive boundary of the returned random numbers.
-    @param b upper non-inclusive boundary of the returned random numbers.
+    @param a lower inclusive boundary of the returned random number.
+    @param b upper non-inclusive boundary of the returned random number.
       */
     int uniform(int a, int b);
     /** @overload */
