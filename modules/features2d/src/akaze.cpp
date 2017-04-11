@@ -167,6 +167,8 @@ namespace cv
                               OutputArray descriptors,
                               bool useProvidedKeypoints)
         {
+            CV_INSTRUMENT_REGION()
+
             Mat img = image.getMat();
             if (img.channels() > 1)
                 cvtColor(image, img, COLOR_BGR2GRAY);
@@ -198,6 +200,8 @@ namespace cv
             if (!useProvidedKeypoints)
             {
                 impl.Feature_Detection(keypoints);
+                if( !descriptors.needed() )
+                    impl.Compute_Keypoints_Orientation(keypoints);
             }
 
             if (!mask.empty())

@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <cassert>
 
 #if (defined(__cplusplus) &&  __cplusplus > 199711L) || (defined(_MSC_VER) && _MSC_VER >= 1700)
 #define USE_STD_THREADS
@@ -124,7 +125,8 @@ namespace cv
 class cv::DetectionBasedTracker::SeparateDetectionWork
 {
     public:
-        SeparateDetectionWork(cv::DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector);
+        SeparateDetectionWork(cv::DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector,
+                              const cv::DetectionBasedTracker::Parameters& params);
         virtual ~SeparateDetectionWork();
         bool communicateWithDetectingThread(const Mat& imageGray, std::vector<Rect>& rectsWhereRegions);
         bool run();
@@ -135,23 +137,36 @@ class cv::DetectionBasedTracker::SeparateDetectionWork
         {
             return (stateThread==STATE_THREAD_WORKING_SLEEPING) || (stateThread==STATE_THREAD_WORKING_WITH_IMAGE);
         }
-        inline void lock()
+        void setParameters(const cv::DetectionBasedTracker::Parameters& params)
         {
 #ifdef USE_STD_THREADS
-            mtx_lock.lock();
+            std::unique_lock<std::mutex> mtx_lock(mtx);
 #else
             pthread_mutex_lock(&mutex);
 #endif
-        }
-        inline void unlock()
-        {
-#ifdef USE_STD_THREADS
-            mtx_lock.unlock();
-#else
+            parameters = params;
+#ifndef USE_STD_THREADS
             pthread_mutex_unlock(&mutex);
 #endif
         }
 
+        inline void init()
+        {
+#ifdef USE_STD_THREADS
+            std::unique_lock<std::mutex> mtx_lock(mtx);
+#else
+            pthread_mutex_lock(&mutex);
+#endif
+            stateThread = STATE_THREAD_STOPPED;
+            isObjectDetectingReady = false;
+            shouldObjectDetectingResultsBeForgot = false;
+#ifdef USE_STD_THREADS
+            objectDetectorThreadStartStop.notify_one();
+#else
+            pthread_cond_signal(&(objectDetectorThreadStartStop));
+            pthread_mutex_unlock(&mutex);
+#endif
+        }
     protected:
 
         DetectionBasedTracker& detectionBasedTracker;
@@ -159,7 +174,6 @@ class cv::DetectionBasedTracker::SeparateDetectionWork
 #ifdef USE_STD_THREADS
         std::thread second_workthread;
         std::mutex mtx;
-        std::unique_lock<std::mutex> mtx_lock;
         std::condition_variable objectDetectorRun;
         std::condition_variable objectDetectorThreadStartStop;
 #else
@@ -187,23 +201,23 @@ class cv::DetectionBasedTracker::SeparateDetectionWork
         friend void* workcycleObjectDetectorFunction(void* p);
 
         long long  timeWhenDetectingThreadStartedWork;
+        cv::DetectionBasedTracker::Parameters parameters;
 };
 
-cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector)
+cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector,
+                                                                        const cv::DetectionBasedTracker::Parameters& params)
     :detectionBasedTracker(_detectionBasedTracker),
     cascadeInThread(),
     isObjectDetectingReady(false),
     shouldObjectDetectingResultsBeForgot(false),
     stateThread(STATE_THREAD_STOPPED),
-    timeWhenDetectingThreadStartedWork(-1)
+    timeWhenDetectingThreadStartedWork(-1),
+    parameters(params)
 {
     CV_Assert(_detector);
 
     cascadeInThread = _detector;
-#ifdef USE_STD_THREADS
-    mtx_lock =  std::unique_lock<std::mutex>(mtx);
-    mtx_lock.unlock();
-#else
+#ifndef USE_STD_THREADS
     int res=0;
     res=pthread_mutex_init(&mutex, NULL);//TODO: should be attributes?
     if (res) {
@@ -235,21 +249,22 @@ cv::DetectionBasedTracker::SeparateDetectionWork::~SeparateDetectionWork()
     pthread_cond_destroy(&objectDetectorThreadStartStop);
     pthread_cond_destroy(&objectDetectorRun);
     pthread_mutex_destroy(&mutex);
+#else
+    second_workthread.join();
 #endif
 }
 bool cv::DetectionBasedTracker::SeparateDetectionWork::run()
 {
     LOGD("DetectionBasedTracker::SeparateDetectionWork::run() --- start");
 #ifdef USE_STD_THREADS
-    mtx_lock.lock();
+    std::unique_lock<std::mutex> mtx_lock(mtx);
+    // unlocked when leaving scope
 #else
     pthread_mutex_lock(&mutex);
 #endif
     if (stateThread != STATE_THREAD_STOPPED) {
         LOGE("DetectionBasedTracker::SeparateDetectionWork::run is called while the previous run is not stopped");
-#ifdef USE_STD_THREADS
-        mtx_lock.unlock();
-#else
+#ifndef USE_STD_THREADS
         pthread_mutex_unlock(&mutex);
 #endif
         return false;
@@ -258,7 +273,6 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::run()
 #ifdef USE_STD_THREADS
     second_workthread = std::thread(workcycleObjectDetectorFunction, (void*)this); //TODO: add attributes?
     objectDetectorThreadStartStop.wait(mtx_lock);
-    mtx_lock.unlock();
 #else
     pthread_create(&second_workthread, NULL, workcycleObjectDetectorFunction, (void*)this); //TODO: add attributes?
     pthread_cond_wait(&objectDetectorThreadStartStop, &mutex);
@@ -284,16 +298,7 @@ void* cv::workcycleObjectDetectorFunction(void* p)
 {
     CATCH_ALL_AND_LOG({ ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->workcycleObjectDetector(); });
     try{
-        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->lock();
-        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->stateThread = cv::DetectionBasedTracker::SeparateDetectionWork::STATE_THREAD_STOPPED;
-        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->isObjectDetectingReady=false;
-        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->shouldObjectDetectingResultsBeForgot=false;
-#ifdef USE_STD_THREADS
-        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->objectDetectorThreadStartStop.notify_one();
-#else
-        pthread_cond_signal(&(((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->objectDetectorThreadStartStop));
-#endif
-        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->unlock();
+        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->init();
     } catch(...) {
         LOGE0("DetectionBasedTracker: workcycleObjectDetectorFunction: ERROR concerning pointer, received as the function parameter");
     }
@@ -308,7 +313,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
 
     CV_Assert(stateThread==STATE_THREAD_WORKING_SLEEPING);
 #ifdef USE_STD_THREADS
-    mtx_lock.lock();
+    std::unique_lock<std::mutex> mtx_lock(mtx);
 #else
     pthread_mutex_lock(&mutex);
 #endif
@@ -453,7 +458,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::stop()
 {
     //FIXME: TODO: should add quickStop functionality
 #ifdef USE_STD_THREADS
-    mtx_lock.lock();
+  std::unique_lock<std::mutex> mtx_lock(mtx);
 #else
     pthread_mutex_lock(&mutex);
 #endif
@@ -464,6 +469,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::stop()
         pthread_mutex_unlock(&mutex);
 #endif
         LOGE("SimpleHighguiDemoCore::stop is called but the SimpleHighguiDemoCore pthread is not active");
+        stateThread = STATE_THREAD_STOPPING;
         return;
     }
     stateThread=STATE_THREAD_STOPPING;
@@ -485,7 +491,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::resetTracking()
 {
     LOGD("DetectionBasedTracker::SeparateDetectionWork::resetTracking");
 #ifdef USE_STD_THREADS
-    mtx_lock.lock();
+    std::unique_lock<std::mutex> mtx_lock(mtx);
 #else
     pthread_mutex_lock(&mutex);
 #endif
@@ -523,7 +529,7 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingT
     bool shouldHandleResult = false;
 
 #ifdef USE_STD_THREADS
-    mtx_lock.lock();
+    std::unique_lock<std::mutex> mtx_lock(mtx);
 #else
     pthread_mutex_lock(&mutex);
 #endif
@@ -574,8 +580,8 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingT
 
 cv::DetectionBasedTracker::Parameters::Parameters()
 {
-    maxTrackLifetime=5;
-    minDetectionPeriod=0;
+  maxTrackLifetime = 5;
+  minDetectionPeriod = 0;
 }
 
 cv::DetectionBasedTracker::InnerParameters::InnerParameters()
@@ -603,7 +609,7 @@ cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector
             && trackingDetector );
 
     if (mainDetector) {
-        separateDetectionWork.reset(new SeparateDetectionWork(*this, mainDetector));
+        separateDetectionWork.reset(new SeparateDetectionWork(*this, mainDetector, params));
     }
 
     weightsPositionsSmoothing.push_back(1);
@@ -618,6 +624,8 @@ cv::DetectionBasedTracker::~DetectionBasedTracker()
 
 void DetectionBasedTracker::process(const Mat& imageGray)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(imageGray.type()==CV_8UC1);
 
     if ( separateDetectionWork && !separateDetectionWork->isWorking() ) {
@@ -1014,12 +1022,9 @@ bool cv::DetectionBasedTracker::setParameters(const Parameters& params)
     }
 
     if (separateDetectionWork) {
-        separateDetectionWork->lock();
+        separateDetectionWork->setParameters(params);
     }
     parameters=params;
-    if (separateDetectionWork) {
-        separateDetectionWork->unlock();
-    }
     return true;
 }
 

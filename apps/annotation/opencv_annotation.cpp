@@ -59,12 +59,7 @@ Adapted by: Puttemans Steven - April 2016 - Vectorize the process to enable bett
 
 #include <fstream>
 #include <iostream>
-
-#if defined(_WIN32)
-   #include <direct.h>
-#else
-   #include <sys/stat.h>
-#endif
+#include <map>
 
 using namespace std;
 using namespace cv;
@@ -224,57 +219,44 @@ vector<Rect> get_annotations(Mat input_image)
 
 int main( int argc, const char** argv )
 {
-    // If no arguments are given, then supply some information on how this tool works
-    if( argc == 1 ){
-        cout << "Usage: " << argv[0] << endl;
-        cout << " -images <folder_location> [example - /data/testimages/]" << endl;
-        cout << " -annotations <ouput_file> [example - /data/annotations.txt]" << endl;
-        cout << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
+    // Use the cmdlineparser to process input arguments
+    CommandLineParser parser(argc, argv,
+        "{ help h usage ? |      | show this message }"
+        "{ images i       |      | (required) path to image folder [example - /data/testimages/] }"
+        "{ annotations a  |      | (required) path to annotations txt file [example - /data/annotations.txt] }"
+        "{ maxWindowHeight m  |  -1   | (optional) images larger in height than this value will be scaled down }"
+        "{ resizeFactor r  |  2  | (optional) factor for scaling down [default = half the size] }"
+    );
+    // Read in the input arguments
+    if (parser.has("help")){
+        parser.printMessage();
+        cerr << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
+        return 0;
+    }
+    string image_folder(parser.get<string>("images"));
+    string annotations_file(parser.get<string>("annotations"));
+    if (image_folder.empty() || annotations_file.empty()){
+        parser.printMessage();
+        cerr << "TIP: Use absolute paths to avoid any problems with the software!" << endl;
         return -1;
     }
 
-    // Read in the input arguments
-    string image_folder;
-    string annotations_file;
-    for(int i = 1; i < argc; ++i )
-    {
-        if( !strcmp( argv[i], "-images" ) )
-        {
-            image_folder = argv[++i];
-        }
-        else if( !strcmp( argv[i], "-annotations" ) )
-        {
-            annotations_file = argv[++i];
-        }
-    }
-
-    // Check if the folder actually exists
-    // If -1 is returned then the folder actually exists, and thus you can continue
-    // In all other cases there was a folder creation and thus the folder did not exist
-    #if defined(_WIN32)
-    if(_mkdir(image_folder.c_str()) != -1){
-        // Generate an error message
-        cerr << "The image folder given does not exist. Please check again!" << endl;
-        // Remove the created folder again, to ensure a second run with same code fails again
-        _rmdir(image_folder.c_str());
-        return 0;
-    }
-    #else
-    if(mkdir(image_folder.c_str(), 0777) != -1){
-        // Generate an error message
-        cerr << "The image folder given does not exist. Please check again!" << endl;
-        // Remove the created folder again, to ensure a second run with same code fails again
-        remove(image_folder.c_str());
-        return 0;
-    }
-    #endif
+    int resizeFactor = parser.get<int>("resizeFactor");
+    int const maxWindowHeight = parser.get<int>("maxWindowHeight") > 0 ? parser.get<int>("maxWindowHeight") : -1;
 
     // Start by processing the data
     // Return the image filenames inside the image folder
-    vector< vector<Rect> > annotations;
+    map< String, vector<Rect> > annotations;
     vector<String> filenames;
     String folder(image_folder);
     glob(folder, filenames);
+
+    // Add key tips on how to use the software when running it
+    cout << "* mark rectangles with the left mouse button," << endl;
+    cout << "* press 'c' to accept a selection," << endl;
+    cout << "* press 'd' to delete the latest selection," << endl;
+    cout << "* press 'n' to proceed with next image," << endl;
+    cout << "* press 'esc' to stop." << endl;
 
     // Loop through each image stored in the images folder
     // Create and temporarily store the annotations
@@ -282,6 +264,7 @@ int main( int argc, const char** argv )
     for (size_t i = 0; i < filenames.size(); i++){
         // Read in an image
         Mat current_image = imread(filenames[i]);
+        bool const resize_bool = (maxWindowHeight > 0) && (current_image.rows > maxWindowHeight);
 
         // Check if the image is actually read - avoid other files in the folder, because glob() takes them all
         // If not then simply skip this iteration
@@ -289,9 +272,22 @@ int main( int argc, const char** argv )
             continue;
         }
 
+        if(resize_bool){
+            resize(current_image, current_image, Size(current_image.cols/resizeFactor, current_image.rows/resizeFactor));
+        }
+
         // Perform annotations & store the result inside the vectorized structure
+        // If the image was resized before, then resize the found annotations back to original dimensions
         vector<Rect> current_annotations = get_annotations(current_image);
-        annotations.push_back(current_annotations);
+        if(resize_bool){
+            for(int j =0; j < (int)current_annotations.size(); j++){
+                current_annotations[j].x = current_annotations[j].x * resizeFactor;
+                current_annotations[j].y = current_annotations[j].y * resizeFactor;
+                current_annotations[j].width = current_annotations[j].width * resizeFactor;
+                current_annotations[j].height = current_annotations[j].height * resizeFactor;
+            }
+        }
+        annotations[filenames[i]] = current_annotations;
 
         // Check if the ESC key was hit, then exit earlier then expected
         if(stop){
@@ -308,10 +304,11 @@ int main( int argc, const char** argv )
     }
 
     // Store the annotations, write to the output file
-    for(int i = 0; i < (int)annotations.size(); i++){
-        output << filenames[i] << " " << annotations[i].size();
-        for(int j=0; j < (int)annotations[i].size(); j++){
-            Rect temp = annotations[i][j];
+    for(map<String, vector<Rect> >::iterator it = annotations.begin(); it != annotations.end(); it++){
+        vector<Rect> &anno = it->second;
+        output << it->first << " " << anno.size();
+        for(size_t j=0; j < anno.size(); j++){
+            Rect temp = anno[j];
             output << " " << temp.x << " " << temp.y << " " << temp.width << " " << temp.height;
         }
         output << endl;

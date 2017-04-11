@@ -50,6 +50,10 @@ ParamGrid::ParamGrid(double _minVal, double _maxVal, double _logStep)
     logStep = std::max(_logStep, 1.);
 }
 
+Ptr<ParamGrid> ParamGrid::create(double minval, double maxval, double logstep) {
+  return makePtr<ParamGrid>(minval, maxval, logstep);
+}
+
 bool StatModel::empty() const { return !isTrained(); }
 
 int StatModel::getVarCount() const { return 0; }
@@ -74,6 +78,7 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
     int i, n = (int)sidx.total();
     bool isclassifier = isClassifier();
     Mat responses = data->getResponses();
+    int responses_type = responses.type();
 
     if( n == 0 )
         n = data->getNSamples();
@@ -91,7 +96,7 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
         int si = sidx_ptr ? sidx_ptr[i] : i;
         Mat sample = layout == ROW_SAMPLE ? samples.row(si) : samples.col(si);
         float val = predict(sample);
-        float val0 = responses.at<float>(si);
+        float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
 
         if( isclassifier )
             err += fabs(val - val0) > FLT_EPSILON;
@@ -116,35 +121,12 @@ static void Cholesky( const Mat& A, Mat& S )
 {
     CV_Assert(A.type() == CV_32F);
 
-    int dim = A.rows;
-    S.create(dim, dim, CV_32F);
-
-    int i, j, k;
-
-    for( i = 0; i < dim; i++ )
-    {
-        for( j = 0; j < i; j++ )
-            S.at<float>(i,j) = 0.f;
-
-        float sum = 0.f;
-        for( k = 0; k < i; k++ )
-        {
-            float val = S.at<float>(k,i);
-            sum += val*val;
-        }
-
-        S.at<float>(i,i) = std::sqrt(std::max(A.at<float>(i,i) - sum, 0.f));
-        float ival = 1.f/S.at<float>(i, i);
-
-        for( j = i + 1; j < dim; j++ )
-        {
-            sum = 0;
-            for( k = 0; k < i; k++ )
-                sum += S.at<float>(k, i) * S.at<float>(k, j);
-
-            S.at<float>(i, j) = (A.at<float>(i, j) - sum)*ival;
-        }
-    }
+    S = A.clone();
+    cv::Cholesky ((float*)S.ptr(),S.step, S.rows,NULL, 0, 0);
+    S = S.t();
+    for (int i=1;i<S.rows;i++)
+        for (int j=0;j<i;j++)
+            S.at<float>(i,j)=0;
 }
 
 /* Generates <sample> from multivariate normal distribution, where <mean> - is an

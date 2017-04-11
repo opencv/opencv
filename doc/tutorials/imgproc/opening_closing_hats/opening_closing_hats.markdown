@@ -24,7 +24,7 @@ In the previous tutorial we covered two basic Morphology operations:
 -   Dilation.
 
 Based on these two we can effectuate more sophisticated transformations to our images. Here we
-discuss briefly 05 operations offered by OpenCV:
+discuss briefly 5 operations offered by OpenCV:
 
 ### Opening
 
@@ -40,6 +40,11 @@ discuss briefly 05 operations offered by OpenCV:
 
     ![](images/Morphology_2_Tutorial_Theory_Opening.png)
 
+For the sake of clarity, we have performed the opening operation (`7x7` rectangular structuring element)
+on the same original image but inverted such as the object in white is now the letter.
+
+![Left image: original image inverted, right image: resulting opening](images/Morphology_2_Tutorial_Theory_Opening_2.png)
+
 ### Closing
 
 -   It is obtained by the dilation of an image followed by an erosion.
@@ -49,6 +54,10 @@ discuss briefly 05 operations offered by OpenCV:
 -   Useful to remove small holes (dark regions).
 
     ![](images/Morphology_2_Tutorial_Theory_Closing.png)
+
+On the inverted image, we have performed the closing operation (`7x7` rectangular structuring element):
+
+![Left image: original image inverted, right image: resulting closing](images/Morphology_2_Tutorial_Theory_Closing_2.png)
 
 ### Morphological Gradient
 
@@ -80,77 +89,8 @@ Code
 ----
 
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Morphology_2.cpp)
-@code{.cpp}
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
-#include <stdlib.h>
-#include <stdio.h>
-
-using namespace cv;
-
-/// Global variables
-Mat src, dst;
-
-int morph_elem = 0;
-int morph_size = 0;
-int morph_operator = 0;
-int const max_operator = 4;
-int const max_elem = 2;
-int const max_kernel_size = 21;
-
-char* window_name = "Morphology Transformations Demo";
-
-/* Function Headers */
-void Morphology_Operations( int, void* );
-
-/* @function main */
-int main( int argc, char** argv )
-{
-  /// Load an image
-  src = imread( argv[1] );
-
-  if( !src.data )
-  { return -1; }
-
- /// Create window
- namedWindow( window_name, WINDOW_AUTOSIZE );
-
- /// Create Trackbar to select Morphology operation
- createTrackbar("Operator:\n 0: Opening - 1: Closing \n 2: Gradient - 3: Top Hat \n 4: Black Hat", window_name, &morph_operator, max_operator, Morphology_Operations );
-
- /// Create Trackbar to select kernel type
- createTrackbar( "Element:\n 0: Rect - 1: Cross - 2: Ellipse", window_name,
-         &morph_elem, max_elem,
-         Morphology_Operations );
-
- /// Create Trackbar to choose kernel size
- createTrackbar( "Kernel size:\n 2n +1", window_name,
-         &morph_size, max_kernel_size,
-         Morphology_Operations );
-
- /// Default start
- Morphology_Operations( 0, 0 );
-
- waitKey(0);
- return 0;
- }
-
- /*
-  * @function Morphology_Operations
-  */
-void Morphology_Operations( int, void* )
-{
-  // Since MORPH_X : 2,3,4,5 and 6
-  int operation = morph_operator + 2;
-
-  Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
-
-  /// Apply the specified morphology operation
-  morphologyEx( src, dst, operation, element );
-  imshow( window_name, dst );
-  }
-@endcode
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Morphology_2.cpp)
+@include cpp/tutorial_code/ImgProc/Morphology_2.cpp
 
 Explanation
 -----------
@@ -158,47 +98,23 @@ Explanation
 -#  Let's check the general structure of the program:
     -   Load an image
     -   Create a window to display results of the Morphological operations
-    -   Create 03 Trackbars for the user to enter parameters:
-        -   The first trackbar **"Operator"** returns the kind of morphology operation to use
+    -   Create three Trackbars for the user to enter parameters:
+        -   The first trackbar **Operator** returns the kind of morphology operation to use
             (**morph_operator**).
-            @code{.cpp}
-            createTrackbar("Operator:\n 0: Opening - 1: Closing \n 2: Gradient - 3: Top Hat \n 4: Black Hat",
-                           window_name, &morph_operator, max_operator,
-                           Morphology_Operations );
-            @endcode
-        -   The second trackbar **"Element"** returns **morph_elem**, which indicates what kind of
+            @snippet cpp/tutorial_code/ImgProc/Morphology_2.cpp create_trackbar1
+
+        -   The second trackbar **Element** returns **morph_elem**, which indicates what kind of
             structure our kernel is:
-            @code{.cpp}
-            createTrackbar( "Element:\n 0: Rect - 1: Cross - 2: Ellipse", window_name,
-                    &morph_elem, max_elem,
-                    Morphology_Operations );
-            @endcode
-        -   The final trackbar **"Kernel Size"** returns the size of the kernel to be used
+            @snippet cpp/tutorial_code/ImgProc/Morphology_2.cpp create_trackbar2
+
+        -   The final trackbar **Kernel Size** returns the size of the kernel to be used
             (**morph_size**)
-            @code{.cpp}
-            createTrackbar( "Kernel size:\n 2n +1", window_name,
-                    &morph_size, max_kernel_size,
-                    Morphology_Operations );
-            @endcode
+            @snippet cpp/tutorial_code/ImgProc/Morphology_2.cpp create_trackbar3
+
     -   Every time we move any slider, the user's function **Morphology_Operations** will be called
         to effectuate a new morphology operation and it will update the output image based on the
         current trackbar values.
-        @code{.cpp}
-        /*
-         * @function Morphology_Operations
-         */
-        void Morphology_Operations( int, void* )
-        {
-            // Since MORPH_X : 2,3,4,5 and 6
-            int operation = morph_operator + 2;
-
-            Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
-
-            /// Apply the specified morphology operation
-            morphologyEx( src, dst, operation, element );
-            imshow( window_name, dst );
-        }
-        @endcode
+        @snippet cpp/tutorial_code/ImgProc/Morphology_2.cpp morphology_operations
 
         We can observe that the key function to perform the morphology transformations is @ref
         cv::morphologyEx . In this example we use four arguments (leaving the rest as defaults):
@@ -216,9 +132,7 @@ Explanation
 
             As you can see the values range from \<2-6\>, that is why we add (+2) to the values
             entered by the Trackbar:
-            @code{.cpp}
-            int operation = morph_operator + 2;
-            @endcode
+            @snippet cpp/tutorial_code/ImgProc/Morphology_2.cpp operation
         -   **element**: The kernel to be used. We use the function @ref cv::getStructuringElement
             to define our own structure.
 

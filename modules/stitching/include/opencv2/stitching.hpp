@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_STITCHER_HPP__
-#define __OPENCV_STITCHING_STITCHER_HPP__
+#ifndef OPENCV_STITCHING_STITCHER_HPP
+#define OPENCV_STITCHING_STITCHER_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -53,6 +53,12 @@
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/camera.hpp"
 
+
+#if defined(Status)
+#  warning Detected X11 'Status' macro definition, it can cause build conflicts. Please, include this header before any X11 headers.
+#endif
+
+
 /**
 @defgroup stitching Images stitching
 
@@ -63,7 +69,29 @@ one can combine and use them separately.
 
 The implemented stitching pipeline is very similar to the one proposed in @cite BL07 .
 
-![image](StitchingPipeline.jpg)
+![stitching pipeline](StitchingPipeline.jpg)
+
+Camera models
+-------------
+
+There are currently 2 camera models implemented in stitching pipeline.
+
+- _Homography model_ expecting perspective transformations between images
+  implemented in @ref cv::detail::BestOf2NearestMatcher cv::detail::HomographyBasedEstimator
+  cv::detail::BundleAdjusterReproj cv::detail::BundleAdjusterRay
+- _Affine model_ expecting affine transformation with 6 DOF or 4 DOF implemented in
+  @ref cv::detail::AffineBestOf2NearestMatcher cv::detail::AffineBasedEstimator
+  cv::detail::BundleAdjusterAffine cv::detail::BundleAdjusterAffinePartial cv::AffineWarper
+
+Homography model is useful for creating photo panoramas captured by camera,
+while affine-based model can be used to stitch scans and object captured by
+specialized devices. Use @ref cv::Stitcher::create to get preconfigured pipeline for one
+of those models.
+
+@note
+Certain detailed settings of @ref cv::Stitcher might not make sense. Especially
+you should not mix classes implementing affine model and classes implementing
+Homography model, as they work with different transformations.
 
 @{
     @defgroup stitching_match Features Finding and Images Matching
@@ -104,6 +132,22 @@ public:
         ERR_HOMOGRAPHY_EST_FAIL = 2,
         ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
     };
+    enum Mode
+    {
+        /** Mode for creating photo panoramas. Expects images under perspective
+        transformation and projects resulting pano to sphere.
+
+        @sa detail::BestOf2NearestMatcher SphericalWarper
+        */
+        PANORAMA = 0,
+        /** Mode for composing scans. Expects images under affine transformation does
+        not compensate exposure by default.
+
+        @sa detail::AffineBestOf2NearestMatcher AffineWarper
+        */
+        SCANS = 1,
+
+    };
 
    // Stitcher() {}
     /** @brief Creates a stitcher with the default parameters.
@@ -112,6 +156,15 @@ public:
     @return Stitcher class instance.
      */
     static Stitcher createDefault(bool try_use_gpu = false);
+    /** @brief Creates a Stitcher configured in one of the stitching modes.
+
+    @param mode Scenario for stitcher operation. This is usually determined by source of images
+    to stitch and their transformation. Default parameters will be chosen for operation in given
+    scenario.
+    @param try_use_gpu Flag indicating whether GPU should be used whenever it's possible.
+    @return Stitcher class instance.
+     */
+    static Ptr<Stitcher> create(Mode mode = PANORAMA, bool try_use_gpu = false);
 
     CV_WRAP double registrationResol() const { return registr_resol_; }
     CV_WRAP void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
@@ -152,6 +205,13 @@ public:
     const Ptr<detail::BundleAdjusterBase> bundleAdjuster() const { return bundle_adjuster_; }
     void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster)
         { bundle_adjuster_ = bundle_adjuster; }
+
+    /* TODO OpenCV ABI 4.x
+    Ptr<detail::Estimator> estimator() { return estimator_; }
+    const Ptr<detail::Estimator> estimator() const { return estimator_; }
+    void setEstimator(Ptr<detail::Estimator> estimator)
+        { estimator_ = estimator; }
+    */
 
     Ptr<WarperCreator> warper() { return warper_; }
     const Ptr<WarperCreator> warper() const { return warper_; }
@@ -227,6 +287,9 @@ private:
     Ptr<detail::FeaturesMatcher> features_matcher_;
     cv::UMat matching_mask_;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
+    /* TODO OpenCV ABI 4.x
+    Ptr<detail::Estimator> estimator_;
+    */
     bool do_wave_correct_;
     detail::WaveCorrectKind wave_correct_kind_;
     Ptr<WarperCreator> warper_;
@@ -254,4 +317,4 @@ CV_EXPORTS_W Ptr<Stitcher> createStitcher(bool try_use_gpu = false);
 
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_STITCHER_HPP__
+#endif // OPENCV_STITCHING_STITCHER_HPP

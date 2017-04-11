@@ -186,11 +186,11 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_VFW
         TRY_OPEN(capture, cvCreateCameraCapture_VFW(index))
 #endif
-        if (pref) break; // CV_CAP_VFW
 
 #if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
         TRY_OPEN(capture, cvCreateCameraCapture_V4L(index))
 #endif
+        if (pref) break; // CV_CAP_VFW
 
 #ifdef HAVE_GSTREAMER
         TRY_OPEN(capture, cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_V4L2, reinterpret_cast<char *>(index)))
@@ -271,6 +271,12 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         TRY_OPEN(capture, cvCreateCameraCapture_Giganetix(index))
         if (pref) break; // CV_CAP_GIGANETIX
 #endif
+
+#ifdef HAVE_ARAVIS_API
+    case CV_CAP_ARAVIS:
+        TRY_OPEN(capture, cvCreateCameraCapture_Aravis(index))
+        if (pref) break;
+#endif
     }
 
     return capture;
@@ -296,15 +302,15 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         if (apiPreference) break;
 #endif
 
-#ifdef HAVE_VFW
     case CV_CAP_VFW:
+#ifdef HAVE_VFW
         TRY_OPEN(result, cvCreateFileCapture_VFW (filename))
-        if (apiPreference) break;
 #endif
+
 #if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
         TRY_OPEN(result, cvCreateCameraCapture_V4L(filename))
-        if (apiPreference) break;
 #endif
+        if (apiPreference) break;
 
     case CV_CAP_MSMF:
 #ifdef HAVE_MSMF
@@ -337,6 +343,12 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
 #ifdef HAVE_OPENNI
     case CV_CAP_OPENNI:
         TRY_OPEN(result, cvCreateFileCapture_OpenNI (filename))
+        if (apiPreference) break;
+#endif
+
+#ifdef HAVE_OPENNI2
+    case CV_CAP_OPENNI2:
+        TRY_OPEN(result, cvCreateFileCapture_OpenNI2 (filename))
         if (apiPreference) break;
 #endif
 
@@ -565,6 +577,8 @@ VideoCapture::~VideoCapture()
 
 bool VideoCapture::open(const String& filename, int apiPreference)
 {
+    CV_INSTRUMENT_REGION()
+
     if (isOpened()) release();
     icap = IVideoCapture_create(filename);
     if (!icap.empty())
@@ -576,17 +590,26 @@ bool VideoCapture::open(const String& filename, int apiPreference)
 
 bool VideoCapture::open(const String& filename)
 {
+    CV_INSTRUMENT_REGION()
+
     return open(filename, CAP_ANY);
 }
 
 bool VideoCapture::open(int index)
 {
+    CV_INSTRUMENT_REGION()
+
     if (isOpened()) release();
     icap = IVideoCapture_create(index);
     if (!icap.empty())
         return true;
     cap.reset(cvCreateCameraCapture(index));
     return isOpened();
+}
+bool  VideoCapture::open(int cameraNum, int apiPreference)
+{
+    cameraNum = cameraNum + apiPreference;
+    return open(cameraNum);
 }
 
 bool VideoCapture::isOpened() const
@@ -602,6 +625,8 @@ void VideoCapture::release()
 
 bool VideoCapture::grab()
 {
+    CV_INSTRUMENT_REGION()
+
     if (!icap.empty())
         return icap->grabFrame();
     return cvGrabFrame(cap) != 0;
@@ -609,6 +634,8 @@ bool VideoCapture::grab()
 
 bool VideoCapture::retrieve(OutputArray image, int channel)
 {
+    CV_INSTRUMENT_REGION()
+
     if (!icap.empty())
         return icap->retrieveFrame(channel, image);
 
@@ -630,6 +657,8 @@ bool VideoCapture::retrieve(OutputArray image, int channel)
 
 bool VideoCapture::read(OutputArray image)
 {
+    CV_INSTRUMENT_REGION()
+
     if(grab())
         retrieve(image);
     else
@@ -667,6 +696,8 @@ VideoCapture& VideoCapture::operator >> (Mat& image)
 
 VideoCapture& VideoCapture::operator >> (UMat& image)
 {
+    CV_INSTRUMENT_REGION()
+
     read(image);
     return *this;
 }
@@ -707,6 +738,8 @@ VideoWriter::~VideoWriter()
 
 bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
+    CV_INSTRUMENT_REGION()
+
     if (isOpened()) release();
     iwriter = IVideoWriter_create(filename, _fourcc, fps, frameSize, isColor);
     if (!iwriter.empty())
@@ -737,6 +770,8 @@ double VideoWriter::get(int propId) const
 
 void VideoWriter::write(const Mat& image)
 {
+    CV_INSTRUMENT_REGION()
+
     if( iwriter )
         iwriter->write(image);
     else
@@ -748,6 +783,8 @@ void VideoWriter::write(const Mat& image)
 
 VideoWriter& VideoWriter::operator << (const Mat& image)
 {
+    CV_INSTRUMENT_REGION()
+
     write(image);
     return *this;
 }

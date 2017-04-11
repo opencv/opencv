@@ -46,6 +46,8 @@
 
 using namespace cvtest;
 
+namespace {
+
 ////////////////////////////////////////////////////////////////////////////////
 // Merge
 
@@ -415,5 +417,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, CopyMakeBorder, testing::Combine(
     testing::Values(Border(1), Border(10), Border(50)),
     ALL_BORDER_TYPES,
     WHOLE_SUBMAT));
+
+} //namespace
 
 #endif // HAVE_CUDA

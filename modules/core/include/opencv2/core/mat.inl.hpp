@@ -42,8 +42,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_MATRIX_OPERATIONS_HPP__
-#define __OPENCV_CORE_MATRIX_OPERATIONS_HPP__
+#ifndef OPENCV_CORE_MATRIX_OPERATIONS_HPP
+#define OPENCV_CORE_MATRIX_OPERATIONS_HPP
 
 #ifndef __cplusplus
 #  error mat.inl.hpp header must be compiled as C++
@@ -387,6 +387,23 @@ Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
 }
 
 inline
+Mat::Mat(const std::vector<int>& _sz, int _type)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
+{
+    create(_sz, _type);
+}
+
+inline
+Mat::Mat(const std::vector<int>& _sz, int _type, const Scalar& _s)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
+{
+    create(_sz, _type);
+    *this = _s;
+}
+
+inline
 Mat::Mat(const Mat& m)
     : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
@@ -680,7 +697,8 @@ void Mat::addref()
         CV_XADD(&u->refcount, 1);
 }
 
-inline void Mat::release()
+inline
+void Mat::release()
 {
     if( u && CV_XADD(&u->refcount, -1) == 1 )
         deallocate();
@@ -688,6 +706,16 @@ inline void Mat::release()
     datastart = dataend = datalimit = data = 0;
     for(int i = 0; i < dims; i++)
         size.p[i] = 0;
+#ifdef _DEBUG
+    flags = MAGIC_VAL;
+    dims = rows = cols = 0;
+    if(step.p != step.buf)
+    {
+        fastFree(step.p);
+        step.p = step.buf;
+        size.p = &rows;
+    }
+#endif
 }
 
 inline
@@ -704,6 +732,12 @@ Mat Mat::operator()( const Rect& roi ) const
 
 inline
 Mat Mat::operator()(const Range* ranges) const
+{
+    return Mat(*this, ranges);
+}
+
+inline
+Mat Mat::operator()(const std::vector<Range>& ranges) const
 {
     return Mat(*this, ranges);
 }
@@ -1356,6 +1390,11 @@ Mat_<_Tp>::Mat_(const Mat_<_Tp>& m, const Range* ranges)
 {}
 
 template<typename _Tp> inline
+Mat_<_Tp>::Mat_(const Mat_<_Tp>& m, const std::vector<Range>& ranges)
+    : Mat(m, ranges)
+{}
+
+template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const Mat& m)
     : Mat()
 {
@@ -1587,16 +1626,22 @@ Mat_<_Tp> Mat_<_Tp>::operator()( const Range* ranges ) const
 }
 
 template<typename _Tp> inline
+Mat_<_Tp> Mat_<_Tp>::operator()(const std::vector<Range>& ranges) const
+{
+    return Mat_<_Tp>(*this, ranges);
+}
+
+template<typename _Tp> inline
 _Tp* Mat_<_Tp>::operator [](int y)
 {
-    CV_DbgAssert( 0 <= y && y < rows );
+    CV_DbgAssert( 0 <= y && y < size.p[0] );
     return (_Tp*)(data + y*step.p[0]);
 }
 
 template<typename _Tp> inline
 const _Tp* Mat_<_Tp>::operator [](int y) const
 {
-    CV_DbgAssert( 0 <= y && y < rows );
+    CV_DbgAssert( 0 <= y && y < size.p[0] );
     return (const _Tp*)(data + y*step.p[0]);
 }
 
@@ -1773,7 +1818,7 @@ Mat_<_Tp>::Mat_(Mat_&& m)
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (Mat_&& m)
 {
-    Mat::operator = (m);
+    Mat::operator = (std::move(m));
     return *this;
 }
 
@@ -3508,6 +3553,12 @@ UMat UMat::operator()( const Rect& roi ) const
 
 inline
 UMat UMat::operator()(const Range* ranges) const
+{
+    return UMat(*this, ranges);
+}
+
+inline
+UMat UMat::operator()(const std::vector<Range>& ranges) const
 {
     return UMat(*this, ranges);
 }

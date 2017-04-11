@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_TEST_UTILITY_HPP__
-#define __OPENCV_CUDA_TEST_UTILITY_HPP__
+#ifndef OPENCV_CUDA_TEST_UTILITY_HPP
+#define OPENCV_CUDA_TEST_UTILITY_HPP
 
 #include <stdexcept>
 #include "cvconfig.h"
@@ -180,14 +180,17 @@ namespace cvtest
         static int AddToRegistry() { \
           ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
               GetTestCasePatternHolder<test_case_name>(\
-                  #test_case_name, __FILE__, __LINE__)->AddTestPattern(\
-                      #test_case_name, \
-                      #test_name, \
-                      new ::testing::internal::TestMetaFactory< \
-                          GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>()); \
+                  #test_case_name, \
+                  ::testing::internal::CodeLocation(\
+                      __FILE__, __LINE__))->AddTestPattern(\
+                          #test_case_name, \
+                          #test_name, \
+                          new ::testing::internal::TestMetaFactory< \
+                              GTEST_TEST_CLASS_NAME_(\
+                                  test_case_name, test_name)>()); \
           return 0; \
         } \
-        static int gtest_registering_dummy_; \
+        static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_; \
         GTEST_DISALLOW_COPY_AND_ASSIGN_(\
             GTEST_TEST_CLASS_NAME_(test_case_name, test_name)); \
       }; \
@@ -348,8 +351,10 @@ namespace cv { namespace cuda
 
 #ifdef HAVE_CUDA
 
-#define CV_CUDA_TEST_MAIN(resourcesubdir) \
-    CV_TEST_MAIN(resourcesubdir, cvtest::parseCudaDeviceOptions(argc, argv), cvtest::printCudaInfo(), cv::setUseOptimized(false))
+#define CV_TEST_INIT0_CUDA cvtest::parseCudaDeviceOptions(argc, argv), cvtest::printCudaInfo(), cv::setUseOptimized(false)
+
+#define CV_CUDA_TEST_MAIN(resourcesubdir, ...) \
+    CV_TEST_MAIN_EX(resourcesubdir, CUDA, __VA_ARGS__)
 
 #else // HAVE_CUDA
 
@@ -363,4 +368,4 @@ namespace cv { namespace cuda
 #endif // HAVE_CUDA
 
 
-#endif // __OPENCV_CUDA_TEST_UTILITY_HPP__
+#endif // OPENCV_CUDA_TEST_UTILITY_HPP

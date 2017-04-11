@@ -40,12 +40,16 @@
 //
 //M*/
 
-#ifndef __OPENCV_HIGHGUI_HPP__
-#define __OPENCV_HIGHGUI_HPP__
+#ifndef OPENCV_HIGHGUI_HPP
+#define OPENCV_HIGHGUI_HPP
 
 #include "opencv2/core.hpp"
+#ifdef HAVE_OPENCV_IMGCODECS
 #include "opencv2/imgcodecs.hpp"
+#endif
+#ifdef HAVE_OPENCV_VIDEOIO
 #include "opencv2/videoio.hpp"
+#endif
 
 /**
 @defgroup highgui High-level GUI
@@ -192,7 +196,8 @@ enum WindowPropertyFlags {
        WND_PROP_FULLSCREEN   = 0, //!< fullscreen property    (can be WINDOW_NORMAL or WINDOW_FULLSCREEN).
        WND_PROP_AUTOSIZE     = 1, //!< autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE).
        WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO).
-       WND_PROP_OPENGL       = 3  //!< opengl support.
+       WND_PROP_OPENGL       = 3, //!< opengl support.
+       WND_PROP_VISIBLE      = 4  //!< checks whether the window exists and is visible
      };
 
 //! Mouse Events see cv::MouseCallback
@@ -239,9 +244,10 @@ enum QtFontStyles {
 
 //! Qt "button" type
 enum QtButtonTypes {
-       QT_PUSH_BUTTON = 0, //!< Push button.
-       QT_CHECKBOX    = 1, //!< Checkbox button.
-       QT_RADIOBOX    = 2  //!< Radiobox button.
+       QT_PUSH_BUTTON   = 0,    //!< Push button.
+       QT_CHECKBOX      = 1,    //!< Checkbox button.
+       QT_RADIOBOX      = 2,    //!< Radiobox button.
+       QT_NEW_BUTTONBAR = 1024  //!< Button should create a new buttonbar
      };
 
 /** @brief Callback function for mouse events. see cv::setMouseCallback
@@ -313,6 +319,15 @@ The function destroyAllWindows destroys all of the opened HighGUI windows.
 CV_EXPORTS_W void destroyAllWindows();
 
 CV_EXPORTS_W int startWindowThread();
+
+/** @brief Similar to #waitKey, but returns full key code.
+
+@note
+
+Key code is implementation specific and depends on used backend: QT/GTK/Win32/etc
+
+*/
+CV_EXPORTS_W int waitKeyEx(int delay = 0);
 
 /** @brief Waits for a pressed key.
 
@@ -425,7 +440,7 @@ CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
 @param winname Name of the window.
 @param onMouse Mouse callback. See OpenCV samples, such as
-<https://github.com/Itseez/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
+<https://github.com/opencv/opencv/tree/master/samples/cpp/ffilldemo.cpp>, on how to specify and
 use the callback.
 @param userdata The optional parameter passed to the callback.
  */
@@ -665,6 +680,23 @@ The function addText draws *text* on the image *img* using a specific font *font
  */
 CV_EXPORTS void addText( const Mat& img, const String& text, Point org, const QtFont& font);
 
+/** @brief Draws a text on the image.
+
+@param img 8-bit 3-channel image where the text should be drawn.
+@param text Text to write on an image.
+@param org Point(x,y) where the text should start on an image.
+@param nameFont Name of the font. The name should match the name of a system font (such as
+*Times*). If the font is not found, a default one is used.
+@param pointSize Size of the font. If not specified, equal zero or negative, the point size of the
+font is set to a system-dependent default value. Generally, this is 12 points.
+@param color Color of the font in BGRA where A = 255 is fully transparent.
+@param weight Font weight. Available operation flags are : cv::QtFontWeights You can also specify a positive integer for better control.
+@param style Font style. Available operation flags are : cv::QtFontStyles
+@param spacing Spacing between characters. It can be negative or positive.
+ */
+CV_EXPORTS_W void addText(const Mat& img, const String& text, Point org, const String& nameFont, int pointSize = -1, Scalar color = Scalar::all(0),
+        int weight = QT_FONT_NORMAL, int style = QT_STYLE_NORMAL, int spacing = 0);
+
 /** @brief Displays a text on a window image as an overlay for a specified duration.
 
 The function displayOverlay displays useful information/tips on top of the window for a certain
@@ -719,7 +751,8 @@ CV_EXPORTS  void stopLoop();
 
 The function createButton attaches a button to the control panel. Each button is added to a
 buttonbar to the right of the last button. A new buttonbar is created if nothing was attached to the
-control panel before, or if the last element attached to the control panel was a trackbar.
+control panel before, or if the last element attached to the control panel was a trackbar or if the
+QT_NEW_BUTTONBAR flag is added to the type.
 
 See below various examples of the cv::createButton function call: :
 @code
@@ -728,6 +761,7 @@ See below various examples of the cv::createButton function call: :
     createButton("button3",callbackButton,&value);
     createButton("button5",callbackButton1,NULL,QT_RADIOBOX);
     createButton("button6",callbackButton2,NULL,QT_PUSH_BUTTON,1);
+    createButton("button6",callbackButton2,NULL,QT_PUSH_BUTTON|QT_NEW_BUTTONBAR);// create a push button in a new row
 @endcode
 
 @param  bar_name Name of the button.

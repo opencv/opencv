@@ -77,9 +77,9 @@ void MatAllocator::download(UMatData* u, void* dstptr,
     {
         CV_Assert( sz[i] <= (size_t)INT_MAX );
         if( sz[i] == 0 )
-        return;
+            return;
         if( srcofs )
-        srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
+            srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
         isz[i] = (int)sz[i];
     }
 
@@ -89,9 +89,9 @@ void MatAllocator::download(UMatData* u, void* dstptr,
     const Mat* arrays[] = { &src, &dst };
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs, 2);
-    size_t j, planesz = it.size;
+    size_t planesz = it.size;
 
-    for( j = 0; j < it.nplanes; j++, ++it )
+    for( size_t j = 0; j < it.nplanes; j++, ++it )
         memcpy(ptrs[1], ptrs[0], planesz);
 }
 
@@ -108,9 +108,9 @@ void MatAllocator::upload(UMatData* u, const void* srcptr, int dims, const size_
     {
         CV_Assert( sz[i] <= (size_t)INT_MAX );
         if( sz[i] == 0 )
-        return;
+            return;
         if( dstofs )
-        dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+            dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
         isz[i] = (int)sz[i];
     }
 
@@ -120,9 +120,9 @@ void MatAllocator::upload(UMatData* u, const void* srcptr, int dims, const size_
     const Mat* arrays[] = { &src, &dst };
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs, 2);
-    size_t j, planesz = it.size;
+    size_t planesz = it.size;
 
-    for( j = 0; j < it.nplanes; j++, ++it )
+    for( size_t j = 0; j < it.nplanes; j++, ++it )
         memcpy(ptrs[1], ptrs[0], planesz);
 }
 
@@ -130,6 +130,8 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
                   const size_t srcofs[], const size_t srcstep[],
                   const size_t dstofs[], const size_t dststep[], bool /*sync*/) const
 {
+    CV_INSTRUMENT_REGION()
+
     if(!usrc || !udst)
         return;
     int isz[CV_MAX_DIM];
@@ -153,9 +155,9 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
     const Mat* arrays[] = { &src, &dst };
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs, 2);
-    size_t j, planesz = it.size;
+    size_t planesz = it.size;
 
-    for( j = 0; j < it.nplanes; j++, ++it )
+    for( size_t j = 0; j < it.nplanes; j++, ++it )
         memcpy(ptrs[1], ptrs[0], planesz);
 }
 
@@ -299,8 +301,7 @@ static inline void setSize( Mat& m, int _dims, const int* _sz,
         return;
 
     size_t esz = CV_ELEM_SIZE(m.flags), esz1 = CV_ELEM_SIZE1(m.flags), total = esz;
-    int i;
-    for( i = _dims-1; i >= 0; i-- )
+    for( int i = _dims-1; i >= 0; i-- )
     {
         int s = _sz[i];
         CV_Assert( s >= 0 );
@@ -438,6 +439,11 @@ void Mat::create(int d, const int* _sizes, int _type)
     finalizeHdr(*this);
 }
 
+void Mat::create(const std::vector<int>& _sizes, int _type)
+{
+    create((int)_sizes.size(), _sizes.data(), _type);
+}
+
 void Mat::copySize(const Mat& m)
 {
     setSize(*this, m.dims, 0, 0);
@@ -540,20 +546,31 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
 }
 
 
+Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _steps)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
+{
+    flags |= CV_MAT_TYPE(_type);
+    datastart = data = (uchar*)_data;
+    setSize(*this, (int)_sizes.size(), _sizes.data(), _steps, true);
+    finalizeHdr(*this);
+}
+
+
 Mat::Mat(const Mat& m, const Range* ranges)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
-    int i, d = m.dims;
+    int d = m.dims;
 
     CV_Assert(ranges);
-    for( i = 0; i < d; i++ )
+    for( int i = 0; i < d; i++ )
     {
         Range r = ranges[i];
         CV_Assert( r == Range::all() || (0 <= r.start && r.start < r.end && r.end <= m.size[i]) );
     }
     *this = m;
-    for( i = 0; i < d; i++ )
+    for( int i = 0; i < d; i++ )
     {
         Range r = ranges[i];
         if( r != Range::all() && r != Range(0, size.p[i]))
@@ -566,6 +583,31 @@ Mat::Mat(const Mat& m, const Range* ranges)
     updateContinuityFlag(*this);
 }
 
+Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+    datalimit(0), allocator(0), u(0), size(&rows)
+{
+    int d = m.dims;
+
+    CV_Assert((int)ranges.size() == d);
+    for (int i = 0; i < d; i++)
+    {
+        Range r = ranges[i];
+        CV_Assert(r == Range::all() || (0 <= r.start && r.start < r.end && r.end <= m.size[i]));
+    }
+    *this = m;
+    for (int i = 0; i < d; i++)
+    {
+        Range r = ranges[i];
+        if (r != Range::all() && r != Range(0, size.p[i]))
+        {
+            size.p[i] = r.end - r.start;
+            data += r.start*step.p[i];
+            flags |= SUBMATRIX_FLAG;
+        }
+    }
+    updateContinuityFlag(*this);
+}
 
 static Mat cvMatNDToMat(const CvMatND* m, bool copyData)
 {
@@ -578,8 +620,8 @@ static Mat cvMatNDToMat(const CvMatND* m, bool copyData)
     int _sizes[CV_MAX_DIM];
     size_t _steps[CV_MAX_DIM];
 
-    int i, d = m->dims;
-    for( i = 0; i < d; i++ )
+    int d = m->dims;
+    for( int i = 0; i < d; i++ )
     {
         _sizes[i] = m->dim[i].size;
         _steps[i] = m->dim[i].step;
@@ -788,6 +830,32 @@ void Mat::reserve(size_t nelems)
     dataend = data + step.p[0]*r;
 }
 
+void Mat::reserveBuffer(size_t nbytes)
+{
+    size_t esz = 1;
+    int mtype = CV_8UC1;
+    if (!empty())
+    {
+        if (!isSubmatrix() && data + nbytes <= dataend)//Should it be datalimit?
+            return;
+        esz = elemSize();
+        mtype = type();
+    }
+
+    size_t nelems = (nbytes - 1) / esz + 1;
+
+#if SIZE_MAX > UINT_MAX
+    CV_Assert(nelems <= size_t(INT_MAX)*size_t(INT_MAX));
+    int newrows = nelems > size_t(INT_MAX) ? nelems > 0x400*size_t(INT_MAX) ? nelems > 0x100000 * size_t(INT_MAX) ? nelems > 0x40000000 * size_t(INT_MAX) ?
+                  size_t(INT_MAX) : 0x40000000 : 0x100000 : 0x400 : 1;
+#else
+    int newrows = nelems > size_t(INT_MAX) ? 2 : 1;
+#endif
+    int newcols = (int)((nelems - 1) / newrows + 1);
+
+    create(newrows, newcols, mtype);
+}
+
 
 void Mat::resize(size_t nelems)
 {
@@ -839,9 +907,9 @@ void Mat::push_back(const Mat& elems)
     bool eq = size == elems.size;
     size.p[0] = r;
     if( !eq )
-        CV_Error(CV_StsUnmatchedSizes, "");
+        CV_Error(CV_StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
     if( type() != elems.type() )
-        CV_Error(CV_StsUnmatchedFormats, "");
+        CV_Error(CV_StsUnmatchedFormats, "Pushed vector type is not the same as matrix type");
 
     if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
@@ -929,8 +997,13 @@ Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     Size wholeSize; Point ofs;
     size_t esz = elemSize();
     locateROI( wholeSize, ofs );
-    int row1 = std::max(ofs.y - dtop, 0), row2 = std::min(ofs.y + rows + dbottom, wholeSize.height);
-    int col1 = std::max(ofs.x - dleft, 0), col2 = std::min(ofs.x + cols + dright, wholeSize.width);
+    int row1 = std::min(std::max(ofs.y - dtop, 0), wholeSize.height), row2 = std::max(0, std::min(ofs.y + rows + dbottom, wholeSize.height));
+    int col1 = std::min(std::max(ofs.x - dleft, 0), wholeSize.width), col2 = std::max(0, std::min(ofs.x + cols + dright, wholeSize.width));
+    if(row1 > row2)
+        std::swap(row1, row2);
+    if(col1 > col2)
+        std::swap(col1, col2);
+
     data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
     rows = row2 - row1; cols = col2 - col1;
     size.p[0] = rows; size.p[1] = cols;
@@ -1056,6 +1129,8 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
 
 void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 {
+    CV_INSTRUMENT_REGION()
+
     int i, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn <= 4);
     switch(depth)
@@ -1286,10 +1361,10 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == MAT )
     {
         const Mat& m = *(const Mat*)obj;
-        int i, n = (int)m.size[0];
+        int n = (int)m.size[0];
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( int i = 0; i < n; i++ )
             mv[i] = m.dims == 2 ? Mat(1, m.cols, m.type(), (void*)m.ptr(i)) :
                 Mat(m.dims-1, &m.size[1], m.type(), (void*)m.ptr(i), &m.step[1]);
         return;
@@ -1298,20 +1373,20 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == EXPR )
     {
         Mat m = *(const MatExpr*)obj;
-        int i, n = m.size[0];
+        int n = m.size[0];
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( int i = 0; i < n; i++ )
             mv[i] = m.row(i);
         return;
     }
 
     if( k == MATX )
     {
-        size_t i, n = sz.height, esz = CV_ELEM_SIZE(flags);
+        size_t n = sz.height, esz = CV_ELEM_SIZE(flags);
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             mv[i] = Mat(1, sz.width, CV_MAT_TYPE(flags), (uchar*)obj + esz*sz.width*i);
         return;
     }
@@ -1320,11 +1395,11 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     {
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
 
-        size_t i, n = v.size(), esz = CV_ELEM_SIZE(flags);
+        size_t n = size().width, esz = CV_ELEM_SIZE(flags);
         int t = CV_MAT_DEPTH(flags), cn = CV_MAT_CN(flags);
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             mv[i] = Mat(1, cn, t, (void*)(&v[0] + esz*i));
         return;
     }
@@ -1338,11 +1413,11 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == STD_VECTOR_VECTOR )
     {
         const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        int i, n = (int)vv.size();
+        int n = (int)vv.size();
         int t = CV_MAT_TYPE(flags);
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( int i = 0; i < n; i++ )
         {
             const std::vector<uchar>& v = vv[i];
             mv[i] = Mat(size(i), t, (void*)&v[0]);
@@ -1353,10 +1428,10 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
-        size_t i, n = v.size();
+        size_t n = v.size();
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             mv[i] = v[i];
         return;
     }
@@ -1364,10 +1439,10 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
-        size_t i, n = v.size();
+        size_t n = v.size();
         mv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             mv[i] = v[i].getMat(accessFlags);
         return;
     }
@@ -1389,10 +1464,10 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
-        size_t i, n = v.size();
+        size_t n = v.size();
         umv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             umv[i] = v[i].getUMat(accessFlags);
         return;
     }
@@ -1400,10 +1475,10 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
-        size_t i, n = v.size();
+        size_t n = v.size();
         umv.resize(n);
 
-        for( i = 0; i < n; i++ )
+        for( size_t i = 0; i < n; i++ )
             umv[i] = v[i];
         return;
     }
@@ -1993,6 +2068,9 @@ bool _InputArray::isContinuous(int i) const
         CV_Assert((size_t)i < vv.size());
         return vv[i].isContinuous();
     }
+
+    if( k == CUDA_GPU_MAT )
+      return i < 0 ? ((const cuda::GpuMat*)obj)->isContinuous() : true;
 
     CV_Error(CV_StsNotImplemented, "Unknown/unsupported array type");
     return false;
@@ -2802,6 +2880,8 @@ InputOutputArray noArray() { return _none; }
 
 void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     if( nsrc == 0 || !src )
     {
         _dst.release();
@@ -2809,8 +2889,7 @@ void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
     }
 
     int totalCols = 0, cols = 0;
-    size_t i;
-    for( i = 0; i < nsrc; i++ )
+    for( size_t i = 0; i < nsrc; i++ )
     {
         CV_Assert( src[i].dims <= 2 &&
                    src[i].rows == src[0].rows &&
@@ -2819,7 +2898,7 @@ void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
     }
     _dst.create( src[0].rows, totalCols, src[0].type());
     Mat dst = _dst.getMat();
-    for( i = 0; i < nsrc; i++ )
+    for( size_t i = 0; i < nsrc; i++ )
     {
         Mat dpart = dst(Rect(cols, 0, src[i].cols, src[i].rows));
         src[i].copyTo(dpart);
@@ -2829,12 +2908,16 @@ void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 
 void cv::hconcat(InputArray src1, InputArray src2, OutputArray dst)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src[] = {src1.getMat(), src2.getMat()};
     hconcat(src, 2, dst);
 }
 
 void cv::hconcat(InputArray _src, OutputArray dst)
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<Mat> src;
     _src.getMatVector(src);
     hconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
@@ -2842,6 +2925,8 @@ void cv::hconcat(InputArray _src, OutputArray dst)
 
 void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     if( nsrc == 0 || !src )
     {
         _dst.release();
@@ -2849,8 +2934,7 @@ void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
     }
 
     int totalRows = 0, rows = 0;
-    size_t i;
-    for( i = 0; i < nsrc; i++ )
+    for( size_t i = 0; i < nsrc; i++ )
     {
         CV_Assert(src[i].dims <= 2 &&
                   src[i].cols == src[0].cols &&
@@ -2859,7 +2943,7 @@ void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
     }
     _dst.create( totalRows, src[0].cols, src[0].type());
     Mat dst = _dst.getMat();
-    for( i = 0; i < nsrc; i++ )
+    for( size_t i = 0; i < nsrc; i++ )
     {
         Mat dpart(dst, Rect(0, rows, src[i].cols, src[i].rows));
         src[i].copyTo(dpart);
@@ -2869,12 +2953,16 @@ void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 
 void cv::vconcat(InputArray src1, InputArray src2, OutputArray dst)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src[] = {src1.getMat(), src2.getMat()};
     vconcat(src, 2, dst);
 }
 
 void cv::vconcat(InputArray _src, OutputArray dst)
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<Mat> src;
     _src.getMatVector(src);
     vconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
@@ -2924,13 +3012,15 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 
 void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _m.dims() <= 2 );
 
     CV_OCL_RUN(_m.isUMat(),
                ocl_setIdentity(_m, s))
 
     Mat m = _m.getMat();
-    int i, j, rows = m.rows, cols = m.cols, type = m.type();
+    int rows = m.rows, cols = m.cols, type = m.type();
 
     if( type == CV_32FC1 )
     {
@@ -2938,9 +3028,9 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
         float val = (float)s[0];
         size_t step = m.step/sizeof(data[0]);
 
-        for( i = 0; i < rows; i++, data += step )
+        for( int i = 0; i < rows; i++, data += step )
         {
-            for( j = 0; j < cols; j++ )
+            for( int j = 0; j < cols; j++ )
                 data[j] = 0;
             if( i < cols )
                 data[i] = val;
@@ -2952,9 +3042,9 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
         double val = s[0];
         size_t step = m.step/sizeof(data[0]);
 
-        for( i = 0; i < rows; i++, data += step )
+        for( int i = 0; i < rows; i++, data += step )
         {
-            for( j = 0; j < cols; j++ )
+            for( int j = 0; j < cols; j++ )
                 data[j] = j == i ? val : 0;
         }
     }
@@ -2969,9 +3059,11 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 
 cv::Scalar cv::trace( InputArray _m )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat m = _m.getMat();
     CV_Assert( m.dims <= 2 );
-    int i, type = m.type();
+    int type = m.type();
     int nm = std::min(m.rows, m.cols);
 
     if( type == CV_32FC1 )
@@ -2979,7 +3071,7 @@ cv::Scalar cv::trace( InputArray _m )
         const float* ptr = m.ptr<float>();
         size_t step = m.step/sizeof(ptr[0]) + 1;
         double _s = 0;
-        for( i = 0; i < nm; i++ )
+        for( int i = 0; i < nm; i++ )
             _s += ptr[i*step];
         return _s;
     }
@@ -2989,7 +3081,7 @@ cv::Scalar cv::trace( InputArray _m )
         const double* ptr = m.ptr<double>();
         size_t step = m.step/sizeof(ptr[0]) + 1;
         double _s = 0;
-        for( i = 0; i < nm; i++ )
+        for( int i = 0; i < nm; i++ )
             _s += ptr[i*step];
         return _s;
     }
@@ -3061,12 +3153,11 @@ transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
 template<typename T> static void
 transposeI_( uchar* data, size_t step, int n )
 {
-    int i, j;
-    for( i = 0; i < n; i++ )
+    for( int i = 0; i < n; i++ )
     {
         T* row = (T*)(data + step*i);
         uchar* data1 = data + i*sizeof(T);
-        for( j = i+1; j < n; j++ )
+        for( int j = i+1; j < n; j++ )
             std::swap( row[j], *(T*)(data1 + step*j) );
     }
 }
@@ -3170,62 +3261,64 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 #ifdef HAVE_IPP
 static bool ipp_transpose( Mat &src, Mat &dst )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int type = src.type();
-    typedef IppStatus (CV_STDCALL * ippiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
-    typedef IppStatus (CV_STDCALL * ippiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
-    ippiTranspose ippFunc = 0;
-    ippiTransposeI ippFuncI = 0;
+    typedef IppStatus (CV_STDCALL * IppiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
+    typedef IppStatus (CV_STDCALL * IppiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
+    IppiTranspose ippiTranspose = 0;
+    IppiTransposeI ippiTranspose_I = 0;
 
     if (dst.data == src.data && dst.cols == dst.rows)
     {
         CV_SUPPRESS_DEPRECATED_START
-        ippFuncI =
-            type == CV_8UC1 ? (ippiTransposeI)ippiTranspose_8u_C1IR :
-            type == CV_8UC3 ? (ippiTransposeI)ippiTranspose_8u_C3IR :
-            type == CV_8UC4 ? (ippiTransposeI)ippiTranspose_8u_C4IR :
-            type == CV_16UC1 ? (ippiTransposeI)ippiTranspose_16u_C1IR :
-            type == CV_16UC3 ? (ippiTransposeI)ippiTranspose_16u_C3IR :
-            type == CV_16UC4 ? (ippiTransposeI)ippiTranspose_16u_C4IR :
-            type == CV_16SC1 ? (ippiTransposeI)ippiTranspose_16s_C1IR :
-            type == CV_16SC3 ? (ippiTransposeI)ippiTranspose_16s_C3IR :
-            type == CV_16SC4 ? (ippiTransposeI)ippiTranspose_16s_C4IR :
-            type == CV_32SC1 ? (ippiTransposeI)ippiTranspose_32s_C1IR :
-            type == CV_32SC3 ? (ippiTransposeI)ippiTranspose_32s_C3IR :
-            type == CV_32SC4 ? (ippiTransposeI)ippiTranspose_32s_C4IR :
-            type == CV_32FC1 ? (ippiTransposeI)ippiTranspose_32f_C1IR :
-            type == CV_32FC3 ? (ippiTransposeI)ippiTranspose_32f_C3IR :
-            type == CV_32FC4 ? (ippiTransposeI)ippiTranspose_32f_C4IR : 0;
+        ippiTranspose_I =
+            type == CV_8UC1 ? (IppiTransposeI)ippiTranspose_8u_C1IR :
+            type == CV_8UC3 ? (IppiTransposeI)ippiTranspose_8u_C3IR :
+            type == CV_8UC4 ? (IppiTransposeI)ippiTranspose_8u_C4IR :
+            type == CV_16UC1 ? (IppiTransposeI)ippiTranspose_16u_C1IR :
+            type == CV_16UC3 ? (IppiTransposeI)ippiTranspose_16u_C3IR :
+            type == CV_16UC4 ? (IppiTransposeI)ippiTranspose_16u_C4IR :
+            type == CV_16SC1 ? (IppiTransposeI)ippiTranspose_16s_C1IR :
+            type == CV_16SC3 ? (IppiTransposeI)ippiTranspose_16s_C3IR :
+            type == CV_16SC4 ? (IppiTransposeI)ippiTranspose_16s_C4IR :
+            type == CV_32SC1 ? (IppiTransposeI)ippiTranspose_32s_C1IR :
+            type == CV_32SC3 ? (IppiTransposeI)ippiTranspose_32s_C3IR :
+            type == CV_32SC4 ? (IppiTransposeI)ippiTranspose_32s_C4IR :
+            type == CV_32FC1 ? (IppiTransposeI)ippiTranspose_32f_C1IR :
+            type == CV_32FC3 ? (IppiTransposeI)ippiTranspose_32f_C3IR :
+            type == CV_32FC4 ? (IppiTransposeI)ippiTranspose_32f_C4IR : 0;
         CV_SUPPRESS_DEPRECATED_END
     }
     else
     {
-        ippFunc =
-            type == CV_8UC1 ? (ippiTranspose)ippiTranspose_8u_C1R :
-            type == CV_8UC3 ? (ippiTranspose)ippiTranspose_8u_C3R :
-            type == CV_8UC4 ? (ippiTranspose)ippiTranspose_8u_C4R :
-            type == CV_16UC1 ? (ippiTranspose)ippiTranspose_16u_C1R :
-            type == CV_16UC3 ? (ippiTranspose)ippiTranspose_16u_C3R :
-            type == CV_16UC4 ? (ippiTranspose)ippiTranspose_16u_C4R :
-            type == CV_16SC1 ? (ippiTranspose)ippiTranspose_16s_C1R :
-            type == CV_16SC3 ? (ippiTranspose)ippiTranspose_16s_C3R :
-            type == CV_16SC4 ? (ippiTranspose)ippiTranspose_16s_C4R :
-            type == CV_32SC1 ? (ippiTranspose)ippiTranspose_32s_C1R :
-            type == CV_32SC3 ? (ippiTranspose)ippiTranspose_32s_C3R :
-            type == CV_32SC4 ? (ippiTranspose)ippiTranspose_32s_C4R :
-            type == CV_32FC1 ? (ippiTranspose)ippiTranspose_32f_C1R :
-            type == CV_32FC3 ? (ippiTranspose)ippiTranspose_32f_C3R :
-            type == CV_32FC4 ? (ippiTranspose)ippiTranspose_32f_C4R : 0;
+        ippiTranspose =
+            type == CV_8UC1 ? (IppiTranspose)ippiTranspose_8u_C1R :
+            type == CV_8UC3 ? (IppiTranspose)ippiTranspose_8u_C3R :
+            type == CV_8UC4 ? (IppiTranspose)ippiTranspose_8u_C4R :
+            type == CV_16UC1 ? (IppiTranspose)ippiTranspose_16u_C1R :
+            type == CV_16UC3 ? (IppiTranspose)ippiTranspose_16u_C3R :
+            type == CV_16UC4 ? (IppiTranspose)ippiTranspose_16u_C4R :
+            type == CV_16SC1 ? (IppiTranspose)ippiTranspose_16s_C1R :
+            type == CV_16SC3 ? (IppiTranspose)ippiTranspose_16s_C3R :
+            type == CV_16SC4 ? (IppiTranspose)ippiTranspose_16s_C4R :
+            type == CV_32SC1 ? (IppiTranspose)ippiTranspose_32s_C1R :
+            type == CV_32SC3 ? (IppiTranspose)ippiTranspose_32s_C3R :
+            type == CV_32SC4 ? (IppiTranspose)ippiTranspose_32s_C4R :
+            type == CV_32FC1 ? (IppiTranspose)ippiTranspose_32f_C1R :
+            type == CV_32FC3 ? (IppiTranspose)ippiTranspose_32f_C3R :
+            type == CV_32FC4 ? (IppiTranspose)ippiTranspose_32f_C4R : 0;
     }
 
     IppiSize roiSize = { src.cols, src.rows };
-    if (ippFunc != 0)
+    if (ippiTranspose != 0)
     {
-        if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
+        if (CV_INSTRUMENT_FUN_IPP(ippiTranspose, src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
             return true;
     }
-    else if (ippFuncI != 0)
+    else if (ippiTranspose_I != 0)
     {
-        if (ippFuncI(dst.ptr(), (int)dst.step, roiSize) >= 0)
+        if (CV_INSTRUMENT_FUN_IPP(ippiTranspose_I, dst.ptr(), (int)dst.step, roiSize) >= 0)
             return true;
     }
     return false;
@@ -3237,6 +3330,8 @@ static bool ipp_transpose( Mat &src, Mat &dst )
 
 void cv::transpose( InputArray _src, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), esz = CV_ELEM_SIZE(type);
     CV_Assert( _src.dims() <= 2 && esz <= 32 );
 
@@ -3261,7 +3356,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
-    CV_IPP_RUN(true, ipp_transpose(src, dst))
+    CV_IPP_RUN_FAST(ipp_transpose(src, dst))
 
     if( dst.data == src.data )
     {
@@ -3283,6 +3378,8 @@ void cv::transpose( InputArray _src, OutputArray _dst )
 
 void cv::completeSymm( InputOutputArray _m, bool LtoR )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat m = _m.getMat();
     size_t step = m.step, esz = m.elemSize();
     CV_Assert( m.dims <= 2 && m.rows == m.cols );
@@ -3388,7 +3485,7 @@ reduceC_( const Mat& srcmat, Mat& dstmat )
 {
     typedef typename Op::rtype WT;
     Size size = srcmat.size();
-    int i, k, cn = srcmat.channels();
+    int cn = srcmat.channels();
     size.width *= cn;
     Op op;
 
@@ -3397,13 +3494,14 @@ reduceC_( const Mat& srcmat, Mat& dstmat )
         const T* src = srcmat.ptr<T>(y);
         ST* dst = dstmat.ptr<ST>(y);
         if( size.width == cn )
-            for( k = 0; k < cn; k++ )
+            for( int k = 0; k < cn; k++ )
                 dst[k] = src[k];
         else
         {
-            for( k = 0; k < cn; k++ )
+            for( int k = 0; k < cn; k++ )
             {
                 WT a0 = src[k], a1 = src[k+cn];
+                int i;
                 for( i = 2*cn; i <= size.width - 4*cn; i += 4*cn )
                 {
                     a0 = op(a0, (WT)src[i+k]);
@@ -3417,7 +3515,7 @@ reduceC_( const Mat& srcmat, Mat& dstmat )
                     a0 = op(a0, (WT)src[i+k]);
                 }
                 a0 = op(a0, a1);
-              dst[k] = (ST)a0;
+                dst[k] = (ST)a0;
             }
         }
     }
@@ -3458,43 +3556,43 @@ static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat
 
     IppiSize roisize = { srcmat.size().width, 1 };
 
-    typedef IppStatus (CV_STDCALL * ippiSum)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum);
-    typedef IppStatus (CV_STDCALL * ippiSumHint)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum, IppHintAlgorithm hint);
-    ippiSum ippFunc = 0;
-    ippiSumHint ippFuncHint = 0;
+    typedef IppStatus (CV_STDCALL * IppiSum)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum);
+    typedef IppStatus (CV_STDCALL * IppiSumHint)(const void * pSrc, int srcStep, IppiSize roiSize, Ipp64f* pSum, IppHintAlgorithm hint);
+    IppiSum ippiSum = 0;
+    IppiSumHint ippiSumHint = 0;
 
     if(ddepth == CV_64F)
     {
-        ippFunc =
-            stype == CV_8UC1 ? (ippiSum)ippiSum_8u_C1R :
-            stype == CV_8UC3 ? (ippiSum)ippiSum_8u_C3R :
-            stype == CV_8UC4 ? (ippiSum)ippiSum_8u_C4R :
-            stype == CV_16UC1 ? (ippiSum)ippiSum_16u_C1R :
-            stype == CV_16UC3 ? (ippiSum)ippiSum_16u_C3R :
-            stype == CV_16UC4 ? (ippiSum)ippiSum_16u_C4R :
-            stype == CV_16SC1 ? (ippiSum)ippiSum_16s_C1R :
-            stype == CV_16SC3 ? (ippiSum)ippiSum_16s_C3R :
-            stype == CV_16SC4 ? (ippiSum)ippiSum_16s_C4R : 0;
-        ippFuncHint =
-            stype == CV_32FC1 ? (ippiSumHint)ippiSum_32f_C1R :
-            stype == CV_32FC3 ? (ippiSumHint)ippiSum_32f_C3R :
-            stype == CV_32FC4 ? (ippiSumHint)ippiSum_32f_C4R : 0;
+        ippiSum =
+            stype == CV_8UC1 ? (IppiSum)ippiSum_8u_C1R :
+            stype == CV_8UC3 ? (IppiSum)ippiSum_8u_C3R :
+            stype == CV_8UC4 ? (IppiSum)ippiSum_8u_C4R :
+            stype == CV_16UC1 ? (IppiSum)ippiSum_16u_C1R :
+            stype == CV_16UC3 ? (IppiSum)ippiSum_16u_C3R :
+            stype == CV_16UC4 ? (IppiSum)ippiSum_16u_C4R :
+            stype == CV_16SC1 ? (IppiSum)ippiSum_16s_C1R :
+            stype == CV_16SC3 ? (IppiSum)ippiSum_16s_C3R :
+            stype == CV_16SC4 ? (IppiSum)ippiSum_16s_C4R : 0;
+        ippiSumHint =
+            stype == CV_32FC1 ? (IppiSumHint)ippiSum_32f_C1R :
+            stype == CV_32FC3 ? (IppiSumHint)ippiSum_32f_C3R :
+            stype == CV_32FC4 ? (IppiSumHint)ippiSum_32f_C4R : 0;
     }
 
-    if(ippFunc)
+    if(ippiSum)
     {
         for(int y = 0; y < srcmat.size().height; y++)
         {
-            if(ippFunc(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippiSum, srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y)) < 0)
                 return false;
         }
         return true;
     }
-    else if(ippFuncHint)
+    else if(ippiSumHint)
     {
         for(int y = 0; y < srcmat.size().height; y++)
         {
-            if(ippFuncHint(srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippiSumHint, srcmat.ptr(y), sstep, roisize, dstmat.ptr<Ipp64f>(y), ippAlgHintAccurate) < 0)
                 return false;
         }
         return true;
@@ -3505,7 +3603,7 @@ static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat
 
 static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
-    CV_IPP_RUN(true, ipp_reduceSumC_8u16u16s32f_64f(srcmat, dstmat));
+    CV_IPP_RUN_FAST(ipp_reduceSumC_8u16u16s32f_64f(srcmat, dstmat));
 
     cv::ReduceFunc func = 0;
 
@@ -3555,7 +3653,7 @@ static inline bool ipp_reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& 
         IppiSize roisize = ippiSize(srcmat.size().width, 1);\
         for(int y = 0; y < srcmat.size().height; y++)\
         {\
-            if(ippi##optype##_##favor##_C1R(srcmat.ptr<IppType>(y), sstep, roisize, dstmat.ptr<IppType>(y)) < 0)\
+            if(CV_INSTRUMENT_FUN_IPP(ippi##optype##_##favor##_C1R, srcmat.ptr<IppType>(y), sstep, roisize, dstmat.ptr<IppType>(y)) < 0)\
                 return false;\
         }\
         return true;\
@@ -3564,7 +3662,7 @@ static inline bool ipp_reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& 
 } \
 static inline void reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
 { \
-    CV_IPP_RUN(true, ipp_reduce##optype##C##favor(srcmat, dstmat)); \
+    CV_IPP_RUN_FAST(ipp_reduce##optype##C##favor(srcmat, dstmat)); \
     cv::reduceC_ < type1, type2, cv::Op##optype < type2 > >(srcmat, dstmat); \
 }
 #endif
@@ -3704,6 +3802,8 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
 void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _src.dims() <= 2 );
     int op0 = op;
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
@@ -3903,7 +4003,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     T* bptr;
-    int i, j, n, len;
+    int n, len;
     bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
     bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
@@ -3928,7 +4028,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
     }
 #endif
 
-    for( i = 0; i < n; i++ )
+    for( int i = 0; i < n; i++ )
     {
         T* ptr = bptr;
         if( sortRows )
@@ -3943,12 +4043,12 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
         }
         else
         {
-            for( j = 0; j < len; j++ )
+            for( int j = 0; j < len; j++ )
                 ptr[j] = src.ptr<T>(j)[i];
         }
 
 #ifdef USE_IPP_SORT
-        if (!ippSortFunc || ippSortFunc(ptr, len) < 0)
+        if (!ippSortFunc || CV_INSTRUMENT_FUN_IPP(ippSortFunc, ptr, len) < 0)
 #endif
         {
 #ifdef USE_IPP_SORT
@@ -3959,13 +4059,13 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
             if( sortDescending )
             {
 #ifdef USE_IPP_SORT
-                if (!ippFlipFunc || ippFlipFunc(ptr, len) < 0)
+                if (!ippFlipFunc || CV_INSTRUMENT_FUN_IPP(ippFlipFunc, ptr, len) < 0)
 #endif
                 {
 #ifdef USE_IPP_SORT
                     setIppErrorStatus();
 #endif
-                    for( j = 0; j < len/2; j++ )
+                    for( int j = 0; j < len/2; j++ )
                         std::swap(ptr[j], ptr[len-1-j]);
                 }
 #ifdef USE_IPP_SORT
@@ -3984,7 +4084,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 #endif
 
         if( !sortRows )
-            for( j = 0; j < len; j++ )
+            for( int j = 0; j < len; j++ )
                 dst.ptr<T>(j)[i] = ptr[j];
     }
 }
@@ -4025,14 +4125,12 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     AutoBuffer<int> ibuf;
-    T* bptr;
-    int* _iptr;
-    int i, j, n, len;
     bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
     bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
 
     CV_Assert( src.data != dst.data );
 
+    int n, len;
     if( sortRows )
         n = src.rows, len = src.cols;
     else
@@ -4041,8 +4139,8 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         buf.allocate(len);
         ibuf.allocate(len);
     }
-    bptr = (T*)buf;
-    _iptr = (int*)ibuf;
+    T* bptr = (T*)buf;
+    int* _iptr = (int*)ibuf;
 
 #if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
     int depth = src.depth();
@@ -4055,7 +4153,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
     }
 #endif
 
-    for( i = 0; i < n; i++ )
+    for( int i = 0; i < n; i++ )
     {
         T* ptr = bptr;
         int* iptr = _iptr;
@@ -4067,10 +4165,10 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         }
         else
         {
-            for( j = 0; j < len; j++ )
+            for( int j = 0; j < len; j++ )
                 ptr[j] = src.ptr<T>(j)[i];
         }
-        for( j = 0; j < len; j++ )
+        for( int j = 0; j < len; j++ )
             iptr[j] = j;
 
 #if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
@@ -4090,7 +4188,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
                     setIppErrorStatus();
 #endif
-                    for( j = 0; j < len/2; j++ )
+                    for( int j = 0; j < len/2; j++ )
                         std::swap(iptr[j], iptr[len-1-j]);
                 }
 #if defined USE_IPP_SORT && IPP_DISABLE_BLOCK
@@ -4109,7 +4207,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #endif
 
         if( !sortRows )
-            for( j = 0; j < len; j++ )
+            for( int j = 0; j < len; j++ )
                 dst.ptr<int>(j)[i] = iptr[j];
     }
 }
@@ -4120,6 +4218,8 @@ typedef void (*SortFunc)(const Mat& src, Mat& dst, int flags);
 
 void cv::sort( InputArray _src, OutputArray _dst, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     static SortFunc tab[] =
     {
         sort_<uchar>, sort_<schar>, sort_<ushort>, sort_<short>,
@@ -4135,6 +4235,8 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
 
 void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     static SortFunc tab[] =
     {
         sortIdx_<uchar>, sortIdx_<schar>, sortIdx_<ushort>, sortIdx_<short>,
@@ -4216,22 +4318,17 @@ cvReduce( const CvArr* srcarr, CvArr* dstarr, int dim, int op )
 CV_IMPL CvArr*
 cvRange( CvArr* arr, double start, double end )
 {
-    int ok = 0;
-
     CvMat stub, *mat = (CvMat*)arr;
-    double delta;
-    int type, step;
+    int step;
     double val = start;
-    int i, j;
-    int rows, cols;
 
     if( !CV_IS_MAT(mat) )
         mat = cvGetMat( mat, &stub);
 
-    rows = mat->rows;
-    cols = mat->cols;
-    type = CV_MAT_TYPE(mat->type);
-    delta = (end-start)/(rows*cols);
+    int rows = mat->rows;
+    int cols = mat->cols;
+    int type = CV_MAT_TYPE(mat->type);
+    double delta = (end-start)/(rows*cols);
 
     if( CV_IS_MAT_CONT(mat->type) )
     {
@@ -4250,29 +4347,28 @@ cvRange( CvArr* arr, double start, double end )
         if( fabs(val - ival) < DBL_EPSILON &&
             fabs(delta - idelta) < DBL_EPSILON )
         {
-            for( i = 0; i < rows; i++, idata += step )
-                for( j = 0; j < cols; j++, ival += idelta )
+            for( int i = 0; i < rows; i++, idata += step )
+                for( int j = 0; j < cols; j++, ival += idelta )
                     idata[j] = ival;
         }
         else
         {
-            for( i = 0; i < rows; i++, idata += step )
-                for( j = 0; j < cols; j++, val += delta )
+            for( int i = 0; i < rows; i++, idata += step )
+                for( int j = 0; j < cols; j++, val += delta )
                     idata[j] = cvRound(val);
         }
     }
     else if( type == CV_32FC1 )
     {
         float* fdata = mat->data.fl;
-        for( i = 0; i < rows; i++, fdata += step )
-            for( j = 0; j < cols; j++, val += delta )
+        for( int i = 0; i < rows; i++, fdata += step )
+            for( int j = 0; j < cols; j++, val += delta )
                 fdata[j] = (float)val;
     }
     else
         CV_Error( CV_StsUnsupportedFormat, "The function only supports 32sC1 and 32fC1 datatypes" );
 
-    ok = 1;
-    return ok ? arr : 0;
+    return arr;
 }
 
 
@@ -4673,7 +4769,7 @@ void MatConstIterator::seek(ptrdiff_t ofs, bool relative)
 
 void MatConstIterator::seek(const int* _idx, bool relative)
 {
-    int i, d = m->dims;
+    int d = m->dims;
     ptrdiff_t ofs = 0;
     if( !_idx )
         ;
@@ -4681,7 +4777,7 @@ void MatConstIterator::seek(const int* _idx, bool relative)
         ofs = _idx[0]*m->size[1] + _idx[1];
     else
     {
-        for( i = 0; i < d; i++ )
+        for( int i = 0; i < d; i++ )
             ofs = ofs*m->size[i] + _idx[i];
     }
     seek(ofs, relative);
@@ -4891,13 +4987,13 @@ SparseMat::SparseMat(const Mat& m)
 
 void SparseMat::create(int d, const int* _sizes, int _type)
 {
-    int i;
     CV_Assert( _sizes && 0 < d && d <= CV_MAX_DIM );
-    for( i = 0; i < d; i++ )
+    for( int i = 0; i < d; i++ )
         CV_Assert( _sizes[i] > 0 );
     _type = CV_MAT_TYPE(_type);
     if( hdr && _type == type() && hdr->dims == d && hdr->refcount == 1 )
     {
+        int i;
         for( i = 0; i < d; i++ )
             if( _sizes[i] != hdr->size[i] )
                 break;
@@ -4910,7 +5006,7 @@ void SparseMat::create(int d, const int* _sizes, int _type)
     int _sizes_backup[CV_MAX_DIM]; // #5991
     if (_sizes == hdr->size)
     {
-        for(i = 0; i < d; i++ )
+        for(int i = 0; i < d; i++ )
             _sizes_backup[i] = _sizes[i];
         _sizes = _sizes_backup;
     }
@@ -4930,9 +5026,9 @@ void SparseMat::copyTo( SparseMat& m ) const
     }
     m.create( hdr->dims, hdr->size, type() );
     SparseMatConstIterator from = begin();
-    size_t i, N = nzcount(), esz = elemSize();
+    size_t N = nzcount(), esz = elemSize();
 
-    for( i = 0; i < N; i++, ++from )
+    for( size_t i = 0; i < N; i++, ++from )
     {
         const Node* n = from.node();
         uchar* to = m.newNode(n->idx, n->hashval);
@@ -4948,9 +5044,9 @@ void SparseMat::copyTo( Mat& m ) const
     m = Scalar(0);
 
     SparseMatConstIterator from = begin();
-    size_t i, N = nzcount(), esz = elemSize();
+    size_t N = nzcount(), esz = elemSize();
 
-    for( i = 0; i < N; i++, ++from )
+    for( size_t i = 0; i < N; i++, ++from )
     {
         const Node* n = from.node();
         copyElem( from.ptr, (ndims > 1 ? m.ptr(n->idx) : m.ptr(n->idx[0])), esz);
@@ -4977,12 +5073,12 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
         m.create( hdr->dims, hdr->size, rtype );
 
     SparseMatConstIterator from = begin();
-    size_t i, N = nzcount();
+    size_t N = nzcount();
 
     if( alpha == 1 )
     {
         ConvertData cvtfunc = getConvertElem(type(), rtype);
-        for( i = 0; i < N; i++, ++from )
+        for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
             uchar* to = hdr == m.hdr ? from.ptr : m.newNode(n->idx, n->hashval);
@@ -4992,7 +5088,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     else
     {
         ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
-        for( i = 0; i < N; i++, ++from )
+        for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
             uchar* to = hdr == m.hdr ? from.ptr : m.newNode(n->idx, n->hashval);
@@ -5014,12 +5110,12 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
     m = Scalar(beta);
 
     SparseMatConstIterator from = begin();
-    size_t i, N = nzcount();
+    size_t N = nzcount();
 
     if( alpha == 1 && beta == 0 )
     {
         ConvertData cvtfunc = getConvertElem(type(), rtype);
-        for( i = 0; i < N; i++, ++from )
+        for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
             uchar* to = m.ptr(n->idx);
@@ -5029,7 +5125,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
     else
     {
         ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
-        for( i = 0; i < N; i++, ++from )
+        for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
             uchar* to = m.ptr(n->idx);
@@ -5063,7 +5159,7 @@ uchar* SparseMat::ptr(int i0, bool createMissing, size_t* hashval)
         int idx[] = { i0 };
         return newNode( idx, h );
     }
-    return 0;
+    return NULL;
 }
 
 uchar* SparseMat::ptr(int i0, int i1, bool createMissing, size_t* hashval)
@@ -5085,7 +5181,7 @@ uchar* SparseMat::ptr(int i0, int i1, bool createMissing, size_t* hashval)
         int idx[] = { i0, i1 };
         return newNode( idx, h );
     }
-    return 0;
+    return NULL;
 }
 
 uchar* SparseMat::ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval)
@@ -5108,7 +5204,7 @@ uchar* SparseMat::ptr(int i0, int i1, int i2, bool createMissing, size_t* hashva
         int idx[] = { i0, i1, i2 };
         return newNode( idx, h );
     }
-    return 0;
+    return NULL;
 }
 
 uchar* SparseMat::ptr(const int* idx, bool createMissing, size_t* hashval)
@@ -5132,7 +5228,7 @@ uchar* SparseMat::ptr(const int* idx, bool createMissing, size_t* hashval)
         nidx = elem->next;
     }
 
-    return createMissing ? newNode(idx, h) : 0;
+    return createMissing ? newNode(idx, h) : NULL;
 }
 
 void SparseMat::erase(int i0, int i1, size_t* hashval)
@@ -5206,13 +5302,13 @@ void SparseMat::resizeHashTab(size_t newsize)
     if((newsize & (newsize-1)) != 0)
         newsize = (size_t)1 << cvCeil(std::log((double)newsize)/CV_LOG2);
 
-    size_t i, hsize = hdr->hashtab.size();
+    size_t hsize = hdr->hashtab.size();
     std::vector<size_t> _newh(newsize);
     size_t* newh = &_newh[0];
-    for( i = 0; i < newsize; i++ )
+    for( size_t i = 0; i < newsize; i++ )
         newh[i] = 0;
     uchar* pool = &hdr->pool[0];
-    for( i = 0; i < hsize; i++ )
+    for( size_t i = 0; i < hsize; i++ )
     {
         size_t nidx = hdr->hashtab[i];
         while( nidx )
@@ -5341,6 +5437,8 @@ SparseMatConstIterator& SparseMatConstIterator::operator ++()
 
 double norm( const SparseMat& src, int normType )
 {
+    CV_INSTRUMENT_REGION()
+
     SparseMatConstIterator it = src.begin();
 
     size_t i, N = src.nzcount();
@@ -5390,6 +5488,8 @@ double norm( const SparseMat& src, int normType )
 
 void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _minidx, int* _maxidx )
 {
+    CV_INSTRUMENT_REGION()
+
     SparseMatConstIterator it = src.begin();
     size_t i, N = src.nzcount(), d = src.hdr ? src.hdr->dims : 0;
     int type = src.type();
@@ -5453,6 +5553,8 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
 
 void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
 {
+    CV_INSTRUMENT_REGION()
+
     double scale = 1;
     if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )
     {
@@ -5517,6 +5619,16 @@ Rect RotatedRect::boundingRect() const
            cvCeil(std::max(std::max(std::max(pt[0].y, pt[1].y), pt[2].y), pt[3].y)));
     r.width -= r.x - 1;
     r.height -= r.y - 1;
+    return r;
+}
+
+
+Rect_<float> RotatedRect::boundingRect2f() const
+{
+    Point2f pt[4];
+    points(pt);
+    Rect_<float> r(Point_<float>(min(min(min(pt[0].x, pt[1].x), pt[2].x), pt[3].x), min(min(min(pt[0].y, pt[1].y), pt[2].y), pt[3].y)),
+                   Point_<float>(max(max(max(pt[0].x, pt[1].x), pt[2].x), pt[3].x), max(max(max(pt[0].y, pt[1].y), pt[2].y), pt[3].y)));
     return r;
 }
 

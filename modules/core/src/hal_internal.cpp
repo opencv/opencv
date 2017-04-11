@@ -46,17 +46,19 @@
 
 #ifdef HAVE_LAPACK
 
+#include "opencv_lapack.h"
+
 #include <cmath>
-#include <lapacke.h>
-#include <cblas.h>
 #include <algorithm>
 #include <typeinfo>
 #include <limits>
 #include <complex>
+#include <vector>
 
 #define HAL_GEMM_SMALL_COMPLEX_MATRIX_THRESH 100
 #define HAL_GEMM_SMALL_MATRIX_THRESH 100
 #define HAL_SVD_SMALL_MATRIX_THRESH 25
+#define HAL_QR_SMALL_MATRIX_THRESH 30
 #define HAL_LU_SMALL_MATRIX_THRESH 100
 #define HAL_CHOLESKY_SMALL_MATRIX_THRESH 100
 
@@ -96,7 +98,7 @@ set_value(fptype *dst, size_t dst_ld, fptype value, size_t m, size_t n)
 template <typename fptype> static inline int
 lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int* info)
 {
-    int lda = a_step / sizeof(fptype), sign = 0;
+    int lda = (int)(a_step / sizeof(fptype)), sign = 0;
     int* piv = new int[m];
 
     transpose_square_inplace(a, lda, m);
@@ -112,7 +114,7 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
         }
         else
         {
-            int ldb = b_step / sizeof(fptype);
+            int ldb = (int)(b_step / sizeof(fptype));
             fptype* tmpB = new fptype[m*n];
 
             transpose(b, ldb, tmpB, m, m, n);
@@ -150,8 +152,8 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
 template <typename fptype> static inline int
 lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, bool* info)
 {
-    int lapackStatus;
-    int lda = a_step / sizeof(fptype);
+    int lapackStatus = 0;
+    int lda = (int)(a_step / sizeof(fptype));
     char L[] = {'L', '\0'};
 
     if(b)
@@ -165,7 +167,7 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
         }
         else
         {
-            int ldb = b_step / sizeof(fptype);
+            int ldb = (int)(b_step / sizeof(fptype));
             fptype* tmpB = new fptype[m*n];
             transpose(b, ldb, tmpB, m, m, n);
 
@@ -195,9 +197,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
 template <typename fptype> static inline int
 lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype* vt, size_t v_step, int m, int n, int flags, int* info)
 {
-    int lda = a_step / sizeof(fptype);
-    int ldv = v_step / sizeof(fptype);
-    int ldu = u_step / sizeof(fptype);
+    int lda = (int)(a_step / sizeof(fptype));
+    int ldv = (int)(v_step / sizeof(fptype));
+    int ldu = (int)(u_step / sizeof(fptype));
     int lwork = -1;
     int* iworkBuf = new int[8*std::min(m, n)];
     fptype work1 = 0;
@@ -227,7 +229,7 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     else if(typeid(fptype) == typeid(double))
         dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&work1, &lwork, iworkBuf, info);
 
-    lwork = round(work1); //optimal buffer size
+    lwork = (int)round(work1); //optimal buffer size
     fptype* buffer = new fptype[lwork + 1];
 
     if(typeid(fptype) == typeid(float))
@@ -252,13 +254,113 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
 }
 
 template <typename fptype> static inline int
+lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_step, fptype* dst, int* info)
+{
+    int lda = (int)(a_step / sizeof(fptype));
+    char mode[] = { 'N', '\0' };
+    if(m < n)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    std::vector<fptype> tmpAMemHolder;
+    fptype* tmpA;
+    int ldtmpA;
+    if (m == n)
+    {
+        transpose_square_inplace(a, lda, m);
+        tmpA = a;
+        ldtmpA = lda;
+    }
+    else
+    {
+        tmpAMemHolder.resize(m*n);
+        tmpA = &tmpAMemHolder.front();
+        ldtmpA = m;
+        transpose(a, lda, tmpA, m, m, n);
+    }
+
+    int lwork = -1;
+    fptype work1 = 0.;
+
+    if (b)
+    {
+        if (k == 1 && b_step == sizeof(fptype))
+        {
+            if (typeid(fptype) == typeid(float))
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
+            else if (typeid(fptype) == typeid(double))
+                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
+
+            lwork = cvRound(work1); //optimal buffer size
+            std::vector<fptype> workBufMemHolder(lwork + 1);
+            fptype* buffer = &workBufMemHolder.front();
+
+            if (typeid(fptype) == typeid(float))
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
+            else if (typeid(fptype) == typeid(double))
+                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)buffer, &lwork, info);
+        }
+        else
+        {
+            std::vector<fptype> tmpBMemHolder(m*k);
+            fptype* tmpB = &tmpBMemHolder.front();
+            int ldb = (int)(b_step / sizeof(fptype));
+            transpose(b, ldb, tmpB, m, m, k);
+
+            if (typeid(fptype) == typeid(float))
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
+            else if (typeid(fptype) == typeid(double))
+                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
+
+            lwork = cvRound(work1); //optimal buffer size
+            std::vector<fptype> workBufMemHolder(lwork + 1);
+            fptype* buffer = &workBufMemHolder.front();
+
+            if (typeid(fptype) == typeid(float))
+                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
+            else if (typeid(fptype) == typeid(double))
+                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)buffer, &lwork, info);
+
+            transpose(tmpB, m, b, ldb, k, m);
+        }
+    }
+    else
+    {
+        if (typeid(fptype) == typeid(float))
+            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, info);
+        else if (typeid(fptype) == typeid(double))
+            dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, info);
+
+        lwork = cvRound(work1); //optimal buffer size
+        std::vector<fptype> workBufMemHolder(lwork + 1);
+        fptype* buffer = &workBufMemHolder.front();
+
+        if (typeid(fptype) == typeid(float))
+            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)buffer, &lwork, info);
+        else if (typeid(fptype) == typeid(double))
+            dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, info);
+    }
+
+    if (m == n)
+        transpose_square_inplace(a, lda, m);
+    else
+        transpose(tmpA, m, a, lda, n, m);
+
+    if (*info != 0)
+        *info = 0;
+    else
+        *info = 1;
+
+    return CV_HAL_ERROR_OK;
+}
+
+template <typename fptype> static inline int
 lapack_gemm(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
             const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int a_m, int a_n, int d_n, int flags)
 {
-    int ldsrc1 = src1_step / sizeof(fptype);
-    int ldsrc2 = src2_step / sizeof(fptype);
-    int ldsrc3 = src3_step / sizeof(fptype);
-    int lddst = dst_step / sizeof(fptype);
+    int ldsrc1 = (int)(src1_step / sizeof(fptype));
+    int ldsrc2 = (int)(src2_step / sizeof(fptype));
+    int ldsrc3 = (int)(src3_step / sizeof(fptype));
+    int lddst = (int)(dst_step / sizeof(fptype));
     int c_m, c_n, d_m;
     CBLAS_TRANSPOSE transA, transB;
 
@@ -332,10 +434,10 @@ template <typename fptype> static inline int
 lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
             const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int a_m, int a_n, int d_n, int flags)
 {
-    int ldsrc1 = src1_step / sizeof(std::complex<fptype>);
-    int ldsrc2 = src2_step / sizeof(std::complex<fptype>);
-    int ldsrc3 = src3_step / sizeof(std::complex<fptype>);
-    int lddst = dst_step / sizeof(std::complex<fptype>);
+    int ldsrc1 = (int)(src1_step / sizeof(std::complex<fptype>));
+    int ldsrc2 = (int)(src2_step / sizeof(std::complex<fptype>));
+    int ldsrc3 = (int)(src3_step / sizeof(std::complex<fptype>));
+    int lddst = (int)(dst_step / sizeof(std::complex<fptype>));
     int c_m, c_n, d_m;
     CBLAS_TRANSPOSE transA, transB;
     std::complex<fptype> cAlpha(alpha, 0.0);
@@ -399,9 +501,9 @@ lapack_gemm_c(const fptype *src1, size_t src1_step, const fptype *src2, size_t s
         set_value((std::complex<fptype>*)dst, lddst, std::complex<fptype>(0.0, 0.0), d_m, d_n);
 
     if(typeid(fptype) == typeid(float))
-        cblas_cgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, &cAlpha, (void*)src1, ldsrc1, (void*)src2, ldsrc2, &cBeta, (void*)dst, lddst);
+        cblas_cgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (float*)reinterpret_cast<fptype(&)[2]>(cAlpha), (float*)src1, ldsrc1, (float*)src2, ldsrc2, (float*)reinterpret_cast<fptype(&)[2]>(cBeta), (float*)dst, lddst);
     else if(typeid(fptype) == typeid(double))
-        cblas_zgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, &cAlpha, (void*)src1, ldsrc1, (void*)src2, ldsrc2, &cBeta, (void*)dst, lddst);
+        cblas_zgemm(CblasRowMajor, transA, transB, a_m, d_n, a_n, (double*)reinterpret_cast<fptype(&)[2]>(cAlpha), (double*)src1, ldsrc1, (double*)src2, ldsrc2, (double*)reinterpret_cast<fptype(&)[2]>(cBeta), (double*)dst, lddst);
 
     return CV_HAL_ERROR_OK;
 }
@@ -449,6 +551,20 @@ int lapack_SVD64f(double* a, size_t a_step, double *w, double* u, size_t u_step,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     int info;
     return lapack_SVD(a, a_step, w, u, u_step, vt, v_step, m, n, flags, &info);
+}
+
+int lapack_QR32f(float* src1, size_t src1_step, int m, int n, int k, float* src2, size_t src2_step, float* dst, int* info)
+{
+    if (m < HAL_QR_SMALL_MATRIX_THRESH)
+      return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return lapack_QR(src1, src1_step, m, n, k, src2, src2_step, dst, info);
+}
+
+int lapack_QR64f(double* src1, size_t src1_step, int m, int n, int k, double* src2, size_t src2_step, double* dst, int* info)
+{
+    if (m < HAL_QR_SMALL_MATRIX_THRESH)
+      return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return lapack_QR(src1, src1_step, m, n, k, src2, src2_step, dst, info);
 }
 
 int lapack_gemm32f(const float *src1, size_t src1_step, const float *src2, size_t src2_step, float alpha,

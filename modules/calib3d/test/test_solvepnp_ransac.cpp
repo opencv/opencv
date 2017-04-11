@@ -57,6 +57,7 @@ public:
         eps[SOLVEPNP_ITERATIVE] = 1.0e-2;
         eps[SOLVEPNP_EPNP] = 1.0e-2;
         eps[SOLVEPNP_P3P] = 1.0e-2;
+        eps[SOLVEPNP_AP3P] = 1.0e-2;
         eps[SOLVEPNP_DLS] = 1.0e-2;
         eps[SOLVEPNP_UPNP] = 1.0e-2;
         totalTestsCount = 10;
@@ -161,7 +162,7 @@ protected:
         points.resize(pointsCount);
         generate3DPointCloud(points);
 
-        const int methodsCount = 5;
+        const int methodsCount = 6;
         RNG rng = ts->get_rng();
 
 
@@ -189,7 +190,7 @@ protected:
             }
         }
     }
-    double eps[5];
+    double eps[6];
     int totalTestsCount;
 };
 
@@ -201,6 +202,7 @@ public:
         eps[SOLVEPNP_ITERATIVE] = 1.0e-6;
         eps[SOLVEPNP_EPNP] = 1.0e-6;
         eps[SOLVEPNP_P3P] = 1.0e-4;
+        eps[SOLVEPNP_AP3P] = 1.0e-4;
         eps[SOLVEPNP_DLS] = 1.0e-4;
         eps[SOLVEPNP_UPNP] = 1.0e-4;
         totalTestsCount = 1000;
@@ -222,7 +224,7 @@ protected:
         generatePose(trueRvec, trueTvec, rng);
 
         std::vector<Point3f> opoints;
-        if (method == 2)
+        if (method == 2 || method == 5)
         {
             opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
         }
@@ -322,10 +324,12 @@ TEST(Calib3d_SolvePnPRansac, input_type)
 
     std::vector<cv::Point3f> points3d;
     std::vector<cv::Point2f> points2d;
-    for (int i = 0; i < numPoints; i++)
+    for (int i = 0; i < numPoints; i+=2)
     {
-        points3d.push_back(cv::Point3i(i, 0, 0));
-        points2d.push_back(cv::Point2i(i, 0));
+        points3d.push_back(cv::Point3i(5+i, 3, 2));
+        points3d.push_back(cv::Point3i(5+i, 3+i, 2+i));
+        points2d.push_back(cv::Point2i(0, i));
+        points2d.push_back(cv::Point2i(-i, i));
     }
     Mat R1, t1, R2, t2, R3, t3, R4, t4;
 
@@ -359,12 +363,16 @@ TEST(Calib3d_SolvePnP, double_support)
     std::vector<cv::Point2d> points2d;
     std::vector<cv::Point3f> points3dF;
     std::vector<cv::Point2f> points2dF;
-    for (int i = 0; i < 10 ; i++)
+    for (int i = 0; i < 10 ; i+=2)
     {
-        points3d.push_back(cv::Point3d(i,0,0));
-        points3dF.push_back(cv::Point3d(i,0,0));
-        points2d.push_back(cv::Point2d(i,0));
-        points2dF.push_back(cv::Point2d(i,0));
+        points3d.push_back(cv::Point3d(5+i, 3, 2));
+        points3dF.push_back(cv::Point3d(5+i, 3, 2));
+        points3d.push_back(cv::Point3d(5+i, 3+i, 2+i));
+        points3dF.push_back(cv::Point3d(5+i, 3+i, 2+i));
+        points2d.push_back(cv::Point2d(0, i));
+        points2dF.push_back(cv::Point2d(0, i));
+        points2d.push_back(cv::Point2d(-i, i));
+        points2dF.push_back(cv::Point2d(-i, i));
     }
     Mat R,t, RF, tF;
     vector<int> inliers;

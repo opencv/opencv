@@ -61,7 +61,7 @@ class PatternMaker:
 
   def save(self):
     c = canvas(self.g,width="%d%s"%(self.width,self.units),height="%d%s"%(self.height,self.units),viewBox="0 0 %d %d"%(self.width,self.height))
-    c.inkview(self.output)
+    c.save(self.output)
 
 
 def main():
@@ -70,9 +70,9 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:], "Ho:c:r:T:u:s:R:w:h:a:", ["help","output=","columns=","rows=",
                                                                       "type=","units=","square_size=","radius_rate=",
                                                                       "page_width=","page_height=", "page_size="])
-    except getopt.error, msg:
-        print msg
-        print "for help use --help"
+    except getopt.error as msg:
+        print(msg)
+        print("for help use --help")
         sys.exit(2)
     output = "out.svg"
     columns = 8
@@ -89,7 +89,7 @@ def main():
     # process options
     for o, a in opts:
         if o in ("-H", "--help"):
-            print __doc__
+            print(__doc__)
             sys.exit(0)
         elif o in ("-r", "--rows"):
             rows = int(a)

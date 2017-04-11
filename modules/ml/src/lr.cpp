@@ -127,6 +127,12 @@ Ptr<LogisticRegression> LogisticRegression::create()
     return makePtr<LogisticRegressionImpl>();
 }
 
+Ptr<LogisticRegression> LogisticRegression::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<LogisticRegression>(filepath, nodeName);
+}
+
+
 bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
 {
     // return value
@@ -311,7 +317,7 @@ Mat LogisticRegressionImpl::calc_sigmoid(const Mat& data) const
 
 double LogisticRegressionImpl::compute_cost(const Mat& _data, const Mat& _labels, const Mat& _init_theta)
 {
-    int llambda = 0;
+    float llambda = 0;                   /*changed llambda from int to float to solve issue #7924*/
     int m;
     int n;
     double cost = 0;
@@ -579,7 +585,7 @@ void LogisticRegressionImpl::write(FileStorage& fs) const
         CV_Error(CV_StsBadArg,"file can't open. Check file path");
     }
     writeFormat(fs);
-    string desc = "Logisitic Regression Classifier";
+    string desc = "Logistic Regression Classifier";
     fs<<"classifier"<<desc.c_str();
     fs<<"alpha"<<this->params.alpha;
     fs<<"iterations"<<this->params.num_iters;

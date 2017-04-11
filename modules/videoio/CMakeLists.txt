@@ -167,9 +167,22 @@ if(HAVE_GIGE_API)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
+if(HAVE_ARAVIS_API)
+  add_definitions(-DHAVE_ARAVIS_API)
+  ocv_include_directories(${ARAVIS_INCLUDE_PATH})
+  set(videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_aravis.cpp ${videoio_srcs})
+  list(APPEND VIDEOIO_LIBRARIES ${ARAVIS_LIBRARIES})
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_aravis.cpp)
+endif(HAVE_ARAVIS_API)
+
 if(HAVE_AVFOUNDATION)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation.mm)
-  list(APPEND VIDEOIO_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
+  if(IOS)
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation.mm)
+    list(APPEND VIDEOIO_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
+  else()
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_avfoundation_mac.mm)
+    list(APPEND VIDEOIO_LIBRARIES "-framework Cocoa" "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore")
+  endif()
 endif()
 
 if(HAVE_QUICKTIME)
@@ -195,7 +208,11 @@ if(IOS)
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_abstract_camera.mm
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_video_camera.mm)
+
   list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework AssetsLibrary")
+  if(APPLE_FRAMEWORK)
+    list(APPEND VIDEOIO_LIBRARIES "-framework UIKit")
+  endif()
 endif()
 
 if(WIN32)
@@ -227,10 +244,6 @@ if(APPLE)
   add_apple_compiler_options(the_module)
 endif()
 
-if(BUILD_SHARED_LIBS)
-  add_definitions(-DVIDEOIO_EXPORTS)
-endif()
-
 if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
@@ -242,15 +255,16 @@ endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
-if(WIN32 AND WITH_FFMPEG)
+if(WIN32 AND HAVE_FFMPEG)
   #copy ffmpeg dll to the output folder
   if(MSVC64 OR MINGW64)
     set(FFMPEG_SUFFIX _64)
   endif()
 
+  set(ffmpeg_dir "${OpenCV_BINARY_DIR}/3rdparty/ffmpeg")
   set(ffmpeg_bare_name "opencv_ffmpeg${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_bare_name_ver "opencv_ffmpeg${OPENCV_DLLVERSION}${FFMPEG_SUFFIX}.dll")
-  set(ffmpeg_path "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/${ffmpeg_bare_name}")
+  set(ffmpeg_path "${ffmpeg_dir}/${ffmpeg_bare_name}")
 
   if(MSVC_IDE)
     add_custom_command(TARGET ${the_module} POST_BUILD
@@ -270,8 +284,8 @@ if(WIN32 AND WITH_FFMPEG)
   install(FILES "${ffmpeg_path}" DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs RENAME "${ffmpeg_bare_name_ver}")
 
   if(INSTALL_CREATE_DISTRIB)
-    install(FILES "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/opencv_ffmpeg.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}.dll")
-    install(FILES "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/opencv_ffmpeg_64.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}_64.dll")
+    install(FILES "${ffmpeg_dir}/opencv_ffmpeg.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}.dll")
+    install(FILES "${ffmpeg_dir}/opencv_ffmpeg_64.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}_64.dll")
   endif()
 endif()
 endmacro()

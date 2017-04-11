@@ -51,6 +51,8 @@
 #include "opencv2/core/cuda/filters.hpp"
 #include "opencv2/core/cuda/border_interpolate.hpp"
 
+#include <iostream>
+
 using namespace cv::cuda;
 using namespace cv::cuda::device;
 
@@ -344,6 +346,24 @@ namespace pyrlk
         return ret;
     }
 
+    template <typename T>
+    struct DenormalizationFactor
+    {
+        static __device__ __forceinline__ float factor()
+        {
+            return 1.0f;
+        }
+    };
+
+    template <>
+    struct DenormalizationFactor<uchar>
+    {
+        static __device__ __forceinline__ float factor()
+        {
+            return 255.0f;
+        }
+    };
+
     template <int cn, int PATCH_X, int PATCH_Y, bool calcErr, typename T>
     __global__ void sparseKernel(const float2* prevPts, float2* nextPts, uchar* status, float* err, const int level, const int rows, const int cols)
     {
@@ -532,7 +552,7 @@ namespace pyrlk
             nextPts[blockIdx.x] = nextPt;
 
             if (calcErr)
-                err[blockIdx.x] = static_cast<float>(errval) / (cn * c_winSize_x * c_winSize_y);
+                err[blockIdx.x] = static_cast<float>(errval) / (::min(cn, 3) * c_winSize_x * c_winSize_y) * DenormalizationFactor<T>::factor();
         }
     }
 
@@ -725,7 +745,7 @@ namespace pyrlk
             nextPts[blockIdx.x] = nextPt;
 
             if (calcErr)
-                err[blockIdx.x] = static_cast<float>(errval) / (3 * c_winSize_x * c_winSize_y);
+                err[blockIdx.x] = static_cast<float>(errval) / (::min(cn, 3)*c_winSize_x * c_winSize_y);
         }
     } // __global__ void sparseKernel_
 
@@ -905,15 +925,15 @@ namespace pyrlk
                 float x = xBase - c_halfWin_x + j + 0.5f;
                 float y = yBase - c_halfWin_y + i + 0.5f;
 
-                I_patch[i * patchWidth + j] = tex2D(tex_Ib, x, y);
+                I_patch[i * patchWidth + j] = tex2D(tex_If, x, y);
 
                 // Sharr Deriv
 
-                dIdx_patch[i * patchWidth + j] = 3 * tex2D(tex_Ib, x+1, y-1) + 10 * tex2D(tex_Ib, x+1, y) + 3 * tex2D(tex_Ib, x+1, y+1) -
-                                                (3 * tex2D(tex_Ib, x-1, y-1) + 10 * tex2D(tex_Ib, x-1, y) + 3 * tex2D(tex_Ib, x-1, y+1));
+                dIdx_patch[i * patchWidth + j] = 3 * tex2D(tex_If, x+1, y-1) + 10 * tex2D(tex_If, x+1, y) + 3 * tex2D(tex_If, x+1, y+1) -
+                                                (3 * tex2D(tex_If, x-1, y-1) + 10 * tex2D(tex_If, x-1, y) + 3 * tex2D(tex_If, x-1, y+1));
 
-                dIdy_patch[i * patchWidth + j] = 3 * tex2D(tex_Ib, x-1, y+1) + 10 * tex2D(tex_Ib, x, y+1) + 3 * tex2D(tex_Ib, x+1, y+1) -
-                                                (3 * tex2D(tex_Ib, x-1, y-1) + 10 * tex2D(tex_Ib, x, y-1) + 3 * tex2D(tex_Ib, x+1, y-1));
+                dIdy_patch[i * patchWidth + j] = 3 * tex2D(tex_If, x-1, y+1) + 10 * tex2D(tex_If, x, y+1) + 3 * tex2D(tex_If, x+1, y+1) -
+                                                (3 * tex2D(tex_If, x-1, y-1) + 10 * tex2D(tex_If, x, y-1) + 3 * tex2D(tex_If, x+1, y-1));
             }
         }
 
@@ -924,6 +944,7 @@ namespace pyrlk
 
         if (x >= cols || y >= rows)
             return;
+
 
         int A11i = 0;
         int A12i = 0;
@@ -952,7 +973,6 @@ namespace pyrlk
         {
             if (calcErr)
                 err(y, x) = numeric_limits<float>::max();
-
             return;
         }
 
@@ -995,6 +1015,7 @@ namespace pyrlk
                     b2 += diff * dIdy;
                 }
             }
+
 
             float2 delta;
             delta.x = A12 * b2 - A22 * b1;
@@ -1065,11 +1086,11 @@ namespace pyrlk
             funcs[patch.y - 1][patch.x - 1](I, J, I.rows, I.cols, prevPts, nextPts, status, err, ptcount,
                 level, block, stream);
         }
-        static void dense(PtrStepSzb I, PtrStepSz<T> J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV, PtrStepSzf err, int2 winSize, cudaStream_t stream)
+        static void dense(PtrStepSz<T> I, PtrStepSz<T> J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV, PtrStepSzf err, int2 winSize, cudaStream_t stream)
         {
             dim3 block(16, 16);
             dim3 grid(divUp(I.cols, block.x), divUp(I.rows, block.y));
-            Tex_I<1, uchar>::bindTexture_(I);
+            Tex_I<1, T>::bindTexture_(I);
             Tex_J<1, T>::bindTexture_(J);
 
             int2 halfWin = make_int2((winSize.x - 1) / 2, (winSize.y - 1) / 2);

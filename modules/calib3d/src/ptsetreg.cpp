@@ -344,10 +344,8 @@ public:
                 else
                     errf = err;
                 CV_Assert( errf.isContinuous() && errf.type() == CV_32F && (int)errf.total() == count );
-                std::sort(errf.ptr<int>(), errf.ptr<int>() + count);
-
-                double median = count % 2 != 0 ?
-                errf.at<float>(count/2) : (errf.at<float>(count/2-1) + errf.at<float>(count/2))*0.5;
+                std::nth_element(errf.ptr<int>(), errf.ptr<int>() + count/2, errf.ptr<int>() + count);
+                double median = errf.at<float>(count/2);
 
                 if( median < minMedian )
                 {
@@ -462,7 +460,7 @@ public:
             double b = F[4]*f.x + F[5]*f.y + F[ 6]*f.z + F[ 7] - t.y;
             double c = F[8]*f.x + F[9]*f.y + F[10]*f.z + F[11] - t.z;
 
-            errptr[i] = (float)std::sqrt(a*a + b*b + c*c);
+            errptr[i] = (float)(a*a + b*b + c*c);
         }
     }
 
@@ -501,12 +499,277 @@ public:
     }
 };
 
-}
-
-int cv::estimateAffine3D(InputArray _from, InputArray _to,
-                         OutputArray _out, OutputArray _inliers,
-                         double param1, double param2)
+class Affine2DEstimatorCallback : public PointSetRegistrator::Callback
 {
+public:
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        const Point2f* from = m1.ptr<Point2f>();
+        const Point2f* to   = m2.ptr<Point2f>();
+        _model.create(2, 3, CV_64F);
+        Mat M_mat = _model.getMat();
+        double *M = M_mat.ptr<double>();
+
+        // we need 3 points to estimate affine transform
+        double x1 = from[0].x;
+        double y1 = from[0].y;
+        double x2 = from[1].x;
+        double y2 = from[1].y;
+        double x3 = from[2].x;
+        double y3 = from[2].y;
+
+        double X1 = to[0].x;
+        double Y1 = to[0].y;
+        double X2 = to[1].x;
+        double Y2 = to[1].y;
+        double X3 = to[2].x;
+        double Y3 = to[2].y;
+
+        /*
+        We want to solve AX = B
+
+            | x1 y1  1  0  0  0 |
+            |  0  0  0 x1 y1  1 |
+            | x2 y2  1  0  0  0 |
+        A = |  0  0  0 x2 y2  1 |
+            | x3 y3  1  0  0  0 |
+            |  0  0  0 x3 y3  1 |
+        B = (X1, Y1, X2, Y2, X3, Y3).t()
+        X = (a, b, c, d, e, f).t()
+
+        As the estimate of (a, b, c) only depends on the Xi, and (d, e, f) only
+        depends on the Yi, we do the *trick* to solve each one analytically.
+
+        | X1 |   | x1 y1 1 |   | a |
+        | X2 | = | x2 y2 1 | * | b |
+        | X3 |   | x3 y3 1 |   | c |
+
+        | Y1 |   | x1 y1 1 |   | d |
+        | Y2 | = | x2 y2 1 | * | e |
+        | Y3 |   | x3 y3 1 |   | f |
+        */
+
+        double d = 1. / ( x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2) );
+
+        M[0] = d * ( X1*(y2-y3) + X2*(y3-y1) + X3*(y1-y2) );
+        M[1] = d * ( X1*(x3-x2) + X2*(x1-x3) + X3*(x2-x1) );
+        M[2] = d * ( X1*(x2*y3 - x3*y2) + X2*(x3*y1 - x1*y3) + X3*(x1*y2 - x2*y1) );
+
+        M[3] = d * ( Y1*(y2-y3) + Y2*(y3-y1) + Y3*(y1-y2) );
+        M[4] = d * ( Y1*(x3-x2) + Y2*(x1-x3) + Y3*(x2-x1) );
+        M[5] = d * ( Y1*(x2*y3 - x3*y2) + Y2*(x3*y1 - x1*y3) + Y3*(x1*y2 - x2*y1) );
+        return 1;
+    }
+
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
+        const Point2f* from = m1.ptr<Point2f>();
+        const Point2f* to   = m2.ptr<Point2f>();
+        const double* F = model.ptr<double>();
+
+        int count = m1.checkVector(2);
+        CV_Assert( count > 0 );
+
+        _err.create(count, 1, CV_32F);
+        Mat err = _err.getMat();
+        float* errptr = err.ptr<float>();
+        // transform matrix to floats
+        float F0 = (float)F[0], F1 = (float)F[1], F2 = (float)F[2];
+        float F3 = (float)F[3], F4 = (float)F[4], F5 = (float)F[5];
+
+        for(int i = 0; i < count; i++ )
+        {
+            const Point2f& f = from[i];
+            const Point2f& t = to[i];
+
+            float a = F0*f.x + F1*f.y + F2 - t.x;
+            float b = F3*f.x + F4*f.y + F5 - t.y;
+
+            errptr[i] = a*a + b*b;
+        }
+    }
+
+    bool checkSubset( InputArray _ms1, InputArray, int count ) const
+    {
+        Mat ms1 = _ms1.getMat();
+        // check colinearity and also check that points are too close
+        // only ms1 affects actual estimation stability
+        return !haveCollinearPoints(ms1, count);
+    }
+};
+
+class AffinePartial2DEstimatorCallback : public Affine2DEstimatorCallback
+{
+public:
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        const Point2f* from = m1.ptr<Point2f>();
+        const Point2f* to   = m2.ptr<Point2f>();
+        _model.create(2, 3, CV_64F);
+        Mat M_mat = _model.getMat();
+        double *M = M_mat.ptr<double>();
+
+        // we need only 2 points to estimate transform
+        double x1 = from[0].x;
+        double y1 = from[0].y;
+        double x2 = from[1].x;
+        double y2 = from[1].y;
+
+        double X1 = to[0].x;
+        double Y1 = to[0].y;
+        double X2 = to[1].x;
+        double Y2 = to[1].y;
+
+        /*
+        we are solving AS = B
+            | x1 -y1 1 0 |
+            | y1  x1 0 1 |
+        A = | x2 -y2 1 0 |
+            | y2  x2 0 1 |
+        B = (X1, Y1, X2, Y2).t()
+        we solve that analytically
+        */
+        double d = 1./((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+
+        // solution vector
+        double S0 = d * ( (X1-X2)*(x1-x2) + (Y1-Y2)*(y1-y2) );
+        double S1 = d * ( (Y1-Y2)*(x1-x2) - (X1-X2)*(y1-y2) );
+        double S2 = d * ( (Y1-Y2)*(x1*y2 - x2*y1) - (X1*y2 - X2*y1)*(y1-y2) - (X1*x2 - X2*x1)*(x1-x2) );
+        double S3 = d * (-(X1-X2)*(x1*y2 - x2*y1) - (Y1*x2 - Y2*x1)*(x1-x2) - (Y1*y2 - Y2*y1)*(y1-y2) );
+
+        // set model, rotation part is antisymmetric
+        M[0] = M[4] = S0;
+        M[1] = -S1;
+        M[2] = S2;
+        M[3] = S1;
+        M[5] = S3;
+        return 1;
+    }
+};
+
+class Affine2DRefineCallback : public LMSolver::Callback
+{
+public:
+    Affine2DRefineCallback(InputArray _src, InputArray _dst)
+    {
+        src = _src.getMat();
+        dst = _dst.getMat();
+    }
+
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    {
+        int i, count = src.checkVector(2);
+        Mat param = _param.getMat();
+        _err.create(count*2, 1, CV_64F);
+        Mat err = _err.getMat(), J;
+        if( _Jac.needed())
+        {
+            _Jac.create(count*2, param.rows, CV_64F);
+            J = _Jac.getMat();
+            CV_Assert( J.isContinuous() && J.cols == 6 );
+        }
+
+        const Point2f* M = src.ptr<Point2f>();
+        const Point2f* m = dst.ptr<Point2f>();
+        const double* h = param.ptr<double>();
+        double* errptr = err.ptr<double>();
+        double* Jptr = J.data ? J.ptr<double>() : 0;
+
+        for( i = 0; i < count; i++ )
+        {
+            double Mx = M[i].x, My = M[i].y;
+            double xi = h[0]*Mx + h[1]*My + h[2];
+            double yi = h[3]*Mx + h[4]*My + h[5];
+            errptr[i*2] = xi - m[i].x;
+            errptr[i*2+1] = yi - m[i].y;
+
+            /*
+            Jacobian should be:
+                {x, y, 1, 0, 0, 0}
+                {0, 0, 0, x, y, 1}
+            */
+            if( Jptr )
+            {
+                Jptr[0] = Mx; Jptr[1] = My; Jptr[2] = 1.;
+                Jptr[3] = Jptr[4] = Jptr[5] = 0.;
+                Jptr[6] = Jptr[7] = Jptr[8] = 0.;
+                Jptr[9] = Mx; Jptr[10] = My; Jptr[11] = 1.;
+
+                Jptr += 6*2;
+            }
+        }
+
+        return true;
+    }
+
+    Mat src, dst;
+};
+
+class AffinePartial2DRefineCallback : public LMSolver::Callback
+{
+public:
+    AffinePartial2DRefineCallback(InputArray _src, InputArray _dst)
+    {
+        src = _src.getMat();
+        dst = _dst.getMat();
+    }
+
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    {
+        int i, count = src.checkVector(2);
+        Mat param = _param.getMat();
+        _err.create(count*2, 1, CV_64F);
+        Mat err = _err.getMat(), J;
+        if( _Jac.needed())
+        {
+            _Jac.create(count*2, param.rows, CV_64F);
+            J = _Jac.getMat();
+            CV_Assert( J.isContinuous() && J.cols == 4 );
+        }
+
+        const Point2f* M = src.ptr<Point2f>();
+        const Point2f* m = dst.ptr<Point2f>();
+        const double* h = param.ptr<double>();
+        double* errptr = err.ptr<double>();
+        double* Jptr = J.data ? J.ptr<double>() : 0;
+
+        for( i = 0; i < count; i++ )
+        {
+            double Mx = M[i].x, My = M[i].y;
+            double xi = h[0]*Mx - h[1]*My + h[2];
+            double yi = h[1]*Mx + h[0]*My + h[3];
+            errptr[i*2] = xi - m[i].x;
+            errptr[i*2+1] = yi - m[i].y;
+
+            /*
+            Jacobian should be:
+                {x, -y, 1, 0}
+                {y,  x, 0, 1}
+            */
+            if( Jptr )
+            {
+                Jptr[0] = Mx; Jptr[1] = -My; Jptr[2] = 1.; Jptr[3] = 0.;
+                Jptr[4] = My; Jptr[5] =  Mx; Jptr[6] = 0.; Jptr[7] = 1.;
+
+                Jptr += 4*2;
+            }
+        }
+
+        return true;
+    }
+
+    Mat src, dst;
+};
+
+int estimateAffine3D(InputArray _from, InputArray _to,
+                     OutputArray _out, OutputArray _inliers,
+                     double param1, double param2)
+{
+    CV_INSTRUMENT_REGION()
+
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(3);
 
@@ -524,3 +787,152 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
 
     return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
 }
+
+Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
+                     const int method, const double ransacReprojThreshold,
+                     const size_t maxIters, const double confidence,
+                     const size_t refineIters)
+{
+    Mat from = _from.getMat(), to = _to.getMat();
+    int count = from.checkVector(2);
+    bool result = false;
+    Mat H;
+
+    CV_Assert( count >= 0 && to.checkVector(2) == count );
+
+    if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
+    {
+        Mat tmp1, tmp2;
+        from.convertTo(tmp1, CV_32FC2);
+        from = tmp1;
+        to.convertTo(tmp2, CV_32FC2);
+        to = tmp2;
+    }
+    // convert to N x 1 vectors
+    from = from.reshape(2, count);
+    to = to.reshape(2, count);
+
+    Mat inliers;
+    if(_inliers.needed())
+    {
+        _inliers.create(count, 1, CV_8U, -1, true);
+        inliers = _inliers.getMat();
+    }
+
+    // run robust method
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<Affine2DEstimatorCallback>();
+    if( method == RANSAC )
+        result = createRANSACPointSetRegistrator(cb, 3, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
+    else if( method == LMEDS )
+        result = createLMeDSPointSetRegistrator(cb, 3, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
+
+    if(result && count > 3 && refineIters)
+    {
+        // reorder to start with inliers
+        compressElems(from.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
+        int inliers_count = compressElems(to.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
+        if(inliers_count > 0)
+        {
+            Mat src = from.rowRange(0, inliers_count);
+            Mat dst = to.rowRange(0, inliers_count);
+            Mat Hvec = H.reshape(1, 6);
+            createLMSolver(makePtr<Affine2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
+        }
+    }
+
+    if (!result)
+    {
+        H.release();
+        if(_inliers.needed())
+        {
+            inliers = Mat::zeros(count, 1, CV_8U);
+            inliers.copyTo(_inliers);
+        }
+    }
+
+    return H;
+}
+
+Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inliers,
+                            const int method, const double ransacReprojThreshold,
+                            const size_t maxIters, const double confidence,
+                            const size_t refineIters)
+{
+    Mat from = _from.getMat(), to = _to.getMat();
+    const int count = from.checkVector(2);
+    bool result = false;
+    Mat H;
+
+    CV_Assert( count >= 0 && to.checkVector(2) == count );
+
+    if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
+    {
+        Mat tmp1, tmp2;
+        from.convertTo(tmp1, CV_32FC2);
+        from = tmp1;
+        to.convertTo(tmp2, CV_32FC2);
+        to = tmp2;
+    }
+    // convert to N x 1 vectors
+    from = from.reshape(2, count);
+    to = to.reshape(2, count);
+
+    Mat inliers;
+    if(_inliers.needed())
+    {
+        _inliers.create(count, 1, CV_8U, -1, true);
+        inliers = _inliers.getMat();
+    }
+
+    // run robust estimation
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<AffinePartial2DEstimatorCallback>();
+    if( method == RANSAC )
+        result = createRANSACPointSetRegistrator(cb, 2, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
+    else if( method == LMEDS )
+        result = createLMeDSPointSetRegistrator(cb, 2, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
+
+    if(result && count > 2 && refineIters)
+    {
+        // reorder to start with inliers
+        compressElems(from.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
+        int inliers_count = compressElems(to.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
+        if(inliers_count > 0)
+        {
+            Mat src = from.rowRange(0, inliers_count);
+            Mat dst = to.rowRange(0, inliers_count);
+            // H is
+            //     a -b tx
+            //     b  a ty
+            // Hvec model for LevMarq is
+            //     (a, b, tx, ty)
+            double *Hptr = H.ptr<double>();
+            double Hvec_buf[4] = {Hptr[0], Hptr[3], Hptr[2], Hptr[5]};
+            Mat Hvec (4, 1, CV_64F, Hvec_buf);
+            createLMSolver(makePtr<AffinePartial2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
+            // update H with refined parameters
+            Hptr[0] = Hptr[4] = Hvec_buf[0];
+            Hptr[1] = -Hvec_buf[1];
+            Hptr[2] = Hvec_buf[2];
+            Hptr[3] = Hvec_buf[1];
+            Hptr[5] = Hvec_buf[3];
+        }
+    }
+
+    if (!result)
+    {
+        H.release();
+        if(_inliers.needed())
+        {
+            inliers = Mat::zeros(count, 1, CV_8U);
+            inliers.copyTo(_inliers);
+        }
+    }
+
+    return H;
+}
+
+} // namespace cv

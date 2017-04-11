@@ -259,6 +259,8 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
 
 void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
+    CV_INSTRUMENT_REGION()
+
     result.clear();
     String path, wildchart;
 

@@ -130,7 +130,7 @@ class Builder:
             "-DBUILD_ANDROID_EXAMPLES=ON",
             "-DINSTALL_ANDROID_EXAMPLES=ON",
             "-DANDROID_STL=gnustl_static",
-            "-DANDROID_NATIVE_API_LEVEL=8",
+            "-DANDROID_NATIVE_API_LEVEL=9",
             "-DANDROID_ABI='%s'" % abi.cmake_name,
             "-DWITH_TBB=ON",
             "-DANDROID_TOOLCHAIN_NAME=%s" % abi.toolchain
@@ -171,7 +171,7 @@ class Builder:
         # Add extra data
         apkxmldest = check_dir(os.path.join(apkdest, "res", "xml"), create=True)
         apklibdest = check_dir(os.path.join(apkdest, "libs", abi.name), create=True)
-        for ver, d in self.extra_packs + [("3.1.0", os.path.join(self.libdest, "lib"))]:
+        for ver, d in self.extra_packs + [("3.2.0", os.path.join(self.libdest, "lib"))]:
             r = ET.Element("library", attrib={"version": ver})
             log.info("Adding libraries from %s", d)
 

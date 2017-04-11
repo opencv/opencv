@@ -11,7 +11,7 @@ header files plus binaries and you have set the environment variables as describ
 
 The OpenCV libraries, distributed by us, on the Microsoft Windows operating system are in a
 Dynamic Linked Libraries (*DLL*). These have the advantage that all the content of the
-library are loaded only at runtime, on demand, and that countless programs may use the same library
+library is loaded only at runtime, on demand, and that countless programs may use the same library
 file. This means that if you have ten applications using the OpenCV library, no need to have around
 a version for each one of them. Of course you need to have the *dll* of the OpenCV on all systems
 where you want to run your application.
@@ -42,9 +42,9 @@ To build an application with OpenCV you need to do two things:
     extension libraries. The good part is that at runtime only the *DLL* is required.
 
 To pass on all this information to the Visual Studio IDE you can either do it globally (so all your
-future projects will get these information) or locally (so only for you current project). The
+future projects will get this information) or locally (so only for you current project). The
 advantage of the global one is that you only need to do it once; however, it may be undesirable to
-clump all your projects all the time with all these information. In case of the global one how you
+clump all your projects all the time with all this information. In case of the global one how you
 do it depends on the Microsoft Visual Studio you use. There is a **2008 and previous versions** and
 a **2010 way** of doing it. Inside the global section of this tutorial I'll show what the main
 differences are.
@@ -53,7 +53,7 @@ The base item of a project in Visual Studio is a solution. A solution may contai
 Projects are the building blocks of an application. Every project will realize something and you
 will have a main project in which you can put together this project puzzle. In case of the many
 simple applications (like many of the tutorials will be) you do not need to break down the
-application into modules. In these cases your main project will be the only existing one. Now go
+application into modules. In these cases, your main project will be the only existing one. Now go
 create a new solution inside Visual studio by going through the File --\> New --\> Project menu
 selection. Choose *Win32 Console Application* as type. Enter its name and select the path where to
 create it. Then in the upcoming dialog make sure you create an empty project.
@@ -91,7 +91,7 @@ projects with custom rules that I do not use it. Go the C++ groups General entry
 *"Additional Include Directories"* add the path to your OpenCV include. If you don't have *"C/C++"*
 group, you should add any .c/.cpp file to the project.
 @code{.bash}
-\f$(OPENCV_DIR)\..\..\include
+$(OPENCV_DIR)\..\..\include
 @endcode
 ![](images/PropertySheetOpenCVInclude.jpg)
 
@@ -152,7 +152,7 @@ them.
 
 ![](images/PropertySheetOpenCVLibrariesRelease.jpg)
 
-You can find your property sheets inside your projects directory. At this point it is a wise
+You can find your property sheets inside your projects directory. At this point, it is a wise
 decision to back them up into some special directory, to always have them at hand in the future,
 whenever you create an OpenCV project. Note that for Visual Studio 2010 the file extension is
 *props*, while for 2008 this is *vsprops*.
@@ -167,7 +167,7 @@ entry inside the Property Manager to easily add the OpenCV build rules.
 The *global* method
 -------------------
 
-In case you find to troublesome to add the property pages to each and every one of your projects you
+In case you find it too troublesome to add the property pages to each and every one of your projects you
 can also add this rules to a *"global property page"*. However, this applies only to the additional
 include and library directories. The name of the libraries to use you still need to specify manually
 by using for instance: a Property page.
@@ -189,7 +189,7 @@ Test it!
 --------
 
 Now to try this out download our little test [source code
-](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp)
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/introduction_windows_vs.cpp)
 or get it from the sample code folder of the OpenCV sources. Add this to your project and build it.
 Here's its content:
 
@@ -202,10 +202,11 @@ current working directory is the projects directory, while otherwise it is the f
 application file currently is (so usually your build directory). Moreover, in case of starting from
 the *IDE* the console window will not close once finished. It will wait for a keystroke of yours.
 
-This is important to remember when you code inside the code open and save commands. You're resources
+This is important to remember when you code inside the code open and save commands. Your resources
 will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless
-you give a full, explicit path as parameter for the I/O functions. In the code above we open [this
-OpenCV logo](https://github.com/Itseez/opencv/tree/master/samples/data/opencv-logo.png). Before starting up the application make sure you place
+you give a full, explicit path as a parameter for the I/O functions. In the code above we open [this
+OpenCV logo](https://github.com/opencv/opencv/tree/master/samples/data/opencv-logo.png). Before starting up the application,
+make sure you place
 the image file in your current working directory. Modify the image file name inside the code to try
 it out on other images too. Run it and voil á:
 
@@ -214,8 +215,8 @@ it out on other images too. Run it and voil á:
 Command line arguments with Visual Studio
 -----------------------------------------
 
-Throughout some of our future tutorials you'll see that the programs main input method will be by
-giving a runtime argument. To do this you can just start up a commmand windows (cmd + Enter in the
+Throughout some of our future tutorials, you'll see that the programs main input method will be by
+giving a runtime argument. To do this you can just start up a command windows (cmd + Enter in the
 start menu), navigate to your executable file and start it with an argument. So for example in case
 of my upper project this would look like:
 @code{.bash}
@@ -232,5 +233,5 @@ cumbersome task. Luckily, in the Visual Studio there is a menu to automate all t
 ![](images/VisualStudioCommandLineArguments.jpg)
 
 Specify here the name of the inputs and while you start your application from the Visual Studio
-enviroment you have automatic argument passing. In the next introductionary tutorial you'll see an
+environment you have automatic argument passing. In the next introductory tutorial you'll see an
 in-depth explanation of the upper source code: @ref tutorial_display_image.

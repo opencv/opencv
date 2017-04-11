@@ -362,6 +362,12 @@ static void sortSamplesByClasses( const Mat& _samples, const Mat& _responses,
 
 //////////////////////// SVM implementation //////////////////////////////
 
+Ptr<ParamGrid> SVM::getDefaultGridPtr( int param_id)
+{
+  ParamGrid grid = getDefaultGrid(param_id); // this is not a nice solution..
+  return makePtr<ParamGrid>(grid.minVal, grid.maxVal, grid.logStep);
+}
+
 ParamGrid SVM::getDefaultGrid( int param_id )
 {
     ParamGrid grid;
@@ -1442,7 +1448,7 @@ public:
             //check that while cross-validation there were the samples from all the classes
             if( class_ranges[class_count] <= 0 )
                 CV_Error( CV_StsBadArg, "While cross-validation one or more of the classes have "
-                "been fell out of the sample. Try to enlarge <Params::k_fold>" );
+                "been fell out of the sample. Try to reduce <Params::k_fold>" );
 
             if( svmType == NU_SVC )
             {
@@ -1920,6 +1926,24 @@ public:
         bool returnDFVal;
     };
 
+    bool trainAuto_(InputArray samples, int layout,
+            InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
+            Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
+            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
+    {
+        Ptr<TrainData> data = TrainData::create(samples, layout, responses);
+        return this->trainAuto(
+                data, kfold,
+                *Cgrid.get(),
+                *gammaGrid.get(),
+                *pGrid.get(),
+                *nuGrid.get(),
+                *coeffGrid.get(),
+                *degreeGrid.get(),
+                balanced);
+    }
+
+
     float predict( InputArray _samples, OutputArray _results, int flags ) const
     {
         float result = 0;
@@ -2279,6 +2303,19 @@ Mat SVM::getUncompressedSupportVectors() const
     if(!this_)
         CV_Error(Error::StsNotImplemented, "the class is not SVMImpl");
     return this_->getUncompressedSupportVectors_();
+}
+
+bool SVM::trainAuto(InputArray samples, int layout,
+            InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
+            Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
+            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
+{
+  SVMImpl* this_ = dynamic_cast<SVMImpl*>(this);
+  if (!this_) {
+    CV_Error(Error::StsNotImplemented, "the class is not SVMImpl");
+  }
+  return this_->trainAuto_(samples, layout, responses,
+    kfold, Cgrid, gammaGrid, pGrid, nuGrid, coeffGrid, degreeGrid, balanced);
 }
 
 }

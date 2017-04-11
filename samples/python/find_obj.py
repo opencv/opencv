@@ -3,7 +3,7 @@
 '''
 Feature-based image matching sample.
 
-Note, that you will need the https://github.com/Itseez/opencv_contrib repo for SIFT and SURF
+Note, that you will need the https://github.com/opencv/opencv_contrib repo for SIFT and SURF
 
 USAGE
   find_obj.py [--feature=<sift|surf|orb|akaze|brisk>[-flann]] [ <image1> <image2> ]

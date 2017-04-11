@@ -129,6 +129,8 @@ static float _apply(const Mat &set1, const Mat &set2, int distType, double propR
 
 float HausdorffDistanceExtractorImpl::computeDistance(InputArray contour1, InputArray contour2)
 {
+    CV_INSTRUMENT_REGION()
+
     Mat set1=contour1.getMat(), set2=contour2.getMat();
     if (set1.type() != CV_32F)
         set1.convertTo(set1, CV_32F);
@@ -136,6 +138,13 @@ float HausdorffDistanceExtractorImpl::computeDistance(InputArray contour1, Input
         set2.convertTo(set2, CV_32F);
     CV_Assert((set1.channels()==2) && (set1.cols>0));
     CV_Assert((set2.channels()==2) && (set2.cols>0));
+
+    // Force vectors column-based
+    if (set1.dims > 1)
+        set1 = set1.reshape(2, 1);
+    if (set2.dims > 1)
+        set2 = set2.reshape(2, 1);
+
     return std::max( _apply(set1, set2, distanceFlag, rankProportion),
                      _apply(set2, set1, distanceFlag, rankProportion) );
 }

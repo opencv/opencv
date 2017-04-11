@@ -44,10 +44,6 @@
 
 #ifdef HAVE_OPENNI2
 
-#if defined TBB_INTERFACE_VERSION && TBB_INTERFACE_VERSION < 5000
-# undef HAVE_TBB
-#endif
-
 #include <queue>
 
 #ifndef i386
@@ -1086,7 +1082,7 @@ CvCapture* cvCreateCameraCapture_OpenNI2( int index )
     return 0;
 }
 
-CvCapture* cvCreateFileCapture_OpenNI( const char* filename )
+CvCapture* cvCreateFileCapture_OpenNI2( const char* filename )
 {
     CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( filename );
 

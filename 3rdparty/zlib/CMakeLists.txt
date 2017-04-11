@@ -21,7 +21,9 @@ endif()
 #
 # Check for unistd.h
 #
-check_include_file(unistd.h Z_HAVE_UNISTD_H)
+if(NOT MSVC)
+  check_include_file(unistd.h Z_HAVE_UNISTD_H)
+endif()
 
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)

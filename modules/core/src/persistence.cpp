@@ -44,6 +44,8 @@
 
 #include <ctype.h>
 #include <deque>
+#include <sstream>
+#include <string>
 #include <iterator>
 
 #define USE_ZLIB 1
@@ -65,6 +67,8 @@
 #    define _FILE_OFFSET_BITS 0
 #  endif
 #  include <zlib.h>
+#else
+typedef void* gzFile;
 #endif
 
 /****************************************************************************************\
@@ -94,6 +98,15 @@ static inline bool cv_isspace(char c)
     return (9 <= c && c <= 13) || c == ' ';
 }
 
+static inline char* cv_skip_BOM(char* ptr)
+{
+    if((uchar)ptr[0] == 0xef && (uchar)ptr[1] == 0xbb && (uchar)ptr[2] == 0xbf) //UTF-8 BOM
+    {
+      return ptr + 3;
+    }
+    return ptr;
+}
+
 static char* icv_itoa( int _val, char* buffer, int /*radix*/ )
 {
     const int radix = 10;
@@ -113,6 +126,25 @@ static char* icv_itoa( int _val, char* buffer, int /*radix*/ )
         *--ptr = '-';
 
     return ptr;
+}
+
+static inline bool cv_strcasecmp(const char * s1, const char * s2)
+{
+    if ( s1 == 0 && s2 == 0 )
+        return true;
+    else if ( s1 == 0 || s2 == 0 )
+        return false;
+
+    size_t len1 = strlen(s1);
+    size_t len2 = strlen(s2);
+    if ( len1 != len2 )
+        return false;
+
+    for ( size_t i = 0U; i < len1; i++ )
+        if ( tolower( static_cast<int>(s1[i]) ) != tolower( static_cast<int>(s2[i]) ) )
+            return false;
+
+    return true;
 }
 
 cv::String cv::FileStorage::getDefaultObjectName(const cv::String& _filename)
@@ -181,6 +213,21 @@ typedef struct CvXMLStackRecord
 }
 CvXMLStackRecord;
 
+namespace base64
+{
+    class Base64Writer;
+
+    namespace fs
+    {
+        enum State
+        {
+            Uncertain,
+            NotUse,
+            InUse,
+        };
+    }
+}
+
 #define CV_XML_OPENING_TAG 1
 #define CV_XML_CLOSING_TAG 2
 #define CV_XML_EMPTY_TAG 3
@@ -238,9 +285,115 @@ typedef struct CvFileStorage
     size_t strbufsize, strbufpos;
     std::deque<char>* outbuf;
 
+    base64::Base64Writer * base64_writer;
+    bool is_default_using_base64;
+    base64::fs::State state_of_writing_base64;  /**< used in WriteRawData only */
+
+    bool is_write_struct_delayed;
+    char* delayed_struct_key;
+    int   delayed_struct_flags;
+    char* delayed_type_name;
+
     bool is_opened;
 }
 CvFileStorage;
+
+namespace base64
+{
+    static const size_t HEADER_SIZE         = 24U;
+    static const size_t ENCODED_HEADER_SIZE = 32U;
+
+    /* base64 */
+
+    typedef uchar uint8_t;
+
+    extern uint8_t const base64_padding;
+    extern uint8_t const base64_mapping[65];
+    extern uint8_t const base64_demapping[127];
+
+    size_t base64_encode(uint8_t const * src, uint8_t * dst, size_t off,      size_t cnt);
+    size_t base64_encode(   char const * src,    char * dst, size_t off = 0U, size_t cnt = 0U);
+
+    size_t base64_decode(uint8_t const * src, uint8_t * dst, size_t off,      size_t cnt);
+    size_t base64_decode(   char const * src,    char * dst, size_t off = 0U, size_t cnt = 0U);
+
+    bool   base64_valid (uint8_t const * src, size_t off,      size_t cnt);
+    bool   base64_valid (   char const * src, size_t off = 0U, size_t cnt = 0U);
+
+    size_t base64_encode_buffer_size(size_t cnt, bool is_end_with_zero = true);
+
+    size_t base64_decode_buffer_size(size_t cnt, bool is_end_with_zero = true);
+    size_t base64_decode_buffer_size(size_t cnt, char  const * src, bool is_end_with_zero = true);
+    size_t base64_decode_buffer_size(size_t cnt, uchar const * src, bool is_end_with_zero = true);
+
+    /* binary */
+
+    template<typename _uint_t>      inline size_t to_binary(_uint_t       val, uchar * cur);
+    template<>                      inline size_t to_binary(double        val, uchar * cur);
+    template<>                      inline size_t to_binary(float         val, uchar * cur);
+    template<typename _primitive_t> inline size_t to_binary(uchar const * val, uchar * cur);
+
+    template<typename _uint_t>      inline size_t binary_to(uchar const * cur, _uint_t & val);
+    template<>                      inline size_t binary_to(uchar const * cur, double  & val);
+    template<>                      inline size_t binary_to(uchar const * cur, float   & val);
+    template<typename _primitive_t> inline size_t binary_to(uchar const * cur, uchar   * val);
+
+    class RawDataToBinaryConvertor;
+
+    class BinaryToCvSeqConvertor;
+
+    /* class */
+
+    class Base64ContextParser
+    {
+    public:
+        explicit Base64ContextParser(uchar * buffer, size_t size);
+        ~Base64ContextParser();
+        Base64ContextParser & read(const uchar * beg, const uchar * end);
+        bool flush();
+    private:
+        static const size_t BUFFER_LEN = 120U;
+        uchar * dst_cur;
+        uchar * dst_end;
+        std::vector<uchar> base64_buffer;
+        uchar * src_beg;
+        uchar * src_cur;
+        uchar * src_end;
+        std::vector<uchar> binary_buffer;
+    };
+
+    class Base64ContextEmitter;
+
+    class Base64Writer
+    {
+    public:
+        Base64Writer(::CvFileStorage * fs);
+        ~Base64Writer();
+        void write(const void* _data, size_t len, const char* dt);
+        template<typename _to_binary_convertor_t> void write(_to_binary_convertor_t & convertor, const char* dt);
+
+    private:
+        void check_dt(const char* dt);
+
+    private:
+
+        Base64ContextEmitter * emitter;
+        std::string data_type_string;
+    };
+
+    /* other */
+
+    std::string make_base64_header(const char * dt);
+
+    bool read_base64_header(std::vector<char> const & header, std::string & dt);
+
+    void make_seq(void * binary_data, int elem_cnt, const char * dt, CvSeq & seq);
+
+    /* sample */
+
+    void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt);
+}
+
 
 static void icvPuts( CvFileStorage* fs, const char* str )
 {
@@ -498,8 +651,7 @@ icvFSFlush( CvFileStorage* fs )
 
     if( fs->space != indent )
     {
-        if( fs->space < indent )
-            memset( fs->buffer_start + fs->space, ' ', indent - fs->space );
+        memset( fs->buffer_start, ' ', indent );
         fs->space = indent;
     }
 
@@ -530,6 +682,8 @@ icvClose( CvFileStorage* fs, cv::String* out )
             icvFSFlush(fs);
             if( fs->fmt == CV_STORAGE_FORMAT_XML )
                 icvPuts( fs, "</opencv_storage>\n" );
+            else if ( fs->fmt == CV_STORAGE_FORMAT_JSON )
+                icvPuts( fs, "}\n" );
         }
 
         icvCloseFile(fs);
@@ -560,8 +714,10 @@ cvReleaseFileStorage( CvFileStorage** p_fs )
         cvFree( &fs->buffer_start );
         cvReleaseMemStorage( &fs->memstorage );
 
-        if( fs->outbuf )
-            delete fs->outbuf;
+        delete fs->outbuf;
+        delete fs->base64_writer;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
 
         memset( fs, 0, sizeof(*fs) );
         cvFree( &fs );
@@ -941,6 +1097,185 @@ static double icv_strtod( CvFileStorage* fs, char* ptr, char** endptr )
     return fval;
 }
 
+// this function will convert "aa?bb&cc&dd" to {"aa", "bb", "cc", "dd"}
+static std::vector<std::string> analyze_file_name( std::string const & file_name )
+{
+    static const char not_file_name       = '\n';
+    static const char parameter_begin     = '?';
+    static const char parameter_separator = '&';
+    std::vector<std::string> result;
+
+    if ( file_name.find(not_file_name, 0U) != std::string::npos )
+        return result;
+
+    size_t beg = file_name.find_last_of(parameter_begin);
+    size_t end = file_name.size();
+    result.push_back(file_name.substr(0U, beg));
+
+    if ( beg != std::string::npos )
+    {
+        beg ++;
+        for ( size_t param_beg = beg, param_end = beg;
+              param_end < end;
+              param_beg = param_end + 1U )
+        {
+            param_end = file_name.find_first_of( parameter_separator, param_beg );
+            if ( (param_end == std::string::npos || param_end != param_beg) && param_beg + 1U < end )
+            {
+                result.push_back( file_name.substr( param_beg, param_end - param_beg ) );
+            }
+        }
+    }
+
+    return result;
+}
+
+static bool is_param_exist( const std::vector<std::string> & params, const std::string & param )
+{
+    if ( params.size() < 2U )
+        return false;
+
+    return std::find(params.begin(), params.end(), param) != params.end();
+}
+
+static void switch_to_Base64_state( CvFileStorage* fs, base64::fs::State state )
+{
+    const char * err_unkonwn_state = "Unexpected error, unable to determine the Base64 state.";
+    const char * err_unable_to_switch = "Unexpected error, unable to switch to this state.";
+
+    /* like a finite state machine */
+    switch (fs->state_of_writing_base64)
+    {
+    case base64::fs::Uncertain:
+        switch (state)
+        {
+        case base64::fs::InUse:
+            CV_DbgAssert( fs->base64_writer == 0 );
+            fs->base64_writer = new base64::Base64Writer( fs );
+            break;
+        case base64::fs::Uncertain:
+            break;
+        case base64::fs::NotUse:
+            break;
+        default:
+            CV_Error( CV_StsError, err_unkonwn_state );
+            break;
+        }
+        break;
+    case base64::fs::InUse:
+        switch (state)
+        {
+        case base64::fs::InUse:
+        case base64::fs::NotUse:
+            CV_Error( CV_StsError, err_unable_to_switch );
+            break;
+        case base64::fs::Uncertain:
+            delete fs->base64_writer;
+            fs->base64_writer = 0;
+            break;
+        default:
+            CV_Error( CV_StsError, err_unkonwn_state );
+            break;
+        }
+        break;
+    case base64::fs::NotUse:
+        switch (state)
+        {
+        case base64::fs::InUse:
+        case base64::fs::NotUse:
+            CV_Error( CV_StsError, err_unable_to_switch );
+            break;
+        case base64::fs::Uncertain:
+            break;
+        default:
+            CV_Error( CV_StsError, err_unkonwn_state );
+            break;
+        }
+        break;
+    default:
+        CV_Error( CV_StsError, err_unkonwn_state );
+        break;
+    }
+
+    fs->state_of_writing_base64 = state;
+}
+
+
+static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_type_to_base64 = false )
+{
+    if ( fs->is_write_struct_delayed )
+    {
+        /* save data to prevent recursive call errors */
+        std::string struct_key;
+        std::string type_name;
+        int struct_flags = fs->delayed_struct_flags;
+
+        if ( fs->delayed_struct_key != 0 && *fs->delayed_struct_key != '\0' )
+        {
+            struct_key.assign(fs->delayed_struct_key);
+        }
+        if ( fs->delayed_type_name != 0 && *fs->delayed_type_name != '\0' )
+        {
+            type_name.assign(fs->delayed_type_name);
+        }
+
+        /* reset */
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
+        fs->delayed_struct_key   = 0;
+        fs->delayed_struct_flags = 0;
+        fs->delayed_type_name    = 0;
+
+        fs->is_write_struct_delayed = false;
+
+        /* call */
+        if ( change_type_to_base64 )
+        {
+            fs->start_write_struct( fs, struct_key.c_str(), struct_flags, "binary");
+            if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+                switch_to_Base64_state( fs, base64::fs::Uncertain );
+            switch_to_Base64_state( fs, base64::fs::InUse );
+        }
+        else
+        {
+            fs->start_write_struct( fs, struct_key.c_str(), struct_flags, type_name.c_str());
+            if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+                switch_to_Base64_state( fs, base64::fs::Uncertain );
+            switch_to_Base64_state( fs, base64::fs::NotUse );
+        }
+    }
+}
+
+
+static void make_write_struct_delayed(
+    CvFileStorage* fs,
+    const char* key,
+    int struct_flags,
+    const char* type_name )
+{
+    CV_Assert( fs->is_write_struct_delayed == false );
+    CV_DbgAssert( fs->delayed_struct_key   == 0 );
+    CV_DbgAssert( fs->delayed_struct_flags == 0 );
+    CV_DbgAssert( fs->delayed_type_name    == 0 );
+
+    fs->delayed_struct_flags = struct_flags;
+
+    if ( key != 0 )
+    {
+        fs->delayed_struct_key = new char[strlen(key) + 1U];
+        strcpy(fs->delayed_struct_key, key);
+    }
+
+    if ( type_name != 0 )
+    {
+        fs->delayed_type_name = new char[strlen(type_name) + 1U];
+        strcpy(fs->delayed_type_name, type_name);
+    }
+
+    fs->is_write_struct_delayed = true;
+}
+
+static const size_t PARSER_BASE64_BUFFER_SIZE = 1024U * 1024U / 8U;
 
 /****************************************************************************************\
 *                                       YAML Parser                                      *
@@ -995,6 +1330,99 @@ icvYMLSkipSpaces( CvFileStorage* fs, char* ptr, int min_indent, int max_comment_
 }
 
 
+static void icvYMLGetMultilineStringContent(CvFileStorage* fs,
+    char* ptr, int indent, char* &beg, char* &end)
+{
+    ptr = icvYMLSkipSpaces(fs, ptr, 0, INT_MAX);
+    beg = ptr;
+    end = ptr;
+    if (fs->dummy_eof)
+        return ; /* end of file */
+
+    if (ptr - fs->buffer_start != indent)
+        return ; /* end of string */
+
+    /* find end */
+    while(cv_isprint(*ptr)) /* no check for base64 string */
+        ++ ptr;
+    if (*ptr == '\0')
+        CV_PARSE_ERROR("Unexpected end of line");
+
+    end = ptr;
+}
+
+static int icvCalcStructSize( const char* dt, int initial_size );
+
+static char* icvYMLParseBase64(CvFileStorage* fs, char* ptr, int indent, CvFileNode * node)
+{
+    char * beg = 0;
+    char * end = 0;
+
+    icvYMLGetMultilineStringContent(fs, ptr, indent, beg, end);
+    if (beg >= end)
+        return end; // CV_PARSE_ERROR("Empty Binary Data");
+
+    /* calc (decoded) total_byte_size from header */
+    std::string dt;
+    {
+        if (end - beg < static_cast<int>(base64::ENCODED_HEADER_SIZE))
+            CV_PARSE_ERROR("Unrecognized Base64 header");
+
+        std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
+        base64::base64_decode(beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
+        if ( !base64::read_base64_header(header, dt) || dt.empty() )
+            CV_PARSE_ERROR("Invalid `dt` in Base64 header");
+
+        beg += base64::ENCODED_HEADER_SIZE;
+    }
+
+    /* get all Base64 data */
+    std::string base64_buffer;
+    base64_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
+    while( beg < end )
+    {
+        base64_buffer.append( beg, end );
+        beg = end;
+        icvYMLGetMultilineStringContent( fs, beg, indent, beg, end );
+    }
+    if ( !base64::base64_valid(base64_buffer.data(), 0U, base64_buffer.size()) )
+        CV_PARSE_ERROR( "Invalid Base64 data." );
+
+    /* buffer for decoded data(exclude header) */
+    std::vector<uchar> binary_buffer( base64::base64_decode_buffer_size(base64_buffer.size()) );
+    int total_byte_size = static_cast<int>(
+        base64::base64_decode_buffer_size( base64_buffer.size(), base64_buffer.data(), false )
+        );
+    {
+        base64::Base64ContextParser parser(binary_buffer.data(), binary_buffer.size() );
+        const uchar * buffer_beg = reinterpret_cast<const uchar *>( base64_buffer.data() );
+        const uchar * buffer_end = buffer_beg + base64_buffer.size();
+        parser.read( buffer_beg, buffer_end );
+        parser.flush();
+    }
+
+    /* save as CvSeq */
+    int elem_size = ::icvCalcStructSize(dt.c_str(), 0);
+    if (total_byte_size % elem_size != 0)
+        CV_PARSE_ERROR("Byte size not match elememt size");
+    int elem_cnt = total_byte_size / elem_size;
+
+    node->tag = CV_NODE_NONE;
+    int struct_flags = CV_NODE_FLOW | CV_NODE_SEQ;
+    /* after icvFSCreateCollection, node->tag == struct_flags */
+    icvFSCreateCollection(fs, struct_flags, node);
+    base64::make_seq(binary_buffer.data(), elem_cnt, dt.c_str(), *node->data.seq);
+
+    if (fs->dummy_eof) {
+        /* end of file */
+        return fs->buffer_start;
+    } else {
+        /* end of line */
+        return end;
+    }
+}
+
+
 static char*
 icvYMLParseKey( CvFileStorage* fs, char* ptr,
                 CvFileNode* map_node, CvFileNode** value_placeholder )
@@ -1038,6 +1466,7 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
     int is_parent_flow = CV_NODE_IS_FLOW(parent_flags);
     int value_type = CV_NODE_NONE;
     int len;
+    bool is_binary_string = false;
 
     memset( node, 0, sizeof(*node) );
 
@@ -1047,6 +1476,26 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
         {
             ptr++;
             value_type |= CV_NODE_USER;
+        }
+        if ( d == '<') //support of full type heading from YAML 1.2
+        {
+            const char* yamlTypeHeading = "<tag:yaml.org,2002:";
+            const size_t headingLenght = strlen(yamlTypeHeading);
+
+            char* typeEndPtr = ++ptr;
+
+            do d = *++typeEndPtr;
+            while( cv_isprint(d) && d != ' ' && d != '>' );
+
+            if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLenght )
+            {
+                if ( memcmp(ptr, yamlTypeHeading, headingLenght) == 0 )
+                {
+                    value_type |= CV_NODE_USER;
+                    *typeEndPtr = ' ';
+                    ptr += headingLenght - 1;
+                }
+            }
         }
 
         endptr = ptr++;
@@ -1074,6 +1523,27 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
             if( memcmp( ptr, "float", 5 ) == 0 )
                 value_type = CV_NODE_REAL;
         }
+        else if (len == 6 && CV_NODE_IS_USER(value_type))
+        {
+            if( memcmp( ptr, "binary", 6 ) == 0 ) {
+                value_type = CV_NODE_SEQ;
+                is_binary_string = true;
+
+                /* for ignore '|' */
+
+                /**** operation with endptr ****/
+                *endptr = d;
+
+                do {
+                    d = *++endptr;
+                    if (d == '|')
+                        break;
+                } while (d == ' ');
+
+                d = *++endptr;
+                *endptr = '\0';
+            }
+        }
         else if( CV_NODE_IS_USER(value_type) )
         {
             node->info = cvFindType( ptr );
@@ -1088,7 +1558,7 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
 
         if( !CV_NODE_IS_USER(value_type) )
         {
-            if( value_type == CV_NODE_STRING && c != '\'' && c != '\"' )
+            if (value_type == CV_NODE_STRING && c != '\'' && c != '\"')
                 goto force_string;
             if( value_type == CV_NODE_INT )
                 goto force_int;
@@ -1097,7 +1567,13 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
         }
     }
 
-    if( cv_isdigit(c) ||
+    if (is_binary_string)
+    {
+        /* for base64 string */
+        int indent = static_cast<int>(ptr - fs->buffer_start);
+        ptr = icvYMLParseBase64(fs, ptr, indent, node);
+    }
+    else if( cv_isdigit(c) ||
         ((c == '-' || c == '+') && (cv_isdigit(d) || d == '.')) ||
         (c == '.' && cv_isalnum(d))) // a number
     {
@@ -1355,8 +1831,9 @@ icvYMLParse( CvFileStorage* fs )
 
             if( *ptr == '%' )
             {
-                if( memcmp( ptr, "%YAML:", 6 ) == 0 &&
-                    memcmp( ptr, "%YAML:1.", 8 ) != 0 )
+                if( memcmp( ptr, "%YAML", 5 ) == 0 &&
+                    memcmp( ptr, "%YAML:1.", 8 ) != 0 &&
+                    memcmp( ptr, "%YAML 1.", 8 ) != 0)
                     CV_PARSE_ERROR( "Unsupported YAML version (it must be 1.x)" );
                 *ptr = '\0';
             }
@@ -1413,6 +1890,16 @@ icvYMLParse( CvFileStorage* fs )
 static void
 icvYMLWrite( CvFileStorage* fs, const char* key, const char* data )
 {
+    check_if_write_struct_is_delayed( fs );
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
+    {
+        switch_to_Base64_state( fs, base64::fs::NotUse );
+    }
+    else if ( fs->state_of_writing_base64 == base64::fs::InUse )
+    {
+        CV_Error( CV_StsError, "At present, output Base64 data only." );
+    }
+
     int i, keylen = 0;
     int datalen = 0;
     int struct_flags;
@@ -1516,12 +2003,22 @@ icvYMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags,
     char buf[CV_FS_MAX_LEN + 1024];
     const char* data = 0;
 
+    if ( type_name && *type_name == '\0' )
+        type_name = 0;
+
     struct_flags = (struct_flags & (CV_NODE_TYPE_MASK|CV_NODE_FLOW)) | CV_NODE_EMPTY;
     if( !CV_NODE_IS_COLLECTION(struct_flags))
         CV_Error( CV_StsBadArg,
         "Some collection type - CV_NODE_SEQ or CV_NODE_MAP, must be specified" );
 
-    if( CV_NODE_IS_FLOW(struct_flags) )
+    if (type_name && memcmp(type_name, "binary", 6) == 0)
+    {
+        /* reset struct flag. in order not to print ']' */
+        struct_flags = CV_NODE_SEQ;
+        sprintf(buf, "!!binary |");
+        data = buf;
+    }
+    else if( CV_NODE_IS_FLOW(struct_flags))
     {
         char c = CV_NODE_IS_MAP(struct_flags) ? '{' : '[';
         struct_flags |= CV_NODE_FLOW;
@@ -1637,7 +2134,7 @@ icvYMLWriteString( CvFileStorage* fs, const char* key,
 
     if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
     {
-        int need_quote = quote || len == 0;
+        int need_quote = quote || len == 0 || str[0] == ' ';
         data = buf;
         *data++ = '\"';
         for( i = 0; i < len; i++ )
@@ -1813,6 +2310,98 @@ icvXMLSkipSpaces( CvFileStorage* fs, char* ptr, int mode )
 }
 
 
+static void icvXMLGetMultilineStringContent(CvFileStorage* fs,
+    char* ptr, char* &beg, char* &end)
+{
+    ptr = icvXMLSkipSpaces(fs, ptr, CV_XML_INSIDE_TAG);
+    beg = ptr;
+    end = ptr;
+    if ( fs->dummy_eof )
+        return ; /* end of file */
+
+    if ( *beg == '<' )
+        return; /* end of string */
+
+    /* find end */
+    while( cv_isprint(*ptr) ) /* no check for base64 string */
+        ++ ptr;
+    if ( *ptr == '\0' )
+        CV_PARSE_ERROR( "Unexpected end of line" );
+
+    end = ptr;
+}
+
+
+static char* icvXMLParseBase64(CvFileStorage* fs, char* ptr, CvFileNode * node)
+{
+    char * beg = 0;
+    char * end = 0;
+
+    icvXMLGetMultilineStringContent(fs, ptr, beg, end);
+    if (beg >= end)
+        return end; // CV_PARSE_ERROR("Empty Binary Data");
+
+    /* calc (decoded) total_byte_size from header */
+    std::string dt;
+    {
+        if (end - beg < static_cast<int>(base64::ENCODED_HEADER_SIZE))
+            CV_PARSE_ERROR("Unrecognized Base64 header");
+
+        std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
+        base64::base64_decode(beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
+        if ( !base64::read_base64_header(header, dt) || dt.empty() )
+            CV_PARSE_ERROR("Invalid `dt` in Base64 header");
+
+        beg += base64::ENCODED_HEADER_SIZE;
+    }
+
+    /* get all Base64 data */
+    std::string base64_buffer; // not an efficient way.
+    base64_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
+    while( beg < end )
+    {
+        base64_buffer.append( beg, end );
+        beg = end;
+        icvXMLGetMultilineStringContent( fs, beg, beg, end );
+    }
+    if ( !base64::base64_valid(base64_buffer.data(), 0U, base64_buffer.size()) )
+        CV_PARSE_ERROR( "Invalid Base64 data." );
+
+    /* alloc buffer for all decoded data(include header) */
+    std::vector<uchar> binary_buffer( base64::base64_decode_buffer_size(base64_buffer.size()) );
+    int total_byte_size = static_cast<int>(
+        base64::base64_decode_buffer_size( base64_buffer.size(), base64_buffer.data(), false )
+        );
+    {
+        base64::Base64ContextParser parser(binary_buffer.data(), binary_buffer.size() );
+        const uchar * buffer_beg = reinterpret_cast<const uchar *>( base64_buffer.data() );
+        const uchar * buffer_end = buffer_beg + base64_buffer.size();
+        parser.read( buffer_beg, buffer_end );
+        parser.flush();
+    }
+
+    /* save as CvSeq */
+    int elem_size = ::icvCalcStructSize(dt.c_str(), 0);
+    if (total_byte_size % elem_size != 0)
+        CV_PARSE_ERROR("data size not matches elememt size");
+    int elem_cnt = total_byte_size / elem_size;
+
+    node->tag = CV_NODE_NONE;
+    int struct_flags = CV_NODE_SEQ;
+    /* after icvFSCreateCollection, node->tag == struct_flags */
+    icvFSCreateCollection(fs, struct_flags, node);
+    base64::make_seq(binary_buffer.data(), elem_cnt, dt.c_str(), *node->data.seq);
+
+    if (fs->dummy_eof) {
+        /* end of file */
+        return fs->buffer_start;
+    } else {
+        /* end of line */
+        return end;
+    }
+}
+
+
 static char*
 icvXMLParseTag( CvFileStorage* fs, char* ptr, CvStringHashNode** _tag,
                 CvAttrList** _list, int* _tag_type );
@@ -1864,6 +2453,9 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
 
             assert( tag_type == CV_XML_OPENING_TAG );
 
+            /* for base64 string */
+            bool is_binary_string = false;
+
             type_name = list ? cvAttrValue( list, "type_id" ) : 0;
             if( type_name )
             {
@@ -1873,6 +2465,11 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
                     elem_type = CV_NODE_MAP;
                 else if( strcmp( type_name, "seq" ) == 0 )
                     elem_type = CV_NODE_SEQ;
+                else if (strcmp(type_name, "binary") == 0)
+                {
+                    elem_type = CV_NODE_NONE;
+                    is_binary_string = true;
+                }
                 else
                 {
                     info = cvFindType( type_name );
@@ -1895,7 +2492,14 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
             else
                 elem = cvGetFileNode( fs, node, key, 1 );
 
-            ptr = icvXMLParseValue( fs, ptr, elem, elem_type);
+            if (!is_binary_string)
+                ptr = icvXMLParseValue( fs, ptr, elem, elem_type);
+            else {
+                /* for base64 string */
+                ptr = icvXMLParseBase64( fs, ptr, elem);
+                ptr = icvXMLSkipSpaces( fs, ptr, 0 );
+            }
+
             if( !is_noname )
                 elem->tag |= CV_NODE_NAMED;
             is_simple &= !CV_NODE_IS_COLLECTION(elem->tag);
@@ -2367,6 +2971,9 @@ icvXMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags,
         CV_Error( CV_StsBadArg,
         "Some collection type: CV_NODE_SEQ or CV_NODE_MAP must be specified" );
 
+    if ( type_name && *type_name == '\0' )
+        type_name = 0;
+
     if( type_name )
     {
         attr[idx++] = "type_id";
@@ -2441,6 +3048,16 @@ icvXMLStartNextStream( CvFileStorage* fs )
 static void
 icvXMLWriteScalar( CvFileStorage* fs, const char* key, const char* data, int len )
 {
+    check_if_write_struct_is_delayed( fs );
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
+    {
+        switch_to_Base64_state( fs, base64::fs::NotUse );
+    }
+    else if ( fs->state_of_writing_base64 == base64::fs::InUse )
+    {
+        CV_Error( CV_StsError, "Currently only Base64 data is allowed." );
+    }
+
     if( CV_NODE_IS_MAP(fs->struct_flags) ||
         (!CV_NODE_IS_COLLECTION(fs->struct_flags) && key) )
     {
@@ -2644,19 +3261,920 @@ icvXMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment )
 
 
 /****************************************************************************************\
+*                                       JSON Parser                                      *
+\****************************************************************************************/
+
+static char*
+icvJSONSkipSpaces( CvFileStorage* fs, char* ptr )
+{
+    bool is_eof = false;
+    bool is_completed = false;
+
+    while ( is_eof == false && is_completed == false )
+    {
+        switch ( *ptr )
+        {
+        /* comment */
+        case '/' : {
+            ptr++;
+            if ( *ptr == '\0' )
+            {
+                ptr = icvGets( fs, fs->buffer_start, static_cast<int>(fs->buffer_end - fs->buffer_start) );
+                if ( !ptr ) { is_eof = true; break; }
+            }
+
+            if ( *ptr == '/' )
+            {
+                while ( *ptr != '\n' && *ptr != '\r' )
+                {
+                    if ( *ptr == '\0' )
+                    {
+                        ptr = icvGets( fs, fs->buffer_start, static_cast<int>(fs->buffer_end - fs->buffer_start) );
+                        if ( !ptr ) { is_eof = true; break; }
+                    }
+                    else
+                    {
+                        ptr++;
+                    }
+                }
+            }
+            else if ( *ptr == '*' )
+            {
+                ptr++;
+                for (;;)
+                {
+                    if ( *ptr == '\0' )
+                    {
+                        ptr = icvGets( fs, fs->buffer_start, static_cast<int>(fs->buffer_end - fs->buffer_start) );
+                        if ( !ptr ) { is_eof = true; break; }
+                    }
+                    else if ( *ptr == '*' )
+                    {
+                        ptr++;
+                        if ( *ptr == '\0' )
+                        {
+                            ptr = icvGets( fs, fs->buffer_start, static_cast<int>(fs->buffer_end - fs->buffer_start) );
+                            if ( !ptr ) { is_eof = true; break; }
+                        }
+                        if ( *ptr == '/' )
+                        {
+                            ptr++;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        ptr++;
+                    }
+                }
+            }
+            else
+            {
+                CV_PARSE_ERROR( "Not supported escape character" );
+            }
+        } break;
+        /* whitespace */
+        case '\t':
+        case ' ' : {
+            ptr++;
+        } break;
+        /* newline || end mark */
+        case '\0':
+        case '\n':
+        case '\r': {
+            ptr = icvGets( fs, fs->buffer_start, static_cast<int>(fs->buffer_end - fs->buffer_start) );
+            if ( !ptr ) { is_eof = true; break; }
+        } break;
+        /* other character */
+        default: {
+            if ( !cv_isprint(*ptr) )
+                CV_PARSE_ERROR( "Invalid character in the stream" );
+            is_completed = true;
+        } break;
+        }
+    }
+
+    if ( is_eof )
+    {
+        ptr = fs->buffer_start;
+        *ptr = '\0';
+        fs->dummy_eof = 1;
+    }
+    else if ( !is_completed )
+    {
+        /* should not be executed */
+        ptr = 0;
+        fs->dummy_eof = 1;
+        CV_PARSE_ERROR( "Abort at parse time" );
+    }
+    return ptr;
+}
+
+
+static char* icvJSONParseKey( CvFileStorage* fs, char* ptr, CvFileNode* map, CvFileNode** value_placeholder )
+{
+    if( *ptr != '"' )
+        CV_PARSE_ERROR( "Key must start with \'\"\'" );
+
+    char * beg = ptr + 1;
+    char * end = beg;
+
+    do ++ptr;
+    while( cv_isprint(*ptr) && *ptr != '"' );
+
+    if( *ptr != '"' )
+        CV_PARSE_ERROR( "Key must end with \'\"\'" );
+
+    end = ptr;
+    ptr++;
+    ptr = icvJSONSkipSpaces( fs, ptr );
+    if ( ptr == 0 || fs->dummy_eof )
+        return 0;
+
+    if( *ptr != ':' )
+        CV_PARSE_ERROR( "Missing \':\' between key and value" );
+
+    /* [beg, end) */
+    if( end <= beg )
+        CV_PARSE_ERROR( "Key is empty" );
+
+    if ( end - beg == 7u && memcmp(beg, "type_id", 7u) == 0 )
+    {
+        *value_placeholder = 0;
+    }
+    else
+    {
+        CvStringHashNode* str_hash_node = cvGetHashedKey( fs, beg, static_cast<int>(end - beg), 1 );
+        *value_placeholder = cvGetFileNode( fs, map, str_hash_node, 1 );
+    }
+
+    ptr++;
+    return ptr;
+}
+
+static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
+{
+    ptr = icvJSONSkipSpaces( fs, ptr );
+    if ( ptr == 0 || fs->dummy_eof )
+        CV_PARSE_ERROR( "Unexpected End-Of-File" );
+
+    memset( node, 0, sizeof(*node) );
+
+    if ( *ptr == '"' )
+    {   /* must be string or Base64 string */
+        ptr++;
+        char * beg = ptr;
+        size_t len = 0u;
+        for ( ; (cv_isalnum(*ptr) || *ptr == '$' ) && len <= 9u; ptr++ )
+            len++;
+
+        if ( len >= 8u && memcmp( beg, "$base64$", 8u ) == 0 )
+        {   /**************** Base64 string ****************/
+            ptr = beg += 8;
+
+            std::string base64_buffer;
+            base64_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
+
+            bool is_matching = false;
+            while ( !is_matching )
+            {
+                switch ( *ptr )
+                {
+                case '\0':
+                {
+                    base64_buffer.append( beg, ptr );
+
+                    ptr = icvGets( fs, fs->buffer_start, static_cast<int>(fs->buffer_end - fs->buffer_start) );
+                    if ( !ptr )
+                        CV_PARSE_ERROR( "'\"' - right-quote of string is missing" );
+
+                    beg = ptr;
+                    break;
+                }
+                case '\"':
+                {
+                    base64_buffer.append( beg, ptr );
+                    beg = ptr;
+                    is_matching = true;
+                    break;
+                }
+                case '\n':
+                case '\r':
+                {
+                    CV_PARSE_ERROR( "'\"' - right-quote of string is missing" );
+                    break;
+                }
+                default:
+                {
+                    ptr++;
+                    break;
+                }
+                }
+            }
+
+            if ( *ptr != '\"' )
+                CV_PARSE_ERROR( "'\"' - right-quote of string is missing" );
+            else
+                ptr++;
+
+            if ( base64_buffer.size() >= base64::ENCODED_HEADER_SIZE )
+            {
+                const char * base64_beg = base64_buffer.data();
+                const char * base64_end = base64_beg + base64_buffer.size();
+
+                /* get dt from header */
+                std::string dt;
+                {
+                    std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
+                    base64::base64_decode(base64_beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
+                    if ( !base64::read_base64_header(header, dt) || dt.empty() )
+                        CV_PARSE_ERROR("Invalid `dt` in Base64 header");
+                }
+
+                /* set base64_beg to beginning of base64 data */
+                base64_beg = &base64_buffer.at( base64::ENCODED_HEADER_SIZE );
+
+                if ( base64_buffer.size() > base64::ENCODED_HEADER_SIZE )
+                {
+                    if ( !base64::base64_valid( base64_beg, 0U, base64_end - base64_beg ) )
+                        CV_PARSE_ERROR( "Invalid Base64 data." );
+
+                    /* buffer for decoded data(exclude header) */
+                    std::vector<uchar> binary_buffer( base64::base64_decode_buffer_size(base64_end - base64_beg) );
+                    int total_byte_size = static_cast<int>(
+                        base64::base64_decode_buffer_size( base64_end - base64_beg, base64_beg, false )
+                        );
+                    {
+                        base64::Base64ContextParser parser(binary_buffer.data(), binary_buffer.size() );
+                        const uchar * binary_beg = reinterpret_cast<const uchar *>( base64_beg );
+                        const uchar * binary_end = binary_beg + (base64_end - base64_beg);
+                        parser.read( binary_beg, binary_end );
+                        parser.flush();
+                    }
+
+                    /* save as CvSeq */
+                    int elem_size = ::icvCalcStructSize(dt.c_str(), 0);
+                    if (total_byte_size % elem_size != 0)
+                        CV_PARSE_ERROR("Byte size not match elememt size");
+                    int elem_cnt = total_byte_size / elem_size;
+
+                    /* after icvFSCreateCollection, node->tag == struct_flags */
+                    icvFSCreateCollection(fs, CV_NODE_FLOW | CV_NODE_SEQ, node);
+                    base64::make_seq(binary_buffer.data(), elem_cnt, dt.c_str(), *node->data.seq);
+                }
+                else
+                {
+                    /* empty */
+                    icvFSCreateCollection(fs, CV_NODE_FLOW | CV_NODE_SEQ, node);
+                }
+            }
+            else if ( base64_buffer.empty() )
+            {
+                /* empty */
+                icvFSCreateCollection(fs, CV_NODE_FLOW | CV_NODE_SEQ, node);
+            }
+            else
+            {
+                CV_PARSE_ERROR("Unrecognized Base64 header");
+            }
+        }
+        else
+        {   /**************** normal string ****************/
+            std::string string_buffer;
+            string_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
+
+            ptr = beg;
+            bool is_matching = false;
+            while ( !is_matching )
+            {
+                switch ( *ptr )
+                {
+                case '\\':
+                {
+                    string_buffer.append( beg, ptr );
+                    ptr++;
+                    switch ( *ptr )
+                    {
+                    case '\\':
+                    case '\"':
+                    case '\'': { string_buffer.append( 1u, *ptr ); break; }
+                    case 'n' : { string_buffer.append( 1u, '\n' ); break; }
+                    case 'r' : { string_buffer.append( 1u, '\r' ); break; }
+                    case 't' : { string_buffer.append( 1u, '\t' ); break; }
+                    case 'b' : { string_buffer.append( 1u, '\b' ); break; }
+                    case 'f' : { string_buffer.append( 1u, '\f' ); break; }
+                    case 'u' : { CV_PARSE_ERROR( "'\\uXXXX' currently not supported" ); }
+                    default  : { CV_PARSE_ERROR( "Invalid escape character" ); }
+                        break;
+                    }
+                    ptr++;
+                    beg = ptr;
+                    break;
+                }
+                case '\0':
+                {
+                    string_buffer.append( beg, ptr );
+
+                    ptr = icvGets( fs, fs->buffer_start, static_cast<int>(fs->buffer_end - fs->buffer_start) );
+                    if ( !ptr )
+                        CV_PARSE_ERROR( "'\"' - right-quote of string is missing" );
+
+                    beg = ptr;
+                    break;
+                }
+                case '\"':
+                {
+                    string_buffer.append( beg, ptr );
+                    beg = ptr;
+                    is_matching = true;
+                    break;
+                }
+                case '\n':
+                case '\r':
+                {
+                    CV_PARSE_ERROR( "'\"' - right-quote of string is missing" );
+                    break;
+                }
+                default:
+                {
+                    ptr++;
+                    break;
+                }
+                }
+            }
+
+            if ( *ptr != '\"' )
+                CV_PARSE_ERROR( "'\"' - right-quote of string is missing" );
+            else
+                ptr++;
+
+            node->data.str = cvMemStorageAllocString
+            (
+                fs->memstorage,
+                string_buffer.c_str(),
+                static_cast<int>(string_buffer.size())
+            );
+            node->tag = CV_NODE_STRING;
+        }
+    }
+    else if ( cv_isdigit(*ptr) || *ptr == '-' || *ptr == '+' || *ptr == '.' )
+    {    /**************** number ****************/
+        char * beg = ptr;
+        if ( *ptr == '+' || *ptr == '-' )
+            ptr++;
+        while( cv_isdigit(*ptr) )
+            ptr++;
+        if (*ptr == '.' || *ptr == 'e')
+        {
+            node->data.f = icv_strtod( fs, beg, &ptr );
+            node->tag = CV_NODE_REAL;
+        }
+        else
+        {
+            node->data.i = static_cast<int>(strtol( beg, &ptr, 0 ));
+            node->tag = CV_NODE_INT;
+        }
+
+        if ( beg >= ptr )
+            CV_PARSE_ERROR( "Invalid numeric value (inconsistent explicit type specification?)" );
+    }
+    else
+    {    /**************** other data ****************/
+        const char * beg = ptr;
+        size_t len = 0u;
+        for ( ; cv_isalpha(*ptr) && len <= 6u; ptr++ )
+            len++;
+
+        if ( len >= 4u && memcmp( beg, "null", 4u ) == 0 )
+        {
+            CV_PARSE_ERROR( "Value 'null' is not supported by this parser" );
+        }
+        else if ( len >= 4u && memcmp( beg, "true", 4u ) == 0 )
+        {
+            node->data.i = 1;
+            node->tag = CV_NODE_INT;
+        }
+        else if ( len >= 5u && memcmp( beg, "false", 5u ) == 0 )
+        {
+            node->data.i = 0;
+            node->tag = CV_NODE_INT;
+        }
+        else
+        {
+            CV_PARSE_ERROR( "Unrecognized value" );
+        }
+        ptr++;
+    }
+
+    return ptr;
+}
+
+static char* icvJSONParseSeq( CvFileStorage* fs, char* ptr, CvFileNode* node );
+static char* icvJSONParseMap( CvFileStorage* fs, char* ptr, CvFileNode* node );
+
+static char* icvJSONParseSeq( CvFileStorage* fs, char* ptr, CvFileNode* node )
+{
+    if ( *ptr != '[' )
+        CV_PARSE_ERROR( "'[' - left-brace of seq is missing" );
+    else
+        ptr++;
+
+    memset( node, 0, sizeof(*node) );
+    icvFSCreateCollection( fs, CV_NODE_SEQ, node );
+
+    for (;;)
+    {
+        ptr = icvJSONSkipSpaces( fs, ptr );
+        if ( ptr == 0 || fs->dummy_eof )
+            break;
+
+        if ( *ptr != ']' )
+        {
+            CvFileNode* child = (CvFileNode*)cvSeqPush( node->data.seq, 0 );
+
+            if ( *ptr == '[' )
+                ptr = icvJSONParseSeq( fs, ptr, child );
+            else if ( *ptr == '{' )
+                ptr = icvJSONParseMap( fs, ptr, child );
+            else
+                ptr = icvJSONParseValue( fs, ptr, child );
+        }
+
+        ptr = icvJSONSkipSpaces( fs, ptr );
+        if ( ptr == 0 || fs->dummy_eof )
+            break;
+
+        if ( *ptr == ',' )
+            ptr++;
+        else if ( *ptr == ']' )
+            break;
+        else
+            CV_PARSE_ERROR( "Unexpected character" );
+    }
+
+    if ( *ptr != ']' )
+        CV_PARSE_ERROR( "']' - right-brace of seq is missing" );
+    else
+        ptr++;
+
+    return ptr;
+}
+
+static char* icvJSONParseMap( CvFileStorage* fs, char* ptr, CvFileNode* node )
+{
+    if ( *ptr != '{' )
+        CV_PARSE_ERROR( "'{' - left-brace of map is missing" );
+    else
+        ptr++;
+
+    memset( node, 0, sizeof(*node) );
+    icvFSCreateCollection( fs, CV_NODE_MAP, node );
+
+    for ( ;; )
+    {
+        ptr = icvJSONSkipSpaces( fs, ptr );
+        if ( ptr == 0 || fs->dummy_eof )
+            break;
+
+        if ( *ptr == '"' )
+        {
+            CvFileNode* child = 0;
+            ptr = icvJSONParseKey( fs, ptr, node, &child );
+            ptr = icvJSONSkipSpaces( fs, ptr );
+            if ( ptr == 0 || fs->dummy_eof )
+                break;
+
+            if ( child == 0 )
+            {   /* type_id */
+                CvFileNode tmp;
+                ptr = icvJSONParseValue( fs, ptr, &tmp );
+                if ( CV_NODE_IS_STRING(tmp.tag) )
+                {
+                    node->info = cvFindType( tmp.data.str.ptr );
+                    if ( node->info )
+                        node->tag |= CV_NODE_USER;
+                    // delete tmp.data.str
+                }
+                else
+                {
+                    CV_PARSE_ERROR( "\"type_id\" should be of type string" );
+                }
+            }
+            else
+            {   /* normal */
+                if ( *ptr == '[' )
+                    ptr = icvJSONParseSeq( fs, ptr, child );
+                else if ( *ptr == '{' )
+                    ptr = icvJSONParseMap( fs, ptr, child );
+                else
+                    ptr = icvJSONParseValue( fs, ptr, child );
+            }
+        }
+
+        ptr = icvJSONSkipSpaces( fs, ptr );
+        if ( ptr == 0 || fs->dummy_eof )
+            break;
+
+        if ( *ptr == ',' )
+            ptr++;
+        else if ( *ptr == '}' )
+            break;
+        else
+            CV_PARSE_ERROR( "Unexpected character" );
+    }
+
+    if ( *ptr != '}' )
+        CV_PARSE_ERROR( "'}' - right-brace of map is missing" );
+    else
+        ptr++;
+
+    return ptr;
+}
+
+
+static void
+icvJSONParse( CvFileStorage* fs )
+{
+    char* ptr = fs->buffer_start;
+    ptr = icvJSONSkipSpaces( fs, ptr );
+    if ( ptr == 0 || fs->dummy_eof )
+        return;
+
+    if ( *ptr == '{' )
+    {
+        CvFileNode* root_node = (CvFileNode*)cvSeqPush( fs->roots, 0 );
+        ptr = icvJSONParseMap( fs, ptr, root_node );
+    }
+    else if ( *ptr == '[' )
+    {
+        CvFileNode* root_node = (CvFileNode*)cvSeqPush( fs->roots, 0 );
+        ptr = icvJSONParseSeq( fs, ptr, root_node );
+    }
+    else
+    {
+        CV_PARSE_ERROR( "left-brace of top level is missing" );
+    }
+
+    if ( fs->dummy_eof != 0 )
+        CV_PARSE_ERROR( "Unexpected End-Of-File" );
+}
+
+
+/****************************************************************************************\
+*                                       JSON Emitter                                     *
+\****************************************************************************************/
+
+static void
+icvJSONWrite( CvFileStorage* fs, const char* key, const char* data )
+{
+    /* check write_struct */
+
+    check_if_write_struct_is_delayed( fs );
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
+    {
+        switch_to_Base64_state( fs, base64::fs::NotUse );
+    }
+    else if ( fs->state_of_writing_base64 == base64::fs::InUse )
+    {
+        CV_Error( CV_StsError, "At present, output Base64 data only." );
+    }
+
+    /* check parameters */
+
+    size_t key_len = 0u;
+    if( key && *key == '\0' )
+        key = 0;
+    if ( key )
+    {
+        key_len = strlen(key);
+        if ( key_len == 0u )
+            CV_Error( CV_StsBadArg, "The key is an empty" );
+        else if ( static_cast<int>(key_len) > CV_FS_MAX_LEN )
+            CV_Error( CV_StsBadArg, "The key is too long" );
+    }
+
+    size_t data_len = 0u;
+    if ( data )
+        data_len = strlen(data);
+
+    int struct_flags = fs->struct_flags;
+    if( CV_NODE_IS_COLLECTION(struct_flags) )
+    {
+        if ( (CV_NODE_IS_MAP(struct_flags) ^ (key != 0)) )
+            CV_Error( CV_StsBadArg, "An attempt to add element without a key to a map, "
+                                    "or add element with key to sequence" );
+    } else {
+        fs->is_first = 0;
+        struct_flags = CV_NODE_EMPTY | (key ? CV_NODE_MAP : CV_NODE_SEQ);
+    }
+
+    /* start to write */
+
+    char* ptr = 0;
+
+    if( CV_NODE_IS_FLOW(struct_flags) )
+    {
+        int new_offset;
+        ptr = fs->buffer;
+        if( !CV_NODE_IS_EMPTY(struct_flags) )
+            *ptr++ = ',';
+        new_offset = static_cast<int>(ptr - fs->buffer_start + key_len + data_len);
+        if( new_offset > fs->wrap_margin && new_offset - fs->struct_indent > 10 )
+        {
+            fs->buffer = ptr;
+            ptr = icvFSFlush(fs);
+        }
+        else
+            *ptr++ = ' ';
+    }
+    else
+    {
+        if ( !CV_NODE_IS_EMPTY(struct_flags) )
+        {
+            ptr = fs->buffer;
+            *ptr++ = ',';
+            *ptr++ = '\n';
+            *ptr++ = '\0';
+            ::icvPuts( fs, fs->buffer_start );
+            ptr = fs->buffer = fs->buffer_start;
+        }
+        ptr = icvFSFlush(fs);
+    }
+
+    if( key )
+    {
+        if( !cv_isalpha(key[0]) && key[0] != '_' )
+            CV_Error( CV_StsBadArg, "Key must start with a letter or _" );
+
+        ptr = icvFSResizeWriteBuffer( fs, ptr, static_cast<int>(key_len) );
+        *ptr++ = '\"';
+
+        for( size_t i = 0u; i < key_len; i++ )
+        {
+            char c = key[i];
+
+            ptr[i] = c;
+            if( !cv_isalnum(c) && c != '-' && c != '_' && c != ' ' )
+                CV_Error( CV_StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
+        }
+
+        ptr += key_len;
+        *ptr++ = '\"';
+        *ptr++ = ':';
+        *ptr++ = ' ';
+    }
+
+    if( data )
+    {
+        ptr = icvFSResizeWriteBuffer( fs, ptr, static_cast<int>(data_len) );
+        memcpy( ptr, data, data_len );
+        ptr += data_len;
+    }
+
+    fs->buffer = ptr;
+    fs->struct_flags = struct_flags & ~CV_NODE_EMPTY;
+}
+
+
+static void
+icvJSONStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags,
+                        const char* type_name CV_DEFAULT(0))
+{
+    int parent_flags;
+    char data[CV_FS_MAX_LEN + 1024];
+
+    struct_flags = (struct_flags & (CV_NODE_TYPE_MASK|CV_NODE_FLOW)) | CV_NODE_EMPTY;
+    if( !CV_NODE_IS_COLLECTION(struct_flags))
+        CV_Error( CV_StsBadArg,
+        "Some collection type - CV_NODE_SEQ or CV_NODE_MAP, must be specified" );
+
+    if ( type_name && *type_name == '\0' )
+        type_name = 0;
+
+    bool has_type_id = false;
+    bool is_real_collection = true;
+    if (type_name && memcmp(type_name, "binary", 6) == 0)
+    {
+        struct_flags = CV_NODE_STR;
+        data[0] = '\0';
+        is_real_collection = false;
+    }
+    else if( type_name )
+    {
+        has_type_id = true;
+    }
+
+    if ( is_real_collection )
+    {
+        char c = CV_NODE_IS_MAP(struct_flags) ? '{' : '[';
+        data[0] = c;
+        data[1] = '\0';
+    }
+
+    icvJSONWrite( fs, key, data );
+
+    parent_flags = fs->struct_flags;
+    cvSeqPush( fs->write_stack, &parent_flags );
+    fs->struct_flags = struct_flags;
+    fs->struct_indent += 4;
+
+    if ( has_type_id )
+        fs->write_string( fs, "type_id", type_name, 1 );
+}
+
+
+static void
+icvJSONEndWriteStruct( CvFileStorage* fs )
+{
+    if( fs->write_stack->total == 0 )
+        CV_Error( CV_StsError, "EndWriteStruct w/o matching StartWriteStruct" );
+
+    int parent_flags = 0;
+    int struct_flags = fs->struct_flags;
+    cvSeqPop( fs->write_stack, &parent_flags );
+    fs->struct_indent -= 4;
+    fs->struct_flags = parent_flags & ~CV_NODE_EMPTY;
+    assert( fs->struct_indent >= 0 );
+
+    if ( CV_NODE_IS_COLLECTION(struct_flags) )
+    {
+        if ( !CV_NODE_IS_FLOW(struct_flags) )
+        {
+            if ( fs->buffer <= fs->buffer_start + fs->space )
+            {
+                /* some bad code for base64_writer... */
+                *fs->buffer++ = '\n';
+                *fs->buffer++ = '\0';
+                icvPuts( fs, fs->buffer_start );
+                fs->buffer = fs->buffer_start;
+            }
+            icvFSFlush(fs);
+        }
+
+        char* ptr = fs->buffer;
+        if( ptr > fs->buffer_start + fs->struct_indent && !CV_NODE_IS_EMPTY(struct_flags) )
+            *ptr++ = ' ';
+        *ptr++ = CV_NODE_IS_MAP(struct_flags) ? '}' : ']';
+        fs->buffer = ptr;
+    }
+}
+
+
+static void
+icvJSONStartNextStream( CvFileStorage* fs )
+{
+    if( !fs->is_first )
+    {
+        while( fs->write_stack->total > 0 )
+            icvJSONEndWriteStruct(fs);
+
+        fs->struct_indent = 4;
+        icvFSFlush(fs);
+        fs->buffer = fs->buffer_start;
+    }
+}
+
+
+static void
+icvJSONWriteInt( CvFileStorage* fs, const char* key, int value )
+{
+    char buf[128];
+    icvJSONWrite( fs, key, icv_itoa( value, buf, 10 ));
+}
+
+
+static void
+icvJSONWriteReal( CvFileStorage* fs, const char* key, double value )
+{
+    char buf[128];
+    size_t len = strlen( icvDoubleToString( buf, value ) );
+    if( len > 0 && buf[len-1] == '.' )
+    {
+        // append zero if string ends with decimal place to match JSON standard
+        buf[len] = '0';
+        buf[len+1] = '\0';
+    }
+    icvJSONWrite( fs, key, buf );
+}
+
+
+static void
+icvJSONWriteString( CvFileStorage* fs, const char* key,
+                   const char* str, int quote CV_DEFAULT(0))
+{
+    char buf[CV_FS_MAX_LEN*4+16];
+    char* data = (char*)str;
+    int i, len;
+
+    if( !str )
+        CV_Error( CV_StsNullPtr, "Null string pointer" );
+
+    len = (int)strlen(str);
+    if( len > CV_FS_MAX_LEN )
+        CV_Error( CV_StsBadArg, "The written string is too long" );
+
+    if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
+    {
+        int need_quote = 1;
+        data = buf;
+        *data++ = '\"';
+        for( i = 0; i < len; i++ )
+        {
+            char c = str[i];
+
+            switch ( c )
+            {
+            case '\\':
+            case '\"':
+            case '\'': { *data++ = '\\'; *data++ = c;   break; }
+            case '\n': { *data++ = '\\'; *data++ = 'n'; break; }
+            case '\r': { *data++ = '\\'; *data++ = 'r'; break; }
+            case '\t': { *data++ = '\\'; *data++ = 't'; break; }
+            case '\b': { *data++ = '\\'; *data++ = 'b'; break; }
+            case '\f': { *data++ = '\\'; *data++ = 'f'; break; }
+            default  : { *data++ = c; }
+                break;
+            }
+        }
+
+        *data++ = '\"';
+        *data++ = '\0';
+        data = buf + !need_quote;
+    }
+
+    icvJSONWrite( fs, key, data );
+}
+
+
+static void
+icvJSONWriteComment( CvFileStorage* fs, const char* comment, int eol_comment )
+{
+    if( !comment )
+        CV_Error( CV_StsNullPtr, "Null comment" );
+
+    int         len = static_cast<int>(strlen(comment));
+    char*       ptr = fs->buffer;
+    const char* eol = strchr(comment, '\n');
+    bool  multiline = eol != 0;
+
+    if( !eol_comment || multiline || fs->buffer_end - ptr < len || ptr == fs->buffer_start )
+        ptr = icvFSFlush( fs );
+    else
+        *ptr++ = ' ';
+
+    while( comment )
+    {
+        *ptr++ = '/';
+        *ptr++ = '/';
+        *ptr++ = ' ';
+        if( eol )
+        {
+            ptr = icvFSResizeWriteBuffer( fs, ptr, (int)(eol - comment) + 1 );
+            memcpy( ptr, comment, eol - comment + 1 );
+            fs->buffer = ptr + (eol - comment);
+            comment = eol + 1;
+            eol = strchr( comment, '\n' );
+        }
+        else
+        {
+            len = (int)strlen(comment);
+            ptr = icvFSResizeWriteBuffer( fs, ptr, len );
+            memcpy( ptr, comment, len );
+            fs->buffer = ptr + len;
+            comment = 0;
+        }
+        ptr = icvFSFlush( fs );
+    }
+}
+
+
+/****************************************************************************************\
 *                              Common High-Level Functions                               *
 \****************************************************************************************/
 
 CV_IMPL CvFileStorage*
-cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, const char* encoding )
+cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const char* encoding )
 {
     CvFileStorage* fs = 0;
     int default_block_size = 1 << 18;
     bool append = (flags & 3) == CV_STORAGE_APPEND;
     bool mem = (flags & CV_STORAGE_MEMORY) != 0;
     bool write_mode = (flags & 3) != 0;
+    bool write_base64 = (write_mode || append) && (flags & CV_STORAGE_BASE64) != 0;
     bool isGZ = false;
     size_t fnamelen = 0;
+    const char * filename = query;
+
+    std::vector<std::string> params;
+    if ( !mem )
+    {
+        params = analyze_file_name( query );
+        if ( !params.empty() )
+            filename = params.begin()->c_str();
+
+        if ( write_base64 == false && is_param_exist( params, "base64" ) )
+            write_base64 = (write_mode || append);
+    }
 
     if( !filename || filename[0] == '\0' )
     {
@@ -2735,13 +4253,23 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
 
         if( fmt == CV_STORAGE_FORMAT_AUTO && filename )
         {
-            const char* dot_pos = filename + fnamelen - (isGZ ? 7 : 4);
-            fs->fmt = (dot_pos >= filename && (memcmp( dot_pos, ".xml", 4) == 0 ||
-                    memcmp(dot_pos, ".XML", 4) == 0 || memcmp(dot_pos, ".Xml", 4) == 0)) ?
-                CV_STORAGE_FORMAT_XML : CV_STORAGE_FORMAT_YAML;
+            const char* dot_pos = strrchr( filename, '.' );
+            fs->fmt
+                = cv_strcasecmp( dot_pos, ".xml" )
+                ? CV_STORAGE_FORMAT_XML
+                : cv_strcasecmp( dot_pos, ".json" )
+                ? CV_STORAGE_FORMAT_JSON
+                : CV_STORAGE_FORMAT_YAML
+                ;
+        }
+        else if ( fmt != CV_STORAGE_FORMAT_AUTO )
+        {
+            fs->fmt = fmt;
         }
         else
-            fs->fmt = fmt != CV_STORAGE_FORMAT_AUTO ? fmt : CV_STORAGE_FORMAT_XML;
+        {
+            fs->fmt = CV_STORAGE_FORMAT_XML;
+        }
 
         // we use factor=6 for XML (the longest characters (' and ") are encoded with 6 bytes (&apos; and &quot;)
         // and factor=4 for YAML ( as we use 4 bytes for non ASCII characters (e.g. \xAB))
@@ -2757,6 +4285,16 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
         fs->struct_flags = CV_NODE_EMPTY;
         fs->buffer_start = fs->buffer = (char*)cvAlloc( buf_size + 1024 );
         fs->buffer_end = fs->buffer_start + buf_size;
+
+        fs->base64_writer           = 0;
+        fs->is_default_using_base64 = write_base64;
+        fs->state_of_writing_base64 = base64::fs::Uncertain;
+
+        fs->is_write_struct_delayed = false;
+        fs->delayed_struct_key      = 0;
+        fs->delayed_struct_flags    = 0;
+        fs->delayed_type_name       = 0;
+
         if( fs->fmt == CV_STORAGE_FORMAT_XML )
         {
             size_t file_size = fs->file ? (size_t)ftell( fs->file ) : (size_t)0;
@@ -2829,10 +4367,10 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             fs->write_comment = icvXMLWriteComment;
             fs->start_next_stream = icvXMLStartNextStream;
         }
-        else
+        else if( fs->fmt == CV_STORAGE_FORMAT_YAML )
         {
             if( !append )
-                icvPuts( fs, "%YAML:1.0\n" );
+                icvPuts( fs, "%YAML:1.0\n---\n" );
             else
                 icvPuts( fs, "...\n---\n" );
             fs->start_write_struct = icvYMLStartWriteStruct;
@@ -2842,6 +4380,48 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             fs->write_string = icvYMLWriteString;
             fs->write_comment = icvYMLWriteComment;
             fs->start_next_stream = icvYMLStartNextStream;
+        }
+        else
+        {
+            if( !append )
+                icvPuts( fs, "{\n" );
+            else
+            {
+                bool valid = false;
+                long roffset = 0;
+                for ( ;
+                      fseek( fs->file, roffset, SEEK_END ) == 0;
+                      roffset -= 1 )
+                {
+                    const char end_mark = '}';
+                    if ( fgetc( fs->file ) == end_mark )
+                    {
+                        fseek( fs->file, roffset, SEEK_END );
+                        valid = true;
+                        break;
+                    }
+                }
+
+                if ( valid )
+                {
+                    icvCloseFile( fs );
+                    fs->file = fopen( fs->filename, "r+t" );
+                    fseek( fs->file, roffset, SEEK_END );
+                    fputs( ",", fs->file );
+                }
+                else
+                {
+                    CV_Error( CV_StsError, "Could not find '}' in the end of file.\n" );
+                }
+            }
+            fs->struct_indent = 4;
+            fs->start_write_struct = icvJSONStartWriteStruct;
+            fs->end_write_struct = icvJSONEndWriteStruct;
+            fs->write_int = icvJSONWriteInt;
+            fs->write_real = icvJSONWriteReal;
+            fs->write_string = icvJSONWriteString;
+            fs->write_comment = icvJSONWriteComment;
+            fs->start_next_stream = icvJSONStartNextStream;
         }
     }
     else
@@ -2853,11 +4433,24 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
         }
 
         size_t buf_size = 1 << 20;
-        const char* yaml_signature = "%YAML:";
+        const char* yaml_signature = "%YAML";
+        const char* json_signature = "{";
+        const char* xml_signature  = "<?xml";
         char buf[16];
         icvGets( fs, buf, sizeof(buf)-2 );
-        fs->fmt = strncmp( buf, yaml_signature, strlen(yaml_signature) ) == 0 ?
-            CV_STORAGE_FORMAT_YAML : CV_STORAGE_FORMAT_XML;
+        char* bufPtr = cv_skip_BOM(buf);
+        size_t bufOffset = bufPtr - buf;
+
+        if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_YAML;
+        else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_JSON;
+        else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_XML;
+        else if(fs->strbufsize  == bufOffset)
+            CV_Error(CV_BADARG_ERR, "Input file is empty");
+        else
+            CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 
         if( !isGZ )
         {
@@ -2872,6 +4465,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             buf_size = MAX( buf_size, (size_t)(CV_FS_MAX_LEN*2 + 1024) );
         }
         icvRewind(fs);
+        fs->strbufpos = bufOffset;
 
         fs->str_hash = cvCreateMap( 0, sizeof(CvStringHash),
                         sizeof(CvStringHashNode), fs->memstorage, 256 );
@@ -2888,10 +4482,13 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
         //cvSetErrMode( CV_ErrModeSilent );
         try
         {
-            if( fs->fmt == CV_STORAGE_FORMAT_XML )
-                icvXMLParse( fs );
-            else
-                icvYMLParse( fs );
+            switch (fs->fmt)
+            {
+            case CV_STORAGE_FORMAT_XML : { icvXMLParse ( fs ); break; }
+            case CV_STORAGE_FORMAT_YAML: { icvYMLParse ( fs ); break; }
+            case CV_STORAGE_FORMAT_JSON: { icvJSONParse( fs ); break; }
+            default: break;
+            }
         }
         catch (...)
         {
@@ -2931,7 +4528,48 @@ cvStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags,
                     const char* type_name, CvAttrList /*attributes*/ )
 {
     CV_CHECK_OUTPUT_FILE_STORAGE(fs);
-    fs->start_write_struct( fs, key, struct_flags, type_name );
+    check_if_write_struct_is_delayed( fs );
+    if ( fs->state_of_writing_base64 == base64::fs::NotUse )
+        switch_to_Base64_state( fs, base64::fs::Uncertain );
+
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain
+        &&
+        CV_NODE_IS_SEQ(struct_flags)
+        &&
+        fs->is_default_using_base64
+        &&
+        type_name == 0
+       )
+    {
+        /* Uncertain whether output Base64 data */
+        make_write_struct_delayed( fs, key, struct_flags, type_name );
+    }
+    else if ( type_name && memcmp(type_name, "binary", 6) == 0 )
+    {
+        /* Must output Base64 data */
+        if ( !CV_NODE_IS_SEQ(struct_flags) )
+            CV_Error( CV_StsBadArg, "must set 'struct_flags |= CV_NODE_SEQ' if using Base64.");
+        else if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+            CV_Error( CV_StsError, "function \'cvStartWriteStruct\' calls cannot be nested if using Base64.");
+
+        fs->start_write_struct( fs, key, struct_flags, type_name );
+
+        if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+            switch_to_Base64_state( fs, base64::fs::Uncertain );
+        switch_to_Base64_state( fs, base64::fs::InUse );
+    }
+    else
+    {
+        /* Won't output Base64 data */
+        if ( fs->state_of_writing_base64 == base64::fs::InUse )
+            CV_Error( CV_StsError, "At the end of the output Base64, `cvEndWriteStruct` is needed.");
+
+        fs->start_write_struct( fs, key, struct_flags, type_name );
+
+        if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+            switch_to_Base64_state( fs, base64::fs::Uncertain );
+        switch_to_Base64_state( fs, base64::fs::NotUse );
+    }
 }
 
 
@@ -2939,6 +4577,11 @@ CV_IMPL void
 cvEndWriteStruct( CvFileStorage* fs )
 {
     CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+    check_if_write_struct_is_delayed( fs );
+
+    if ( fs->state_of_writing_base64 != base64::fs::Uncertain )
+        switch_to_Base64_state( fs, base64::fs::Uncertain );
+
     fs->end_write_struct( fs );
 }
 
@@ -3075,6 +4718,29 @@ icvCalcElemSize( const char* dt, int initial_size )
 
 
 static int
+icvCalcStructSize( const char* dt, int initial_size )
+{
+    int size = icvCalcElemSize( dt, initial_size );
+    size_t elem_max_size = 0;
+    for ( const char * type = dt; *type != '\0'; type++ ) {
+        switch ( *type )
+        {
+        case 'u': { elem_max_size = std::max( elem_max_size, sizeof(uchar ) ); break; }
+        case 'c': { elem_max_size = std::max( elem_max_size, sizeof(schar ) ); break; }
+        case 'w': { elem_max_size = std::max( elem_max_size, sizeof(ushort) ); break; }
+        case 's': { elem_max_size = std::max( elem_max_size, sizeof(short ) ); break; }
+        case 'i': { elem_max_size = std::max( elem_max_size, sizeof(int   ) ); break; }
+        case 'f': { elem_max_size = std::max( elem_max_size, sizeof(float ) ); break; }
+        case 'd': { elem_max_size = std::max( elem_max_size, sizeof(double) ); break; }
+        default: break;
+        }
+    }
+    size = cvAlign( size, static_cast<int>(elem_max_size) );
+    return size;
+}
+
+
+static int
 icvDecodeSimpleFormat( const char* dt )
 {
     int elem_type = -1;
@@ -3093,6 +4759,17 @@ icvDecodeSimpleFormat( const char* dt )
 CV_IMPL void
 cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
 {
+    if (fs->is_default_using_base64 ||
+        fs->state_of_writing_base64 == base64::fs::InUse )
+    {
+        base64::cvWriteRawDataBase64( fs, _data, len, dt );
+        return;
+    }
+    else if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
+    {
+        switch_to_Base64_state( fs, base64::fs::NotUse );
+    }
+
     const char* data0 = (const char*)_data;
     int offset = 0;
     int fmt_pairs[CV_FS_MAX_FMT_PAIRS*2], k, fmt_pair_count;
@@ -3166,7 +4843,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
                     data += sizeof(size_t);
                     break;
                 default:
-                    assert(0);
+                    CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
                     return;
                 }
 
@@ -3175,8 +4852,25 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
                     int buf_len = (int)strlen(ptr);
                     icvXMLWriteScalar( fs, 0, ptr, buf_len );
                 }
-                else
+                else if ( fs->fmt == CV_STORAGE_FORMAT_YAML )
+                {
                     icvYMLWrite( fs, 0, ptr );
+                }
+                else
+                {
+                    if( elem_type == CV_32F || elem_type == CV_64F )
+                    {
+                        size_t buf_len = strlen(ptr);
+                        if( buf_len > 0 && ptr[buf_len-1] == '.' )
+                        {
+                            // append zero if CV_32F or CV_64F string ends with decimal place to match JSON standard
+                            // ptr will point to buf, so can write to buf given ptr is const
+                            buf[buf_len] = '0';
+                            buf[buf_len+1] = '\0';
+                        }
+                    }
+                    icvJSONWrite( fs, 0, ptr );
+                }
             }
 
             offset = (int)(data - data0);
@@ -3288,7 +4982,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                         data += sizeof(size_t);
                         break;
                     default:
-                        assert(0);
+                        CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
                         return;
                     }
                 }
@@ -3338,7 +5032,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                         data += sizeof(size_t);
                         break;
                     default:
-                        assert(0);
+                        CV_Error( CV_StsUnsupportedFormat, "Unsupported type" );
                         return;
                     }
                 }
@@ -3421,15 +5115,15 @@ icvWriteFileNode( CvFileStorage* fs, const char* name, const CvFileNode* node )
         break;
     case CV_NODE_SEQ:
     case CV_NODE_MAP:
-        fs->start_write_struct( fs, name, CV_NODE_TYPE(node->tag) +
+        cvStartWriteStruct( fs, name, CV_NODE_TYPE(node->tag) +
                 (CV_NODE_SEQ_IS_SIMPLE(node->data.seq) ? CV_NODE_FLOW : 0),
                 node->info ? node->info->type_name : 0 );
         icvWriteCollection( fs, node );
-        fs->end_write_struct( fs );
+        cvEndWriteStruct( fs );
         break;
     case CV_NODE_NONE:
-        fs->start_write_struct( fs, name, CV_NODE_SEQ, 0 );
-        fs->end_write_struct( fs );
+        cvStartWriteStruct( fs, name, CV_NODE_SEQ, 0 );
+        cvEndWriteStruct( fs );
         break;
     default:
         CV_Error( CV_StsBadFlag, "Unknown type of file node" );
@@ -3534,7 +5228,7 @@ static int
 icvFileNodeSeqLen( CvFileNode* node )
 {
     return CV_NODE_IS_COLLECTION(node->tag) ? node->data.seq->total :
-           CV_NODE_TYPE(node->tag) != CV_NODE_NONE;
+        CV_NODE_TYPE(node->tag) != CV_NODE_NONE;
 }
 
 
@@ -3570,8 +5264,6 @@ icvReadMat( CvFileStorage* fs, CvFileNode* node )
         mat = cvCreateMat( rows, cols, elem_type );
         cvReadRawData( fs, data, mat->data.ptr, dt );
     }
-    else if( rows == 0 && cols == 0 )
-        mat = cvCreateMatHeader( 0, 1, elem_type );
     else
         mat = cvCreateMatHeader( rows, cols, elem_type );
 
@@ -5159,6 +6851,8 @@ FileStorage::~FileStorage()
 
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
 {
+    CV_INSTRUMENT_REGION()
+
     release();
     fs.reset(cvOpenFileStorage( filename.c_str(), 0, flags,
                                 !encoding.empty() ? encoding.c_str() : 0));
@@ -5196,6 +6890,8 @@ FileNode FileStorage::root(int streamidx) const
 
 FileStorage& operator << (FileStorage& fs, const String& str)
 {
+    CV_INSTRUMENT_REGION()
+
     enum { NAME_EXPECTED = FileStorage::NAME_EXPECTED,
         VALUE_EXPECTED = FileStorage::VALUE_EXPECTED,
         INSIDE_MAP = FileStorage::INSIDE_MAP };
@@ -5589,14 +7285,7 @@ void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& 
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )
     {
-        const KeyPoint& kpt = keypoints[i];
-        cv::write(fs, kpt.pt.x);
-        cv::write(fs, kpt.pt.y);
-        cv::write(fs, kpt.size);
-        cv::write(fs, kpt.angle);
-        cv::write(fs, kpt.response);
-        cv::write(fs, kpt.octave);
-        cv::write(fs, kpt.class_id);
+        write(fs, keypoints[i]);
     }
 }
 
@@ -5621,11 +7310,7 @@ void write(FileStorage& fs, const String& objname, const std::vector<DMatch>& ma
     int i, n = (int)matches.size();
     for( i = 0; i < n; i++ )
     {
-        const DMatch& m = matches[i];
-        cv::write(fs, m.queryIdx);
-        cv::write(fs, m.trainIdx);
-        cv::write(fs, m.imgIdx);
-        cv::write(fs, m.distance);
+        write(fs, matches[i]);
     }
 }
 
@@ -5678,6 +7363,948 @@ void read(const FileNode& node, String& value, const String& default_value)
     value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? String(node.node->data.str.ptr) : String();
 }
 
+}
+
+
+
+
+
+
+
+
+
+/****************************************************************************
+ * Newly added for Base64
+ *
+ *
+ ***************************************************************************/
+
+
+/****************************************************************************
+ * constant
+ ***************************************************************************/
+
+#if CHAR_BIT != 8
+#error "`char` should be 8 bit."
+#endif
+
+base64::uint8_t const base64::base64_mapping[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789+/";
+
+base64::uint8_t const base64::base64_padding = '=';
+
+base64::uint8_t const base64::base64_demapping[] = {
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0, 62,  0,  0,  0, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,  0,  0,
+    0,  0,  0,  0,  0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,  0,  0,  0,  0,  0,  0, 26, 27, 28,
+    29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+    49, 50, 51,  0,  0,  0,  0,
+};
+
+/*    `base64_demapping` above is generated in this way:
+ *    `````````````````````````````````````````````````````````````````````
+ *  std::string mapping((const char *)base64_mapping);
+ *    for (auto ch = 0; ch < 127; ch++) {
+ *        auto i = mapping.find(ch);
+ *        printf("%3u, ", (i != std::string::npos ? i : 0));
+ *    }
+ *    putchar('\n');
+ *    `````````````````````````````````````````````````````````````````````
+ */
+
+/****************************************************************************
+ * function
+ ***************************************************************************/
+
+size_t base64::base64_encode(uint8_t const * src, uint8_t * dst, size_t off, size_t cnt)
+{
+    if (!src || !dst || !cnt)
+        return 0;
+
+    /* initialize beginning and end */
+    uint8_t       * dst_beg = dst;
+    uint8_t       * dst_cur = dst_beg;
+
+    uint8_t const * src_beg = src + off;
+    uint8_t const * src_cur = src_beg;
+    uint8_t const * src_end = src_cur + cnt / 3U * 3U;
+
+    /* integer multiples part */
+    while (src_cur < src_end) {
+        uint8_t _2 = *src_cur++;
+        uint8_t _1 = *src_cur++;
+        uint8_t _0 = *src_cur++;
+        *dst_cur++ = base64_mapping[ _2          >> 2U];
+        *dst_cur++ = base64_mapping[(_1 & 0xF0U) >> 4U | (_2 & 0x03U) << 4U];
+        *dst_cur++ = base64_mapping[(_0 & 0xC0U) >> 6U | (_1 & 0x0FU) << 2U];
+        *dst_cur++ = base64_mapping[ _0 & 0x3FU];
+    }
+
+    /* remainder part */
+    size_t rst = src_beg + cnt - src_cur;
+    if (rst == 1U) {
+        uint8_t _2 = *src_cur++;
+        *dst_cur++ = base64_mapping[ _2          >> 2U];
+        *dst_cur++ = base64_mapping[(_2 & 0x03U) << 4U];
+    } else if (rst == 2U) {
+        uint8_t _2 = *src_cur++;
+        uint8_t _1 = *src_cur++;
+        *dst_cur++ = base64_mapping[ _2          >> 2U];
+        *dst_cur++ = base64_mapping[(_2 & 0x03U) << 4U | (_1 & 0xF0U) >> 4U];
+        *dst_cur++ = base64_mapping[(_1 & 0x0FU) << 2U];
+    }
+
+    /* padding */
+    switch (rst)
+    {
+    case 1U: *dst_cur++ = base64_padding;
+    case 2U: *dst_cur++ = base64_padding;
+    default: *dst_cur   = 0;
+        break;
+    }
+
+    return static_cast<size_t>(dst_cur - dst_beg);
+}
+
+size_t base64::base64_encode(char const * src, char * dst, size_t off, size_t cnt)
+{
+    if (cnt == 0U)
+        cnt = std::strlen(src);
+
+    return base64_encode
+    (
+        reinterpret_cast<uint8_t const *>(src),
+        reinterpret_cast<uint8_t       *>(dst),
+        off,
+        cnt
+    );
+}
+
+size_t base64::base64_decode(uint8_t const * src, uint8_t * dst, size_t off, size_t cnt)
+{
+    /* check parameters */
+    if (!src || !dst || !cnt)
+        return 0U;
+    if (cnt & 0x3U)
+        return 0U;
+
+    /* initialize beginning and end */
+    uint8_t       * dst_beg = dst;
+    uint8_t       * dst_cur = dst_beg;
+
+    uint8_t const * src_beg = src + off;
+    uint8_t const * src_cur = src_beg;
+    uint8_t const * src_end = src_cur + cnt;
+
+    /* start decoding */
+    while (src_cur < src_end) {
+        uint8_t d50 = base64_demapping[*src_cur++];
+        uint8_t c50 = base64_demapping[*src_cur++];
+        uint8_t b50 = base64_demapping[*src_cur++];
+        uint8_t a50 = base64_demapping[*src_cur++];
+
+        uint8_t b10 = b50 & 0x03U;
+        uint8_t b52 = b50 & 0x3CU;
+        uint8_t c30 = c50 & 0x0FU;
+        uint8_t c54 = c50 & 0x30U;
+
+        *dst_cur++ = (d50 << 2U) | (c54 >> 4U);
+        *dst_cur++ = (c30 << 4U) | (b52 >> 2U);
+        *dst_cur++ = (b10 << 6U) | (a50 >> 0U);
+    }
+
+    *dst_cur = 0;
+    return size_t(dst_cur - dst_beg);
+}
+
+size_t base64::base64_decode(char const * src, char * dst, size_t off, size_t cnt)
+{
+    if (cnt == 0U)
+        cnt = std::strlen(src);
+
+    return base64_decode
+    (
+        reinterpret_cast<uint8_t const *>(src),
+        reinterpret_cast<uint8_t       *>(dst),
+        off,
+        cnt
+    );
+}
+
+bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
+{
+    /* check parameters */
+    if (src == 0 || src + off == 0)
+        return false;
+    if (cnt == 0U)
+        cnt = std::strlen(reinterpret_cast<char const *>(src));
+    if (cnt == 0U)
+        return false;
+    if (cnt & 0x3U)
+        return false;
+
+    /* initialize beginning and end */
+    uint8_t const * beg = src + off;
+    uint8_t const * end = beg + cnt;
+
+    /* skip padding */
+    if (*(end - 1U) == base64_padding) {
+        end--;
+        if (*(end - 1U) == base64_padding)
+            end--;
+    }
+
+    /* find illegal characters */
+    for (uint8_t const * iter = beg; iter < end; iter++)
+        if (*iter > 126U || (!base64_demapping[(uint8_t)*iter] && *iter != base64_mapping[0]))
+            return false;
+
+    return true;
+}
+
+bool base64::base64_valid(char const * src, size_t off, size_t cnt)
+{
+    if (cnt == 0U)
+        cnt = std::strlen(src);
+
+    return base64_valid(reinterpret_cast<uint8_t const *>(src), off, cnt);
+}
+
+size_t base64::base64_encode_buffer_size(size_t cnt, bool is_end_with_zero)
+{
+    size_t additional = static_cast<size_t>(is_end_with_zero == true);
+    return (cnt + 2U) / 3U * 4U + additional;
+}
+
+size_t base64::base64_decode_buffer_size(size_t cnt, bool is_end_with_zero)
+{
+    size_t additional = static_cast<size_t>(is_end_with_zero == true);
+    return cnt / 4U * 3U + additional;
+}
+
+size_t base64::base64_decode_buffer_size(size_t cnt, char  const * src, bool is_end_with_zero)
+{
+    return base64_decode_buffer_size(cnt, reinterpret_cast<uchar const *>(src), is_end_with_zero);
+}
+
+size_t base64::base64_decode_buffer_size(size_t cnt, uchar const * src, bool is_end_with_zero)
+{
+    size_t padding_cnt = 0U;
+    for (uchar const * ptr = src + cnt - 1U; *ptr == base64_padding; ptr--)
+        padding_cnt ++;
+    return base64_decode_buffer_size(cnt, is_end_with_zero) - padding_cnt;
+}
+
+/****************************************************************************
+ * to_binary && binary_to
+ ***************************************************************************/
+
+template<typename _uint_t> inline size_t base64::
+to_binary(_uint_t val, uchar * cur)
+{
+    size_t delta = CHAR_BIT;
+    size_t cnt = sizeof(_uint_t);
+    while (cnt --> static_cast<size_t>(0U)) {
+        *cur++ = static_cast<uchar>(val);
+        val >>= delta;
+    }
+    return sizeof(_uint_t);
+}
+
+template<> inline size_t base64::to_binary(double val, uchar * cur)
+{
+    Cv64suf bit64;
+    bit64.f = val;
+    return to_binary(bit64.u, cur);
+}
+
+template<> inline size_t base64::to_binary(float val, uchar * cur)
+{
+    Cv32suf bit32;
+    bit32.f = val;
+    return to_binary(bit32.u, cur);
+}
+
+template<typename _primitive_t> inline size_t base64::
+to_binary(uchar const * val, uchar * cur)
+{
+    return to_binary<_primitive_t>(*reinterpret_cast<_primitive_t const *>(val), cur);
+}
+
+
+template<typename _uint_t> inline size_t base64::
+binary_to(uchar const * cur, _uint_t & val)
+{
+    val = static_cast<_uint_t>(0);
+    for (size_t i = static_cast<size_t>(0U); i < sizeof(_uint_t); i++)
+        val |= (static_cast<_uint_t>(*cur++) << (i * CHAR_BIT));
+    return sizeof(_uint_t);
+}
+
+template<> inline size_t base64::binary_to(uchar const * cur, double & val)
+{
+    Cv64suf bit64;
+    binary_to(cur, bit64.u);
+    val = bit64.f;
+    return sizeof(val);
+}
+
+template<> inline size_t base64::binary_to(uchar const * cur, float & val)
+{
+    Cv32suf bit32;
+    binary_to(cur, bit32.u);
+    val = bit32.f;
+    return sizeof(val);
+}
+
+template<typename _primitive_t> inline size_t base64::
+binary_to(uchar const * cur, uchar * val)
+{
+    return binary_to<_primitive_t>(cur, *reinterpret_cast<_primitive_t *>(val));
+}
+
+/****************************************************************************
+ * others
+ ***************************************************************************/
+
+std::string base64::make_base64_header(const char * dt)
+{
+    std::ostringstream oss;
+    oss << dt   << ' ';
+    std::string buffer(oss.str());
+    CV_Assert(buffer.size() < HEADER_SIZE);
+
+    buffer.reserve(HEADER_SIZE);
+    while (buffer.size() < HEADER_SIZE)
+        buffer += ' ';
+
+    return buffer;
+}
+
+bool base64::read_base64_header(std::vector<char> const & header, std::string & dt)
+{
+    std::istringstream iss(header.data());
+    return !!(iss >> dt);//the "std::basic_ios::operator bool" differs between C++98 and C++11. The "double not" syntax is portable and covers both cases with equivalent meaning
+}
+
+/****************************************************************************
+ * Parser
+ ***************************************************************************/
+
+base64::Base64ContextParser::Base64ContextParser(uchar * buffer, size_t size)
+    : dst_cur(buffer)
+    , dst_end(buffer + size)
+    , base64_buffer(BUFFER_LEN)
+    , src_beg(0)
+    , src_cur(0)
+    , src_end(0)
+    , binary_buffer(base64_encode_buffer_size(BUFFER_LEN))
+{
+    src_beg = binary_buffer.data();
+    src_cur = src_beg;
+    src_end = src_beg + BUFFER_LEN;
+}
+
+base64::Base64ContextParser::~Base64ContextParser()
+{
+    /* encode the rest binary data to base64 buffer */
+    if (src_cur != src_beg)
+        flush();
+}
+
+base64::Base64ContextParser & base64::Base64ContextParser::
+read(const uchar * beg, const uchar * end)
+{
+    if (beg >= end)
+        return *this;
+
+    while (beg < end) {
+        /* collect binary data and copy to binary buffer */
+        size_t len = std::min(end - beg, src_end - src_cur);
+        std::memcpy(src_cur, beg, len);
+        beg     += len;
+        src_cur += len;
+
+        if (src_cur >= src_end) {
+            /* binary buffer is full. */
+            /* decode it send result to dst */
+
+            CV_Assert(flush());    /* check for base64_valid */
+        }
+    }
+
+    return *this;
+}
+
+bool base64::Base64ContextParser::flush()
+{
+    if ( !base64_valid(src_beg, 0U, src_cur - src_beg) )
+        return false;
+
+    if ( src_cur == src_beg )
+        return true;
+
+    uchar * buffer = binary_buffer.data();
+    size_t len = base64_decode(src_beg, buffer, 0U, src_cur - src_beg);
+    src_cur = src_beg;
+
+    /* unexpected error */
+    CV_Assert(len != 0);
+
+    /* buffer is full */
+    CV_Assert(dst_cur + len < dst_end);
+
+    if (dst_cur + len < dst_end) {
+        /* send data to dst */
+        std::memcpy(dst_cur, buffer, len);
+        dst_cur += len;
+    }
+
+    return true;
+}
+
+/****************************************************************************
+ * Emitter
+ ***************************************************************************/
+
+/* A decorator for CvFileStorage
+ * - no copyable
+ * - not safe for now
+ * - move constructor may be needed if C++11
+ */
+class base64::Base64ContextEmitter
+{
+public:
+    explicit Base64ContextEmitter(CvFileStorage * fs)
+        : file_storage(fs)
+        , binary_buffer(BUFFER_LEN)
+        , base64_buffer(base64_encode_buffer_size(BUFFER_LEN))
+        , src_beg(0)
+        , src_cur(0)
+        , src_end(0)
+    {
+        src_beg = binary_buffer.data();
+        src_end = src_beg + BUFFER_LEN;
+        src_cur = src_beg;
+
+        CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+
+        if ( fs->fmt == CV_STORAGE_FORMAT_JSON )
+        {
+            /* clean and break buffer */
+            *fs->buffer++ = '\0';
+            ::icvPuts( fs, fs->buffer_start );
+            fs->buffer = fs->buffer_start;
+            memset( file_storage->buffer_start, 0, static_cast<int>(file_storage->space) );
+            ::icvPuts( fs, "\"$base64$" );
+        }
+        else
+        {
+            ::icvFSFlush(file_storage);
+        }
+    }
+
+    ~Base64ContextEmitter()
+    {
+        /* cleaning */
+        if (src_cur != src_beg)
+            flush();    /* encode the rest binary data to base64 buffer */
+
+        if ( file_storage->fmt == CV_STORAGE_FORMAT_JSON )
+        {
+            /* clean and break buffer  */
+            ::icvPuts(file_storage, "\"");
+            file_storage->buffer = file_storage->buffer_start;
+            ::icvFSFlush( file_storage );
+            memset( file_storage->buffer_start, 0, static_cast<int>(file_storage->space) );
+            file_storage->buffer = file_storage->buffer_start;
+        }
+    }
+
+    Base64ContextEmitter & write(const uchar * beg, const uchar * end)
+    {
+        if (beg >= end)
+            return *this;
+
+        while (beg < end) {
+            /* collect binary data and copy to binary buffer */
+            size_t len = std::min(end - beg, src_end - src_cur);
+           std::memcpy(src_cur, beg, len);
+            beg     += len;
+            src_cur += len;
+
+            if (src_cur >= src_end) {
+                /* binary buffer is full. */
+                /* encode it to base64 and send result to fs */
+                flush();
+            }
+        }
+
+        return *this;
+    }
+
+    /*
+     * a convertor must provide :
+     * - `operator >> (uchar * & dst)` for writting current binary data to `dst` and moving to next data.
+     * - `operator bool` for checking if current loaction is valid and not the end.
+     */
+    template<typename _to_binary_convertor_t> inline
+    Base64ContextEmitter & write(_to_binary_convertor_t & convertor)
+    {
+        static const size_t BUFFER_MAX_LEN = 1024U;
+
+        std::vector<uchar> buffer(BUFFER_MAX_LEN);
+        uchar * beg = buffer.data();
+        uchar * end = beg;
+
+        while (convertor) {
+            convertor >> end;
+            write(beg, end);
+            end = beg;
+        }
+
+        return *this;
+    }
+
+    bool flush()
+    {
+        /* controll line width, so on. */
+        size_t len = base64_encode(src_beg, base64_buffer.data(), 0U, src_cur - src_beg);
+        if (len == 0U)
+            return false;
+
+        src_cur = src_beg;
+        {
+            if ( file_storage->fmt == CV_STORAGE_FORMAT_JSON )
+            {
+                ::icvPuts(file_storage, (const char*)base64_buffer.data());
+            }
+            else
+            {
+                const char newline[] = "\n";
+                char space[80];
+                int ident = file_storage->struct_indent;
+                memset(space, ' ', static_cast<int>(ident));
+                space[ident] = '\0';
+
+                ::icvPuts(file_storage, space);
+                ::icvPuts(file_storage, (const char*)base64_buffer.data());
+                ::icvPuts(file_storage, newline);
+                ::icvFSFlush(file_storage);
+            }
+
+        }
+
+        return true;
+    }
+
+private:
+    /* because of Base64, we must keep its length a multiple of 3 */
+    static const size_t BUFFER_LEN = 48U;
+    // static_assert(BUFFER_LEN % 3 == 0, "BUFFER_LEN is invalid");
+
+private:
+    CvFileStorage * file_storage;
+
+    std::vector<uchar> binary_buffer;
+    std::vector<uchar> base64_buffer;
+    uchar * src_beg;
+    uchar * src_cur;
+    uchar * src_end;
+};
+
+
+class base64::RawDataToBinaryConvertor
+{
+public:
+
+    RawDataToBinaryConvertor(const void* src, int len, const char* dt)
+        : beg(reinterpret_cast<const uchar *>(src))
+        , cur(0)
+        , end(0)
+    {
+        CV_Assert(src);
+        CV_Assert(dt);
+        CV_Assert(len > 0);
+
+        /* calc step and to_binary_funcs */
+        make_to_binary_funcs(dt);
+
+        end = beg;
+        cur = beg;
+
+        step = ::icvCalcStructSize(dt, 0);
+        end = beg + step * static_cast<size_t>(len);
+    }
+
+    inline RawDataToBinaryConvertor & operator >>(uchar * & dst)
+    {
+        CV_DbgAssert(*this);
+
+        for (size_t i = 0U, n = to_binary_funcs.size(); i < n; i++) {
+            elem_to_binary_t & pack = to_binary_funcs[i];
+            pack.func(cur + pack.offset, dst + pack.offset);
+        }
+        cur += step;
+        dst += step;
+
+        return *this;
+    }
+
+    inline operator bool() const
+    {
+        return cur < end;
+    }
+
+private:
+    typedef size_t(*to_binary_t)(const uchar *, uchar *);
+    struct elem_to_binary_t
+    {
+        size_t      offset;
+        to_binary_t func;
+    };
+
+private:
+    void make_to_binary_funcs(const char* dt)
+    {
+        size_t cnt = 0;
+        size_t offset = 0;
+        char type = '\0';
+
+        std::istringstream iss(dt);
+        while (!iss.eof()) {
+            if (!(iss >> cnt)) {
+                iss.clear();
+                cnt = 1;
+            }
+            CV_Assert(cnt > 0U);
+            if (!(iss >> type))
+                break;
+
+            while (cnt-- > 0)
+            {
+                elem_to_binary_t pack;
+
+                size_t size = 0;
+                switch (type)
+                {
+                case 'u':
+                case 'c':
+                    size = sizeof(uchar);
+                    pack.func = to_binary<uchar>;
+                    break;
+                case 'w':
+                case 's':
+                    size = sizeof(ushort);
+                    pack.func = to_binary<ushort>;
+                    break;
+                case 'i':
+                    size = sizeof(uint);
+                    pack.func = to_binary<uint>;
+                    break;
+                case 'f':
+                    size = sizeof(float);
+                    pack.func = to_binary<float>;
+                    break;
+                case 'd':
+                    size = sizeof(double);
+                    pack.func = to_binary<double>;
+                    break;
+                case 'r':
+                default: { CV_Assert(!"type not support"); break; }
+                };
+
+                offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
+                pack.offset = offset;
+                offset += size;
+
+                to_binary_funcs.push_back(pack);
+            }
+        }
+
+        CV_Assert(iss.eof());
+    }
+
+private:
+    const uchar * beg;
+    const uchar * cur;
+    const uchar * end;
+
+    size_t step;
+    std::vector<elem_to_binary_t> to_binary_funcs;
+};
+
+class base64::BinaryToCvSeqConvertor
+{
+public:
+    BinaryToCvSeqConvertor(const void* src, int len, const char* dt)
+        : cur(reinterpret_cast<const uchar *>(src))
+        , beg(reinterpret_cast<const uchar *>(src))
+        , end(reinterpret_cast<const uchar *>(src))
+    {
+        CV_Assert(src);
+        CV_Assert(dt);
+        CV_Assert(len >= 0);
+
+        /* calc binary_to_funcs */
+        make_funcs(dt);
+        functor_iter = binary_to_funcs.begin();
+
+        step = ::icvCalcStructSize(dt, 0);
+        end = beg + step * static_cast<size_t>(len);
+    }
+
+    inline BinaryToCvSeqConvertor & operator >> (CvFileNode & dst)
+    {
+        CV_DbgAssert(*this);
+
+        /* get current data */
+        union
+        {
+            uchar mem[sizeof(double)];
+            uchar  u;
+            char   b;
+            ushort w;
+            short  s;
+            int    i;
+            float  f;
+            double d;
+        } buffer; /* for GCC -Wstrict-aliasing */
+        std::memset(buffer.mem, 0, sizeof(buffer));
+        functor_iter->func(cur + functor_iter->offset, buffer.mem);
+
+        /* set node::data */
+        switch (functor_iter->cv_type)
+        {
+        case CV_8U : { dst.data.i = cv::saturate_cast<int>   (buffer.u); break;}
+        case CV_8S : { dst.data.i = cv::saturate_cast<int>   (buffer.b); break;}
+        case CV_16U: { dst.data.i = cv::saturate_cast<int>   (buffer.w); break;}
+        case CV_16S: { dst.data.i = cv::saturate_cast<int>   (buffer.s); break;}
+        case CV_32S: { dst.data.i = cv::saturate_cast<int>   (buffer.i); break;}
+        case CV_32F: { dst.data.f = cv::saturate_cast<double>(buffer.f); break;}
+        case CV_64F: { dst.data.f = cv::saturate_cast<double>(buffer.d); break;}
+        default: break;
+        }
+
+        /* set node::tag */
+        switch (functor_iter->cv_type)
+        {
+        case CV_8U :
+        case CV_8S :
+        case CV_16U:
+        case CV_16S:
+        case CV_32S: { dst.tag = CV_NODE_INT; /*std::printf("%i,", dst.data.i);*/ break; }
+        case CV_32F:
+        case CV_64F: { dst.tag = CV_NODE_REAL; /*std::printf("%.1f,", dst.data.f);*/ break; }
+        default: break;
+        }
+
+        /* check if end */
+        if (++functor_iter == binary_to_funcs.end()) {
+            functor_iter = binary_to_funcs.begin();
+            cur += step;
+        }
+
+        return *this;
+    }
+
+    inline operator bool() const
+    {
+        return cur < end;
+    }
+
+private:
+    typedef size_t(*binary_to_t)(uchar const *, uchar *);
+    struct binary_to_filenode_t
+    {
+        size_t      cv_type;
+        size_t      offset;
+        binary_to_t func;
+    };
+
+private:
+    void make_funcs(const char* dt)
+    {
+        size_t cnt = 0;
+        char type = '\0';
+        size_t offset = 0;
+
+        std::istringstream iss(dt);
+        while (!iss.eof()) {
+            if (!(iss >> cnt)) {
+                iss.clear();
+                cnt = 1;
+            }
+            CV_Assert(cnt > 0U);
+            if (!(iss >> type))
+                break;
+
+            while (cnt-- > 0)
+            {
+                binary_to_filenode_t pack;
+
+                /* set func and offset */
+                size_t size = 0;
+                switch (type)
+                {
+                case 'u':
+                case 'c':
+                    size      = sizeof(uchar);
+                    pack.func = binary_to<uchar>;
+                    break;
+                case 'w':
+                case 's':
+                    size      = sizeof(ushort);
+                    pack.func = binary_to<ushort>;
+                    break;
+                case 'i':
+                    size      = sizeof(uint);
+                    pack.func = binary_to<uint>;
+                    break;
+                case 'f':
+                    size      = sizeof(float);
+                    pack.func = binary_to<float>;
+                    break;
+                case 'd':
+                    size      = sizeof(double);
+                    pack.func = binary_to<double>;
+                    break;
+                case 'r':
+                default:  { CV_Assert(!"type not support"); break; }
+                }; // need a better way for outputting error.
+
+                offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
+                pack.offset = offset;
+                offset += size;
+
+                /* set type */
+                switch (type)
+                {
+                case 'u': { pack.cv_type = CV_8U ; break; }
+                case 'c': { pack.cv_type = CV_8S ; break; }
+                case 'w': { pack.cv_type = CV_16U; break; }
+                case 's': { pack.cv_type = CV_16S; break; }
+                case 'i': { pack.cv_type = CV_32S; break; }
+                case 'f': { pack.cv_type = CV_32F; break; }
+                case 'd': { pack.cv_type = CV_64F; break; }
+                case 'r':
+                default:  { CV_Assert(!"type is not support"); break; }
+                } // need a better way for outputting error.
+
+                binary_to_funcs.push_back(pack);
+            }
+        }
+
+        CV_Assert(iss.eof());
+        CV_Assert(binary_to_funcs.size());
+    }
+
+private:
+
+    const uchar * cur;
+    const uchar * beg;
+    const uchar * end;
+
+    size_t step;
+    std::vector<binary_to_filenode_t> binary_to_funcs;
+    std::vector<binary_to_filenode_t>::iterator functor_iter;
+};
+
+
+
+/****************************************************************************
+ * Wapper
+ ***************************************************************************/
+
+
+base64::Base64Writer::Base64Writer(::CvFileStorage * fs)
+    : emitter(new Base64ContextEmitter(fs))
+    , data_type_string()
+{
+    CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+}
+
+void base64::Base64Writer::write(const void* _data, size_t len, const char* dt)
+{
+    check_dt(dt);
+
+    RawDataToBinaryConvertor convertor(
+        _data, static_cast<int>(len), data_type_string.c_str()
+    );
+    emitter->write(convertor);
+}
+
+template<typename _to_binary_convertor_t> inline
+void base64::Base64Writer::write(_to_binary_convertor_t & convertor, const char* dt)
+{
+    check_dt(dt);
+    emitter->write(convertor);
+}
+
+base64::Base64Writer::~Base64Writer()
+{
+    delete emitter;
+}
+
+void base64::Base64Writer::check_dt(const char* dt)
+{
+    if ( dt == 0 )
+        CV_Error( CV_StsBadArg, "Invalid \'dt\'." );
+    else if (data_type_string.empty()) {
+        data_type_string = dt;
+
+        /* output header */
+        std::string buffer = make_base64_header(dt);
+        const uchar * beg = reinterpret_cast<const uchar *>(buffer.data());
+        const uchar * end = beg + buffer.size();
+
+        emitter->write(beg, end);
+    } else if ( data_type_string != dt )
+        CV_Error( CV_StsBadArg, "\'dt\' does not match." );
+}
+
+
+void base64::make_seq(void * binary, int elem_cnt, const char * dt, ::CvSeq & seq)
+{
+    ::CvFileNode node;
+    node.info = 0;
+    BinaryToCvSeqConvertor convertor(binary, elem_cnt, dt);
+    while (convertor) {
+        convertor >> node;
+        cvSeqPush(&seq, &node);
+    }
+}
+
+void base64::cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt)
+{
+    CV_Assert(fs);
+    CV_CHECK_OUTPUT_FILE_STORAGE(fs);
+
+    check_if_write_struct_is_delayed( fs, true );
+
+    if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
+    {
+        switch_to_Base64_state( fs, base64::fs::InUse );
+    }
+    else if ( fs->state_of_writing_base64 != base64::fs::InUse )
+    {
+        CV_Error( CV_StsError, "Base64 should not be used at present." );
+    }
+
+    fs->base64_writer->write(_data, len, dt);
+}
+
+/****************************************************************************
+ * Interface
+ ***************************************************************************/
+
+CV_IMPL void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt)
+{
+    ::base64::cvWriteRawDataBase64(fs, _data, len, dt);
 }
 
 /* End of file. */

@@ -114,52 +114,6 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
         cvmSet(points4D,2,i,matrV(3,2));/* Z */
         cvmSet(points4D,3,i,matrV(3,3));/* W */
     }
-
-#if 0
-    double err = 0;
-    /* Points was reconstructed. Try to reproject points */
-    /* We can compute reprojection error if need */
-    {
-        int i;
-        CvMat point3D;
-        double point3D_dat[4];
-        point3D = cvMat(4,1,CV_64F,point3D_dat);
-
-        CvMat point2D;
-        double point2D_dat[3];
-        point2D = cvMat(3,1,CV_64F,point2D_dat);
-
-        for( i = 0; i < numPoints; i++ )
-        {
-            double W = cvmGet(points4D,3,i);
-
-            point3D_dat[0] = cvmGet(points4D,0,i)/W;
-            point3D_dat[1] = cvmGet(points4D,1,i)/W;
-            point3D_dat[2] = cvmGet(points4D,2,i)/W;
-            point3D_dat[3] = 1;
-
-            /* !!! Project this point for each camera */
-            for( int currCamera = 0; currCamera < 2; currCamera++ )
-            {
-                cvMatMul(projMatrs[currCamera], &point3D, &point2D);
-
-                float x,y;
-                float xr,yr,wr;
-                x = (float)cvmGet(projPoints[currCamera],0,i);
-                y = (float)cvmGet(projPoints[currCamera],1,i);
-
-                wr = (float)point2D_dat[2];
-                xr = (float)(point2D_dat[0]/wr);
-                yr = (float)(point2D_dat[1]/wr);
-
-                float deltaX,deltaY;
-                deltaX = (float)fabs(x-xr);
-                deltaY = (float)fabs(y-yr);
-                err += deltaX*deltaX + deltaY*deltaY;
-            }
-        }
-    }
-#endif
 }
 
 
@@ -393,6 +347,8 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
                             InputArray _projPoints1, InputArray _projPoints2,
                             OutputArray _points4D )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat matr1 = _projMatr1.getMat(), matr2 = _projMatr2.getMat();
     Mat points1 = _projPoints1.getMat(), points2 = _projPoints2.getMat();
 
@@ -414,6 +370,8 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
 void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2,
                          OutputArray _newPoints1, OutputArray _newPoints2 )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat F = _F.getMat();
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
 

@@ -17,10 +17,6 @@ if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER}" MATCHES "ccache")
   set(CMAKE_COMPILER_IS_CCACHE 1)
 endif()
 
-if((CMAKE_COMPILER_IS_CLANGCXX OR CMAKE_COMPILER_IS_CLANGCC OR CMAKE_COMPILER_IS_CCACHE) AND NOT CMAKE_GENERATOR MATCHES "Xcode")
-  set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
-endif()
-
 # ----------------------------------------------------------------------------
 # Detect Intel ICC compiler -- for -fPIC in 3rdparty ( UNIX ONLY ):
 #  see  include/opencv/cxtypes.h file for related   ICC & CV_ICC defines.
@@ -45,7 +41,7 @@ if(UNIX)
   endif()
 endif()
 
-if(MSVC AND CMAKE_C_COMPILER MATCHES "icc")
+if(MSVC AND CMAKE_C_COMPILER MATCHES "icc|icl")
   set(CV_ICC   __INTEL_COMPILER_FOR_WINDOWS)
 endif()
 
@@ -164,6 +160,8 @@ if(MSVC)
     set(OpenCV_RUNTIME vc12)
   elseif(MSVC_VERSION EQUAL 1900)
     set(OpenCV_RUNTIME vc14)
+  elseif(MSVC_VERSION EQUAL 1910)
+    set(OpenCV_RUNTIME vc15)
   endif()
 elseif(MINGW)
   set(OpenCV_RUNTIME mingw)
@@ -173,4 +171,14 @@ elseif(MINGW)
   else()
     set(OpenCV_ARCH x86)
   endif()
+endif()
+
+# Fix handling of duplicated files in the same static library:
+# https://public.kitware.com/Bug/view.php?id=14874
+if(CMAKE_VERSION VERSION_LESS "3.1")
+  foreach(var CMAKE_C_ARCHIVE_APPEND CMAKE_CXX_ARCHIVE_APPEND)
+    if(${var} MATCHES "^<CMAKE_AR> r")
+      string(REPLACE "<CMAKE_AR> r" "<CMAKE_AR> q" ${var} "${${var}}")
+    endif()
+  endforeach()
 endif()

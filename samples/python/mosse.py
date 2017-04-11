@@ -18,7 +18,7 @@ Keys:
   c        - clear targets
 
 [1] David S. Bolme et al. "Visual Object Tracking using Adaptive Correlation Filters"
-    http://www.cs.colostate.edu/~bolme/publications/Bolme2010Tracking.pdf
+    http://www.cs.colostate.edu/~draper/papers/bolme_cvpr10.pdf
 '''
 
 # Python 2/3 compatibility
@@ -176,7 +176,7 @@ class App:
             self.rect_sel.draw(vis)
 
             cv2.imshow('frame', vis)
-            ch = cv2.waitKey(10) & 0xFF
+            ch = cv2.waitKey(10)
             if ch == 27:
                 break
             if ch == ord(' '):

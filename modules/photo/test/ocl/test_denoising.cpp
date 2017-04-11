@@ -37,7 +37,7 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, int, bool, bool)
             h[i] = 3.0f + 0.5f*i;
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int type = CV_8UC(cn);
         Mat image;

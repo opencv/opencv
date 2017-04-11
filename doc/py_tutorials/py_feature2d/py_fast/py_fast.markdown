@@ -105,23 +105,23 @@ fast = cv2.FastFeatureDetector_create()
 
 # find and draw the keypoints
 kp = fast.detect(img,None)
-img2 = cv2.drawKeypoints(img, kp, color=(255,0,0))
+img2 = cv2.drawKeypoints(img, kp, None, color=(255,0,0))
 
 # Print all default params
-print "Threshold: ", fast.getInt('threshold')
-print "nonmaxSuppression: ", fast.getBool('nonmaxSuppression')
-print "neighborhood: ", fast.getInt('type')
+print "Threshold: ", fast.getThreshold()
+print "nonmaxSuppression: ", fast.getNonmaxSuppression()
+print "neighborhood: ", fast.getType()
 print "Total Keypoints with nonmaxSuppression: ", len(kp)
 
 cv2.imwrite('fast_true.png',img2)
 
 # Disable nonmaxSuppression
-fast.setBool('nonmaxSuppression',0)
+fast.setNonmaxSuppression(0)
 kp = fast.detect(img,None)
 
 print "Total Keypoints without nonmaxSuppression: ", len(kp)
 
-img3 = cv2.drawKeypoints(img, kp, color=(255,0,0))
+img3 = cv2.drawKeypoints(img, kp, None, color=(255,0,0))
 
 cv2.imwrite('fast_false.png',img3)
 @endcode

@@ -659,6 +659,18 @@ struct InitializerFunctor{
     }
 };
 
+template<typename Pixel>
+struct InitializerFunctor5D{
+    /// Initializer for cv::Mat::forEach test (5 dimensional case)
+    void operator()(Pixel & pixel, const int * idx) const {
+        pixel[0] = idx[0];
+        pixel[1] = idx[1];
+        pixel[2] = idx[2];
+        pixel[3] = idx[3];
+        pixel[4] = idx[4];
+    }
+};
+
 void Core_ArrayOpTest::run( int /* start_from */)
 {
     int errcount = 0;
@@ -729,6 +741,57 @@ void Core_ArrayOpTest::run( int /* start_from */)
         uint64 total2 = 0;
         for (size_t i = 0; i < sizeof(dims) / sizeof(dims[0]); ++i) {
             total2 += ((dims[i] - 1) * dims[i] / 2) * dims[0] * dims[1] * dims[2] / dims[i];
+        }
+        if (total != total2) {
+            ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
+            errcount++;
+        }
+    }
+
+    // test cv::Mat::forEach
+    // with a matrix that has more dimensions than columns
+    // See https://github.com/opencv/opencv/issues/8447
+    {
+        const int dims[5] = { 2, 2, 2, 2, 2 };
+        typedef cv::Vec<int, 5> Pixel;
+
+        cv::Mat a = cv::Mat::zeros(5, dims, CV_32SC(5));
+        InitializerFunctor5D<Pixel> initializer;
+
+        a.forEach<Pixel>(initializer);
+
+        uint64 total = 0;
+        bool error_reported = false;
+        for (int i0 = 0; i0 < dims[0]; ++i0) {
+            for (int i1 = 0; i1 < dims[1]; ++i1) {
+                for (int i2 = 0; i2 < dims[2]; ++i2) {
+                    for (int i3 = 0; i3 < dims[3]; ++i3) {
+                        for (int i4 = 0; i4 < dims[4]; ++i4) {
+                            const int i[5] = { i0, i1, i2, i3, i4 };
+                            Pixel& pixel = a.at<Pixel>(i);
+                            if (pixel[0] != i0 || pixel[1] != i1 || pixel[2] != i2 || pixel[3] != i3 || pixel[4] != i4) {
+                                if (!error_reported) {
+                                    ts->printf(cvtest::TS::LOG, "forEach is not correct.\n"
+                                        "First error detected at position (%d, %d, %d, %d, %d), got value (%d, %d, %d, %d, %d).\n",
+                                        i0, i1, i2, i3, i4,
+                                        pixel[0], pixel[1], pixel[2], pixel[3], pixel[4]);
+                                    error_reported = true;
+                                }
+                                errcount++;
+                            }
+                            total += pixel[0];
+                            total += pixel[1];
+                            total += pixel[2];
+                            total += pixel[3];
+                            total += pixel[4];
+                        }
+                    }
+                }
+            }
+        }
+        uint64 total2 = 0;
+        for (size_t i = 0; i < sizeof(dims) / sizeof(dims[0]); ++i) {
+            total2 += ((dims[i] - 1) * dims[i] / 2) * dims[0] * dims[1] * dims[2] * dims[3] * dims[4] / dims[i];
         }
         if (total != total2) {
             ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
@@ -1392,7 +1455,7 @@ TEST(Core_SparseMat, footprint)
 }
 
 
-// Can't fix without duty hacks or broken user code (PR #4159)
+// Can't fix without dirty hacks or broken user code (PR #4159)
 TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
@@ -1420,7 +1483,7 @@ TEST(Core_Mat_vector, copyTo_roi_column)
 
     Mat src_full(src_base);
     Mat src(src_full.col(0));
-#if 0 // Can't fix without duty hacks or broken user code (PR #4159)
+#if 0 // Can't fix without dirty hacks or broken user code (PR #4159)
     OutputArray _dst(dst1);
     {
         _dst.create(src.rows, src.cols, src.type());
@@ -1482,4 +1545,92 @@ TEST(Mat, regression_5991)
     EXPECT_EQ(sz[1], mat.size[1]);
     EXPECT_EQ(sz[2], mat.size[2]);
     EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+}
+
+#ifdef OPENCV_TEST_BIGDATA
+TEST(Mat, regression_6696_BigData_8Gb)
+{
+    int width = 60000;
+    int height = 10000;
+
+    Mat destImageBGR = Mat(height, width, CV_8UC3, Scalar(1, 2, 3, 0));
+    Mat destImageA = Mat(height, width, CV_8UC1, Scalar::all(4));
+
+    vector<Mat> planes;
+    split(destImageBGR, planes);
+    planes.push_back(destImageA);
+    merge(planes, destImageBGR);
+
+    EXPECT_EQ(1, destImageBGR.at<Vec4b>(0)[0]);
+    EXPECT_EQ(2, destImageBGR.at<Vec4b>(0)[1]);
+    EXPECT_EQ(3, destImageBGR.at<Vec4b>(0)[2]);
+    EXPECT_EQ(4, destImageBGR.at<Vec4b>(0)[3]);
+
+    EXPECT_EQ(1, destImageBGR.at<Vec4b>(height-1, width-1)[0]);
+    EXPECT_EQ(2, destImageBGR.at<Vec4b>(height-1, width-1)[1]);
+    EXPECT_EQ(3, destImageBGR.at<Vec4b>(height-1, width-1)[2]);
+    EXPECT_EQ(4, destImageBGR.at<Vec4b>(height-1, width-1)[3]);
+}
+#endif
+
+TEST(Reduce, regression_should_fail_bug_4594)
+{
+    cv::Mat src = cv::Mat::eye(4, 4, CV_8U);
+    std::vector<int> dst;
+
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MIN, CV_32S), cv::Exception);
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MAX, CV_32S), cv::Exception);
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
+}
+
+TEST(Mat, push_back_vector)
+{
+    cv::Mat result(1, 5, CV_32FC1);
+
+    std::vector<float> vec1(result.cols + 1);
+    std::vector<int> vec2(result.cols);
+
+    EXPECT_THROW(result.push_back(vec1), cv::Exception);
+    EXPECT_THROW(result.push_back(vec2), cv::Exception);
+
+    vec1.resize(result.cols);
+
+    for (int i = 0; i < 5; ++i)
+        result.push_back(cv::Mat(vec1).reshape(1, 1));
+
+    ASSERT_EQ(6, result.rows);
+}
+
+TEST(Mat, regression_5917_clone_empty)
+{
+    Mat cloned;
+    Mat_<Point2f> source(5, 0);
+
+    ASSERT_NO_THROW(cloned = source.clone());
+}
+
+TEST(Mat, regression_7873_mat_vector_initialize)
+{
+    std::vector<int> dims;
+    dims.push_back(12);
+    dims.push_back(3);
+    dims.push_back(2);
+    Mat multi_mat(dims, CV_32FC1, cv::Scalar(0));
+
+    ASSERT_EQ(3, multi_mat.dims);
+    ASSERT_EQ(12, multi_mat.size[0]);
+    ASSERT_EQ(3, multi_mat.size[1]);
+    ASSERT_EQ(2, multi_mat.size[2]);
+
+    std::vector<Range> ranges;
+    ranges.push_back(Range(1, 2));
+    ranges.push_back(Range::all());
+    ranges.push_back(Range::all());
+    Mat sub_mat = multi_mat(ranges);
+
+    ASSERT_EQ(3, sub_mat.dims);
+    ASSERT_EQ(1, sub_mat.size[0]);
+    ASSERT_EQ(3, sub_mat.size[1]);
+    ASSERT_EQ(2, sub_mat.size[2]);
 }

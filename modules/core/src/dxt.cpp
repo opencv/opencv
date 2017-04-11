@@ -469,53 +469,53 @@ template<> struct DFT_VecR4<float>
 static IppStatus ippsDFTFwd_CToC( const Complex<float>* src, Complex<float>* dst,
                              const void* spec, uchar* buf)
 {
-    return ippsDFTFwd_CToC_32fc( (const Ipp32fc*)src, (Ipp32fc*)dst,
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTFwd_CToC_32fc, (const Ipp32fc*)src, (Ipp32fc*)dst,
                                  (const IppsDFTSpec_C_32fc*)spec, buf);
 }
 
 static IppStatus ippsDFTFwd_CToC( const Complex<double>* src, Complex<double>* dst,
                              const void* spec, uchar* buf)
 {
-    return ippsDFTFwd_CToC_64fc( (const Ipp64fc*)src, (Ipp64fc*)dst,
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTFwd_CToC_64fc, (const Ipp64fc*)src, (Ipp64fc*)dst,
                                  (const IppsDFTSpec_C_64fc*)spec, buf);
 }
 
 static IppStatus ippsDFTInv_CToC( const Complex<float>* src, Complex<float>* dst,
                              const void* spec, uchar* buf)
 {
-    return ippsDFTInv_CToC_32fc( (const Ipp32fc*)src, (Ipp32fc*)dst,
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTInv_CToC_32fc, (const Ipp32fc*)src, (Ipp32fc*)dst,
                                  (const IppsDFTSpec_C_32fc*)spec, buf);
 }
 
 static IppStatus ippsDFTInv_CToC( const Complex<double>* src, Complex<double>* dst,
                                   const void* spec, uchar* buf)
 {
-    return ippsDFTInv_CToC_64fc( (const Ipp64fc*)src, (Ipp64fc*)dst,
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTInv_CToC_64fc, (const Ipp64fc*)src, (Ipp64fc*)dst,
                                  (const IppsDFTSpec_C_64fc*)spec, buf);
 }
 
 static IppStatus ippsDFTFwd_RToPack( const float* src, float* dst,
                                      const void* spec, uchar* buf)
 {
-    return ippsDFTFwd_RToPack_32f( src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTFwd_RToPack_32f, src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
 }
 
 static IppStatus ippsDFTFwd_RToPack( const double* src, double* dst,
                                      const void* spec, uchar* buf)
 {
-    return ippsDFTFwd_RToPack_64f( src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTFwd_RToPack_64f, src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
 }
 
 static IppStatus ippsDFTInv_PackToR( const float* src, float* dst,
                                      const void* spec, uchar* buf)
 {
-    return ippsDFTInv_PackToR_32f( src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTInv_PackToR_32f, src, dst, (const IppsDFTSpec_R_32f*)spec, buf);
 }
 
 static IppStatus ippsDFTInv_PackToR( const double* src, double* dst,
                                      const void* spec, uchar* buf)
 {
-    return ippsDFTInv_PackToR_64f( src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
+    return CV_INSTRUMENT_FUN_IPP(ippsDFTInv_PackToR_64f, src, dst, (const IppsDFTSpec_R_64f*)spec, buf);
 }
 #endif
 
@@ -1728,30 +1728,32 @@ bool Dft_R_IPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t dst_s
 
 struct IPPDFT_C_Functor
 {
-    IPPDFT_C_Functor(ippiDFT_C_Func _func) : func(_func){}
+    IPPDFT_C_Functor(ippiDFT_C_Func _func) : ippiDFT_CToC_32fc_C1R(_func){}
 
     bool operator()(const Ipp32fc* src, size_t srcStep, Ipp32fc* dst, size_t dstStep, const IppiDFTSpec_C_32fc* pDFTSpec, Ipp8u* pBuffer) const
     {
-        return func ? func(src, static_cast<int>(srcStep), dst, static_cast<int>(dstStep), pDFTSpec, pBuffer) >= 0 : false;
+        return ippiDFT_CToC_32fc_C1R ? CV_INSTRUMENT_FUN_IPP(ippiDFT_CToC_32fc_C1R, src, static_cast<int>(srcStep), dst, static_cast<int>(dstStep), pDFTSpec, pBuffer) >= 0 : false;
     }
 private:
-    ippiDFT_C_Func func;
+    ippiDFT_C_Func ippiDFT_CToC_32fc_C1R;
 };
 
 struct IPPDFT_R_Functor
 {
-    IPPDFT_R_Functor(ippiDFT_R_Func _func) : func(_func){}
+    IPPDFT_R_Functor(ippiDFT_R_Func _func) : ippiDFT_PackToR_32f_C1R(_func){}
 
     bool operator()(const Ipp32f* src, size_t srcStep, Ipp32f* dst, size_t dstStep, const IppiDFTSpec_R_32f* pDFTSpec, Ipp8u* pBuffer) const
     {
-        return func ? func(src, static_cast<int>(srcStep), dst, static_cast<int>(dstStep), pDFTSpec, pBuffer) >= 0 : false;
+        return ippiDFT_PackToR_32f_C1R ? CV_INSTRUMENT_FUN_IPP(ippiDFT_PackToR_32f_C1R, src, static_cast<int>(srcStep), dst, static_cast<int>(dstStep), pDFTSpec, pBuffer) >= 0 : false;
     }
 private:
-    ippiDFT_R_Func func;
+    ippiDFT_R_Func ippiDFT_PackToR_32f_C1R;
 };
 
 static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     IppStatus status;
     Ipp8u* pBuffer = 0;
     Ipp8u* pMemInit= 0;
@@ -1787,9 +1789,9 @@ static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size
     }
 
     if (!inv)
-        status = ippiDFTFwd_CToC_32fc_C1R( (Ipp32fc*)src, static_cast<int>(src_step), (Ipp32fc*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer );
+        status = CV_INSTRUMENT_FUN_IPP(ippiDFTFwd_CToC_32fc_C1R, (Ipp32fc*)src, static_cast<int>(src_step), (Ipp32fc*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer);
     else
-        status = ippiDFTInv_CToC_32fc_C1R( (Ipp32fc*)src, static_cast<int>(src_step), (Ipp32fc*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer );
+        status = CV_INSTRUMENT_FUN_IPP(ippiDFTInv_CToC_32fc_C1R, (Ipp32fc*)src, static_cast<int>(src_step), (Ipp32fc*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer);
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -1806,6 +1808,8 @@ static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size
 
 static bool ippi_DFT_R_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     IppStatus status;
     Ipp8u* pBuffer = 0;
     Ipp8u* pMemInit= 0;
@@ -1841,9 +1845,9 @@ static bool ippi_DFT_R_32F(const uchar * src, size_t src_step, uchar * dst, size
     }
 
     if (!inv)
-        status = ippiDFTFwd_RToPack_32f_C1R( (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer );
+        status = CV_INSTRUMENT_FUN_IPP(ippiDFTFwd_RToPack_32f_C1R, (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer);
     else
-        status = ippiDFTInv_PackToR_32f_C1R( (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer );
+        status = CV_INSTRUMENT_FUN_IPP(ippiDFTInv_PackToR_32f_C1R, (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDFTSpec, pBuffer);
 
     if ( sizeBuffer > 0 )
         ippFree( pBuffer );
@@ -3318,6 +3322,8 @@ Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
 
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
+    CV_INSTRUMENT_REGION()
+
 #ifdef HAVE_CLAMDFFT
     CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
             _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
@@ -3335,6 +3341,9 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     int depth = src.depth();
 
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+
+    // Fail if DFT_COMPLEX_INPUT is specified, but src is not 2 channels.
+    CV_Assert( !((flags & DFT_COMPLEX_INPUT) && src.channels() != 2) );
 
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
         _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
@@ -3363,6 +3372,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
 void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
 {
+    CV_INSTRUMENT_REGION()
+
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
 
@@ -3404,16 +3415,136 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
 
 #endif
 
+namespace {
+
+#define VAL(buf, elem) (((T*)((char*)data ## buf + (step ## buf * (elem))))[0])
+#define MUL_SPECTRUMS_COL(A, B, C) \
+    VAL(C, 0) = VAL(A, 0) * VAL(B, 0); \
+    for (size_t j = 1; j <= rows - 2; j += 2) \
+    { \
+        double a_re = VAL(A, j), a_im = VAL(A, j + 1); \
+        double b_re = VAL(B, j), b_im = VAL(B, j + 1); \
+        if (conjB) b_im = -b_im; \
+        double c_re = a_re * b_re - a_im * b_im; \
+        double c_im = a_re * b_im + a_im * b_re; \
+        VAL(C, j) = (T)c_re; VAL(C, j + 1) = (T)c_im; \
+    } \
+    if ((rows & 1) == 0) \
+        VAL(C, rows-1) = VAL(A, rows-1) * VAL(B, rows-1)
+
+template <typename T, bool conjB> static inline
+void mulSpectrums_processCol_noinplace(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows)
+{
+    MUL_SPECTRUMS_COL(A, B, C);
+}
+
+template <typename T, bool conjB> static inline
+void mulSpectrums_processCol_inplaceA(const T* dataB, T* dataAC, size_t stepB, size_t stepAC, size_t rows)
+{
+    MUL_SPECTRUMS_COL(AC, B, AC);
+}
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_processCol(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows)
+{
+    if (inplaceA)
+        mulSpectrums_processCol_inplaceA<T, conjB>(dataB, dataC, stepB, stepC, rows);
+    else
+        mulSpectrums_processCol_noinplace<T, conjB>(dataA, dataB, dataC, stepA, stepB, stepC, rows);
+}
+#undef MUL_SPECTRUMS_COL
+#undef VAL
+
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_processCols(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows, size_t cols)
+{
+    mulSpectrums_processCol<T, conjB, inplaceA>(dataA, dataB, dataC, stepA, stepB, stepC, rows);
+    if ((cols & 1) == 0)
+    {
+        mulSpectrums_processCol<T, conjB, inplaceA>(dataA + cols - 1, dataB + cols - 1, dataC + cols - 1, stepA, stepB, stepC, rows);
+    }
+}
+
+#define VAL(buf, elem) (data ## buf[(elem)])
+#define MUL_SPECTRUMS_ROW(A, B, C) \
+    for (size_t j = j0; j < j1; j += 2) \
+    { \
+        double a_re = VAL(A, j), a_im = VAL(A, j + 1); \
+        double b_re = VAL(B, j), b_im = VAL(B, j + 1); \
+        if (conjB) b_im = -b_im; \
+        double c_re = a_re * b_re - a_im * b_im; \
+        double c_im = a_re * b_im + a_im * b_re; \
+        VAL(C, j) = (T)c_re; VAL(C, j + 1) = (T)c_im; \
+    }
+template <typename T, bool conjB> static inline
+void mulSpectrums_processRow_noinplace(const T* dataA, const T* dataB, T* dataC, size_t j0, size_t j1)
+{
+    MUL_SPECTRUMS_ROW(A, B, C);
+}
+template <typename T, bool conjB> static inline
+void mulSpectrums_processRow_inplaceA(const T* dataB, T* dataAC, size_t j0, size_t j1)
+{
+    MUL_SPECTRUMS_ROW(AC, B, AC);
+}
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_processRow(const T* dataA, const T* dataB, T* dataC, size_t j0, size_t j1)
+{
+    if (inplaceA)
+        mulSpectrums_processRow_inplaceA<T, conjB>(dataB, dataC, j0, j1);
+    else
+        mulSpectrums_processRow_noinplace<T, conjB>(dataA, dataB, dataC, j0, j1);
+}
+#undef MUL_SPECTRUMS_ROW
+#undef VAL
+
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_processRows(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows, size_t cols, size_t j0, size_t j1, bool is_1d_CN1)
+{
+    while (rows-- > 0)
+    {
+        if (is_1d_CN1)
+            dataC[0] = dataA[0]*dataB[0];
+        mulSpectrums_processRow<T, conjB, inplaceA>(dataA, dataB, dataC, j0, j1);
+        if (is_1d_CN1 && (cols & 1) == 0)
+            dataC[j1] = dataA[j1]*dataB[j1];
+
+        dataA = (const T*)(((char*)dataA) + stepA);
+        dataB = (const T*)(((char*)dataB) + stepB);
+        dataC =       (T*)(((char*)dataC) + stepC);
+    }
+}
+
+
+template <typename T, bool conjB, bool inplaceA> static inline
+void mulSpectrums_Impl_(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows, size_t cols, size_t j0, size_t j1, bool is_1d, bool isCN1)
+{
+    if (!is_1d && isCN1)
+    {
+        mulSpectrums_processCols<T, conjB, inplaceA>(dataA, dataB, dataC, stepA, stepB, stepC, rows, cols);
+    }
+    mulSpectrums_processRows<T, conjB, inplaceA>(dataA, dataB, dataC, stepA, stepB, stepC, rows, cols, j0, j1, is_1d && isCN1);
+}
+template <typename T, bool conjB> static inline
+void mulSpectrums_Impl(const T* dataA, const T* dataB, T* dataC, size_t stepA, size_t stepB, size_t stepC, size_t rows, size_t cols, size_t j0, size_t j1, bool is_1d, bool isCN1)
+{
+    if (dataA == dataC)
+        mulSpectrums_Impl_<T, conjB, true>(dataA, dataB, dataC, stepA, stepB, stepC, rows, cols, j0, j1, is_1d, isCN1);
+    else
+        mulSpectrums_Impl_<T, conjB, false>(dataA, dataB, dataC, stepA, stepB, stepC, rows, cols, j0, j1, is_1d, isCN1);
+}
+
+} // namespace
+
 void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_dst.isUMat() && _srcA.dims() <= 2 && _srcB.dims() <= 2,
             ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
 
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
-    int rows = srcA.rows, cols = srcA.cols;
-    int j, k;
+    size_t rows = srcA.rows, cols = srcA.cols;
 
     CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
@@ -3421,149 +3552,42 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
     _dst.create( srcA.rows, srcA.cols, type );
     Mat dst = _dst.getMat();
 
-    bool is_1d = (flags & DFT_ROWS) || (rows == 1 || (cols == 1 &&
-             srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous()));
+    // correct inplace support
+    // Case 'dst.data == srcA.data' is handled by implementation,
+    // because it is used frequently (filter2D, matchTemplate)
+    if (dst.data == srcB.data)
+        srcB = srcB.clone(); // workaround for B only
+
+    bool is_1d = (flags & DFT_ROWS)
+        || (rows == 1)
+        || (cols == 1 && srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous());
 
     if( is_1d && !(flags & DFT_ROWS) )
         cols = cols + rows - 1, rows = 1;
 
-    int ncols = cols*cn;
-    int j0 = cn == 1;
-    int j1 = ncols - (cols % 2 == 0 && cn == 1);
+    bool isCN1 = cn == 1;
+    size_t j0 = isCN1 ? 1 : 0;
+    size_t j1 = cols*cn - (((cols & 1) == 0 && cn == 1) ? 1 : 0);
 
-    if( depth == CV_32F )
+    if (depth == CV_32F)
     {
         const float* dataA = srcA.ptr<float>();
         const float* dataB = srcB.ptr<float>();
         float* dataC = dst.ptr<float>();
-
-        size_t stepA = srcA.step/sizeof(dataA[0]);
-        size_t stepB = srcB.step/sizeof(dataB[0]);
-        size_t stepC = dst.step/sizeof(dataC[0]);
-
-        if( !is_1d && cn == 1 )
-        {
-            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
-            {
-                if( k == 1 )
-                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
-                dataC[0] = dataA[0]*dataB[0];
-                if( rows % 2 == 0 )
-                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA]*dataB[(rows-1)*stepB];
-                if( !conjB )
-                    for( j = 1; j <= rows - 2; j += 2 )
-                    {
-                        double re = (double)dataA[j*stepA]*dataB[j*stepB] -
-                                    (double)dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
-                        double im = (double)dataA[j*stepA]*dataB[(j+1)*stepB] +
-                                    (double)dataA[(j+1)*stepA]*dataB[j*stepB];
-                        dataC[j*stepC] = (float)re; dataC[(j+1)*stepC] = (float)im;
-                    }
-                else
-                    for( j = 1; j <= rows - 2; j += 2 )
-                    {
-                        double re = (double)dataA[j*stepA]*dataB[j*stepB] +
-                                    (double)dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
-                        double im = (double)dataA[(j+1)*stepA]*dataB[j*stepB] -
-                                    (double)dataA[j*stepA]*dataB[(j+1)*stepB];
-                        dataC[j*stepC] = (float)re; dataC[(j+1)*stepC] = (float)im;
-                    }
-                if( k == 1 )
-                    dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
-            }
-        }
-
-        for( ; rows--; dataA += stepA, dataB += stepB, dataC += stepC )
-        {
-            if( is_1d && cn == 1 )
-            {
-                dataC[0] = dataA[0]*dataB[0];
-                if( cols % 2 == 0 )
-                    dataC[j1] = dataA[j1]*dataB[j1];
-            }
-
-            if( !conjB )
-                for( j = j0; j < j1; j += 2 )
-                {
-                    double re = (double)dataA[j]*dataB[j] - (double)dataA[j+1]*dataB[j+1];
-                    double im = (double)dataA[j+1]*dataB[j] + (double)dataA[j]*dataB[j+1];
-                    dataC[j] = (float)re; dataC[j+1] = (float)im;
-                }
-            else
-                for( j = j0; j < j1; j += 2 )
-                {
-                    double re = (double)dataA[j]*dataB[j] + (double)dataA[j+1]*dataB[j+1];
-                    double im = (double)dataA[j+1]*dataB[j] - (double)dataA[j]*dataB[j+1];
-                    dataC[j] = (float)re; dataC[j+1] = (float)im;
-                }
-        }
+        if (!conjB)
+            mulSpectrums_Impl<float, false>(dataA, dataB, dataC, srcA.step, srcB.step, dst.step, rows, cols, j0, j1, is_1d, isCN1);
+        else
+            mulSpectrums_Impl<float, true>(dataA, dataB, dataC, srcA.step, srcB.step, dst.step, rows, cols, j0, j1, is_1d, isCN1);
     }
     else
     {
         const double* dataA = srcA.ptr<double>();
         const double* dataB = srcB.ptr<double>();
         double* dataC = dst.ptr<double>();
-
-        size_t stepA = srcA.step/sizeof(dataA[0]);
-        size_t stepB = srcB.step/sizeof(dataB[0]);
-        size_t stepC = dst.step/sizeof(dataC[0]);
-
-        if( !is_1d && cn == 1 )
-        {
-            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
-            {
-                if( k == 1 )
-                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
-                dataC[0] = dataA[0]*dataB[0];
-                if( rows % 2 == 0 )
-                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA]*dataB[(rows-1)*stepB];
-                if( !conjB )
-                    for( j = 1; j <= rows - 2; j += 2 )
-                    {
-                        double re = dataA[j*stepA]*dataB[j*stepB] -
-                                    dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
-                        double im = dataA[j*stepA]*dataB[(j+1)*stepB] +
-                                    dataA[(j+1)*stepA]*dataB[j*stepB];
-                        dataC[j*stepC] = re; dataC[(j+1)*stepC] = im;
-                    }
-                else
-                    for( j = 1; j <= rows - 2; j += 2 )
-                    {
-                        double re = dataA[j*stepA]*dataB[j*stepB] +
-                                    dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
-                        double im = dataA[(j+1)*stepA]*dataB[j*stepB] -
-                                    dataA[j*stepA]*dataB[(j+1)*stepB];
-                        dataC[j*stepC] = re; dataC[(j+1)*stepC] = im;
-                    }
-                if( k == 1 )
-                    dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
-            }
-        }
-
-        for( ; rows--; dataA += stepA, dataB += stepB, dataC += stepC )
-        {
-            if( is_1d && cn == 1 )
-            {
-                dataC[0] = dataA[0]*dataB[0];
-                if( cols % 2 == 0 )
-                    dataC[j1] = dataA[j1]*dataB[j1];
-            }
-
-            if( !conjB )
-                for( j = j0; j < j1; j += 2 )
-                {
-                    double re = dataA[j]*dataB[j] - dataA[j+1]*dataB[j+1];
-                    double im = dataA[j+1]*dataB[j] + dataA[j]*dataB[j+1];
-                    dataC[j] = re; dataC[j+1] = im;
-                }
-            else
-                for( j = j0; j < j1; j += 2 )
-                {
-                    double re = dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1];
-                    double im = dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1];
-                    dataC[j] = re; dataC[j+1] = im;
-                }
-        }
+        if (!conjB)
+            mulSpectrums_Impl<double, false>(dataA, dataB, dataC, srcA.step, srcB.step, dst.step, rows, cols, j0, j1, is_1d, isCN1);
+        else
+            mulSpectrums_Impl<double, true>(dataA, dataB, dataC, srcA.step, srcB.step, dst.step, rows, cols, j0, j1, is_1d, isCN1);
     }
 }
 
@@ -3818,7 +3842,7 @@ public:
                 ippFree(pInitBuf);      \
             return;
 
-        ippiDCTFunc     ippDctFun   = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
+        ippiDCTFunc     ippiDCT_32f_C1R   = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
         ippiDCTInit     ippDctInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
         ippiDCTGetSize  ippDctGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
 
@@ -3856,7 +3880,7 @@ public:
 
         for(int i = range.start; i < range.end; ++i)
         {
-            if(ippDctFun((float*)(src + src_step * i), static_cast<int>(src_step), (float*)(dst + dst_step * i), static_cast<int>(dst_step), pDCTSpec, pBuffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippiDCT_32f_C1R, (float*)(src + src_step * i), static_cast<int>(src_step), (float*)(dst + dst_step * i), static_cast<int>(dst_step), pDCTSpec, pBuffer) < 0)
             {
                 *ok = false;
                 IPP_RETURN
@@ -3925,6 +3949,8 @@ static bool DctIPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t d
 
 static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, bool row)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     if(row)
         return DctIPPLoop(src, src_step, dst, dst_step, width, height, inv);
     else
@@ -3948,7 +3974,7 @@ static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t
             if(pInitBuf)                \
                 ippFree(pInitBuf);      \
 
-        ippiDCTFunc     ippDctFun      = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
+        ippiDCTFunc     ippiDCT_32f_C1R      = inv ? (ippiDCTFunc)ippiDCTInv_32f_C1R         : (ippiDCTFunc)ippiDCTFwd_32f_C1R;
         ippiDCTInit     ippDctInit     = inv ? (ippiDCTInit)ippiDCTInvInit_32f         : (ippiDCTInit)ippiDCTFwdInit_32f;
         ippiDCTGetSize  ippDctGetSize  = inv ? (ippiDCTGetSize)ippiDCTInvGetSize_32f   : (ippiDCTGetSize)ippiDCTFwdGetSize_32f;
 
@@ -3978,7 +4004,7 @@ static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t
             return false;
         }
 
-        if(ippDctFun((float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDCTSpec, pBuffer) < 0)
+        if(CV_INSTRUMENT_FUN_IPP(ippiDCT_32f_C1R, (float*)src, static_cast<int>(src_step), (float*)dst, static_cast<int>(dst_step), pDCTSpec, pBuffer) < 0)
         {
             IPP_RELEASE
             return false;
@@ -4218,6 +4244,8 @@ Ptr<DCT2D> DCT2D::create(int width, int height, int depth, int flags)
 
 void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src0 = _src0.getMat(), src = src0;
     int type = src.type(), depth = src.depth();
 
@@ -4240,6 +4268,8 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
 void cv::idct( InputArray src, OutputArray dst, int flags )
 {
+    CV_INSTRUMENT_REGION()
+
     dct( src, dst, flags | DCT_INVERSE );
 }
 

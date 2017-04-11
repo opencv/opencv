@@ -387,7 +387,7 @@ static int icvInitEMD( const float* signature1, int size1,
 
         }
         else if( weight < 0 )
-            CV_Error(CV_StsOutOfRange, "");
+            CV_Error(CV_StsBadArg, "signature1 must not contain negative weights");
     }
 
     for( i = 0; i < size2; i++ )
@@ -401,11 +401,13 @@ static int icvInitEMD( const float* signature1, int size1,
             state->idx2[dsize++] = i;
         }
         else if( weight < 0 )
-            CV_Error(CV_StsOutOfRange, "");
+            CV_Error(CV_StsBadArg, "signature2 must not contain negative weights");
     }
 
-    if( ssize == 0 || dsize == 0 )
-        CV_Error(CV_StsOutOfRange, "");
+    if( ssize == 0 )
+        CV_Error(CV_StsBadArg, "signature1 must contain at least one non-zero value");
+    if( dsize == 0 )
+        CV_Error(CV_StsBadArg, "signature2 must contain at least one non-zero value");
 
     /* if supply different than the demand, add a zero-cost dummy cluster */
     diff = s_sum - d_sum;
@@ -1142,6 +1144,8 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
                int distType, InputArray _cost,
                float* lowerBound, OutputArray _flow )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat signature1 = _signature1.getMat(), signature2 = _signature2.getMat();
     Mat cost = _cost.getMat(), flow;
 
@@ -1158,6 +1162,13 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
 
     return cvCalcEMD2( &_csignature1, &_csignature2, distType, 0, cost.empty() ? 0 : &_ccost,
                        _flow.needed() ? &_cflow : 0, lowerBound, 0 );
+}
+
+float cv::wrapperEMD(InputArray _signature1, InputArray _signature2,
+               int distType, InputArray _cost,
+               Ptr<float> lowerBound, OutputArray _flow)
+{
+    return EMD(_signature1, _signature2, distType, _cost, lowerBound.get(), _flow);
 }
 
 /* End of file. */

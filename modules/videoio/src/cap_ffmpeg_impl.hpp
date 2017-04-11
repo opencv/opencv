@@ -75,48 +75,8 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #endif
 
-#ifdef WIN32
-  #define HAVE_FFMPEG_SWSCALE 1
-  #include <libavcodec/avcodec.h>
-  #include <libswscale/swscale.h>
-#else
-
-#ifndef HAVE_FFMPEG_SWSCALE
-    #error "libswscale is necessary to build the newer OpenCV ffmpeg wrapper"
-#endif
-
-// if the header path is not specified explicitly, let's deduce it
-#if !defined HAVE_FFMPEG_AVCODEC_H && !defined HAVE_LIBAVCODEC_AVCODEC_H
-
-#if defined(HAVE_GENTOO_FFMPEG)
-  #define HAVE_LIBAVCODEC_AVCODEC_H 1
-  #if defined(HAVE_FFMPEG_SWSCALE)
-    #define HAVE_LIBSWSCALE_SWSCALE_H 1
-  #endif
-#elif defined HAVE_FFMPEG
-  #define HAVE_FFMPEG_AVCODEC_H 1
-  #if defined(HAVE_FFMPEG_SWSCALE)
-    #define HAVE_FFMPEG_SWSCALE_H 1
-  #endif
-#endif
-
-#endif
-
-#if defined(HAVE_FFMPEG_AVCODEC_H)
-  #include <ffmpeg/avcodec.h>
-#endif
-#if defined(HAVE_FFMPEG_SWSCALE_H)
-  #include <ffmpeg/swscale.h>
-#endif
-
-#if defined(HAVE_LIBAVCODEC_AVCODEC_H)
-  #include <libavcodec/avcodec.h>
-#endif
-#if defined(HAVE_LIBSWSCALE_SWSCALE_H)
-  #include <libswscale/swscale.h>
-#endif
-
-#endif
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
 
 #ifdef __cplusplus
 }
@@ -971,7 +931,8 @@ bool CvCapture_FFMPEG::grabFrame()
         {
             //picture_pts = picture->best_effort_timestamp;
             if( picture_pts == AV_NOPTS_VALUE_ )
-                picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
+                picture_pts = picture->pkt_pts != AV_NOPTS_VALUE_ && picture->pkt_pts != 0 ? picture->pkt_pts : picture->pkt_dts;
+
             frame_number++;
             valid = true;
         }
@@ -1134,6 +1095,9 @@ int CvCapture_FFMPEG::get_bitrate() const
 
 double CvCapture_FFMPEG::get_fps() const
 {
+#if 0 && LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100) && LIBAVFORMAT_VERSION_MICRO >= 100
+    double fps = r2d(av_guess_frame_rate(ic, ic->streams[video_stream], NULL));
+#else
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0)
     double fps = r2d(ic->streams[video_stream]->avg_frame_rate);
 #else
@@ -1151,7 +1115,7 @@ double CvCapture_FFMPEG::get_fps() const
     {
         fps = 1.0 / r2d(ic->streams[video_stream]->codec->time_base);
     }
-
+#endif
     return fps;
 }
 
@@ -1576,6 +1540,10 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     {
         c->flags |= CODEC_FLAG_GLOBAL_HEADER;
     }
+#endif
+
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
+    st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
 #endif
 
     return st;
@@ -2447,11 +2415,14 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
     }
 
     // write the stream header, if any
+    int header_err =
     #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
         av_write_header(oc_);
     #else
         avformat_write_header(oc_, NULL);
     #endif
+    if (header_err != 0)
+        return false;
 
     return true;
 }

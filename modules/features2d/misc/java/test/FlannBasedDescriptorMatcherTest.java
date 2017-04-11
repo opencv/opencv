@@ -3,7 +3,6 @@ package org.opencv.test.features2d;
 import java.util.Arrays;
 import java.util.List;
 
-import org.opencv.core.Core;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -12,18 +11,18 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.DMatch;
-import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
-import org.opencv.features2d.FeatureDetector;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.features2d.Feature2D;
 
 public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
 
     static final String xmlParamsDefault = "<?xml version=\"1.0\"?>\n"
             + "<opencv_storage>\n"
+            + "<format>3</format>\n"
             + "<indexParams>\n"
             + "  <_>\n"
             + "    <name>algorithm</name>\n"
@@ -47,7 +46,8 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "    <type>15</type>\n"
             + "    <value>1</value></_></searchParams>\n"
             + "</opencv_storage>\n";
-    static final String ymlParamsDefault = "%YAML:1.0\n"
+    static final String ymlParamsDefault = "%YAML:1.0\n---\n"
+            + "format: 3\n"
             + "indexParams:\n"
             + "   -\n"
             + "      name: algorithm\n"
@@ -70,7 +70,8 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "      name: sorted\n"
             + "      type: 15\n"
             + "      value: 1\n";
-    static final String ymlParamsModified = "%YAML:1.0\n"
+    static final String ymlParamsModified = "%YAML:1.0\n---\n"
+            + "format: 3\n"
             + "indexParams:\n"
             + "   -\n"
             + "      name: algorithm\n"
@@ -113,12 +114,12 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat descriptors = new Mat();
 
-        FeatureDetector detector = FeatureDetector.create(FeatureDetector.SURF);
-        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
+        Feature2D detector = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
+        Feature2D extractor = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
 
-        String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
-        detector.read(filename);
+        setProperty(detector, "hessianThreshold", "double", 8000);
+        setProperty(detector, "nOctaves", "int", 3);
+        setProperty(detector, "upright", "boolean", false);
 
         detector.detect(img, keypoints);
         extractor.compute(img, keypoints, descriptors);
@@ -139,7 +140,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         MatOfKeyPoint keypoints = new MatOfKeyPoint(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
         Mat descriptors = new Mat();
 
-        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
+        Feature2D extractor = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
 
         extractor.compute(img, keypoints, descriptors);
 

@@ -1,8 +1,16 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
-#include <opencv2/aruco/charuco.hpp>
 #include <opencv2/cvconfig.h>
 #include <opencv2/highgui.hpp>
+
+#ifdef HAVE_OPENCV_ARUCO
+#include <opencv2/aruco/charuco.hpp>
+#endif
+
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -12,7 +20,6 @@
 #include "calibCommon.hpp"
 #include "calibPipeline.hpp"
 #include "frameProcessor.hpp"
-#include "cvCalibrationFork.hpp"
 #include "calibController.hpp"
 #include "parametersController.hpp"
 #include "rotationConverters.hpp"
@@ -23,7 +30,7 @@ const std::string keys  =
         "{v        |         | Input from video file }"
         "{ci       | 0       | Default camera id }"
         "{flip     | false   | Vertical flip of input frames }"
-        "{t        | circles | Template for calibration (circles, chessboard, dualCircles, chAruco) }"
+        "{t        | circles | Template for calibration (circles, chessboard, dualCircles, charuco) }"
         "{sz       | 16.3    | Distance between two nearest centers of circles or squares on calibration board}"
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
@@ -46,31 +53,27 @@ bool calib::showOverlayMessage(const std::string& message)
 #endif
 }
 
-static void deleteButton(int state, void* data)
+static void deleteButton(int, void* data)
 {
-    state++; //to avoid gcc warnings
     (static_cast<cv::Ptr<calibDataController>*>(data))->get()->deleteLastFrame();
     calib::showOverlayMessage("Last frame deleted");
 }
 
-static void deleteAllButton(int state, void* data)
+static void deleteAllButton(int, void* data)
 {
-    state++;
     (static_cast<cv::Ptr<calibDataController>*>(data))->get()->deleteAllData();
     calib::showOverlayMessage("All frames deleted");
 }
 
-static void saveCurrentParamsButton(int state, void* data)
+static void saveCurrentParamsButton(int, void* data)
 {
-    state++;
     if((static_cast<cv::Ptr<calibDataController>*>(data))->get()->saveCurrentCameraParameters())
         calib::showOverlayMessage("Calibration parameters saved");
 }
 
 #ifdef HAVE_QT
-static void switchVisualizationModeButton(int state, void* data)
+static void switchVisualizationModeButton(int, void* data)
 {
-    state++;
     ShowProcessor* processor = static_cast<ShowProcessor*>(((cv::Ptr<FrameProcessor>*)data)->get());
     processor->switchVisualizationMode();
 }
@@ -99,6 +102,11 @@ int main(int argc, char** argv)
 
     captureParameters capParams = paramsController.getCaptureParameters();
     internalParameters intParams = paramsController.getInternalParameters();
+#ifndef HAVE_OPENCV_ARUCO
+    if(capParams.board == chAruco)
+        CV_Error(cv::Error::StsNotImplemented, "Aruco module is disabled in current build configuration."
+                                               " Consider usage of another calibration pattern\n");
+#endif
 
     cv::TermCriteria solverTermCrit = cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS,
                                                        intParams.solverMaxIters, intParams.solverEps);
@@ -106,7 +114,7 @@ int main(int argc, char** argv)
     if(!parser.has("v")) globalData->imageSize = capParams.cameraResolution;
 
     int calibrationFlags = 0;
-    if(intParams.fastSolving) calibrationFlags |= CALIB_USE_QR;
+    if(intParams.fastSolving) calibrationFlags |= cv::CALIB_USE_QR;
     cv::Ptr<calibController> controller(new calibController(globalData, calibrationFlags,
                                                          parser.get<bool>("ft"), capParams.minFramesNum));
     cv::Ptr<calibDataController> dataController(new calibDataController(globalData, capParams.maxFramesNum,
@@ -131,11 +139,16 @@ int main(int argc, char** argv)
     cv::namedWindow(mainWindowName);
     cv::moveWindow(mainWindowName, 10, 10);
 #ifdef HAVE_QT
-    cv::createButton("Delete last frame", deleteButton, &dataController, cv::QT_PUSH_BUTTON);
-    cv::createButton("Delete all frames", deleteAllButton, &dataController, cv::QT_PUSH_BUTTON);
-    cv::createButton("Undistort", undistortButton, &showProcessor, cv::QT_CHECKBOX, false);
-    cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController, cv::QT_PUSH_BUTTON);
-    cv::createButton("Switch visualisation mode", switchVisualizationModeButton, &showProcessor, cv::QT_PUSH_BUTTON);
+    cv::createButton("Delete last frame", deleteButton, &dataController,
+                     cv::QT_PUSH_BUTTON | cv::QT_NEW_BUTTONBAR);
+    cv::createButton("Delete all frames", deleteAllButton, &dataController,
+                     cv::QT_PUSH_BUTTON | cv::QT_NEW_BUTTONBAR);
+    cv::createButton("Undistort", undistortButton, &showProcessor,
+                     cv::QT_CHECKBOX | cv::QT_NEW_BUTTONBAR, false);
+    cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController,
+                     cv::QT_PUSH_BUTTON | cv::QT_NEW_BUTTONBAR);
+    cv::createButton("Switch visualisation mode", switchVisualizationModeButton, &showProcessor,
+                     cv::QT_PUSH_BUTTON | cv::QT_NEW_BUTTONBAR);
 #endif //HAVE_QT
     try {
         bool pipelineFinished = false;
@@ -156,24 +169,26 @@ int main(int argc, char** argv)
 
                 if(capParams.board != chAruco) {
                     globalData->totalAvgErr =
-                            cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
+                            cv::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
                                                     globalData->imageSize, globalData->cameraMatrix,
                                                     globalData->distCoeffs, cv::noArray(), cv::noArray(),
-                                                    globalData->stdDeviations, globalData->perViewErrors,
+                                                    globalData->stdDeviations, cv::noArray(), globalData->perViewErrors,
                                                     calibrationFlags, solverTermCrit);
                 }
                 else {
+#ifdef HAVE_OPENCV_ARUCO
                     cv::Ptr<cv::aruco::Dictionary> dictionary =
                             cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
                     cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
                                 cv::aruco::CharucoBoard::create(capParams.boardSize.width, capParams.boardSize.height,
                                                                 capParams.charucoSquareLenght, capParams.charucoMarkerSize, dictionary);
                     globalData->totalAvgErr =
-                            cvfork::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds,
+                            cv::aruco::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds,
                                                            charucoboard, globalData->imageSize,
                                                            globalData->cameraMatrix, globalData->distCoeffs,
-                                                           cv::noArray(), cv::noArray(), globalData->stdDeviations,
+                                                           cv::noArray(), cv::noArray(), globalData->stdDeviations, cv::noArray(),
                                                            globalData->perViewErrors, calibrationFlags, solverTermCrit);
+#endif
                 }
                 dataController->updateUndistortMap();
                 dataController->printParametersToConsole(std::cout);

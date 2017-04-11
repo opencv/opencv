@@ -53,7 +53,7 @@ void UIImageToMat(const UIImage* image, cv::Mat& m, bool alphaExist);
 UIImage* MatToUIImage(const cv::Mat& image) {
 
     NSData *data = [NSData dataWithBytes:image.data
-                                  length:image.elemSize()*image.total()];
+                                  length:image.step.p[0] * image.rows];
 
     CGColorSpaceRef colorSpace;
 
@@ -73,7 +73,7 @@ UIImage* MatToUIImage(const cv::Mat& image) {
     // Creating CGImage from cv::Mat
     CGImageRef imageRef = CGImageCreate(image.cols,
                                         image.rows,
-                                        8,
+                                        8 * image.elemSize1(),
                                         8 * image.elemSize(),
                                         image.step.p[0],
                                         colorSpace,
@@ -97,15 +97,17 @@ UIImage* MatToUIImage(const cv::Mat& image) {
 void UIImageToMat(const UIImage* image,
                          cv::Mat& m, bool alphaExist) {
     CGColorSpaceRef colorSpace = CGImageGetColorSpace(image.CGImage);
-    CGFloat cols = image.size.width, rows = image.size.height;
+    CGFloat cols = CGImageGetWidth(image.CGImage), rows = CGImageGetHeight(image.CGImage);
     CGContextRef contextRef;
     CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedLast;
-    if (CGColorSpaceGetModel(colorSpace) == 0)
+    if (CGColorSpaceGetModel(colorSpace) == kCGColorSpaceModelMonochrome)
     {
         m.create(rows, cols, CV_8UC1); // 8 bits per component, 1 channel
         bitmapInfo = kCGImageAlphaNone;
         if (!alphaExist)
             bitmapInfo = kCGImageAlphaNone;
+        else
+            m = cv::Scalar(0);
         contextRef = CGBitmapContextCreate(m.data, m.cols, m.rows, 8,
                                            m.step[0], colorSpace,
                                            bitmapInfo);
@@ -116,6 +118,8 @@ void UIImageToMat(const UIImage* image,
         if (!alphaExist)
             bitmapInfo = kCGImageAlphaNoneSkipLast |
                                 kCGBitmapByteOrderDefault;
+        else
+            m = cv::Scalar(0);
         contextRef = CGBitmapContextCreate(m.data, m.cols, m.rows, 8,
                                            m.step[0], colorSpace,
                                            bitmapInfo);

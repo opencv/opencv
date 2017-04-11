@@ -43,8 +43,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_VIZ3D_HPP__
-#define __OPENCV_VIZ_VIZ3D_HPP__
+#ifndef OPENCV_VIZ_VIZ3D_HPP
+#define OPENCV_VIZ_VIZ3D_HPP
 
 #if !defined YES_I_AGREE_THAT_VIZ_API_IS_NOT_STABLE_NOW_AND_BINARY_COMPARTIBILITY_WONT_BE_SUPPORTED && !defined CVAPI_EXPORTS
     //#error "Viz is in beta state now. Please define macro above to use it"

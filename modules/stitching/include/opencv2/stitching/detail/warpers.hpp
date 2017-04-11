@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_WARPERS_HPP__
-#define __OPENCV_STITCHING_WARPERS_HPP__
+#ifndef OPENCV_STITCHING_WARPERS_HPP
+#define OPENCV_STITCHING_WARPERS_HPP
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda.hpp"
@@ -202,6 +202,34 @@ public:
 
 protected:
     void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br);
+};
+
+
+/** @brief Affine warper that uses rotations and translations
+
+ Uses affine transformation in homogeneous coordinates to represent both rotation and
+ translation in camera rotation matrix.
+ */
+class CV_EXPORTS AffineWarper : public PlaneWarper
+{
+public:
+    /** @brief Construct an instance of the affine warper class.
+
+    @param scale Projected image scale multiplier
+     */
+    AffineWarper(float scale = 1.f) : PlaneWarper(scale) {}
+
+    Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R);
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap);
+    Point warp(InputArray src, InputArray K, InputArray R,
+               int interp_mode, int border_mode, OutputArray dst);
+    Rect warpRoi(Size src_size, InputArray K, InputArray R);
+
+protected:
+    /** @brief Extracts rotation and translation matrices from matrix H representing
+        affine transformation in homogeneous coordinates
+     */
+    void getRTfromHomogeneous(InputArray H, Mat &R, Mat &T);
 };
 
 
@@ -585,4 +613,4 @@ protected:
 
 #include "warpers_inl.hpp"
 
-#endif // __OPENCV_STITCHING_WARPERS_HPP__
+#endif // OPENCV_STITCHING_WARPERS_HPP

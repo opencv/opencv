@@ -135,7 +135,7 @@ matrix.
 
 See the code below:
 @code{.py}
-img = cv2.imread('sudokusmall.png')
+img = cv2.imread('sudoku.png')
 rows,cols,ch = img.shape
 
 pts1 = np.float32([[56,65],[368,52],[28,387],[389,390]])

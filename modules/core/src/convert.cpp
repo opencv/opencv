@@ -44,12 +44,16 @@
 #include "precomp.hpp"
 
 #include "opencl_kernels_core.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+
+#include "opencv2/core/openvx/ovx_defs.hpp"
 
 #ifdef __APPLE__
 #undef CV_NEON
 #define CV_NEON 0
 #endif
 
+#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/cn) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
 
 /****************************************************************************************\
 *                                       split & merge                                    *
@@ -83,6 +87,8 @@ static MergeFunc getMergeFunc(int depth)
 
 void cv::split(const Mat& src, Mat* mv)
 {
+    CV_INSTRUMENT_REGION()
+
     int k, depth = src.depth(), cn = src.channels();
     if( cn == 1 )
     {
@@ -93,8 +99,8 @@ void cv::split(const Mat& src, Mat* mv)
     SplitFunc func = getSplitFunc(depth);
     CV_Assert( func != 0 );
 
-    int esz = (int)src.elemSize(), esz1 = (int)src.elemSize1();
-    int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
+    size_t esz = src.elemSize(), esz1 = src.elemSize1();
+    size_t blocksize0 = (BLOCK_SIZE + esz-1)/esz;
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -107,14 +113,15 @@ void cv::split(const Mat& src, Mat* mv)
     }
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
+    size_t total = it.size;
+    size_t blocksize = std::min((size_t)CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn), cn <= 4 ? total : std::min(total, blocksize0));
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        for( int j = 0; j < total; j += blocksize )
+        for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
-            func( ptrs[0], &ptrs[1], bsz, cn );
+            size_t bsz = std::min(total - j, blocksize);
+            func( ptrs[0], &ptrs[1], (int)bsz, cn );
 
             if( j + blocksize < total )
             {
@@ -174,6 +181,8 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 
 void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
                ocl_split(_m, _mv))
 
@@ -199,6 +208,8 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( mv && n > 0 );
 
     int depth = mv[0].depth();
@@ -241,8 +252,11 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         return;
     }
 
+    MergeFunc func = getMergeFunc(depth);
+    CV_Assert( func != 0 );
+
     size_t esz = dst.elemSize(), esz1 = dst.elemSize1();
-    int blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
+    size_t blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -252,15 +266,15 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         arrays[k+1] = &mv[k];
 
     NAryMatIterator it(arrays, ptrs, cn+1);
-    int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
-    MergeFunc func = getMergeFunc(depth);
+    size_t total = (int)it.size;
+    size_t blocksize = std::min((size_t)CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn), cn <= 4 ? total : std::min(total, blocksize0));
 
     for( i = 0; i < it.nplanes; i++, ++it )
     {
-        for( int j = 0; j < total; j += blocksize )
+        for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
-            func( (const uchar**)&ptrs[1], ptrs[0], bsz, cn );
+            size_t bsz = std::min(total - j, blocksize);
+            func( (const uchar**)&ptrs[1], ptrs[0], (int)bsz, cn );
 
             if( j + blocksize < total )
             {
@@ -340,6 +354,8 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_mv.isUMatVector() && _dst.isUMat(),
                ocl_merge(_mv, _dst))
 
@@ -434,6 +450,8 @@ static MixChannelsFunc getMixchFunc(int depth)
 
 void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
+    CV_INSTRUMENT_REGION()
+
     if( npairs == 0 )
         return;
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
@@ -610,6 +628,8 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
+    CV_INSTRUMENT_REGION()
+
     if (npairs == 0 || fromTo == NULL)
         return;
 
@@ -639,6 +659,8 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                      const std::vector<int>& fromTo)
 {
+    CV_INSTRUMENT_REGION()
+
     if (fromTo.empty())
         return;
 
@@ -667,6 +689,8 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( 0 <= coi && coi < cn );
     int ch[] = { coi, 0 };
@@ -688,6 +712,8 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 
 void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 {
+    CV_INSTRUMENT_REGION()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
     CV_Assert( _src.sameSize(_dst) && sdepth == ddepth );
@@ -4356,10 +4382,373 @@ struct Cvt_SIMD<float, int>
 
 #endif
 
+#if !CV_FP16_TYPE
+// const numbers for floating points format
+const unsigned int kShiftSignificand    = 13;
+const unsigned int kMaskFp16Significand = 0x3ff;
+const unsigned int kBiasFp16Exponent    = 15;
+const unsigned int kBiasFp32Exponent    = 127;
+#endif
+
+#if CV_FP16_TYPE
+static float convertFp16SW(short fp16)
+{
+    // Fp16 -> Fp32
+    Cv16suf a;
+    a.i = fp16;
+    return (float)a.h;
+}
+#else
+static float convertFp16SW(short fp16)
+{
+    // Fp16 -> Fp32
+    Cv16suf b;
+    b.i = fp16;
+    int exponent    = b.fmt.exponent - kBiasFp16Exponent;
+    int significand = b.fmt.significand;
+
+    Cv32suf a;
+    a.i = 0;
+    a.fmt.sign = b.fmt.sign; // sign bit
+    if( exponent == 16 )
+    {
+        // Inf or NaN
+        a.i = a.i | 0x7F800000;
+        if( significand != 0 )
+        {
+            // NaN
+#if defined(__x86_64__) || defined(_M_X64)
+            // 64bit
+            a.i = a.i | 0x7FC00000;
+#endif
+            a.fmt.significand = a.fmt.significand | (significand << kShiftSignificand);
+        }
+        return a.f;
+    }
+    else if ( exponent == -15 )
+    {
+        // subnormal in Fp16
+        if( significand == 0 )
+        {
+            // zero
+            return a.f;
+        }
+        else
+        {
+            int shift = -1;
+            while( ( significand & 0x400 ) == 0 )
+            {
+                significand = significand << 1;
+                shift++;
+            }
+            significand = significand & kMaskFp16Significand;
+            exponent -= shift;
+        }
+    }
+
+    a.fmt.exponent = (exponent+kBiasFp32Exponent);
+    a.fmt.significand = significand << kShiftSignificand;
+    return a.f;
+}
+#endif
+
+#if CV_FP16_TYPE
+static short convertFp16SW(float fp32)
+{
+    // Fp32 -> Fp16
+    Cv16suf a;
+    a.h = (__fp16)fp32;
+    return a.i;
+}
+#else
+static short convertFp16SW(float fp32)
+{
+    // Fp32 -> Fp16
+    Cv32suf a;
+    a.f = fp32;
+    int exponent    = a.fmt.exponent - kBiasFp32Exponent;
+    int significand = a.fmt.significand;
+
+    Cv16suf result;
+    result.i = 0;
+    unsigned int absolute = a.i & 0x7fffffff;
+    if( 0x477ff000 <= absolute )
+    {
+        // Inf in Fp16
+        result.i = result.i | 0x7C00;
+        if( exponent == 128 && significand != 0 )
+        {
+            // NaN
+            result.i = (short)( result.i | 0x200 | ( significand >> kShiftSignificand ) );
+        }
+    }
+    else if ( absolute < 0x33000001 )
+    {
+        // too small for fp16
+        result.i = 0;
+    }
+    else if ( absolute < 0x33c00000 )
+    {
+        result.i = 1;
+    }
+    else if ( absolute < 0x34200001 )
+    {
+        result.i = 2;
+    }
+    else if ( absolute < 0x387fe000 )
+    {
+        // subnormal in Fp16
+        int fp16Significand = significand | 0x800000;
+        int bitShift = (-exponent) - 1;
+        fp16Significand = fp16Significand >> bitShift;
+
+        // special cases to round up
+        bitShift = exponent + 24;
+        int threshold = ( ( 0x400000 >> bitShift ) | ( ( ( significand & ( 0x800000 >> bitShift ) ) >> ( 126 - a.fmt.exponent ) ) ^ 1 ) );
+        if( threshold <= ( significand & ( 0xffffff >> ( exponent + 25 ) ) ) )
+        {
+            fp16Significand++;
+        }
+        result.i = (short)fp16Significand;
+    }
+    else
+    {
+        // usual situation
+        // exponent
+        result.fmt.exponent = ( exponent + kBiasFp16Exponent );
+
+        // significand;
+        short fp16Significand = (short)(significand >> kShiftSignificand);
+        result.fmt.significand = fp16Significand;
+
+        // special cases to round up
+        short lsb10bitsFp32 = (significand & 0x1fff);
+        short threshold = 0x1000 + ( ( fp16Significand & 0x1 ) ? 0 : 1 );
+        if( threshold <= lsb10bitsFp32 )
+        {
+            result.i++;
+        }
+        else if ( fp16Significand == 0x3ff && exponent == -15)
+        {
+            result.i++;
+        }
+    }
+
+    // sign bit
+    result.fmt.sign = a.fmt.sign;
+    return result.i;
+}
+#endif
+
+// template for FP16 HW conversion function
+template<typename T, typename DT> static void
+cvtScaleHalf_( const T* src, size_t sstep, DT* dst, size_t dstep, Size size);
+
+template<> void
+cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t dstep, Size size)
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    if( checkHardwareSupport(CV_CPU_FP16) )
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
+            if ( ( (intptr_t)dst & 0xf ) == 0 )
+#endif
+            {
+#if CV_FP16 && CV_SIMD128
+                for ( ; x <= size.width - 4; x += 4)
+                {
+                    v_float32x4 v_src = v_load(src + x);
+
+                    v_float16x4 v_dst = v_cvt_f16(v_src);
+
+                    v_store_f16(dst + x, v_dst);
+                }
+#endif
+            }
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+    else
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+}
+
+template<> void
+cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t dstep, Size size)
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    if( checkHardwareSupport(CV_CPU_FP16) )
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_IX86) || defined(i386)
+            if ( ( (intptr_t)src & 0xf ) == 0 )
+#endif
+            {
+#if CV_FP16 && CV_SIMD128
+                for ( ; x <= size.width - 4; x += 4)
+                {
+                    v_float16x4 v_src = v_load_f16(src + x);
+
+                    v_float32x4 v_dst = v_cvt_f32(v_src);
+
+                    v_store(dst + x, v_dst);
+                }
+#endif
+            }
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+    else
+    {
+        for( ; size.height--; src += sstep, dst += dstep )
+        {
+            int x = 0;
+            for ( ; x < size.width; x++ )
+            {
+                dst[x] = convertFp16SW(src[x]);
+            }
+        }
+    }
+}
+
+#ifdef HAVE_OPENVX
+
+template<typename T, typename DT>
+static bool _openvx_cvt(const T* src, size_t sstep,
+                        DT* dst, size_t dstep, Size continuousSize)
+{
+    using namespace ivx;
+
+    if(!(continuousSize.width > 0 && continuousSize.height > 0))
+    {
+        return true;
+    }
+
+    //.height is for number of continuous pieces
+    //.width  is for length of one piece
+    Size imgSize = continuousSize;
+    if(continuousSize.height == 1)
+    {
+        if(sstep / sizeof(T) == dstep / sizeof(DT) && sstep / sizeof(T) > 0 &&
+           continuousSize.width % (sstep / sizeof(T)) == 0)
+        {
+            //continuous n-lines image
+            imgSize.width  = sstep / sizeof(T);
+            imgSize.height = continuousSize.width / (sstep / sizeof(T));
+        }
+        else
+        {
+            //1-row image with possibly incorrect step
+            sstep = continuousSize.width * sizeof(T);
+            dstep = continuousSize.width * sizeof(DT);
+        }
+    }
+
+    int srcType = DataType<T>::type, dstType = DataType<DT>::type;
+
+    try
+    {
+        Context context = ovx::getOpenVXContext();
+
+        // Other conversions are marked as "experimental"
+        if(context.vendorID() == VX_ID_KHRONOS &&
+           !(srcType == CV_8U  && dstType == CV_16S) &&
+           !(srcType == CV_16S && dstType == CV_8U))
+        {
+            return false;
+        }
+
+        Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(srcType),
+                                                 Image::createAddressing(imgSize.width, imgSize.height,
+                                                                         (vx_uint32)sizeof(T), (vx_uint32)sstep),
+                                                 (void*)src);
+        Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(dstType),
+                                                 Image::createAddressing(imgSize.width, imgSize.height,
+                                                                         (vx_uint32)sizeof(DT), (vx_uint32)dstep),
+                                                 (void*)dst);
+
+        IVX_CHECK_STATUS(vxuConvertDepth(context, srcImage, dstImage, VX_CONVERT_POLICY_SATURATE, 0));
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        srcImage.swapHandle(); dstImage.swapHandle();
+#endif
+    }
+    catch (RuntimeError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    catch (WrapperError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+
+    return true;
+}
+
+template<typename T, typename DT>
+static bool openvx_cvt(const T* src, size_t sstep,
+                       DT* dst, size_t dstep, Size size)
+{
+    (void)src; (void)sstep; (void)dst; (void)dstep; (void)size;
+    return false;
+}
+
+#define DEFINE_OVX_CVT_SPECIALIZATION(T, DT) \
+template<>                                                                    \
+bool openvx_cvt(const T *src, size_t sstep, DT *dst, size_t dstep, Size size) \
+{                                                                             \
+    return _openvx_cvt<T, DT>(src, sstep, dst, dstep, size);                  \
+}
+
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, ushort)
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, short)
+DEFINE_OVX_CVT_SPECIALIZATION(uchar, int)
+DEFINE_OVX_CVT_SPECIALIZATION(ushort, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(ushort, int)
+DEFINE_OVX_CVT_SPECIALIZATION(short, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(short, int)
+DEFINE_OVX_CVT_SPECIALIZATION(int, uchar)
+DEFINE_OVX_CVT_SPECIALIZATION(int, ushort)
+DEFINE_OVX_CVT_SPECIALIZATION(int, short)
+
+#endif
+
 template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
       DT* dst, size_t dstep, Size size )
 {
+    CV_OVX_RUN(
+        true,
+        openvx_cvt(src, sstep, dst, dstep, size)
+    )
+
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
     Cvt_SIMD<T, DT> vop;
@@ -4443,6 +4832,13 @@ static void cvtScaleAbs##suffix( const stype* src, size_t sstep, const uchar*, s
     tfunc(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
+#define DEF_CVT_SCALE_FP16_FUNC(suffix, stype, dtype) \
+static void cvtScaleHalf##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
+dtype* dst, size_t dstep, Size size, double*) \
+{ \
+    cvtScaleHalf_<stype,dtype>(src, sstep, dst, dstep, size); \
+}
+
 #define DEF_CVT_SCALE_FUNC(suffix, stype, dtype, wtype) \
 static void cvtScale##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 dtype* dst, size_t dstep, Size size, double* scale) \
@@ -4455,7 +4851,7 @@ dtype* dst, size_t dstep, Size size, double* scale) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    CV_IPP_RUN(src && dst, ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0)\
+    CV_IPP_RUN(src && dst, CV_INSTRUMENT_FUN_IPP(ippiConvert_##ippFavor, src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height)) >= 0) \
     cvt_(src, sstep, dst, dstep, size); \
 }
 
@@ -4463,7 +4859,7 @@ static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
 { \
-    CV_IPP_RUN(src && dst, ippiConvert_##ippFavor(src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0)\
+    CV_IPP_RUN(src && dst, CV_INSTRUMENT_FUN_IPP(ippiConvert_##ippFavor, src, (int)sstep, dst, (int)dstep, ippiSize(size.width, size.height), ippRndFinancial, 0) >= 0) \
     cvt_(src, sstep, dst, dstep, size); \
 }
 #else
@@ -4498,6 +4894,9 @@ DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float)
+
+DEF_CVT_SCALE_FP16_FUNC(32f16f, float, short)
+DEF_CVT_SCALE_FP16_FUNC(16f32f, short, float)
 
 DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float)
 DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float)
@@ -4618,6 +5017,17 @@ static BinaryFunc getCvtScaleAbsFunc(int depth)
     };
 
     return cvtScaleAbsTab[depth];
+}
+
+BinaryFunc getConvertFuncFp16(int ddepth)
+{
+    static BinaryFunc cvtTab[] =
+    {
+        0, 0, 0,
+        (BinaryFunc)(cvtScaleHalf32f16f), 0, (BinaryFunc)(cvtScaleHalf16f32f),
+        0, 0,
+    };
+    return cvtTab[CV_MAT_DEPTH(ddepth)];
 }
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth)
@@ -4776,6 +5186,8 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_convertScaleAbs(_src, _dst, alpha, beta))
 
@@ -4804,8 +5216,54 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
     }
 }
 
+void cv::convertFp16( InputArray _src, OutputArray _dst)
+{
+    CV_INSTRUMENT_REGION()
+
+    Mat src = _src.getMat();
+    int ddepth = 0;
+
+    switch( src.depth() )
+    {
+    case CV_32F:
+        ddepth = CV_16S;
+        break;
+    case CV_16S:
+        ddepth = CV_32F;
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported input depth");
+        return;
+    }
+
+    int type = CV_MAKETYPE(ddepth, src.channels());
+    _dst.create( src.dims, src.size, type );
+    Mat dst = _dst.getMat();
+    BinaryFunc func = getConvertFuncFp16(ddepth);
+    int cn = src.channels();
+    CV_Assert( func != 0 );
+
+    if( src.dims <= 2 )
+    {
+        Size sz = getContinuousSize(src, dst, cn);
+        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, 0);
+    }
+    else
+    {
+        const Mat* arrays[] = {&src, &dst, 0};
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs);
+        Size sz((int)(it.size*cn), 1);
+
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            func(ptrs[0], 1, 0, 0, ptrs[1], 1, sz, 0);
+    }
+}
+
 void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
+    CV_INSTRUMENT_REGION()
+
     bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
 
     if( _type < 0 )
@@ -4940,6 +5398,39 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 
 #endif
 
+#ifdef HAVE_OPENVX
+static bool openvx_LUT(Mat src, Mat dst, Mat _lut)
+{
+    if (src.type() != CV_8UC1 || dst.type() != src.type() || _lut.type() != src.type() || !_lut.isContinuous())
+        return false;
+
+    try
+    {
+        ivx::Context ctx = ovx::getOpenVXContext();
+
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(src.cols, src.rows, 1, (vx_int32)(src.step)), src.data),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+        ivx::LUT lut = ivx::LUT::create(ctx);
+        lut.copyFrom(_lut);
+        ivx::IVX_CHECK_STATUS(vxuTableLookup(ctx, ia, lut, ib));
+    }
+    catch (ivx::RuntimeError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    catch (ivx::WrapperError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+
+    return true;
+}
+#endif
+
 #if defined(HAVE_IPP)
 namespace ipp {
 
@@ -5030,7 +5521,7 @@ public:
         CV_DbgAssert(lutcn == 3 || lutcn == 4);
         if (lutcn == 3)
         {
-            IppStatus status = ippiCopy_8u_C3P3R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C3P3R, lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -5040,7 +5531,7 @@ public:
         }
         else if (lutcn == 4)
         {
-            IppStatus status = ippiCopy_8u_C4P4R(lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C4P4R, lut.ptr(), (int)lut.step[0], lutTable, (int)lut.step[0], sz256);
             if (status < 0)
             {
                 setIppErrorStatus();
@@ -5073,7 +5564,7 @@ public:
 
         if (lutcn == 3)
         {
-            if (ippiLUTPalette_8u_C3R(
+            if (CV_INSTRUMENT_FUN_IPP(ippiLUTPalette_8u_C3R,
                     src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
             {
@@ -5083,7 +5574,7 @@ public:
         }
         else if (lutcn == 4)
         {
-            if (ippiLUTPalette_8u_C4R(
+            if (CV_INSTRUMENT_FUN_IPP(ippiLUTPalette_8u_C4R,
                     src.ptr(), (int)src.step[0], dst.ptr(), (int)dst.step[0],
                     ippiSize(dst.size()), lutTable, 8) >= 0)
             {
@@ -5102,6 +5593,8 @@ private:
 
 static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int lutcn = lut.channels();
 
     if(src.dims > 2)
@@ -5187,6 +5680,8 @@ private:
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
+    CV_INSTRUMENT_REGION()
+
     int cn = _src.channels(), depth = _src.depth();
     int lutcn = _lut.channels();
 
@@ -5200,6 +5695,9 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
+
+    CV_OVX_RUN(true,
+               openvx_LUT(src, dst, lut))
 
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
 
@@ -5334,12 +5832,14 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
                     int norm_type, int rtype, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     double scale = 1, shift = 0;
     if( norm_type == CV_MINMAX )
     {
         double smin = 0, smax = 0;
         double dmin = MIN( a, b ), dmax = MAX( a, b );
-        minMaxLoc( _src, &smin, &smax, 0, 0, _mask );
+        minMaxIdx( _src, &smin, &smax, 0, 0, _mask );
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
         shift = dmin - smin*scale;
     }

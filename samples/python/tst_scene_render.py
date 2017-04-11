@@ -21,7 +21,7 @@ class TestSceneRender():
         self.deformation = deformation
         self.speed = speed
 
-        if bgImg != None:
+        if bgImg is not None:
             self.sceneBg = bgImg.copy()
         else:
             self.sceneBg = np.zeros(defaultSize, defaultSize, np.uint8)
@@ -29,7 +29,7 @@ class TestSceneRender():
         self.w = self.sceneBg.shape[0]
         self.h = self.sceneBg.shape[1]
 
-        if fgImg != None:
+        if fgImg is not None:
             self.foreground = fgImg.copy()
             self.center = self.currentCenter = (int(self.w/2 - fgImg.shape[0]/2), int(self.h/2 - fgImg.shape[1]/2))
 
@@ -52,7 +52,7 @@ class TestSceneRender():
 
     def getRectInTime(self, time):
 
-        if self.foreground != None:
+        if self.foreground is not None:
             tmp = np.array(self.center) + np.array((self.getXOffset(time), self.getYOffset(time)))
             x0, y0 = tmp
             x1, y1 = tmp + self.foreground.shape[0:2]
@@ -64,7 +64,7 @@ class TestSceneRender():
 
     def getCurrentRect(self):
 
-        if self.foreground != None:
+        if self.foreground is not None:
 
             x0 = self.currentCenter[0]
             y0 = self.currentCenter[1]
@@ -79,7 +79,7 @@ class TestSceneRender():
     def getNextFrame(self):
         img = self.sceneBg.copy()
 
-        if self.foreground != None:
+        if self.foreground is not None:
             self.currentCenter = (self.center[0] + self.getXOffset(self.time), self.center[1] + self.getYOffset(self.time))
             img[self.currentCenter[0]:self.currentCenter[0]+self.foreground.shape[0],
              self.currentCenter[1]:self.currentCenter[1]+self.foreground.shape[1]] = self.foreground
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         img = render.getNextFrame()
         cv2.imshow('img', img)
 
-        ch = 0xFF & cv2.waitKey(3)
+        ch = cv2.waitKey(3)
         if  ch == 27:
             break
     #import os

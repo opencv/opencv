@@ -104,6 +104,8 @@ static void fastNlMeansDenoising_( const Mat& src, Mat& dst, const std::vector<f
 void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
                                int templateWindowSize, int searchWindowSize)
 {
+    CV_INSTRUMENT_REGION()
+
     fastNlMeansDenoising(_src, _dst, std::vector<float>(1, h),
                          templateWindowSize, searchWindowSize);
 }
@@ -111,6 +113,8 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
 void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, const std::vector<float>& h,
                                int templateWindowSize, int searchWindowSize, int normType)
 {
+    CV_INSTRUMENT_REGION()
+
     int hn = (int)h.size(), type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(hn == 1 || hn == cn);
 
@@ -169,6 +173,8 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
                                       float h, float hForColorComponents,
                                       int templateWindowSize, int searchWindowSize)
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Size src_size = _src.size();
     if (type != CV_8UC3 && type != CV_8UC4)
@@ -308,6 +314,8 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
                                     int imgToDenoiseIndex, int temporalWindowSize,
                                     float h, int templateWindowSize, int searchWindowSize)
 {
+    CV_INSTRUMENT_REGION()
+
     fastNlMeansDenoisingMulti(_srcImgs, _dst, imgToDenoiseIndex, temporalWindowSize,
                               std::vector<float>(1, h), templateWindowSize, searchWindowSize);
 }
@@ -317,6 +325,8 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
                                     const std::vector<float>& h,
                                     int templateWindowSize, int searchWindowSize, int normType)
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
 
@@ -378,6 +388,8 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
                                            float h, float hForColorComponents,
                                            int templateWindowSize, int searchWindowSize)
 {
+    CV_INSTRUMENT_REGION()
+
     std::vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
 

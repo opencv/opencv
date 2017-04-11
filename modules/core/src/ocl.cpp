@@ -45,6 +45,9 @@
 #include <string>
 #include <sstream>
 #include <iostream> // std::cerr
+#if !(defined _MSC_VER) || (defined _MSC_VER && _MSC_VER > 1700)
+#include <inttypes.h>
+#endif
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
 #define CV_OPENCL_SHOW_RUN_ERRORS       0
@@ -1932,7 +1935,7 @@ String Device::OpenCL_C_Version() const
 { return p ? p->getStrProp(CL_DEVICE_OPENCL_C_VERSION) : String(); }
 
 String Device::OpenCLVersion() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? p->getStrProp(CL_DEVICE_VERSION) : String(); }
 
 int Device::deviceVersionMajor() const
 { return p ? p->deviceVersionMajor_ : 0; }
@@ -3152,6 +3155,7 @@ KernelArg::KernelArg()
 KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, int _iwscale, const void* _obj, size_t _sz)
     : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale), iwscale(_iwscale)
 {
+    CV_Assert(_flags == LOCAL || _flags == CONSTANT || _m != NULL);
 }
 
 KernelArg KernelArg::Constant(const Mat& m)
@@ -3169,6 +3173,9 @@ struct Kernel::Impl
     {
         cl_program ph = (cl_program)prog.ptr();
         cl_int retval = 0;
+#ifdef ENABLE_INSTRUMENTATION
+        name = kname;
+#endif
         handle = ph != 0 ?
             clCreateKernel(ph, kname, &retval) : 0;
         CV_OclDbgAssert(retval == CL_SUCCESS);
@@ -3221,6 +3228,9 @@ struct Kernel::Impl
 
     IMPLEMENT_REFCOUNTABLE();
 
+#ifdef ENABLE_INSTRUMENTATION
+    cv::String name;
+#endif
     cl_kernel handle;
     cl_event e;
     enum { MAX_ARRS = 16 };
@@ -3424,7 +3434,7 @@ int Kernel::set(int i, const KernelArg& arg)
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
                 int cols = u3d.cols*arg.wscale/arg.iwscale;
-                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows) == CL_SUCCESS);
+                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.slices) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols) == CL_SUCCESS);
                 i += 3;
@@ -3441,6 +3451,8 @@ int Kernel::set(int i, const KernelArg& arg)
 bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                  bool sync, const Queue& q)
 {
+    CV_INSTRUMENT_REGION_OPENCL_RUN(p->name.c_str());
+
     if(!p || !p->handle || p->e != 0)
         return false;
 
@@ -3552,6 +3564,7 @@ struct Program::Impl
     Impl(const ProgramSource& _src,
          const String& _buildflags, String& errmsg)
     {
+        CV_INSTRUMENT_REGION_OPENCL_COMPILE(cv::format("Compile: %" PRIx64 " options: %s", _src.hash(), _buildflags.c_str()).c_str());
         refcount = 1;
         const Context& ctx = Context::getDefault();
         src = _src;
@@ -5516,7 +5529,7 @@ struct PlatformInfo::Impl
         getDevices(devices, handle);
     }
 
-    String getStrProp(cl_device_info prop) const
+    String getStrProp(cl_platform_info prop) const
     {
         char buf[1024];
         size_t sz=0;
@@ -6059,6 +6072,18 @@ Image2D::~Image2D()
 void* Image2D::ptr() const
 {
     return p ? p->handle : 0;
+}
+
+bool internal::isOpenCLForced()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = getBoolParameter("OPENCV_OPENCL_FORCE", false);
+        initialized = true;
+    }
+    return value;
 }
 
 bool internal::isPerformanceCheckBypassed()

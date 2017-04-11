@@ -8,7 +8,7 @@ Learn to:
 
 -   Access pixel values and modify them
 -   Access image properties
--   Setting Region of Image (ROI)
+-   Setting Region of Interest (ROI)
 -   Splitting and Merging images
 
 Almost all the operations in this section is mainly related to Numpy rather than OpenCV. A good
@@ -173,7 +173,7 @@ from matplotlib import pyplot as plt
 
 BLUE = [255,0,0]
 
-img1 = cv2.imread('opencv_logo.png')
+img1 = cv2.imread('opencv-logo.png')
 
 replicate = cv2.copyMakeBorder(img1,10,10,10,10,cv2.BORDER_REPLICATE)
 reflect = cv2.copyMakeBorder(img1,10,10,10,10,cv2.BORDER_REFLECT)

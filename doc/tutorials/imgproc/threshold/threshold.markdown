@@ -97,7 +97,7 @@ Code
 ----
 
 The tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Threshold.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Threshold.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Threshold.cpp
 
 Explanation
@@ -106,51 +106,23 @@ Explanation
 -#  Let's check the general structure of the program:
     -   Load an image. If it is BGR we convert it to Grayscale. For this, remember that we can use
         the function @ref cv::cvtColor :
-        @code{.cpp}
-        src = imread( argv[1], 1 );
+        @snippet cpp/tutorial_code/ImgProc/Threshold.cpp load
 
-        /// Convert the image to Gray
-        cvtColor( src, src_gray, COLOR_BGR2GRAY );
-        @endcode
     -   Create a window to display the result
-        @code{.cpp}
-        namedWindow( window_name, WINDOW_AUTOSIZE );
-        @endcode
+        @snippet cpp/tutorial_code/ImgProc/Threshold.cpp window
+
     -   Create \f$2\f$ trackbars for the user to enter user input:
 
         -   **Type of thresholding**: Binary, To Zero, etc...
         -   **Threshold value**
-        @code{.cpp}
-        createTrackbar( trackbar_type,
-             window_name, &threshold_type,
-             max_type, Threshold_Demo );
+        @snippet cpp/tutorial_code/ImgProc/Threshold.cpp trackbar
 
-        createTrackbar( trackbar_value,
-             window_name, &threshold_value,
-             max_value, Threshold_Demo );
-        @endcode
     -   Wait until the user enters the threshold value, the type of thresholding (or until the
         program exits)
     -   Whenever the user changes the value of any of the Trackbars, the function *Threshold_Demo*
         is called:
-        @code{.cpp}
-        /*
-         * @function Threshold_Demo
-         */
-        void Threshold_Demo( int, void* )
-        {
-          /* 0: Binary
-             1: Binary Inverted
-             2: Threshold Truncated
-             3: Threshold to Zero
-             4: Threshold to Zero Inverted
-           */
+        @snippet cpp/tutorial_code/ImgProc/Threshold.cpp Threshold_Demo
 
-          threshold( src_gray, dst, threshold_value, max_BINARY_value,threshold_type );
-
-          imshow( window_name, dst );
-        }
-        @endcode
         As you can see, the function @ref cv::threshold is invoked. We give \f$5\f$ parameters:
 
         -   *src_gray*: Our input image

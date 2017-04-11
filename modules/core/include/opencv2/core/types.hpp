@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_TYPES_HPP__
-#define __OPENCV_CORE_TYPES_HPP__
+#ifndef OPENCV_CORE_TYPES_HPP
+#define OPENCV_CORE_TYPES_HPP
 
 #ifndef __cplusplus
 #  error types.hpp header must be compiled as C++
@@ -51,6 +51,7 @@
 #include <climits>
 #include <cfloat>
 #include <vector>
+#include <limits>
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
@@ -176,6 +177,7 @@ public:
 };
 
 typedef Point_<int> Point2i;
+typedef Point_<int64> Point2l;
 typedef Point_<float> Point2f;
 typedef Point_<double> Point2d;
 typedef Point2i Point;
@@ -231,7 +233,11 @@ public:
     //! conversion to another data type
     template<typename _Tp2> operator Point3_<_Tp2>() const;
     //! conversion to cv::Vec<>
+#if OPENCV_ABI_COMPATIBILITY > 300
+    template<typename _Tp2> operator Vec<_Tp2, 3>() const;
+#else
     operator Vec<_Tp, 3>() const;
+#endif
 
     //! dot product
     _Tp dot(const Point3_& pt) const;
@@ -303,6 +309,7 @@ public:
 };
 
 typedef Size_<int> Size2i;
+typedef Size_<int64> Size2l;
 typedef Size_<float> Size2f;
 typedef Size_<double> Size2d;
 typedef Size2i Size;
@@ -476,8 +483,10 @@ public:
     @param pts The points array for storing rectangle vertices.
     */
     void points(Point2f pts[]) const;
-    //! returns the minimal up-right rectangle containing the rotated rectangle
+    //! returns the minimal up-right integer rectangle containing the rotated rectangle
     Rect boundingRect() const;
+    //! returns the minimal (exact) floating point rectangle containing the rotated rectangle, not intended for use with images
+    Rect_<float> boundingRect2f() const;
 
     Point2f center; //< the rectangle mass center
     Size2f size;    //< width and height of the rectangle
@@ -1326,11 +1335,19 @@ Point3_<_Tp>::operator Point3_<_Tp2>() const
     return Point3_<_Tp2>(saturate_cast<_Tp2>(x), saturate_cast<_Tp2>(y), saturate_cast<_Tp2>(z));
 }
 
+#if OPENCV_ABI_COMPATIBILITY > 300
+template<typename _Tp> template<typename _Tp2> inline
+Point3_<_Tp>::operator Vec<_Tp2, 3>() const
+{
+    return Vec<_Tp2, 3>(x, y, z);
+}
+#else
 template<typename _Tp> inline
 Point3_<_Tp>::operator Vec<_Tp, 3>() const
 {
     return Vec<_Tp, 3>(x, y, z);
 }
+#endif
 
 template<typename _Tp> inline
 Point3_<_Tp>& Point3_<_Tp>::operator = (const Point3_& pt)
@@ -1575,7 +1592,10 @@ Size_<_Tp>& Size_<_Tp>::operator = (const Size_<_Tp>& sz)
 template<typename _Tp> inline
 _Tp Size_<_Tp>::area() const
 {
-    return width * height;
+    const _Tp result = width * height;
+    CV_DbgAssert(!std::numeric_limits<_Tp>::is_integer
+        || width == 0 || result / width == height); // make sure the result fits in the return value
+    return result;
 }
 
 template<typename _Tp> static inline
@@ -1714,7 +1734,10 @@ Size_<_Tp> Rect_<_Tp>::size() const
 template<typename _Tp> inline
 _Tp Rect_<_Tp>::area() const
 {
-    return width * height;
+    const _Tp result = width * height;
+    CV_DbgAssert(!std::numeric_limits<_Tp>::is_integer
+        || width == 0 || result / width == height); // make sure the result fits in the return value
+    return result;
 }
 
 template<typename _Tp> template<typename _Tp2> inline
@@ -1832,7 +1855,26 @@ Rect_<_Tp> operator | (const Rect_<_Tp>& a, const Rect_<_Tp>& b)
     return c |= b;
 }
 
+/**
+ * @brief measure dissimilarity between two sample sets
+ *
+ * computes the complement of the Jaccard Index as described in <https://en.wikipedia.org/wiki/Jaccard_index>.
+ * For rectangles this reduces to computing the intersection over the union.
+ */
+template<typename _Tp> static inline
+double jaccardDistance(const Rect_<_Tp>& a, const Rect_<_Tp>& b) {
+    _Tp Aa = a.area();
+    _Tp Ab = b.area();
 
+    if ((Aa + Ab) <= std::numeric_limits<_Tp>::epsilon()) {
+        // jaccard_index = 1 -> distance = 0
+        return 0.0;
+    }
+
+    double Aab = (a & b).area();
+    // distance = 1 - jaccard_index
+    return 1.0 - Aab / (Aa + Ab - Aab);
+}
 
 ////////////////////////////// RotatedRect //////////////////////////////
 
@@ -2225,4 +2267,4 @@ TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
 
 } // cv
 
-#endif //__OPENCV_CORE_TYPES_HPP__
+#endif //OPENCV_CORE_TYPES_HPP

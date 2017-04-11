@@ -44,6 +44,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#include "opencv2/core/openvx/ovx_defs.hpp"
+
 /*
  * This file includes the code, contributed by Simon Perreault
  * (the function icvMedianBlur_8u_O1)
@@ -86,18 +88,93 @@ struct RowSum :
         int i = 0, k, ksz_cn = ksize*cn;
 
         width = (width - 1)*cn;
-        for( k = 0; k < cn; k++, S++, D++ )
+        if( ksize == 3 )
         {
-            ST s = 0;
-            for( i = 0; i < ksz_cn; i += cn )
-                s += S[i];
-            D[0] = s;
-            for( i = 0; i < width; i += cn )
+            for( i = 0; i < width + cn; i++ )
             {
-                s += S[i + ksz_cn] - S[i];
-                D[i+cn] = s;
+                D[i] = (ST)S[i] + (ST)S[i+cn] + (ST)S[i+cn*2];
             }
         }
+        else if( ksize == 5 )
+        {
+            for( i = 0; i < width + cn; i++ )
+            {
+                D[i] = (ST)S[i] + (ST)S[i+cn] + (ST)S[i+cn*2] + (ST)S[i + cn*3] + (ST)S[i + cn*4];
+            }
+        }
+        else if( cn == 1 )
+        {
+            ST s = 0;
+            for( i = 0; i < ksz_cn; i++ )
+                s += (ST)S[i];
+            D[0] = s;
+            for( i = 0; i < width; i++ )
+            {
+                s += (ST)S[i + ksz_cn] - (ST)S[i];
+                D[i+1] = s;
+            }
+        }
+        else if( cn == 3 )
+        {
+            ST s0 = 0, s1 = 0, s2 = 0;
+            for( i = 0; i < ksz_cn; i += 3 )
+            {
+                s0 += (ST)S[i];
+                s1 += (ST)S[i+1];
+                s2 += (ST)S[i+2];
+            }
+            D[0] = s0;
+            D[1] = s1;
+            D[2] = s2;
+            for( i = 0; i < width; i += 3 )
+            {
+                s0 += (ST)S[i + ksz_cn] - (ST)S[i];
+                s1 += (ST)S[i + ksz_cn + 1] - (ST)S[i + 1];
+                s2 += (ST)S[i + ksz_cn + 2] - (ST)S[i + 2];
+                D[i+3] = s0;
+                D[i+4] = s1;
+                D[i+5] = s2;
+            }
+        }
+        else if( cn == 4 )
+        {
+            ST s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+            for( i = 0; i < ksz_cn; i += 4 )
+            {
+                s0 += (ST)S[i];
+                s1 += (ST)S[i+1];
+                s2 += (ST)S[i+2];
+                s3 += (ST)S[i+3];
+            }
+            D[0] = s0;
+            D[1] = s1;
+            D[2] = s2;
+            D[3] = s3;
+            for( i = 0; i < width; i += 4 )
+            {
+                s0 += (ST)S[i + ksz_cn] - (ST)S[i];
+                s1 += (ST)S[i + ksz_cn + 1] - (ST)S[i + 1];
+                s2 += (ST)S[i + ksz_cn + 2] - (ST)S[i + 2];
+                s3 += (ST)S[i + ksz_cn + 3] - (ST)S[i + 3];
+                D[i+4] = s0;
+                D[i+5] = s1;
+                D[i+6] = s2;
+                D[i+7] = s3;
+            }
+        }
+        else
+            for( k = 0; k < cn; k++, S++, D++ )
+            {
+                ST s = 0;
+                for( i = 0; i < ksz_cn; i += cn )
+                    s += (ST)S[i];
+                D[0] = s;
+                for( i = 0; i < width; i += cn )
+                {
+                    s += (ST)S[i + ksz_cn] - (ST)S[i];
+                    D[i+cn] = s;
+                }
+            }
     }
 };
 
@@ -138,13 +215,8 @@ struct ColumnSum :
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const ST* Sp = (const ST*)src[0];
-                for( i = 0; i <= width - 2; i += 2 )
-                {
-                    ST s0 = SUM[i] + Sp[i], s1 = SUM[i+1] + Sp[i+1];
-                    SUM[i] = s0; SUM[i+1] = s1;
-                }
 
-                for( ; i < width; i++ )
+                for( i = 0; i < width; i++ )
                     SUM[i] += Sp[i];
             }
         }
@@ -222,13 +294,14 @@ struct ColumnSum<int, uchar> :
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i;
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
 
         #if CV_SSE2
             bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+        #elif CV_NEON
+            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
         #endif
 
         if( width != (int)sum.size() )
@@ -244,7 +317,7 @@ struct ColumnSum<int, uchar> :
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -256,8 +329,11 @@ struct ColumnSum<int, uchar> :
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width - 4; i+=4 )
-                    vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                if(haveNEON)
+                {
+                    for( ; i <= width - 4; i+=4 )
+                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                }
                 #endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
@@ -276,7 +352,7 @@ struct ColumnSum<int, uchar> :
             uchar* D = (uchar*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -303,20 +379,23 @@ struct ColumnSum<int, uchar> :
                     }
                 }
                 #elif CV_NEON
-                float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                for( ; i <= width-8; i+=8 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                    int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
 
-                    uint32x4_t v_s0d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                    uint32x4_t v_s01d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
+                        uint32x4_t v_s0d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
+                        uint32x4_t v_s01d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
 
-                    uint16x8_t v_dst = vcombine_u16(vqmovn_u32(v_s0d), vqmovn_u32(v_s01d));
-                    vst1_u8(D + i, vqmovn_u16(v_dst));
+                        uint16x8_t v_dst = vcombine_u16(vqmovn_u32(v_s0d), vqmovn_u32(v_s01d));
+                        vst1_u8(D + i, vqmovn_u16(v_dst));
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                    }
                 }
                 #endif
                 for( ; i < width; i++ )
@@ -328,7 +407,7 @@ struct ColumnSum<int, uchar> :
             }
             else
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -351,16 +430,19 @@ struct ColumnSum<int, uchar> :
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width-8; i+=8 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                    int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
 
-                    uint16x8_t v_dst = vcombine_u16(vqmovun_s32(v_s0), vqmovun_s32(v_s01));
-                    vst1_u8(D + i, vqmovn_u16(v_dst));
+                        uint16x8_t v_dst = vcombine_u16(vqmovun_s32(v_s0), vqmovun_s32(v_s01));
+                        vst1_u8(D + i, vqmovn_u16(v_dst));
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                    }
                 }
                 #endif
 
@@ -379,6 +461,152 @@ struct ColumnSum<int, uchar> :
     int sumCount;
     std::vector<int> sum;
 };
+
+
+template<>
+struct ColumnSum<ushort, uchar> :
+public BaseColumnFilter
+{
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+    BaseColumnFilter()
+    {
+        ksize = _ksize;
+        anchor = _anchor;
+        scale = _scale;
+        sumCount = 0;
+        divDelta = 0;
+        divScale = 1;
+        if( scale != 1 )
+        {
+            int d = cvRound(1./scale);
+            double scalef = ((double)(1 << 16))/d;
+            divScale = cvFloor(scalef);
+            scalef -= divScale;
+            divDelta = d/2;
+            if( scalef < 0.5 )
+                divDelta++;
+            else
+                divScale++;
+        }
+    }
+
+    virtual void reset() { sumCount = 0; }
+
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    {
+        const int ds = divScale;
+        const int dd = divDelta;
+        ushort* SUM;
+        const bool haveScale = scale != 1;
+
+#if CV_SSE2
+        bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#elif CV_NEON
+        bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
+#endif
+
+        if( width != (int)sum.size() )
+        {
+            sum.resize(width);
+            sumCount = 0;
+        }
+
+        SUM = &sum[0];
+        if( sumCount == 0 )
+        {
+            memset((void*)SUM, 0, width*sizeof(SUM[0]));
+            for( ; sumCount < ksize - 1; sumCount++, src++ )
+            {
+                const ushort* Sp = (const ushort*)src[0];
+                int i = 0;
+#if CV_SSE2
+                if(haveSSE2)
+                {
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
+                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
+                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi16(_sum, _sp));
+                    }
+                }
+#elif CV_NEON
+                if(haveNEON)
+                {
+                    for( ; i <= width - 8; i+=8 )
+                        vst1q_u16(SUM + i, vaddq_u16(vld1q_u16(SUM + i), vld1q_u16(Sp + i)));
+                }
+#endif
+                for( ; i < width; i++ )
+                    SUM[i] += Sp[i];
+            }
+        }
+        else
+        {
+            CV_Assert( sumCount == ksize-1 );
+            src += ksize-1;
+        }
+
+        for( ; count--; src++ )
+        {
+            const ushort* Sp = (const ushort*)src[0];
+            const ushort* Sm = (const ushort*)src[1-ksize];
+            uchar* D = (uchar*)dst;
+            if( haveScale )
+            {
+                int i = 0;
+    #if CV_SSE2
+                if(haveSSE2)
+                {
+                    __m128i ds8 = _mm_set1_epi16((short)ds);
+                    __m128i dd8 = _mm_set1_epi16((short)dd);
+
+                    for( ; i <= width-16; i+=16 )
+                    {
+                        __m128i _sm0  = _mm_loadu_si128((const __m128i*)(Sm+i));
+                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+8));
+
+                        __m128i _s0  = _mm_add_epi16(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
+                        __m128i _s1  = _mm_add_epi16(_mm_loadu_si128((const __m128i*)(SUM+i+8)),
+                                                     _mm_loadu_si128((const __m128i*)(Sp+i+8)));
+                        __m128i _s2 = _mm_mulhi_epu16(_mm_adds_epu16(_s0, dd8), ds8);
+                        __m128i _s3 = _mm_mulhi_epu16(_mm_adds_epu16(_s1, dd8), ds8);
+                        _s0 = _mm_sub_epi16(_s0, _sm0);
+                        _s1 = _mm_sub_epi16(_s1, _sm1);
+                        _mm_storeu_si128((__m128i*)(D+i), _mm_packus_epi16(_s2, _s3));
+                        _mm_storeu_si128((__m128i*)(SUM+i), _s0);
+                        _mm_storeu_si128((__m128i*)(SUM+i+8), _s1);
+                    }
+                }
+    #endif
+                for( ; i < width; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = (uchar)((s0 + dd)*ds >> 16);
+                    SUM[i] = (ushort)(s0 - Sm[i]);
+                }
+            }
+            else
+            {
+                int i = 0;
+                for( ; i < width; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<uchar>(s0);
+                    SUM[i] = (ushort)(s0 - Sm[i]);
+                }
+            }
+            dst += dststep;
+        }
+    }
+
+    double scale;
+    int sumCount;
+    int divDelta;
+    int divScale;
+    std::vector<ushort> sum;
+};
+
 
 template<>
 struct ColumnSum<int, short> :
@@ -404,6 +632,8 @@ struct ColumnSum<int, short> :
 
         #if CV_SSE2
             bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+        #elif CV_NEON
+            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
         #endif
 
         if( width != (int)sum.size() )
@@ -411,6 +641,7 @@ struct ColumnSum<int, short> :
             sum.resize(width);
             sumCount = 0;
         }
+
         SUM = &sum[0];
         if( sumCount == 0 )
         {
@@ -430,8 +661,11 @@ struct ColumnSum<int, short> :
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width - 4; i+=4 )
-                    vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                if(haveNEON)
+                {
+                    for( ; i <= width - 4; i+=4 )
+                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                }
                 #endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
@@ -475,18 +709,21 @@ struct ColumnSum<int, short> :
                     }
                 }
                 #elif CV_NEON
-                float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                for( ; i <= width-8; i+=8 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                    int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
 
-                    int32x4_t v_s0d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                    int32x4_t v_s01d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
-                    vst1q_s16(D + i, vcombine_s16(vqmovn_s32(v_s0d), vqmovn_s32(v_s01d)));
+                        int32x4_t v_s0d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
+                        int32x4_t v_s01d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
+                        vst1q_s16(D + i, vcombine_s16(vqmovn_s32(v_s0d), vqmovn_s32(v_s01d)));
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                    }
                 }
                 #endif
                 for( ; i < width; i++ )
@@ -520,15 +757,18 @@ struct ColumnSum<int, short> :
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width-8; i+=8 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                    int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
 
-                    vst1q_s16(D + i, vcombine_s16(vqmovn_s32(v_s0), vqmovn_s32(v_s01)));
+                        vst1q_s16(D + i, vcombine_s16(vqmovn_s32(v_s0), vqmovn_s32(v_s01)));
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                    }
                 }
                 #endif
 
@@ -566,12 +806,14 @@ struct ColumnSum<int, ushort> :
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i;
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
+
         #if CV_SSE2
-                bool haveSSE2 =  checkHardwareSupport(CV_CPU_SSE2);
+            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+        #elif CV_NEON
+            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
         #endif
 
         if( width != (int)sum.size() )
@@ -579,6 +821,7 @@ struct ColumnSum<int, ushort> :
             sum.resize(width);
             sumCount = 0;
         }
+
         SUM = &sum[0];
         if( sumCount == 0 )
         {
@@ -586,20 +829,23 @@ struct ColumnSum<int, ushort> :
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
-                    for( ; i < width-4; i+=4 )
+                    for( ; i <= width-4; i+=4 )
                     {
                         __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
                         __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_add_epi32(_sum, _sp));
+                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width - 4; i+=4 )
-                    vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                if(haveNEON)
+                {
+                    for( ; i <= width - 4; i+=4 )
+                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                }
                 #endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
@@ -618,7 +864,7 @@ struct ColumnSum<int, ushort> :
             ushort* D = (ushort*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -642,18 +888,21 @@ struct ColumnSum<int, ushort> :
                     }
                 }
                 #elif CV_NEON
-                float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                for( ; i <= width-8; i+=8 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                    int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
 
-                    uint32x4_t v_s0d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                    uint32x4_t v_s01d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
-                    vst1q_u16(D + i, vcombine_u16(vqmovn_u32(v_s0d), vqmovn_u32(v_s01d)));
+                        uint32x4_t v_s0d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
+                        uint32x4_t v_s01d = cv_vrndq_u32_f32(vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
+                        vst1q_u16(D + i, vcombine_u16(vqmovn_u32(v_s0d), vqmovn_u32(v_s01d)));
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                    }
                 }
                 #endif
                 for( ; i < width; i++ )
@@ -665,8 +914,8 @@ struct ColumnSum<int, ushort> :
             }
             else
             {
-                i = 0;
-                #if  CV_SSE2
+                int i = 0;
+                #if CV_SSE2
                 if(haveSSE2)
                 {
                     const __m128i delta0 = _mm_set1_epi32(0x8000);
@@ -686,15 +935,18 @@ struct ColumnSum<int, ushort> :
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width-8; i+=8 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                    int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
 
-                    vst1q_u16(D + i, vcombine_u16(vqmovun_s32(v_s0), vqmovun_s32(v_s01)));
+                        vst1q_u16(D + i, vcombine_u16(vqmovun_s32(v_s0), vqmovun_s32(v_s01)));
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                    }
                 }
                 #endif
 
@@ -731,13 +983,14 @@ struct ColumnSum<int, int> :
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i;
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
 
         #if CV_SSE2
             bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+        #elif CV_NEON
+            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
         #endif
 
         if( width != (int)sum.size() )
@@ -745,6 +998,7 @@ struct ColumnSum<int, int> :
             sum.resize(width);
             sumCount = 0;
         }
+
         SUM = &sum[0];
         if( sumCount == 0 )
         {
@@ -752,7 +1006,7 @@ struct ColumnSum<int, int> :
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -764,8 +1018,11 @@ struct ColumnSum<int, int> :
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width - 4; i+=4 )
-                    vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                if(haveNEON)
+                {
+                    for( ; i <= width - 4; i+=4 )
+                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                }
                 #endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
@@ -784,7 +1041,7 @@ struct ColumnSum<int, int> :
             int* D = (int*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -803,15 +1060,18 @@ struct ColumnSum<int, int> :
                     }
                 }
                 #elif CV_NEON
-                float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                for( ; i <= width-4; i+=4 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
+                    for( ; i <= width-4; i+=4 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
 
-                    int32x4_t v_s0d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                    vst1q_s32(D + i, v_s0d);
+                        int32x4_t v_s0d = cv_vrndq_s32_f32(vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
+                        vst1q_s32(D + i, v_s0d);
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                    }
                 }
                 #endif
                 for( ; i < width; i++ )
@@ -823,7 +1083,7 @@ struct ColumnSum<int, int> :
             }
             else
             {
-                i = 0;
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
@@ -838,12 +1098,15 @@ struct ColumnSum<int, int> :
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width-4; i+=4 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                    for( ; i <= width-4; i+=4 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
 
-                    vst1q_s32(D + i, v_s0);
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(D + i, v_s0);
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                    }
                 }
                 #endif
 
@@ -881,13 +1144,14 @@ struct ColumnSum<int, float> :
 
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
-        int i;
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
 
         #if CV_SSE2
-        bool haveSSE2 =  checkHardwareSupport(CV_CPU_SSE2);
+            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+        #elif CV_NEON
+            bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
         #endif
 
         if( width != (int)sum.size() )
@@ -899,26 +1163,27 @@ struct ColumnSum<int, float> :
         SUM = &sum[0];
         if( sumCount == 0 )
         {
-            memset((void *)SUM, 0, sizeof(int) * width);
-
+            memset((void*)SUM, 0, width*sizeof(int));
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-                i = 0;
-
+                int i = 0;
                 #if CV_SSE2
                 if(haveSSE2)
                 {
-                    for( ; i < width-4; i+=4 )
+                    for( ; i <= width-4; i+=4 )
                     {
                         __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
                         __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_add_epi32(_sum, _sp));
+                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width - 4; i+=4 )
-                    vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                if(haveNEON)
+                {
+                    for( ; i <= width - 4; i+=4 )
+                        vst1q_s32(SUM + i, vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i)));
+                }
                 #endif
 
                 for( ; i < width; i++ )
@@ -938,7 +1203,7 @@ struct ColumnSum<int, float> :
             float* D = (float*)dst;
             if( haveScale )
             {
-                i = 0;
+                int i = 0;
 
                 #if CV_SSE2
                 if(haveSSE2)
@@ -956,17 +1221,20 @@ struct ColumnSum<int, float> :
                     }
                 }
                 #elif CV_NEON
-                float32x4_t v_scale = vdupq_n_f32((float)_scale);
-                for( ; i <= width-8; i+=8 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                    int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                    float32x4_t v_scale = vdupq_n_f32((float)_scale);
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
 
-                    vst1q_f32(D + i, vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
-                    vst1q_f32(D + i + 4, vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
+                        vst1q_f32(D + i, vmulq_f32(vcvtq_f32_s32(v_s0), v_scale));
+                        vst1q_f32(D + i + 4, vmulq_f32(vcvtq_f32_s32(v_s01), v_scale));
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                    }
                 }
                 #endif
 
@@ -979,7 +1247,7 @@ struct ColumnSum<int, float> :
             }
             else
             {
-                i = 0;
+                int i = 0;
 
                 #if CV_SSE2
                 if(haveSSE2)
@@ -995,16 +1263,19 @@ struct ColumnSum<int, float> :
                     }
                 }
                 #elif CV_NEON
-                for( ; i <= width-8; i+=8 )
+                if(haveNEON)
                 {
-                    int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
-                    int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
+                    for( ; i <= width-8; i+=8 )
+                    {
+                        int32x4_t v_s0 = vaddq_s32(vld1q_s32(SUM + i), vld1q_s32(Sp + i));
+                        int32x4_t v_s01 = vaddq_s32(vld1q_s32(SUM + i + 4), vld1q_s32(Sp + i + 4));
 
-                    vst1q_f32(D + i, vcvtq_f32_s32(v_s0));
-                    vst1q_f32(D + i + 4, vcvtq_f32_s32(v_s01));
+                        vst1q_f32(D + i, vcvtq_f32_s32(v_s0));
+                        vst1q_f32(D + i + 4, vcvtq_f32_s32(v_s01));
 
-                    vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
-                    vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                        vst1q_s32(SUM + i, vsubq_s32(v_s0, vld1q_s32(Sm + i)));
+                        vst1q_s32(SUM + i + 4, vsubq_s32(v_s01, vld1q_s32(Sm + i + 4)));
+                    }
                 }
                 #endif
 
@@ -1025,6 +1296,61 @@ struct ColumnSum<int, float> :
 };
 
 #ifdef HAVE_OPENCL
+
+static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth,
+                                   Size ksize, Point anchor, int borderType, bool normalize )
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    if (anchor.x < 0)
+        anchor.x = ksize.width / 2;
+    if (anchor.y < 0)
+        anchor.y = ksize.height / 2;
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0) &&
+         (anchor.x == 1) && (anchor.y == 1) &&
+         (ksize.width == 3) && (ksize.height == 3)) )
+        return false;
+
+    float alpha = 1.0f / (ksize.height * ksize.width);
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+
+    globalsize[0] = size.width / 16;
+    globalsize[1] = size.height / 2;
+
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s", borderMap[borderType], normalize ? "-D NORMALIZE" : "");
+
+    ocl::Kernel kernel("boxFilter3x3_8UC1_cols16_rows2", cv::ocl::imgproc::boxFilter3x3_oclsrc, build_opts);
+    if (kernel.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = kernel.set(idxArg, (int)dst.step);
+    idxArg = kernel.set(idxArg, (int)dst.rows);
+    idxArg = kernel.set(idxArg, (int)dst.cols);
+    if (normalize)
+        idxArg = kernel.set(idxArg, (float)alpha);
+
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+}
 
 #define DIVUP(total, grain) ((total + grain - 1) / (grain))
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
@@ -1219,6 +1545,8 @@ cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksi
 
     if( sdepth == CV_8U && ddepth == CV_32S )
         return makePtr<RowSum<uchar, int> >(ksize, anchor);
+    if( sdepth == CV_8U && ddepth == CV_16U )
+        return makePtr<RowSum<uchar, ushort> >(ksize, anchor);
     if( sdepth == CV_8U && ddepth == CV_64F )
         return makePtr<RowSum<uchar, double> >(ksize, anchor);
     if( sdepth == CV_16U && ddepth == CV_32S )
@@ -1255,6 +1583,8 @@ cv::Ptr<cv::BaseColumnFilter> cv::getColumnSumFilter(int sumType, int dstType, i
 
     if( ddepth == CV_8U && sdepth == CV_32S )
         return makePtr<ColumnSum<int, uchar> >(ksize, anchor, scale);
+    if( ddepth == CV_8U && sdepth == CV_16U )
+        return makePtr<ColumnSum<ushort, uchar> >(ksize, anchor, scale);
     if( ddepth == CV_8U && sdepth == CV_64F )
         return makePtr<ColumnSum<double, uchar> >(ksize, anchor, scale);
     if( ddepth == CV_16U && sdepth == CV_32S )
@@ -1289,7 +1619,10 @@ cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ks
 {
     int sdepth = CV_MAT_DEPTH(srcType);
     int cn = CV_MAT_CN(srcType), sumType = CV_64F;
-    if( sdepth <= CV_32S && (!normalize ||
+    if( sdepth == CV_8U && CV_MAT_DEPTH(dstType) == CV_8U &&
+        ksize.width*ksize.height <= 256 )
+        sumType = CV_16U;
+    else if( sdepth <= CV_32S && (!normalize ||
         ksize.width*ksize.height <= (sdepth == CV_8U ? (1<<23) :
             sdepth == CV_16U ? (1 << 15) : (1 << 16))) )
         sumType = CV_32S;
@@ -1303,13 +1636,114 @@ cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ks
            srcType, dstType, sumType, borderType );
 }
 
-#if defined(HAVE_IPP)
+#ifdef HAVE_OPENVX
+namespace cv
+{
+    static bool openvx_boxfilter(InputArray _src, OutputArray _dst, int ddepth,
+                                 Size ksize, Point anchor,
+                                 bool normalize, int borderType)
+    {
+        int stype = _src.type();
+        if (ddepth < 0)
+            ddepth = CV_8UC1;
+        if (stype != CV_8UC1 || (ddepth != CV_8U && ddepth != CV_16S) ||
+            (anchor.x >= 0 && anchor.x != ksize.width / 2) ||
+            (anchor.y >= 0 && anchor.y != ksize.height / 2) ||
+            ksize.width % 2 != 1 || ksize.height % 2 != 1 ||
+            ksize.width < 3 || ksize.height < 3)
+            return false;
+
+        Mat src = _src.getMat();
+        _dst.create(src.size(), CV_MAKETYPE(ddepth, 1));
+        Mat dst = _dst.getMat();
+
+        if (src.cols < ksize.width || src.rows < ksize.height)
+            return false;
+
+        if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
+            return false; //Process isolated borders only
+        vx_enum border;
+        switch (borderType & ~BORDER_ISOLATED)
+        {
+        case BORDER_CONSTANT:
+            border = VX_BORDER_CONSTANT;
+            break;
+        case BORDER_REPLICATE:
+            border = VX_BORDER_REPLICATE;
+            break;
+        default:
+            return false;
+        }
+
+        try
+        {
+            ivx::Context ctx = ovx::getOpenVXContext();
+            if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
+                return false;
+
+            Mat a;
+            if (dst.data != src.data)
+                a = src;
+            else
+                src.copyTo(a);
+
+            ivx::Image
+                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                                                  ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+                ib = ivx::Image::createFromHandle(ctx, ddepth == CV_16S ? VX_DF_IMAGE_S16 : VX_DF_IMAGE_U8,
+                                                  ivx::Image::createAddressing(dst.cols, dst.rows, ddepth == CV_16S ? 2 : 1, (vx_int32)(dst.step)), dst.data);
+
+            //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+            //since OpenVX standart says nothing about thread-safety for now
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(border, (vx_uint8)(0));
+            if (ddepth == CV_8U && ksize.width == 3 && ksize.height == 3 && normalize)
+            {
+                ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
+            }
+            else
+            {
+#if VX_VERSION <= VX_VERSION_1_0
+                if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
+                {
+                    ctx.setImmediateBorder(prevBorder);
+                    return false;
+                }
+#endif
+                Mat convData(ksize, CV_16SC1);
+                convData = normalize ? (1 << 15) / (ksize.width * ksize.height) : 1;
+                ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
+                cnv.copyFrom(convData);
+                if (normalize)
+                    cnv.setScale(1 << 15);
+                ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
+            }
+            ctx.setImmediateBorder(prevBorder);
+        }
+        catch (ivx::RuntimeError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+        catch (ivx::WrapperError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+
+        return true;
+    }
+}
+#endif
+
+// TODO: IPP performance regression
+#if defined(HAVE_IPP) && IPP_DISABLE_BLOCK
 namespace cv
 {
 static bool ipp_boxfilter( InputArray _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if( ddepth < 0 )
         ddepth = sdepth;
@@ -1348,7 +1782,7 @@ static bool ipp_boxfilter( InputArray _src, OutputArray _dst, int ddepth,
                     Ipp8u * buffer = ippsMalloc_8u(bufSize); \
                     ippType borderValue[4] = { 0, 0, 0, 0 }; \
                     ippBorderType = ippBorderType == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl; \
-                    IppStatus status = ippiFilterBoxBorder_##flavor(src.ptr<ippType>(), (int)src.step, dst.ptr<ippType>(), \
+                    IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiFilterBoxBorder_##flavor, src.ptr<ippType>(), (int)src.step, dst.ptr<ippType>(), \
                                                                     (int)dst.step, roiSize, maskSize, \
                                                                     (IppiBorderType)ippBorderType, borderValue, buffer); \
                     ippsFree(buffer); \
@@ -1402,7 +1836,17 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
+    CV_OCL_RUN(_dst.isUMat() &&
+               (borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT ||
+                borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101),
+               ocl_boxFilter3x3_8UC1(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
+
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
+
+    CV_OVX_RUN(true,
+               openvx_boxfilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
 
     Mat src = _src.getMat();
     int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
@@ -1422,9 +1866,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         return;
 #endif
 
-#ifdef HAVE_IPP
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
     int ippBorderType = borderType & ~BORDER_ISOLATED;
-#endif
     Point ocvAnchor, ippAnchor;
     ocvAnchor.x = anchor.x < 0 ? ksize.width / 2 : anchor.x;
     ocvAnchor.y = anchor.y < 0 ? ksize.height / 2 : anchor.y;
@@ -1435,13 +1878,16 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
              ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor &&
              _dst.cols() != ksize.width && _dst.rows() != ksize.height),
              ipp_boxfilter( _src,  _dst,  ddepth, ksize,  anchor, normalize,  borderType));
+#endif
 
+    Point ofs;
+    Size wsz(src.cols, src.rows);
+    if(!(borderType&BORDER_ISOLATED))
+        src.locateROI( wsz, ofs );
+    borderType = (borderType&~BORDER_ISOLATED);
 
     Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
                         ksize, anchor, normalize, borderType );
-    Point ofs;
-    Size wsz(src.cols, src.rows);
-    src.locateROI( wsz, ofs );
 
     f->apply( src, dst, wsz, ofs );
 }
@@ -1450,6 +1896,8 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 void cv::blur( InputArray src, OutputArray dst,
            Size ksize, Point anchor, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     boxFilter( src, dst, -1, ksize, anchor, true, borderType );
 }
 
@@ -1532,6 +1980,8 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
                        Size ksize, Point anchor,
                        bool normalize, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     int srcType = _src.type(), sdepth = CV_MAT_DEPTH(srcType), cn = CV_MAT_CN(srcType);
     Size size = _src.size();
 
@@ -1669,14 +2119,193 @@ cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
     return createSeparableLinearFilter( type, type, kx, ky, Point(-1,-1), 0, borderType );
 }
 
-#ifdef HAVE_IPP
 namespace cv
 {
+#ifdef HAVE_OPENCL
+
+static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize, int ddepth,
+                                  InputArray _kernelX, InputArray _kernelY, int borderType)
+{
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ( !(dev.isIntel() && (type == CV_8UC1) &&
+         (_src.offset() == 0) && (_src.step() % 4 == 0) &&
+         ((ksize.width == 5 && (_src.cols() % 4 == 0)) ||
+         (ksize.width == 3 && (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0)))) )
+        return false;
+
+    Mat kernelX = _kernelX.getMat().reshape(1, 1);
+    if (kernelX.cols % 2 != 1)
+        return false;
+    Mat kernelY = _kernelY.getMat().reshape(1, 1);
+    if (kernelY.cols % 2 != 1)
+        return false;
+
+    if (ddepth < 0)
+        ddepth = sdepth;
+
+    Size size = _src.size();
+    size_t globalsize[2] = { 0, 0 };
+    size_t localsize[2] = { 0, 0 };
+
+    if (ksize.width == 3)
+    {
+        globalsize[0] = size.width / 16;
+        globalsize[1] = size.height / 2;
+    }
+    else if (ksize.width == 5)
+    {
+        globalsize[0] = size.width / 4;
+        globalsize[1] = size.height / 1;
+    }
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
+    char build_opts[1024];
+    sprintf(build_opts, "-D %s %s%s", borderMap[borderType],
+            ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
+            ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
+
+    ocl::Kernel kernel;
+
+    if (ksize.width == 3)
+        kernel.create("gaussianBlur3x3_8UC1_cols16_rows2", cv::ocl::imgproc::gaussianBlur3x3_oclsrc, build_opts);
+    else if (ksize.width == 5)
+        kernel.create("gaussianBlur5x5_8UC1_cols4", cv::ocl::imgproc::gaussianBlur5x5_oclsrc, build_opts);
+
+    if (kernel.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, CV_MAKETYPE(ddepth, cn));
+    if (!(_dst.offset() == 0 && _dst.step() % 4 == 0))
+        return false;
+    UMat dst = _dst.getUMat();
+
+    int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+    idxArg = kernel.set(idxArg, (int)dst.step);
+    idxArg = kernel.set(idxArg, (int)dst.rows);
+    idxArg = kernel.set(idxArg, (int)dst.cols);
+
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+}
+
+#endif
+
+#ifdef HAVE_OPENVX
+
+static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
+                                double sigma1, double sigma2, int borderType)
+{
+    int stype = _src.type();
+    if (sigma2 <= 0)
+        sigma2 = sigma1;
+    // automatic detection of kernel size from sigma
+    if (ksize.width <= 0 && sigma1 > 0)
+        ksize.width = cvRound(sigma1*6 + 1) | 1;
+    if (ksize.height <= 0 && sigma2 > 0)
+        ksize.height = cvRound(sigma2*6 + 1) | 1;
+
+    if (stype != CV_8UC1 ||
+        ksize.width < 3 || ksize.height < 3 ||
+        ksize.width % 2 != 1 || ksize.height % 2 != 1)
+        return false;
+
+    sigma1 = std::max(sigma1, 0.);
+    sigma2 = std::max(sigma2, 0.);
+
+    Mat src = _src.getMat();
+    Mat dst = _dst.getMat();
+
+    if (src.cols < ksize.width || src.rows < ksize.height)
+        return false;
+
+    if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
+        return false; //Process isolated borders only
+    vx_enum border;
+    switch (borderType & ~BORDER_ISOLATED)
+    {
+    case BORDER_CONSTANT:
+        border = VX_BORDER_CONSTANT;
+        break;
+    case BORDER_REPLICATE:
+        border = VX_BORDER_REPLICATE;
+        break;
+    default:
+        return false;
+    }
+
+    try
+    {
+        ivx::Context ctx = ovx::getOpenVXContext();
+        if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
+            return false;
+
+        Mat a;
+        if (dst.data != src.data)
+            a = src;
+        else
+            src.copyTo(a);
+
+        ivx::Image
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+        //since OpenVX standart says nothing about thread-safety for now
+        ivx::border_t prevBorder = ctx.immediateBorder();
+        ctx.setImmediateBorder(border, (vx_uint8)(0));
+        if (ksize.width == 3 && ksize.height == 3 && (sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) && (sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON))
+        {
+            ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
+        }
+        else
+        {
+#if VX_VERSION <= VX_VERSION_1_0
+            if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(a.cols) <= ctx.convolutionMaxDimension() || (vx_size)(a.rows) <= ctx.convolutionMaxDimension()))
+            {
+                ctx.setImmediateBorder(prevBorder);
+                return false;
+            }
+#endif
+            Mat convData;
+            cv::Mat(cv::getGaussianKernel(ksize.height, sigma2)*cv::getGaussianKernel(ksize.width, sigma1).t()).convertTo(convData, CV_16SC1, (1 << 15));
+            ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
+            cnv.copyFrom(convData);
+            cnv.setScale(1 << 15);
+            ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
+        }
+        ctx.setImmediateBorder(prevBorder);
+    }
+    catch (ivx::RuntimeError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    catch (ivx::WrapperError & e)
+    {
+        VX_DbgThrow(e.what());
+    }
+    return true;
+}
+
+#endif
+
+#ifdef HAVE_IPP
+
 static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 810
+    if ((borderType & BORDER_ISOLATED) == 0 && _src.isSubmatrix())
+        return false;
+
     int type = _src.type();
     Size size = _src.size();
 
@@ -1711,19 +2340,18 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #define IPP_FILTER_GAUSS_C1(ippfavor) \
                     { \
                         Ipp##ippfavor borderValues = 0; \
-                        status = ippiFilterGaussianBorder_##ippfavor##_C1R(src.ptr<Ipp##ippfavor>(), (int)src.step, \
+                        status = CV_INSTRUMENT_FUN_IPP(ippiFilterGaussianBorder_##ippfavor##_C1R, src.ptr<Ipp##ippfavor>(), (int)src.step, \
                                 dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
                     }
 
 #define IPP_FILTER_GAUSS_CN(ippfavor, ippcn) \
                     { \
                         Ipp##ippfavor borderValues[] = { 0, 0, 0 }; \
-                        status = ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R(src.ptr<Ipp##ippfavor>(), (int)src.step, \
+                        status = CV_INSTRUMENT_FUN_IPP(ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R, src.ptr<Ipp##ippfavor>(), (int)src.step, \
                                 dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
                     }
 
                     IppStatus status = ippStsErr;
-#if !HAVE_ICV
 #if IPP_VERSION_X100 > 900 // Buffer overflow may happen in IPP 9.0.0 and less
                     if (type == CV_8UC1)
                         IPP_FILTER_GAUSS_C1(8u)
@@ -1741,9 +2369,7 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                         IPP_FILTER_GAUSS_CN(16s, 3)
                     else if (type == CV_32FC3)
                         IPP_FILTER_GAUSS_CN(32f, 3)
-                    else
-#endif
-                    if (type == CV_32FC1)
+                    else if (type == CV_32FC1)
                         IPP_FILTER_GAUSS_C1(32f)
 
                     if(status >= 0)
@@ -1760,14 +2386,16 @@ static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 #endif
     return false;
 }
-}
 #endif
+}
 
 
 void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type();
     Size size = _src.size();
     _dst.create( size, type );
@@ -1786,6 +2414,9 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
     }
 
+    CV_OVX_RUN(true,
+               openvx_gaussianBlur(_src, _dst, ksize, sigma1, sigma2, borderType))
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
     Mat src = _src.getMat();
     Mat dst = _dst.getMat();
@@ -1793,10 +2424,17 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
 #endif
 
-    CV_IPP_RUN(true, ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
+    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 &&
+               ((ksize.width == 3 && ksize.height == 3) ||
+               (ksize.width == 5 && ksize.height == 5)) &&
+               (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
+               ocl_GaussianBlur_8UC1(_src, _dst, ksize, CV_MAT_DEPTH(type), kx, ky, borderType));
+
     sepFilter2D(_src, _dst, CV_MAT_DEPTH(type), kx, ky, Point(-1,-1), 0, borderType );
 }
 
@@ -2706,11 +3344,96 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 
 }
 
+#ifdef HAVE_OPENVX
+namespace cv
+{
+    static bool openvx_medianFilter(InputArray _src, OutputArray _dst, int ksize)
+    {
+        if (_src.type() != CV_8UC1 || _dst.type() != CV_8U
+#ifndef VX_VERSION_1_1
+            || ksize != 3
+#endif
+            )
+            return false;
+
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+
+        try
+        {
+            ivx::Context ctx = ovx::getOpenVXContext();
+#ifdef VX_VERSION_1_1
+            if ((vx_size)ksize > ctx.nonlinearMaxDimension())
+                return false;
+#endif
+
+            Mat a;
+            if (dst.data != src.data)
+                a = src;
+            else
+                src.copyTo(a);
+
+            ivx::Image
+                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
+                ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
+
+            //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
+            //since OpenVX standart says nothing about thread-safety for now
+            ivx::border_t prevBorder = ctx.immediateBorder();
+            ctx.setImmediateBorder(VX_BORDER_REPLICATE);
+#ifdef VX_VERSION_1_1
+            if (ksize == 3)
+#endif
+            {
+                ivx::IVX_CHECK_STATUS(vxuMedian3x3(ctx, ia, ib));
+            }
+#ifdef VX_VERSION_1_1
+            else
+            {
+                ivx::Matrix mtx;
+                if(ksize == 5)
+                    mtx = ivx::Matrix::createFromPattern(ctx, VX_PATTERN_BOX, ksize, ksize);
+                else
+                {
+                    vx_size supportedSize;
+                    ivx::IVX_CHECK_STATUS(vxQueryContext(ctx, VX_CONTEXT_NONLINEAR_MAX_DIMENSION, &supportedSize, sizeof(supportedSize)));
+                    if ((vx_size)ksize > supportedSize)
+                    {
+                        ctx.setImmediateBorder(prevBorder);
+                        return false;
+                    }
+                    Mat mask(ksize, ksize, CV_8UC1, Scalar(255));
+                    mtx = ivx::Matrix::create(ctx, VX_TYPE_UINT8, ksize, ksize);
+                    mtx.copyFrom(mask);
+                }
+                ivx::IVX_CHECK_STATUS(vxuNonLinearFilter(ctx, VX_NONLINEAR_FILTER_MEDIAN, ia, mtx, ib));
+            }
+#endif
+            ctx.setImmediateBorder(prevBorder);
+        }
+        catch (ivx::RuntimeError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+        catch (ivx::WrapperError & e)
+        {
+            VX_DbgThrow(e.what());
+        }
+
+        return true;
+    }
+}
+#endif
+
 #ifdef HAVE_IPP
 namespace cv
 {
 static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
 #if IPP_VERSION_X100 >= 810
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
@@ -2723,7 +3446,7 @@ static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
         ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
         { \
             Ipp8u * buffer = ippsMalloc_8u(bufSize); \
-            IppStatus status = ippiFilterMedianBorder_##flavor(src.ptr<ippType>(), (int)src.step, \
+            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_##flavor, src.ptr<ippType>(), (int)src.step, \
             dst.ptr<ippType>(), (int)dst.step, dstRoiSize, maskSize, \
             ippBorderRepl, (ippType)0, buffer); \
             ippsFree(buffer); \
@@ -2767,9 +3490,11 @@ static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
 
 void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( (ksize % 2 == 1) && (_src0.dims() <= 2 ));
 
-    if( ksize <= 1 )
+    if( ksize <= 1 || _src0.empty() )
     {
         _src0.copyTo(_dst);
         return;
@@ -2782,6 +3507,9 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
 
+    CV_OVX_RUN(true,
+               openvx_medianFilter(_src0, _dst, ksize))
+
     CV_IPP_RUN(IPP_VERSION_X100 >= 810 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -2791,7 +3519,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
     bool useSortNet = ksize == 3 || (ksize == 5
 #if !(CV_SSE2 || CV_NEON)
-            && src0.depth() > CV_8U
+            && ( src0.depth() > CV_8U || src0.channels() == 2 || src0.channels() > 4 )
 #endif
         );
 
@@ -2960,16 +3688,16 @@ public:
                             _g = _mm_mul_ps(_g, _w);
                             _r = _mm_mul_ps(_r, _w);
 
-                             _w = _mm_hadd_ps(_w, _b);
-                             _g = _mm_hadd_ps(_g, _r);
+                            _w = _mm_hadd_ps(_w, _b);
+                            _g = _mm_hadd_ps(_g, _r);
 
-                             _w = _mm_hadd_ps(_w, _g);
-                             _mm_store_ps(bufSum, _w);
+                            _w = _mm_hadd_ps(_w, _g);
+                            _mm_store_ps(bufSum, _w);
 
-                             wsum  += bufSum[0];
-                             sum_b += bufSum[1];
-                             sum_g += bufSum[2];
-                             sum_r += bufSum[3];
+                            wsum  += bufSum[0];
+                            sum_b += bufSum[1];
+                            sum_g += bufSum[2];
+                            sum_r += bufSum[3];
                          }
                     }
                     #endif
@@ -3000,7 +3728,7 @@ private:
     float *space_weight, *color_weight;
 };
 
-#if defined (HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_DISABLE_BLOCK
+#if defined (HAVE_IPP) && IPP_DISABLE_BLOCK
 class IPPBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
@@ -3236,11 +3964,15 @@ public:
     {
         int i, j, k;
         Size size = dest->size();
-        #if CV_SSE3
+        #if CV_SSE3 || CV_NEON
         int CV_DECL_ALIGNED(16) idxBuf[4];
         float CV_DECL_ALIGNED(16) bufSum32[4];
         static const unsigned int CV_DECL_ALIGNED(16) bufSignMask[] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
+        #endif
+        #if CV_SSE3
         bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+        #elif CV_NEON
+        bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
         #endif
 
         for( i = range.start; i < range.end; i++ )
@@ -3282,14 +4014,55 @@ public:
                             __m128 _w = _mm_mul_ps(_sw, _mm_add_ps(_explut, _mm_mul_ps(_alpha, _mm_sub_ps(_explut1, _explut))));
                             _val = _mm_mul_ps(_w, _val);
 
-                             _sw = _mm_hadd_ps(_w, _val);
-                             _sw = _mm_hadd_ps(_sw, _sw);
-                             psum = _mm_add_ps(_sw, psum);
+                            _sw = _mm_hadd_ps(_w, _val);
+                            _sw = _mm_hadd_ps(_sw, _sw);
+                            psum = _mm_add_ps(_sw, psum);
                         }
                         _mm_storel_pi((__m64*)bufSum32, psum);
 
                         sum = bufSum32[1];
                         wsum = bufSum32[0];
+                    }
+                    #elif CV_NEON
+                    if( haveNEON )
+                    {
+                        float32x2_t psum = vdup_n_f32(0.0f);
+                        const volatile float32x4_t _val0 = vdupq_n_f32(sptr[j]);
+                        const float32x4_t _scale_index = vdupq_n_f32(scale_index);
+                        const uint32x4_t _signMask = vld1q_u32(bufSignMask);
+
+                        for( ; k <= maxk - 4 ; k += 4 )
+                        {
+                            float32x4_t _sw  = vld1q_f32(space_weight + k);
+                            float CV_DECL_ALIGNED(16) _data[] = {sptr[j + space_ofs[k]],   sptr[j + space_ofs[k+1]],
+                                                                 sptr[j + space_ofs[k+2]], sptr[j + space_ofs[k+3]],};
+                            float32x4_t _val = vld1q_f32(_data);
+                            float32x4_t _alpha = vsubq_f32(_val, _val0);
+                            _alpha = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(_alpha), _signMask));
+                            _alpha = vmulq_f32(_alpha, _scale_index);
+                            int32x4_t _idx = vcvtq_s32_f32(_alpha);
+                            vst1q_s32(idxBuf, _idx);
+                            _alpha = vsubq_f32(_alpha, vcvtq_f32_s32(_idx));
+
+                            bufSum32[0] = expLUT[idxBuf[0]];
+                            bufSum32[1] = expLUT[idxBuf[1]];
+                            bufSum32[2] = expLUT[idxBuf[2]];
+                            bufSum32[3] = expLUT[idxBuf[3]];
+                            float32x4_t _explut = vld1q_f32(bufSum32);
+                            bufSum32[0] = expLUT[idxBuf[0]+1];
+                            bufSum32[1] = expLUT[idxBuf[1]+1];
+                            bufSum32[2] = expLUT[idxBuf[2]+1];
+                            bufSum32[3] = expLUT[idxBuf[3]+1];
+                            float32x4_t _explut1 = vld1q_f32(bufSum32);
+
+                            float32x4_t _w = vmulq_f32(_sw, vaddq_f32(_explut, vmulq_f32(_alpha, vsubq_f32(_explut1, _explut))));
+                            _val = vmulq_f32(_w, _val);
+
+                            float32x2_t _wval = vpadd_f32(vpadd_f32(vget_low_f32(_w),vget_high_f32(_w)), vpadd_f32(vget_low_f32(_val), vget_high_f32(_val)));
+                            psum = vadd_f32(_wval, psum);
+                        }
+                        sum = vget_lane_f32(psum, 1);
+                        wsum = vget_lane_f32(psum, 0);
                     }
                     #endif
 
@@ -3365,6 +4138,72 @@ public:
                              sum = _mm_add_ps(sum, _w);
                         }
                         _mm_store_ps(bufSum32, sum);
+                        wsum  = bufSum32[0];
+                        sum_b = bufSum32[1];
+                        sum_g = bufSum32[2];
+                        sum_r = bufSum32[3];
+                    }
+                    #elif CV_NEON
+                    if( haveNEON )
+                    {
+                        float32x4_t sum = vdupq_n_f32(0.0f);
+                        const float32x4_t _b0 = vdupq_n_f32(b0);
+                        const float32x4_t _g0 = vdupq_n_f32(g0);
+                        const float32x4_t _r0 = vdupq_n_f32(r0);
+                        const float32x4_t _scale_index = vdupq_n_f32(scale_index);
+                        const uint32x4_t _signMask = vld1q_u32(bufSignMask);
+
+                        for( ; k <= maxk-4; k += 4 )
+                        {
+                            float32x4_t _sw = vld1q_f32(space_weight + k);
+
+                            const float* const sptr_k0 = sptr + j + space_ofs[k];
+                            const float* const sptr_k1 = sptr + j + space_ofs[k+1];
+                            const float* const sptr_k2 = sptr + j + space_ofs[k+2];
+                            const float* const sptr_k3 = sptr + j + space_ofs[k+3];
+
+                            float32x4_t _v0 = vld1q_f32(sptr_k0);
+                            float32x4_t _v1 = vld1q_f32(sptr_k1);
+                            float32x4_t _v2 = vld1q_f32(sptr_k2);
+                            float32x4_t _v3 = vld1q_f32(sptr_k3);
+
+                            float32x4x2_t v01 = vtrnq_f32(_v0, _v1);
+                            float32x4x2_t v23 = vtrnq_f32(_v2, _v3);
+                            float32x4_t _b = vcombine_f32(vget_low_f32(v01.val[0]), vget_low_f32(v23.val[0]));
+                            float32x4_t _g = vcombine_f32(vget_low_f32(v01.val[1]), vget_low_f32(v23.val[1]));
+                            float32x4_t _r = vcombine_f32(vget_high_f32(v01.val[0]), vget_high_f32(v23.val[0]));
+
+                            float32x4_t _bt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_b, _b0)), _signMask));
+                            float32x4_t _gt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_g, _g0)), _signMask));
+                            float32x4_t _rt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_r, _r0)), _signMask));
+                            float32x4_t _alpha = vmulq_f32(_scale_index, vaddq_f32(_bt, vaddq_f32(_gt, _rt)));
+
+                            int32x4_t _idx = vcvtq_s32_f32(_alpha);
+                            vst1q_s32((int*)idxBuf, _idx);
+                            bufSum32[0] = expLUT[idxBuf[0]];
+                            bufSum32[1] = expLUT[idxBuf[1]];
+                            bufSum32[2] = expLUT[idxBuf[2]];
+                            bufSum32[3] = expLUT[idxBuf[3]];
+                            float32x4_t _explut = vld1q_f32(bufSum32);
+                            bufSum32[0] = expLUT[idxBuf[0]+1];
+                            bufSum32[1] = expLUT[idxBuf[1]+1];
+                            bufSum32[2] = expLUT[idxBuf[2]+1];
+                            bufSum32[3] = expLUT[idxBuf[3]+1];
+                            float32x4_t _explut1 = vld1q_f32(bufSum32);
+
+                            float32x4_t _w = vmulq_f32(_sw, vaddq_f32(_explut, vmulq_f32(_alpha, vsubq_f32(_explut1, _explut))));
+
+                            _b = vmulq_f32(_b, _w);
+                            _g = vmulq_f32(_g, _w);
+                            _r = vmulq_f32(_r, _w);
+
+                            float32x2_t _wb = vpadd_f32(vpadd_f32(vget_low_f32(_w),vget_high_f32(_w)), vpadd_f32(vget_low_f32(_b), vget_high_f32(_b)));
+                            float32x2_t _gr = vpadd_f32(vpadd_f32(vget_low_f32(_g),vget_high_f32(_g)), vpadd_f32(vget_low_f32(_r), vget_high_f32(_r)));
+
+                            _w = vcombine_f32(_wb, _gr);
+                            sum = vaddq_f32(sum, _w);
+                        }
+                        vst1q_f32(bufSum32, sum);
                         wsum  = bufSum32[0];
                         sum_b = bufSum32[1];
                         sum_g = bufSum32[2];
@@ -3497,6 +4336,8 @@ void cv::bilateralFilter( InputArray _src, OutputArray _dst, int d,
                       double sigmaColor, double sigmaSpace,
                       int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     _dst.create( _src.size(), _src.type() );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),

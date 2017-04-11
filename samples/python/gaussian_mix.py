@@ -50,7 +50,7 @@ if __name__ == '__main__':
         em.setCovarianceMatrixType(cv2.ml.EM_COV_MAT_GENERIC)
         em.trainEM(points)
         means = em.getMeans()
-        covs = em.getCovs()  # Known bug: https://github.com/Itseez/opencv/pull/4232
+        covs = em.getCovs()  # Known bug: https://github.com/opencv/opencv/pull/4232
         found_distrs = zip(means, covs)
         print('ready!\n')
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
             draw_gaussain(img, m, cov, (0, 0, 255))
 
         cv2.imshow('gaussian mixture', img)
-        ch = 0xFF & cv2.waitKey(0)
+        ch = cv2.waitKey(0)
         if ch == 27:
             break
     cv2.destroyAllWindows()

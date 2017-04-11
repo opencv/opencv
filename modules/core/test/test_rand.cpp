@@ -365,3 +365,56 @@ TEST(Core_RNG_MT19937, regression)
         ASSERT_EQ(expected[i], actual[i]);
     }
 }
+
+
+TEST(Core_Rand, Regression_Stack_Corruption)
+{
+    int bufsz = 128; //enough for 14 doubles
+    AutoBuffer<uchar> buffer(bufsz);
+    size_t offset = 0;
+    cv::Mat_<cv::Point2d> x(2, 3, (cv::Point2d*)(buffer+offset)); offset += x.total()*x.elemSize();
+    double& param1 = *(double*)(buffer+offset); offset += sizeof(double);
+    double& param2 = *(double*)(buffer+offset); offset += sizeof(double);
+    param1 = -9; param2 = 2;
+
+    cv::theRNG().fill(x, cv::RNG::NORMAL, param1, param2);
+
+    ASSERT_EQ(param1, -9);
+    ASSERT_EQ(param2,  2);
+}
+
+namespace {
+
+class RandRowFillParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    RandRowFillParallelLoopBody(Mat& dst) : dst_(dst) {}
+    ~RandRowFillParallelLoopBody() {}
+    void operator()(const cv::Range& r) const
+    {
+        cv::RNG rng = cv::theRNG(); // copy state
+        for (int y = r.start; y < r.end; y++)
+        {
+            cv::theRNG() = cv::RNG(rng.state + y); // seed is based on processed row
+            cv::randu(dst_.row(y), Scalar(-100), Scalar(100));
+        }
+        // theRNG() state is changed here (but state collision has low probability, so we don't check this)
+    }
+protected:
+    Mat& dst_;
+};
+
+TEST(Core_Rand, parallel_for_stable_results)
+{
+    cv::RNG rng = cv::theRNG(); // save rng state
+    Mat dst1(1000, 100, CV_8SC1);
+    parallel_for_(cv::Range(0, dst1.rows), RandRowFillParallelLoopBody(dst1));
+
+    cv::theRNG() = rng; // restore rng state
+    Mat dst2(1000, 100, CV_8SC1);
+    parallel_for_(cv::Range(0, dst2.rows), RandRowFillParallelLoopBody(dst2));
+
+    ASSERT_EQ(0, countNonZero(dst1 != dst2));
+}
+
+} // namespace

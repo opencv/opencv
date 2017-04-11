@@ -1,5 +1,11 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include "calibPipeline.hpp"
+
 #include <opencv2/highgui.hpp>
+
 #include <stdexcept>
 
 using namespace calib;
@@ -62,7 +68,7 @@ PipelineExitStatus CalibPipeline::start(std::vector<cv::Ptr<FrameProcessor> > pr
         for (std::vector<cv::Ptr<FrameProcessor> >::iterator it = processors.begin(); it != processors.end(); ++it)
             processedFrame = (*it)->processFrame(processedFrame);
         cv::imshow(mainWindowName, processedFrame);
-        int key = cv::waitKey(CAP_DELAY);
+        char key = (char)cv::waitKey(CAP_DELAY);
 
         if(key == 27) // esc
             return Finished;

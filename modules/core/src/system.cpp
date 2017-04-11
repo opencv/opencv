@@ -198,7 +198,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 
 #include <stdarg.h>
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__
+#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -237,24 +237,81 @@ void Exception::formatMessage()
         msg = format("%s:%d: error: (%d) %s\n", file.c_str(), line, code, err.c_str());
 }
 
+static const char* g_hwFeatureNames[CV_HARDWARE_MAX_FEATURE] = { NULL };
+
+static const char* getHWFeatureName(int id)
+{
+    return (id < CV_HARDWARE_MAX_FEATURE) ? g_hwFeatureNames[id] : NULL;
+}
+static const char* getHWFeatureNameSafe(int id)
+{
+    const char* name = getHWFeatureName(id);
+    return name ? name : "Unknown feature";
+}
+
 struct HWFeatures
 {
     enum { MAX_FEATURE = CV_HARDWARE_MAX_FEATURE };
 
-    HWFeatures(void)
+    HWFeatures(bool run_initialize = false)
     {
-        memset( have, 0, sizeof(have) );
-        x86_family = 0;
+        memset( have, 0, sizeof(have[0]) * MAX_FEATURE );
+        if (run_initialize)
+            initialize();
     }
 
-    static HWFeatures initialize(void)
+    static void initializeNames()
     {
-        HWFeatures f;
+        for (int i = 0; i < CV_HARDWARE_MAX_FEATURE; i++)
+        {
+            g_hwFeatureNames[i] = 0;
+        }
+        g_hwFeatureNames[CPU_MMX] = "MMX";
+        g_hwFeatureNames[CPU_SSE] = "SSE";
+        g_hwFeatureNames[CPU_SSE2] = "SSE2";
+        g_hwFeatureNames[CPU_SSE3] = "SSE3";
+        g_hwFeatureNames[CPU_SSSE3] = "SSSE3";
+        g_hwFeatureNames[CPU_SSE4_1] = "SSE4.1";
+        g_hwFeatureNames[CPU_SSE4_2] = "SSE4.2";
+        g_hwFeatureNames[CPU_POPCNT] = "POPCNT";
+        g_hwFeatureNames[CPU_FP16] = "FP16";
+        g_hwFeatureNames[CPU_AVX] = "AVX";
+        g_hwFeatureNames[CPU_AVX2] = "AVX2";
+        g_hwFeatureNames[CPU_FMA3] = "FMA3";
+
+        g_hwFeatureNames[CPU_AVX_512F] = "AVX512F";
+        g_hwFeatureNames[CPU_AVX_512BW] = "AVX512BW";
+        g_hwFeatureNames[CPU_AVX_512CD] = "AVX512CD";
+        g_hwFeatureNames[CPU_AVX_512DQ] = "AVX512DQ";
+        g_hwFeatureNames[CPU_AVX_512ER] = "AVX512ER";
+        g_hwFeatureNames[CPU_AVX_512IFMA512] = "AVX512IFMA";
+        g_hwFeatureNames[CPU_AVX_512PF] = "AVX512PF";
+        g_hwFeatureNames[CPU_AVX_512VBMI] = "AVX512VBMI";
+        g_hwFeatureNames[CPU_AVX_512VL] = "AVX512VL";
+
+        g_hwFeatureNames[CPU_NEON] = "NEON";
+    }
+
+    void initialize(void)
+    {
+#ifndef WINRT
+        if (getenv("OPENCV_DUMP_CONFIG"))
+        {
+            fprintf(stderr, "\nOpenCV build configuration is:\n%s\n",
+                cv::getBuildInformation().c_str());
+        }
+#endif
+
+        initializeNames();
+
         int cpuid_data[4] = { 0, 0, 0, 0 };
+        int cpuid_data_ex[4] = { 0, 0, 0, 0 };
 
     #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
+    #define OPENCV_HAVE_X86_CPUID 1
         __cpuid(cpuid_data, 1);
     #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
+    #define OPENCV_HAVE_X86_CPUID 1
         #ifdef __x86_64__
         asm __volatile__
         (
@@ -278,32 +335,36 @@ struct HWFeatures
         #endif
     #endif
 
-        f.x86_family = (cpuid_data[0] >> 8) & 15;
-        if( f.x86_family >= 6 )
+    #ifdef OPENCV_HAVE_X86_CPUID
+        int x86_family = (cpuid_data[0] >> 8) & 15;
+        if( x86_family >= 6 )
         {
-            f.have[CV_CPU_MMX]    = (cpuid_data[3] & (1 << 23)) != 0;
-            f.have[CV_CPU_SSE]    = (cpuid_data[3] & (1<<25)) != 0;
-            f.have[CV_CPU_SSE2]   = (cpuid_data[3] & (1<<26)) != 0;
-            f.have[CV_CPU_SSE3]   = (cpuid_data[2] & (1<<0)) != 0;
-            f.have[CV_CPU_SSSE3]  = (cpuid_data[2] & (1<<9)) != 0;
-            f.have[CV_CPU_FMA3]  = (cpuid_data[2] & (1<<12)) != 0;
-            f.have[CV_CPU_SSE4_1] = (cpuid_data[2] & (1<<19)) != 0;
-            f.have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
-            f.have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
-            f.have[CV_CPU_AVX]    = (((cpuid_data[2] & (1<<28)) != 0)&&((cpuid_data[2] & (1<<27)) != 0));//OS uses XSAVE_XRSTORE and CPU support AVX
+            have[CV_CPU_MMX]    = (cpuid_data[3] & (1<<23)) != 0;
+            have[CV_CPU_SSE]    = (cpuid_data[3] & (1<<25)) != 0;
+            have[CV_CPU_SSE2]   = (cpuid_data[3] & (1<<26)) != 0;
+            have[CV_CPU_SSE3]   = (cpuid_data[2] & (1<<0)) != 0;
+            have[CV_CPU_SSSE3]  = (cpuid_data[2] & (1<<9)) != 0;
+            have[CV_CPU_FMA3]   = (cpuid_data[2] & (1<<12)) != 0;
+            have[CV_CPU_SSE4_1] = (cpuid_data[2] & (1<<19)) != 0;
+            have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
+            have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
+            have[CV_CPU_AVX]    = (cpuid_data[2] & (1<<28)) != 0;
+            have[CV_CPU_FP16]   = (cpuid_data[2] & (1<<29)) != 0;
 
             // make the second call to the cpuid command in order to get
             // information about extended features like AVX2
         #if defined _MSC_VER && (defined _M_IX86 || defined _M_X64)
-            __cpuidex(cpuid_data, 7, 0);
+        #define OPENCV_HAVE_X86_CPUID_EX 1
+            __cpuidex(cpuid_data_ex, 7, 0);
         #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
+        #define OPENCV_HAVE_X86_CPUID_EX 1
             #ifdef __x86_64__
             asm __volatile__
             (
              "movl $7, %%eax\n\t"
              "movl $0, %%ecx\n\t"
              "cpuid\n\t"
-             :[eax]"=a"(cpuid_data[0]),[ebx]"=b"(cpuid_data[1]),[ecx]"=c"(cpuid_data[2]),[edx]"=d"(cpuid_data[3])
+             :[eax]"=a"(cpuid_data_ex[0]),[ebx]"=b"(cpuid_data_ex[1]),[ecx]"=c"(cpuid_data_ex[2]),[edx]"=d"(cpuid_data_ex[3])
              :
              : "cc"
             );
@@ -316,29 +377,77 @@ struct HWFeatures
              "cpuid\n\t"
              "movl %%ebx, %0\n\t"
              "popl %%ebx\n\t"
-             : "=r"(cpuid_data[1]), "=c"(cpuid_data[2])
+             : "=r"(cpuid_data_ex[1]), "=c"(cpuid_data_ex[2])
              :
              : "cc"
             );
             #endif
         #endif
-            f.have[CV_CPU_AVX2]   = (cpuid_data[1] & (1<<5)) != 0;
 
-            f.have[CV_CPU_AVX_512F]       = (cpuid_data[1] & (1<<16)) != 0;
-            f.have[CV_CPU_AVX_512DQ]      = (cpuid_data[1] & (1<<17)) != 0;
-            f.have[CV_CPU_AVX_512IFMA512] = (cpuid_data[1] & (1<<21)) != 0;
-            f.have[CV_CPU_AVX_512PF]      = (cpuid_data[1] & (1<<26)) != 0;
-            f.have[CV_CPU_AVX_512ER]      = (cpuid_data[1] & (1<<27)) != 0;
-            f.have[CV_CPU_AVX_512CD]      = (cpuid_data[1] & (1<<28)) != 0;
-            f.have[CV_CPU_AVX_512BW]      = (cpuid_data[1] & (1<<30)) != 0;
-            f.have[CV_CPU_AVX_512VL]      = (cpuid_data[1] & (1<<31)) != 0;
-            f.have[CV_CPU_AVX_512VBMI]    = (cpuid_data[2] &  (1<<1)) != 0;
+        #ifdef OPENCV_HAVE_X86_CPUID_EX
+            have[CV_CPU_AVX2]   = (cpuid_data_ex[1] & (1<<5)) != 0;
+
+            have[CV_CPU_AVX_512F]       = (cpuid_data_ex[1] & (1<<16)) != 0;
+            have[CV_CPU_AVX_512DQ]      = (cpuid_data_ex[1] & (1<<17)) != 0;
+            have[CV_CPU_AVX_512IFMA512] = (cpuid_data_ex[1] & (1<<21)) != 0;
+            have[CV_CPU_AVX_512PF]      = (cpuid_data_ex[1] & (1<<26)) != 0;
+            have[CV_CPU_AVX_512ER]      = (cpuid_data_ex[1] & (1<<27)) != 0;
+            have[CV_CPU_AVX_512CD]      = (cpuid_data_ex[1] & (1<<28)) != 0;
+            have[CV_CPU_AVX_512BW]      = (cpuid_data_ex[1] & (1<<30)) != 0;
+            have[CV_CPU_AVX_512VL]      = (cpuid_data_ex[1] & (1<<31)) != 0;
+            have[CV_CPU_AVX_512VBMI]    = (cpuid_data_ex[2] & (1<<1)) != 0;
+        #else
+            CV_UNUSED(cpuid_data_ex);
+        #endif
+
+            bool have_AVX_OS_support = true;
+            bool have_AVX512_OS_support = true;
+            if (!(cpuid_data[2] & (1<<27)))
+                have_AVX_OS_support = false; // OS uses XSAVE_XRSTORE and CPU support AVX
+            else
+            {
+                int xcr0 = 0;
+            #ifdef _XCR_XFEATURE_ENABLED_MASK // requires immintrin.h
+                xcr0 = (int)_xgetbv(_XCR_XFEATURE_ENABLED_MASK);
+            #elif defined __GNUC__ && (defined __i386__ || defined __x86_64__)
+                __asm__ ("xgetbv" : "=a" (xcr0) : "c" (0) : "%edx" );
+            #endif
+                if ((xcr0 & 0x6) != 0x6)
+                    have_AVX_OS_support = false; // YMM registers
+                if ((xcr0 & 0xe6) != 0xe6)
+                    have_AVX512_OS_support = false; // ZMM registers
+            }
+
+            if (!have_AVX_OS_support)
+            {
+                have[CV_CPU_AVX] = false;
+                have[CV_CPU_FP16] = false;
+                have[CV_CPU_AVX2] = false;
+                have[CV_CPU_FMA3] = false;
+            }
+            if (!have_AVX_OS_support || !have_AVX512_OS_support)
+            {
+                have[CV_CPU_AVX_512F] = false;
+                have[CV_CPU_AVX_512BW] = false;
+                have[CV_CPU_AVX_512CD] = false;
+                have[CV_CPU_AVX_512DQ] = false;
+                have[CV_CPU_AVX_512ER] = false;
+                have[CV_CPU_AVX_512IFMA512] = false;
+                have[CV_CPU_AVX_512PF] = false;
+                have[CV_CPU_AVX_512VBMI] = false;
+                have[CV_CPU_AVX_512VL] = false;
+            }
         }
+    #else
+        CV_UNUSED(cpuid_data);
+        CV_UNUSED(cpuid_data_ex);
+    #endif // OPENCV_HAVE_X86_CPUID
 
     #if defined ANDROID || defined __linux__
     #ifdef __aarch64__
-        f.have[CV_CPU_NEON] = true;
-    #else
+        have[CV_CPU_NEON] = true;
+        have[CV_CPU_FP16] = true;
+    #elif defined __arm__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
@@ -350,7 +459,8 @@ struct HWFeatures
             {
                 if (auxv.a_type == AT_HWCAP)
                 {
-                    f.have[CV_CPU_NEON] = (auxv.a_un.a_val & 4096) != 0;
+                    have[CV_CPU_NEON] = (auxv.a_un.a_val & 4096) != 0;
+                    have[CV_CPU_FP16] = (auxv.a_un.a_val & 2) != 0;
                     break;
                 }
             }
@@ -358,18 +468,135 @@ struct HWFeatures
             close(cpufile);
         }
     #endif
-    #elif (defined __clang__ || defined __APPLE__) && (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
-        f.have[CV_CPU_NEON] = true;
+    #elif (defined __clang__ || defined __APPLE__)
+    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
+        have[CV_CPU_NEON] = true;
+    #endif
+    #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
+        have[CV_CPU_FP16] = true;
+    #endif
     #endif
 
-        return f;
+        int baseline_features[] = { CV_CPU_BASELINE_FEATURES };
+        if (!checkFeatures(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0])))
+        {
+            fprintf(stderr, "\n"
+                    "******************************************************************\n"
+                    "* FATAL ERROR:                                                   *\n"
+                    "* This OpenCV build doesn't support current CPU/HW configuration *\n"
+                    "*                                                                *\n"
+                    "* Use OPENCV_DUMP_CONFIG=1 environment variable for details      *\n"
+                    "******************************************************************\n");
+            fprintf(stderr, "\nRequired baseline features:\n");
+            checkFeatures(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0]), true);
+            CV_ErrorNoReturn(cv::Error::StsAssert, "Missing support for required CPU baseline features. Check OpenCV build configuration and required CPU/HW setup.");
+        }
+
+        readSettings(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0]));
     }
 
-    int x86_family;
+    bool checkFeatures(const int* features, int count, bool dump = false)
+    {
+        bool result = true;
+        for (int i = 0; i < count; i++)
+        {
+            int feature = features[i];
+            if (feature)
+            {
+                if (have[feature])
+                {
+                    if (dump) fprintf(stderr, "%s - OK\n", getHWFeatureNameSafe(feature));
+                }
+                else
+                {
+                    result = false;
+                    if (dump) fprintf(stderr, "%s - NOT AVAILABLE\n", getHWFeatureNameSafe(feature));
+                }
+            }
+        }
+        return result;
+    }
+
+    static inline bool isSymbolSeparator(char c)
+    {
+        return c == ',' || c == ';' || c == '-';
+    }
+
+    void readSettings(const int* baseline_features, int baseline_count)
+    {
+        bool dump = true;
+        const char* disabled_features =
+#ifndef WINRT
+                getenv("OPENCV_CPU_DISABLE");
+#else
+                NULL;
+#endif
+        if (disabled_features && disabled_features[0] != 0)
+        {
+            const char* start = disabled_features;
+            for (;;)
+            {
+                while (start[0] != 0 && isSymbolSeparator(start[0]))
+                {
+                    start++;
+                }
+                if (start[0] == 0)
+                    break;
+                const char* end = start;
+                while (end[0] != 0 && !isSymbolSeparator(end[0]))
+                {
+                    end++;
+                }
+                if (end == start)
+                    continue;
+                cv::String feature(start, end);
+                start = end;
+
+                CV_Assert(feature.size() > 0);
+
+                bool found = false;
+                for (int i = 0; i < CV_HARDWARE_MAX_FEATURE; i++)
+                {
+                    if (!g_hwFeatureNames[i]) continue;
+                    size_t len = strlen(g_hwFeatureNames[i]);
+                    if (len != feature.size()) continue;
+                    if (feature.compare(g_hwFeatureNames[i]) == 0)
+                    {
+                        bool isBaseline = false;
+                        for (int k = 0; k < baseline_count; k++)
+                        {
+                            if (baseline_features[k] == i)
+                            {
+                                isBaseline = true;
+                                break;
+                            }
+                        }
+                        if (isBaseline)
+                        {
+                            if (dump) fprintf(stderr, "OPENCV: Trying to disable baseline CPU feature: '%s'. This has very limited effect, because code optimizations for this feature are executed unconditionally in the most cases.\n", getHWFeatureNameSafe(i));
+                        }
+                        if (!have[i])
+                        {
+                            if (dump) fprintf(stderr, "OPENCV: Trying to disable unavailable CPU feature on the current platform: '%s'.\n", getHWFeatureNameSafe(i));
+                        }
+                        have[i] = false;
+
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    if (dump) fprintf(stderr, "OPENCV: Trying to disable unknown CPU feature: '%s'.\n", feature.c_str());
+                }
+            }
+        }
+    }
+
     bool have[MAX_FEATURE+1];
 };
 
-static HWFeatures  featuresEnabled = HWFeatures::initialize(), featuresDisabled = HWFeatures();
+static HWFeatures  featuresEnabled(true), featuresDisabled = HWFeatures(false);
 static HWFeatures* currentFeatures = &featuresEnabled;
 
 bool checkHardwareSupport(int feature)
@@ -613,7 +840,7 @@ String tempfile( const char* suffix )
     return fname;
 }
 
-static CvErrorCallback customErrorCallback = 0;
+static ErrorCallback customErrorCallback = 0;
 static void* customErrorCallbackData = 0;
 static bool breakOnError = false;
 
@@ -658,13 +885,13 @@ void error(int _code, const String& _err, const char* _func, const char* _file, 
     error(cv::Exception(_code, _err, _func, _file, _line));
 }
 
-CvErrorCallback
-redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
+ErrorCallback
+redirectError( ErrorCallback errCallback, void* userdata, void** prevUserdata)
 {
     if( prevUserdata )
         *prevUserdata = customErrorCallbackData;
 
-    CvErrorCallback prevCallback = customErrorCallback;
+    ErrorCallback prevCallback = customErrorCallback;
 
     customErrorCallback     = errCallback;
     customErrorCallbackData = userdata;
@@ -743,7 +970,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_StsAutoTrace :           return "Autotrace call";
     case CV_StsBadSize :             return "Incorrect size of input array";
     case CV_StsNullPtr :             return "Null pointer";
-    case CV_StsDivByZero :           return "Division by zero occured";
+    case CV_StsDivByZero :           return "Division by zero occurred";
     case CV_BadStep :                return "Image step is wrong";
     case CV_StsInplaceNotSupported : return "Inplace operation is not supported";
     case CV_StsObjectNotFound :      return "Requested object was not found";
@@ -1027,7 +1254,7 @@ public:
         {
             if(threads[i])
             {
-                /* Current architecture doesn't allow proper global objects relase, so this check can cause crashes
+                /* Current architecture doesn't allow proper global objects release, so this check can cause crashes
 
                 // Check if all slots were properly cleared
                 for(size_t j = 0; j < threads[i]->slots.size(); j++)
@@ -1077,8 +1304,8 @@ public:
         return (tlsSlots.size()-1);
     }
 
-    // Release TLS storage index and pass assosiated data to caller
-    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec)
+    // Release TLS storage index and pass associated data to caller
+    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec, bool keepSlot = false)
     {
         AutoLock guard(mtxGlobalAccess);
         CV_Assert(tlsSlots.size() > slotIdx);
@@ -1091,12 +1318,13 @@ public:
                 if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
                 {
                     dataVec.push_back(thread_slots[slotIdx]);
-                    threads[i]->slots[slotIdx] = 0;
+                    thread_slots[slotIdx] = NULL;
                 }
             }
         }
 
-        tlsSlots[slotIdx] = 0;
+        if (!keepSlot)
+            tlsSlots[slotIdx] = 0;
     }
 
     // Get data by TLS storage index
@@ -1188,9 +1416,18 @@ void TLSDataContainer::release()
     std::vector<void*> data;
     data.reserve(32);
     getTlsStorage().releaseSlot(key_, data); // Release key and get stored data for proper destruction
-    for(size_t i = 0; i < data.size(); i++)  // Delete all assosiated data
-        deleteDataInstance(data[i]);
     key_ = -1;
+    for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
+        deleteDataInstance(data[i]);
+}
+
+void TLSDataContainer::cleanup()
+{
+    std::vector<void*> data;
+    data.reserve(32);
+    getTlsStorage().releaseSlot(key_, data, true); // Extract stored data with removal from TLS tables
+    for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
+        deleteDataInstance(data[i]);
 }
 
 void* TLSDataContainer::getData() const
@@ -1292,13 +1529,219 @@ void setUseCollection(bool flag)
 }
 #endif
 
+namespace instr
+{
+bool useInstrumentation()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return getInstrumentStruct().useInstr;
+#else
+    return false;
+#endif
+}
+
+void setUseInstrumentation(bool flag)
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().useInstr = flag;
+#else
+    CV_UNUSED(flag);
+#endif
+}
+
+InstrNode* getTrace()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return &getInstrumentStruct().rootNode;
+#else
+    return NULL;
+#endif
+}
+
+void resetTrace()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().rootNode.removeChilds();
+    getInstrumentTLSStruct().pCurrentNode = &getInstrumentStruct().rootNode;
+#endif
+}
+
+void setFlags(FLAGS modeFlags)
+{
+#ifdef ENABLE_INSTRUMENTATION
+    getInstrumentStruct().flags = modeFlags;
+#else
+    CV_UNUSED(modeFlags);
+#endif
+}
+FLAGS getFlags()
+{
+#ifdef ENABLE_INSTRUMENTATION
+    return (FLAGS)getInstrumentStruct().flags;
+#else
+    return (FLAGS)0;
+#endif
+}
+
+NodeData::NodeData(const char* funName, const char* fileName, int lineNum, void* retAddress, bool alwaysExpand, cv::instr::TYPE instrType, cv::instr::IMPL implType)
+{
+    m_funName       = funName;
+    m_instrType     = instrType;
+    m_implType      = implType;
+    m_fileName      = fileName;
+    m_lineNum       = lineNum;
+    m_retAddress    = retAddress;
+    m_alwaysExpand  = alwaysExpand;
+
+    m_threads    = 1;
+    m_counter    = 0;
+    m_ticksTotal = 0;
+
+    m_funError  = false;
+}
+NodeData::NodeData(NodeData &ref)
+{
+    *this = ref;
+}
+NodeData& NodeData::operator=(const NodeData &right)
+{
+    this->m_funName      = right.m_funName;
+    this->m_instrType    = right.m_instrType;
+    this->m_implType     = right.m_implType;
+    this->m_fileName     = right.m_fileName;
+    this->m_lineNum      = right.m_lineNum;
+    this->m_retAddress   = right.m_retAddress;
+    this->m_alwaysExpand = right.m_alwaysExpand;
+
+    this->m_threads     = right.m_threads;
+    this->m_counter     = right.m_counter;
+    this->m_ticksTotal  = right.m_ticksTotal;
+
+    this->m_funError    = right.m_funError;
+
+    return *this;
+}
+NodeData::~NodeData()
+{
+}
+bool operator==(const NodeData& left, const NodeData& right)
+{
+    if(left.m_lineNum == right.m_lineNum && left.m_funName == right.m_funName && left.m_fileName == right.m_fileName)
+    {
+        if(left.m_retAddress == right.m_retAddress || !(cv::instr::getFlags()&cv::instr::FLAGS_EXPAND_SAME_NAMES || left.m_alwaysExpand))
+            return true;
+    }
+    return false;
+}
+
+#ifdef ENABLE_INSTRUMENTATION
+InstrStruct& getInstrumentStruct()
+{
+    static InstrStruct instr;
+    return instr;
+}
+
+InstrTLSStruct& getInstrumentTLSStruct()
+{
+    return *getInstrumentStruct().tlsStruct.get();
+}
+
+InstrNode* getCurrentNode()
+{
+    return getInstrumentTLSStruct().pCurrentNode;
+}
+
+IntrumentationRegion::IntrumentationRegion(const char* funName, const char* fileName, int lineNum, void *retAddress, bool alwaysExpand, TYPE instrType, IMPL implType)
+{
+    m_disabled    = false;
+    m_regionTicks = 0;
+
+    InstrStruct *pStruct = &getInstrumentStruct();
+    if(pStruct->useInstr)
+    {
+        InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
+
+        // Disable in case of failure
+        if(!pTLS->pCurrentNode)
+        {
+            m_disabled = true;
+            return;
+        }
+
+        int depth = pTLS->pCurrentNode->getDepth();
+        if(pStruct->maxDepth && pStruct->maxDepth <= depth)
+        {
+            m_disabled = true;
+            return;
+        }
+
+        NodeData payload(funName, fileName, lineNum, retAddress, alwaysExpand, instrType, implType);
+        Node<NodeData>* pChild = NULL;
+
+        if(pStruct->flags&FLAGS_MAPPING)
+        {
+            // Critical section
+            cv::AutoLock guard(pStruct->mutexCreate); // Guard from concurrent child creation
+            pChild = pTLS->pCurrentNode->findChild(payload);
+            if(!pChild)
+            {
+                pChild = new Node<NodeData>(payload);
+                pTLS->pCurrentNode->addChild(pChild);
+            }
+        }
+        else
+        {
+            pChild = pTLS->pCurrentNode->findChild(payload);
+            if(!pChild)
+            {
+                m_disabled = true;
+                return;
+            }
+        }
+        pTLS->pCurrentNode = pChild;
+
+        m_regionTicks = getTickCount();
+    }
+}
+
+IntrumentationRegion::~IntrumentationRegion()
+{
+    InstrStruct *pStruct = &getInstrumentStruct();
+    if(pStruct->useInstr)
+    {
+        if(!m_disabled)
+        {
+            InstrTLSStruct *pTLS = &getInstrumentTLSStruct();
+
+            if (pTLS->pCurrentNode->m_payload.m_implType == cv::instr::IMPL_OPENCL &&
+                (pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_FUN ||
+                    pTLS->pCurrentNode->m_payload.m_instrType == cv::instr::TYPE_WRAPPER))
+            {
+                cv::ocl::finish(); // TODO Support "async" OpenCL instrumentation
+            }
+
+            uint64 ticks = (getTickCount() - m_regionTicks);
+            {
+                cv::AutoLock guard(pStruct->mutexCount); // Concurrent ticks accumulation
+                pTLS->pCurrentNode->m_payload.m_counter++;
+                pTLS->pCurrentNode->m_payload.m_ticksTotal += ticks;
+                pTLS->pCurrentNode->m_payload.m_tls.get()->m_ticksTotal += ticks;
+            }
+
+            pTLS->pCurrentNode = pTLS->pCurrentNode->m_pParent;
+        }
+    }
+}
+#endif
+}
+
 namespace ipp
 {
 
-struct IPPInitSingelton
+struct IPPInitSingleton
 {
 public:
-    IPPInitSingelton()
+    IPPInitSingleton()
     {
         useIPP      = true;
         ippStatus   = 0;
@@ -1352,15 +1795,15 @@ public:
     int         ippFeatures;
 };
 
-static IPPInitSingelton& getIPPSingelton()
+static IPPInitSingleton& getIPPSingleton()
 {
-    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingelton, new IPPInitSingelton())
+    CV_SINGLETON_LAZY_INIT_REF(IPPInitSingleton, new IPPInitSingleton())
 }
 
 int getIppFeatures()
 {
 #ifdef HAVE_IPP
-    return getIPPSingelton().ippFeatures;
+    return getIPPSingleton().ippFeatures;
 #else
     return 0;
 #endif
@@ -1368,20 +1811,20 @@ int getIppFeatures()
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
-    getIPPSingelton().ippStatus = status;
-    getIPPSingelton().funcname = _funcname;
-    getIPPSingelton().filename = _filename;
-    getIPPSingelton().linen = _line;
+    getIPPSingleton().ippStatus = status;
+    getIPPSingleton().funcname = _funcname;
+    getIPPSingleton().filename = _filename;
+    getIPPSingleton().linen = _line;
 }
 
 int getIppStatus()
 {
-    return getIPPSingelton().ippStatus;
+    return getIPPSingleton().ippStatus;
 }
 
 String getIppErrorLocation()
 {
-    return format("%s:%d %s", getIPPSingelton().filename ? getIPPSingelton().filename : "", getIPPSingelton().linen, getIPPSingelton().funcname ? getIPPSingelton().funcname : "");
+    return format("%s:%d %s", getIPPSingleton().filename ? getIPPSingleton().filename : "", getIPPSingleton().linen, getIPPSingleton().funcname ? getIPPSingleton().funcname : "");
 }
 
 bool useIPP()
@@ -1390,7 +1833,7 @@ bool useIPP()
     CoreTLSData* data = getCoreTlsData().get();
     if(data->useIPP < 0)
     {
-        data->useIPP = getIPPSingelton().useIPP;
+        data->useIPP = getIPPSingleton().useIPP;
     }
     return (data->useIPP > 0);
 #else
@@ -1402,7 +1845,7 @@ void setUseIPP(bool flag)
 {
     CoreTLSData* data = getCoreTlsData().get();
 #ifdef HAVE_IPP
-    data->useIPP = flag;
+    data->useIPP = (getIPPSingleton().useIPP)?flag:false;
 #else
     (void)flag;
     data->useIPP = false;

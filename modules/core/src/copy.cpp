@@ -82,7 +82,7 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
 template<> void
 copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
-    CV_IPP_RUN(true, ippiCopy_8u_C1MR(_src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1MR, _src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
 
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
     {
@@ -122,7 +122,7 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
-    CV_IPP_RUN(true, ippiCopy_16u_C1MR((const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_16u_C1MR, (const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
 
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
     {
@@ -194,7 +194,7 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
 static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
                              uchar* dst, size_t dstep, Size size, void*) \
 { \
-    CV_IPP_RUN(true, ippiCopy_##ippfavor((const ipptype *)src, (int)sstep, (ipptype *)dst, (int)dstep, ippiSize(size), (const Ipp8u *)mask, (int)mstep) >= 0)\
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_##ippfavor, (const ipptype *)src, (int)sstep, (ipptype *)dst, (int)dstep, ippiSize(size), (const Ipp8u *)mask, (int)mstep) >= 0)\
     copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
 }
 #else
@@ -251,6 +251,8 @@ BinaryFunc getCopyMaskFunc(size_t esz)
 /* dst = src */
 void Mat::copyTo( OutputArray _dst ) const
 {
+    CV_INSTRUMENT_REGION()
+
     int dtype = _dst.type();
     if( _dst.fixedType() && dtype != type() )
     {
@@ -259,14 +261,13 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
-    if( empty() )
-    {
-        _dst.release();
-        return;
-    }
-
     if( _dst.isUMat() )
     {
+        if( empty() )
+        {
+            _dst.release();
+            return;
+        }
         _dst.create( dims, size.p, type() );
         UMat dst = _dst.getUMat();
 
@@ -302,7 +303,7 @@ void Mat::copyTo( OutputArray _dst ) const
                     (size_t)step <= (size_t)INT_MAX &&
                     (size_t)dst.step <= (size_t)INT_MAX
                     ,
-                    ippiCopy_8u_C1R(sptr, (int)step, dptr, (int)dst.step, ippiSize((int)(cols*elemSize()), rows)) >= 0
+                    CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R, sptr, (int)step, dptr, (int)dst.step, ippiSize((int)(cols*elemSize()), rows)) >= 0
             )
 
             Size sz = getContinuousSize(*this, dst);
@@ -333,6 +334,8 @@ void Mat::copyTo( OutputArray _dst ) const
 
 void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 {
+    CV_INSTRUMENT_REGION()
+
     Mat mask = _mask.getMat();
     if( !mask.data )
     {
@@ -373,6 +376,8 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
 Mat& Mat::operator = (const Scalar& s)
 {
+    CV_INSTRUMENT_REGION()
+
     const Mat* arrays[] = { this };
     uchar* dptr;
     NAryMatIterator it(arrays, &dptr, 1);
@@ -381,7 +386,7 @@ Mat& Mat::operator = (const Scalar& s)
 
     if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_DISABLE_BLOCK
         CV_IPP_CHECK()
         {
             if (dims <= 2 || isContinuous())
@@ -441,6 +446,8 @@ Mat& Mat::operator = (const Scalar& s)
 #if defined HAVE_IPP
 static bool ipp_Mat_setTo(Mat *src, Mat &value, Mat &mask)
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int cn = src->channels(), depth0 = src->depth();
 
     if (!mask.empty() && (src->dims <= 2 || (src->isContinuous() && mask.isContinuous())) &&
@@ -466,13 +473,13 @@ static bool ipp_Mat_setTo(Mat *src, Mat &value, Mat &mask)
             /*if (depth0 == CV_8U)
                 status = ippiSet_8u_C1MR(*(Ipp8u *)buf, (Ipp8u *)data, dstep, roisize, mask.data, mstep);
             else*/ if (depth0 == CV_16U)
-                status = ippiSet_16u_C1MR(*(Ipp16u *)buf, (Ipp16u *)src->data, dstep, roisize, mask.data, mstep);
+                status = CV_INSTRUMENT_FUN_IPP(ippiSet_16u_C1MR, *(Ipp16u *)buf, (Ipp16u *)src->data, dstep, roisize, mask.data, mstep);
             else if (depth0 == CV_16S)
-                status = ippiSet_16s_C1MR(*(Ipp16s *)buf, (Ipp16s *)src->data, dstep, roisize, mask.data, mstep);
+                status = CV_INSTRUMENT_FUN_IPP(ippiSet_16s_C1MR, *(Ipp16s *)buf, (Ipp16s *)src->data, dstep, roisize, mask.data, mstep);
             else if (depth0 == CV_32S)
-                status = ippiSet_32s_C1MR(*(Ipp32s *)buf, (Ipp32s *)src->data, dstep, roisize, mask.data, mstep);
+                status = CV_INSTRUMENT_FUN_IPP(ippiSet_32s_C1MR, *(Ipp32s *)buf, (Ipp32s *)src->data, dstep, roisize, mask.data, mstep);
             else if (depth0 == CV_32F)
-                status = ippiSet_32f_C1MR(*(Ipp32f *)buf, (Ipp32f *)src->data, dstep, roisize, mask.data, mstep);
+                status = CV_INSTRUMENT_FUN_IPP(ippiSet_32f_C1MR, *(Ipp32f *)buf, (Ipp32f *)src->data, dstep, roisize, mask.data, mstep);
         }
         else if (cn == 3 || cn == 4)
         {
@@ -482,7 +489,7 @@ static bool ipp_Mat_setTo(Mat *src, Mat &value, Mat &mask)
             { \
                 typedef Ipp##ippfavor ipptype; \
                 ipptype ippvalue[4] = { ((ipptype *)buf)[0], ((ipptype *)buf)[1], ((ipptype *)buf)[2], ((ipptype *)buf)[3] }; \
-                status = ippiSet_##ippfavor##_C##ippcn##MR(ippvalue, (ipptype *)src->data, dstep, roisize, mask.data, mstep); \
+                status = CV_INSTRUMENT_FUN_IPP(ippiSet_##ippfavor##_C##ippcn##MR, ippvalue, (ipptype *)src->data, dstep, roisize, mask.data, mstep); \
             } while ((void)0, 0)
 
 #define IPP_SET_CN(ippcn) \
@@ -521,6 +528,8 @@ static bool ipp_Mat_setTo(Mat *src, Mat &value, Mat &mask)
 
 Mat& Mat::setTo(InputArray _value, InputArray _mask)
 {
+    CV_INSTRUMENT_REGION()
+
     if( empty() )
         return *this;
 
@@ -529,7 +538,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
     CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
 
-    CV_IPP_RUN(true, ipp_Mat_setTo((cv::Mat*)this, value, mask), *this)
+    CV_IPP_RUN_FAST(ipp_Mat_setTo((cv::Mat*)this, value, mask), *this)
 
     size_t esz = elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
@@ -706,65 +715,67 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 #if defined HAVE_IPP
 static bool ipp_flip( Mat &src, Mat &dst, int flip_mode )
 {
+    CV_INSTRUMENT_REGION_IPP()
+
     int type = src.type();
 
-    typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
-    typedef IppStatus (CV_STDCALL * ippiMirrorI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize, IppiAxis flip);
-    ippiMirror ippFunc = 0;
-    ippiMirrorI ippFuncI = 0;
+    typedef IppStatus (CV_STDCALL * IppiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
+    typedef IppStatus (CV_STDCALL * IppiMirrorI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize, IppiAxis flip);
+    IppiMirror ippiMirror = 0;
+    IppiMirrorI ippiMirror_I = 0;
 
     if (src.data == dst.data)
     {
         CV_SUPPRESS_DEPRECATED_START
-        ippFuncI =
-            type == CV_8UC1 ? (ippiMirrorI)ippiMirror_8u_C1IR :
-            type == CV_8UC3 ? (ippiMirrorI)ippiMirror_8u_C3IR :
-            type == CV_8UC4 ? (ippiMirrorI)ippiMirror_8u_C4IR :
-            type == CV_16UC1 ? (ippiMirrorI)ippiMirror_16u_C1IR :
-            type == CV_16UC3 ? (ippiMirrorI)ippiMirror_16u_C3IR :
-            type == CV_16UC4 ? (ippiMirrorI)ippiMirror_16u_C4IR :
-            type == CV_16SC1 ? (ippiMirrorI)ippiMirror_16s_C1IR :
-            type == CV_16SC3 ? (ippiMirrorI)ippiMirror_16s_C3IR :
-            type == CV_16SC4 ? (ippiMirrorI)ippiMirror_16s_C4IR :
-            type == CV_32SC1 ? (ippiMirrorI)ippiMirror_32s_C1IR :
-            type == CV_32SC3 ? (ippiMirrorI)ippiMirror_32s_C3IR :
-            type == CV_32SC4 ? (ippiMirrorI)ippiMirror_32s_C4IR :
-            type == CV_32FC1 ? (ippiMirrorI)ippiMirror_32f_C1IR :
-            type == CV_32FC3 ? (ippiMirrorI)ippiMirror_32f_C3IR :
-            type == CV_32FC4 ? (ippiMirrorI)ippiMirror_32f_C4IR : 0;
+        ippiMirror_I =
+            type == CV_8UC1 ? (IppiMirrorI)ippiMirror_8u_C1IR :
+            type == CV_8UC3 ? (IppiMirrorI)ippiMirror_8u_C3IR :
+            type == CV_8UC4 ? (IppiMirrorI)ippiMirror_8u_C4IR :
+            type == CV_16UC1 ? (IppiMirrorI)ippiMirror_16u_C1IR :
+            type == CV_16UC3 ? (IppiMirrorI)ippiMirror_16u_C3IR :
+            type == CV_16UC4 ? (IppiMirrorI)ippiMirror_16u_C4IR :
+            type == CV_16SC1 ? (IppiMirrorI)ippiMirror_16s_C1IR :
+            type == CV_16SC3 ? (IppiMirrorI)ippiMirror_16s_C3IR :
+            type == CV_16SC4 ? (IppiMirrorI)ippiMirror_16s_C4IR :
+            type == CV_32SC1 ? (IppiMirrorI)ippiMirror_32s_C1IR :
+            type == CV_32SC3 ? (IppiMirrorI)ippiMirror_32s_C3IR :
+            type == CV_32SC4 ? (IppiMirrorI)ippiMirror_32s_C4IR :
+            type == CV_32FC1 ? (IppiMirrorI)ippiMirror_32f_C1IR :
+            type == CV_32FC3 ? (IppiMirrorI)ippiMirror_32f_C3IR :
+            type == CV_32FC4 ? (IppiMirrorI)ippiMirror_32f_C4IR : 0;
         CV_SUPPRESS_DEPRECATED_END
     }
     else
     {
-        ippFunc =
-            type == CV_8UC1 ? (ippiMirror)ippiMirror_8u_C1R :
-            type == CV_8UC3 ? (ippiMirror)ippiMirror_8u_C3R :
-            type == CV_8UC4 ? (ippiMirror)ippiMirror_8u_C4R :
-            type == CV_16UC1 ? (ippiMirror)ippiMirror_16u_C1R :
-            type == CV_16UC3 ? (ippiMirror)ippiMirror_16u_C3R :
-            type == CV_16UC4 ? (ippiMirror)ippiMirror_16u_C4R :
-            type == CV_16SC1 ? (ippiMirror)ippiMirror_16s_C1R :
-            type == CV_16SC3 ? (ippiMirror)ippiMirror_16s_C3R :
-            type == CV_16SC4 ? (ippiMirror)ippiMirror_16s_C4R :
-            type == CV_32SC1 ? (ippiMirror)ippiMirror_32s_C1R :
-            type == CV_32SC3 ? (ippiMirror)ippiMirror_32s_C3R :
-            type == CV_32SC4 ? (ippiMirror)ippiMirror_32s_C4R :
-            type == CV_32FC1 ? (ippiMirror)ippiMirror_32f_C1R :
-            type == CV_32FC3 ? (ippiMirror)ippiMirror_32f_C3R :
-            type == CV_32FC4 ? (ippiMirror)ippiMirror_32f_C4R : 0;
+        ippiMirror =
+            type == CV_8UC1 ? (IppiMirror)ippiMirror_8u_C1R :
+            type == CV_8UC3 ? (IppiMirror)ippiMirror_8u_C3R :
+            type == CV_8UC4 ? (IppiMirror)ippiMirror_8u_C4R :
+            type == CV_16UC1 ? (IppiMirror)ippiMirror_16u_C1R :
+            type == CV_16UC3 ? (IppiMirror)ippiMirror_16u_C3R :
+            type == CV_16UC4 ? (IppiMirror)ippiMirror_16u_C4R :
+            type == CV_16SC1 ? (IppiMirror)ippiMirror_16s_C1R :
+            type == CV_16SC3 ? (IppiMirror)ippiMirror_16s_C3R :
+            type == CV_16SC4 ? (IppiMirror)ippiMirror_16s_C4R :
+            type == CV_32SC1 ? (IppiMirror)ippiMirror_32s_C1R :
+            type == CV_32SC3 ? (IppiMirror)ippiMirror_32s_C3R :
+            type == CV_32SC4 ? (IppiMirror)ippiMirror_32s_C4R :
+            type == CV_32FC1 ? (IppiMirror)ippiMirror_32f_C1R :
+            type == CV_32FC3 ? (IppiMirror)ippiMirror_32f_C3R :
+            type == CV_32FC4 ? (IppiMirror)ippiMirror_32f_C4R : 0;
     }
     IppiAxis axis = flip_mode == 0 ? ippAxsHorizontal :
         flip_mode > 0 ? ippAxsVertical : ippAxsBoth;
     IppiSize roisize = { dst.cols, dst.rows };
 
-    if (ippFunc != 0)
+    if (ippiMirror != 0)
     {
-        if (ippFunc(src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, ippiSize(src.cols, src.rows), axis) >= 0)
+        if (CV_INSTRUMENT_FUN_IPP(ippiMirror, src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, ippiSize(src.cols, src.rows), axis) >= 0)
             return true;
     }
-    else if (ippFuncI != 0)
+    else if (ippiMirror_I != 0)
     {
-        if (ippFuncI(dst.ptr(), (int)dst.step, roisize, axis) >= 0)
+        if (CV_INSTRUMENT_FUN_IPP(ippiMirror_I, dst.ptr(), (int)dst.step, roisize, axis) >= 0)
             return true;
     }
 
@@ -775,6 +786,8 @@ static bool ipp_flip( Mat &src, Mat &dst, int flip_mode )
 
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _src.dims() <= 2 );
     Size size = _src.size();
 
@@ -800,7 +813,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     _dst.create( size, type );
     Mat dst = _dst.getMat();
 
-    CV_IPP_RUN(true, ipp_flip(src, dst, flip_mode));
+    CV_IPP_RUN_FAST(ipp_flip(src, dst, flip_mode));
 
     size_t esz = CV_ELEM_SIZE(type);
 
@@ -811,6 +824,54 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     if( flip_mode < 0 )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
+}
+
+#ifdef HAVE_OPENCL
+
+static bool ocl_rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        transpose(_src, _dst);
+        flip(_dst, _dst, 1);
+        break;
+    case ROTATE_180:
+        flip(_src, _dst, -1);
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        transpose(_src, _dst);
+        flip(_dst, _dst, 0);
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+#endif
+
+void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    CV_Assert(_src.dims() <= 2);
+
+    CV_OCL_RUN(_dst.isUMat(), ocl_rotate(_src, _dst, rotateMode))
+
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        transpose(_src, _dst);
+        flip(_dst, _dst, 1);
+        break;
+    case ROTATE_180:
+        flip(_src, _dst, -1);
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        transpose(_src, _dst);
+        flip(_dst, _dst, 0);
+        break;
+    default:
+        break;
+    }
 }
 
 #if defined HAVE_OPENCL && !defined __APPLE__
@@ -845,6 +906,8 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( _src.dims() <= 2 );
     CV_Assert( ny > 0 && nx > 0 );
 
@@ -896,6 +959,8 @@ Mat repeat(const Mat& src, int ny, int nx)
  */
 int cv::borderInterpolate( int p, int len, int borderType )
 {
+    CV_INSTRUMENT_REGION()
+
     if( (unsigned)p < (unsigned)len )
         ;
     else if( borderType == BORDER_REPLICATE )
@@ -1125,6 +1190,8 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
 void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                          int left, int right, int borderType, const Scalar& value )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,

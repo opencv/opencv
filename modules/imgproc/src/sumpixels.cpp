@@ -54,7 +54,7 @@ struct Integral_SIMD
                     ST *, size_t,
                     QT *, size_t,
                     ST *, size_t,
-                    Size, int) const
+                    int, int, int) const
     {
         return false;
     }
@@ -74,19 +74,19 @@ struct Integral_SIMD<uchar, int, double>
                     int * sum, size_t _sumstep,
                     double * sqsum, size_t,
                     int * tilted, size_t,
-                    Size size, int cn) const
+                    int width, int height, int cn) const
     {
         if (sqsum || tilted || cn != 1 || !haveSSE2)
             return false;
 
         // the first iteration
-        memset(sum, 0, (size.width + 1) * sizeof(int));
+        memset(sum, 0, (width + 1) * sizeof(int));
 
         __m128i v_zero = _mm_setzero_si128(), prev = v_zero;
         int j = 0;
 
         // the others
-        for (int i = 0; i < size.height; ++i)
+        for (int i = 0; i < height; ++i)
         {
             const uchar * src_row = src + _srcstep * i;
             int * prev_sum_row = (int *)((uchar *)sum + _sumstep * i) + 1;
@@ -97,7 +97,7 @@ struct Integral_SIMD<uchar, int, double>
             prev = v_zero;
             j = 0;
 
-            for ( ; j + 7 < size.width; j += 8)
+            for ( ; j + 7 < width; j += 8)
             {
                 __m128i vsuml = _mm_loadu_si128((const __m128i *)(prev_sum_row + j));
                 __m128i vsumh = _mm_loadu_si128((const __m128i *)(prev_sum_row + j + 4));
@@ -128,7 +128,7 @@ struct Integral_SIMD<uchar, int, double>
                 prev = _mm_add_epi32(prev, _mm_shuffle_epi32(el4h, _MM_SHUFFLE(3, 3, 3, 3)));
             }
 
-            for (int v = sum_row[j - 1] - prev_sum_row[j - 1]; j < size.width; ++j)
+            for (int v = sum_row[j - 1] - prev_sum_row[j - 1]; j < width; ++j)
                 sum_row[j] = (v += src_row[j]) + prev_sum_row[j];
         }
 
@@ -143,7 +143,7 @@ struct Integral_SIMD<uchar, int, double>
 template<typename T, typename ST, typename QT>
 void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
                 QT* sqsum, size_t _sqsumstep, ST* tilted, size_t _tiltedstep,
-                Size size, int cn )
+                int width, int height, int cn )
 {
     int x, y, k;
 
@@ -151,7 +151,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
                                    sum, _sumstep,
                                    sqsum, _sqsumstep,
                                    tilted, _tiltedstep,
-                                   size, cn))
+                                   width, height, cn))
         return;
 
     int srcstep = (int)(_srcstep/sizeof(T));
@@ -159,31 +159,31 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
     int tiltedstep = (int)(_tiltedstep/sizeof(ST));
     int sqsumstep = (int)(_sqsumstep/sizeof(QT));
 
-    size.width *= cn;
+    width *= cn;
 
-    memset( sum, 0, (size.width+cn)*sizeof(sum[0]));
+    memset( sum, 0, (width+cn)*sizeof(sum[0]));
     sum += sumstep + cn;
 
     if( sqsum )
     {
-        memset( sqsum, 0, (size.width+cn)*sizeof(sqsum[0]));
+        memset( sqsum, 0, (width+cn)*sizeof(sqsum[0]));
         sqsum += sqsumstep + cn;
     }
 
     if( tilted )
     {
-        memset( tilted, 0, (size.width+cn)*sizeof(tilted[0]));
+        memset( tilted, 0, (width+cn)*sizeof(tilted[0]));
         tilted += tiltedstep + cn;
     }
 
     if( sqsum == 0 && tilted == 0 )
     {
-        for( y = 0; y < size.height; y++, src += srcstep - cn, sum += sumstep - cn )
+        for( y = 0; y < height; y++, src += srcstep - cn, sum += sumstep - cn )
         {
             for( k = 0; k < cn; k++, src++, sum++ )
             {
                 ST s = sum[-cn] = 0;
-                for( x = 0; x < size.width; x += cn )
+                for( x = 0; x < width; x += cn )
                 {
                     s += src[x];
                     sum[x] = sum[x - sumstep] + s;
@@ -193,14 +193,14 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
     }
     else if( tilted == 0 )
     {
-        for( y = 0; y < size.height; y++, src += srcstep - cn,
+        for( y = 0; y < height; y++, src += srcstep - cn,
                         sum += sumstep - cn, sqsum += sqsumstep - cn )
         {
             for( k = 0; k < cn; k++, src++, sum++, sqsum++ )
             {
                 ST s = sum[-cn] = 0;
                 QT sq = sqsum[-cn] = 0;
-                for( x = 0; x < size.width; x += cn )
+                for( x = 0; x < width; x += cn )
                 {
                     T it = src[x];
                     s += it;
@@ -215,7 +215,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
     }
     else
     {
-        AutoBuffer<ST> _buf(size.width+cn);
+        AutoBuffer<ST> _buf(width+cn);
         ST* buf = _buf;
         ST s;
         QT sq;
@@ -223,7 +223,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
         {
             sum[-cn] = tilted[-cn] = 0;
 
-            for( x = 0, s = 0, sq = 0; x < size.width; x += cn )
+            for( x = 0, s = 0, sq = 0; x < width; x += cn )
             {
                 T it = src[x];
                 buf[x] = tilted[x] = it;
@@ -234,7 +234,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
                     sqsum[x] = sq;
             }
 
-            if( size.width == cn )
+            if( width == cn )
                 buf[cn] = 0;
 
             if( sqsum )
@@ -244,7 +244,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
             }
         }
 
-        for( y = 1; y < size.height; y++ )
+        for( y = 1; y < height; y++ )
         {
             src += srcstep - cn;
             sum += sumstep - cn;
@@ -270,7 +270,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
                     sqsum[0] = sqsum[-sqsumstep] + tq0;
                 tilted[0] = tilted[-tiltedstep] + t0 + buf[cn];
 
-                for( x = cn; x < size.width - cn; x += cn )
+                for( x = cn; x < width - cn; x += cn )
                 {
                     ST t1 = buf[x];
                     buf[x - cn] = t1 + t0;
@@ -285,7 +285,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
                     tilted[x] = t1;
                 }
 
-                if( size.width > cn )
+                if( width > cn )
                 {
                     ST t1 = buf[x];
                     buf[x - cn] = t1 + t0;
@@ -307,29 +307,6 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
     }
 }
 
-
-#define DEF_INTEGRAL_FUNC(suffix, T, ST, QT) \
-static void integral_##suffix( T* src, size_t srcstep, ST* sum, size_t sumstep, QT* sqsum, size_t sqsumstep, \
-                              ST* tilted, size_t tiltedstep, Size size, int cn ) \
-{ integral_(src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tiltedstep, size, cn); }
-
-DEF_INTEGRAL_FUNC(8u32s, uchar, int, double)
-DEF_INTEGRAL_FUNC(8u32s32s, uchar, int, int)
-DEF_INTEGRAL_FUNC(8u32f64f, uchar, float, double)
-DEF_INTEGRAL_FUNC(8u64f64f, uchar, double, double)
-DEF_INTEGRAL_FUNC(16u64f64f, ushort, double, double)
-DEF_INTEGRAL_FUNC(16s64f64f, short, double, double)
-DEF_INTEGRAL_FUNC(32f32f64f, float, float, double)
-DEF_INTEGRAL_FUNC(32f64f64f, float, double, double)
-DEF_INTEGRAL_FUNC(64f64f64f, double, double, double)
-
-DEF_INTEGRAL_FUNC(8u32s32f, uchar, int, float)
-DEF_INTEGRAL_FUNC(8u32f32f, uchar, float, float)
-DEF_INTEGRAL_FUNC(32f32f32f, float, float, float)
-
-typedef void (*IntegralFunc)(const uchar* src, size_t srcstep, uchar* sum, size_t sumstep,
-                             uchar* sqsum, size_t sqsumstep, uchar* tilted, size_t tstep,
-                             Size size, int cn );
 
 #ifdef HAVE_OPENCL
 
@@ -423,51 +400,46 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum,
 #if defined(HAVE_IPP)
 namespace cv
 {
-static bool ipp_integral(InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth, int sqdepth)
+static bool ipp_integral(
+    int depth, int sdepth, int sqdepth,
+    const uchar* src, size_t srcstep,
+    uchar* sum, size_t sumstep,
+    uchar* sqsum, size_t sqsumstep,
+    int width, int height, int cn)
 {
-#if !defined(HAVE_IPP_ICV_ONLY) && (IPP_VERSION_X100 != 900) // Disabled on ICV due invalid results
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_INSTRUMENT_REGION_IPP()
+
+#if IPP_VERSION_X100 != 900 // Disabled on ICV due invalid results
     if( sdepth <= 0 )
         sdepth = depth == CV_8U ? CV_32S : CV_64F;
     if ( sqdepth <= 0 )
          sqdepth = CV_64F;
     sdepth = CV_MAT_DEPTH(sdepth), sqdepth = CV_MAT_DEPTH(sqdepth);
 
-
-    Size ssize = _src.size(), isize(ssize.width + 1, ssize.height + 1);
-    _sum.create( isize, CV_MAKETYPE(sdepth, cn) );
-    Mat src = _src.getMat(), sum =_sum.getMat(), sqsum, tilted;
-
-    if( _sqsum.needed() )
-    {
-        _sqsum.create( isize, CV_MAKETYPE(sqdepth, cn) );
-        sqsum = _sqsum.getMat();
-    };
-
-    if( ( depth == CV_8U ) && ( sdepth == CV_32F || sdepth == CV_32S ) && ( !_tilted.needed() ) && ( !_sqsum.needed() || sqdepth == CV_64F ) && ( cn == 1 ) )
+    if( ( depth == CV_8U ) && ( sdepth == CV_32F || sdepth == CV_32S ) && ( !sqsum || sqdepth == CV_64F ) && ( cn == 1 ) )
     {
         IppStatus status = ippStsErr;
-        IppiSize srcRoiSize = ippiSize( src.cols, src.rows );
+        IppiSize srcRoiSize = ippiSize( width, height );
         if( sdepth == CV_32F )
         {
-            if( _sqsum.needed() )
+            if( sqsum )
             {
-                status = ippiSqrIntegral_8u32f64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
+                status = CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32f64f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, (Ipp64f*)sqsum, (int)sqsumstep, srcRoiSize, 0, 0);
             }
             else
             {
-                status = ippiIntegral_8u32f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, srcRoiSize, 0 );
+                status = CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, srcRoiSize, 0);
             }
         }
         else if( sdepth == CV_32S )
         {
-            if( _sqsum.needed() )
+            if( sqsum )
             {
-                status = ippiSqrIntegral_8u32s64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
+                status = CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32s64f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, (Ipp64f*)sqsum, (int)sqsumstep, srcRoiSize, 0, 0);
             }
             else
             {
-                status = ippiIntegral_8u32s_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, srcRoiSize, 0 );
+                status = CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32s_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, srcRoiSize, 0);
             }
         }
         if (0 <= status)
@@ -477,15 +449,73 @@ static bool ipp_integral(InputArray _src, OutputArray _sum, OutputArray _sqsum, 
         }
     }
 #else
-    CV_UNUSED(_src); CV_UNUSED(_sum); CV_UNUSED(_sqsum); CV_UNUSED(_tilted); CV_UNUSED(sdepth); CV_UNUSED(sqdepth);
+    CV_UNUSED(depth); CV_UNUSED(sdepth); CV_UNUSED(sqdepth);
+    CV_UNUSED(src); CV_UNUSED(srcstep);
+    CV_UNUSED(sum); CV_UNUSED(sumstep);
+    CV_UNUSED(sqsum); CV_UNUSED(sqsumstep);
+    CV_UNUSED(tilted); CV_UNUSED(tstep);
+    CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(cn);
 #endif
     return false;
 }
 }
 #endif
 
+namespace cv { namespace hal {
+
+void integral(int depth, int sdepth, int sqdepth,
+              const uchar* src, size_t srcstep,
+              uchar* sum, size_t sumstep,
+              uchar* sqsum, size_t sqsumstep,
+              uchar* tilted, size_t tstep,
+              int width, int height, int cn)
+{
+    CALL_HAL(integral, cv_hal_integral, depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn);
+    CV_IPP_RUN(( depth == CV_8U )
+               && ( sdepth == CV_32F || sdepth == CV_32S )
+               && ( !tilted )
+               && ( !sqsum || sqdepth == CV_64F )
+               && ( cn == 1 ),
+               ipp_integral(depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, width, height, cn));
+
+#define ONE_CALL(A, B, C) integral_<A, B, C>((const A*)src, srcstep, (B*)sum, sumstep, (C*)sqsum, sqsumstep, (B*)tilted, tstep, width, height, cn)
+
+    if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_64F )
+        ONE_CALL(uchar, int, double);
+    else if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32F )
+        ONE_CALL(uchar, int, float);
+    else if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32S )
+        ONE_CALL(uchar, int, int);
+    else if( depth == CV_8U && sdepth == CV_32F && sqdepth == CV_64F )
+        ONE_CALL(uchar, float, double);
+    else if( depth == CV_8U && sdepth == CV_32F && sqdepth == CV_32F )
+        ONE_CALL(uchar, float, float);
+    else if( depth == CV_8U && sdepth == CV_64F && sqdepth == CV_64F )
+        ONE_CALL(uchar, double, double);
+    else if( depth == CV_16U && sdepth == CV_64F && sqdepth == CV_64F )
+        ONE_CALL(ushort, double, double);
+    else if( depth == CV_16S && sdepth == CV_64F && sqdepth == CV_64F )
+        ONE_CALL(short, double, double);
+    else if( depth == CV_32F && sdepth == CV_32F && sqdepth == CV_64F )
+        ONE_CALL(float, float, double);
+    else if( depth == CV_32F && sdepth == CV_32F && sqdepth == CV_32F )
+        ONE_CALL(float, float, float);
+    else if( depth == CV_32F && sdepth == CV_64F && sqdepth == CV_64F )
+        ONE_CALL(float, double, double);
+    else if( depth == CV_64F && sdepth == CV_64F && sqdepth == CV_64F )
+        ONE_CALL(double, double, double);
+    else
+        CV_Error( CV_StsUnsupportedFormat, "" );
+
+#undef ONE_CALL
+}
+
+}} // cv::hal::
+
 void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth, int sqdepth )
 {
+    CV_INSTRUMENT_REGION()
+
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( sdepth <= 0 )
         sdepth = depth == CV_8U ? CV_32S : CV_64F;
@@ -515,55 +545,31 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
         sqsum = _sqsum.getMat();
     };
 
-    CV_IPP_RUN(( depth == CV_8U ) && ( sdepth == CV_32F || sdepth == CV_32S ) &&
-        ( !_tilted.needed() ) && ( !_sqsum.needed() || sqdepth == CV_64F ) && ( cn == 1 ),
-        ipp_integral(_src, _sum, _sqsum, _tilted, sdepth, sqdepth));
-
     if( _tilted.needed() )
     {
         _tilted.create( isize, CV_MAKETYPE(sdepth, cn) );
         tilted = _tilted.getMat();
     }
 
-    IntegralFunc func = 0;
-    if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_64F )
-        func = (IntegralFunc)GET_OPTIMIZED(integral_8u32s);
-    else if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32F )
-        func = (IntegralFunc)integral_8u32s32f;
-    else if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32S )
-        func = (IntegralFunc)integral_8u32s32s;
-    else if( depth == CV_8U && sdepth == CV_32F && sqdepth == CV_64F )
-        func = (IntegralFunc)integral_8u32f64f;
-    else if( depth == CV_8U && sdepth == CV_32F && sqdepth == CV_32F )
-        func = (IntegralFunc)integral_8u32f32f;
-    else if( depth == CV_8U && sdepth == CV_64F && sqdepth == CV_64F )
-        func = (IntegralFunc)integral_8u64f64f;
-    else if( depth == CV_16U && sdepth == CV_64F && sqdepth == CV_64F )
-        func = (IntegralFunc)integral_16u64f64f;
-    else if( depth == CV_16S && sdepth == CV_64F && sqdepth == CV_64F )
-        func = (IntegralFunc)integral_16s64f64f;
-    else if( depth == CV_32F && sdepth == CV_32F && sqdepth == CV_64F )
-        func = (IntegralFunc)integral_32f32f64f;
-    else if( depth == CV_32F && sdepth == CV_32F && sqdepth == CV_32F )
-        func = (IntegralFunc)integral_32f32f32f;
-    else if( depth == CV_32F && sdepth == CV_64F && sqdepth == CV_64F )
-        func = (IntegralFunc)integral_32f64f64f;
-    else if( depth == CV_64F && sdepth == CV_64F && sqdepth == CV_64F )
-        func = (IntegralFunc)integral_64f64f64f;
-    else
-        CV_Error( CV_StsUnsupportedFormat, "" );
-
-    func( src.ptr(), src.step, sum.ptr(), sum.step, sqsum.ptr(), sqsum.step,
-          tilted.ptr(), tilted.step, src.size(), cn );
+    hal::integral(depth, sdepth, sqdepth,
+                  src.ptr(), src.step,
+                  sum.ptr(), sum.step,
+                  sqsum.ptr(), sqsum.step,
+                  tilted.ptr(), tilted.step,
+                  src.cols, src.rows, cn);
 }
 
 void cv::integral( InputArray src, OutputArray sum, int sdepth )
 {
+    CV_INSTRUMENT_REGION()
+
     integral( src, sum, noArray(), noArray(), sdepth );
 }
 
 void cv::integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth, int sqdepth )
 {
+    CV_INSTRUMENT_REGION()
+
     integral( src, sum, sqsum, noArray(), sdepth, sqdepth );
 }
 

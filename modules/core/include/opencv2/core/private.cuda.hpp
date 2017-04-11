@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_PRIVATE_CUDA_HPP__
-#define __OPENCV_CORE_PRIVATE_CUDA_HPP__
+#ifndef OPENCV_CORE_PRIVATE_CUDA_HPP
+#define OPENCV_CORE_PRIVATE_CUDA_HPP
 
 #ifndef __OPENCV_BUILD
 #  error this is a private header which should not be used from outside of the OpenCV library
@@ -64,7 +64,7 @@
 
 #  define NPP_VERSION (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD)
 
-#  define CUDART_MINIMUM_REQUIRED_VERSION 4020
+#  define CUDART_MINIMUM_REQUIRED_VERSION 6050
 
 #  if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
 #    error "Insufficient Cuda Runtime library version, please update it."
@@ -102,20 +102,6 @@ static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The
 
 namespace cv { namespace cuda
 {
-    class CV_EXPORTS BufferPool
-    {
-    public:
-        explicit BufferPool(Stream& stream);
-
-        GpuMat getBuffer(int rows, int cols, int type);
-        GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
-
-        GpuMat::Allocator* getAllocator() const { return allocator_; }
-
-    private:
-        GpuMat::Allocator* allocator_;
-    };
-
     static inline void checkNppError(int code, const char* file, const int line, const char* func)
     {
         if (code < 0)
@@ -169,4 +155,4 @@ namespace cv { namespace cuda
 
 //! @endcond
 
-#endif // __OPENCV_CORE_CUDA_PRIVATE_HPP__
+#endif // OPENCV_CORE_PRIVATE_CUDA_HPP
