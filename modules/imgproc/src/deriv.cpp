@@ -188,42 +188,16 @@ namespace cv
                              int dx, int dy, int ksize,
                              double scale, double delta, int borderType)
     {
-        int stype = _src.type();
-        int dtype = _dst.type();
-        if (stype != CV_8UC1 || (dtype != CV_16SC1 && dtype != CV_8UC1) ||
-            ksize != 3 || delta != 0.0)//Restrict to 3x3 kernels since otherwise convolution would be slower than separable filter
+        if (_src.type() != CV_8UC1 || _dst.type() != CV_16SC1 ||
+            ksize != 3 || scale != 1.0 || delta != 0.0 ||
+            (dx | dy) != 1 || (dx + dy) != 1 ||
+            _src.cols < ksize || _src.rows < ksize ||
+            ovx::skipSmallImages<VX_KERNEL_SOBEL_3x3>(_src.cols, _src.rows)
+            )
             return false;
 
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
-
-        if (src.cols < ksize || src.rows < ksize)
-            return false;
-
-        if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1 ?
-            ovx::skipSmallImages<VX_KERNEL_SOBEL_3x3>(src.cols, src.rows) :
-            ovx::skipSmallImages<VX_KERNEL_CUSTOM_CONVOLUTION>(src.cols, src.rows)
-            )
-            return false;
-
-        int iscale = 1;
-        vx_uint32 cscale = 1;
-        if(scale != 1.0)
-        {
-            iscale = static_cast<int>(scale);
-            if (std::abs(scale - iscale) >= DBL_EPSILON)
-            {
-                int exp = 0;
-                float significand = frexp(scale, &exp);
-                if ((significand == 0.5f) && (exp <= 0))
-                {
-                    iscale = 1;
-                    cscale = 1 << (exp = -exp + 1);
-                }
-                else
-                    return false;
-            }
-        }
 
         if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
             return false; //Process isolated borders only
@@ -255,40 +229,17 @@ namespace cv
             ivx::Image
                 ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
                     ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
-                ib = ivx::Image::createFromHandle(ctx, dtype == CV_16SC1 ? VX_DF_IMAGE_S16 : VX_DF_IMAGE_U8,
-                    ivx::Image::createAddressing(dst.cols, dst.rows, dtype == CV_16SC1 ? 2 : 1, (vx_int32)(dst.step)), dst.data);
+                ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_S16,
+                    ivx::Image::createAddressing(dst.cols, dst.rows, 2, (vx_int32)(dst.step)), dst.data);
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
             ctx.setImmediateBorder(border, (vx_uint8)(0));
-            if (dtype == CV_16SC1 && ksize == 3 && ((dx | dy) == 1) && (dx + dy) == 1)
-            {
-                if(dx)
-                    ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, ib, NULL));
-                else
-                    ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, NULL, ib));
-            }
+            if(dx)
+                ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, ib, NULL));
             else
-            {
-#if VX_VERSION <= VX_VERSION_1_0
-                if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
-                {
-                    ctx.setImmediateBorder(prevBorder);
-                    return false;
-                }
-#endif
-                Mat kx, ky;
-                getDerivKernels(kx, ky, dx, dy, ksize, false);
-                flip(kx, kx, 0);
-                flip(ky, ky, 0);
-                Mat convData;
-                cv::Mat(ky*kx.t()).convertTo(convData, CV_16SC1, iscale);
-                ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
-                cnv.copyFrom(convData);
-                cnv.setScale(cscale);
-                ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
-            }
+                ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, NULL, ib));
             ctx.setImmediateBorder(prevBorder);
         }
         catch (ivx::RuntimeError & e)
