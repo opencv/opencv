@@ -191,8 +191,8 @@ namespace cv
         if (_src.type() != CV_8UC1 || _dst.type() != CV_16SC1 ||
             ksize != 3 || scale != 1.0 || delta != 0.0 ||
             (dx | dy) != 1 || (dx + dy) != 1 ||
-            _src.cols < ksize || _src.rows < ksize ||
-            ovx::skipSmallImages<VX_KERNEL_SOBEL_3x3>(_src.cols, _src.rows)
+            _src.cols() < ksize || _src.rows() < ksize ||
+            ovx::skipSmallImages<VX_KERNEL_SOBEL_3x3>(_src.cols(), _src.rows())
             )
             return false;
 

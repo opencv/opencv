@@ -1646,11 +1646,11 @@ namespace cv
         if (ddepth < 0)
             ddepth = CV_8UC1;
         if (_src.type() != CV_8UC1 || ddepth != CV_8U || !normalize ||
-            _src.cols < 3 || _src.rows < 3 ||
+            _src.cols() < 3 || _src.rows() < 3 ||
             ksize.width != 3 || ksize.height != 3 ||
             (anchor.x >= 0 && anchor.x != 1) ||
             (anchor.y >= 0 && anchor.y != 1) ||
-            ovx::skipSmallImages<VX_KERNEL_BOX_3x3>(_src.cols, _src.rows))
+            ovx::skipSmallImages<VX_KERNEL_BOX_3x3>(_src.cols(), _src.rows()))
             return false;
 
         Mat src = _src.getMat();
@@ -2184,7 +2184,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
         ksize.height = cvRound(sigma2*6 + 1) | 1;
 
     if (_src.type() != CV_8UC1 ||
-        _src.cols < 3 || _src.rows < 3 ||
+        _src.cols() < 3 || _src.rows() < 3 ||
         ksize.width != 3 || ksize.height != 3)
         return false;
 
@@ -2192,7 +2192,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     sigma2 = std::max(sigma2, 0.);
 
     if (!(sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) || !(sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON) ||
-        ovx::skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(_src.cols, _src.rows))
+        ovx::skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(_src.cols(), _src.rows()))
         return false;
 
     Mat src = _src.getMat();

@@ -106,12 +106,12 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
 #undef cv_hal_filterFree
 #define cv_hal_filterFree ovx_hal_filterFree
 
-#undef cv_hal_sepFilterInit
-#define cv_hal_sepFilterInit ovx_hal_sepFilterInit
-#undef cv_hal_sepFilter
-#define cv_hal_sepFilter ovx_hal_filter
-#undef cv_hal_sepFilterFree
-#define cv_hal_sepFilterFree ovx_hal_filterFree
+//#undef cv_hal_sepFilterInit
+//#define cv_hal_sepFilterInit ovx_hal_sepFilterInit
+//#undef cv_hal_sepFilter
+//#define cv_hal_sepFilter ovx_hal_filter
+//#undef cv_hal_sepFilterFree
+//#define cv_hal_sepFilterFree ovx_hal_filterFree
 
 #if VX_VERSION > VX_VERSION_1_0
 
