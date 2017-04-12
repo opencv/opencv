@@ -16,9 +16,11 @@ endif()
 #find android SDK: search in ANDROID_SDK first
 find_host_program(ANDROID_EXECUTABLE
   NAMES android.bat android
-  PATH_SUFFIXES tools
+  PATH_SUFFIXES tools tools/bin
   PATHS
     ENV ANDROID_SDK
+    ${ANDROID_NDK}/..
+    ${CMAKE_ANDROID_NDK}/..
   DOC "Android SDK location"
   NO_DEFAULT_PATH
   )
@@ -36,14 +38,20 @@ find_host_program(ANDROID_EXECUTABLE
         "${ProgramFiles_ENV_PATH}/Android"
   DOC "Android SDK location"
   )
-
+    
 if(ANDROID_EXECUTABLE)
   if(NOT ANDROID_SDK_DETECT_QUIET)
     message(STATUS "Found android tool: ${ANDROID_EXECUTABLE}")
   endif()
 
   get_filename_component(ANDROID_SDK_TOOLS_PATH "${ANDROID_EXECUTABLE}" PATH)
-
+  
+  find_host_program(AVDMANAGER_EXECUTABLE
+    NAMES avdmanager.bat
+    PATH_SUFFIXES bin
+    PATHS ${ANDROID_SDK_TOOLS_PATH}
+  )
+  
   #read source.properties
   if(EXISTS "${ANDROID_SDK_TOOLS_PATH}/source.properties")
     file(STRINGS "${ANDROID_SDK_TOOLS_PATH}/source.properties" ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES REGEX "^[ ]*[^#].*$")
@@ -88,7 +96,15 @@ if(ANDROID_EXECUTABLE)
   set(ANDROID_PROJECT_FILES ${ANDROID_LIB_PROJECT_FILES})
 
   #get installed targets
-  if(ANDROID_TOOLS_Pkg_Revision GREATER 11)
+  if (AVDMANAGER_EXECUTABLE)
+    execute_process(COMMAND ${AVDMANAGER_EXECUTABLE} list target -c
+      RESULT_VARIABLE ANDROID_PROCESS
+      OUTPUT_VARIABLE ANDROID_SDK_TARGETS
+      ERROR_VARIABLE ANDROID_PROCESS_ERRORS
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+    string(REGEX MATCHALL "[^\n]+" ANDROID_SDK_TARGETS "${ANDROID_SDK_TARGETS}")
+  elseif(ANDROID_TOOLS_Pkg_Revision GREATER 11)
     execute_process(COMMAND ${ANDROID_EXECUTABLE} list target -c
       RESULT_VARIABLE ANDROID_PROCESS
       OUTPUT_VARIABLE ANDROID_SDK_TARGETS

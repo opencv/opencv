@@ -45,18 +45,6 @@ if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsSt
   set(WINRT TRUE)
 endif(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
 
-# if using cmake-toolchains but not ANDROID toolchain included with opencv
-# see https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android-with-the-ndk
-if (NOT ANDROID AND CMAKE_SYSTEM_NAME STREQUAL ANDROID)
-    set(ANDROID True)
-    set(BUILD_ANDROID True)
-    remove_definitions(-DANDROID)
-    add_definitions(-DANDROID)
-    set(ANDROID_NATIVE_API_LEVEL android-${CMAKE_SYSTEM_VERSION})
-    set(ANDROID_ABI ${CMAKE_ANDROID_ARCH_ABI})
-    set(ANDROID_STL ${CMAKE_ANDROID_STL_TYPE})
-endif()
-
 if(WINRT)
   add_definitions(-DWINRT -DNO_GETENV)
 
@@ -111,6 +99,10 @@ if(POLICY CMP0056)
   cmake_policy(SET CMP0056 NEW)
 endif()
 
+if(POLICY CMP0058)
+  cmake_policy(SET CMP0058 NEW)
+endif()
+
 include(cmake/OpenCVUtils.cmake)
 
 # must go before the project command
@@ -122,6 +114,25 @@ endif()
 enable_testing()
 
 project(OpenCV CXX C)
+
+# if using cmake-toolchains but not ANDROID toolchain included with opencv
+# see https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android-with-the-ndk
+if(NOT ANDROID AND CMAKE_SYSTEM_NAME STREQUAL ANDROID)
+  set(ANDROID True)
+  set(BUILD_ANDROID True)
+  add_definitions(-DANDROID)
+endif()
+if(ANDROID)
+  if(NOT ANDROID_NATIVE_API_LEVEL AND CMAKE_SYSTEM_VERSION)
+    set(ANDROID_NATIVE_API_LEVEL ${CMAKE_SYSTEM_VERSION})
+  endif()
+  if(NOT ANDROID_ABI AND CMAKE_ANDROID_ARCH_ABI)
+    set(ANDROID_ABI ${CMAKE_ANDROID_ARCH_ABI})
+  endif()
+  if(NOT ANDROID_STL AND CMAKE_ANDROID_STL_TYPE)
+    set(ANDROID_STL ${CMAKE_ANDROID_STL_TYPE})
+  endif()
+endif()
 
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
