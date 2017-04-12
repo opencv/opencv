@@ -520,6 +520,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
   endforeach()
   foreach(fname ${${SOURCES_VAR_NAME}})
     string(TOLOWER "${fname}" fname_LOWER)
+    get_filename_component(fname_LOWER "${fname_LOWER}" NAME)
     if(fname_LOWER MATCHES "\\.(.*)\\.cpp$")
       string(TOUPPER "${CMAKE_MATCH_1}" OPT_)
       if(OPT_ MATCHES "(CUDA.*|DISPATCH.*|OCL)") # don't touch files like filename.cuda.cpp
