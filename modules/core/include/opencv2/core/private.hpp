@@ -44,12 +44,12 @@
 #ifndef OPENCV_CORE_PRIVATE_HPP
 #define OPENCV_CORE_PRIVATE_HPP
 
-#ifndef __OPENCV_BUILD
+#if !defined(__OPENCV_BUILD) && !defined(__OPENCV_ADDON_BUILD)
 #  error this is a private header which should not be used from outside of the OpenCV library
 #endif
 
 #include "opencv2/core.hpp"
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #ifdef HAVE_EIGEN
 #  if defined __GNUC__ && defined __APPLE__

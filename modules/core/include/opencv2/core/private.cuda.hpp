@@ -44,11 +44,11 @@
 #ifndef OPENCV_CORE_PRIVATE_CUDA_HPP
 #define OPENCV_CORE_PRIVATE_CUDA_HPP
 
-#ifndef __OPENCV_BUILD
+#if !defined(__OPENCV_BUILD) && !defined(__OPENCV_ADDON_BUILD)
 #  error this is a private header which should not be used from outside of the OpenCV library
 #endif
 
-#include "cvconfig.h"
+#include "opencv2/cvconfig.h"
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/base.hpp"

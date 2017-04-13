@@ -24,7 +24,7 @@ endif()
 set(STR_CPP "// This file is auto-generated. Do not edit!
 
 #include \"precomp.hpp\"
-#include \"cvconfig.h\"
+#include \"opencv2/cvconfig.h\"
 #include \"${OUTPUT_HPP_NAME}\"
 
 #ifdef HAVE_OPENCL
@@ -39,11 +39,12 @@ ${nested_namespace_start}
 
 set(STR_HPP "// This file is auto-generated. Do not edit!
 
-#include \"opencv2/core/ocl.hpp\"
-#include \"opencv2/core/ocl_genbase.hpp\"
 #include \"opencv2/core/opencl/ocl_defs.hpp\"
 
 #ifdef HAVE_OPENCL
+
+#include \"opencv2/core/ocl.hpp\"
+#include \"opencv2/core/ocl_genbase.hpp\"
 
 namespace cv
 {

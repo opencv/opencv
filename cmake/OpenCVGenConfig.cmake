@@ -115,3 +115,16 @@ if(WIN32)
     ocv_gen_config("${CMAKE_BINARY_DIR}/win-install" "" "")
   endif()
 endif()
+
+# --------------------------------------------------------------------------------------------
+#  Helpers to support addons
+# --------------------------------------------------------------------------------------------
+install(FILES
+    "${OpenCV_SOURCE_DIR}/cmake/OpenCVAddons.cmake"
+    "${OpenCV_SOURCE_DIR}/cmake/OpenCVUtils.cmake"
+    "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
+    DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}/addons/cmake" COMPONENT dev)
+install(FILES
+    "${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-addon.cmake.in"
+    "${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVAddonConfig.cmake.in"
+    DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}/addons/cmake/templates" COMPONENT dev)
