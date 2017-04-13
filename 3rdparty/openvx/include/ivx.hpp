@@ -2508,10 +2508,10 @@ public:
     {
         if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
             throw WrapperError(std::string(__func__) + "(): destination type is wrong");
-        if (data.size() != size())
+        if (data.size()*sizeof(T) != size())
         {
             if (data.size() == 0)
-                data.resize(size());
+                data.resize(size()/sizeof(T));
             else
                 throw WrapperError(std::string(__func__) + "(): destination size is wrong");
         }
@@ -2522,7 +2522,7 @@ public:
     {
         if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
             throw WrapperError(std::string(__func__) + "(): source type is wrong");
-        if (data.size() != size()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
+        if (data.size()*sizeof(T) != size()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyFrom(&data[0]);
     }
 
@@ -2670,10 +2670,10 @@ public:
     {
         if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
             throw WrapperError(std::string(__func__) + "(): destination type is wrong");
-        if (data.size() != size())
+        if (data.size()*sizeof(T) != size())
         {
             if (data.size() == 0)
-                data.resize(size());
+                data.resize(size()/sizeof(T));
             else
                 throw WrapperError(std::string(__func__) + "(): destination size is wrong");
         }
@@ -2684,7 +2684,7 @@ public:
     {
         if (!areTypesCompatible(TypeToEnum<T>::value, dataType()))
             throw WrapperError(std::string(__func__) + "(): source type is wrong");
-        if (data.size() != size()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
+        if (data.size()*sizeof(T) != size()) throw WrapperError(std::string(__func__) + "(): source size is wrong");
         copyFrom(&data[0]);
     }
 
