@@ -67,6 +67,23 @@
 #define TIME( arg ) (time( arg ))
 #endif
 
+// MBLBP Related definitions.
+#define MBLBP_LUTLENGTH  59
+//#define MBLBP_LUTLENGTH  256
+#define MAX_NUM_WEAKS 512
+#define MAX_NUM_STAGES 32
+
+#define CC_MAGIC_NAME "version"
+#define CC_MAGIC_VALUE "SZU-MBLBP-MVIEW1.0"
+#define CC_WIDTH  "width"
+#define CC_MINHITRATE       "minHitRate"
+#define CC_STAGES       "stages"
+#define CC_FALSE_ALARM "falseAlarm"
+#define CC_WEAK_THRESHOLD  "weakThreshold"
+#define CC_FEATUREIDX  "featureindex"
+#define CC_LUT_LENGTH  "lutlength"
+#define CC_LUT		   "lut"
+
 class CvCascadeParams : public CvParams
 {
 public:

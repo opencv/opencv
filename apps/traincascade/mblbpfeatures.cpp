@@ -1,14 +1,14 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/internal.hpp"
 
-#include "mblbpfeatures.h.h"
+#include "mblbpfeatures.h"
 #include "cascadeclassifier.h"
 
 using namespace std;
 using namespace cv;
 
 
-void CvMPLBPEvaluator::generateFeatures()
+void CvMBLBPEvaluator::generateFeatures()
 {
     int offset = winSize.width+1;
     int count = 0;
@@ -94,12 +94,12 @@ void CvMPLBPEvaluator::generateFeatures()
         this->features[i].offsets[12] = (y+h*3) * offset + (x      );
         this->features[i].offsets[13] = (y+h*3) * offset + (x + w  );
         this->features[i].offsets[14] = (y+h*3) * offset + (x + w*2);
-        this->features[i].offsets[15] = (y+h*3) * offset + (x + w*3);       
+        this->features[i].offsets[15] = (y+h*3) * offset + (x + w*3);
     }
     return true;
 }
 
-void CvMPLBPEvaluator::setImage(const Mat &img, int idx,bool isSum)
+void CvMBLBPEvaluator::setImage(const Mat &img, int idx,bool isSum)
 {
     Mat sum;
 
@@ -128,4 +128,53 @@ void CvMPLBPEvaluator::setImage(const Mat &img, int idx,bool isSum)
     }
 
     return true;
+}
+
+bool CvMBLBPEvaluator::loadPosSamples(string _posFilename){
+    //positive sampls
+    this->numSamples = 0;
+    this->numSamples += this->numPos;
+    this->numSamples += this->numNeg;
+
+    //alloc memory for samples
+    this->labels = Mat::zeros(1, numSamples, CV_8UC1);
+    this->samplesLBP.create(this->numFeatures, numSamples, CV_8UC1);
+    if(labels.empty() || samplesLBP.empty())
+    {
+        cerr << "Cannot alloc memory for samples." << endl;
+        return false;
+    }
+
+
+    //load postive samples and convert them to integral images
+    {
+        Mat img(this->winSize, CV_8UC1);
+        posReader.create(_posFilename);
+
+        int currPos = 0;
+        while( posReader.get(img))
+        {
+            //imshow("pos", img);
+            //waitKey(10);
+
+            labels.at<unsigned char>(0, currPos) = 1;
+            setImage(img, currPos, false);
+            currPos++;
+
+            if(currPos >= this->numPos)
+                break;
+        }
+
+        if( currPos != this->numPos)
+        {
+            cerr << "Read vec file " << _posFilename << " error" << endl;
+            cerr << "There are " << this->numPos << " samples, but only " << currPos << " loaded." << endl;
+            return false;
+        }
+
+        cout << currPos << " positive samples loaded." << endl;
+    }
+
+    return true;
+
 }

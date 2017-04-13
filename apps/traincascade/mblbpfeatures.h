@@ -10,15 +10,20 @@ struct CvMBLBPFeatureParams : CvFeatureParams
     CvMBLBPFeatureParams();
 };
 
-class CvMPLBPEvaluator:public CvFeatureEvaluator
+class CvMBLBPEvaluator:public CvFeatureEvaluator
 {
     public:
-        virtual ~CvMPLBPEvaluator(){}
+        virtual ~CvMBLBPEvaluator(){}
         virtual void init(const CvFeatureParams *_featureParams,
             int _maxSampleCount, cv::Size _winSize);
         virtual void setImage(const cv::Mat &img, int idx,bool isSum);
+        virtual bool loadPosSamples(string _posFilename);
+        virtual bool loadNegSamples(double &FARate);
         virtual float operator()(int featureIdx,int sampleIdx) const
-        { return (float)features[featureIdx].calc(sum,sampleIdx); }
+        { 
+            //TODO: 计算特征值的方法 
+            return (float)features[featureIdx].calc(sum, offsets, img_offset);
+        }
         virtual void writeFeatures(cv::FileStorage &fs, const cv::Mat& featureMap) const;
     protected:
         virtual void generateFeatures();
@@ -27,28 +32,44 @@ class CvMPLBPEvaluator:public CvFeatureEvaluator
         public:
             Feature();
             Feature(int offset, int x, int y, int _block_w,int _block_h);
-            uchar calc(const cv::Mat&_sum,size_t y) const;
+            LBPMAP calc(const cv::Mat&_sum, const int * offsets, size_t img_offset) const;
             void write (cv::FileStorage &fs) const;
             cv::Rect rect;
             int p[16];
         };
-        std::vector<Feature> features;
         cv::Mat sum;
+        // feature parameters
+        int numFeatures;
+        MBLBPWeakf * features;
+        bool *featuresMask;
+        // cascade parameters
+        int numPos;
+        int numNeg;
+        int numSamples;
+        int maxWeakCount;
+        float minHitRate;
+        MBLBPCascadef cascade;
+        PosImageReader posReader;
+        NegImageReader negReader;
+        Mat samplesLBP;
+        Mat labels;
 };
 
-inline uchar CvMPLBPEvaluator::Feature::calc(const cv::Mat &_sum, size_t y) const
+inline LBPMAP CvMBLBPEvaluator::Feature::calc(const cv::Mat &_sum,const int * offsets, size_t img_offset=0) const
 {
-    const int* psum = _sum.ptr<int>((int)y);
-    int cval = psum[p[5]] - psum[p[6]] - psum[p[9]] + psum[p[10]];
+    const int* psum = _sum.ptr<int>(0);
+    const int* p = offsets;
 
-    return (uchar)((psum[p[0]] - psum[p[1]] - psum[p[4]] + psum[p[5]] >= cval ? 128 : 0) |   // 0
-        (psum[p[1]] - psum[p[2]] - psum[p[5]] + psum[p[6]] >= cval ? 64 : 0) |    // 1
-        (psum[p[2]] - psum[p[3]] - psum[p[6]] + psum[p[7]] >= cval ? 32 : 0) |    // 2
-        (psum[p[6]] - psum[p[7]] - psum[p[10]] + psum[p[11]] >= cval ? 16 : 0) |  // 5
-        (psum[p[10]] - psum[p[11]] - psum[p[14]] + psum[p[15]] >= cval ? 8 : 0) | // 8
-        (psum[p[9]] - psum[p[10]] - psum[p[13]] + psum[p[14]] >= cval ? 4 : 0) |  // 7
-        (psum[p[8]] - psum[p[9]] - psum[p[12]] + psum[p[13]] >= cval ? 2 : 0) |   // 6
-        (psum[p[4]] - psum[p[5]] - psum[p[8]] + psum[p[9]] >= cval ? 1 : 0));     // 3
+    int cval = psum[p[5]+img_offset] - psum[p[6]+img_offset] - psum[p[9]+img_offset] + psum[p[10]+img_offset]; 
+    
+	return        LBPMAP[(((psum[p[ 0]+img_offset ] - psum[p[ 1]+img_offset ] - psum[p[ 4]+img_offset ] + psum[p[ 5]+img_offset ] >= cval) << 7) |
+                          ((psum[p[ 1]+img_offset ] - psum[p[ 2]+img_offset ] - psum[p[ 5]+img_offset ] + psum[p[ 6]+img_offset ] >= cval) << 6) |
+                          ((psum[p[ 2]+img_offset ] - psum[p[ 3]+img_offset ] - psum[p[ 6]+img_offset ] + psum[p[ 7]+img_offset ] >= cval) << 5) |
+                          ((psum[p[ 6]+img_offset ] - psum[p[ 7]+img_offset ] - psum[p[10]+img_offset ] + psum[p[11]+img_offset ] >= cval) << 4) |
+                          ((psum[p[10]+img_offset ] - psum[p[11]+img_offset ] - psum[p[14]+img_offset ] + psum[p[15]+img_offset ] >= cval) << 3) |
+                          ((psum[p[ 9]+img_offset ] - psum[p[10]+img_offset ] - psum[p[13]+img_offset ] + psum[p[14]+img_offset ] >= cval) << 2) |
+                          ((psum[p[ 8]+img_offset ] - psum[p[ 9]+img_offset ] - psum[p[12]+img_offset ] + psum[p[13]+img_offset ] >= cval) << 1) |  
+                          ( psum[p[ 4]+img_offset ] - psum[p[ 5]+img_offset ] - psum[p[ 8]+img_offset ] + psum[p[ 9]+img_offset ] >= cval)     )];
 }
 
 #endif

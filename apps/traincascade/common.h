@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 
+#include "cascadeclassifier.h"
 #include "opencv.hpp"
 
 #ifdef _OPENMP
@@ -14,32 +15,6 @@
 using namespace std;
 using namespace cv;
 
-#define MBLBP_LUTLENGTH  59
-//#define MBLBP_LUTLENGTH  256
-#define MAX_NUM_WEAKS 512
-#define MAX_NUM_STAGES 32
-
-#define CC_MAGIC_NAME "version"
-#define CC_MAGIC_VALUE "SZU-MBLBP-MVIEW1.0"
-#define CC_HEIGHT "height"
-#define CC_WIDTH  "width"
-#define CC_MINHITRATE       "minHitRate"
-#define CC_STAGES       "stages"
-#define CC_FALSE_ALARM "falseAlarm"
-#define CC_STAGE_THRESHOLD  "stageThreshold"
-#define CC_WEAK_CLASSIFIERS "weakClassifiers"
-#define CC_WEAK_THRESHOLD  "weakThreshold"
-#define CC_FEATUREIDX  "featureindex"
-#define CC_RECT       "rect"
-#define CC_LUT_LENGTH  "lutlength"
-#define CC_LUT		   "lut"
-
-#ifndef CC_WEAK_COUNT
-#define CC_WEAK_COUNT       "weakCount"
-#endif
-#ifndef CC_STAGE_NUM
-#define CC_STAGE_NUM    "stageCount"
-#endif
 #if MBLBP_LUTLENGTH == 59
 
 static unsigned char LBPMAP[256] = {1,   2,   3,   4,   5,   0,   6,   7,   8,   0,   0,   0,   9,   0,  10,  11,
