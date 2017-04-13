@@ -35,7 +35,7 @@ unset(IPP_VERSION_MINOR)
 unset(IPP_VERSION_BUILD)
 
 if (X86 AND UNIX AND NOT APPLE AND NOT ANDROID AND BUILD_SHARED_LIBS)
-    message(STATUS "On 32-bit Linux IPP can not currently be used with dynamic libs because of linker errors. Set BUILD_SHARED_LIBS=OFF")
+    message(STATUS "On 32-bit Linux Intel IPP can not currently be used with dynamic libs because of linker errors. Set BUILD_SHARED_LIBS=OFF")
     return()
 endif()
 
@@ -47,14 +47,14 @@ if(CMAKE_CL_64)
     set(IPP_X64 1)
 endif()
 
-# This function detects IPP version by analyzing .h file
+# This function detects Intel IPP version by analyzing .h file
 macro(ipp_get_version VERSION_FILE)
   unset(_VERSION_STR)
   unset(_MAJOR)
   unset(_MINOR)
   unset(_BUILD)
 
-  # read IPP version info from file
+  # read Intel IPP version info from file
   file(STRINGS ${VERSION_FILE} STR1 REGEX "IPP_VERSION_MAJOR")
   file(STRINGS ${VERSION_FILE} STR2 REGEX "IPP_VERSION_MINOR")
   file(STRINGS ${VERSION_FILE} STR3 REGEX "IPP_VERSION_BUILD")
@@ -96,29 +96,29 @@ macro(ipp_detect_version)
   elseif(EXISTS ${IPP_ROOT_DIR}/include/ipp.h)
     # nothing
   else()
-    _ipp_not_supported("Can't resolve IPP directory: ${IPP_ROOT_DIR}")
+    _ipp_not_supported("Can't resolve Intel IPP directory: ${IPP_ROOT_DIR}")
   endif()
 
   ipp_get_version(${IPP_INCLUDE_DIRS}/ippversion.h)
   ocv_assert(IPP_VERSION_STR VERSION_GREATER "1.0")
 
-  message(STATUS "found IPP${__msg}: ${_MAJOR}.${_MINOR}.${_BUILD} [${IPP_VERSION_STR}]")
+  message(STATUS "found Intel IPP${__msg}: ${_MAJOR}.${_MINOR}.${_BUILD} [${IPP_VERSION_STR}]")
   message(STATUS "at: ${IPP_ROOT_DIR}")
 
   if(${IPP_VERSION_STR} VERSION_LESS "7.0")
-    _ipp_not_supported("IPP ${IPP_VERSION_STR} is not supported")
+    _ipp_not_supported("Intel IPP ${IPP_VERSION_STR} is not supported")
   endif()
 
   set(HAVE_IPP 1)
 
   macro(_ipp_set_library_dir DIR)
     if(NOT EXISTS ${DIR})
-      _ipp_not_supported("IPP library directory not found")
+      _ipp_not_supported("Intel IPP library directory not found")
     endif()
     set(IPP_LIBRARY_DIR ${DIR})
   endmacro()
 
-  if(APPLE)
+  if(APPLE AND NOT HAVE_IPP_ICV_ONLY)
     _ipp_set_library_dir(${IPP_ROOT_DIR}/lib)
   elseif(IPP_X64)
     _ipp_set_library_dir(${IPP_ROOT_DIR}/lib/intel64)
@@ -127,7 +127,7 @@ macro(ipp_detect_version)
   endif()
 
   macro(_ipp_add_library name)
-    # dynamic linking is only supported for standalone version of IPP
+    # dynamic linking is only supported for standalone version of Intel IPP
     if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
       if (WIN32)
         set(IPP_LIB_PREFIX ${CMAKE_IMPORT_LIBRARY_PREFIX})
@@ -142,7 +142,7 @@ macro(ipp_detect_version)
     endif ()
     if (EXISTS ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
       if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
-        # When using dynamic libraries from standalone IPP it is your responsibility to install those on the target system
+        # When using dynamic libraries from standalone Intel IPP it is your responsibility to install those on the target system
         list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
       else ()
         add_library(ipp${name} STATIC IMPORTED)
@@ -161,33 +161,32 @@ macro(ipp_detect_version)
         endif()
       endif()
     else()
-      message(STATUS "Can't find IPP library: ${name} at ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}")
+      message(STATUS "Can't find Intel IPP library: ${name} at ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}")
     endif()
   endmacro()
 
   set(IPP_PREFIX "ipp")
   if(${IPP_VERSION_STR} VERSION_LESS "8.0")
     if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
-      set(IPP_SUFFIX "")      # dynamic not threaded libs suffix IPP 7.x
+      set(IPP_SUFFIX "")      # dynamic not threaded libs suffix Intel IPP 7.x
     else ()
-      set(IPP_SUFFIX "_l")    # static not threaded libs suffix IPP 7.x
+      set(IPP_SUFFIX "_l")    # static not threaded libs suffix Intel IPP 7.x
     endif ()
   else ()
     if(WIN32)
       if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV_ONLY)
-        set(IPP_SUFFIX "")    # dynamic not threaded libs suffix IPP 8.x for Windows
+        set(IPP_SUFFIX "")    # dynamic not threaded libs suffix Intel IPP 8.x for Windows
       else ()
-        set(IPP_SUFFIX "mt")  # static not threaded libs suffix IPP 8.x for Windows
+        set(IPP_SUFFIX "mt")  # static not threaded libs suffix Intel IPP 8.x for Windows
       endif ()
     else()
-      set(IPP_SUFFIX "")      # static not threaded libs suffix IPP 8.x for Linux/OS X
+      set(IPP_SUFFIX "")      # static not threaded libs suffix Intel IPP 8.x for Linux/OS X
     endif()
   endif()
 
   if(HAVE_IPP_ICV_ONLY)
     _ipp_add_library(icv)
   else()
-    _ipp_add_library(m)
     _ipp_add_library(cv)
     _ipp_add_library(i)
     _ipp_add_library(cc)
@@ -201,7 +200,7 @@ macro(ipp_detect_version)
         get_filename_component(INTEL_COMPILER_LIBRARY_DIR ${IPP_ROOT_DIR}/../compiler/lib REALPATH)
       endif()
       if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR})
-        _ipp_not_supported("IPP configuration error: can't find Intel compiler library dir ${INTEL_COMPILER_LIBRARY_DIR}")
+        _ipp_not_supported("Intel IPP configuration error: can't find Intel compiler library dir ${INTEL_COMPILER_LIBRARY_DIR}")
       endif()
       if(NOT APPLE)
         if(IPP_X64)
@@ -231,7 +230,7 @@ macro(ipp_detect_version)
     endif()
   endif()
 
-  #message(STATUS "IPP libs: ${IPP_LIBRARIES}")
+  #message(STATUS "Intel IPP libs: ${IPP_LIBRARIES}")
 endmacro()
 
 # OPENCV_IPP_PATH is an environment variable for internal usage only, do not use it
@@ -240,12 +239,6 @@ if(DEFINED ENV{OPENCV_IPP_PATH} AND NOT DEFINED IPPROOT)
 endif()
 
 if(NOT DEFINED IPPROOT)
-  if(IOS AND NOT x86_64)
-    # 2016/10: There is an issue with MacOS binary .a file.
-    # It is fat multiarch library, and can't be "merged" multiple times.
-    # So try to ignore i386 version
-    return()
-  endif()
   include("${OpenCV_SOURCE_DIR}/3rdparty/ippicv/ippicv.cmake")
   download_ippicv(IPPROOT)
   if(NOT IPPROOT)
@@ -261,7 +254,7 @@ endif()
 
 
 if(WIN32 AND MINGW AND NOT IPP_VERSION_MAJOR LESS 7)
-    # Since IPP built with Microsoft compiler and /GS option
+    # Since Intel IPP built with Microsoft compiler and /GS option
     # ======================================================
     # From Windows SDK 7.1
     #   (usually in "C:\Program Files\Microsoft Visual Studio 10.0\VC\lib"),

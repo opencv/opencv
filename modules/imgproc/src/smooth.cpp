@@ -2295,100 +2295,53 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 #endif
 
 #ifdef HAVE_IPP
-
-static bool ipp_GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
-                   double sigma1, double sigma2,
-                   int borderType )
+static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
+                   double sigma1, double sigma2, int borderType )
 {
+#ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 >= 810
-    if ((borderType & BORDER_ISOLATED) == 0 && _src.isSubmatrix())
+#if IPP_VERSION_X100 <= 201702 && ((defined _MSC_VER && defined _M_IX86) || (defined __GNUC__ && defined __i386__))
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(ksize); CV_UNUSED(sigma1); CV_UNUSED(sigma2); CV_UNUSED(borderType);
+    return false; // bug on ia32
+#else
+    if(sigma1 != sigma2)
         return false;
 
-    int type = _src.type();
-    Size size = _src.size();
+    if(sigma1 < FLT_EPSILON)
+        return false;
 
-    if( borderType != BORDER_CONSTANT && (borderType & BORDER_ISOLATED) != 0 )
+    if(ksize.width != ksize.height)
+        return false;
+
+    // Acquire data and begin processing
+    try
     {
-        if( size.height == 1 )
-            ksize.height = 1;
-        if( size.width == 1 )
-            ksize.width = 1;
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+        ::ipp::IwiImage iwSrc      = ippiGetImage(src);
+        ::ipp::IwiImage iwDst      = ippiGetImage(dst);
+        ::ipp::IwiBorderSize  borderSize(::ipp::IwiSize(ippiSize(ksize)));
+        ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
+        if(!ippBorder.m_borderType)
+            return false;
+
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterGaussian, &iwSrc, &iwDst, ksize.width, (float)sigma1, ippBorder);
+    }
+    catch (::ipp::IwException ex)
+    {
+        return false;
     }
 
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-
-    if ((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn == 1 || cn == 3) &&
-            sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
-    {
-        IppiBorderType ippBorder = ippiGetBorderType(borderType);
-        if (ippBorderConst == ippBorder || ippBorderRepl == ippBorder)
-        {
-            Mat src = _src.getMat(), dst = _dst.getMat();
-            IppiSize roiSize = { src.cols, src.rows };
-            IppDataType dataType = ippiGetDataType(depth);
-            Ipp32s specSize = 0, bufferSize = 0;
-
-            if (ippiFilterGaussianGetBufferSize(roiSize, (Ipp32u)ksize.width, dataType, cn, &specSize, &bufferSize) >= 0)
-            {
-                IppAutoBuffer<IppFilterGaussianSpec> spec(specSize);
-                IppAutoBuffer<Ipp8u> buffer(bufferSize);
-
-                if (ippiFilterGaussianInit(roiSize, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, dataType, cn, spec, buffer) >= 0)
-                {
-#define IPP_FILTER_GAUSS_C1(ippfavor) \
-                    { \
-                        Ipp##ippfavor borderValues = 0; \
-                        status = CV_INSTRUMENT_FUN_IPP(ippiFilterGaussianBorder_##ippfavor##_C1R, src.ptr<Ipp##ippfavor>(), (int)src.step, \
-                                dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
-                    }
-
-#define IPP_FILTER_GAUSS_CN(ippfavor, ippcn) \
-                    { \
-                        Ipp##ippfavor borderValues[] = { 0, 0, 0 }; \
-                        status = CV_INSTRUMENT_FUN_IPP(ippiFilterGaussianBorder_##ippfavor##_C##ippcn##R, src.ptr<Ipp##ippfavor>(), (int)src.step, \
-                                dst.ptr<Ipp##ippfavor>(), (int)dst.step, roiSize, borderValues, spec, buffer); \
-                    }
-
-                    IppStatus status = ippStsErr;
-#if IPP_VERSION_X100 > 900 // Buffer overflow may happen in IPP 9.0.0 and less
-                    if (type == CV_8UC1)
-                        IPP_FILTER_GAUSS_C1(8u)
-                    else
+    return true;
 #endif
-                    if (type == CV_8UC3)
-                        IPP_FILTER_GAUSS_CN(8u, 3)
-                    else if (type == CV_16UC1)
-                        IPP_FILTER_GAUSS_C1(16u)
-                    else if (type == CV_16UC3)
-                        IPP_FILTER_GAUSS_CN(16u, 3)
-                    else if (type == CV_16SC1)
-                        IPP_FILTER_GAUSS_C1(16s)
-                    else if (type == CV_16SC3)
-                        IPP_FILTER_GAUSS_CN(16s, 3)
-                    else if (type == CV_32FC3)
-                        IPP_FILTER_GAUSS_CN(32f, 3)
-                    else if (type == CV_32FC1)
-                        IPP_FILTER_GAUSS_C1(32f)
-
-                    if(status >= 0)
-                        return true;
-
-#undef IPP_FILTER_GAUSS_C1
-#undef IPP_FILTER_GAUSS_CN
-                }
-            }
-        }
-    }
 #else
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(ksize); CV_UNUSED(sigma1); CV_UNUSED(sigma2); CV_UNUSED(borderType);
-#endif
     return false;
+#endif
 }
 #endif
 }
-
 
 void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
@@ -2423,17 +2376,18 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     if(sigma1 == 0 && sigma2 == 0 && tegra::useTegra() && tegra::gaussian(src, dst, ksize, borderType))
         return;
 #endif
+    bool useOpenCL = (_dst.isUMat() && _src.dims() <= 2 &&
+               ((ksize.width == 3 && ksize.height == 3) ||
+               (ksize.width == 5 && ksize.height == 5)) &&
+               _src.rows() > ksize.height && _src.cols() > ksize.width);
+    (void)useOpenCL;
 
-    CV_IPP_RUN(!(ocl::useOpenCL() && _dst.isUMat()), ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
+    CV_IPP_RUN(!useOpenCL, ipp_GaussianBlur( _src,  _dst,  ksize, sigma1,  sigma2, borderType));
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 &&
-               ((ksize.width == 3 && ksize.height == 3) ||
-               (ksize.width == 5 && ksize.height == 5)) &&
-               (size_t)_src.rows() > ky.total() && (size_t)_src.cols() > kx.total(),
-               ocl_GaussianBlur_8UC1(_src, _dst, ksize, CV_MAT_DEPTH(type), kx, ky, borderType));
+    CV_OCL_RUN(useOpenCL, ocl_GaussianBlur_8UC1(_src, _dst, ksize, CV_MAT_DEPTH(type), kx, ky, borderType));
 
     sepFilter2D(_src, _dst, CV_MAT_DEPTH(type), kx, ky, Point(-1,-1), 0, borderType );
 }
@@ -3430,60 +3384,69 @@ namespace cv
 #ifdef HAVE_IPP
 namespace cv
 {
-static bool ipp_medianFilter( InputArray _src0, OutputArray _dst, int ksize )
+static bool ipp_medianFilter(Mat &src0, Mat &dst, int ksize)
 {
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 >= 810
-    Mat src0 = _src0.getMat();
-    _dst.create( src0.size(), src0.type() );
-    Mat dst = _dst.getMat();
-
-#define IPP_FILTER_MEDIAN_BORDER(ippType, ippDataType, flavor) \
-    do \
-    { \
-        if (ippiFilterMedianBorderGetBufferSize(dstRoiSize, maskSize, \
-        ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
-        { \
-            Ipp8u * buffer = ippsMalloc_8u(bufSize); \
-            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_##flavor, src.ptr<ippType>(), (int)src.step, \
-            dst.ptr<ippType>(), (int)dst.step, dstRoiSize, maskSize, \
-            ippBorderRepl, (ippType)0, buffer); \
-            ippsFree(buffer); \
-            if (status >= 0) \
-            { \
-                CV_IMPL_ADD(CV_IMPL_IPP); \
-                return true; \
-            } \
-        } \
-    } \
-    while ((void)0, 0)
-
-    if( ksize <= 5 )
     {
-        Ipp32s bufSize;
-        IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
+        int         bufSize;
+        IppiSize    dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
+        IppDataType ippType = ippiGetDataType(src0.type());
+        int         channels = src0.channels();
+        IppAutoBuffer<Ipp8u> buffer;
+
+        if(src0.isSubmatrix())
+            return false;
+
         Mat src;
-        if( dst.data != src0.data )
+        if(dst.data != src0.data)
             src = src0;
         else
             src0.copyTo(src);
 
-        int type = src0.type();
-        if (type == CV_8UC1)
-            IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
-        else if (type == CV_16UC1)
-            IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
-        else if (type == CV_16SC1)
-            IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
-        else if (type == CV_32FC1)
-            IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+        if(ippiFilterMedianBorderGetBufferSize(dstRoiSize, maskSize, ippType, channels, &bufSize) < 0)
+            return false;
+
+        buffer.allocate(bufSize);
+
+        switch(ippType)
+        {
+        case ipp8u:
+            if(channels == 1)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_8u_C1R, src.ptr<Ipp8u>(), (int)src.step, dst.ptr<Ipp8u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else if(channels == 3)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_8u_C3R, src.ptr<Ipp8u>(), (int)src.step, dst.ptr<Ipp8u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else if(channels == 4)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_8u_C4R, src.ptr<Ipp8u>(), (int)src.step, dst.ptr<Ipp8u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else
+                return false;
+        case ipp16u:
+            if(channels == 1)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16u_C1R, src.ptr<Ipp16u>(), (int)src.step, dst.ptr<Ipp16u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else if(channels == 3)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16u_C3R, src.ptr<Ipp16u>(), (int)src.step, dst.ptr<Ipp16u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else if(channels == 4)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16u_C4R, src.ptr<Ipp16u>(), (int)src.step, dst.ptr<Ipp16u>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else
+                return false;
+        case ipp16s:
+            if(channels == 1)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16s_C1R, src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else if(channels == 3)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16s_C3R, src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else if(channels == 4)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_16s_C4R, src.ptr<Ipp16s>(), (int)src.step, dst.ptr<Ipp16s>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else
+                return false;
+        case ipp32f:
+            if(channels == 1)
+                return CV_INSTRUMENT_FUN_IPP(ippiFilterMedianBorder_32f_C1R, src.ptr<Ipp32f>(), (int)src.step, dst.ptr<Ipp32f>(), (int)dst.step, dstRoiSize, maskSize, ippBorderRepl, 0, buffer) >= 0;
+            else
+                return false;
+        default:
+            return false;
+        }
     }
-#undef IPP_FILTER_MEDIAN_BORDER
-#else
-    CV_UNUSED(_src0); CV_UNUSED(_dst); CV_UNUSED(ksize);
-#endif
-    return false;
 }
 }
 #endif
@@ -3510,7 +3473,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     CV_OVX_RUN(true,
                openvx_medianFilter(_src0, _dst, ksize))
 
-    CV_IPP_RUN(IPP_VERSION_X100 >= 810 && ksize <= 5, ipp_medianFilter(_src0,_dst, ksize));
+    CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::useTegra() && tegra::medianBlur(src0, dst, ksize))

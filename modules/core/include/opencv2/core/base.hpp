@@ -671,7 +671,11 @@ namespace cudev
 
 namespace ipp
 {
+#if OPENCV_ABI_COMPATIBILITY > 300
+CV_EXPORTS   unsigned long long getIppFeatures();
+#else
 CV_EXPORTS   int getIppFeatures();
+#endif
 CV_EXPORTS   void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
                              int line = 0);
 CV_EXPORTS   int getIppStatus();

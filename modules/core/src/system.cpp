@@ -1738,19 +1738,19 @@ IntrumentationRegion::~IntrumentationRegion()
 namespace ipp
 {
 
+#ifdef HAVE_IPP
 struct IPPInitSingleton
 {
 public:
     IPPInitSingleton()
     {
-        useIPP      = true;
-        ippStatus   = 0;
-        funcname    = NULL;
-        filename    = NULL;
-        linen       = 0;
-        ippFeatures = 0;
+        useIPP       = true;
+        ippStatus    = 0;
+        funcname     = NULL;
+        filename     = NULL;
+        linen        = 0;
+        ippFeatures  = 0;
 
-#ifdef HAVE_IPP
         const char* pIppEnv = getenv("OPENCV_IPP");
         cv::String env = pIppEnv;
         if(env.size())
@@ -1783,7 +1783,7 @@ public:
         }
 
         IPP_INITIALIZER(ippFeatures)
-#endif
+        ippFeatures = ippGetEnabledCpuFeatures();
     }
 
     bool useIPP;
@@ -1792,18 +1792,27 @@ public:
     const char *funcname;
     const char *filename;
     int         linen;
-    int         ippFeatures;
+    Ipp64u      ippFeatures;
 };
 
 static IPPInitSingleton& getIPPSingleton()
 {
     CV_SINGLETON_LAZY_INIT_REF(IPPInitSingleton, new IPPInitSingleton())
 }
+#endif
 
+#if OPENCV_ABI_COMPATIBILITY > 300
+unsigned long long getIppFeatures()
+#else
 int getIppFeatures()
+#endif
 {
 #ifdef HAVE_IPP
+#if OPENCV_ABI_COMPATIBILITY > 300
     return getIPPSingleton().ippFeatures;
+#else
+    return (int)getIPPSingleton().ippFeatures;
+#endif
 #else
     return 0;
 #endif
@@ -1811,20 +1820,32 @@ int getIppFeatures()
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
+#ifdef HAVE_IPP
     getIPPSingleton().ippStatus = status;
     getIPPSingleton().funcname = _funcname;
     getIPPSingleton().filename = _filename;
     getIPPSingleton().linen = _line;
+#else
+    CV_UNUSED(status); CV_UNUSED(_funcname); CV_UNUSED(_filename); CV_UNUSED(_line);
+#endif
 }
 
 int getIppStatus()
 {
+#ifdef HAVE_IPP
     return getIPPSingleton().ippStatus;
+#else
+    return 0;
+#endif
 }
 
 String getIppErrorLocation()
 {
+#ifdef HAVE_IPP
     return format("%s:%d %s", getIPPSingleton().filename ? getIPPSingleton().filename : "", getIPPSingleton().linen, getIPPSingleton().funcname ? getIPPSingleton().funcname : "");
+#else
+    return String();
+#endif
 }
 
 bool useIPP()
