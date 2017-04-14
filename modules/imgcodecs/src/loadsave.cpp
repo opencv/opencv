@@ -82,13 +82,13 @@ protected:
         }
 
         // check limits
-        if (off < (off_type)0 || off >= egptr() - eback())
+        if (off >= (off_type)0 && off <= egptr() - eback())
         {
-            return -1;
+            setg(eback(), gptr() + off, egptr());
+            return gptr() - eback();
         }
 
-        setg(eback(), gptr() + off, egptr());
-        return gptr() - eback();
+        return -1;
     }
 };
 
