@@ -50,15 +50,6 @@
 
 #define USE_ZLIB 1
 
-#ifdef __APPLE__
-#  include "TargetConditionals.h"
-#  if (defined TARGET_OS_IPHONE && TARGET_OS_IPHONE) || (defined TARGET_IPHONE_SIMULATOR && TARGET_IPHONE_SIMULATOR)
-#    undef USE_ZLIB
-#    define USE_ZLIB 0
-     typedef void* gzFile;
-#  endif
-#endif
-
 #if USE_ZLIB
 #  ifndef _LFS64_LARGEFILE
 #    define _LFS64_LARGEFILE 0
