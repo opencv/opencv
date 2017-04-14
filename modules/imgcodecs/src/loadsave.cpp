@@ -66,23 +66,28 @@ public:
     }
 
 protected:
-    virtual pos_type seekoff( off_type off,
+    virtual pos_type seekoff( off_type offset,
                               std::ios_base::seekdir dir,
                               std::ios_base::openmode )
     {
+        // get absolute offset
+        off_type off = offset;
         if (dir == std::ios_base::cur)
         {
-            if (gptr() + off >= egptr())
-            {
-                return -1;
-            }
-            if (gptr() + off < eback())
-            {
-                return -1;
-            }
-            setg(eback(), gptr() + off, egptr());
+            off += gptr() - eback();
+        }
+        else if (dir == std::ios_base::end)
+        {
+            off += egptr() - eback();
         }
 
+        // check limits
+        if (off < (off_type)0 || off >= egptr() - eback())
+        {
+            return -1;
+        }
+
+        setg(eback(), gptr() + off, egptr());
         return gptr() - eback();
     }
 };
