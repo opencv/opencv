@@ -558,7 +558,7 @@ Mat imread( const String& filename, int flags )
     imread_( filename, flags, LOAD_MAT, &img );
 
     /// optionally rotate the data if EXIF' orientation flag says so
-    if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
     {
         ApplyExifOrientation(filename, img);
     }
@@ -724,7 +724,7 @@ Mat imdecode( InputArray _buf, int flags )
     imdecode_( buf, flags, LOAD_MAT, &img );
 
     /// optionally rotate the data if EXIF' orientation flag says so
-    if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
     {
         ApplyExifOrientation(buf, img);
     }
@@ -739,7 +739,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     imdecode_( buf, flags, LOAD_MAT, dst );
 
     /// optionally rotate the data if EXIF' orientation flag says so
-    if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    if( !dst->empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
     {
         ApplyExifOrientation(buf, *dst);
     }
