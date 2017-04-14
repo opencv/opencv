@@ -57,34 +57,34 @@
 \****************************************************************************************/
 namespace {
 
-class ByteStreamBuffer : public std::streambuf
+class ByteStreamBuffer: public std::streambuf
 {
 public:
-   ByteStreamBuffer(char* base, size_t length)
-   {
-      setg( base, base, base + length );
-   };
+    ByteStreamBuffer(char* base, size_t length)
+    {
+        setg(base, base, base + length);
+    }
 
 protected:
-   virtual pos_type seekoff( off_type off,
-                             std::ios_base::seekdir dir,
-                             std::ios_base::openmode )
-   {
-      if( dir == std::ios_base::cur )
-      {
-         if( gptr() + off >= egptr() )
-         {
-            return -1;
-         }
-         if( gptr() + off < eback() )
-         {
-            return -1;
-         }
-         setg( eback(), gptr() + off, egptr() );
-      }
+    virtual pos_type seekoff( off_type off,
+                              std::ios_base::seekdir dir,
+                              std::ios_base::openmode )
+    {
+        if (dir == std::ios_base::cur)
+        {
+            if (gptr() + off >= egptr())
+            {
+                return -1;
+            }
+            if (gptr() + off < eback())
+            {
+                return -1;
+            }
+            setg(eback(), gptr() + off, egptr());
+        }
 
-      return gptr() - eback();
-   }
+        return gptr() - eback();
+    }
 };
 
 }
@@ -310,17 +310,17 @@ static void ApplyExifOrientation(const String& filename, Mat& img)
 
     if (filename.size() > 0)
     {
-       std::ifstream stream( filename.c_str(), std::ios_base::in | std::ios_base::binary );
-       ExifReader reader( stream );
-       if( reader.parse() )
-       {
-           ExifEntry_t entry = reader.getTag( ORIENTATION );
-           if (entry.tag != INVALID_TAG)
-           {
-               orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-           }
-       }
-       stream.close();
+        std::ifstream stream( filename.c_str(), std::ios_base::in | std::ios_base::binary );
+        ExifReader reader( stream );
+        if( reader.parse() )
+        {
+            ExifEntry_t entry = reader.getTag( ORIENTATION );
+            if (entry.tag != INVALID_TAG)
+            {
+                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
+            }
+        }
+        stream.close();
     }
 
     ExifTransform(orientation, img);
@@ -332,17 +332,17 @@ static void ApplyExifOrientation(const Mat& buf, Mat& img)
 
     if( buf.isContinuous() )
     {
-       ByteStreamBuffer bsb( reinterpret_cast<char*>(buf.data), buf.total() * buf.elemSize() );
-       std::istream stream( &bsb );
-       ExifReader reader( stream );
-       if( reader.parse() )
-       {
-           ExifEntry_t entry = reader.getTag( ORIENTATION );
-           if (entry.tag != INVALID_TAG)
-           {
-               orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-           }
-       }
+        ByteStreamBuffer bsb( reinterpret_cast<char*>(buf.data), buf.total() * buf.elemSize() );
+        std::istream stream( &bsb );
+        ExifReader reader( stream );
+        if( reader.parse() )
+        {
+            ExifEntry_t entry = reader.getTag( ORIENTATION );
+            if (entry.tag != INVALID_TAG)
+            {
+                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
+            }
+        }
     }
 
     ExifTransform(orientation, img);
