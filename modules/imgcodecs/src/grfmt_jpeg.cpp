@@ -41,6 +41,8 @@
 
 #include "precomp.hpp"
 #include "grfmt_jpeg.hpp"
+#include "exif.hpp"
+#include <fstream>
 
 #ifdef HAVE_JPEG
 
@@ -75,6 +77,49 @@ extern "C" {
 #include "jpeglib.h"
 }
 
+namespace {
+
+class ByteStreamBuffer : public std::streambuf
+{
+public:
+   ByteStreamBuffer(char* base, size_t length)
+   {
+      setg( base, base, base + length );
+   };
+
+protected:
+   virtual pos_type seekoff( off_type off,
+                             std::ios_base::seekdir dir,
+                             std::ios_base::openmode )
+   {
+      if( off > INT_MAX )
+      {
+         return -1;
+      }
+
+      if( off < INT_MIN )
+      {
+         return -1;
+      }
+
+      if( dir == std::ios_base::cur )
+      {
+         if( gptr() + off >= egptr() )
+         {
+            return -1;
+         }
+         if( gptr() + off < eback() )
+         {
+            return -1;
+         }
+         gbump( static_cast<int>(off) );
+      }
+
+      return gptr() - eback();
+   }
+};
+
+}
 namespace cv
 {
 
@@ -176,7 +221,9 @@ JpegDecoder::JpegDecoder()
     m_signature = "\xFF\xD8\xFF";
     m_state = 0;
     m_f = 0;
+    m_orientation = IMAGE_ORIENTATION_TL;
     m_buf_supported = true;
+    m_description = "JPEG";
 }
 
 
@@ -206,7 +253,7 @@ void  JpegDecoder::close()
     m_type = -1;
 }
 
-ImageDecoder JpegDecoder::newDecoder() const
+Ptr<ImageDecoder> JpegDecoder::newDecoder() const
 {
     return makePtr<JpegDecoder>();
 }
@@ -255,6 +302,37 @@ bool  JpegDecoder::readHeader()
 
     if( !result )
         close();
+
+    // set a default in case we don't find the tag
+    m_orientation = IMAGE_ORIENTATION_TL;
+    if( !m_buf.empty() )
+    {
+       ByteStreamBuffer bsb( reinterpret_cast<char*>(m_buf.data), m_buf.total() * m_buf.elemSize() );
+       std::istream stream( &bsb );
+       ExifReader reader( stream );
+       if( reader.parse() )
+       {
+           ExifEntry_t entry = reader.getTag( ORIENTATION );
+           if (entry.tag != INVALID_TAG)
+           {
+               m_orientation = int(entry.field_u16); //orientation is unsigned short, so check field_u16
+           }
+       }
+    }
+    else
+    {
+       std::ifstream stream( m_filename.c_str(), std::ios_base::in | std::ios_base::binary );
+       ExifReader reader( stream );
+       if( reader.parse() )
+       {
+           ExifEntry_t entry = reader.getTag( ORIENTATION );
+           if (entry.tag != INVALID_TAG)
+           {
+               m_orientation = int(entry.field_u16); //orientation is unsigned short, so check field_u16
+           }
+       }
+       stream.close();
+    }
 
     return result;
 }
@@ -398,8 +476,9 @@ bool  JpegDecoder::readData( Mat& img )
     volatile bool result = false;
     int step = (int)img.step;
     bool color = img.channels() > 1;
+    int dst_type = color ? CV_8UC3 : CV_8UC1;
 
-    if( m_state && m_width && m_height )
+    if( m_state && m_width && m_height && checkDest( img, dst_type ) )
     {
         jpeg_decompress_struct* cinfo = &((JpegState*)m_state)->cinfo;
         JpegErrorMgr* jerr = &((JpegState*)m_state)->jerr;
@@ -542,7 +621,7 @@ JpegEncoder::~JpegEncoder()
 {
 }
 
-ImageEncoder JpegEncoder::newEncoder() const
+Ptr<ImageEncoder> JpegEncoder::newEncoder() const
 {
     return makePtr<JpegEncoder>();
 }

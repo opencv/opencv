@@ -60,16 +60,19 @@ public:
     JpegDecoder();
     virtual ~JpegDecoder();
 
+    int orientation() const { return m_orientation; }
+
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
 
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder> newDecoder() const;
 
 protected:
 
     FILE* m_f;
     void* m_state;
+    int m_orientation;
 };
 
 
@@ -80,7 +83,7 @@ public:
     virtual ~JpegEncoder();
 
     bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder> newEncoder() const;
 };
 
 }

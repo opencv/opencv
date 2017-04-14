@@ -53,6 +53,7 @@ HdrDecoder::HdrDecoder()
     m_signature_alt = "#?RADIANCE";
     file = NULL;
     m_type = CV_32FC3;
+    m_description = "HDR";
 }
 
 HdrDecoder::~HdrDecoder()
@@ -108,7 +109,7 @@ bool HdrDecoder::checkSignature( const String& signature ) const
     return false;
 }
 
-ImageDecoder HdrDecoder::newDecoder() const
+Ptr<ImageDecoder> HdrDecoder::newDecoder() const
 {
     return makePtr<HdrDecoder>();
 }
@@ -152,7 +153,7 @@ bool HdrEncoder::write( const Mat& input_img, const std::vector<int>& params )
     return true;
 }
 
-ImageEncoder HdrEncoder::newEncoder() const
+Ptr<ImageEncoder> HdrEncoder::newEncoder() const
 {
     return makePtr<HdrEncoder>();
 }

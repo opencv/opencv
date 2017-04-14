@@ -60,7 +60,7 @@ public:
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
-    ImageDecoder newDecoder() const;
+    Ptr<ImageDecoder> newDecoder() const;
 
 protected:
     bool  readComponent8u( uchar *data, void *buffer, int step, int cmpt,
@@ -81,7 +81,7 @@ public:
 
     bool  isFormatSupported( int depth ) const;
     bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
+    Ptr<ImageEncoder> newEncoder() const;
 
 protected:
     bool  writeComponent8u( void *img, const Mat& _img );

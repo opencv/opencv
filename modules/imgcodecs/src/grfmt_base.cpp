@@ -47,6 +47,14 @@
 namespace cv
 {
 
+ImageDecoder::~ImageDecoder()
+{
+}
+
+ImageEncoder::~ImageEncoder()
+{
+}
+
 BaseImageDecoder::BaseImageDecoder()
 {
     m_width = m_height = 0;
@@ -89,9 +97,21 @@ int BaseImageDecoder::setScale( const int& scale_denom )
     return temp;
 }
 
-ImageDecoder BaseImageDecoder::newDecoder() const
+bool BaseImageDecoder::checkDest( const Mat& dst, int dst_type ) const
 {
-    return ImageDecoder();
+    size_t have_size = dst.total() * dst.elemSize();
+    size_t want_size = m_width * m_height * CV_ELEM_SIZE(dst_type);
+    return have_size >= want_size;
+}
+
+String BaseImageDecoder::getDescription() const
+{
+    return m_description;
+}
+
+Ptr<ImageDecoder> BaseImageDecoder::newDecoder() const
+{
+    return Ptr<BaseImageDecoder>();
 }
 
 BaseImageEncoder::BaseImageEncoder()
@@ -126,9 +146,9 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     return true;
 }
 
-ImageEncoder BaseImageEncoder::newEncoder() const
+Ptr<ImageEncoder> BaseImageEncoder::newEncoder() const
 {
-    return ImageEncoder();
+    return Ptr<BaseImageEncoder>();
 }
 
 void BaseImageEncoder::throwOnEror() const

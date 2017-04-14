@@ -43,19 +43,14 @@
 #ifndef _GRFMT_BASE_H_
 #define _GRFMT_BASE_H_
 
+#include "opencv2/imgcodecs.hpp"
 #include "utils.hpp"
 #include "bitstrm.hpp"
 
 namespace cv
 {
 
-class BaseImageDecoder;
-class BaseImageEncoder;
-typedef Ptr<BaseImageEncoder> ImageEncoder;
-typedef Ptr<BaseImageDecoder> ImageDecoder;
-
-///////////////////////////////// base class for decoders ////////////////////////
-class BaseImageDecoder
+class BaseImageDecoder : public ImageDecoder
 {
 public:
     BaseImageDecoder();
@@ -64,20 +59,22 @@ public:
     int width() const { return m_width; }
     int height() const { return m_height; }
     virtual int type() const { return m_type; }
+    virtual int orientation() const { return IMAGE_ORIENTATION_TL; }
 
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
     virtual int setScale( const int& scale_denom );
     virtual bool readHeader() = 0;
     virtual bool readData( Mat& img ) = 0;
+    bool checkDest( const Mat& dst, int type ) const;
 
     /// Called after readData to advance to the next page, if any.
     virtual bool nextPage() { return false; }
 
     virtual size_t signatureLength() const;
     virtual bool checkSignature( const String& signature ) const;
-    virtual ImageDecoder newDecoder() const;
-
+    virtual Ptr<ImageDecoder> newDecoder() const;
+    virtual String getDescription() const;
 protected:
     int  m_width;  // width  of the image ( filled by readHeader )
     int  m_height; // height of the image ( filled by readHeader )
@@ -87,15 +84,15 @@ protected:
     String m_signature;
     Mat m_buf;
     bool m_buf_supported;
+    String m_description;
 };
 
-
-///////////////////////////// base class for encoders ////////////////////////////
-class BaseImageEncoder
+class BaseImageEncoder : public ImageEncoder
 {
 public:
     BaseImageEncoder();
     virtual ~BaseImageEncoder() {}
+
     virtual bool isFormatSupported( int depth ) const;
 
     virtual bool setDestination( const String& filename );
@@ -103,10 +100,9 @@ public:
     virtual bool write( const Mat& img, const std::vector<int>& params ) = 0;
 
     virtual String getDescription() const;
-    virtual ImageEncoder newEncoder() const;
+    virtual Ptr<ImageEncoder> newEncoder() const;
 
     virtual void throwOnEror() const;
-
 protected:
     String m_description;
 

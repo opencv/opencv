@@ -51,6 +51,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace cv
 {
@@ -131,24 +132,6 @@ struct ExifEntry_t
 };
 
 /**
- * @brief Picture orientation which may be taken from EXIF
- *      Orientation usually matters when the picture is taken by
- *      smartphone or other camera with orientation sensor support
- *      Corresponds to EXIF 2.3 Specification
- */
-enum ImageOrientation
-{
-    IMAGE_ORIENTATION_TL = 1, ///< Horizontal (normal)
-    IMAGE_ORIENTATION_TR = 2, ///< Mirrored horizontal
-    IMAGE_ORIENTATION_BR = 3, ///< Rotate 180
-    IMAGE_ORIENTATION_BL = 4, ///< Mirrored vertical
-    IMAGE_ORIENTATION_LT = 5, ///< Mirrored horizontal & rotate 270 CW
-    IMAGE_ORIENTATION_RT = 6, ///< Rotate 90 CW
-    IMAGE_ORIENTATION_RB = 7, ///< Mirrored horizontal & rotate 90 CW
-    IMAGE_ORIENTATION_LB = 8  ///< Rotate 270 CW
-};
-
-/**
  * @brief Reading exif information from Jpeg file
  *
  * Usage example for getting the orientation of the image:
@@ -168,9 +151,9 @@ public:
     /**
      * @brief ExifReader constructor. Constructs an object of exif reader
      *
-     * @param [in]filename The name of file to look exif info in
+     * @param [in]stream An istream to look for EXIF bytes from
      */
-    explicit ExifReader( std::string filename );
+    explicit ExifReader( std::istream& stream );
     ~ExifReader();
 
 
@@ -190,7 +173,7 @@ public:
     ExifEntry_t getTag( const ExifTagName tag );
 
 private:
-    std::string m_filename;
+    std::istream& m_stream;
     std::vector<unsigned char> m_data;
     std::map<int, ExifEntry_t > m_exif;
     Endianess_t m_format;
@@ -198,7 +181,7 @@ private:
     void parseExif();
     bool checkTagMark() const;
 
-    size_t getFieldSize ( FILE* f ) const;
+    size_t getFieldSize ();
     size_t getNumDirEntry() const;
     uint32_t getStartOffset() const;
     uint16_t getExifTag( const size_t offset ) const;
@@ -245,7 +228,6 @@ private:
     //number of Reference Black&White components
     static const size_t refBWComponents = 6;
 };
-
 
 
 }
