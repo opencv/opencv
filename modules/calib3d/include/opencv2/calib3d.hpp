@@ -557,6 +557,9 @@ F.Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Leng
 Estimation". In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
 assuming that both have the same value. Then the cameraMatrix is updated with the estimated
 focal length.
+-   **SOLVEPNP_AP3P** Method is based on the paper of Tong Ke and Stergios I. Roumeliotis.
+"An Efficient Algebraic Solution to the Perspective-Three-Point Problem". In this case the
+function requires exactly four object and image points.
 
 The function estimates the object pose given a set of object points, their corresponding image
 projections, as well as the camera matrix and the distortion coefficients.
