@@ -797,20 +797,23 @@ TEST(Calib3d_StereoSGBMPar, idontknowhowtotesthere)
 //                                 int mode)
     Mat leftImg = imread("/home/q/Work/GitVault/opencv_extra/testdata/cv/stereomatching/datasets/teddy/im2.png");
     Mat rightImg = imread("/home/q/Work/GitVault/opencv_extra/testdata/cv/stereomatching/datasets/teddy/im6.png");
-    {
-        Mat leftDisp;
-        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH);
-        sgbm->compute( leftImg, rightImg, leftDisp );
-        CV_Assert( leftDisp.type() == CV_16SC1 );
-        leftDisp/=8;
-        imwrite( "/home/q/Work/GitVault/modehh.jpg", leftDisp);
-    }
+    Mat leftDisp_old, leftDisp_new;
     {
         Mat leftDisp;
         Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4);
-        sgbm->compute( leftImg, rightImg, leftDisp );
-        CV_Assert( leftDisp.type() == CV_16SC1 );
-        leftDisp/=8;
-        imwrite( "/home/q/Work/GitVault/modehh4.jpg", leftDisp);
+        sgbm->compute( leftImg, rightImg, leftDisp_new );
+        CV_Assert( leftDisp_new.type() == CV_16SC1 );
+//        leftDisp/=8;
+//        imwrite( "/home/q/Work/GitVault/modehh4_new.jpg", leftDisp);
     }
+    {
+        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4_OLD);
+        sgbm->compute( leftImg, rightImg, leftDisp_old );
+        CV_Assert( leftDisp_old.type() == CV_16SC1 );
+//        leftDisp/=8;
+//        imwrite( "/home/q/Work/GitVault/modehh4_old.jpg", leftDisp);
+    }
+    Mat diff;
+    absdiff(leftDisp_old,leftDisp_new,diff);
+    CV_Assert( countNonZero(diff)==0);
 }

@@ -110,6 +110,7 @@ struct StereoSGBMParams
     int mode;
 };
 
+static const int DEFAULT_RIGHT_BORDER = -1;
 /*
  For each pixel row1[x], max(maxD, 0) <= minX <= x < maxX <= width - max(0, -minD),
  and for each disparity minD<=d<maxD the function
@@ -123,12 +124,21 @@ struct StereoSGBMParams
 static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
                             int minD, int maxD, CostType* cost,
                             PixType* buffer, const PixType* tab,
-                            int tabOfs, int )
+                            int tabOfs, int , int xrange_min = 0, int xrange_max = DEFAULT_RIGHT_BORDER )
+    //TODO: This function was changed and modified old function's behabior. Check they in tests
 {
     int x, c, width = img1.cols, cn = img1.channels();
     int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+    int D = maxD - minD, width1 = maxX1 - minX1;
+    //This minX1 & maxX2 correction is defining which part of calculatable line must be calculated
+    //That is needs of parallel algorithm
+    xrange_min = (xrange_min < 0) ? 0: xrange_min;
+    xrange_max = (xrange_max == DEFAULT_RIGHT_BORDER) || (xrange_max > width1) ? width1 : xrange_max;
+    maxX1 = minX1 + xrange_max;
+    minX1 += xrange_min;
+    width1 = maxX1 - minX1;
     int minX2 = std::max(minX1 - maxD, 0), maxX2 = std::min(maxX1 - minD, width);
-    int D = maxD - minD, width1 = maxX1 - minX1, width2 = maxX2 - minX2;
+    int width2 = maxX2 - minX2;
     const PixType *row1 = img1.ptr<PixType>(y), *row2 = img2.ptr<PixType>(y);
     PixType *prow1 = buffer + width2*2, *prow2 = prow1 + width*cn*2;
 #if CV_SIMD128
@@ -179,10 +189,10 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
         }
     }
 
-    memset( cost, 0, width1*D*sizeof(cost[0]) );
+    memset( cost + xrange_min*D, 0, width1*D*sizeof(cost[0]) );
 
-    buffer -= minX2;
-    cost -= minX1*D + minD; // simplify the cost indices inside the loop
+    buffer -= width-1-maxX2;
+    cost -= (minX1-xrange_min)*D + minD; // simplify the cost indices inside the loop
 
     for( c = 0; c < cn*2; c++, prow1 += width, prow2 += width )
     {
@@ -191,7 +201,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
         // precompute
         //   v0 = min(row2[x-1/2], row2[x], row2[x+1/2]) and
         //   v1 = max(row2[x-1/2], row2[x], row2[x+1/2]) and
-        for( x = minX2; x < maxX2; x++ )
+        for( x = width-1-maxX2; x < width-1- minX2; x++ )
         {
             int v = prow2[x];
             int vl = x > 0 ? (v + prow2[x-1])/2 : v;
@@ -830,6 +840,335 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
+//TODO: Assumation: Let's pretend, that we allocate memory for pixDiff and tempBuf independently in each thread, with full size, needed for original calcBT
+//TODO: Redo size of this arrays even if situation with independent allocation will still.
+struct CalcVerticalSums: public ParallelLoopBody
+{
+    CalcVerticalSums(const Mat& _img1, const Mat& _img2, const StereoSGBMParams& params,
+                     CostType* alignedBuf, PixType* _clipTab): img1(_img1), img2(_img2), clipTab(_clipTab)
+    {
+        minD = params.minDisparity;
+        maxD = minD + params.numDisparities;
+        SW2 = SH2 = (params.SADWindowSize > 0 ? params.SADWindowSize : 5)/2;
+        ftzero = std::max(params.preFilterCap, 15) | 1;
+        P1 = params.P1 > 0 ? params.P1 : 2;
+        P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);   //TODO: think about P1/S(x,y) Proportion
+        height = img1.rows;
+        width = img1.cols;
+        int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+        D = maxD - minD;
+        width1 = maxX1 - minX1;
+        D2 = D + 16;
+        costBufSize = width1*D;
+        CSBufSize = costBufSize*height;
+        minLrSize = (width1 + LrBorder*2);
+        LrSize = minLrSize*D2;
+        hsumBufNRows = SH2*2 + 2;
+        Cbuf = alignedBuf;
+        Sbuf = Cbuf + CSBufSize;
+        hsumBuf = Sbuf + CSBufSize;
+    }
+
+    void operator()( const Range& range ) const
+    {
+        static const CostType MAX_COST = SHRT_MAX;
+        static const int ALIGN = 16;
+        static const int TAB_OFS = 256*4;
+        int x1 = range.start, x2 = range.end, k;
+        size_t pixDiffSize = ((x2 - x1) + 2*SW2)*D;
+        size_t auxBufsSize = pixDiffSize*sizeof(CostType) +                 //pixdiff size
+                             width*16*img1.channels()*sizeof(PixType) + 32; //tempBuf //TODO: Probably it's better 6 instead of 16(alignment?)
+        Mat auxBuff;
+        auxBuff.create(1, (int)auxBufsSize, CV_8U);
+        CostType* pixDiff = (CostType*)alignPtr(auxBuff.ptr(), ALIGN);
+        PixType* tempBuf = (PixType*)(pixDiff + pixDiffSize);
+
+        // Simplification of index calculation
+        pixDiff -= (x1>SW2 ? (x1 - SW2): 0)*D;
+
+        for( int pass = 1; pass <= 2; pass++ ) //TODO: rename this magic 2.
+        {
+            int y1, y2, dy;
+
+            if( pass == 1 )
+            {
+                y1 = 0; y2 = height; dy = 1;
+            }
+            else
+            {
+                y1 = height-1; y2 = -1; dy = -1;
+            }
+
+            CostType *Lr[NLR]={0}, *minLr[NLR]={0};             //4e: arrays for L(x,y,r,d) of previous and current rows and minimums of them
+
+            for( k = 0; k < NLR; k++ )                          //4e: One of them is needed, and one of them is stored. So, we need to swap pointer
+            {                                                   //4e: Yes, and this is done at the end of next cycle, not here.
+                // shift Lr[k] and minLr[k] pointers, because we allocated them with the borders,
+                // and will occasionally use negative indices with the arrays
+                // we need to shift Lr[k] pointers by 1, to give the space for d=-1.
+                // however, then the alignment will be imperfect, i.e. bad for SSE,
+                // thus we shift the pointers by 8 (8*sizeof(short) == 16 - ideal alignment)
+                Lr[k] = hsumBuf + costBufSize*hsumBufNRows + LrSize*k + D2*LrBorder + 8;
+                memset( Lr[k] + x1*D2 - 8, 0, (x2-x1)*D2*sizeof(CostType) );
+                minLr[k] = hsumBuf + costBufSize*hsumBufNRows + LrSize*NLR + minLrSize*k + LrBorder;
+                memset( minLr[k] + x1, 0, (x2-x1)*sizeof(CostType) );
+            }
+
+            for( int y = y1; y != y2; y += dy )
+            {
+                int x, d;
+                CostType* C = Cbuf + y*costBufSize;
+                CostType* S = Sbuf + y*costBufSize;
+
+                if( pass == 1 ) // compute C on the first pass, and reuse it on the second pass, if any.
+                {
+                    int dy1 = y == 0 ? 0 : y + SH2, dy2 = y == 0 ? SH2 : dy1;   //4e: for first line's block sum we need calculate half-window of costs and only one for other
+
+                    for( k = dy1; k <= dy2; k++ )
+                    {
+                        CostType* hsumAdd = hsumBuf + (std::min(k, height-1) % hsumBufNRows)*costBufSize;   //4e: Ring buffer for horizontally summed lines
+
+                        if( k < height )
+                        {
+                            calcPixelCostBT( img1, img2, k, minD, maxD, pixDiff, tempBuf, clipTab, TAB_OFS, ftzero, x1 - SW2, x2 + SW2);
+
+                            memset(hsumAdd + x1*D, 0, D*sizeof(CostType));
+                            for( x = (x1 - SW2)*D; x <= (x1 + SW2)*D; x += D )                //4e: Calculation summed costs for all disparities in first pixel of line
+                            {
+                                int xbord = x <= 0 ? 0 : (x > (width1 - 1)*D? (width1 - 1)*D : x);
+                                for( d = 0; d < D; d++ )
+                                    hsumAdd[x1*D + d] = (CostType)(hsumAdd[x1*D + d] + pixDiff[xbord + d]);
+                            }
+
+                            if( y > 0 )             //4e: We calculate horizontal sums and forming full block sums for y coord by adding this horsums to previous line's sums and subtracting stored lowest
+                            {                       //4e: horsum in hsumBuf. Exception is case y=0, where we need many iterations per lines to create full blocking sum.
+                                const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
+                                const CostType* Cprev = C - costBufSize;
+
+                                // We need to calculate C[x1] in different way, because hsumadd is already calculated
+                                // We don't doing then for x==0, because original function has forgotten to do this  //TODO: Check: does this original still exist?
+                                if(x1!=0)
+                                {
+                                    for( d = 0; d < D; d++ )
+                                        C[x1*D + d] = (CostType)(Cprev[x1*D + d] + hsumAdd[x1*D + d] - hsumSub[x1*D + d]);
+                                }
+
+                                for( x = (x1+1)*D; x < x2*D; x += D )
+                                {
+                                    const CostType* pixAdd = pixDiff + std::min(x + SW2*D, (width1-1)*D);
+                                    const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
+
+//                                #if CV_SIMD128
+//                                    if( useSIMD )
+//                                    {
+//                                        for( d = 0; d < D; d += 8 )
+//                                        {
+//                                            v_int16x8 hv = v_load(hsumAdd + x - D + d);
+//                                            v_int16x8 Cx = v_load(Cprev + x + d);
+//                                            v_int16x8 psub = v_load(pixSub + d);
+//                                            v_int16x8 padd = v_load(pixAdd + d);
+//                                            hv = (hv - psub + padd);
+//                                            psub = v_load(hsumSub + x + d);
+//                                            Cx = Cx - psub + hv;
+//                                            v_store(hsumAdd + x + d, hv);
+//                                            v_store(C + x + d, Cx);
+//                                        }
+//                                    }
+//                                    else
+//                                #endif
+                                    {
+                                        for( d = 0; d < D; d++ )
+                                        {
+                                            int hv = hsumAdd[x + d] = (CostType)(hsumAdd[x - D + d] + pixAdd[d] - pixSub[d]);
+                                            C[x + d] = (CostType)(Cprev[x + d] + hv - hsumSub[x + d]);
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                for( x = (x1+1)*D; x < x2*D; x += D )  //4e: Calcluates horizontal sums if (y==0). This piece of code is calling SH2+1 times and then result is used in different way
+                                {                                   //4e: to create full blocks sum. That's why this code is isolated from upper case.
+                                    const CostType* pixAdd = pixDiff + std::min(x + SW2*D, (width1-1)*D);
+                                    const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
+
+                                    for( d = 0; d < D; d++ )
+                                        hsumAdd[x + d] = (CostType)(hsumAdd[x - D + d] + pixAdd[d] - pixSub[d]);
+                                }
+                            }
+                            // Return to coordinates, which is needed by CalcCostBT
+                        }
+
+                        if( y == 0 )        //4e: Calculating first full block sum.
+                        {
+                            int scale = k == 0 ? SH2 + 1 : 1;
+                            for( x = x1*D; x < x2*D; x++ )
+                                C[x] = (CostType)(C[x] + hsumAdd[x]*scale);
+                        }
+                    }
+
+                    // also, clear the S buffer
+                    for( k = x1*D; k < x2*D; k++ )                                         //4e: only on first pass, so it keep old information, don't be confused
+                        S[k] = 0;
+                }
+
+//                 [formula 13 in the paper]
+//                 compute L_r(p, d) = C(p, d) +
+//                 min(L_r(p-r, d),
+//                 L_r(p-r, d-1) + P1,
+//                 L_r(p-r, d+1) + P1,
+//                 min_k L_r(p-r, k) + P2) - min_k L_r(p-r, k)
+//                 where p = (x,y), r is one of the directions.
+//                 we process all the directions at once:
+//                 0: r=(-dx, 0)
+//                 1: r=(-1, -dy)
+//                 2: r=(0, -dy)
+//                 3: r=(1, -dy)
+//                 4: r=(-2, -dy)
+//                 5: r=(-1, -dy*2)
+//                 6: r=(1, -dy*2)
+//                 7: r=(2, -dy)
+
+                for( x = x1; x != x2; x++ )
+                {
+                    int xd = x*D2;
+
+                    int delta = minLr[1][x] + P2;
+
+                    CostType* Lr_ppr = Lr[1] + xd;
+
+                    Lr_ppr[-1] = Lr_ppr[D] = MAX_COST;
+
+                    CostType* Lr_p = Lr[0] + xd;
+                    const CostType* Cp = C + x*D;
+                    CostType* Sp = S + x*D;
+
+//                #if CV_SIMD128
+//                    if( useSIMD )
+//                    {
+//                        v_int16x8 _P1 = v_setall_s16((short)P1);
+//
+//                        v_int16x8 _delta0 = v_setall_s16((short)delta0);
+//                        v_int16x8 _delta1 = v_setall_s16((short)delta1);
+//                        v_int16x8 _delta2 = v_setall_s16((short)delta2);
+//                        v_int16x8 _delta3 = v_setall_s16((short)delta3);
+//                        v_int16x8 _minL0 = v_setall_s16((short)MAX_COST);
+//
+//                        for( d = 0; d < D; d += 8 )
+//                        {
+//                            v_int16x8 Cpd = v_load(Cp + d);
+//                            v_int16x8 L0, L1, L2, L3;
+//
+//                            L0 = v_load(Lr_p0 + d);
+//                            L1 = v_load(Lr_p1 + d);
+//                            L2 = v_load(Lr_ppr + d);
+//                            L3 = v_load(Lr_p3 + d);
+//
+//                            L0 = v_min(L0, (v_load(Lr_p0 + d - 1) + _P1));
+//                            L0 = v_min(L0, (v_load(Lr_p0 + d + 1) + _P1));
+//
+//                            L1 = v_min(L1, (v_load(Lr_p1 + d - 1) + _P1));
+//                            L1 = v_min(L1, (v_load(Lr_p1 + d + 1) + _P1));
+//
+//                            L2 = v_min(L2, (v_load(Lr_ppr + d - 1) + _P1));
+//                            L2 = v_min(L2, (v_load(Lr_ppr + d + 1) + _P1));
+//
+//                            L3 = v_min(L3, (v_load(Lr_p3 + d - 1) + _P1));
+//                            L3 = v_min(L3, (v_load(Lr_p3 + d + 1) + _P1));
+//
+//                            L0 = v_min(L0, _delta0);
+//                            L0 = ((L0 - _delta0) + Cpd);
+//
+//                            L1 = v_min(L1, _delta1);
+//                            L1 = ((L1 - _delta1) + Cpd);
+//
+//                            L2 = v_min(L2, _delta2);
+//                            L2 = ((L2 - _delta2) + Cpd);
+//
+//                            L3 = v_min(L3, _delta3);
+//                            L3 = ((L3 - _delta3) + Cpd);
+//
+//                            v_store(Lr_p + d, L0);
+//                            v_store(Lr_p + d + D2, L1);
+//                            v_store(Lr_p + d + D2*2, L2);
+//                            v_store(Lr_p + d + D2*3, L3);
+//
+//                            // Get minimum from in L0-L3
+//                            v_int16x8 t02L, t02H, t13L, t13H, t0123L, t0123H;
+//                            v_zip(L0, L2, t02L, t02H);            // L0[0] L2[0] L0[1] L2[1]...
+//                            v_zip(L1, L3, t13L, t13H);            // L1[0] L3[0] L1[1] L3[1]...
+//                            v_int16x8 t02 = v_min(t02L, t02H);    // L0[i] L2[i] L0[i] L2[i]...
+//                            v_int16x8 t13 = v_min(t13L, t13H);    // L1[i] L3[i] L1[i] L3[i]...
+//                            v_zip(t02, t13, t0123L, t0123H);      // L0[i] L1[i] L2[i] L3[i]...
+//                            v_int16x8 t0 = v_min(t0123L, t0123H);
+//                            _minL0 = v_min(_minL0, t0);
+//
+//                            v_int16x8 Sval = v_load(Sp + d);
+//
+//                            L0 = L0 + L1;
+//                            L2 = L2 + L3;
+//                            Sval = Sval + L0;
+//                            Sval = Sval + L2;
+//
+//                            v_store(Sp + d, Sval);
+//                        }
+//
+//                        v_int32x4 minL, minH;
+//                        v_expand(_minL0, minL, minH);
+//                        v_pack_store(&minLr[0][x], v_min(minL, minH));
+//                    }
+//                    else
+//                    #endif
+                    {
+                        int minL = MAX_COST;
+
+                        for( d = 0; d < D; d++ )
+                        {
+                            int Cpd = Cp[d], L;   //4e: Remember, that every Cp is increased on P2 in line number 369. That's why next 4 lines are paper-like actually
+
+                            L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+
+                            Lr_p[d] = (CostType)L;
+                            minL = std::min(minL, L);
+
+                            Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                        }
+                        minLr[0][x] = (CostType)minL;
+                    }
+                }
+
+                // now shift the cyclic buffers
+                std::swap( Lr[0], Lr[1] );
+                std::swap( minLr[0], minLr[1] );
+            }
+        }
+    }
+    static const int NLR = 2;
+    static const int LrBorder = NLR - 1;
+    const Mat& img1;
+    const Mat& img2;
+    CostType* Cbuf;
+    CostType* Sbuf;
+    CostType* hsumBuf;
+    PixType* clipTab;
+    int minD;
+    int maxD;
+    int D;
+    int D2;
+    int SH2;
+    int SW2;
+    int width;
+    int width1;
+    int height;
+    int P1;
+    int P2;
+    size_t costBufSize;
+    size_t CSBufSize;
+    size_t minLrSize;
+    size_t LrSize;
+    size_t hsumBufNRows;
+    int ftzero;
+};
 
 /*
  This is new experimential version of disparity calculation, which should be parralled after
@@ -854,8 +1193,473 @@ TODO: Don't forget to rewrire this commentaries after
  disp2cost also has the same size as img1 (or img2).
  It contains the minimum current cost, used to find the best disparity, corresponding to the minimal cost.
  */
-#include<stdio.h>  //TODO: DUBUG!!!
 static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
+                                 Mat& disp1, const StereoSGBMParams& params,
+                                 Mat& buffer )
+{
+//#if CV_SIMD128
+//    // maxDisparity is supposed to multiple of 16, so we can forget doing else
+//    static const uchar LSBTab[] =
+//    {
+//        0, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
+//        5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
+//        6, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
+//        5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
+//        7, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
+//        5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
+//        6, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
+//        5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0
+//    };
+//    static const v_uint16x8 v_LSB = v_uint16x8(0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80);
+//
+//    bool useSIMD = hasSIMD128();
+//#endif
+
+    const int ALIGN = 16;
+    const int DISP_SHIFT = StereoMatcher::DISP_SHIFT;
+    const int DISP_SCALE = (1 << DISP_SHIFT);
+    const CostType MAX_COST = SHRT_MAX;
+
+    int minD = params.minDisparity, maxD = minD + params.numDisparities;
+    Size SADWindowSize;                                                                                 //4e: SAD means Sum of Absolute Differences
+    SADWindowSize.width = SADWindowSize.height = params.SADWindowSize > 0 ? params.SADWindowSize : 5;   //4e: and this is always square
+    int ftzero = std::max(params.preFilterCap, 15) | 1;                             //4e:ftzero clips x-derivatives. I think, this story with arrays is about non-realized SIMD method
+    int uniquenessRatio = params.uniquenessRatio >= 0 ? params.uniquenessRatio : 10;
+    int disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
+    int P1 = params.P1 > 0 ? params.P1 : 2, P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);   //TODO: think about P1/S(x,y) Proportion
+    int k, width = disp1.cols, height = disp1.rows;
+    int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+    int D = maxD - minD, width1 = maxX1 - minX1;
+    int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
+    int SH2 = SADWindowSize.height/2;
+    const int TAB_OFS = 256*4, TAB_SIZE = 256 + TAB_OFS*2;                  //4e: array is such big due to derivative could be +-8*256 in worst cases
+    PixType clipTab[TAB_SIZE];
+
+    for( k = 0; k < TAB_SIZE; k++ )         //4e: If ftzero would = 4, array containment will be = -4 -4 -4 ... -4 -3 -2 -1 0 1 2 3 4 ... 4 4 4
+        clipTab[k] = (PixType)(std::min(std::max(k - TAB_OFS, -ftzero), ftzero) + ftzero);
+
+    if( minX1 >= maxX1 )
+    {
+        disp1 = Scalar::all(INVALID_DISP_SCALED);
+        return;
+    }
+
+    CV_Assert( D % 16 == 0 );                    //TODO: Are you sure? By the way, why not 8?
+
+    // NR - the number of directions. the loop on x below that computes Lr assumes that NR == 8.
+    // if you change NR, please, modify the loop as well.
+    int D2 = D+16;                  //4e: Somewhere in code we need d+1, so D+1. One of simplest solutuons is increasing D-dimension on 1. But 1 is 16, when storage should be aligned.
+
+    // the number of L_r(.,.) and min_k L_r(.,.) lines in the buffer:
+    // for 8-way dynamic programming we need the current row and
+    // the previous row, i.e. 2 rows in total
+    const int NLR = 2;                          //4e: We assume, that we need one or more previous steps in our linear dynamic(one right here).
+    const int LrBorder = NLR - 1;               //4e: for simplification of calculations we need border for taking previous dynamic solutions.
+
+    // for each possible stereo match (img1(x,y) <=> img2(x-d,y))
+    // we keep pixel difference cost (C) and the summary cost over NR directions (S).
+    // we also keep all the partial costs for the previous line L_r(x,d) and also min_k L_r(x, k)
+    size_t costBufSize = width1*D;
+    size_t CSBufSize = costBufSize*height;
+    size_t minLrSize = (width1 + LrBorder*2), LrSize = minLrSize*D2;        //TODO: We don't need LrBorder for vertical passes and we don't need Lr buffer for horizontal passes.
+    int hsumBufNRows = SH2*2 + 2;
+    size_t totalBufSize = (LrSize + minLrSize)*NLR*sizeof(CostType) + // minLr[] and Lr[]
+    costBufSize*hsumBufNRows*sizeof(CostType) +                       // hsumBuf                    //4e: TODO: Why we should increase sum window height one more time?
+    CSBufSize*2*sizeof(CostType) +                                    // C, S                       //4e: C is Block sum of costs, S is multidirectional dynamic sum with same size
+    width*(sizeof(CostType) + sizeof(DispType)) + 1024;               // disp2cost + disp2
+
+    if( buffer.empty() || !buffer.isContinuous() ||
+        buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
+        buffer.create(1, (int)totalBufSize, CV_8U);
+
+    // summary cost over different (nDirs) directions
+    CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), ALIGN);
+    CostType* Sbuf = Cbuf + CSBufSize;
+    CostType* hsumBuf = Sbuf + CSBufSize;
+
+    CostType* disp2cost = hsumBuf + costBufSize*hsumBufNRows + (LrSize + minLrSize)*NLR;     //4e: It is containers for backwards disparity, made by S[d] too, but with other method
+    DispType* disp2ptr = (DispType*)(disp2cost + width);
+
+    // add P2 to every C(x,y). it saves a few operations in the inner loops
+    for(k = 0; k < (int)CSBufSize; k++ )
+        Cbuf[k] = (CostType)P2;
+
+    parallel_for_(Range(0,width1),CalcVerticalSums(img1, img2, params, Cbuf, clipTab));
+
+//    for( int pass = 1; pass <= 2; pass++ ) //pass=1 or left-to-right pass
+    {
+
+        CostType *Lr, *minLr;
+
+        {                                                   //4e: Yes, and this is done at the end of next cycle, not here.
+            // shift Lr[k] and minLr[k] pointers, because we allocated them with the borders,
+            // and will occasionally use negative indices with the arrays
+            // we need to shift Lr[k] pointers by 1, to give the space for d=-1.
+            // however, then the alignment will be imperfect, i.e. bad for SSE,
+            // thus we shift the pointers by 8 (8*sizeof(short) == 16 - ideal alignment)
+            Lr = hsumBuf + costBufSize*hsumBufNRows + D2*LrBorder + 8;
+            memset( Lr - LrBorder*D2 - 8, 0, LrSize*sizeof(CostType) );
+            minLr = hsumBuf + costBufSize*hsumBufNRows + LrSize*NLR + LrBorder;
+            memset( minLr - LrBorder, 0, minLrSize*sizeof(CostType) );
+        }
+
+        for( int y = 0; y != height; y++)
+        {
+            int x, d;
+            DispType* disp1ptr = disp1.ptr<DispType>(y);
+            CostType* C = Cbuf + y*costBufSize;
+            CostType* S = Sbuf + y*costBufSize;
+
+            for( x = 0; x < width; x++ )
+            {
+                disp1ptr[x] = disp2ptr[x] = (DispType)INVALID_DISP_SCALED;
+                disp2cost[x] = MAX_COST;
+            }
+
+            // clear the left and the right borders
+            memset( Lr - D2*LrBorder - 8, 0, D2*LrBorder*sizeof(CostType) );     //4e: To understand this "8" shifts and how they could work it's simpler to imagine pixel dislocation in memory
+            memset( Lr + width1*D2 - 8, 0, D2*LrBorder*sizeof(CostType) );       //4e: ...00000000|D2-16 of real costs value(and some of them are zeroes too)|00000000...
+            memset( minLr - LrBorder, 0, LrBorder*sizeof(CostType) );
+            memset( minLr + width1, 0, LrBorder*sizeof(CostType) );
+
+            /*
+             [formula 13 in the paper]
+             compute L_r(p, d) = C(p, d) +
+             min(L_r(p-r, d),
+             L_r(p-r, d-1) + P1,
+             L_r(p-r, d+1) + P1,
+             min_k L_r(p-r, k) + P2) - min_k L_r(p-r, k)
+             where p = (x,y), r is one of the directions.
+             we process all the directions at once:
+             0: r=(-dx, 0)
+             1: r=(-1, -dy)
+             2: r=(0, -dy)
+             3: r=(1, -dy)
+             4: r=(-2, -dy)
+             5: r=(-1, -dy*2)
+             6: r=(1, -dy*2)
+             7: r=(2, -dy)
+             */
+            for( x = 0; x != width1; x++)
+            {
+                int xd = x*D2;
+
+                int delta = minLr[x - 1] + P2;
+
+                CostType* Lr_ppr = Lr + xd - D2;
+
+                Lr_ppr[-1] = Lr_ppr[D] = MAX_COST;
+
+                CostType* Lr_p = Lr + xd;
+                const CostType* Cp = C + x*D;
+                CostType* Sp = S + x*D;
+
+//            #if CV_SIMD128
+//                if( useSIMD )
+//                {
+//                    v_int16x8 _P1 = v_setall_s16((short)P1);
+//
+//                    v_int16x8 _delta0 = v_setall_s16((short)delta0);
+//                    v_int16x8 _delta1 = v_setall_s16((short)delta1);
+//                    v_int16x8 _delta2 = v_setall_s16((short)delta2);
+//                    v_int16x8 _delta3 = v_setall_s16((short)delta3);
+//                    v_int16x8 _minL0 = v_setall_s16((short)MAX_COST);
+//
+//                    for( d = 0; d < D; d += 8 )
+//                    {
+//                        v_int16x8 Cpd = v_load(Cp + d);
+//                        v_int16x8 L0, L1, L2, L3;
+//
+//                        L0 = v_load(Lr_ppr + d);
+//                        L1 = v_load(Lr_p1 + d);
+//                        L2 = v_load(Lr_p2 + d);
+//                        L3 = v_load(Lr_p3 + d);
+//
+//                        L0 = v_min(L0, (v_load(Lr_ppr + d - 1) + _P1));
+//                        L0 = v_min(L0, (v_load(Lr_ppr + d + 1) + _P1));
+//
+//                        L1 = v_min(L1, (v_load(Lr_p1 + d - 1) + _P1));
+//                        L1 = v_min(L1, (v_load(Lr_p1 + d + 1) + _P1));
+//
+//                        L2 = v_min(L2, (v_load(Lr_p2 + d - 1) + _P1));
+//                        L2 = v_min(L2, (v_load(Lr_p2 + d + 1) + _P1));
+//
+//                        L3 = v_min(L3, (v_load(Lr_p3 + d - 1) + _P1));
+//                        L3 = v_min(L3, (v_load(Lr_p3 + d + 1) + _P1));
+//
+//                        L0 = v_min(L0, _delta0);
+//                        L0 = ((L0 - _delta0) + Cpd);
+//
+//                        L1 = v_min(L1, _delta1);
+//                        L1 = ((L1 - _delta1) + Cpd);
+//
+//                        L2 = v_min(L2, _delta2);
+//                        L2 = ((L2 - _delta2) + Cpd);
+//
+//                        L3 = v_min(L3, _delta3);
+//                        L3 = ((L3 - _delta3) + Cpd);
+//
+//                        v_store(Lr_p + d, L0);
+//                        v_store(Lr_p + d + D2, L1);
+//                        v_store(Lr_p + d + D2*2, L2);
+//                        v_store(Lr_p + d + D2*3, L3);
+//
+//                        // Get minimum from in L0-L3
+//                        v_int16x8 t02L, t02H, t13L, t13H, t0123L, t0123H;
+//                        v_zip(L0, L2, t02L, t02H);            // L0[0] L2[0] L0[1] L2[1]...
+//                        v_zip(L1, L3, t13L, t13H);            // L1[0] L3[0] L1[1] L3[1]...
+//                        v_int16x8 t02 = v_min(t02L, t02H);    // L0[i] L2[i] L0[i] L2[i]...
+//                        v_int16x8 t13 = v_min(t13L, t13H);    // L1[i] L3[i] L1[i] L3[i]...
+//                        v_zip(t02, t13, t0123L, t0123H);      // L0[i] L1[i] L2[i] L3[i]...
+//                        v_int16x8 t0 = v_min(t0123L, t0123H);
+//                        _minL0 = v_min(_minL0, t0);
+//
+//                        v_int16x8 Sval = v_load(Sp + d);
+//
+//                        L0 = L0 + L1;
+//                        L2 = L2 + L3;
+//                        Sval = Sval + L0;
+//                        Sval = Sval + L2;
+//
+//                        v_store(Sp + d, Sval);
+//                    }
+//
+//                    v_int32x4 minL, minH;
+//                    v_expand(_minL0, minL, minH);
+//                    v_pack_store(&minLr[x], v_min(minL, minH));
+//                }
+//                else
+//            #endif
+                {
+                    int minL = MAX_COST;
+
+                    for( d = 0; d < D; d++ )
+                    {
+                        int Cpd = Cp[d], L;   //4e: Remember, that every Cp is increased on P2 in line number 369. That's why next 4 lines are paper-like actually
+
+                        L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+
+                        Lr_p[d] = (CostType)L;
+                        minL = std::min(minL, L);
+
+                        Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                    }
+                    minLr[x] = (CostType)minL;
+                }
+            }
+
+            for( x = width1-1; x != -1; x--)
+            {
+                int xd = x*D2;
+
+                int delta = minLr[x + 1] + P2;
+
+                CostType* Lr_ppr = Lr + xd + D2;
+
+                Lr_ppr[-1] = Lr_ppr[D] = MAX_COST;
+
+                CostType* Lr_p = Lr + xd;
+                const CostType* Cp = C + x*D;
+                CostType* Sp = S + x*D;
+                int minS = MAX_COST, bestDisp = -1;
+
+//            #if CV_SIMD128
+//                if( useSIMD )
+//                {
+//                    v_int16x8 _P1 = v_setall_s16((short)P1);
+//
+//                    v_int16x8 _delta0 = v_setall_s16((short)delta0);
+//                    v_int16x8 _delta1 = v_setall_s16((short)delta1);
+//                    v_int16x8 _delta2 = v_setall_s16((short)delta2);
+//                    v_int16x8 _delta3 = v_setall_s16((short)delta3);
+//                    v_int16x8 _minL0 = v_setall_s16((short)MAX_COST);
+//
+//                    for( d = 0; d < D; d += 8 )
+//                    {
+//                        v_int16x8 Cpd = v_load(Cp + d);
+//                        v_int16x8 L0, L1, L2, L3;
+//
+//                        L0 = v_load(Lr_ppr + d);
+//                        L1 = v_load(Lr_p1 + d);
+//                        L2 = v_load(Lr_p2 + d);
+//                        L3 = v_load(Lr_p3 + d);
+//
+//                        L0 = v_min(L0, (v_load(Lr_ppr + d - 1) + _P1));
+//                        L0 = v_min(L0, (v_load(Lr_ppr + d + 1) + _P1));
+//
+//                        L1 = v_min(L1, (v_load(Lr_p1 + d - 1) + _P1));
+//                        L1 = v_min(L1, (v_load(Lr_p1 + d + 1) + _P1));
+//
+//                        L2 = v_min(L2, (v_load(Lr_p2 + d - 1) + _P1));
+//                        L2 = v_min(L2, (v_load(Lr_p2 + d + 1) + _P1));
+//
+//                        L3 = v_min(L3, (v_load(Lr_p3 + d - 1) + _P1));
+//                        L3 = v_min(L3, (v_load(Lr_p3 + d + 1) + _P1));
+//
+//                        L0 = v_min(L0, _delta0);
+//                        L0 = ((L0 - _delta0) + Cpd);
+//
+//                        L1 = v_min(L1, _delta1);
+//                        L1 = ((L1 - _delta1) + Cpd);
+//
+//                        L2 = v_min(L2, _delta2);
+//                        L2 = ((L2 - _delta2) + Cpd);
+//
+//                        L3 = v_min(L3, _delta3);
+//                        L3 = ((L3 - _delta3) + Cpd);
+//
+//                        v_store(Lr_p + d, L0);
+//                        v_store(Lr_p + d + D2, L1);
+//                        v_store(Lr_p + d + D2*2, L2);
+//                        v_store(Lr_p + d + D2*3, L3);
+//
+//                        // Get minimum from in L0-L3
+//                        v_int16x8 t02L, t02H, t13L, t13H, t0123L, t0123H;
+//                        v_zip(L0, L2, t02L, t02H);            // L0[0] L2[0] L0[1] L2[1]...
+//                        v_zip(L1, L3, t13L, t13H);            // L1[0] L3[0] L1[1] L3[1]...
+//                        v_int16x8 t02 = v_min(t02L, t02H);    // L0[i] L2[i] L0[i] L2[i]...
+//                        v_int16x8 t13 = v_min(t13L, t13H);    // L1[i] L3[i] L1[i] L3[i]...
+//                        v_zip(t02, t13, t0123L, t0123H);      // L0[i] L1[i] L2[i] L3[i]...
+//                        v_int16x8 t0 = v_min(t0123L, t0123H);
+//                        _minL0 = v_min(_minL0, t0);
+//
+//                        v_int16x8 Sval = v_load(Sp + d);
+//
+//                        L0 = L0 + L1;
+//                        L2 = L2 + L3;
+//                        Sval = Sval + L0;
+//                        Sval = Sval + L2;
+//
+//                        v_store(Sp + d, Sval);
+//                    }
+//
+//                    v_int32x4 minL, minH;
+//                    v_expand(_minL0, minL, minH);
+//                    v_pack_store(&minLr[x], v_min(minL, minH));
+//                }
+//                else
+//            #endif
+//TODO:Next piece of code is came from postprocessing. Be very careful with joining them!!!
+//                #if CV_SIMD128
+//                    if( useSIMD )
+//                    {
+//                        v_int16x8 _minS = v_setall_s16(MAX_COST), _bestDisp = v_setall_s16(-1);
+//                        v_int16x8 _d8 = v_int16x8(0, 1, 2, 3, 4, 5, 6, 7), _8 = v_setall_s16(8);
+//
+//                        for( d = 0; d < D; d+= 8 )
+//                        {
+//                            v_int16x8 L0 = v_load(Sp + d);
+//                            v_int16x8 mask = L0 < _minS;
+//                            _minS = v_min( L0, _minS );
+//                            _bestDisp = _bestDisp ^ ((_bestDisp ^ _d8) & mask);
+//                            _d8 = _d8 + _8;
+//                        }
+//                        v_int32x4 _d0, _d1;
+//                        v_expand(_minS, _d0, _d1);
+//                        minS = (int)std::min(v_reduce_min(_d0), v_reduce_min(_d1));
+//                        v_int16x8 v_mask = v_setall_s16((short)minS) == _minS;
+//
+//                        _bestDisp = (_bestDisp & v_mask) | (v_setall_s16(SHRT_MAX) & ~v_mask);
+//                        v_expand(_bestDisp, _d0, _d1);
+//                        bestDisp = (int)std::min(v_reduce_min(_d0), v_reduce_min(_d1));
+//                    }
+//                    else
+//                #endif
+                {
+                    int minL = MAX_COST;
+
+                    for( d = 0; d < D; d++ )
+                    {
+                        int Cpd = Cp[d], L;   //4e: Remember, that every Cp is increased on P2 in line number 369. That's why next 4 lines are paper-like actually
+
+                        L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+
+                        Lr_p[d] = (CostType)L;
+                        minL = std::min(minL, L);
+
+                        Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                        if( Sp[d] < minS )
+                        {
+                            minS = Sp[d];
+                            bestDisp = d;
+                        }
+                    }
+                    minLr[x] = (CostType)minL;
+                }
+                //Some postprocessing procedures and saving
+                for( d = 0; d < D; d++ )
+                {
+                    if( Sp[d]*(100 - uniquenessRatio) < minS*100 && std::abs(bestDisp - d) > 1 )
+                        break;
+                }
+                if( d < D )
+                    continue;
+                d = bestDisp;
+                int _x2 = x + minX1 - d - minD;
+                if( disp2cost[_x2] > minS )
+                {
+                    disp2cost[_x2] = (CostType)minS;
+                    disp2ptr[_x2] = (DispType)(d + minD);
+                }
+
+                if( 0 < d && d < D-1 )
+                {
+                    // do subpixel quadratic interpolation:
+                    //   fit parabola into (x1=d-1, y1=Sp[d-1]), (x2=d, y2=Sp[d]), (x3=d+1, y3=Sp[d+1])
+                    //   then find minimum of the parabola.
+                    int denom2 = std::max(Sp[d-1] + Sp[d+1] - 2*Sp[d], 1);
+                    d = d*DISP_SCALE + ((Sp[d-1] - Sp[d+1])*DISP_SCALE + denom2)/(denom2*2);
+                }
+                else
+                    d *= DISP_SCALE;
+                disp1ptr[x + minX1] = (DispType)(d + minD*DISP_SCALE);
+            }
+            //Left-right check sanity procedure
+            for( x = minX1; x < maxX1; x++ )
+            {
+                // we round the computed disparity both towards -inf and +inf and check
+                // if either of the corresponding disparities in disp2 is consistent.
+                // This is to give the computed disparity a chance to look valid if it is.
+                int d1 = disp1ptr[x];
+                if( d1 == INVALID_DISP_SCALED )
+                    continue;
+                int _d = d1 >> DISP_SHIFT;
+                int d_ = (d1 + DISP_SCALE-1) >> DISP_SHIFT;
+                int _x = x - _d, x_ = x - d_;
+                if( 0 <= _x && _x < width && disp2ptr[_x] >= minD && std::abs(disp2ptr[_x] - _d) > disp12MaxDiff &&         //4e: To dismiss disparity, we should assure, that there is no any
+                   0 <= x_ && x_ < width && disp2ptr[x_] >= minD && std::abs(disp2ptr[x_] - d_) > disp12MaxDiff )           //4e: chance to understand this as correct.
+                    disp1ptr[x] = (DispType)INVALID_DISP_SCALED;
+            }
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+ This is new experimential version of disparity calculation, which should be parralled after
+TODO: Don't forget to rewrire this commentaries after
+
+ computes disparity for "roi" in img1 w.r.t. img2 and write it to disp1buf.
+ that is, disp1buf(x, y)=d means that img1(x+roi.x, y+roi.y) ~ img2(x+roi.x-d, y+roi.y).
+ minD <= d < maxD.
+ disp2full is the reverse disparity map, that is:
+ disp2full(x+roi.x,y+roi.y)=d means that img2(x+roi.x, y+roi.y) ~ img1(x+roi.x+d, y+roi.y)
+
+ note that disp1buf will have the same size as the roi and
+ disp2full will have the same size as img1 (or img2).
+ On exit disp2buf is not the final disparity, it is an intermediate result that becomes
+ final after all the tiles are processed.
+
+ the disparity in disp1buf is written with sub-pixel accuracy
+ (4 fractional bits, see StereoSGBM::DISP_SCALE),
+ using quadratic interpolation, while the disparity in disp2buf
+ is written as is, without interpolation.
+
+ disp2cost also has the same size as img1 (or img2).
+ It contains the minimum current cost, used to find the best disparity, corresponding to the minimal cost.
+ */
+static void computeDisparitySGBMParallelOld( const Mat& img1, const Mat& img2,
                                  Mat& disp1, const StereoSGBMParams& params,
                                  Mat& buffer )
 {
@@ -1204,6 +2008,14 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
             std::swap( minLr[0], minLr[1] );
         }
     }
+//    for(int y = 0; y<height;y++)            //TODO:DUBUG!!!
+//        for(int x = 0; x<width1;x++)
+//        {
+//            printf("%d %d:",y,x);
+//            for(int d = 0; d<D;d++)
+//                printf("%d ",Cbuf[y*costBufSize+x*D+d]);
+//            printf("\n");
+//        }
 
 //    for( int pass = 1; pass <= 2; pass++ ) //pass=1 or left-to-right pass
     {
@@ -1552,9 +2364,7 @@ static void computeDisparitySGBMParallel( const Mat& img1, const Mat& img2,
         }
     }
 }
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 void getBufferPointers(Mat& buffer, int width, int width1, int D, int num_ch, int SH2, int P2,
                        CostType*& curCostVolumeLine, CostType*& hsumBuf, CostType*& pixDiff,
@@ -2208,6 +3018,8 @@ public:
 
         if(params.mode==MODE_SGBM_3WAY)
             computeDisparity3WaySGBM( left, right, disp, params, buffers, num_stripes );
+        else if(params.mode==MODE_HH4_OLD)
+            computeDisparitySGBMParallelOld( left, right, disp, params, buffer );
         else if(params.mode==MODE_HH4)
             computeDisparitySGBMParallel( left, right, disp, params, buffer );
         else
