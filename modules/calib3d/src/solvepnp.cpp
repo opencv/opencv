@@ -268,10 +268,10 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     int model_points = 5;
     int ransac_kernel_method = SOLVEPNP_EPNP;
 
-    if( npoints == 4 )
+    if( flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P)
     {
         model_points = 4;
-        ransac_kernel_method = SOLVEPNP_P3P;
+        ransac_kernel_method = flags;
     }
 
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
