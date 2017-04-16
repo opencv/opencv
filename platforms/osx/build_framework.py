@@ -18,6 +18,7 @@ class OSXBuilder(Builder):
     def getBuildCommand(self, archs, target):
         buildcmd = [
             "xcodebuild",
+            "MACOSX_DEPLOYMENT_TARGET=10.9",
             "ARCHS=%s" % archs[0],
             "-sdk", target.lower(),
             "-configuration", "Release",
