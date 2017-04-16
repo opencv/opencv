@@ -5,10 +5,10 @@
 #include "common.h"
 
 #define MBLBPF_NAME "mblbpFeatureParams"
-
 struct CvMBLBPFeatureParams : CvFeatureParams
 {
     CvMBLBPFeatureParams();
+    
 };
 
 class CvMBLBPEvaluator:public CvFeatureEvaluator
@@ -35,7 +35,14 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
             void write (cv::FileStorage &fs) const;
             cv::Rect rect;
             int p[16];
-            MBLBPWeakf * mblbpfeatures;
+            // MBLBP Parameters
+            int x=0;
+            int y=0;
+            int cellwidth=0;
+            int cellheight=0;
+            int offsets[16];
+            double soft_threshold=0.0;
+            double look_up_table[MBLBP_LUTLENGTH];
         };
         cv::Mat sum;
         // feature parameters
@@ -56,7 +63,7 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
 inline uchar CvMBLBPEvaluator::Feature::calc(const cv::Mat &_sum, size_t img_offset=0) const
 {
     const int* psum = _sum.ptr<int>(0);
-    const int* p = this->mblbpfeatures->offsets;
+    const int* p = offsets;
 
     int cval = psum[p[5]+img_offset] - psum[p[6]+img_offset] - psum[p[9]+img_offset] + psum[p[10]+img_offset]; 
     

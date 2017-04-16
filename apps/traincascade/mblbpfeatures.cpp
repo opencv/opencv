@@ -7,9 +7,26 @@
 using namespace std;
 using namespace cv;
 
+CvMBLBPFeatureParams::CvMBLBPFeatureParams()
+{
+    name = MBLBPF_NAME;
+}
+
+void CvMBLBPEvaluator::init(const CvFeatureParams *_featureParams, int _maxSampleCount, Size _winSize){
+    CV_Assert( _maxSampleCount > 0);
+    sum.create((int)_maxSampleCount, (_winSize.width + 1) * (_winSize.height + 1), CV_32SC1);
+    CvFeatureEvaluator::init( _featureParams, _maxSampleCount, _winSize );
+}
+
+
+CvMBLBPEvaluator::Feature::Feature()
+{
+    rect = cvRect(0, 0, 0, 0);
+}
 
 void CvMBLBPEvaluator::generateFeatures()
 {
+    cout<<"generating features"<<endl;
     int offset = winSize.width+1;
     int count = 0;
     this->numFeatures = 0;
@@ -26,11 +43,18 @@ void CvMBLBPEvaluator::generateFeatures()
                                 this->numFeatures++; //count how many features
                             else //set features
                             {
+                                cout<<"setting features x"<<endl;
+                                cout<<count<<endl;
+                                cout<<x<<endl;
                                 this->features[count].x = x;
+                                cout<<"setting features y"<<endl;
                                 this->features[count].y = y;
+                                cout<<"setting features cellwidth"<<endl;
                                 this->features[count].cellwidth = w;
+                                cout<<"setting features cellheight"<<endl;
                                 this->features[count].cellheight = h;
                                 count++;
+                                cout<<"finished round one features setting"<<endl;
                             }
                         }
                     }
@@ -40,17 +64,17 @@ void CvMBLBPEvaluator::generateFeatures()
         {
             cout << "numFeatures = " << this->numFeatures << endl;
             int mem_size = sizeof(MBLBPWeakf)*numFeatures;
-            this->features = (MBLBPWeakf*) cvAlloc(mem_size);
+            //this->features.mblbpfeatures = (MBLBPWeakf*) cvAlloc(mem_size);
             this->featuresMask = (bool*) cvAlloc(sizeof(bool)*numFeatures);
 
-            if(this->features == NULL || this->featuresMask == NULL)
+            if( this->featuresMask == NULL)
             {
                 cerr << "Can not alloc memory. size = " <<  mem_size << endl;
-                return false;
+                
             }
             else
             {
-                memset(this->features, 0, mem_size);
+                //memset(this->features, 0, mem_size);
                 memset(this->featuresMask, 0, sizeof(bool)*this->numFeatures);
             }
 
@@ -60,9 +84,9 @@ void CvMBLBPEvaluator::generateFeatures()
             if( count != this->numFeatures)
             {
                 cerr << "count("<< count <<") != numFeatures("<< this->numFeatures <<")" << endl;
-                cvFree( &(this->features) );
-                cvFree( &(this->featuresMask) );
-                return false;
+                //cvFree( &(this->features) );
+                //cvFree( &(this->featuresMask) );
+                
             }
         }//end else round
         
@@ -96,7 +120,6 @@ void CvMBLBPEvaluator::generateFeatures()
         this->features[i].offsets[14] = (y+h*3) * offset + (x + w*2);
         this->features[i].offsets[15] = (y+h*3) * offset + (x + w*3);
     }
-    return true;
 }
 
 void CvMBLBPEvaluator::setImage(const Mat &img, int idx,bool isSum)
@@ -106,7 +129,6 @@ void CvMBLBPEvaluator::setImage(const Mat &img, int idx,bool isSum)
     if( idx >= samplesLBP.cols )
     {
         cerr << "The sample index is out of rangle: index=" << idx << "; Range [0, " << samplesLBP.cols << ")" << endl;
-        return false;
     }
     unsigned char * pLBP = samplesLBP.ptr(0)+idx;
 
@@ -119,13 +141,32 @@ void CvMBLBPEvaluator::setImage(const Mat &img, int idx,bool isSum)
        sum.rows != this->winSize.height + 1)
     {
         cerr << "The sum image's size is incorrect." << endl;
-        return false;
     }
 
     for(int i = 0; i < numFeatures; i++)
     {
         pLBP[i*samplesLBP.step] = LBPcode(sum, features[i].offsets);
     }
+}
 
-    return true;
+CvMBLBPEvaluator::Feature::Feature( int offset, int x, int y, int _blockWidth, int _blockHeight )
+{
+    Rect tr = rect = cvRect(x, y, _blockWidth, _blockHeight);
+    CV_SUM_OFFSETS( p[0], p[1], p[4], p[5], tr, offset )
+    tr.x += 2*rect.width;
+    CV_SUM_OFFSETS( p[2], p[3], p[6], p[7], tr, offset )
+    tr.y +=2*rect.height;
+    CV_SUM_OFFSETS( p[10], p[11], p[14], p[15], tr, offset )
+    tr.x -= 2*rect.width;
+    CV_SUM_OFFSETS( p[8], p[9], p[12], p[13], tr, offset )
+}
+
+void CvMBLBPEvaluator::Feature::write(FileStorage &fs) const
+{
+    fs << CC_RECT << "[:" << rect.x << rect.y << rect.width << rect.height << "]";
+}
+
+void CvMBLBPEvaluator::writeFeatures(FileStorage &fs, const Mat& featureMap ) const
+{
+    _writeFeatures( features, fs, featureMap );
 }
