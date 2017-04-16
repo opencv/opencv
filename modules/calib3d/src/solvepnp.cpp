@@ -273,6 +273,11 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         model_points = 4;
         ransac_kernel_method = flags;
     }
+    else if( npoints == 4 )
+    {
+        model_points = 4;
+        ransac_kernel_method = SOLVEPNP_P3P;
+    }
 
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
     cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, ransac_kernel_method, useExtrinsicGuess, rvec, tvec);
