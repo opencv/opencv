@@ -56,6 +56,8 @@ namespace cv
 
 //! @cond IGNORED
 
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+
 struct v_uint8x16
 {
     typedef uchar lane_type;
@@ -253,7 +255,7 @@ struct v_float64x2
     __m128d val;
 };
 
-#if defined(HAVE_FP16)
+#if CV_FP16
 struct v_float16x4
 {
     typedef short lane_type;
@@ -1054,7 +1056,7 @@ inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
 OPENCV_HAL_IMPL_SSE_LOADSTORE_FLT_OP(v_float32x4, float, ps)
 OPENCV_HAL_IMPL_SSE_LOADSTORE_FLT_OP(v_float64x2, double, pd)
 
-#if defined(HAVE_FP16)
+#if CV_FP16
 inline v_float16x4 v_load_f16(const short* ptr)
 { return v_float16x4(_mm_loadl_epi64((const __m128i*)ptr)); }
 inline void v_store_f16(short* ptr, v_float16x4& a)
@@ -1368,6 +1370,24 @@ OPENCV_HAL_IMPL_SSE_TRANSPOSE4x4(v_int32x4, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NO
 OPENCV_HAL_IMPL_SSE_TRANSPOSE4x4(v_float32x4, ps, _mm_castps_si128, _mm_castsi128_ps)
 
 // adopted from sse_utils.hpp
+inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b)
+{
+    __m128i t00 = _mm_loadu_si128((const __m128i*)ptr);
+    __m128i t01 = _mm_loadu_si128((const __m128i*)(ptr + 16));
+
+    __m128i t10 = _mm_unpacklo_epi8(t00, t01);
+    __m128i t11 = _mm_unpackhi_epi8(t00, t01);
+
+    __m128i t20 = _mm_unpacklo_epi8(t10, t11);
+    __m128i t21 = _mm_unpackhi_epi8(t10, t11);
+
+    __m128i t30 = _mm_unpacklo_epi8(t20, t21);
+    __m128i t31 = _mm_unpackhi_epi8(t20, t21);
+
+    a.val = _mm_unpacklo_epi8(t30, t31);
+    b.val = _mm_unpackhi_epi8(t30, t31);
+}
+
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, v_uint8x16& c)
 {
     __m128i t00 = _mm_loadu_si128((const __m128i*)ptr);
@@ -1505,6 +1525,15 @@ inline void v_store_interleave( short* ptr, const v_int16x8& a, const v_int16x8&
     t1 = _mm_unpackhi_epi16(a.val, b.val);
     _mm_storeu_si128((__m128i*)(ptr), t0);
     _mm_storeu_si128((__m128i*)(ptr + 8), t1);
+}
+
+inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b)
+{
+    __m128i v0 = _mm_unpacklo_epi8(a.val, b.val);
+    __m128i v1 = _mm_unpackhi_epi8(a.val, b.val);
+
+    _mm_storeu_si128((__m128i*)(ptr), v0);
+    _mm_storeu_si128((__m128i*)(ptr + 16), v1);
 }
 
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
@@ -1747,7 +1776,7 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
     return v_float64x2(_mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(a.val),8))));
 }
 
-#if defined(HAVE_FP16)
+#if CV_FP16
 inline v_float32x4 v_cvt_f32(const v_float16x4& a)
 {
     return v_float32x4(_mm_cvtph_ps(a.val));
@@ -1764,10 +1793,12 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
 //! @brief Check CPU capability of SIMD operation
 static inline bool hasSIMD128()
 {
-    return checkHardwareSupport(CV_CPU_SSE2);
+    return (CV_CPU_HAS_SUPPORT_SSE2) ? true : false;
 }
 
 //! @}
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond
 

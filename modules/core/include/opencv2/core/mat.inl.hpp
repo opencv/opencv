@@ -1634,14 +1634,14 @@ Mat_<_Tp> Mat_<_Tp>::operator()(const std::vector<Range>& ranges) const
 template<typename _Tp> inline
 _Tp* Mat_<_Tp>::operator [](int y)
 {
-    CV_DbgAssert( 0 <= y && y < rows );
+    CV_DbgAssert( 0 <= y && y < size.p[0] );
     return (_Tp*)(data + y*step.p[0]);
 }
 
 template<typename _Tp> inline
 const _Tp* Mat_<_Tp>::operator [](int y) const
 {
-    CV_DbgAssert( 0 <= y && y < rows );
+    CV_DbgAssert( 0 <= y && y < size.p[0] );
     return (const _Tp*)(data + y*step.p[0]);
 }
 
@@ -1818,7 +1818,7 @@ Mat_<_Tp>::Mat_(Mat_&& m)
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (Mat_&& m)
 {
-    Mat::operator = (m);
+    Mat::operator = (std::move(m));
     return *this;
 }
 

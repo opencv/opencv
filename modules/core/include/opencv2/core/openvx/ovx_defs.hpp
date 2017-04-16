@@ -20,6 +20,12 @@
 #define IVX_USE_OPENCV
 #include "ivx.hpp"
 
+namespace cv{
+namespace ovx{
+// Get common thread local OpenVX context
+CV_EXPORTS_W ivx::Context& getOpenVXContext();
+}}
+
 #define CV_OVX_RUN(condition, func, ...)          \
     if (cv::useOpenVX() && (condition) && func)   \
     {                                             \

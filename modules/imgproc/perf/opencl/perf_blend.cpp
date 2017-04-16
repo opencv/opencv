@@ -56,7 +56,7 @@ namespace ocl {
 
 typedef Size_MatType BlendLinearFixture;
 
-OCL_PERF_TEST_P(BlendLinearFixture, BlendLinear, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
+OCL_PERF_TEST_P(BlendLinearFixture, BlendLinear, ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);

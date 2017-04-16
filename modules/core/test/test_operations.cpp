@@ -1240,3 +1240,17 @@ protected:
 };
 
 TEST(Core_SparseMat, iterations) { CV_SparseMatTest test; test.safe_run(); }
+
+TEST(MatTestRoi, adjustRoiOverflow)
+{
+    Mat m(15, 10, CV_32S);
+    Mat roi(m, cv::Range(2, 10), cv::Range(3,6));
+    int rowsInROI = roi.rows;
+    roi.adjustROI(1, 0, 0, 0);
+
+    ASSERT_EQ(roi.rows, rowsInROI + 1);
+
+    roi.adjustROI(-m.rows, -m.rows, 0, 0);
+
+    ASSERT_EQ(roi.rows, m.rows);
+}

@@ -3155,6 +3155,7 @@ KernelArg::KernelArg()
 KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, int _iwscale, const void* _obj, size_t _sz)
     : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale), iwscale(_iwscale)
 {
+    CV_Assert(_flags == LOCAL || _flags == CONSTANT || _m != NULL);
 }
 
 KernelArg KernelArg::Constant(const Mat& m)
@@ -3433,7 +3434,7 @@ int Kernel::set(int i, const KernelArg& arg)
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
                 int cols = u3d.cols*arg.wscale/arg.iwscale;
-                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows) == CL_SUCCESS);
+                CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.slices) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols) == CL_SUCCESS);
                 i += 3;

@@ -41,7 +41,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Theodore Tsesmelis
 
-    Here we will show how we can use different morphology operators to extract horizontal and vertical lines
+    Here we will show how we can use different morphological operators to extract horizontal and vertical lines
 
 -   @subpage tutorial_pyramids
 
@@ -57,7 +57,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Ana Huamán
 
-    After so much processing, it is time to decide which pixels stay!
+    After so much processing, it is time to decide which pixels stay
 
 -   @subpage tutorial_threshold_inRange
 
@@ -81,7 +81,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Ana Huamán
 
-    Where we learn how to pad our images!
+    Where we learn how to pad our images
 
 -   @subpage tutorial_sobel_derivatives
 
@@ -89,7 +89,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Ana Huamán
 
-    Where we learn how to calculate gradients and use them to detect edges!
+    Where we learn how to calculate gradients and use them to detect edges
 
 -   @subpage tutorial_laplace_operator
 
@@ -97,7 +97,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Ana Huamán
 
-    Where we learn about the *Laplace* operator and how to detect edges with it.
+    Where we learn about the *Laplace* operator and how to detect edges with it
 
 -   @subpage tutorial_canny_detector
 
@@ -105,7 +105,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Ana Huamán
 
-    Where we learn a sophisticated alternative to detect edges.
+    Where we learn a sophisticated alternative to detect edges
 
 -   @subpage tutorial_hough_lines
 
@@ -193,7 +193,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Ana Huamán
 
-    Where we learn how to get hull contours and draw them!
+    Where we learn how to get hull contours and draw them
 
 -   @subpage tutorial_bounding_rects_circles
 
@@ -201,7 +201,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Ana Huamán
 
-    Where we learn how to obtain bounding boxes and circles for our contours.
+    Where we learn how to obtain bounding boxes and circles for our contours
 
 -   @subpage tutorial_bounding_rotated_ellipses
 
@@ -209,7 +209,7 @@ In this section you will learn about the image processing (manipulation) functio
 
     *Author:* Ana Huamán
 
-    Where we learn how to obtain rotated bounding boxes and ellipses for our contours.
+    Where we learn how to obtain rotated bounding boxes and ellipses for our contours
 
 -   @subpage tutorial_moments
 

@@ -411,6 +411,11 @@ PyObject* pyopencv_from(const Mat& m)
     return o;
 }
 
+template<typename _Tp, int m, int n>
+PyObject* pyopencv_from(const Matx<_Tp, m, n>& matx)
+{
+    return pyopencv_from(Mat(matx));
+}
 
 typedef struct {
     PyObject_HEAD
@@ -791,6 +796,21 @@ template<>
 PyObject* pyopencv_from(const Size& sz)
 {
     return Py_BuildValue("(ii)", sz.width, sz.height);
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, Size_<float>& sz, const char* name)
+{
+    (void)name;
+    if(!obj || obj == Py_None)
+        return true;
+    return PyArg_ParseTuple(obj, "ff", &sz.width, &sz.height) > 0;
+}
+
+template<>
+PyObject* pyopencv_from(const Size_<float>& sz)
+{
+    return Py_BuildValue("(ff)", sz.width, sz.height);
 }
 
 template<>
@@ -1251,9 +1271,19 @@ PyObject* pyopencv_from(const Moments& m)
                          "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
 }
 
+template<typename T>
+PyObject* pyopencv_from(const cv::Ptr<T>& p)
+{
+    if (!p)
+        Py_RETURN_NONE;
+    return pyopencv_from(*p);
+}
+
 template <typename T>
 bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
 {
+    if (!o || o == Py_None)
+        return true;
     p = makePtr<T>();
     return pyopencv_to(o, *p, name);
 }
@@ -1362,7 +1392,7 @@ static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
     PyObject *userdata = NULL;
     char* button_name;
     int button_type = 0;
-    bool initial_button_state = false;
+    int initial_button_state = 0;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|Oii", (char**)keywords, &button_name, &on_change, &userdata, &button_type, &initial_button_state))
         return NULL;
@@ -1374,7 +1404,7 @@ static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
         userdata = Py_None;
     }
 
-    ERRWRAP2(createButton(button_name, OnButtonChange, Py_BuildValue("OO", on_change, userdata), button_type, initial_button_state));
+    ERRWRAP2(createButton(button_name, OnButtonChange, Py_BuildValue("OO", on_change, userdata), button_type, initial_button_state != 0));
     Py_RETURN_NONE;
 }
 #endif

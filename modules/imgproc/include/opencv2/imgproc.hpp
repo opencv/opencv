@@ -416,7 +416,7 @@ enum ConnectedComponentsTypes {
 //! connected components algorithm
 enum ConnectedComponentsAlgorithmsTypes {
     CCL_WU      = 0,  //!< SAUF algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
-    CCL_DEFAULT = -1, //!< BBDT algortihm for 8-way connectivity, SAUF algorithm for 4-way connectivity
+    CCL_DEFAULT = -1, //!< BBDT algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
     CCL_GRANA   = 1   //!< BBDT algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity
 };
 
@@ -450,6 +450,20 @@ enum ContourApproximationModes {
     CHAIN_APPROX_TC89_L1   = 3,
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
     CHAIN_APPROX_TC89_KCOS = 4
+};
+
+/** @brief Shape matching methods
+
+\f$A\f$ denotes object1,\f$B\f$ denotes object2
+
+\f$\begin{array}{l} m^A_i =  \mathrm{sign} (h^A_i)  \cdot \log{h^A_i} \\ m^B_i =  \mathrm{sign} (h^B_i)  \cdot \log{h^B_i} \end{array}\f$
+
+and \f$h^A_i, h^B_i\f$ are the Hu moments of \f$A\f$ and \f$B\f$ , respectively.
+*/
+enum ShapeMatchModes {
+    CONTOURS_MATCH_I1  =1, //!< \f[I_1(A,B) =  \sum _{i=1...7}  \left |  \frac{1}{m^A_i} -  \frac{1}{m^B_i} \right |\f]
+    CONTOURS_MATCH_I2  =2, //!< \f[I_2(A,B) =  \sum _{i=1...7}  \left | m^A_i - m^B_i  \right |\f]
+    CONTOURS_MATCH_I3  =3  //!< \f[I_3(A,B) =  \max _{i=1...7}  \frac{ \left| m^A_i - m^B_i \right| }{ \left| m^A_i \right| }\f]
 };
 
 //! @} imgproc_shape
@@ -769,8 +783,18 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA,
     COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA,
 
+    //! Demosaicing with alpha channel
+    COLOR_BayerBG2BGRA = 139,
+    COLOR_BayerGB2BGRA = 140,
+    COLOR_BayerRG2BGRA = 141,
+    COLOR_BayerGR2BGRA = 142,
 
-    COLOR_COLORCVT_MAX  = 139
+    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA,
+    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA,
+    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA,
+    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA,
+
+    COLOR_COLORCVT_MAX  = 143
 };
 
 /** types of intersection between rectangles
@@ -816,7 +840,7 @@ public:
 };
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Detects position only without traslation and rotation
+//! Detects position only without translation and rotation
 class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
 {
 public:
@@ -830,7 +854,7 @@ public:
 };
 
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-//! Detects position, traslation and rotation
+//! Detects position, translation and rotation
 class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
 {
 public:
@@ -985,7 +1009,7 @@ public:
     -  The point is outside the subdivision reference rectangle. The function returns PTLOC_OUTSIDE_RECT
        and no pointers are filled.
     -  One of input arguments is invalid. A runtime error is raised or, if silent or “parent” error
-       processing mode is selected, CV_PTLOC_ERROR is returnd.
+       processing mode is selected, CV_PTLOC_ERROR is returned.
      */
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
@@ -1397,7 +1421,7 @@ CV_EXPORTS_W void bilateralFilter( InputArray src, OutputArray dst, int d,
 
 /** @brief Blurs an image using the box filter.
 
-The function smoothes an image using the kernel:
+The function smooths an image using the kernel:
 
 \f[\texttt{K} =  \alpha \begin{bmatrix} 1 & 1 & 1 &  \cdots & 1 & 1  \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \hdotsfor{6} \\ 1 & 1 & 1 &  \cdots & 1 & 1 \end{bmatrix}\f]
 
@@ -1449,7 +1473,7 @@ CV_EXPORTS_W void sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
 /** @brief Blurs an image using the normalized box filter.
 
-The function smoothes an image using the kernel:
+The function smooths an image using the kernel:
 
 \f[\texttt{K} =  \frac{1}{\texttt{ksize.width*ksize.height}} \begin{bmatrix} 1 & 1 & 1 &  \cdots & 1 & 1  \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \hdotsfor{6} \\ 1 & 1 & 1 &  \cdots & 1 & 1  \\ \end{bmatrix}\f]
 
@@ -2578,9 +2602,8 @@ The function supports multi-channel images. Each channel is processed independen
 The functions accumulate\* can be used, for example, to collect statistics of a scene background
 viewed by a still camera and for the further foreground-background segmentation.
 
-@param src Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
-@param dst %Accumulator image with the same number of channels as input image, 32-bit or 64-bit
-floating-point.
+@param src Input image of type CV_8UC(n), CV_16UC(n), CV_32FC(n) or CV_64FC(n), where n is a positive integer.
+@param dst %Accumulator image with the same number of channels as input image, and a depth of CV_32F or CV_64F.
 @param mask Optional operation mask.
 
 @sa  accumulateSquare, accumulateProduct, accumulateWeighted
@@ -3257,6 +3280,10 @@ CV_EXPORTS float EMD( InputArray signature1, InputArray signature2,
                       int distType, InputArray cost=noArray(),
                       float* lowerBound = 0, OutputArray flow = noArray() );
 
+CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature2,
+                      int distType, InputArray cost=noArray(),
+                      CV_IN_OUT Ptr<float> lowerBound = Ptr<float>(), OutputArray flow = noArray() );
+
 //! @} imgproc_hist
 
 /** @example watershed.cpp
@@ -3574,7 +3601,7 @@ CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn
 
 //! @} imgproc_misc
 
-// main function for all demosaicing procceses
+// main function for all demosaicing processes
 CV_EXPORTS_W void demosaicing(InputArray _src, OutputArray _dst, int code, int dcn = 0);
 
 //! @addtogroup imgproc_shape
@@ -3756,7 +3783,7 @@ If mode equals to cv::RETR_CCOMP or cv::RETR_FLOODFILL, the input can also be a 
 std::vector<std::vector<cv::Point> >).
 @param hierarchy Optional output vector (e.g. std::vector<cv::Vec4i>), containing information about the image topology. It has
 as many elements as the number of contours. For each i-th contour contours[i], the elements
-hierarchy[i][0] , hiearchy[i][1] , hiearchy[i][2] , and hiearchy[i][3] are set to 0-based indices
+hierarchy[i][0] , hierarchy[i][1] , hierarchy[i][2] , and hierarchy[i][3] are set to 0-based indices
 in contours of the next and previous contours at the same hierarchical level, the first child
 contour and the parent contour, respectively. If for the contour i there are no next, previous,
 parent, or nested contours, the corresponding elements of hierarchy[i] will be negative.
@@ -3906,7 +3933,7 @@ The function compares two shapes. All three implemented methods use the Hu invar
 
 @param contour1 First contour or grayscale image.
 @param contour2 Second contour or grayscale image.
-@param method Comparison method, see ::ShapeMatchModes
+@param method Comparison method, see cv::ShapeMatchModes
 @param parameter Method-specific parameter (not supported now).
  */
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
@@ -4044,7 +4071,7 @@ CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measu
 
 /** @brief Finds out if there is any intersection between two rotated rectangles.
 
-If there is then the vertices of the interesecting region are returned as well.
+If there is then the vertices of the intersecting region are returned as well.
 
 Below are some examples of intersection configurations. The hatched pattern indicates the
 intersecting region and the red vertices are returned by the function.
@@ -4064,14 +4091,20 @@ CV_EXPORTS_W int rotatedRectangleIntersection( const RotatedRect& rect1, const R
 CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Detects position only without traslation and rotation
+//! Detects position only without translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-//! Detects position, traslation and rotation
+//! Detects position, translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
-//! Performs linear blending of two images
+//! Performs linear blending of two images:
+//! \f[ \texttt{dst}(i,j) = \texttt{weights1}(i,j)*\texttt{src1}(i,j) + \texttt{weights2}(i,j)*\texttt{src2}(i,j) \f]
+//! @param src1 It has a type of CV_8UC(n) or CV_32FC(n), where n is a positive integer.
+//! @param src2 It has the same type and size as src1.
+//! @param weights1 It has a type of CV_32FC1 and the same size with src1.
+//! @param weights2 It has a type of CV_32FC1 and the same size with src1.
+//! @param dst It is created if it does not have the same size and type with src1.
 CV_EXPORTS void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
 
 //! @addtogroup imgproc_colormap
@@ -4188,13 +4221,14 @@ CV_EXPORTS_W void circle(InputOutputArray img, Point center, int radius,
 /** @brief Draws a simple or thick elliptic arc or fills an ellipse sector.
 
 The function cv::ellipse with less parameters draws an ellipse outline, a filled ellipse, an elliptic
-arc, or a filled ellipse sector. A piecewise-linear curve is used to approximate the elliptic arc
+arc, or a filled ellipse sector. The drawing code uses general parametric form.
+A piecewise-linear curve is used to approximate the elliptic arc
 boundary. If you need more control of the ellipse rendering, you can retrieve the curve using
-ellipse2Poly and then render it with polylines or fill it with fillPoly . If you use the first
-variant of the function and want to draw the whole ellipse, not an arc, pass startAngle=0 and
-endAngle=360 . The figure below explains the meaning of the parameters.
+cv::ellipse2Poly and then render it with polylines or fill it with cv::fillPoly. If you use the first
+variant of the function and want to draw the whole ellipse, not an arc, pass `startAngle=0` and
+`endAngle=360`. The figure below explains the meaning of the parameters to draw the blue arc.
 
-![Parameters of Elliptic Arc](pics/ellipse.png)
+![Parameters of Elliptic Arc](pics/ellipse.svg)
 
 @param img Image.
 @param center Center of the ellipse.

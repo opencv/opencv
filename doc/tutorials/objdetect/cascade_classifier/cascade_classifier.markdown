@@ -19,8 +19,6 @@ Code
 
 This tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp)
-. The second version (using LBP for face detection) can be [found
-here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/objectDetection/objectDetection2.cpp)
 @include samples/cpp/tutorial_code/objectDetection/objectDetection.cpp
 
 Explanation
@@ -34,8 +32,8 @@ Result
 
     ![](images/Cascade_Classifier_Tutorial_Result_Haar.jpg)
 
-    Remember to copy the files *haarcascade_frontalface_alt.xml* and
-    *haarcascade_eye_tree_eyeglasses.xml* in your current directory. They are located in
+    Be sure the program will find the path of files *haarcascade_frontalface_alt.xml* and
+    *haarcascade_eye_tree_eyeglasses.xml*. They are located in
     *opencv/data/haarcascades*
 
 -#  This is the result of using the file *lbpcascade_frontalface.xml* (LBP trained) for the face

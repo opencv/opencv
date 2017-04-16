@@ -132,16 +132,10 @@ enum
 #define R_COMP z
 #define G_COMP y
 #define B_COMP x
-#elif bidx == 2
+#else
 #define R_COMP x
 #define G_COMP y
 #define B_COMP z
-#elif bidx == 3
-// The only kernel that uses bidx == 3 doesn't use these macros.
-// But we still need to make the compiler happy.
-#define R_COMP w
-#define G_COMP w
-#define B_COMP w
 #endif
 
 #ifndef uidx
@@ -160,6 +154,7 @@ enum
 #define CAT(x, y) __CAT(x, y)
 
 #define DATA_TYPE_4 CAT(DATA_TYPE, 4)
+#define DATA_TYPE_3 CAT(DATA_TYPE, 3)
 
 ///////////////////////////////////// RGB <-> GRAY //////////////////////////////////////
 
@@ -182,7 +177,7 @@ __kernel void RGB2Gray(__global const uchar * srcptr, int src_step, int src_offs
             {
                 __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr + src_index);
                 __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + dst_index);
-                DATA_TYPE_4 src_pix = vload4(0, src);
+                DATA_TYPE_3 src_pix = vload3(0, src);
 #ifdef DEPTH_5
                 dst[0] = fma(src_pix.B_COMP, B2YF, fma(src_pix.G_COMP, G2YF, src_pix.R_COMP * R2YF));
 #else
@@ -256,7 +251,7 @@ __kernel void RGB2YUV(__global const uchar* srcptr, int src_step, int src_offset
             {
                 __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr + src_index);
                 __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + dst_index);
-                DATA_TYPE_4 src_pix = vload4(0, src);
+                DATA_TYPE_3 src_pix = vload3(0, src);
                 DATA_TYPE b = src_pix.B_COMP, g = src_pix.G_COMP, r = src_pix.R_COMP;
 
 #ifdef DEPTH_5
