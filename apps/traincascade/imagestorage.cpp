@@ -10,7 +10,8 @@
 using namespace std;
 using namespace cv;
 
-bool CvCascadeImageReader::create(const string _posFilename, const string _negFilename, Size _winSize){
+bool CvCascadeImageReader::create( const string _posFilename, const string _negFilename, Size _winSize )
+{
     return posReader.create(_posFilename) && negReader.create(_negFilename, _winSize);
 }
 
@@ -18,223 +19,101 @@ CvCascadeImageReader::NegReader::NegReader()
 {
     src.create( 0, 0 , CV_8UC1 );
     img.create( 0, 0, CV_8UC1 );
-    //imgsum.create(0, 0, CV_32SC1);
     point = offset = Point( 0, 0 );
     scale       = 1.0F;
     scaleFactor = 1.4142135623730950488016887242097F;
     stepFactor  = 0.5F;
 }
 
-bool CvCascadeImageReader::NegReader::create(const string _filename, Size _winSize){
+bool CvCascadeImageReader::NegReader::create( const string _filename, Size _winSize )
+{
     string dirname, str;
-    ifstream file(_filename.c_str());
+    std::ifstream file(_filename.c_str());
     if ( !file.is_open() )
         return false;
-    
-    size_t pos = _filename.rfind('\\');
-    char dlmrt = '\\';
-    if (pos == String::npos)
-    {
-        pos = _filename.rfind('/');
-        dlmrt = '/';
-    }
-    dirname = pos == String::npos ? "" : _filename.substr(0, pos) + dlmrt;
+
     while( !file.eof() )
     {
-        getline(file, str);
+        std::getline(file, str);
         if (str.empty()) break;
         if (str.at(0) == '#' ) continue; /* comment */
-        imgFilenames.push_back(dirname + str);
+        imgFilenames.push_back(str);
     }
     file.close();
-    
+
     winSize = _winSize;
     last = round = 0;
     return true;
 }
 
-bool CvCascadeImageReader::NegReader::nextImg(){
-    Point _offset = Point(0,0);
-	size_t count = imgFilenames.size();
-    
-	for( size_t i = 0; i < count; i++ )
-	{
-		src = imread( imgFilenames[last++], 0 );
-		//cout <<  imgFilenames[last-1] <<endl;
-		if( src.empty() )
-			continue;
-		round += last / count;
-		round = round % (winSize.width * winSize.height);
-		last %= count;
-        
-		_offset.x = min( (int)round % winSize.width, src.cols - winSize.width );
-		_offset.y = min( (int)round / winSize.width, src.rows - winSize.height );
-		if( !src.empty() && src.type() == CV_8UC1
-           && _offset.x >= 0 && _offset.y >= 0 )
-			break;
-	}
-    
- 	if( src.empty() )
- 		return false; // no appropriate image
-    
-	point = offset = _offset;
-	scale = max( ((float)winSize.width + point.x) / ((float)src.cols),
-                ((float)winSize.height + point.y) / ((float)src.rows) );
-    
-	Size sz( (int)(scale*src.cols + 0.5F), (int)(scale*src.rows + 0.5F) );
-	resize( src, img, sz );
-    //blur(img, img, Size(3,3));
-	//integral(img, imgsum );
-
-	return true;
-}
-bool CvCascadeImageReader::NegReader::nextImg2(MBLBPCascadef * pCascade)
+bool CvCascadeImageReader::NegReader::nextImg()
 {
-    if(pCascade->count > 0)
+    Point _offset = Point(0,0);
+    size_t count = imgFilenames.size();
+    for( size_t i = 0; i < count; i++ )
     {
-        if(pCascade->stages[pCascade->count-1]->false_alarm >= 1.0e-2)
-            stepFactor = 1.f;
-        else if(pCascade->stages[pCascade->count-1]->false_alarm < 1.0e-2 &&
-                pCascade->stages[pCascade->count-1]->false_alarm >= 1.0e-4)
-            stepFactor = 0.5f;
-        else if(pCascade->stages[pCascade->count-1]->false_alarm < 1.0e-4 && 
-                pCascade->stages[pCascade->count-1]->false_alarm >= 1.0e-5)
-            stepFactor = 0.3f;
-        else if(pCascade->stages[pCascade->count-1]->false_alarm < 1.0e-5)
-            stepFactor = 0.125f;
+        src = imread( imgFilenames[last++], 0 );
+        if( src.empty() )
+            continue;
+        round += last / count;
+        round = round % (winSize.width * winSize.height);
+        last %= count;
+
+        _offset.x = std::min( (int)round % winSize.width, src.cols - winSize.width );
+        _offset.y = std::min( (int)round / winSize.width, src.rows - winSize.height );
+        if( !src.empty() && src.type() == CV_8UC1
+                && _offset.x >= 0 && _offset.y >= 0 )
+            break;
     }
 
-    Point _offset = Point(0,0);
-	size_t count = imgFilenames.size();
-    
-	for( size_t i = 0; i < count; i++ )
-	{
-		src = imread( imgFilenames[last++], 0 );
-		//cout <<  imgFilenames[last-1] << endl;
-		round += last / count;
-		round = round % (winSize.width * winSize.height);
-		last %= count;
-        
-		if( src.empty() )
-			continue;
+    if( src.empty() )
+        return false; // no appropriate image
+    point = offset = _offset;
+    scale = max( ((float)winSize.width + point.x) / ((float)src.cols),
+                 ((float)winSize.height + point.y) / ((float)src.rows) );
 
-        _offset.x = min( (int)round % winSize.width, src.cols - winSize.width );
-		_offset.y = min( (int)round / winSize.width, src.rows - winSize.height );
-		if( !src.empty() && src.type() == CV_8UC1
-           && _offset.x >= 0 && _offset.y >= 0 )
-			break;
-	}
-    
- 	if( src.empty() )
- 		return false; // no appropriate image
-    
-	point = offset = _offset;
-	scale = max( ((float)winSize.width + point.x) / ((float)src.cols),
-                ((float)winSize.height + point.y) / ((float)src.rows) );
-    
-	Size sz( (int)(scale*src.cols + 0.5F), (int)(scale*src.rows + 0.5F) );
-	resize( src, img, sz );
-    integral(img, this->sum);
-    updateCascade(pCascade, (int)(this->sum.step/sum.elemSize()));
-	return true;
+    Size sz( (int)(scale*src.cols + 0.5F), (int)(scale*src.rows + 0.5F) );
+    resize( src, img, sz );
+    return true;
 }
 
-bool CvCascadeImageReader::NegReader::get(Mat &_img){
-    CV_Assert( !_img.empty() );
-	CV_Assert( _img.type() == CV_8UC1 );
-	CV_Assert( _img.cols == winSize.width );
-	CV_Assert( _img.rows == winSize.height );
-
-	if( img.empty() )
-		if ( !nextImg() )
-			return false;
-	Mat mat( winSize.height, winSize.width, CV_8UC1,
-            (void*)(img.data + point.y * img.step + point.x * img.elemSize()), img.step );
-	mat.copyTo(_img);
-
-    
-	if( (int)( point.x + (1.0F + stepFactor ) * winSize.width ) < img.cols )
-		point.x += (int)(stepFactor * winSize.width);
-	else
-	{
-		point.x = offset.x;
-		if( (int)( point.y + (1.0F + stepFactor ) * winSize.height ) < img.rows )
-			point.y += (int)(stepFactor * winSize.height);
-		else
-		{
-			point.y = offset.y;
-			scale *= scaleFactor;
-			if( scale <= 1.0F )
-            {
-				resize( src, img, Size( (int)(scale*src.cols), (int)(scale*src.rows) ) );
-                //blur(img, img, Size(3,3));
-            }
-			else
-			{
-				if ( !nextImg() )
-					return false;
-			}
-		}
-	}
-	return true;
-}
-
-bool CvCascadeImageReader::NegReader::get_good_negative( Mat& _img, MBLBPCascadef * pCascade, size_t &testCount)
+bool CvCascadeImageReader::NegReader::get( Mat& _img )
 {
-	CV_Assert( !_img.empty() );
-	CV_Assert( _img.type() == CV_8UC1 );
-	CV_Assert( _img.cols == winSize.width );
-	CV_Assert( _img.rows == winSize.height );
+    CV_Assert( !_img.empty() );
+    CV_Assert( _img.type() == CV_8UC1 );
+    CV_Assert( _img.cols == winSize.width );
+    CV_Assert( _img.rows == winSize.height );
 
-    testCount = 0;
+    if( img.empty() )
+        if ( !nextImg() )
+            return false;
 
-	if( img.empty() )
-		if ( !nextImg2(pCascade) )
-			return false;
+    Mat mat( winSize.height, winSize.width, CV_8UC1,
+        (void*)(img.data + point.y * img.step + point.x * img.elemSize()), img.step );
+    mat.copyTo(_img);
 
-    while(1)
+    if( (int)( point.x + (1.0F + stepFactor ) * winSize.width ) < img.cols )
+        point.x += (int)(stepFactor * winSize.width);
+    else
     {
-        testCount++;
-        int detect_offset = (int)(point.y * (sum.step/sum.elemSize()) + point.x);
-        bool ret = detectAt(this->sum, pCascade, detect_offset);
-        if(ret)//i have get a good negative sample
+        point.x = offset.x;
+        if( (int)( point.y + (1.0F + stepFactor ) * winSize.height ) < img.rows )
+            point.y += (int)(stepFactor * winSize.height);
+        else
         {
-	        Mat mat( winSize.height, winSize.width, CV_8UC1,
-                    (void*)(img.data + point.y * img.step + point.x * img.elemSize()), img.step );
-	        mat.copyTo(_img);
+            point.y = offset.y;
+            scale *= scaleFactor;
+            if( scale <= 1.0F )
+                resize( src, img, Size( (int)(scale*src.cols), (int)(scale*src.rows) ) );
+            else
+            {
+                if ( !nextImg() )
+                    return false;
+            }
         }
-
-	    if( (int)( point.x + (1.0F + stepFactor ) * winSize.width ) < img.cols )
-		    point.x += (int)(stepFactor * winSize.width);
-	    else
-	    {
-		    point.x = offset.x;
-		    if( (int)( point.y + (1.0F + stepFactor ) * winSize.height ) < img.rows )
-			    point.y += (int)(stepFactor * winSize.height);
-		    else
-		    {
-			    point.y = offset.y;
-			    scale *= scaleFactor;
-			    if( scale <= 1.0F )
-                {
-				    resize( src, img, Size( (int)(scale*src.cols), (int)(scale*src.rows) ) );
-                    integral(img, this->sum);
-                    updateCascade(pCascade, (int)(sum.step/sum.elemSize()) );
-                }
-			    else
-			    {
-				    if ( !nextImg2(pCascade) )
-					    return false;
-			    }
-		    }
-        }
-
-        if(ret) //i have get a good negative sample
-            break;
-	}
-	return true;
+    }
+    return true;
 }
-
 
 CvCascadeImageReader::PosReader::PosReader()
 {
@@ -242,12 +121,12 @@ CvCascadeImageReader::PosReader::PosReader()
     vec = 0;
 }
 
-bool CvCascadeImageReader::PosReader::create(const string _filename)
+bool CvCascadeImageReader::PosReader::create( const string _filename )
 {
     if ( file )
         fclose( file );
     file = fopen( _filename.c_str(), "rb" );
-    
+
     if( !file )
         return false;
     short tmp = 0;
@@ -260,30 +139,31 @@ bool CvCascadeImageReader::PosReader::create(const string _filename)
     if( feof( file ) )
         return false;
     last = 0;
-
-    if(vec) cvFree(&vec);
     vec = (short*) cvAlloc( sizeof( *vec ) * vecSize );
-
     CV_Assert( vec );
     return true;
 }
+
 bool CvCascadeImageReader::PosReader::get( Mat &_img )
 {
     CV_Assert( _img.rows * _img.cols == vecSize );
     uchar tmp = 0;
-    fread( &tmp, sizeof( tmp ), 1, file );
-    fread( vec, sizeof( vec[0] ), vecSize, file );
-    
+    size_t elements_read = fread( &tmp, sizeof( tmp ), 1, file );
+    if( elements_read != 1 )
+        CV_Error( CV_StsBadArg, "Can not get new positive sample. The most possible reason is "
+                                "insufficient count of samples in given vec-file.\n");
+    elements_read = fread( vec, sizeof( vec[0] ), vecSize, file );
+    if( elements_read != (size_t)(vecSize) )
+        CV_Error( CV_StsBadArg, "Can not get new positive sample. Seems that vec-file has incorrect structure.\n");
+
     if( feof( file ) || last++ >= count )
-        return false;
-    
+        CV_Error( CV_StsBadArg, "Can not get new positive sample. vec-file is over.\n");
+
     for( int r = 0; r < _img.rows; r++ )
     {
         for( int c = 0; c < _img.cols; c++ )
             _img.ptr(r)[c] = (uchar)vec[r * _img.cols + c];
     }
-
-    //blur(_img, _img, Size(3,3));
     return true;
 }
 

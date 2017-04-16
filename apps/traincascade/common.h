@@ -5,12 +5,17 @@
 #include <vector>
 #include <iostream>
 
-#include "cascadeclassifier.h"
 #include "opencv.hpp"
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+
+// MBLBP Related definitions.
+#define MBLBP_LUTLENGTH  59
+// define MBLBP_LUTLENGTH  256
+#define MAX_NUM_WEAKS 512
+#define MAX_NUM_STAGES 32
 
 using namespace std;
 using namespace cv;
@@ -108,6 +113,8 @@ inline unsigned char LBPcode(const Mat & _sum, const int * offsets, size_t img_o
 
 int updateCascade(MBLBPCascadef * pCascade, int stepWidth);
 bool detectAt(const Mat &sum, MBLBPCascadef * pCascade, int sum_offset);
+
+#include "cascadeclassifier.h"
 
 
 #define MY_IMPLEMENT_QSORT_EX( func_name, T, LT, user_data_type )                   \
@@ -276,3 +283,4 @@ void func_name( T *array, size_t total, user_data_type aux )                    
 
 
 #endif
+

@@ -18,15 +18,12 @@ int main( int argc, char* argv[] )
         precalcIdxBufSize = 1024;
     bool baseFormatSave = false;
     double acceptanceRatioBreakValue = -1.0;
-    CvSize winSize = cvSize(24, 24);
-    int maxWeakCount = 256;
-    float minHitRate = 0.995f;
+
     CvCascadeParams cascadeParams;
     CvCascadeBoostParams stageParams;
     Ptr<CvFeatureParams> featureParams[] = { Ptr<CvFeatureParams>(new CvHaarFeatureParams),
                                              Ptr<CvFeatureParams>(new CvLBPFeatureParams),
-                                             Ptr<CvFeatureParams>(new CvHOGFeatureParams),
-                                             Ptr<CvFeatureParams>(new CvMBLBPFeatureParams)
+                                             Ptr<CvFeatureParams>(new CvHOGFeatureParams)
                                            };
     int fc = sizeof(featureParams)/sizeof(featureParams[0]);
     if( argc == 1 )
@@ -42,11 +39,6 @@ int main( int argc, char* argv[] )
         cout << "  [-precalcIdxBufSize <precalculated_idxs_buffer_size_in_Mb = " << precalcIdxBufSize << ">]" << endl;
         cout << "  [-baseFormatSave]" << endl;
         cout << "  [-acceptanceRatioBreakValue <value> = " << acceptanceRatioBreakValue << ">]" << endl;
-        cout << "  [-w <window_width = " << winSize.width << ">]" << endl;
-        cout << "  [-h <window_height = " << winSize.height << ">]" << endl;
-        cout << "  [-maxWeakCount = <max_weak_count = " << maxWeakCount << ">]" << endl;
-        cout << "  [-minHitRate = <min_hit_rate = " << minHitRate << ">]" << endl;
-
         cascadeParams.printDefaults();
         stageParams.printDefaults();
         for( int fi = 0; fi < fc; fi++ )
@@ -97,22 +89,6 @@ int main( int argc, char* argv[] )
         {
             acceptanceRatioBreakValue = atof(argv[++i]);
         }
-        else if( !strcmp ( argv[i], "-w" ) )
-        {
-            winSize.width = atoi( argv[++i] );
-        }
-        else if (!strcmp (argv[i], "-h" ) )
-        {
-            winSize.height = atoi( argv[++i] );
-        }
-        else if( !strcmp( argv[i], "-maxWeakCount" ) )
-        {
-            maxWeakCount = atoi( argv[++i] );
-        }
-        else if( !strcmp( argv[i], "-minHitRate" ) )
-        {
-            minHitRate = (float)atof( argv[++i] );
-        }
         else if ( cascadeParams.scanAttr( argv[i], argv[i+1] ) ) { i++; }
         else if ( stageParams.scanAttr( argv[i], argv[i+1] ) ) { i++; }
         else if ( !set )
@@ -127,10 +103,6 @@ int main( int argc, char* argv[] )
                 }
             }
         }
-        else{
-            cerr << "Unrecognized parameter " << argv[i] << endl;
-            return 0;
-        }
     }
 
     classifier.train( cascadeDirName,
@@ -142,9 +114,6 @@ int main( int argc, char* argv[] )
                       cascadeParams,
                       *featureParams[cascadeParams.featureType],
                       stageParams,
-                      winSize,
-                      maxWeakCount,
-                      minHitRate,
                       baseFormatSave,
                       acceptanceRatioBreakValue );
     return 0;

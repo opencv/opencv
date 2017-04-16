@@ -2,6 +2,7 @@
 #define _OPENCV_MBLBPFEATURES_H_
 
 #include "traincascade_features.h"
+#include "common.h"
 
 #define MBLBPF_NAME "mblbpFeatureParams"
 
@@ -17,13 +18,11 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
         virtual void init(const CvFeatureParams *_featureParams,
             int _maxSampleCount, cv::Size _winSize);
         virtual void setImage(const cv::Mat &img, int idx,bool isSum);
-        virtual bool loadPosSamples(string _posFilename);
-        virtual bool loadNegSamples(double &FARate);
         virtual float operator()(int featureIdx,int sampleIdx) const
         { 
             //TODO: 计算特征值的方法 
-            return (float)features[featureIdx].calc(sum, offsets, img_offset);
-        }
+            return (float)features[featureIdx].calc(sum, 0);
+        };
         virtual void writeFeatures(cv::FileStorage &fs, const cv::Mat& featureMap) const;
     protected:
         virtual void generateFeatures();
@@ -32,15 +31,15 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
         public:
             Feature();
             Feature(int offset, int x, int y, int _block_w,int _block_h);
-            LBPMAP calc(const cv::Mat&_sum, const int * offsets, size_t img_offset) const;
+            uchar calc(const cv::Mat&_sum, size_t img_offset) const;
             void write (cv::FileStorage &fs) const;
             cv::Rect rect;
             int p[16];
+            MBLBPWeakf * mblbpfeatures;
         };
         cv::Mat sum;
         // feature parameters
         int numFeatures;
-        MBLBPWeakf * features;
         bool *featuresMask;
         // cascade parameters
         int numPos;
@@ -49,16 +48,15 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
         int maxWeakCount;
         float minHitRate;
         MBLBPCascadef cascade;
-        PosImageReader posReader;
-        NegImageReader negReader;
         Mat samplesLBP;
         Mat labels;
+        std::vector<Feature> features;
 };
 
-inline LBPMAP CvMBLBPEvaluator::Feature::calc(const cv::Mat &_sum,const int * offsets, size_t img_offset=0) const
+inline uchar CvMBLBPEvaluator::Feature::calc(const cv::Mat &_sum, size_t img_offset=0) const
 {
     const int* psum = _sum.ptr<int>(0);
-    const int* p = offsets;
+    const int* p = this->mblbpfeatures->offsets;
 
     int cval = psum[p[5]+img_offset] - psum[p[6]+img_offset] - psum[p[9]+img_offset] + psum[p[10]+img_offset]; 
     

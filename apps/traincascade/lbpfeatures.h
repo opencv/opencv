@@ -7,6 +7,7 @@
 struct CvLBPFeatureParams : CvFeatureParams
 {
     CvLBPFeatureParams();
+
 };
 
 class CvLBPEvaluator : public CvFeatureEvaluator

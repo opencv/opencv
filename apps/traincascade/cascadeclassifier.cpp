@@ -8,7 +8,7 @@ using namespace std;
 using namespace cv;
 
 static const char* stageTypes[] = { CC_BOOST };
-static const char* featureTypes[] = { CC_HAAR, CC_LBP, CC_MBLBP,CC_HOG };
+static const char* featureTypes[] = { CC_HAAR, CC_LBP, CC_HOG };
 
 CvCascadeParams::CvCascadeParams() : stageType( defaultStageType ),
     featureType( defaultFeatureType ), winSize( cvSize(24, 24) )
@@ -30,8 +30,8 @@ void CvCascadeParams::write( FileStorage &fs ) const
     fs << CC_STAGE_TYPE << stageTypeStr;
     string featureTypeStr = featureType == CvFeatureParams::HAAR ? CC_HAAR :
                             featureType == CvFeatureParams::LBP ? CC_LBP :
-                            featureType == CvFeatureParams::MBLBP ? CC_MBLBP:
                             featureType == CvFeatureParams::HOG ? CC_HOG :
+                            featureType == CvFeatureParams::MBLBP ? CC_MBLBP :
                             0;
     CV_Assert( !stageTypeStr.empty() );
     fs << CC_FEATURE_TYPE << featureTypeStr;
@@ -57,7 +57,6 @@ bool CvCascadeParams::read( const FileNode &node )
     rnode >> featureTypeStr;
     featureType = !featureTypeStr.compare( CC_HAAR ) ? CvFeatureParams::HAAR :
                   !featureTypeStr.compare( CC_LBP ) ? CvFeatureParams::LBP :
-                  !featureTypeStr.compare( CC_MBLBP) ? CvFeatureParams::MBLBP:
                   !featureTypeStr.compare( CC_HOG ) ? CvFeatureParams::HOG :
                   -1;
     if (featureType == -1)
@@ -138,11 +137,8 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                                 const CvCascadeParams& _cascadeParams,
                                 const CvFeatureParams& _featureParams,
                                 const CvCascadeBoostParams& _stageParams,
-                                cv::Size _winSize,
-                                int _maxWeakCount,
-                                float _minHitRate,
                                 bool baseFormatSave,
-                                double acceptanceRatioBreakValue  )
+                                double acceptanceRatioBreakValue)
 {
     // Start recording clock ticks for training time output
     const clock_t begin_time = clock();
@@ -159,10 +155,6 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     numPos = _numPos;
     numNeg = _numNeg;
     numStages = _numStages;
-    winSize=_winSize;
-    maxWeakCount=MIN(_maxWeakCount,MAX_NUM_WEAKS);
-    minHitRate = _minHitRate;
-
     if ( !imgReader.create( _posFilename, _negFilename, _cascadeParams.winSize ) )
     {
         cout << "Image reader can not be created from -vec " << _posFilename

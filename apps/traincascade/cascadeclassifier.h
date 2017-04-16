@@ -5,13 +5,12 @@
 #include "traincascade_features.h"
 #include "haarfeatures.h"
 #include "lbpfeatures.h"
-#include "HOGfeatures.h" 
-#include "mblbpfeatures.h" // new
+#include "HOGfeatures.h"
+#include "mblbpfeatures.h"
+
 #include "boost.h"
 #include "cv.h"
 #include "cxcore.h"
-#include "common.h"
-#include "imagestorage.h"
 
 #define CC_CASCADE_FILENAME "cascade.xml"
 #define CC_PARAMS_FILENAME "params.xml"
@@ -23,7 +22,6 @@
 #define CC_WIDTH  "width"
 
 #define CC_STAGE_NUM    "stageNum"
-#define CC_STAGES       "stages"
 #define CC_STAGE_PARAMS "stageParams"
 
 #define CC_BOOST            "BOOST"
@@ -56,7 +54,6 @@
 #define CC_TILTED      "tilted"
 
 #define CC_LBP  "LBP"
-#define CC_MBLBP "MBLBP"
 #define CC_RECT "rect"
 
 #define CC_HOG "HOG"
@@ -67,7 +64,6 @@
 #define TIME( arg ) (time( arg ))
 #endif
 
-// MBLBP Related definitions.
 #define MBLBP_LUTLENGTH  59
 //#define MBLBP_LUTLENGTH  256
 #define MAX_NUM_WEAKS 512
@@ -83,6 +79,8 @@
 #define CC_FEATUREIDX  "featureindex"
 #define CC_LUT_LENGTH  "lutlength"
 #define CC_LUT		   "lut"
+#define CC_MBLBP "MBLBP"
+
 
 class CvCascadeParams : public CvParams
 {
@@ -103,10 +101,6 @@ public:
     int stageType;
     int featureType;
     cv::Size winSize;
-    // MBLBP Parameters
-    MBLBPWeakf *features;
-    bool *featuresMask;
-    // cascade Parameters
 };
 
 class CvCascadeClassifier
@@ -121,9 +115,6 @@ public:
                 const CvCascadeParams& _cascadeParams,
                 const CvFeatureParams& _featureParams,
                 const CvCascadeBoostParams& _stageParams,
-                cv::Size _winSize,
-                int _maxWeakCount,
-                float _minHitRate,
                 bool baseFormatSave = false,
                 double acceptanceRatioBreakValue = -1.0 );
 private:
@@ -150,9 +141,6 @@ private:
     CvCascadeImageReader imgReader;
     int numStages, curNumSamples;
     int numPos, numNeg;
-    cv::Size winSize;
-    int maxWeakCount;
-    float minHitRate;
 };
 
 #endif
