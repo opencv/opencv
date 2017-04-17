@@ -83,6 +83,9 @@ protected:
 
     vector<PointType> convertContourType(const Mat& currentQuery) const
     {
+        if (currentQuery.empty()) {
+            return vector<PointType>();
+        }
         vector<vector<Point> > _contoursQuery;
         findContours(currentQuery, _contoursQuery, RETR_LIST, CHAIN_APPROX_NONE);
 
