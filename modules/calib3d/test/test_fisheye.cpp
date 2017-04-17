@@ -329,7 +329,7 @@ TEST_F(fisheyeTest, Homography)
     EXPECT_MAT_NEAR(std_err, correct_std_err, 1e-12);
 }
 
-TEST_F(fisheyeTest, EtimateUncertainties)
+TEST_F(fisheyeTest, EstimateUncertainties)
 {
     const int n_images = 34;
 
