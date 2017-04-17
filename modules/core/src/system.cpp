@@ -859,9 +859,10 @@ void error( const Exception& exc )
     else
     {
         const char* errorStr = cvErrorStr(exc.code);
-        char buf[1 << 16];
+        char buf[1 << 12];
 
-        sprintf( buf, "OpenCV Error: %s (%s) in %s, file %s, line %d",
+        snprintf( buf, sizeof(buf),
+          "OpenCV Error: %s (%s) in %s, file %s, line %d",
             errorStr, exc.err.c_str(), exc.func.size() > 0 ?
             exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
         fprintf( stderr, "%s\n", buf );
