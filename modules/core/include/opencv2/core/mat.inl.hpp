@@ -3524,24 +3524,6 @@ cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
         Mat((int)vec.size(), 1, DataType<_Tp>::type, (uchar*)&vec[0]).copyTo(*this);
 }
 
-#ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _N> inline
-UMat::UMat(const std::array<_Tp, _N>& arr, bool copyData)
-: flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)arr.size()),
-cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
-{
-    if(arr.empty())
-        return;
-    if( !copyData )
-    {
-        // !!!TODO!!!
-        CV_Error(Error::StsNotImplemented, "");
-    }
-    else
-        Mat((int)arr.size(), 1, DataType<_Tp>::type, (uchar*)arr.data()).copyTo(*this);
-}
-#endif
-
 inline
 UMat& UMat::operator = (const UMat& m)
 {

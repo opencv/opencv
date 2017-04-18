@@ -2324,11 +2324,6 @@ public:
     //! builds matrix from std::vector with or without copying the data
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
 
-#ifdef CV_CXX_STD_ARRAY
-    //! builds matrix from std::array with or without copying the data
-    template<typename _Tp, std::size_t _N> explicit UMat(const std::array<_Tp, _N>& vec, bool copyData=false);
-#endif
-
     //! builds matrix from cv::Vec; the data is copied by default
     template<typename _Tp, int n> explicit UMat(const Vec<_Tp, n>& vec, bool copyData=true);
     //! builds matrix from cv::Matx; the data is copied by default
