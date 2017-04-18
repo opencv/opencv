@@ -1813,7 +1813,7 @@ struct Device::Impl
         parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
 
         intelSubgroupsSupport_ = isExtensionSupported("cl_intel_subgroups");
-        
+
         vendorName_ = getStrProp(CL_DEVICE_VENDOR);
         if (vendorName_ == "Advanced Micro Devices, Inc." ||
             vendorName_ == "AMD")

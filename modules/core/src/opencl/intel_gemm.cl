@@ -72,7 +72,7 @@ __kernel void intelblas_gemm_buffer_NN_sp(
     float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 5 * ldC)) : (float4)(0.0));
     float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 6 * ldC)) : (float4)(0.0));
     float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 7 * ldC)) : (float4)(0.0));
-   
+
     int end_index = min(start_index + stride, K);
     int w = start_index;
     while( w + TILE_K <= end_index ) {
@@ -191,7 +191,7 @@ __kernel void intelblas_gemm_buffer_NN(
     float4 dot05 = (start_index != 0) ? vload4(0, dst_write0 + 5 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 5 * ldC)) : (float4)(0.0));
     float4 dot06 = (start_index != 0) ? vload4(0, dst_write0 + 6 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 6 * ldC)) : (float4)(0.0));
     float4 dot07 = (start_index != 0) ? vload4(0, dst_write0 + 7 * ldC) : ((beta != 0.0) ? ((float)beta * vload4(0, dst_write0 + 7 * ldC)) : (float4)(0.0));
-   
+
     int end_index = min(start_index + stride, K);
     int w = start_index;
     while( w + TILE_K <= end_index ) {
@@ -421,7 +421,7 @@ __kernel void intelblas_gemm_buffer_NT(
     float8 dot05 = 0.f;
     float8 dot06 = 0.f;
     float8 dot07 = 0.f;
-    
+
     float4 brow0;
     float4 brow1;
     float4 brow2;
@@ -430,7 +430,7 @@ __kernel void intelblas_gemm_buffer_NT(
     float4 brow5;
     float4 brow6;
     float4 brow7;
-    
+
     __global float *dst_write0 = dst + local_x * VEC_SIZE + ( group_x * TILE_N ) + ( group_y * LWG_HEIGHT * TILE_M + local_y * TILE_M) * ldC + offd;
 
     const __global float *src0_read = src0 + local_x * ( TILE_K / 8 ) + ( group_y * LWG_HEIGHT * TILE_M + local_y * TILE_M ) * ldA + off0;
@@ -459,7 +459,7 @@ __kernel void intelblas_gemm_buffer_NT(
         int end_w = min(b_tile + SLM_BLOCK, K);
         while( w + TILE_K <= end_w ) {
             float4 arow;
-                            
+
             brow0 = vload4(0, slm_brow0 + 0 * SLM_BLOCK);
             brow1 = vload4(0, slm_brow0 + 1 * SLM_BLOCK);
             brow2 = vload4(0, slm_brow0 + 2 * SLM_BLOCK);
@@ -468,14 +468,14 @@ __kernel void intelblas_gemm_buffer_NT(
             brow5 = vload4(0, slm_brow0 + 5 * SLM_BLOCK);
             brow6 = vload4(0, slm_brow0 + 6 * SLM_BLOCK);
             brow7 = vload4(0, slm_brow0 + 7 * SLM_BLOCK);
-             
+
 #define MM_DOT_PRODUCT(_row,_dot)   \
             arow = vload4(0, src0_read + _row * ldA);                           \
             _dot = mad( (float8)(arow.x), (float8)(brow0.x, brow1.x, brow2.x, brow3.x, brow4.x, brow5.x, brow6.x, brow7.x), _dot ); \
             _dot = mad( (float8)(arow.y), (float8)(brow0.y, brow1.y, brow2.y, brow3.y, brow4.y, brow5.y, brow6.y, brow7.y), _dot ); \
             _dot = mad( (float8)(arow.z), (float8)(brow0.z, brow1.z, brow2.z, brow3.z, brow4.z, brow5.z, brow6.z, brow7.z), _dot ); \
             _dot = mad( (float8)(arow.w), (float8)(brow0.w, brow1.w, brow2.w, brow3.w, brow4.w, brow5.w, brow6.w, brow7.w), _dot );
-                        
+
             MM_DOT_PRODUCT(0,dot00);
             MM_DOT_PRODUCT(1,dot01);
             MM_DOT_PRODUCT(2,dot02);
@@ -485,7 +485,7 @@ __kernel void intelblas_gemm_buffer_NT(
             MM_DOT_PRODUCT(6,dot06);
             MM_DOT_PRODUCT(7,dot07);
 #undef MM_DOT_PRODUCT
-       
+
             src0_read += TILE_K;
             slm_brow0 += TILE_K;
             w += TILE_K;
@@ -522,7 +522,7 @@ __kernel void intelblas_gemm_buffer_NT(
         _dot = mad( (float8)(arow.y), (float8)(brow0.y, brow1.y, brow2.y, brow3.y, brow4.y, brow5.y, brow6.y, brow7.y), _dot ); \
         _dot = mad( (float8)(arow.z), (float8)(brow0.z, brow1.z, brow2.z, brow3.z, brow4.z, brow5.z, brow6.z, brow7.z), _dot ); \
         _dot = mad( (float8)(arow.w), (float8)(brow0.w, brow1.w, brow2.w, brow3.w, brow4.w, brow5.w, brow6.w, brow7.w), _dot );
-                        
+
         MM_DOT_PRODUCT(0,dot00);
         MM_DOT_PRODUCT(1,dot01);
         MM_DOT_PRODUCT(2,dot02);
@@ -551,7 +551,7 @@ __kernel void intelblas_gemm_buffer_NT(
            intel_sub_group_shuffle(_dot.s6, 4) + intel_sub_group_shuffle(_dot.s6, 5) + intel_sub_group_shuffle(_dot.s6, 6) + intel_sub_group_shuffle(_dot.s6, 7); \
     _dot.s7 = intel_sub_group_shuffle(_dot.s7, 0) + intel_sub_group_shuffle(_dot.s7, 1) + intel_sub_group_shuffle(_dot.s7, 2) + intel_sub_group_shuffle(_dot.s7, 3) +  \
            intel_sub_group_shuffle(_dot.s7, 4) + intel_sub_group_shuffle(_dot.s7, 5) + intel_sub_group_shuffle(_dot.s7, 6) + intel_sub_group_shuffle(_dot.s7, 7);
-    
+
     REDUCE(dot00);
     REDUCE(dot01);
     REDUCE(dot02);
@@ -627,7 +627,7 @@ __kernel void intelblas_gemm_buffer_TN(
     const int local_y = get_local_id(1);
     const int global_x = get_global_id(0);
     const int global_y = get_global_id(1);
-   
+
     float4 brow;
 
     __global float *dst_write0 = dst + local_x * VEC_SIZE + ( group_x * TILE_N ) + ( group_y * LWG_HEIGHT * TILE_M + local_y * TILE_M) * ldC + offd;
@@ -1080,4 +1080,3 @@ __kernel void intelblas_gemm_buffer_TT(
 #undef TILE_N
 
 #endif
-

@@ -807,11 +807,11 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     bool haveC = matC.kind() != cv::_InputArray::NONE;
     Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
     bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
-    
+
     CV_Assert( !haveC || matC.type() == type );
 
     Size sizeD(((btrans)? sizeB.height : sizeB.width),
-               ((atrans)? sizeA.width : sizeA.height)); 
+               ((atrans)? sizeA.width : sizeA.height));
     matD.create(sizeD, type);
 
     UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
@@ -882,10 +882,10 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
         {
             beta = 0.0;
         }
-        
+
         return intel_gpu_gemm(A, sizeA,
                               B, sizeB,
-                              D, sizeD, 
+                              D, sizeD,
                               alpha,
                               beta,
                               atrans, btrans);

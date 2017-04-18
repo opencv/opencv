@@ -1,6 +1,6 @@
 /*
 * Copyright 2015-2017 Philippe Tillet
-* Copyright © 2017, Intel Corporation
+* Copyright (c) 2017, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files
@@ -52,7 +52,7 @@ static bool intel_gpu_gemm(
 
     if(!atrans && !btrans)
     {
-    
+
         if (M % 32 == 0 && N % 32 == 0 && K % 16 == 0)
         {
             kernelName = "intelblas_gemm_buffer_NN_sp";
@@ -62,7 +62,7 @@ static bool intel_gpu_gemm(
             kernelName = "intelblas_gemm_buffer_NN";
         }
     }
-    else if(atrans && !btrans) 
+    else if(atrans && !btrans)
     {
         kernelName = "intelblas_gemm_buffer_TN";
     }
@@ -82,11 +82,11 @@ static bool intel_gpu_gemm(
 
     size_t local[] = {lx, ly, 1};
     size_t global[] = {(gx + lx - 1) / lx * lx, (gy + ly - 1) / ly * ly, 1};
- 
+
     int stride = (M * N < 1024 * 1024) ? 10000000 : 256;
 
     ocl::Queue q;
-    String errmsg; 
+    String errmsg;
     const ocl::Program program = ocl::Context::getDefault().getProg(ocl::core::intel_gemm_oclsrc, "", errmsg);
 
     if(!atrans && btrans)
@@ -110,7 +110,7 @@ static bool intel_gpu_gemm(
                (int)(B.step / sizeof(float)),
                (int)(D.step / sizeof(float)),
                (int) 0,                          // 14 start_index
-               stride);                          
+               stride);
 
         ret = k.run(2, global, local, false, q);
     }
@@ -134,7 +134,7 @@ static bool intel_gpu_gemm(
                     (int) start_index,                          // 14 start_index
                     stride);
 
-    	    ret = k.run(2, global, local, false, q);
+            ret = k.run(2, global, local, false, q);
             if (!ret) return ret;
         }
     }
@@ -145,4 +145,3 @@ static bool intel_gpu_gemm(
 } // namespace cv
 
 #endif
-
