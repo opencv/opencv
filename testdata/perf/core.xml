@@ -71635,4 +71635,58 @@
       <x>817257</x>
       <y>0</y>
       <val>2.2593464519098896e+02</val></rng2></angle></VectorLength_phase64f--phase64f--1048576>
+<SizePrm_LUT--LUT--320x240>
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>254.</max>
+    <last>
+      <x>319</x>
+      <y>239</y>
+      <val>84.</val></last>
+    <rng1>
+      <x>43</x>
+      <y>99</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>200</x>
+      <y>76</y>
+      <val>23.</val></rng2></dst></SizePrm_LUT--LUT--320x240>
+<SizePrm_LUT--LUT--640x480>
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>254.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>142.</val></last>
+    <rng1>
+      <x>628</x>
+      <y>328</y>
+      <val>61.</val></rng1>
+    <rng2>
+      <x>638</x>
+      <y>258</y>
+      <val>201.</val></rng2></dst></SizePrm_LUT--LUT--640x480>
+<SizePrm_LUT--LUT--1920x1080>
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>254.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>173.</val></last>
+    <rng1>
+      <x>84</x>
+      <y>813</y>
+      <val>146.</val></rng1>
+    <rng2>
+      <x>780</x>
+      <y>821</y>
+      <val>128.</val></rng2></dst></SizePrm_LUT--LUT--1920x1080>
 </opencv_storage>
