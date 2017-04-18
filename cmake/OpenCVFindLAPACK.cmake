@@ -136,6 +136,10 @@ if(WITH_LAPACK)
         unset(LAPACK_LIBRARIES)
         unset(LAPACK_LIBRARIES CACHE)
       endif()
+    else()
+      # LAPACK not found
+      unset(LAPACK_LIBRARIES)
+      unset(LAPACK_LIBRARIES CACHE)
     endif()
   endif()
 
