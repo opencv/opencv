@@ -40,15 +40,15 @@ static bool intel_gpu_gemm(
     double alpha, double beta,
     bool atrans, bool btrans)
 {
-    sizeA; sizeB;
+    CV_UNUSED(sizeB);
 
     int M = sizeD.height, N = sizeD.width, K = ((atrans)? sizeA.height : sizeA.width);
 
     std::string kernelName;
     bool ret = true;
 
-    int lx = 8, ly = 4;
-    int dx = 4, dy = 8;
+    size_t lx = 8, ly = 4;
+    size_t dx = 4, dy = 8;
 
     if(!atrans && !btrans)
     {
