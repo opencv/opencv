@@ -165,7 +165,8 @@ public:
         UMAT              =10 << KIND_SHIFT,
         STD_VECTOR_UMAT   =11 << KIND_SHIFT,
         STD_BOOL_VECTOR   =12 << KIND_SHIFT,
-        STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT
+        STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT,
+        STD_ARRAY         =14 << KIND_SHIFT
     };
 
     _InputArray();
@@ -175,6 +176,7 @@ public:
     _InputArray(const std::vector<Mat>& vec);
     template<typename _Tp> _InputArray(const Mat_<_Tp>& m);
     template<typename _Tp> _InputArray(const std::vector<_Tp>& vec);
+    template<typename _Tp, std::size_t _N> _InputArray(const std::array<_Tp, _N>& arr);
     _InputArray(const std::vector<bool>& vec);
     template<typename _Tp> _InputArray(const std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _InputArray(const std::vector<Mat_<_Tp> >& vec);
@@ -226,6 +228,7 @@ public:
     bool isUMatVector() const;
     bool isMatx() const;
     bool isVector() const;
+    bool isArray() const;
     bool isGpuMatVector() const;
     ~_InputArray();
 
@@ -291,6 +294,7 @@ public:
     _OutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
+    template<typename _Tp, std::size_t _N> _OutputArray(std::array<_Tp, _N>& arr);
     _OutputArray(std::vector<bool>& vec);
     template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
@@ -308,6 +312,7 @@ public:
     _OutputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(const cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(const std::vector<_Tp>& vec);
+    template<typename _Tp, std::size_t _N> _OutputArray(const std::array<_Tp, _N>& arr);
     template<typename _Tp> _OutputArray(const std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(const std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
@@ -350,6 +355,7 @@ public:
     _InputOutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _InputOutputArray(std::vector<_Tp>& vec);
+    template<typename _Tp, std::size_t _N> _InputOutputArray(std::array<_Tp, _N>& arr);
     _InputOutputArray(std::vector<bool>& vec);
     template<typename _Tp> _InputOutputArray(std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _InputOutputArray(std::vector<Mat_<_Tp> >& vec);
@@ -367,6 +373,7 @@ public:
     _InputOutputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(const cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _InputOutputArray(const std::vector<_Tp>& vec);
+    template<typename _Tp, std::size_t _N> _InputOutputArray(const std::array<_Tp, _N>& arr);
     template<typename _Tp> _InputOutputArray(const std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _InputOutputArray(const std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _InputOutputArray(const Mat_<_Tp>& m);
@@ -954,6 +961,10 @@ public:
     destructed.
     */
     template<typename _Tp> explicit Mat(const std::vector<_Tp>& vec, bool copyData=false);
+
+    /** @overload
+    */
+    template<typename _Tp, size_t _N> explicit Mat(const std::array<_Tp, _N>& arr, bool copyData=false);
 
     /** @overload
     */
@@ -1572,6 +1583,7 @@ public:
     // operator IplImage() const;
 
     template<typename _Tp> operator std::vector<_Tp>() const;
+    template<typename _Tp, std::size_t _N> operator std::array<_Tp, _N>() const;
     template<typename _Tp, int n> operator Vec<_Tp, n>() const;
     template<typename _Tp, int m, int n> operator Matx<_Tp, m, n>() const;
 
@@ -2108,6 +2120,7 @@ public:
     explicit Mat_(const MatExpr& e);
     //! makes a matrix out of Vec, std::vector, Point_ or Point3_. The matrix will have a single column
     explicit Mat_(const std::vector<_Tp>& vec, bool copyData=false);
+    template <std::size_t _N> explicit Mat_(const std::array<_Tp, _N>& arr, bool copyData=false);
     template<int n> explicit Mat_(const Vec<typename DataType<_Tp>::channel_type, n>& vec, bool copyData=true);
     template<int m, int n> explicit Mat_(const Matx<typename DataType<_Tp>::channel_type, m, n>& mtx, bool copyData=true);
     explicit Mat_(const Point_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
@@ -2207,6 +2220,8 @@ public:
 
     //! conversion to vector.
     operator std::vector<_Tp>() const;
+    //! conversion to array.
+    template<std::size_t _N> operator std::array<_Tp, _N>() const;
     //! conversion to Vec
     template<int n> operator Vec<typename DataType<_Tp>::channel_type, n>() const;
     //! conversion to Matx
@@ -2281,6 +2296,8 @@ public:
     UMat(const UMat& m, const std::vector<Range>& ranges);
     //! builds matrix from std::vector with or without copying the data
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
+    //! builds matrix from std::array with or without copying the data
+    template<typename _Tp, std::size_t _N> explicit UMat(const std::array<_Tp, _N>& vec, bool copyData=false);
     //! builds matrix from cv::Vec; the data is copied by default
     template<typename _Tp, int n> explicit UMat(const Vec<_Tp, n>& vec, bool copyData=true);
     //! builds matrix from cv::Matx; the data is copied by default

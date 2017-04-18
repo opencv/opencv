@@ -48,6 +48,7 @@
 #  error types.hpp header must be compiled as C++
 #endif
 
+#include <array>
 #include <climits>
 #include <cfloat>
 #include <vector>
