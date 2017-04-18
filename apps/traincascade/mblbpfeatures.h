@@ -20,7 +20,6 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
         virtual void setImage(const cv::Mat &img, int idx,bool isSum);
         virtual float operator()(int featureIdx,int sampleIdx) const
         { 
-            //TODO: 计算特征值的方法 
             return (float)features[featureIdx].calc(sum, 0);
         };
         virtual void writeFeatures(cv::FileStorage &fs, const cv::Mat& featureMap) const;
@@ -31,6 +30,7 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
         public:
             Feature();
             Feature(int offset, int x, int y, int _block_w,int _block_h);
+            Feature(int x, int y, int cellwidth, int cellheight);
             uchar calc(const cv::Mat&_sum, size_t img_offset) const;
             void write (cv::FileStorage &fs) const;
             cv::Rect rect;

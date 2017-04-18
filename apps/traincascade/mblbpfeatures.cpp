@@ -43,18 +43,7 @@ void CvMBLBPEvaluator::generateFeatures()
                                 this->numFeatures++; //count how many features
                             else //set features
                             {
-                                cout<<"setting features x"<<endl;
-                                cout<<count<<endl;
-                                cout<<x<<endl;
-                                this->features[count].x = x;
-                                cout<<"setting features y"<<endl;
-                                this->features[count].y = y;
-                                cout<<"setting features cellwidth"<<endl;
-                                this->features[count].cellwidth = w;
-                                cout<<"setting features cellheight"<<endl;
-                                this->features[count].cellheight = h;
-                                count++;
-                                cout<<"finished round one features setting"<<endl;
+                                features.push_back(Feature(x,y,w,h));
                             }
                         }
                     }
@@ -159,6 +148,14 @@ CvMBLBPEvaluator::Feature::Feature( int offset, int x, int y, int _blockWidth, i
     CV_SUM_OFFSETS( p[10], p[11], p[14], p[15], tr, offset )
     tr.x -= 2*rect.width;
     CV_SUM_OFFSETS( p[8], p[9], p[12], p[13], tr, offset )
+}
+
+CvMBLBPEvaluator::Feature::Feature( int x, int y, int cellwidth, int cellheight )
+{
+    this->x = x;
+    this->y = y;
+    this->cellwidth = cellwidth;
+    this->cellheight = cellheight;
 }
 
 void CvMBLBPEvaluator::Feature::write(FileStorage &fs) const
