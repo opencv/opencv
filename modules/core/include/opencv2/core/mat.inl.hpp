@@ -81,6 +81,10 @@ inline
 _InputArray::_InputArray(const std::vector<bool>& vec)
 { init(FIXED_TYPE + STD_BOOL_VECTOR + DataType<bool>::type + ACCESS_READ, &vec); }
 
+inline
+_InputArray::_InputArray(const std::vector<std::vector<bool> >& vec)
+{ init(FIXED_TYPE + STD_BOOL_VECTOR_VECTOR + DataType<bool>::type + ACCESS_READ, &vec); }
+
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }

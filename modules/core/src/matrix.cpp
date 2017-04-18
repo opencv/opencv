@@ -1278,6 +1278,16 @@ Mat _InputArray::getMat_(int i) const
         return !v.empty() ? Mat(size(i), t, (void*)&v[0]) : Mat();
     }
 
+    if( k == STD_BOOL_VECTOR_VECTOR )
+    {
+        const std::vector<std::vector<bool> >& bool_vv = *(const std::vector<std::vector<bool> >*)obj;
+        CV_Assert( 0 <= i && i < (int)bool_vv.size() );
+        const std::vector<bool>& bool_v = bool_vv[i];
+        InputArray bool_input(bool_v);
+
+        return bool_input.getMat();
+    }
+
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
