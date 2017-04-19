@@ -260,7 +260,7 @@ inline void GetPatch(image2d_t J, float x, float y,
 
 inline void GetError(image2d_t J, const float x, const float y, const float* Pch, float* errval)
 {
-    float diff = read_imagef(J, sampler, (float2)(x,y)).x-*Pch;
+    float diff = (((read_imagef(J, sampler, (float2)(x,y)).x * 16384) + 256) / 512) - (((*Pch * 16384) + 256) /512);
     *errval += fabs(diff);
 }
 
@@ -526,6 +526,6 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
         nextPts[gid] = prevPt;
 
         if (calcErr)
-            err[gid] = smem1[0] / (float)(c_winSize_x * c_winSize_y);
+            err[gid] = smem1[0] / (float)(32 * c_winSize_x * c_winSize_y);
     }
 }
