@@ -1751,6 +1751,10 @@ public:
     /** @overload */
     const uchar* ptr(const int* idx) const;
     /** @overload */
+    uchar* ptr(const std::vector<int>& idx);
+    /** @overload */
+    const uchar* ptr(const std::vector<int>& idx) const;
+    /** @overload */
     template<int n> uchar* ptr(const Vec<int, n>& idx);
     /** @overload */
     template<int n> const uchar* ptr(const Vec<int, n>& idx) const;
@@ -1777,6 +1781,10 @@ public:
     template<typename _Tp> _Tp* ptr(const int* idx);
     /** @overload */
     template<typename _Tp> const _Tp* ptr(const int* idx) const;
+    /** @overload */
+    template<typename _Tp> _Tp* ptr(const std::vector<int>& idx);
+    /** @overload */
+    template<typename _Tp> const _Tp* ptr(const std::vector<int>& idx) const;
     /** @overload */
     template<typename _Tp, int n> _Tp* ptr(const Vec<int, n>& idx);
     /** @overload */
@@ -1850,6 +1858,10 @@ public:
     */
     template<typename _Tp> const _Tp& at(const int* idx) const;
 
+    /** @overload */
+    template<typename _Tp> _Tp& at(const std::vector<int>& idx);
+    /** @overload */
+    template<typename _Tp> const _Tp& at(const std::vector<int>& idx) const;
     /** @overload */
     template<typename _Tp, int n> _Tp& at(const Vec<int, n>& idx);
     /** @overload */
