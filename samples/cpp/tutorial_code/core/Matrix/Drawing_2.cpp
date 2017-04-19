@@ -117,7 +117,7 @@ int Drawing_Random_Lines( Mat image, char* window_name, RNG rng )
 
     line( image, pt1, pt2, randomColor(rng), rng.uniform(1, 10), 8 );
     imshow( window_name, image );
-    if( waitKey( DELAY ) >= 0 )
+    if( waitKey( DELAY ) <= 0 )
       { return -1; }
   }
 
@@ -143,7 +143,7 @@ int Drawing_Random_Rectangles( Mat image, char* window_name, RNG rng )
     rectangle( image, pt1, pt2, randomColor(rng), MAX( thickness, -1 ), lineType );
 
     imshow( window_name, image );
-    if( waitKey( DELAY ) >= 0 )
+    if( waitKey( DELAY ) <= 0 )
       { return -1; }
   }
 
@@ -174,7 +174,7 @@ int Drawing_Random_Ellipses( Mat image, char* window_name, RNG rng )
 
     imshow( window_name, image );
 
-    if( waitKey(DELAY) >= 0 )
+    if( waitKey(DELAY) <= 0 )
       { return -1; }
   }
 
@@ -210,7 +210,7 @@ int Drawing_Random_Polylines( Mat image, char* window_name, RNG rng )
     polylines(image, ppt, npt, 2, true, randomColor(rng), rng.uniform(1,10), lineType);
 
     imshow( window_name, image );
-    if( waitKey(DELAY) >= 0 )
+    if( waitKey(DELAY) <= 0 )
       { return -1; }
   }
   return 0;
@@ -245,7 +245,7 @@ int Drawing_Random_Filled_Polygons( Mat image, char* window_name, RNG rng )
     fillPoly( image, ppt, npt, 2, randomColor(rng), lineType );
 
     imshow( window_name, image );
-    if( waitKey(DELAY) >= 0 )
+    if( waitKey(DELAY) <= 0 )
        { return -1; }
   }
   return 0;
@@ -268,7 +268,7 @@ int Drawing_Random_Circles( Mat image, char* window_name, RNG rng )
             rng.uniform(-1, 9), lineType );
 
     imshow( window_name, image );
-    if( waitKey(DELAY) >= 0 )
+    if( waitKey(DELAY) <= 0 )
       { return -1; }
   }
 
@@ -292,7 +292,7 @@ int Displaying_Random_Text( Mat image, char* window_name, RNG rng )
              rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
 
     imshow( window_name, image );
-    if( waitKey(DELAY) >= 0 )
+    if( waitKey(DELAY) <= 0 )
       { return -1; }
   }
 
@@ -317,7 +317,7 @@ int Displaying_Big_End( Mat image, char* window_name, RNG )
              Scalar(i, i, 255), 5, lineType );
 
     imshow( window_name, image2 );
-    if( waitKey(DELAY) >= 0 )
+    if( waitKey(DELAY) <= 0 )
        { return -1; }
   }
 
