@@ -165,7 +165,9 @@ public:
         UMAT              =10 << KIND_SHIFT,
         STD_VECTOR_UMAT   =11 << KIND_SHIFT,
         STD_BOOL_VECTOR   =12 << KIND_SHIFT,
-        STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT
+        STD_VECTOR_CUDA_GPU_MAT = 13 << KIND_SHIFT,
+        STD_ARRAY         =14 << KIND_SHIFT,
+        STD_ARRAY_MAT     =15 << KIND_SHIFT
     };
 
     _InputArray();
@@ -188,6 +190,11 @@ public:
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
     _InputArray(const UMat& um);
     _InputArray(const std::vector<UMat>& umv);
+
+#ifdef CV_CXX_STD_ARRAY
+    template<typename _Tp, std::size_t _N> _InputArray(const std::array<_Tp, _N>& arr);
+    template<std::size_t _N> _InputArray(const std::array<Mat, _N>& arr);
+#endif
 
     Mat getMat(int idx=-1) const;
     Mat getMat_(int idx=-1) const;
@@ -316,6 +323,13 @@ public:
     _OutputArray(const UMat& m);
     _OutputArray(const std::vector<UMat>& vec);
 
+#ifdef CV_CXX_STD_ARRAY
+    template<typename _Tp, std::size_t _N> _OutputArray(std::array<_Tp, _N>& arr);
+    template<typename _Tp, std::size_t _N> _OutputArray(const std::array<_Tp, _N>& arr);
+    template<std::size_t _N> _OutputArray(std::array<Mat, _N>& arr);
+    template<std::size_t _N> _OutputArray(const std::array<Mat, _N>& arr);
+#endif
+
     bool fixedSize() const;
     bool fixedType() const;
     bool needed() const;
@@ -374,6 +388,14 @@ public:
     template<typename _Tp, int m, int n> _InputOutputArray(const Matx<_Tp, m, n>& matx);
     _InputOutputArray(const UMat& m);
     _InputOutputArray(const std::vector<UMat>& vec);
+
+#ifdef CV_CXX_STD_ARRAY
+    template<typename _Tp, std::size_t _N> _InputOutputArray(std::array<_Tp, _N>& arr);
+    template<typename _Tp, std::size_t _N> _InputOutputArray(const std::array<_Tp, _N>& arr);
+    template<std::size_t _N> _InputOutputArray(std::array<Mat, _N>& arr);
+    template<std::size_t _N> _InputOutputArray(const std::array<Mat, _N>& arr);
+#endif
+
 };
 
 typedef const _InputArray& InputArray;
@@ -954,6 +976,12 @@ public:
     destructed.
     */
     template<typename _Tp> explicit Mat(const std::vector<_Tp>& vec, bool copyData=false);
+
+#ifdef CV_CXX_STD_ARRAY
+    /** @overload
+    */
+    template<typename _Tp, size_t _N> explicit Mat(const std::array<_Tp, _N>& arr, bool copyData=false);
+#endif
 
     /** @overload
     */
@@ -1575,6 +1603,10 @@ public:
     template<typename _Tp, int n> operator Vec<_Tp, n>() const;
     template<typename _Tp, int m, int n> operator Matx<_Tp, m, n>() const;
 
+#ifdef CV_CXX_STD_ARRAY
+    template<typename _Tp, std::size_t _N> operator std::array<_Tp, _N>() const;
+#endif
+
     /** @brief Reports whether the matrix is continuous or not.
 
     The method returns true if the matrix elements are stored continuously without gaps at the end of
@@ -2114,6 +2146,10 @@ public:
     explicit Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
     explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
+#ifdef CV_CXX_STD_ARRAY
+    template <std::size_t _N> explicit Mat_(const std::array<_Tp, _N>& arr, bool copyData=false);
+#endif
+
     Mat_& operator = (const Mat& m);
     Mat_& operator = (const Mat_& m);
     //! set all the elements to s.
@@ -2207,6 +2243,12 @@ public:
 
     //! conversion to vector.
     operator std::vector<_Tp>() const;
+
+#ifdef CV_CXX_STD_ARRAY
+    //! conversion to array.
+    template<std::size_t _N> operator std::array<_Tp, _N>() const;
+#endif
+
     //! conversion to Vec
     template<int n> operator Vec<typename DataType<_Tp>::channel_type, n>() const;
     //! conversion to Matx
@@ -2281,6 +2323,7 @@ public:
     UMat(const UMat& m, const std::vector<Range>& ranges);
     //! builds matrix from std::vector with or without copying the data
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
+
     //! builds matrix from cv::Vec; the data is copied by default
     template<typename _Tp, int n> explicit UMat(const Vec<_Tp, n>& vec, bool copyData=true);
     //! builds matrix from cv::Matx; the data is copied by default
