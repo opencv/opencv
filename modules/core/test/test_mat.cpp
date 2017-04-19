@@ -1634,3 +1634,90 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(3, sub_mat.size[1]);
     ASSERT_EQ(2, sub_mat.size[2]);
 }
+
+// Constructor: Mat(int ndims, const int* sizes, int type);
+TEST(Mat, create_1D_mat_from_dims_sz)
+{
+   int sz[] = { 5 };
+   Mat m(1, sz, CV_32S);
+#if 1
+   std::cout << "m.dims = " << m.dims << std::endl;
+   std::cout << "m.cols = " << m.cols << std::endl;
+   std::cout << "m.rows = " << m.rows << std::endl;
+   std::cout << "m.size = " << m.size() << std::endl;
+#endif
+   EXPECT_EQ(1, m.dims);
+   EXPECT_EQ(5, m.size[0]);
+   EXPECT_EQ(5u, m.total());
+}
+
+// Constructor: Mat(const std::vector<int>& sizes, int type);
+TEST(Mat, create_1D_mat_from_vec_sz)
+{
+   std::vector<int> sz(1);
+   sz[0] = 5;
+   Mat m(sz, CV_32S);
+#if 1
+   std::cout << "m.dims = " << m.dims << std::endl;
+   std::cout << "m.cols = " << m.cols << std::endl;
+   std::cout << "m.rows = " << m.rows << std::endl;
+   std::cout << "m.size = " << m.size() << std::endl;
+#endif
+   EXPECT_EQ(1, m.dims);
+   EXPECT_EQ(5, m.size[0]);
+   EXPECT_EQ(5u, m.total());
+}
+
+// Constructor: Mat(Size size, int type, void* data, size_t step=AUTO_STEP);
+TEST(Mat, create_1D_mat_from_dims_sz_ptr)
+{
+   int v[5] = {1, 2, 3, 4, 5};
+   int sz[] = { 5 };
+   Mat m(1, sz, CV_32S, v);
+#if 1
+   std::cout << m << std::endl;
+   std::cout << "m.dims = " << m.dims << std::endl;
+   std::cout << "m.cols = " << m.cols << std::endl;
+   std::cout << "m.rows = " << m.rows << std::endl;
+   std::cout << "m.size = " << m.size() << std::endl;
+#endif
+   EXPECT_EQ(1, m.dims);
+   EXPECT_EQ(5, m.size[0]);
+   EXPECT_EQ(5u, m.total());
+}
+
+TEST(Mat, create_1D_mat_from_vec_sz_ptr)
+{
+   int v[5] = {1, 2, 3, 4, 5};
+   std::vector<int> sz(1);
+   sz[0] = 5;
+   Mat m(sz, CV_32S, v);
+#if 1
+   std::cout << m << std::endl;
+   std::cout << "m.dims = " << m.dims << std::endl;
+   std::cout << "m.cols = " << m.cols << std::endl;
+   std::cout << "m.rows = " << m.rows << std::endl;
+   std::cout << "m.size = " << m.size() << std::endl;
+#endif
+   EXPECT_EQ(1, m.dims);
+   EXPECT_EQ(5, m.size[0]);
+   EXPECT_EQ(5u, m.total());
+}
+
+// Contructor: Mat(const std::vector<_Tp>& vec, bool copyData=false);
+TEST(Mat, create_1D_mat_from_std_vector)
+{
+   int v[5] = {1, 2, 3, 4, 5};
+   std::vector<int> vec(v, v + 5);
+   Mat m(vec);
+#if 1
+   std::cout << m << std::endl;
+   std::cout << "m.dims = " << m.dims << std::endl;
+   std::cout << "m.cols = " << m.cols << std::endl;
+   std::cout << "m.rows = " << m.rows << std::endl;
+   std::cout << "m.size = " << m.size() << std::endl;
+#endif
+   EXPECT_EQ(1, m.dims);
+   EXPECT_EQ(5, m.size[0]);
+   EXPECT_EQ(5u, m.total());
+}
