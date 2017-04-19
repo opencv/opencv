@@ -270,6 +270,17 @@ std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
     return out << "[" << rect.width << " x " << rect.height << " from (" << rect.x << ", " << rect.y << ")]";
 }
 
+static inline std::ostream& operator << (std::ostream& out, const MatSize& msize)
+{
+    int i, dims = msize.p[-1];
+    for( i = 0; i < dims; i++ )
+    {
+        out << msize.p[i];
+        if( i < dims-1 )
+            out << " x ";
+    }
+    return out;
+}
 
 #endif // OPENCV_NOSTL
 } // cv
