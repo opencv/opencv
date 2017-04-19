@@ -1812,6 +1812,8 @@ struct Device::Impl
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
         parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
 
+        intelSubgroupsSupport_ = isExtensionSupported("cl_intel_subgroups");
+
         vendorName_ = getStrProp(CL_DEVICE_VENDOR);
         if (vendorName_ == "Advanced Micro Devices, Inc." ||
             vendorName_ == "AMD")
@@ -1851,6 +1853,18 @@ struct Device::Impl
             sz < sizeof(buf) ? String(buf) : String();
     }
 
+    bool isExtensionSupported(const String& extensionName) const
+    {
+        bool ret = false;
+        size_t pos = getStrProp(CL_DEVICE_EXTENSIONS).find(extensionName);
+        if (pos != String::npos)
+        {
+            ret = true;
+        }
+        return ret;
+    }
+
+
     IMPLEMENT_REFCOUNTABLE();
     cl_device_id handle;
 
@@ -1866,6 +1880,7 @@ struct Device::Impl
     String driverVersion_;
     String vendorName_;
     int vendorID_;
+    bool intelSubgroupsSupport_;
 };
 
 
@@ -2071,6 +2086,9 @@ size_t Device::imageMaxArraySize() const
 #else
 { CV_REQUIRE_OPENCL_1_2_ERROR; }
 #endif
+
+bool Device::intelSubgroupsSupport() const
+{ return p ? p->intelSubgroupsSupport_ : false; }
 
 int Device::maxClockFrequency() const
 { return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_CLOCK_FREQUENCY) : 0; }

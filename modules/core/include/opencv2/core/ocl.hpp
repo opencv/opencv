@@ -160,6 +160,8 @@ public:
     uint imagePitchAlignment() const;
     uint imageBaseAddressAlignment() const;
 
+    bool intelSubgroupsSupport() const;
+
     size_t image2DMaxWidth() const;
     size_t image2DMaxHeight() const;
 
