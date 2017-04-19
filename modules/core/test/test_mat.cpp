@@ -1634,3 +1634,95 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(3, sub_mat.size[1]);
     ASSERT_EQ(2, sub_mat.size[2]);
 }
+
+#ifdef CV_CXX_STD_ARRAY
+TEST(Core_Mat_array, outputArray_create_getMat)
+{
+    cv::Mat_<uchar> src_base(5, 1);
+    std::array<uchar, 5> dst8;
+
+    src_base << 1, 2, 3, 4, 5;
+
+    Mat src(src_base);
+    OutputArray _dst(dst8);
+
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+}
+
+TEST(Core_Mat_array, copyTo_roi_column)
+{
+    cv::Mat_<uchar> src_base(5, 2);
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.col(0));
+
+    std::array<uchar, 5> dst1;
+    src.copyTo(dst1);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst1) << std::endl;
+    EXPECT_EQ((size_t)5, dst1.size());
+    EXPECT_EQ(1, (int)dst1[0]);
+    EXPECT_EQ(3, (int)dst1[1]);
+    EXPECT_EQ(5, (int)dst1[2]);
+    EXPECT_EQ(7, (int)dst1[3]);
+    EXPECT_EQ(9, (int)dst1[4]);
+}
+
+TEST(Core_Mat_array, copyTo_roi_row)
+{
+    cv::Mat_<uchar> src_base(2, 5);
+    std::array<uchar, 5> dst1;
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.row(0));
+    OutputArray _dst(dst1);
+    {
+        _dst.create(5, 1, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(1, dst.cols);
+        EXPECT_EQ(5, dst.rows);
+    }
+
+    std::array<uchar, 5> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(2, (int)dst2[1]);
+    EXPECT_EQ(3, (int)dst2[2]);
+    EXPECT_EQ(4, (int)dst2[3]);
+    EXPECT_EQ(5, (int)dst2[4]);
+}
+
+TEST(Core_Mat_array, SplitMerge)
+{
+    std::array<cv::Mat, 3> src;
+    for(size_t i=0; i<src.size(); ++i) {
+        src[i].create(10, 10, CV_8U);
+        src[i] = 127 * i;
+    }
+
+    Mat merged;
+    merge(src, merged);
+
+    std::array<cv::Mat, 3> dst;
+    split(merged, dst);
+
+    Mat diff;
+    for(size_t i=0; i<dst.size(); ++i) {
+        absdiff(src[i], dst[i], diff);
+        EXPECT_EQ(0, countNonZero(diff));
+    }
+}
+#endif
