@@ -4220,13 +4220,14 @@ CV_EXPORTS_W void circle(InputOutputArray img, Point center, int radius,
 
 /** @brief Draws a simple or thick elliptic arc or fills an ellipse sector.
 
-The function cv::ellipse with less parameters draws an ellipse outline, a filled ellipse, an elliptic
+The function cv::ellipse with more parameters draws an ellipse outline, a filled ellipse, an elliptic
 arc, or a filled ellipse sector. The drawing code uses general parametric form.
 A piecewise-linear curve is used to approximate the elliptic arc
 boundary. If you need more control of the ellipse rendering, you can retrieve the curve using
 cv::ellipse2Poly and then render it with polylines or fill it with cv::fillPoly. If you use the first
 variant of the function and want to draw the whole ellipse, not an arc, pass `startAngle=0` and
-`endAngle=360`. The figure below explains the meaning of the parameters to draw the blue arc.
+`endAngle=360`. If `startAngle` is greater than `endAngle`, they are swapped. The figure below explains
+the meaning of the parameters to draw the blue arc.
 
 ![Parameters of Elliptic Arc](pics/ellipse.svg)
 
@@ -4468,7 +4469,7 @@ CV_EXPORTS_W bool clipLine(Rect imgRect, CV_OUT CV_IN_OUT Point& pt1, CV_OUT CV_
 /** @brief Approximates an elliptic arc with a polyline.
 
 The function ellipse2Poly computes the vertices of a polyline that approximates the specified
-elliptic arc. It is used by cv::ellipse.
+elliptic arc. It is used by cv::ellipse. If `arcStart` is greater than `arcEnd`, they are swapped.
 
 @param center Center of the arc.
 @param axes Half of the size of the ellipse main axes. See the ellipse for details.
