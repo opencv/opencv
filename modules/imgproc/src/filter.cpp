@@ -4635,7 +4635,7 @@ static bool ippFilter2D(int stype, int dtype,
     int ddepth = CV_MAT_DEPTH(dtype);
     int sdepth = CV_MAT_DEPTH(stype);
 
-#if IPP_VERSION_X100 >= 201700 && IPP_VERSION_X100 < 201702 // IPP bug with 1x1 kernel
+#if IPP_VERSION_X100 >= 201700 && IPP_VERSION_X100 <= 201702 // IPP bug with 1x1 kernel
     if(kernel_width == 1 && kernel_height == 1)
         return false;
 #endif
@@ -4662,6 +4662,7 @@ static bool ippFilter2D(int stype, int dtype,
     Ipp32s bufsize = 0;
     IppiSize dstRoiSize = { width, height };
     IppStatus status;
+
     status = ippiFilterBorderGetSize(kernelSize, dstRoiSize, dataType, kernelType, cn, &specSize, &bufsize);
     if (status < 0)
         return false;
@@ -4670,7 +4671,7 @@ static bool ippFilter2D(int stype, int dtype,
     size_t good_kernel_step = sizeof(kernel_type) * static_cast<size_t>(kernelSize.width);
 #if IPP_VERSION_X100 >= 900
     if (kernel_step != good_kernel_step) {
-        kernelBuffer.Alloc((int)good_kernel_step * kernelSize.height);
+        kernelBuffer.allocate((int)good_kernel_step * kernelSize.height);
         status = trait::get_copy_fun()((kernel_type*)kernel_data, (int)kernel_step, kernelBuffer, (int)good_kernel_step, kernelSize);
         if (status < 0)
             return false;
@@ -4683,8 +4684,8 @@ static bool ippFilter2D(int stype, int dtype,
     flip(kernel, kerFlip, -1);
     pKerBuffer = kernelBuffer;
 #endif
-    spec.Alloc(specSize);
-    buffer.Alloc(bufsize);
+    spec.allocate(specSize);
+    buffer.allocate(bufsize);
     status = trait::runInit(pKerBuffer, kernelSize, 0, dataType, cn, ippRndFinancial, spec);
     if (status < 0) {
         return false;
