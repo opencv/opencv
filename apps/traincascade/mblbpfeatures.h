@@ -8,7 +8,6 @@
 struct CvMBLBPFeatureParams : CvFeatureParams
 {
     CvMBLBPFeatureParams();
-    
 };
 
 class CvMBLBPEvaluator:public CvFeatureEvaluator
@@ -55,8 +54,8 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
         int maxWeakCount;
         float minHitRate;
         MBLBPCascadef cascade;
-        Mat samplesLBP;
-        Mat labels;
+        cv::Mat samplesLBP;
+        cv::Mat labels;
         std::vector<Feature> features;
 };
 

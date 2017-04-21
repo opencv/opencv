@@ -4,6 +4,7 @@
 #include "traincascade_features.h"
 
 #define LBPF_NAME "lbpFeatureParams"
+
 struct CvLBPFeatureParams : CvFeatureParams
 {
     CvLBPFeatureParams();

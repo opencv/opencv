@@ -1311,9 +1311,13 @@ bool CvCascadeBoost::train( const CvFeatureEvaluator* _featureEvaluator,
 
     do
     {
+
+        cout<<"params weak count: "<<params.weak_count<<endl;
+        
         CvCascadeBoostTree* tree = new CvCascadeBoostTree;
         if( !tree->train( data, subsample_mask, this ) )
         {
+            cout<<"!tree->train"<<endl;
             delete tree;
             break;
         }
@@ -1324,7 +1328,7 @@ bool CvCascadeBoost::train( const CvFeatureEvaluator* _featureEvaluator,
             break;
     }
     while( !isErrDesired() && (weak->total < params.weak_count) );
-
+    cout<<"weak total: "<<weak->total<<endl;
     if(weak->total > 0)
     {
         data->is_classifier = true;

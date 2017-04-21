@@ -163,8 +163,34 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                 << " and -bg " << _negFilename << "." << endl;
         return false;
     }
-    if ( !load( dirName ) )
-    {
+    if(_cascadeParams.featureType != 3){
+        if ( !load( dirName ) )
+        {
+            cascadeParams = _cascadeParams;
+            featureParams = CvFeatureParams::create(cascadeParams.featureType);
+            featureParams->init(_featureParams);
+            stageParams = new CvCascadeBoostParams;
+            *stageParams = _stageParams;
+            featureEvaluator = CvFeatureEvaluator::create(cascadeParams.featureType);
+            featureEvaluator->init( (CvFeatureParams*)featureParams, numPos + numNeg, cascadeParams.winSize );
+            stageClassifiers.reserve( numStages );
+        }else{
+            // Make sure that if model parameters are preloaded, that people are aware of this,
+            // even when passing other parameters to the training command
+            cout << "---------------------------------------------------------------------------------" << endl;
+            cout << "Training parameters are pre-loaded from the parameter file in data folder!" << endl;
+            cout << "Please empty this folder if you want to use a NEW set of training parameters." << endl;
+            cout << "---------------------------------------------------------------------------------" << endl;
+        }
+    }
+    else{
+        if( ! MBLBPGenerateFeatures())
+            return false;
+        if(! loadPosSamples(_posFilename))
+            return false;
+    //init negative sample reader
+        negReader.create(_negFilename, this->winSize);
+        
         cascadeParams = _cascadeParams;
         featureParams = CvFeatureParams::create(cascadeParams.featureType);
         featureParams->init(_featureParams);
@@ -173,13 +199,9 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
         featureEvaluator = CvFeatureEvaluator::create(cascadeParams.featureType);
         featureEvaluator->init( (CvFeatureParams*)featureParams, numPos + numNeg, cascadeParams.winSize );
         stageClassifiers.reserve( numStages );
-    }else{
-        // Make sure that if model parameters are preloaded, that people are aware of this,
-        // even when passing other parameters to the training command
-        cout << "---------------------------------------------------------------------------------" << endl;
-        cout << "Training parameters are pre-loaded from the parameter file in data folder!" << endl;
-        cout << "Please empty this folder if you want to use a NEW set of training parameters." << endl;
-        cout << "---------------------------------------------------------------------------------" << endl;
+        cout<<"MBLBP Load"<<endl;
+        MBLBPload( dirName ); 
+        cout<<"MBLBP Load Finished"<<endl;
     }
     cout << "PARAMETERS:" << endl;
     cout << "cascadeDirName: " << _cascadeDirName << endl;
@@ -205,7 +227,66 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     double requiredLeafFARate = pow( (double) stageParams->maxFalseAlarm, (double) numStages ) /
                                 (double)stageParams->max_depth;
     double tempLeafFARate;
+    
+    if(_cascadeParams.featureType == 3){
+        // MBLBP is in use
+        startNumStages = cascade.count;
+        cout<<"MBLBP is in use"<<endl;
+        // MBLBP Classifier
+        cout<<"MBLBP is in use:"<<startNumStages<<endl;
+        if ( startNumStages > 1 )
+            cout << endl << "Stages 0-" << startNumStages-1 << " are loaded" << endl;
+        else if ( startNumStages == 1)
+            cout << endl << "Stage 0 is loaded" << endl;
+        for(int i = startNumStages; i<numStages; i++){
+            cout << "================= Training " << i << "-stage ====================" << endl;
+            double rateFA = 1.0;
+            if(cascade.count != i){
+                cerr << "inconsistent value: cascade.count" << endl;
+                return false;
+            }
+            MBLBPStagef * pStage = (MBLBPStagef*)cvAlloc( sizeof(MBLBPStagef));
+            memset(pStage, 0, sizeof(MBLBPStagef));
+            cascade.stages[ cascade.count++ ] = pStage;
+            pStage->false_alarm = rateFA;
+            // Set max weak count = 256
+            // Set minHitRate = 0.995f
+            // Set numSamples = 0
+            int weak_count_this_stage = 256;
+            float minHitRate = 0.995f;
+            {
+                if( i == 0 )
+                    weak_count_this_stage = 8;
+                else if( i == 1 )
+                    weak_count_this_stage = 16;
+                else if( i == 2 )
+                    weak_count_this_stage = 32;
+            }
 
+            // Start MBLBP Training -- boost train function
+            double t = (double)cvGetTickCount();
+            if(!boostTrain(pStage, 
+                        samplesLBP, 
+                        labels, 
+                        features, 
+                        featuresMask, 
+                        numFeatures, 
+                        numPos,
+                        numNeg,
+                        weak_count_this_stage,
+                        minHitRate) )
+            {
+                return false;
+            }
+        }
+        
+		// save current stage
+ 		char buf[64];
+		// sprintf(buf, "%s%d.xml", "cascade", i);
+		this->save( dirName + string(buf));
+        return true;
+    }
+else{
     for( int i = startNumStages; i < numStages; i++ )
     {
         cout << endl << "===== TRAINING " << i << "-stage =====" << endl;
@@ -230,6 +311,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
 }
 
         CvCascadeBoost* tempStage = new CvCascadeBoost;
+        cout<< stageParams->weak_count<<endl;
         bool isStageTrained = tempStage->train( (CvFeatureEvaluator*)featureEvaluator,
                                                 curNumSamples, _precalcValBufSize, _precalcIdxBufSize,
                                                 *((CvCascadeBoostParams*)stageParams) );
@@ -288,6 +370,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     save( dirName + CC_CASCADE_FILENAME, baseFormatSave );
 
     return true;
+    }
 }
 
 int CvCascadeClassifier::predict( int sampleIdx )
@@ -357,12 +440,132 @@ void CvCascadeClassifier::writeParams( FileStorage &fs ) const
     fs << CC_STAGE_PARAMS << "{"; stageParams->write( fs ); fs << "}";
     fs << CC_FEATURE_PARAMS << "{"; featureParams->write( fs ); fs << "}";
 }
+bool CvCascadeClassifier::setImage(Mat img, int idx, bool isSum)
+{
+    Mat sum;
 
+    if( idx >= samplesLBP.cols )
+    {
+        cerr << "The sample index is out of rangle: index=" << idx << "; Range [0, " << samplesLBP.cols << ")" << endl;
+        return false;
+    }
+    unsigned char * pLBP = samplesLBP.ptr(0)+idx;
+
+    if(isSum)
+        sum = img;
+    else
+        integral(img, sum);
+
+    if(sum.cols != this->winSize.width + 1 || 
+       sum.rows != this->winSize.height + 1)
+    {
+        cerr << "The sum image's size is incorrect." << endl;
+        return false;
+    }
+
+    for(int i = 0; i < numFeatures; i++)
+    {
+        pLBP[i*samplesLBP.step] = LBPcode(sum, features[i].offsets);
+    }
+
+    return true;
+}
 void CvCascadeClassifier::writeFeatures( FileStorage &fs, const Mat& featureMap ) const
 {
     ((CvFeatureEvaluator*)((Ptr<CvFeatureEvaluator>)featureEvaluator))->writeFeatures( fs, featureMap );
 }
+bool CvCascadeClassifier::loadNegSamples(double & FARate)
+{
+    int64 totnegtest = 0;
+    int negCount = 0;
 
+    Mat img;
+    bool isGoodNeg;
+
+    img.create(this->winSize, CV_8UC1);
+
+    int first = this->numPos;
+    int count = this->numNeg;
+
+    for( int i = first; i < first + count; i++ )
+    {
+        size_t neg_test_count = 0;
+        bool isGetImage = negReader.get_good_negative(img, &cascade, neg_test_count);
+            
+        if(!isGetImage)
+                return false;
+
+        setImage(img, i, false);
+
+        totnegtest+=neg_test_count;
+        negCount++;
+
+        if( negCount %(count/20)==0  )
+        {
+            std::cout << "current neg: " << negCount << ": " << negCount*100.0f/count << "%  " <<  negCount/double(totnegtest) << endl;
+            
+            if( negCount/double(totnegtest) < 1.0e-7)
+                return false;
+        }
+    }
+	cout << "Total Test: " << totnegtest << endl;
+
+    if ( !negCount )
+        return false;
+    
+    FARate = (totnegtest == 0) ? 0.0 : ( (double)negCount/(double)totnegtest );
+    cout << "NEG count : acceptanceRatio    " << negCount << " : " << FARate << endl;
+
+    return true;
+
+}
+bool CvCascadeClassifier::loadPosSamples(string _posFilename){
+    //positive sampls
+    this->numSamples = 0;
+    this->numSamples += this->numPos;
+    this->numSamples += this->numNeg;
+
+    //alloc memory for samples
+    this->labels = Mat::zeros(1, numSamples, CV_8UC1);
+    this->samplesLBP.create(this->numFeatures, numSamples, CV_8UC1);
+    if(labels.empty() || samplesLBP.empty())
+    {
+        cerr << "Cannot alloc memory for samples." << endl;
+        return false;
+    }
+
+
+    //load postive samples and convert them to integral images
+    {
+        Mat img(this->winSize, CV_8UC1);
+        posReader.create(_posFilename);
+
+        int currPos = 0;
+        while( posReader.get(img))
+        {
+            //imshow("pos", img);
+            //waitKey(10);
+
+            labels.at<unsigned char>(0, currPos) = 1;
+            setImage(img, currPos, false);
+            currPos++;
+
+            if(currPos >= this->numPos)
+                break;
+        }
+
+        if( currPos != this->numPos)
+        {
+            cerr << "Read vec file " << _posFilename << " error" << endl;
+            cerr << "There are " << this->numPos << " samples, but only " << currPos << " loaded." << endl;
+            return false;
+        }
+
+        cout << currPos << " positive samples loaded." << endl;
+    }
+
+    return true;
+}
 void CvCascadeClassifier::writeStages( FileStorage &fs, const Mat& featureMap ) const
 {
     char cmnt[30];
@@ -555,6 +758,197 @@ bool CvCascadeClassifier::load( const string cascadeDirName )
         }
         stageClassifiers.push_back(tempStage);
     }
+    return true;
+}
+void CvCascadeClassifier::clearCascade()
+{
+        for(int i = 0; i < this->cascade.count; i++)
+    {
+        cvFree(cascade.stages+i);
+    }
+     memset(&cascade, 0, sizeof(MBLBPCascadef));
+}
+bool CvCascadeClassifier::MBLBPGenerateFeatures()
+{
+    int offset = winSize.width + 1;
+    int count = 0;
+    this->numFeatures = 0;
+    for(int round=0; round < 2; round++)
+    {
+        for( int x = 0; x < winSize.width; x++ )
+            for( int y = 0; y < winSize.height; y++ )
+                for( int w = 1; w <= winSize.width / 3; w++ )
+                    for( int h = 1; h <= winSize.height / 3; h++ )
+                    {
+                        if((x+3*w <= winSize.width) && (y+3*h <= winSize.height) )
+                        {
+                            if ( round==0 )
+                                this->numFeatures++; //count how many features
+                            else //set features
+                            {
+                                this->features[count].x = x;
+                                this->features[count].y = y;
+                                this->features[count].cellwidth = w;
+                                this->features[count].cellheight = h;
+                                count++;
+                            }
+                        }
+                    }
+        
+
+        if(round==0) //alloc memory for features in the first round
+        {
+            cout << "numFeatures = " << this->numFeatures << endl;
+            int mem_size = sizeof(MBLBPWeakf)*numFeatures;
+            this->features = (MBLBPWeakf*) cvAlloc(mem_size);
+            this->featuresMask = (bool*) cvAlloc(sizeof(bool)*numFeatures);
+
+            if(this->features == NULL || this->featuresMask == NULL)
+            {
+                cerr << "Can not alloc memory. size = " <<  mem_size << endl;
+                return false;
+            }
+            else
+            {
+                memset(this->features, 0, mem_size);
+                memset(this->featuresMask, 0, sizeof(bool)*this->numFeatures);
+            }
+
+        } //end if round
+        else //check 
+        {
+            if( count != this->numFeatures)
+            {
+                cerr << "count("<< count <<") != numFeatures("<< this->numFeatures <<")" << endl;
+                cvFree( &(this->features) );
+                cvFree( &(this->featuresMask) );
+                return false;
+            }
+        }//end else round
+        
+    }
+
+    //cal fast pointer offsets for each features
+    for(int i = 0; i < this->numFeatures; i++)
+    {
+        int x = this->features[i].x;
+        int y = this->features[i].y;
+        int w = this->features[i].cellwidth;
+        int h = this->features[i].cellheight;
+
+        this->features[i].offsets[ 0] = y * offset + (x      );
+        this->features[i].offsets[ 1] = y * offset + (x + w  );
+        this->features[i].offsets[ 2] = y * offset + (x + w*2);
+        this->features[i].offsets[ 3] = y * offset + (x + w*3);
+        
+        this->features[i].offsets[ 4] = (y+h) * offset + (x      );
+        this->features[i].offsets[ 5] = (y+h) * offset + (x + w  );
+        this->features[i].offsets[ 6] = (y+h) * offset + (x + w*2);
+        this->features[i].offsets[ 7] = (y+h) * offset + (x + w*3);
+        
+        this->features[i].offsets[ 8] = (y+h*2) * offset + (x      );
+        this->features[i].offsets[ 9] = (y+h*2) * offset + (x + w  );
+        this->features[i].offsets[10] = (y+h*2) * offset + (x + w*2);
+        this->features[i].offsets[11] = (y+h*2) * offset + (x + w*3);
+        
+        this->features[i].offsets[12] = (y+h*3) * offset + (x      );
+        this->features[i].offsets[13] = (y+h*3) * offset + (x + w  );
+        this->features[i].offsets[14] = (y+h*3) * offset + (x + w*2);
+        this->features[i].offsets[15] = (y+h*3) * offset + (x + w*3);       
+    }
+    return true;
+}
+
+bool CvCascadeClassifier::MBLBPload( const string dirName )
+{
+//find the last classifier in the directory
+	int currstage = -1;
+	for(int stage_idx = 0; stage_idx < MAX_NUM_STAGES; stage_idx++)
+	{
+		stringstream snum;
+		snum << stage_idx;
+		string filename =  dirName + "cascade" + snum.str() + ".xml";
+		FILE * p = fopen(filename.c_str(), "r");
+		if(p)
+		{
+			fclose(p);
+			currstage = stage_idx;
+		}
+		else
+			break;
+	}
+	
+	if(currstage < 0)
+		return true;
+
+	//load the classifier
+    //get the filename first
+	stringstream snum;
+	snum << currstage;
+	string filename =  dirName + "cascade" + snum.str() + ".xml";
+
+    //open the classifier file
+	FileStorage fs;
+	fs.open(filename, FileStorage::READ );
+	if(!fs.isOpened()) {
+		cerr << "Read " << filename << " error!" << endl;
+		return NULL;
+	}
+    //clear the cascade classifier
+    this->clearCascade();
+
+    //read the classifier content 
+	FileNode node = fs.getFirstTopLevelNode();
+
+
+	//get window size
+	cascade.win_width = node[CC_WIDTH];
+	cascade.win_height = node[CC_HEIGHT];
+
+	//get the number of stages
+	FileNode stages = node[CC_STAGES];
+    cascade.count = (int)stages.size();
+
+    int stage_idx = 0;
+	for(FileNodeIterator Iter = stages.begin(); Iter != stages.end(); Iter++, stage_idx++)
+	{
+        //alloc memory for the stage
+        MBLBPStagef* pStage = (MBLBPStagef*)cvAlloc( sizeof(MBLBPStagef));
+	    memset(pStage, 0, sizeof(MBLBPStagef));
+        cascade.stages[stage_idx] = pStage;
+
+		//get the number of weak classifiers
+		(*Iter)[CC_WEAK_COUNT] >> pStage->count;
+        //get the stage threshold
+		(*Iter)[CC_STAGE_THRESHOLD] >> pStage->threshold;
+        (*Iter)[CC_FALSE_ALARM] >> pStage->false_alarm;
+
+        int weak_idx = 0;
+		FileNode nextnode = (*Iter)[CC_WEAK_CLASSIFIERS];
+		for( FileNodeIterator nextIter = nextnode.begin(); nextIter != nextnode.end(); nextIter++, weak_idx++ )
+		{
+            int feature_idx = (int)(*nextIter)[CC_FEATUREIDX];
+
+            pStage->weak_classifiers_idx[weak_idx] = feature_idx;
+            this->featuresMask[feature_idx]=true;
+            pStage->weak_classifiers[weak_idx].x = (int)(*nextIter)[CC_RECT][0];
+            pStage->weak_classifiers[weak_idx].y = (int)(*nextIter)[CC_RECT][1];
+            pStage->weak_classifiers[weak_idx].cellwidth  = (int)(*nextIter)[CC_RECT][2];
+            pStage->weak_classifiers[weak_idx].cellheight = (int)(*nextIter)[CC_RECT][3];
+
+            //copy offset values
+            memcpy(pStage->weak_classifiers[weak_idx].offsets, features[feature_idx].offsets, sizeof(features[feature_idx].offsets));
+
+			int lutlength = (int)(*nextIter)[CC_LUT_LENGTH];
+
+			for (int i = 0; i < lutlength; i++){
+                pStage->weak_classifiers[weak_idx].look_up_table[i] = (float)(*nextIter)[CC_LUT][i];
+			}
+            pStage->weak_classifiers[weak_idx].soft_threshold = (*nextIter)[CC_WEAK_THRESHOLD];
+		}
+        CV_Assert(pStage->count == weak_idx);
+    }
+
     return true;
 }
 

@@ -45,7 +45,7 @@ void CvMBLBPEvaluator::generateFeatures()
                             {
                                 features.push_back(Feature(x,y,w,h));
                             }
-                        }
+                         }
                     }
         
 
@@ -109,6 +109,7 @@ void CvMBLBPEvaluator::generateFeatures()
         this->features[i].offsets[14] = (y+h*3) * offset + (x + w*2);
         this->features[i].offsets[15] = (y+h*3) * offset + (x + w*3);
     }
+    cout<<"Finished Generating Features"<<endl;
 }
 
 void CvMBLBPEvaluator::setImage(const Mat &img, int idx,bool isSum)

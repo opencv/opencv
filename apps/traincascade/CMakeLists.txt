@@ -11,7 +11,9 @@ ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/incl
 ocv_include_modules(${OPENCV_TRAINCASCADE_DEPS})
 
 set(traincascade_files traincascade.cpp
+  mblbpimgstorage.cpp mblbpimgstorage.h
   cascadeclassifier.cpp cascadeclassifier.h
+  boostlbp.cpp boostlbp.h
   boost.cpp boost.h features.cpp traincascade_features.h
   haarfeatures.cpp haarfeatures.h
   lbpfeatures.cpp lbpfeatures.h

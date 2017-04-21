@@ -1,5 +1,5 @@
-#ifndef _CLASSIFIER_H
-#define _CLASSIFIER_H
+#ifndef _MBLBP_COMMON_H
+#define _MBLBP_COMMON_H
 
 #include <string>
 #include <vector>

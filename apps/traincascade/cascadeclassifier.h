@@ -1,6 +1,7 @@
 #ifndef _OPENCV_CASCADECLASSIFIER_H_
 #define _OPENCV_CASCADECLASSIFIER_H_
 
+
 #include <ctime>
 #include "traincascade_features.h"
 #include "haarfeatures.h"
@@ -9,6 +10,7 @@
 #include "mblbpfeatures.h"
 
 #include "boost.h"
+#include "boostlbp.h"
 #include "cv.h"
 #include "cxcore.h"
 
@@ -70,7 +72,6 @@
 #define MAX_NUM_STAGES 32
 
 #define CC_MAGIC_NAME "version"
-#define CC_MAGIC_VALUE "SZU-MBLBP-MVIEW1.0"
 #define CC_WIDTH  "width"
 #define CC_MINHITRATE       "minHitRate"
 #define CC_STAGES       "stages"
@@ -121,6 +122,8 @@ private:
     int predict( int sampleIdx );
     void save( const std::string cascadeDirName, bool baseFormat = false );
     bool load( const std::string cascadeDirName );
+    bool MBLBPload(const std::string dirName);
+    bool MBLBPGenerateFeatures();
     bool updateTrainingSet( double minimumAcceptanceRatio, double& acceptanceRatio );
     int fillPassedSamples( int first, int count, bool isPositive, double requiredAcceptanceRatio, int64& consumed );
 
@@ -129,7 +132,11 @@ private:
     void writeFeatures( cv::FileStorage &fs, const cv::Mat& featureMap ) const;
     bool readParams( const cv::FileNode &node );
     bool readStages( const cv::FileNode &node );
+    bool setImage(Mat img, int idx, bool isSum=false);
+    bool loadPosSamples(string _posFilename);
+    bool loadNegSamples(double & FARate);
 
+    void clearCascade();
     void getUsedFeaturesIdxMap( cv::Mat& featureMap );
 
     CvCascadeParams cascadeParams;
@@ -141,6 +148,18 @@ private:
     CvCascadeImageReader imgReader;
     int numStages, curNumSamples;
     int numPos, numNeg;
+    PosImageReader posReader;
+    NegImageReader negReader;
+    // MBLBP related Samples data,  labels, cascade and training stage.
+    CvSize winSize;
+    Mat samplesLBP;
+    Mat labels;
+    MBLBPCascadef cascade;
+    MBLBPStagef * pStrong;
+    MBLBPWeakf * features;
+    bool *featuresMask;
+    int numFeatures;
+    int numSamples;
 };
 
 #endif

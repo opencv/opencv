@@ -14,7 +14,6 @@ public:
     void restart() { posReader.restart(); }
     bool getNeg(cv::Mat &_img) { return negReader.get( _img ); }
     bool getPos(cv::Mat &_img) { return posReader.get( _img ); }
-
 private:
     class PosReader
     {
