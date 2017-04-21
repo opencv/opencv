@@ -497,6 +497,65 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
 
 #endif
 
+#ifdef HAVE_IPP
+static bool ipp_polarToCart(Mat &mag, Mat &angle, Mat &x, Mat &y)
+{
+    CV_INSTRUMENT_REGION_IPP()
+
+    int depth = angle.depth();
+    if(depth != CV_32F && depth != CV_64F)
+        return false;
+
+    if(angle.dims <= 2)
+    {
+        int len = (int)(angle.cols*angle.channels());
+
+        if(depth == CV_32F)
+        {
+            for (int h = 0; h < angle.rows; h++)
+            {
+                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_32f, (const float*)mag.ptr(h), (const float*)angle.ptr(h), (float*)x.ptr(h), (float*)y.ptr(h), len) < 0)
+                    return false;
+            }
+        }
+        else
+        {
+            for (int h = 0; h < angle.rows; h++)
+            {
+                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_64f, (const double*)mag.ptr(h), (const double*)angle.ptr(h), (double*)x.ptr(h), (double*)y.ptr(h), len) < 0)
+                    return false;
+            }
+        }
+        return true;
+    }
+    else
+    {
+        const Mat      *arrays[] = {&mag, &angle, &x, &y, NULL};
+        uchar          *ptrs[4]  = {NULL};
+        NAryMatIterator it(arrays, ptrs);
+        int len = (int)(it.size*angle.channels());
+
+        if(depth == CV_32F)
+        {
+            for (size_t i = 0; i < it.nplanes; i++, ++it)
+            {
+                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_32f, (const float*)ptrs[0], (const float*)ptrs[1], (float*)ptrs[2], (float*)ptrs[3], len) < 0)
+                    return false;
+            }
+        }
+        else
+        {
+            for (size_t i = 0; i < it.nplanes; i++, ++it)
+            {
+                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_64f, (const double*)ptrs[0], (const double*)ptrs[1], (double*)ptrs[2], (double*)ptrs[3], len) < 0)
+                    return false;
+            }
+        }
+        return true;
+    }
+}
+#endif
+
 void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
@@ -514,28 +573,7 @@ void polarToCart( InputArray src1, InputArray src2,
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
 
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
-    {
-        if (Mag.isContinuous() && Angle.isContinuous() && X.isContinuous() && Y.isContinuous() && !angleInDegrees)
-        {
-            typedef IppStatus (CV_STDCALL * IppsPolarToCart)(const void * pSrcMagn, const void * pSrcPhase,
-                                                             void * pDstRe, void * pDstIm, int len);
-            IppsPolarToCart ippsPolarToCart =
-            depth == CV_32F ? (IppsPolarToCart)ippsPolarToCart_32f :
-            depth == CV_64F ? (IppsPolarToCart)ippsPolarToCart_64f : 0;
-            CV_Assert(ippsPolarToCart != 0);
-
-            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippsPolarToCart, Mag.ptr(), Angle.ptr(), X.ptr(), Y.ptr(), static_cast<int>(cn * X.total()));
-            if (status >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CV_IPP_RUN(!angleInDegrees, ipp_polarToCart(Mag, Angle, X, Y));
 
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4];
@@ -1167,11 +1205,6 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
 
 #endif
 
-static void InvSqrt_32f(const float* src, float* dst, int n) { hal::invSqrt32f(src, dst, n); }
-static void InvSqrt_64f(const double* src, double* dst, int n) { hal::invSqrt64f(src, dst, n); }
-static void Sqrt_32f(const float* src, float* dst, int n) { hal::sqrt32f(src, dst, n); }
-static void Sqrt_64f(const double* src, double* dst, int n) { hal::sqrt64f(src, dst, n); }
-
 void pow( InputArray _src, double power, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION()
@@ -1228,8 +1261,8 @@ void pow( InputArray _src, double power, OutputArray _dst )
     else if( fabs(fabs(power) - 0.5) < DBL_EPSILON )
     {
         MathFunc func = power < 0 ?
-            (depth == CV_32F ? (MathFunc)InvSqrt_32f : (MathFunc)InvSqrt_64f) :
-            (depth == CV_32F ? (MathFunc)Sqrt_32f : (MathFunc)Sqrt_64f);
+            (depth == CV_32F ? (MathFunc)hal::invSqrt32f : (MathFunc)hal::invSqrt64f) :
+            (depth == CV_32F ? (MathFunc)hal::sqrt32f : (MathFunc)hal::sqrt64f);
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             func( ptrs[0], ptrs[1], len );
@@ -1260,24 +1293,6 @@ void pow( InputArray _src, double power, OutputArray _dst )
             for( j = 0; j < len; j += blockSize )
             {
                 int bsz = std::min(len - j, blockSize);
-
-#if defined(HAVE_IPP)
-                CV_IPP_CHECK()
-                {
-                    IppStatus status = depth == CV_32F ?
-                    CV_INSTRUMENT_FUN_IPP(ippsPowx_32f_A21, (const float*)ptrs[0], (float)power, (float*)ptrs[1], bsz) :
-                    CV_INSTRUMENT_FUN_IPP(ippsPowx_64f_A50, (const double*)ptrs[0], (double)power, (double*)ptrs[1], bsz);
-
-                    if (status >= 0)
-                    {
-                        CV_IMPL_ADD(CV_IMPL_IPP);
-                        ptrs[0] += bsz*esz1;
-                        ptrs[1] += bsz*esz1;
-                        continue;
-                    }
-                    setIppErrorStatus();
-                }
-#endif
 
                 if( depth == CV_32F )
                 {
