@@ -95,6 +95,11 @@ void CV_LRTest::run( int /*start_from*/ )
     string dataFileName = ts->get_data_path() + "iris.data";
     Ptr<TrainData> tdata = TrainData::loadFromCSV(dataFileName, 0);
 
+    if (tdata.empty()) {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        return;
+    }
+
     // run LR classifier train classifier
     Ptr<LogisticRegression> p = LogisticRegression::create();
     p->setLearningRate(1.0);
