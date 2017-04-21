@@ -2464,6 +2464,10 @@ public:
     UMat& operator = (UMat&& m);
 #endif
 
+    /*! Returns the OpenCL buffer handle on which UMat operates on.
+        The UMat instance should be kept alive during the use of the handle to prevent the buffer to be
+        returned to the OpenCV buffer pool.
+     */
     void* handle(int accessFlags) const;
     void ndoffset(size_t* ofs) const;
 
