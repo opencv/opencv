@@ -1285,7 +1285,7 @@ smoothing kernels (a symmetrical kernel with sum of weights equal to 1) and hand
 You may also use the higher-level GaussianBlur.
 @param ksize Aperture size. It should be odd ( \f$\texttt{ksize} \mod 2 = 1\f$ ) and positive.
 @param sigma Gaussian standard deviation. If it is non-positive, it is computed from ksize as
-`sigma = 0.3\*((ksize-1)\*0.5 - 1) + 0.8`.
+`sigma = 0.3*((ksize-1)*0.5 - 1) + 0.8`.
 @param ktype Type of filter coefficients. It can be CV_32F or CV_64F .
 @sa  sepFilter2D, getDerivKernels, getStructuringElement, GaussianBlur
  */
