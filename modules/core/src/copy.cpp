@@ -298,13 +298,7 @@ void Mat::copyTo( OutputArray _dst ) const
             const uchar* sptr = data;
             uchar* dptr = dst.data;
 
-            CV_IPP_RUN(
-                    (size_t)cols*elemSize() <= (size_t)INT_MAX &&
-                    (size_t)step <= (size_t)INT_MAX &&
-                    (size_t)dst.step <= (size_t)INT_MAX
-                    ,
-                    CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R, sptr, (int)step, dptr, (int)dst.step, ippiSize((int)(cols*elemSize()), rows)) >= 0
-            )
+            CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, sptr, (int)step, dptr, (int)dst.step, ippiSizeL((int)(cols*elemSize()), rows)) >= 0)
 
             Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();

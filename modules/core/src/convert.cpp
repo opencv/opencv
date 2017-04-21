@@ -5516,7 +5516,7 @@ public:
 
         size_t elemSize1 = dst.elemSize1();
         CV_DbgAssert(elemSize1 == 1);
-        lutBuffer = (uchar*)ippMalloc(256 * (int)elemSize1 * 4);
+        lutBuffer = (uchar*)CV_IPP_MALLOC(256 * (int)elemSize1 * 4);
         lutTable[0] = lutBuffer + 0;
         lutTable[1] = lutBuffer + 1 * 256 * elemSize1;
         lutTable[2] = lutBuffer + 2 * 256 * elemSize1;

@@ -101,6 +101,7 @@
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
 #cmakedefine HAVE_IPP_ICV_ONLY
+#cmakedefine HAVE_IPP_IW
 
 /* Intel IPP Async */
 #cmakedefine HAVE_IPP_A
