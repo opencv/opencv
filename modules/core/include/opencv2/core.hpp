@@ -58,6 +58,7 @@
 #include "opencv2/core/types.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/persistence.hpp"
+#include "opencv2/core/softfloat.hpp"
 
 /**
 @defgroup core Core functionality

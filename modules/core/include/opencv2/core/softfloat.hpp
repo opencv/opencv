@@ -1,3 +1,46 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                          License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2015, Itseez Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 
 /*============================================================================
 
@@ -41,7 +84,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdbool.h>
 #include <stdint.h>
 
-#define LITTLEENDIAN 1
+namespace cv
+{
+
+namespace softfloat
+{
 
 /*----------------------------------------------------------------------------
 | Types used to pass 32-bit and 64-bit floating-point
@@ -54,6 +101,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef struct { uint32_t v; } float32_t;
 typedef struct { uint64_t v; } float64_t;
 
+//TODO: put the things marked with this to TLS
 #ifndef THREAD_LOCAL
 #define THREAD_LOCAL
 #endif
@@ -164,5 +212,110 @@ bool f64_eq_signaling( float64_t, float64_t );
 bool f64_le_quiet( float64_t, float64_t );
 bool f64_lt_quiet( float64_t, float64_t );
 bool f64_isSignalingNaN( float64_t );
+
+/*----------------------------------------------------------------------------
+| Ported from OpenCV and added for usability
+*----------------------------------------------------------------------------*/
+
+inline float32_t  operator + (const float32_t& a, const float32_t& b);
+inline float32_t  operator - (const float32_t& a, const float32_t& b);
+inline float32_t  operator * (const float32_t& a, const float32_t& b);
+inline float32_t  operator / (const float32_t& a, const float32_t& b);
+
+inline float32_t operator += (const float32_t& a, const float32_t& b);
+inline float32_t operator -= (const float32_t& a, const float32_t& b);
+inline float32_t operator *= (const float32_t& a, const float32_t& b);
+inline float32_t operator /= (const float32_t& a, const float32_t& b);
+
+inline float64_t operator + (const float64_t& a, const float64_t& b);
+inline float64_t operator - (const float64_t& a, const float64_t& b);
+inline float64_t operator * (const float64_t& a, const float64_t& b);
+inline float64_t operator / (const float64_t& a, const float64_t& b);
+
+inline float64_t operator += (const float64_t& a, const float64_t& b);
+inline float64_t operator -= (const float64_t& a, const float64_t& b);
+inline float64_t operator *= (const float64_t& a, const float64_t& b);
+inline float64_t operator /= (const float64_t& a, const float64_t& b);
+
+//TODO: process flags
+inline float32_t  operator + (const float32_t& a, const float32_t& b)
+{
+    return f32_add(a, b);
+}
+inline float32_t  operator - (const float32_t& a, const float32_t& b)
+{
+    return f32_sub(a, b);
+}
+inline float32_t  operator * (const float32_t& a, const float32_t& b)
+{
+    return f32_mul(a, b);
+}
+inline float32_t  operator / (const float32_t& a, const float32_t& b)
+{
+    return f32_div(a, b);
+}
+
+inline float32_t operator += (const float32_t& a, const float32_t& b)
+{
+    return (a + b);
+}
+inline float32_t operator -= (const float32_t& a, const float32_t& b)
+{
+    return (a - b);
+}
+inline float32_t operator *= (const float32_t& a, const float32_t& b)
+{
+    return (a * b);
+}
+inline float32_t operator /= (const float32_t& a, const float32_t& b)
+{
+    return (a / b);
+}
+
+inline float64_t  operator + (const float64_t& a, const float64_t& b)
+{
+    return f64_add(a, b);
+}
+inline float64_t  operator - (const float64_t& a, const float64_t& b)
+{
+    return f64_sub(a, b);
+}
+inline float64_t  operator * (const float64_t& a, const float64_t& b)
+{
+    return f64_mul(a, b);
+}
+inline float64_t  operator / (const float64_t& a, const float64_t& b)
+{
+    return f64_div(a, b);
+}
+
+inline float64_t operator += (const float64_t& a, const float64_t& b)
+{
+    return (a + b);
+}
+inline float64_t operator -= (const float64_t& a, const float64_t& b)
+{
+    return (a - b);
+}
+inline float64_t operator *= (const float64_t& a, const float64_t& b)
+{
+    return (a * b);
+}
+inline float64_t operator /= (const float64_t& a, const float64_t& b)
+{
+    return (a / b);
+}
+
+float32_t f32_exp( float32_t );
+float32_t f32_log( float32_t );
+float32_t f32_pow( float32_t, float32_t );
+
+float64_t f64_exp( float64_t );
+float64_t f64_log( float64_t );
+float64_t f64_pow( float64_t, float64_t );
+
+}
+
+}
 
 #endif
