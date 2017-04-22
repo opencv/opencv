@@ -2,7 +2,10 @@
 #define _OPENCV_CASCADECLASSIFIER_H_
 
 #include <ctime>
-#include "mblbpimgstorage.h"
+#include <opencv/cv.h>
+#include <stdio.h>
+#include <iostream>
+#include <fstream>
 #include "traincascade_features.h"
 #include "haarfeatures.h"
 #include "lbpfeatures.h"
@@ -81,6 +84,45 @@
 #define CC_LUT		   "lut"
 #define CC_MBLBP "MBLBP"
 
+class PosImageReader{
+    short* vec;
+    FILE*  file;
+    int    count;
+    int    vecSize;
+    int    last;
+    int    base;
+ public:
+    PosImageReader();
+    ~PosImageReader();
+
+    bool create(const string _posFilename);
+    bool get(Mat &_img);
+    void restart();
+};
+
+class NegImageReader{
+ public:
+    NegImageReader();
+    bool create( const string _filename, Size _winSize );
+    //bool get( Mat& _img, Mat & _imgsum );
+    bool get( Mat& _img);
+    bool get_good_negative( Mat& _img, MBLBPCascadef * pCascade, size_t &testCount);
+    bool nextImg();
+    bool nextImg2(MBLBPCascadef * pCascade);
+
+    Mat src;
+    Mat img;
+    Mat sum;
+
+    vector<String> imgFilenames;
+    Point   offset, point;
+    float   scale;
+    float   scaleFactor;
+    float   stepFactor;
+    size_t  last, round;
+    Size    winSize;
+};
+
 class CvCascadeParams : public CvParams
 {
 public:
@@ -120,7 +162,7 @@ private:
     int predict( int sampleIdx );
     void save( const std::string cascadeDirName, bool baseFormat = false );
     bool load( const std::string cascadeDirName );
-    bool MBLBPload(const std::string dirName);
+    bool MBLBPLoad(const std::string dirName);
     bool MBLBPGenerateFeatures();
     bool updateTrainingSet( double minimumAcceptanceRatio, double& acceptanceRatio );
     int fillPassedSamples( int first, int count, bool isPositive, double requiredAcceptanceRatio, int64& consumed );
@@ -158,6 +200,8 @@ private:
     bool *featuresMask;
     int numFeatures;
     int numSamples;
+    int maxWeakCount;
+    float minHitRate;
 };
 
 #endif
