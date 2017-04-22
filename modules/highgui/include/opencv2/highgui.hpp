@@ -491,7 +491,7 @@ CV_EXPORTS_W Rect selectROI(InputArray img, bool showCrosshair = true, bool from
 /** @brief Selects ROIs on the given image.
 Function creates a window and allows user to select a ROIs using mouse.
 Controls: use `space` or `enter` to finish current selection and start a new one,
-use `ecs` to terminate multiple ROI selection process.
+use `esc` to terminate multiple ROI selection process.
 
 @param windowName name of the window where selection process will be shown.
 @param img image to select a ROI.
