@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+
 #include "traincascade_features.h"
 #include "haarfeatures.h"
 #include "lbpfeatures.h"
@@ -83,6 +84,7 @@
 #define CC_LUT_LENGTH  "lutlength"
 #define CC_LUT		   "lut"
 #define CC_MBLBP "MBLBP"
+#define CC_MAGIC_VALUE "CYY_MBLBP_1.0"
 
 class PosImageReader{
     short* vec;
@@ -162,6 +164,7 @@ private:
     int predict( int sampleIdx );
     void save( const std::string cascadeDirName, bool baseFormat = false );
     bool load( const std::string cascadeDirName );
+    bool MBLBPSave(const std::string dirName);
     bool MBLBPLoad(const std::string dirName);
     bool MBLBPGenerateFeatures();
     bool updateTrainingSet( double minimumAcceptanceRatio, double& acceptanceRatio );

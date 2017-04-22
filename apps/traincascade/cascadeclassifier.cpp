@@ -51,8 +51,6 @@ bool PosImageReader::create( const string _filename )
 
 bool PosImageReader::get( Mat &_img )
 {
-    cout<<"img row:"<<_img.rows <<" img cols:"<<_img.cols<<endl;
-    cout<<"vec Size:"<<vecSize<<endl;
     CV_Assert( _img.rows * _img.cols == vecSize );
     uchar tmp = 0;
     fread( &tmp, sizeof( tmp ), 1, file );
@@ -452,7 +450,8 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
         this->numStages = _numStages;
         this->numPos = _numPos;
         this->numNeg = _numNeg;
-        this->winSize = cvSize(24, 24);;
+        // TODO: set size as args
+        this->winSize = cvSize(80, 40);
         this->maxWeakCount = 256;
         this->minHitRate = 0.995f;
         cout << "PARAMETERS:" << endl;
@@ -471,7 +470,8 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
             return false;
         negReader.create(_negFilename, this->winSize);
         MBLBPLoad(dirName);
-        int startNumStages = cascade.count;
+        int startNumStages =cascade.count;
+        cout<<"start Num Stages："<<startNumStages<<endl;
         if ( startNumStages > 1 )
             cout << endl << "Stages 0-" << startNumStages-1 << " are loaded" << endl;
         else if ( startNumStages == 1)
@@ -505,14 +505,11 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
             else
                 cout << "Precalculation time: " <<  t/3600  << " hours" << endl;
                 
-
             //reset feature mask
             //memset(this->featuresMask, 0, sizeof(bool)*this->numFeatures);
-
             MBLBPStagef * pStage = (MBLBPStagef*)cvAlloc( sizeof(MBLBPStagef));
             memset(pStage, 0, sizeof(MBLBPStagef));
             cascade.stages[ cascade.count++ ] = pStage;
-
             pStage->false_alarm = rateFA;
 
             int weak_count_this_stage = maxWeakCount;
@@ -526,7 +523,6 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                     weak_count_this_stage = 32;
             }
             //weak_count_this_stage = 24;
-
             t = (double)cvGetTickCount();
             if(!boostTrain(pStage,
                         samplesLBP,
@@ -550,14 +546,9 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                 cout << "===Training time: " <<  t/60  << " minutes" << endl;
             else
                 cout << "===Training time: " <<  t/3600  << " hours" << endl;
-
-            // save current stage
             char buf[64];
             sprintf(buf, "%s%d.xml", "cascade", i);
-            this->save( dirName + string(buf));
-
-            //saveSelectedFeatureData(pStage, i, numPos, numNeg);
-
+            this->MBLBPSave( dirName + string(buf));
         }
         return true;
     }
@@ -618,6 +609,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
         cout << "Number of unique features given windowSize [" << _cascadeParams.winSize.width << "," << _cascadeParams.winSize.height << "] : " << featureEvaluator->getNumFeatures() << "" << endl;
 
         int startNumStages = (int)stageClassifiers.size();
+        cout<<"startNumStages"<<startNumStages<<endl;
         if ( startNumStages > 1 )
             cout << endl << "Stages 0-" << startNumStages-1 << " are loaded" << endl;
         else if ( startNumStages == 1)
@@ -958,7 +950,67 @@ bool CvCascadeClassifier::readStages( const FileNode &node)
     }
     return true;
 }
+bool CvCascadeClassifier::MBLBPSave( const string dirName)
+{
+	FileStorage fs( dirName, FileStorage::WRITE );
+    
+    if ( !fs.isOpened() )
+        return false;
+    
+    fs << "cascade" << "{";
+    
+    fs << CC_MAGIC_NAME << CC_MAGIC_VALUE;
+    fs << CC_WIDTH << winSize.width ;
+    fs << CC_HEIGHT << winSize.height;
+    fs << CC_STAGE_NUM << cascade.count;
+    fs << CC_MINHITRATE << minHitRate;
+    fs << CC_STAGES << "[" ;
 
+    for( int si = 0; si < cascade.count; si++)
+    {
+        MBLBPStagef * pStage = cascade.stages[si];
+
+        char cmnt[1024];
+        sprintf( cmnt, "stage %d", si );
+        cvWriteComment( fs.fs, cmnt, 0 );
+
+        fs << "{";
+        fs << CC_WEAK_COUNT << pStage->count;
+        fs << CC_STAGE_THRESHOLD << pStage->threshold;
+        fs << CC_FALSE_ALARM << pStage->false_alarm;
+        fs << CC_WEAK_CLASSIFIERS << "[";
+        
+        for( int wi = 0; wi < pStage->count; wi++)
+        {
+            int weak_idx = pStage->weak_classifiers_idx[wi];
+            //MBLBPWeakf * pWeak = features + weak_idx;
+            MBLBPWeakf * pWeak = pStage->weak_classifiers + wi;;
+
+            fs << "{" ;
+            fs << CC_FEATUREIDX << weak_idx;
+            fs << CC_RECT << "[:" << pWeak->x << pWeak->y << pWeak->cellwidth << pWeak->cellheight << "]";
+            fs << CC_WEAK_THRESHOLD << pWeak->soft_threshold;
+            fs << CC_LUT_LENGTH << MBLBP_LUTLENGTH;
+
+            fs << CC_LUT << "[:";
+            for( int t = 0; t < MBLBP_LUTLENGTH; t++)
+            {
+                fs << pWeak->look_up_table[t];
+            } 
+            fs << "]";
+
+
+            fs << "}" ;
+        }
+        fs << "]";
+        fs << "}";
+        
+    }
+
+	fs << "]";
+
+    return true;
+}
 // For old Haar Classifier file saving
 #define ICV_HAAR_SIZE_NAME            "size"
 #define ICV_HAAR_STAGES_NAME          "stages"
@@ -1200,7 +1252,6 @@ bool CvCascadeClassifier::MBLBPGenerateFeatures()
 
 bool CvCascadeClassifier::MBLBPLoad( const string dirName )
 {
-//find the last classifier in the directory
 	int currstage = -1;
 	for(int stage_idx = 0; stage_idx < MAX_NUM_STAGES; stage_idx++)
 	{
@@ -1217,8 +1268,10 @@ bool CvCascadeClassifier::MBLBPLoad( const string dirName )
 			break;
 	}
 	
-	if(currstage < 0)
-		return true;
+	if(currstage < 0){
+		cascade.count=0;
+        return true;
+    }
 
 	//load the classifier
     //get the filename first
@@ -1246,6 +1299,7 @@ bool CvCascadeClassifier::MBLBPLoad( const string dirName )
 
 	//get the number of stages
 	FileNode stages = node[CC_STAGES];
+    cout<<"stages size:"<<(int)stages.size();
     cascade.count = (int)stages.size();
 
     int stage_idx = 0;
@@ -1287,7 +1341,6 @@ bool CvCascadeClassifier::MBLBPLoad( const string dirName )
 		}
         CV_Assert(pStage->count == weak_idx);
     }
-    cout<<"cascade: "<<cascade.count<<endl;
     return true;
 }
 

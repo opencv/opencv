@@ -329,7 +329,6 @@ bool boostTrain(MBLBPStagef * pStrong,
                 int maxWeakCount,
                 double min_hit_rate)
 {
-    cout<<"boost training"<<endl;
     int numSamples = 0;
     numSamples += numPos;
     numSamples += numNeg;
