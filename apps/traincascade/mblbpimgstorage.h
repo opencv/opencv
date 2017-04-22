@@ -20,7 +20,6 @@ class PosImageReader{
     bool create(const string _posFilename);
     bool get(Mat &_img);
     void restart();
-
 };
 
 class NegImageReader{
@@ -33,8 +32,6 @@ class NegImageReader{
     bool nextImg();
     bool nextImg2(MBLBPCascadef * pCascade);
 
-    
-    
     Mat src;
     Mat img;
     Mat sum;

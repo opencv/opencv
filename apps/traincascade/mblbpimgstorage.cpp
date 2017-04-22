@@ -1,8 +1,12 @@
 #include <opencv/cv.h>
-#include "mblbpimgstorage.h"
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+
+#include "mblbpimgstorage.h"
+
+using namespace cv;
+using namespace std;
 
 PosImageReader::PosImageReader()
 {
@@ -84,7 +88,7 @@ NegImageReader::NegImageReader()
 bool NegImageReader::create( const string _filename, Size _winSize )
 {
     string dirname, str;
-    std::ifstream file(_filename.c_str());
+    ifstream file(_filename.c_str());
     if ( !file.is_open() )
         return false;
     
@@ -98,7 +102,7 @@ bool NegImageReader::create( const string _filename, Size _winSize )
     dirname = pos == String::npos ? "" : _filename.substr(0, pos) + dlmrt;
     while( !file.eof() )
     {
-        std::getline(file, str);
+        getline(file, str);
         if (str.empty()) break;
         if (str.at(0) == '#' ) continue; /* comment */
         imgFilenames.push_back(dirname + str);
@@ -118,7 +122,7 @@ bool NegImageReader::nextImg()
 	for( size_t i = 0; i < count; i++ )
 	{
 		src = imread( imgFilenames[last++], 0 );
-		//std::cout <<  imgFilenames[last-1] << std::endl;
+		//cout <<  imgFilenames[last-1] << endl;
 		if( src.empty() )
 			continue;
 		round += last / count;
@@ -169,7 +173,7 @@ bool NegImageReader::nextImg2(MBLBPCascadef * pCascade)
 	for( size_t i = 0; i < count; i++ )
 	{
 		src = imread( imgFilenames[last++], 0 );
-		//std::cout <<  imgFilenames[last-1] << std::endl;
+		//cout <<  imgFilenames[last-1] << endl;
 		round += last / count;
 		round = round % (winSize.width * winSize.height);
 		last %= count;

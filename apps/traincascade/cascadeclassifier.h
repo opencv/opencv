@@ -1,14 +1,13 @@
 #ifndef _OPENCV_CASCADECLASSIFIER_H_
 #define _OPENCV_CASCADECLASSIFIER_H_
 
-
 #include <ctime>
+#include "mblbpimgstorage.h"
 #include "traincascade_features.h"
 #include "haarfeatures.h"
 #include "lbpfeatures.h"
 #include "HOGfeatures.h"
 #include "mblbpfeatures.h"
-
 #include "boost.h"
 #include "boostlbp.h"
 #include "cv.h"
@@ -81,7 +80,6 @@
 #define CC_LUT_LENGTH  "lutlength"
 #define CC_LUT		   "lut"
 #define CC_MBLBP "MBLBP"
-
 
 class CvCascadeParams : public CvParams
 {

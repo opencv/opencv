@@ -1,11 +1,11 @@
-#ifndef _MBLBP_COMMON_H
-#define _MBLBP_COMMON_H
+#ifndef _MBLBP_COMMON_H_
+#define _MBLBP_COMMON_H_
 
 #include <string>
 #include <vector>
 #include <iostream>
 
-#include "opencv.hpp"
+#include <opencv2/opencv.hpp>
 
 #ifdef _OPENMP
 #include <omp.h>

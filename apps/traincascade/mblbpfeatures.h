@@ -53,7 +53,7 @@ class CvMBLBPEvaluator:public CvFeatureEvaluator
         int numSamples;
         int maxWeakCount;
         float minHitRate;
-        MBLBPCascadef cascade;
+        //MBLBPCascadef cascade;
         cv::Mat samplesLBP;
         cv::Mat labels;
         std::vector<Feature> features;
