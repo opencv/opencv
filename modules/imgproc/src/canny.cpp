@@ -843,7 +843,6 @@ void Canny( InputArray _src, OutputArray _dst,
     const Size size = _src.size();
 
     CV_Assert( depth == CV_8U );
-    _dst.create(size, CV_8U);
 
     if (!L2gradient && (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT)
     {
@@ -946,8 +945,9 @@ int high = cvFloor(high_thresh);
     if (!m[mapstep-1])  CANNY_PUSH_SERIAL(m + mapstep - 1);
     if (!m[mapstep])    CANNY_PUSH_SERIAL(m + mapstep);
     if (!m[mapstep+1])  CANNY_PUSH_SERIAL(m + mapstep + 1);
-}
-
+    }
+    _dst.create(size, CV_8U);
+    dst = _dst.getMat();
     parallel_for_(Range(0, dst.rows), finalPass(map, dst, mapstep), dst.total()/(double)(1<<16));
 }
 
