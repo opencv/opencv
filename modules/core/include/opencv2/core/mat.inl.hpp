@@ -879,6 +879,17 @@ size_t Mat::total() const
 }
 
 inline
+size_t Mat::total(int startDim, int endDim) const
+{
+    CV_Assert( 0 <= startDim && startDim <= endDim);
+    size_t p = 1;
+    int endDim_ = endDim <= dims ? endDim : dims;
+    for( int i = startDim; i < endDim_; i++ )
+        p *= size[i];
+    return p;
+}
+
+inline
 uchar* Mat::ptr(int y)
 {
     CV_DbgAssert( y == 0 || (data && dims >= 1 && (unsigned)y < (unsigned)size.p[0]) );
