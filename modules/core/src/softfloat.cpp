@@ -4382,7 +4382,7 @@ typedef union Sf64suf
 Sf64suf;
 
 ////////////////////////////////////// EXP /////////////////////////////////////
-#if 0
+
 typedef union
 {
     struct {
@@ -4415,9 +4415,9 @@ static const double expTab[] = {
     1.0905077326652576592070106557607 * EXPPOLY_32F_A0,
     1.1023825833078409435564142094256 * EXPPOLY_32F_A0,
     1.1143867425958925363088129569196 * EXPPOLY_32F_A0,
-    1.126521618608241899794798643787 * EXPPOLY_32F_A0,
+    1.126521618608241899794798643787  * EXPPOLY_32F_A0,
     1.1387886347566916537038302838415 * EXPPOLY_32F_A0,
-    1.151189229952982705817759635202 * EXPPOLY_32F_A0,
+    1.151189229952982705817759635202  * EXPPOLY_32F_A0,
     1.1637248587775775138135735990922 * EXPPOLY_32F_A0,
     1.1763969916502812762846457284838 * EXPPOLY_32F_A0,
     1.1892071150027210667174999705605 * EXPPOLY_32F_A0,
@@ -4440,7 +4440,7 @@ static const double expTab[] = {
     1.4296133383919700112350657782751 * EXPPOLY_32F_A0,
     1.4451808069770466200370062414717 * EXPPOLY_32F_A0,
     1.4609177941806469886513028903106 * EXPPOLY_32F_A0,
-    1.476826145939499311386907480374 * EXPPOLY_32F_A0,
+    1.476826145939499311386907480374  * EXPPOLY_32F_A0,
     1.4929077282912648492006435314867 * EXPPOLY_32F_A0,
     1.5091644275934227397660195510332 * EXPPOLY_32F_A0,
     1.5255981507445383068512536895169 * EXPPOLY_32F_A0,
@@ -4449,7 +4449,7 @@ static const double expTab[] = {
     1.5759808451078864864552701601819 * EXPPOLY_32F_A0,
     1.5931421513422668979372486431191 * EXPPOLY_32F_A0,
     1.6104903319492543081795206673574 * EXPPOLY_32F_A0,
-    1.628027421857347766848218522014 * EXPPOLY_32F_A0,
+    1.628027421857347766848218522014  * EXPPOLY_32F_A0,
     1.6457554781539648445187567247258 * EXPPOLY_32F_A0,
     1.6636765803267364350463364569764 * EXPPOLY_32F_A0,
     1.6817928305074290860622509524664 * EXPPOLY_32F_A0,
@@ -4470,80 +4470,62 @@ static const double expTab[] = {
     1.9784560263879509682582499181312 * EXPPOLY_32F_A0,
 };
 
-static const double exp_prescale = 1.4426950408889634073599246810019 * (1 << EXPTAB_SCALE);
-static const double exp_postscale = 1./(1 << EXPTAB_SCALE);
-static const double exp_max_val = 3000.*(1 << EXPTAB_SCALE); // log10(DBL_MAX) < 3000
+static const float64_t exp_prescale  = double_to_f64(1.4426950408889634073599246810019 * (1 << EXPTAB_SCALE));
+static const float64_t exp_postscale = double_to_f64(1./(1 << EXPTAB_SCALE));
+static const float64_t exp_max_val   = double_to_f64(3000.*(1 << EXPTAB_SCALE)); // log10(DBL_MAX) < 3000
 
-float32_t f32_exp( float32_t _x)
+float32_t f32_exp( float32_t x)
 {
-    float32_t y;
+    static const float64_t
+        A4 = double_to_f64(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
+        A3 = double_to_f64(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
+        A2 = double_to_f64(.2402265109513301490103372422686535526573 / EXPPOLY_32F_A0),
+        A1 = double_to_f64(.5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0);
 
-    static const float
-    A4 = (float)(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
-    A3 = (float)(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
-    A2 = (float)(.2402265109513301490103372422686535526573 / EXPPOLY_32F_A0),
-    A1 = (float)(.5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0);
+    float64_t x0;
+    if(expF32UI(x.v) > 127 + 10)
+        x0 = signF32UI(x.v) ? -exp_max_val : exp_max_val;
+    else
+        x0 = f32_to_f64(x) * exp_prescale;
 
-#undef EXPPOLY
-#define EXPPOLY(x)  \
-(((((x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)
+    int val0 = f64_to_i32(x0, softfloat_round_near_even, false);
+    int t = (val0 >> EXPTAB_SCALE) + 1023;
+    t = t < 0 ? 0 : (t > 2047 ? 2047 : t);
+    float64_t buf = { packToF64UI(0, t, 0) };
 
-    Sf32suf* x = (Sf32suf*)&_x;
-    Sf32suf buf;
+    x0 = (x0 - f64_roundToInt(x0, softfloat_round_near_even, false)) * exp_postscale;
 
-    float64_t x0 = x->f * exp_prescale;
-    int val0, t;
-
-    if( ((x->i >> 23) & 255) > 127 + 10 )
-        x0 = x->i < 0 ? -exp_max_val : exp_max_val;
-
-    val0 = cvRound(x0);
-    t = (val0 >> EXPTAB_SCALE) + 127;
-    t = !(t & ~255) ? t : t < 0 ? 0 : 255;
-
-    buf.i = t << 23;
-    x0 = (x0 - val0)*exp_postscale;
-
-    y = (float)(buf.f * expTab[val0 & EXPTAB_MASK] * EXPPOLY(x0));
-
+    float32_t y = f64_to_f32(buf * double_to_f64(expTab[val0 & EXPTAB_MASK]) *
+                             ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4));
     return y;
 }
 
-void exp64f( const double *_x, double *y, int n )
+float64_t f64_exp(float64_t x)
 {
-    static const double
-    A5 = .99999999999999999998285227504999 / EXPPOLY_32F_A0,
-    A4 = .69314718055994546743029643825322 / EXPPOLY_32F_A0,
-    A3 = .24022650695886477918181338054308 / EXPPOLY_32F_A0,
-    A2 = .55504108793649567998466049042729e-1 / EXPPOLY_32F_A0,
-    A1 = .96180973140732918010002372686186e-2 / EXPPOLY_32F_A0,
-    A0 = .13369713757180123244806654839424e-2 / EXPPOLY_32F_A0;
+    static const float64_t
+    A5 = double_to_f64(.99999999999999999998285227504999 / EXPPOLY_32F_A0),
+    A4 = double_to_f64(.69314718055994546743029643825322 / EXPPOLY_32F_A0),
+    A3 = double_to_f64(.24022650695886477918181338054308 / EXPPOLY_32F_A0),
+    A2 = double_to_f64(.55504108793649567998466049042729e-1 / EXPPOLY_32F_A0),
+    A1 = double_to_f64(.96180973140732918010002372686186e-2 / EXPPOLY_32F_A0),
+    A0 = double_to_f64(.13369713757180123244806654839424e-2 / EXPPOLY_32F_A0);
 
-#undef EXPPOLY
-#define EXPPOLY(x)  (((((A0*(x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)*(x) + A5)
+    float64_t x0;
+    if(expF64UI(x.v) > 1023 + 10)
+        x0 = signF64UI(x.v) ? -exp_max_val : exp_max_val;
+    else
+        x0 = x * exp_prescale;
 
-    int i = 0;
-    Sf32suf buf[4];
-    const Sf32suf* x = (const Sf32suf*)_x;
+    int val0 = f64_to_i32(x0, softfloat_round_near_even, false);
+    int t = (val0 >> EXPTAB_SCALE) + 1023;
+    t = t < 0 ? 0 : (t > 2047 ? 2047 : t);
+    float64_t buf = { packToF64UI(0, t, 0) };
 
-    for( ; i < n; i++ )
-    {
-        double x0 = x[i].f * exp_prescale;
-        int val0, t;
+    x0 = (x0 - f64_roundToInt(x0, softfloat_round_near_even, false)) * exp_postscale;
 
-        t = (int)(x[i].i >> 52);
-        if( (t & 2047) > 1023 + 10 )
-            x0 = t < 0 ? -exp_max_val : exp_max_val;
-
-        val0 = cvRound(x0);
-        t = (val0 >> EXPTAB_SCALE) + 1023;
-        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
-
-        buf[0].i = (int64_t)t << 52;
-        x0 = (x0 - val0)*exp_postscale;
-
-        y[i] = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
-    }
+    float64_t y = buf * double_to_f64(expTab[val0 & EXPTAB_MASK]) *
+                  (((((A0*x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)*x0 + A5);
+    return y;
 }
 
 #undef EXPTAB_SCALE
@@ -4557,7 +4539,7 @@ void exp64f( const double *_x, double *y, int n )
 #define LOGTAB_MASK2        ((1 << (20 - LOGTAB_SCALE)) - 1)
 #define LOGTAB_MASK2_32F    ((1 << (23 - LOGTAB_SCALE)) - 1)
 
-static const double icvLogTab[] = {
+static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
     0.0000000000000000000000000000000000000000,    1.000000000000000000000000000000000000000,
     .00389864041565732288852075271279318258166,    .9961089494163424124513618677042801556420,
     .00778214044205494809292034119607706088573,    .9922480620155038759689922480620155038760,
@@ -4817,19 +4799,51 @@ static const double icvLogTab[] = {
 };
 
 #define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
-static const double ln_2 = 0.69314718055994530941723212145818;
+static const float64_t ln_2 = double_to_f64(0.69314718055994530941723212145818);
+
+//TODO: rewrite it properly
+
+float32_t f32_log(float32_t x)
+{
+    static const float32_t shift[] = { float_to_f32(0), float_to_f32(-1.f/512) };
+    static const float32_t
+    A0 = float_to_f32(0.3333333333333333333333333f),
+    A1 = float_to_f32(-0.5f),
+    A2 = float_to_f32(1.f);
+
+    float32_t buf;
+    float64_t y0;
+
+    int h0 = x.v;
+    y0 = i32_to_f64(expF32UI(h0) - 127) * ln_2;
+
+    //TODO: from this place, ooooohhh
+
+    //#define LOGTAB_MASK2_32F    ((1 << (23 - LOGTAB_SCALE)) - 1)
+    buf.v = (h0 & LOGTAB_MASK2_32F) | (127 << 23);
+    h0 = (h0 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
+
+    float32_t x0;
+    float64_t tab0 = double_to_f64(icvLogTab[h0]);
+    float64_t tab1 = double_to_f64(icvLogTab[h0+1]);
+    y0 += tab0;
+
+    x0 = (buf - i32_to_f32(1)) * f64_to_f32(tab1);
+    x0 += shift[h0 == 510];
+    y0 += f32_to_f64(((A0*(x0) + A1)*(x0) + A2)*(x0));
+
+    float32_t y = f64_to_f32(y0);
+    return y;
+}
+
+#if 0
+
 
 void log32f( const float *_x, float *y, int n )
 {
 
-    static const float shift[] = { 0, -1.f/512 };
-    static const float
-    A0 = 0.3333333333333333333333333f,
-    A1 = -0.5f,
-    A2 = 1.f;
 
-#undef LOGPOLY
-#define LOGPOLY(x) (((A0*(x) + A1)*(x) + A2)*(x))
+
 
     int i = 0;
     Sf32suf buf[4];
@@ -4837,21 +4851,9 @@ void log32f( const float *_x, float *y, int n )
 
     for( ; i < n; i++ )
     {
-        int h0 = x[i];
-        double y0;
-        float x0;
 
-        y0 = (((h0 >> 23) & 0xff) - 127) * ln_2;
 
-        buf[0].i = (h0 & LOGTAB_MASK2_32F) | (127 << 23);
-        h0 = (h0 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
 
-        y0 += icvLogTab[h0];
-        x0 = (float)LOGTAB_TRANSLATE( buf[0].f, h0 );
-        x0 += shift[h0 == 510];
-        y0 += LOGPOLY( x0 );
-
-        y[i] = (float)y0;
     }
 }
 
@@ -4900,8 +4902,6 @@ float32_t f32_log( float32_t );
 float64_t f64_log( float64_t );
 float32_t f32_pow( float32_t, float32_t );
 float64_t f64_pow( float64_t, float64_t );
-
 #endif
-
 }
 }
