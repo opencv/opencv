@@ -153,70 +153,70 @@ inline void softfloat_raiseFlags( uint_fast8_t /* flags */)
 /*----------------------------------------------------------------------------
 | Integer-to-floating-point conversion routines.
 *----------------------------------------------------------------------------*/
-float32_t ui32_to_f32( uint32_t );
-float64_t ui32_to_f64( uint32_t );
-float32_t ui64_to_f32( uint64_t );
-float64_t ui64_to_f64( uint64_t );
-float32_t i32_to_f32( int32_t );
-float64_t i32_to_f64( int32_t );
-float32_t i64_to_f32( int64_t );
-float64_t i64_to_f64( int64_t );
+CV_EXPORTS float32_t ui32_to_f32( uint32_t );
+CV_EXPORTS float64_t ui32_to_f64( uint32_t );
+CV_EXPORTS float32_t ui64_to_f32( uint64_t );
+CV_EXPORTS float64_t ui64_to_f64( uint64_t );
+CV_EXPORTS float32_t i32_to_f32( int32_t );
+CV_EXPORTS float64_t i32_to_f64( int32_t );
+CV_EXPORTS float32_t i64_to_f32( int64_t );
+CV_EXPORTS float64_t i64_to_f64( int64_t );
 
 /*----------------------------------------------------------------------------
 | 32-bit (single-precision) floating-point operations.
 *----------------------------------------------------------------------------*/
-uint_fast32_t f32_to_ui32( float32_t, uint_fast8_t, bool );
-uint_fast64_t f32_to_ui64( float32_t, uint_fast8_t, bool );
-int_fast32_t f32_to_i32( float32_t, uint_fast8_t, bool );
-int_fast64_t f32_to_i64( float32_t, uint_fast8_t, bool );
-uint_fast32_t f32_to_ui32_r_minMag( float32_t, bool );
-uint_fast64_t f32_to_ui64_r_minMag( float32_t, bool );
-int_fast32_t f32_to_i32_r_minMag( float32_t, bool );
-int_fast64_t f32_to_i64_r_minMag( float32_t, bool );
-float64_t f32_to_f64( float32_t );
-float32_t f32_roundToInt( float32_t, uint_fast8_t, bool );
-float32_t f32_add( float32_t, float32_t );
-float32_t f32_sub( float32_t, float32_t );
-float32_t f32_mul( float32_t, float32_t );
-float32_t f32_mulAdd( float32_t, float32_t, float32_t );
-float32_t f32_div( float32_t, float32_t );
-float32_t f32_rem( float32_t, float32_t );
-float32_t f32_sqrt( float32_t );
-bool f32_eq( float32_t, float32_t );
-bool f32_le( float32_t, float32_t );
-bool f32_lt( float32_t, float32_t );
-bool f32_eq_signaling( float32_t, float32_t );
-bool f32_le_quiet( float32_t, float32_t );
-bool f32_lt_quiet( float32_t, float32_t );
-bool f32_isSignalingNaN( float32_t );
+CV_EXPORTS uint_fast32_t f32_to_ui32( float32_t, uint_fast8_t, bool );
+CV_EXPORTS uint_fast64_t f32_to_ui64( float32_t, uint_fast8_t, bool );
+CV_EXPORTS int_fast32_t f32_to_i32( float32_t, uint_fast8_t, bool );
+CV_EXPORTS int_fast64_t f32_to_i64( float32_t, uint_fast8_t, bool );
+CV_EXPORTS uint_fast32_t f32_to_ui32_r_minMag( float32_t, bool );
+CV_EXPORTS uint_fast64_t f32_to_ui64_r_minMag( float32_t, bool );
+CV_EXPORTS int_fast32_t f32_to_i32_r_minMag( float32_t, bool );
+CV_EXPORTS int_fast64_t f32_to_i64_r_minMag( float32_t, bool );
+CV_EXPORTS float64_t f32_to_f64( float32_t );
+CV_EXPORTS float32_t f32_roundToInt( float32_t, uint_fast8_t, bool );
+CV_EXPORTS float32_t f32_add( float32_t, float32_t );
+CV_EXPORTS float32_t f32_sub( float32_t, float32_t );
+CV_EXPORTS float32_t f32_mul( float32_t, float32_t );
+CV_EXPORTS float32_t f32_mulAdd( float32_t, float32_t, float32_t );
+CV_EXPORTS float32_t f32_div( float32_t, float32_t );
+CV_EXPORTS float32_t f32_rem( float32_t, float32_t );
+CV_EXPORTS float32_t f32_sqrt( float32_t );
+CV_EXPORTS bool f32_eq( float32_t, float32_t );
+CV_EXPORTS bool f32_le( float32_t, float32_t );
+CV_EXPORTS bool f32_lt( float32_t, float32_t );
+CV_EXPORTS bool f32_eq_signaling( float32_t, float32_t );
+CV_EXPORTS bool f32_le_quiet( float32_t, float32_t );
+CV_EXPORTS bool f32_lt_quiet( float32_t, float32_t );
+CV_EXPORTS bool f32_isSignalingNaN( float32_t );
 
 /*----------------------------------------------------------------------------
 | 64-bit (double-precision) floating-point operations.
 *----------------------------------------------------------------------------*/
-uint_fast32_t f64_to_ui32( float64_t, uint_fast8_t, bool );
-uint_fast64_t f64_to_ui64( float64_t, uint_fast8_t, bool );
-int_fast32_t f64_to_i32( float64_t, uint_fast8_t, bool );
-int_fast64_t f64_to_i64( float64_t, uint_fast8_t, bool );
-uint_fast32_t f64_to_ui32_r_minMag( float64_t, bool );
-uint_fast64_t f64_to_ui64_r_minMag( float64_t, bool );
-int_fast32_t f64_to_i32_r_minMag( float64_t, bool );
-int_fast64_t f64_to_i64_r_minMag( float64_t, bool );
-float32_t f64_to_f32( float64_t );
-float64_t f64_roundToInt( float64_t, uint_fast8_t, bool );
-float64_t f64_add( float64_t, float64_t );
-float64_t f64_sub( float64_t, float64_t );
-float64_t f64_mul( float64_t, float64_t );
-float64_t f64_mulAdd( float64_t, float64_t, float64_t );
-float64_t f64_div( float64_t, float64_t );
-float64_t f64_rem( float64_t, float64_t );
-float64_t f64_sqrt( float64_t );
-bool f64_eq( float64_t, float64_t );
-bool f64_le( float64_t, float64_t );
-bool f64_lt( float64_t, float64_t );
-bool f64_eq_signaling( float64_t, float64_t );
-bool f64_le_quiet( float64_t, float64_t );
-bool f64_lt_quiet( float64_t, float64_t );
-bool f64_isSignalingNaN( float64_t );
+CV_EXPORTS uint_fast32_t f64_to_ui32( float64_t, uint_fast8_t, bool );
+CV_EXPORTS uint_fast64_t f64_to_ui64( float64_t, uint_fast8_t, bool );
+CV_EXPORTS int_fast32_t f64_to_i32( float64_t, uint_fast8_t, bool );
+CV_EXPORTS int_fast64_t f64_to_i64( float64_t, uint_fast8_t, bool );
+CV_EXPORTS uint_fast32_t f64_to_ui32_r_minMag( float64_t, bool );
+CV_EXPORTS uint_fast64_t f64_to_ui64_r_minMag( float64_t, bool );
+CV_EXPORTS int_fast32_t f64_to_i32_r_minMag( float64_t, bool );
+CV_EXPORTS int_fast64_t f64_to_i64_r_minMag( float64_t, bool );
+CV_EXPORTS float32_t f64_to_f32( float64_t );
+CV_EXPORTS float64_t f64_roundToInt( float64_t, uint_fast8_t, bool );
+CV_EXPORTS float64_t f64_add( float64_t, float64_t );
+CV_EXPORTS float64_t f64_sub( float64_t, float64_t );
+CV_EXPORTS float64_t f64_mul( float64_t, float64_t );
+CV_EXPORTS float64_t f64_mulAdd( float64_t, float64_t, float64_t );
+CV_EXPORTS float64_t f64_div( float64_t, float64_t );
+CV_EXPORTS float64_t f64_rem( float64_t, float64_t );
+CV_EXPORTS float64_t f64_sqrt( float64_t );
+CV_EXPORTS bool f64_eq( float64_t, float64_t );
+CV_EXPORTS bool f64_le( float64_t, float64_t );
+CV_EXPORTS bool f64_lt( float64_t, float64_t );
+CV_EXPORTS bool f64_eq_signaling( float64_t, float64_t );
+CV_EXPORTS bool f64_le_quiet( float64_t, float64_t );
+CV_EXPORTS bool f64_lt_quiet( float64_t, float64_t );
+CV_EXPORTS bool f64_isSignalingNaN( float64_t );
 
 /*----------------------------------------------------------------------------
 | Ported from OpenCV and added for usability
