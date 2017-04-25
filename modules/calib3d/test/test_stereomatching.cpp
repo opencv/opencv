@@ -785,37 +785,22 @@ protected:
 TEST(Calib3d_StereoBM, regression) { CV_StereoBMTest test; test.safe_run(); }
 TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
 
-TEST(Calib3d_StereoSGBMPar, idontknowhowtotesthere)
+TEST(Calib3d_StereoSGBM_HH4, regression)
 {
-//	<!-- caseName, datasetName, numDisp, winSize, mode -->
-//	case_teddy_2 teddy "48" "3" "MODE_HH"
-
-//Ptr<StereoSGBM> StereoSGBM::create(int minDisparity, int numDisparities, int SADWindowSize,
-//                                 int P1, int P2, int disp12MaxDiff,
-//                                 int preFilterCap, int uniquenessRatio,
-//                                 int speckleWindowSize, int speckleRange,
-//                                 int mode)
-    Mat leftImg = imread("/home/q/Work/GitVault/opencv_extra/testdata/cv/stereomatching/datasets/teddy/im2.png");
-    Mat rightImg = imread("/home/q/Work/GitVault/opencv_extra/testdata/cv/stereomatching/datasets/teddy/im6.png");
-//    Mat leftDisp_old, leftDisp_new;
+    String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
+    Mat leftImg = imread(path + "im2.png", 0);
+    Mat rightImg = imread(path + "im6.png", 0);
+    Mat testData = imread(path + "disp2_hh4.png",-1);
+    Mat leftDisp;
+    Mat toCheck;
     {
-        Mat leftDisp;
-        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH);
-        sgbm->compute( leftImg, rightImg, leftDisp);
-        CV_Assert( leftDisp.type() == CV_16SC1 );
-        leftDisp/=8;
-        imwrite( "/home/q/Work/GitVault/modehh4_new.jpg", leftDisp);
-    }
-    {
-        Mat leftDisp;
         Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4);
         sgbm->compute( leftImg, rightImg, leftDisp);
         CV_Assert( leftDisp.type() == CV_16SC1 );
-        leftDisp/=8;
-        imwrite( "/home/q/Work/GitVault/modehh4_old.jpg", leftDisp);
+        leftDisp.convertTo(toCheck, CV_16UC1);
+//        imwrite("/home/q/Work/GitVault/disp2_hh4.png",toCheck);
     }
-//    Mat diff;
-//    absdiff(leftDisp_old,leftDisp_new,diff);
-//    CV_Assert( countNonZero(diff)==0);
-//
+    Mat diff;
+    absdiff(toCheck, testData,diff);
+    CV_Assert( countNonZero(diff)==0);
 }
