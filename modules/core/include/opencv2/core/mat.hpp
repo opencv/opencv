@@ -1243,6 +1243,9 @@ public:
     /** @overload */
     Mat reshape(int cn, int newndims, const int* newsz) const;
 
+    /** @overload */
+    Mat reshape(int cn, const std::vector<int>& newshape) const;
+
     /** @brief Transposes a matrix.
 
     The method performs matrix transposition by means of matrix expressions. It does not perform the
@@ -1748,6 +1751,12 @@ public:
     image).
      */
     size_t total() const;
+
+    /** @brief Returns the total number of array elements.
+
+     The method returns the number of elements within a certain sub-array slice with startDim <= dim < endDim
+     */
+    size_t total(int startDim, int endDim=INT_MAX) const;
 
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
     int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
