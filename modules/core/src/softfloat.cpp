@@ -525,6 +525,28 @@ inline struct uint128_extra softfloat_shortShiftRightJam128Extra(uint64_t a64, u
 }
 
 /*----------------------------------------------------------------------------
+| Shifts the 192 bits formed by concatenating 'a64', 'a0', and 'extra' right
+| by 64 _plus_ the number of bits given in 'dist', which must not be zero.
+| This shifted value is at most 128 nonzero bits and is returned in the 'v'
+| field of the 'struct uint128_extra' result.  The 64-bit 'extra' field of the
+| result contains a value formed as follows from the bits that were shifted
+| off:  The _last_ bit shifted off is the most-significant bit of the 'extra'
+| field, and the other 63 bits of the 'extra' field are all zero if and only
+| if _all_but_the_last_ bits shifted off were all zero.
+|   (This function makes more sense if 'a64', 'a0', and 'extra' are considered
+| to form an unsigned fixed-point number with binary point between 'a0' and
+| 'extra'.  This fixed-point value is shifted right by the number of bits
+| given in 'dist', and the integer part of this shifted value is returned
+| in the 'v' field of the result.  The fractional part of the shifted value
+| is modified as described above and returned in the 'extra' field of the
+| result.)
+*----------------------------------------------------------------------------*/
+/*
+ * The function was cut since it's not used, description is left to explain the function above.
+ * static struct uint128_extra softfloat_shiftRightJam128Extra(uint64_t a64, uint64_t a0, uint64_t extra, uint_fast32_t dist );
+ */
+
+/*----------------------------------------------------------------------------
 | Shifts the 128 bits formed by concatenating 'a' and 'extra' right by 64
 | _plus_ the number of bits given in 'dist', which must not be zero.  This
 | shifted value is at most 64 nonzero bits and is returned in the 'v' field
@@ -567,25 +589,6 @@ inline struct uint64_extra softfloat_shiftRightJam64Extra(uint64_t a, uint64_t e
 static struct uint128 softfloat_shiftRightJam128( uint64_t a64, uint64_t a0, uint_fast32_t dist );
 
 /*----------------------------------------------------------------------------
-| Shifts the 192 bits formed by concatenating 'a64', 'a0', and 'extra' right
-| by 64 _plus_ the number of bits given in 'dist', which must not be zero.
-| This shifted value is at most 128 nonzero bits and is returned in the 'v'
-| field of the 'struct uint128_extra' result.  The 64-bit 'extra' field of the
-| result contains a value formed as follows from the bits that were shifted
-| off:  The _last_ bit shifted off is the most-significant bit of the 'extra'
-| field, and the other 63 bits of the 'extra' field are all zero if and only
-| if _all_but_the_last_ bits shifted off were all zero.
-|   (This function makes more sense if 'a64', 'a0', and 'extra' are considered
-| to form an unsigned fixed-point number with binary point between 'a0' and
-| 'extra'.  This fixed-point value is shifted right by the number of bits
-| given in 'dist', and the integer part of this shifted value is returned
-| in the 'v' field of the result.  The fractional part of the shifted value
-| is modified as described above and returned in the 'extra' field of the
-| result.)
-*----------------------------------------------------------------------------*/
-static struct uint128_extra softfloat_shiftRightJam128Extra(uint64_t a64, uint64_t a0, uint64_t extra, uint_fast32_t dist );
-
-/*----------------------------------------------------------------------------
 | Returns the sum of the 128-bit integer formed by concatenating 'a64' and
 | 'a0' and the 128-bit integer formed by concatenating 'b64' and 'b0'.  The
 | addition is modulo 2^128, so any carry out is lost.
@@ -597,15 +600,6 @@ inline struct uint128 softfloat_add128( uint64_t a64, uint64_t a0, uint64_t b64,
     z.v64 = a64 + b64 + (z.v0 < a0);
     return z;
 }
-
-/*----------------------------------------------------------------------------
-| Adds the two 256-bit integers pointed to by 'aPtr' and 'bPtr'.  The addition
-| is modulo 2^256, so any carry out is lost.  The sum is stored at the
-| location pointed to by 'zPtr'.  Each of 'aPtr', 'bPtr', and 'zPtr' points to
-| an array of four 64-bit elements that concatenate in the platform's normal
-| endian order to form a 256-bit integer.
-*----------------------------------------------------------------------------*/
-static void softfloat_add256M(const uint64_t *aPtr, const uint64_t *bPtr, uint64_t *zPtr );
 
 /*----------------------------------------------------------------------------
 | Returns the difference of the 128-bit integer formed by concatenating 'a64'
@@ -620,16 +614,6 @@ inline struct uint128 softfloat_sub128( uint64_t a64, uint64_t a0, uint64_t b64,
     z.v64 -= (a0 < b0);
     return z;
 }
-
-/*----------------------------------------------------------------------------
-| Subtracts the 256-bit integer pointed to by 'bPtr' from the 256-bit integer
-| pointed to by 'aPtr'.  The addition is modulo 2^256, so any borrow out
-| (carry out) is lost.  The difference is stored at the location pointed to
-| by 'zPtr'.  Each of 'aPtr', 'bPtr', and 'zPtr' points to an array of four
-| 64-bit elements that concatenate in the platform's normal endian order to
-| form a 256-bit integer.
-*----------------------------------------------------------------------------*/
-static void softfloat_sub256M(const uint64_t *aPtr, const uint64_t *bPtr, uint64_t *zPtr );
 
 /*----------------------------------------------------------------------------
 | Returns the 128-bit product of 'a', 'b', and 2^32.
@@ -665,15 +649,6 @@ inline struct uint128 softfloat_mul128By32( uint64_t a64, uint64_t a0, uint32_t 
     z.v64 = a64 * b + (uint_fast32_t) ((mid + carry)>>32);
     return z;
 }
-
-/*----------------------------------------------------------------------------
-| Multiplies the 128-bit unsigned integer formed by concatenating 'a64' and
-| 'a0' by the 128-bit unsigned integer formed by concatenating 'b64' and
-| 'b0'.  The 256-bit product is stored at the location pointed to by 'zPtr'.
-| Argument 'zPtr' points to an array of four 64-bit elements that concatenate
-| in the platform's normal endian order to form a 256-bit integer.
-*----------------------------------------------------------------------------*/
-static void softfloat_mul128To256M(uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0, uint64_t *zPtr );
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
@@ -3000,27 +2975,6 @@ float64_t i64_to_f64( int64_t a )
 
 }
 
-void
- softfloat_add256M(
-     const uint64_t *aPtr, const uint64_t *bPtr, uint64_t *zPtr )
-{
-    unsigned int index;
-    uint_fast8_t carry;
-    uint64_t wordA, wordZ;
-
-    index = indexWordLo( 4 );
-    carry = 0;
-    for (;;) {
-        wordA = aPtr[index];
-        wordZ = wordA + bPtr[index] + carry;
-        zPtr[index] = wordZ;
-        if ( index == indexWordHi( 4 ) ) break;
-        if ( wordZ != wordA ) carry = (wordZ < wordA);
-        index += wordIncr;
-    }
-
-}
-
 float32_t softfloat_addMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
 {
     int_fast16_t expA;
@@ -4148,58 +4102,6 @@ struct uint128
                 : ((a64 | a0) != 0);
     }
     return z;
-
-}
-
-static struct uint128_extra softfloat_shiftRightJam128Extra(uint64_t a64, uint64_t a0, uint64_t extra, uint_fast32_t dist )
-{
-    uint_fast8_t u8NegDist;
-    struct uint128_extra z;
-
-    u8NegDist = -dist;
-    if ( dist < 64 ) {
-        z.v.v64 = a64>>dist;
-        z.v.v0 = a64<<(u8NegDist & 63) | a0>>dist;
-        z.extra = a0<<(u8NegDist & 63);
-    } else {
-        z.v.v64 = 0;
-        if ( dist == 64 ) {
-            z.v.v0 = a64;
-            z.extra = a0;
-        } else {
-            extra |= a0;
-            if ( dist < 128 ) {
-                z.v.v0 = a64>>(dist & 63);
-                z.extra = a64<<(u8NegDist & 63);
-            } else {
-                z.v.v0 = 0;
-                z.extra = (dist == 128) ? a64 : (a64 != 0);
-            }
-        }
-    }
-    z.extra |= (extra != 0);
-    return z;
-
-}
-
-void
- softfloat_sub256M(
-     const uint64_t *aPtr, const uint64_t *bPtr, uint64_t *zPtr )
-{
-    unsigned int index;
-    uint_fast8_t borrow;
-    uint64_t wordA, wordB;
-
-    index = indexWordLo( 4 );
-    borrow = 0;
-    for (;;) {
-        wordA = aPtr[index];
-        wordB = bPtr[index];
-        zPtr[index] = wordA - wordB - borrow;
-        if ( index == indexWordHi( 4 ) ) break;
-        borrow = borrow ? (wordA <= wordB) : (wordA < wordB);
-        index += wordIncr;
-    }
 
 }
 
