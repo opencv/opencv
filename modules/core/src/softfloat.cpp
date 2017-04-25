@@ -86,11 +86,6 @@ namespace softfloat
 {
 
 /*----------------------------------------------------------------------------
-| Default value for `softfloat_detectTininess'.
-*----------------------------------------------------------------------------*/
-#define init_detectTininess softfloat_tininess_afterRounding
-
-/*----------------------------------------------------------------------------
 | The values to return on conversions to 32-bit integer formats that raise an
 | invalid exception.
 *----------------------------------------------------------------------------*/
@@ -3714,25 +3709,6 @@ struct exp16_sig64 softfloat_normSubnormalF64Sig( uint_fast64_t sig )
     return z;
 
 }
-
-/*----------------------------------------------------------------------------
-| Raises the exceptions specified by `flags'.  Floating-point traps can be
-| defined here if desired.  It is currently not possible for such a trap
-| to substitute a result value.  If traps are not implemented, this routine
-| should be simply `softfloat_exceptionFlags |= flags;'.
-*----------------------------------------------------------------------------*/
-inline void softfloat_raiseFlags( uint_fast8_t flags )
-{
-    softfloat_exceptionFlags |= flags;
-}
-
-#ifndef THREAD_LOCAL
-#define THREAD_LOCAL
-#endif
-
-THREAD_LOCAL uint_fast8_t softfloat_roundingMode = softfloat_round_near_even;
-THREAD_LOCAL uint_fast8_t softfloat_detectTininess = init_detectTininess;
-THREAD_LOCAL uint_fast8_t softfloat_exceptionFlags = 0;
 
 /*----------------------------------------------------------------------------
 | Interpreting `uiA' and `uiB' as the bit patterns of two 32-bit floating-
