@@ -70,21 +70,21 @@ protected:
                               std::ios_base::seekdir dir,
                               std::ios_base::openmode )
     {
-        // get absolute offset
-        off_type off = offset;
+        char* whence = eback();
         if (dir == std::ios_base::cur)
         {
-            off += gptr() - eback();
+            whence = gptr();
         }
         else if (dir == std::ios_base::end)
         {
-            off += egptr() - eback();
+            whence = egptr();
         }
+        char* to = whence + offset;
 
         // check limits
-        if (off >= (off_type)0 && off <= egptr() - eback())
+        if (to >= eback() && to <= egptr())
         {
-            setg(eback(), gptr() + off, egptr());
+            setg(eback(), to, egptr());
             return gptr() - eback();
         }
 
