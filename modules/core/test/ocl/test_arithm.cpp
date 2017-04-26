@@ -447,8 +447,8 @@ OCL_TEST_P(Min, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::max(src1_roi, src2_roi, dst1_roi));
-        OCL_ON(cv::max(usrc1_roi, usrc2_roi, udst1_roi));
+        OCL_OFF(cv::min(src1_roi, src2_roi, dst1_roi));
+        OCL_ON(cv::min(usrc1_roi, usrc2_roi, udst1_roi));
         Near(0);
     }
 }
@@ -461,8 +461,8 @@ OCL_TEST_P(Max, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::min(src1_roi, src2_roi, dst1_roi));
-        OCL_ON(cv::min(usrc1_roi, usrc2_roi, udst1_roi));
+        OCL_OFF(cv::max(src1_roi, src2_roi, dst1_roi));
+        OCL_ON(cv::max(usrc1_roi, usrc2_roi, udst1_roi));
         Near(0);
     }
 }

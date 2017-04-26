@@ -162,6 +162,8 @@ bool WebPDecoder::readData(Mat &img)
 {
     if( m_width > 0 && m_height > 0 )
     {
+        bool convert_grayscale = (img.type() == CV_8UC1); // IMREAD_GRAYSCALE requested
+
         if (img.cols != m_width || img.rows != m_height || img.type() != m_type)
         {
             img.create(m_height, m_width, m_type);
@@ -184,6 +186,10 @@ bool WebPDecoder::readData(Mat &img)
 
         if(res_ptr == out_data)
         {
+            if (convert_grayscale)
+            {
+                cvtColor(img, img, COLOR_BGR2GRAY);
+            }
             return true;
         }
     }

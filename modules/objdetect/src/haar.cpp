@@ -340,8 +340,8 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
             out->isStumpBased &= node_count == 1;
         }
     }
-/*
-#ifdef HAVE_IPP
+
+#if defined HAVE_IPP && !IPP_DISABLE_HAAR
     int can_use_ipp = CV_IPP_CHECK_COND && (!out->has_tilted_features && !out->is_tree && out->isStumpBased);
 
     if( can_use_ipp )
@@ -396,7 +396,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
         }
     }
 #endif
-*/
+
     cascade->hid_cascade = out;
     assert( (char*)haar_node_ptr - (char*)out <= datasize );
 
@@ -824,10 +824,7 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
                                CvPoint pt, double& stage_sum, int start_stage )
 {
 #ifdef CV_HAAR_USE_AVX
-    bool haveAVX = false;
-    if(cv::checkHardwareSupport(CV_CPU_AVX))
-    if(__xgetbv()&0x6)// Check if the OS will save the YMM registers
-       haveAVX = true;
+    bool haveAVX = cv::checkHardwareSupport(CV_CPU_AVX);
 #else
 #  ifdef CV_HAAR_USE_SSE
     bool haveSSE2 = cv::checkHardwareSupport(CV_CPU_SSE2);

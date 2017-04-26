@@ -604,9 +604,9 @@ namespace cv
 {
 static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
+#if IPP_VERSION_X100 >= 800
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 >= 800
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
@@ -703,14 +703,10 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
 #if defined(HAVE_IPP)
 namespace cv
 {
-static bool ipp_cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
+static bool ipp_cornerHarris( Mat &src, Mat &dst, int blockSize, int ksize, double k, int borderType )
 {
+#if IPP_VERSION_X100 >= 810
     CV_INSTRUMENT_REGION_IPP()
-
-#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
-    Mat src = _src.getMat();
-    _dst.create( src.size(), CV_32FC1 );
-    Mat dst = _dst.getMat();
 
     {
         int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -734,17 +730,17 @@ static bool ipp_cornerHarris( InputArray _src, OutputArray _dst, int blockSize, 
 
             if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
             {
-                Ipp8u * buffer = ippsMalloc_8u(bufsize);
+                Ipp8u * buffer = (Ipp8u*)CV_IPP_MALLOC(bufsize);
                 IppiDifferentialKernel filterType = ksize > 0 ? ippFilterSobel : ippFilterScharr;
                 IppiBorderType borderTypeIpp = borderTypeNI == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl;
                 IppStatus status = (IppStatus)-1;
 
                 if (depth == CV_8U)
-                    status = CV_INSTRUMENT_FUN_IPP(ippiHarrisCorner_8u32f_C1R,((const Ipp8u *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
-                        filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer));
+                    status = CV_INSTRUMENT_FUN_IPP(ippiHarrisCorner_8u32f_C1R, (const Ipp8u *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
+                        filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
                 else if (depth == CV_32F)
-                    status = CV_INSTRUMENT_FUN_IPP(ippiHarrisCorner_32f_C1R,((const Ipp32f *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
-                        filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer));
+                    status = CV_INSTRUMENT_FUN_IPP(ippiHarrisCorner_32f_C1R, (const Ipp32f *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
+                        filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
                 ippsFree(buffer);
 
                 if (status >= 0)
@@ -756,7 +752,7 @@ static bool ipp_cornerHarris( InputArray _src, OutputArray _dst, int blockSize, 
         }
     }
 #else
-    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(blockSize);  CV_UNUSED(ksize); CV_UNUSED(k); CV_UNUSED(borderType);
+    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(blockSize);  CV_UNUSED(ksize); CV_UNUSED(k); CV_UNUSED(borderType);
 #endif
     return false;
 }
@@ -770,19 +766,17 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, k, borderType, HARRIS))
 
+    Mat src = _src.getMat();
+    _dst.create( src.size(), CV_32FC1 );
+    Mat dst = _dst.getMat();
+
 #ifdef HAVE_IPP
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
 #endif
     CV_IPP_RUN(((ksize == 3 || ksize == 5) && (_src.type() == CV_8UC1 || _src.type() == CV_32FC1) &&
         (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && CV_MAT_CN(_src.type()) == 1 &&
-        (!_src.isSubmatrix() || isolated)) && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK, ipp_cornerHarris( _src, _dst, blockSize, ksize, k, borderType ));
-
-
-    Mat src = _src.getMat();
-    _dst.create( src.size(), CV_32FC1 );
-    Mat dst = _dst.getMat();
-
+        (!_src.isSubmatrix() || isolated)) && IPP_VERSION_X100 >= 810, ipp_cornerHarris( src, dst, blockSize, ksize, k, borderType ));
 
     cornerEigenValsVecs( src, dst, blockSize, ksize, HARRIS, k, borderType );
 }

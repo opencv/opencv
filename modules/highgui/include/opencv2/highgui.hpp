@@ -468,6 +468,44 @@ Mouse-wheel events are currently supported only on Windows.
  */
 CV_EXPORTS int getMouseWheelDelta(int flags);
 
+/** @brief Selects ROI on the given image.
+Function creates a window and allows user to select a ROI using mouse.
+Controls: use `space` or `enter` to finish selection, use key `c` to cancel selection (function will return the zero cv::Rect).
+
+@param windowName name of the window where selection process will be shown.
+@param img image to select a ROI.
+@param showCrosshair if true crosshair of selection rectangle will be shown.
+@param fromCenter if true center of selection will match initial mouse position. In opposite case a corner of
+selection rectangle will correspont to the initial mouse position.
+@return selected ROI or empty rect if selection canceled.
+
+@note The function sets it's own mouse callback for specified window using cv::setMouseCallback(windowName, ...).
+After finish of work an empty callback will be set for the used window.
+ */
+CV_EXPORTS_W Rect selectROI(const String& windowName, InputArray img, bool showCrosshair = true, bool fromCenter = false);
+
+/** @overload
+ */
+CV_EXPORTS_W Rect selectROI(InputArray img, bool showCrosshair = true, bool fromCenter = false);
+
+/** @brief Selects ROIs on the given image.
+Function creates a window and allows user to select a ROIs using mouse.
+Controls: use `space` or `enter` to finish current selection and start a new one,
+use `esc` to terminate multiple ROI selection process.
+
+@param windowName name of the window where selection process will be shown.
+@param img image to select a ROI.
+@param boundingBoxes selected ROIs.
+@param showCrosshair if true crosshair of selection rectangle will be shown.
+@param fromCenter if true center of selection will match initial mouse position. In opposite case a corner of
+selection rectangle will correspont to the initial mouse position.
+
+@note The function sets it's own mouse callback for specified window using cv::setMouseCallback(windowName, ...).
+After finish of work an empty callback will be set for the used window.
+ */
+CV_EXPORTS_W void selectROIs(const String& windowName, InputArray img,
+                             CV_OUT std::vector<Rect>& boundingBoxes, bool showCrosshair = true, bool fromCenter = false);
+
 /** @brief Creates a trackbar and attaches it to the specified window.
 
 The function createTrackbar creates a trackbar (a slider or range control) with the specified name

@@ -1360,14 +1360,14 @@ struct RowVec_32f
     {
         kernel = _kernel;
         haveSSE = checkHardwareSupport(CV_CPU_SSE);
-#if defined USE_IPP_SEP_FILTERS && IPP_DISABLE_BLOCK
+#if defined USE_IPP_SEP_FILTERS
         bufsz = -1;
 #endif
     }
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
-#if defined USE_IPP_SEP_FILTERS && IPP_DISABLE_BLOCK
+#if defined USE_IPP_SEP_FILTERS
         CV_IPP_CHECK()
         {
             int ret = ippiOperator(_src, _dst, width, cn);
@@ -1408,7 +1408,7 @@ struct RowVec_32f
 
     Mat kernel;
     bool haveSSE;
-#if defined USE_IPP_SEP_FILTERS && IPP_DISABLE_BLOCK
+#if defined USE_IPP_SEP_FILTERS
 private:
     mutable int bufsz;
     int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
@@ -1436,10 +1436,10 @@ private:
         float borderValue[] = {0.f, 0.f, 0.f};
         // here is the trick. IPP needs border type and extrapolates the row. We did it already.
         // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
-        if( (cn == 1 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C1R,(src, step, &dst, roisz, _kx, _ksize, 0,
-                                                            ippBorderRepl, borderValue[0], bufptr)) < 0) ||
-            (cn == 3 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C3R,(src, step, &dst, roisz, _kx, _ksize, 0,
-                                                            ippBorderRepl, borderValue, bufptr)) < 0))
+        if( (cn == 1 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C1R, src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue[0], bufptr) < 0) ||
+            (cn == 3 && CV_INSTRUMENT_FUN_IPP(ippiFilterRowBorderPipeline_32f_C3R, src, step, &dst, roisz, _kx, _ksize, 0,
+                                                            ippBorderRepl, borderValue, bufptr) < 0))
         {
             setIppErrorStatus();
             return 0;
@@ -4635,7 +4635,7 @@ static bool ippFilter2D(int stype, int dtype,
     int ddepth = CV_MAT_DEPTH(dtype);
     int sdepth = CV_MAT_DEPTH(stype);
 
-#if IPP_VERSION_X100 >= 201700 && IPP_VERSION_X100 < 201702 // IPP bug with 1x1 kernel
+#if IPP_VERSION_X100 >= 201700 && IPP_VERSION_X100 <= 201702 // IPP bug with 1x1 kernel
     if(kernel_width == 1 && kernel_height == 1)
         return false;
 #endif
@@ -4662,6 +4662,7 @@ static bool ippFilter2D(int stype, int dtype,
     Ipp32s bufsize = 0;
     IppiSize dstRoiSize = { width, height };
     IppStatus status;
+
     status = ippiFilterBorderGetSize(kernelSize, dstRoiSize, dataType, kernelType, cn, &specSize, &bufsize);
     if (status < 0)
         return false;
@@ -4670,7 +4671,7 @@ static bool ippFilter2D(int stype, int dtype,
     size_t good_kernel_step = sizeof(kernel_type) * static_cast<size_t>(kernelSize.width);
 #if IPP_VERSION_X100 >= 900
     if (kernel_step != good_kernel_step) {
-        kernelBuffer.Alloc((int)good_kernel_step * kernelSize.height);
+        kernelBuffer.allocate((int)good_kernel_step * kernelSize.height);
         status = trait::get_copy_fun()((kernel_type*)kernel_data, (int)kernel_step, kernelBuffer, (int)good_kernel_step, kernelSize);
         if (status < 0)
             return false;
@@ -4683,8 +4684,8 @@ static bool ippFilter2D(int stype, int dtype,
     flip(kernel, kerFlip, -1);
     pKerBuffer = kernelBuffer;
 #endif
-    spec.Alloc(specSize);
-    buffer.Alloc(bufsize);
+    spec.allocate(specSize);
+    buffer.allocate(bufsize);
     status = trait::runInit(pKerBuffer, kernelSize, 0, dataType, cn, ippRndFinancial, spec);
     if (status < 0) {
         return false;

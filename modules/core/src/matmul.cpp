@@ -41,9 +41,12 @@
 //
 //M*/
 
+#include <sstream>
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
+#include "opencv2/core/opencl/runtime/opencl_core.hpp"
+#include "intel_gpu_gemm.inl.hpp"
 
 namespace cv
 {
@@ -787,7 +790,6 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
 #endif
 
 #ifdef HAVE_OPENCL
-
 static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
 {
@@ -806,62 +808,88 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
     bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
 
-    if (atrans)
-        sizeA = Size(sizeA.height, sizeA.width);
-    if (btrans)
-        sizeB = Size(sizeB.height, sizeB.width);
-    if (haveC && ctrans)
-        sizeC = Size(sizeC.height, sizeC.width);
-
-    Size sizeD(sizeB.width, sizeA.height);
-
     CV_Assert( !haveC || matC.type() == type );
-    CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
 
-    int max_wg_size = (int)dev.maxWorkGroupSize();
-    int block_size = (max_wg_size / (32*cn) < 32) ? (max_wg_size / (16*cn) < 16) ? (max_wg_size / (8*cn) < 8) ? 1 : 8 : 16 : 32;
-
+    Size sizeD(((btrans)? sizeB.height : sizeB.width),
+               ((atrans)? sizeA.width : sizeA.height));
     matD.create(sizeD, type);
 
     UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
 
-    if (atrans)
-        A = A.t();
 
-    if (btrans)
-        B = B.t();
+    if (!dev.intelSubgroupsSupport() || (depth == CV_64F) || cn != 1)
+    {
+        String opts;
 
-    if (haveC)
-        ctrans ? transpose(matC, D) : matC.copyTo(D);
+        if (atrans)
+            sizeA = Size(sizeA.height, sizeA.width);
+        if (btrans)
+            sizeB = Size(sizeB.height, sizeB.width);
+        if (haveC && ctrans)
+            sizeC = Size(sizeC.height, sizeC.width);
 
-    int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
-    int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
+        CV_Assert( sizeA.width == sizeB.height && (!haveC || sizeC == sizeD) );
 
-    String opts = format("-D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d %s %s %s",
+        int max_wg_size = (int)dev.maxWorkGroupSize();
+        int block_size = (max_wg_size / (32*cn) < 32) ? (max_wg_size / (16*cn) < 16) ? (max_wg_size / (8*cn) < 8) ? 1 : 8 : 16 : 32;
+
+        if (atrans)
+            A = A.t();
+
+        if (btrans)
+            B = B.t();
+
+        if (haveC)
+            ctrans ? transpose(matC, D) : matC.copyTo(D);
+
+        int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
+        int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
+
+        opts += format(" -D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d %s %s %s",
                           ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)),
                           cn, kercn, block_size,
                           (sizeA.width % block_size !=0) ? "-D NO_MULT" : "",
                           haveC ? "-D HAVE_C" : "",
                           doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
-    ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
-    if (k.empty())
-        return false;
+        ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
+        if (k.empty())
+            return false;
 
-    if (depth == CV_64F)
-        k.args(ocl::KernelArg::ReadOnlyNoSize(A),
-               ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
-               ocl::KernelArg::ReadWrite(D, cn, kercn),
-               sizeA.width, alpha, beta);
+        if (depth == CV_64F)
+            k.args(ocl::KernelArg::ReadOnlyNoSize(A),
+                   ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
+                   ocl::KernelArg::ReadWrite(D, cn, kercn),
+                   sizeA.width, alpha, beta);
+        else
+            k.args(ocl::KernelArg::ReadOnlyNoSize(A),
+                   ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
+                   ocl::KernelArg::ReadWrite(D, cn, kercn),
+                   sizeA.width, (float)alpha, (float)beta);
+
+        size_t globalsize[2] = { (size_t)sizeD.width * cn / kercn, (size_t)sizeD.height};
+        size_t localsize[2] = { (size_t)block_size, (size_t)block_size};
+
+        return k.run(2, globalsize, block_size!=1 ? localsize : NULL, false);
+    }
     else
-        k.args(ocl::KernelArg::ReadOnlyNoSize(A),
-               ocl::KernelArg::ReadOnlyNoSize(B, cn, kercn),
-               ocl::KernelArg::ReadWrite(D, cn, kercn),
-               sizeA.width, (float)alpha, (float)beta);
+    {
+        if (haveC && beta != 0.0)
+        {
+            ctrans ? transpose(matC, D) : matC.copyTo(D);
+        }
+        else
+        {
+            beta = 0.0;
+        }
 
-    size_t globalsize[2] = { (size_t)sizeD.width * cn / kercn, (size_t)sizeD.height};
-    size_t localsize[2] = { (size_t)block_size, (size_t)block_size};
-    return k.run(2, globalsize, block_size!=1 ? localsize : NULL, false);
+        return intel_gpu_gemm(A, sizeA,
+                              B, sizeB,
+                              D, sizeD,
+                              alpha,
+                              beta,
+                              atrans, btrans);
+    }
 }
 #endif
 
@@ -2551,7 +2579,7 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
 {
     CV_INSTRUMENT_REGION()
 
-    if(_src.kind() == _InputArray::STD_VECTOR_MAT)
+    if(_src.kind() == _InputArray::STD_VECTOR_MAT || _src.kind() == _InputArray::STD_ARRAY_MAT)
     {
         std::vector<cv::Mat> src;
         _src.getMatVector(src);
@@ -3072,18 +3100,8 @@ dotProd_(const T* src1, const T* src2, int len)
 static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 {
     double r = 0;
-#if ARITHM_USE_IPP && IPP_DISABLE_BLOCK
-    CV_IPP_CHECK()
-    {
-        if (0 <= CV_INSTRUMENT_FUN_IPP(ippiDotProd_8u64f_C1R, (src1, (int)(len*sizeof(src1[0])),
-                                       src2, (int)(len*sizeof(src2[0])),
-                                       ippiSize(len, 1), &r)))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return r;
-        }
-        setIppErrorStatus();
-    }
+#if ARITHM_USE_IPP
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiDotProd_8u64f_C1R, src1, len*sizeof(uchar), src2, len*sizeof(uchar), ippiSize(len, 1), &r) >= 0, r);
 #endif
     int i = 0;
 
@@ -3270,51 +3288,27 @@ static double dotProd_8s(const schar* src1, const schar* src2, int len)
 
 static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        double r = 0;
-        if (0 <= CV_INSTRUMENT_FUN_IPP(ippiDotProd_16u64f_C1R, src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return r;
-        }
-        setIppErrorStatus();
-    }
+#if ARITHM_USE_IPP
+    double r = 0;
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiDotProd_16u64f_C1R, src1, len*sizeof(ushort), src2, len*sizeof(ushort), ippiSize(len, 1), &r) >= 0, r);
 #endif
     return dotProd_(src1, src2, len);
 }
 
 static double dotProd_16s(const short* src1, const short* src2, int len)
 {
-#if (ARITHM_USE_IPP == 1) && (IPP_VERSION_X100 != 900) // bug in IPP 9.0.0
-    CV_IPP_CHECK()
-    {
-        double r = 0;
-        if (0 <= CV_INSTRUMENT_FUN_IPP(ippiDotProd_16s64f_C1R, src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return r;
-        }
-        setIppErrorStatus();
-    }
+#if ARITHM_USE_IPP && (IPP_VERSION_X100 != 900) // bug in IPP 9.0.0
+    double r = 0;
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiDotProd_16s64f_C1R, src1, len*sizeof(short), src2, len*sizeof(short), ippiSize(len, 1), &r) >= 0, r);
 #endif
     return dotProd_(src1, src2, len);
 }
 
 static double dotProd_32s(const int* src1, const int* src2, int len)
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        double r = 0;
-        if (0 <= CV_INSTRUMENT_FUN_IPP(ippiDotProd_32s64f_C1R, src1, (int)(len*sizeof(src1[0])), src2, (int)(len*sizeof(src2[0])), ippiSize(len, 1), &r))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return r;
-        }
-        setIppErrorStatus();
-    }
+#if ARITHM_USE_IPP
+    double r = 0;
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiDotProd_32s64f_C1R, src1, len*sizeof(int), src2, len*sizeof(int), ippiSize(len, 1), &r) >= 0, r);
 #endif
     return dotProd_(src1, src2, len);
 }
@@ -3322,19 +3316,13 @@ static double dotProd_32s(const int* src1, const int* src2, int len)
 static double dotProd_32f(const float* src1, const float* src2, int len)
 {
     double r = 0.0;
+
+#if ARITHM_USE_IPP
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiDotProd_32f64f_C1R, src1, len*sizeof(float), src2, len*sizeof(float), ippiSize(len, 1), &r, ippAlgHintFast) >= 0, r);
+#endif
     int i = 0;
 
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        if (0 <= CV_INSTRUMENT_FUN_IPP(ippsDotProd_32f64f, src1, src2, len, &r))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return r;
-        }
-        setIppErrorStatus();
-    }
-#elif CV_NEON
+#if CV_NEON
     int len0 = len & -4, blockSize0 = (1 << 13), blockSize;
     float32x4_t v_zero = vdupq_n_f32(0.0f);
     CV_DECL_ALIGNED(16) float buf[4];
@@ -3361,18 +3349,11 @@ static double dotProd_32f(const float* src1, const float* src2, int len)
 
 static double dotProd_64f(const double* src1, const double* src2, int len)
 {
-#if (ARITHM_USE_IPP == 1)
-    CV_IPP_CHECK()
-    {
-        double r = 0;
-        if (0 <= CV_INSTRUMENT_FUN_IPP(ippsDotProd_64f, src1, src2, len, &r))
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return r;
-        }
-        setIppErrorStatus();
-    }
+#if ARITHM_USE_IPP
+    double r = 0;
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsDotProd_64f, src1, src2, len, &r) >= 0, r);
 #endif
+
     return dotProd_(src1, src2, len);
 }
 

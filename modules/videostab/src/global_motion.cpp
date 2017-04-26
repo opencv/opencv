@@ -711,6 +711,14 @@ KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(Ptr<MotionEstimatorBa
 
 Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 {
+    InputArray image0 = frame0;
+    InputArray image1 = frame1;
+
+    return estimate(image0, image1, ok);
+}
+
+Mat KeypointBasedMotionEstimator::estimate(InputArray frame0, InputArray frame1, bool *ok)
+{
     // find keypoints
     detector_->detect(frame0, keypointsPrev_);
     if (keypointsPrev_.empty())

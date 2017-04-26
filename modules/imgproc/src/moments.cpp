@@ -556,13 +556,94 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
         m.m03 += mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
     }
 
+    completeMomentState( &m );
+
     return true;
 }
 
 #endif
 
-}
+#ifdef HAVE_IPP
+typedef IppStatus (CV_STDCALL * ippiMoments)(const void* pSrc, int srcStep, IppiSize roiSize, IppiMomentState_64f* pCtx);
 
+static bool ipp_moments(Mat &src, Moments &m )
+{
+#if IPP_VERSION_X100 >= 900
+    CV_INSTRUMENT_REGION_IPP()
+
+    IppiSize  roi      = { src.cols, src.rows };
+    IppiPoint point    = { 0, 0 };
+    int       type     = src.type();
+    IppStatus ippStatus;
+
+    IppAutoBuffer<IppiMomentState_64f> state;
+    int stateSize = 0;
+
+    ippiMoments ippiMoments64f =
+        (type == CV_8UC1)?(ippiMoments)ippiMoments64f_8u_C1R:
+        (type == CV_16UC1)?(ippiMoments)ippiMoments64f_16u_C1R:
+        (type == CV_32FC1)?(ippiMoments)ippiMoments64f_32f_C1R:
+        NULL;
+    if(!ippiMoments64f)
+        return false;
+
+    ippStatus = ippiMomentGetStateSize_64f(ippAlgHintAccurate, &stateSize);
+    if(ippStatus < 0)
+        return false;
+
+    if(!state.allocate(stateSize) && stateSize)
+        return false;
+
+    ippStatus = ippiMomentInit_64f(state, ippAlgHintAccurate);
+    if(ippStatus < 0)
+        return false;
+
+    ippStatus = CV_INSTRUMENT_FUN_IPP(ippiMoments64f, src.ptr<Ipp8u>(), (int)src.step, roi, state);
+    if(ippStatus < 0)
+        return false;
+
+    ippStatus = ippiGetSpatialMoment_64f(state, 0, 0, 0, point, &m.m00);
+    if(ippStatus < 0)
+        return false;
+    ippiGetSpatialMoment_64f(state, 1, 0, 0, point, &m.m10);
+    ippiGetSpatialMoment_64f(state, 0, 1, 0, point, &m.m01);
+    ippiGetSpatialMoment_64f(state, 2, 0, 0, point, &m.m20);
+    ippiGetSpatialMoment_64f(state, 1, 1, 0, point, &m.m11);
+    ippiGetSpatialMoment_64f(state, 0, 2, 0, point, &m.m02);
+    ippiGetSpatialMoment_64f(state, 3, 0, 0, point, &m.m30);
+    ippiGetSpatialMoment_64f(state, 2, 1, 0, point, &m.m21);
+    ippiGetSpatialMoment_64f(state, 1, 2, 0, point, &m.m12);
+    ippiGetSpatialMoment_64f(state, 0, 3, 0, point, &m.m03);
+
+    ippStatus = ippiGetCentralMoment_64f(state, 2, 0, 0, &m.mu20);
+    if(ippStatus < 0)
+        return false;
+    ippiGetCentralMoment_64f(state, 1, 1, 0, &m.mu11);
+    ippiGetCentralMoment_64f(state, 0, 2, 0, &m.mu02);
+    ippiGetCentralMoment_64f(state, 3, 0, 0, &m.mu30);
+    ippiGetCentralMoment_64f(state, 2, 1, 0, &m.mu21);
+    ippiGetCentralMoment_64f(state, 1, 2, 0, &m.mu12);
+    ippiGetCentralMoment_64f(state, 0, 3, 0, &m.mu03);
+
+    ippStatus = ippiGetNormalizedCentralMoment_64f(state, 2, 0, 0, &m.nu20);
+    if(ippStatus < 0)
+        return false;
+    ippiGetNormalizedCentralMoment_64f(state, 1, 1, 0, &m.nu11);
+    ippiGetNormalizedCentralMoment_64f(state, 0, 2, 0, &m.nu02);
+    ippiGetNormalizedCentralMoment_64f(state, 3, 0, 0, &m.nu30);
+    ippiGetNormalizedCentralMoment_64f(state, 2, 1, 0, &m.nu21);
+    ippiGetNormalizedCentralMoment_64f(state, 1, 2, 0, &m.nu12);
+    ippiGetNormalizedCentralMoment_64f(state, 0, 3, 0, &m.nu03);
+
+    return true;
+#else
+    CV_UNUSED(src); CV_UNUSED(m);
+    return false;
+#endif
+}
+#endif
+
+}
 
 cv::Moments cv::moments( InputArray _src, bool binary )
 {
@@ -579,159 +660,93 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         return m;
 
 #ifdef HAVE_OPENCL
-    if( !(ocl::useOpenCL() && type == CV_8UC1  &&
-        _src.isUMat() && ocl_moments(_src, m, binary)) )
+    CV_OCL_RUN_(type == CV_8UC1 && _src.isUMat(), ocl_moments(_src, m, binary), m);
 #endif
+
+    Mat mat = _src.getMat();
+    if( mat.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
+        return contourMoments(mat);
+
+    if( cn > 1 )
+        CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
+
+    CV_IPP_RUN(!binary, ipp_moments(mat, m), m);
+
+    if( binary || depth == CV_8U )
+        func = momentsInTile<uchar, int, int>;
+    else if( depth == CV_16U )
+        func = momentsInTile<ushort, int, int64>;
+    else if( depth == CV_16S )
+        func = momentsInTile<short, int, int64>;
+    else if( depth == CV_32F )
+        func = momentsInTile<float, double, double>;
+    else if( depth == CV_64F )
+        func = momentsInTile<double, double, double>;
+    else
+        CV_Error( CV_StsUnsupportedFormat, "" );
+
+    Mat src0(mat);
+
+    for( int y = 0; y < size.height; y += TILE_SIZE )
     {
-        Mat mat = _src.getMat();
-        if( mat.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
-            return contourMoments(mat);
+        Size tileSize;
+        tileSize.height = std::min(TILE_SIZE, size.height - y);
 
-        if( cn > 1 )
-            CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
-
-#if IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
-        CV_IPP_CHECK()
+        for( int x = 0; x < size.width; x += TILE_SIZE )
         {
-            if (!binary)
+            tileSize.width = std::min(TILE_SIZE, size.width - x);
+            Mat src(src0, cv::Rect(x, y, tileSize.width, tileSize.height));
+
+            if( binary )
             {
-                IppiSize roi = { mat.cols, mat.rows };
-                IppiMomentState_64f * moment = NULL;
-                // ippiMomentInitAlloc_64f, ippiMomentFree_64f are deprecated in 8.1, but there are not another way
-                // to initialize IppiMomentState_64f. When GetStateSize and Init functions will appear we have to
-                // change our code.
-                CV_SUPPRESS_DEPRECATED_START
-                if (ippiMomentInitAlloc_64f(&moment, ippAlgHintAccurate) >= 0)
-                {
-                    typedef IppStatus (CV_STDCALL * ippiMoments)(const void * pSrc, int srcStep, IppiSize roiSize, IppiMomentState_64f* pCtx);
-                    ippiMoments ippFunc =
-                        type == CV_8UC1 ? (ippiMoments)ippiMoments64f_8u_C1R :
-                        type == CV_16UC1 ? (ippiMoments)ippiMoments64f_16u_C1R :
-                        type == CV_32FC1? (ippiMoments)ippiMoments64f_32f_C1R : 0;
-
-                    if (ippFunc)
-                    {
-                        if (CV_INSTRUMENT_FUN_IPP(ippFunc,(mat.data, (int)mat.step, roi, moment)) >= 0)
-                        {
-                            IppiPoint point = { 0, 0 };
-                            ippiGetSpatialMoment_64f(moment, 0, 0, 0, point, &m.m00);
-                            ippiGetSpatialMoment_64f(moment, 1, 0, 0, point, &m.m10);
-                            ippiGetSpatialMoment_64f(moment, 0, 1, 0, point, &m.m01);
-
-                            ippiGetSpatialMoment_64f(moment, 2, 0, 0, point, &m.m20);
-                            ippiGetSpatialMoment_64f(moment, 1, 1, 0, point, &m.m11);
-                            ippiGetSpatialMoment_64f(moment, 0, 2, 0, point, &m.m02);
-
-                            ippiGetSpatialMoment_64f(moment, 3, 0, 0, point, &m.m30);
-                            ippiGetSpatialMoment_64f(moment, 2, 1, 0, point, &m.m21);
-                            ippiGetSpatialMoment_64f(moment, 1, 2, 0, point, &m.m12);
-                            ippiGetSpatialMoment_64f(moment, 0, 3, 0, point, &m.m03);
-                            ippiGetCentralMoment_64f(moment, 2, 0, 0, &m.mu20);
-                            ippiGetCentralMoment_64f(moment, 1, 1, 0, &m.mu11);
-                            ippiGetCentralMoment_64f(moment, 0, 2, 0, &m.mu02);
-                            ippiGetCentralMoment_64f(moment, 3, 0, 0, &m.mu30);
-                            ippiGetCentralMoment_64f(moment, 2, 1, 0, &m.mu21);
-                            ippiGetCentralMoment_64f(moment, 1, 2, 0, &m.mu12);
-                            ippiGetCentralMoment_64f(moment, 0, 3, 0, &m.mu03);
-                            ippiGetNormalizedCentralMoment_64f(moment, 2, 0, 0, &m.nu20);
-                            ippiGetNormalizedCentralMoment_64f(moment, 1, 1, 0, &m.nu11);
-                            ippiGetNormalizedCentralMoment_64f(moment, 0, 2, 0, &m.nu02);
-                            ippiGetNormalizedCentralMoment_64f(moment, 3, 0, 0, &m.nu30);
-                            ippiGetNormalizedCentralMoment_64f(moment, 2, 1, 0, &m.nu21);
-                            ippiGetNormalizedCentralMoment_64f(moment, 1, 2, 0, &m.nu12);
-                            ippiGetNormalizedCentralMoment_64f(moment, 0, 3, 0, &m.nu03);
-
-                            ippiMomentFree_64f(moment);
-                            CV_IMPL_ADD(CV_IMPL_IPP);
-                            return m;
-                        }
-                        setIppErrorStatus();
-                    }
-                    ippiMomentFree_64f(moment);
-                }
-                else
-                    setIppErrorStatus();
-                CV_SUPPRESS_DEPRECATED_END
+                cv::Mat tmp(tileSize, CV_8U, nzbuf);
+                cv::compare( src, 0, tmp, CV_CMP_NE );
+                src = tmp;
             }
-        }
-#endif
 
-        if( binary || depth == CV_8U )
-            func = momentsInTile<uchar, int, int>;
-        else if( depth == CV_16U )
-            func = momentsInTile<ushort, int, int64>;
-        else if( depth == CV_16S )
-            func = momentsInTile<short, int, int64>;
-        else if( depth == CV_32F )
-            func = momentsInTile<float, double, double>;
-        else if( depth == CV_64F )
-            func = momentsInTile<double, double, double>;
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
+            double mom[10];
+            func( src, mom );
 
-        Mat src0(mat);
-
-        for( int y = 0; y < size.height; y += TILE_SIZE )
-        {
-            Size tileSize;
-            tileSize.height = std::min(TILE_SIZE, size.height - y);
-
-            for( int x = 0; x < size.width; x += TILE_SIZE )
+            if(binary)
             {
-                tileSize.width = std::min(TILE_SIZE, size.width - x);
-                Mat src(src0, cv::Rect(x, y, tileSize.width, tileSize.height));
-
-                if( binary )
-                {
-                    cv::Mat tmp(tileSize, CV_8U, nzbuf);
-                    cv::compare( src, 0, tmp, CV_CMP_NE );
-                    src = tmp;
-                }
-
-                double mom[10];
-                func( src, mom );
-
-                if(binary)
-                {
-                    double s = 1./255;
-                    for( int k = 0; k < 10; k++ )
-                        mom[k] *= s;
-                }
-
-                double xm = x * mom[0], ym = y * mom[0];
-
-                // accumulate moments computed in each tile
-
-                // + m00 ( = m00' )
-                m.m00 += mom[0];
-
-                // + m10 ( = m10' + x*m00' )
-                m.m10 += mom[1] + xm;
-
-                // + m01 ( = m01' + y*m00' )
-                m.m01 += mom[2] + ym;
-
-                // + m20 ( = m20' + 2*x*m10' + x*x*m00' )
-                m.m20 += mom[3] + x * (mom[1] * 2 + xm);
-
-                // + m11 ( = m11' + x*m01' + y*m10' + x*y*m00' )
-                m.m11 += mom[4] + x * (mom[2] + ym) + y * mom[1];
-
-                // + m02 ( = m02' + 2*y*m01' + y*y*m00' )
-                m.m02 += mom[5] + y * (mom[2] * 2 + ym);
-
-                // + m30 ( = m30' + 3*x*m20' + 3*x*x*m10' + x*x*x*m00' )
-                m.m30 += mom[6] + x * (3. * mom[3] + x * (3. * mom[1] + xm));
-
-                // + m21 ( = m21' + x*(2*m11' + 2*y*m10' + x*m01' + x*y*m00') + y*m20')
-                m.m21 += mom[7] + x * (2 * (mom[4] + y * mom[1]) + x * (mom[2] + ym)) + y * mom[3];
-
-                // + m12 ( = m12' + y*(2*m11' + 2*x*m01' + y*m10' + x*y*m00') + x*m02')
-                m.m12 += mom[8] + y * (2 * (mom[4] + x * mom[2]) + y * (mom[1] + xm)) + x * mom[5];
-
-                // + m03 ( = m03' + 3*y*m02' + 3*y*y*m01' + y*y*y*m00' )
-                m.m03 += mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
+                double s = 1./255;
+                for( int k = 0; k < 10; k++ )
+                    mom[k] *= s;
             }
+
+            double xm = x * mom[0], ym = y * mom[0];
+
+            // accumulate moments computed in each tile
+
+            // + m00 ( = m00' )
+            m.m00 += mom[0];
+
+            // + m10 ( = m10' + x*m00' )
+            m.m10 += mom[1] + xm;
+
+            // + m01 ( = m01' + y*m00' )
+            m.m01 += mom[2] + ym;
+
+            // + m20 ( = m20' + 2*x*m10' + x*x*m00' )
+            m.m20 += mom[3] + x * (mom[1] * 2 + xm);
+
+            // + m11 ( = m11' + x*m01' + y*m10' + x*y*m00' )
+            m.m11 += mom[4] + x * (mom[2] + ym) + y * mom[1];
+
+            // + m02 ( = m02' + 2*y*m01' + y*y*m00' )
+            m.m02 += mom[5] + y * (mom[2] * 2 + ym);
+
+            // + m30 ( = m30' + 3*x*m20' + 3*x*x*m10' + x*x*x*m00' )
+            m.m30 += mom[6] + x * (3. * mom[3] + x * (3. * mom[1] + xm));
+
+            // + m21 ( = m21' + x*(2*m11' + 2*y*m10' + x*m01' + x*y*m00') + y*m20')
+            m.m21 += mom[7] + x * (2 * (mom[4] + y * mom[1]) + x * (mom[2] + ym)) + y * mom[3];
+
+            // + m12 ( = m12' + y*(2*m11' + 2*x*m01' + y*m10' + x*y*m00') + x*m02')
+            m.m12 += mom[8] + y * (2 * (mom[4] + x * mom[2]) + y * (mom[1] + xm)) + x * mom[5];
+
+            // + m03 ( = m03' + 3*y*m02' + 3*y*y*m01' + y*y*y*m00' )
+            m.m03 += mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
         }
     }
 

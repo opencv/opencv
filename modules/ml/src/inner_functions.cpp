@@ -50,6 +50,10 @@ ParamGrid::ParamGrid(double _minVal, double _maxVal, double _logStep)
     logStep = std::max(_logStep, 1.);
 }
 
+Ptr<ParamGrid> ParamGrid::create(double minval, double maxval, double logstep) {
+  return makePtr<ParamGrid>(minval, maxval, logstep);
+}
+
 bool StatModel::empty() const { return !isTrained(); }
 
 int StatModel::getVarCount() const { return 0; }
