@@ -405,58 +405,43 @@ static bool ipp_integral(
     const uchar* src, size_t srcstep,
     uchar* sum, size_t sumstep,
     uchar* sqsum, size_t sqsumstep,
+    uchar* tilted, size_t tstep,
     int width, int height, int cn)
 {
     CV_INSTRUMENT_REGION_IPP()
 
-#if IPP_VERSION_X100 != 900 // Disabled on ICV due invalid results
-    if( sdepth <= 0 )
-        sdepth = depth == CV_8U ? CV_32S : CV_64F;
-    if ( sqdepth <= 0 )
-         sqdepth = CV_64F;
-    sdepth = CV_MAT_DEPTH(sdepth), sqdepth = CV_MAT_DEPTH(sqdepth);
+    IppiSize size = {width, height};
 
-    if( ( depth == CV_8U ) && ( sdepth == CV_32F || sdepth == CV_32S ) && ( !sqsum || sqdepth == CV_64F ) && ( cn == 1 ) )
+    if(cn > 1)
+        return false;
+    if(tilted)
     {
-        IppStatus status = ippStsErr;
-        IppiSize srcRoiSize = ippiSize( width, height );
-        if( sdepth == CV_32F )
-        {
-            if( sqsum )
-            {
-                status = CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32f64f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, (Ipp64f*)sqsum, (int)sqsumstep, srcRoiSize, 0, 0);
-            }
-            else
-            {
-                status = CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, srcRoiSize, 0);
-            }
-        }
-        else if( sdepth == CV_32S )
-        {
-            if( sqsum )
-            {
-                status = CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32s64f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, (Ipp64f*)sqsum, (int)sqsumstep, srcRoiSize, 0, 0);
-            }
-            else
-            {
-                status = CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32s_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, srcRoiSize, 0);
-            }
-        }
-        if (0 <= status)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP);
-            return true;
-        }
+        CV_UNUSED(tstep);
+        return false;
     }
-#else
-    CV_UNUSED(depth); CV_UNUSED(sdepth); CV_UNUSED(sqdepth);
-    CV_UNUSED(src); CV_UNUSED(srcstep);
-    CV_UNUSED(sum); CV_UNUSED(sumstep);
-    CV_UNUSED(sqsum); CV_UNUSED(sqsumstep);
-    CV_UNUSED(tilted); CV_UNUSED(tstep);
-    CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(cn);
-#endif
-    return false;
+
+    if(!sqsum)
+    {
+        if(depth == CV_8U && sdepth == CV_32S)
+            return CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32s_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, size, 0) >= 0;
+        else if(depth == CV_8UC1 && sdepth == CV_32F)
+            return CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, size, 0) >= 0;
+        else if(depth == CV_32FC1 && sdepth == CV_32F)
+            return CV_INSTRUMENT_FUN_IPP(ippiIntegral_32f_C1R, (const Ipp32f*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, size) >= 0;
+        else
+            return false;
+    }
+    else
+    {
+        if(depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32S)
+            return CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32s_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, (Ipp32s*)sqsum, (int)sqsumstep, size, 0, 0) >= 0;
+        else if(depth == CV_8U && sdepth == CV_32S && sqdepth == CV_64F)
+            return CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32s64f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, (Ipp64f*)sqsum, (int)sqsumstep, size, 0, 0) >= 0;
+        else if(depth == CV_8U && sdepth == CV_32F && sqdepth == CV_64F)
+            return CV_INSTRUMENT_FUN_IPP(ippiSqrIntegral_8u32f64f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, (Ipp64f*)sqsum, (int)sqsumstep, size, 0, 0) >= 0;
+        else
+            return false;
+    }
 }
 }
 #endif
@@ -471,12 +456,7 @@ void integral(int depth, int sdepth, int sqdepth,
               int width, int height, int cn)
 {
     CALL_HAL(integral, cv_hal_integral, depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn);
-    CV_IPP_RUN(( depth == CV_8U )
-               && ( sdepth == CV_32F || sdepth == CV_32S )
-               && ( !tilted )
-               && ( !sqsum || sqdepth == CV_64F )
-               && ( cn == 1 ),
-               ipp_integral(depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, width, height, cn));
+    CV_IPP_RUN_FAST(ipp_integral(depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn));
 
 #define ONE_CALL(A, B, C) integral_<A, B, C>((const A*)src, srcstep, (B*)sum, sumstep, (C*)sqsum, sqsumstep, (B*)tilted, tstep, width, height, cn)
 
