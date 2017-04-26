@@ -3687,7 +3687,7 @@ data type.
 is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \times (H-h+1)\f$ .
 @param method Parameter specifying the comparison method, see cv::TemplateMatchModes
 @param mask Mask of searched template. It must have the same datatype and size with templ. It is
-not set by default.
+not set by default. Currently, only the TM_SQDIFF and TM_CCORR_NORMED methods are supported.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method, InputArray mask = noArray() );
