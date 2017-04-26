@@ -3183,4 +3183,50 @@ TEST(Core_SoftFloat, log32)
     }
 }
 
+//TODO: asserts from GTEST
+TEST(Core_SoftFloat, log64)
+{
+    using namespace cv::softfloat;
+
+    vector<double> inputs, outGood;
+    RNG rng(0);
+    inputs.push_back(0);
+    inputs.push_back(1);
+    inputs.push_back(std::exp(1));
+    inputs.push_back(DBL_MIN);
+    inputs.push_back(DBL_MAX);
+    for(int i = 0; i < 50000; i++)
+    {
+        Cv64suf x;
+        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
+        if(cvIsNaN(x.f) || cvIsInf(x.f))
+            // reset LSB of exponent
+            x.u = x.u ^ (1LL << 52);
+        inputs.push_back(abs(x.f));
+    }
+
+    cv::log(inputs, outGood);
+
+    for(size_t i = 0; i < inputs.size(); i++)
+    {
+        double x = inputs[i];
+        Cv64suf ugood, ucheck;
+        ugood.f = outGood[i];
+        ucheck.f = f64_to_double(f64_log(double_to_f64(x)));
+        //ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
+        assert(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
+        bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
+        //ASSERT_EQ(infgood, infcheck);
+        assert(infgood == infcheck);
+        double diff = abs(ugood.f - ucheck.f);
+        if(!infgood && !infcheck && diff > DBL_EPSILON)
+        {
+            //ASSERT_LT(diff/max(ugood.f, ucheck.f), 2*DBL_EPSILON);
+            assert(diff/max(ugood.f, ucheck.f) < 2*DBL_EPSILON);
+        }
+    }
+}
+
+//TODO: add test for f32_cbrt
+
 /* End of file. */

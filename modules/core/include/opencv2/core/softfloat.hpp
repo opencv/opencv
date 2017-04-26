@@ -104,48 +104,42 @@ typedef struct { uint64_t v; } float64_t;
 | Software floating-point underflow tininess-detection mode.
 *----------------------------------------------------------------------------*/
 enum {
-    softfloat_tininess_beforeRounding = 0,
-    softfloat_tininess_afterRounding  = 1
+    tininess_beforeRounding = 0,
+    tininess_afterRounding  = 1
 };
 //fixed to make softfloat code stateless
-const uint_fast8_t softfloat_detectTininess = softfloat_tininess_afterRounding;
+const uint_fast8_t globalDetectTininess = tininess_afterRounding;
 
 /*----------------------------------------------------------------------------
 | Software floating-point rounding mode.
 *----------------------------------------------------------------------------*/
 enum {
-    softfloat_round_near_even   = 0,
-    softfloat_round_minMag      = 1,
-    softfloat_round_min         = 2,
-    softfloat_round_max         = 3,
-    softfloat_round_near_maxMag = 4,
-    softfloat_round_odd         = 5
+    round_near_even   = 0,
+    round_minMag      = 1,
+    round_min         = 2,
+    round_max         = 3,
+    round_near_maxMag = 4,
+    round_odd         = 5
 };
 //fixed to make softfloat code stateless
-const uint_fast8_t softfloat_roundingMode = softfloat_round_near_even;
+const uint_fast8_t globalRoundingMode = round_near_even;
 
 /*----------------------------------------------------------------------------
 | Software floating-point exception flags.
 *----------------------------------------------------------------------------*/
 enum {
-    softfloat_flag_inexact   =  1,
-    softfloat_flag_underflow =  2,
-    softfloat_flag_overflow  =  4,
-    softfloat_flag_infinite  =  8,
-    softfloat_flag_invalid   = 16
+    flag_inexact   =  1,
+    flag_underflow =  2,
+    flag_overflow  =  4,
+    flag_infinite  =  8,
+    flag_invalid   = 16
 };
 
 // Disabled to make softfloat code stateless
 // The user has to check values manually with *_isSignalingNaN() functions
-/*----------------------------------------------------------------------------
-| Raises the exceptions specified by `flags'.  Floating-point traps can be
-| defined here if desired.  It is currently not possible for such a trap
-| to substitute a result value.  If traps are not implemented, this routine
-| should be simply `softfloat_exceptionFlags |= flags;'.
-*----------------------------------------------------------------------------*/
-inline void softfloat_raiseFlags( uint_fast8_t /* flags */)
+inline void raiseFlags( uint_fast8_t /* flags */)
 {
-    //softfloat_exceptionFlags |= flags;
+    //exceptionFlags |= flags;
 }
 
 /*----------------------------------------------------------------------------
