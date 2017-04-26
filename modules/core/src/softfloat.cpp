@@ -4801,61 +4801,26 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
 #define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
 static const float64_t ln_2 = double_to_f64(0.69314718055994530941723212145818);
 
-//TODO: rewrite it properly
-
 float32_t f32_log(float32_t x)
 {
-    static const float32_t shift[] = { float_to_f32(0), float_to_f32(-1.f/512) };
-    static const float32_t
-    A0 = float_to_f32(0.3333333333333333333333333f),
-    A1 = float_to_f32(-0.5f),
-    A2 = float_to_f32(1.f);
-
     float32_t buf;
-    float64_t y0;
+    buf.v = packToF32UI(0, 127, x.v & LOGTAB_MASK2_32F);
+    int h0 = (x.v >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
 
-    int h0 = x.v;
-    y0 = i32_to_f64(expF32UI(h0) - 127) * ln_2;
-
-    //TODO: from this place, ooooohhh
-
-    //#define LOGTAB_MASK2_32F    ((1 << (23 - LOGTAB_SCALE)) - 1)
-    buf.v = (h0 & LOGTAB_MASK2_32F) | (127 << 23);
-    h0 = (h0 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-    float32_t x0;
     float64_t tab0 = double_to_f64(icvLogTab[h0]);
     float64_t tab1 = double_to_f64(icvLogTab[h0+1]);
-    y0 += tab0;
 
-    x0 = (buf - i32_to_f32(1)) * f64_to_f32(tab1);
-    x0 += shift[h0 == 510];
-    y0 += f32_to_f64(((A0*(x0) + A1)*(x0) + A2)*(x0));
+    float64_t x0 = (f32_to_f64(buf) - i32_to_f64(1)) * tab1;
+    //icvLogTab size is 512
+    if(h0 == 510) x0 += double_to_f64(-1./512);
 
-    float32_t y = f64_to_f32(y0);
-    return y;
+    float64_t y0 = i32_to_f64(expF32UI(x.v) - 127) * ln_2 + tab0 +
+                   x0*x0*x0/i32_to_f64(3) - x0*x0/i32_to_f64(2) + x0;
+
+    return f64_to_f32(y0);
 }
 
 #if 0
-
-
-void log32f( const float *_x, float *y, int n )
-{
-
-
-
-
-    int i = 0;
-    Sf32suf buf[4];
-    const int* x = (const int*)_x;
-
-    for( ; i < n; i++ )
-    {
-
-
-
-    }
-}
 
 void log64f( const double *x, double *y, int n )
 {
@@ -4902,6 +4867,7 @@ float32_t f32_log( float32_t );
 float64_t f64_log( float64_t );
 float32_t f32_pow( float32_t, float32_t );
 float64_t f64_pow( float64_t, float64_t );
+float32_t f32_cbrt( float32_t );
 #endif
 }
 }

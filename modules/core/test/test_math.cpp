@@ -3121,6 +3121,7 @@ TEST(Core_SoftFloat, exp64)
         Cv64suf x;
         x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
         if(cvIsNaN(x.f) || cvIsInf(x.f))
+            //reset LSB of exponent
             x.u = x.u ^ (1LL << 52);
         inputs.push_back(x.f);
     }
@@ -3150,26 +3151,35 @@ TEST(Core_SoftFloat, log32)
 
     vector<float> inputs, outGood;
     RNG rng(0);
-    inputs.push_back(-1);
     inputs.push_back(0);
     inputs.push_back(1);
     inputs.push_back(std::exp(1));
     inputs.push_back(FLT_MIN);
     inputs.push_back(FLT_MAX);
-    for(int i = 0; i < 5000; i++)
+    for(int i = 0; i < 50000; i++)
     {
-        float x = (float)rng*FLT_MAX;
-        inputs.push_back(x);
+        Cv32suf x;
+        x.u = rng();
+        if(cvIsNaN(x.f) || cvIsInf(x.f))
+            x.fmt.exponent ^= 1;
+        inputs.push_back(abs(x.f));
     }
     cv::log(inputs, outGood);
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
         float x = inputs[i];
-        float good = outGood[i];
-        float toCheck = f32_to_float(f32_log(float_to_f32(x)));
-        //cout << x << " " << good << " " << toCheck << endl;
-        //ASSERT_EQ(good, toCheck);
+        Cv32suf ugood, ucheck;
+        ugood.f = outGood[i];
+        ucheck.f = f32_to_float(f32_log(float_to_f32(x)));
+        ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
+        bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
+        ASSERT_EQ(infgood, infcheck);
+        float diff = abs(ugood.f - ucheck.f);
+        if(!infgood && !infcheck && diff > FLT_EPSILON)
+        {
+            ASSERT_LT(diff/max(ugood.f, ucheck.f), 2*FLT_EPSILON);
+        }
     }
 }
 
