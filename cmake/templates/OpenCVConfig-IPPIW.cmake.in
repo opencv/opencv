@@ -1,0 +1,7 @@
+if(NOT TARGET ippiw)
+  add_library(ippiw STATIC IMPORTED)
+  set_target_properties(ippiw PROPERTIES
+    IMPORTED_LINK_INTERFACE_LIBRARIES ""
+    IMPORTED_LOCATION "${OpenCV_INSTALL_PATH}/@IPPIW_INSTALL_PATH_RELATIVE_CONFIGCMAKE@"
+  )
+endif()
