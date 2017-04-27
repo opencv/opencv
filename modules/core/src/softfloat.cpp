@@ -4815,38 +4815,32 @@ float32_t f32_log(float32_t x)
 //TODO: this
 float64_t f64_log(float64_t x)
 {
-    static const double shift[] = { 0, -1./512 };
-    static const double
-    A7 = 1.0,
-    A6 = -0.5,
-    A5 = 0.333333333333333314829616256247390992939472198486328125,
-    A4 = -0.25,
-    A3 = 0.2,
-    A2 = -0.1666666666666666574148081281236954964697360992431640625,
-    A1 = 0.1428571428571428769682682968777953647077083587646484375,
-    A0 = -0.125;
+    static const float64_t
+    A7 = double_to_f64(1.0),
+    A6 = double_to_f64(-0.5),
+    A5 = double_to_f64(0.333333333333333314829616256247390992939472198486328125),
+    A4 = double_to_f64(-0.25),
+    A3 = double_to_f64(0.2),
+    A2 = double_to_f64(-0.1666666666666666574148081281236954964697360992431640625),
+    A1 = double_to_f64(0.1428571428571428769682682968777953647077083587646484375),
+    A0 = double_to_f64(-0.125);
 
-#undef LOGPOLY
-#define LOGPOLY(x,k) ((x)+=shift[k], xq = (x)*(x),\
-(((A0*xq + A2)*xq + A4)*xq + A6)*xq + \
-(((A1*xq + A3)*xq + A5)*xq + A7)*(x))
+    float64_t buf, xq;
+    float64_t x0;
 
-    DBLINT buf;
-    DBLINT* X = (DBLINT*)&x;
+    buf.v = packToF64UI(0, 1023, x.v & ((1LL << (52 - LOGTAB_SCALE)) - 1));
+    int h0 = (x.v >> (52 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
 
-    int h0 = X->i.hi;
-    double xq;
-    double x0, y0 = (((h0 >> 20) & 0x7ff) - 1023) * f64_to_double(ln_2);
+    float64_t tab0 = double_to_f64(icvLogTab[h0]);
+    float64_t tab1 = double_to_f64(icvLogTab[h0 + 1]);
 
-    buf.i.hi = (h0 & LOGTAB_MASK2) | (1023 << 20);
-    buf.i.lo = X->i.lo;
-    h0 = (h0 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
+    x0 = (buf - i32_to_f64(1)) * tab1;
+    //icvLogTab size is 512
+    if(h0 == 510) x0 += double_to_f64(-1./512);
+    xq = x0*x0;
 
-    y0 += icvLogTab[h0];
-    x0 = LOGTAB_TRANSLATE( buf.d, h0 );
-    y0 += LOGPOLY( x0, h0 == 510 );
-
-    return double_to_f64(y0);
+    return i32_to_f64( expF64UI(x.v) - 1023) * (ln_2) + tab0 +
+           (((A0*xq + A2)*xq + A4)*xq + A6)*xq + (((A1*xq + A3)*xq + A5)*xq + A7)*x0;
 }
 
 //TODO: this
