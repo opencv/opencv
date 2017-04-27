@@ -3101,7 +3101,7 @@ TEST(Core_SoftFloat, exp32)
         float diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > FLT_EPSILON)
         {
-            ASSERT_LT(diff/max(ugood.f, ucheck.f), 2*FLT_EPSILON);
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*FLT_EPSILON);
         }
     }
 }
@@ -3140,7 +3140,7 @@ TEST(Core_SoftFloat, exp64)
         double diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > DBL_EPSILON)
         {
-            ASSERT_LT(diff/max(ugood.f, ucheck.f), 2*DBL_EPSILON);
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*DBL_EPSILON);
         }
     }
 }
@@ -3178,12 +3178,11 @@ TEST(Core_SoftFloat, log32)
         float diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > FLT_EPSILON)
         {
-            ASSERT_LT(diff/max(ugood.f, ucheck.f), 2*FLT_EPSILON);
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*FLT_EPSILON);
         }
     }
 }
 
-//TODO: asserts from GTEST
 TEST(Core_SoftFloat, log64)
 {
     using namespace cv::softfloat;
@@ -3213,20 +3212,51 @@ TEST(Core_SoftFloat, log64)
         Cv64suf ugood, ucheck;
         ugood.f = outGood[i];
         ucheck.f = f64_to_double(f64_log(double_to_f64(x)));
-        //ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        assert(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
+        ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
         bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
-        //ASSERT_EQ(infgood, infcheck);
-        assert(infgood == infcheck);
+        ASSERT_EQ(infgood, infcheck);
         double diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > DBL_EPSILON)
         {
-            //ASSERT_LT(diff/max(ugood.f, ucheck.f), 2*DBL_EPSILON);
-            assert(diff/max(ugood.f, ucheck.f) < 2*DBL_EPSILON);
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*DBL_EPSILON);
         }
     }
 }
 
-//TODO: add test for f32_cbrt
+TEST(Core_SoftFloat, cbrt32)
+{
+    using namespace cv::softfloat;
+
+    vector<float> inputs;
+    RNG rng(0);
+    inputs.push_back(0);
+    inputs.push_back(1);
+    inputs.push_back(FLT_MAX);
+    inputs.push_back(FLT_MIN);
+    for(int i = 0; i < 50000; i++)
+    {
+        Cv32suf x;
+        x.u = rng();
+        if(cvIsNaN(x.f) || cvIsInf(x.f))
+            x.fmt.exponent ^= 1;
+        inputs.push_back(x.f);
+    }
+
+    for(size_t i = 0; i < inputs.size(); i++)
+    {
+        float x = inputs[i];
+        Cv32suf ugood, ucheck;
+        ugood.f = cv::cubeRoot(x);
+        ucheck.f = f32_to_float(f32_cbrt(float_to_f32(x)));
+        ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
+        bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
+        ASSERT_EQ(infgood, infcheck);
+        float diff = abs(ugood.f - ucheck.f);
+        if(!infgood && !infcheck && diff > FLT_EPSILON)
+        {
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*FLT_EPSILON);
+        }
+    }
+}
 
 /* End of file. */

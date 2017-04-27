@@ -4850,40 +4850,33 @@ float64_t f64_log(float64_t x)
 \* ************************************************************************** */
 float32_t f32_cbrt(float32_t x)
 {
-    float fr;
-    Cv32suf v, m;
-    int ix, s;
-    int ex, shx;
-
-    v.f = f32_to_float(x);
-    ix = v.i & 0x7fffffff;
-    s = v.i & 0x80000000;
-    ex = (ix >> 23) - 127;
-    shx = ex % 3;
+    int s = signF32UI(x.v);
+    int ex = expF32UI(x.v) - 127;
+    int shx = ex % 3;
     shx -= shx >= 0 ? 3 : 0;
-    ex = (ex - shx) / 3; /* exponent of cube root */
-    v.i = (ix & ((1<<23)-1)) | ((shx + 127)<<23);
-    fr = v.f;
+    ex = (ex - shx) / 3 - 1; /* exponent of cube root */
+    float32_t fr = { packToF32UI(0, shx + 127, fracF32UI(x.v)) };
+    float64_t fr0 = f32_to_f64(fr);
 
     /* 0.125 <= fr < 1.0 */
     /* Use quartic rational polynomial with error < 2^(-24) */
-    fr = (float)(((((45.2548339756803022511987494 * fr +
-    192.2798368355061050458134625) * fr +
-    119.1654824285581628956914143) * fr +
-    13.43250139086239872172837314) * fr +
-    0.1636161226585754240958355063)/
-    ((((14.80884093219134573786480845 * fr +
-    151.9714051044435648658557668) * fr +
-    168.5254414101568283957668343) * fr +
-    33.9905941350215598754191872) * fr +
-    1.0));
-
+    const float64_t A1  = double_to_f64(45.2548339756803022511987494);
+    const float64_t A2  = double_to_f64(192.2798368355061050458134625);
+    const float64_t A3  = double_to_f64(119.1654824285581628956914143);
+    const float64_t A4  = double_to_f64(13.43250139086239872172837314);
+    const float64_t A5  = double_to_f64(0.1636161226585754240958355063);
+    const float64_t A6  = double_to_f64(14.80884093219134573786480845);
+    const float64_t A7  = double_to_f64(151.9714051044435648658557668);
+    const float64_t A8  = double_to_f64(168.5254414101568283957668343);
+    const float64_t A9  = double_to_f64(33.9905941350215598754191872);
+    const float64_t A10 = double_to_f64(1.0);
+    fr = f64_to_f32(((((A1 * fr0 + A2) * fr0 + A3) * fr0 + A4) * fr0 + A5)/
+                    ((((A6 * fr0 + A7) * fr0 + A8) * fr0 + A9) * fr0 + A10));
     /* fr *= 2^ex * sign */
-    m.f = f32_to_float(x);
-    v.f = fr;
-    // m.i * 2 != 0 checks for "+0" and "-0"
-    v.i = (v.i + (ex << 23) + s) & (m.i*2 != 0 ? -1 : 0);
-    return float_to_f32(v.f);
+
+    // checks for "+0" and "-0", reset sign bit
+    float32_t y = { (x.v & ((1u << 31) - 1)) ? packToF32UI(s, ex+127, fracF32UI(fr.v)) : 0 };
+    return y;
 }
 
 //TODO: this and checks of args
