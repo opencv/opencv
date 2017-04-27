@@ -797,8 +797,7 @@ TEST(Calib3d_StereoSGBM_HH4, regression)
         Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4);
         sgbm->compute( leftImg, rightImg, leftDisp);
         CV_Assert( leftDisp.type() == CV_16SC1 );
-        leftDisp.convertTo(toCheck, CV_16UC1);
-//        imwrite("/home/q/Work/GitVault/disp2_hh4.png",toCheck);
+        leftDisp.convertTo(toCheck, CV_16UC1,1,16);
     }
     Mat diff;
     absdiff(toCheck, testData,diff);
