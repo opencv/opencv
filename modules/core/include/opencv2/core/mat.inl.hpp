@@ -78,13 +78,13 @@ _InputArray::_InputArray(const std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _N> inline
-_InputArray::_InputArray(const std::array<_Tp, _N>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_READ, arr.data(), Size(1, _N)); }
+template<typename _Tp, std::size_t _Nm> inline
+_InputArray::_InputArray(const std::array<_Tp, _Nm>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_READ, arr.data(), Size(1, _Nm)); }
 
-template<std::size_t _N> inline
-_InputArray::_InputArray(const std::array<Mat, _N>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_READ, arr.data(), Size(1, _N)); }
+template<std::size_t _Nm> inline
+_InputArray::_InputArray(const std::array<Mat, _Nm>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_READ, arr.data(), Size(1, _Nm)); }
 #endif
 
 inline
@@ -162,13 +162,13 @@ _OutputArray::_OutputArray(std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _N> inline
-_OutputArray::_OutputArray(std::array<_Tp, _N>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _N)); }
+template<typename _Tp, std::size_t _Nm> inline
+_OutputArray::_OutputArray(std::array<_Tp, _Nm>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
-template<std::size_t _N> inline
-_OutputArray::_OutputArray(std::array<Mat, _N>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _N)); }
+template<std::size_t _Nm> inline
+_OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 #endif
 
 inline
@@ -200,13 +200,13 @@ _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _N> inline
-_OutputArray::_OutputArray(const std::array<_Tp, _N>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _N)); }
+template<typename _Tp, std::size_t _Nm> inline
+_OutputArray::_OutputArray(const std::array<_Tp, _Nm>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
-template<std::size_t _N> inline
-_OutputArray::_OutputArray(const std::array<Mat, _N>& arr)
-{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _N)); }
+template<std::size_t _Nm> inline
+_OutputArray::_OutputArray(const std::array<Mat, _Nm>& arr)
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 #endif
 
 template<typename _Tp> inline
@@ -277,13 +277,13 @@ _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _N> inline
-_InputOutputArray::_InputOutputArray(std::array<_Tp, _N>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _N)); }
+template<typename _Tp, std::size_t _Nm> inline
+_InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
-template<std::size_t _N> inline
-_InputOutputArray::_InputOutputArray(std::array<Mat, _N>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _N)); }
+template<std::size_t _Nm> inline
+_InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 #endif
 
 inline _InputOutputArray::_InputOutputArray(std::vector<bool>&)
@@ -314,13 +314,13 @@ _InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _N> inline
-_InputOutputArray::_InputOutputArray(const std::array<_Tp, _N>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _N)); }
+template<typename _Tp, std::size_t _Nm> inline
+_InputOutputArray::_InputOutputArray(const std::array<_Tp, _Nm>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
-template<std::size_t _N> inline
-_InputOutputArray::_InputOutputArray(const std::array<Mat, _N>& arr)
-{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _N)); }
+template<std::size_t _Nm> inline
+_InputOutputArray::_InputOutputArray(const std::array<Mat, _Nm>& arr)
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 #endif
 
 template<typename _Tp> inline
@@ -558,8 +558,8 @@ Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
 }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _N> inline
-Mat::Mat(const std::array<_Tp, _N>& arr, bool copyData)
+template<typename _Tp, std::size_t _Nm> inline
+Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)arr.size()),
       cols(1), data(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
@@ -1197,10 +1197,10 @@ Mat::operator std::vector<_Tp>() const
 }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _N> inline
-Mat::operator std::array<_Tp, _N>() const
+template<typename _Tp, std::size_t _Nm> inline
+Mat::operator std::array<_Tp, _Nm>() const
 {
-    std::array<_Tp, _N> v;
+    std::array<_Tp, _Nm> v;
     copyTo(v);
     return v;
 }
@@ -1561,8 +1561,8 @@ Mat_<_Tp>::Mat_(const std::vector<_Tp>& vec, bool copyData)
 {}
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp> template<std::size_t _N> inline
-Mat_<_Tp>::Mat_(const std::array<_Tp, _N>& arr, bool copyData)
+template<typename _Tp> template<std::size_t _Nm> inline
+Mat_<_Tp>::Mat_(const std::array<_Tp, _Nm>& arr, bool copyData)
     : Mat(arr, copyData)
 {}
 #endif
@@ -1845,10 +1845,10 @@ Mat_<_Tp>::operator std::vector<_Tp>() const
 }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp> template<std::size_t _N> inline
-Mat_<_Tp>::operator std::array<_Tp, _N>() const
+template<typename _Tp> template<std::size_t _Nm> inline
+Mat_<_Tp>::operator std::array<_Tp, _Nm>() const
 {
-    std::array<_Tp, _N> a;
+    std::array<_Tp, _Nm> a;
     copyTo(a);
     return a;
 }
