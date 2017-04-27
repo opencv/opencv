@@ -206,6 +206,23 @@ bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>");
 template<typename T> static
 PyObject* pyopencv_from(const T& src);
 
+template <typename T> static
+bool pyopencv_to_ptr(PyObject *o, T* p, const char *name = "<unknown>")
+{
+    if (!o || o == Py_None)
+        return true;
+    p = new T();
+    return pyopencv_to(o, *p, name);
+}
+
+template<typename T> static
+PyObject* pyopencv_from_ptr(const T* p)
+{
+    if (!p)
+        Py_RETURN_NONE;
+    return pyopencv_from(*p);
+}
+
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
 // special case, when the convertor needs full ArgInfo structure
@@ -1332,18 +1349,13 @@ PyObject* pyopencv_from(const Moments& m)
 template<typename T>
 PyObject* pyopencv_from(const cv::Ptr<T>& p)
 {
-    if (!p)
-        Py_RETURN_NONE;
-    return pyopencv_from(*p);
+    return pyopencv_from_ptr(p.get());
 }
 
 template <typename T>
 bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
 {
-    if (!o || o == Py_None)
-        return true;
-    p = makePtr<T>();
-    return pyopencv_to(o, *p, name);
+    return pyopencv_to_ptr(o, p.get(), name);
 }
 
 #include "pyopencv_custom_headers.h"
