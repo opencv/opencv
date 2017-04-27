@@ -288,7 +288,7 @@ namespace cv{
                 int r = range.start;
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r * imgLabels_.cols + 1) / 2 + 1);
+                LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -615,6 +615,10 @@ namespace cv{
 
                 //merge labels of different chunks
                 mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels);
+
+                for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
+                    flattenL(P, int((i + 1) / 2) * int((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
+                }
             }
             else{
                 //First scan, each thread works with chunk of img.rows/nThreads rows
@@ -623,10 +627,10 @@ namespace cv{
 
                 //merge labels of different chunks
                 mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels);
-            }
-
-            for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                flattenL(P, (i * w + 1) / 2 + 1, chunksSizeAndLabels[i + 1], nLabels);
+                
+                for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
+                    flattenL(P, int(i * w + 1) / 2 + 1, chunksSizeAndLabels[i + 1], nLabels);
+                }
             }
 
             //Array for statistics dataof threads
@@ -842,7 +846,7 @@ namespace cv{
 
                 chunksSizeAndLabels_[r] = range.end + (range.end % 2);
 
-                LabelT label = LabelT((r + 1) * (imgLabels_.cols + 1) / 4);
+                LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
 
                 const LabelT firstLabel = label;
                 const int h = img_.rows, w = img_.cols;
@@ -2540,7 +2544,7 @@ namespace cv{
             //0 0 0 0 0...
             //1 0 1 0 1...
             //............
-            const size_t Plength = ((size_t(h) + 1) * (size_t(w) + 1)) / 4 + 1;
+            const size_t Plength = size_t(((h + 1) / 2) * size_t((w + 1) / 2)) + 1;
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
@@ -2562,7 +2566,7 @@ namespace cv{
 
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                flattenL(P, (i + 1) * (w + 1) / 4, chunksSizeAndLabels[i + 1], nLabels);
+                flattenL(P, LabelT((i + 1) / 2) * LabelT((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics data
@@ -2602,7 +2606,7 @@ namespace cv{
             //0 0 0 0 0...
             //1 0 1 0 1...
             //............
-            const size_t Plength = ((size_t(h) + 1) * (size_t(w) + 1)) / 4 + 1;
+            const size_t Plength = size_t(((h + 1) / 2) * size_t((w + 1) / 2)) + 1;
 
             LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT) *Plength);
             P[0] = 0;

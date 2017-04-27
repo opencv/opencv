@@ -188,7 +188,7 @@ public:
 
     A shadow is detected if pixel is a darker version of the background. The shadow threshold (Tau in
     the paper) is a threshold defining how much darker the shadow can be. Tau= 0.5 means that if a pixel
-    is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiarra,
+    is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiara,
     *Detecting Moving Shadows...*, IEEE PAMI,2003.
      */
     CV_WRAP virtual double getShadowThreshold() const = 0;
@@ -289,7 +289,7 @@ public:
 
     A shadow is detected if pixel is a darker version of the background. The shadow threshold (Tau in
     the paper) is a threshold defining how much darker the shadow can be. Tau= 0.5 means that if a pixel
-    is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiarra,
+    is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiara,
     *Detecting Moving Shadows...*, IEEE PAMI,2003.
      */
     CV_WRAP virtual double getShadowThreshold() const = 0;
