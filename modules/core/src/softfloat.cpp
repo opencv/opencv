@@ -937,7 +937,6 @@ float32_t f32_mulAdd( float32_t a, float32_t b, float32_t c )
     uC.f = c;
     uiC = uC.ui;
     return softfloat_mulAddF32( uiA, uiB, uiC, 0 );
-
 }
 
 float32_t f32_mul( float32_t a, float32_t b )
@@ -1031,7 +1030,6 @@ float32_t f32_mul( float32_t a, float32_t b )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 float32_t f32_rem( float32_t a, float32_t b )
@@ -1156,7 +1154,6 @@ float32_t f32_rem( float32_t a, float32_t b )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
@@ -1225,7 +1222,6 @@ float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 float32_t f32_sqrt( float32_t a )
@@ -1303,7 +1299,6 @@ float32_t f32_sqrt( float32_t a )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 float32_t f32_sub( float32_t a, float32_t b )
@@ -1371,7 +1366,6 @@ float64_t f32_to_f64( float32_t a )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 int_fast32_t f32_to_i32( float32_t a, uint_fast8_t roundingMode, bool exact )
@@ -1412,7 +1406,6 @@ int_fast32_t f32_to_i32( float32_t a, uint_fast8_t roundingMode, bool exact )
     shiftDist = 0xAA - exp;
     if ( 0 < shiftDist ) sig64 = softfloat_shiftRightJam64( sig64, shiftDist );
     return softfloat_roundToI32( sign, sig64, roundingMode, exact );
-
 }
 
 int_fast32_t f32_to_i32_r_minMag( float32_t a, bool exact )
@@ -1458,7 +1451,6 @@ int_fast32_t f32_to_i32_r_minMag( float32_t a, bool exact )
         raiseFlags(flag_inexact);
     }
     return sign ? -absZ : absZ;
-
 }
 
 int_fast64_t f32_to_i64( float32_t a, uint_fast8_t roundingMode, bool exact )
@@ -1549,7 +1541,6 @@ int_fast64_t f32_to_i64_r_minMag( float32_t a, bool exact )
         raiseFlags(flag_inexact);
     }
     return sign ? -absZ : absZ;
-
 }
 
 uint_fast32_t f32_to_ui32( float32_t a, uint_fast8_t roundingMode, bool exact )
@@ -1590,7 +1581,6 @@ uint_fast32_t f32_to_ui32( float32_t a, uint_fast8_t roundingMode, bool exact )
     shiftDist = 0xAA - exp;
     if ( 0 < shiftDist ) sig64 = softfloat_shiftRightJam64( sig64, shiftDist );
     return softfloat_roundToUI32( sign, sig64, roundingMode, exact );
-
 }
 
 uint_fast32_t f32_to_ui32_r_minMag( float32_t a, bool exact )
@@ -1635,7 +1625,6 @@ uint_fast32_t f32_to_ui32_r_minMag( float32_t a, bool exact )
         raiseFlags(flag_inexact);
     }
     return z;
-
 }
 
 uint_fast64_t f32_to_ui64( float32_t a, uint_fast8_t roundingMode, bool exact )
@@ -1721,7 +1710,6 @@ uint_fast64_t f32_to_ui64_r_minMag( float32_t a, bool exact )
         raiseFlags(flag_inexact);
     }
     return z;
-
 }
 
 float64_t f64_add( float64_t a, float64_t b )
@@ -1872,7 +1860,6 @@ float64_t f64_div( float64_t a, float64_t b )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 bool f64_eq( float64_t a, float64_t b )
@@ -1895,7 +1882,6 @@ bool f64_eq( float64_t a, float64_t b )
         return false;
     }
     return (uiA == uiB) || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ));
-
 }
 
 bool f64_eq_signaling( float64_t a, float64_t b )
@@ -1914,7 +1900,6 @@ bool f64_eq_signaling( float64_t a, float64_t b )
         return false;
     }
     return (uiA == uiB) || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ));
-
 }
 
 bool f64_isSignalingNaN( float64_t a )
@@ -1923,7 +1908,6 @@ bool f64_isSignalingNaN( float64_t a )
 
     uA.f = a;
     return softfloat_isSigNaNF64UI( uA.ui );
-
 }
 
 bool f64_le( float64_t a, float64_t b )
@@ -1948,7 +1932,6 @@ bool f64_le( float64_t a, float64_t b )
         (signA != signB)
             ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
             : (uiA == uiB) || (signA ^ (uiA < uiB));
-
 }
 
 bool f64_le_quiet( float64_t a, float64_t b )
@@ -1977,7 +1960,6 @@ bool f64_le_quiet( float64_t a, float64_t b )
         (signA != signB)
             ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
             : (uiA == uiB) || (signA ^ (uiA < uiB));
-
 }
 
 bool f64_lt( float64_t a, float64_t b )
@@ -2002,7 +1984,6 @@ bool f64_lt( float64_t a, float64_t b )
         (signA != signB)
             ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
             : (uiA != uiB) && (signA ^ (uiA < uiB));
-
 }
 
 bool f64_lt_quiet( float64_t a, float64_t b )
@@ -2031,7 +2012,6 @@ bool f64_lt_quiet( float64_t a, float64_t b )
         (signA != signB)
             ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
             : (uiA != uiB) && (signA ^ (uiA < uiB));
-
 }
 
 float64_t f64_mulAdd( float64_t a, float64_t b, float64_t c )
@@ -2146,7 +2126,6 @@ float64_t f64_mul( float64_t a, float64_t b )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 float64_t f64_rem( float64_t a, float64_t b )
@@ -2288,7 +2267,6 @@ float64_t f64_rem( float64_t a, float64_t b )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 float64_t f64_roundToInt( float64_t a, uint_fast8_t roundingMode, bool exact )
@@ -2357,7 +2335,6 @@ float64_t f64_roundToInt( float64_t a, uint_fast8_t roundingMode, bool exact )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 float64_t f64_sqrt( float64_t a )
@@ -2447,7 +2424,6 @@ float64_t f64_sqrt( float64_t a )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 float64_t f64_sub( float64_t a, float64_t b )
@@ -2515,7 +2491,6 @@ float32_t f64_to_f32( float64_t a )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
-
 }
 
 int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exact )
@@ -2554,7 +2529,6 @@ int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exact )
     shiftDist = 0x427 - exp;
     if ( 0 < shiftDist ) sig = softfloat_shiftRightJam64( sig, shiftDist );
     return softfloat_roundToI32( sign, sig, roundingMode, exact );
-
 }
 
 int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
@@ -2607,7 +2581,6 @@ int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
         raiseFlags(flag_inexact);
     }
     return sign ? -absZ : absZ;
-
 }
 
 int_fast64_t f64_to_i64( float64_t a, uint_fast8_t roundingMode, bool exact )
@@ -2649,7 +2622,6 @@ int_fast64_t f64_to_i64( float64_t a, uint_fast8_t roundingMode, bool exact )
     return
         (exp == 0x7FF) && fracF64UI( uiA ) ? i64_fromNaN
             : sign ? i64_fromNegOverflow : i64_fromPosOverflow;
-
 }
 
 int_fast64_t f64_to_i64_r_minMag( float64_t a, bool exact )
@@ -2706,7 +2678,6 @@ int_fast64_t f64_to_i64_r_minMag( float64_t a, bool exact )
         }
     }
     return sign ? -absZ : absZ;
-
 }
 
 uint_fast32_t f64_to_ui32( float64_t a, uint_fast8_t roundingMode, bool exact )
@@ -4352,45 +4323,7 @@ float64_t ui64_to_f64( uint64_t a )
 | Ported from OpenCV.
 *----------------------------------------------------------------------------*/
 
-//TODO: this
-typedef union Sf32suf
-{
-    int i;
-    unsigned u;
-    float32_t f;
-    struct _fp32Format
-    {
-        unsigned int significand : 23;
-        unsigned int exponent    : 8;
-        unsigned int sign        : 1;
-    } fmt;
-}
-Sf32suf;
-
-typedef union Sf64suf
-{
-    int64_t i;
-    uint64_t u;
-    float64_t f;
-}
-Sf64suf;
-
 ////////////////////////////////////// EXP /////////////////////////////////////
-
-typedef union
-{
-    struct {
-#if ( defined( WORDS_BIGENDIAN ) && !defined( OPENCV_UNIVERSAL_BUILD ) ) || defined( __BIG_ENDIAN__ )
-        int hi;
-        int lo;
-#else
-        int lo;
-        int hi;
-#endif
-    } i;
-    double d;
-}
-DBLINT;
 
 #define EXPTAB_SCALE 6
 #define EXPTAB_MASK  ((1 << EXPTAB_SCALE) - 1)
@@ -4527,9 +4460,6 @@ float64_t f64_exp(float64_t x)
 /////////////////////////////////////////// LOG ///////////////////////////////////////
 
 #define LOGTAB_SCALE    8
-#define LOGTAB_MASK         ((1 << LOGTAB_SCALE) - 1)
-#define LOGTAB_MASK2        ((1 << (20 - LOGTAB_SCALE)) - 1)
-#define LOGTAB_MASK2_32F    ((1 << (23 - LOGTAB_SCALE)) - 1)
 
 static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
     0.0000000000000000000000000000000000000000,    1.000000000000000000000000000000000000000,
@@ -4795,16 +4725,18 @@ static const float64_t ln_2 = double_to_f64(0.69314718055994530941723212145818);
 
 float32_t f32_log(float32_t x)
 {
-    float32_t buf;
-    buf.v = packToF32UI(0, 127, x.v & LOGTAB_MASK2_32F);
-    int h0 = (x.v >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
+    //first 8 bits of mantissa
+    int h0 = (x.v >> (23 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
+    //buf == 0.00000000_the_rest_mantissa_bits
+    float64_t buf = { packToF64UI(0, 1023, ((uint64_t)x.v << 29) & ((1LL << (52 - LOGTAB_SCALE)) - 1)) };
+    buf -= i32_to_f64(1);
 
-    float64_t tab0 = double_to_f64(icvLogTab[h0]);
-    float64_t tab1 = double_to_f64(icvLogTab[h0+1]);
+    float64_t tab0 = double_to_f64(icvLogTab[2*h0]);
+    float64_t tab1 = double_to_f64(icvLogTab[2*h0+1]);
 
-    float64_t x0 = (f32_to_f64(buf) - i32_to_f64(1)) * tab1;
-    //icvLogTab size is 512
-    if(h0 == 510) x0 += double_to_f64(-1./512);
+    float64_t x0 = buf * tab1;
+    //if last elements of icvLogTab
+    if(h0 == 255) x0 += double_to_f64(-1./512);
 
     float64_t y0 = i32_to_f64(expF32UI(x.v) - 127) * ln_2 + tab0 +
                    x0*x0*x0/i32_to_f64(3) - x0*x0/i32_to_f64(2) + x0;
@@ -4825,25 +4757,24 @@ float64_t f64_log(float64_t x)
     A1 = double_to_f64(0.1428571428571428769682682968777953647077083587646484375),
     A0 = double_to_f64(-0.125);
 
-    float64_t buf, xq;
-    float64_t x0;
+    //first 8 bits of mantissa
+    int h0 = (x.v >> (52 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
+    //buf == 0.00000000_the_rest_mantissa_bits
+    float64_t buf = { packToF64UI(0, 1023, x.v & ((1LL << (52 - LOGTAB_SCALE)) - 1)) };
+    buf -= i32_to_f64(1);
 
-    buf.v = packToF64UI(0, 1023, x.v & ((1LL << (52 - LOGTAB_SCALE)) - 1));
-    int h0 = (x.v >> (52 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
+    float64_t tab0 = double_to_f64(icvLogTab[2*h0]);
+    float64_t tab1 = double_to_f64(icvLogTab[2*h0 + 1]);
 
-    float64_t tab0 = double_to_f64(icvLogTab[h0]);
-    float64_t tab1 = double_to_f64(icvLogTab[h0 + 1]);
-
-    x0 = (buf - i32_to_f64(1)) * tab1;
-    //icvLogTab size is 512
-    if(h0 == 510) x0 += double_to_f64(-1./512);
-    xq = x0*x0;
+    float64_t x0 = buf * tab1;
+    //if last elements of icvLogTab
+    if(h0 == 255) x0 += double_to_f64(-1./512);
+    float64_t xq = x0*x0;
 
     return i32_to_f64( expF64UI(x.v) - 1023) * (ln_2) + tab0 +
            (((A0*xq + A2)*xq + A4)*xq + A6)*xq + (((A1*xq + A3)*xq + A5)*xq + A7)*x0;
 }
 
-//TODO: this
 /* ************************************************************************** *\
    Fast cube root by Ken Turkowski
    (http://www.worldserver.com/turk/computergraphics/papers.html)
@@ -4855,8 +4786,7 @@ float32_t f32_cbrt(float32_t x)
     int shx = ex % 3;
     shx -= shx >= 0 ? 3 : 0;
     ex = (ex - shx) / 3 - 1; /* exponent of cube root */
-    float32_t fr = { packToF32UI(0, shx + 127, fracF32UI(x.v)) };
-    float64_t fr0 = f32_to_f64(fr);
+    float64_t fr = { packToF64UI(0, shx + 1023, ((uint64_t)fracF32UI(x.v)) << 29) };
 
     /* 0.125 <= fr < 1.0 */
     /* Use quartic rational polynomial with error < 2^(-24) */
@@ -4870,75 +4800,24 @@ float32_t f32_cbrt(float32_t x)
     const float64_t A8  = double_to_f64(168.5254414101568283957668343);
     const float64_t A9  = double_to_f64(33.9905941350215598754191872);
     const float64_t A10 = double_to_f64(1.0);
-    fr = f64_to_f32(((((A1 * fr0 + A2) * fr0 + A3) * fr0 + A4) * fr0 + A5)/
-                    ((((A6 * fr0 + A7) * fr0 + A8) * fr0 + A9) * fr0 + A10));
+    fr = ((((A1 * fr + A2) * fr + A3) * fr + A4) * fr + A5)/
+         ((((A6 * fr + A7) * fr + A8) * fr + A9) * fr + A10);
     /* fr *= 2^ex * sign */
 
     // checks for "+0" and "-0", reset sign bit
-    float32_t y = { (x.v & ((1u << 31) - 1)) ? packToF32UI(s, ex+127, fracF32UI(fr.v)) : 0 };
+    float32_t y = { (x.v & ((1u << 31) - 1)) ? packToF32UI(s, ex+127, fracF64UI(fr.v) >> 29) : 0 };
     return y;
 }
 
-//TODO: this and checks of args
 float32_t f32_pow( float32_t x, float32_t y)
 {
     return f32_exp(y * f32_log(x));
 }
 
-//TODO: this and checks of args
 float64_t f64_pow( float64_t x, float64_t y)
 {
     return f64_exp(y * f64_log(x));
 }
 
-#if 0
-
-/* ************************************************************************** *\
-   Fast cube root by Ken Turkowski
-   (http://www.worldserver.com/turk/computergraphics/papers.html)
-\* ************************************************************************** */
-float  cubeRoot( float value )
-{
-    CV_INSTRUMENT_REGION()
-
-    float fr;
-    Cv32suf v, m;
-    int ix, s;
-    int ex, shx;
-
-    v.f = value;
-    ix = v.i & 0x7fffffff;
-    s = v.i & 0x80000000;
-    ex = (ix >> 23) - 127;
-    shx = ex % 3;
-    shx -= shx >= 0 ? 3 : 0;
-    ex = (ex - shx) / 3; /* exponent of cube root */
-    v.i = (ix & ((1<<23)-1)) | ((shx + 127)<<23);
-    fr = v.f;
-
-    /* 0.125 <= fr < 1.0 */
-    /* Use quartic rational polynomial with error < 2^(-24) */
-    fr = (float)(((((45.2548339756803022511987494 * fr +
-    192.2798368355061050458134625) * fr +
-    119.1654824285581628956914143) * fr +
-    13.43250139086239872172837314) * fr +
-    0.1636161226585754240958355063)/
-    ((((14.80884093219134573786480845 * fr +
-    151.9714051044435648658557668) * fr +
-    168.5254414101568283957668343) * fr +
-    33.9905941350215598754191872) * fr +
-    1.0));
-
-    /* fr *= 2^ex * sign */
-    m.f = value;
-    v.f = fr;
-    v.i = (v.i + (ex << 23) + s) & (m.i*2 != 0 ? -1 : 0);
-    return v.f;
-}
-
-float32_t f32_pow( float32_t, float32_t );
-float64_t f64_pow( float64_t, float64_t );
-float32_t f32_cbrt( float32_t );
-#endif
 }
 }

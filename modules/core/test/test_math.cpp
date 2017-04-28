@@ -3101,6 +3101,7 @@ TEST(Core_SoftFloat, exp32)
         float diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > FLT_EPSILON)
         {
+            //TODO: fix the bug with cv::exp() and decrease to 1*FLT_EPSILON
             ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*FLT_EPSILON);
         }
     }
@@ -3140,7 +3141,7 @@ TEST(Core_SoftFloat, exp64)
         double diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > DBL_EPSILON)
         {
-            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*DBL_EPSILON);
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), DBL_EPSILON);
         }
     }
 }
@@ -3178,7 +3179,7 @@ TEST(Core_SoftFloat, log32)
         float diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > FLT_EPSILON)
         {
-            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*FLT_EPSILON);
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), FLT_EPSILON);
         }
     }
 }
@@ -3218,7 +3219,7 @@ TEST(Core_SoftFloat, log64)
         double diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > DBL_EPSILON)
         {
-            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*DBL_EPSILON);
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), DBL_EPSILON);
         }
     }
 }
@@ -3254,7 +3255,7 @@ TEST(Core_SoftFloat, cbrt32)
         float diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > FLT_EPSILON)
         {
-            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*FLT_EPSILON);
+            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), FLT_EPSILON);
         }
     }
 }

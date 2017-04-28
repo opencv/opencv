@@ -304,9 +304,7 @@ CV_EXPORTS float64_t f64_exp( float64_t );
 CV_EXPORTS float64_t f64_log( float64_t );
 CV_EXPORTS float64_t f64_pow( float64_t, float64_t );
 
-//TODO: cube root
 CV_EXPORTS float32_t f32_cbrt( float32_t );
-
 }
 
 }
