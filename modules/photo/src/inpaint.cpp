@@ -67,6 +67,10 @@ min4( float a, float b, float c, float d )
 #define INSIDE 2  //unknown
 #define CHANGE 3  //servise
 
+// Processing data types
+typedef double data_type;
+int data_type_cv = CV_64F;
+
 typedef struct CvHeapElem
 {
     float T;
@@ -463,31 +467,31 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
 
                               if (CV_MAT_ELEM(*f,uchar,k,l+1)!=INSIDE) {
                                  if (CV_MAT_ELEM(*f,uchar,k,l-1)!=INSIDE) {
-                                    gradI.x=(float)((CV_MAT_ELEM(*out,uchar,km,lp+1)-CV_MAT_ELEM(*out,uchar,km,lm-1)))*2.0f;
+                                    gradI.x=(float)((CV_MAT_ELEM(*out,data_type,km,lp+1)-CV_MAT_ELEM(*out,data_type,km,lm-1)))*2.0f;
                                  } else {
-                                    gradI.x=(float)((CV_MAT_ELEM(*out,uchar,km,lp+1)-CV_MAT_ELEM(*out,uchar,km,lm)));
+                                    gradI.x=(float)((CV_MAT_ELEM(*out,data_type,km,lp+1)-CV_MAT_ELEM(*out,data_type,km,lm)));
                                  }
                               } else {
                                  if (CV_MAT_ELEM(*f,uchar,k,l-1)!=INSIDE) {
-                                    gradI.x=(float)((CV_MAT_ELEM(*out,uchar,km,lp)-CV_MAT_ELEM(*out,uchar,km,lm-1)));
+                                    gradI.x=(float)((CV_MAT_ELEM(*out,data_type,km,lp)-CV_MAT_ELEM(*out,data_type,km,lm-1)));
                                  } else {
                                     gradI.x=0;
                                  }
                               }
                               if (CV_MAT_ELEM(*f,uchar,k+1,l)!=INSIDE) {
                                  if (CV_MAT_ELEM(*f,uchar,k-1,l)!=INSIDE) {
-                                    gradI.y=(float)((CV_MAT_ELEM(*out,uchar,kp+1,lm)-CV_MAT_ELEM(*out,uchar,km-1,lm)))*2.0f;
+                                    gradI.y=(float)((CV_MAT_ELEM(*out,data_type,kp+1,lm)-CV_MAT_ELEM(*out,data_type,km-1,lm)))*2.0f;
                                  } else {
-                                    gradI.y=(float)((CV_MAT_ELEM(*out,uchar,kp+1,lm)-CV_MAT_ELEM(*out,uchar,km,lm)));
+                                    gradI.y=(float)((CV_MAT_ELEM(*out,data_type,kp+1,lm)-CV_MAT_ELEM(*out,data_type,km,lm)));
                                  }
                               } else {
                                  if (CV_MAT_ELEM(*f,uchar,k-1,l)!=INSIDE) {
-                                    gradI.y=(float)((CV_MAT_ELEM(*out,uchar,kp,lm)-CV_MAT_ELEM(*out,uchar,km-1,lm)));
+                                    gradI.y=(float)((CV_MAT_ELEM(*out,data_type,kp,lm)-CV_MAT_ELEM(*out,data_type,km-1,lm)));
                                  } else {
                                     gradI.y=0;
                                  }
                               }
-                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,uchar,km,lm));
+                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,data_type,km,lm));
                               Jx -= (float)w * (float)(gradI.x*r.x);
                               Jy -= (float)w * (float)(gradI.y*r.y);
                               s  += w;
@@ -497,7 +501,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                   }
                   sat = (float)((Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f)+0.5f));
                   {
-                  CV_MAT_ELEM(*out,uchar,i-1,j-1) = cv::saturate_cast<uchar>(sat);
+                  CV_MAT_ELEM(*out,data_type,i-1,j-1) = cv::saturate_cast<data_type>(sat);
                   }
                }
 
@@ -640,28 +644,28 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
 
                               if (CV_MAT_ELEM(*f,uchar,k+1,l)!=INSIDE) {
                                  if (CV_MAT_ELEM(*f,uchar,k-1,l)!=INSIDE) {
-                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,uchar,kp+1,lm)-CV_MAT_ELEM(*out,uchar,kp,lm))+
-                                                    abs(CV_MAT_ELEM(*out,uchar,kp,lm)-CV_MAT_ELEM(*out,uchar,km-1,lm)));
+                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,data_type,kp+1,lm)-CV_MAT_ELEM(*out,data_type,kp,lm))+
+                                                    abs(CV_MAT_ELEM(*out,data_type,kp,lm)-CV_MAT_ELEM(*out,data_type,km-1,lm)));
                                  } else {
-                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,uchar,kp+1,lm)-CV_MAT_ELEM(*out,uchar,kp,lm)))*2.0f;
+                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,data_type,kp+1,lm)-CV_MAT_ELEM(*out,data_type,kp,lm)))*2.0f;
                                  }
                               } else {
                                  if (CV_MAT_ELEM(*f,uchar,k-1,l)!=INSIDE) {
-                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,uchar,kp,lm)-CV_MAT_ELEM(*out,uchar,km-1,lm)))*2.0f;
+                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,data_type,kp,lm)-CV_MAT_ELEM(*out,data_type,km-1,lm)))*2.0f;
                                  } else {
                                     gradI.x=0;
                                  }
                               }
                               if (CV_MAT_ELEM(*f,uchar,k,l+1)!=INSIDE) {
                                  if (CV_MAT_ELEM(*f,uchar,k,l-1)!=INSIDE) {
-                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,uchar,km,lp+1)-CV_MAT_ELEM(*out,uchar,km,lm))+
-                                                    abs(CV_MAT_ELEM(*out,uchar,km,lm)-CV_MAT_ELEM(*out,uchar,km,lm-1)));
+                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,data_type,km,lp+1)-CV_MAT_ELEM(*out,data_type,km,lm))+
+                                                    abs(CV_MAT_ELEM(*out,data_type,km,lm)-CV_MAT_ELEM(*out,data_type,km,lm-1)));
                                  } else {
-                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,uchar,km,lp+1)-CV_MAT_ELEM(*out,uchar,km,lm)))*2.0f;
+                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,data_type,km,lp+1)-CV_MAT_ELEM(*out,data_type,km,lm)))*2.0f;
                                  }
                               } else {
                                  if (CV_MAT_ELEM(*f,uchar,k,l-1)!=INSIDE) {
-                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,uchar,km,lm)-CV_MAT_ELEM(*out,uchar,km,lm-1)))*2.0f;
+                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,data_type,km,lm)-CV_MAT_ELEM(*out,data_type,km,lm-1)))*2.0f;
                                  } else {
                                     gradI.y=0;
                                  }
@@ -676,13 +680,13 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                                  dir = (float)fabs(VectorScalMult(r,gradI)/sqrt(VectorLength(r)*VectorLength(gradI)));
                               }
                               w = dst*dir;
-                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,uchar,km,lm));
+                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,data_type,km,lm));
                               s  += w;
                            }
                         }
                      }
                   }
-                  CV_MAT_ELEM(*out,uchar,i-1,j-1) = cv::saturate_cast<uchar>((double)Ia/s);
+                  CV_MAT_ELEM(*out,data_type,i-1,j-1) = cv::saturate_cast<data_type>((double)Ia/s);
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
@@ -744,11 +748,11 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     if( !CV_ARE_SIZES_EQ(input_img,output_img) || !CV_ARE_SIZES_EQ(input_img,inpaint_mask))
         CV_Error( CV_StsUnmatchedSizes, "All the input and output images must have the same size" );
 
-    if( (CV_MAT_TYPE(input_img->type) != CV_8UC1 &&
+    if( (CV_MAT_CN(input_img->type) != 1 &&
         CV_MAT_TYPE(input_img->type) != CV_8UC3) ||
         !CV_ARE_TYPES_EQ(input_img,output_img) )
         CV_Error( CV_StsUnsupportedFormat,
-        "Only 8-bit 1-channel and 3-channel input/output images are supported" );
+        "Any 1-channel and 8-bit 3-channel input/output images are supported" );
 
     if( CV_MAT_TYPE(inpaint_mask->type) != CV_8UC1 )
         CV_Error( CV_StsUnsupportedFormat, "The mask must be 8-bit 1-channel image" );
@@ -815,6 +819,17 @@ void cv::inpaint( InputArray _src, InputArray _mask, OutputArray _dst,
     Mat src = _src.getMat(), mask = _mask.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    CvMat c_src = src, c_mask = mask, c_dst = dst;
+
+	Mat src_temp;
+	if (src.channels() == 1) {
+		src.convertTo(src_temp, data_type_cv);
+	} else
+		src_temp = src.clone();    
+
+	Mat dst_temp = Mat::zeros(src_temp.size(), src_temp.type());
+    CvMat c_src = src_temp, c_mask = mask, c_dst = dst_temp;
     cvInpaint( &c_src, &c_mask, &c_dst, inpaintRange, flags );
+
+	if (src.channels() == 1) dst_temp.convertTo(dst_temp, src.type());
+	dst_temp.copyTo(dst);
 }
