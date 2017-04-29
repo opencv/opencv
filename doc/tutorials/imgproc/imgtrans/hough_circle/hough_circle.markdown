@@ -66,7 +66,7 @@ Explanation
     -   *min_dist = gray.rows/16*: Minimum distance between detected centers.
     -   *param_1 = 200*: Upper threshold for the internal Canny edge detector.
     -   *param_2* = 100\*: Threshold for center detection.
-    -   *min_radius = 0*: Minimum radio to be detected. If unknown, put zero as default.
+    -   *min_radius = 0*: Minimum radius to be detected. If unknown, put zero as default.
     -   *max_radius = 0*: Maximum radius to be detected. If unknown, put zero as default.
 
 -#  Draw the detected circles:
