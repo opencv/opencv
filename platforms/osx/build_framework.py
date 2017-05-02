@@ -23,7 +23,7 @@ class OSXBuilder(Builder):
             "-sdk", target.lower(),
             "-configuration", "Release",
             "-parallelizeTargets",
-            "-jobs", multiprocessing.cpu_count()
+            "-jobs", str(multiprocessing.cpu_count())
         ]
         return buildcmd
 
