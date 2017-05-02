@@ -4368,13 +4368,13 @@ public:
                                     _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
                                 }
                             }
-                        #endif
-
+                        #else 
                             for( ; x1 < bcols; x1++ )
                             {
                                 XY[x1*2] = saturate_cast<short>(sX[x1]);
                                 XY[x1*2+1] = saturate_cast<short>(sY[x1]);
                             }
+                        #endif
                         }
                     }
                     nnfunc( *src, dpart, bufxy, borderType, borderValue );
