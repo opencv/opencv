@@ -104,7 +104,9 @@ namespace softfloat
 #define ui64_fromNegOverflow 0
 #define ui64_fromNaN         UINT64_C( 0xFFFFFFFFFFFFFFFF )
 #define i64_fromPosOverflow  UINT64_C( 0x7FFFFFFFFFFFFFFF )
-#define i64_fromNegOverflow  (-UINT64_C( 0x7FFFFFFFFFFFFFFF ) - 1)
+//fixed unsigned unary minus: -x == ~x + 1
+//#define i64_fromNegOverflow (-UINT64_C( 0x7FFFFFFFFFFFFFFF ) - 1)
+#define i64_fromNegOverflow  (~UINT64_C( 0x7FFFFFFFFFFFFFFF ) + 1 - 1)
 #define i64_fromNaN          UINT64_C( 0x7FFFFFFFFFFFFFFF )
 
 /*----------------------------------------------------------------------------
@@ -309,7 +311,8 @@ CV_INLINE uint64_t softfloat_shortShiftRightJam64( uint64_t a, uint_fast8_t dist
 
 CV_INLINE uint32_t softfloat_shiftRightJam32( uint32_t a, uint_fast16_t dist )
 {
-    return (dist < 31) ? a>>dist | ((uint32_t) (a<<(-dist & 31)) != 0) : (a != 0);
+    //fixed unsigned unary minus: -x == ~x + 1
+    return (dist < 31) ? a>>dist | ((uint32_t) (a<<((~dist + 1) & 31)) != 0) : (a != 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -323,7 +326,8 @@ CV_INLINE uint32_t softfloat_shiftRightJam32( uint32_t a, uint_fast16_t dist )
 *----------------------------------------------------------------------------*/
 CV_INLINE uint64_t softfloat_shiftRightJam64( uint64_t a, uint_fast32_t dist )
 {
-    return (dist < 63) ? a>>dist | ((uint64_t) (a<<(-dist & 63)) != 0) : (a != 0);
+    //fixed unsigned unary minus: -x == ~x + 1
+    return (dist < 63) ? a>>dist | ((uint64_t) (a<<((~dist + 1) & 63)) != 0) : (a != 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -554,7 +558,8 @@ CV_INLINE struct uint64_extra softfloat_shiftRightJam64Extra(uint64_t a, uint64_
     struct uint64_extra z;
     if ( dist < 64 ) {
         z.v = a>>dist;
-        z.extra = a<<(-dist & 63);
+        //fixed unsigned unary minus: -x == ~x + 1
+        z.extra = a<<((~dist + 1) & 63);
     } else {
         z.v = 0;
         z.extra = (dist == 64) ? a : (a != 0);
@@ -1111,7 +1116,8 @@ float32_t f32_rem( float32_t a, float32_t b )
         for (;;) {
             q = (rem * (uint_fast64_t) recip32)>>32;
             if ( expDiff < 0 ) break;
-            rem = -(q * (uint32_t) sigB);
+            //fixed unsigned unary minus: -x == ~x + 1
+            rem = ~(q * (uint32_t) sigB) + 1;
             expDiff -= 29;
         }
         /*--------------------------------------------------------------------
@@ -1132,7 +1138,8 @@ float32_t f32_rem( float32_t a, float32_t b )
     signRem = signA;
     if ( 0x80000000 <= rem ) {
         signRem = ! signRem;
-        rem = -rem;
+        //fixed unsigned unary minus: -x == ~x + 1
+        rem = ~rem + 1;
     }
     return softfloat_normRoundPackToF32( signRem, expB, rem );
     /*------------------------------------------------------------------------
@@ -2245,7 +2252,8 @@ float64_t f64_rem( float64_t a, float64_t b )
     signRem = signA;
     if ( rem & UINT64_C( 0x8000000000000000 ) ) {
         signRem = ! signRem;
-        rem = -rem;
+        //fixed unsigned unary minus: -x == ~x + 1
+        rem = ~rem + 1;
     }
     return softfloat_normRoundPackToF64( signRem, expB, rem );
     /*------------------------------------------------------------------------
@@ -2858,7 +2866,8 @@ float32_t i32_to_f32( int32_t a )
         uZ.ui = sign ? packToF32UI( 1, 0x9E, 0 ) : 0;
         return uZ.f;
     }
-    absA = sign ? -(uint_fast32_t) a : (uint_fast32_t) a;
+    //fixed unsigned unary minus: -x == ~x + 1
+    absA = sign ? (~(uint_fast32_t) a + 1) : (uint_fast32_t) a;
     return softfloat_normRoundPackToF32( sign, 0x9C, absA );
 
 }
@@ -2875,7 +2884,8 @@ float64_t i32_to_f64( int32_t a )
         uiZ = 0;
     } else {
         sign = (a < 0);
-        absA = sign ? -(uint_fast32_t) a : (uint_fast32_t) a;
+        //fixed unsigned unary minus: -x == ~x + 1
+        absA = sign ? (~(uint_fast32_t) a + 1) : (uint_fast32_t) a;
         shiftDist = softfloat_countLeadingZeros32( absA ) + 21;
         uiZ =
             packToF64UI(
@@ -2895,7 +2905,8 @@ float32_t i64_to_f32( int64_t a )
     uint_fast32_t sig;
 
     sign = (a < 0);
-    absA = sign ? -(uint_fast64_t) a : (uint_fast64_t) a;
+    //fixed unsigned unary minus: -x == ~x + 1
+    absA = sign ? (~(uint_fast64_t) a + 1) : (uint_fast64_t) a;
     shiftDist = softfloat_countLeadingZeros64( absA ) - 40;
     if ( 0 <= shiftDist ) {
         u.ui =
@@ -2925,7 +2936,8 @@ float64_t i64_to_f64( int64_t a )
         uZ.ui = sign ? packToF64UI( 1, 0x43E, 0 ) : 0;
         return uZ.f;
     }
-    absA = sign ? -(uint_fast64_t) a : (uint_fast64_t) a;
+    //fixed unsigned unary minus: -x == ~x + 1
+    absA = sign ? (~(uint_fast64_t) a + 1) : (uint_fast64_t) a;
     return softfloat_normRoundPackToF64( sign, 0x43C, absA );
 
 }
@@ -3363,7 +3375,8 @@ float32_t
             if ( ! sig64Z ) goto completeCancellation;
             if ( sig64Z & UINT64_C( 0x8000000000000000 ) ) {
                 signZ = ! signZ;
-                sig64Z = -sig64Z;
+                //fixed unsigned unary minus: -x == ~x + 1
+                sig64Z = ~sig64Z + 1;
             }
         } else {
             expZ = expProd;
@@ -3876,7 +3889,8 @@ int_fast32_t
     if ( sig & UINT64_C( 0xFFFFF00000000000 ) ) goto invalid;
     sig32 = sig>>12;
     sig32 &= ~(uint_fast32_t) (! (roundBits ^ 0x800) & roundNearEven);
-    uZ.ui = sign ? -sig32 : sig32;
+    //fixed unsigned unary minus: -x == ~x + 1
+    uZ.ui = sign ? (~sig32 + 1) : sig32;
     z = uZ.i;
     if ( z && ((z < 0) ^ sign) ) goto invalid;
     if ( exact && roundBits ) {
@@ -3922,7 +3936,8 @@ int_fast64_t
                  (! (sigExtra & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
                       & roundNearEven);
     }
-    uZ.ui = sign ? -sig : sig;
+    //fixed unsigned unary minus: -x == ~x + 1
+    uZ.ui = sign ? (~sig + 1) : sig;
     z = uZ.i;
     if ( z && ((z < 0) ^ sign) ) goto invalid;
     if ( exact && sigExtra ) {
@@ -4023,7 +4038,8 @@ struct uint128
     struct uint128 z;
 
     if ( dist < 64 ) {
-        u8NegDist = -dist;
+        //fixed unsigned unary minus: -x == ~x + 1 , fixed type cast
+        u8NegDist = (uint_fast8_t)(~dist + 1);
         z.v64 = a64>>dist;
         z.v0 =
             a64<<(u8NegDist & 63) | a0>>dist
