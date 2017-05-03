@@ -629,17 +629,18 @@ protected:
 class CV_EXPORTS ProgramSource
 {
 public:
-    typedef uint64 hash_t;
+    typedef uint64 hash_t; // deprecated
 
     ProgramSource();
-    explicit ProgramSource(const String& prog);
-    explicit ProgramSource(const char* prog);
+    explicit ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash);
+    explicit ProgramSource(const String& prog); // deprecated
+    explicit ProgramSource(const char* prog); // deprecated
     ~ProgramSource();
     ProgramSource(const ProgramSource& prog);
     ProgramSource& operator = (const ProgramSource& prog);
 
     const String& source() const;
-    hash_t hash() const;
+    hash_t hash() const; // deprecated
 
 protected:
     struct Impl;
