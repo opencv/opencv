@@ -3276,13 +3276,9 @@ should be set to 0.
 @param flow Resultant \f$\texttt{size1} \times \texttt{size2}\f$ flow matrix: \f$\texttt{flow}_{i,j}\f$ is
 a flow from \f$i\f$ -th point of signature1 to \f$j\f$ -th point of signature2 .
  */
-CV_EXPORTS float EMD( InputArray signature1, InputArray signature2,
+CV_EXPORTS_W float EMD( InputArray signature1, InputArray signature2,
                       int distType, InputArray cost=noArray(),
-                      float* lowerBound = 0, OutputArray flow = noArray() );
-
-CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature2,
-                      int distType, InputArray cost=noArray(),
-                      CV_IN_OUT Ptr<float> lowerBound = Ptr<float>(), OutputArray flow = noArray() );
+                      CV_IN_OUT float* lowerBound = 0, OutputArray flow = noArray() );
 
 //! @} imgproc_hist
 

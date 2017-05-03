@@ -1227,7 +1227,8 @@ class JavaWrapperGenerator(object):
                     fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))
                     if "I" in a.out or not a.out or self.isWrapped(a.ctype): # input arg, pass by primitive fields
                         for f in fields:
-                            jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            f1 =  "[0]" if not f[1] and a.pointer and "O" in a.out else f[1]
+                            jn_args.append ( ArgInfo([ f[0], a.name + f1, "", [], "" ]) )
                             jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
                     if a.out and not self.isWrapped(a.ctype): # out arg, pass as double[]
                         jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )

@@ -9,7 +9,8 @@ if sys.version_info[0] >= 3:
 else:
     from cStringIO import StringIO
 
-ignored_arg_types = ["RNG*"]
+#[(Type, IsPointer)]
+ignored_arg_types = [("RNG", True)]
 
 gen_template_check_self = Template("""    if(!PyObject_TypeCheck(self, &pyopencv_${name}_Type))
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
@@ -249,7 +250,12 @@ def normalize_class_name(name):
 
 class ClassProp(object):
     def __init__(self, decl):
-        self.tp = decl[0].replace("*", "_ptr")
+        self.pointer = False
+        tp = decl[0]
+        if tp.endswith("*"):
+            tp = tp[:-1]
+            self.pointer = True
+        self.tp = tp
         self.name = decl[1]
         self.readonly = True
         if "/RW" in decl[3]:
@@ -364,9 +370,17 @@ def handle_ptr(tp):
 
 class ArgInfo(object):
     def __init__(self, arg_tuple):
-        self.tp = handle_ptr(arg_tuple[0])
+        self.pointer = False
+        tp = handle_ptr(arg_tuple[0])
+        defval = arg_tuple[2]
+        if tp.endswith("*"):
+            if not defval:
+                defval = "0"
+            tp = tp[:-1]
+            self.pointer = True
+        self.tp = tp
         self.name = arg_tuple[1]
-        self.defval = arg_tuple[2]
+        self.defval = defval
         self.isarray = False
         self.arraylen = 0
         self.arraycvt = None
@@ -449,7 +463,7 @@ class FuncVariant(object):
             argno += 1
             if a.name in self.array_counters:
                 continue
-            if a.tp in ignored_arg_types:
+            if (a.tp, a.pointer) in ignored_arg_types:
                 continue
             if a.returnarg:
                 outlist.append((a.name, argno))
@@ -458,7 +472,7 @@ class FuncVariant(object):
                 continue
             if not a.inputarg:
                 continue
-            if not a.defval:
+            if not a.defval or (a.pointer and a.defval == "0"):
                 arglist.append((a.name, argno))
             else:
                 firstoptarg = min(firstoptarg, len(arglist))
@@ -596,10 +610,8 @@ class FuncInfo(object):
             # form the function/method call,
             # for the list of type mappings
             for a in v.args:
-                if a.tp in ignored_arg_types:
+                if (a.tp, a.pointer) in ignored_arg_types:
                     defval = a.defval
-                    if not defval and a.tp.endswith("*"):
-                        defval = 0
                     assert defval
                     if not code_args.endswith("("):
                         code_args += ", "
@@ -609,13 +621,12 @@ class FuncInfo(object):
                 tp1 = tp = a.tp
                 amp = ""
                 defval0 = ""
-                if tp.endswith("*"):
-                    tp = tp1 = tp[:-1]
+                if a.pointer and a.inputarg:
+                    tp1 = tp = "Ptr<%s>" % tp
+                    defval0 = "%s(%s)" % (tp, '' if a.defval == "0" else a.defval)
+                elif a.pointer:
                     amp = "&"
-                    if tp.endswith("*"):
-                        defval0 = "0"
-                        tp1 = tp.replace("*", "_ptr")
-                if tp1.endswith("*"):
+                if "*" in tp1:
                     print("Error: type with star: a.tp=%s, tp=%s, tp1=%s" % (a.tp, tp, tp1))
                     sys.exit(-1)
 
@@ -633,7 +644,7 @@ class FuncInfo(object):
                 all_cargs.append([amapping, parse_name])
 
                 defval = a.defval
-                if not defval:
+                if not defval or (defval == "0" and a.pointer):
                     defval = amapping[2]
                 else:
                     if "UMat" in tp:
@@ -645,7 +656,7 @@ class FuncInfo(object):
                 if a.outputarg and not a.inputarg:
                     defval = ""
                 if defval:
-                    code_decl += "    %s %s=%s;\n" % (amapping[0], a.name, defval)
+                    code_decl += "    %s %s = %s;\n" % (amapping[0], a.name, defval)
                 else:
                     code_decl += "    %s %s;\n" % (amapping[0], a.name)
 
@@ -726,7 +737,7 @@ class FuncInfo(object):
                     amapping = all_cargs[argno][0]
                     backcvt_arg_list.append("%s(%s)" % (amapping[2], aname))
                 code_ret = "return Py_BuildValue(\"(%s)\", %s)" % \
-                    (fmtspec, ", ".join(["pyopencv_from(" + aname + ")" for aname, argno in v.py_outlist]))
+                    (fmtspec, ", ".join(["pyopencv_from(%s)" % aname for aname, argno in v.py_outlist]))
 
             all_code_variants.append(gen_template_func_body.substitute(code_decl=code_decl,
                 code_parse=code_parse, code_prelude=code_prelude, code_fcall=code_fcall, code_ret=code_ret))
