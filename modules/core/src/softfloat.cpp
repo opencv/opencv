@@ -294,7 +294,7 @@ static float64_t softfloat_mulAddF64( uint_fast64_t, uint_fast64_t, uint_fast64_
 | significant bit to 1.  This shifted-and-jammed value is returned.
 *----------------------------------------------------------------------------*/
 
-inline uint64_t softfloat_shortShiftRightJam64( uint64_t a, uint_fast8_t dist )
+CV_INLINE uint64_t softfloat_shortShiftRightJam64( uint64_t a, uint_fast8_t dist )
 { return a>>dist | ((a & (((uint_fast64_t) 1<<dist) - 1)) != 0); }
 
 /*----------------------------------------------------------------------------
@@ -307,7 +307,7 @@ inline uint64_t softfloat_shortShiftRightJam64( uint64_t a, uint_fast8_t dist )
 | is zero or nonzero.
 *----------------------------------------------------------------------------*/
 
-inline uint32_t softfloat_shiftRightJam32( uint32_t a, uint_fast16_t dist )
+CV_INLINE uint32_t softfloat_shiftRightJam32( uint32_t a, uint_fast16_t dist )
 {
     return (dist < 31) ? a>>dist | ((uint32_t) (a<<(-dist & 31)) != 0) : (a != 0);
 }
@@ -321,7 +321,7 @@ inline uint32_t softfloat_shiftRightJam32( uint32_t a, uint_fast16_t dist )
 | greater than 64, the result will be either 0 or 1, depending on whether 'a'
 | is zero or nonzero.
 *----------------------------------------------------------------------------*/
-inline uint64_t softfloat_shiftRightJam64( uint64_t a, uint_fast32_t dist )
+CV_INLINE uint64_t softfloat_shiftRightJam64( uint64_t a, uint_fast32_t dist )
 {
     return (dist < 63) ? a>>dist | ((uint64_t) (a<<(-dist & 63)) != 0) : (a != 0);
 }
@@ -354,7 +354,7 @@ static const uint_least8_t softfloat_countLeadingZeros8[256] = {
 | Returns the number of leading 0 bits before the most-significant 1 bit of
 | 'a'.  If 'a' is zero, 32 is returned.
 *----------------------------------------------------------------------------*/
-inline uint_fast8_t softfloat_countLeadingZeros32( uint32_t a )
+CV_INLINE uint_fast8_t softfloat_countLeadingZeros32( uint32_t a )
 {
     uint_fast8_t count = 0;
     if ( a < 0x10000 ) {
@@ -432,7 +432,7 @@ static const uint16_t softfloat_approxRecipSqrt_1k1s[16] = {
 | 'b64' and 'b0'.
 *----------------------------------------------------------------------------*/
 
-inline bool softfloat_eq128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
+CV_INLINE bool softfloat_eq128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
 { return (a64 == b64) && (a0 == b0); }
 
 /*----------------------------------------------------------------------------
@@ -440,7 +440,7 @@ inline bool softfloat_eq128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b
 | and 'a0' is less than or equal to the 128-bit unsigned integer formed by
 | concatenating 'b64' and 'b0'.
 *----------------------------------------------------------------------------*/
-inline bool softfloat_le128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
+CV_INLINE bool softfloat_le128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
 { return (a64 < b64) || ((a64 == b64) && (a0 <= b0)); }
 
 /*----------------------------------------------------------------------------
@@ -448,14 +448,14 @@ inline bool softfloat_le128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b
 | and 'a0' is less than the 128-bit unsigned integer formed by concatenating
 | 'b64' and 'b0'.
 *----------------------------------------------------------------------------*/
-inline bool softfloat_lt128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
+CV_INLINE bool softfloat_lt128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
 { return (a64 < b64) || ((a64 == b64) && (a0 < b0)); }
 
 /*----------------------------------------------------------------------------
 | Shifts the 128 bits formed by concatenating 'a64' and 'a0' left by the
 | number of bits given in 'dist', which must be in the range 1 to 63.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_shortShiftLeft128( uint64_t a64, uint64_t a0, uint_fast8_t dist )
+CV_INLINE struct uint128 softfloat_shortShiftLeft128( uint64_t a64, uint64_t a0, uint_fast8_t dist )
 {
     struct uint128 z;
     z.v64 = a64<<dist | a0>>(-dist & 63);
@@ -467,7 +467,7 @@ inline struct uint128 softfloat_shortShiftLeft128( uint64_t a64, uint64_t a0, ui
 | Shifts the 128 bits formed by concatenating 'a64' and 'a0' right by the
 | number of bits given in 'dist', which must be in the range 1 to 63.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_shortShiftRight128( uint64_t a64, uint64_t a0, uint_fast8_t dist )
+CV_INLINE struct uint128 softfloat_shortShiftRight128( uint64_t a64, uint64_t a0, uint_fast8_t dist )
 {
     struct uint128 z;
     z.v64 = a64>>dist;
@@ -479,7 +479,7 @@ inline struct uint128 softfloat_shortShiftRight128( uint64_t a64, uint64_t a0, u
 | This function is the same as 'softfloat_shiftRightJam64Extra' (below),
 | except that 'dist' must be in the range 1 to 63.
 *----------------------------------------------------------------------------*/
-inline struct uint64_extra softfloat_shortShiftRightJam64Extra(uint64_t a, uint64_t extra, uint_fast8_t dist )
+CV_INLINE struct uint64_extra softfloat_shortShiftRightJam64Extra(uint64_t a, uint64_t extra, uint_fast8_t dist )
 {
     struct uint64_extra z;
     z.v = a>>dist;
@@ -494,7 +494,7 @@ inline struct uint64_extra softfloat_shortShiftRightJam64Extra(uint64_t a, uint6
 | bit of the shifted value by setting the least-significant bit to 1.  This
 | shifted-and-jammed value is returned.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_shortShiftRightJam128(uint64_t a64, uint64_t a0, uint_fast8_t dist )
+CV_INLINE struct uint128 softfloat_shortShiftRightJam128(uint64_t a64, uint64_t a0, uint_fast8_t dist )
 {
     uint_fast8_t negDist = -dist;
     struct uint128 z;
@@ -509,7 +509,7 @@ inline struct uint128 softfloat_shortShiftRightJam128(uint64_t a64, uint64_t a0,
 | This function is the same as 'softfloat_shiftRightJam128Extra' (below),
 | except that 'dist' must be in the range 1 to 63.
 *----------------------------------------------------------------------------*/
-inline struct uint128_extra softfloat_shortShiftRightJam128Extra(uint64_t a64, uint64_t a0, uint64_t extra, uint_fast8_t dist )
+CV_INLINE struct uint128_extra softfloat_shortShiftRightJam128Extra(uint64_t a64, uint64_t a0, uint64_t extra, uint_fast8_t dist )
 {
     uint_fast8_t negDist = -dist;
     struct uint128_extra z;
@@ -557,7 +557,7 @@ inline struct uint128_extra softfloat_shortShiftRightJam128Extra(uint64_t a64, u
 | field of the result.  The fractional part of the shifted value is modified
 | as described above and returned in the 'extra' field of the result.)
 *----------------------------------------------------------------------------*/
-inline struct uint64_extra softfloat_shiftRightJam64Extra(uint64_t a, uint64_t extra, uint_fast32_t dist )
+CV_INLINE struct uint64_extra softfloat_shiftRightJam64Extra(uint64_t a, uint64_t extra, uint_fast32_t dist )
 {
     struct uint64_extra z;
     if ( dist < 64 ) {
@@ -588,7 +588,7 @@ static struct uint128 softfloat_shiftRightJam128( uint64_t a64, uint64_t a0, uin
 | 'a0' and the 128-bit integer formed by concatenating 'b64' and 'b0'.  The
 | addition is modulo 2^128, so any carry out is lost.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_add128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
+CV_INLINE struct uint128 softfloat_add128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
 {
     struct uint128 z;
     z.v0 = a0 + b0;
@@ -601,7 +601,7 @@ inline struct uint128 softfloat_add128( uint64_t a64, uint64_t a0, uint64_t b64,
 | and 'a0' and the 128-bit integer formed by concatenating 'b64' and 'b0'.
 | The subtraction is modulo 2^128, so any borrow out (carry out) is lost.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_sub128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
+CV_INLINE struct uint128 softfloat_sub128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
 {
     struct uint128 z;
     z.v0 = a0 - b0;
@@ -613,7 +613,7 @@ inline struct uint128 softfloat_sub128( uint64_t a64, uint64_t a0, uint64_t b64,
 /*----------------------------------------------------------------------------
 | Returns the 128-bit product of 'a', 'b', and 2^32.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_mul64ByShifted32To128( uint64_t a, uint32_t b )
+CV_INLINE struct uint128 softfloat_mul64ByShifted32To128( uint64_t a, uint32_t b )
 {
     uint_fast64_t mid;
     struct uint128 z;
@@ -633,7 +633,7 @@ static struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b );
 | 'a0', multiplied by 'b'.  The multiplication is modulo 2^128; any overflow
 | bits are discarded.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_mul128By32( uint64_t a64, uint64_t a0, uint32_t b )
+CV_INLINE struct uint128 softfloat_mul128By32( uint64_t a64, uint64_t a0, uint32_t b )
 {
     struct uint128 z;
     uint_fast64_t mid;
