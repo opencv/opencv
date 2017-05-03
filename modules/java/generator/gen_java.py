@@ -649,6 +649,7 @@ public class $jname {
     protected final long nativeObj;
     protected $jname(long addr) { nativeObj = addr; }
 
+    public long getNativeObjAddr() { return nativeObj; }
 """
 
 T_JAVA_START_MODULE = """
@@ -1004,7 +1005,7 @@ class JavaWrapperGenerator(object):
             classinfo.addImports(classinfo.base)
         type_dict["Ptr_"+name] = \
             { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : "*((Ptr<"+classinfo.fullName(isCPP=True)+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
@@ -1228,7 +1229,7 @@ class JavaWrapperGenerator(object):
                     if "I" in a.out or not a.out or self.isWrapped(a.ctype): # input arg, pass by primitive fields
                         for f in fields:
                             jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
-                            jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
+                            jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]","").replace("_getNativeObjAddr()","_nativeObj"), "", [], "" ]) )
                     if a.out and not self.isWrapped(a.ctype): # out arg, pass as double[]
                         jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
                         jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
@@ -1276,7 +1277,7 @@ class JavaWrapperGenerator(object):
                 "    private static native $type $name($args);\n").substitute(\
                 type = type_dict[fi.ctype].get("jn_type", "double[]"), \
                 name = fi.jname + '_' + str(suffix_counter), \
-                args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_").replace("[","").replace("]","")) for a in jn_args])
+                args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_").replace("[","").replace("]","").replace("_getNativeObjAddr()","_nativeObj")) for a in jn_args])
             ) );
 
             # java part:
