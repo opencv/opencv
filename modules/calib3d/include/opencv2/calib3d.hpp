@@ -1862,7 +1862,8 @@ public:
     {
         MODE_SGBM = 0,
         MODE_HH   = 1,
-        MODE_SGBM_3WAY = 2
+        MODE_SGBM_3WAY = 2,
+        MODE_HH4  = 3
     };
 
     CV_WRAP virtual int getPreFilterCap() const = 0;
