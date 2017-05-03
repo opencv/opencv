@@ -3154,7 +3154,7 @@ TEST(Core_SoftFloat, log32)
     RNG rng(0);
     inputs.push_back(0);
     inputs.push_back(1);
-    inputs.push_back(std::exp(1));
+    inputs.push_back(std::exp(1.f));
     inputs.push_back(FLT_MIN);
     inputs.push_back(FLT_MAX);
     for(int i = 0; i < 50000; i++)

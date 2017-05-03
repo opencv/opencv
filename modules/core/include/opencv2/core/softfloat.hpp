@@ -275,7 +275,7 @@ inline float64_t  operator + (const float64_t& a, const float64_t& b) { return f
 inline float64_t  operator - (const float64_t& a, const float64_t& b) { return f64_sub(a, b); }
 inline float64_t  operator * (const float64_t& a, const float64_t& b) { return f64_mul(a, b); }
 inline float64_t  operator / (const float64_t& a, const float64_t& b) { return f64_div(a, b); }
-inline float64_t  operator - (const float64_t& a) { float64_t x = {a.v ^ (1L << 63)}; return x; }
+inline float64_t  operator - (const float64_t& a) { float64_t x = {a.v ^ (1ULL << 63)}; return x; }
 
 inline float64_t& operator += (float64_t& a, const float64_t& b) { a = a + b; return a; }
 inline float64_t& operator -= (float64_t& a, const float64_t& b) { a = a - b; return a; }
