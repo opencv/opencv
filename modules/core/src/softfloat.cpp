@@ -248,7 +248,7 @@ static int_fast64_t softfloat_roundToI64( bool, uint_fast64_t, uint_fast64_t, ui
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
-#define signF32UI( a ) ((bool) ((uint32_t) (a)>>31))
+#define signF32UI( a ) (((uint32_t) (a)>>31) != 0)
 #define expF32UI( a ) ((int_fast16_t) ((a)>>23) & 0xFF)
 #define fracF32UI( a ) ((a) & 0x007FFFFF)
 #define packToF32UI( sign, exp, sig ) (((uint32_t) (sign)<<31) + ((uint32_t) (exp)<<23) + (sig))
@@ -267,7 +267,7 @@ static float32_t softfloat_mulAddF32(uint_fast32_t, uint_fast32_t, uint_fast32_t
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
-#define signF64UI( a ) ((bool) ((uint64_t) (a)>>63))
+#define signF64UI( a ) (((uint64_t) (a)>>63) != 0)
 #define expF64UI( a ) ((int_fast16_t) ((a)>>52) & 0x7FF)
 #define fracF64UI( a ) ((a) & UINT64_C( 0x000FFFFFFFFFFFFF ))
 #define packToF64UI( sign, exp, sig ) ((uint64_t) (((uint_fast64_t) (sign)<<63) + ((uint_fast64_t) (exp)<<52) + (sig)))
@@ -4805,7 +4805,7 @@ float32_t f32_cbrt(float32_t x)
     /* fr *= 2^ex * sign */
 
     // checks for "+0" and "-0", reset sign bit
-    float32_t y = { (x.v & ((1u << 31) - 1)) ? packToF32UI(s, ex+127, fracF64UI(fr.v) >> 29) : 0 };
+    float32_t y = { ((x.v & ((1u << 31) - 1)) != 0) ? packToF32UI(s, ex+127, (uint32_t)(fracF64UI(fr.v) >> 29)) : 0 };
     return y;
 }
 

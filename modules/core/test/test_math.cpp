@@ -3095,7 +3095,7 @@ TEST(Core_SoftFloat, exp32)
         ugood.f = outGood[i];
         ucheck.f = f32_to_float(f32_exp(float_to_f32(x)));
         ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
+        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
         ASSERT_EQ(infgood, infcheck);
         ASSERT_GE(ugood.f, 0); ASSERT_GE(ucheck.f, 0);
         float diff = abs(ugood.f - ucheck.f);
@@ -3135,7 +3135,7 @@ TEST(Core_SoftFloat, exp64)
         ugood.f = outGood[i];
         ucheck.f = f64_to_double(f64_exp(double_to_f64(x)));
         ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
+        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
         ASSERT_EQ(infgood, infcheck);
         ASSERT_GE(ugood.f, 0); ASSERT_GE(ucheck.f, 0);
         double diff = abs(ugood.f - ucheck.f);
@@ -3174,7 +3174,7 @@ TEST(Core_SoftFloat, log32)
         ugood.f = outGood[i];
         ucheck.f = f32_to_float(f32_log(float_to_f32(x)));
         ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
+        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
         ASSERT_EQ(infgood, infcheck);
         float diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > FLT_EPSILON)
@@ -3214,7 +3214,7 @@ TEST(Core_SoftFloat, log64)
         ugood.f = outGood[i];
         ucheck.f = f64_to_double(f64_log(double_to_f64(x)));
         ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
+        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
         ASSERT_EQ(infgood, infcheck);
         double diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > DBL_EPSILON)
@@ -3250,7 +3250,7 @@ TEST(Core_SoftFloat, cbrt32)
         ugood.f = cv::cubeRoot(x);
         ucheck.f = f32_to_float(f32_cbrt(float_to_f32(x)));
         ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f), infcheck = cvIsInf(ucheck.f);
+        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
         ASSERT_EQ(infgood, infcheck);
         float diff = abs(ugood.f - ucheck.f);
         if(!infgood && !infcheck && diff > FLT_EPSILON)
