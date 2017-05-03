@@ -4470,7 +4470,22 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
 float normL2Sqr_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
-#if CV_SSE
+#if CV_AVX2
+    float CV_DECL_ALIGNED(32) buf[8];
+    __m256 d0 = _mm256_setzero_ps();
+
+    for( ; j <= n - 8; j += 8 )
+    {
+        __m256 t0 = _mm256_sub_ps(_mm256_loadu_ps(a + j), _mm256_loadu_ps(b + j));
+#ifdef CV_FMA3
+        d0 = _mm256_fmadd_ps(t0, t0, d0);
+#else
+        d0 = _mm256_add_ps(d0, _mm256_mul_ps(t0, t0));
+#endif
+    }
+    _mm256_store_ps(buf, d0);
+    d = buf[0] + buf[1] + buf[2] + buf[3] + buf[4] + buf[5] + buf[6] + buf[7];
+#elif CV_SSE
     float CV_DECL_ALIGNED(16) buf[4];
     __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
 
