@@ -392,7 +392,6 @@ static uint_fast8_t softfloat_countLeadingZeros64( uint64_t a );
 *----------------------------------------------------------------------------*/
 #define softfloat_approxRecip32_1( a ) ((uint32_t) (UINT64_C( 0x7FFFFFFFFFFFFFFF ) / (uint32_t) (a)))
 
-
 /*----------------------------------------------------------------------------
 | Returns an approximation to the reciprocal of the square root of the number
 | represented by 'a', where 'a' is interpreted as an unsigned fixed-point
@@ -741,7 +740,7 @@ float32_t f32_div( float32_t a, float32_t b )
     } else {
         sig64A = (uint_fast64_t) sigA<<30;
     }
-    sigZ = sig64A / sigB;
+    sigZ = (uint_fast32_t)(sig64A / sigB); // fixed warning on type cast
     if ( ! (sigZ & 0x3F) ) sigZ |= ((uint_fast64_t) sigB * sigZ != sig64A);
     return softfloat_roundPackToF32( signZ, expZ, sigZ );
     /*------------------------------------------------------------------------
@@ -999,7 +998,7 @@ float32_t f32_mul( float32_t a, float32_t b )
     expZ = expA + expB - 0x7F;
     sigA = (sigA | 0x00800000)<<7;
     sigB = (sigB | 0x00800000)<<8;
-    sigZ = softfloat_shortShiftRightJam64( (uint_fast64_t) sigA * sigB, 32 );
+    sigZ = (uint_fast32_t)softfloat_shortShiftRightJam64( (uint_fast64_t) sigA * sigB, 32 ); //fixed warning on type cast
     if ( sigZ < 0x40000000 ) {
         --expZ;
         sigZ <<= 1;
@@ -2391,7 +2390,7 @@ float64_t f64_sqrt( float64_t a )
     expZ = ((expA - 0x3FF)>>1) + 0x3FE;
     expA &= 1;
     sigA |= UINT64_C( 0x0010000000000000 );
-    sig32A = sigA>>21;
+    sig32A = (uint32_t)(sigA>>21); //fixed warning on type cast
     recipSqrt32 = softfloat_approxRecipSqrt32_1( expA, sig32A );
     sig32Z = ((uint_fast64_t) sig32A * recipSqrt32)>>32;
     if ( expA ) {
@@ -2480,7 +2479,7 @@ float32_t f64_to_f32( float64_t a )
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    frac32 = softfloat_shortShiftRightJam64( frac, 22 );
+    frac32 = (uint_fast32_t)softfloat_shortShiftRightJam64( frac, 22 ); //fixed warning on type cast
     if ( ! (exp | frac32) ) {
         uiZ = packToF32UI( sign, 0, 0 );
         goto uiZ;
@@ -2576,7 +2575,7 @@ int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     sig |= UINT64_C( 0x0010000000000000 );
-    absZ = sig>>shiftDist;
+    absZ = (int_fast32_t)(sig>>shiftDist); //fixed warning on type cast
     if ( exact && ((uint_fast64_t) (uint_fast32_t) absZ<<shiftDist != sig) ) {
         raiseFlags(flag_inexact);
     }
@@ -2756,7 +2755,7 @@ uint_fast32_t f64_to_ui32_r_minMag( float64_t a, bool exact )
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     sig |= UINT64_C( 0x0010000000000000 );
-    z = sig>>shiftDist;
+    z = (uint_fast32_t)(sig>>shiftDist); //fixed warning on type cast
     if ( exact && ((uint_fast64_t) z<<shiftDist != sig) ) {
         raiseFlags(flag_inexact);
     }
@@ -2918,7 +2917,7 @@ float32_t i64_to_f32( int64_t a )
         shiftDist += 7;
         sig =
             (shiftDist < 0)
-                ? softfloat_shortShiftRightJam64( absA, -shiftDist )
+                ? (uint_fast32_t) softfloat_shortShiftRightJam64( absA, -shiftDist ) //fixed warning on type cast
                 : (uint_fast32_t) absA<<shiftDist;
         return softfloat_roundPackToF32( sign, 0x9C - shiftDist, sig );
     }
@@ -3129,7 +3128,7 @@ uint32_t softfloat_approxRecipSqrt32_1( unsigned int oddExpA, uint32_t a )
     ESqrR0 = (uint_fast32_t) r0 * r0;
     if ( ! oddExpA ) ESqrR0 <<= 1;
     sigma0 = ~(uint_fast32_t) (((uint32_t) ESqrR0 * (uint_fast64_t) a)>>23);
-    r = ((uint_fast32_t) r0<<16) + ((r0 * (uint_fast64_t) sigma0)>>25);
+    r = (uint_fast32_t)(((uint_fast32_t) r0<<16) + ((r0 * (uint_fast64_t) sigma0)>>25)); //fixed warning on type cast
     sqrSigma0 = ((uint_fast64_t) sigma0 * sigma0)>>32;
     r += ((uint32_t) ((r>>1) + (r>>3) - ((uint_fast32_t) r0<<14))
               * (uint_fast64_t) sqrSigma0)
@@ -3172,7 +3171,7 @@ uint_fast8_t softfloat_countLeadingZeros64( uint64_t a )
     a32 = a>>32;
     if ( ! a32 ) {
         count = 32;
-        a32 = a;
+        a32 = (uint32_t) a; //fixed warning on type cast
     }
     /*------------------------------------------------------------------------
     | From here, result is current count + count leading zeros of `a32'.
@@ -3201,7 +3200,7 @@ void softfloat_f32UIToCommonNaN( uint_fast32_t uiA, struct commonNaN *zPtr )
     if ( softfloat_isSigNaNF32UI( uiA ) ) {
         raiseFlags( flag_invalid );
     }
-    zPtr->sign = uiA>>31;
+    zPtr->sign = (uiA>>31) != 0;
     zPtr->v64  = (uint_fast64_t) uiA<<41;
     zPtr->v0   = 0;
 }
@@ -3218,10 +3217,9 @@ void softfloat_f64UIToCommonNaN( uint_fast64_t uiA, struct commonNaN *zPtr )
     if ( softfloat_isSigNaNF64UI( uiA ) ) {
         raiseFlags( flag_invalid );
     }
-    zPtr->sign = uiA>>63;
+    zPtr->sign = (uiA>>63) != 0;
     zPtr->v64  = uiA<<12;
     zPtr->v0   = 0;
-
 }
 
 struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b )
@@ -3231,9 +3229,9 @@ struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b )
     uint64_t mid1, mid;
 
     a32 = a>>32;
-    a0 = a;
+    a0 = (uint32_t)a; //fixed warning on type cast
     b32 = b>>32;
-    b0 = b;
+    b0 = (uint32_t) b; //fixed warning on type cast
     z.v0 = (uint_fast64_t) a0 * b0;
     mid1 = (uint_fast64_t) a32 * b0;
     mid = mid1 + (uint_fast64_t) a0 * b32;
@@ -3332,7 +3330,7 @@ float32_t
     if ( ! expC ) {
         if ( ! sigC ) {
             expZ = expProd - 1;
-            sigZ = softfloat_shortShiftRightJam64( sigProd, 31 );
+            sigZ = (uint_fast32_t) softfloat_shortShiftRightJam64( sigProd, 31 ); //fixed warning on type cast
             goto roundPack;
         }
         normExpSig = softfloat_normSubnormalF32Sig( sigC );
@@ -3348,14 +3346,14 @@ float32_t
         *--------------------------------------------------------------------*/
         if ( expDiff <= 0 ) {
             expZ = expC;
-            sigZ = sigC + softfloat_shiftRightJam64( sigProd, 32 - expDiff );
+            sigZ = sigC + (uint_fast32_t) softfloat_shiftRightJam64( sigProd, 32 - expDiff ); //fixed warning on type cast
         } else {
             expZ = expProd;
             sig64Z =
                 sigProd
                     + softfloat_shiftRightJam64(
                           (uint_fast64_t) sigC<<32, expDiff );
-            sigZ = softfloat_shortShiftRightJam64( sig64Z, 32 );
+            sigZ = (uint_fast32_t) softfloat_shortShiftRightJam64( sig64Z, 32 ); //fixed warning on type cast
         }
         if ( sigZ < 0x40000000 ) {
             --expZ;
@@ -3386,7 +3384,7 @@ float32_t
         expZ -= shiftDist;
         shiftDist -= 32;
         if ( shiftDist < 0 ) {
-            sigZ = softfloat_shortShiftRightJam64( sig64Z, -shiftDist );
+            sigZ = (uint_fast32_t) softfloat_shortShiftRightJam64( sig64Z, -shiftDist ); //fixed warning on type cast
         } else {
             sigZ = (uint_fast32_t) sig64Z<<shiftDist;
         }
@@ -3887,7 +3885,7 @@ int_fast32_t
     roundBits = sig & 0xFFF;
     sig += roundIncrement;
     if ( sig & UINT64_C( 0xFFFFF00000000000 ) ) goto invalid;
-    sig32 = sig>>12;
+    sig32 = (uint_fast32_t)(sig>>12); //fixed warning on type cast
     sig32 &= ~(uint_fast32_t) (! (roundBits ^ 0x800) & roundNearEven);
     //fixed unsigned unary minus: -x == ~x + 1
     uZ.ui = sign ? (~sig32 + 1) : sig32;
@@ -3974,7 +3972,7 @@ uint_fast32_t
     roundBits = sig & 0xFFF;
     sig += roundIncrement;
     if ( sig & UINT64_C( 0xFFFFF00000000000 ) ) goto invalid;
-    z = sig>>12;
+    z = (uint_fast32_t)(sig>>12); //fixed warning on type cast
     z &= ~(uint_fast32_t) (! (roundBits ^ 0x800) & roundNearEven);
     if ( sign && z ) goto invalid;
     if ( exact && roundBits ) {
@@ -4106,7 +4104,7 @@ float32_t softfloat_subMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
         shiftDist = softfloat_countLeadingZeros32( sigDiff ) - 8;
         expZ = expA - shiftDist;
         if ( expZ < 0 ) {
-            shiftDist = expA;
+            shiftDist = (int_fast8_t)expA; //fixed type cast
             expZ = 0;
         }
         uiZ = packToF32UI( signZ, expZ, sigDiff<<shiftDist );
@@ -4205,7 +4203,7 @@ float64_t
         shiftDist = softfloat_countLeadingZeros64( sigDiff ) - 11;
         expZ = expA - shiftDist;
         if ( expZ < 0 ) {
-            shiftDist = expA;
+            shiftDist = (int_fast8_t)expA; //fixed type cast
             expZ = 0;
         }
         uiZ = packToF64UI( signZ, expZ, sigDiff<<shiftDist );
@@ -4305,7 +4303,7 @@ float32_t ui64_to_f32( uint64_t a )
     } else {
         shiftDist += 7;
         sig =
-            (shiftDist < 0) ? softfloat_shortShiftRightJam64( a, -shiftDist )
+            (shiftDist < 0) ? (uint_fast32_t) softfloat_shortShiftRightJam64( a, -shiftDist ) //fixed warning on type cast
                 : (uint_fast32_t) a<<shiftDist;
         return softfloat_roundPackToF32( 0, 0x9C - shiftDist, sig );
     }
@@ -4730,7 +4728,6 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
     .69314718055994530941723212145818, 5.0e-01,
 };
 
-#define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
 static const float64_t ln_2 = double_to_f64(0.69314718055994530941723212145818);
 
 float32_t f32_log(float32_t x)
@@ -4754,7 +4751,6 @@ float32_t f32_log(float32_t x)
     return f64_to_f32(y0);
 }
 
-//TODO: this
 float64_t f64_log(float64_t x)
 {
     static const float64_t
