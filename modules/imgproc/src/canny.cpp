@@ -939,10 +939,10 @@ void Canny( InputArray _src, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION()
 
-    const int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( _src.depth() == CV_8U );
+
     const Size size = _src.size();
 
-    CV_Assert( depth == CV_8U );
     _dst.create(size, CV_8U);
 
     if (!L2gradient && (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT)
@@ -958,8 +958,8 @@ void Canny( InputArray _src, OutputArray _dst,
     if (low_thresh > high_thresh)
         std::swap(low_thresh, high_thresh);
 
-    CV_OCL_RUN(_dst.isUMat() && (cn == 1 || cn == 3),
-               ocl_Canny<false>(_src, UMat(), UMat(), _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
+    CV_OCL_RUN(_dst.isUMat() && (_src.channels() == 1 || _src.channels() == 3),
+               ocl_Canny<false>(_src, UMat(), UMat(), _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, _src.channels(), size))
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
@@ -1045,11 +1045,10 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
     if (low_thresh > high_thresh)
         std::swap(low_thresh, high_thresh);
 
-    const int cn = _dx.channels();
     const Size size = _dx.size();
 
     CV_OCL_RUN(_dst.isUMat(),
-               ocl_Canny<true>(UMat(), _dx.getUMat(), _dy.getUMat(), _dst, (float)low_thresh, (float)high_thresh, 0, L2gradient, cn, size))
+               ocl_Canny<true>(UMat(), _dx.getUMat(), _dy.getUMat(), _dst, (float)low_thresh, (float)high_thresh, 0, L2gradient, _dx.channels(), size))
 
     _dst.create(size, CV_8U);
     Mat dst = _dst.getMat();
