@@ -373,10 +373,17 @@ public:
         }
 
         // _mag_p: previous row, _mag_a: actual row, _mag_n: next row
+#if CV_SIMD128
         AutoBuffer<int> buffer(3 * (mapstep * cn + CV_MALLOC_SIMD128));
         _mag_p = alignPtr((int*)buffer + 1, CV_MALLOC_SIMD128);
         _mag_a = alignPtr(_mag_p + mapstep * cn, CV_MALLOC_SIMD128);
         _mag_n = alignPtr(_mag_a + mapstep * cn, CV_MALLOC_SIMD128);
+#else
+        AutoBuffer<int> buffer(3 * (mapstep * cn));
+        _mag_p = (int*)buffer + 1;
+        _mag_a = _mag_p + mapstep * cn;
+        _mag_n = _mag_a + mapstep * cn;
+#endif
 
         // For the first time when just 2 rows are filled and for left and right borders
         if(rowStart == boundaries.start)
