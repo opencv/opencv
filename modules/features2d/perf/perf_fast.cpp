@@ -38,3 +38,26 @@ PERF_TEST_P(fast, detect, testing::Combine(
 
     SANITY_CHECK_KEYPOINTS(points);
 }
+
+PERF_TEST_P(fast, detect_ovx, testing::Combine(
+    testing::Values(FAST_IMAGES),
+    FastType::all()
+))
+{
+    string filename = getDataPath(get<0>(GetParam()));
+    int type = get<1>(GetParam());
+    Mat frame = imread(filename, IMREAD_GRAYSCALE);
+
+    if (frame.empty())
+        FAIL() << "Unable to load source image " << filename;
+
+    declare.in(frame);
+
+    Ptr<FeatureDetector> fd = FastFeatureDetector::create(20, false, type);
+    ASSERT_FALSE(fd.empty());
+    vector<KeyPoint> points;
+
+    TEST_CYCLE() fd->detect(frame, points);
+
+    SANITY_CHECK_KEYPOINTS(points);
+}

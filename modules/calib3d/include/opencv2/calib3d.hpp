@@ -1862,7 +1862,8 @@ public:
     {
         MODE_SGBM = 0,
         MODE_HH   = 1,
-        MODE_SGBM_3WAY = 2
+        MODE_SGBM_3WAY = 2,
+        MODE_HH4  = 3
     };
 
     CV_WRAP virtual int getPreFilterCap() const = 0;
@@ -1917,7 +1918,7 @@ public:
     set StereoSGBM::numDisparities at minimum. The second constructor enables you to set each parameter
     to a custom value.
      */
-    CV_WRAP static Ptr<StereoSGBM> create(int minDisparity, int numDisparities, int blockSize,
+    CV_WRAP static Ptr<StereoSGBM> create(int minDisparity = 0, int numDisparities = 16, int blockSize = 3,
                                           int P1 = 0, int P2 = 0, int disp12MaxDiff = 0,
                                           int preFilterCap = 0, int uniquenessRatio = 0,
                                           int speckleWindowSize = 0, int speckleRange = 0,
