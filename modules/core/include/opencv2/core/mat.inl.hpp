@@ -1626,6 +1626,15 @@ void Mat_<_Tp>::create(int _dims, const int* _sz)
 }
 
 template<typename _Tp> inline
+void Mat_<_Tp>::release()
+{
+    Mat::release();
+#ifdef _DEBUG
+    flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<_Tp>::type;
+#endif
+}
+
+template<typename _Tp> inline
 Mat_<_Tp> Mat_<_Tp>::cross(const Mat_& m) const
 {
     return Mat_<_Tp>(Mat::cross(m));
