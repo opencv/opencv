@@ -137,7 +137,7 @@ enum {
 
 // Disabled to make softfloat code stateless
 // The user has to check values manually with *_isSignalingNaN() functions
-inline void raiseFlags( uint_fast8_t /* flags */)
+CV_INLINE void raiseFlags( uint_fast8_t /* flags */)
 {
     //exceptionFlags |= flags;
 }
@@ -214,87 +214,87 @@ CV_EXPORTS bool f64_isSignalingNaN( float64_t );
 | Ported from OpenCV and added for usability
 *----------------------------------------------------------------------------*/
 
-inline float32_t float_to_f32 (const float&);
-inline float64_t double_to_f64(const double&);
-inline float  f32_to_float (const float32_t&);
-inline double f64_to_double(const float64_t&);
+CV_INLINE float32_t float_to_f32 (const float&);
+CV_INLINE float64_t double_to_f64(const double&);
+CV_INLINE float  f32_to_float (const float32_t&);
+CV_INLINE double f64_to_double(const float64_t&);
 
-inline float32_t  operator + (const float32_t& a, const float32_t& b);
-inline float32_t  operator - (const float32_t& a, const float32_t& b);
-inline float32_t  operator * (const float32_t& a, const float32_t& b);
-inline float32_t  operator / (const float32_t& a, const float32_t& b);
-inline float32_t  operator - (const float32_t& a);
+CV_INLINE float32_t  operator + (const float32_t& a, const float32_t& b);
+CV_INLINE float32_t  operator - (const float32_t& a, const float32_t& b);
+CV_INLINE float32_t  operator * (const float32_t& a, const float32_t& b);
+CV_INLINE float32_t  operator / (const float32_t& a, const float32_t& b);
+CV_INLINE float32_t  operator - (const float32_t& a);
 
-inline float32_t& operator += (float32_t& a, const float32_t& b);
-inline float32_t& operator -= (float32_t& a, const float32_t& b);
-inline float32_t& operator *= (float32_t& a, const float32_t& b);
-inline float32_t& operator /= (float32_t& a, const float32_t& b);
+CV_INLINE float32_t& operator += (float32_t& a, const float32_t& b);
+CV_INLINE float32_t& operator -= (float32_t& a, const float32_t& b);
+CV_INLINE float32_t& operator *= (float32_t& a, const float32_t& b);
+CV_INLINE float32_t& operator /= (float32_t& a, const float32_t& b);
 
-inline float64_t operator + (const float64_t& a, const float64_t& b);
-inline float64_t operator - (const float64_t& a, const float64_t& b);
-inline float64_t operator * (const float64_t& a, const float64_t& b);
-inline float64_t operator / (const float64_t& a, const float64_t& b);
-inline float64_t operator - (const float64_t& a);
+CV_INLINE float64_t operator + (const float64_t& a, const float64_t& b);
+CV_INLINE float64_t operator - (const float64_t& a, const float64_t& b);
+CV_INLINE float64_t operator * (const float64_t& a, const float64_t& b);
+CV_INLINE float64_t operator / (const float64_t& a, const float64_t& b);
+CV_INLINE float64_t operator - (const float64_t& a);
 
-inline float64_t& operator += (float64_t& a, const float64_t& b);
-inline float64_t& operator -= (float64_t& a, const float64_t& b);
-inline float64_t& operator *= (float64_t& a, const float64_t& b);
-inline float64_t& operator /= (float64_t& a, const float64_t& b);
+CV_INLINE float64_t& operator += (float64_t& a, const float64_t& b);
+CV_INLINE float64_t& operator -= (float64_t& a, const float64_t& b);
+CV_INLINE float64_t& operator *= (float64_t& a, const float64_t& b);
+CV_INLINE float64_t& operator /= (float64_t& a, const float64_t& b);
 
-inline bool operator == (const float32_t& a, const float32_t& b);
-inline bool operator != (const float32_t& a, const float32_t& b);
-inline bool operator >  (const float32_t& a, const float32_t& b);
-inline bool operator >= (const float32_t& a, const float32_t& b);
-inline bool operator <  (const float32_t& a, const float32_t& b);
-inline bool operator <= (const float32_t& a, const float32_t& b);
+CV_INLINE bool operator == (const float32_t& a, const float32_t& b);
+CV_INLINE bool operator != (const float32_t& a, const float32_t& b);
+CV_INLINE bool operator >  (const float32_t& a, const float32_t& b);
+CV_INLINE bool operator >= (const float32_t& a, const float32_t& b);
+CV_INLINE bool operator <  (const float32_t& a, const float32_t& b);
+CV_INLINE bool operator <= (const float32_t& a, const float32_t& b);
 
-inline bool operator == (const float64_t& a, const float64_t& b);
-inline bool operator != (const float64_t& a, const float64_t& b);
-inline bool operator >  (const float64_t& a, const float64_t& b);
-inline bool operator >= (const float64_t& a, const float64_t& b);
-inline bool operator <  (const float64_t& a, const float64_t& b);
-inline bool operator <= (const float64_t& a, const float64_t& b);
+CV_INLINE bool operator == (const float64_t& a, const float64_t& b);
+CV_INLINE bool operator != (const float64_t& a, const float64_t& b);
+CV_INLINE bool operator >  (const float64_t& a, const float64_t& b);
+CV_INLINE bool operator >= (const float64_t& a, const float64_t& b);
+CV_INLINE bool operator <  (const float64_t& a, const float64_t& b);
+CV_INLINE bool operator <= (const float64_t& a, const float64_t& b);
 
-inline float32_t float_to_f32 (const float&  a){ return *((float32_t*) &a); }
-inline float64_t double_to_f64(const double& a){ return *((float64_t*) &a); }
-inline float  f32_to_float (const float32_t& a){ return *((float*)  &a); }
-inline double f64_to_double(const float64_t& a){ return *((double*) &a); }
+CV_INLINE float32_t float_to_f32 (const float&  a){ return *((float32_t*) &a); }
+CV_INLINE float64_t double_to_f64(const double& a){ return *((float64_t*) &a); }
+CV_INLINE float  f32_to_float (const float32_t& a){ return *((float*)  &a); }
+CV_INLINE double f64_to_double(const float64_t& a){ return *((double*) &a); }
 
-inline float32_t  operator + (const float32_t& a, const float32_t& b) { return f32_add(a, b); }
-inline float32_t  operator - (const float32_t& a, const float32_t& b) { return f32_sub(a, b); }
-inline float32_t  operator * (const float32_t& a, const float32_t& b) { return f32_mul(a, b); }
-inline float32_t  operator / (const float32_t& a, const float32_t& b) { return f32_div(a, b); }
-inline float32_t  operator - (const float32_t& a) { float32_t x = {a.v ^ (1 << 31)}; return x; }
+CV_INLINE float32_t  operator + (const float32_t& a, const float32_t& b) { return f32_add(a, b); }
+CV_INLINE float32_t  operator - (const float32_t& a, const float32_t& b) { return f32_sub(a, b); }
+CV_INLINE float32_t  operator * (const float32_t& a, const float32_t& b) { return f32_mul(a, b); }
+CV_INLINE float32_t  operator / (const float32_t& a, const float32_t& b) { return f32_div(a, b); }
+CV_INLINE float32_t  operator - (const float32_t& a) { float32_t x = {a.v ^ (1U << 31)}; return x; }
 
-inline float32_t& operator += (float32_t& a, const float32_t& b) { a = a + b; return a; }
-inline float32_t& operator -= (float32_t& a, const float32_t& b) { a = a - b; return a; }
-inline float32_t& operator *= (float32_t& a, const float32_t& b) { a = a * b; return a; }
-inline float32_t& operator /= (float32_t& a, const float32_t& b) { a = a / b; return a; }
+CV_INLINE float32_t& operator += (float32_t& a, const float32_t& b) { a = a + b; return a; }
+CV_INLINE float32_t& operator -= (float32_t& a, const float32_t& b) { a = a - b; return a; }
+CV_INLINE float32_t& operator *= (float32_t& a, const float32_t& b) { a = a * b; return a; }
+CV_INLINE float32_t& operator /= (float32_t& a, const float32_t& b) { a = a / b; return a; }
 
-inline float64_t  operator + (const float64_t& a, const float64_t& b) { return f64_add(a, b); }
-inline float64_t  operator - (const float64_t& a, const float64_t& b) { return f64_sub(a, b); }
-inline float64_t  operator * (const float64_t& a, const float64_t& b) { return f64_mul(a, b); }
-inline float64_t  operator / (const float64_t& a, const float64_t& b) { return f64_div(a, b); }
-inline float64_t  operator - (const float64_t& a) { float64_t x = {a.v ^ (1ULL << 63)}; return x; }
+CV_INLINE float64_t  operator + (const float64_t& a, const float64_t& b) { return f64_add(a, b); }
+CV_INLINE float64_t  operator - (const float64_t& a, const float64_t& b) { return f64_sub(a, b); }
+CV_INLINE float64_t  operator * (const float64_t& a, const float64_t& b) { return f64_mul(a, b); }
+CV_INLINE float64_t  operator / (const float64_t& a, const float64_t& b) { return f64_div(a, b); }
+CV_INLINE float64_t  operator - (const float64_t& a) { float64_t x = {a.v ^ (1ULL << 63)}; return x; }
 
-inline float64_t& operator += (float64_t& a, const float64_t& b) { a = a + b; return a; }
-inline float64_t& operator -= (float64_t& a, const float64_t& b) { a = a - b; return a; }
-inline float64_t& operator *= (float64_t& a, const float64_t& b) { a = a * b; return a; }
-inline float64_t& operator /= (float64_t& a, const float64_t& b) { a = a / b; return a; }
+CV_INLINE float64_t& operator += (float64_t& a, const float64_t& b) { a = a + b; return a; }
+CV_INLINE float64_t& operator -= (float64_t& a, const float64_t& b) { a = a - b; return a; }
+CV_INLINE float64_t& operator *= (float64_t& a, const float64_t& b) { a = a * b; return a; }
+CV_INLINE float64_t& operator /= (float64_t& a, const float64_t& b) { a = a / b; return a; }
 
-inline bool operator == (const float32_t& a, const float32_t& b) { return  f32_eq(a, b); }
-inline bool operator != (const float32_t& a, const float32_t& b) { return !f32_eq(a, b); }
-inline bool operator >  (const float32_t& a, const float32_t& b) { return  f32_lt(b, a); }
-inline bool operator >= (const float32_t& a, const float32_t& b) { return  f32_le(b, a); }
-inline bool operator <  (const float32_t& a, const float32_t& b) { return  f32_lt(a, b); }
-inline bool operator <= (const float32_t& a, const float32_t& b) { return  f32_le(a, b); }
+CV_INLINE bool operator == (const float32_t& a, const float32_t& b) { return  f32_eq(a, b); }
+CV_INLINE bool operator != (const float32_t& a, const float32_t& b) { return !f32_eq(a, b); }
+CV_INLINE bool operator >  (const float32_t& a, const float32_t& b) { return  f32_lt(b, a); }
+CV_INLINE bool operator >= (const float32_t& a, const float32_t& b) { return  f32_le(b, a); }
+CV_INLINE bool operator <  (const float32_t& a, const float32_t& b) { return  f32_lt(a, b); }
+CV_INLINE bool operator <= (const float32_t& a, const float32_t& b) { return  f32_le(a, b); }
 
-inline bool operator == (const float64_t& a, const float64_t& b) { return  f64_eq(a, b); }
-inline bool operator != (const float64_t& a, const float64_t& b) { return !f64_eq(a, b); }
-inline bool operator >  (const float64_t& a, const float64_t& b) { return  f64_lt(b, a); }
-inline bool operator >= (const float64_t& a, const float64_t& b) { return  f64_le(b, a); }
-inline bool operator <  (const float64_t& a, const float64_t& b) { return  f64_lt(a, b); }
-inline bool operator <= (const float64_t& a, const float64_t& b) { return  f64_le(a, b); }
+CV_INLINE bool operator == (const float64_t& a, const float64_t& b) { return  f64_eq(a, b); }
+CV_INLINE bool operator != (const float64_t& a, const float64_t& b) { return !f64_eq(a, b); }
+CV_INLINE bool operator >  (const float64_t& a, const float64_t& b) { return  f64_lt(b, a); }
+CV_INLINE bool operator >= (const float64_t& a, const float64_t& b) { return  f64_le(b, a); }
+CV_INLINE bool operator <  (const float64_t& a, const float64_t& b) { return  f64_lt(a, b); }
+CV_INLINE bool operator <= (const float64_t& a, const float64_t& b) { return  f64_le(a, b); }
 
 CV_EXPORTS float32_t f32_exp( float32_t );
 CV_EXPORTS float32_t f32_log( float32_t );
