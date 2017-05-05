@@ -4411,6 +4411,11 @@ static const float64_t exp_max_val   = double_to_f64(3000.*(1 << EXPTAB_SCALE));
 
 float32_t f32_exp( float32_t x)
 {
+    const float32_t zero = { 0 }, inf = { packToF32UI( 0, 0xFF, 0 ) }, nan = { 0x7fffffff };
+    //special cases
+    if(f32_isNaN(x)) return nan;
+    if(f32_isInf(x)) return (x == inf) ? x : zero;
+
     static const float64_t
         A4 = double_to_f64(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
         A3 = double_to_f64(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
@@ -4436,6 +4441,11 @@ float32_t f32_exp( float32_t x)
 
 float64_t f64_exp(float64_t x)
 {
+    const float64_t zero = { 0 }, inf = { packToF64UI( 0, 0x7FF, 0 ) }, nan = { CV_BIG_INT(0x7FFFFFFFFFFFFFFF) };
+    //special cases
+    if(f64_isNaN(x)) return nan;
+    if(f64_isInf(x)) return (x == inf) ? x : zero;
+
     static const float64_t
     A5 = double_to_f64(.99999999999999999998285227504999 / EXPPOLY_32F_A0),
     A4 = double_to_f64(.69314718055994546743029643825322 / EXPPOLY_32F_A0),
@@ -4732,6 +4742,11 @@ static const float64_t ln_2 = double_to_f64(0.69314718055994530941723212145818);
 
 float32_t f32_log(float32_t x)
 {
+    const float32_t nan = { 0x7fffffff }, zero = { 0 };
+    //special cases
+    if(f32_isNaN(x) || x < zero) return nan;
+    if(f32_isInf(x)) return x;
+
     //first 8 bits of mantissa
     int h0 = (x.v >> (23 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
     //buf == 0.00000000_the_rest_mantissa_bits
@@ -4753,6 +4768,11 @@ float32_t f32_log(float32_t x)
 
 float64_t f64_log(float64_t x)
 {
+    const float64_t zero = { 0 }, nan = { CV_BIG_INT(0x7FFFFFFFFFFFFFFF) };
+    //special cases
+    if(f64_isNaN(x) || x < zero) return nan;
+    if(f64_isInf(x)) return x;
+
     static const float64_t
     A7 = double_to_f64(1.0),
     A6 = double_to_f64(-0.5),
@@ -4787,6 +4807,11 @@ float64_t f64_log(float64_t x)
 \* ************************************************************************** */
 float32_t f32_cbrt(float32_t x)
 {
+    const float32_t nan = { 0x7fffffff };
+    //special cases
+    if(f32_isNaN(x)) return nan;
+    if(f32_isInf(x)) return x;
+
     int s = signF32UI(x.v);
     int ex = expF32UI(x.v) - 127;
     int shx = ex % 3;
@@ -4815,14 +4840,127 @@ float32_t f32_cbrt(float32_t x)
     return y;
 }
 
+/// POW functions ///
+
 float32_t f32_pow( float32_t x, float32_t y)
 {
-    return f32_exp(y * f32_log(x));
+    const float32_t zero = { 0 }, inf = { packToF32UI( 0, 0xFF, 0 ) }, nan = { 0x7fffffff };
+    const float32_t one = i32_to_f32(1);
+    bool xinf = f32_isInf(x), yinf = f32_isInf(y), xnan = f32_isNaN(x), ynan = f32_isNaN(y);
+    float32_t v;
+    //special cases
+    if(ynan) v = nan;
+    else
+    {
+        if(yinf)
+        {
+            float32_t ax = f32_abs(x);
+            bool useInf = (y > zero) == (ax > one);
+            v = (ax == one) ? nan : (useInf ? inf : zero);
+        }
+        else if(y == zero) v = one;
+        else if(y ==  one) v = x;
+        else //here y is ok
+        {
+            if(xnan) v = nan;
+            else if(xinf) v = (y < zero) ? zero : inf;
+            else if(x  < zero) v = nan;
+            else if(x == zero)
+            {
+                // (0 ** 0) == 1
+                v = (y < zero) ? inf : (y == zero ? one : zero);
+            }
+            else // here x and y are ok
+            {
+                v = f32_exp(y * f32_log(x));
+            }
+        }
+    }
+
+    return v;
 }
 
 float64_t f64_pow( float64_t x, float64_t y)
 {
-    return f64_exp(y * f64_log(x));
+    const float64_t zero = { 0 }, inf = { packToF64UI( 0, 0x7FF, 0 ) }, nan = { CV_BIG_INT(0x7FFFFFFFFFFFFFFF) };
+    const float64_t one = i32_to_f64(1);
+    bool xinf = f64_isInf(x), yinf = f64_isInf(y), xnan = f64_isNaN(x), ynan = f64_isNaN(y);
+    float64_t v;
+    //special cases
+    if(ynan) v = nan;
+    else
+    {
+        if(yinf)
+        {
+            float64_t ax = f64_abs(x);
+            bool useInf = (y > zero) == (ax > one);
+            v = (ax == one) ? nan : (useInf ? inf : zero);
+        }
+        else if(y == zero) v = one;
+        else if(y ==  one) v = x;
+        else //here y is ok
+        {
+            if(xnan) v = nan;
+            else if(xinf) v = (y < zero) ? zero : inf;
+            else if(x  < zero) v = nan;
+            else if(x == zero)
+            {
+                // (0 ** 0) == 1
+                v = (y < zero) ? inf : (y == zero ? one : zero);
+            }
+            else // here x and y are ok
+            {
+                v = f64_exp(y * f64_log(x));
+            }
+        }
+    }
+
+    return v;
+}
+
+float32_t f32_pow( float32_t x, int y)
+{
+    const float32_t one = i32_to_f32(1);
+    //special cases
+
+
+
+    int power = std::abs(y);
+    float32_t a = one, b = x;
+    int p = power;
+    if( y < 0 )
+        b = one/b;
+
+    while( p > 1 )
+    {
+        if( p & 1 )
+            a *= b;
+        b *= b;
+        p >>= 1;
+    }
+
+    a *= b;
+    return a;
+}
+
+float64_t f64_pow( float64_t x, int y)
+{
+    int power = std::abs(y);
+    float64_t a = i32_to_f64(1), b = x;
+    int p = power;
+    if( y < 0 )
+        b = i32_to_f64(1)/b;
+
+    while( p > 1 )
+    {
+        if( p & 1 )
+            a *= b;
+        b *= b;
+        p >>= 1;
+    }
+
+    a *= b;
+    return a;
 }
 
 }

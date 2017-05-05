@@ -296,13 +296,47 @@ CV_INLINE bool operator >= (const float64_t& a, const float64_t& b) { return  f6
 CV_INLINE bool operator <  (const float64_t& a, const float64_t& b) { return  f64_lt(a, b); }
 CV_INLINE bool operator <= (const float64_t& a, const float64_t& b) { return  f64_le(a, b); }
 
+CV_INLINE bool f32_isNaN( float32_t a )
+{
+    return (a.v & 0x7fffffff) > 0x7f800000;
+}
+
+CV_INLINE bool f64_isNaN( float64_t a )
+{
+    return (a.v & 0x7fffffffffffffff) > 0x7ff0000000000000;
+}
+
+CV_INLINE bool f32_isInf( float32_t a )
+{
+    return (a.v & 0x7fffffff) == 0x7f800000;
+}
+
+CV_INLINE bool f64_isInf( float64_t a )
+{
+    return (a.v & 0x7fffffffffffffff) == 0x7ff0000000000000;
+}
+
+CV_INLINE float32_t f32_abs( float32_t a)
+{
+    float32_t x = { a.v & ((1U << 31) - 1) };
+    return x;
+}
+
+CV_INLINE float64_t f64_abs( float64_t a)
+{
+    float64_t x = { a.v & ((1ULL << 63) - 1) };
+    return x;
+}
+
 CV_EXPORTS float32_t f32_exp( float32_t );
 CV_EXPORTS float32_t f32_log( float32_t );
 CV_EXPORTS float32_t f32_pow( float32_t, float32_t );
+CV_EXPORTS float32_t f32_pow( float32_t, int );
 
 CV_EXPORTS float64_t f64_exp( float64_t );
 CV_EXPORTS float64_t f64_log( float64_t );
 CV_EXPORTS float64_t f64_pow( float64_t, float64_t );
+CV_EXPORTS float64_t f64_pow( float64_t, int) ;
 
 CV_EXPORTS float32_t f32_cbrt( float32_t );
 }
