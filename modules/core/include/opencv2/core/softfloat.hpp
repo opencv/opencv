@@ -143,6 +143,24 @@ CV_INLINE void raiseFlags( uint_fast8_t /* flags */)
 }
 
 /*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+#define signF32UI( a ) (((uint32_t) (a)>>31) != 0)
+#define expF32UI( a ) ((int_fast16_t) ((a)>>23) & 0xFF)
+#define fracF32UI( a ) ((a) & 0x007FFFFF)
+#define packToF32UI( sign, exp, sig ) (((uint32_t) (sign)<<31) + ((uint32_t) (exp)<<23) + (sig))
+
+#define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
+
+/*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+#define signF64UI( a ) (((uint64_t) (a)>>63) != 0)
+#define expF64UI( a ) ((int_fast16_t) ((a)>>52) & 0x7FF)
+#define fracF64UI( a ) ((a) & UINT64_C( 0x000FFFFFFFFFFFFF ))
+#define packToF64UI( sign, exp, sig ) ((uint64_t) (((uint_fast64_t) (sign)<<63) + ((uint_fast64_t) (exp)<<52) + (sig)))
+
+#define isNaNF64UI( a ) (((~(a) & UINT64_C( 0x7FF0000000000000 )) == 0) && ((a) & UINT64_C( 0x000FFFFFFFFFFFFF )))
+
+/*----------------------------------------------------------------------------
 | Integer-to-floating-point conversion routines.
 *----------------------------------------------------------------------------*/
 CV_EXPORTS float32_t ui32_to_f32( uint32_t );
@@ -295,6 +313,12 @@ CV_INLINE bool operator >  (const float64_t& a, const float64_t& b) { return  f6
 CV_INLINE bool operator >= (const float64_t& a, const float64_t& b) { return  f64_le(b, a); }
 CV_INLINE bool operator <  (const float64_t& a, const float64_t& b) { return  f64_lt(a, b); }
 CV_INLINE bool operator <= (const float64_t& a, const float64_t& b) { return  f64_le(a, b); }
+
+CV_INLINE float32_t min(const float32_t a, const float32_t b) { return (a > b) ? b : a; }
+CV_INLINE float64_t min(const float64_t a, const float64_t b) { return (a > b) ? b : a; }
+
+CV_INLINE float32_t max(const float32_t a, const float32_t b) { return (a > b) ? a : b; }
+CV_INLINE float64_t max(const float64_t a, const float64_t b) { return (a > b) ? a : b; }
 
 const float32_t f32_zero = { 0 }, f32_inf = { packToF32UI( 0, 0xFF, 0 ) }, f32_nan = { 0x7fffffff };
 const float32_t f32_one = i32_to_f32(1);

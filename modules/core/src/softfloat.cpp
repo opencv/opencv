@@ -250,12 +250,6 @@ static int_fast64_t softfloat_roundToI64( bool, uint_fast64_t, uint_fast64_t, ui
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
-#define signF32UI( a ) (((uint32_t) (a)>>31) != 0)
-#define expF32UI( a ) ((int_fast16_t) ((a)>>23) & 0xFF)
-#define fracF32UI( a ) ((a) & 0x007FFFFF)
-#define packToF32UI( sign, exp, sig ) (((uint32_t) (sign)<<31) + ((uint32_t) (exp)<<23) + (sig))
-
-#define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
 
 struct exp16_sig32 { int_fast16_t exp; uint_fast32_t sig; };
 static struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t );
@@ -269,12 +263,6 @@ static float32_t softfloat_mulAddF32(uint_fast32_t, uint_fast32_t, uint_fast32_t
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
-#define signF64UI( a ) (((uint64_t) (a)>>63) != 0)
-#define expF64UI( a ) ((int_fast16_t) ((a)>>52) & 0x7FF)
-#define fracF64UI( a ) ((a) & UINT64_C( 0x000FFFFFFFFFFFFF ))
-#define packToF64UI( sign, exp, sig ) ((uint64_t) (((uint_fast64_t) (sign)<<63) + ((uint_fast64_t) (exp)<<52) + (sig)))
-
-#define isNaNF64UI( a ) (((~(a) & UINT64_C( 0x7FF0000000000000 )) == 0) && ((a) & UINT64_C( 0x000FFFFFFFFFFFFF )))
 
 struct exp16_sig64 { int_fast16_t exp; uint_fast64_t sig; };
 static struct exp16_sig64 softfloat_normSubnormalF64Sig( uint_fast64_t );
