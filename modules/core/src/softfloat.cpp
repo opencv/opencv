@@ -4728,7 +4728,7 @@ float32_t f32_log(float32_t x)
 {
     //special cases
     if(f32_isNaN(x) || x < f32_zero) return f32_nan;
-    if(f32_isInf(x)) return x;
+    if(x == f32_zero) return -f32_inf;
 
     //first 8 bits of mantissa
     int h0 = (x.v >> (23 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
@@ -4753,7 +4753,7 @@ float64_t f64_log(float64_t x)
 {
     //special cases
     if(f64_isNaN(x) || x < f64_zero) return f64_nan;
-    if(f64_isInf(x)) return x;
+    if(x == f64_zero) return -f64_inf;
 
     static const float64_t
     A7 = double_to_f64(1.0),

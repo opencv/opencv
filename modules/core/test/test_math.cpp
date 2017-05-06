@@ -3068,15 +3068,19 @@ TEST(Core_QR_Solver, accuracy64f)
     ASSERT_FALSE(solve(A, B, solutionQR, DECOMP_QR));
 }
 
+
 TEST(Core_SoftFloat, exp32)
 {
     using namespace cv::softfloat;
+    //special cases
+    ASSERT_TRUE(f32_isNaN(f32_exp(f32_nan)));
+    ASSERT_TRUE(f32_isInf(f32_exp(f32_inf)));
+    ASSERT_EQ(f32_exp(-f32_inf), f32_zero);
 
     vector<float> inputs, outGood;
     RNG rng(0);
     inputs.push_back(0);
     inputs.push_back(1);
-    inputs.push_back(FLT_MAX);
     inputs.push_back(FLT_MIN);
     for(int i = 0; i < 50000; i++)
     {
@@ -3084,25 +3088,26 @@ TEST(Core_SoftFloat, exp32)
         x.u = rng();
         if(cvIsNaN(x.f) || cvIsInf(x.f))
             x.fmt.exponent ^= 1;
+        // e ** 88 > FLT_MAX
+        if(x.f >= 88.0f)
+            x.f = rng.uniform(0.0f, 88.0f);
         inputs.push_back(x.f);
     }
     cv::exp(inputs, outGood);
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        float x = inputs[i];
-        Cv32suf ugood, ucheck;
-        ugood.f = outGood[i];
-        ucheck.f = f32_to_float(f32_exp(float_to_f32(x)));
-        ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
-        ASSERT_EQ(infgood, infcheck);
-        ASSERT_GE(ugood.f, 0); ASSERT_GE(ucheck.f, 0);
-        float diff = abs(ugood.f - ucheck.f);
-        if(!infgood && !infcheck && diff > FLT_EPSILON)
+        float xf = inputs[i];
+        float32_t x = float_to_f32(xf);
+        float32_t y = f32_exp(x);
+        ASSERT_TRUE(!f32_isNaN(y));
+        ASSERT_TRUE(!f32_isInf(y));
+        ASSERT_GE(y, f32_zero);
+        float32_t ygood = float_to_f32(outGood[i]);
+        float32_t diff = f32_abs(ygood - y);
+        if(diff > float_to_f32(FLT_EPSILON))
         {
-            //TODO: fix the bug with cv::exp() and decrease to 1*FLT_EPSILON
-            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), 2*FLT_EPSILON);
+            ASSERT_LE(diff/max(f32_abs(y), f32_abs(ygood)), float_to_f32(0.00001));
         }
     }
 }
@@ -3110,12 +3115,15 @@ TEST(Core_SoftFloat, exp32)
 TEST(Core_SoftFloat, exp64)
 {
     using namespace cv::softfloat;
+    //special cases
+    ASSERT_TRUE(f64_isNaN(f64_exp(f64_nan)));
+    ASSERT_TRUE(f64_isInf(f64_exp(f64_inf)));
+    ASSERT_EQ(f64_exp(-f64_inf), f64_zero);
 
     vector<double> inputs, outGood;
     RNG rng(0);
     inputs.push_back(0);
     inputs.push_back(1);
-    inputs.push_back(DBL_MAX);
     inputs.push_back(DBL_MIN);
     for(int i = 0; i < 50000; i++)
     {
@@ -3124,24 +3132,26 @@ TEST(Core_SoftFloat, exp64)
         if(cvIsNaN(x.f) || cvIsInf(x.f))
             //reset LSB of exponent
             x.u = x.u ^ (1LL << 52);
+        // e ** 700 > DBL_MAX
+        if(x.f >= 700.0)
+            x.f = rng.uniform(0.0, 700.0);
         inputs.push_back(x.f);
     }
     cv::exp(inputs, outGood);
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        double x = inputs[i];
-        Cv64suf ugood, ucheck;
-        ugood.f = outGood[i];
-        ucheck.f = f64_to_double(f64_exp(double_to_f64(x)));
-        ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
-        ASSERT_EQ(infgood, infcheck);
-        ASSERT_GE(ugood.f, 0); ASSERT_GE(ucheck.f, 0);
-        double diff = abs(ugood.f - ucheck.f);
-        if(!infgood && !infcheck && diff > DBL_EPSILON)
+        double xf = inputs[i];
+        float64_t x = double_to_f64(xf);
+        float64_t y = f64_exp(x);
+        ASSERT_TRUE(!f64_isNaN(y));
+        ASSERT_TRUE(!f64_isInf(y));
+        ASSERT_GE(y, f64_zero);
+        float64_t ygood = double_to_f64(outGood[i]);
+        float64_t diff = f64_abs(ygood - y);
+        if(diff > double_to_f64(DBL_EPSILON))
         {
-            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), DBL_EPSILON);
+            ASSERT_LE(diff/max(f64_abs(y), f64_abs(ygood)), double_to_f64(0.00001));
         }
     }
 }
@@ -3149,15 +3159,28 @@ TEST(Core_SoftFloat, exp64)
 TEST(Core_SoftFloat, log32)
 {
     using namespace cv::softfloat;
-
-    vector<float> inputs, outGood;
+    const int nValues = 50000;
     RNG rng(0);
-    inputs.push_back(0);
+    //special cases
+    ASSERT_TRUE(f32_isNaN(f32_log(f32_nan)));
+    for(int i = 0; i < nValues; i++)
+    {
+        Cv32suf x;
+        x.u = rng();
+        if(cvIsNaN(x.f) || cvIsInf(x.f))
+            x.fmt.exponent ^= 1;
+        float32_t x32 = f32_abs(float_to_f32(x.f));
+        ASSERT_TRUE(f32_isNaN(f32_log(-x32)));
+    }
+    ASSERT_TRUE(f32_isInf(f32_log(f32_zero)));
+
+    vector<float> inputs;
+
     inputs.push_back(1);
     inputs.push_back(std::exp(1.f));
     inputs.push_back(FLT_MIN);
     inputs.push_back(FLT_MAX);
-    for(int i = 0; i < 50000; i++)
+    for(int i = 0; i < nValues; i++)
     {
         Cv32suf x;
         x.u = rng();
@@ -3165,21 +3188,21 @@ TEST(Core_SoftFloat, log32)
             x.fmt.exponent ^= 1;
         inputs.push_back(abs(x.f));
     }
-    cv::log(inputs, outGood);
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        float x = inputs[i];
-        Cv32suf ugood, ucheck;
-        ugood.f = outGood[i];
-        ucheck.f = f32_to_float(f32_log(float_to_f32(x)));
-        ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
-        ASSERT_EQ(infgood, infcheck);
-        float diff = abs(ugood.f - ucheck.f);
-        if(!infgood && !infcheck && diff > FLT_EPSILON)
+        float xf = inputs[i];
+        float32_t x = float_to_f32(xf);
+        float32_t y = f32_log(x);
+        ASSERT_TRUE(!f32_isNaN(y));
+        ASSERT_TRUE(!f32_isInf(y));
+        float32_t ex = f32_exp(y);
+        float32_t diff = f32_abs(ex - x);
+        // 88 is approx estimate of max exp() argument
+        ASSERT_TRUE(!f32_isInf(ex) || (y > i32_to_f32(88)));
+        if(!f32_isInf(ex) && diff > float_to_f32(FLT_EPSILON))
         {
-            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), FLT_EPSILON);
+            ASSERT_LT(diff/max(f32_abs(ex), x), float_to_f32(0.00001));
         }
     }
 }
@@ -3188,14 +3211,28 @@ TEST(Core_SoftFloat, log64)
 {
     using namespace cv::softfloat;
 
-    vector<double> inputs, outGood;
+    const int nValues = 50000;
     RNG rng(0);
-    inputs.push_back(0);
+    //special cases
+    ASSERT_TRUE(f64_isNaN(f64_log(f64_nan)));
+    for(int i = 0; i < nValues; i++)
+    {
+        Cv64suf x;
+        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
+        if(cvIsNaN(x.f) || cvIsInf(x.f))
+            // reset LSB of exponent
+            x.u = x.u ^ (1LL << 52);
+        float64_t x64 = f64_abs(double_to_f64(x.f));
+        ASSERT_TRUE(f64_isNaN(f64_log(-x64)));
+    }
+    ASSERT_TRUE(f64_isInf(f64_log(f64_zero)));
+
+    vector<double> inputs;
     inputs.push_back(1);
     inputs.push_back(std::exp(1));
     inputs.push_back(DBL_MIN);
     inputs.push_back(DBL_MAX);
-    for(int i = 0; i < 50000; i++)
+    for(int i = 0; i < nValues; i++)
     {
         Cv64suf x;
         x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
@@ -3205,21 +3242,20 @@ TEST(Core_SoftFloat, log64)
         inputs.push_back(abs(x.f));
     }
 
-    cv::log(inputs, outGood);
-
     for(size_t i = 0; i < inputs.size(); i++)
     {
-        double x = inputs[i];
-        Cv64suf ugood, ucheck;
-        ugood.f = outGood[i];
-        ucheck.f = f64_to_double(f64_log(double_to_f64(x)));
-        ASSERT_TRUE(!cvIsNaN(ugood.f) && !cvIsNaN(ucheck.f));
-        bool infgood = cvIsInf(ugood.f) != 0, infcheck = cvIsInf(ucheck.f) != 0;
-        ASSERT_EQ(infgood, infcheck);
-        double diff = abs(ugood.f - ucheck.f);
-        if(!infgood && !infcheck && diff > DBL_EPSILON)
+        double xf = inputs[i];
+        float64_t x = double_to_f64(xf);
+        float64_t y = f64_log(x);
+        ASSERT_TRUE(!f64_isNaN(y));
+        ASSERT_TRUE(!f64_isInf(y));
+        float64_t ex = f64_exp(y);
+        float64_t diff = f64_abs(ex - x);
+        // 700 is approx estimate of max exp() argument
+        ASSERT_TRUE(!f64_isInf(ex) || (y > i32_to_f64(700)));
+        if(!f64_isInf(ex) && diff > double_to_f64(DBL_EPSILON))
         {
-            ASSERT_LT(diff/max(abs(ugood.f), abs(ucheck.f)), DBL_EPSILON);
+            ASSERT_LT(diff/max(f64_abs(ex), x), double_to_f64(1e-10));
         }
     }
 }
