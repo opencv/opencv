@@ -296,6 +296,12 @@ CV_INLINE bool operator >= (const float64_t& a, const float64_t& b) { return  f6
 CV_INLINE bool operator <  (const float64_t& a, const float64_t& b) { return  f64_lt(a, b); }
 CV_INLINE bool operator <= (const float64_t& a, const float64_t& b) { return  f64_le(a, b); }
 
+const float32_t f32_zero = { 0 }, f32_inf = { packToF32UI( 0, 0xFF, 0 ) }, f32_nan = { 0x7fffffff };
+const float32_t f32_one = i32_to_f32(1);
+
+const float64_t f64_zero = { 0 }, f64_inf = { packToF64UI( 0, 0x7FF, 0 ) }, f64_nan = { CV_BIG_INT(0x7FFFFFFFFFFFFFFF) };
+const float64_t f64_one = i32_to_f64(1);
+
 CV_INLINE bool f32_isNaN( float32_t a )
 {
     return (a.v & 0x7fffffff) > 0x7f800000;
