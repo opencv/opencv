@@ -628,6 +628,11 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
                                   float reprojectionError = 8.0, double confidence = 0.99,
                                   OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
 
+CV_EXPORTS_W int solveP3P( InputArray objectPoints, InputArray imagePoints,
+                           InputArray cameraMatrix, InputArray distCoeffs,
+                           OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                           int flags );
+
 /** @brief Finds an initial camera matrix from 3D-2D point correspondences.
 
 @param objectPoints Vector of vectors of the calibration pattern points in the calibration pattern
