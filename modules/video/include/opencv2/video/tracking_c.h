@@ -104,40 +104,6 @@ CVAPI(void) cvCalcOpticalFlowFarneback( const CvArr* prev, const CvArr* next,
                                         int winsize, int iterations, int poly_n,
                                         double poly_sigma, int flags );
 
-/********************************* motion templates *************************************/
-
-/****************************************************************************************\
-*        All the motion template functions work only with single channel images.         *
-*        Silhouette image must have depth IPL_DEPTH_8U or IPL_DEPTH_8S                   *
-*        Motion history image must have depth IPL_DEPTH_32F,                             *
-*        Gradient mask - IPL_DEPTH_8U or IPL_DEPTH_8S,                                   *
-*        Motion orientation image - IPL_DEPTH_32F                                        *
-*        Segmentation mask - IPL_DEPTH_32F                                               *
-*        All the angles are in degrees, all the times are in milliseconds                *
-\****************************************************************************************/
-
-/* Updates motion history image given motion silhouette */
-CVAPI(void)    cvUpdateMotionHistory( const CvArr* silhouette, CvArr* mhi,
-                                      double timestamp, double duration );
-
-/* Calculates gradient of the motion history image and fills
-   a mask indicating where the gradient is valid */
-CVAPI(void)    cvCalcMotionGradient( const CvArr* mhi, CvArr* mask, CvArr* orientation,
-                                     double delta1, double delta2,
-                                     int aperture_size CV_DEFAULT(3));
-
-/* Calculates average motion direction within a selected motion region
-   (region can be selected by setting ROIs and/or by composing a valid gradient mask
-   with the region mask) */
-CVAPI(double)  cvCalcGlobalOrientation( const CvArr* orientation, const CvArr* mask,
-                                        const CvArr* mhi, double timestamp,
-                                        double duration );
-
-/* Splits a motion history image into a few parts corresponding to separate independent motions
-   (e.g. left hand, right hand) */
-CVAPI(CvSeq*)  cvSegmentMotion( const CvArr* mhi, CvArr* seg_mask,
-                                CvMemStorage* storage,
-                                double timestamp, double seg_thresh );
 
 /****************************************************************************************\
 *                                       Tracking                                         *
