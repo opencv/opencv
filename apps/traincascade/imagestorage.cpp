@@ -38,7 +38,7 @@ bool CvCascadeImageReader::NegReader::create( const string _filename, Size _winS
         std::getline(file, str);
         str.erase(str.find_last_not_of(" \n\r\t")+1);
         if (str.empty()) break;
-        if (str.at(0) == '#' ) continue; /* comment */
+        if (str.at(0) == '#' ) continue;
         imgFilenames.push_back(str);
     }
     file.close();
