@@ -125,7 +125,7 @@ class CV_EXPORTS_W Stitcher
 {
 public:
     enum { ORIG_RESOL = -1 };
-    enum Status
+    enum status
     {
         OK = 0,
         ERR_NEED_MORE_IMGS = 1,
