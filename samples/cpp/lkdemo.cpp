@@ -142,6 +142,7 @@ int main( int argc, char** argv )
         case 'c':
             points[0].clear();
             points[1].clear();
+	    points[0].clear();
             break;
         case 'n':
             nightMode = !nightMode;
