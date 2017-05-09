@@ -255,7 +255,7 @@ CV_INLINE double cvRandReal( CvRNG* rng )
  * is an extract from IPL headers.
  * Copyright (c) 1995 Intel Corporation.
  */
-#define IPL_DEPTH_SIGN 0x80000000
+#define IPL_DEPTH_SIGN (int)(0x80000000)
 
 #define IPL_DEPTH_1U     1
 #define IPL_DEPTH_8U     8
