@@ -44,6 +44,16 @@
 #include "precomp.hpp"
 #include <iostream>
 
+#if (__cplusplus >= 201103L || ((defined(_MSC_VER) && _MSC_VER >= 1800)))
+    #define HAVE_CPP11 1
+#else
+    #define HAVE_CPP11 0
+#endif
+
+#if HAVE_CPP11
+# include <chrono>
+#endif
+
 namespace cv {
 
 static Mutex* __initialization_mutex = NULL;
@@ -627,9 +637,13 @@ bool useOptimized(void)
     return useOptimizedFlag;
 }
 
+
 int64 getTickCount(void)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if HAVE_CPP11
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    return now.time_since_epoch().count();
+#elif defined WIN32 || defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
     return (int64)counter.QuadPart;
@@ -649,7 +663,9 @@ int64 getTickCount(void)
 
 double getTickFrequency(void)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if HAVE_CPP11
+    return 1e9;
+#elif defined WIN32 || defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     return (double)freq.QuadPart;
