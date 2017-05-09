@@ -779,6 +779,22 @@ bool pyopencv_to(PyObject* obj, int& value, const char* name)
 }
 
 template<>
+PyObject* pyopencv_from(const uint& value)
+{
+    return PyLong_FromUnsignedLong(value);
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, uint& value, const char* name)
+{
+    (void)name;
+    if (!obj || obj == Py_None)
+        return true;
+    value = (int)PyLong_AsUnsignedLong(obj);
+    return value != (uint)-1 || !PyErr_Occurred();
+}
+
+template<>
 PyObject* pyopencv_from(const uchar& value)
 {
     return PyInt_FromLong(value);
