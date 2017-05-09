@@ -95,7 +95,7 @@
 #  elif defined _MSC_VER
 #    define CV_INLINE __inline
 #  else
-#    define CV_INLINE static
+#    define CV_INLINE static inline
 #  endif
 #endif
 
