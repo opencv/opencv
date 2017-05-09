@@ -5134,7 +5134,7 @@ DEF_CVT_SCALE_FUNC(8s32f,  schar, float, float)
 DEF_CVT_SCALE_FUNC(16u32f, ushort, float, float)
 DEF_CVT_SCALE_FUNC(16s32f, short, float, float)
 DEF_CVT_SCALE_FUNC(32s32f, int, float, double)
-DEF_CVT_SCALE_FUNC(32f,    float, float, float)
+DEF_CVT_SCALE_FUNC(32f,    float, float, double)
 DEF_CVT_SCALE_FUNC(64f32f, double, float, double)
 
 DEF_CVT_SCALE_FUNC(8u64f,  uchar, double, double)
