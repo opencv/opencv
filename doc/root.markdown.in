@@ -4,6 +4,7 @@ OpenCV modules {#mainpage}
 - @ref intro
 - @ref tutorial_root
 - @ref tutorial_py_root
+- <a href="http://opencv-java-tutorials.readthedocs.org/" class="el">OpenCV-Java Tutorials</a> (external)
 @CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT@
 - @ref faq
 - @ref citelist
