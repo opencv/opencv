@@ -40,7 +40,7 @@ Canny Edge Detection is a popular edge detection algorithm. It was developed by 
     pixels which may not constitute the edge. For this, at every pixel, pixel is checked if it is a
     local maximum in its neighborhood in the direction of gradient. Check the image below:
 
-    ![image](images/nms.jpg)
+![image](images/nms.jpg)
 
     Point A is on the edge ( in vertical direction). Gradient direction is normal to the edge. Point B
     and C are in gradient directions. So point A is checked with point B and C to see if it forms a
@@ -57,7 +57,7 @@ Canny Edge Detection is a popular edge detection algorithm. It was developed by 
     to "sure-edge" pixels, they are considered to be part of edges. Otherwise, they are also discarded.
     See the image below:
 
-    ![image](images/hysteresis.jpg)
+![image](images/hysteresis.jpg)
 
     The edge A is above the maxVal, so considered as "sure-edge". Although edge C is below maxVal, it is
     connected to edge A, so that also considered as valid edge and we get that full curve. But edge B,
