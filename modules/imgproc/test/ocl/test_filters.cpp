@@ -154,7 +154,7 @@ OCL_TEST_P(LaplacianTest, Accuracy)
 {
     double scale = param;
 
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < 1; j++)
     {
         random_roi();
 
