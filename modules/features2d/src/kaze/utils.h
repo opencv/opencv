@@ -7,7 +7,7 @@
  */
 inline float getAngle(float x, float y) {
 
-  if (x >= 0 && y >= 0) {
+  if (x > 0 && y >= 0) {
     return atanf(y / x);
   }
 
@@ -19,7 +19,7 @@ inline float getAngle(float x, float y) {
     return static_cast<float>(CV_PI)+atanf(y / x);
   }
 
-  if (x >= 0 && y < 0) {
+  if (x > 0 && y < 0) {
     return static_cast<float>(2.0 * CV_PI) - atanf(-y / x);
   }
 
