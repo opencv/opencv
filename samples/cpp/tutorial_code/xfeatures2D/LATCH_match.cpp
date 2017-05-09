@@ -21,12 +21,12 @@ const float nn_match_ratio = 0.8f;   // Nearest neighbor matching ratio
 
 int main(void)
 {
-    Mat img1 = imread("../data/graf1.png", IMREAD_GRAYSCALE);
-    Mat img2 = imread("../data/graf3.png", IMREAD_GRAYSCALE);
+    Mat img1 = imread("../../../data/graf1.png", IMREAD_GRAYSCALE);
+    Mat img2 = imread("../../../data/graf3.png", IMREAD_GRAYSCALE);
 
 
     Mat homography;
-    FileStorage fs("../data/H1to3p.xml", FileStorage::READ);
+    FileStorage fs("../../../data/H1to3p.xml", FileStorage::READ);
 
     fs.getFirstTopLevelNode() >> homography;
 
