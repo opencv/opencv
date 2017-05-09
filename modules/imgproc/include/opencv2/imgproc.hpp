@@ -1713,7 +1713,8 @@ Finds edges in an image using the Canny algorithm with custom image gradient.
 @param dy 16-bit y derivative of input image (same type as dx).
 @param edges,threshold1,threshold2,L2gradient See cv::Canny
  */
-CV_EXPORTS_W void Canny( InputArray dx, InputArray dy,
+CV_EXPORTS_AS(CannyGradient)
+             void Canny( InputArray dx, InputArray dy,
                          OutputArray edges,
                          double threshold1, double threshold2,
                          bool L2gradient = false );
