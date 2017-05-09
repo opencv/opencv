@@ -235,6 +235,8 @@ make & enjoy!
 #include <sys/videoio.h>
 #endif
 
+#include "opencv2/imgcodecs.hpp"
+
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
