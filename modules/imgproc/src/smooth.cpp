@@ -3524,6 +3524,9 @@ public:
         float CV_DECL_ALIGNED(16) bufSum[4];
         static const unsigned int CV_DECL_ALIGNED(16) bufSignMask[] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
         bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+        __m128i izero;
+        if (haveSSE3)
+            izero = _mm_setzero_si128();
         #endif
 
         for( i = range.start; i < range.end; i++ )
