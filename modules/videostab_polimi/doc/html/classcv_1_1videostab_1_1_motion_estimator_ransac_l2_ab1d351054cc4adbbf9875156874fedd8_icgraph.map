@@ -1,0 +1,4 @@
+<map id="cv::videostab::MotionEstimatorRansacL2::setMinInlierRatio" name="cv::videostab::MotionEstimatorRansacL2::setMinInlierRatio">
+<area shape="rect" id="node3" href="$classcv_1_1videostab_1_1_motion_estimator_ransac_l2.html#ae7d9545b45bc537042cdc4251a8237ca" title="cv::videostab::MotionEstimator\lRansacL2::MotionEstimatorRansacL2" alt="" coords="256,5,499,51"/>
+<area shape="rect" id="node5" href="$class_motion_estimator_ransac_l2_builder.html#ac7d06fdfb0158b27e0303508552ed889" title="MotionEstimatorRansacL2Builder\l::build" alt="" coords="269,74,485,121"/>
+</map>

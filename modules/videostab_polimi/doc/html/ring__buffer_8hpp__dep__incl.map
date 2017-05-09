@@ -1,0 +1,13 @@
+<map id="ring_buffer.hpp" name="ring_buffer.hpp">
+<area shape="rect" id="node3" href="$videostab_8hpp.html" title="videostab.hpp" alt="" coords="5,83,107,112"/>
+<area shape="rect" id="node7" href="$deblurring_8cpp.html" title="deblurring.cpp" alt="" coords="131,83,232,112"/>
+<area shape="rect" id="node9" href="$fast__marching_8cpp.html" title="fast_marching.cpp" alt="" coords="256,83,384,112"/>
+<area shape="rect" id="node11" href="$frame__source_8cpp.html" title="frame_source.cpp" alt="" coords="408,83,533,112"/>
+<area shape="rect" id="node13" href="$global__motion_8cpp.html" title="global_motion.cpp" alt="" coords="557,83,683,112"/>
+<area shape="rect" id="node15" href="$inpainting_8cpp.html" title="inpainting.cpp" alt="" coords="707,83,808,112"/>
+<area shape="rect" id="node17" href="$motion__stabilizing_8cpp.html" title="motion_stabilizing.cpp" alt="" coords="832,83,981,112"/>
+<area shape="rect" id="node19" href="$optical__flow_8cpp.html" title="optical_flow.cpp" alt="" coords="1005,83,1120,112"/>
+<area shape="rect" id="node21" href="$stabilizer_8cpp.html" title="stabilizer.cpp" alt="" coords="1144,83,1243,112"/>
+<area shape="rect" id="node23" href="$wobble__suppression_8cpp.html" title="wobble_suppression.cpp" alt="" coords="1267,83,1432,112"/>
+<area shape="rect" id="node5" href="$videostab_8cpp.html" title="videostab.cpp" alt="" coords="5,160,107,189"/>
+</map>

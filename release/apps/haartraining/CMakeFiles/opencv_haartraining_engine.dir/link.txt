@@ -1,0 +1,2 @@
+/usr/bin/ar cr ../../lib/libopencv_haartraining_engine.a  CMakeFiles/opencv_haartraining_engine.dir/cvboost.cpp.o CMakeFiles/opencv_haartraining_engine.dir/cvcommon.cpp.o CMakeFiles/opencv_haartraining_engine.dir/cvhaarclassifier.cpp.o CMakeFiles/opencv_haartraining_engine.dir/cvhaartraining.cpp.o CMakeFiles/opencv_haartraining_engine.dir/cvsamples.cpp.o
+/usr/bin/ranlib ../../lib/libopencv_haartraining_engine.a

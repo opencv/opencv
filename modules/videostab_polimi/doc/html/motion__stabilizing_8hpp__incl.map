@@ -1,0 +1,6 @@
+<map id="motion_stabilizing.hpp" name="motion_stabilizing.hpp">
+<area shape="rect" id="node9" href="$global__motion_8hpp.html" title="opencv2/videostab/global\l_motion.hpp" alt="" coords="443,83,611,130"/>
+<area shape="rect" id="node21" href="$optical__flow_8hpp.html" title="opencv2/videostab/optical\l_flow.hpp" alt="" coords="696,179,869,226"/>
+<area shape="rect" id="node25" href="$motion__core_8hpp.html" title="opencv2/videostab/motion\l_core.hpp" alt="" coords="341,275,515,322"/>
+<area shape="rect" id="node30" href="$outlier__rejection_8hpp.html" title="opencv2/videostab/outlier\l_rejection.hpp" alt="" coords="373,179,544,226"/>
+</map>

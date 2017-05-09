@@ -1,0 +1,4 @@
+<map id="cv::videostab::GaussianMotionFilter" name="cv::videostab::GaussianMotionFilter">
+<area shape="rect" id="node2" href="$classcv_1_1videostab_1_1_motion_filter_base.html" title="cv::videostab::MotionFilterBase" alt="" coords="5,83,211,112"/>
+<area shape="rect" id="node4" href="$classcv_1_1videostab_1_1_i_motion_stabilizer.html" title="cv::videostab::IMotionStabilizer" alt="" coords="5,5,211,35"/>
+</map>

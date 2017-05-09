@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classcv_1_1videostab_1_1_i_outlier_rejector.html" title="cv::videostab::IOutlierRejector" alt="" coords="7,48,204,77"/>
+<area shape="rect" id="node3" href="$classcv_1_1videostab_1_1_null_outlier_rejector.html" title="cv::videostab::NullOutlier\lRejector" alt="" coords="259,5,427,51"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_translation_based_local_outlier_rejector.html" title="cv::videostab::Translation\lBasedLocalOutlierRejector" alt="" coords="255,74,431,121"/>
+</map>

@@ -1,0 +1,25 @@
+change resolution -------------------
+
+ffmpeg -i output_home2.mp4 -s 512x384 output_home2.avi
+
+change fps ----------------
+ffmpeg -i input.mov -sameq -r 24 -y output.mov
+
+
+change fps with time -----
+ffmpeg -i test.avi -f rawvideo -b 50000000 -pix_fmt yuv420p -vcodec rawvideo -s 512x384 -y temp.raw
+ffmpeg -f rawvideo -b 50000000 -pix_fmt yuv420p -r 29.61 -s 512x384 -i temp.raw -y output.avi
+
+
+combine matteucci---------------------
+
+ffmpeg -i landing.avi -vf "[in] scale=iw/1:ih/1, pad=2*iw:ih [left]; movie=landing_stabilized.avi, scale=iw/1:ih/1, fade=out:300:30:alpha=1 [right]; [left][right] overlay=main_w/2:0 [out]" -b:v 768k Output.avi
+
+
+________________
+
+
+transl|transl_and_scale|rigid|similarity|affine|homography)
+
+ffmpeg -i home2.avi -vf "[in] scale=iw/1:ih/1, pad=2*iw:ih [left]; movie=output_home2_200_zm250_similarity.avi, scale=iw/1:ih/1 [right]; [left][right] overlay=main_w/2:0 [out]" -b:v 768k Output.avi
+

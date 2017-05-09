@@ -1,0 +1,16 @@
+<map id="outlier_rejection.hpp" name="outlier_rejection.hpp">
+<area shape="rect" id="node3" href="$global__motion_8hpp.html" title="global_motion.hpp" alt="" coords="480,83,605,112"/>
+<area shape="rect" id="node30" href="$global__motion_8cpp.html" title="global_motion.cpp" alt="" coords="793,160,919,189"/>
+<area shape="rect" id="node35" href="$outlier__rejection_8cpp.html" title="outlier_rejection.cpp" alt="" coords="787,83,925,112"/>
+<area shape="rect" id="node5" href="$inpainting_8hpp.html" title="inpainting.hpp" alt="" coords="492,160,593,189"/>
+<area shape="rect" id="node7" href="$stabilizer_8hpp.html" title="stabilizer.hpp" alt="" coords="216,237,315,267"/>
+<area shape="rect" id="node15" href="$inpainting_8cpp.html" title="inpainting.cpp" alt="" coords="616,237,717,267"/>
+<area shape="rect" id="node17" href="$motion__stabilizing_8hpp.html" title="motion_stabilizing.hpp" alt="" coords="79,160,228,189"/>
+<area shape="rect" id="node20" href="$motion__stabilizing_8cpp.html" title="motion_stabilizing.cpp" alt="" coords="5,237,155,267"/>
+<area shape="rect" id="node23" href="$wobble__suppression_8hpp.html" title="wobble_suppression.hpp" alt="" coords="303,160,468,189"/>
+<area shape="rect" id="node28" href="$deblurring_8cpp.html" title="deblurring.cpp" alt="" coords="617,160,719,189"/>
+<area shape="rect" id="node9" href="$videostab_8hpp.html" title="videostab.hpp" alt="" coords="152,315,253,344"/>
+<area shape="rect" id="node13" href="$stabilizer_8cpp.html" title="stabilizer.cpp" alt="" coords="277,315,376,344"/>
+<area shape="rect" id="node11" href="$videostab_8cpp.html" title="videostab.cpp" alt="" coords="152,392,253,421"/>
+<area shape="rect" id="node26" href="$wobble__suppression_8cpp.html" title="wobble_suppression.cpp" alt="" coords="339,237,504,267"/>
+</map>

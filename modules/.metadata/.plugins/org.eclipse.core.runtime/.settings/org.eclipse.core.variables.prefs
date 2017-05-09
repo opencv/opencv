@@ -1,0 +1,2 @@
+eclipse.preferences.version=1
+org.eclipse.core.variables.valueVariables=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<valueVariables>\n<valueVariable description\="payload" name\="payload" readOnly\="false" value\="&quot;&quot;"/>\n<valueVariable description\="Path to Perl executable in the local file system" name\="dsfPerlExecutable" readOnly\="false" value\="/usr/bin/perl"/>\n<valueVariable description\="payload_args" name\="payload_args" readOnly\="false" value\="&quot;&quot;"/>\n</valueVariables>\n

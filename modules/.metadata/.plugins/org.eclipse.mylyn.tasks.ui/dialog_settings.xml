@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.mylyn.tasklist.ui.exportWizard">
+		<item value="Settings saved" key="Settings saved"/>
+		<item value="/home/rodrygojose/opencv/modules/videostab_polimi/project_config" key="Destination directory setting"/>
+	</section>
+</section>

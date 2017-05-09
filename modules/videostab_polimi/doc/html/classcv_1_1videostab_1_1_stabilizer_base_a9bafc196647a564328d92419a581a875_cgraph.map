@@ -1,0 +1,5 @@
+<map id="cv::videostab::StabilizerBase::setUp" name="cv::videostab::StabilizerBase::setUp">
+<area shape="rect" id="node3" href="$classcv_1_1videostab_1_1_inpainter_base.html#ae6b922a0eac6e676f0b1574fe388645b" title="cv::videostab::Inpainter\lBase::setMotionModel" alt="" coords="233,5,391,51"/>
+<area shape="rect" id="node5" href="$namespacecv_1_1videostab.html#a527fd10de0ee99ed7585d4a7dc23c470" title="cv::videostab::calcBlurriness" alt="" coords="217,75,407,104"/>
+<area shape="rect" id="node7" href="$namespacecv_1_1videostab.html#a64715f89ad837e2b6b5649d0f833172d" title="cv::videostab::at" alt="" coords="253,128,371,157"/>
+</map>

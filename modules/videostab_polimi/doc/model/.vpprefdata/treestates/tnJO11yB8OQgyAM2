@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ProjectTreeState projectID="ehw3V1yB8OQgyAAQ" projectPath="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/doc/model/activity_diagram.vpp">
+	<TreeState name="ModelRepository" viewX="20" viewY="0">
+		<ExpandedPath>ModelRepository</ExpandedPath>
+		<SelectedPath>ModelRepository,k4rCD1yD.AAAAgwc</SelectedPath>
+	</TreeState>
+	<TreeState name="DiagramNavigator" viewX="0" viewY="0">
+		<ExpandedPath>DiagramNavigator</ExpandedPath>
+		<ExpandedPath>DiagramNavigator,UML Diagrams</ExpandedPath>
+		<ExpandedPath>DiagramNavigator,Requirements Capturing</ExpandedPath>
+		<ExpandedPath>DiagramNavigator,Database Modeling</ExpandedPath>
+		<ExpandedPath>DiagramNavigator,SysML</ExpandedPath>
+		<ExpandedPath>DiagramNavigator,Others</ExpandedPath>
+		<SelectedPath>ActivityDiagram</SelectedPath>
+	</TreeState>
+	<TreeState name="ClassBrowser" viewX="0" viewY="0">
+		<ExpandedPath>ClassBrowser</ExpandedPath>
+	</TreeState>
+	<TreeState name="LogicalView" viewX="0" viewY="0"/>
+</ProjectTreeState>

@@ -1,0 +1,9 @@
+<map id="deblurring.cpp" name="deblurring.cpp">
+<area shape="rect" id="node3" href="$precomp_8hpp.html" title="precomp.hpp" alt="" coords="487,92,583,121"/>
+<area shape="rect" id="node23" href="$deblurring_8hpp.html" title="opencv2/videostab/deblurring.hpp" alt="" coords="1259,188,1475,217"/>
+<area shape="rect" id="node28" href="$global__motion_8hpp.html" title="opencv2/videostab/global\l_motion.hpp" alt="" coords="1631,83,1799,130"/>
+<area shape="rect" id="node53" href="$ring__buffer_8hpp.html" title="opencv2/videostab/ring\l_buffer.hpp" alt="" coords="984,83,1139,130"/>
+<area shape="rect" id="node39" href="$optical__flow_8hpp.html" title="opencv2/videostab/optical\l_flow.hpp" alt="" coords="1936,179,2109,226"/>
+<area shape="rect" id="node43" href="$motion__core_8hpp.html" title="opencv2/videostab/motion\l_core.hpp" alt="" coords="1741,275,1915,322"/>
+<area shape="rect" id="node48" href="$outlier__rejection_8hpp.html" title="opencv2/videostab/outlier\l_rejection.hpp" alt="" coords="1691,179,1861,226"/>
+</map>

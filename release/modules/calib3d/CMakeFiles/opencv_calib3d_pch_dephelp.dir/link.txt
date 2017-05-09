@@ -1,0 +1,2 @@
+/usr/bin/ar cr ../../lib/libopencv_calib3d_pch_dephelp.a  CMakeFiles/opencv_calib3d_pch_dephelp.dir/opencv_calib3d_pch_dephelp.cxx.o
+/usr/bin/ranlib ../../lib/libopencv_calib3d_pch_dephelp.a

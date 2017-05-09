@@ -1,0 +1,6 @@
+<map id="cv::videostab::ConsistentMosaicInpainter::inpaint" name="cv::videostab::ConsistentMosaicInpainter::inpaint">
+<area shape="rect" id="node3" href="$namespacecv_1_1videostab.html#a64715f89ad837e2b6b5649d0f833172d" title="cv::videostab::at" alt="" coords="248,5,365,35"/>
+<area shape="rect" id="node5" href="$namespacecv_1_1videostab.html#a3c4d339f7e22f330c83af7aebdf720d6" title="cv::videostab::getMotion" alt="" coords="224,59,389,88"/>
+<area shape="rect" id="node7" href="$precomp_8hpp.html#a4cc2c5519950c279589e9d77684a8304" title="intensity" alt="" coords="272,112,341,141"/>
+<area shape="rect" id="node9" href="$precomp_8hpp.html#a8cab84cc5fe4972692fbdae513a78f6f" title="sqr" alt="" coords="287,165,327,195"/>
+</map>

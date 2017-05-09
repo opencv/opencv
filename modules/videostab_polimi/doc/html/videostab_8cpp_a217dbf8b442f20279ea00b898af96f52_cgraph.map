@@ -1,0 +1,37 @@
+<map id="main" name="main">
+<area shape="rect" id="node3" href="$videostab_8cpp.html#a0d20b69b0ad703df78459e1033d5c1d4" title="printHelp" alt="" coords="176,5,251,35"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_video_file_source.html#a76fe6c31e6baa71fd8fa002345c44815" title="cv::videostab::VideoFile\lSource::count" alt="" coords="132,58,295,105"/>
+<area shape="rect" id="node7" href="$classcv_1_1videostab_1_1_video_file_source.html#a61c733af4e06a8e80cbf7c3d39164719" title="cv::videostab::VideoFile\lSource::fps" alt="" coords="132,127,295,174"/>
+<area shape="rect" id="node9" href="$classcv_1_1videostab_1_1_two_pass_stabilizer.html#a9c5f4df50af8214defda588f3c6be4d7" title="cv::videostab::TwoPassStabilizer\l::setEstimateTrimRatio" alt="" coords="105,197,321,243"/>
+<area shape="rect" id="node11" href="$classcv_1_1videostab_1_1_lp_motion_stabilizer.html#a79c7c7ff5d2fa5ad71acef8e719765e9" title="cv::videostab::LpMotionStabilizer\l::setFrameSize" alt="" coords="107,266,320,313"/>
+<area shape="rect" id="node13" href="$classcv_1_1videostab_1_1_video_file_source.html#ab12c1b3a67d4aebe3ed8cf80c4195246" title="cv::videostab::VideoFile\lSource::width" alt="" coords="132,335,295,382"/>
+<area shape="rect" id="node15" href="$classcv_1_1videostab_1_1_video_file_source.html#a85875189d5a75304c34541685983db72" title="cv::videostab::VideoFile\lSource::height" alt="" coords="132,405,295,451"/>
+<area shape="rect" id="node17" href="$classcv_1_1videostab_1_1_lp_motion_stabilizer.html#a41f1a1566344655639a710429db8d811" title="cv::videostab::LpMotionStabilizer\l::setTrimRatio" alt="" coords="107,474,320,521"/>
+<area shape="rect" id="node19" href="$classcv_1_1videostab_1_1_lp_motion_stabilizer.html#a8b2b01a104671f9fd6dd6518fb3ce1a8" title="cv::videostab::LpMotionStabilizer\l::setWeight1" alt="" coords="107,543,320,590"/>
+<area shape="rect" id="node21" href="$classcv_1_1videostab_1_1_lp_motion_stabilizer.html#af7bb33735451b27d34177bc3491a8670" title="cv::videostab::LpMotionStabilizer\l::setWeight2" alt="" coords="107,613,320,659"/>
+<area shape="rect" id="node23" href="$classcv_1_1videostab_1_1_lp_motion_stabilizer.html#acb11f0167a147074452b34050d8b5297" title="cv::videostab::LpMotionStabilizer\l::setWeight3" alt="" coords="107,682,320,729"/>
+<area shape="rect" id="node25" href="$classcv_1_1videostab_1_1_lp_motion_stabilizer.html#a13f4c831757489d682476448bbe62549" title="cv::videostab::LpMotionStabilizer\l::setWeight4" alt="" coords="107,751,320,798"/>
+<area shape="rect" id="node27" href="$classcv_1_1videostab_1_1_two_pass_stabilizer.html#af234eec62a25308270c95f7f066e74aa" title="cv::videostab::TwoPassStabilizer\l::setMotionStabilizer" alt="" coords="105,821,321,867"/>
+<area shape="rect" id="node29" href="$classcv_1_1videostab_1_1_wobble_suppressor_base.html#a1d219dd75f827edc8128c84a66f6242e" title="cv::videostab::WobbleSuppressor\lBase::setMotionEstimator" alt="" coords="104,890,323,937"/>
+<area shape="rect" id="node31" href="$classcv_1_1videostab_1_1_more_accurate_motion_wobble_suppressor_base.html#a7b31ec03811a5ec21a90604abcb7c2da" title="cv::videostab::MoreAccurate\lMotionWobbleSuppressorBase\l::setPeriod" alt="" coords="113,960,313,1024"/>
+<area shape="rect" id="node33" href="$classcv_1_1videostab_1_1_two_pass_stabilizer.html#ad0a574ccd17df9d2a59acee82fad97a0" title="cv::videostab::TwoPassStabilizer\l::setWobbleSuppressor" alt="" coords="105,1047,321,1094"/>
+<area shape="rect" id="node35" href="$classcv_1_1videostab_1_1_wobble_suppressor_base.html#aedb4b2485747a03ee2f905a763161e6f" title="cv::videostab::WobbleSuppressor\lBase::motionEstimator" alt="" coords="104,1117,323,1163"/>
+<area shape="rect" id="node37" href="$classcv_1_1videostab_1_1_one_pass_stabilizer.html#af63308021cfb37cf696836665d78a820" title="cv::videostab::OnePassStabilizer\l::setMotionFilter" alt="" coords="105,1186,321,1233"/>
+<area shape="rect" id="node39" href="$classcv_1_1videostab_1_1_stabilizer_base.html#a107e9f7960b7efd7e210b5e178118021" title="cv::videostab::Stabilizer\lBase::setFrameSource" alt="" coords="132,1255,295,1302"/>
+<area shape="rect" id="node41" href="$classcv_1_1videostab_1_1_stabilizer_base.html#a6e8c33ea40e8dde5b5083c16338307c6" title="cv::videostab::Stabilizer\lBase::setMotionEstimator" alt="" coords="127,1325,300,1371"/>
+<area shape="rect" id="node43" href="$classcv_1_1videostab_1_1_stabilizer_base.html#a4fc78d45ad3c0d706b58427ecc21c041" title="cv::videostab::Stabilizer\lBase::motionEstimator" alt="" coords="132,1394,295,1441"/>
+<area shape="rect" id="node45" href="$classcv_1_1videostab_1_1_stabilizer_base.html#a0245ba9e08329f9ac2f617a8f7c1eaaf" title="cv::videostab::Stabilizer\lBase::setRadius" alt="" coords="132,1463,295,1510"/>
+<area shape="rect" id="node47" href="$classcv_1_1videostab_1_1_deblurer_base.html#aff114dc78cdafd537d14879de31ef16e" title="cv::videostab::DeblurerBase\l::setRadius" alt="" coords="120,1533,307,1579"/>
+<area shape="rect" id="node49" href="$classcv_1_1videostab_1_1_weighting_deblurer.html#ac928392260915d897cc26ea0d1f590b3" title="cv::videostab::Weighting\lDeblurer::setSensitivity" alt="" coords="131,1602,296,1649"/>
+<area shape="rect" id="node51" href="$classcv_1_1videostab_1_1_stabilizer_base.html#a45319b46a3729c36cda4f664da2a69b1" title="cv::videostab::Stabilizer\lBase::setDeblurer" alt="" coords="132,1671,295,1718"/>
+<area shape="rect" id="node53" href="$classcv_1_1videostab_1_1_stabilizer_base.html#aac98667cf80a45d764e883b5a02ae152" title="cv::videostab::Stabilizer\lBase::setTrimRatio" alt="" coords="132,1741,295,1787"/>
+<area shape="rect" id="node55" href="$classcv_1_1videostab_1_1_stabilizer_base.html#ada19bffb5b015f14af92e7c472989605" title="cv::videostab::Stabilizer\lBase::setCorrectionForInclusion" alt="" coords="109,1810,317,1857"/>
+<area shape="rect" id="node57" href="$classcv_1_1videostab_1_1_stabilizer_base.html#a5c2b79352223792a044080dfd365b30b" title="cv::videostab::Stabilizer\lBase::setBorderMode" alt="" coords="132,1879,295,1926"/>
+<area shape="rect" id="node59" href="$classcv_1_1videostab_1_1_consistent_mosaic_inpainter.html#a08f47e6b4674029d42a823e2a8243312" title="cv::videostab::Consistent\lMosaicInpainter::setStdevThresh" alt="" coords="107,1949,320,1995"/>
+<area shape="rect" id="node61" href="$classcv_1_1videostab_1_1_inpainting_pipeline.html#a81161c1f209a241259f22714334f0bd1" title="cv::videostab::Inpainting\lPipeline::pushBack" alt="" coords="132,2018,295,2065"/>
+<area shape="rect" id="node63" href="$classcv_1_1videostab_1_1_motion_inpainter.html#acec803125f370bd1708fdf72b560f656" title="cv::videostab::MotionInpainter\l::setDistThreshold" alt="" coords="115,2087,312,2134"/>
+<area shape="rect" id="node65" href="$classcv_1_1videostab_1_1_inpainting_pipeline.html#a616c66d103cd73e98a987c28e81038f6" title="cv::videostab::Inpainting\lPipeline::empty" alt="" coords="132,2157,295,2203"/>
+<area shape="rect" id="node67" href="$classcv_1_1videostab_1_1_inpainting_pipeline.html#a5765e338d8e740456c4e641bdb8b3342" title="cv::videostab::Inpainting\lPipeline::setRadius" alt="" coords="132,2226,295,2273"/>
+<area shape="rect" id="node69" href="$classcv_1_1videostab_1_1_stabilizer_base.html#add20a4cf58f541dbafcaa290a3c35f16" title="cv::videostab::Stabilizer\lBase::setInpainter" alt="" coords="132,2295,295,2342"/>
+<area shape="rect" id="node71" href="$videostab_8cpp.html#a13a43e6d814de94978c515cb084873b1" title="run" alt="" coords="193,2365,233,2395"/>
+</map>

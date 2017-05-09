@@ -1,0 +1,4 @@
+<map id="IMotionEstimatorBuilder" name="IMotionEstimatorBuilder">
+<area shape="rect" id="node3" href="$class_motion_estimator_l1_builder.html" title="MotionEstimatorL1Builder" alt="" coords="5,83,176,112"/>
+<area shape="rect" id="node5" href="$class_motion_estimator_ransac_l2_builder.html" title="MotionEstimatorRansacL2Builder" alt="" coords="200,83,416,112"/>
+</map>

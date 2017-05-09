@@ -1,0 +1,4 @@
+<map id="cv::videostab::estimateGlobalMotionLeastSquares" name="cv::videostab::estimateGlobalMotionLeastSquares">
+<area shape="rect" id="node3" href="$namespacecv_1_1videostab.html#a6260bd61792a7ec94ea974af9d94ead7" title="cv::videostab::estimateGlobal\lMotionRansac" alt="" coords="248,5,443,51"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_motion_estimator_ransac_l2.html#a13ed5192e633e3932852e06cac889b14" title="cv::videostab::MotionEstimator\lRansacL2::estimate" alt="" coords="491,5,693,51"/>
+</map>
