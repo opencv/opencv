@@ -9657,7 +9657,9 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
         case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
-            CV_Assert( scn == 3 || scn == 4 );
+            CV_Assert( (scn == 3 && (code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_RGB2BGR)) ||
+                       (scn == 4 && (code == CV_RGBA2BGR || code == CV_BGRA2BGR || code == CV_BGRA2RGBA)) );
+
             dcn = code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_BGRA2RGBA ? 4 : 3;
             _dst.create( sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
@@ -9667,7 +9669,12 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
         case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
-            CV_Assert( (scn == 3 || scn == 4) && depth == CV_8U );
+            CV_Assert( ((scn == 3 && (code == CV_BGR2BGR565 || code == CV_BGR2BGR555 ||
+                                      code == CV_RGB2BGR565 || code == CV_RGB2BGR555)) ||
+                        (scn == 4 && (code == CV_BGRA2BGR565 || code == CV_BGRA2BGR555 ||
+                                      code == CV_RGBA2BGR565 || code == CV_RGBA2BGR555))) &&
+                       depth == CV_8U );
+
             gbits = code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
                     code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5;
             _dst.create(sz, CV_8UC2);
@@ -9678,8 +9685,14 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
         case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
-            if(dcn <= 0) dcn = (code==CV_BGR5652BGRA || code==CV_BGR5552BGRA || code==CV_BGR5652RGBA || code==CV_BGR5552RGBA) ? 4 : 3;
+            if (dcn <= 0)
+            {
+                dcn = (code == CV_BGR5652BGRA || code == CV_BGR5552BGRA ||
+                       code == CV_BGR5652RGBA || code == CV_BGR5552RGBA) ? 4 : 3;
+            }
+
             CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
+
             gbits = code == CV_BGR5652BGR || code == CV_BGR5652RGB ||
                     code == CV_BGR5652BGRA || code == CV_BGR5652RGBA ? 6 : 5;
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
@@ -9689,7 +9702,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
 
         case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
-            CV_Assert( scn == 3 || scn == 4 );
+            CV_Assert( (scn == 3 && (code == CV_BGR2GRAY || code == CV_RGB2GRAY)) ||
+                       (scn == 4 && (code == CV_BGRA2GRAY || code == CV_RGBA2GRAY)) );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
             hal::cvtBGRtoGray(src.data, src.step, dst.data, dst.step, src.cols, src.rows,
@@ -9705,8 +9719,10 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
 
         case CV_GRAY2BGR: case CV_GRAY2BGRA:
-            if( dcn <= 0 ) dcn = (code==CV_GRAY2BGRA) ? 4 : 3;
+            if (dcn <= 0)
+                dcn = code == CV_GRAY2BGRA ? 4 : 3;
             CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
+
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
             hal::cvtGraytoBGR(src.data, src.step, dst.data, dst.step, src.cols, src.rows, depth, dcn);
