@@ -90,12 +90,20 @@
 #define dstT_C1 dstT
 #endif
 
-#if cn != 3
+#define vload1
+#define vstore1
+
+#define __CAT(x, y) x##y
+#define CAT(x, y) __CAT(x, y)
+#define vstorecn CAT(vstore, cn)
+#define vloadcn CAT(vload, cn)
+
+#if cn == 1
     #define storedst(val) *(__global dstT *)(dstptr + dst_index) = val
     #define storedst2(val) *(__global dstT *)(dstptr2 + dst_index2) = val
 #else
-    #define storedst(val) vstore3(val, 0, (__global dstT_C1 *)(dstptr + dst_index))
-    #define storedst2(val) vstore3(val, 0, (__global dstT_C1 *)(dstptr2 + dst_index2))
+    #define storedst(val) vstorecn(val, 0, (__global dstT_C1 *)(dstptr + dst_index))
+    #define storedst2(val) vstorecn(val, 0, (__global dstT_C1 *)(dstptr2 + dst_index2))
 #endif
 
 #define noconvert
@@ -119,12 +127,12 @@
     #endif
 
     #define workT dstT
-    #if cn != 3
+    #if cn == 1
         #define srcelem1 *(__global srcT1 *)(srcptr1 + src1_index)
         #define srcelem2 *(__global srcT2 *)(srcptr2 + src2_index)
     #else
-        #define srcelem1 vload3(0, (__global srcT1_C1 *)(srcptr1 + src1_index))
-        #define srcelem2 vload3(0, (__global srcT2_C1 *)(srcptr2 + src2_index))
+        #define srcelem1 vloadcn(0, (__global srcT1_C1 *)(srcptr1 + src1_index))
+        #define srcelem2 vloadcn(0, (__global srcT2_C1 *)(srcptr2 + src2_index))
     #endif
     #ifndef convertToDT
     #define convertToDT noconvert
@@ -135,12 +143,12 @@
     #ifndef convertToWT2
     #define convertToWT2 convertToWT1
     #endif
-    #if cn != 3
+    #if cn == 1
         #define srcelem1 convertToWT1(*(__global srcT1 *)(srcptr1 + src1_index))
         #define srcelem2 convertToWT2(*(__global srcT2 *)(srcptr2 + src2_index))
     #else
-        #define srcelem1 convertToWT1(vload3(0, (__global srcT1_C1 *)(srcptr1 + src1_index)))
-        #define srcelem2 convertToWT2(vload3(0, (__global srcT2_C1 *)(srcptr2 + src2_index)))
+        #define srcelem1 convertToWT1(vloadcn(0, (__global srcT1_C1 *)(srcptr1 + src1_index)))
+        #define srcelem2 convertToWT2(vloadcn(0, (__global srcT2_C1 *)(srcptr2 + src2_index)))
     #endif
 
 #endif
