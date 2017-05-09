@@ -847,6 +847,10 @@ macro(_ocv_create_module)
     set_target_properties(${the_module} PROPERTIES FOLDER "modules")
   endif()
 
+  if(NOT CMAKE_MACOSX_RPATH)
+    set_target_properties(${the_module} PROPERTIES INSTALL_NAME_DIR lib)
+  endif()
+
   set_target_properties(${the_module} PROPERTIES
     OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
