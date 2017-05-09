@@ -1023,7 +1023,8 @@ public:
     of the facet containing the input point, though the facet (located using locate() ) is used as a
     starting point.
 
-    @returns vertex ID.
+    @returns vertex ID on success. Returns PTLOC_OUTSIDE_RECT if the point is outside the subdivision
+    reference rectangle. Returns CV_PTLOC_ERROR if the subdivision is empty.
      */
     CV_WRAP int findNearest(Point2f pt, CV_OUT Point2f* nearestPt = 0);
 
