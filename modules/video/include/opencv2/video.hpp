@@ -55,6 +55,7 @@
 
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
+#include "opencv2/video/kalman_filters.hpp"
 
 #ifndef DISABLE_OPENCV_24_COMPATIBILITY
 #include "opencv2/video/tracking_c.h"
