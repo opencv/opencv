@@ -181,7 +181,7 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
             break;
         case CV_16U:
             for( j = 0; j < cols*cn; j++ )
-                ((ushort*)ptr)[j] = (ushort)cvRound(buffer[j]);
+                ((int*)ptr)[j] = (int)cvRound(buffer[j]);
             break;
         case CV_32F:
             for( j = 0; j < cols*cn; j++ )
@@ -416,7 +416,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
                 break;
             case CV_16U:
                 {
-                const ushort* sptr = (const ushort*)sptr0 + iys*step + ixs*cn;
+                const int* sptr = (const int*)sptr0 + iys*step + ixs*cn;
                 for( k = 0; k < cn; k++ )
                 {
                     float v00 = sptr[k];
@@ -427,7 +427,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
                     v00 = v00 + xs*(v01 - v00);
                     v10 = v10 + xs*(v11 - v10);
                     v00 = v00 + ys*(v10 - v00);
-                    ((ushort*)dptr)[k] = (ushort)cvRound(v00);
+                    ((int*)dptr)[k] = (int)cvRound(v00);
                 }
                 }
                 break;
@@ -1512,7 +1512,7 @@ TEST(Imgproc_fitLine_Mat_3dC1, regression)
 
 TEST(Imgproc_resize_area, regression)
 {
-    static ushort input_data[16 * 16] = {
+    static int input_data[16 * 16] = {
          90,  94,  80,   3, 231,   2, 186, 245, 188, 165,  10,  19, 201, 169,   8, 228,
          86,   5, 203, 120, 136, 185,  24,  94,  81, 150, 163, 137,  88, 105, 132, 132,
         236,  48, 250, 218,  19,  52,  54, 221, 159, 112,  45,  11, 152, 153, 112, 134,
@@ -1530,7 +1530,7 @@ TEST(Imgproc_resize_area, regression)
         240, 152, 136, 235, 235, 164, 157,  9,  152,  38,  27, 209, 120,  77, 238, 196,
         240, 233,  10, 241,  90,  67,  12, 79,    0,  43,  58,  27,  83, 199, 190, 182};
 
-    static ushort expected_data[5 * 5] = {
+    static int expected_data[5 * 5] = {
         120, 100, 151, 101, 130,
         106, 115, 141, 130, 127,
          91, 136, 170, 114, 140,
@@ -1544,7 +1544,7 @@ TEST(Imgproc_resize_area, regression)
 
     cv::resize(src, actual, cv::Size(), 0.3, 0.3, INTER_AREA);
 
-    check_resize_area<ushort>(expected, actual, 1.0);
+    check_resize_area<int>(expected, actual, 1.0);
 }
 
 TEST(Imgproc_resize_area, regression_half_round)
@@ -1668,11 +1668,11 @@ TEST(Resize, Area_half)
         rng.fill(src, cv::RNG::UNIFORM, -1000, 1000, true);
 
         if (depth == CV_8U)
-            resizeArea<uchar, ushort, 2, IntCast<uchar, ushort> >(src, dst_reference);
+            resizeArea<uchar, int, 2, IntCast<uchar, int> >(src, dst_reference);
         else if (depth == CV_16U)
-            resizeArea<ushort, uint, 2, IntCast<ushort, uint> >(src, dst_reference);
+            resizeArea<int, uint, 2, IntCast<int, uint> >(src, dst_reference);
         else if (depth == CV_16S)
-            resizeArea<short, int, 2, IntCast<short, int> >(src, dst_reference);
+            resizeArea<int, int, 2, IntCast<int, int> >(src, dst_reference);
         else if (depth == CV_32F)
             resizeArea<float, float, 0, FltCast<float, float> >(src, dst_reference);
         else
