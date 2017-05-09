@@ -1264,37 +1264,81 @@ namespace cv {
 
 static bool ocl_countNonZero( InputArray _src, int & res )
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), kercn = ocl::predictOptimalVectorWidth(_src);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (depth == CV_64F && !doubleSupport)
         return false;
 
-    int dbsize = ocl::Device::getDefault().maxComputeUnits();
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    if (ocl::Device::getDefault().isIntel())
+    {
+        UMat src = _src.getUMat();
+        bool halfRows = (src.cols <= 1024) && (128 < src.rows);
+        int src_cols_tmp = halfRows ? 2 * src.cols : src.cols;
+        UMat buffer(1, src_cols_tmp, CV_32SC1);
+        cv::String build_opt = format("-D srcT=%s%s%s",
+                                        ocl::typeToStr(type),
+                                        halfRows ? " -D HALF_ROWS" : "",
+                                        doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
-    int wgs2_aligned = 1;
-    while (wgs2_aligned < (int)wgs)
-        wgs2_aligned <<= 1;
-    wgs2_aligned >>= 1;
+        ocl::Kernel k("countNonZero", ocl::core::count_non_zero_oclsrc, build_opt);
+        if (k.empty())
+            return false;
 
-    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D srcT1=%s -D cn=1 -D OP_COUNT_NON_ZERO"
-                         " -D WGS=%d -D kercn=%d -D WGS2_ALIGNED=%d%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
-                         ocl::typeToStr(depth), (int)wgs, kercn,
-                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                         _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
-    if (k.empty())
-        return false;
+        ocl::Kernel ksum("sumLine", ocl::core::count_non_zero_oclsrc, build_opt);
+        if (ksum.empty())
+            return false;
 
-    UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
-           dbsize, ocl::KernelArg::PtrWriteOnly(db));
+        k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(buffer));
 
-    size_t globalsize = dbsize * wgs;
-    if (k.run(1, &globalsize, &wgs, true))
-        return res = saturate_cast<int>(cv::sum(db.getMat(ACCESS_READ))[0]), true;
+        size_t globalSize = src_cols_tmp;//src.cols;
+        if (k.run(1, &globalSize, NULL, false))
+        {
+            const int bufSumCols = 32;
+            size_t globalSizeSum = bufSumCols;
+            size_t localSizeSum = 8;
+            ksum.args(ocl::KernelArg::ReadWrite(buffer));
+            if (ksum.run(1, &globalSizeSum, &localSizeSum, false))
+            {
+                Mat buf = buffer.getMat(ACCESS_READ);
+                int *bufptr = (int *)buf.ptr(0);
+                double sum = 0.0;
+                for (int i = 0; i < bufSumCols; i++)
+                    sum += bufptr[i];
+                res = saturate_cast<int>(sum);
+                return true;
+            }
+        }
+    }
+    else
+    {
+        int kercn = ocl::predictOptimalVectorWidth(_src);
+        int dbsize = ocl::Device::getDefault().maxComputeUnits();
+        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+        int wgs2_aligned = 1;
+        while (wgs2_aligned < (int)wgs)
+            wgs2_aligned <<= 1;
+        wgs2_aligned >>= 1;
+
+        ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
+                      format("-D srcT=%s -D srcT1=%s -D cn=1 -D OP_COUNT_NON_ZERO"
+                             " -D WGS=%d -D kercn=%d -D WGS2_ALIGNED=%d%s%s",
+                             ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                             ocl::typeToStr(depth), (int)wgs, kercn,
+                             wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                             _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
+        if (k.empty())
+            return false;
+
+        UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+               dbsize, ocl::KernelArg::PtrWriteOnly(db));
+
+        size_t globalsize = dbsize * wgs;
+        if (k.run(1, &globalsize, &wgs, true))
+            return res = saturate_cast<int>(cv::sum(db.getMat(ACCESS_READ))[0]), true;
+    }
     return false;
 }
 
