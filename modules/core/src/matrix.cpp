@@ -222,7 +222,7 @@ public:
 };
 namespace
 {
-    MatAllocator* g_matAllocator = NULL;
+    MatAllocator* volatile g_matAllocator = NULL;
 }
 
 
@@ -230,7 +230,11 @@ MatAllocator* Mat::getDefaultAllocator()
 {
     if (g_matAllocator == NULL)
     {
-        g_matAllocator = getStdAllocator();
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (g_matAllocator == NULL)
+        {
+            g_matAllocator = getStdAllocator();
+        }
     }
     return g_matAllocator;
 }
