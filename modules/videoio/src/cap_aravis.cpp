@@ -77,11 +77,13 @@
 //      video/x-raw, fourcc:'GREY'  -> 8bit, 1 channel
 //      video/x-raw, fourcc:'Y800'  -> 8bit, 1 channel
 //      video/x-raw, fourcc:'Y12 '  -> 12bit, 1 channel
+//      video/x-raw, fourcc:'Y16 '  -> 16bit, 1 channel
 //
 
 #define MODE_GREY   CV_FOURCC_MACRO('G','R','E','Y')
 #define MODE_Y800   CV_FOURCC_MACRO('Y','8','0','0')
 #define MODE_Y12    CV_FOURCC_MACRO('Y','1','2',' ')
+#define MODE_Y16    CV_FOURCC_MACRO('Y','1','6',' ')
 
 #define CLIP(a,b,c) (cv::max(cv::min((a),(c)),(b)))
 
@@ -182,7 +184,7 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     targetGrey = 0;
     frameID = prevFrameID = 0;
 
-    num_buffers = 50;
+    num_buffers = 10;
     frame = NULL;
 }
 
@@ -314,6 +316,7 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
                 channels = 1;
                 break;
             case ARV_PIXEL_FORMAT_MONO_12:
+            case ARV_PIXEL_FORMAT_MONO_16:
                 depth = IPL_DEPTH_16U;
                 channels = 1;
                 break;
@@ -334,8 +337,8 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
             }
             cvCopy(&src, frame);
 
-            if(controlExposure && ((frameID - prevFrameID) > 1)) {
-                // control exposure every second frame
+            if(controlExposure && ((frameID - prevFrameID) >= 3)) {
+                // control exposure every third frame
                 // i.e. skip frame taken with previous exposure setup
                 autoExposureControl(frame);
             }
@@ -375,7 +378,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
     double ne = CLIP( ( exposure * d ) / dmid, exposureMin, maxe);
 
     // if change of value requires intervention
-    if(fabs(d-dmid) > 5) {
+    if(std::fabs(d-dmid) > 5) {
         double ev, ng = 0;
 
         if(gainAvailable && autoGain) {
@@ -390,11 +393,9 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
         }
 
         if(exposureAvailable) {
-            if(abs(exposure - ne) > 2) {
-                // priority 2 - control of exposure time
-                arv_camera_set_exposure_time(camera, (exposure = ne) );
-                return;
-            }
+            // priority 2 - control of exposure time
+            arv_camera_set_exposure_time(camera, (exposure = ne) );
+            return;
         }
 
         if(gainAvailable && autoGain) {
@@ -463,6 +464,8 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                         return MODE_Y800;
                     case ARV_PIXEL_FORMAT_MONO_12:
                         return MODE_Y12;
+                    case ARV_PIXEL_FORMAT_MONO_16:
+                        return MODE_Y16;
                 }
             }
             break;
@@ -528,6 +531,10 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                         newFormat = ARV_PIXEL_FORMAT_MONO_12;
                         targetGrey = 2048;
                         break;
+                    case MODE_Y16:
+                        newFormat = ARV_PIXEL_FORMAT_MONO_16;
+                        targetGrey = 32768;
+                        break;
                 }
                 if(newFormat != pixelFormat) {
                     stopCapture();
@@ -570,7 +577,6 @@ bool CvCaptureCAM_Aravis::startCapture()
 {
     if(init_buffers() ) {
         arv_camera_set_acquisition_mode(camera, ARV_ACQUISITION_MODE_CONTINUOUS);
-        arv_device_set_string_feature_value(arv_camera_get_device (camera), "TriggerMode" , "Off");
         arv_camera_start_acquisition(camera);
 
         return true;
