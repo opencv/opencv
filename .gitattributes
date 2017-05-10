@@ -1,0 +1,1 @@
+testdata/dnn/torch/*.txt text eol=lf

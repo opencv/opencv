@@ -1,0 +1,18 @@
+name: "test_Dropout"
+input: "input"
+
+input_dim: 2
+input_dim: 6
+input_dim: 75
+input_dim: 113
+
+layer {
+  type: "Dropout"
+  dropout_param
+  {
+  	dropout_ratio: 0.12345
+  }
+  name: "output"
+  bottom: "input"
+  top: "output"
+}

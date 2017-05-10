@@ -1,0 +1,21 @@
+name: "test_Concat"
+input: "input"
+
+input_dim: 2
+input_dim: 6
+input_dim: 75
+input_dim: 113
+
+layer {
+  type: "Split"
+  name: "split"
+  bottom: "input"
+  top: "split"
+}
+
+layer {
+  type: "Concat"
+  name: "output"
+  bottom: "split"
+  top: "output"
+}
