@@ -78,13 +78,13 @@ _InputArray::_InputArray(const std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _Nm> inline
-_InputArray::_InputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_READ, arr.data(), Size(1, _Nm)); }
+template<typename _Tp, std::size_t _N> inline
+_InputArray::_InputArray(const std::array<_Tp, _N>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_READ, arr.data(), Size(1, _N)); }
 
-template<std::size_t _Nm> inline
-_InputArray::_InputArray(const std::array<Mat, _Nm>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_READ, arr.data(), Size(1, _Nm)); }
+template<std::size_t _N> inline
+_InputArray::_InputArray(const std::array<Mat, _N>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_READ, arr.data(), Size(1, _N)); }
 #endif
 
 inline
@@ -94,10 +94,6 @@ _InputArray::_InputArray(const std::vector<bool>& vec)
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }
-
-inline
-_InputArray::_InputArray(const std::vector<std::vector<bool> >&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<std::vector<bool> > is not supported!\n"); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<Mat_<_Tp> >& vec)
@@ -166,13 +162,13 @@ _OutputArray::_OutputArray(std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _Nm> inline
-_OutputArray::_OutputArray(std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+template<typename _Tp, std::size_t _N> inline
+_OutputArray::_OutputArray(std::array<_Tp, _N>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _N)); }
 
-template<std::size_t _Nm> inline
-_OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+template<std::size_t _N> inline
+_OutputArray::_OutputArray(std::array<Mat, _N>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _N)); }
 #endif
 
 inline
@@ -182,10 +178,6 @@ _OutputArray::_OutputArray(std::vector<bool>&)
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
-
-inline
-_OutputArray::_OutputArray(std::vector<std::vector<bool> >&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<std::vector<bool> > cannot be an output array\n"); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<Mat_<_Tp> >& vec)
@@ -208,13 +200,13 @@ _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _Nm> inline
-_OutputArray::_OutputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+template<typename _Tp, std::size_t _N> inline
+_OutputArray::_OutputArray(const std::array<_Tp, _N>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_WRITE, arr.data(), Size(1, _N)); }
 
-template<std::size_t _Nm> inline
-_OutputArray::_OutputArray(const std::array<Mat, _Nm>& arr)
-{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+template<std::size_t _N> inline
+_OutputArray::_OutputArray(const std::array<Mat, _N>& arr)
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _N)); }
 #endif
 
 template<typename _Tp> inline
@@ -285,13 +277,13 @@ _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
 { init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _Nm> inline
-_InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+template<typename _Tp, std::size_t _N> inline
+_InputOutputArray::_InputOutputArray(std::array<_Tp, _N>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _N)); }
 
-template<std::size_t _Nm> inline
-_InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+template<std::size_t _N> inline
+_InputOutputArray::_InputOutputArray(std::array<Mat, _N>& arr)
+{ init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _N)); }
 #endif
 
 inline _InputOutputArray::_InputOutputArray(std::vector<bool>&)
@@ -322,13 +314,13 @@ _InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _Nm> inline
-_InputOutputArray::_InputOutputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+template<typename _Tp, std::size_t _N> inline
+_InputOutputArray::_InputOutputArray(const std::array<_Tp, _N>& arr)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + DataType<_Tp>::type + ACCESS_RW, arr.data(), Size(1, _N)); }
 
-template<std::size_t _Nm> inline
-_InputOutputArray::_InputOutputArray(const std::array<Mat, _Nm>& arr)
-{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+template<std::size_t _N> inline
+_InputOutputArray::_InputOutputArray(const std::array<Mat, _N>& arr)
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _N)); }
 #endif
 
 template<typename _Tp> inline
@@ -566,8 +558,8 @@ Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
 }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _Nm> inline
-Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
+template<typename _Tp, std::size_t _N> inline
+Mat::Mat(const std::array<_Tp, _N>& arr, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)arr.size()),
       cols(1), data(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
@@ -1205,10 +1197,10 @@ Mat::operator std::vector<_Tp>() const
 }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp, std::size_t _Nm> inline
-Mat::operator std::array<_Tp, _Nm>() const
+template<typename _Tp, std::size_t _N> inline
+Mat::operator std::array<_Tp, _N>() const
 {
-    std::array<_Tp, _Nm> v;
+    std::array<_Tp, _N> v;
     copyTo(v);
     return v;
 }
@@ -1348,7 +1340,7 @@ MatSize::MatSize(int* _p)
 inline
 Size MatSize::operator()() const
 {
-    CV_DbgAssert(p[-1] <= 2);
+    CV_DbgAssert(dims() <= 2);
     return Size(p[1], p[0]);
 }
 
@@ -1373,8 +1365,8 @@ MatSize::operator const int*() const
 inline
 bool MatSize::operator == (const MatSize& sz) const
 {
-    int d = p[-1];
-    int dsz = sz.p[-1];
+    int d = dims();
+    int dsz = sz.dims();
     if( d != dsz )
         return false;
     if( d == 2 )
@@ -1392,7 +1384,11 @@ bool MatSize::operator != (const MatSize& sz) const
     return !(*this == sz);
 }
 
-
+inline
+int MatSize::dims() const
+{
+	return p[-1];
+}
 
 ///////////////////////////// MatStep ////////////////////////////
 
@@ -1569,8 +1565,8 @@ Mat_<_Tp>::Mat_(const std::vector<_Tp>& vec, bool copyData)
 {}
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp> template<std::size_t _Nm> inline
-Mat_<_Tp>::Mat_(const std::array<_Tp, _Nm>& arr, bool copyData)
+template<typename _Tp> template<std::size_t _N> inline
+Mat_<_Tp>::Mat_(const std::array<_Tp, _N>& arr, bool copyData)
     : Mat(arr, copyData)
 {}
 #endif
@@ -1853,10 +1849,10 @@ Mat_<_Tp>::operator std::vector<_Tp>() const
 }
 
 #ifdef CV_CXX_STD_ARRAY
-template<typename _Tp> template<std::size_t _Nm> inline
-Mat_<_Tp>::operator std::array<_Tp, _Nm>() const
+template<typename _Tp> template<std::size_t _N> inline
+Mat_<_Tp>::operator std::array<_Tp, _N>() const
 {
-    std::array<_Tp, _Nm> a;
+    std::array<_Tp, _N> a;
     copyTo(a);
     return a;
 }
