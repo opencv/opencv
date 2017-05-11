@@ -64,6 +64,7 @@
 //  read/write
 //      CAP_PROP_AUTO_EXPOSURE(0|1)
 //      CAP_PROP_EXPOSURE(t), t in seconds
+//      CAP_PROP_BRIGHTNESS (ev), exposure compensation in EV for auto exposure algorithm
 //      CAP_PROP_GAIN(g), g >=0 or -1 for automatic control if CAP_PROP_AUTO_EXPOSURE is true
 //      CAP_PROP_FPS(f)
 //      CAP_PROP_FOURCC(type)
@@ -141,6 +142,7 @@ protected:
     double          exposureMax;            // Camera's maximum exposure time.
 
     bool            controlExposure;        // Flag if automatic exposure shall be done by this SW
+    double          exposureCompensation;
     bool            autoGain;
     double          targetGrey;             // Target grey value (mid grey))
 
@@ -181,6 +183,7 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     xoffset = yoffset = width = height = 0;
     fpsMin = fpsMax = gainMin = gainMax = exposureMin = exposureMax = 0;
     controlExposure = false;
+    exposureCompensation = 0;
     targetGrey = 0;
     frameID = prevFrameID = 0;
 
@@ -375,7 +378,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
     midGrey = brightness;
 
     double maxe = 1e6 / fps;
-    double ne = CLIP( ( exposure * d ) / dmid, exposureMin, maxe);
+    double ne = CLIP( ( exposure * d ) / ( dmid * pow(sqrt(2), -2 * exposureCompensation) ), exposureMin, maxe);
 
     // if change of value requires intervention
     if(std::fabs(d-dmid) > 5) {
@@ -383,7 +386,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
 
         if(gainAvailable && autoGain) {
             ev = log( d / dmid ) / log(2);
-            ng = CLIP( gain + ev, gainMin, gainMax);
+            ng = CLIP( gain + ev + exposureCompensation, gainMin, gainMax);
 
             if( ng < gain ) {
                 // piority 1 - reduce gain
@@ -394,8 +397,11 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
 
         if(exposureAvailable) {
             // priority 2 - control of exposure time
-            arv_camera_set_exposure_time(camera, (exposure = ne) );
-            return;
+            if(std::fabs(exposure - ne) > 2) {
+                // we have not yet reach the max-e level
+                arv_camera_set_exposure_time(camera, (exposure = ne) );
+                return;
+            }
         }
 
         if(gainAvailable && autoGain) {
@@ -436,6 +442,9 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
 
         case CV_CAP_PROP_AUTO_EXPOSURE:
             return (controlExposure ? 1 : 0);
+
+    case CV_CAP_PROP_BRIGHTNESS:
+        return exposureCompensation;
 
         case CV_CAP_PROP_EXPOSURE:
             if(exposureAvailable) {
@@ -493,6 +502,9 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 }
             }
             break;
+    case CV_CAP_PROP_BRIGHTNESS:
+       exposureCompensation = CLIP(value, -3., 3.);
+       break;
 
         case CV_CAP_PROP_EXPOSURE:
             if(exposureAvailable) {
