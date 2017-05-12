@@ -4390,16 +4390,16 @@ static const double expTab[] = {
     1.9784560263879509682582499181312 * EXPPOLY_32F_A0,
 };
 
+// 1 / ln(2) == 1.4426950408889634073599246810019
 static const float64_t exp_prescale  = double_to_f64(1.4426950408889634073599246810019 * (1 << EXPTAB_SCALE));
 static const float64_t exp_postscale = double_to_f64(1./(1 << EXPTAB_SCALE));
 static const float64_t exp_max_val   = double_to_f64(3000.*(1 << EXPTAB_SCALE)); // log10(DBL_MAX) < 3000
 
 float32_t f32_exp( float32_t x)
 {
-    const float32_t zero = { 0 }, inf = { packToF32UI( 0, 0xFF, 0 ) }, nan = { 0x7fffffff };
     //special cases
-    if(f32_isNaN(x)) return nan;
-    if(f32_isInf(x)) return (x == inf) ? x : zero;
+    if(f32_isNaN(x)) return f32_nan;
+    if(f32_isInf(x)) return (x == f32_inf) ? x : f32_zero;
 
     static const float64_t
         A4 = double_to_f64(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
