@@ -154,6 +154,12 @@ public:
     //! extract the matrix column
     Matx<_Tp, m, 1> col(int i) const;
 
+    //! copies the matrix to another one.
+    void copyTo(Matx<_Tp, m, n>& matx) const;
+
+    //! copies the matrix to a plain array.
+    void copyTo(_Tp* arr) const;
+
     //! extract the matrix diagonal
     diag_type diag() const;
 
@@ -712,6 +718,18 @@ Matx<_Tp, m, 1> Matx<_Tp, m, n>::col(int j) const
     for( int i = 0; i < m; i++ )
         v.val[i] = val[i*n + j];
     return v;
+}
+
+template<typename _Tp, int m, int n> inline
+void Matx<_Tp, m, n>::copyTo(Matx<_Tp, m, n>& matx) const
+{
+    for (int i = 0; i < channels; i++) matx.val[i] = val[i];
+}
+
+template<typename _Tp, int m, int n> inline
+void Matx<_Tp, m, n>::copyTo(_Tp* arr) const
+{
+    for (int i = 0; i < channels; i++) arr[i] = val[i];
 }
 
 template<typename _Tp, int m, int n> inline
