@@ -3238,7 +3238,7 @@ TEST(Core_SoftFloat, log32)
         ASSERT_TRUE(!f32_isInf(ex) || (y > i32_to_f32(88)));
         if(!f32_isInf(ex) && diff > float_to_f32(FLT_EPSILON))
         {
-            ASSERT_LT(diff/max(f32_abs(ex), x), float_to_f32(0.00001));
+            ASSERT_LT(diff/max(f32_abs(ex), x), float_to_f32(0.00001f));
         }
     }
 }
