@@ -77,11 +77,12 @@
 //      video/x-raw, fourcc:'GREY'  -> 8bit, 1 channel
 //      video/x-raw, fourcc:'Y800'  -> 8bit, 1 channel
 //      video/x-raw, fourcc:'Y12 '  -> 12bit, 1 channel
-//
+//      video/x-raw, fourcc:'BGR8'  -> 8bit, 1 channel
 
-#define MODE_GREY   CV_FOURCC_MACRO('G','R','E','Y')
-#define MODE_Y800   CV_FOURCC_MACRO('Y','8','0','0')
-#define MODE_Y12    CV_FOURCC_MACRO('Y','1','2',' ')
+#define MODE_GREY         CV_FOURCC_MACRO('G','R','E','Y')
+#define MODE_Y800         CV_FOURCC_MACRO('Y','8','0','0')
+#define MODE_Y12          CV_FOURCC_MACRO('Y','1','2',' ')
+#define MODE_BAYER_GR_8   CV_FOURCC_MACRO('B','G','R','8')
 
 #define CLIP(a,b,c) (cv::max(cv::min((a),(c)),(b)))
 
@@ -317,6 +318,10 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
                 depth = IPL_DEPTH_16U;
                 channels = 1;
                 break;
+            case ARV_PIXEL_FORMAT_BAYER_GR_8:
+                depth = IPL_DEPTH_8U;
+                channels = 1;
+                break;
         }
         if(depth && channels) {
             IplImage src;
@@ -463,6 +468,8 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                         return MODE_Y800;
                     case ARV_PIXEL_FORMAT_MONO_12:
                         return MODE_Y12;
+                    case ARV_PIXEL_FORMAT_BAYER_GR_8:
+                        return MODE_BAYER_GR_8;
                 }
             }
             break;
@@ -527,6 +534,10 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                     case MODE_Y12:
                         newFormat = ARV_PIXEL_FORMAT_MONO_12;
                         targetGrey = 2048;
+                        break;
+                    case MODE_BAYER_GR_8:
+                        newFormat = ARV_PIXEL_FORMAT_BAYER_GR_8;
+                        targetGrey = 128;
                         break;
                 }
                 if(newFormat != pixelFormat) {
