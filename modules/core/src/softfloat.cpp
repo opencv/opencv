@@ -82,8 +82,162 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace cv
 {
 
-namespace softfloat
-{
+/*----------------------------------------------------------------------------
+| Types used to pass 32-bit and 64-bit floating-point
+| arguments and results to/from functions.  These types must be exactly
+| 32 bits and 64 bits in size, respectively.  Where a
+| platform has "native" support for IEEE-Standard floating-point formats,
+| the types below may, if desired, be defined as aliases for the native types
+| (typically 'float' and 'double').
+*----------------------------------------------------------------------------*/
+typedef softfloat32_t float32_t;
+typedef softfloat64_t float64_t;
+
+/*----------------------------------------------------------------------------
+| Integer-to-floating-point conversion routines.
+*----------------------------------------------------------------------------*/
+//TODO: no CV_EXPORTS
+float32_t ui32_to_f32( uint32_t );
+float64_t ui32_to_f64( uint32_t );
+float32_t ui64_to_f32( uint64_t );
+float64_t ui64_to_f64( uint64_t );
+float32_t i32_to_f32( int32_t );
+float64_t i32_to_f64( int32_t );
+float32_t i64_to_f32( int64_t );
+float64_t i64_to_f64( int64_t );
+
+/*----------------------------------------------------------------------------
+| 32-bit (single-precision) floating-point operations.
+*----------------------------------------------------------------------------*/
+uint_fast32_t f32_to_ui32( float32_t, uint_fast8_t, bool );
+uint_fast64_t f32_to_ui64( float32_t, uint_fast8_t, bool );
+int_fast32_t f32_to_i32( float32_t, uint_fast8_t, bool );
+int_fast64_t f32_to_i64( float32_t, uint_fast8_t, bool );
+uint_fast32_t f32_to_ui32_r_minMag( float32_t, bool );
+uint_fast64_t f32_to_ui64_r_minMag( float32_t, bool );
+int_fast32_t f32_to_i32_r_minMag( float32_t, bool );
+int_fast64_t f32_to_i64_r_minMag( float32_t, bool );
+float64_t f32_to_f64( float32_t );
+float32_t f32_roundToInt( float32_t, uint_fast8_t, bool );
+float32_t f32_add( float32_t, float32_t );
+float32_t f32_sub( float32_t, float32_t );
+float32_t f32_mul( float32_t, float32_t );
+float32_t f32_mulAdd( float32_t, float32_t, float32_t );
+float32_t f32_div( float32_t, float32_t );
+float32_t f32_rem( float32_t, float32_t );
+float32_t f32_sqrt( float32_t );
+bool f32_eq( float32_t, float32_t );
+bool f32_le( float32_t, float32_t );
+bool f32_lt( float32_t, float32_t );
+bool f32_eq_signaling( float32_t, float32_t );
+bool f32_le_quiet( float32_t, float32_t );
+bool f32_lt_quiet( float32_t, float32_t );
+bool f32_isSignalingNaN( float32_t );
+
+/*----------------------------------------------------------------------------
+| 64-bit (double-precision) floating-point operations.
+*----------------------------------------------------------------------------*/
+uint_fast32_t f64_to_ui32( float64_t, uint_fast8_t, bool );
+uint_fast64_t f64_to_ui64( float64_t, uint_fast8_t, bool );
+int_fast32_t f64_to_i32( float64_t, uint_fast8_t, bool );
+int_fast64_t f64_to_i64( float64_t, uint_fast8_t, bool );
+uint_fast32_t f64_to_ui32_r_minMag( float64_t, bool );
+uint_fast64_t f64_to_ui64_r_minMag( float64_t, bool );
+int_fast32_t f64_to_i32_r_minMag( float64_t, bool );
+int_fast64_t f64_to_i64_r_minMag( float64_t, bool );
+float32_t f64_to_f32( float64_t );
+float64_t f64_roundToInt( float64_t, uint_fast8_t, bool );
+float64_t f64_add( float64_t, float64_t );
+float64_t f64_sub( float64_t, float64_t );
+float64_t f64_mul( float64_t, float64_t );
+float64_t f64_mulAdd( float64_t, float64_t, float64_t );
+float64_t f64_div( float64_t, float64_t );
+float64_t f64_rem( float64_t, float64_t );
+float64_t f64_sqrt( float64_t );
+bool f64_eq( float64_t, float64_t );
+bool f64_le( float64_t, float64_t );
+bool f64_lt( float64_t, float64_t );
+bool f64_eq_signaling( float64_t, float64_t );
+bool f64_le_quiet( float64_t, float64_t );
+bool f64_lt_quiet( float64_t, float64_t );
+bool f64_isSignalingNaN( float64_t );
+
+/*----------------------------------------------------------------------------
+| softfloat32_t and softfloat64_t methods and members
+*----------------------------------------------------------------------------*/
+
+softfloat32_t::softfloat32_t( const uint32_t a ) { *this = ui32_to_f32(a); }
+softfloat32_t::softfloat32_t( const uint64_t a ) { *this = ui64_to_f32(a); }
+softfloat32_t::softfloat32_t( const  int32_t a ) { *this =  i32_to_f32(a); }
+softfloat32_t::softfloat32_t( const  int64_t a ) { *this =  i64_to_f32(a); }
+
+uint_fast32_t softfloat32_t::toUI32_minMag( bool exact ) { return f32_to_ui32_r_minMag(*this, exact); }
+uint_fast64_t softfloat32_t::toUI64_minMag( bool exact ) { return f32_to_ui64_r_minMag(*this, exact); }
+int_fast32_t  softfloat32_t:: toI32_minMag( bool exact ) { return f32_to_i32_r_minMag (*this, exact); }
+int_fast64_t  softfloat32_t:: toI64_minMag( bool exact ) { return f32_to_i64_r_minMag (*this, exact); }
+uint_fast32_t softfloat32_t::toUI32( uint_fast8_t roundingMode, bool exact ) { return f32_to_ui32(*this, roundingMode, exact); }
+uint_fast64_t softfloat32_t::toUI64( uint_fast8_t roundingMode, bool exact ) { return f32_to_ui64(*this, roundingMode, exact); }
+int_fast32_t  softfloat32_t:: toI32( uint_fast8_t roundingMode, bool exact ) { return f32_to_i32 (*this, roundingMode, exact); }
+int_fast64_t  softfloat32_t:: toI64( uint_fast8_t roundingMode, bool exact ) { return f32_to_i64 (*this, roundingMode, exact); }
+
+softfloat32_t softfloat32_t::round( uint_fast8_t roundingMode, bool exact ) { return f32_roundToInt(*this, roundingMode, exact); }
+
+softfloat64_t softfloat32_t::toF64() { return f32_to_f64(*this); }
+float softfloat32_t::toFloat() { return *((float*) &(this->v)); }
+
+softfloat32_t softfloat32_t::operator + (const softfloat32_t& a) const { return f32_add(*this, a); }
+softfloat32_t softfloat32_t::operator - (const softfloat32_t& a) const { return f32_sub(*this, a); }
+softfloat32_t softfloat32_t::operator * (const softfloat32_t& a) const { return f32_mul(*this, a); }
+softfloat32_t softfloat32_t::operator / (const softfloat32_t& a) const { return f32_div(*this, a); }
+softfloat32_t softfloat32_t::operator % (const softfloat32_t& a) const { return f32_rem(*this, a); }
+
+bool softfloat32_t::operator == ( const softfloat32_t& a ) const { return  f32_eq(*this, a); }
+bool softfloat32_t::operator != ( const softfloat32_t& a ) const { return !f32_eq(*this, a); }
+bool softfloat32_t::operator >  ( const softfloat32_t& a ) const { return  f32_lt(a, *this); }
+bool softfloat32_t::operator >= ( const softfloat32_t& a ) const { return  f32_le(a, *this); }
+bool softfloat32_t::operator <  ( const softfloat32_t& a ) const { return  f32_lt(*this, a); }
+bool softfloat32_t::operator <= ( const softfloat32_t& a ) const { return  f32_le(*this, a); }
+
+softfloat64_t::softfloat64_t( const uint32_t a ) { *this = ui32_to_f64(a); }
+softfloat64_t::softfloat64_t( const uint64_t a ) { *this = ui64_to_f64(a); }
+softfloat64_t::softfloat64_t( const  int32_t a ) { *this =  i32_to_f64(a); }
+softfloat64_t::softfloat64_t( const  int64_t a ) { *this =  i64_to_f64(a); }
+
+uint_fast32_t softfloat64_t::toUI32_minMag( bool exact ) { return f64_to_ui32_r_minMag(*this, exact); }
+uint_fast64_t softfloat64_t::toUI64_minMag( bool exact ) { return f64_to_ui64_r_minMag(*this, exact); }
+int_fast32_t  softfloat64_t:: toI32_minMag( bool exact ) { return f64_to_i32_r_minMag (*this, exact); }
+int_fast64_t  softfloat64_t:: toI64_minMag( bool exact ) { return f64_to_i64_r_minMag (*this, exact); }
+uint_fast32_t softfloat64_t::toUI32( uint_fast8_t roundingMode, bool exact ) { return f64_to_ui32(*this, roundingMode, exact); }
+uint_fast64_t softfloat64_t::toUI64( uint_fast8_t roundingMode, bool exact ) { return f64_to_ui64(*this, roundingMode, exact); }
+int_fast32_t  softfloat64_t:: toI32( uint_fast8_t roundingMode, bool exact ) { return f64_to_i32 (*this, roundingMode, exact); }
+int_fast64_t  softfloat64_t:: toI64( uint_fast8_t roundingMode, bool exact ) { return f64_to_i64 (*this, roundingMode, exact); }
+
+softfloat64_t softfloat64_t::round(uint_fast8_t roundingMode, bool exact) { return f64_roundToInt(*this, roundingMode, exact); }
+softfloat32_t softfloat64_t::toF32() { return f64_to_f32(*this); }
+double softfloat64_t::toDouble() { return *((double*) &(this->v)); }
+
+softfloat64_t softfloat64_t::operator + (const softfloat64_t& a) const { return f64_add(*this, a); }
+softfloat64_t softfloat64_t::operator - (const softfloat64_t& a) const { return f64_sub(*this, a); }
+softfloat64_t softfloat64_t::operator * (const softfloat64_t& a) const { return f64_mul(*this, a); }
+softfloat64_t softfloat64_t::operator / (const softfloat64_t& a) const { return f64_div(*this, a); }
+softfloat64_t softfloat64_t::operator % (const softfloat64_t& a) const { return f64_rem(*this, a); }
+
+bool softfloat64_t::operator == (const softfloat64_t& a) const { return  f64_eq(*this, a); }
+bool softfloat64_t::operator != (const softfloat64_t& a) const { return !f64_eq(*this, a); }
+bool softfloat64_t::operator >  (const softfloat64_t& a) const { return  f64_lt(a, *this); }
+bool softfloat64_t::operator >= (const softfloat64_t& a) const { return  f64_le(a, *this); }
+bool softfloat64_t::operator <  (const softfloat64_t& a) const { return  f64_lt(*this, a); }
+bool softfloat64_t::operator <= (const softfloat64_t& a) const { return  f64_le(*this, a); }
+
+const softfloat32_t softfloat32_t::zero = softfloat32_t::fromRaw( 0 );
+const softfloat32_t softfloat32_t::inf  = softfloat32_t::fromRaw( packToF32UI( 0, 0xFF, 0 ) );
+const softfloat32_t softfloat32_t::nan  = softfloat32_t::fromRaw( 0x7fffffff );
+const softfloat32_t softfloat32_t::one  = softfloat32_t::fromRaw( packToF32UI( 0,  127, 0 ) );
+
+const softfloat64_t softfloat64_t::zero = softfloat64_t::fromRaw( 0 );
+const softfloat64_t softfloat64_t::inf = softfloat64_t::fromRaw( packToF64UI( 0, 0x7FF, 0 ) );
+const softfloat64_t softfloat64_t::nan = softfloat64_t::fromRaw( CV_BIG_INT(0x7FFFFFFFFFFFFFFF) );
+const softfloat64_t softfloat64_t::one = softfloat64_t::fromRaw( packToF64UI( 0, 1023, 0 ) );
 
 /*----------------------------------------------------------------------------
 | The values to return on conversions to 32-bit integer formats that raise an
@@ -4276,52 +4430,51 @@ static const double expTab[] = {
 };
 
 // 1 / ln(2) == 1.4426950408889634073599246810019
-static const float64_t exp_prescale  = double_to_f64(1.4426950408889634073599246810019 * (1 << EXPTAB_SCALE));
-static const float64_t exp_postscale = double_to_f64(1./(1 << EXPTAB_SCALE));
-static const float64_t exp_max_val   = double_to_f64(3000.*(1 << EXPTAB_SCALE)); // log10(DBL_MAX) < 3000
+static const float64_t exp_prescale(1.4426950408889634073599246810019 * (1 << EXPTAB_SCALE));
+static const float64_t exp_postscale(1./(1 << EXPTAB_SCALE));
+static const float64_t exp_max_val(3000.*(1 << EXPTAB_SCALE)); // log10(DBL_MAX) < 3000
 
 float32_t f32_exp( float32_t x)
 {
     //special cases
-    if(f32_isNaN(x)) return f32_nan;
-    if(f32_isInf(x)) return (x == f32_inf) ? x : f32_zero;
+    if(x.isNaN()) return float32_t::nan;
+    if(x.isInf()) return (x == float32_t::inf) ? x : float32_t::zero;
 
     static const float64_t
-        A4 = double_to_f64(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
-        A3 = double_to_f64(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
-        A2 = double_to_f64(.2402265109513301490103372422686535526573 / EXPPOLY_32F_A0),
-        A1 = double_to_f64(.5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0);
+        A4(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
+        A3(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
+        A2(.2402265109513301490103372422686535526573 / EXPPOLY_32F_A0),
+        A1(.5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0);
 
     float64_t x0;
     if(expF32UI(x.v) > 127 + 10)
         x0 = signF32UI(x.v) ? -exp_max_val : exp_max_val;
     else
-        x0 = f32_to_f64(x) * exp_prescale;
+        x0 = x.toF64() * exp_prescale;
 
-    int val0 = f64_to_i32(x0, round_near_even, false);
+    int val0 = x0.toI32();
     int t = (val0 >> EXPTAB_SCALE) + 1023;
     t = t < 0 ? 0 : (t > 2047 ? 2047 : t);
-    float64_t buf = { packToF64UI(0, t, 0) };
+    float64_t buf; buf.v = packToF64UI(0, t, 0);
 
-    x0 = (x0 - f64_roundToInt(x0, round_near_even, false)) * exp_postscale;
+    x0 = (x0 - x0.round()) * exp_postscale;
 
-    return f64_to_f32(buf * double_to_f64(expTab[val0 & EXPTAB_MASK]) *
-                      ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4));
+    return (buf * float64_t(expTab[val0 & EXPTAB_MASK]) * ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)).toF32();
 }
 
 float64_t f64_exp(float64_t x)
 {
     //special cases
-    if(f64_isNaN(x)) return f64_nan;
-    if(f64_isInf(x)) return (x == f64_inf) ? x : f64_zero;
+    if(x.isNaN()) return float64_t::nan;
+    if(x.isInf()) return (x == float64_t::inf) ? x : float64_t::zero;
 
     static const float64_t
-    A5 = double_to_f64(.99999999999999999998285227504999 / EXPPOLY_32F_A0),
-    A4 = double_to_f64(.69314718055994546743029643825322 / EXPPOLY_32F_A0),
-    A3 = double_to_f64(.24022650695886477918181338054308 / EXPPOLY_32F_A0),
-    A2 = double_to_f64(.55504108793649567998466049042729e-1 / EXPPOLY_32F_A0),
-    A1 = double_to_f64(.96180973140732918010002372686186e-2 / EXPPOLY_32F_A0),
-    A0 = double_to_f64(.13369713757180123244806654839424e-2 / EXPPOLY_32F_A0);
+    A5(.99999999999999999998285227504999 / EXPPOLY_32F_A0),
+    A4(.69314718055994546743029643825322 / EXPPOLY_32F_A0),
+    A3(.24022650695886477918181338054308 / EXPPOLY_32F_A0),
+    A2(.55504108793649567998466049042729e-1 / EXPPOLY_32F_A0),
+    A1(.96180973140732918010002372686186e-2 / EXPPOLY_32F_A0),
+    A0(.13369713757180123244806654839424e-2 / EXPPOLY_32F_A0);
 
     float64_t x0;
     if(expF64UI(x.v) > 1023 + 10)
@@ -4329,15 +4482,14 @@ float64_t f64_exp(float64_t x)
     else
         x0 = x * exp_prescale;
 
-    int val0 = f64_to_i32(x0, round_near_even, false);
+    int val0 = x0.toI32();
     int t = (val0 >> EXPTAB_SCALE) + 1023;
     t = t < 0 ? 0 : (t > 2047 ? 2047 : t);
-    float64_t buf = { packToF64UI(0, t, 0) };
+    float64_t buf; buf.v = packToF64UI(0, t, 0);
 
-    x0 = (x0 - f64_roundToInt(x0, round_near_even, false)) * exp_postscale;
+    x0 = (x0 - x0.round()) * exp_postscale;
 
-    return buf * double_to_f64(expTab[val0 & EXPTAB_MASK]) *
-           (((((A0*x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)*x0 + A5);
+    return buf * float64_t(expTab[val0 & EXPTAB_MASK]) * (((((A0*x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)*x0 + A5);
 }
 
 #undef EXPTAB_SCALE
@@ -4607,65 +4759,64 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
     .69314718055994530941723212145818, 5.0e-01,
 };
 
-static const float64_t ln_2 = double_to_f64(0.69314718055994530941723212145818);
+static const float64_t ln_2(0.69314718055994530941723212145818);
 
 float32_t f32_log(float32_t x)
 {
     //special cases
-    if(f32_isNaN(x) || x < f32_zero) return f32_nan;
-    if(x == f32_zero) return -f32_inf;
+    if(x.isNaN() || x < float32_t::zero) return float32_t::nan;
+    if(x == float32_t::zero) return -float32_t::inf;
 
     //first 8 bits of mantissa
     int h0 = (x.v >> (23 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
     //buf == 0.00000000_the_rest_mantissa_bits
-    float64_t buf = { packToF64UI(0, 1023, ((uint64_t)x.v << 29) & ((1LL << (52 - LOGTAB_SCALE)) - 1)) };
-    buf -= f64_one;
+    float64_t buf; buf.v = packToF64UI(0, 1023, ((uint64_t)x.v << 29) & ((1LL << (52 - LOGTAB_SCALE)) - 1));
+    buf -= float64_t::one;
 
-    float64_t tab0 = double_to_f64(icvLogTab[2*h0]);
-    float64_t tab1 = double_to_f64(icvLogTab[2*h0+1]);
+    float64_t tab0(icvLogTab[2*h0]);
+    float64_t tab1(icvLogTab[2*h0+1]);
 
     float64_t x0 = buf * tab1;
     //if last elements of icvLogTab
-    if(h0 == 255) x0 += double_to_f64(-1./512);
+    if(h0 == 255) x0 += float64_t(-1./512);
 
-    float64_t y0 = i32_to_f64(expF32UI(x.v) - 127) * ln_2 + tab0 +
-                   x0*x0*x0/i32_to_f64(3) - x0*x0/i32_to_f64(2) + x0;
+    float64_t y0 = float64_t(expF32UI(x.v) - 127) * ln_2 + tab0 + x0*x0*x0/i32_to_f64(3) - x0*x0/i32_to_f64(2) + x0;
 
-    return f64_to_f32(y0);
+    return y0.toF32();
 }
 
 float64_t f64_log(float64_t x)
 {
     //special cases
-    if(f64_isNaN(x) || x < f64_zero) return f64_nan;
-    if(x == f64_zero) return -f64_inf;
+    if(x.isNaN() || x < float64_t::zero) return float64_t::nan;
+    if(x == float64_t::zero) return -float64_t::inf;
 
     static const float64_t
-    A7 = double_to_f64(1.0),
-    A6 = double_to_f64(-0.5),
-    A5 = double_to_f64(0.333333333333333314829616256247390992939472198486328125),
-    A4 = double_to_f64(-0.25),
-    A3 = double_to_f64(0.2),
-    A2 = double_to_f64(-0.1666666666666666574148081281236954964697360992431640625),
-    A1 = double_to_f64(0.1428571428571428769682682968777953647077083587646484375),
-    A0 = double_to_f64(-0.125);
+    A7(1.0),
+    A6(-0.5),
+    A5(0.333333333333333314829616256247390992939472198486328125),
+    A4(-0.25),
+    A3(0.2),
+    A2(-0.1666666666666666574148081281236954964697360992431640625),
+    A1(0.1428571428571428769682682968777953647077083587646484375),
+    A0(-0.125);
 
     //first 8 bits of mantissa
     int h0 = (x.v >> (52 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
     //buf == 0.00000000_the_rest_mantissa_bits
-    float64_t buf = { packToF64UI(0, 1023, x.v & ((1LL << (52 - LOGTAB_SCALE)) - 1)) };
-    buf -= f64_one;
+    float64_t buf; buf.v = packToF64UI(0, 1023, x.v & ((1LL << (52 - LOGTAB_SCALE)) - 1));
+    buf -= float64_t::one;
 
-    float64_t tab0 = double_to_f64(icvLogTab[2*h0]);
-    float64_t tab1 = double_to_f64(icvLogTab[2*h0 + 1]);
+    float64_t tab0(icvLogTab[2*h0]);
+    float64_t tab1(icvLogTab[2*h0 + 1]);
 
     float64_t x0 = buf * tab1;
     //if last elements of icvLogTab
-    if(h0 == 255) x0 += double_to_f64(-1./512);
+    if(h0 == 255) x0 += float64_t(-1./512);
     float64_t xq = x0*x0;
 
-    return i32_to_f64( expF64UI(x.v) - 1023) * (ln_2) + tab0 +
-           (((A0*xq + A2)*xq + A4)*xq + A6)*xq + (((A1*xq + A3)*xq + A5)*xq + A7)*x0;
+    return float64_t( expF64UI(x.v) - 1023) * (ln_2) + tab0 + (((A0*xq + A2)*xq + A4)*xq + A6)*xq +
+           (((A1*xq + A3)*xq + A5)*xq + A7)*x0;
 }
 
 /* ************************************************************************** *\
@@ -4675,34 +4826,34 @@ float64_t f64_log(float64_t x)
 float32_t f32_cbrt(float32_t x)
 {
     //special cases
-    if(f32_isNaN(x)) return f32_nan;
-    if(f32_isInf(x)) return x;
+    if(x.isNaN()) return float32_t::nan;
+    if(x.isInf()) return x;
 
     int s = signF32UI(x.v);
     int ex = expF32UI(x.v) - 127;
     int shx = ex % 3;
     shx -= shx >= 0 ? 3 : 0;
     ex = (ex - shx) / 3 - 1; /* exponent of cube root */
-    float64_t fr = { packToF64UI(0, shx + 1023, ((uint64_t)fracF32UI(x.v)) << 29) };
+    float64_t fr; fr.v = packToF64UI(0, shx + 1023, ((uint64_t)fracF32UI(x.v)) << 29);
 
     /* 0.125 <= fr < 1.0 */
     /* Use quartic rational polynomial with error < 2^(-24) */
-    const float64_t A1  = double_to_f64(45.2548339756803022511987494);
-    const float64_t A2  = double_to_f64(192.2798368355061050458134625);
-    const float64_t A3  = double_to_f64(119.1654824285581628956914143);
-    const float64_t A4  = double_to_f64(13.43250139086239872172837314);
-    const float64_t A5  = double_to_f64(0.1636161226585754240958355063);
-    const float64_t A6  = double_to_f64(14.80884093219134573786480845);
-    const float64_t A7  = double_to_f64(151.9714051044435648658557668);
-    const float64_t A8  = double_to_f64(168.5254414101568283957668343);
-    const float64_t A9  = double_to_f64(33.9905941350215598754191872);
-    const float64_t A10 = double_to_f64(1.0);
+    const float64_t A1(45.2548339756803022511987494);
+    const float64_t A2(192.2798368355061050458134625);
+    const float64_t A3(119.1654824285581628956914143);
+    const float64_t A4(13.43250139086239872172837314);
+    const float64_t A5(0.1636161226585754240958355063);
+    const float64_t A6(14.80884093219134573786480845);
+    const float64_t A7(151.9714051044435648658557668);
+    const float64_t A8(168.5254414101568283957668343);
+    const float64_t A9(33.9905941350215598754191872);
+    const float64_t A10(1.0);
     fr = ((((A1 * fr + A2) * fr + A3) * fr + A4) * fr + A5)/
          ((((A6 * fr + A7) * fr + A8) * fr + A9) * fr + A10);
     /* fr *= 2^ex * sign */
 
     // checks for "+0" and "-0", reset sign bit
-    float32_t y = { ((x.v & ((1u << 31) - 1)) != 0) ? packToF32UI(s, ex+127, (uint32_t)(fracF64UI(fr.v) >> 29)) : 0 };
+    float32_t y; y.v = ((x.v & ((1u << 31) - 1)) != 0) ? packToF32UI(s, ex+127, (uint32_t)(fracF64UI(fr.v) >> 29)) : 0;
     return y;
 }
 
@@ -4710,24 +4861,24 @@ float32_t f32_cbrt(float32_t x)
 
 float32_t f32_pow( float32_t x, float32_t y)
 {
-    bool xinf = f32_isInf(x), yinf = f32_isInf(y), xnan = f32_isNaN(x), ynan = f32_isNaN(y);
+    bool xinf = x.isInf(), yinf = y.isInf(), xnan = x.isNaN(), ynan = y.isNaN();
     float32_t v;
     //special cases
-    if(ynan) v = f32_nan;
+    if(ynan) v = float32_t::nan;
     else
     {
         float32_t ax = f32_abs(x);
-        bool useInf = (y > f32_zero) == (ax > f32_one);
-        if(yinf) v = (ax == f32_one || xnan) ? f32_nan : (useInf ? f32_inf : f32_zero);
-        else if(y == f32_zero) v = f32_one;
-        else if(y == f32_one ) v = x;
+        bool useInf = (y > float32_t::zero) == (ax > float32_t::one);
+        if(yinf) v = (ax == float32_t::one || xnan) ? float32_t::nan : (useInf ? float32_t::inf : float32_t::zero);
+        else if(y == float32_t::zero) v = float32_t::one;
+        else if(y == float32_t::one ) v = x;
         else //here y is ok
         {
-            if(xnan) v = f32_nan;
-            else if(xinf) v = (y < f32_zero) ? f32_zero : f32_inf;
-            else if(x  < f32_zero) v = f32_nan;
+            if(xnan) v = float32_t::nan;
+            else if(xinf) v = (y < float32_t::zero) ? float32_t::zero : float32_t::inf;
+            else if(x  < float32_t::zero) v = float32_t::nan;
             // (0 ** 0) == 1
-            else if(x == f32_zero) v = (y < f32_zero) ? f32_inf : (y == f32_zero ? f32_one : f32_zero);
+            else if(x == float32_t::zero) v = (y < float32_t::zero) ? float32_t::inf : (y == float32_t::zero ? float32_t::one : float32_t::zero);
             // here x and y are ok
             else v = f32_exp(y * f32_log(x));
         }
@@ -4738,24 +4889,24 @@ float32_t f32_pow( float32_t x, float32_t y)
 
 float64_t f64_pow( float64_t x, float64_t y)
 {
-    bool xinf = f64_isInf(x), yinf = f64_isInf(y), xnan = f64_isNaN(x), ynan = f64_isNaN(y);
+    bool xinf = x.isInf(), yinf = y.isInf(), xnan = x.isNaN(), ynan = y.isNaN();
     float64_t v;
     //special cases
-    if(ynan) v = f64_nan;
+    if(ynan) v = float64_t::nan;
     else
     {
         float64_t ax = f64_abs(x);
-        bool useInf = (y > f64_zero) == (ax > f64_one);
-        if(yinf) v = (ax == f64_one || xnan) ? f64_nan : (useInf ? f64_inf : f64_zero);
-        else if(y == f64_zero) v = f64_one;
-        else if(y == f64_one ) v = x;
+        bool useInf = (y > float64_t::zero) == (ax > float64_t::one);
+        if(yinf) v = (ax == float64_t::one || xnan) ? float64_t::nan : (useInf ? float64_t::inf : float64_t::zero);
+        else if(y == float64_t::zero) v = float64_t::one;
+        else if(y == float64_t::one ) v = x;
         else //here y is ok
         {
-            if(xnan) v = f64_nan;
-            else if(xinf) v = (y < f64_zero) ? f64_zero : f64_inf;
-            else if(x  < f64_zero) v = f64_nan;
+            if(xnan) v = float64_t::nan;
+            else if(xinf) v = (y < float64_t::zero) ? float64_t::zero : float64_t::inf;
+            else if(x  < float64_t::zero) v = float64_t::nan;
             // (0 ** 0) == 1
-            else if(x == f64_zero) v = (y < f64_zero) ? f64_inf : (y == f64_zero ? f64_one : f64_zero);
+            else if(x == float64_t::zero) v = (y < float64_t::zero) ? float64_t::inf : (y == float64_t::zero ? float64_t::one : float64_t::zero);
             // here x and y are ok
             else v = f64_exp(y * f64_log(x));
         }
@@ -4766,24 +4917,23 @@ float64_t f64_pow( float64_t x, float64_t y)
 
 float32_t f32_pow( float32_t x, int y)
 {
-    bool xinf = f32_isInf(x), xnan = f32_isNaN(x);
     float32_t v;
     //special cases
-    if(y == 0) v = f32_one;
+    if(y == 0) v = float32_t::one;
     else if(y == 1) v = x;
     else //here y is ok
     {
-        if(xnan) v = f32_nan;
-        else if(xinf) v = (y < 0) ? f32_zero : f32_inf;
+        if(x.isNaN()) v = float32_t::nan;
+        else if(x.isInf()) v = (y < 0) ? float32_t::zero : float32_t::inf;
         // (0 ** 0) == 1
-        else if(x == f32_zero) v = (y < 0) ? f32_inf : (y == 0 ? f32_one : f32_zero);
+        else if(x == float32_t::zero) v = (y < 0) ? float32_t::inf : (y == 0 ? float32_t::one : float32_t::zero);
         // here x and y are ok
         else
         {
-            float32_t a = f32_one, b = x;
+            float32_t a = float32_t::one, b = x;
             int p = std::abs(y);
             if( y < 0 )
-                b = f32_one/b;
+                b = float32_t::one/b;
             while( p > 1 )
             {
                 if( p & 1 )
@@ -4799,24 +4949,23 @@ float32_t f32_pow( float32_t x, int y)
 
 float64_t f64_pow( float64_t x, int y)
 {
-    bool xinf = f64_isInf(x), xnan = f64_isNaN(x);
     float64_t v;
     //special cases
-    if(y == 0) v = f64_one;
+    if(y == 0) v = float64_t::one;
     else if(y == 1) v = x;
     else //here y is ok
     {
-        if(xnan) v = f64_nan;
-        else if(xinf) v = (y < 0) ? f64_zero : f64_inf;
+        if(x.isNaN()) v = float64_t::nan;
+        else if(x.isInf()) v = (y < 0) ? float64_t::zero : float64_t::inf;
         // (0 ** 0) == 1
-        else if(x == f64_zero) v = (y < 0) ? f64_inf : (y == 0 ? f64_one : f64_zero);
+        else if(x == float64_t::zero) v = (y < 0) ? float64_t::inf : (y == 0 ? float64_t::one : float64_t::zero);
         // here x and y are ok
         else
         {
-            float64_t a = f64_one, b = x;
+            float64_t a = float64_t::one, b = x;
             int p = std::abs(y);
             if( y < 0 )
-                b = f64_one/b;
+                b = float64_t::one/b;
             while( p > 1 )
             {
                 if( p & 1 )
@@ -4830,5 +4979,5 @@ float64_t f64_pow( float64_t x, int y)
     return v;
 }
 
-}
+
 }
