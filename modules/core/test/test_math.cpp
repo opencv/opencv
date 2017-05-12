@@ -3077,6 +3077,8 @@ TEST(Core_SoftFloat, exp32)
     ASSERT_TRUE(f32_isInf(f32_exp(f32_inf)));
     ASSERT_EQ(f32_exp(-f32_inf), f32_zero);
 
+    //ln(FLT_MAX) ~ 88.722
+    const float ln_max = 88.722f;
     vector<float> inputs, outGood;
     RNG rng(0);
     inputs.push_back(0);
@@ -3085,12 +3087,11 @@ TEST(Core_SoftFloat, exp32)
     for(int i = 0; i < 50000; i++)
     {
         Cv32suf x;
-        x.u = rng();
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            x.fmt.exponent ^= 1;
-        // e ** 88 > FLT_MAX
-        if(x.f >= 88.0f)
-            x.f = rng.uniform(0.0f, 88.0f);
+        x.fmt.sign = rng() % 2;
+        x.fmt.exponent = rng() % (10 + 127); //bigger exponent will produce inf
+        x.fmt.significand = rng() % (1 << 23);
+        if(x.f > ln_max)
+            x.f = rng.uniform(0.0f, ln_max);
         inputs.push_back(x.f);
     }
     cv::exp(inputs, outGood);
@@ -3120,6 +3121,8 @@ TEST(Core_SoftFloat, exp64)
     ASSERT_TRUE(f64_isInf(f64_exp(f64_inf)));
     ASSERT_EQ(f64_exp(-f64_inf), f64_zero);
 
+    //ln(DBL_MAX) ~ 709.7827
+    const double ln_max = 709.7827;
     vector<double> inputs, outGood;
     RNG rng(0);
     inputs.push_back(0);
@@ -3128,13 +3131,12 @@ TEST(Core_SoftFloat, exp64)
     for(int i = 0; i < 50000; i++)
     {
         Cv64suf x;
-        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            //reset LSB of exponent
-            x.u = x.u ^ (1LL << 52);
-        // e ** 700 > DBL_MAX
-        if(x.f >= 700.0)
-            x.f = rng.uniform(0.0, 700.0);
+        uint64 sign = rng() % 2;
+        uint64 exponent = rng() % (10 + 1023); //bigger exponent will produce inf
+        uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        x.u = (sign << 63) | (exponent << 52) | mantissa;
+        if(x.f > ln_max)
+            x.f = rng.uniform(0.0, ln_max);
         inputs.push_back(x.f);
     }
     cv::exp(inputs, outGood);
@@ -3166,11 +3168,11 @@ TEST(Core_SoftFloat, log32)
     for(int i = 0; i < nValues; i++)
     {
         Cv32suf x;
-        x.u = rng();
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            x.fmt.exponent ^= 1;
-        float32_t x32 = f32_abs(float_to_f32(x.f));
-        ASSERT_TRUE(f32_isNaN(f32_log(-x32)));
+        x.fmt.sign = 1;
+        x.fmt.exponent = rng() % 255;
+        x.fmt.significand = rng() % (1 << 23);
+        float32_t x32 = float_to_f32(x.f);
+        ASSERT_TRUE(f32_isNaN(f32_log(x32)));
     }
     ASSERT_TRUE(f32_isInf(f32_log(f32_zero)));
 
@@ -3183,10 +3185,10 @@ TEST(Core_SoftFloat, log32)
     for(int i = 0; i < nValues; i++)
     {
         Cv32suf x;
-        x.u = rng();
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            x.fmt.exponent ^= 1;
-        inputs.push_back(abs(x.f));
+        x.fmt.sign = 0;
+        x.fmt.exponent = rng() % 255;
+        x.fmt.significand = rng() % (1 << 23);
+        inputs.push_back(x.f);
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
@@ -3218,12 +3220,12 @@ TEST(Core_SoftFloat, log64)
     for(int i = 0; i < nValues; i++)
     {
         Cv64suf x;
-        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            // reset LSB of exponent
-            x.u = x.u ^ (1LL << 52);
-        float64_t x64 = f64_abs(double_to_f64(x.f));
-        ASSERT_TRUE(f64_isNaN(f64_log(-x64)));
+        uint64 sign = 1;
+        uint64 exponent = rng() % 2047;
+        uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        x.u = (sign << 63) | (exponent << 52) | mantissa;
+        float64_t x64 = double_to_f64(x.f);
+        ASSERT_TRUE(f64_isNaN(f64_log(x64)));
     }
     ASSERT_TRUE(f64_isInf(f64_log(f64_zero)));
 
@@ -3235,10 +3237,10 @@ TEST(Core_SoftFloat, log64)
     for(int i = 0; i < nValues; i++)
     {
         Cv64suf x;
-        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            // reset LSB of exponent
-            x.u = x.u ^ (1LL << 52);
+        uint64 sign = 0;
+        uint64 exponent = rng() % 2047;
+        uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        x.u = (sign << 63) | (exponent << 52) | mantissa;
         inputs.push_back(abs(x.f));
     }
 
@@ -3273,9 +3275,9 @@ TEST(Core_SoftFloat, cbrt32)
     for(int i = 0; i < 50000; i++)
     {
         Cv32suf x;
-        x.u = rng();
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            x.fmt.exponent ^= 1;
+        x.fmt.sign = rng() % 2;
+        x.fmt.exponent = rng() % 255;
+        x.fmt.significand = rng() % (1 << 23);
         inputs.push_back(x.f);
     }
 
@@ -3370,9 +3372,9 @@ TEST(Core_SoftFloat, pow32)
     for(size_t i = 0; i < nValues; i++)
     {
         Cv32suf x;
-        x.u = rng();
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            x.fmt.exponent ^= 1;
+        x.fmt.sign = rng() % 2;
+        x.fmt.exponent = rng() % 255;
+        x.fmt.significand = rng() % (1 << 23);
         float32_t x32 = f32_abs(float_to_f32(x.f));
         ASSERT_TRUE(f32_isInf(f32_pow( f32_inf, x32)));
         ASSERT_TRUE(f32_isInf(f32_pow(-f32_inf, x32)));
@@ -3384,14 +3386,14 @@ TEST(Core_SoftFloat, pow32)
     for(size_t i = 0; i < nValues; i++)
     {
         Cv32suf x;
-        x.u = rng();
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            x.fmt.exponent ^= 1;
-        float32_t x32 = -f32_abs(float_to_f32(x.f));
+        x.fmt.sign = 1;
+        x.fmt.exponent = rng() % 255;
+        x.fmt.significand = rng() % (1 << 23);
+        float32_t x32 = float_to_f32(x.f);
         Cv32suf y;
-        y.u = rng();
-        if(cvIsNaN(y.f) || cvIsInf(y.f))
-            y.fmt.exponent ^= 1;
+        y.fmt.sign = rng() % 2;
+        y.fmt.exponent = rng() % 255;
+        y.fmt.significand = rng() % (1 << 23);
         float32_t y32 = float_to_f32(y.f);
         ASSERT_TRUE(f32_isNaN(f32_pow(x32, y32)));
     }
@@ -3404,11 +3406,10 @@ TEST(Core_SoftFloat, pow32)
     for(size_t i = 0; i < nValues; i++)
     {
         Cv32suf x;
-        x.u = rng();
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            x.fmt.exponent ^= 1;
-        float32_t x32 = f32_abs(float_to_f32(x.f));
-
+        x.fmt.sign = 0;
+        x.fmt.exponent = rng() % 255;
+        x.fmt.significand = rng() % (1 << 23);
+        float32_t x32 = float_to_f32(x.f);
         ASSERT_TRUE(f32_isInf(f32_pow(f32_zero, -x32)));
         if(x32 != f32_one)
             ASSERT_EQ(f32_pow(f32_zero, x32), f32_zero);
@@ -3491,11 +3492,11 @@ TEST(Core_SoftFloat, pow64)
     for(size_t i = 0; i < nValues; i++)
     {
         Cv64suf x;
-        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            // reset LSB of exponent
-            x.u = x.u ^ (1LL << 52);
-        float64_t x64 = f64_abs(double_to_f64(x.f));
+        uint64 sign = 0;
+        uint64 exponent = rng() % 2047;
+        uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        x.u = (sign << 63) | (exponent << 52) | mantissa;
+        float64_t x64 = double_to_f64(x.f);
         ASSERT_TRUE(f64_isInf(f64_pow( f64_inf, x64)));
         ASSERT_TRUE(f64_isInf(f64_pow(-f64_inf, x64)));
         ASSERT_EQ(f64_pow( f64_inf, -x64), f64_zero);
@@ -3506,16 +3507,16 @@ TEST(Core_SoftFloat, pow64)
     for(size_t i = 0; i < nValues; i++)
     {
         Cv64suf x;
-        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            // reset LSB of exponent
-            x.u = x.u ^ (1LL << 52);
-        float64_t x64 = -f64_abs(double_to_f64(x.f));
+        uint64 sign = 1;
+        uint64 exponent = rng() % 2047;
+        uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        x.u = (sign << 63) | (exponent << 52) | mantissa;
+        float64_t x64 = double_to_f64(x.f);
         Cv64suf y;
-        y.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        if(cvIsNaN(y.f) || cvIsInf(y.f))
-            // reset LSB of exponent
-            y.u = y.u ^ (1LL << 52);
+        sign = rng() % 2;
+        exponent = rng() % 2047;
+        mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        y.u = (sign << 63) | (exponent << 52) | mantissa;
         float64_t y64 = double_to_f64(y.f);
         ASSERT_TRUE(f64_isNaN(f64_pow(x64, y64)));
     }
@@ -3528,11 +3529,11 @@ TEST(Core_SoftFloat, pow64)
     for(size_t i = 0; i < nValues; i++)
     {
         Cv64suf x;
-        x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        if(cvIsNaN(x.f) || cvIsInf(x.f))
-            // reset LSB of exponent
-            x.u = x.u ^ (1LL << 52);
-        float64_t x64 = f64_abs(double_to_f64(x.f));
+        uint64 sign = 0;
+        uint64 exponent = rng() % 2047;
+        uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
+        x.u = (sign << 63) | (exponent << 52) | mantissa;
+        float64_t x64 = double_to_f64(x.f);
 
         ASSERT_TRUE(f64_isInf(f64_pow(f64_zero, -x64)));
         if(x64 != f64_one)
