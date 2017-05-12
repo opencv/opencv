@@ -410,31 +410,6 @@ static const uint16_t softfloat_approxRecipSqrt_1k1s[16] = {
 };
 
 /*----------------------------------------------------------------------------
-| Returns true if the 128-bit unsigned integer formed by concatenating 'a64'
-| and 'a0' is equal to the 128-bit unsigned integer formed by concatenating
-| 'b64' and 'b0'.
-*----------------------------------------------------------------------------*/
-
-CV_INLINE bool softfloat_eq128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
-{ return (a64 == b64) && (a0 == b0); }
-
-/*----------------------------------------------------------------------------
-| Returns true if the 128-bit unsigned integer formed by concatenating 'a64'
-| and 'a0' is less than or equal to the 128-bit unsigned integer formed by
-| concatenating 'b64' and 'b0'.
-*----------------------------------------------------------------------------*/
-CV_INLINE bool softfloat_le128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
-{ return (a64 < b64) || ((a64 == b64) && (a0 <= b0)); }
-
-/*----------------------------------------------------------------------------
-| Returns true if the 128-bit unsigned integer formed by concatenating 'a64'
-| and 'a0' is less than the 128-bit unsigned integer formed by concatenating
-| 'b64' and 'b0'.
-*----------------------------------------------------------------------------*/
-CV_INLINE bool softfloat_lt128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
-{ return (a64 < b64) || ((a64 == b64) && (a0 < b0)); }
-
-/*----------------------------------------------------------------------------
 | Shifts the 128 bits formed by concatenating 'a64' and 'a0' left by the
 | number of bits given in 'dist', which must be in the range 1 to 63.
 *----------------------------------------------------------------------------*/
@@ -443,30 +418,6 @@ CV_INLINE struct uint128 softfloat_shortShiftLeft128( uint64_t a64, uint64_t a0,
     struct uint128 z;
     z.v64 = a64<<dist | a0>>(-dist & 63);
     z.v0 = a0<<dist;
-    return z;
-}
-
-/*----------------------------------------------------------------------------
-| Shifts the 128 bits formed by concatenating 'a64' and 'a0' right by the
-| number of bits given in 'dist', which must be in the range 1 to 63.
-*----------------------------------------------------------------------------*/
-CV_INLINE struct uint128 softfloat_shortShiftRight128( uint64_t a64, uint64_t a0, uint_fast8_t dist )
-{
-    struct uint128 z;
-    z.v64 = a64>>dist;
-    z.v0 = a64<<(-dist & 63) | a0>>dist;
-    return z;
-}
-
-/*----------------------------------------------------------------------------
-| This function is the same as 'softfloat_shiftRightJam64Extra' (below),
-| except that 'dist' must be in the range 1 to 63.
-*----------------------------------------------------------------------------*/
-CV_INLINE struct uint64_extra softfloat_shortShiftRightJam64Extra(uint64_t a, uint64_t extra, uint_fast8_t dist )
-{
-    struct uint64_extra z;
-    z.v = a>>dist;
-    z.extra = a<<(-dist & 63) | (extra != 0);
     return z;
 }
 
@@ -487,42 +438,6 @@ CV_INLINE struct uint128 softfloat_shortShiftRightJam128(uint64_t a64, uint64_t 
             | ((uint64_t) (a0<<(negDist & 63)) != 0);
     return z;
 }
-
-/*----------------------------------------------------------------------------
-| This function is the same as 'softfloat_shiftRightJam128Extra' (below),
-| except that 'dist' must be in the range 1 to 63.
-*----------------------------------------------------------------------------*/
-CV_INLINE struct uint128_extra softfloat_shortShiftRightJam128Extra(uint64_t a64, uint64_t a0, uint64_t extra, uint_fast8_t dist )
-{
-    uint_fast8_t negDist = -dist;
-    struct uint128_extra z;
-    z.v.v64 = a64>>dist;
-    z.v.v0 = a64<<(negDist & 63) | a0>>dist;
-    z.extra = a0<<(negDist & 63) | (extra != 0);
-    return z;
-}
-
-/*----------------------------------------------------------------------------
-| Shifts the 192 bits formed by concatenating 'a64', 'a0', and 'extra' right
-| by 64 _plus_ the number of bits given in 'dist', which must not be zero.
-| This shifted value is at most 128 nonzero bits and is returned in the 'v'
-| field of the 'struct uint128_extra' result.  The 64-bit 'extra' field of the
-| result contains a value formed as follows from the bits that were shifted
-| off:  The _last_ bit shifted off is the most-significant bit of the 'extra'
-| field, and the other 63 bits of the 'extra' field are all zero if and only
-| if _all_but_the_last_ bits shifted off were all zero.
-|   (This function makes more sense if 'a64', 'a0', and 'extra' are considered
-| to form an unsigned fixed-point number with binary point between 'a0' and
-| 'extra'.  This fixed-point value is shifted right by the number of bits
-| given in 'dist', and the integer part of this shifted value is returned
-| in the 'v' field of the result.  The fractional part of the shifted value
-| is modified as described above and returned in the 'extra' field of the
-| result.)
-*----------------------------------------------------------------------------*/
-/*
- * The function was cut since it's not used, description is left to explain the function above.
- * static struct uint128_extra softfloat_shiftRightJam128Extra(uint64_t a64, uint64_t a0, uint64_t extra, uint_fast32_t dist );
- */
 
 /*----------------------------------------------------------------------------
 | Shifts the 128 bits formed by concatenating 'a' and 'extra' right by 64
@@ -595,39 +510,9 @@ CV_INLINE struct uint128 softfloat_sub128( uint64_t a64, uint64_t a0, uint64_t b
 }
 
 /*----------------------------------------------------------------------------
-| Returns the 128-bit product of 'a', 'b', and 2^32.
-*----------------------------------------------------------------------------*/
-CV_INLINE struct uint128 softfloat_mul64ByShifted32To128( uint64_t a, uint32_t b )
-{
-    uint_fast64_t mid;
-    struct uint128 z;
-    mid = (uint_fast64_t) (uint32_t) a * b;
-    z.v0 = mid<<32;
-    z.v64 = (uint_fast64_t) (uint32_t) (a>>32) * b + (mid>>32);
-    return z;
-}
-
-/*----------------------------------------------------------------------------
 | Returns the 128-bit product of 'a' and 'b'.
 *----------------------------------------------------------------------------*/
 static struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b );
-
-/*----------------------------------------------------------------------------
-| Returns the product of the 128-bit integer formed by concatenating 'a64' and
-| 'a0', multiplied by 'b'.  The multiplication is modulo 2^128; any overflow
-| bits are discarded.
-*----------------------------------------------------------------------------*/
-CV_INLINE struct uint128 softfloat_mul128By32( uint64_t a64, uint64_t a0, uint32_t b )
-{
-    struct uint128 z;
-    uint_fast64_t mid;
-    uint_fast32_t carry;
-    z.v0 = a0 * b;
-    mid = (uint_fast64_t) (uint32_t) (a0>>32) * b;
-    carry = (uint32_t) ((uint_fast32_t) (z.v0>>32) - (uint_fast32_t) mid);
-    z.v64 = a64 * b + (uint_fast32_t) ((mid + carry)>>32);
-    return z;
-}
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
