@@ -3068,6 +3068,42 @@ TEST(Core_QR_Solver, accuracy64f)
     ASSERT_FALSE(solve(A, B, solutionQR, DECOMP_QR));
 }
 
+using namespace cv::softfloat;
+
+float64_t naiveExp(float64_t x)
+{
+    int exponent = expF64UI(x.v) - 1023;
+    int sign = signF64UI(x.v) ? -1 : 1;
+    if(sign < 0 && exponent >= 10) return f64_inf;
+    float64_t mantissa = { packToF64UI(0, 1023, fracF64UI(x.v)) };
+    //Taylor series for mantissa
+    uint64 fac[20] = {1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800,
+                    39916800, 479001600, 6227020800, 87178291200, 1307674368000,
+                    20922789888000, 355687428096000, 6402373705728000, 121645100408832000,
+                    2432902008176640000};
+    float64_t sum = f64_one;
+    // 21! > (2 ** 64)
+    for(int i = 20; i > 0; i--)
+    {
+        uint64 f = fac[i-1];
+        float64_t prod = f64_pow(mantissa, i);
+        float64_t v = prod/ui64_to_f64(f);
+        sum += v;
+    }
+    if(exponent >= 0)
+    {
+        exponent = (1 << exponent);
+        return f64_pow(sum, exponent*sign);
+    }
+    else
+    {
+        if(sign < 0) sum = f64_one/sum;
+        exponent = -exponent;
+        for(int j = 0; j < exponent; j++)
+            sum = f64_sqrt(sum);
+        return sum;
+    }
+}
 
 TEST(Core_SoftFloat, exp32)
 {
@@ -3079,7 +3115,7 @@ TEST(Core_SoftFloat, exp32)
 
     //ln(FLT_MAX) ~ 88.722
     const float ln_max = 88.722f;
-    vector<float> inputs, outGood;
+    vector<float> inputs;
     RNG rng(0);
     inputs.push_back(0);
     inputs.push_back(1);
@@ -3094,7 +3130,6 @@ TEST(Core_SoftFloat, exp32)
             x.f = rng.uniform(0.0f, ln_max);
         inputs.push_back(x.f);
     }
-    cv::exp(inputs, outGood);
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
@@ -3104,11 +3139,11 @@ TEST(Core_SoftFloat, exp32)
         ASSERT_TRUE(!f32_isNaN(y));
         ASSERT_TRUE(!f32_isInf(y));
         ASSERT_GE(y, f32_zero);
-        float32_t ygood = float_to_f32(outGood[i]);
+        float32_t ygood = f64_to_f32(naiveExp(f32_to_f64(x)));
         float32_t diff = f32_abs(ygood - y);
         if(diff > float_to_f32(FLT_EPSILON))
         {
-            ASSERT_LE(diff/max(f32_abs(y), f32_abs(ygood)), float_to_f32(0.00001));
+            ASSERT_LE(diff/max(f32_abs(y), f32_abs(ygood)), float_to_f32(FLT_EPSILON));
         }
     }
 }
@@ -3123,7 +3158,7 @@ TEST(Core_SoftFloat, exp64)
 
     //ln(DBL_MAX) ~ 709.7827
     const double ln_max = 709.7827;
-    vector<double> inputs, outGood;
+    vector<double> inputs;
     RNG rng(0);
     inputs.push_back(0);
     inputs.push_back(1);
@@ -3139,7 +3174,6 @@ TEST(Core_SoftFloat, exp64)
             x.f = rng.uniform(0.0, ln_max);
         inputs.push_back(x.f);
     }
-    cv::exp(inputs, outGood);
 
     for(size_t i = 0; i < inputs.size(); i++)
     {
@@ -3149,11 +3183,11 @@ TEST(Core_SoftFloat, exp64)
         ASSERT_TRUE(!f64_isNaN(y));
         ASSERT_TRUE(!f64_isInf(y));
         ASSERT_GE(y, f64_zero);
-        float64_t ygood = double_to_f64(outGood[i]);
+        float64_t ygood = naiveExp(x);
         float64_t diff = f64_abs(ygood - y);
         if(diff > double_to_f64(DBL_EPSILON))
         {
-            ASSERT_LE(diff/max(f64_abs(y), f64_abs(ygood)), double_to_f64(0.00001));
+            ASSERT_LE(diff/max(f64_abs(y), f64_abs(ygood)), double_to_f64(8192*DBL_EPSILON));
         }
     }
 }

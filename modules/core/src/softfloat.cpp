@@ -4734,7 +4734,7 @@ float32_t f32_log(float32_t x)
     int h0 = (x.v >> (23 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
     //buf == 0.00000000_the_rest_mantissa_bits
     float64_t buf = { packToF64UI(0, 1023, ((uint64_t)x.v << 29) & ((1LL << (52 - LOGTAB_SCALE)) - 1)) };
-    buf -= i32_to_f64(1);
+    buf -= f64_one;
 
     float64_t tab0 = double_to_f64(icvLogTab[2*h0]);
     float64_t tab1 = double_to_f64(icvLogTab[2*h0+1]);
@@ -4769,7 +4769,7 @@ float64_t f64_log(float64_t x)
     int h0 = (x.v >> (52 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
     //buf == 0.00000000_the_rest_mantissa_bits
     float64_t buf = { packToF64UI(0, 1023, x.v & ((1LL << (52 - LOGTAB_SCALE)) - 1)) };
-    buf -= i32_to_f64(1);
+    buf -= f64_one;
 
     float64_t tab0 = double_to_f64(icvLogTab[2*h0]);
     float64_t tab1 = double_to_f64(icvLogTab[2*h0 + 1]);
