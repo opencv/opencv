@@ -4881,42 +4881,68 @@ float64_t f64_pow( float64_t x, float64_t y)
 
 float32_t f32_pow( float32_t x, int y)
 {
-    int power = std::abs(y);
-    float32_t a = f32_one, b = x;
-    int p = power;
-    if( y < 0 )
-        b = f32_one/b;
-
-    while( p > 1 )
+    bool xinf = f32_isInf(x), xnan = f32_isNaN(x);
+    float32_t v;
+    //special cases
+    if(y == 0) v = f32_one;
+    else if(y == 1) v = x;
+    else //here y is ok
     {
-        if( p & 1 )
-            a *= b;
-        b *= b;
-        p >>= 1;
+        if(xnan) v = f32_nan;
+        else if(xinf) v = (y < 0) ? f32_zero : f32_inf;
+        // (0 ** 0) == 1
+        else if(x == f32_zero) v = (y < 0) ? f32_inf : (y == 0 ? f32_one : f32_zero);
+        // here x and y are ok
+        else
+        {
+            float32_t a = f32_one, b = x;
+            int p = std::abs(y);
+            if( y < 0 )
+                b = f32_one/b;
+            while( p > 1 )
+            {
+                if( p & 1 )
+                    a *= b;
+                b *= b;
+                p >>= 1;
+            }
+            v = a * b;
+        }
     }
-
-    a *= b;
-    return a;
+    return v;
 }
 
 float64_t f64_pow( float64_t x, int y)
 {
-    int power = std::abs(y);
-    float64_t a = f64_one, b = x;
-    int p = power;
-    if( y < 0 )
-        b = f64_one/b;
-
-    while( p > 1 )
+    bool xinf = f64_isInf(x), xnan = f64_isNaN(x);
+    float64_t v;
+    //special cases
+    if(y == 0) v = f64_one;
+    else if(y == 1) v = x;
+    else //here y is ok
     {
-        if( p & 1 )
-            a *= b;
-        b *= b;
-        p >>= 1;
+        if(xnan) v = f64_nan;
+        else if(xinf) v = (y < 0) ? f64_zero : f64_inf;
+        // (0 ** 0) == 1
+        else if(x == f64_zero) v = (y < 0) ? f64_inf : (y == 0 ? f64_one : f64_zero);
+        // here x and y are ok
+        else
+        {
+            float64_t a = f64_one, b = x;
+            int p = std::abs(y);
+            if( y < 0 )
+                b = f64_one/b;
+            while( p > 1 )
+            {
+                if( p & 1 )
+                    a *= b;
+                b *= b;
+                p >>= 1;
+            }
+            v = a * b;
+        }
     }
-
-    a *= b;
-    return a;
+    return v;
 }
 
 }
