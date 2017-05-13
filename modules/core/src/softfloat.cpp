@@ -387,9 +387,6 @@ struct uint128_extra { struct uint128 v; uint64_t extra; };
 #define INIT_UINTM4( v3, v2, v1, v0 ) { v3, v2, v1, v0 }
 #endif
 
-union ui32_f32 { uint32_t ui; float32_t f; };
-union ui64_f64 { uint64_t ui; float64_t f; };
-
 enum {
     softfloat_mulAdd_subC    = 1,
     softfloat_mulAdd_subProd = 2
@@ -675,15 +672,9 @@ static struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b );
 
 float32_t f32_add( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
-    uint_fast32_t uiA;
-    union ui32_f32 uB;
-    uint_fast32_t uiB;
+    uint_fast32_t uiA = a.v;
+    uint_fast32_t uiB = b.v;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
     if ( signF32UI( uiA ^ uiB ) ) {
         return softfloat_subMagsF32( uiA, uiB );
     } else {
@@ -693,12 +684,10 @@ float32_t f32_add( float32_t a, float32_t b )
 
 float32_t f32_div( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool signA;
     int_fast16_t expA;
     uint_fast32_t sigA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
     bool signB;
     int_fast16_t expB;
@@ -709,17 +698,14 @@ float32_t f32_div( float32_t a, float32_t b )
     uint_fast64_t sig64A;
     uint_fast32_t sigZ;
     uint_fast32_t uiZ;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF32UI( uiA );
     expA  = expF32UI( uiA );
     sigA  = fracF32UI( uiA );
-    uB.f = b;
-    uiB = uB.ui;
+    uiB = b.v;
     signB = signF32UI( uiB );
     expB  = expF32UI( uiB );
     sigB  = fracF32UI( uiB );
@@ -791,22 +777,16 @@ float32_t f32_div( float32_t a, float32_t b )
  zero:
     uiZ = packToF32UI( signZ, 0, 0 );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
-
+    return float32_t::fromRaw(uiZ);
 }
 
 bool f32_eq( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
         if (
             softfloat_isSigNaNF32UI( uiA ) || softfloat_isSigNaNF32UI( uiB )
@@ -820,15 +800,11 @@ bool f32_eq( float32_t a, float32_t b )
 
 bool f32_eq_signaling( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
         raiseFlags( flag_invalid );
         return false;
@@ -838,24 +814,17 @@ bool f32_eq_signaling( float32_t a, float32_t b )
 
 bool f32_isSignalingNaN( float32_t a )
 {
-    union ui32_f32 uA;
-
-    uA.f = a;
-    return softfloat_isSigNaNF32UI( uA.ui );
+    return softfloat_isSigNaNF32UI( a.v );
 }
 
 bool f32_le( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
     bool signA, signB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
         raiseFlags( flag_invalid );
         return false;
@@ -869,16 +838,12 @@ bool f32_le( float32_t a, float32_t b )
 
 bool f32_le_quiet( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
     bool signA, signB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
         if (
             softfloat_isSigNaNF32UI( uiA ) || softfloat_isSigNaNF32UI( uiB )
@@ -896,16 +861,12 @@ bool f32_le_quiet( float32_t a, float32_t b )
 
 bool f32_lt( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
     bool signA, signB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
         raiseFlags( flag_invalid );
         return false;
@@ -919,16 +880,12 @@ bool f32_lt( float32_t a, float32_t b )
 
 bool f32_lt_quiet( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
     bool signA, signB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
         if (
             softfloat_isSigNaNF32UI( uiA ) || softfloat_isSigNaNF32UI( uiB )
@@ -946,30 +903,22 @@ bool f32_lt_quiet( float32_t a, float32_t b )
 
 float32_t f32_mulAdd( float32_t a, float32_t b, float32_t c )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
-    union ui32_f32 uC;
     uint_fast32_t uiC;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
-    uC.f = c;
-    uiC = uC.ui;
+    uiA = a.v;
+    uiB = b.v;
+    uiC = c.v;
     return softfloat_mulAddF32( uiA, uiB, uiC, 0 );
 }
 
 float32_t f32_mul( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool signA;
     int_fast16_t expA;
     uint_fast32_t sigA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
     bool signB;
     int_fast16_t expB;
@@ -979,17 +928,14 @@ float32_t f32_mul( float32_t a, float32_t b )
     struct exp16_sig32 normExpSig;
     int_fast16_t expZ;
     uint_fast32_t sigZ, uiZ;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF32UI( uiA );
     expA  = expF32UI( uiA );
     sigA  = fracF32UI( uiA );
-    uB.f = b;
-    uiB = uB.ui;
+    uiB = b.v;
     signB = signF32UI( uiB );
     expB  = expF32UI( uiB );
     sigB  = fracF32UI( uiB );
@@ -1051,18 +997,15 @@ float32_t f32_mul( float32_t a, float32_t b )
  zero:
     uiZ = packToF32UI( signZ, 0, 0 );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float32_t::fromRaw(uiZ);
 }
 
 float32_t f32_rem( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool signA;
     int_fast16_t expA;
     uint_fast32_t sigA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
     int_fast16_t expB;
     uint_fast32_t sigB;
@@ -1072,17 +1015,14 @@ float32_t f32_rem( float32_t a, float32_t b )
     uint32_t q, recip32, altRem, meanRem;
     bool signRem;
     uint_fast32_t uiZ;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF32UI( uiA );
     expA  = expF32UI( uiA );
     sigA  = fracF32UI( uiA );
-    uB.f = b;
-    uiB = uB.ui;
+    uiB = b.v;
     expB = expF32UI( uiB );
     sigB = fracF32UI( uiB );
     /*------------------------------------------------------------------------
@@ -1177,22 +1117,18 @@ float32_t f32_rem( float32_t a, float32_t b )
     raiseFlags( flag_invalid );
     uiZ = defaultNaNF32UI;
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float32_t::fromRaw(uiZ);
 }
 
 float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     int_fast16_t exp;
     uint_fast32_t uiZ, lastBitMask, roundBitsMask;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF32UI( uiA );
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -1245,13 +1181,11 @@ float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
         raiseFlags(flag_inexact);
     }
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float32_t::fromRaw(uiZ);
 }
 
 float32_t f32_sqrt( float32_t a )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool signA;
     int_fast16_t expA;
@@ -1260,12 +1194,10 @@ float32_t f32_sqrt( float32_t a )
     int_fast16_t expZ;
     uint_fast32_t sigZ, shiftedSigZ;
     uint32_t negRem;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF32UI( uiA );
     expA  = expF32UI( uiA );
     sigA  = fracF32UI( uiA );
@@ -1322,21 +1254,16 @@ float32_t f32_sqrt( float32_t a )
     raiseFlags( flag_invalid );
     uiZ = defaultNaNF32UI;
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float32_t::fromRaw(uiZ);
 }
 
 float32_t f32_sub( float32_t a, float32_t b )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
-    union ui32_f32 uB;
     uint_fast32_t uiB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( signF32UI( uiA ^ uiB ) ) {
         return softfloat_addMagsF32( uiA, uiB );
     } else {
@@ -1346,7 +1273,6 @@ float32_t f32_sub( float32_t a, float32_t b )
 
 float64_t f32_to_f64( float32_t a )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -1354,12 +1280,10 @@ float64_t f32_to_f64( float32_t a )
     struct commonNaN commonNaN;
     uint_fast64_t uiZ;
     struct exp16_sig32 normExpSig;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF32UI( uiA );
     exp  = expF32UI( uiA );
     frac = fracF32UI( uiA );
@@ -1389,13 +1313,11 @@ float64_t f32_to_f64( float32_t a )
     *------------------------------------------------------------------------*/
     uiZ = packToF64UI( sign, exp + 0x380, (uint_fast64_t) frac<<29 );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 }
 
 int_fast32_t f32_to_i32( float32_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -1405,8 +1327,7 @@ int_fast32_t f32_to_i32( float32_t a, uint_fast8_t roundingMode, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF32UI( uiA );
     exp  = expF32UI( uiA );
     sig  = fracF32UI( uiA );
@@ -1435,7 +1356,6 @@ int_fast32_t f32_to_i32( float32_t a, uint_fast8_t roundingMode, bool exact )
 
 int_fast32_t f32_to_i32_r_minMag( float32_t a, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     int_fast16_t exp;
     uint_fast32_t sig;
@@ -1445,8 +1365,7 @@ int_fast32_t f32_to_i32_r_minMag( float32_t a, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF32UI( uiA );
     sig = fracF32UI( uiA );
     /*------------------------------------------------------------------------
@@ -1480,7 +1399,6 @@ int_fast32_t f32_to_i32_r_minMag( float32_t a, bool exact )
 
 int_fast64_t f32_to_i64( float32_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -1491,8 +1409,7 @@ int_fast64_t f32_to_i64( float32_t a, uint_fast8_t roundingMode, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF32UI( uiA );
     exp  = expF32UI( uiA );
     sig  = fracF32UI( uiA );
@@ -1520,7 +1437,6 @@ int_fast64_t f32_to_i64( float32_t a, uint_fast8_t roundingMode, bool exact )
 
 int_fast64_t f32_to_i64_r_minMag( float32_t a, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     int_fast16_t exp;
     uint_fast32_t sig;
@@ -1531,8 +1447,7 @@ int_fast64_t f32_to_i64_r_minMag( float32_t a, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF32UI( uiA );
     sig = fracF32UI( uiA );
     /*------------------------------------------------------------------------
@@ -1570,7 +1485,6 @@ int_fast64_t f32_to_i64_r_minMag( float32_t a, bool exact )
 
 uint_fast32_t f32_to_ui32( float32_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -1580,8 +1494,7 @@ uint_fast32_t f32_to_ui32( float32_t a, uint_fast8_t roundingMode, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF32UI( uiA );
     exp  = expF32UI( uiA );
     sig  = fracF32UI( uiA );
@@ -1610,7 +1523,6 @@ uint_fast32_t f32_to_ui32( float32_t a, uint_fast8_t roundingMode, bool exact )
 
 uint_fast32_t f32_to_ui32_r_minMag( float32_t a, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     int_fast16_t exp;
     uint_fast32_t sig;
@@ -1620,8 +1532,7 @@ uint_fast32_t f32_to_ui32_r_minMag( float32_t a, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF32UI( uiA );
     sig = fracF32UI( uiA );
     /*------------------------------------------------------------------------
@@ -1654,7 +1565,6 @@ uint_fast32_t f32_to_ui32_r_minMag( float32_t a, bool exact )
 
 uint_fast64_t f32_to_ui64( float32_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -1664,8 +1574,7 @@ uint_fast64_t f32_to_ui64( float32_t a, uint_fast8_t roundingMode, bool exact )
     struct uint64_extra sig64Extra;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF32UI( uiA );
     exp  = expF32UI( uiA );
     sig  = fracF32UI( uiA );
@@ -1693,7 +1602,6 @@ uint_fast64_t f32_to_ui64( float32_t a, uint_fast8_t roundingMode, bool exact )
 
 uint_fast64_t f32_to_ui64_r_minMag( float32_t a, bool exact )
 {
-    union ui32_f32 uA;
     uint_fast32_t uiA;
     int_fast16_t exp;
     uint_fast32_t sig;
@@ -1703,8 +1611,7 @@ uint_fast64_t f32_to_ui64_r_minMag( float32_t a, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF32UI( uiA );
     sig = fracF32UI( uiA );
     /*------------------------------------------------------------------------
@@ -1739,18 +1646,14 @@ uint_fast64_t f32_to_ui64_r_minMag( float32_t a, bool exact )
 
 float64_t f64_add( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool signA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     bool signB;
 
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF64UI( uiA );
-    uB.f = b;
-    uiB = uB.ui;
+    uiB = b.v;
     signB = signF64UI( uiB );
     if ( signA == signB ) {
         return softfloat_addMagsF64( uiA, uiB, signA );
@@ -1761,12 +1664,10 @@ float64_t f64_add( float64_t a, float64_t b )
 
 float64_t f64_div( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool signA;
     int_fast16_t expA;
     uint_fast64_t sigA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     bool signB;
     int_fast16_t expB;
@@ -1779,17 +1680,14 @@ float64_t f64_div( float64_t a, float64_t b )
     uint32_t q;
     uint_fast64_t sigZ;
     uint_fast64_t uiZ;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF64UI( uiA );
     expA  = expF64UI( uiA );
     sigA  = fracF64UI( uiA );
-    uB.f = b;
-    uiB = uB.ui;
+    uiB = b.v;
     signB = signF64UI( uiB );
     expB  = expF64UI( uiB );
     sigB  = fracF64UI( uiB );
@@ -1883,21 +1781,16 @@ float64_t f64_div( float64_t a, float64_t b )
  zero:
     uiZ = packToF64UI( signZ, 0, 0 );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 }
 
 bool f64_eq( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
         if (
             softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB )
@@ -1911,15 +1804,11 @@ bool f64_eq( float64_t a, float64_t b )
 
 bool f64_eq_signaling( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
         raiseFlags( flag_invalid );
         return false;
@@ -1929,24 +1818,17 @@ bool f64_eq_signaling( float64_t a, float64_t b )
 
 bool f64_isSignalingNaN( float64_t a )
 {
-    union ui64_f64 uA;
-
-    uA.f = a;
-    return softfloat_isSigNaNF64UI( uA.ui );
+    return softfloat_isSigNaNF64UI( a.v );
 }
 
 bool f64_le( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     bool signA, signB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
         raiseFlags( flag_invalid );
         return false;
@@ -1961,16 +1843,12 @@ bool f64_le( float64_t a, float64_t b )
 
 bool f64_le_quiet( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     bool signA, signB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
         if (
             softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB )
@@ -1989,16 +1867,12 @@ bool f64_le_quiet( float64_t a, float64_t b )
 
 bool f64_lt( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     bool signA, signB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
         raiseFlags( flag_invalid );
         return false;
@@ -2013,16 +1887,12 @@ bool f64_lt( float64_t a, float64_t b )
 
 bool f64_lt_quiet( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     bool signA, signB;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
+    uiA = a.v;
+    uiB = b.v;
     if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
         if (
             softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB )
@@ -2041,30 +1911,22 @@ bool f64_lt_quiet( float64_t a, float64_t b )
 
 float64_t f64_mulAdd( float64_t a, float64_t b, float64_t c )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
-    union ui64_f64 uC;
     uint_fast64_t uiC;
 
-    uA.f = a;
-    uiA = uA.ui;
-    uB.f = b;
-    uiB = uB.ui;
-    uC.f = c;
-    uiC = uC.ui;
+    uiA = a.v;
+    uiB = b.v;
+    uiC = c.v;
     return softfloat_mulAddF64( uiA, uiB, uiC, 0 );
 }
 
 float64_t f64_mul( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool signA;
     int_fast16_t expA;
     uint_fast64_t sigA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     bool signB;
     int_fast16_t expB;
@@ -2075,17 +1937,14 @@ float64_t f64_mul( float64_t a, float64_t b )
     int_fast16_t expZ;
     struct uint128 sig128Z;
     uint_fast64_t sigZ, uiZ;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF64UI( uiA );
     expA  = expF64UI( uiA );
     sigA  = fracF64UI( uiA );
-    uB.f = b;
-    uiB = uB.ui;
+    uiB = b.v;
     signB = signF64UI( uiB );
     expB  = expF64UI( uiB );
     sigB  = fracF64UI( uiB );
@@ -2149,18 +2008,15 @@ float64_t f64_mul( float64_t a, float64_t b )
  zero:
     uiZ = packToF64UI( signZ, 0, 0 );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 }
 
 float64_t f64_rem( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool signA;
     int_fast16_t expA;
     uint_fast64_t sigA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     int_fast16_t expB;
     uint_fast64_t sigB;
@@ -2172,17 +2028,14 @@ float64_t f64_rem( float64_t a, float64_t b )
     uint64_t altRem, meanRem;
     bool signRem;
     uint_fast64_t uiZ;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF64UI( uiA );
     expA  = expF64UI( uiA );
     sigA  = fracF64UI( uiA );
-    uB.f = b;
-    uiB = uB.ui;
+    uiB = b.v;
     expB = expF64UI( uiB );
     sigB = fracF64UI( uiB );
     /*------------------------------------------------------------------------
@@ -2291,22 +2144,18 @@ float64_t f64_rem( float64_t a, float64_t b )
     raiseFlags( flag_invalid );
     uiZ = defaultNaNF64UI;
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 }
 
 float64_t f64_roundToInt( float64_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     int_fast16_t exp;
     uint_fast64_t uiZ, lastBitMask, roundBitsMask;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF64UI( uiA );
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -2359,13 +2208,11 @@ float64_t f64_roundToInt( float64_t a, uint_fast8_t roundingMode, bool exact )
         raiseFlags(flag_inexact);
     }
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 }
 
 float64_t f64_sqrt( float64_t a )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool signA;
     int_fast16_t expA;
@@ -2376,12 +2223,10 @@ float64_t f64_sqrt( float64_t a )
     uint_fast64_t rem;
     uint32_t q;
     uint_fast64_t sigZ, shiftedSigZ;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF64UI( uiA );
     expA  = expF64UI( uiA );
     sigA  = fracF64UI( uiA );
@@ -2448,24 +2293,19 @@ float64_t f64_sqrt( float64_t a )
     raiseFlags( flag_invalid );
     uiZ = defaultNaNF64UI;
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 }
 
 float64_t f64_sub( float64_t a, float64_t b )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool signA;
-    union ui64_f64 uB;
     uint_fast64_t uiB;
     bool signB;
 
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     signA = signF64UI( uiA );
-    uB.f = b;
-    uiB = uB.ui;
+    uiB = b.v;
     signB = signF64UI( uiB );
 
     if ( signA == signB ) {
@@ -2477,19 +2317,16 @@ float64_t f64_sub( float64_t a, float64_t b )
 
 float32_t f64_to_f32( float64_t a )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool sign;
     int_fast16_t exp;
     uint_fast64_t frac;
     struct commonNaN commonNaN;
     uint_fast32_t uiZ, frac32;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF64UI( uiA );
     exp  = expF64UI( uiA );
     frac = fracF64UI( uiA );
@@ -2515,13 +2352,11 @@ float32_t f64_to_f32( float64_t a )
     *------------------------------------------------------------------------*/
     return softfloat_roundPackToF32( sign, exp - 0x381, frac32 | 0x40000000 );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float32_t::fromRaw(uiZ);
 }
 
 int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -2530,8 +2365,7 @@ int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF64UI( uiA );
     exp  = expF64UI( uiA );
     sig  = fracF64UI( uiA );
@@ -2559,7 +2393,6 @@ int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exact )
 
 int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     int_fast16_t exp;
     uint_fast64_t sig;
@@ -2569,8 +2402,7 @@ int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF64UI( uiA );
     sig = fracF64UI( uiA );
     /*------------------------------------------------------------------------
@@ -2611,7 +2443,6 @@ int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
 
 int_fast64_t f64_to_i64( float64_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -2621,8 +2452,7 @@ int_fast64_t f64_to_i64( float64_t a, uint_fast8_t roundingMode, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF64UI( uiA );
     exp  = expF64UI( uiA );
     sig  = fracF64UI( uiA );
@@ -2652,7 +2482,6 @@ int_fast64_t f64_to_i64( float64_t a, uint_fast8_t roundingMode, bool exact )
 
 int_fast64_t f64_to_i64_r_minMag( float64_t a, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -2662,8 +2491,7 @@ int_fast64_t f64_to_i64_r_minMag( float64_t a, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF64UI( uiA );
     exp  = expF64UI( uiA );
     sig  = fracF64UI( uiA );
@@ -2708,7 +2536,6 @@ int_fast64_t f64_to_i64_r_minMag( float64_t a, bool exact )
 
 uint_fast32_t f64_to_ui32( float64_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -2717,8 +2544,7 @@ uint_fast32_t f64_to_ui32( float64_t a, uint_fast8_t roundingMode, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF64UI( uiA );
     exp  = expF64UI( uiA );
     sig  = fracF64UI( uiA );
@@ -2747,7 +2573,6 @@ uint_fast32_t f64_to_ui32( float64_t a, uint_fast8_t roundingMode, bool exact )
 
 uint_fast32_t f64_to_ui32_r_minMag( float64_t a, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     int_fast16_t exp;
     uint_fast64_t sig;
@@ -2757,8 +2582,7 @@ uint_fast32_t f64_to_ui32_r_minMag( float64_t a, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF64UI( uiA );
     sig = fracF64UI( uiA );
     /*------------------------------------------------------------------------
@@ -2792,7 +2616,6 @@ uint_fast32_t f64_to_ui32_r_minMag( float64_t a, bool exact )
 
 uint_fast64_t f64_to_ui64( float64_t a, uint_fast8_t roundingMode, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -2802,8 +2625,7 @@ uint_fast64_t f64_to_ui64( float64_t a, uint_fast8_t roundingMode, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     sign = signF64UI( uiA );
     exp  = expF64UI( uiA );
     sig  = fracF64UI( uiA );
@@ -2833,7 +2655,6 @@ uint_fast64_t f64_to_ui64( float64_t a, uint_fast8_t roundingMode, bool exact )
 
 uint_fast64_t f64_to_ui64_r_minMag( float64_t a, bool exact )
 {
-    union ui64_f64 uA;
     uint_fast64_t uiA;
     int_fast16_t exp;
     uint_fast64_t sig;
@@ -2843,8 +2664,7 @@ uint_fast64_t f64_to_ui64_r_minMag( float64_t a, bool exact )
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
+    uiA = a.v;
     exp = expF64UI( uiA );
     sig = fracF64UI( uiA );
     /*------------------------------------------------------------------------
@@ -2884,13 +2704,11 @@ uint_fast64_t f64_to_ui64_r_minMag( float64_t a, bool exact )
 float32_t i32_to_f32( int32_t a )
 {
     bool sign;
-    union ui32_f32 uZ;
     uint_fast32_t absA;
 
     sign = (a < 0);
     if ( ! (a & 0x7FFFFFFF) ) {
-        uZ.ui = sign ? packToF32UI( 1, 0x9E, 0 ) : 0;
-        return uZ.f;
+        return float32_t::fromRaw(sign ? packToF32UI( 1, 0x9E, 0 ) : 0);
     }
     //fixed unsigned unary minus: -x == ~x + 1
     absA = sign ? (~(uint_fast32_t) a + 1) : (uint_fast32_t) a;
@@ -2904,7 +2722,6 @@ float64_t i32_to_f64( int32_t a )
     bool sign;
     uint_fast32_t absA;
     int_fast8_t shiftDist;
-    union ui64_f64 uZ;
 
     if ( ! a ) {
         uiZ = 0;
@@ -2917,8 +2734,7 @@ float64_t i32_to_f64( int32_t a )
             packToF64UI(
                 sign, 0x432 - shiftDist, (uint_fast64_t) absA<<shiftDist );
     }
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 
 }
 
@@ -2927,7 +2743,6 @@ float32_t i64_to_f32( int64_t a )
     bool sign;
     uint_fast64_t absA;
     int_fast8_t shiftDist;
-    union ui32_f32 u;
     uint_fast32_t sig;
 
     sign = (a < 0);
@@ -2935,11 +2750,7 @@ float32_t i64_to_f32( int64_t a )
     absA = sign ? (~(uint_fast64_t) a + 1) : (uint_fast64_t) a;
     shiftDist = softfloat_countLeadingZeros64( absA ) - 40;
     if ( 0 <= shiftDist ) {
-        u.ui =
-            a ? packToF32UI(
-                    sign, 0x95 - shiftDist, (uint_fast32_t) absA<<shiftDist )
-                : 0;
-        return u.f;
+        return float32_t::fromRaw(a ? packToF32UI(sign, 0x95 - shiftDist, (uint_fast32_t) absA<<shiftDist ) : 0);
     } else {
         shiftDist += 7;
         sig =
@@ -2954,13 +2765,11 @@ float32_t i64_to_f32( int64_t a )
 float64_t i64_to_f64( int64_t a )
 {
     bool sign;
-    union ui64_f64 uZ;
     uint_fast64_t absA;
 
     sign = (a < 0);
     if ( ! (a & UINT64_C( 0x7FFFFFFFFFFFFFFF )) ) {
-        uZ.ui = sign ? packToF64UI( 1, 0x43E, 0 ) : 0;
-        return uZ.f;
+        return float64_t::fromRaw(sign ? packToF64UI( 1, 0x43E, 0 ) : 0);
     }
     //fixed unsigned unary minus: -x == ~x + 1
     absA = sign ? (~(uint_fast64_t) a + 1) : (uint_fast64_t) a;
@@ -2979,7 +2788,6 @@ float32_t softfloat_addMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
     bool signZ;
     int_fast16_t expZ;
     uint_fast32_t sigZ;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -3047,9 +2855,7 @@ float32_t softfloat_addMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
  propagateNaN:
     uiZ = softfloat_propagateNaNF32UI( uiA, uiB );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
-
+    return float32_t::fromRaw(uiZ);
 }
 
 float64_t
@@ -3063,7 +2869,6 @@ float64_t
     uint_fast64_t uiZ;
     int_fast16_t expZ;
     uint_fast64_t sigZ;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -3133,9 +2938,7 @@ float64_t
  propagateNaN:
     uiZ = softfloat_propagateNaNF64UI( uiA, uiB );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
-
+    return float64_t::fromRaw(uiZ);
 }
 
 uint32_t softfloat_approxRecipSqrt32_1( unsigned int oddExpA, uint32_t a )
@@ -3293,7 +3096,6 @@ float32_t
     int_fast16_t expDiff;
     uint_fast64_t sig64Z, sig64C;
     int_fast8_t shiftDist;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -3445,8 +3247,7 @@ float32_t
             packToF32UI((globalRoundingMode == round_min), 0, 0 );
     }
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float32_t::fromRaw(uiZ);
 }
 
 float64_t
@@ -3471,7 +3272,6 @@ float64_t
     int_fast16_t expDiff;
     struct uint128 sig128C;
     int_fast8_t shiftDist;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -3643,8 +3443,7 @@ float64_t
             packToF64UI((globalRoundingMode == round_min), 0, 0 );
     }
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 
 }
 
@@ -3652,13 +3451,11 @@ float32_t
  softfloat_normRoundPackToF32( bool sign, int_fast16_t exp, uint_fast32_t sig )
 {
     int_fast8_t shiftDist;
-    union ui32_f32 uZ;
 
     shiftDist = softfloat_countLeadingZeros32( sig ) - 1;
     exp -= shiftDist;
     if ( (7 <= shiftDist) && ((unsigned int) exp < 0xFD) ) {
-        uZ.ui = packToF32UI( sign, sig ? exp : 0, sig<<(shiftDist - 7) );
-        return uZ.f;
+        return float32_t::fromRaw(packToF32UI( sign, sig ? exp : 0, sig<<(shiftDist - 7) ));
     } else {
         return softfloat_roundPackToF32( sign, exp, sig<<shiftDist );
     }
@@ -3669,13 +3466,11 @@ float64_t
  softfloat_normRoundPackToF64( bool sign, int_fast16_t exp, uint_fast64_t sig )
 {
     int_fast8_t shiftDist;
-    union ui64_f64 uZ;
 
     shiftDist = softfloat_countLeadingZeros64( sig ) - 1;
     exp -= shiftDist;
     if ( (10 <= shiftDist) && ((unsigned int) exp < 0x7FD) ) {
-        uZ.ui = packToF64UI( sign, sig ? exp : 0, sig<<(shiftDist - 10) );
-        return uZ.f;
+        return float64_t::fromRaw(packToF64UI( sign, sig ? exp : 0, sig<<(shiftDist - 10) ));
     } else {
         return softfloat_roundPackToF64( sign, exp, sig<<shiftDist );
     }
@@ -3751,7 +3546,6 @@ float32_t
     uint_fast8_t roundIncrement, roundBits;
     bool isTiny;
     uint_fast32_t uiZ;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -3807,8 +3601,7 @@ float32_t
  packReturn:
     uiZ = packToF32UI( sign, exp, sig );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float32_t::fromRaw(uiZ);
 
 }
 
@@ -3820,7 +3613,6 @@ float64_t
     uint_fast16_t roundIncrement, roundBits;
     bool isTiny;
     uint_fast64_t uiZ;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -3880,9 +3672,7 @@ float64_t
  packReturn:
     uiZ = packToF64UI( sign, exp, sig );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
-
+    return float64_t::fromRaw(uiZ);
 }
 
 int_fast32_t
@@ -4092,7 +3882,6 @@ float32_t softfloat_subMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
     int_fast8_t shiftDist;
     int_fast16_t expZ;
     uint_fast32_t sigX, sigY;
-    union ui32_f32 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -4174,9 +3963,7 @@ float32_t softfloat_subMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
  propagateNaN:
     uiZ = softfloat_propagateNaNF32UI( uiA, uiB );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
-
+    return float32_t::fromRaw(uiZ);
 }
 
 float64_t
@@ -4192,7 +3979,6 @@ float64_t
     int_fast8_t shiftDist;
     int_fast16_t expZ;
     uint_fast64_t sigZ;
-    union ui64_f64 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -4272,18 +4058,14 @@ float64_t
  propagateNaN:
     uiZ = softfloat_propagateNaNF64UI( uiA, uiB );
  uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 
 }
 
 float32_t ui32_to_f32( uint32_t a )
 {
-    union ui32_f32 uZ;
-
     if ( ! a ) {
-        uZ.ui = 0;
-        return uZ.f;
+        return float32_t::fromRaw(0);
     }
     if ( a & 0x80000000 ) {
         return softfloat_roundPackToF32( 0, 0x9D, a>>1 | (a & 1) );
@@ -4297,7 +4079,6 @@ float64_t ui32_to_f64( uint32_t a )
 {
     uint_fast64_t uiZ;
     int_fast8_t shiftDist;
-    union ui64_f64 uZ;
 
     if ( ! a ) {
         uiZ = 0;
@@ -4306,24 +4087,18 @@ float64_t ui32_to_f64( uint32_t a )
         uiZ =
             packToF64UI( 0, 0x432 - shiftDist, (uint_fast64_t) a<<shiftDist );
     }
-    uZ.ui = uiZ;
-    return uZ.f;
+    return float64_t::fromRaw(uiZ);
 
 }
 
 float32_t ui64_to_f32( uint64_t a )
 {
     int_fast8_t shiftDist;
-    union ui32_f32 u;
     uint_fast32_t sig;
 
     shiftDist = softfloat_countLeadingZeros64( a ) - 40;
     if ( 0 <= shiftDist ) {
-        u.ui =
-            a ? packToF32UI(
-                    0, 0x95 - shiftDist, (uint_fast32_t) a<<shiftDist )
-                : 0;
-        return u.f;
+        return float32_t::fromRaw(a ? packToF32UI(0, 0x95 - shiftDist, (uint_fast32_t) a<<shiftDist ) : 0);
     } else {
         shiftDist += 7;
         sig =
@@ -4336,11 +4111,8 @@ float32_t ui64_to_f32( uint64_t a )
 
 float64_t ui64_to_f64( uint64_t a )
 {
-    union ui64_f64 uZ;
-
     if ( ! a ) {
-        uZ.ui = 0;
-        return uZ.f;
+        return float64_t::fromRaw(0);
     }
     if ( a & UINT64_C( 0x8000000000000000 ) ) {
         return
