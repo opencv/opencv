@@ -159,12 +159,12 @@ struct CV_EXPORTS softfloat32_t
 public:
     softfloat32_t() { v = 0; }
     softfloat32_t( const softfloat32_t& c) { v = c.v; }
-    softfloat32_t& operator=( const softfloat32_t& c)
+    softfloat32_t& operator=( const softfloat32_t& c )
     {
         if(&c != this) v = c.v;
         return *this;
     }
-    static softfloat32_t fromRaw( uint32_t a) { softfloat32_t x; x.v = a; return x; }
+    static const softfloat32_t fromRaw( const uint32_t a ) { softfloat32_t x; x.v = a; return x; }
 
     softfloat32_t( const uint32_t );
     softfloat32_t( const uint64_t );
@@ -208,10 +208,10 @@ public:
     bool isNaN() { return (v & 0x7fffffff)  > 0x7f800000; }
     bool isInf() { return (v & 0x7fffffff) == 0x7f800000; }
 
-    static const softfloat32_t zero;
-    static const softfloat32_t  inf;
-    static const softfloat32_t  nan;
-    static const softfloat32_t  one;
+    static softfloat32_t zero() { return softfloat32_t::fromRaw( 0 ); }
+    static softfloat32_t  inf() { return softfloat32_t::fromRaw( packToF32UI( 0, 0xFF, 0 ) ); }
+    static softfloat32_t  nan() { return softfloat32_t::fromRaw( 0x7fffffff ); }
+    static softfloat32_t  one() { return softfloat32_t::fromRaw( packToF32UI( 0,  127, 0 ) ); }
 
     uint32_t v;
 };
@@ -219,9 +219,9 @@ public:
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-
 struct CV_EXPORTS softfloat64_t
 {
+public:
     softfloat64_t() { }
     softfloat64_t( const softfloat64_t& c) { v = c.v; }
     softfloat64_t& operator=( const softfloat64_t& c )
@@ -229,7 +229,7 @@ struct CV_EXPORTS softfloat64_t
         if(&c != this) v = c.v;
         return *this;
     }
-    static softfloat64_t fromRaw(uint64_t a) { softfloat64_t x; x.v = a; return x; }
+    static softfloat64_t fromRaw( const uint64_t a ) { softfloat64_t x; x.v = a; return x; }
 
     softfloat64_t( const uint32_t );
     softfloat64_t( const uint64_t );
@@ -273,10 +273,10 @@ struct CV_EXPORTS softfloat64_t
     bool isNaN() { return (v & 0x7fffffffffffffff)  > 0x7ff0000000000000; }
     bool isInf() { return (v & 0x7fffffffffffffff) == 0x7ff0000000000000; }
 
-    static const softfloat64_t zero;
-    static const softfloat64_t  inf;
-    static const softfloat64_t  nan;
-    static const softfloat64_t  one;
+    static softfloat64_t zero() { return softfloat64_t::fromRaw( 0 ); }
+    static softfloat64_t  inf() { return softfloat64_t::fromRaw( packToF64UI( 0, 0x7FF, 0 ) ); }
+    static softfloat64_t  nan() { return softfloat64_t::fromRaw( CV_BIG_INT(0x7FFFFFFFFFFFFFFF) ); }
+    static softfloat64_t  one() { return softfloat64_t::fromRaw( packToF64UI( 0, 1023, 0 ) ); }
 
     uint64_t v;
 };

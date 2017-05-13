@@ -229,16 +229,6 @@ bool softfloat64_t::operator >= (const softfloat64_t& a) const { return  f64_le(
 bool softfloat64_t::operator <  (const softfloat64_t& a) const { return  f64_lt(*this, a); }
 bool softfloat64_t::operator <= (const softfloat64_t& a) const { return  f64_le(*this, a); }
 
-const softfloat32_t softfloat32_t::zero = softfloat32_t::fromRaw( 0 );
-const softfloat32_t softfloat32_t::inf  = softfloat32_t::fromRaw( packToF32UI( 0, 0xFF, 0 ) );
-const softfloat32_t softfloat32_t::nan  = softfloat32_t::fromRaw( 0x7fffffff );
-const softfloat32_t softfloat32_t::one  = softfloat32_t::fromRaw( packToF32UI( 0,  127, 0 ) );
-
-const softfloat64_t softfloat64_t::zero = softfloat64_t::fromRaw( 0 );
-const softfloat64_t softfloat64_t::inf = softfloat64_t::fromRaw( packToF64UI( 0, 0x7FF, 0 ) );
-const softfloat64_t softfloat64_t::nan = softfloat64_t::fromRaw( CV_BIG_INT(0x7FFFFFFFFFFFFFFF) );
-const softfloat64_t softfloat64_t::one = softfloat64_t::fromRaw( packToF64UI( 0, 1023, 0 ) );
-
 /*----------------------------------------------------------------------------
 | The values to return on conversions to 32-bit integer formats that raise an
 | invalid exception.
@@ -4209,8 +4199,8 @@ static const float64_t exp_max_val(3000.*(1 << EXPTAB_SCALE)); // log10(DBL_MAX)
 float32_t f32_exp( float32_t x)
 {
     //special cases
-    if(x.isNaN()) return float32_t::nan;
-    if(x.isInf()) return (x == float32_t::inf) ? x : float32_t::zero;
+    if(x.isNaN()) return float32_t::nan();
+    if(x.isInf()) return (x == float32_t::inf()) ? x : float32_t::zero();
 
     static const float64_t
         A4(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
@@ -4237,8 +4227,8 @@ float32_t f32_exp( float32_t x)
 float64_t f64_exp(float64_t x)
 {
     //special cases
-    if(x.isNaN()) return float64_t::nan;
-    if(x.isInf()) return (x == float64_t::inf) ? x : float64_t::zero;
+    if(x.isNaN()) return float64_t::nan();
+    if(x.isInf()) return (x == float64_t::inf()) ? x : float64_t::zero();
 
     static const float64_t
     A5(.99999999999999999998285227504999 / EXPPOLY_32F_A0),
@@ -4536,14 +4526,14 @@ static const float64_t ln_2(0.69314718055994530941723212145818);
 float32_t f32_log(float32_t x)
 {
     //special cases
-    if(x.isNaN() || x < float32_t::zero) return float32_t::nan;
-    if(x == float32_t::zero) return -float32_t::inf;
+    if(x.isNaN() || x < float32_t::zero()) return float32_t::nan();
+    if(x == float32_t::zero()) return -float32_t::inf();
 
     //first 8 bits of mantissa
     int h0 = (x.v >> (23 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
     //buf == 0.00000000_the_rest_mantissa_bits
     float64_t buf; buf.v = packToF64UI(0, 1023, ((uint64_t)x.v << 29) & ((1LL << (52 - LOGTAB_SCALE)) - 1));
-    buf -= float64_t::one;
+    buf -= float64_t::one();
 
     float64_t tab0(icvLogTab[2*h0]);
     float64_t tab1(icvLogTab[2*h0+1]);
@@ -4560,8 +4550,8 @@ float32_t f32_log(float32_t x)
 float64_t f64_log(float64_t x)
 {
     //special cases
-    if(x.isNaN() || x < float64_t::zero) return float64_t::nan;
-    if(x == float64_t::zero) return -float64_t::inf;
+    if(x.isNaN() || x < float64_t::zero()) return float64_t::nan();
+    if(x == float64_t::zero()) return -float64_t::inf();
 
     static const float64_t
     A7(1.0),
@@ -4577,7 +4567,7 @@ float64_t f64_log(float64_t x)
     int h0 = (x.v >> (52 - LOGTAB_SCALE)) & ((1 << LOGTAB_SCALE) - 1);
     //buf == 0.00000000_the_rest_mantissa_bits
     float64_t buf; buf.v = packToF64UI(0, 1023, x.v & ((1LL << (52 - LOGTAB_SCALE)) - 1));
-    buf -= float64_t::one;
+    buf -= float64_t::one();
 
     float64_t tab0(icvLogTab[2*h0]);
     float64_t tab1(icvLogTab[2*h0 + 1]);
@@ -4598,7 +4588,7 @@ float64_t f64_log(float64_t x)
 float32_t f32_cbrt(float32_t x)
 {
     //special cases
-    if(x.isNaN()) return float32_t::nan;
+    if(x.isNaN()) return float32_t::nan();
     if(x.isInf()) return x;
 
     int s = signF32UI(x.v);
@@ -4633,24 +4623,25 @@ float32_t f32_cbrt(float32_t x)
 
 float32_t f32_pow( float32_t x, float32_t y)
 {
+    const float32_t zero = float32_t::zero(), one = float32_t::one(), inf = float32_t::inf(), nan = float32_t::nan();
     bool xinf = x.isInf(), yinf = y.isInf(), xnan = x.isNaN(), ynan = y.isNaN();
     float32_t v;
     //special cases
-    if(ynan) v = float32_t::nan;
+    if(ynan) v = nan;
     else
     {
         float32_t ax = f32_abs(x);
-        bool useInf = (y > float32_t::zero) == (ax > float32_t::one);
-        if(yinf) v = (ax == float32_t::one || xnan) ? float32_t::nan : (useInf ? float32_t::inf : float32_t::zero);
-        else if(y == float32_t::zero) v = float32_t::one;
-        else if(y == float32_t::one ) v = x;
+        bool useInf = (y > zero) == (ax > one);
+        if(yinf) v = (ax == one || xnan) ? nan : (useInf ? inf : zero);
+        else if(y == zero) v = one;
+        else if(y == one ) v = x;
         else //here y is ok
         {
-            if(xnan) v = float32_t::nan;
-            else if(xinf) v = (y < float32_t::zero) ? float32_t::zero : float32_t::inf;
-            else if(x  < float32_t::zero) v = float32_t::nan;
+            if(xnan) v = nan;
+            else if(xinf) v = (y < zero) ? zero : inf;
+            else if(x  < zero) v = nan;
             // (0 ** 0) == 1
-            else if(x == float32_t::zero) v = (y < float32_t::zero) ? float32_t::inf : (y == float32_t::zero ? float32_t::one : float32_t::zero);
+            else if(x == zero) v = (y < zero) ? inf : (y == zero ? one : zero);
             // here x and y are ok
             else v = f32_exp(y * f32_log(x));
         }
@@ -4661,24 +4652,25 @@ float32_t f32_pow( float32_t x, float32_t y)
 
 float64_t f64_pow( float64_t x, float64_t y)
 {
+    const float64_t zero = float64_t::zero(), one = float64_t::one(), inf = float64_t::inf(), nan = float64_t::nan();
     bool xinf = x.isInf(), yinf = y.isInf(), xnan = x.isNaN(), ynan = y.isNaN();
     float64_t v;
     //special cases
-    if(ynan) v = float64_t::nan;
+    if(ynan) v = nan;
     else
     {
         float64_t ax = f64_abs(x);
-        bool useInf = (y > float64_t::zero) == (ax > float64_t::one);
-        if(yinf) v = (ax == float64_t::one || xnan) ? float64_t::nan : (useInf ? float64_t::inf : float64_t::zero);
-        else if(y == float64_t::zero) v = float64_t::one;
-        else if(y == float64_t::one ) v = x;
+        bool useInf = (y > zero) == (ax > one);
+        if(yinf) v = (ax == one || xnan) ? nan : (useInf ? inf : zero);
+        else if(y == zero) v = one;
+        else if(y == one ) v = x;
         else //here y is ok
         {
-            if(xnan) v = float64_t::nan;
-            else if(xinf) v = (y < float64_t::zero) ? float64_t::zero : float64_t::inf;
-            else if(x  < float64_t::zero) v = float64_t::nan;
+            if(xnan) v = nan;
+            else if(xinf) v = (y < zero) ? zero : inf;
+            else if(x  < zero) v = nan;
             // (0 ** 0) == 1
-            else if(x == float64_t::zero) v = (y < float64_t::zero) ? float64_t::inf : (y == float64_t::zero ? float64_t::one : float64_t::zero);
+            else if(x == zero) v = (y < zero) ? inf : (y == zero ? one : zero);
             // here x and y are ok
             else v = f64_exp(y * f64_log(x));
         }
@@ -4691,21 +4683,21 @@ float32_t f32_pow( float32_t x, int y)
 {
     float32_t v;
     //special cases
-    if(y == 0) v = float32_t::one;
+    if(y == 0) v = float32_t::one();
     else if(y == 1) v = x;
     else //here y is ok
     {
-        if(x.isNaN()) v = float32_t::nan;
-        else if(x.isInf()) v = (y < 0) ? float32_t::zero : float32_t::inf;
+        if(x.isNaN()) v = float32_t::nan();
+        else if(x.isInf()) v = (y < 0) ? float32_t::zero() : float32_t::inf();
         // (0 ** 0) == 1
-        else if(x == float32_t::zero) v = (y < 0) ? float32_t::inf : (y == 0 ? float32_t::one : float32_t::zero);
+        else if(x == float32_t::zero()) v = (y < 0) ? float32_t::inf() : (y == 0 ? float32_t::one() : float32_t::zero());
         // here x and y are ok
         else
         {
-            float32_t a = float32_t::one, b = x;
+            float32_t a = float32_t::one(), b = x;
             int p = std::abs(y);
             if( y < 0 )
-                b = float32_t::one/b;
+                b = float32_t::one()/b;
             while( p > 1 )
             {
                 if( p & 1 )
@@ -4723,21 +4715,21 @@ float64_t f64_pow( float64_t x, int y)
 {
     float64_t v;
     //special cases
-    if(y == 0) v = float64_t::one;
+    if(y == 0) v = float64_t::one();
     else if(y == 1) v = x;
     else //here y is ok
     {
-        if(x.isNaN()) v = float64_t::nan;
-        else if(x.isInf()) v = (y < 0) ? float64_t::zero : float64_t::inf;
+        if(x.isNaN()) v = float64_t::nan();
+        else if(x.isInf()) v = (y < 0) ? float64_t::zero() : float64_t::inf();
         // (0 ** 0) == 1
-        else if(x == float64_t::zero) v = (y < 0) ? float64_t::inf : (y == 0 ? float64_t::one : float64_t::zero);
+        else if(x == float64_t::zero()) v = (y < 0) ? float64_t::inf() : (y == 0 ? float64_t::one() : float64_t::zero());
         // here x and y are ok
         else
         {
-            float64_t a = float64_t::one, b = x;
+            float64_t a = float64_t::one(), b = x;
             int p = std::abs(y);
             if( y < 0 )
-                b = float64_t::one/b;
+                b = float64_t::one()/b;
             while( p > 1 )
             {
                 if( p & 1 )

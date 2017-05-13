@@ -3072,14 +3072,14 @@ softfloat64_t naiveExp(softfloat64_t x)
 {
     int exponent = expF64UI(x.v) - 1023;
     int sign = signF64UI(x.v) ? -1 : 1;
-    if(sign < 0 && exponent >= 10) return softfloat64_t::inf;
+    if(sign < 0 && exponent >= 10) return softfloat64_t::inf();
     softfloat64_t mantissa; mantissa.v = packToF64UI(0, 1023, fracF64UI(x.v));
     //Taylor series for mantissa
     uint64 fac[20] = {1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800,
                     39916800, 479001600, 6227020800, 87178291200, 1307674368000,
                     20922789888000, 355687428096000, 6402373705728000, 121645100408832000,
                     2432902008176640000};
-    softfloat64_t sum = softfloat64_t::one;
+    softfloat64_t sum = softfloat64_t::one();
     // 21! > (2 ** 64)
     for(int i = 20; i > 0; i--)
     {
@@ -3095,7 +3095,7 @@ softfloat64_t naiveExp(softfloat64_t x)
     }
     else
     {
-        if(sign < 0) sum = softfloat64_t::one/sum;
+        if(sign < 0) sum = softfloat64_t::one()/sum;
         exponent = -exponent;
         for(int j = 0; j < exponent; j++)
             sum = f64_sqrt(sum);
@@ -3106,9 +3106,9 @@ softfloat64_t naiveExp(softfloat64_t x)
 TEST(Core_SoftFloat, exp32)
 {
     //special cases
-    ASSERT_TRUE(f32_exp(softfloat32_t::nan).isNaN());
-    ASSERT_TRUE(f32_exp(softfloat32_t::inf).isInf());
-    ASSERT_EQ(f32_exp(-softfloat32_t::inf), softfloat32_t::zero);
+    ASSERT_TRUE(f32_exp( softfloat32_t::nan()).isNaN());
+    ASSERT_TRUE(f32_exp( softfloat32_t::inf()).isInf());
+    ASSERT_EQ  (f32_exp(-softfloat32_t::inf()), softfloat32_t::zero());
 
     //ln(FLT_MAX) ~ 88.722
     const float ln_max = 88.722f;
@@ -3135,7 +3135,7 @@ TEST(Core_SoftFloat, exp32)
         softfloat32_t y = f32_exp(x);
         ASSERT_TRUE(!y.isNaN());
         ASSERT_TRUE(!y.isInf());
-        ASSERT_GE(y, softfloat32_t::zero);
+        ASSERT_GE(y, softfloat32_t::zero());
         softfloat32_t ygood = naiveExp(x.toF64()).toF32();
         softfloat32_t diff = f32_abs(ygood - y);
         if(diff > softfloat32_t(FLT_EPSILON))
@@ -3148,9 +3148,9 @@ TEST(Core_SoftFloat, exp32)
 TEST(Core_SoftFloat, exp64)
 {
     //special cases
-    ASSERT_TRUE(f64_exp(softfloat64_t::nan).isNaN());
-    ASSERT_TRUE(f64_exp(softfloat64_t::inf).isInf());
-    ASSERT_EQ(f64_exp(-softfloat64_t::inf), softfloat64_t::zero);
+    ASSERT_TRUE(f64_exp( softfloat64_t::nan()).isNaN());
+    ASSERT_TRUE(f64_exp( softfloat64_t::inf()).isInf());
+    ASSERT_EQ  (f64_exp(-softfloat64_t::inf()), softfloat64_t::zero());
 
     //ln(DBL_MAX) ~ 709.7827
     const double ln_max = 709.7827;
@@ -3178,7 +3178,7 @@ TEST(Core_SoftFloat, exp64)
         softfloat64_t y = f64_exp(x);
         ASSERT_TRUE(!y.isNaN());
         ASSERT_TRUE(!y.isInf());
-        ASSERT_GE(y, softfloat64_t::zero);
+        ASSERT_GE(y, softfloat64_t::zero());
         softfloat64_t ygood = naiveExp(x);
         softfloat64_t diff = f64_abs(ygood - y);
         if(diff > softfloat64_t(DBL_EPSILON))
@@ -3193,7 +3193,7 @@ TEST(Core_SoftFloat, log32)
     const int nValues = 50000;
     RNG rng(0);
     //special cases
-    ASSERT_TRUE(f32_log(softfloat32_t::nan).isNaN());
+    ASSERT_TRUE(f32_log(softfloat32_t::nan()).isNaN());
     for(int i = 0; i < nValues; i++)
     {
         Cv32suf x;
@@ -3203,7 +3203,7 @@ TEST(Core_SoftFloat, log32)
         softfloat32_t x32(x.f);
         ASSERT_TRUE(f32_log(x32).isNaN());
     }
-    ASSERT_TRUE(f32_log(softfloat32_t::zero).isInf());
+    ASSERT_TRUE(f32_log(softfloat32_t::zero()).isInf());
 
     vector<float> inputs;
 
@@ -3243,7 +3243,7 @@ TEST(Core_SoftFloat, log64)
     const int nValues = 50000;
     RNG rng(0);
     //special cases
-    ASSERT_TRUE(f64_log(softfloat64_t::nan).isNaN());
+    ASSERT_TRUE(f64_log(softfloat64_t::nan()).isNaN());
     for(int i = 0; i < nValues; i++)
     {
         Cv64suf x;
@@ -3254,7 +3254,7 @@ TEST(Core_SoftFloat, log64)
         softfloat64_t x64(x.f);
         ASSERT_TRUE(f64_log(x64).isNaN());
     }
-    ASSERT_TRUE(f64_log(softfloat64_t::zero).isInf());
+    ASSERT_TRUE(f64_log(softfloat64_t::zero()).isInf());
 
     vector<double> inputs;
     inputs.push_back(1);
@@ -3324,6 +3324,8 @@ TEST(Core_SoftFloat, cbrt32)
 
 TEST(Core_SoftFloat, pow32)
 {
+    const softfloat32_t zero = softfloat32_t::zero(), one = softfloat32_t::one();
+    const softfloat32_t  inf = softfloat32_t::inf(),  nan = softfloat32_t::nan();
     const size_t nValues = 5000;
     RNG rng(0);
     //x ** nan == nan
@@ -3331,7 +3333,7 @@ TEST(Core_SoftFloat, pow32)
     {
         Cv32suf x;
         x.u = rng();
-        ASSERT_TRUE(f32_pow(softfloat32_t(x.f), softfloat32_t::nan).isNaN());
+        ASSERT_TRUE(f32_pow(softfloat32_t(x.f), nan).isNaN());
     }
     //x ** inf check
     for(size_t i = 0; i < nValues; i++)
@@ -3342,29 +3344,29 @@ TEST(Core_SoftFloat, pow32)
         softfloat32_t ax = f32_abs(x32);
         if(x32.isNaN())
         {
-            ASSERT_TRUE(f32_pow(x32, softfloat32_t::inf).isNaN());
+            ASSERT_TRUE(f32_pow(x32, inf).isNaN());
         }
-        if(ax > softfloat32_t::one)
+        if(ax > one)
         {
-            ASSERT_TRUE(f32_pow(x32, softfloat32_t::inf).isInf());
-            ASSERT_EQ(f32_pow(x32, -softfloat32_t::inf), softfloat32_t::zero);
+            ASSERT_TRUE(f32_pow(x32,  inf).isInf());
+            ASSERT_EQ  (f32_pow(x32, -inf), zero);
         }
-        if(ax < softfloat32_t::one && ax > softfloat32_t::zero)
+        if(ax < one && ax > zero)
         {
-            ASSERT_TRUE(f32_pow(x32, -softfloat32_t::inf).isInf());
-            ASSERT_EQ(f32_pow(x32, softfloat32_t::inf), softfloat32_t::zero);
+            ASSERT_TRUE(f32_pow(x32, -inf).isInf());
+            ASSERT_EQ  (f32_pow(x32,  inf), zero);
         }
     }
     //+-1 ** inf
-    ASSERT_TRUE(f32_pow( softfloat32_t::one, softfloat32_t::inf).isNaN());
-    ASSERT_TRUE(f32_pow(-softfloat32_t::one, softfloat32_t::inf).isNaN());
+    ASSERT_TRUE(f32_pow( one, inf).isNaN());
+    ASSERT_TRUE(f32_pow(-one, inf).isNaN());
 
     // x ** 0 == 1
     for(size_t i = 0; i < nValues; i++)
     {
         Cv32suf x;
         x.u = rng();
-        ASSERT_EQ(f32_pow(softfloat32_t(x.f), softfloat32_t::zero), softfloat32_t::one);
+        ASSERT_EQ(f32_pow(softfloat32_t(x.f), zero), one);
     }
 
     // x ** 1 == x
@@ -3373,7 +3375,7 @@ TEST(Core_SoftFloat, pow32)
         Cv32suf x;
         x.u = rng();
         softfloat32_t x32(x.f);
-        softfloat32_t val = f32_pow(x32, softfloat32_t::one);
+        softfloat32_t val = f32_pow(x32, one);
         // don't compare val and x32 directly because x != x if x is nan
         ASSERT_EQ(val.v, x32.v);
     }
@@ -3385,10 +3387,10 @@ TEST(Core_SoftFloat, pow32)
         x.u = rng();
         if(!x.u) x.f = FLT_MIN;
         softfloat32_t x32(x.f);
-        ASSERT_TRUE(f32_pow(softfloat32_t::nan, x32).isNaN());
+        ASSERT_TRUE(f32_pow(nan, x32).isNaN());
     }
     // nan ** 0 == 1
-    ASSERT_EQ(f32_pow(softfloat32_t::nan, softfloat32_t::zero), softfloat32_t::one);
+    ASSERT_EQ(f32_pow(nan, zero), one);
 
     // inf ** y == 0, if y < 0
     // inf ** y == inf, if y > 0
@@ -3399,10 +3401,10 @@ TEST(Core_SoftFloat, pow32)
         x.fmt.exponent = rng() % 255;
         x.fmt.significand = rng() % (1 << 23);
         softfloat32_t x32 = softfloat32_t(x.f);
-        ASSERT_TRUE(f32_pow( softfloat32_t::inf, x32).isInf());
-        ASSERT_TRUE(f32_pow(-softfloat32_t::inf, x32).isInf());
-        ASSERT_EQ(f32_pow( softfloat32_t::inf, -x32), softfloat32_t::zero);
-        ASSERT_EQ(f32_pow(-softfloat32_t::inf, -x32), softfloat32_t::zero);
+        ASSERT_TRUE(f32_pow( inf, x32).isInf());
+        ASSERT_TRUE(f32_pow(-inf, x32).isInf());
+        ASSERT_EQ(f32_pow( inf, -x32), zero);
+        ASSERT_EQ(f32_pow(-inf, -x32), zero);
     }
 
     // x ** y == nan, if x < 0
@@ -3422,7 +3424,7 @@ TEST(Core_SoftFloat, pow32)
     }
 
     // (0 ** 0) == 1
-    ASSERT_EQ(f32_pow(softfloat32_t::zero, softfloat32_t::zero), softfloat32_t::one);
+    ASSERT_EQ(f32_pow(zero, zero), one);
 
     // 0 ** y == inf, if y < 0
     // 0 ** y == 0, if y > 0
@@ -3433,14 +3435,17 @@ TEST(Core_SoftFloat, pow32)
         x.fmt.exponent = rng() % 255;
         x.fmt.significand = rng() % (1 << 23);
         softfloat32_t x32(x.f);
-        ASSERT_TRUE(f32_pow(softfloat32_t::zero, -x32).isInf());
-        if(x32 != softfloat32_t::one)
-            ASSERT_EQ(f32_pow(softfloat32_t::zero, x32), softfloat32_t::zero);
+        ASSERT_TRUE(f32_pow(zero, -x32).isInf());
+        if(x32 != one)
+            ASSERT_EQ(f32_pow(zero, x32), zero);
     }
 }
 
 TEST(Core_SoftFloat, pow64)
 {
+    const softfloat64_t zero = softfloat64_t::zero(), one = softfloat64_t::one();
+    const softfloat64_t  inf = softfloat64_t::inf(),  nan = softfloat64_t::nan();
+
     const size_t nValues = 5000;
     RNG rng(0);
 
@@ -3449,7 +3454,7 @@ TEST(Core_SoftFloat, pow64)
     {
         Cv64suf x;
         x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        ASSERT_TRUE(f64_pow(softfloat64_t(x.f), softfloat64_t::nan).isNaN());
+        ASSERT_TRUE(f64_pow(softfloat64_t(x.f), nan).isNaN());
     }
     //x ** inf check
     for(size_t i = 0; i < nValues; i++)
@@ -3460,29 +3465,29 @@ TEST(Core_SoftFloat, pow64)
         softfloat64_t ax = f64_abs(x64);
         if(x64.isNaN())
         {
-            ASSERT_TRUE(f64_pow(x64, softfloat64_t::inf).isNaN());
+            ASSERT_TRUE(f64_pow(x64, inf).isNaN());
         }
-        if(ax > softfloat64_t::one)
+        if(ax > one)
         {
-            ASSERT_TRUE(f64_pow(x64, softfloat64_t::inf).isInf());
-            ASSERT_EQ(f64_pow(x64, -softfloat64_t::inf), softfloat64_t::zero);
+            ASSERT_TRUE(f64_pow(x64, inf).isInf());
+            ASSERT_EQ(f64_pow(x64, -inf), zero);
         }
-        if(ax < softfloat64_t::one && ax > softfloat64_t::zero)
+        if(ax < one && ax > zero)
         {
-            ASSERT_TRUE(f64_pow(x64, -softfloat64_t::inf).isInf());
-            ASSERT_EQ(f64_pow(x64, softfloat64_t::inf), softfloat64_t::zero);
+            ASSERT_TRUE(f64_pow(x64, -inf).isInf());
+            ASSERT_EQ(f64_pow(x64, inf), zero);
         }
     }
     //+-1 ** inf
-    ASSERT_TRUE(f64_pow( softfloat64_t::one, softfloat64_t::inf).isNaN());
-    ASSERT_TRUE(f64_pow(-softfloat64_t::one, softfloat64_t::inf).isNaN());
+    ASSERT_TRUE(f64_pow( one, inf).isNaN());
+    ASSERT_TRUE(f64_pow(-one, inf).isNaN());
 
     // x ** 0 == 1
     for(size_t i = 0; i < nValues; i++)
     {
         Cv64suf x;
         x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
-        ASSERT_EQ(f64_pow(softfloat64_t(x.f), softfloat64_t::zero), softfloat64_t::one);
+        ASSERT_EQ(f64_pow(softfloat64_t(x.f), zero), one);
     }
 
     // x ** 1 == x
@@ -3491,7 +3496,7 @@ TEST(Core_SoftFloat, pow64)
         Cv64suf x;
         x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
         softfloat64_t x64(x.f);
-        softfloat64_t val = f64_pow(x64, softfloat64_t::one);
+        softfloat64_t val = f64_pow(x64, one);
         // don't compare val and x64 directly because x != x if x is nan
         ASSERT_EQ(val.v, x64.v);
     }
@@ -3503,10 +3508,10 @@ TEST(Core_SoftFloat, pow64)
         x.u = ((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng);
         if(!x.u) x.f = DBL_MIN;
         softfloat64_t x64(x.f);
-        ASSERT_TRUE(f64_pow(softfloat64_t::nan, x64).isNaN());
+        ASSERT_TRUE(f64_pow(nan, x64).isNaN());
     }
     // nan ** 0 == 1
-    ASSERT_EQ(f64_pow(softfloat64_t::nan, softfloat64_t::zero), softfloat64_t::one);
+    ASSERT_EQ(f64_pow(nan, zero), one);
 
     // inf ** y == 0, if y < 0
     // inf ** y == inf, if y > 0
@@ -3518,10 +3523,10 @@ TEST(Core_SoftFloat, pow64)
         uint64 mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
         x.u = (sign << 63) | (exponent << 52) | mantissa;
         softfloat64_t x64(x.f);
-        ASSERT_TRUE(f64_pow( softfloat64_t::inf, x64).isInf());
-        ASSERT_TRUE(f64_pow(-softfloat64_t::inf, x64).isInf());
-        ASSERT_EQ(f64_pow( softfloat64_t::inf, -x64), softfloat64_t::zero);
-        ASSERT_EQ(f64_pow(-softfloat64_t::inf, -x64), softfloat64_t::zero);
+        ASSERT_TRUE(f64_pow( inf, x64).isInf());
+        ASSERT_TRUE(f64_pow(-inf, x64).isInf());
+        ASSERT_EQ(f64_pow( inf, -x64), zero);
+        ASSERT_EQ(f64_pow(-inf, -x64), zero);
     }
 
     // x ** y == nan, if x < 0
@@ -3543,7 +3548,7 @@ TEST(Core_SoftFloat, pow64)
     }
 
     // (0 ** 0) == 1
-    ASSERT_EQ(f64_pow(softfloat64_t::zero, softfloat64_t::zero), softfloat64_t::one);
+    ASSERT_EQ(f64_pow(zero, zero), one);
 
     // 0 ** y == inf, if y < 0
     // 0 ** y == 0, if y > 0
@@ -3556,9 +3561,9 @@ TEST(Core_SoftFloat, pow64)
         x.u = (sign << 63) | (exponent << 52) | mantissa;
         softfloat64_t x64(x.f);
 
-        ASSERT_TRUE(f64_pow(softfloat64_t::zero, -x64).isInf());
-        if(x64 != softfloat64_t::one)
-            ASSERT_EQ(f64_pow(softfloat64_t::zero, x64), softfloat64_t::zero);
+        ASSERT_TRUE(f64_pow(zero, -x64).isInf());
+        if(x64 != one)
+            ASSERT_EQ(f64_pow(zero, x64), zero);
     }
 }
 
