@@ -305,7 +305,7 @@ public:
 #if CV_SIMD128
         haveSIMD = hasSIMD128();
         if(haveSIMD)
-            _map.create(src.rows + 2, alignSize((size_t)(src.cols + CV_MALLOC_SIMD128 + 1), CV_MALLOC_SIMD128), CV_8UC1);
+            _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_MALLOC_SIMD128 + 1), CV_MALLOC_SIMD128), CV_8UC1);
         else
 #endif
             _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
@@ -325,7 +325,7 @@ public:
 #if CV_SIMD128
         haveSIMD = hasSIMD128();
         if(haveSIMD)
-            _map.create(src.rows + 2, alignSize((size_t)(src.cols + CV_MALLOC_SIMD128 + 1), CV_MALLOC_SIMD128), CV_8UC1);
+            _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_MALLOC_SIMD128 + 1), CV_MALLOC_SIMD128), CV_8UC1);
         else
 #endif
             _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
