@@ -183,7 +183,7 @@ int_fast64_t  softfloat32_t:: toI64( uint_fast8_t roundingMode, bool exact ) { r
 softfloat32_t softfloat32_t::round( uint_fast8_t roundingMode, bool exact ) { return f32_roundToInt(*this, roundingMode, exact); }
 
 softfloat64_t softfloat32_t::toF64() { return f32_to_f64(*this); }
-float softfloat32_t::toFloat() { return *((float*) &(this->v)); }
+float softfloat32_t::toFloat() { return *reinterpret_cast<float*>(&(this->v)); }
 
 softfloat32_t softfloat32_t::operator + (const softfloat32_t& a) const { return f32_add(*this, a); }
 softfloat32_t softfloat32_t::operator - (const softfloat32_t& a) const { return f32_sub(*this, a); }
@@ -214,7 +214,7 @@ int_fast64_t  softfloat64_t:: toI64( uint_fast8_t roundingMode, bool exact ) { r
 
 softfloat64_t softfloat64_t::round(uint_fast8_t roundingMode, bool exact) { return f64_roundToInt(*this, roundingMode, exact); }
 softfloat32_t softfloat64_t::toF32() { return f64_to_f32(*this); }
-double softfloat64_t::toDouble() { return *((double*) &(this->v)); }
+double softfloat64_t::toDouble() { return *reinterpret_cast<double*>(&(this->v)); }
 
 softfloat64_t softfloat64_t::operator + (const softfloat64_t& a) const { return f64_add(*this, a); }
 softfloat64_t softfloat64_t::operator - (const softfloat64_t& a) const { return f64_sub(*this, a); }
