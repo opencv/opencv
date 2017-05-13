@@ -165,6 +165,7 @@ protected:
     unsigned        prevFrameID;
 
     IplImage        *frame;                 // local frame copy
+    ArvPixelFormat  framePixelFormat;       // local frame pixel format
 };
 
 
@@ -308,36 +309,43 @@ bool CvCaptureCAM_Aravis::grabFrame()
 IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
 {
     if(framebuffer) {
-        int depth = 0, channels = 0;
+        int inputDepth = 0, inputChannels = 0, outputDepth = 0, outputChannels = 0;
         switch(pixelFormat) {
             case ARV_PIXEL_FORMAT_MONO_8:
-                depth = IPL_DEPTH_8U;
-                channels = 1;
+                inputDepth = outputDepth = IPL_DEPTH_8U;
+                inputChannels = outputChannels = 1;
                 break;
             case ARV_PIXEL_FORMAT_MONO_12:
-                depth = IPL_DEPTH_16U;
-                channels = 1;
+                inputDepth = outputDepth = IPL_DEPTH_16U;
+                inputChannels = outputChannels = 1;
                 break;
             case ARV_PIXEL_FORMAT_BAYER_GR_8:
-                depth = IPL_DEPTH_8U;
-                channels = 1;
+                inputDepth = outputDepth = IPL_DEPTH_8U;
+                inputChannels = 1;
+                outputChannels = 3;
                 break;
         }
-        if(depth && channels) {
+        if(inputDepth && inputChannels && outputDepth && outputChannels) {
             IplImage src;
-            cvInitImageHeader( &src, cvSize( width, height ), depth, channels, IPL_ORIGIN_TL, 4 );
+            cvInitImageHeader( &src, cvSize( width, height ), inputDepth, inputChannels, IPL_ORIGIN_TL, 4 );
 
             cvSetData( &src, framebuffer, src.widthStep );
             if( !frame ||
                  frame->width != src.width ||
                  frame->height != src.height ||
-                 frame->depth != src.depth ||
-                 frame->nChannels != src.nChannels) {
+                 pixelFormat != framePixelFormat) {
 
                 cvReleaseImage( &frame );
-                frame = cvCreateImage( cvGetSize(&src), src.depth, channels );
+                frame = cvCreateImage( cvGetSize(&src), outputDepth, outputChannels );
             }
-            cvCopy(&src, frame);
+
+            if (pixelFormat == ARV_PIXEL_FORMAT_BAYER_GR_8) {
+                // Output RGB directly
+                cvCvtColor(&src, frame, CV_BayerGR2RGB);
+            }
+            else{
+                cvCopy(&src, frame);
+            }
 
             if(controlExposure && ((frameID - prevFrameID) > 1)) {
                 // control exposure every second frame
