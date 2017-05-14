@@ -42,11 +42,6 @@
 
 #if !defined CUDA_DISABLER
 
-#include "precomp.hpp"
-
-using namespace cv;
-using namespace cv::cuda;
-
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 #include "opencv2/core/cuda/vec_math.hpp"
