@@ -3185,6 +3185,19 @@ VideoCapture_DShow::VideoCapture_DShow(int index)
     CoInitialize(0);
     open(index);
 }
+
+VideoCapture_DShow::VideoCapture_DShow(int index, int width, int height)
+    : m_index(-1)
+    , m_width(-1)
+    , m_height(-1)
+    , m_fourcc(-1)
+    , m_widthSet(width)
+    , m_heightSet(height)
+{
+    CoInitialize(0);
+    open(index, width, height);
+}
+
 VideoCapture_DShow::~VideoCapture_DShow()
 {
     close();
@@ -3360,7 +3373,7 @@ bool VideoCapture_DShow::isOpened() const
     return (-1 != m_index);
 }
 
-void VideoCapture_DShow::open(int index)
+void VideoCapture_DShow::open(int index, int width, int height)
 {
     close();
     int devices = g_VI.listDevices(true);
@@ -3368,6 +3381,34 @@ void VideoCapture_DShow::open(int index)
         return;
     if (index < 0 || index > devices-1)
         return;
+
+    // Don't attempt to open Personify devices (e.g. Cameo by Personify -- this might create a loop situation!
+    if (nullptr != strstr(g_VI.getDeviceName(index), "Personify"))
+    {
+        return;
+    }
+
+    g_VI.setupDeviceFourcc(index, width,height, -1);
+    if (!g_VI.isDeviceSetup(index))
+        return;
+    m_index = index;
+}
+
+void VideoCapture_DShow::open(int index)
+{
+    close();
+    int devices = g_VI.listDevices(true);
+    if (0 == devices)
+        return;
+    if (index < 0 || index > devices - 1)
+        return;
+
+    // Don't attempt to open Personify devices (e.g. Cameo by Personify -- this might create a loop situation!
+    if (nullptr != strstr(g_VI.getDeviceName(index), "Personify"))
+    {
+        return;
+    }
+
     g_VI.setupDevice(index);
     if (!g_VI.isDeviceSetup(index))
         return;

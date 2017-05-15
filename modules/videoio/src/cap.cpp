@@ -505,6 +505,78 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
     return Ptr<IVideoCapture>();
 }
 
+static Ptr<IVideoCapture> IVideoCapture_create(int index, int width, int height)
+{
+    int  domains[] =
+    {
+#ifdef HAVE_DSHOW
+        CV_CAP_DSHOW,
+#endif
+#ifdef HAVE_INTELPERC
+        CV_CAP_INTELPERC,
+#endif
+#ifdef WINRT_VIDEO
+        CAP_WINRT,
+#endif
+#ifdef HAVE_GPHOTO2
+        CV_CAP_GPHOTO2,
+#endif
+        - 1, -1
+    };
+
+    // interpret preferred interface (0 = autodetect)
+    int pref = (index / 100) * 100;
+    if (pref)
+    {
+        domains[0] = pref;
+        index %= 100;
+        domains[1] = -1;
+    }
+
+    // try every possibly installed camera API
+    for (int i = 0; domains[i] >= 0; i++)
+    {
+#if defined(HAVE_DSHOW)        || \
+    defined(HAVE_INTELPERC)    || \
+    defined(WINRT_VIDEO)       || \
+    defined(HAVE_GPHOTO2)      || \
+    (0)
+        Ptr<IVideoCapture> capture;
+
+        switch (domains[i])
+        {
+#ifdef HAVE_DSHOW
+        case CV_CAP_DSHOW:
+            capture = makePtr<VideoCapture_DShow>(index, width, height);
+            break; // CV_CAP_DSHOW
+#endif
+#ifdef HAVE_INTELPERC
+        case CV_CAP_INTELPERC:
+            capture = makePtr<VideoCapture_IntelPerC>();
+            break; // CV_CAP_INTEL_PERC
+#endif
+#ifdef WINRT_VIDEO
+        case CAP_WINRT:
+            capture = Ptr<IVideoCapture>(new cv::VideoCapture_WinRT(index));
+            if (capture)
+                return capture;
+            break; // CAP_WINRT
+#endif
+#ifdef HAVE_GPHOTO2
+        case CV_CAP_GPHOTO2:
+            capture = createGPhoto2Capture(index);
+            break;
+#endif
+        }
+        if (capture && capture->isOpened())
+            return capture;
+#endif
+    }
+
+    // failed open a camera
+    return Ptr<IVideoCapture>();
+}
+
 
 static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
 {
@@ -610,6 +682,16 @@ bool  VideoCapture::open(int cameraNum, int apiPreference)
 {
     cameraNum = cameraNum + apiPreference;
     return open(cameraNum);
+}
+
+bool VideoCapture::open(int index, int width, int height)
+{
+    if (isOpened()) release();
+    icap = IVideoCapture_create(index, width, height);
+    if (!icap.empty())
+        return true;
+    cap.reset(cvCreateCameraCapture(index));
+    return isOpened();
 }
 
 bool VideoCapture::isOpened() const

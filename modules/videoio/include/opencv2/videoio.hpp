@@ -666,6 +666,12 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index);
+  
+    /** @overload
+    @param index = camera_id + domain_offset (CAP_*). id of the video capturing device to open. If there is a single
+    camera connected, just pass 0. Advanced Usage: to open Camera 1 using the MS Media Foundation API: index = 1 + CAP_MSMF
+    */
+    CV_WRAP virtual bool open(int index, int width, int height);
 
    /** @brief  Open a camera for video capturing
 
