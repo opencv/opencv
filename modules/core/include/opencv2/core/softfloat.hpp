@@ -170,7 +170,7 @@ public:
     softfloat32_t( const uint64_t );
     softfloat32_t( const int32_t );
     softfloat32_t( const int64_t );
-    softfloat32_t( const float a ) { v = *reinterpret_cast<const uint32_t*>(&a); }
+    softfloat32_t( const float a ) { Cv32suf s; s.f = a; v = s.u; }
 
     uint_fast32_t toUI32_minMag( bool exact = false );
     uint_fast64_t toUI64_minMag( bool exact = false );
@@ -235,7 +235,7 @@ public:
     softfloat64_t( const uint64_t );
     softfloat64_t( const  int32_t );
     softfloat64_t( const  int64_t );
-    softfloat64_t( const double a ) { v = *reinterpret_cast<const uint64_t*>(&a); }
+    softfloat64_t( const double a ) { Cv64suf s; s.f = a; v = s.u; }
 
     uint_fast32_t toUI32_minMag( bool exact = false );
     uint_fast64_t toUI64_minMag( bool exact = false );
