@@ -172,18 +172,18 @@ public:
     softfloat32_t( const int64_t );
     softfloat32_t( const float a ) { Cv32suf s; s.f = a; v = s.u; }
 
-    uint_fast32_t toUI32_minMag( bool exact = false );
-    uint_fast64_t toUI64_minMag( bool exact = false );
-    int_fast32_t   toI32_minMag( bool exact = false );
-    int_fast64_t   toI64_minMag( bool exact = false );
-    uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false );
-    uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false );
-    int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false );
-    int_fast64_t   toI64( uint_fast8_t roundingMode = round_near_even, bool exact = false );
+    uint_fast32_t toUI32_minMag( bool exact = false ) const;
+    uint_fast64_t toUI64_minMag( bool exact = false ) const;
+    int_fast32_t   toI32_minMag( bool exact = false ) const;
+    int_fast64_t   toI64_minMag( bool exact = false ) const;
+    uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
+    uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
+    int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
+    int_fast64_t   toI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
 
-    softfloat32_t  round( uint_fast8_t roundingMode = round_near_even, bool exact = false);
-    softfloat64_t toF64();
-    float toFloat();
+    softfloat32_t  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
+    softfloat64_t toF64() const;
+    float toFloat() const { Cv32suf s; s.u = v; return s.f; }
 
     softfloat32_t operator + (const softfloat32_t&) const;
     softfloat32_t operator - (const softfloat32_t&) const;
@@ -205,8 +205,8 @@ public:
     bool operator <  ( const softfloat32_t& ) const;
     bool operator <= ( const softfloat32_t& ) const;
 
-    bool isNaN() { return (v & 0x7fffffff)  > 0x7f800000; }
-    bool isInf() { return (v & 0x7fffffff) == 0x7f800000; }
+    bool isNaN() const { return (v & 0x7fffffff)  > 0x7f800000; }
+    bool isInf() const { return (v & 0x7fffffff) == 0x7f800000; }
 
     static softfloat32_t zero() { return softfloat32_t::fromRaw( 0 ); }
     static softfloat32_t  inf() { return softfloat32_t::fromRaw( packToF32UI( 0, 0xFF, 0 ) ); }
@@ -237,18 +237,18 @@ public:
     softfloat64_t( const  int64_t );
     softfloat64_t( const double a ) { Cv64suf s; s.f = a; v = s.u; }
 
-    uint_fast32_t toUI32_minMag( bool exact = false );
-    uint_fast64_t toUI64_minMag( bool exact = false );
-    int_fast32_t   toI32_minMag( bool exact = false );
-    int_fast64_t   toI64_minMag( bool exact = false );
-    uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false );
-    uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false );
-    int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false );
-    int_fast64_t   toI64( uint_fast8_t roundingMode = round_near_even, bool exact = false );
+    uint_fast32_t toUI32_minMag( bool exact = false ) const;
+    uint_fast64_t toUI64_minMag( bool exact = false ) const;
+    int_fast32_t   toI32_minMag( bool exact = false ) const;
+    int_fast64_t   toI64_minMag( bool exact = false ) const;
+    uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
+    uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
+    int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
+    int_fast64_t   toI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
 
-    softfloat64_t  round( uint_fast8_t roundingMode = round_near_even, bool exact = false);
-    softfloat32_t toF32();
-    double toDouble();
+    softfloat64_t  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
+    softfloat32_t toF32() const;
+    double toDouble() const { Cv64suf s; s.u = v; return s.f; }
 
     softfloat64_t operator + (const softfloat64_t&) const;
     softfloat64_t operator - (const softfloat64_t&) const;
@@ -270,8 +270,8 @@ public:
     bool operator <  ( const softfloat64_t& ) const;
     bool operator <= ( const softfloat64_t& ) const;
 
-    bool isNaN() { return (v & 0x7fffffffffffffff)  > 0x7ff0000000000000; }
-    bool isInf() { return (v & 0x7fffffffffffffff) == 0x7ff0000000000000; }
+    bool isNaN() const { return (v & 0x7fffffffffffffff)  > 0x7ff0000000000000; }
+    bool isInf() const { return (v & 0x7fffffffffffffff) == 0x7ff0000000000000; }
 
     static softfloat64_t zero() { return softfloat64_t::fromRaw( 0 ); }
     static softfloat64_t  inf() { return softfloat64_t::fromRaw( packToF64UI( 0, 0x7FF, 0 ) ); }
