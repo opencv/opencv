@@ -3373,6 +3373,27 @@ static char* icvJSONParseKey( CvFileStorage* fs, char* ptr, CvFileNode* map, CvF
     do ++ptr;
     while( cv_isprint(*ptr) && *ptr != '"' );
 
+    if (*ptr == 0)
+    {
+        if (fs->buffer_start < beg)
+        {
+            int sz = static_cast<int>(ptr - beg);
+            memcpy(fs->buffer_start, beg, sz);
+            beg = fs->buffer_start;
+            if (static_cast<int>(fs->buffer_end - fs->buffer_start) < sz)
+                CV_PARSE_ERROR("Key name is too long");
+            ptr = icvGets(fs, fs->buffer_start + sz, static_cast<int>(fs->buffer_end - fs->buffer_start - sz));
+            if (!ptr)
+            {
+                fs->dummy_eof = true;
+                CV_PARSE_ERROR("Key must end with \'\"\'");
+            }
+
+            while (cv_isprint(*ptr) && *ptr != '"')
+                ++ptr;
+        }
+    }
+
     if( *ptr != '"' )
         CV_PARSE_ERROR( "Key must end with \'\"\'" );
 
