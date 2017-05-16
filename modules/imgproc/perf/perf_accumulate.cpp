@@ -30,7 +30,7 @@ PERF_TEST_P( Size_MatType, Accumulate,
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() accumulate(src, dst);
+    TEST_CYCLE() { dst.setTo(cv::Scalar::all(0)); accumulate(src, dst); }
 
     SANITY_CHECK(dst);
 }
@@ -60,7 +60,7 @@ PERF_TEST_P( Size_MatType, AccumulateSquare,
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() accumulateSquare(src, dst);
+    TEST_CYCLE() { dst.setTo(cv::Scalar::all(0)); accumulateSquare(src, dst); }
 
     SANITY_CHECK(dst);
 }
@@ -90,7 +90,7 @@ PERF_TEST_P( Size_MatType, AccumulateWeighted,
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() accumulateWeighted(src, dst, 0.314);
+    TEST_CYCLE() { dst.setTo(cv::Scalar::all(0)); accumulateWeighted(src, dst, 0.314); }
 
     SANITY_CHECK(dst);
 }
