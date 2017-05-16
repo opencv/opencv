@@ -62,6 +62,8 @@ protected:
     double threshold1, threshold2;
     bool test_cpp;
     bool test_custom_deriv;
+
+    Mat img;
 };
 
 
@@ -77,6 +79,9 @@ CV_CannyTest::CV_CannyTest(bool custom_deriv)
 
     test_cpp = false;
     test_custom_deriv = custom_deriv;
+
+    const char imgPath[] = "shared/fruits.png";
+    img = cv::imread(cvtest::TS::ptr()->get_data_path() + imgPath, IMREAD_GRAYSCALE);
 }
 
 
@@ -112,8 +117,21 @@ int CV_CannyTest::prepare_test_case( int test_case_idx )
     int code = cvtest::ArrayTest::prepare_test_case( test_case_idx );
     if( code > 0 )
     {
+        RNG& rng = ts->get_rng();
         Mat& src = test_mat[INPUT][0];
-        GaussianBlur(src, src, Size(11, 11), 5, 5);
+        //GaussianBlur(src, src, Size(11, 11), 5, 5);
+        if(src.cols > img.cols || src.rows > img.rows)
+            resize(img, src, src.size());
+        else
+            img(
+                Rect(
+                    cvtest::randInt(rng) % (img.cols-src.cols),
+                    cvtest::randInt(rng) % (img.rows-src.rows),
+                    src.cols,
+                    src.rows
+                )
+            ).copyTo(src);
+        GaussianBlur(src, src, Size(5, 5), 0);
     }
 
     return code;
@@ -304,5 +322,108 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
 
 TEST(Imgproc_Canny, accuracy) { CV_CannyTest test; test.safe_run(); }
 TEST(Imgproc_Canny, accuracy_deriv) { CV_CannyTest test(true); test.safe_run(); }
+
+
+/*
+ * Comparing OpenVX based implementation with the main one
+*/
+
+#ifndef IMPLEMENT_PARAM_CLASS
+#define IMPLEMENT_PARAM_CLASS(name, type) \
+    class name \
+    { \
+    public: \
+        name ( type arg = type ()) : val_(arg) {} \
+        operator type () const {return val_;} \
+    private: \
+        type val_; \
+    }; \
+    inline void PrintTo( name param, std::ostream* os) \
+    { \
+        *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
+    }
+#endif // IMPLEMENT_PARAM_CLASS
+
+IMPLEMENT_PARAM_CLASS(ImagePath, string)
+IMPLEMENT_PARAM_CLASS(ApertureSize, int)
+IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+
+PARAM_TEST_CASE(CannyVX, ImagePath, ApertureSize, L2gradient)
+{
+    string imgPath;
+    int kSize;
+    bool useL2;
+    Mat src, dst;
+
+    virtual void SetUp()
+    {
+        imgPath = GET_PARAM(0);
+        kSize = GET_PARAM(1);
+        useL2 = GET_PARAM(2);
+    }
+
+    void loadImage()
+    {
+        src = cv::imread(cvtest::TS::ptr()->get_data_path() + imgPath, IMREAD_GRAYSCALE);
+        ASSERT_FALSE(src.empty()) << "cann't load image: " << imgPath;
+    }
+};
+
+TEST_P(CannyVX, Accuracy)
+{
+    if(haveOpenVX())
+    {
+        loadImage();
+
+        setUseOpenVX(false);
+        Mat canny;
+        cv::Canny(src, canny, 100, 150, 3);
+
+        setUseOpenVX(true);
+        Mat cannyVX;
+        cv::Canny(src, cannyVX, 100, 150, 3);
+
+        // 'smart' diff check (excluding isolated pixels)
+        Mat diff, diff1;
+        absdiff(canny, cannyVX, diff);
+        boxFilter(diff, diff1, -1, Size(3,3));
+        const int minPixelsAroud = 3; // empirical number
+        diff1 = diff1 > 255/9 * minPixelsAroud;
+        erode(diff1, diff1, Mat());
+        double error = cv::norm(diff1, NORM_L1) / 255;
+        const int maxError = std::min(10, diff.size().area()/100); // empirical number
+        if(error > maxError)
+        {
+            string outPath =
+                    string("CannyVX-diff-") +
+                    imgPath + '-' +
+                    'k' + char(kSize+'0') + '-' +
+                    (useL2 ? "l2" : "l1");
+            std::replace(outPath.begin(), outPath.end(), '/', '_');
+            std::replace(outPath.begin(), outPath.end(), '\\', '_');
+            std::replace(outPath.begin(), outPath.end(), '.', '_');
+            imwrite(outPath+".png", diff);
+        }
+        ASSERT_LE(error, maxError);
+
+    }
+}
+
+    INSTANTIATE_TEST_CASE_P(
+                ImgProc, CannyVX,
+                testing::Combine(
+                    testing::Values(
+                        string("shared/baboon.png"),
+                        string("shared/fruits.png"),
+                        string("shared/lena.png"),
+                        string("shared/pic1.png"),
+                        string("shared/pic3.png"),
+                        string("shared/pic5.png"),
+                        string("shared/pic6.png")
+                    ),
+                    testing::Values(ApertureSize(3), ApertureSize(5)),
+                    testing::Values(L2gradient(false), L2gradient(true))
+                )
+    );
 
 /* End of file. */

@@ -21,14 +21,14 @@ static String Legende(SimpleBlobDetector::Params &pAct)
     String s = "";
     if (pAct.filterByArea)
     {
-        String inf = static_cast<ostringstream*>(&(ostringstream() << pAct.minArea))->str();
-        String sup = static_cast<ostringstream*>(&(ostringstream() << pAct.maxArea))->str();
+        String inf = static_cast<const ostringstream&>(ostringstream() << pAct.minArea).str();
+        String sup = static_cast<const ostringstream&>(ostringstream() << pAct.maxArea).str();
         s = " Area range [" + inf + " to  " + sup + "]";
     }
     if (pAct.filterByCircularity)
     {
-        String inf = static_cast<ostringstream*>(&(ostringstream() << pAct.minCircularity))->str();
-        String sup = static_cast<ostringstream*>(&(ostringstream() << pAct.maxCircularity))->str();
+        String inf = static_cast<const ostringstream&>(ostringstream() << pAct.minCircularity).str();
+        String sup = static_cast<const ostringstream&>(ostringstream() << pAct.maxCircularity).str();
         if (s.length() == 0)
             s = " Circularity range [" + inf + " to  " + sup + "]";
         else
@@ -36,7 +36,7 @@ static String Legende(SimpleBlobDetector::Params &pAct)
     }
     if (pAct.filterByColor)
     {
-        String inf = static_cast<ostringstream*>(&(ostringstream() << (int)pAct.blobColor))->str();
+        String inf = static_cast<const ostringstream&>(ostringstream() << (int)pAct.blobColor).str();
         if (s.length() == 0)
             s = " Blob color " + inf;
         else
@@ -44,8 +44,8 @@ static String Legende(SimpleBlobDetector::Params &pAct)
     }
     if (pAct.filterByConvexity)
     {
-        String inf = static_cast<ostringstream*>(&(ostringstream() << pAct.minConvexity))->str();
-        String sup = static_cast<ostringstream*>(&(ostringstream() << pAct.maxConvexity))->str();
+        String inf = static_cast<const ostringstream&>(ostringstream() << pAct.minConvexity).str();
+        String sup = static_cast<const ostringstream&>(ostringstream() << pAct.maxConvexity).str();
         if (s.length() == 0)
             s = " Convexity range[" + inf + " to  " + sup + "]";
         else
@@ -53,8 +53,8 @@ static String Legende(SimpleBlobDetector::Params &pAct)
     }
     if (pAct.filterByInertia)
     {
-        String inf = static_cast<ostringstream*>(&(ostringstream() << pAct.minInertiaRatio))->str();
-        String sup = static_cast<ostringstream*>(&(ostringstream() << pAct.maxInertiaRatio))->str();
+        String inf = static_cast<const ostringstream&>(ostringstream() << pAct.minInertiaRatio).str();
+        String sup = static_cast<const ostringstream&>(ostringstream() << pAct.maxInertiaRatio).str();
         if (s.length() == 0)
             s = " Inertia ratio range [" + inf + " to  " + sup + "]";
         else

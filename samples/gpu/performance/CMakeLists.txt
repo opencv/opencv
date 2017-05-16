@@ -4,11 +4,11 @@ file(GLOB sources "performance/*.cpp")
 file(GLOB headers "performance/*.h")
 
 if(HAVE_opencv_xfeatures2d)
-  ocv_include_directories("${opencv_xfeatures2d_SOURCE_DIR}/include")
+  ocv_include_modules_recurse(opencv_xfeatures2d)
 endif()
 
 if(HAVE_opencv_bgsegm)
-  ocv_include_directories("${opencv_bgsegm_SOURCE_DIR}/include")
+  ocv_include_modules_recurse(opencv_bgsegm)
 endif()
 
 add_executable(${the_target} ${sources} ${headers})

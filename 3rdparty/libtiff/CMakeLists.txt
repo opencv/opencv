@@ -11,11 +11,13 @@ check_include_file(assert.h HAVE_ASSERT_H)
 check_include_file(fcntl.h HAVE_FCNTL_H)
 check_include_file(io.h HAVE_IO_H)
 check_function_exists(jbg_newlen HAVE_JBG_NEWLEN)
-check_function_exists(mmap HAVE_MMAP)
 check_include_file(search.h HAVE_SEARCH_H)
 check_include_file(string.h HAVE_STRING_H)
 check_include_file(sys/types.h HAVE_SYS_TYPES_H)
-check_include_file(unistd.h HAVE_UNISTD_H)
+if(NOT MSVC)
+  check_include_file(unistd.h HAVE_UNISTD_H)
+  check_function_exists(mmap HAVE_MMAP)
+endif()
 
 if(WIN32 AND NOT WINRT)
   set(USE_WIN32_FILEIO 1)
@@ -86,7 +88,9 @@ else()
 endif()
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef -Wunused -Wsign-compare
-                                   -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast)
+                                   -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
+                                   -Wmisleading-indentation
+)
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter)
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4100 /wd4127 /wd4311 /wd4701 /wd4706) # vs2005

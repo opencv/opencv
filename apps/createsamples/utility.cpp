@@ -1270,7 +1270,7 @@ void cvCreateTrainingSamples( const char* filename,
                 if( showsamples )
                 {
                     cvShowImage( "Sample", &sample );
-                    if( cvWaitKey( 0 ) == 27 )
+                    if( (cvWaitKey( 0 ) & 0xFF) == 27 )
                     {
                         showsamples = 0;
                     }
@@ -1402,7 +1402,7 @@ void cvCreateTestSamples( const char* infoname,
                 if( showsamples )
                 {
                     cvShowImage( "Image", &cvbgreader->src );
-                    if( cvWaitKey( 0 ) == 27 )
+                    if( (cvWaitKey( 0 ) & 0xFF) == 27 )
                     {
                         showsamples = 0;
                     }
@@ -1525,7 +1525,7 @@ int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilena
             if( showsamples )
             {
                 cvShowImage( "Sample", sample );
-                if( cvWaitKey( 0 ) == 27 )
+                if( (cvWaitKey( 0 ) & 0xFF) == 27 )
                 {
                     showsamples = 0;
                 }
@@ -1672,7 +1672,7 @@ void cvShowVecSamples( const char* filename, int winwidth, int winheight,
                 icvGetTraininDataFromVec( sample, &file );
                 if( scale != 1.0 ) cvResize( sample, scaled_sample, CV_INTER_LINEAR);
                 cvShowImage( "Sample", scaled_sample );
-                if( cvWaitKey( 0 ) == 27 ) break;
+                if( (cvWaitKey( 0 ) & 0xFF) == 27 ) break;
             }
             if( scaled_sample && scaled_sample != sample ) cvReleaseMat( &scaled_sample );
             cvReleaseMat( &sample );

@@ -4,7 +4,7 @@ The script builds OpenCV.framework for OSX.
 """
 
 from __future__ import print_function
-import os, os.path, sys, argparse, traceback
+import os, os.path, sys, argparse, traceback, multiprocessing
 
 # import common code
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios'))
@@ -15,14 +15,15 @@ class OSXBuilder(Builder):
     def getToolchain(self, arch, target):
         return None
 
-    def getBuildCommand(self, arch, target):
+    def getBuildCommand(self, archs, target):
         buildcmd = [
             "xcodebuild",
-            "ARCHS=%s" % arch,
+            "MACOSX_DEPLOYMENT_TARGET=10.9",
+            "ARCHS=%s" % archs[0],
             "-sdk", target.lower(),
             "-configuration", "Release",
             "-parallelizeTargets",
-            "-jobs", "4"
+            "-jobs", str(multiprocessing.cpu_count())
         ]
         return buildcmd
 
@@ -39,8 +40,8 @@ if __name__ == "__main__":
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     args = parser.parse_args()
 
-    b = OSXBuilder(args.opencv, args.contrib, args.without,
+    b = OSXBuilder(args.opencv, args.contrib, False, False, args.without,
         [
-            ("x86_64", "MacOSX")
+            (["x86_64"], "MacOSX")
         ])
     b.build(args.out)

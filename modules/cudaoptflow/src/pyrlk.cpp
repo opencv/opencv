@@ -61,7 +61,7 @@ namespace pyrlk
         static void sparse(PtrStepSz<typename device::TypeVec<T, cn>::vec_type> I, PtrStepSz<typename device::TypeVec<T, cn>::vec_type> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream);
 
-        static void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
+        static void dense(PtrStepSzf I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
             PtrStepSzf err, int2 winSize, cudaStream_t stream);
     };
 
@@ -236,7 +236,9 @@ namespace
         prevPyr_.resize(maxLevel_ + 1);
         nextPyr_.resize(maxLevel_ + 1);
 
-        prevPyr_[0] = prevImg;
+        //prevPyr_[0] = prevImg;
+
+        prevImg.convertTo(prevPyr_[0], CV_32F, stream);
         nextImg.convertTo(nextPyr_[0], CV_32F, stream);
 
         for (int level = 1; level <= maxLevel_; ++level)

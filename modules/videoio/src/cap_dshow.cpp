@@ -877,14 +877,12 @@ void videoDevice::NukeDownstream(IBaseFilter *pBF){
 
 void videoDevice::destroyGraph(){
     HRESULT hr = 0;
-     //int FuncRetval=0;
-     //int NumFilters=0;
 
     int i = 0;
     while (hr == NOERROR)
     {
         IEnumFilters * pEnum = 0;
-        ULONG cFetched;
+        ULONG cFetched = 0;
 
         // We must get the enumerator again every time because removing a filter from the graph
         // invalidates the enumerator. We always get only the first filter from each enumerator.
@@ -917,9 +915,11 @@ void videoDevice::destroyGraph(){
             pFilter->Release();
             pFilter = NULL;
         }
-        else break;
         pEnum->Release();
         pEnum = NULL;
+
+        if (cFetched == 0)
+            break;
         i++;
     }
 

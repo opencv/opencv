@@ -123,6 +123,26 @@ class Hackathon244Tests(NewOpenCVTests):
         boost.getMaxDepth() # from ml::DTrees
         boost.isClassifier() # from ml::StatModel
 
+    def test_umat_construct(self):
+        data = np.random.random([512, 512])
+        # UMat constructors
+        data_um = cv2.UMat(data)  # from ndarray
+        data_sub_um = cv2.UMat(data_um, [128, 256], [128, 256])  # from UMat
+        data_dst_um = cv2.UMat(128, 128, cv2.CV_64F)  # from size/type
+        # test continuous and submatrix flags
+        assert data_um.isContinuous() and not data_um.isSubmatrix()
+        assert not data_sub_um.isContinuous() and data_sub_um.isSubmatrix()
+        # test operation on submatrix
+        cv2.multiply(data_sub_um, 2., dst=data_dst_um)
+        assert np.allclose(2. * data[128:256, 128:256], data_dst_um.get())
+
+    def test_umat_handle(self):
+        a_um = cv2.UMat(256, 256, cv2.CV_32F)
+        ctx_handle = cv2.UMat.context()  # obtain context handle
+        queue_handle = cv2.UMat.queue()  # obtain queue handle
+        a_handle = a_um.handle(cv2.ACCESS_READ)  # obtain buffer handle
+        offset = a_um.offset  # obtain buffer offset
+
     def test_umat_matching(self):
         img1 = self.get_sample("samples/data/right01.jpg")
         img2 = self.get_sample("samples/data/right02.jpg")

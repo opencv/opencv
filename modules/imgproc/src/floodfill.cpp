@@ -586,7 +586,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    uchar newMaskVal = (uchar)((flags & ~0xff) == 0 ? 1 : ((flags >> 8) & 255));
+    uchar newMaskVal = (uchar)((flags & 0xff00) == 0 ? 1 : ((flags >> 8) & 255));
 
     if( type == CV_8UC1 )
         floodFillGrad_CnIR<uchar, uchar, int, Diff8uC1>(

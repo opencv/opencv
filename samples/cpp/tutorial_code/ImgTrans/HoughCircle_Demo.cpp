@@ -90,7 +90,7 @@ int main(int argc, char** argv)
     // infinite loop to display
     // and refresh the content of the output image
     // until the user presses q or Q
-    int key = 0;
+    char key = 0;
     while(key != 'q' && key != 'Q')
     {
         // those paramaters cannot be =0
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
         HoughDetection(src_gray, src, cannyThreshold, accumulatorThreshold);
 
         // get user key
-        key = waitKey(10);
+        key = (char)waitKey(10);
     }
 
     return 0;

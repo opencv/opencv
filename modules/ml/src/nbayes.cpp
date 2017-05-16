@@ -458,6 +458,11 @@ Ptr<NormalBayesClassifier> NormalBayesClassifier::create()
     return p;
 }
 
+Ptr<NormalBayesClassifier> NormalBayesClassifier::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<NormalBayesClassifier>(filepath, nodeName);
+}
+
 }
 }
 

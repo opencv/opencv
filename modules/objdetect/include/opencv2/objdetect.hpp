@@ -255,7 +255,7 @@ public:
     @param flags Parameter with the same meaning for an old cascade as in the function
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
-    @param maxSize Maximum possible object size. Objects larger than that are ignored.
+    @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
 
     The function is parallelized with the TBB library.
 
@@ -283,7 +283,7 @@ public:
     @param flags Parameter with the same meaning for an old cascade as in the function
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
-    @param maxSize Maximum possible object size. Objects larger than that are ignored.
+    @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
     */
     CV_WRAP_AS(detectMultiScale2) void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -294,7 +294,21 @@ public:
                           Size maxSize=Size() );
 
     /** @overload
-    if `outputRejectLevels` is `true` returns `rejectLevels` and `levelWeights`
+    This function allows you to retrieve the final stage decision certainty of classification.
+    For this, one needs to set `outputRejectLevels` on true and provide the `rejectLevels` and `levelWeights` parameter.
+    For each resulting detection, `levelWeights` will then contain the certainty of classification at the final stage.
+    This value can then be used to separate strong from weaker classifications.
+
+    A code sample on how to use it efficiently can be found below:
+    @code
+    Mat img;
+    vector<double> weights;
+    vector<int> levels;
+    vector<Rect> detections;
+    CascadeClassifier model("/path/to/your/model.xml");
+    model.detectMultiScale(img, detections, levels, weights, 1.1, 3, 0, Size(), Size(), true);
+    cerr << "Detection " << detections[0] << " with weight " << weights[0] << endl;
+    @endcode
     */
     CV_WRAP_AS(detectMultiScale3) void detectMultiScale( InputArray image,
                                   CV_OUT std::vector<Rect>& objects,

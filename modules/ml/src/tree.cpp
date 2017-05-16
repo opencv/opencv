@@ -1941,6 +1941,12 @@ Ptr<DTrees> DTrees::create()
     return makePtr<DTreesImpl>();
 }
 
+Ptr<DTrees> DTrees::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<DTrees>(filepath, nodeName);
+}
+
+
 }
 }
 

@@ -45,6 +45,7 @@
 #include "dls.h"
 #include "epnp.h"
 #include "p3p.h"
+#include "ap3p.h"
 #include "opencv2/calib3d/calib3d_c.h"
 
 #include <iostream>
@@ -77,8 +78,14 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else
     {
-        _rvec.create(3, 1, CV_64F);
-        _tvec.create(3, 1, CV_64F);
+        int mtype = CV_64F;
+        // use CV_32F if all PnP inputs are CV_32F and outputs are empty
+        if (_ipoints.depth() == _cameraMatrix.depth() && _ipoints.depth() == _opoints.depth() &&
+            _rvec.empty() && _tvec.empty())
+            mtype = _opoints.depth();
+
+        _rvec.create(3, 1, mtype);
+        _tvec.create(3, 1, mtype);
     }
     rvec = _rvec.getMat();
     tvec = _tvec.getMat();
@@ -106,6 +113,18 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         p3p P3Psolver(cameraMatrix);
+
+        Mat R;
+        result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
+        if (result)
+            Rodrigues(R, rvec);
+    }
+    else if (flags == SOLVEPNP_AP3P)
+    {
+        CV_Assert( npoints == 4);
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        ap3p P3Psolver(cameraMatrix);
 
         Mat R;
         result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
@@ -197,7 +216,7 @@ public:
         float* err = _err.getMat().ptr<float>();
 
         for ( i = 0; i < count; ++i)
-            err[i] = (float)norm( ipoints_ptr[i] - projpoints_ptr[i] );
+            err[i] = (float)norm( Matx21f(ipoints_ptr[i] - projpoints_ptr[i]), NORM_L2SQR );
 
     }
 
@@ -285,7 +304,8 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         opoints_inliers.resize(npoints1);
         ipoints_inliers.resize(npoints1);
         result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
-                          distCoeffs, rvec, tvec, false, flags == SOLVEPNP_P3P ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+                          distCoeffs, rvec, tvec, false,
+                          (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
     }
 
     if( result <= 0 || _local_model.rows <= 0)

@@ -58,10 +58,10 @@ while True:
     cv2.putText(img, "FPS: {}".format(fps), (15, 80), font, 1.0, color)
     cv2.imshow("Video", img)
 
-    k = 0xFF & cv2.waitKey(1)
+    k = cv2.waitKey(1)
 
     if k == 27:
         break
-    elif k == ord("g"):
+    elif k == ord('g'):
         convert_rgb = not convert_rgb
         cap.set(cv2.CAP_PROP_CONVERT_RGB, convert_rgb)

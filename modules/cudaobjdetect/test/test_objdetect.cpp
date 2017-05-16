@@ -46,6 +46,8 @@
 
 using namespace cvtest;
 
+namespace {
+
 //#define DUMP
 
 struct HOG : testing::TestWithParam<cv::cuda::DeviceInfo>
@@ -557,5 +559,7 @@ CUDA_TEST_P(LBP_classify, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, LBP_classify,
                         testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
+
+} // namespace
 
 #endif // HAVE_CUDA

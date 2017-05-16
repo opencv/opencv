@@ -32,7 +32,7 @@ PARAM_TEST_CASE(IPPAsync, MatDepth, Channels, hppAccelType)
         accelType = GET_PARAM(2);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size matrix_Size = randomSize(2, 100);
         const double upValue = 100;
@@ -102,7 +102,7 @@ PARAM_TEST_CASE(IPPAsyncShared, Channels, hppAccelType)
         type=CV_MAKE_TYPE(CV_8U, GET_PARAM(0));
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size matrix_Size = randomSize(2, 100);
         hpp32u pitch, size;

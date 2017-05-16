@@ -50,19 +50,6 @@
 #endif
 
 
-#ifdef FLANN_DEPRECATED
-#undef FLANN_DEPRECATED
-#endif
-#ifdef __GNUC__
-#define FLANN_DEPRECATED __attribute__ ((deprecated))
-#elif defined(_MSC_VER)
-#define FLANN_DEPRECATED __declspec(deprecated)
-#else
-#pragma message("WARNING: You need to implement FLANN_DEPRECATED for this compiler")
-#define FLANN_DEPRECATED
-#endif
-
-
 #undef FLANN_PLATFORM_32_BIT
 #undef FLANN_PLATFORM_64_BIT
 #if defined __amd64__ || defined __x86_64__ || defined _WIN64 || defined _M_X64

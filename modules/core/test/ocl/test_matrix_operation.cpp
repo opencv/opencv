@@ -71,7 +71,7 @@ PARAM_TEST_CASE(ConvertTo, MatDepth, MatDepth, Channels, bool)
         use_roi = GET_PARAM(3);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);

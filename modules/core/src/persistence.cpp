@@ -50,15 +50,6 @@
 
 #define USE_ZLIB 1
 
-#ifdef __APPLE__
-#  include "TargetConditionals.h"
-#  if (defined TARGET_OS_IPHONE && TARGET_OS_IPHONE) || (defined TARGET_IPHONE_SIMULATOR && TARGET_IPHONE_SIMULATOR)
-#    undef USE_ZLIB
-#    define USE_ZLIB 0
-     typedef void* gzFile;
-#  endif
-#endif
-
 #if USE_ZLIB
 #  ifndef _LFS64_LARGEFILE
 #    define _LFS64_LARGEFILE 0
@@ -67,6 +58,8 @@
 #    define _FILE_OFFSET_BITS 0
 #  endif
 #  include <zlib.h>
+#else
+typedef void* gzFile;
 #endif
 
 /****************************************************************************************\
@@ -94,6 +87,15 @@ static inline bool cv_isdigit(char c)
 static inline bool cv_isspace(char c)
 {
     return (9 <= c && c <= 13) || c == ' ';
+}
+
+static inline char* cv_skip_BOM(char* ptr)
+{
+    if((uchar)ptr[0] == 0xef && (uchar)ptr[1] == 0xbb && (uchar)ptr[2] == 0xbf) //UTF-8 BOM
+    {
+      return ptr + 3;
+    }
+    return ptr;
 }
 
 static char* icv_itoa( int _val, char* buffer, int /*radix*/ )
@@ -705,8 +707,8 @@ cvReleaseFileStorage( CvFileStorage** p_fs )
 
         delete fs->outbuf;
         delete fs->base64_writer;
-        delete fs->delayed_struct_key;
-        delete fs->delayed_type_name;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
 
         memset( fs, 0, sizeof(*fs) );
         cvFree( &fs );
@@ -1209,8 +1211,8 @@ static void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_typ
         }
 
         /* reset */
-        delete fs->delayed_struct_key;
-        delete fs->delayed_type_name;
+        delete[] fs->delayed_struct_key;
+        delete[] fs->delayed_type_name;
         fs->delayed_struct_key   = 0;
         fs->delayed_struct_flags = 0;
         fs->delayed_type_name    = 0;
@@ -1465,6 +1467,26 @@ icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
         {
             ptr++;
             value_type |= CV_NODE_USER;
+        }
+        if ( d == '<') //support of full type heading from YAML 1.2
+        {
+            const char* yamlTypeHeading = "<tag:yaml.org,2002:";
+            const size_t headingLenght = strlen(yamlTypeHeading);
+
+            char* typeEndPtr = ++ptr;
+
+            do d = *++typeEndPtr;
+            while( cv_isprint(d) && d != ' ' && d != '>' );
+
+            if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLenght )
+            {
+                if ( memcmp(ptr, yamlTypeHeading, headingLenght) == 0 )
+                {
+                    value_type |= CV_NODE_USER;
+                    *typeEndPtr = ' ';
+                    ptr += headingLenght - 1;
+                }
+            }
         }
 
         endptr = ptr++;
@@ -4016,7 +4038,14 @@ static void
 icvJSONWriteReal( CvFileStorage* fs, const char* key, double value )
 {
     char buf[128];
-    icvJSONWrite( fs, key, icvDoubleToString( buf, value ));
+    size_t len = strlen( icvDoubleToString( buf, value ) );
+    if( len > 0 && buf[len-1] == '.' )
+    {
+        // append zero if string ends with decimal place to match JSON standard
+        buf[len] = '0';
+        buf[len+1] = '\0';
+    }
+    icvJSONWrite( fs, key, buf );
 }
 
 
@@ -4332,7 +4361,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         else if( fs->fmt == CV_STORAGE_FORMAT_YAML )
         {
             if( !append )
-                icvPuts( fs, "%YAML 1.0\n---\n" );
+                icvPuts( fs, "%YAML:1.0\n---\n" );
             else
                 icvPuts( fs, "...\n---\n" );
             fs->start_write_struct = icvYMLStartWriteStruct;
@@ -4397,15 +4426,22 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
         size_t buf_size = 1 << 20;
         const char* yaml_signature = "%YAML";
         const char* json_signature = "{";
+        const char* xml_signature  = "<?xml";
         char buf[16];
         icvGets( fs, buf, sizeof(buf)-2 );
-        fs->fmt
-            = strncmp( buf, yaml_signature, strlen(yaml_signature) ) == 0
-            ? CV_STORAGE_FORMAT_YAML
-            : strncmp( buf, json_signature, strlen(json_signature) ) == 0
-            ? CV_STORAGE_FORMAT_JSON
-            : CV_STORAGE_FORMAT_XML
-            ;
+        char* bufPtr = cv_skip_BOM(buf);
+        size_t bufOffset = bufPtr - buf;
+
+        if(strncmp( bufPtr, yaml_signature, strlen(yaml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_YAML;
+        else if(strncmp( bufPtr, json_signature, strlen(json_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_JSON;
+        else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
+            fs->fmt = CV_STORAGE_FORMAT_XML;
+        else if(fs->strbufsize  == bufOffset)
+            CV_Error(CV_BADARG_ERR, "Input file is empty");
+        else
+            CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 
         if( !isGZ )
         {
@@ -4420,6 +4456,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
             buf_size = MAX( buf_size, (size_t)(CV_FS_MAX_LEN*2 + 1024) );
         }
         icvRewind(fs);
+        fs->strbufpos = bufOffset;
 
         fs->str_hash = cvCreateMap( 0, sizeof(CvStringHash),
                         sizeof(CvStringHashNode), fs->memstorage, 256 );
@@ -4812,6 +4849,17 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
                 }
                 else
                 {
+                    if( elem_type == CV_32F || elem_type == CV_64F )
+                    {
+                        size_t buf_len = strlen(ptr);
+                        if( buf_len > 0 && ptr[buf_len-1] == '.' )
+                        {
+                            // append zero if CV_32F or CV_64F string ends with decimal place to match JSON standard
+                            // ptr will point to buf, so can write to buf given ptr is const
+                            buf[buf_len] = '0';
+                            buf[buf_len+1] = '\0';
+                        }
+                    }
                     icvJSONWrite( fs, 0, ptr );
                 }
             }
@@ -4859,7 +4907,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
 {
     char* data0 = (char*)_data;
     int fmt_pairs[CV_FS_MAX_FMT_PAIRS*2], k = 0, fmt_pair_count;
-    int i = 0, offset = 0, count = 0;
+    int i = 0, count = 0;
 
     CV_CHECK_FILE_STORAGE( fs );
 
@@ -4870,9 +4918,11 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
         CV_Error( CV_StsBadSize, "The readed sequence is a scalar, thus len must be 1" );
 
     fmt_pair_count = icvDecodeFormat( dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS );
+    size_t step = ::icvCalcStructSize(dt, 0);
 
     for(;;)
     {
+        int offset = 0;
         for( k = 0; k < fmt_pair_count; k++ )
         {
             int elem_type = fmt_pairs[k*2+1];
@@ -4990,6 +5040,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
 
             offset = (int)(data - data0);
         }
+        data0 += step;
     }
 
 end_loop:
@@ -7228,14 +7279,7 @@ void write(FileStorage& fs, const String& objname, const std::vector<KeyPoint>& 
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )
     {
-        const KeyPoint& kpt = keypoints[i];
-        cv::write(fs, kpt.pt.x);
-        cv::write(fs, kpt.pt.y);
-        cv::write(fs, kpt.size);
-        cv::write(fs, kpt.angle);
-        cv::write(fs, kpt.response);
-        cv::write(fs, kpt.octave);
-        cv::write(fs, kpt.class_id);
+        write(fs, keypoints[i]);
     }
 }
 
@@ -7260,11 +7304,7 @@ void write(FileStorage& fs, const String& objname, const std::vector<DMatch>& ma
     int i, n = (int)matches.size();
     for( i = 0; i < n; i++ )
     {
-        const DMatch& m = matches[i];
-        cv::write(fs, m.queryIdx);
-        cv::write(fs, m.trainIdx);
-        cv::write(fs, m.imgIdx);
-        cv::write(fs, m.distance);
+        write(fs, matches[i]);
     }
 }
 
@@ -7496,6 +7536,8 @@ bool base64::base64_valid(uint8_t const * src, size_t off, size_t cnt)
         return false;
     if (cnt == 0U)
         cnt = std::strlen(reinterpret_cast<char const *>(src));
+    if (cnt == 0U)
+        return false;
     if (cnt & 0x3U)
         return false;
 
@@ -7640,7 +7682,7 @@ std::string base64::make_base64_header(const char * dt)
 bool base64::read_base64_header(std::vector<char> const & header, std::string & dt)
 {
     std::istringstream iss(header.data());
-    return static_cast<bool>(iss >> dt);
+    return !!(iss >> dt);//the "std::basic_ios::operator bool" differs between C++98 and C++11. The "double not" syntax is portable and covers both cases with equivalent meaning
 }
 
 /****************************************************************************

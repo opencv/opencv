@@ -40,9 +40,9 @@ int main( int, char** argv )
   for(;;)
   {
     /// Each 1 sec. Press ESC to exit the program
-    int c = waitKey( 1000 );
+    char c = (char)waitKey( 1000 );
 
-    if( (char)c == 27 )
+    if( c == 27 )
       { break; }
 
     /// Update map_x & map_y. Then apply remap

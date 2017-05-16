@@ -170,7 +170,7 @@ class App:
 
             self.rect_sel.draw(vis)
             cv2.imshow('plane', vis)
-            ch = cv2.waitKey(1) & 0xFF
+            ch = cv2.waitKey(1)
             if ch == ord(' '):
                 self.paused = not self.paused
             if ch == ord('c'):

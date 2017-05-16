@@ -74,19 +74,19 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        int c = waitKey(0);
+        char c = (char)waitKey(0);
 
-        if( (char)c == 27 )
+        if( c == 27 )
             break;
 
-        if( (char)c == 'r' )
+        if( c == 'r' )
         {
             markerMask = Scalar::all(0);
             img0.copyTo(img);
             imshow( "image", img );
         }
 
-        if( (char)c == 'w' || (char)c == ' ' )
+        if( c == 'w' || c == ' ' )
         {
             int i, j, compCount = 0;
             vector<vector<Point> > contours;

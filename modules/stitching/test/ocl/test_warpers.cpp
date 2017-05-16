@@ -55,7 +55,7 @@ struct WarperTestBase :
     UMat usrc, udst, uxmap, uymap;
     Mat K, R;
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size size = randomSize(1, MAX_VALUE);
 
@@ -132,6 +132,27 @@ OCL_TEST_F(PlaneWarperTest, Mat)
 
         Ptr<WarperCreator> creator = makePtr<PlaneWarper>();
         Ptr<detail::RotationWarper> warper = creator->create(2.0);
+
+        OCL_OFF(warper->buildMaps(src.size(), K, R, xmap, ymap));
+        OCL_ON(warper->buildMaps(usrc.size(), K, R, uxmap, uymap));
+
+        OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
+        OCL_ON(warper->warp(usrc, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
+
+        Near(1.5e-4);
+    }
+}
+
+typedef WarperTestBase AffineWarperTest;
+
+OCL_TEST_F(AffineWarperTest, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        Ptr<WarperCreator> creator = makePtr<AffineWarper>();
+        Ptr<detail::RotationWarper> warper = creator->create(1.0);
 
         OCL_OFF(warper->buildMaps(src.size(), K, R, xmap, ymap));
         OCL_ON(warper->buildMaps(usrc.size(), K, R, uxmap, uymap));

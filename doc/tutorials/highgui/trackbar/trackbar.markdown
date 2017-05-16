@@ -68,7 +68,7 @@ Result
     ![](images/Adding_Trackbars_Tutorial_Result_0.jpg)
 
 -   As a manner of practice, you can also add two trackbars for the program made in
-    @ref tutorial_basic_linear_transform. One trackbar to set \f$\alpha\f$ and another for \f$\beta\f$. The output might
+    @ref tutorial_basic_linear_transform. One trackbar to set \f$\alpha\f$ and another for set \f$\beta\f$. The output might
     look like:
 
     ![](images/Adding_Trackbars_Tutorial_Result_1.jpg)

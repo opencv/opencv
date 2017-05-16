@@ -60,26 +60,10 @@
 #endif
 
 #ifdef HAVE_TBB
-#  include "tbb/tbb_stddef.h"
-#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
-#    include "tbb/tbb.h"
-#    include "tbb/task.h"
-#    undef min
-#    undef max
-#  else
-#    undef HAVE_TBB
-#  endif
-#endif
-
-#if defined HAVE_FP16 && (defined __F16C__ || (defined _MSC_VER && _MSC_VER >= 1700))
-#  include <immintrin.h>
-#  define CV_FP16 1
-#elif defined HAVE_FP16 && defined __GNUC__
-#  define CV_FP16 1
-#endif
-
-#ifndef CV_FP16
-#  define CV_FP16 0
+#  include "tbb/tbb.h"
+#  include "tbb/task.h"
+#  undef min
+#  undef max
 #endif
 
 //! @cond IGNORED
@@ -201,28 +185,76 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 *                     Structures and macros for integration with IPP                     *
 \****************************************************************************************/
 
-#ifdef HAVE_IPP
-#include "ipp.h"
+// Temporary disabled named IPP region. Accuracy
+#define IPP_DISABLE_PYRAMIDS_UP         1 // Different results
+#define IPP_DISABLE_PYRAMIDS_DOWN       1 // Different results
+#define IPP_DISABLE_PYRAMIDS_BUILD      1 // Different results
+#define IPP_DISABLE_WARPAFFINE          1 // Different results
+#define IPP_DISABLE_WARPPERSPECTIVE     1 // Different results
+#define IPP_DISABLE_REMAP               1 // Different results
+#define IPP_DISABLE_MORPH_ADV           1 // mask flipping in IPP
+#define IPP_DISABLE_SORT_IDX            0 // different order in index tables
+#define IPP_DISABLE_YUV_RGB             1 // accuracy difference
+#define IPP_DISABLE_RGB_YUV             1 // breaks OCL accuracy tests
+#define IPP_DISABLE_RGB_HSV             1 // breaks OCL accuracy tests
+#define IPP_DISABLE_RGB_LAB             1 // breaks OCL accuracy tests
+#define IPP_DISABLE_LAB_RGB             1 // breaks OCL accuracy tests
+#define IPP_DISABLE_RGB_XYZ             1 // big accuracy difference
+#define IPP_DISABLE_XYZ_RGB             1 // big accuracy difference
+#define IPP_DISABLE_HAAR                1 // improper integration/results
+#define IPP_DISABLE_HOUGH               1 // improper integration/results
+#define IPP_DISABLE_RESIZE_8U           1 // Incompatible accuracy
+#define IPP_DISABLE_RESIZE_NEAREST      1 // Accuracy mismatch (max diff 1)
+#define IPP_DISABLE_RESIZE_AREA         1 // Accuracy mismatch (max diff 1)
 
+// Temporary disabled named IPP region. Performance
+#define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
+#define IPP_DISABLE_PERF_LUT            1 // there are no performance benefits (PR #2653)
+#define IPP_DISABLE_PERF_TRUE_DIST_MT   1 // cv::distanceTransform OpenCV MT performance is better
+#define IPP_DISABLE_PERF_CANNY_MT       1 // cv::Canny OpenCV MT performance is better
+#define IPP_DISABLE_PERF_HISTU32F_SSE42 1 // cv::calcHist optimizations problem
+#define IPP_DISABLE_PERF_MORPH_SSE42    1 // cv::erode, cv::dilate optimizations problem
+#define IPP_DISABLE_PERF_MAG_SSE42      1 // cv::magnitude optimizations problem
+#define IPP_DISABLE_PERF_BOX16S_SSE42   1 // cv::boxFilter optimizations problem
+
+#ifdef HAVE_IPP
+#include "ippversion.h"
 #ifndef IPP_VERSION_UPDATE // prior to 7.1
 #define IPP_VERSION_UPDATE 0
 #endif
 
 #define IPP_VERSION_X100 (IPP_VERSION_MAJOR * 100 + IPP_VERSION_MINOR*10 + IPP_VERSION_UPDATE)
 
-// General define for ipp function disabling
-#define IPP_DISABLE_BLOCK 0
+#ifdef HAVE_IPP_ICV_ONLY
+#define ICV_BASE
+#if IPP_VERSION_X100 >= 201700
+#include "ippicv.h"
+#else
+#include "ipp.h"
+#endif
+#else
+#include "ipp.h"
+#endif
+#ifdef HAVE_IPP_IW
+#include "iw++/iw.hpp"
+#endif
 
 #ifdef CV_MALLOC_ALIGN
 #undef CV_MALLOC_ALIGN
 #endif
 #define CV_MALLOC_ALIGN 32 // required for AVX optimization
 
+#if IPP_VERSION_X100 >= 201700
+#define CV_IPP_MALLOC(SIZE) ippMalloc_L(SIZE)
+#else
+#define CV_IPP_MALLOC(SIZE) ippMalloc((int)SIZE)
+#endif
+
 #define setIppErrorStatus() cv::ipp::setIppStatus(-1, CV_Func, __FILE__, __LINE__)
 
-static inline IppiSize ippiSize(int width, int height)
+static inline IppiSize ippiSize(size_t width, size_t height)
 {
-    IppiSize size = { width, height };
+    IppiSize size = { (int)width, (int)height };
     return size;
 }
 
@@ -231,6 +263,20 @@ static inline IppiSize ippiSize(const cv::Size & _size)
     IppiSize size = { _size.width, _size.height };
     return size;
 }
+
+#if IPP_VERSION_X100 >= 201700
+static inline IppiSizeL ippiSizeL(size_t width, size_t height)
+{
+    IppiSizeL size = { (IppSizeL)width, (IppSizeL)height };
+    return size;
+}
+
+static inline IppiSizeL ippiSizeL(const cv::Size & _size)
+{
+    IppiSizeL size = { _size.width, _size.height };
+    return size;
+}
+#endif
 
 static inline IppiPoint ippiPoint(const cv::Point & _point)
 {
@@ -246,34 +292,177 @@ static inline IppiPoint ippiPoint(int x, int y)
 
 static inline IppiBorderType ippiGetBorderType(int borderTypeNI)
 {
-    return borderTypeNI == cv::BORDER_CONSTANT ? ippBorderConst :
-        borderTypeNI == cv::BORDER_WRAP ? ippBorderWrap :
-        borderTypeNI == cv::BORDER_REPLICATE ? ippBorderRepl :
-        borderTypeNI == cv::BORDER_REFLECT_101 ? ippBorderMirror :
-        borderTypeNI == cv::BORDER_REFLECT ? ippBorderMirrorR : (IppiBorderType)-1;
+    return borderTypeNI == cv::BORDER_CONSTANT    ? ippBorderConst   :
+           borderTypeNI == cv::BORDER_TRANSPARENT ? ippBorderTransp  :
+           borderTypeNI == cv::BORDER_REPLICATE   ? ippBorderRepl    :
+           borderTypeNI == cv::BORDER_REFLECT_101 ? ippBorderMirror  :
+           (IppiBorderType)-1;
+}
+
+static inline IppiMaskSize ippiGetMaskSize(int kx, int ky)
+{
+    return (kx == 1 && ky == 3) ? ippMskSize1x3 :
+           (kx == 1 && ky == 5) ? ippMskSize1x5 :
+           (kx == 3 && ky == 1) ? ippMskSize3x1 :
+           (kx == 3 && ky == 3) ? ippMskSize3x3 :
+           (kx == 5 && ky == 1) ? ippMskSize5x1 :
+           (kx == 5 && ky == 5) ? ippMskSize5x5 :
+           (IppiMaskSize)-1;
 }
 
 static inline IppDataType ippiGetDataType(int depth)
 {
+    depth = CV_MAT_DEPTH(depth);
     return depth == CV_8U ? ipp8u :
         depth == CV_8S ? ipp8s :
         depth == CV_16U ? ipp16u :
         depth == CV_16S ? ipp16s :
         depth == CV_32S ? ipp32s :
         depth == CV_32F ? ipp32f :
-        depth == CV_64F ? ipp64f : (IppDataType)-1;
+        depth == CV_64F ? ipp64f :
+        (IppDataType)-1;
 }
 
-// IPP temporary buffer hepler
+#ifdef HAVE_IPP_IW
+static inline IwiDerivativeType ippiGetDerivType(int dx, int dy, bool nvert)
+{
+    return (dx == 1 && dy == 0) ? ((nvert)?iwiDerivNVerFirst:iwiDerivVerFirst) :
+           (dx == 0 && dy == 1) ? iwiDerivHorFirst :
+           (dx == 2 && dy == 0) ? iwiDerivVerSecond :
+           (dx == 0 && dy == 2) ? iwiDerivHorSecond :
+           (IwiDerivativeType)-1;
+}
+
+static inline void ippiGetImage(const cv::Mat &src, ::ipp::IwiImage &dst)
+{
+    ::ipp::IwiBorderSize inMemBorder;
+    if(src.isSubmatrix()) // already have physical border
+    {
+        cv::Size  origSize;
+        cv::Point offset;
+        src.locateROI(origSize, offset);
+
+        inMemBorder.borderLeft   = (Ipp32u)offset.x;
+        inMemBorder.borderTop    = (Ipp32u)offset.y;
+        inMemBorder.borderRight  = (Ipp32u)(origSize.width - src.cols - offset.x);
+        inMemBorder.borderBottom = (Ipp32u)(origSize.height - src.rows - offset.y);
+    }
+
+    dst.Init(ippiSize(src.size()), ippiGetDataType(src.depth()), src.channels(), inMemBorder, (void*)src.ptr(), src.step);
+}
+
+static inline ::ipp::IwiImage ippiGetImage(const cv::Mat &src)
+{
+    ::ipp::IwiImage image;
+    ippiGetImage(src, image);
+    return image;
+}
+
+static inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorderType, IppiBorderSize &borderSize)
+{
+    int            inMemFlags = 0;
+    IppiBorderType border     = ippiGetBorderType(ocvBorderType & ~cv::BORDER_ISOLATED);
+    if((int)border == -1)
+        return (IppiBorderType)0;
+
+    if(!(ocvBorderType & cv::BORDER_ISOLATED))
+    {
+        if(image.m_inMemSize.borderLeft)
+        {
+            if(image.m_inMemSize.borderLeft >= borderSize.borderLeft)
+                inMemFlags |= ippBorderInMemLeft;
+            else
+                return (IppiBorderType)0;
+        }
+        else
+            borderSize.borderLeft = 0;
+        if(image.m_inMemSize.borderTop)
+        {
+            if(image.m_inMemSize.borderTop >= borderSize.borderTop)
+                inMemFlags |= ippBorderInMemTop;
+            else
+                return (IppiBorderType)0;
+        }
+        else
+            borderSize.borderTop = 0;
+        if(image.m_inMemSize.borderRight)
+        {
+            if(image.m_inMemSize.borderRight >= borderSize.borderRight)
+                inMemFlags |= ippBorderInMemRight;
+            else
+                return (IppiBorderType)0;
+        }
+        else
+            borderSize.borderRight = 0;
+        if(image.m_inMemSize.borderBottom)
+        {
+            if(image.m_inMemSize.borderBottom >= borderSize.borderBottom)
+                inMemFlags |= ippBorderInMemBottom;
+            else
+                return (IppiBorderType)0;
+        }
+        else
+            borderSize.borderBottom = 0;
+    }
+    else
+        borderSize.borderLeft = borderSize.borderRight = borderSize.borderTop = borderSize.borderBottom = 0;
+
+    return (IppiBorderType)(border|inMemFlags);
+}
+
+static inline ::ipp::IwValue ippiGetValue(const cv::Scalar &scalar)
+{
+    return ::ipp::IwValue(scalar[0], scalar[1], scalar[2], scalar[3]);
+}
+
+static inline int ippiSuggestThreadsNum(const ::ipp::IwiImage &image, double multiplier)
+{
+    int threads = cv::getNumThreads();
+    if(image.m_size.height > threads)
+    {
+        size_t opMemory = (int)(image.m_step*image.m_size.height*multiplier);
+        int l2cache  = 0;
+#if IPP_VERSION_X100 >= 201700
+        ippGetL2CacheSize(&l2cache);
+#endif
+        if(!l2cache)
+            l2cache = 1 << 18;
+
+        return IPP_MAX(1, (IPP_MIN((int)(opMemory/l2cache), threads)));
+    }
+    return 1;
+}
+#endif
+
+static inline int ippiSuggestThreadsNum(const cv::Mat &image, double multiplier)
+{
+    int threads = cv::getNumThreads();
+    if(image.rows > threads)
+    {
+        size_t opMemory = (int)(image.total()*multiplier);
+        int l2cache = 0;
+#if IPP_VERSION_X100 >= 201700
+        ippGetL2CacheSize(&l2cache);
+#endif
+        if(!l2cache)
+            l2cache = 1 << 18;
+
+        return IPP_MAX(1, (IPP_MIN((int)(opMemory/l2cache), threads)));
+    }
+    return 1;
+}
+
+// IPP temporary buffer helper
 template<typename T>
 class IppAutoBuffer
 {
 public:
-    IppAutoBuffer() { m_pBuffer = NULL; }
-    IppAutoBuffer(int size) { Alloc(size); }
-    ~IppAutoBuffer() { Release(); }
-    T* Alloc(int size) { m_pBuffer = (T*)ippMalloc(size); return m_pBuffer; }
-    void Release() { if(m_pBuffer) ippFree(m_pBuffer); }
+    IppAutoBuffer() { m_size = 0; m_pBuffer = NULL; }
+    IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = NULL; allocate(size); }
+    ~IppAutoBuffer() { deallocate(); }
+    T* allocate(size_t size)   { if(m_size < size) { deallocate(); m_pBuffer = (T*)CV_IPP_MALLOC(size); m_size = size; } return m_pBuffer; }
+    void deallocate() { if(m_pBuffer) { ippFree(m_pBuffer); m_pBuffer = NULL; } m_size = 0; }
+    inline T* get() { return (T*)m_pBuffer;}
     inline operator T* () { return (T*)m_pBuffer;}
     inline operator const T* () const { return (const T*)m_pBuffer;}
 private:
@@ -281,8 +470,16 @@ private:
     IppAutoBuffer(IppAutoBuffer &) {}
     IppAutoBuffer& operator =(const IppAutoBuffer &) {return *this;}
 
-    T* m_pBuffer;
+    size_t m_size;
+    T*     m_pBuffer;
 };
+
+// Extracts border interpolation type without flags
+#if IPP_VERSION_MAJOR >= 2017
+#define IPP_BORDER_INTER(BORDER) (IppiBorderType)((BORDER)&0xF|((((BORDER)&ippBorderInMem) == ippBorderInMem)?ippBorderInMem:0));
+#else
+#define IPP_BORDER_INTER(BORDER) (IppiBorderType)((BORDER)&0xF);
+#endif
 
 #else
 #define IPP_VERSION_X100 0
@@ -457,10 +654,11 @@ class InstrStruct
 public:
     InstrStruct()
     {
-        useInstr         = false;
-        enableMapping    = true;
+        useInstr    = false;
+        flags       = FLAGS_MAPPING;
+        maxDepth    = 0;
 
-        rootNode.m_payload = NodeData("ROOT", NULL, 0, TYPE_GENERAL, IMPL_PLAIN);
+        rootNode.m_payload = NodeData("ROOT", NULL, 0, NULL, false, TYPE_GENERAL, IMPL_PLAIN);
         tlsStruct.get()->pCurrentNode = &rootNode;
     }
 
@@ -468,7 +666,8 @@ public:
     Mutex mutexCount;
 
     bool       useInstr;
-    bool       enableMapping;
+    int        flags;
+    int        maxDepth;
     InstrNode  rootNode;
     TLSData<InstrTLSStruct> tlsStruct;
 };
@@ -476,7 +675,7 @@ public:
 class CV_EXPORTS IntrumentationRegion
 {
 public:
-    IntrumentationRegion(const char* funName, const char* fileName, int lineNum, TYPE instrType = TYPE_GENERAL, IMPL implType = IMPL_PLAIN);
+    IntrumentationRegion(const char* funName, const char* fileName, int lineNum, void *retAddress, bool alwaysExpand, TYPE instrType = TYPE_GENERAL, IMPL implType = IMPL_PLAIN);
     ~IntrumentationRegion();
 
 private:
@@ -484,20 +683,28 @@ private:
     uint64  m_regionTicks;
 };
 
-InstrStruct&    getInstrumentStruct();
-InstrTLSStruct& getInstrumentTLSStruct();
-CV_EXPORTS InstrNode* getCurrentNode();
+CV_EXPORTS InstrStruct& getInstrumentStruct();
+InstrTLSStruct&         getInstrumentTLSStruct();
+CV_EXPORTS InstrNode*   getCurrentNode();
 }
 }
 
-///// General instrumentation
+#ifdef _WIN32
+#define CV_INSTRUMENT_GET_RETURN_ADDRESS _ReturnAddress()
+#else
+#define CV_INSTRUMENT_GET_RETURN_ADDRESS __builtin_extract_return_addr(__builtin_return_address(0))
+#endif
+
 // Instrument region
-#define CV_INSTRUMENT_REGION_META(NAME, TYPE, IMPL)      ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, TYPE, IMPL);
+#define CV_INSTRUMENT_REGION_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)        ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, CV_INSTRUMENT_GET_RETURN_ADDRESS, ALWAYS_EXPAND, TYPE, IMPL);
+#define CV_INSTRUMENT_REGION_CUSTOM_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)\
+    void *__curr_address__ = [&]() {return CV_INSTRUMENT_GET_RETURN_ADDRESS;}();\
+    ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, __curr_address__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
 // Instrument functions with non-void return type
 #define CV_INSTRUMENT_FUN_RT_META(TYPE, IMPL, ERROR_COND, FUN, ...) ([&]()\
 {\
     if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, TYPE, IMPL);\
+        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
         try{\
             auto status = ((FUN)(__VA_ARGS__));\
             if(ERROR_COND){\
@@ -518,7 +725,7 @@ CV_EXPORTS InstrNode* getCurrentNode();
 #define CV_INSTRUMENT_FUN_RV_META(TYPE, IMPL, FUN, ...) ([&]()\
 {\
     if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, TYPE, IMPL);\
+        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
         try{\
             (FUN)(__VA_ARGS__);\
         }catch(...){\
@@ -531,17 +738,19 @@ CV_EXPORTS InstrNode* getCurrentNode();
     }\
 }())
 // Instrumentation information marker
-#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, ::cv::instr::TYPE_MARKER, IMPL);}
+#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, NULL, false, ::cv::instr::TYPE_MARKER, IMPL);}
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro
-#define CV_INSTRUMENT_REGION()              CV_INSTRUMENT_REGION_META(__FUNCTION__, cv::instr::TYPE_GENERAL, cv::instr::IMPL_PLAIN)
-// Parallel OpenCV region instrumentation macro
-#define CV_INSTRUMENT_REGION_MT()           CV_INSTRUMENT_REGION_MT_META(cv::instr::TYPE_GENERAL, cv::instr::IMPL_PLAIN)
+#define CV_INSTRUMENT_REGION_()             CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
+// Custom OpenCV region instrumentation macro
+#define CV_INSTRUMENT_REGION_NAME(NAME)     CV_INSTRUMENT_REGION_CUSTOM_META(NAME,  false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
+// Instrumentation for parallel_for_ or other regions which forks and gathers threads
+#define CV_INSTRUMENT_REGION_MT_FORK()      CV_INSTRUMENT_REGION_META(__FUNCTION__, true,  ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
 
 ///// IPP instrumentation
 // Wrapper region instrumentation macro
-#define CV_INSTRUMENT_REGION_IPP()          CV_INSTRUMENT_REGION_META(__FUNCTION__, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
+#define CV_INSTRUMENT_REGION_IPP()          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
 // Function instrumentation macro
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, status < 0, FUN, __VA_ARGS__)
 // Diagnostic markers
@@ -549,26 +758,34 @@ CV_EXPORTS InstrNode* getCurrentNode();
 
 ///// OpenCL instrumentation
 // Wrapper region instrumentation macro
-#define CV_INSTRUMENT_REGION_OPENCL()              CV_INSTRUMENT_REGION_META(__FUNCTION__, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
-#define CV_INSTRUMENT_REGION_OPENCL_(NAME)         CV_INSTRUMENT_REGION_META(NAME, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
-// Function instrumentation macro
-#define CV_INSTRUMENT_FUN_OPENCL_KERNEL(FUN, ...)  CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_OPENCL, status == 0, FUN, __VA_ARGS__)
+#define CV_INSTRUMENT_REGION_OPENCL()              CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
+// OpenCL kernel compilation wrapper
+#define CV_INSTRUMENT_REGION_OPENCL_COMPILE(NAME)  CV_INSTRUMENT_REGION_META(NAME, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
+// OpenCL kernel run wrapper
+#define CV_INSTRUMENT_REGION_OPENCL_RUN(NAME)      CV_INSTRUMENT_REGION_META(NAME, false, ::cv::instr::TYPE_FUN, ::cv::instr::IMPL_OPENCL)
 // Diagnostic markers
 #define CV_INSTRUMENT_MARK_OPENCL(NAME)            CV_INSTRUMENT_MARK_META(::cv::instr::IMPL_OPENCL, NAME)
 #else
 #define CV_INSTRUMENT_REGION_META(...)
 
-#define CV_INSTRUMENT_REGION()
-#define CV_INSTRUMENT_REGION_MT()
+#define CV_INSTRUMENT_REGION_()
+#define CV_INSTRUMENT_REGION_NAME(...)
+#define CV_INSTRUMENT_REGION_MT_FORK()
 
 #define CV_INSTRUMENT_REGION_IPP()
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...) ((FUN)(__VA_ARGS__))
-#define CV_INSTRUMENT_MARK_IPP(NAME)
+#define CV_INSTRUMENT_MARK_IPP(...)
 
 #define CV_INSTRUMENT_REGION_OPENCL()
-#define CV_INSTRUMENT_REGION_OPENCL_(...)
-#define CV_INSTRUMENT_FUN_OPENCL_KERNEL(FUN, ...) ((FUN)(__VA_ARGS__))
-#define CV_INSTRUMENT_MARK_OPENCL(NAME)
+#define CV_INSTRUMENT_REGION_OPENCL_COMPILE(...)
+#define CV_INSTRUMENT_REGION_OPENCL_RUN(...)
+#define CV_INSTRUMENT_MARK_OPENCL(...)
+#endif
+
+#ifdef __CV_AVX_GUARD
+#define CV_INSTRUMENT_REGION() __CV_AVX_GUARD CV_INSTRUMENT_REGION_()
+#else
+#define CV_INSTRUMENT_REGION() CV_INSTRUMENT_REGION_()
 #endif
 
 //! @endcond

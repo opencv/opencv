@@ -60,9 +60,8 @@ int main( int, char** argv )
   /// Wait until user finishes program
   for(;;)
     {
-      int c;
-      c = waitKey( 20 );
-      if( (char)c == 27 )
+      char c = (char)waitKey( 20 );
+      if( c == 27 )
     { break; }
     }
 

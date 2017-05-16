@@ -44,7 +44,6 @@ int main(int argc, char *argv[])
     conv << argv[3] << endl << argv[4];       // put in the strings
     conv >> psnrTriggerValue >> delay;        // take out the numbers
 
-    char c;
     int frameNum = -1;          // Frame counter
 
     VideoCapture captRefrnc(sourceReference), captUndTst(sourceCompareWith);
@@ -126,7 +125,7 @@ int main(int argc, char *argv[])
         imshow(WIN_RF, frameReference);
         imshow(WIN_UT, frameUnderTest);
 
-        c = (char)waitKey(delay);
+        char c = (char)waitKey(delay);
         if (c == 27) break;
     }
 

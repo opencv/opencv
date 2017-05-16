@@ -1,9 +1,5 @@
 #include "test_precomp.hpp"
 #include <cmath>
-#ifndef NAN
-#include <limits> // numeric_limits<T>::quiet_NaN()
-#define NAN std::numeric_limits<float>::quiet_NaN()
-#endif
 
 using namespace cv;
 using namespace std;
@@ -1485,35 +1481,26 @@ INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWise
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::CartToPolarToCartOp)));
 
 
-class CV_ArithmMaskTest : public cvtest::BaseTest
+TEST(Core_ArithmMask, uninitialized)
 {
-public:
-    CV_ArithmMaskTest() {}
-    ~CV_ArithmMaskTest() {}
-protected:
-    void run(int)
-    {
-        try
-        {
             RNG& rng = theRNG();
             const int MAX_DIM=3;
             int sizes[MAX_DIM];
             for( int iter = 0; iter < 100; iter++ )
             {
-                //ts->printf(cvtest::TS::LOG, ".");
-
-                ts->update_context(this, iter, true);
-                int k, dims = rng.uniform(1, MAX_DIM+1), p = 1;
+                int dims = rng.uniform(1, MAX_DIM+1);
                 int depth = rng.uniform(CV_8U, CV_64F+1);
                 int cn = rng.uniform(1, 6);
                 int type = CV_MAKETYPE(depth, cn);
-                int op = rng.uniform(0, 5);
+                int op = rng.uniform(0, depth < CV_32F ? 5 : 2); // don't run binary operations between floating-point values
                 int depth1 = op <= 1 ? CV_64F : depth;
-                for( k = 0; k < dims; k++ )
+                for (int k = 0; k < MAX_DIM; k++)
                 {
-                    sizes[k] = rng.uniform(1, 30);
-                    p *= sizes[k];
+                    sizes[k] = k < dims ? rng.uniform(1, 30) : 0;
                 }
+                SCOPED_TRACE(cv::format("iter=%d dims=%d depth=%d cn=%d type=%d op=%d depth1=%d dims=[%d; %d; %d]",
+                                         iter,   dims,   depth,   cn,   type,   op,   depth1, sizes[0], sizes[1], sizes[2]));
+
                 Mat a(dims, sizes, type), a1;
                 Mat b(dims, sizes, type), b1;
                 Mat mask(dims, sizes, CV_8U);
@@ -1562,7 +1549,7 @@ protected:
                 }
                 Mat d1;
                 d.convertTo(d1, depth);
-                CV_Assert( cvtest::norm(c, d1, CV_C) <= DBL_EPSILON );
+                EXPECT_LE(cvtest::norm(c, d1, CV_C), DBL_EPSILON);
             }
 
             Mat_<uchar> tmpSrc(100,100);
@@ -1572,15 +1559,7 @@ protected:
             Mat_<uchar> tmpDst(100,100);
             tmpDst = 2;
             tmpSrc.copyTo(tmpDst,tmpMask);
-        }
-        catch(...)
-        {
-           ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }
-    }
-};
-
-TEST(Core_ArithmMask, uninitialized) { CV_ArithmMaskTest test; test.safe_run(); }
+}
 
 TEST(Multiply, FloatingPointRounding)
 {
@@ -1912,7 +1891,7 @@ TEST(MinMaxLoc, regression_4955_nans)
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
     cv::minMaxLoc(one_mat, NULL, NULL, NULL, NULL);
 
-    cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(NAN));
+    cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(std::numeric_limits<float>::quiet_NaN()));
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
 

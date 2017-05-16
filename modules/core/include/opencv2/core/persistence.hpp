@@ -945,10 +945,51 @@ void write(FileStorage& fs, const Scalar_<_Tp>& s )
 }
 
 static inline
+void write(FileStorage& fs, const KeyPoint& kpt )
+{
+    write(fs, kpt.pt.x);
+    write(fs, kpt.pt.y);
+    write(fs, kpt.size);
+    write(fs, kpt.angle);
+    write(fs, kpt.response);
+    write(fs, kpt.octave);
+    write(fs, kpt.class_id);
+}
+
+static inline
+void write(FileStorage& fs, const DMatch& m )
+{
+    write(fs, m.queryIdx);
+    write(fs, m.trainIdx);
+    write(fs, m.imgIdx);
+    write(fs, m.distance);
+}
+
+static inline
 void write(FileStorage& fs, const Range& r )
 {
     write(fs, r.start);
     write(fs, r.end);
+}
+
+static inline
+void write( FileStorage& fs, const std::vector<KeyPoint>& vec )
+{
+    size_t npoints = vec.size();
+    for(size_t i = 0; i < npoints; i++ )
+    {
+        write(fs, vec[i]);
+    }
+}
+
+static inline
+void write( FileStorage& fs, const std::vector<DMatch>& vec )
+{
+    size_t npoints = vec.size();
+    for(size_t i = 0; i < npoints; i++ )
+    {
+        write(fs, vec[i]);
+    }
 }
 
 template<typename _Tp> static inline
@@ -957,7 +998,6 @@ void write( FileStorage& fs, const std::vector<_Tp>& vec )
     cv::internal::VecWriterProxy<_Tp, DataType<_Tp>::fmt != 0> w(&fs);
     w(vec);
 }
-
 
 template<typename _Tp> static inline
 void write(FileStorage& fs, const String& name, const Point_<_Tp>& pt )
@@ -1015,11 +1055,36 @@ void write(FileStorage& fs, const String& name, const Range& r )
     write(fs, r);
 }
 
+static inline
+void write(FileStorage& fs, const String& name, const KeyPoint& r )
+{
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
+    write(fs, r);
+}
+
+static inline
+void write(FileStorage& fs, const String& name, const DMatch& r )
+{
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
+    write(fs, r);
+}
+
 template<typename _Tp> static inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
     write(fs, vec);
+}
+
+template<typename _Tp> static inline
+void write( FileStorage& fs, const String& name, const std::vector< std::vector<_Tp> >& vec )
+{
+    cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ);
+    for(size_t i = 0; i < vec.size(); i++)
+    {
+        cv::internal::WriteStructContext ws_(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
+        write(fs, vec[i]);
+    }
 }
 
 //! @} FileStorage
@@ -1084,6 +1149,24 @@ void read( const FileNode& node, std::vector<_Tp>& vec, const std::vector<_Tp>& 
         FileNodeIterator it = node.begin();
         read( it, vec );
     }
+}
+
+static inline
+void read( const FileNode& node, std::vector<KeyPoint>& vec, const std::vector<KeyPoint>& default_value )
+{
+    if(!node.node)
+        vec = default_value;
+    else
+        read(node, vec);
+}
+
+static inline
+void read( const FileNode& node, std::vector<DMatch>& vec, const std::vector<DMatch>& default_value )
+{
+    if(!node.node)
+        vec = default_value;
+    else
+        read(node, vec);
 }
 
 //! @} FileNode
@@ -1176,6 +1259,14 @@ void operator >> (const FileNode& n, std::vector<KeyPoint>& vec)
 {
     read(n, vec);
 }
+
+static inline
+void operator >> (const FileNode& n, KeyPoint& kpt)
+{
+    FileNodeIterator it = n.begin();
+    it >> kpt.pt.x >> kpt.pt.y >> kpt.size >> kpt.angle >> kpt.response >> kpt.octave >> kpt.class_id;
+}
+
 /** @brief Reads DMatch from a file storage.
 */
 //It needs special handling because it contains two types of fields, int & float.
@@ -1183,6 +1274,13 @@ static inline
 void operator >> (const FileNode& n, std::vector<DMatch>& vec)
 {
     read(n, vec);
+}
+
+static inline
+void operator >> (const FileNode& n, DMatch& m)
+{
+    FileNodeIterator it = n.begin();
+    it >> m.queryIdx >> m.trainIdx >> m.imgIdx >> m.distance;
 }
 
 //! @} FileNode

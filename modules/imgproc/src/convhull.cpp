@@ -280,11 +280,16 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
 
     Mat hull = _hull.getMat();
     int hpoints = hull.checkVector(1, CV_32S);
-    CV_Assert( hpoints > 2 );
+    CV_Assert( hpoints > 0 );
 
     const Point* ptr = points.ptr<Point>();
     const int* hptr = hull.ptr<int>();
     std::vector<Vec4i> defects;
+    if ( hpoints < 3 ) //if hull consists of one or two points, contour is always convex
+    {
+        _defects.release();
+        return;
+    }
 
     // 1. recognize co-orientation of the contour and its hull
     bool rev_orientation = ((hptr[1] > hptr[0]) + (hptr[2] > hptr[1]) + (hptr[0] > hptr[2])) != 2;

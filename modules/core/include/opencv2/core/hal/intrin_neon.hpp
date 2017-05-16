@@ -46,11 +46,14 @@
 #define OPENCV_HAL_INTRIN_NEON_HPP
 
 #include <algorithm>
+#include "opencv2/core/utility.hpp"
 
 namespace cv
 {
 
 //! @cond IGNORED
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD128 1
 #if defined(__aarch64__)
@@ -275,7 +278,7 @@ struct v_float64x2
 };
 #endif
 
-#if defined (HAVE_FP16)
+#if CV_FP16
 // Workaround for old comiplers
 template <typename T> static inline int16x4_t vreinterpret_s16_f16(T a)
 { return (int16x4_t)a; }
@@ -285,8 +288,6 @@ template <typename T> static inline float16x4_t vld1_f16(const T* ptr)
 { return vreinterpret_f16_s16(vld1_s16((const short*)ptr)); }
 template <typename T> static inline void vst1_f16(T* ptr, float16x4_t a)
 { vst1_s16((short*)ptr, vreinterpret_s16_f16(a)); }
-static inline short vget_lane_f16(float16x4_t a, int b)
-{ return vget_lane_s16(vreinterpret_s16_f16(a), b); }
 
 struct v_float16x4
 {
@@ -302,7 +303,7 @@ struct v_float16x4
     }
     short get0() const
     {
-        return vget_lane_f16(val, 0);
+        return vget_lane_s16(vreinterpret_s16_f16(val), 0);
     }
     float16x4_t val;
 };
@@ -774,7 +775,7 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
 #endif
 
-#if defined (HAVE_FP16)
+#if CV_FP16
 // Workaround for old comiplers
 inline v_float16x4 v_load_f16(const short* ptr)
 { return v_float16x4(vld1_f16(ptr)); }
@@ -782,25 +783,53 @@ inline void v_store_f16(short* ptr, v_float16x4& a)
 { vst1_f16(ptr, a.val); }
 #endif
 
-#define OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(_Tpvec, scalartype, func, scalar_func) \
+#define OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
 inline scalartype v_reduce_##func(const _Tpvec& a) \
 { \
-    scalartype CV_DECL_ALIGNED(16) buf[4]; \
-    v_store_aligned(buf, a); \
-    scalartype s0 = scalar_func(buf[0], buf[1]); \
-    scalartype s1 = scalar_func(buf[2], buf[3]); \
-    return scalar_func(s0, s1); \
+    _Tpnvec##_t a0 = vp##vectorfunc##_##suffix(vget_low_##suffix(a.val), vget_high_##suffix(a.val)); \
+    a0 = vp##vectorfunc##_##suffix(a0, a0); \
+    return (scalartype)vget_lane_##suffix(vp##vectorfunc##_##suffix(a0, a0),0); \
 }
 
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, unsigned, sum, OPENCV_HAL_ADD)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, unsigned, max, std::max)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, unsigned, min, std::min)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int, sum, OPENCV_HAL_ADD)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int, max, std::max)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int, min, std::min)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float, sum, OPENCV_HAL_ADD)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float, max, std::max)
-OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float, min, std::min)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, unsigned short, sum, add, u16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, unsigned short, max, max, u16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_uint16x8, uint16x4, unsigned short, min, min, u16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, sum, add, s16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, max, max, s16)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(v_int16x8, int16x4, short, min, min, s16)
+
+#define OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
+inline scalartype v_reduce_##func(const _Tpvec& a) \
+{ \
+    _Tpnvec##_t a0 = vp##vectorfunc##_##suffix(vget_low_##suffix(a.val), vget_high_##suffix(a.val)); \
+    return (scalartype)vget_lane_##suffix(vp##vectorfunc##_##suffix(a0, vget_high_##suffix(a.val)),0); \
+}
+
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, uint32x2, unsigned, sum, add, u32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, uint32x2, unsigned, max, max, u32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_uint32x4, uint32x2, unsigned, min, min, u32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int32x2, int, sum, add, s32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int32x2, int, max, max, s32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_int32x4, int32x2, int, min, min, s32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, sum, add, f32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, max, max, f32)
+OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, min, min, f32)
+
+#define OPENCV_HAL_IMPL_NEON_POPCOUNT(_Tpvec, cast) \
+inline v_uint32x4 v_popcount(const _Tpvec& a) \
+{ \
+    uint8x16_t t = vcntq_u8(cast(a.val)); \
+    uint16x8_t t0 = vpaddlq_u8(t);  /* 16 -> 8 */ \
+    uint32x4_t t1 = vpaddlq_u16(t0); /* 8 -> 4 */ \
+    return v_uint32x4(t1); \
+}
+
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_uint8x16, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_uint16x8, vreinterpretq_u8_u16)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_uint32x4, vreinterpretq_u8_u32)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_int8x16, vreinterpretq_u8_s8)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_int16x8, vreinterpretq_u8_s16)
+OPENCV_HAL_IMPL_NEON_POPCOUNT(v_int32x4, vreinterpretq_u8_s32)
 
 inline int v_signmask(const v_uint8x16& a)
 {
@@ -1194,7 +1223,7 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 }
 #endif
 
-#if defined (HAVE_FP16)
+#if CV_FP16
 inline v_float32x4 v_cvt_f32(const v_float16x4& a)
 {
     return v_float32x4(vcvt_f32_f16(a.val));
@@ -1205,6 +1234,18 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
     return v_float16x4(vcvt_f16_f32(a.val));
 }
 #endif
+
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return (CV_CPU_HAS_SUPPORT_NEON) ? true : false;
+}
+
+//! @}
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond
 

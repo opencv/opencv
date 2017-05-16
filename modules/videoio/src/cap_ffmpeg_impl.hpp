@@ -75,48 +75,8 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #endif
 
-#ifdef WIN32
-  #define HAVE_FFMPEG_SWSCALE 1
-  #include <libavcodec/avcodec.h>
-  #include <libswscale/swscale.h>
-#else
-
-#ifndef HAVE_FFMPEG_SWSCALE
-    #error "libswscale is necessary to build the newer OpenCV ffmpeg wrapper"
-#endif
-
-// if the header path is not specified explicitly, let's deduce it
-#if !defined HAVE_FFMPEG_AVCODEC_H && !defined HAVE_LIBAVCODEC_AVCODEC_H
-
-#if defined(HAVE_GENTOO_FFMPEG)
-  #define HAVE_LIBAVCODEC_AVCODEC_H 1
-  #if defined(HAVE_FFMPEG_SWSCALE)
-    #define HAVE_LIBSWSCALE_SWSCALE_H 1
-  #endif
-#elif defined HAVE_FFMPEG
-  #define HAVE_FFMPEG_AVCODEC_H 1
-  #if defined(HAVE_FFMPEG_SWSCALE)
-    #define HAVE_FFMPEG_SWSCALE_H 1
-  #endif
-#endif
-
-#endif
-
-#if defined(HAVE_FFMPEG_AVCODEC_H)
-  #include <ffmpeg/avcodec.h>
-#endif
-#if defined(HAVE_FFMPEG_SWSCALE_H)
-  #include <ffmpeg/swscale.h>
-#endif
-
-#if defined(HAVE_LIBAVCODEC_AVCODEC_H)
-  #include <libavcodec/avcodec.h>
-#endif
-#if defined(HAVE_LIBSWSCALE_SWSCALE_H)
-  #include <libswscale/swscale.h>
-#endif
-
-#endif
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
 
 #ifdef __cplusplus
 }
@@ -2455,11 +2415,14 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
     }
 
     // write the stream header, if any
+    int header_err =
     #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
         av_write_header(oc_);
     #else
         avformat_write_header(oc_, NULL);
     #endif
+    if (header_err != 0)
+        return false;
 
     return true;
 }

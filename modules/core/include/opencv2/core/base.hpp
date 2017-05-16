@@ -66,38 +66,38 @@ namespace cv
 namespace Error {
 //! error codes
 enum Code {
-    StsOk=                       0,  //!< everithing is ok
+    StsOk=                       0,  //!< everything is ok
     StsBackTrace=               -1,  //!< pseudo error for back trace
     StsError=                   -2,  //!< unknown /unspecified error
     StsInternal=                -3,  //!< internal error (bad state)
     StsNoMem=                   -4,  //!< insufficient memory
     StsBadArg=                  -5,  //!< function arg/param is bad
     StsBadFunc=                 -6,  //!< unsupported function
-    StsNoConv=                  -7,  //!< iter. didn't converge
+    StsNoConv=                  -7,  //!< iteration didn't converge
     StsAutoTrace=               -8,  //!< tracing
     HeaderIsNull=               -9,  //!< image header is NULL
     BadImageSize=              -10,  //!< image size is invalid
     BadOffset=                 -11,  //!< offset is invalid
     BadDataPtr=                -12,  //!<
-    BadStep=                   -13,  //!<
+    BadStep=                   -13,  //!< image step is wrong, this may happen for a non-continuous matrix.
     BadModelOrChSeq=           -14,  //!<
-    BadNumChannels=            -15,  //!<
+    BadNumChannels=            -15,  //!< bad number of channels, for example, some functions accept only single channel matrices.
     BadNumChannel1U=           -16,  //!<
-    BadDepth=                  -17,  //!<
+    BadDepth=                  -17,  //!< input image depth is not supported by the function
     BadAlphaChannel=           -18,  //!<
-    BadOrder=                  -19,  //!<
-    BadOrigin=                 -20,  //!<
-    BadAlign=                  -21,  //!<
+    BadOrder=                  -19,  //!< number of dimensions is out of range
+    BadOrigin=                 -20,  //!< incorrect input origin
+    BadAlign=                  -21,  //!< incorrect input align
     BadCallBack=               -22,  //!<
     BadTileSize=               -23,  //!<
-    BadCOI=                    -24,  //!<
-    BadROISize=                -25,  //!<
+    BadCOI=                    -24,  //!< input COI is not supported
+    BadROISize=                -25,  //!< incorrect input roi
     MaskIsTiled=               -26,  //!<
     StsNullPtr=                -27,  //!< null pointer
     StsVecLengthErr=           -28,  //!< incorrect vector length
-    StsFilterStructContentErr= -29,  //!< incorr. filter structure content
-    StsKernelStructContentErr= -30,  //!< incorr. transform kernel content
-    StsFilterOffsetErr=        -31,  //!< incorrect filter ofset value
+    StsFilterStructContentErr= -29,  //!< incorrect filter structure content
+    StsKernelStructContentErr= -30,  //!< incorrect transform kernel content
+    StsFilterOffsetErr=        -31,  //!< incorrect filter offset value
     StsBadSize=                -201, //!< the input/output structure size is incorrect
     StsDivByZero=              -202, //!< division by zero
     StsInplaceNotSupported=    -203, //!< in-place operation is not supported
@@ -113,13 +113,13 @@ enum Code {
     StsNotImplemented=         -213, //!< the requested function/feature is not implemented
     StsBadMemBlock=            -214, //!< an allocated block has been corrupted
     StsAssert=                 -215, //!< assertion failed
-    GpuNotSupported=           -216,
-    GpuApiCallError=           -217,
-    OpenGlNotSupported=        -218,
-    OpenGlApiCallError=        -219,
-    OpenCLApiCallError=        -220,
+    GpuNotSupported=           -216, //!< no CUDA support
+    GpuApiCallError=           -217, //!< GPU API call error
+    OpenGlNotSupported=        -218, //!< no OpenGL support
+    OpenGlApiCallError=        -219, //!< OpenGL API call error
+    OpenCLApiCallError=        -220, //!< OpenCL API call error
     OpenCLDoubleNotSupported=  -221,
-    OpenCLInitError=           -222,
+    OpenCLInitError=           -222, //!< OpenCL initialization error
     OpenCLNoAMDBlasFft=        -223
 };
 } //Error
@@ -239,6 +239,10 @@ enum DftFlags {
         into a real array and inverse transformation is executed, the function treats the input as a
         packed complex-conjugate symmetrical array, and the output will also be a real array). */
     DFT_REAL_OUTPUT    = 32,
+    /** specifies that input is complex input. If this flag is set, the input must have 2 channels.
+        On the other hand, for backwards compatibility reason, if input has 2 channels, input is
+        already considered complex. */
+    DFT_COMPLEX_INPUT  = 64,
     /** performs an inverse 1D or 2D transform instead of the default forward transform. */
     DCT_INVERSE        = DFT_INVERSE,
     /** performs a forward or inverse transform of every individual row of the input
@@ -338,8 +342,8 @@ It is possible to alternate error processing by using redirectError().
 @param _code - error code (Error::Code)
 @param _err - error description
 @param _func - function name. Available only when the compiler supports getting it
-@param _file - source file name where the error has occured
-@param _line - line number in the source file where the error has occured
+@param _file - source file name where the error has occurred
+@param _line - line number in the source file where the error has occurred
 @see CV_Error, CV_Error_, CV_ErrorNoReturn, CV_ErrorNoReturn_, CV_Assert, CV_DbgAssert
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
@@ -667,13 +671,17 @@ namespace cudev
 
 namespace ipp
 {
-CV_EXPORTS int getIppFeatures();
-CV_EXPORTS void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
+#if OPENCV_ABI_COMPATIBILITY > 300
+CV_EXPORTS   unsigned long long getIppFeatures();
+#else
+CV_EXPORTS   int getIppFeatures();
+#endif
+CV_EXPORTS   void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
                              int line = 0);
-CV_EXPORTS int getIppStatus();
-CV_EXPORTS String getIppErrorLocation();
-CV_EXPORTS bool useIPP();
-CV_EXPORTS void setUseIPP(bool flag);
+CV_EXPORTS   int getIppStatus();
+CV_EXPORTS   String getIppErrorLocation();
+CV_EXPORTS_W bool useIPP();
+CV_EXPORTS_W void setUseIPP(bool flag);
 
 } // ipp
 

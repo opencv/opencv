@@ -313,11 +313,7 @@ void CvLevMarq::step()
     if( !err )
         completeSymm( _JtJN, completeSymmFlag );
 
-#if 1
     _JtJN.diag() *= 1. + lambda;
-#else
-    _JtJN.diag() += lambda;
-#endif
     solve(_JtJN, _JtErr, nonzero_param, solveMethod);
 
     int j = 0;

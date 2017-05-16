@@ -63,7 +63,9 @@ enum
 /* any depth, ? */
     CV_LOAD_IMAGE_ANYDEPTH   =2,
 /* ?, any color */
-    CV_LOAD_IMAGE_ANYCOLOR   =4
+    CV_LOAD_IMAGE_ANYCOLOR   =4,
+/* ?, no rotate */
+    CV_LOAD_IMAGE_IGNORE_ORIENTATION  =128
 };
 
 /* load image from file

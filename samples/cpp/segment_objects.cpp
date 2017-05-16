@@ -105,7 +105,7 @@ int main(int argc, char** argv)
         refineSegments(tmp_frame, bgmask, out_frame);
         imshow("video", tmp_frame);
         imshow("segmented", out_frame);
-        int keycode = waitKey(30);
+        char keycode = (char)waitKey(30);
         if( keycode == 27 )
             break;
         if( keycode == ' ' )

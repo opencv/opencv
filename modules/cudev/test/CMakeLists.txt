@@ -13,20 +13,7 @@ if(OCV_DEPENDENCIES_FOUND)
   source_group("Include" FILES ${test_hdrs})
   set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})
 
-  foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
-    # we remove /EHa as it generates warnings under windows
-    string(REPLACE "/EHa" "" ${var} "${${var}}")
-
-    # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
-    string(REPLACE "-ggdb3" "" ${var} "${${var}}")
-
-    # we remove -Wsign-promo as it generates warnings under linux
-    string(REPLACE "-Wsign-promo" "" ${var} "${${var}}")
-
-    # we remove -fvisibility-inlines-hidden because it's used for C++ compiler
-    # but NVCC uses C compiler by default
-    string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
-  endforeach()
+  ocv_cuda_filter_options()
 
   CUDA_ADD_EXECUTABLE(${the_target} ${OPENCV_TEST_${the_module}_SOURCES})
   ocv_target_link_libraries(${the_target} ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES})

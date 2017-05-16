@@ -114,7 +114,7 @@ public:
      */
     Exception();
     /*!
-     Full constructor. Normally the constuctor is not called explicitly.
+     Full constructor. Normally the constructor is not called explicitly.
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
     Exception(int _code, const String& _err, const String& _func, const String& _file, int _line);
@@ -131,8 +131,8 @@ public:
     int code; ///< error code @see CVStatus
     String err; ///< error description
     String func; ///< function name. Available only when the compiler supports getting it
-    String file; ///< source file name where the error has occured
-    int line; ///< line number in the source file where the error has occured
+    String file; ///< source file name where the error has occurred
+    int line; ///< line number in the source file where the error has occurred
 };
 
 /*! @brief Signals an error and raises the exception.
@@ -626,7 +626,7 @@ then pass the matrix to calcCovarMatrix .
 @param src input array that should have from 1 to 4 channels so that the results can be stored in
 Scalar_ 's.
 @param mean output parameter: calculated mean value.
-@param stddev output parameter: calculateded standard deviation.
+@param stddev output parameter: calculated standard deviation.
 @param mask optional operation mask.
 @sa  countNonZero, mean, norm, minMaxLoc, calcCovarMatrix
 */
@@ -1021,6 +1021,24 @@ around both axes.
 @sa transpose , repeat , completeSymm
 */
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
+
+enum RotateFlags {
+    ROTATE_90_CLOCKWISE = 0, //Rotate 90 degrees clockwise
+    ROTATE_180 = 1, //Rotate 180 degrees clockwise
+    ROTATE_90_COUNTERCLOCKWISE = 2, //Rotate 270 degrees clockwise
+};
+/** @brief Rotates a 2D array in multiples of 90 degrees.
+The function rotate rotates the array in one of three different ways:
+*   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90).
+*   Rotate by 180 degrees clockwise (rotateCode = ROTATE_180).
+*   Rotate by 270 degrees clockwise (rotateCode = ROTATE_270).
+@param src input array.
+@param dst output array of the same type as src.  The size is the same with ROTATE_180,
+and the rows and cols are switched for ROTATE_90 and ROTATE_270.
+@param rotateCode an enum to specify how to rotate the array; see the enum RotateFlags
+@sa transpose , repeat , completeSymm, flip, RotateFlags
+*/
+CV_EXPORTS_W void rotate(InputArray src, OutputArray dst, int rotateCode);
 
 /** @brief Fills the output array with repeated copies of the input array.
 
@@ -1621,7 +1639,7 @@ CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
 
 The function cv::transpose transposes the matrix src :
 \f[\texttt{dst} (i,j) =  \texttt{src} (j,i)\f]
-@note No complex conjugation is done in case of a complex matrix. It it
+@note No complex conjugation is done in case of a complex matrix. It
 should be done separately if needed.
 @param src input array.
 @param dst output array of the same type as src.
@@ -1650,7 +1668,7 @@ m.cols or m.cols-1.
 @param dst output array of the same size and depth as src; it has as
 many channels as m.rows.
 @param m transformation 2x2 or 2x3 floating-point matrix.
-@sa perspectiveTransform, getAffineTransform, estimateRigidTransform, warpAffine, warpPerspective
+@sa perspectiveTransform, getAffineTransform, estimateAffine2D, warpAffine, warpPerspective
 */
 CV_EXPORTS_W void transform(InputArray src, OutputArray dst, InputArray m );
 
@@ -2744,7 +2762,7 @@ public:
     double a1 = rng.uniform((double)0, (double)1);
 
     // produces float from [0, 1)
-    double b = rng.uniform(0.f, 1.f);
+    float b = rng.uniform(0.f, 1.f);
 
     // produces double from [0, 1)
     double c = rng.uniform(0., 1.);
@@ -2760,8 +2778,8 @@ public:
     want a floating-point random number, but the range boundaries are
     integer numbers, either put dots in the end, if they are constants, or
     use explicit type cast operators, as in the a1 initialization above.
-    @param a lower inclusive boundary of the returned random numbers.
-    @param b upper non-inclusive boundary of the returned random numbers.
+    @param a lower inclusive boundary of the returned random number.
+    @param b upper non-inclusive boundary of the returned random number.
       */
     int uniform(int a, int b);
     /** @overload */
@@ -2816,6 +2834,8 @@ public:
     double gaussian(double sigma);
 
     uint64 state;
+
+    bool operator ==(const RNG& other) const;
 };
 
 /** @brief Mersenne Twister random number generator
@@ -3027,7 +3047,8 @@ public:
 
      This is static template method of Algorithm. It's usage is following (in the case of SVM):
      @code
-     Ptr<SVM> svm = Algorithm::read<SVM>(fn);
+     cv::FileStorage fsRead("example.xml", FileStorage::READ);
+     Ptr<SVM> svm = Algorithm::read<SVM>(fsRead.root());
      @endcode
      In order to make this method work, the derived class must overwrite Algorithm::read(const
      FileNode& fn) and also have static create() method without parameters
@@ -3196,5 +3217,6 @@ template<> struct ParamType<uchar>
 #include "opencv2/core/cvstd.inl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/optim.hpp"
+#include "opencv2/core/ovx.hpp"
 
 #endif /*OPENCV_CORE_HPP*/

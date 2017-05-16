@@ -66,7 +66,7 @@ if __name__ == '__main__':
     cv2.createTrackbar('hi', 'floodfill', 20, 255, update)
 
     while True:
-        ch = 0xFF & cv2.waitKey()
+        ch = cv2.waitKey()
         if ch == 27:
             break
         if ch == ord('f'):

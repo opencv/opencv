@@ -39,7 +39,7 @@
 
 @class CvAbstractCamera;
 
-@interface CvAbstractCamera : NSObject
+CV_EXPORTS @interface CvAbstractCamera : NSObject
 {
     UIDeviceOrientation currentDeviceOrientation;
 
@@ -87,7 +87,7 @@
 
 @class CvVideoCamera;
 
-@protocol CvVideoCameraDelegate <NSObject>
+CV_EXPORTS @protocol CvVideoCameraDelegate <NSObject>
 
 #ifdef __cplusplus
 // delegate method for processing image frames
@@ -96,7 +96,7 @@
 
 @end
 
-@interface CvVideoCamera : CvAbstractCamera<AVCaptureVideoDataOutputSampleBufferDelegate>
+CV_EXPORTS @interface CvVideoCamera : CvAbstractCamera<AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     AVCaptureVideoDataOutput *videoDataOutput;
 
@@ -129,14 +129,14 @@
 
 @class CvPhotoCamera;
 
-@protocol CvPhotoCameraDelegate <NSObject>
+CV_EXPORTS @protocol CvPhotoCameraDelegate <NSObject>
 
 - (void)photoCamera:(CvPhotoCamera*)photoCamera capturedImage:(UIImage *)image;
 - (void)photoCameraCancel:(CvPhotoCamera*)photoCamera;
 
 @end
 
-@interface CvPhotoCamera : CvAbstractCamera
+CV_EXPORTS @interface CvPhotoCamera : CvAbstractCamera
 {
     AVCaptureStillImageOutput *stillImageOutput;
 }

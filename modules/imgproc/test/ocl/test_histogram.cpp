@@ -94,7 +94,7 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
         uimages_roi.resize(N);
     }
 
-    virtual void random_roi()
+    void random_roi()
     {
         Size roiSize = randomSize(1, MAX_VALUE);
 
@@ -233,7 +233,7 @@ PARAM_TEST_CASE(CalcHist, bool)
         useRoi = GET_PARAM(0);
     }
 
-    virtual void random_roi()
+    void random_roi()
     {
         Size roiSize = randomSize(1, MAX_VALUE);
 

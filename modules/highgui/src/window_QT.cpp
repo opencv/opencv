@@ -138,6 +138,20 @@ double cvGetRatioWindow_QT(const char* name)
     return result;
 }
 
+double cvGetPropVisible_QT(const char* name) {
+    if (!guiMainThread)
+        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+    double result = 0;
+
+    QMetaObject::invokeMethod(guiMainThread,
+        "getWindowVisible",
+        autoBlockingConnection(),
+        Q_RETURN_ARG(double, result),
+        Q_ARG(QString, QString(name)));
+
+    return result;
+}
 
 void cvSetRatioWindow_QT(const char* name,double prop_value)
 {
@@ -843,7 +857,7 @@ void GuiReceiver::putText(void* arr, QString text, QPoint org, void* arg2)
         //cvScalar(blue_component, green_component, red_component[, alpha_component])
         //Qt map non-transparent to 0xFF and transparent to 0
         //OpenCV scalar is the reverse, so 255-font->color.val[3]
-        qp.setPen(QColor(font->color.val[2], font->color.val[1], font->color.val[0], 255 - font->color.val[3]));
+        qp.setPen(QColor(font->color.val[0], font->color.val[1], font->color.val[2], 255 - font->color.val[3]));
         qp.setFont(f);
     }
     qp.drawText(org, text);
@@ -901,6 +915,16 @@ double GuiReceiver::getPropWindow(QString name)
         return -1;
 
     return (double) w->getPropWindow();
+}
+
+double GuiReceiver::getWindowVisible(QString name)
+{
+    QPointer<CvWindow> w = icvFindWindowByName(name);
+
+    if (!w)
+        return 0;
+
+    return (double) w->isVisible();
 }
 
 

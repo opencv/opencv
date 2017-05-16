@@ -50,10 +50,8 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui_c.h"
 
-#ifdef HAVE_OPENCV_IMGCODECS
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgcodecs/imgcodecs_c.h"
-#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -123,6 +121,7 @@ double cvGetRatioWindow_QT(const char* name);
 void cvSetRatioWindow_QT(const char* name,double prop_value);
 
 double cvGetOpenGlProp_QT(const char* name);
+double cvGetPropVisible_QT(const char* name);
 #endif
 
 #endif /* __HIGHGUI_H_ */

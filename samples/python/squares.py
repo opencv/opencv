@@ -49,7 +49,7 @@ if __name__ == '__main__':
         squares = find_squares(img)
         cv2.drawContours( img, squares, -1, (0, 255, 0), 3 )
         cv2.imshow('squares', img)
-        ch = 0xFF & cv2.waitKey()
+        ch = cv2.waitKey()
         if ch == 27:
             break
     cv2.destroyAllWindows()

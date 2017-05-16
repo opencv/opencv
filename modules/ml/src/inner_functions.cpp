@@ -50,6 +50,10 @@ ParamGrid::ParamGrid(double _minVal, double _maxVal, double _logStep)
     logStep = std::max(_logStep, 1.);
 }
 
+Ptr<ParamGrid> ParamGrid::create(double minval, double maxval, double logstep) {
+  return makePtr<ParamGrid>(minval, maxval, logstep);
+}
+
 bool StatModel::empty() const { return !isTrained(); }
 
 int StatModel::getVarCount() const { return 0; }
@@ -74,6 +78,7 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
     int i, n = (int)sidx.total();
     bool isclassifier = isClassifier();
     Mat responses = data->getResponses();
+    int responses_type = responses.type();
 
     if( n == 0 )
         n = data->getNSamples();
@@ -91,7 +96,7 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
         int si = sidx_ptr ? sidx_ptr[i] : i;
         Mat sample = layout == ROW_SAMPLE ? samples.row(si) : samples.col(si);
         float val = predict(sample);
-        float val0 = responses.at<float>(si);
+        float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
 
         if( isclassifier )
             err += fabs(val - val0) > FLT_EPSILON;

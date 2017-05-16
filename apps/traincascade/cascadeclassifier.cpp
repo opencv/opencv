@@ -139,7 +139,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
                                 double acceptanceRatioBreakValue )
 {
     // Start recording clock ticks for training time output
-    const clock_t begin_time = clock();
+    double time = (double)getTickCount();
 
     if( _cascadeDirName.empty() || _posFilename.empty() || _negFilename.empty() )
         CV_Error( CV_StsBadArg, "_cascadeDirName or _bgfileName or _vecFileName is NULL" );
@@ -267,7 +267,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
         fs << "}";
 
         // Output training time up till now
-        float seconds = float( clock () - begin_time ) / CLOCKS_PER_SEC;
+        double seconds = ( (double)getTickCount() - time)/ getTickFrequency();
         int days = int(seconds) / 60 / 60 / 24;
         int hours = (int(seconds) / 60 / 60) % 24;
         int minutes = (int(seconds) / 60) % 60;
@@ -412,6 +412,7 @@ bool CvCascadeClassifier::readStages( const FileNode &node)
 }
 
 // For old Haar Classifier file saving
+#define ICV_HAAR_TYPE_ID              "opencv-haar-classifier"
 #define ICV_HAAR_SIZE_NAME            "size"
 #define ICV_HAAR_STAGES_NAME          "stages"
 #define ICV_HAAR_TREES_NAME             "trees"
@@ -434,11 +435,12 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
     if ( !fs.isOpened() )
         return;
 
-    fs << FileStorage::getDefaultObjectName(filename) << "{";
+    fs << FileStorage::getDefaultObjectName(filename);
     if ( !baseFormat )
     {
         Mat featureMap;
         getUsedFeaturesIdxMap( featureMap );
+        fs << "{";
         writeParams( fs );
         fs << CC_STAGE_NUM << (int)stageClassifiers.size();
         writeStages( fs, featureMap );
@@ -450,6 +452,7 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
         CvSeq* weak;
         if ( cascadeParams.featureType != CvFeatureParams::HAAR )
             CV_Error( CV_StsBadFunc, "old file format is used for Haar-like features only");
+        fs << "{:" ICV_HAAR_TYPE_ID;
         fs << ICV_HAAR_SIZE_NAME << "[:" << cascadeParams.winSize.width <<
             cascadeParams.winSize.height << "]";
         fs << ICV_HAAR_STAGES_NAME << "[";

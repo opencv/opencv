@@ -239,6 +239,17 @@ static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool 
         __m128 p1 = _mm_unpackhi_ps(q01l, q01h);
 
         _mm_storeu_ps(arr + i, _mm_add_ps(_mm_mul_ps(_mm_loadu_ps(f), p0), p1));
+#elif defined __ARM_NEON && defined __aarch64__
+        // handwritten NEON is required not for performance but for numerical stability!
+        // 64bit gcc tends to use fmadd instead of separate multiply and add
+        // use volatile to ensure to separate the multiply and add
+        float32x4x2_t q = vld2q_f32((const float*)(p + i));
+
+        float32x4_t p0 = q.val[0];
+        float32x4_t p1 = q.val[1];
+
+        volatile float32x4_t v0 = vmulq_f32(vld1q_f32(f), p0);
+        vst1q_f32(arr+i, vaddq_f32(v0, p1));
 #else
         arr[i+0] = f[0]*p[i+0][0] + p[i+0][1];
         arr[i+1] = f[1]*p[i+1][0] + p[i+1][1];
@@ -255,6 +266,11 @@ static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool 
                 _mm_mul_ss(_mm_set_ss((float)(int)temp), _mm_set_ss(p[i][0])),
                 _mm_set_ss(p[i][1]))
                 );
+#elif defined __ARM_NEON && defined __aarch64__
+        float32x2_t t = vadd_f32(vmul_f32(
+                vdup_n_f32((float)(int)temp), vdup_n_f32(p[i][0])),
+                vdup_n_f32(p[i][1]));
+        arr[i] = vget_lane_f32(t, 0);
 #else
         arr[i] = (int)temp*p[i][0] + p[i][1];
 #endif

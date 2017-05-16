@@ -97,6 +97,22 @@ template<typename T> struct OpAbsDiff
     T operator()(T a, T b) const { return a > b ? a - b : b - a; }
 };
 
+// specializations to prevent "-0" results
+template<> struct OpAbsDiff<float>
+{
+    typedef float type1;
+    typedef float type2;
+    typedef float rtype;
+    float operator()(float a, float b) const { return std::abs(a - b); }
+};
+template<> struct OpAbsDiff<double>
+{
+    typedef double type1;
+    typedef double type2;
+    typedef double rtype;
+    double operator()(double a, double b) const { return std::abs(a - b); }
+};
+
 template<typename T> struct OpAnd
 {
     typedef T type1;

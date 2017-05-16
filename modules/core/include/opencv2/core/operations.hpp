@@ -82,7 +82,7 @@ template<typename _Tp> struct Matx_FastInvOp<_Tp, 2>
 {
     bool operator()(const Matx<_Tp, 2, 2>& a, Matx<_Tp, 2, 2>& b, int) const
     {
-        _Tp d = determinant(a);
+        _Tp d = (_Tp)determinant(a);
         if( d == 0 )
             return false;
         d = 1/d;
@@ -137,7 +137,7 @@ template<typename _Tp> struct Matx_FastSolveOp<_Tp, 2, 1>
     bool operator()(const Matx<_Tp, 2, 2>& a, const Matx<_Tp, 2, 1>& b,
                     Matx<_Tp, 2, 1>& x, int) const
     {
-        _Tp d = determinant(a);
+        _Tp d = (_Tp)determinant(a);
         if( d == 0 )
             return false;
         d = 1/d;
@@ -348,6 +348,8 @@ inline unsigned RNG::operator ()()           { return next(); }
 inline int    RNG::uniform(int a, int b)       { return a == b ? a : (int)(next() % (b - a) + a); }
 inline float  RNG::uniform(float a, float b)   { return ((float)*this)*(b - a) + a; }
 inline double RNG::uniform(double a, double b) { return ((double)*this)*(b - a) + a; }
+
+inline bool RNG::operator ==(const RNG& other) const { return state == other.state; }
 
 inline unsigned RNG::next()
 {

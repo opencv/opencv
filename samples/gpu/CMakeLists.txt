@@ -14,25 +14,17 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   project("${project}_samples")
 
   ocv_include_modules_recurse(${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
-  ocv_include_directories(
-    "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia"
-    "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
-    )
 
   if(HAVE_opencv_xfeatures2d)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/xfeatures2d/include")
+    ocv_include_modules_recurse(opencv_xfeatures2d)
   endif()
 
   if(HAVE_opencv_cudacodec)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudacodec/include")
+    ocv_include_modules_recurse(opencv_cudacodec)
   endif()
 
   if(HAVE_CUDA)
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
-  endif()
-
-  if(HAVE_OPENCL)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/ocl/include")
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)

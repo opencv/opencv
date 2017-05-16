@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     cv2.imshow('image',im)
     while True:
-        k = cv2.waitKey(0)&0xFF
+        k = cv2.waitKey(0)
         if k == ord('a'):
             curve = hist_curve(im)
             cv2.imshow('histogram',curve)

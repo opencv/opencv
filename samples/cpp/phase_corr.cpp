@@ -9,7 +9,7 @@ int main(int, char* [])
 {
     VideoCapture video(0);
     Mat frame, curr, prev, curr64f, prev64f, hann;
-    int key = 0;
+    char key;
 
     do
     {
@@ -37,10 +37,10 @@ int main(int, char* [])
         }
 
         imshow("phase shift", frame);
-        key = waitKey(2);
+        key = (char)waitKey(2);
 
         prev = curr.clone();
-    } while((char)key != 27); // Esc to exit...
+    } while(key != 27); // Esc to exit...
 
     return 0;
 }

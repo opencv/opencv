@@ -15,7 +15,7 @@ FIND_PATH(GSTREAMER_glibconfig_INCLUDE_DIR glibconfig.h
     ENV INCLUDE DOC "Directory containing glibconfig.h include file")
 
 FIND_PATH(GSTREAMER_gstconfig_INCLUDE_DIR gst/gstconfig.h
-                                          PATHS ${GSTREAMER_DIR}/lib/gstreamer-1.0/include ${GSTREAMER_DIR}/include ${GSTREAMER_DIR}/lib/include /usr/local/include/gstreamer-1.0 /usr/include/gstreamer-1.0 /usr/local/lib/include/gstreamer-1.0 /usr/lib/include/gstreamer-1.0
+                                          PATHS ${GSTREAMER_DIR}/lib/gstreamer-1.0/include ${GSTREAMER_DIR}/include ${GSTREAMER_DIR}/include/gstreamer-1.0 ${GSTREAMER_DIR}/lib/include /usr/local/include/gstreamer-1.0 /usr/include/gstreamer-1.0 /usr/local/lib/include/gstreamer-1.0 /usr/lib/include/gstreamer-1.0
                                           ENV INCLUDE DOC "Directory containing gst/gstconfig.h include file")
 
 FIND_LIBRARY(GSTREAMER_gstaudio_LIBRARY NAMES gstaudio libgstaudio-1.0 gstaudio-1.0

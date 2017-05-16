@@ -54,6 +54,7 @@ public:
   /// Feature description methods
   void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc);
   static void Compute_Main_Orientation(cv::KeyPoint& kpt, const std::vector<TEvolution>& evolution_);
+  void Compute_Keypoints_Orientation(std::vector<cv::KeyPoint>& kpts) const;
 };
 
 /* ************************************************************************* */

@@ -41,7 +41,7 @@ if __name__ == '__main__':
     sketch = Sketcher('img', [img_mark, mark], lambda : ((255, 255, 255), 255))
 
     while True:
-        ch = 0xFF & cv2.waitKey()
+        ch = cv2.waitKey()
         if ch == 27:
             break
         if ch == ord(' '):

@@ -846,6 +846,17 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
 
 /* ************************************************************************* */
 /**
+ * @brief This method computes the main orientation for a given keypoints
+ * @param kpts Input keypoints
+ */
+void AKAZEFeatures::Compute_Keypoints_Orientation(std::vector<KeyPoint>& kpts) const
+{
+     for(size_t i = 0; i < kpts.size(); i++)
+         Compute_Main_Orientation(kpts[i], evolution_);
+}
+
+/* ************************************************************************* */
+/**
  * @brief This method computes the upright descriptor (not rotation invariant) of
  * the provided keypoint
  * @param kpt Input keypoint

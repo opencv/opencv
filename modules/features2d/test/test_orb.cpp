@@ -90,3 +90,36 @@ TEST(Features2D_ORB, _1996)
 
     ASSERT_EQ(0, roiViolations);
 }
+
+TEST(Features2D_ORB, crash)
+{
+    cv::Mat image = cv::Mat::zeros(cv::Size(1920, 1080), CV_8UC3);
+
+    int nfeatures = 8000;
+    float orbScaleFactor = 1.2f;
+    int nlevels = 18;
+    int edgeThreshold = 4;
+    int firstLevel = 0;
+    int WTA_K = 2;
+    int scoreType = cv::ORB::HARRIS_SCORE;
+    int patchSize = 47;
+    int fastThreshold = 20;
+
+    Ptr<ORB> orb = cv::ORB::create(nfeatures, orbScaleFactor, nlevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize, fastThreshold);
+
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
+
+    cv::KeyPoint kp;
+    kp.pt.x = 443;
+    kp.pt.y = 5;
+    kp.size = 47;
+    kp.angle = 53.4580612f;
+    kp.response = 0.0000470733867f;
+    kp.octave = 0;
+    kp.class_id = -1;
+
+    keypoints.push_back(kp);
+
+    ASSERT_NO_THROW(orb->compute(image, keypoints, descriptors));
+}

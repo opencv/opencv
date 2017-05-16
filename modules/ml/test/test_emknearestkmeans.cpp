@@ -618,6 +618,7 @@ protected:
         {
             ts->printf(cvtest::TS::LOG, "File with spambase dataset cann't be read.\n");
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
         }
 
         Mat samples = data->getSamples();

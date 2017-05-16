@@ -309,7 +309,7 @@ bool  PxMDecoder::readData( Mat& img )
                         }
                     }
                     else
-                        memcpy( data, src, m_width);
+                        memcpy( data, src, CV_ELEM_SIZE1(m_type)*m_width);
                 }
                 else
                 {

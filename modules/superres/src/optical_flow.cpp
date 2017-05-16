@@ -65,7 +65,9 @@ namespace
         virtual void impl(InputArray input0, InputArray input1, OutputArray dst) = 0;
 
     private:
+#ifdef HAVE_OPENCL
         bool ocl_calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
+#endif
 
         int work_type_;
 
@@ -85,6 +87,7 @@ namespace
     {
     }
 
+#ifdef HAVE_OPENCL
     bool CpuOpticalFlow::ocl_calc(InputArray _frame0, InputArray _frame1, OutputArray _flow1, OutputArray _flow2)
     {
         UMat frame0 = arrGetUMat(_frame0, ubuf_[0]);
@@ -116,6 +119,7 @@ namespace
 
         return true;
     }
+#endif
 
     void CpuOpticalFlow::calc(InputArray _frame0, InputArray _frame1, OutputArray _flow1, OutputArray _flow2)
     {

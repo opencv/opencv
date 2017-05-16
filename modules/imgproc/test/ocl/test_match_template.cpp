@@ -74,7 +74,7 @@ PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
         use_roi = GET_PARAM(3);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         Size image_roiSize = randomSize(2, 100);
         Size templ_roiSize = Size(randomInt(1, image_roiSize.width), randomInt(1, image_roiSize.height));

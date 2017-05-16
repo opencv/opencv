@@ -131,7 +131,7 @@ class AsyncServiceHelper
                 }
                 public void cancel()
                 {
-                    Log.d(TAG, "Wating for OpenCV canceled by user");
+                    Log.d(TAG, "Waiting for OpenCV canceled by user");
                     mServiceInstallationProgress = false;
                     int Status = LoaderCallbackInterface.INSTALL_CANCELED;
                     Log.d(TAG, "Init finished with status " + Status);
@@ -197,7 +197,7 @@ class AsyncServiceHelper
                                         if (mEngineService.installVersion(mOpenCVersion))
                                         {
                                             mLibraryInstallationProgress = true;
-                                            Log.d(TAG, "Package installation statred");
+                                            Log.d(TAG, "Package installation started");
                                             Log.d(TAG, "Unbind from service");
                                             mAppContext.unbindService(mServiceConnection);
                                         }
@@ -228,7 +228,7 @@ class AsyncServiceHelper
                                     mUserAppCallback.onManagerConnected(LoaderCallbackInterface.INSTALL_CANCELED);
                                 }
                                 public void wait_install() {
-                                    Log.e(TAG, "Instalation was not started! Nothing to wait!");
+                                    Log.e(TAG, "Installation was not started! Nothing to wait!");
                                 }
                             };
 

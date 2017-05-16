@@ -496,6 +496,20 @@ TEST_P(UMatTestRoi, adjustRoi)
 
 INSTANTIATE_TEST_CASE_P(UMat, UMatTestRoi, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES ));
 
+TEST(UMatTestRoi, adjustRoiOverflow)
+{
+    UMat m(15, 10, CV_32S);
+    UMat roi(m, cv::Range(2, 10), cv::Range(3,6));
+    int rowsInROI = roi.rows;
+    roi.adjustROI(1, 0, 0, 0);
+
+    ASSERT_EQ(roi.rows, rowsInROI + 1);
+
+    roi.adjustROI(-m.rows, -m.rows, 0, 0);
+
+    ASSERT_EQ(roi.rows, m.rows);
+}
+
 /////////////////////////////////////////////////////////////// Size ////////////////////////////////////////////////////////////////////
 
 PARAM_TEST_CASE(UMatTestSizeOperations, int, int, Size, bool)

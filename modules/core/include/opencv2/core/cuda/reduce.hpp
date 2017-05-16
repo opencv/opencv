@@ -43,6 +43,10 @@
 #ifndef OPENCV_CUDA_REDUCE_HPP
 #define OPENCV_CUDA_REDUCE_HPP
 
+#ifndef THRUST_DEBUG // eliminate -Wundef warning
+#define THRUST_DEBUG 0
+#endif
+
 #include <thrust/tuple.h>
 #include "detail/reduce.hpp"
 #include "detail/reduce_key_val.hpp"

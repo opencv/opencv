@@ -2,12 +2,13 @@ if(NOT WITH_VTK OR NOT DEFINED HAVE_VTK OR NOT HAVE_VTK)
   ocv_module_disable(viz)
 endif()
 
-include(${VTK_USE_FILE})
 set(the_description "Viz")
-ocv_define_module(viz opencv_core ${VTK_LIBRARIES} WRAP python)
+include(${VTK_USE_FILE})
+ocv_define_module(viz opencv_core WRAP python)
+ocv_target_link_libraries(${the_module} ${VTK_LIBRARIES})
 
 if(APPLE AND BUILD_opencv_viz)
-  ocv_target_link_libraries(opencv_viz "-framework Cocoa")
+  ocv_target_link_libraries(${the_module} "-framework Cocoa")
 endif()
 
 if(TARGET opencv_test_viz)

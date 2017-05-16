@@ -79,7 +79,7 @@ if __name__ == '__main__':
     cv2.createTrackbar('iters', 'morphology', 1, 10, update)
     update()
     while True:
-        ch = 0xFF & cv2.waitKey()
+        ch = cv2.waitKey()
         if ch == 27:
             break
         if ch == ord('1'):

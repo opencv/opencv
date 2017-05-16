@@ -104,7 +104,7 @@ enum SampleTypes
 It is used for optimizing statmodel accuracy by varying model parameters, the accuracy estimate
 being computed by cross-validation.
  */
-class CV_EXPORTS ParamGrid
+class CV_EXPORTS_W ParamGrid
 {
 public:
     /** @brief Default constructor */
@@ -112,8 +112,8 @@ public:
     /** @brief Constructor with parameters */
     ParamGrid(double _minVal, double _maxVal, double _logStep);
 
-    double minVal; //!< Minimum value of the statmodel parameter. Default value is 0.
-    double maxVal; //!< Maximum value of the statmodel parameter. Default value is 0.
+    CV_PROP_RW double minVal; //!< Minimum value of the statmodel parameter. Default value is 0.
+    CV_PROP_RW double maxVal; //!< Maximum value of the statmodel parameter. Default value is 0.
     /** @brief Logarithmic step for iterating the statmodel parameter.
 
     The grid determines the following iteration sequence of the statmodel parameter values:
@@ -122,7 +122,15 @@ public:
     \f[\texttt{minVal} * \texttt{logStep} ^n <  \texttt{maxVal}\f]
     The grid is logarithmic, so logStep must always be greater then 1. Default value is 1.
     */
-    double logStep;
+    CV_PROP_RW double logStep;
+
+    /** @brief Creates a ParamGrid Ptr that can be given to the %SVM::trainAuto method
+
+    @param minVal minimum value of the parameter grid
+    @param maxVal maximum value of the parameter grid
+    @param logstep Logarithmic step for iterating the statmodel parameter
+    */
+    CV_WRAP static Ptr<ParamGrid> create(double minVal=0., double maxVal=0., double logstep=1.);
 };
 
 /** @brief Class encapsulating training data.
@@ -393,6 +401,17 @@ public:
     /** Creates empty model
     Use StatModel::train to train the model after creation. */
     CV_WRAP static Ptr<NormalBayesClassifier> create();
+
+    /** @brief Loads and creates a serialized NormalBayesClassifier from a file
+     *
+     * Use NormalBayesClassifier::save to serialize and store an NormalBayesClassifier to disk.
+     * Load the NormalBayesClassifier from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized NormalBayesClassifier
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<NormalBayesClassifier> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
@@ -672,13 +691,53 @@ public:
     the usual %SVM with parameters specified in params is executed.
      */
     virtual bool trainAuto( const Ptr<TrainData>& data, int kFold = 10,
-                    ParamGrid Cgrid = SVM::getDefaultGrid(SVM::C),
-                    ParamGrid gammaGrid  = SVM::getDefaultGrid(SVM::GAMMA),
-                    ParamGrid pGrid      = SVM::getDefaultGrid(SVM::P),
-                    ParamGrid nuGrid     = SVM::getDefaultGrid(SVM::NU),
-                    ParamGrid coeffGrid  = SVM::getDefaultGrid(SVM::COEF),
-                    ParamGrid degreeGrid = SVM::getDefaultGrid(SVM::DEGREE),
+                    ParamGrid Cgrid = getDefaultGrid(C),
+                    ParamGrid gammaGrid  = getDefaultGrid(GAMMA),
+                    ParamGrid pGrid      = getDefaultGrid(P),
+                    ParamGrid nuGrid     = getDefaultGrid(NU),
+                    ParamGrid coeffGrid  = getDefaultGrid(COEF),
+                    ParamGrid degreeGrid = getDefaultGrid(DEGREE),
                     bool balanced=false) = 0;
+
+    /** @brief Trains an %SVM with optimal parameters
+
+    @param samples training samples
+    @param layout See ml::SampleTypes.
+    @param responses vector of responses associated with the training samples.
+    @param kFold Cross-validation parameter. The training set is divided into kFold subsets. One
+        subset is used to test the model, the others form the train set. So, the %SVM algorithm is
+    @param Cgrid grid for C
+    @param gammaGrid grid for gamma
+    @param pGrid grid for p
+    @param nuGrid grid for nu
+    @param coeffGrid grid for coeff
+    @param degreeGrid grid for degree
+    @param balanced If true and the problem is 2-class classification then the method creates more
+        balanced cross-validation subsets that is proportions between classes in subsets are close
+        to such proportion in the whole train dataset.
+
+    The method trains the %SVM model automatically by choosing the optimal parameters C, gamma, p,
+    nu, coef0, degree. Parameters are considered optimal when the cross-validation
+    estimate of the test set error is minimal.
+
+    This function only makes use of SVM::getDefaultGrid for parameter optimization and thus only
+    offers rudimentary parameter options.
+
+    This function works for the classification (SVM::C_SVC or SVM::NU_SVC) as well as for the
+    regression (SVM::EPS_SVR or SVM::NU_SVR). If it is SVM::ONE_CLASS, no optimization is made and
+    the usual %SVM with parameters specified in params is executed.
+    */
+    CV_WRAP bool trainAuto(InputArray samples,
+            int layout,
+            InputArray responses,
+            int kFold = 10,
+            Ptr<ParamGrid> Cgrid = SVM::getDefaultGridPtr(SVM::C),
+            Ptr<ParamGrid> gammaGrid  = SVM::getDefaultGridPtr(SVM::GAMMA),
+            Ptr<ParamGrid> pGrid      = SVM::getDefaultGridPtr(SVM::P),
+            Ptr<ParamGrid> nuGrid     = SVM::getDefaultGridPtr(SVM::NU),
+            Ptr<ParamGrid> coeffGrid  = SVM::getDefaultGridPtr(SVM::COEF),
+            Ptr<ParamGrid> degreeGrid = SVM::getDefaultGridPtr(SVM::DEGREE),
+            bool balanced=false);
 
     /** @brief Retrieves all the support vectors
 
@@ -721,6 +780,16 @@ public:
     passed to the function SVM::trainAuto.
      */
     static ParamGrid getDefaultGrid( int param_id );
+
+    /** @brief Generates a grid for %SVM parameters.
+
+    @param param_id %SVM parameters IDs that must be one of the SVM::ParamTypes. The grid is
+    generated for the parameter with this ID.
+
+    The function generates a grid pointer for the specified parameter of the %SVM algorithm.
+    The grid may be passed to the function SVM::trainAuto.
+     */
+    CV_WRAP static Ptr<ParamGrid> getDefaultGridPtr( int param_id );
 
     /** Creates empty model.
     Use StatModel::train to train the model. Since %SVM has several parameters, you may want to
@@ -817,6 +886,15 @@ public:
     each matrix is a square floating-point matrix NxN, where N is the space dimensionality.
      */
     CV_WRAP virtual void getCovs(CV_OUT std::vector<Mat>& covs) const = 0;
+
+    /** @brief Returns posterior probabilities for the provided samples
+
+    @param samples The input samples, floating-point matrix
+    @param results The optional output \f$ nSamples \times nClusters\f$ matrix of results. It contains
+    posterior probabilities for each sample from the input
+    @param flags This parameter will be ignored
+     */
+    CV_WRAP virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
 
     /** @brief Returns a likelihood logarithm value and an index of the most probable mixture component
     for the given sample.
@@ -927,6 +1005,17 @@ public:
     can use one of the EM::train\* methods or load it from file using Algorithm::load\<EM\>(filename).
      */
     CV_WRAP static Ptr<EM> create();
+
+    /** @brief Loads and creates a serialized EM from a file
+     *
+     * Use EM::save to serialize and store an EM to disk.
+     * Load the EM from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized EM
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<EM> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
@@ -1115,6 +1204,17 @@ public:
     file using Algorithm::load\<DTrees\>(filename).
      */
     CV_WRAP static Ptr<DTrees> create();
+
+    /** @brief Loads and creates a serialized DTrees from a file
+     *
+     * Use DTree::save to serialize and store an DTree to disk.
+     * Load the DTree from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized DTree
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<DTrees> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
@@ -1164,11 +1264,33 @@ public:
      */
     CV_WRAP virtual Mat getVarImportance() const = 0;
 
+    /** Returns the result of each individual tree in the forest.
+    In case the model is a regression problem, the method will return each of the trees'
+    results for each of the sample cases. If the model is a classifier, it will return
+    a Mat with samples + 1 rows, where the first row gives the class number and the
+    following rows return the votes each class had for each sample.
+        @param samples Array containg the samples for which votes will be calculated.
+        @param results Array where the result of the calculation will be written.
+        @param flags Flags for defining the type of RTrees.
+    */
+    CV_WRAP void getVotes(InputArray samples, OutputArray results, int flags) const;
+
     /** Creates the empty model.
     Use StatModel::train to train the model, StatModel::train to create and train the model,
     Algorithm::load to load the pre-trained model.
      */
     CV_WRAP static Ptr<RTrees> create();
+
+    /** @brief Loads and creates a serialized RTree from a file
+     *
+     * Use RTree::save to serialize and store an RTree to disk.
+     * Load the RTree from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized RTree
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<RTrees> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
@@ -1218,6 +1340,17 @@ public:
     /** Creates the empty model.
     Use StatModel::train to train the model, Algorithm::load\<Boost\>(filename) to load the pre-trained model. */
     CV_WRAP static Ptr<Boost> create();
+
+    /** @brief Loads and creates a serialized Boost from a file
+     *
+     * Use Boost::save to serialize and store an RTree to disk.
+     * Load the Boost from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized Boost
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<Boost> load(const String& filepath , const String& nodeName = String());
 };
 
 /****************************************************************************************\
@@ -1501,6 +1634,17 @@ public:
     Creates Logistic Regression model with parameters given.
      */
     CV_WRAP static Ptr<LogisticRegression> create();
+
+    /** @brief Loads and creates a serialized LogisticRegression from a file
+     *
+     * Use LogisticRegression::save to serialize and store an LogisticRegression to disk.
+     * Load the LogisticRegression from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized LogisticRegression
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<LogisticRegression> load(const String& filepath , const String& nodeName = String());
 };
 
 
@@ -1615,6 +1759,17 @@ public:
      * find the best parameters for your problem or use setOptimalParameters() to set some default parameters.
     */
     CV_WRAP static Ptr<SVMSGD> create();
+
+    /** @brief Loads and creates a serialized SVMSGD from a file
+     *
+     * Use SVMSGD::save to serialize and store an SVMSGD to disk.
+     * Load the SVMSGD from this file again, by calling this function with the path to the file.
+     * Optionally specify the node for the file containing the classifier
+     *
+     * @param filepath path to serialized SVMSGD
+     * @param nodeName name of node containing the classifier
+     */
+    CV_WRAP static Ptr<SVMSGD> load(const String& filepath , const String& nodeName = String());
 
     /** @brief Function sets optimal parameters values for chosen SVM SGD model.
      * @param svmsgdType is the type of SVMSGD classifier.

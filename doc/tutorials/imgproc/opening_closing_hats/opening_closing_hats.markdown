@@ -24,7 +24,7 @@ In the previous tutorial we covered two basic Morphology operations:
 -   Dilation.
 
 Based on these two we can effectuate more sophisticated transformations to our images. Here we
-discuss briefly 05 operations offered by OpenCV:
+discuss briefly 5 operations offered by OpenCV:
 
 ### Opening
 
@@ -40,6 +40,11 @@ discuss briefly 05 operations offered by OpenCV:
 
     ![](images/Morphology_2_Tutorial_Theory_Opening.png)
 
+For the sake of clarity, we have performed the opening operation (`7x7` rectangular structuring element)
+on the same original image but inverted such as the object in white is now the letter.
+
+![Left image: original image inverted, right image: resulting opening](images/Morphology_2_Tutorial_Theory_Opening_2.png)
+
 ### Closing
 
 -   It is obtained by the dilation of an image followed by an erosion.
@@ -49,6 +54,10 @@ discuss briefly 05 operations offered by OpenCV:
 -   Useful to remove small holes (dark regions).
 
     ![](images/Morphology_2_Tutorial_Theory_Closing.png)
+
+On the inverted image, we have performed the closing operation (`7x7` rectangular structuring element):
+
+![Left image: original image inverted, right image: resulting closing](images/Morphology_2_Tutorial_Theory_Closing_2.png)
 
 ### Morphological Gradient
 

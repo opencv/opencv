@@ -154,6 +154,26 @@ void Feature2D::detectAndCompute( InputArray, InputArray,
     CV_Error(Error::StsNotImplemented, "");
 }
 
+void Feature2D::write( const String& fileName ) const
+{
+    FileStorage fs(fileName, FileStorage::WRITE);
+    write(fs);
+}
+
+void Feature2D::read( const String& fileName )
+{
+    FileStorage fs(fileName, FileStorage::READ);
+    read(fs.root());
+}
+
+void Feature2D::write( FileStorage&) const
+{
+}
+
+void Feature2D::read( const FileNode&)
+{
+}
+
 int Feature2D::descriptorSize() const
 {
     return 0;

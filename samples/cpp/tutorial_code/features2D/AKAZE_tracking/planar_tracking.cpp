@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 
     cout << "Please select a bounding box, and press any key to continue." << endl;
     vector<Point2f> bb;
-    cv::Rect2d uBox = selectROI(video_name, frame);
+    cv::Rect uBox = cv::selectROI(video_name, frame);
     bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y)));
     bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y)));
     bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y+uBox.height)));
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
         drawStatistics(orb_res, orb_draw_stats);
         vconcat(akaze_res, orb_res, res_frame);
         cv::imshow(video_name, res_frame);
-        if(cv::waitKey(1)==27) break; //quit on ESC button
+        if(waitKey(1)==27) break; //quit on ESC button
     }
     akaze_stats /= i - 1;
     orb_stats /= i - 1;

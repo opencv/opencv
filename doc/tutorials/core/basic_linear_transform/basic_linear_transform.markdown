@@ -10,6 +10,7 @@ In this tutorial you will learn how to:
 -   Initialize a matrix with zeros
 -   Learn what @ref cv::saturate_cast does and why it is useful
 -   Get some cool info about pixel transformations
+-   Improve the brightness of an image on a practical example
 
 Theory
 ------
@@ -53,87 +54,29 @@ Code
 ----
 
 -   The following code performs the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ :
-@code{.cpp}
-#include <opencv2/opencv.hpp>
-#include <iostream>
-
-using namespace cv;
-
-double alpha; /*< Simple contrast control */
-int beta;  /*< Simple brightness control */
-
-int main( int argc, char** argv )
-{
-    /// Read image given by user
-    Mat image = imread( argv[1] );
-    Mat new_image = Mat::zeros( image.size(), image.type() );
-
-    /// Initialize values
-    std::cout<<" Basic Linear Transforms "<<std::endl;
-    std::cout<<"-------------------------"<<std::endl;
-    std::cout<<"* Enter the alpha value [1.0-3.0]: ";std::cin>>alpha;
-    std::cout<<"* Enter the beta value [0-100]: "; std::cin>>beta;
-
-    /// Do the operation new_image(i,j) = alpha*image(i,j) + beta
-    for( int y = 0; y < image.rows; y++ ) {
-        for( int x = 0; x < image.cols; x++ ) {
-            for( int c = 0; c < 3; c++ ) {
-                new_image.at<Vec3b>(y,x)[c] =
-                saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
-            }
-        }
-    }
-
-    /// Create Windows
-    namedWindow("Original Image", 1);
-    namedWindow("New Image", 1);
-
-    /// Show stuff
-    imshow("Original Image", image);
-    imshow("New Image", new_image);
-
-    /// Wait until user press some key
-    waitKey();
-    return 0;
-}
-@endcode
+@include BasicLinearTransforms.cpp
 
 Explanation
 -----------
 
 -#  We begin by creating parameters to save \f$\alpha\f$ and \f$\beta\f$ to be entered by the user:
-    @code{.cpp}
-    double alpha;
-    int beta;
-    @endcode
+    @snippet BasicLinearTransforms.cpp basic-linear-transform-parameters
+
 -#  We load an image using @ref cv::imread and save it in a Mat object:
-    @code{.cpp}
-    Mat image = imread( argv[1] );
-    @endcode
+    @snippet BasicLinearTransforms.cpp basic-linear-transform-load
 -#  Now, since we will make some transformations to this image, we need a new Mat object to store
     it. Also, we want this to have the following features:
 
     -   Initial pixel values equal to zero
     -   Same size and type as the original image
-    @code{.cpp}
-    Mat new_image = Mat::zeros( image.size(), image.type() );
-    @endcode
+    @snippet BasicLinearTransforms.cpp basic-linear-transform-output
     We observe that @ref cv::Mat::zeros returns a Matlab-style zero initializer based on
     *image.size()* and *image.type()*
 
 -#  Now, to perform the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ we will access to each
     pixel in image. Since we are operating with BGR images, we will have three values per pixel (B,
     G and R), so we will also access them separately. Here is the piece of code:
-    @code{.cpp}
-    for( int y = 0; y < image.rows; y++ ) {
-        for( int x = 0; x < image.cols; x++ ) {
-            for( int c = 0; c < 3; c++ ) {
-                new_image.at<Vec3b>(y,x)[c] =
-                  saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
-            }
-        }
-    }
-    @endcode
+    @snippet BasicLinearTransforms.cpp basic-linear-transform-operation
     Notice the following:
     -   To access each pixel in the images we are using this syntax: *image.at\<Vec3b\>(y,x)[c]*
         where *y* is the row, *x* is the column and *c* is R, G or B (0, 1 or 2).
@@ -142,15 +85,7 @@ Explanation
         values are valid.
 
 -#  Finally, we create windows and show the images, the usual way.
-    @code{.cpp}
-    namedWindow("Original Image", 1);
-    namedWindow("New Image", 1);
-
-    imshow("Original Image", image);
-    imshow("New Image", new_image);
-
-    waitKey(0);
-    @endcode
+    @snippet BasicLinearTransforms.cpp basic-linear-transform-display
 
 @note
     Instead of using the **for** loops to access each pixel, we could have simply used this command:
@@ -176,3 +111,89 @@ Result
 -   We get this:
 
     ![](images/Basic_Linear_Transform_Tutorial_Result_big.jpg)
+
+Practical example
+----
+
+In this paragraph, we will put into practice what we have learned to correct an underexposed image by adjusting the brightness
+and the contrast of the image. We will also see another technique to correct the brightness of an image called
+gamma correction.
+
+### Brightness and contrast adjustments
+
+Increasing (/ decreasing) the \f$\beta\f$ value will add (/ subtract) a constant value to every pixel. Pixel values outside of the [0 ; 255]
+range will be saturated (i.e. a pixel value higher (/ lesser) than 255 (/ 0) will be clamp to 255 (/ 0)).
+
+![In light gray, histogram of the original image, in dark gray when brightness = 80 in Gimp](images/Basic_Linear_Transform_Tutorial_hist_beta.png)
+
+The histogram represents for each color level the number of pixels with that color level. A dark image will have many pixels with
+low color value and thus the histogram will present a peak in his left part. When adding a constant bias, the histogram is shifted to the
+right as we have added a constant bias to all the pixels.
+
+The \f$\alpha\f$ parameter will modify how the levels spread. If \f$ \alpha < 1 \f$, the color levels will be compressed and the result
+will be an image with less contrast.
+
+![In light gray, histogram of the original image, in dark gray when contrast < 0 in Gimp](images/Basic_Linear_Transform_Tutorial_hist_alpha.png)
+
+Note that these histograms have been obtained using the Brightness-Contrast tool in the Gimp software. The brightness tool should be
+identical to the \f$\beta\f$ bias parameters but the contrast tool seems to differ to the \f$\alpha\f$ gain where the output range
+seems to be centered with Gimp (as you can notice in the previous histogram).
+
+It can occur that playing with the \f$\beta\f$ bias will improve the brightness but in the same time the image will appear with a
+slight veil as the contrast will be reduced. The \f$\alpha\f$ gain can be used to diminue this effect but due to the saturation,
+we will lose some details in the original bright regions.
+
+### Gamma correction
+
+[Gamma correction](https://en.wikipedia.org/wiki/Gamma_correction) can be used to correct the brightness of an image by using a non
+linear transformation between the input values and the mapped output values:
+
+\f[O = \left( \frac{I}{255} \right)^{\gamma} \times 255\f]
+
+As this relation is non linear, the effect will not be the same for all the pixels and will depend to their original value.
+
+![Plot for different values of gamma](images/Basic_Linear_Transform_Tutorial_gamma.png)
+
+When \f$ \gamma < 1 \f$, the original dark regions will be brighter and the histogram will be shifted to the right whereas it will
+be the opposite with \f$ \gamma > 1 \f$.
+
+### Correct an underexposed image
+
+The following image has been corrected with: \f$ \alpha = 1.3 \f$ and \f$ \beta = 40 \f$.
+
+![By Visem (Own work) [CC BY-SA 3.0], via Wikimedia Commons](images/Basic_Linear_Transform_Tutorial_linear_transform_correction.jpg)
+
+The overall brightness has been improved but you can notice that the clouds are now greatly saturated due to the numerical saturation
+of the implementation used ([highlight clipping](https://en.wikipedia.org/wiki/Clipping_(photography)) in photography).
+
+The following image has been corrected with: \f$ \gamma = 0.4 \f$.
+
+![By Visem (Own work) [CC BY-SA 3.0], via Wikimedia Commons](images/Basic_Linear_Transform_Tutorial_gamma_correction.jpg)
+
+The gamma correction should tend to add less saturation effect as the mapping is non linear and there is no numerical saturation possible as in the previous method.
+
+![Left: histogram after alpha, beta correction ; Center: histogram of the original image ; Right: histogram after the gamma correction](images/Basic_Linear_Transform_Tutorial_histogram_compare.png)
+
+The previous figure compares the histograms for the three images (the y-ranges are not the same between the three histograms).
+You can notice that most of the pixel values are in the lower part of the histogram for the original image. After \f$ \alpha \f$,
+\f$ \beta \f$ correction, we can observe a big peak at 255 due to the saturation as well as a shift in the right.
+After gamma correction, the histogram is shifted to the right but the pixels in the dark regions are more shifted
+(see the gamma curves [figure](Basic_Linear_Transform_Tutorial_gamma.png)) than those in the bright regions.
+
+In this tutorial, you have seen two simple methods to adjust the contrast and the brightness of an image. **They are basic techniques
+and are not intended to be used as a replacement of a raster graphics editor!**
+
+### Code
+
+Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/ImgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.cpp).
+Code for the gamma correction:
+
+@snippet changing_contrast_brightness_image.cpp changing-contrast-brightness-gamma-correction
+
+A look-up table is used to improve the performance of the computation as only 256 values needs to be calculated once.
+
+### Additional resources
+
+-   [Gamma correction in graphics rendering](https://learnopengl.com/#!Advanced-Lighting/Gamma-Correction)
+-   [Gamma correction and images displayed on CRT monitors](http://www.graphics.cornell.edu/~westin/gamma/gamma.html)
+-   [Digital exposure techniques](http://www.cambridgeincolour.com/tutorials/digital-exposure-techniques.htm)

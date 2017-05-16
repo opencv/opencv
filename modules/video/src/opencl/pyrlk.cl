@@ -260,13 +260,13 @@ inline void GetPatch(image2d_t J, float x, float y,
 
 inline void GetError(image2d_t J, const float x, const float y, const float* Pch, float* errval)
 {
-    float diff = read_imagef(J, sampler, (float2)(x,y)).x-*Pch;
+    float diff = (((read_imagef(J, sampler, (float2)(x,y)).x * 16384) + 256) / 512) - (((*Pch * 16384) + 256) /512);
     *errval += fabs(diff);
 }
 
 
 //macro to read pixel value into local memory.
-#define READI(_y,_x) IPatchLocal[mad24(mad24((_y), LSy, yid), LM_W, mad24((_x), LSx, xid))] = read_imagef(I, sampler, (float2)(mad((_x), LSx, Point.x + xid - 0.5f), mad((_y), LSy, Point.y + yid - 0.5f))).x;
+#define READI(_y,_x) IPatchLocal[mad24(mad24((_y), LSy, yid), LM_W, mad24((_x), LSx, xid))] = read_imagef(I, sampler, (float2)(mad((float)(_x), (float)LSx, Point.x + xid - 0.5f), mad((float)(_y), (float)LSy, Point.y + yid - 0.5f))).x;
 void ReadPatchIToLocalMem(image2d_t I, float2 Point, local float* IPatchLocal)
 {
     int xid=get_local_id(0);
@@ -526,6 +526,6 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
         nextPts[gid] = prevPt;
 
         if (calcErr)
-            err[gid] = smem1[0] / (float)(c_winSize_x * c_winSize_y);
+            err[gid] = smem1[0] / (float)(32 * c_winSize_x * c_winSize_y);
     }
 }

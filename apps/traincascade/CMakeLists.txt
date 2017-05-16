@@ -8,6 +8,8 @@ endif()
 project(traincascade)
 set(the_target opencv_traincascade)
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Woverloaded-virtual)
+
 ocv_target_include_directories(${the_target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
 ocv_target_include_modules_recurse(${the_target} ${OPENCV_TRAINCASCADE_DEPS})
 

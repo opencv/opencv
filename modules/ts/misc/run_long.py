@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+import xml.etree.ElementTree as ET
+from glob import glob
+from pprint import PrettyPrinter as PP
+
+LONG_TESTS_DEBUG_VALGRIND = [
+    ('calib3d', 'Calib3d_InitUndistortRectifyMap.accuracy', 2017.22),
+    ('features2d', 'Features2d_Feature2d.no_crash', 1235.68),
+    ('ml', 'ML_RTrees.regression', 1423.47),
+    ('optflow', 'DenseOpticalFlow_DeepFlow.ReferenceAccuracy', 1360.95),
+    ('optflow', 'DenseOpticalFlow_DeepFlow_perf.perf/0', 1881.59),
+    ('optflow', 'DenseOpticalFlow_DeepFlow_perf.perf/1', 5608.75),
+    ('optflow', 'DenseOpticalFlow_GlobalPatchColliderDCT.ReferenceAccuracy', 5433.84),
+    ('optflow', 'DenseOpticalFlow_GlobalPatchColliderWHT.ReferenceAccuracy', 5232.73),
+    ('optflow', 'DenseOpticalFlow_SimpleFlow.ReferenceAccuracy', 1542.1),
+    ('photo', 'Photo_Denoising.speed', 1484.87),
+    ('photo', 'Photo_DenoisingColoredMulti.regression', 2447.11),
+    ('rgbd', 'Rgbd_Normals.compute', 1156.32),
+    ('shape', 'Hauss.regression', 2625.72),
+    ('shape', 'ShapeEMD_SCD.regression', 61913.7),
+    ('shape', 'Shape_SCD.regression', 3311.46),
+    ('tracking', 'AUKF.br_mean_squared_error', 10764.6),
+    ('tracking', 'UKF.br_mean_squared_error', 5228.27),
+    ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_BoostDesc_LBGM.regression', 1124.51),
+    ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG120.regression', 2198.1),
+    ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG48.regression', 1958.52),
+    ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG64.regression', 2113.12),
+    ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG80.regression', 2167.16),
+    ('xfeatures2d', 'Features2d_ScaleInvariance_Descriptor_BoostDesc_LBGM.regression', 1511.39),
+    ('xfeatures2d', 'Features2d_ScaleInvariance_Descriptor_VGG120.regression', 1222.07),
+    ('xfeatures2d', 'Features2d_ScaleInvariance_Descriptor_VGG48.regression', 1059.14),
+    ('xfeatures2d', 'Features2d_ScaleInvariance_Descriptor_VGG64.regression', 1163.41),
+    ('xfeatures2d', 'Features2d_ScaleInvariance_Descriptor_VGG80.regression', 1179.06),
+    ('ximgproc', 'L0SmoothTest.SplatSurfaceAccuracy', 6382.26),
+    ('ximgproc', 'L0SmoothTest_perf.perf/17', 2052.16),
+    ('ximgproc', 'RollingGuidanceFilterTest_perf.perf/59', 2760.29),
+    ('ximgproc', 'TypicalSet1/RollingGuidanceFilterTest.MultiThreadReproducibility/5', 1086.33),
+    ('ximgproc', 'TypicalSet1/RollingGuidanceFilterTest.MultiThreadReproducibility/7', 1405.05),
+    ('ximgproc', 'TypicalSet1/RollingGuidanceFilterTest.SplatSurfaceAccuracy/5', 1253.07),
+    ('ximgproc', 'TypicalSet1/RollingGuidanceFilterTest.SplatSurfaceAccuracy/7', 1599.98),
+]
+
+
+def longTestFilter(data):
+    res = ['*', '-']
+    for _, v, _ in data:
+        res.append(v)
+    return '--gtest_filter={}'.format(':'.join(res))
+
+
+# Parse one xml file, filter out tests which took less than 'timeLimit' seconds
+# Returns tuple: ( <module_name>, [ (<module_name>, <test_name>, <test_time>), ... ] )
+def parseOneFile(filename, timeLimit):
+    tree = ET.parse(filename)
+    root = tree.getroot()
+
+    def guess(s, delims):
+        for delim in delims:
+            tmp = s.partition(delim)
+            if len(tmp[1]) != 0:
+                return tmp[0]
+        return None
+    module = guess(filename, ['_posix_', '_nt_', '__']) or root.get('cv_module_name')
+    if not module:
+        return (None, None)
+    res = []
+    for elem in root.findall('.//testcase'):
+        key = '{}.{}'.format(elem.get('classname'), elem.get('name'))
+        val = elem.get('time')
+        if float(val) >= timeLimit:
+            res.append((module, key, float(val)))
+    return (module, res)
+
+
+# Parse all xml files in current folder and combine results into one list
+# Print result to the stdout
+if __name__ == '__main__':
+    LIMIT = 1000
+    res = []
+    xmls = glob('*.xml')
+    for xml in xmls:
+        print('Parsing file', xml, '...')
+        module, testinfo = parseOneFile(xml, LIMIT)
+        if not module:
+            print('SKIP')
+            continue
+        res.extend(testinfo)
+
+    print('========= RESULTS =========')
+    PP(indent=4, width=100).pprint(sorted(res))

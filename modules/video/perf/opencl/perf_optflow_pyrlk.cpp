@@ -54,9 +54,6 @@ using std::tr1::make_tuple;
 namespace cvtest {
 namespace ocl {
 
-///////////// FarnebackOpticalFlow ////////////////////////
-CV_ENUM(farneFlagType, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
-
 typedef tuple< int > PyrLKOpticalFlowParams;
 typedef TestBaseWithParam<PyrLKOpticalFlowParams> PyrLKOpticalFlowFixture;
 

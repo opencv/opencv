@@ -51,7 +51,7 @@ using namespace cv;
 using namespace std;
 
 ChessBoardGenerator::ChessBoardGenerator(const Size& _patternSize) : sensorWidth(32), sensorHeight(24),
-    squareEdgePointsNum(200), min_cos(std::sqrt(2.f)*0.5f), cov(0.5),
+    squareEdgePointsNum(200), min_cos(std::sqrt(3.f)*0.5f), cov(0.5),
     patternSize(_patternSize), rendererResolutionMultiplier(4), tvec(Mat::zeros(1, 3, CV_32F))
 {
     Rodrigues(Mat::eye(3, 3, CV_32F), rvec);
@@ -85,8 +85,10 @@ void cv::ChessBoardGenerator::generateBasis(Point3f& pb1, Point3f& pb2) const
     {
         n[0] = rng.uniform(-1.f, 1.f);
         n[1] = rng.uniform(-1.f, 1.f);
-        n[2] = rng.uniform(-1.f, 1.f);
+        n[2] = rng.uniform(0.0f, 1.f);
         float len = (float)norm(n);
+        if (len < 1e-3)
+            continue;
         n[0]/=len;
         n[1]/=len;
         n[2]/=len;

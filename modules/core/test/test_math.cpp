@@ -2748,20 +2748,22 @@ public:
 protected:
     void run(int inVariant)
     {
+        RNG& rng = ts->get_rng();
         int i, iter = 0, N = 0, N0 = 0, K = 0, dims = 0;
         Mat labels;
-        try
+
         {
-            RNG& rng = theRNG();
             const int MAX_DIM=5;
             int MAX_POINTS = 100, maxIter = 100;
             for( iter = 0; iter < maxIter; iter++ )
             {
                 ts->update_context(this, iter, true);
                 dims = rng.uniform(inVariant == MAT_1_N_CDIM ? 2 : 1, MAX_DIM+1);
-                N = rng.uniform(1, MAX_POINTS+1);
+                N = rng.uniform(2, MAX_POINTS+1);
                 N0 = rng.uniform(1, MAX(N/10, 2));
                 K = rng.uniform(1, N+1);
+
+                Mat centers;
 
                 if (inVariant == VECTOR)
                 {
@@ -2775,7 +2777,7 @@ protected:
                         data[i] = data0[rng.uniform(0, N0)];
 
                     kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
-                           5, KMEANS_PP_CENTERS);
+                           5, KMEANS_PP_CENTERS, centers);
                 }
                 else
                 {
@@ -2820,27 +2822,23 @@ protected:
                     }
 
                     kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
-                           5, KMEANS_PP_CENTERS);
+                           5, KMEANS_PP_CENTERS, centers);
                 }
+
+                ASSERT_EQ(centers.rows, K);
+                ASSERT_EQ(labels.rows, N);
 
                 Mat hist(K, 1, CV_32S, Scalar(0));
                 for( i = 0; i < N; i++ )
                 {
                     int l = labels.at<int>(i);
-                    CV_Assert(0 <= l && l < K);
+                    ASSERT_GE(l, 0);
+                    ASSERT_LT(l, K);
                     hist.at<int>(l)++;
                 }
                 for( i = 0; i < K; i++ )
-                    CV_Assert( hist.at<int>(i) != 0 );
+                    ASSERT_GT(hist.at<int>(i), 0);
             }
-        }
-        catch(...)
-        {
-            ts->printf(cvtest::TS::LOG,
-                       "context: iteration=%d, N=%d, N0=%d, K=%d\n",
-                       iter, N, N0, K);
-            std::cout << labels << std::endl;
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         }
     }
 };
@@ -2858,6 +2856,35 @@ TEST_P(Core_KMeans_InputVariants, singular)
 }
 
 INSTANTIATE_TEST_CASE_P(AllVariants, Core_KMeans_InputVariants, KMeansInputVariant::all());
+
+TEST(Core_KMeans, compactness)
+{
+    const int N = 1024;
+    const int attempts = 4;
+    const TermCriteria crit = TermCriteria(TermCriteria::COUNT, 5, 0); // low number of iterations
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    for (int K = 1; K <= N; K *= 2)
+    {
+        Mat data(N, 1, CV_32FC2);
+        cvtest::randUni(ts.get_rng(), data, Scalar(-200, -200), Scalar(200, 200));
+        Mat labels, centers;
+        double compactness = kmeans(data, K, labels, crit, attempts, KMEANS_PP_CENTERS, centers);
+        centers = centers.reshape(2);
+        EXPECT_EQ(labels.rows, N);
+        EXPECT_EQ(centers.rows, K);
+        EXPECT_GE(compactness, 0.0);
+        double expected = 0.0;
+        for (int i = 0; i < N; ++i)
+        {
+            int l = labels.at<int>(i);
+            Point2f d = data.at<Point2f>(i) - centers.at<Point2f>(l);
+            expected += d.x * d.x + d.y * d.y;
+        }
+        EXPECT_NEAR(expected, compactness, expected * 1e-8);
+        if (K == N)
+            EXPECT_DOUBLE_EQ(compactness, 0.0);
+    }
+}
 
 TEST(CovariationMatrixVectorOfMat, accuracy)
 {

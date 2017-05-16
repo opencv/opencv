@@ -66,8 +66,33 @@
 #include <setjmp.h>
 #endif
 
+// isDirectory
+#if defined WIN32 || defined _WIN32 || defined WINCE
+# include <windows.h>
+#else
+# include <dirent.h>
+# include <sys/stat.h>
+#endif
+
+
+#include "opencv_tests_config.hpp"
+
 namespace cvtest
 {
+
+uint64 param_seed = 0x12345678; // real value is passed via parseCustomOptions function
+
+static std::string path_join(const std::string& prefix, const std::string& subpath)
+{
+    CV_Assert(subpath.empty() || subpath[0] != '/');
+    if (prefix.empty())
+        return subpath;
+    bool skipSlash = prefix.size() > 0 ? (prefix[prefix.size()-1] == '/' || prefix[prefix.size()-1] == '\\') : false;
+    std::string path = prefix + (skipSlash ? "" : "/") + subpath;
+    return path;
+}
+
+
 
 /*****************************************************************************************\
 *                                Exception and memory handlers                            *
@@ -449,6 +474,7 @@ static int tsErrorCallback( int status, const char* func_name, const char* err_m
 
 void TS::init( const string& modulename )
 {
+    data_search_subdir.push_back(modulename);
 #ifndef WINRT
     char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
 #else
@@ -457,11 +483,7 @@ void TS::init( const string& modulename )
 
     if( datapath_dir )
     {
-        char buf[1024];
-        size_t l = strlen(datapath_dir);
-        bool haveSlash = l > 0 && (datapath_dir[l-1] == '/' || datapath_dir[l-1] == '\\');
-        sprintf( buf, "%s%s%s/", datapath_dir, haveSlash ? "" : "/", modulename.c_str() );
-        data_path = string(buf);
+        data_path = path_join(path_join(datapath_dir, modulename), "");
     }
 
     cv::redirectError((cv::ErrorCallback)tsErrorCallback, this);
@@ -583,7 +605,7 @@ void TS::printf( int streams, const char* fmt, ... )
 }
 
 
-TS ts;
+static TS ts;
 TS* TS::ptr() { return &ts; }
 
 void fillGradient(Mat& img, int delta)
@@ -659,7 +681,6 @@ void smoothBorder(Mat& img, const Scalar& color, int delta)
     }
 }
 
-} //namespace cvtest
 
 bool test_ipp_check = false;
 
@@ -676,6 +697,7 @@ void parseCustomOptions(int argc, char **argv)
 {
     const char * const command_line_keys =
         "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
+        "{ test_seed          |809564   |seed for random numbers generator }"
         "{ h   help           |false    |print help info                          }";
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
@@ -692,6 +714,119 @@ void parseCustomOptions(int argc, char **argv)
 #else
         test_ipp_check = false;
 #endif
+
+    param_seed = parser.get<unsigned int>("test_seed");
 }
+
+
+static bool isDirectory(const std::string& path)
+{
+#if defined WIN32 || defined _WIN32 || defined WINCE
+    WIN32_FILE_ATTRIBUTE_DATA all_attrs;
+#ifdef WINRT
+    wchar_t wpath[MAX_PATH];
+    size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
+    CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+    BOOL status = ::GetFileAttributesExW(wpath, GetFileExInfoStandard, &all_attrs);
+#else
+    BOOL status = ::GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &all_attrs);
+#endif
+    DWORD attributes = all_attrs.dwFileAttributes;
+    return status && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+#else
+    struct stat s;
+    if (0 != stat(path.c_str(), &s))
+        return false;
+    return S_ISDIR(s.st_mode);
+#endif
+}
+
+CV_EXPORTS void addDataSearchPath(const std::string& path)
+{
+    if (isDirectory(path))
+        TS::ptr()->data_search_path.push_back(path);
+}
+CV_EXPORTS void addDataSearchSubDirectory(const std::string& subdir)
+{
+    TS::ptr()->data_search_subdir.push_back(subdir);
+}
+
+std::string findDataFile(const std::string& relative_path, bool required)
+{
+#define TEST_TRY_FILE_WITH_PREFIX(prefix) \
+{ \
+    std::string path = path_join(prefix, relative_path); \
+    /*printf("Trying %s\n", path.c_str());*/ \
+    FILE* f = fopen(path.c_str(), "rb"); \
+    if(f) { \
+       fclose(f); \
+       return path; \
+    } \
+}
+
+    const std::vector<std::string>& search_path = TS::ptr()->data_search_path;
+    for(size_t i = search_path.size(); i > 0; i--)
+    {
+        const std::string& prefix = search_path[i - 1];
+        TEST_TRY_FILE_WITH_PREFIX(prefix);
+    }
+
+    const std::vector<std::string>& search_subdir = TS::ptr()->data_search_subdir;
+
+#ifndef WINRT
+    char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
+#else
+    char* datapath_dir = OPENCV_TEST_DATA_PATH;
+#endif
+
+    std::string datapath;
+    if (datapath_dir)
+    {
+        datapath = datapath_dir;
+        //CV_Assert(isDirectory(datapath) && "OPENCV_TEST_DATA_PATH is specified but it doesn't exist");
+        if (isDirectory(datapath))
+        {
+            for(size_t i = search_subdir.size(); i > 0; i--)
+            {
+                const std::string& subdir = search_subdir[i - 1];
+                std::string prefix = path_join(datapath, subdir);
+                TEST_TRY_FILE_WITH_PREFIX(prefix);
+            }
+        }
+    }
+#ifdef OPENCV_TEST_DATA_INSTALL_PATH
+    datapath = path_join("./", OPENCV_TEST_DATA_INSTALL_PATH);
+    if (isDirectory(datapath))
+    {
+        for(size_t i = search_subdir.size(); i > 0; i--)
+        {
+            const std::string& subdir = search_subdir[i - 1];
+            std::string prefix = path_join(datapath, subdir);
+            TEST_TRY_FILE_WITH_PREFIX(prefix);
+        }
+    }
+#ifdef OPENCV_INSTALL_PREFIX
+    else
+    {
+        datapath = path_join(OPENCV_INSTALL_PREFIX, OPENCV_TEST_DATA_INSTALL_PATH);
+        if (isDirectory(datapath))
+        {
+            for(size_t i = search_subdir.size(); i > 0; i--)
+            {
+                const std::string& subdir = search_subdir[i - 1];
+                std::string prefix = path_join(datapath, subdir);
+                TEST_TRY_FILE_WITH_PREFIX(prefix);
+            }
+        }
+    }
+#endif
+#endif
+    if (required)
+        CV_ErrorNoReturn(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
+    throw SkipTestException(cv::format("OpenCV tests: Can't find data file: %s", relative_path.c_str()));
+}
+
+
+} //namespace cvtest
 
 /* End of file. */

@@ -105,8 +105,8 @@ int main(int argc, char* argv[])
     for (;;)
     {
         updateWindow("OpenGL");
-        int key = waitKey(40);
-        if ((key & 0xff) == 27)
+        char key = (char)waitKey(40);
+        if (key == 27)
             break;
     }
 

@@ -212,8 +212,12 @@ namespace
                 for (int i = 0; i < histSize; ++i)
                     tileHist[i] += redistBatch;
 
-                for (int i = 0; i < residual; ++i)
-                    tileHist[i]++;
+                if (residual != 0)
+                {
+                    int residualStep = MAX(histSize / residual, 1);
+                    for (int i = 0; i < histSize && residual > 0; i += residualStep, residual--)
+                        tileHist[i]++;
+                }
             }
 
             // calc Lut
@@ -359,7 +363,7 @@ namespace
         bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.dims()<=2 && _src.type() == CV_8UC1;
 #endif
 
-        int histSize = _src.type() == CV_8UC1 ? 256 : 4096;
+        int histSize = _src.type() == CV_8UC1 ? 256 : 65536;
 
         cv::Size tileSize;
         cv::_InputArray _srcForLut;
@@ -416,7 +420,7 @@ namespace
         if (_src.type() == CV_8UC1)
             calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 256, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else if (_src.type() == CV_16UC1)
-            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 4096, 4> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 65536, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else
             CV_Error( CV_StsBadArg, "Unsupported type" );
 
@@ -426,7 +430,7 @@ namespace
         if (_src.type() == CV_8UC1)
             interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
         else if (_src.type() == CV_16UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 4> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
 
         cv::parallel_for_(cv::Range(0, src.rows), *interpolationBody);
     }

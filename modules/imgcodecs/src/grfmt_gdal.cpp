@@ -308,6 +308,11 @@ void write_pixel( const double& pixelValue,
     // input: 4 channel, output: 4 channel
     else if( gdalChannels == 4 && image.channels() == 4 ){
         if( image.depth() == CV_8U ){  image.at<Vec4b>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_16U ){  image.at<Vec4s>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_16S ){  image.at<Vec4s>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_32S ){  image.at<Vec4i>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_32F ){  image.at<Vec4f>(row,col)[channel] = newValue;  }
+        else if( image.depth() == CV_64F ){  image.at<Vec4d>(row,col)[channel] = newValue;  }
         else{ throw std::runtime_error("Unknown image depth, gdal: 4, image: 4"); }
     }
 

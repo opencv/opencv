@@ -44,7 +44,7 @@ if __name__ == '__main__':
             cv2.circle(img, (x, y), 1, c, -1)
 
         cv2.imshow('gaussian mixture', img)
-        ch = 0xFF & cv2.waitKey(0)
+        ch = cv2.waitKey(0)
         if ch == 27:
             break
     cv2.destroyAllWindows()

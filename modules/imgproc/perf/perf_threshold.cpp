@@ -14,7 +14,7 @@ typedef perf::TestBaseWithParam<Size_MatType_ThreshType_t> Size_MatType_ThreshTy
 PERF_TEST_P(Size_MatType_ThreshType, threshold,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_16SC1),
+                testing::Values(CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1),
                 ThreshType::all()
                 )
             )

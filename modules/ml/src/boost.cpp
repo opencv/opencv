@@ -507,6 +507,11 @@ Ptr<Boost> Boost::create()
     return makePtr<BoostImpl>();
 }
 
+Ptr<Boost> Boost::load(const String& filepath, const String& nodeName)
+{
+    return Algorithm::load<Boost>(filepath, nodeName);
+}
+
 }}
 
 /* End of file. */

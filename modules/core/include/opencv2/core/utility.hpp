@@ -54,6 +54,7 @@
 #endif
 
 #include "opencv2/core.hpp"
+#include <ostream>
 
 namespace cv
 {
@@ -61,8 +62,8 @@ namespace cv
 #ifdef CV_COLLECT_IMPL_DATA
 CV_EXPORTS void setImpl(int flags); // set implementation flags and reset storage arrays
 CV_EXPORTS void addImpl(int flag, const char* func = 0); // add implementation and function name to storage arrays
-// Get stored implementation flags and fucntions names arrays
-// Each implementation entry correspond to function name entry, so you can find which implementation was executed in which fucntion
+// Get stored implementation flags and functions names arrays
+// Each implementation entry correspond to function name entry, so you can find which implementation was executed in which function
 CV_EXPORTS int getImpl(std::vector<int> &impl, std::vector<String> &funName);
 
 CV_EXPORTS bool useCollection(); // return implementation collection state
@@ -102,7 +103,7 @@ CV_EXPORTS void setUseCollection(bool flag); // set implementation collection st
  \code
  void my_func(const cv::Mat& m)
  {
-    cv::AutoBuffer<float> buf; // create automatic buffer containing 1000 floats
+    cv::AutoBuffer<float> buf(1000); // create automatic buffer containing 1000 floats
 
     buf.allocate(m.rows); // if m.rows <= 1000, the pre-allocated buffer is used,
                           // otherwise the buffer of "m.rows" floats will be allocated
@@ -137,9 +138,9 @@ public:
     void resize(size_t _size);
     //! returns the current buffer size
     size_t size() const;
-    //! returns pointer to the real buffer, stack-allocated or head-allocated
+    //! returns pointer to the real buffer, stack-allocated or heap-allocated
     operator _Tp* ();
-    //! returns read-only pointer to the real buffer, stack-allocated or head-allocated
+    //! returns read-only pointer to the real buffer, stack-allocated or heap-allocated
     operator const _Tp* () const;
 
 protected:
@@ -147,7 +148,7 @@ protected:
     _Tp* ptr;
     //! size of the real buffer
     size_t sz;
-    //! pre-allocated buffer. At least 1 element to confirm C++ standard reqirements
+    //! pre-allocated buffer. At least 1 element to confirm C++ standard requirements
     _Tp buf[(fixed_size > 0) ? fixed_size : 1];
 };
 
@@ -196,7 +197,7 @@ be called outside of parallel region.
 OpenCV will try to run it's functions with specified threads number, but some behaviour differs from
 framework:
 -   `TBB` – User-defined parallel constructions will run with the same threads number, if
-    another does not specified. If late on user creates own scheduler, OpenCV will be use it.
+    another does not specified. If later on user creates own scheduler, OpenCV will use it.
 -   `OpenMP` – No special defined behaviour.
 -   `Concurrency` – If threads == 1, OpenCV will disable threading optimizations and run it's
     functions sequentially.
@@ -229,7 +230,7 @@ CV_EXPORTS_W int getNumThreads();
 returns 0 if called outside of parallel region.
 
 The exact meaning of return value depends on the threading framework used by OpenCV library:
-- `TBB` – Unsupported with current 4.1 TBB release. May be will be supported in future.
+- `TBB` – Unsupported with current 4.1 TBB release. Maybe will be supported in future.
 - `OpenMP` – The thread number, within the current team, of the calling thread.
 - `Concurrency` – An ID for the virtual processor that the current context is executing on (0
   for master thread and unique number for others, but not necessary 1,2,3,...).
@@ -507,7 +508,7 @@ void Mat::forEach_impl(const Functor& operation) {
                     this->rowCall2(row, COLS);
                 }
             } else {
-                std::vector<int> idx(COLS); /// idx is modified in this->rowCall
+                std::vector<int> idx(DIMS); /// idx is modified in this->rowCall
                 idx[DIMS - 2] = range.start - 1;
 
                 for (int line_num = range.start; line_num < range.end; ++line_num) {
@@ -627,6 +628,9 @@ public:
     virtual void  deleteDataInstance(void* pData) const = 0;
 
     int key_;
+
+public:
+    void cleanup(); //! Release created TLS data container objects. It is similar to release() call, but it keeps TLS container valid.
 };
 
 // Main TLS data class
@@ -636,14 +640,16 @@ class TLSData : protected TLSDataContainer
 public:
     inline TLSData()        {}
     inline ~TLSData()       { release();            } // Release key and delete associated data
-    inline T* get() const   { return (T*)getData(); } // Get data assosiated with key
+    inline T* get() const   { return (T*)getData(); } // Get data associated with key
 
-     // Get data from all threads
+    // Get data from all threads
     inline void gather(std::vector<T*> &data) const
     {
         std::vector<void*> &dataVoid = reinterpret_cast<std::vector<void*>&>(data);
         gatherData(dataVoid);
     }
+
+    inline void cleanup() { TLSDataContainer::cleanup(); }
 
 private:
     virtual void* createDataInstance() const {return new T;}                // Wrapper to allocate data by template
@@ -687,7 +693,7 @@ The sample below demonstrates how to use CommandLineParser:
 
 ### Keys syntax
 
-The keys parameter is a string containing several blocks, each one is enclosed in curley braces and
+The keys parameter is a string containing several blocks, each one is enclosed in curly braces and
 describes one argument. Each argument contains three parts separated by the `|` symbol:
 
 -# argument names is a space-separated list of option synonyms (to mark argument as positional, prefix it with the `@` symbol)
@@ -845,7 +851,7 @@ public:
 
     /** @brief Check for parsing errors
 
-    Returns true if error occured while accessing the parameters (bad conversion, missing arguments,
+    Returns true if error occurred while accessing the parameters (bad conversion, missing arguments,
     etc.). Call @ref printErrors to print error messages list.
      */
     bool check() const;
@@ -1029,7 +1035,7 @@ public:
 
     Node<OBJECT>* findChild(OBJECT& payload) const
     {
-        for(int i = 0; i < this->m_childs.size(); i++)
+        for(size_t i = 0; i < this->m_childs.size(); i++)
         {
             if(this->m_childs[i]->m_payload == payload)
                 return this->m_childs[i];
@@ -1039,10 +1045,10 @@ public:
 
     int findChild(Node<OBJECT> *pNode) const
     {
-        for (int i = 0; i < this->m_childs.size(); i++)
+        for (size_t i = 0; i < this->m_childs.size(); i++)
         {
             if(this->m_childs[i] == pNode)
-                return i;
+                return (int)i;
         }
         return -1;
     }
@@ -1059,12 +1065,20 @@ public:
 
     void removeChilds()
     {
-        for(int i = 0; i < m_childs.size(); i++)
+        for(size_t i = 0; i < m_childs.size(); i++)
         {
             m_childs[i]->m_pParent = 0; // avoid excessive parent vector trimming
             delete m_childs[i];
         }
         m_childs.clear();
+    }
+
+    int getDepth()
+    {
+        int   count   = 0;
+        Node *pParent = m_pParent;
+        while(pParent) count++, pParent = pParent->m_pParent;
+        return count;
     }
 
 public:
@@ -1094,10 +1108,19 @@ enum IMPL
     IMPL_OPENCL,
 };
 
+struct NodeDataTls
+{
+    NodeDataTls()
+    {
+        m_ticksTotal = 0;
+    }
+    uint64      m_ticksTotal;
+};
+
 class CV_EXPORTS NodeData
 {
 public:
-    NodeData(const char* funName = 0, const char* fileName = NULL, int lineNum = 0, cv::instr::TYPE instrType = TYPE_GENERAL, cv::instr::IMPL implType = IMPL_PLAIN);
+    NodeData(const char* funName = 0, const char* fileName = NULL, int lineNum = 0, void* retAddress = NULL, bool alwaysExpand = false, cv::instr::TYPE instrType = TYPE_GENERAL, cv::instr::IMPL implType = IMPL_PLAIN);
     NodeData(NodeData &ref);
     ~NodeData();
     NodeData& operator=(const NodeData&);
@@ -1107,17 +1130,18 @@ public:
     cv::instr::IMPL     m_implType;
     const char*         m_fileName;
     int                 m_lineNum;
-
-    volatile int        m_counter;
-    volatile uint64     m_ticksTotal;
-
-    // No synchronization
-    double getTotalMs() const { return (double)m_ticksTotal * 1000. / cv::getTickFrequency(); }
-    // No synchronization
-    double getMeanMs() const { return (double)m_ticksTotal * 1000. / (m_counter * cv::getTickFrequency()); }
-
+    void*               m_retAddress;
+    bool                m_alwaysExpand;
     bool                m_funError;
-    bool                m_stopPoint;
+
+    volatile int         m_counter;
+    volatile uint64      m_ticksTotal;
+    TLSData<NodeDataTls> m_tls;
+    int                  m_threads;
+
+    // No synchronization
+    double getTotalMs()   const { return ((double)m_ticksTotal / cv::getTickFrequency()) * 1000; }
+    double getMeanMs()    const { return (((double)m_ticksTotal/m_counter) / cv::getTickFrequency()) * 1000; }
 };
 bool operator==(const NodeData& lhs, const NodeData& rhs);
 
@@ -1134,8 +1158,9 @@ CV_EXPORTS void       resetTrace();
 
 enum FLAGS
 {
-    FLAGS_NONE = 0,
-    FLAGS_MAPPING = 1 << 0,
+    FLAGS_NONE              = 0,
+    FLAGS_MAPPING           = 0x01,
+    FLAGS_EXPAND_SAME_NAMES = 0x02,
 };
 
 CV_EXPORTS void       setFlags(FLAGS modeFlags);

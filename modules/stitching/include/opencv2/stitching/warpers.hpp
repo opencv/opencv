@@ -68,6 +68,15 @@ public:
     Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PlaneWarper>(scale); }
 };
 
+/** @brief Affine warper factory class.
+  @sa detail::AffineWarper
+ */
+class AffineWarper : public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::AffineWarper>(scale); }
+};
+
 /** @brief Cylindrical warper factory class.
 @sa detail::CylindricalWarper
 */

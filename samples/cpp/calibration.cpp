@@ -493,9 +493,9 @@ int main( int argc, char** argv )
         }
 
         imshow("Image View", view);
-        int key = 0xff & waitKey(capture.isOpened() ? 50 : 500);
+        char key = (char)waitKey(capture.isOpened() ? 50 : 500);
 
-        if( (key & 255) == 27 )
+        if( key == 27 )
             break;
 
         if( key == 'u' && mode == CALIBRATED )
@@ -536,8 +536,8 @@ int main( int argc, char** argv )
             //undistort( view, rview, cameraMatrix, distCoeffs, cameraMatrix );
             remap(view, rview, map1, map2, INTER_LINEAR);
             imshow("Image View", rview);
-            int c = 0xff & waitKey();
-            if( (c & 255) == 27 || c == 'q' || c == 'Q' )
+            char c = (char)waitKey();
+            if( c == 27 || c == 'q' || c == 'Q' )
                 break;
         }
     }

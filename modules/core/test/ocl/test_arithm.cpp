@@ -134,7 +134,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         use_roi = GET_PARAM(2);
     }
 
-    virtual void generateTestData(bool with_val_in_range = false)
+    void generateTestData(bool with_val_in_range = false)
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -447,8 +447,8 @@ OCL_TEST_P(Min, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::max(src1_roi, src2_roi, dst1_roi));
-        OCL_ON(cv::max(usrc1_roi, usrc2_roi, udst1_roi));
+        OCL_OFF(cv::min(src1_roi, src2_roi, dst1_roi));
+        OCL_ON(cv::min(usrc1_roi, usrc2_roi, udst1_roi));
         Near(0);
     }
 }
@@ -461,8 +461,8 @@ OCL_TEST_P(Max, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::min(src1_roi, src2_roi, dst1_roi));
-        OCL_ON(cv::min(usrc1_roi, usrc2_roi, udst1_roi));
+        OCL_OFF(cv::max(src1_roi, src2_roi, dst1_roi));
+        OCL_ON(cv::max(usrc1_roi, usrc2_roi, udst1_roi));
         Near(0);
     }
 }
@@ -897,7 +897,7 @@ struct RepeatTestCase :
 {
     int nx, ny;
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -1495,7 +1495,7 @@ PARAM_TEST_CASE(InRange, MatDepth, Channels, bool /*Scalar or not*/, bool /*Roi*
         use_roi = GET_PARAM(3);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -1574,7 +1574,7 @@ PARAM_TEST_CASE(ConvertScaleAbs, MatDepth, Channels, bool)
         use_roi = GET_PARAM(2);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int stype = CV_MAKE_TYPE(depth, cn);
         const int dtype = CV_MAKE_TYPE(CV_8U, cn);
@@ -1647,7 +1647,7 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
         use_roi = GET_PARAM(1);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int type = CV_MAKE_TYPE(CV_32F, cn);
 
@@ -1727,7 +1727,7 @@ PARAM_TEST_CASE(Reduce, std::pair<MatDepth, MatDepth>, Channels, int, bool)
         use_roi = GET_PARAM(3);
     }
 
-    virtual void generateTestData()
+    void generateTestData()
     {
         const int stype = CV_MAKE_TYPE(sdepth, cn);
         dtype = CV_MAKE_TYPE(ddepth, cn);

@@ -224,6 +224,8 @@ public:
             kbest->setOutlierRejector(outlierRejector);
             return kbest;
         }
+#else
+        CV_Assert(gpu == false && "CUDA modules are not available");
 #endif
 
         Ptr<KeypointBasedMotionEstimator> kbest = makePtr<KeypointBasedMotionEstimator>(est);
@@ -265,6 +267,8 @@ public:
             kbest->setOutlierRejector(outlierRejector);
             return kbest;
         }
+#else
+        CV_Assert(gpu == false && "CUDA modules are not available");
 #endif
 
         Ptr<KeypointBasedMotionEstimator> kbest = makePtr<KeypointBasedMotionEstimator>(est);

@@ -53,6 +53,10 @@
 namespace cv
 {
 
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
+
 /** @addtogroup core_hal_intrin
 
 "Universal intrinsics" is a types and functions set intended to simplify vectorization of code on
@@ -130,7 +134,7 @@ Element-wise binary and unary operations.
 @ref v_shl, @ref v_shr
 
 - Bitwise logic:
-@ref operator &(const v_reg &a, const v_reg &b) "&",
+@ref operator&(const v_reg &a, const v_reg &b) "&",
 @ref operator |(const v_reg &a, const v_reg &b) "|",
 @ref operator ^(const v_reg &a, const v_reg &b) "^",
 @ref operator ~(const v_reg &a) "~"
@@ -140,7 +144,7 @@ Element-wise binary and unary operations.
 @ref operator >=(const v_reg &a, const v_reg &b) ">=",
 @ref operator <(const v_reg &a, const v_reg &b) "<",
 @ref operator <=(const v_reg &a, const v_reg &b) "<=",
-@ref operator ==(const v_reg &a, const v_reg &b) "==",
+@ref operator==(const v_reg &a, const v_reg &b) "==",
 @ref operator !=(const v_reg &a, const v_reg &b) "!="
 
 - min/max: @ref v_min, @ref v_max
@@ -149,7 +153,7 @@ Element-wise binary and unary operations.
 
 Most of these operations return only one value.
 
-- Reduce: @ref v_reduce_min, @ref v_reduce_max, @ref v_reduce_sum
+- Reduce: @ref v_reduce_min, @ref v_reduce_max, @ref v_reduce_sum, @ref v_popcount
 - Mask: @ref v_signmask, @ref v_check_all, @ref v_check_any, @ref v_select
 
 ### Other math
@@ -455,8 +459,10 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> operator ~ (const v_reg<_Tp, 
 {
     v_reg<_Tp, n> c;
     for( int i = 0; i < n; i++ )
+    {
         c.s[i] = V_TypeTraits<_Tp>::reinterpret_from_int(~V_TypeTraits<_Tp>::reinterpret_int(a.s[i]));
-        return c;
+    }
+    return c;
 }
 
 //! @brief Helper macro
@@ -572,6 +578,49 @@ Scheme:
 For 32-bit integer and 32-bit floating point types. */
 OPENCV_HAL_IMPL_REDUCE_MINMAX_FUNC(v_reduce_max, std::max)
 
+static const unsigned char popCountTable[] =
+{
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
+};
+/** @brief Count the 1 bits in the vector and return 4 values
+
+Scheme:
+@code
+{A1 A2 A3 ...} => popcount(A1)
+@endcode
+Any types but result will be in v_uint32x4*/
+template<typename _Tp, int n> inline v_uint32x4 v_popcount(const v_reg<_Tp, n>& a)
+{
+    v_uint8x16 b;
+    b = v_reinterpret_as_u8(a);
+    for( int i = 0; i < v_uint8x16::nlanes; i++ )
+    {
+        b.s[i] = popCountTable[b.s[i]];
+    }
+    v_uint32x4 c;
+    for( int i = 0; i < v_uint32x4::nlanes; i++ )
+    {
+        c.s[i] = b.s[i*4] + b.s[i*4+1] + b.s[i*4+2] + b.s[i*4+3];
+    }
+    return c;
+}
+
+
 //! @cond IGNORED
 template<typename _Tp, int n>
 inline void v_minmax( const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
@@ -672,7 +721,7 @@ inline v_reg<typename V_TypeTraits<_Tp>::abs_type, n> v_absdiff(const v_reg<_Tp,
 {
     typedef typename V_TypeTraits<_Tp>::abs_type rtype;
     v_reg<rtype, n> c;
-    const rtype mask = std::numeric_limits<_Tp>::is_signed ? (1 << (sizeof(rtype)*8 - 1)) : 0;
+    const rtype mask = (rtype)(std::numeric_limits<_Tp>::is_signed ? (1 << (sizeof(rtype)*8 - 1)) : 0);
     for( int i = 0; i < n; i++ )
     {
         rtype ua = a.s[i] ^ mask;
@@ -1772,6 +1821,19 @@ inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
 
 //! @}
 
+//! @name Check SIMD support
+//! @{
+//! @brief Check CPU capability of SIMD operation
+static inline bool hasSIMD128()
+{
+    return false;
+}
+
+//! @}
+
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+#endif
 }
 
 #endif

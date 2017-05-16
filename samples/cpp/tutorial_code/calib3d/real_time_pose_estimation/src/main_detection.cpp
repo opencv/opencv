@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 
   Mat frame, frame_vis;
 
-  while(cap.read(frame) && waitKey(30) != 27) // capture frame until ESC is pressed
+  while(cap.read(frame) && (char)waitKey(30) != 27) // capture frame until ESC is pressed
   {
 
     frame_vis = frame.clone();    // refresh visualisation frame

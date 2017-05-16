@@ -125,7 +125,7 @@ kernel void integral_sum_rows(__global const uchar *buf_ptr, int buf_step, int b
     sumT accum = 0;
 
 #ifdef SUM_SQUARE
-    __global sumSQT *dst_sq = (__global sumT *)(dst_sq_ptr + dst_sq_offset);
+    __global sumSQT *dst_sq = (__global sumSQT *)(dst_sq_ptr + dst_sq_offset);
     for (int xin = x; xin < cols; xin += gs)
     {
         dst_sq[xin] = 0;

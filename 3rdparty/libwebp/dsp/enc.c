@@ -11,13 +11,11 @@
 //
 // Author: Skal (pascal.massimino@gmail.com)
 
+#include <assert.h>
 #include <stdlib.h>  // for abs()
-#include "./dsp.h"
-#include "../enc/vp8enci.h"
 
-#if defined(__cplusplus) || defined(c_plusplus)
-extern "C" {
-#endif
+#include "./dsp.h"
+#include "../enc/vp8i_enc.h"
 
 static WEBP_INLINE uint8_t clip_8b(int v) {
   return (!(v & ~0xff)) ? v : (v < 0) ? 0 : 255;
@@ -42,10 +40,27 @@ const int VP8DspScan[16 + 4 + 4] = {
   8 + 0 * BPS,  12 + 0 * BPS, 8 + 4 * BPS, 12 + 4 * BPS     // V
 };
 
+// general-purpose util function
+void VP8SetHistogramData(const int distribution[MAX_COEFF_THRESH + 1],
+                         VP8Histogram* const histo) {
+  int max_value = 0, last_non_zero = 1;
+  int k;
+  for (k = 0; k <= MAX_COEFF_THRESH; ++k) {
+    const int value = distribution[k];
+    if (value > 0) {
+      if (value > max_value) max_value = value;
+      last_non_zero = k;
+    }
+  }
+  histo->max_value = max_value;
+  histo->last_non_zero = last_non_zero;
+}
+
 static void CollectHistogram(const uint8_t* ref, const uint8_t* pred,
                              int start_block, int end_block,
                              VP8Histogram* const histo) {
   int j;
+  int distribution[MAX_COEFF_THRESH + 1] = { 0 };
   for (j = start_block; j < end_block; ++j) {
     int k;
     int16_t out[16];
@@ -54,11 +69,12 @@ static void CollectHistogram(const uint8_t* ref, const uint8_t* pred,
 
     // Convert coefficients to bin.
     for (k = 0; k < 16; ++k) {
-      const int v = abs(out[k]) >> 3;  // TODO(skal): add rounding?
+      const int v = abs(out[k]) >> 3;
       const int clipped_value = clip_max(v, MAX_COEFF_THRESH);
-      histo->distribution[clipped_value]++;
+      ++distribution[clipped_value];
     }
   }
+  VP8SetHistogramData(distribution, histo);
 }
 
 //------------------------------------------------------------------------------
@@ -70,7 +86,7 @@ static uint8_t clip1[255 + 510 + 1];    // clips [-255,510] to [0,255]
 // and make sure it's set to true _last_ (so as to be thread-safe)
 static volatile int tables_ok = 0;
 
-static void InitTables(void) {
+static WEBP_TSAN_IGNORE_FUNCTION void InitTables(void) {
   if (!tables_ok) {
     int i;
     for (i = -255; i <= 255 + 255; ++i) {
@@ -161,36 +177,14 @@ static void FTransform(const uint8_t* src, const uint8_t* ref, int16_t* out) {
   }
 }
 
-static void ITransformWHT(const int16_t* in, int16_t* out) {
-  int tmp[16];
-  int i;
-  for (i = 0; i < 4; ++i) {
-    const int a0 = in[0 + i] + in[12 + i];
-    const int a1 = in[4 + i] + in[ 8 + i];
-    const int a2 = in[4 + i] - in[ 8 + i];
-    const int a3 = in[0 + i] - in[12 + i];
-    tmp[0  + i] = a0 + a1;
-    tmp[8  + i] = a0 - a1;
-    tmp[4  + i] = a3 + a2;
-    tmp[12 + i] = a3 - a2;
-  }
-  for (i = 0; i < 4; ++i) {
-    const int dc = tmp[0 + i * 4] + 3;    // w/ rounder
-    const int a0 = dc             + tmp[3 + i * 4];
-    const int a1 = tmp[1 + i * 4] + tmp[2 + i * 4];
-    const int a2 = tmp[1 + i * 4] - tmp[2 + i * 4];
-    const int a3 = dc             - tmp[3 + i * 4];
-    out[ 0] = (a0 + a1) >> 3;
-    out[16] = (a3 + a2) >> 3;
-    out[32] = (a0 - a1) >> 3;
-    out[48] = (a3 - a2) >> 3;
-    out += 64;
-  }
+static void FTransform2(const uint8_t* src, const uint8_t* ref, int16_t* out) {
+  VP8FTransform(src, ref, out);
+  VP8FTransform(src + 4, ref + 4, out + 16);
 }
 
 static void FTransformWHT(const int16_t* in, int16_t* out) {
   // input is 12b signed
-  int16_t tmp[16];
+  int32_t tmp[16];
   int i;
   for (i = 0; i < 4; ++i, in += 64) {
     const int a0 = (in[0 * 16] + in[2 * 16]);  // 13b
@@ -224,8 +218,6 @@ static void FTransformWHT(const int16_t* in, int16_t* out) {
 //------------------------------------------------------------------------------
 // Intra predictions
 
-#define DST(x, y) dst[(x) + (y) * BPS]
-
 static WEBP_INLINE void Fill(uint8_t* dst, int value, int size) {
   int j;
   for (j = 0; j < size; ++j) {
@@ -236,7 +228,7 @@ static WEBP_INLINE void Fill(uint8_t* dst, int value, int size) {
 static WEBP_INLINE void VerticalPred(uint8_t* dst,
                                      const uint8_t* top, int size) {
   int j;
-  if (top) {
+  if (top != NULL) {
     for (j = 0; j < size; ++j) memcpy(dst + j * BPS, top, size);
   } else {
     Fill(dst, 127, size);
@@ -245,7 +237,7 @@ static WEBP_INLINE void VerticalPred(uint8_t* dst,
 
 static WEBP_INLINE void HorizontalPred(uint8_t* dst,
                                        const uint8_t* left, int size) {
-  if (left) {
+  if (left != NULL) {
     int j;
     for (j = 0; j < size; ++j) {
       memset(dst + j * BPS, left[j], size);
@@ -258,8 +250,8 @@ static WEBP_INLINE void HorizontalPred(uint8_t* dst,
 static WEBP_INLINE void TrueMotion(uint8_t* dst, const uint8_t* left,
                                    const uint8_t* top, int size) {
   int y;
-  if (left) {
-    if (top) {
+  if (left != NULL) {
+    if (top != NULL) {
       const uint8_t* const clip = clip1 + 255 - left[-1];
       for (y = 0; y < size; ++y) {
         const uint8_t* const clip_table = clip + left[y];
@@ -277,7 +269,7 @@ static WEBP_INLINE void TrueMotion(uint8_t* dst, const uint8_t* left,
     // is equivalent to VE prediction where you just copy the top samples.
     // Note that if top samples are not available, the default value is
     // then 129, and not 127 as in the VerticalPred case.
-    if (top) {
+    if (top != NULL) {
       VerticalPred(dst, top, size);
     } else {
       Fill(dst, 129, size);
@@ -290,15 +282,15 @@ static WEBP_INLINE void DCMode(uint8_t* dst, const uint8_t* left,
                                int size, int round, int shift) {
   int DC = 0;
   int j;
-  if (top) {
+  if (top != NULL) {
     for (j = 0; j < size; ++j) DC += top[j];
-    if (left) {   // top and left present
+    if (left != NULL) {   // top and left present
       for (j = 0; j < size; ++j) DC += left[j];
     } else {      // top, but no left
       DC += DC;
     }
     DC = (DC + round) >> shift;
-  } else if (left) {   // left but no top
+  } else if (left != NULL) {   // left but no top
     for (j = 0; j < size; ++j) DC += left[j];
     DC += DC;
     DC = (DC + round) >> shift;
@@ -320,8 +312,8 @@ static void IntraChromaPreds(uint8_t* dst, const uint8_t* left,
   TrueMotion(C8TM8 + dst, left, top, 8);
   // V block
   dst += 8;
-  if (top) top += 8;
-  if (left) left += 16;
+  if (top != NULL) top += 8;
+  if (left != NULL) left += 16;
   DCMode(C8DC8 + dst, left, top, 8, 8, 4);
   VerticalPred(C8VE8 + dst, top, 8);
   HorizontalPred(C8HE8 + dst, left, 8);
@@ -342,7 +334,8 @@ static void Intra16Preds(uint8_t* dst,
 //------------------------------------------------------------------------------
 // luma 4x4 prediction
 
-#define AVG3(a, b, c) (((a) + 2 * (b) + (c) + 2) >> 2)
+#define DST(x, y) dst[(x) + (y) * BPS]
+#define AVG3(a, b, c) ((uint8_t)(((a) + 2 * (b) + (c) + 2) >> 2))
 #define AVG2(a, b) (((a) + (b) + 1) >> 1)
 
 static void VE4(uint8_t* dst, const uint8_t* top) {    // vertical
@@ -364,10 +357,10 @@ static void HE4(uint8_t* dst, const uint8_t* top) {    // horizontal
   const int J = top[-3];
   const int K = top[-4];
   const int L = top[-5];
-  *(uint32_t*)(dst + 0 * BPS) = 0x01010101U * AVG3(X, I, J);
-  *(uint32_t*)(dst + 1 * BPS) = 0x01010101U * AVG3(I, J, K);
-  *(uint32_t*)(dst + 2 * BPS) = 0x01010101U * AVG3(J, K, L);
-  *(uint32_t*)(dst + 3 * BPS) = 0x01010101U * AVG3(K, L, L);
+  WebPUint32ToMem(dst + 0 * BPS, 0x01010101U * AVG3(X, I, J));
+  WebPUint32ToMem(dst + 1 * BPS, 0x01010101U * AVG3(I, J, K));
+  WebPUint32ToMem(dst + 2 * BPS, 0x01010101U * AVG3(J, K, L));
+  WebPUint32ToMem(dst + 3 * BPS, 0x01010101U * AVG3(K, L, L));
 }
 
 static void DC4(uint8_t* dst, const uint8_t* top) {
@@ -558,6 +551,20 @@ static int SSE4x4(const uint8_t* a, const uint8_t* b) {
   return GetSSE(a, b, 4, 4);
 }
 
+static void Mean16x4(const uint8_t* ref, uint32_t dc[4]) {
+  int k, x, y;
+  for (k = 0; k < 4; ++k) {
+    uint32_t avg = 0;
+    for (y = 0; y < 4; ++y) {
+      for (x = 0; x < 4; ++x) {
+        avg += ref[x + y * BPS];
+      }
+    }
+    dc[k] = avg;
+    ref += 4;   // go to next 4x4 block.
+  }
+}
+
 //------------------------------------------------------------------------------
 // Texture distortion
 //
@@ -566,6 +573,7 @@ static int SSE4x4(const uint8_t* a, const uint8_t* b) {
 
 // Hadamard transform
 // Returns the weighted sum of the absolute value of transformed coefficients.
+// w[] contains a row-major 4 by 4 symmetric matrix.
 static int TTransform(const uint8_t* in, const uint16_t* w) {
   int sum = 0;
   int tmp[16];
@@ -629,21 +637,23 @@ static const uint8_t kZigzag[16] = {
 
 // Simple quantization
 static int QuantizeBlock(int16_t in[16], int16_t out[16],
-                         int n, const VP8Matrix* const mtx) {
+                         const VP8Matrix* const mtx) {
   int last = -1;
-  for (; n < 16; ++n) {
+  int n;
+  for (n = 0; n < 16; ++n) {
     const int j = kZigzag[n];
     const int sign = (in[j] < 0);
-    const int coeff = (sign ? -in[j] : in[j]) + mtx->sharpen_[j];
+    const uint32_t coeff = (sign ? -in[j] : in[j]) + mtx->sharpen_[j];
     if (coeff > mtx->zthresh_[j]) {
-      const int Q = mtx->q_[j];
-      const int iQ = mtx->iq_[j];
-      const int B = mtx->bias_[j];
-      out[n] = QUANTDIV(coeff, iQ, B);
-      if (out[n] > MAX_LEVEL) out[n] = MAX_LEVEL;
-      if (sign) out[n] = -out[n];
-      in[j] = out[n] * Q;
-      if (out[n]) last = n;
+      const uint32_t Q = mtx->q_[j];
+      const uint32_t iQ = mtx->iq_[j];
+      const uint32_t B = mtx->bias_[j];
+      int level = QUANTDIV(coeff, iQ, B);
+      if (level > MAX_LEVEL) level = MAX_LEVEL;
+      if (sign) level = -level;
+      in[j] = level * (int)Q;
+      out[n] = level;
+      if (level) last = n;
     } else {
       out[n] = 0;
       in[j] = 0;
@@ -652,19 +662,167 @@ static int QuantizeBlock(int16_t in[16], int16_t out[16],
   return (last >= 0);
 }
 
+static int Quantize2Blocks(int16_t in[32], int16_t out[32],
+                           const VP8Matrix* const mtx) {
+  int nz;
+  nz  = VP8EncQuantizeBlock(in + 0 * 16, out + 0 * 16, mtx) << 0;
+  nz |= VP8EncQuantizeBlock(in + 1 * 16, out + 1 * 16, mtx) << 1;
+  return nz;
+}
+
 //------------------------------------------------------------------------------
 // Block copy
 
-static WEBP_INLINE void Copy(const uint8_t* src, uint8_t* dst, int size) {
+static WEBP_INLINE void Copy(const uint8_t* src, uint8_t* dst, int w, int h) {
   int y;
-  for (y = 0; y < size; ++y) {
-    memcpy(dst, src, size);
+  for (y = 0; y < h; ++y) {
+    memcpy(dst, src, w);
     src += BPS;
     dst += BPS;
   }
 }
 
-static void Copy4x4(const uint8_t* src, uint8_t* dst) { Copy(src, dst, 4); }
+static void Copy4x4(const uint8_t* src, uint8_t* dst) {
+  Copy(src, dst, 4, 4);
+}
+
+static void Copy16x8(const uint8_t* src, uint8_t* dst) {
+  Copy(src, dst, 16, 8);
+}
+
+//------------------------------------------------------------------------------
+// SSIM / PSNR
+
+// hat-shaped filter. Sum of coefficients is equal to 16.
+static const uint32_t kWeight[2 * VP8_SSIM_KERNEL + 1] = {
+  1, 2, 3, 4, 3, 2, 1
+};
+static const uint32_t kWeightSum = 16 * 16;   // sum{kWeight}^2
+
+static WEBP_INLINE double SSIMCalculation(
+    const VP8DistoStats* const stats, uint32_t N  /*num samples*/) {
+  const uint32_t w2 =  N * N;
+  const uint32_t C1 = 20 * w2;
+  const uint32_t C2 = 60 * w2;
+  const uint32_t C3 = 8 * 8 * w2;   // 'dark' limit ~= 6
+  const uint64_t xmxm = (uint64_t)stats->xm * stats->xm;
+  const uint64_t ymym = (uint64_t)stats->ym * stats->ym;
+  if (xmxm + ymym >= C3) {
+    const int64_t xmym = (int64_t)stats->xm * stats->ym;
+    const int64_t sxy = (int64_t)stats->xym * N - xmym;    // can be negative
+    const uint64_t sxx = (uint64_t)stats->xxm * N - xmxm;
+    const uint64_t syy = (uint64_t)stats->yym * N - ymym;
+    // we descale by 8 to prevent overflow during the fnum/fden multiply.
+    const uint64_t num_S = (2 * (uint64_t)(sxy < 0 ? 0 : sxy) + C2) >> 8;
+    const uint64_t den_S = (sxx + syy + C2) >> 8;
+    const uint64_t fnum = (2 * xmym + C1) * num_S;
+    const uint64_t fden = (xmxm + ymym + C1) * den_S;
+    const double r = (double)fnum / fden;
+    assert(r >= 0. && r <= 1.0);
+    return r;
+  }
+  return 1.;   // area is too dark to contribute meaningfully
+}
+
+double VP8SSIMFromStats(const VP8DistoStats* const stats) {
+  return SSIMCalculation(stats, kWeightSum);
+}
+
+double VP8SSIMFromStatsClipped(const VP8DistoStats* const stats) {
+  return SSIMCalculation(stats, stats->w);
+}
+
+static double SSIMGetClipped_C(const uint8_t* src1, int stride1,
+                               const uint8_t* src2, int stride2,
+                               int xo, int yo, int W, int H) {
+  VP8DistoStats stats = { 0, 0, 0, 0, 0, 0 };
+  const int ymin = (yo - VP8_SSIM_KERNEL < 0) ? 0 : yo - VP8_SSIM_KERNEL;
+  const int ymax = (yo + VP8_SSIM_KERNEL > H - 1) ? H - 1
+                                                  : yo + VP8_SSIM_KERNEL;
+  const int xmin = (xo - VP8_SSIM_KERNEL < 0) ? 0 : xo - VP8_SSIM_KERNEL;
+  const int xmax = (xo + VP8_SSIM_KERNEL > W - 1) ? W - 1
+                                                  : xo + VP8_SSIM_KERNEL;
+  int x, y;
+  src1 += ymin * stride1;
+  src2 += ymin * stride2;
+  for (y = ymin; y <= ymax; ++y, src1 += stride1, src2 += stride2) {
+    for (x = xmin; x <= xmax; ++x) {
+      const uint32_t w = kWeight[VP8_SSIM_KERNEL + x - xo]
+                       * kWeight[VP8_SSIM_KERNEL + y - yo];
+      const uint32_t s1 = src1[x];
+      const uint32_t s2 = src2[x];
+      stats.w   += w;
+      stats.xm  += w * s1;
+      stats.ym  += w * s2;
+      stats.xxm += w * s1 * s1;
+      stats.xym += w * s1 * s2;
+      stats.yym += w * s2 * s2;
+    }
+  }
+  return VP8SSIMFromStatsClipped(&stats);
+}
+
+static double SSIMGet_C(const uint8_t* src1, int stride1,
+                        const uint8_t* src2, int stride2) {
+  VP8DistoStats stats = { 0, 0, 0, 0, 0, 0 };
+  int x, y;
+  for (y = 0; y <= 2 * VP8_SSIM_KERNEL; ++y, src1 += stride1, src2 += stride2) {
+    for (x = 0; x <= 2 * VP8_SSIM_KERNEL; ++x) {
+      const uint32_t w = kWeight[x] * kWeight[y];
+      const uint32_t s1 = src1[x];
+      const uint32_t s2 = src2[x];
+      stats.xm  += w * s1;
+      stats.ym  += w * s2;
+      stats.xxm += w * s1 * s1;
+      stats.xym += w * s1 * s2;
+      stats.yym += w * s2 * s2;
+    }
+  }
+  return VP8SSIMFromStats(&stats);
+}
+
+//------------------------------------------------------------------------------
+
+static uint32_t AccumulateSSE(const uint8_t* src1,
+                              const uint8_t* src2, int len) {
+  int i;
+  uint32_t sse2 = 0;
+  assert(len <= 65535);  // to ensure that accumulation fits within uint32_t
+  for (i = 0; i < len; ++i) {
+    const int32_t diff = src1[i] - src2[i];
+    sse2 += diff * diff;
+  }
+  return sse2;
+}
+
+//------------------------------------------------------------------------------
+
+VP8SSIMGetFunc VP8SSIMGet;
+VP8SSIMGetClippedFunc VP8SSIMGetClipped;
+VP8AccumulateSSEFunc VP8AccumulateSSE;
+
+extern void VP8SSIMDspInitSSE2(void);
+
+static volatile VP8CPUInfo ssim_last_cpuinfo_used =
+    (VP8CPUInfo)&ssim_last_cpuinfo_used;
+
+WEBP_TSAN_IGNORE_FUNCTION void VP8SSIMDspInit(void) {
+  if (ssim_last_cpuinfo_used == VP8GetCPUInfo) return;
+
+  VP8SSIMGetClipped = SSIMGetClipped_C;
+  VP8SSIMGet = SSIMGet_C;
+
+  VP8AccumulateSSE = AccumulateSSE;
+  if (VP8GetCPUInfo != NULL) {
+#if defined(WEBP_USE_SSE2)
+    if (VP8GetCPUInfo(kSSE2)) {
+      VP8SSIMDspInitSSE2();
+    }
+#endif
+  }
+
+  ssim_last_cpuinfo_used = VP8GetCPUInfo;
+}
 
 //------------------------------------------------------------------------------
 // Initialization
@@ -674,7 +832,7 @@ static void Copy4x4(const uint8_t* src, uint8_t* dst) { Copy(src, dst, 4); }
 VP8CHisto VP8CollectHistogram;
 VP8Idct VP8ITransform;
 VP8Fdct VP8FTransform;
-VP8WHT VP8ITransformWHT;
+VP8Fdct VP8FTransform2;
 VP8WHT VP8FTransformWHT;
 VP8Intra4Preds VP8EncPredLuma4;
 VP8IntraPreds VP8EncPredLuma16;
@@ -685,20 +843,35 @@ VP8Metric VP8SSE16x8;
 VP8Metric VP8SSE4x4;
 VP8WMetric VP8TDisto4x4;
 VP8WMetric VP8TDisto16x16;
+VP8MeanMetric VP8Mean16x4;
 VP8QuantizeBlock VP8EncQuantizeBlock;
+VP8Quantize2Blocks VP8EncQuantize2Blocks;
+VP8QuantizeBlockWHT VP8EncQuantizeBlockWHT;
 VP8BlockCopy VP8Copy4x4;
+VP8BlockCopy VP8Copy16x8;
 
 extern void VP8EncDspInitSSE2(void);
+extern void VP8EncDspInitSSE41(void);
+extern void VP8EncDspInitAVX2(void);
 extern void VP8EncDspInitNEON(void);
+extern void VP8EncDspInitMIPS32(void);
+extern void VP8EncDspInitMIPSdspR2(void);
+extern void VP8EncDspInitMSA(void);
 
-void VP8EncDspInit(void) {
+static volatile VP8CPUInfo enc_last_cpuinfo_used =
+    (VP8CPUInfo)&enc_last_cpuinfo_used;
+
+WEBP_TSAN_IGNORE_FUNCTION void VP8EncDspInit(void) {
+  if (enc_last_cpuinfo_used == VP8GetCPUInfo) return;
+
+  VP8DspInit();  // common inverse transforms
   InitTables();
 
   // default C implementations
   VP8CollectHistogram = CollectHistogram;
   VP8ITransform = ITransform;
   VP8FTransform = FTransform;
-  VP8ITransformWHT = ITransformWHT;
+  VP8FTransform2 = FTransform2;
   VP8FTransformWHT = FTransformWHT;
   VP8EncPredLuma4 = Intra4Preds;
   VP8EncPredLuma16 = Intra16Preds;
@@ -709,23 +882,50 @@ void VP8EncDspInit(void) {
   VP8SSE4x4 = SSE4x4;
   VP8TDisto4x4 = Disto4x4;
   VP8TDisto16x16 = Disto16x16;
+  VP8Mean16x4 = Mean16x4;
   VP8EncQuantizeBlock = QuantizeBlock;
+  VP8EncQuantize2Blocks = Quantize2Blocks;
+  VP8EncQuantizeBlockWHT = QuantizeBlock;
   VP8Copy4x4 = Copy4x4;
+  VP8Copy16x8 = Copy16x8;
 
   // If defined, use CPUInfo() to overwrite some pointers with faster versions.
-  if (VP8GetCPUInfo) {
+  if (VP8GetCPUInfo != NULL) {
 #if defined(WEBP_USE_SSE2)
     if (VP8GetCPUInfo(kSSE2)) {
       VP8EncDspInitSSE2();
+#if defined(WEBP_USE_SSE41)
+      if (VP8GetCPUInfo(kSSE4_1)) {
+        VP8EncDspInitSSE41();
+      }
+#endif
     }
-#elif defined(WEBP_USE_NEON)
+#endif
+#if defined(WEBP_USE_AVX2)
+    if (VP8GetCPUInfo(kAVX2)) {
+      VP8EncDspInitAVX2();
+    }
+#endif
+#if defined(WEBP_USE_NEON)
     if (VP8GetCPUInfo(kNEON)) {
       VP8EncDspInitNEON();
     }
 #endif
-  }
-}
-
-#if defined(__cplusplus) || defined(c_plusplus)
-}    // extern "C"
+#if defined(WEBP_USE_MIPS32)
+    if (VP8GetCPUInfo(kMIPS32)) {
+      VP8EncDspInitMIPS32();
+    }
 #endif
+#if defined(WEBP_USE_MIPS_DSP_R2)
+    if (VP8GetCPUInfo(kMIPSdspR2)) {
+      VP8EncDspInitMIPSdspR2();
+    }
+#endif
+#if defined(WEBP_USE_MSA)
+    if (VP8GetCPUInfo(kMSA)) {
+      VP8EncDspInitMSA();
+    }
+#endif
+  }
+  enc_last_cpuinfo_used = VP8GetCPUInfo;
+}

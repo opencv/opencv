@@ -50,11 +50,17 @@ int main( int argc, char* argv[])
     imshow( "Output", dst0 );
     waitKey();
 
+  //![kern]
     Mat kernel = (Mat_<char>(3,3) <<  0, -1,  0,
                                    -1,  5, -1,
                                     0, -1,  0);
+  //![kern]
+
     t = (double)getTickCount();
+
+  //![filter2D]
     filter2D( src, dst1, src.depth(), kernel );
+  //![filter2D]
     t = ((double)getTickCount() - t)/getTickFrequency();
     cout << "Built-in filter2D time passed in seconds:      " << t << endl;
 
@@ -63,13 +69,19 @@ int main( int argc, char* argv[])
     waitKey();
     return 0;
 }
+//! [basic_method]
 void Sharpen(const Mat& myImage,Mat& Result)
 {
+  //! [8_bit]
     CV_Assert(myImage.depth() == CV_8U);  // accept only uchar images
+  //! [8_bit]
 
+  //! [create_channels]
     const int nChannels = myImage.channels();
     Result.create(myImage.size(),myImage.type());
+  //! [create_channels]
 
+  //! [basic_method_loop]
     for(int j = 1 ; j < myImage.rows-1; ++j)
     {
         const uchar* previous = myImage.ptr<uchar>(j - 1);
@@ -84,9 +96,13 @@ void Sharpen(const Mat& myImage,Mat& Result)
                          -current[i-nChannels] - current[i+nChannels] - previous[i] - next[i]);
         }
     }
+  //! [basic_method_loop]
 
+  //! [borders]
     Result.row(0).setTo(Scalar(0));
     Result.row(Result.rows-1).setTo(Scalar(0));
     Result.col(0).setTo(Scalar(0));
     Result.col(Result.cols-1).setTo(Scalar(0));
+  //! [borders]
 }
+//! [basic_method]

@@ -46,6 +46,8 @@
 
 using namespace cvtest;
 
+namespace {
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HoughLines
 
@@ -255,5 +257,7 @@ CUDA_TEST_P(GeneralizedHough, Ballard)
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, GeneralizedHough, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
+
+} // namespace
 
 #endif // HAVE_CUDA
