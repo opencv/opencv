@@ -3082,12 +3082,7 @@ softfloat64_t naiveExp(softfloat64_t x)
     softfloat64_t sum = softfloat64_t::one();
     // 21! > (2 ** 64)
     for(int i = 20; i > 0; i--)
-    {
-        uint64 f = fac[i-1];
-        softfloat64_t prod = f64_pow(mantissa, i);
-        softfloat64_t v = prod/softfloat64_t(f);
-        sum += v;
-    }
+        sum += f64_pow(mantissa, i)/fac[i-1];
     if(exponent >= 0)
     {
         exponent = (1 << exponent);
@@ -3138,9 +3133,9 @@ TEST(Core_SoftFloat, exp32)
         ASSERT_GE(y, softfloat32_t::zero());
         softfloat32_t ygood = naiveExp(x.toF64()).toF32();
         softfloat32_t diff = f32_abs(ygood - y);
-        if(diff > softfloat32_t(FLT_EPSILON))
+        if(diff > FLT_EPSILON)
         {
-            ASSERT_LE(diff/max(f32_abs(y), f32_abs(ygood)), softfloat32_t(FLT_EPSILON));
+            ASSERT_LE(diff/max(f32_abs(y), f32_abs(ygood)), FLT_EPSILON);
         }
     }
 }
@@ -3181,9 +3176,9 @@ TEST(Core_SoftFloat, exp64)
         ASSERT_GE(y, softfloat64_t::zero());
         softfloat64_t ygood = naiveExp(x);
         softfloat64_t diff = f64_abs(ygood - y);
-        if(diff > softfloat64_t(DBL_EPSILON))
+        if(diff > DBL_EPSILON)
         {
-            ASSERT_LE(diff/max(f64_abs(y), f64_abs(ygood)), softfloat64_t(8192*DBL_EPSILON));
+            ASSERT_LE(diff/max(f64_abs(y), f64_abs(ygood)), 8192*DBL_EPSILON);
         }
     }
 }
@@ -3230,10 +3225,10 @@ TEST(Core_SoftFloat, log32)
         softfloat32_t ex = f32_exp(y);
         softfloat32_t diff = f32_abs(ex - x);
         // 88 is approx estimate of max exp() argument
-        ASSERT_TRUE(!ex.isInf() || (y > softfloat32_t(88)));
-        if(!ex.isInf() && diff > softfloat32_t(FLT_EPSILON))
+        ASSERT_TRUE(!ex.isInf() || (y > 88));
+        if(!ex.isInf() && diff > FLT_EPSILON)
         {
-            ASSERT_LT(diff/max(f32_abs(ex), x), softfloat32_t(0.00001f));
+            ASSERT_LT(diff/max(f32_abs(ex), x), 0.00001f);
         }
     }
 }
@@ -3258,7 +3253,7 @@ TEST(Core_SoftFloat, log64)
 
     vector<double> inputs;
     inputs.push_back(1);
-    inputs.push_back(std::exp(1));
+    inputs.push_back(f64_exp(1).toDouble());
     inputs.push_back(DBL_MIN);
     inputs.push_back(DBL_MAX);
     for(int i = 0; i < nValues; i++)
@@ -3281,10 +3276,10 @@ TEST(Core_SoftFloat, log64)
         softfloat64_t ex = f64_exp(y);
         softfloat64_t diff = f64_abs(ex - x);
         // 700 is approx estimate of max exp() argument
-        ASSERT_TRUE(!ex.isInf() || (y > softfloat64_t(700)));
-        if(!ex.isInf() && diff > softfloat64_t(DBL_EPSILON))
+        ASSERT_TRUE(!ex.isInf() || (y > 700));
+        if(!ex.isInf() && diff > DBL_EPSILON)
         {
-            ASSERT_LT(diff/max(f64_abs(ex), x), softfloat64_t(1e-10));
+            ASSERT_LT(diff/max(f64_abs(ex), x), 1e-10);
         }
     }
 }
@@ -3315,9 +3310,9 @@ TEST(Core_SoftFloat, cbrt32)
         ASSERT_TRUE(!y.isInf());
         softfloat32_t cube = y*y*y;
         softfloat32_t diff = f32_abs(x - cube);
-        if(diff > softfloat32_t(FLT_EPSILON))
+        if(diff > FLT_EPSILON)
         {
-            ASSERT_LT(diff/max(f32_abs(x), f32_abs(cube)), softfloat32_t(4*FLT_EPSILON));
+            ASSERT_LT(diff/max(f32_abs(x), f32_abs(cube)), 4*FLT_EPSILON);
         }
     }
 }
