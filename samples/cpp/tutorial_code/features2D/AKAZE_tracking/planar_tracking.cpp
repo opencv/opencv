@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 
     cout << "Please select a bounding box, and press any key to continue." << endl;
     vector<Point2f> bb;
-    cv::Rect2d uBox = selectROI(video_name, frame);
+    cv::Rect uBox = cv::selectROI(video_name, frame);
     bb.push_back(cv::Point2f(static_cast<float>(uBox.x), static_cast<float>(uBox.y)));
     bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y)));
     bb.push_back(cv::Point2f(static_cast<float>(uBox.x+uBox.width), static_cast<float>(uBox.y+uBox.height)));

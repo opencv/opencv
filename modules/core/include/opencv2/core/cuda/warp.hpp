@@ -64,7 +64,7 @@ namespace cv { namespace cuda { namespace device
         static __device__ __forceinline__ unsigned int laneId()
         {
             unsigned int ret;
-            asm("mov.u32 %0, %laneid;" : "=r"(ret) );
+            asm("mov.u32 %0, %%laneid;" : "=r"(ret) );
             return ret;
         }
 

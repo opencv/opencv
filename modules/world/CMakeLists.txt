@@ -24,6 +24,7 @@ if(NOT OPENCV_INITIAL_PASS)
 
   message(STATUS "Processing WORLD modules...")
   foreach(m ${OPENCV_MODULES_BUILD})
+    set(the_module ${m})
     if(OPENCV_MODULE_${m}_IS_PART_OF_WORLD)
       message(STATUS "    module ${m}...")
       set(CMAKE_CURRENT_SOURCE_DIR "${OPENCV_MODULE_${m}_LOCATION}")

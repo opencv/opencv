@@ -68,7 +68,7 @@ Code
 
 -#  **What does this program do?**
     -   Asks the user to enter a numerical value to set the lower threshold for our *Canny Edge
-        Detector* (by means of a Trackbar)
+        Detector* (by means of a Trackbar).
     -   Applies the *Canny Detector* and generates a **mask** (bright lines representing the edges
         on a black background).
     -   Applies the mask obtained on the original image and display it in a window.
@@ -85,19 +85,19 @@ Explanation
 
     Note the following:
 
-    -#  We establish a ratio of lower:upper threshold of 3:1 (with the variable *ratio*)
+    -#  We establish a ratio of lower:upper threshold of 3:1 (with the variable *ratio*).
     -#  We set the kernel size of \f$3\f$ (for the Sobel operations to be performed internally by the
-        Canny function)
+        Canny function).
     -#  We set a maximum value for the lower Threshold of \f$100\f$.
 
 -#  Loads the source image:
     @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp load
 
--#  Create a matrix of the same type and size of *src* (to be *dst*)
+-#  Create a matrix of the same type and size of *src* (to be *dst*):
     @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp create_mat
--#  Convert the image to grayscale (using the function @ref cv::cvtColor :
+-#  Convert the image to grayscale (using the function @ref cv::cvtColor ):
     @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp convert_to_gray
--#  Create a window to display the results
+-#  Create a window to display the results:
     @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp create_window
 -#  Create a Trackbar for the user to enter the lower threshold for our Canny detector:
     @snippet cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp create_trackbar

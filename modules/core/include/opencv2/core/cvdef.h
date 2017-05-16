@@ -48,6 +48,21 @@
 //! @addtogroup core_utils
 //! @{
 
+#ifdef __OPENCV_BUILD
+#include "cvconfig.h"
+#endif
+
+#ifndef __CV_EXPAND
+#define __CV_EXPAND(x) x
+#endif
+
+#ifndef __CV_CAT
+#define __CV_CAT__(x, y) x ## y
+#define __CV_CAT_(x, y) __CV_CAT__(x, y)
+#define __CV_CAT(x, y) __CV_CAT_(x, y)
+#endif
+
+
 #if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
 #  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
 #endif
@@ -58,10 +73,6 @@
 #undef max
 #undef abs
 #undef Complex
-
-#if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
-#  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
-#endif
 
 #include <limits.h>
 #include "opencv2/core/hal/interface.h"
@@ -88,7 +99,7 @@
 #  endif
 #endif
 
-#if defined CV_ICC && !defined CV_ENABLE_UNROLLED
+#if defined CV_DISABLE_OPTIMIZATION || (defined CV_ICC && !defined CV_ENABLE_UNROLLED)
 #  define CV_ENABLE_UNROLLED 0
 #else
 #  define CV_ENABLE_UNROLLED 1
@@ -161,150 +172,9 @@ enum CpuFeatures {
     CPU_NEON            = 100
 };
 
-// do not include SSE/AVX/NEON headers for NVCC compiler
-#ifndef __CUDACC__
 
-#if defined __SSE2__ || defined _M_X64 || (defined _M_IX86_FP && _M_IX86_FP >= 2)
-#  include <emmintrin.h>
-#  define CV_MMX 1
-#  define CV_SSE 1
-#  define CV_SSE2 1
-#  if defined __SSE3__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <pmmintrin.h>
-#    define CV_SSE3 1
-#  endif
-#  if defined __SSSE3__  || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <tmmintrin.h>
-#    define CV_SSSE3 1
-#  endif
-#  if defined __SSE4_1__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <smmintrin.h>
-#    define CV_SSE4_1 1
-#  endif
-#  if defined __SSE4_2__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    include <nmmintrin.h>
-#    define CV_SSE4_2 1
-#  endif
-#  if defined __POPCNT__ || (defined _MSC_VER && _MSC_VER >= 1500)
-#    ifdef _MSC_VER
-#      include <nmmintrin.h>
-#      if defined(_M_X64)
-#        define CV_POPCNT_U64 _mm_popcnt_u64
-#      endif
-#      define CV_POPCNT_U32 _mm_popcnt_u32
-#    else
-#      include <popcntintrin.h>
-#      if defined(__x86_64__)
-#        define CV_POPCNT_U64 __builtin_popcountll
-#      endif
-#      define CV_POPCNT_U32 __builtin_popcount
-#    endif
-#    define CV_POPCNT 1
-#  endif
-#  if defined __AVX__ || (defined _MSC_VER && _MSC_VER >= 1600 && 0)
-// MS Visual Studio 2010 (2012?) has no macro pre-defined to identify the use of /arch:AVX
-// See: http://connect.microsoft.com/VisualStudio/feedback/details/605858/arch-avx-should-define-a-predefined-macro-in-x64-and-set-a-unique-value-for-m-ix86-fp-in-win32
-#    include <immintrin.h>
-#    define CV_AVX 1
-#    if defined(_XCR_XFEATURE_ENABLED_MASK)
-#      define __xgetbv() _xgetbv(_XCR_XFEATURE_ENABLED_MASK)
-#    else
-#      define __xgetbv() 0
-#    endif
-#  endif
-#  if defined __AVX2__ || (defined _MSC_VER && _MSC_VER >= 1800 && 0)
-#    include <immintrin.h>
-#    define CV_AVX2 1
-#    if defined __FMA__
-#      define CV_FMA3 1
-#    endif
-#  endif
-#endif
+#include "cv_cpu_dispatch.h"
 
-#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
-# include <Intrin.h>
-# include <arm_neon.h>
-# define CV_NEON 1
-# define CPU_HAS_NEON_FEATURE (true)
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
-#  include <arm_neon.h>
-#  define CV_NEON 1
-#endif
-
-#if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__
-#  define CV_VFP 1
-#endif
-
-#endif // __CUDACC__
-
-#ifndef CV_POPCNT
-#define CV_POPCNT 0
-#endif
-#ifndef CV_MMX
-#  define CV_MMX 0
-#endif
-#ifndef CV_SSE
-#  define CV_SSE 0
-#endif
-#ifndef CV_SSE2
-#  define CV_SSE2 0
-#endif
-#ifndef CV_SSE3
-#  define CV_SSE3 0
-#endif
-#ifndef CV_SSSE3
-#  define CV_SSSE3 0
-#endif
-#ifndef CV_SSE4_1
-#  define CV_SSE4_1 0
-#endif
-#ifndef CV_SSE4_2
-#  define CV_SSE4_2 0
-#endif
-#ifndef CV_AVX
-#  define CV_AVX 0
-#endif
-#ifndef CV_AVX2
-#  define CV_AVX2 0
-#endif
-#ifndef CV_FMA3
-#  define CV_FMA3 0
-#endif
-#ifndef CV_AVX_512F
-#  define CV_AVX_512F 0
-#endif
-#ifndef CV_AVX_512BW
-#  define CV_AVX_512BW 0
-#endif
-#ifndef CV_AVX_512CD
-#  define CV_AVX_512CD 0
-#endif
-#ifndef CV_AVX_512DQ
-#  define CV_AVX_512DQ 0
-#endif
-#ifndef CV_AVX_512ER
-#  define CV_AVX_512ER 0
-#endif
-#ifndef CV_AVX_512IFMA512
-#  define CV_AVX_512IFMA512 0
-#endif
-#ifndef CV_AVX_512PF
-#  define CV_AVX_512PF 0
-#endif
-#ifndef CV_AVX_512VBMI
-#  define CV_AVX_512VBMI 0
-#endif
-#ifndef CV_AVX_512VL
-#  define CV_AVX_512VL 0
-#endif
-
-#ifndef CV_NEON
-#  define CV_NEON 0
-#endif
-
-#ifndef CV_VFP
-#  define CV_VFP 0
-#endif
 
 /* fundamental constants */
 #define CV_PI   3.1415926535897932384626433832795
@@ -491,6 +361,21 @@ Cv64suf;
 #else
 #  if CV_CXX_MOVE_SEMANTICS == 0
 #    undef CV_CXX_MOVE_SEMANTICS
+#  endif
+#endif
+
+/****************************************************************************************\
+*                                    C++11 std::array                                    *
+\****************************************************************************************/
+
+#ifndef CV_CXX_STD_ARRAY
+#  if __cplusplus >= 201103L
+#    define CV_CXX_STD_ARRAY 1
+#    include <array>
+#  endif
+#else
+#  if CV_CXX_STD_ARRAY == 0
+#    undef CV_CXX_STD_ARRAY
 #  endif
 #endif
 

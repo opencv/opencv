@@ -484,6 +484,8 @@ bool FeatureEvaluator::updateScaleData( Size imgsz, const std::vector<float>& _s
 
 bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _scales )
 {
+    CV_INSTRUMENT_REGION()
+
     Size imgsz = _image.size();
     bool recalcOptFeatures = updateScaleData(imgsz, _scales);
 
@@ -628,6 +630,8 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
 
 void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 {
+    CV_INSTRUMENT_REGION()
+
     const ScaleData& s = scaleData->at(scaleIdx);
     sqofs = hasTiltedFeatures ? sbufSize.area() * 2 : sbufSize.area();
 
@@ -670,6 +674,8 @@ void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 
 void HaarEvaluator::computeOptFeatures()
 {
+    CV_INSTRUMENT_REGION()
+
     if (hasTiltedFeatures)
         tofs = sbufSize.area();
 
@@ -916,6 +922,8 @@ void CascadeClassifierImpl::read(const FileNode& node)
 
 int CascadeClassifierImpl::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, int scaleIdx, double& weight )
 {
+    CV_INSTRUMENT_REGION()
+
     assert( !oldCascade &&
            (data.featureType == FeatureEvaluator::HAAR ||
             data.featureType == FeatureEvaluator::LBP ||
@@ -984,6 +992,8 @@ public:
 
     void operator()(const Range& range) const
     {
+        CV_INSTRUMENT_REGION()
+
         Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
         double gypWeight = 0.;
         Size origWinSize = classifier->data.origWinSize;

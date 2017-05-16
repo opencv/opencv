@@ -138,6 +138,9 @@ bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
     // return value
     bool ok = false;
 
+    if (trainData.empty()) {
+        return false;
+    }
     clear();
     Mat _data_i = trainData->getSamples();
     Mat _labels_i = trainData->getResponses();

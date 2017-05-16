@@ -50,15 +50,6 @@
 
 #define USE_ZLIB 1
 
-#ifdef __APPLE__
-#  include "TargetConditionals.h"
-#  if (defined TARGET_OS_IPHONE && TARGET_OS_IPHONE) || (defined TARGET_IPHONE_SIMULATOR && TARGET_IPHONE_SIMULATOR)
-#    undef USE_ZLIB
-#    define USE_ZLIB 0
-     typedef void* gzFile;
-#  endif
-#endif
-
 #if USE_ZLIB
 #  ifndef _LFS64_LARGEFILE
 #    define _LFS64_LARGEFILE 0
@@ -4916,7 +4907,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
 {
     char* data0 = (char*)_data;
     int fmt_pairs[CV_FS_MAX_FMT_PAIRS*2], k = 0, fmt_pair_count;
-    int i = 0, offset = 0, count = 0;
+    int i = 0, count = 0;
 
     CV_CHECK_FILE_STORAGE( fs );
 
@@ -4927,9 +4918,11 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
         CV_Error( CV_StsBadSize, "The readed sequence is a scalar, thus len must be 1" );
 
     fmt_pair_count = icvDecodeFormat( dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS );
+    size_t step = ::icvCalcStructSize(dt, 0);
 
     for(;;)
     {
+        int offset = 0;
         for( k = 0; k < fmt_pair_count; k++ )
         {
             int elem_type = fmt_pairs[k*2+1];
@@ -5047,6 +5040,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
 
             offset = (int)(data - data0);
         }
+        data0 += step;
     }
 
 end_loop:

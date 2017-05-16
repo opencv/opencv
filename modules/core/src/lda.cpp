@@ -53,7 +53,8 @@ static Mat argsort(InputArray _src, bool ascending=true)
 
 static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0) {
     // make sure the input data is a vector of matrices or vector of vector
-    if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_VECTOR_VECTOR) {
+    if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_ARRAY_MAT &&
+        src.kind() != _InputArray::STD_VECTOR_VECTOR) {
         String error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< std::vector<...> >).";
         CV_Error(Error::StsBadArg, error_message);
     }
@@ -1096,6 +1097,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
 void LDA::compute(InputArrayOfArrays _src, InputArray _lbls) {
     switch(_src.kind()) {
     case _InputArray::STD_VECTOR_MAT:
+    case _InputArray::STD_ARRAY_MAT:
         lda(asRowMatrix(_src, CV_64FC1), _lbls);
         break;
     case _InputArray::MAT:

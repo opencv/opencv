@@ -1580,13 +1580,13 @@ public:
             return;
         }
 
-        IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)ippMalloc( sizeSpec );
+        IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)CV_IPP_MALLOC( sizeSpec );
 
         if ( sizeInit > 0 )
-            pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+            pMemInit = (Ipp8u*)CV_IPP_MALLOC( sizeInit );
 
         if ( sizeBuffer > 0 )
-            pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+            pBuffer = (Ipp8u*)CV_IPP_MALLOC( sizeBuffer );
 
         status = ippiDFTInit_C_32fc( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
 
@@ -1661,13 +1661,13 @@ public:
             return;
         }
 
-        IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)ippMalloc( sizeSpec );
+        IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)CV_IPP_MALLOC( sizeSpec );
 
         if ( sizeInit > 0 )
-            pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+            pMemInit = (Ipp8u*)CV_IPP_MALLOC( sizeInit );
 
         if ( sizeBuffer > 0 )
-            pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+            pBuffer = (Ipp8u*)CV_IPP_MALLOC( sizeBuffer );
 
         status = ippiDFTInit_R_32f( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
 
@@ -1767,13 +1767,13 @@ static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size
     if ( status < 0 )
         return false;
 
-    IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)ippMalloc( sizeSpec );
+    IppiDFTSpec_C_32fc* pDFTSpec = (IppiDFTSpec_C_32fc*)CV_IPP_MALLOC( sizeSpec );
 
     if ( sizeInit > 0 )
-        pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+        pMemInit = (Ipp8u*)CV_IPP_MALLOC( sizeInit );
 
     if ( sizeBuffer > 0 )
-        pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+        pBuffer = (Ipp8u*)CV_IPP_MALLOC( sizeBuffer );
 
     status = ippiDFTInit_C_32fc( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
 
@@ -1823,13 +1823,13 @@ static bool ippi_DFT_R_32F(const uchar * src, size_t src_step, uchar * dst, size
     if ( status < 0 )
         return false;
 
-    IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)ippMalloc( sizeSpec );
+    IppiDFTSpec_R_32f* pDFTSpec = (IppiDFTSpec_R_32f*)CV_IPP_MALLOC( sizeSpec );
 
     if ( sizeInit > 0 )
-        pMemInit = (Ipp8u*)ippMalloc( sizeInit );
+        pMemInit = (Ipp8u*)CV_IPP_MALLOC( sizeInit );
 
     if ( sizeBuffer > 0 )
-        pBuffer = (Ipp8u*)ippMalloc( sizeBuffer );
+        pBuffer = (Ipp8u*)CV_IPP_MALLOC( sizeBuffer );
 
     status = ippiDFTInit_R_32f( srcRoiSize, norm_flag, ippAlgHintNone, pDFTSpec, pMemInit );
 
@@ -3342,6 +3342,9 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
 
+    // Fail if DFT_COMPLEX_INPUT is specified, but src is not 2 channels.
+    CV_Assert( !((flags & DFT_COMPLEX_INPUT) && src.channels() != 2) );
+
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
         _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
     else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
@@ -3849,20 +3852,20 @@ public:
             return;
         }
 
-        pDCTSpec = (Ipp8u*)ippMalloc(specSize);
+        pDCTSpec = (Ipp8u*)CV_IPP_MALLOC(specSize);
         if(!pDCTSpec && specSize)
         {
             *ok = false;
             return;
         }
 
-        pBuffer  = (Ipp8u*)ippMalloc(bufferSize);
+        pBuffer  = (Ipp8u*)CV_IPP_MALLOC(bufferSize);
         if(!pBuffer && bufferSize)
         {
             *ok = false;
             IPP_RETURN
         }
-        pInitBuf = (Ipp8u*)ippMalloc(initSize);
+        pInitBuf = (Ipp8u*)CV_IPP_MALLOC(initSize);
         if(!pInitBuf && initSize)
         {
             *ok = false;
@@ -3978,17 +3981,17 @@ static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t
         if(ippDctGetSize(srcRoiSize, &specSize, &initSize, &bufferSize) < 0)
             return false;
 
-        pDCTSpec = (Ipp8u*)ippMalloc(specSize);
+        pDCTSpec = (Ipp8u*)CV_IPP_MALLOC(specSize);
         if(!pDCTSpec && specSize)
             return false;
 
-        pBuffer  = (Ipp8u*)ippMalloc(bufferSize);
+        pBuffer  = (Ipp8u*)CV_IPP_MALLOC(bufferSize);
         if(!pBuffer && bufferSize)
         {
             IPP_RELEASE
             return false;
         }
-        pInitBuf = (Ipp8u*)ippMalloc(initSize);
+        pInitBuf = (Ipp8u*)CV_IPP_MALLOC(initSize);
         if(!pInitBuf && initSize)
         {
             IPP_RELEASE

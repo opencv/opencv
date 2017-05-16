@@ -715,7 +715,7 @@ void CV_SmoothBaseTest::get_test_array_types_and_sizes( int test_case_idx,
 double CV_SmoothBaseTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     int depth = test_mat[INPUT][0].depth();
-    return depth <= CV_8S ? 1 : 1e-5;
+    return depth < CV_32F ? 1 : 1e-5;
 }
 
 
