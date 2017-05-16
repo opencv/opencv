@@ -53,6 +53,10 @@
 namespace cv
 {
 
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
+
 /** @addtogroup core_hal_intrin
 
 "Universal intrinsics" is a types and functions set intended to simplify vectorization of code on
@@ -717,7 +721,7 @@ inline v_reg<typename V_TypeTraits<_Tp>::abs_type, n> v_absdiff(const v_reg<_Tp,
 {
     typedef typename V_TypeTraits<_Tp>::abs_type rtype;
     v_reg<rtype, n> c;
-    const rtype mask = std::numeric_limits<_Tp>::is_signed ? (1 << (sizeof(rtype)*8 - 1)) : 0;
+    const rtype mask = (rtype)(std::numeric_limits<_Tp>::is_signed ? (1 << (sizeof(rtype)*8 - 1)) : 0);
     for( int i = 0; i < n; i++ )
     {
         rtype ua = a.s[i] ^ mask;
@@ -1827,7 +1831,9 @@ static inline bool hasSIMD128()
 
 //! @}
 
-
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+#endif
 }
 
 #endif

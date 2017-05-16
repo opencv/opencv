@@ -788,6 +788,7 @@ CV_EXPORTS void mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArr
 (obtained from dft_size ).
 -   **DFT_INVERSE** inverts DFT. Use for complex-complex cases (real-complex and complex-real
 cases are always forward and inverse, respectively).
+-   **DFT_COMPLEX_INPUT** Specifies that input is complex input with 2 channels.
 -   **DFT_REAL_OUTPUT** specifies the output as real. The source matrix is the result of
 real-complex transform, so the destination matrix must be real.
 @param stream Stream for the asynchronous version.
@@ -812,6 +813,35 @@ instead of the width.
 @sa dft
  */
 CV_EXPORTS void dft(InputArray src, OutputArray dst, Size dft_size, int flags=0, Stream& stream = Stream::Null());
+
+/** @brief Base class for DFT operator as a cv::Algorithm. :
+ */
+class CV_EXPORTS DFT : public Algorithm
+{
+public:
+    /** @brief Computes an FFT of a given image.
+
+    @param image Source image. Only CV_32FC1 images are supported for now.
+    @param result Result image.
+    @param stream Stream for the asynchronous version.
+     */
+    virtual void compute(InputArray image, OutputArray result, Stream& stream = Stream::Null()) = 0;
+};
+
+/** @brief Creates implementation for cuda::DFT.
+
+@param dft_size The image size.
+@param flags Optional flags:
+-   **DFT_ROWS** transforms each individual row of the source matrix.
+-   **DFT_SCALE** scales the result: divide it by the number of elements in the transform
+(obtained from dft_size ).
+-   **DFT_INVERSE** inverts DFT. Use for complex-complex cases (real-complex and complex-real
+cases are always forward and inverse, respectively).
+-   **DFT_COMPLEX_INPUT** Specifies that inputs will be complex with 2 channels.
+-   **DFT_REAL_OUTPUT** specifies the output as real. The source matrix is the result of
+real-complex transform, so the destination matrix must be real.
+ */
+CV_EXPORTS Ptr<DFT> createDFT(Size dft_size, int flags);
 
 /** @brief Base class for convolution (or cross-correlation) operator. :
  */

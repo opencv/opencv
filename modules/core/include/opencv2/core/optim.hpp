@@ -73,7 +73,7 @@ public:
     /** @brief Getter for the optimized function.
 
     The optimized function is represented by Function interface, which requires derivatives to
-    implement the sole method calc(double*) to evaluate the function.
+    implement the calc(double*) and getDim() methods to evaluate the function.
 
     @return Smart-pointer to an object that implements Function interface - it represents the
     function that is being optimized. It can be empty, if no function was given so far.

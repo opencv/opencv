@@ -132,16 +132,10 @@ enum
 #define R_COMP z
 #define G_COMP y
 #define B_COMP x
-#elif bidx == 2
+#else
 #define R_COMP x
 #define G_COMP y
 #define B_COMP z
-#elif bidx == 3
-// The only kernel that uses bidx == 3 doesn't use these macros.
-// But we still need to make the compiler happy.
-#define R_COMP w
-#define G_COMP w
-#define B_COMP w
 #endif
 
 #ifndef uidx

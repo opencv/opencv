@@ -1,5 +1,14 @@
+#ifndef OPENCV_CVCONFIG_H_INCLUDED
+#define OPENCV_CVCONFIG_H_INCLUDED
+
 /* OpenCV compiled as static or dynamic libs */
 #cmakedefine BUILD_SHARED_LIBS
+
+/* OpenCV intrinsics optimized code */
+#cmakedefine CV_ENABLE_INTRINSICS
+
+/* OpenCV additional optimized code */
+#cmakedefine CV_DISABLE_OPTIMIZATION
 
 /* Compile for 'real' NVIDIA GPU architectures */
 #define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
@@ -92,6 +101,7 @@
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
 #cmakedefine HAVE_IPP_ICV_ONLY
+#cmakedefine HAVE_IPP_IW
 
 /* Intel IPP Async */
 #cmakedefine HAVE_IPP_A
@@ -198,11 +208,12 @@
 /* Lapack */
 #cmakedefine HAVE_LAPACK
 
-/* FP16 */
-#cmakedefine HAVE_FP16
-
 /* Library was compiled with functions instrumentation */
 #cmakedefine ENABLE_INSTRUMENTATION
 
 /* OpenVX */
 #cmakedefine HAVE_OPENVX
+
+
+
+#endif // OPENCV_CVCONFIG_H_INCLUDED

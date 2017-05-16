@@ -61,7 +61,7 @@ ExifEntry_t::ExifEntry_t() :
 /**
  * @brief ExifReader constructor
  */
-ExifReader::ExifReader(std::string filename) : m_filename(filename), m_format(NONE)
+ExifReader::ExifReader(std::istream& stream) : m_stream(stream), m_format(NONE)
 {
 }
 
@@ -121,29 +121,18 @@ ExifEntry_t ExifReader::getTag(const ExifTagName tag)
  */
 std::map<int, ExifEntry_t > ExifReader::getExif()
 {
-    const size_t markerSize = 2;
-    const size_t offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
+    const std::streamsize markerSize = 2;
+    const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
     unsigned char appMarker[markerSize];
     m_exif.erase( m_exif.begin(), m_exif.end() );
 
-    size_t count;
-
-    if (m_filename.size() == 0)
-    {
-        return m_exif;
-    }
-
-    FILE* f = fopen( m_filename.c_str(), "rb" );
-
-    if( !f )
-    {
-        return m_exif; //Until this moment the map is empty
-    }
+    std::streamsize count;
 
     bool exifFound = false, stopSearch = false;
-    while( ( !feof( f ) ) && !exifFound && !stopSearch )
+    while( ( !m_stream.eof() ) && !exifFound && !stopSearch )
     {
-        count = fread( appMarker, sizeof(unsigned char), markerSize, f );
+        m_stream.read( reinterpret_cast<char*>(appMarker), markerSize );
+        count = m_stream.gcount();
         if( count < markerSize )
         {
             break;
@@ -159,12 +148,14 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
             case APP0: case APP2: case APP3: case APP4: case APP5: case APP6: case APP7: case APP8:
             case APP9: case APP10: case APP11: case APP12: case APP13: case APP14: case APP15:
             case COM:
-                bytesToSkip = getFieldSize( f );
+                bytesToSkip = getFieldSize();
                 if (bytesToSkip < markerSize) {
-                    fclose(f);
                     throw ExifParsingError();
                 }
-                fseek( f, static_cast<long>( bytesToSkip - markerSize ), SEEK_CUR );
+                m_stream.seekg( static_cast<long>( bytesToSkip - markerSize ), m_stream.cur );
+                if ( m_stream.fail() ) {
+                    throw ExifParsingError();
+                }
                 break;
 
             //SOI and EOI don't have the size field after the marker
@@ -172,14 +163,17 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
                 break;
 
             case APP1: //actual Exif Marker
-                exifSize = getFieldSize(f);
+                exifSize = getFieldSize();
                 if (exifSize <= offsetToTiffHeader) {
-                    fclose(f);
                     throw ExifParsingError();
                 }
                 m_data.resize( exifSize - offsetToTiffHeader );
-                fseek(f, static_cast<long>( offsetToTiffHeader ), SEEK_CUR);
-                count = fread( &m_data[0], sizeof( unsigned char ), exifSize - offsetToTiffHeader, f );
+                m_stream.seekg( static_cast<long>( offsetToTiffHeader ), m_stream.cur );
+                if ( m_stream.fail() ) {
+                    throw ExifParsingError();
+                }
+                m_stream.read( reinterpret_cast<char*>(&m_data[0]), exifSize - offsetToTiffHeader );
+                count = m_stream.gcount();
                 exifFound = true;
                 break;
 
@@ -188,8 +182,6 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
                 break;
         }
     }
-
-    fclose(f);
 
     if( !exifFound )
     {
@@ -207,10 +199,11 @@ std::map<int, ExifEntry_t > ExifReader::getExif()
  *
  *  @return size of exif field in the file
  */
-size_t ExifReader::getFieldSize (FILE* f) const
+size_t ExifReader::getFieldSize ()
 {
     unsigned char fieldSize[2];
-    size_t count = fread ( fieldSize, sizeof( char ), 2, f );
+    m_stream.read( reinterpret_cast<char*>(fieldSize), 2 );
+    std::streamsize count = m_stream.gcount();
     if (count < 2)
     {
         return 0;

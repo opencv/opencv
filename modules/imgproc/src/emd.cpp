@@ -1164,4 +1164,11 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
                        _flow.needed() ? &_cflow : 0, lowerBound, 0 );
 }
 
+float cv::wrapperEMD(InputArray _signature1, InputArray _signature2,
+               int distType, InputArray _cost,
+               Ptr<float> lowerBound, OutputArray _flow)
+{
+    return EMD(_signature1, _signature2, distType, _cost, lowerBound.get(), _flow);
+}
+
 /* End of file. */

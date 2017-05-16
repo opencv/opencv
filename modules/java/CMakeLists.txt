@@ -345,7 +345,7 @@ else(ANDROID)
   list(APPEND step3_depends "${OpenCV_BINARY_DIR}/build.xml")
 
   add_custom_command(OUTPUT "${JAR_FILE}" "${JAR_FILE}.dephelper"
-                     COMMAND ${ANT_EXECUTABLE} -q -noinput -k jar
+                     COMMAND ${ANT_EXECUTABLE} -q -noinput -k jar javadoc
                      COMMAND ${CMAKE_COMMAND} -E touch "${JAR_FILE}.dephelper"
                      WORKING_DIRECTORY "${OpenCV_BINARY_DIR}"
                      DEPENDS ${step3_depends}

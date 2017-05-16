@@ -99,7 +99,7 @@ will have their corresponding values. Just check it yourself and verify it.
 
 Below is the result I got, and each row is hierarchy details of corresponding contour. For eg, first
 row corresponds to contour 0. Next contour is contour 1. So Next = 1. There is no previous contour,
-so Previous = 0. And the remaining two, as told before, it is -1.
+so Previous = -1. And the remaining two, as told before, it is -1.
 @code{.py}
 >>> hierarchy
 array([[[ 1, -1, -1, -1],
@@ -195,7 +195,7 @@ Take contour-0 : It is in hierarchy-0. Next contour in same hierarchy is contour
 contours. Child is contour-1. And no parent. So array is [7,-1,1,-1].
 
 Take contour-2 : It is in hierarchy-1. No contour in same level. No previous one. Child is
-contour-2. Parent is contour-0. So array is [-1,-1,2,0].
+contour-3. Parent is contour-1. So array is [-1,-1,3,1].
 
 And remaining, try yourself. Below is the full answer:
 @code{.py}

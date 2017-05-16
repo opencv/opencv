@@ -327,6 +327,34 @@ The function does not reallocate memory if the matrix has proper attributes alre
  */
 CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
 
+/** @brief BufferPool for use with CUDA streams
+
+ * BufferPool utilizes cuda::Stream's allocator to create new buffers. It is
+ * particularly useful when BufferPoolUsage is set to true, or a custom
+ * allocator is specified for the cuda::Stream, and you want to implement your
+ * own stream based functions utilizing the same underlying GPU memory
+ * management.
+ */
+class CV_EXPORTS BufferPool
+{
+public:
+
+    //! Gets the BufferPool for the given stream.
+    explicit BufferPool(Stream& stream);
+
+    //! Allocates a new GpuMat of given size and type.
+    GpuMat getBuffer(int rows, int cols, int type);
+
+    //! Allocates a new GpuMat of given size and type.
+    GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+
+    //! Returns the allocator associated with the stream.
+    Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
+
+private:
+    Ptr<GpuMat::Allocator> allocator_;
+};
+
 //! BufferPool management (must be called before Stream creation)
 CV_EXPORTS void setBufferPoolUsage(bool on);
 CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount);
@@ -478,6 +506,9 @@ public:
 
     //! creates a new asynchronous stream
     Stream();
+
+    //! creates a new asynchronous stream with custom allocator
+    Stream(const Ptr<GpuMat::Allocator>& allocator);
 
     /** @brief Returns true if the current stream queue is finished. Otherwise, it returns false.
     */
