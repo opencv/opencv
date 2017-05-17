@@ -2190,3 +2190,28 @@ TEST(ImgProc_Bayer2RGBA, accuracy)
         }
     }
 }
+
+TEST(ImgProc_BGR2RGBA, regression_8696)
+{
+    Mat src(Size(80, 10), CV_8UC4);
+    src.setTo(Scalar(255, 0, 200, 100));
+
+    Mat dst;
+    cvtColor(src, dst, COLOR_BGR2BGRA);
+
+    EXPECT_DOUBLE_EQ(norm(dst - src, NORM_INF), 0.);
+}
+
+TEST(ImgProc_BGR2RGBA, 3ch24ch)
+{
+    Mat src(Size(80, 10), CV_8UC3);
+    src.setTo(Scalar(200, 0, 200));
+
+    Mat dst;
+    cvtColor(src, dst, COLOR_BGR2BGRA);
+
+    Mat expected(Size(80, 10), CV_8UC4);
+    expected.setTo(Scalar(80, 0, 200, 255));
+
+    EXPECT_DOUBLE_EQ(norm(expected - dst, NORM_INF), 0.);
+}

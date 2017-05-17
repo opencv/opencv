@@ -688,7 +688,7 @@ template<typename _Tp> struct RGB2RGB
             for( int i = 0; i < n; i += 4 )
             {
                 _Tp t0 = src[i], t1 = src[i+1], t2 = src[i+2], t3 = src[i+3];
-                dst[i] = t2; dst[i+1] = t1; dst[i+2] = t0; dst[i+3] = t3;
+                dst[i+bidx] = t0; dst[i+1] = t1; dst[i+(bidx^2)] = t2; dst[i+3] = t3;
             }
         }
     }
@@ -802,25 +802,25 @@ template<> struct RGB2RGB<uchar>
             for ( ; i <= n - 64; i += 64 )
             {
                 uint8x16x4_t v_src = vld4q_u8(src + i), v_dst;
-                v_dst.val[0] = v_src.val[2];
+                v_dst.val[0] = v_src.val[bidx];
                 v_dst.val[1] = v_src.val[1];
-                v_dst.val[2] = v_src.val[0];
+                v_dst.val[2] = v_src.val[bidx^2];
                 v_dst.val[3] = v_src.val[3];
                 vst4q_u8(dst + i, v_dst);
             }
             for ( ; i <= n - 32; i += 32 )
             {
                 uint8x8x4_t v_src = vld4_u8(src + i), v_dst;
-                v_dst.val[0] = v_src.val[2];
+                v_dst.val[0] = v_src.val[bidx];
                 v_dst.val[1] = v_src.val[1];
-                v_dst.val[2] = v_src.val[0];
+                v_dst.val[2] = v_src.val[bidx^2];
                 v_dst.val[3] = v_src.val[3];
                 vst4_u8(dst + i, v_dst);
             }
             for ( ; i < n; i += 4)
             {
                 uchar t0 = src[i], t1 = src[i+1], t2 = src[i+2], t3 = src[i+3];
-                dst[i] = t2; dst[i+1] = t1; dst[i+2] = t0; dst[i+3] = t3;
+                dst[i+bidx] = t0; dst[i+1] = t1; dst[i+(bidx^2)] = t2; dst[i+3] = t3;
             }
         }
     }
