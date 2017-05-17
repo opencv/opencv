@@ -3519,11 +3519,15 @@ public:
     {
         int i, j, cn = dest->channels(), k;
         Size size = dest->size();
-        #if CV_SSE3
-        int CV_DECL_ALIGNED(16) buf[4];
+        #if CV_SSE3 || CV_NEON
+        unsigned int CV_DECL_ALIGNED(16) buf[4];
         float CV_DECL_ALIGNED(16) bufSum[4];
         static const unsigned int CV_DECL_ALIGNED(16) bufSignMask[] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
+        #endif
+        #if CV_SSE3
         bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+        #elif CV_NEON
+        bool haveNEON = checkHardwareSupport(CV_CPU_NEON);
         #endif
 
         for( i = range.start; i < range.end; i++ )
@@ -3564,6 +3568,38 @@ public:
 
                              sum += bufSum[1];
                              wsum += bufSum[0];
+                        }
+                    }
+                    #elif CV_NEON
+                    if( haveNEON )
+                    {
+                        float32x4_t _val0 = vdupq_n_f32(static_cast<float>(val0));
+                        const uint32x4_t _signMask = vld1q_u32(bufSignMask);
+                        for( ; k <= maxk - 4; k += 4 )
+                        {
+                            float CV_DECL_ALIGNED(16) data[] = {sptr[j + space_ofs[k]],   sptr[j + space_ofs[k+1]],
+                                                                sptr[j + space_ofs[k+2]], sptr[j + space_ofs[k+3]],};
+                            float32x4_t _valF = vld1q_f32(data);
+                            float32x4_t _val = vsubq_f32(_valF, _val0);
+                            _val = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(_val), _signMask));
+                            vst1q_u32(buf, vcvtq_u32_f32(_val));
+
+                            float CV_DECL_ALIGNED(16) _weight[] = {color_weight[buf[0]],
+                                                                   color_weight[buf[1]],
+                                                                   color_weight[buf[2]],
+                                                                   color_weight[buf[3]],};
+                            float32x4_t _cw = vld1q_f32(_weight);
+                            float32x4_t _sw = vld1q_f32(space_weight+k);
+                            float32x4_t _w = vmulq_f32(_cw, _sw);
+                            _cw = vmulq_f32(_w, _valF);
+
+                            float32x2_t _sum = vpadd_f32(vget_high_f32(_cw), vget_low_f32(_cw));
+                            _sum = vpadd_f32(_sum, _sum);
+                            sum += vget_lane_f32(_sum, 0);
+
+                            _sum = vpadd_f32(vget_high_f32(_w), vget_low_f32(_w));
+                            _sum = vpadd_f32(_sum, _sum);
+                            wsum += vget_lane_f32(_sum, 0);
                         }
                     }
                     #endif
@@ -3636,6 +3672,63 @@ public:
                             sum_g += bufSum[2];
                             sum_r += bufSum[3];
                          }
+                    }
+                    #elif CV_NEON
+                    if( haveNEON )
+                    {
+                        float32x4_t half = vdupq_n_f32(0.5f);
+                        const float32x4_t _b0 = vdupq_n_f32(static_cast<float>(b0));
+                        const float32x4_t _g0 = vdupq_n_f32(static_cast<float>(g0));
+                        const float32x4_t _r0 = vdupq_n_f32(static_cast<float>(r0));
+                        const uint32x4_t _signMask = vld1q_u32(bufSignMask);
+
+                        for( ; k <= maxk - 4; k += 4 )
+                        {
+                            const uchar* const sptr_k0  = sptr + j + space_ofs[k];
+                            const uchar* const sptr_k1  = sptr + j + space_ofs[k+1];
+                            const uchar* const sptr_k2  = sptr + j + space_ofs[k+2];
+                            const uchar* const sptr_k3  = sptr + j + space_ofs[k+3];
+
+                            float32x4_t _v0 = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vld1_u8(sptr_k0)))));
+                            float32x4_t _v1 = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vld1_u8(sptr_k1)))));
+                            float32x4_t _v2 = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vld1_u8(sptr_k2)))));
+                            float32x4_t _v3 = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vld1_u8(sptr_k3)))));
+
+                            float32x4x2_t v01 = vtrnq_f32(_v0, _v1);
+                            float32x4x2_t v23 = vtrnq_f32(_v2, _v3);
+                            float32x4_t _b = vcombine_f32(vget_low_f32(v01.val[0]), vget_low_f32(v23.val[0]));
+                            float32x4_t _g = vcombine_f32(vget_low_f32(v01.val[1]), vget_low_f32(v23.val[1]));
+                            float32x4_t _r = vcombine_f32(vget_high_f32(v01.val[0]), vget_high_f32(v23.val[0]));
+
+                            float32x4_t bt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_b, _b0)), _signMask));
+                            float32x4_t gt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_g, _g0)), _signMask));
+                            float32x4_t rt = vreinterpretq_f32_u32(vbicq_u32(vreinterpretq_u32_f32(vsubq_f32(_r, _r0)), _signMask));
+                            bt = vaddq_f32(half, vaddq_f32(bt, vaddq_f32(gt, rt)));
+                            vst1q_u32(buf, vcvtq_u32_f32(bt));
+
+                            bufSum[0] = color_weight[buf[0]];
+                            bufSum[1] = color_weight[buf[1]];
+                            bufSum[2] = color_weight[buf[2]];
+                            bufSum[3] = color_weight[buf[3]];
+                            float32x4_t _w = vld1q_f32(bufSum);
+                            float32x4_t _sw = vld1q_f32(space_weight+k);
+
+                            _w = vmulq_f32(_w,_sw);
+                            _b = vmulq_f32(_b, _w);
+                            _g = vmulq_f32(_g, _w);
+                            _r = vmulq_f32(_r, _w);
+
+                            float32x2_t _wb = vpadd_f32(vpadd_f32(vget_low_f32(_w),vget_high_f32(_w)), vpadd_f32(vget_low_f32(_b), vget_high_f32(_b)));
+                            float32x2_t _gr = vpadd_f32(vpadd_f32(vget_low_f32(_g),vget_high_f32(_g)), vpadd_f32(vget_low_f32(_r), vget_high_f32(_r)));
+
+                            _w = vcombine_f32(_wb, _gr);
+                            vst1q_f32(bufSum, _w);
+
+                            wsum  += bufSum[0];
+                            sum_b += bufSum[1];
+                            sum_g += bufSum[2];
+                            sum_r += bufSum[3];
+                        }
                     }
                     #endif
 
