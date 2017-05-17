@@ -1204,7 +1204,7 @@ not_found:
     if (!configuration)
         return NULL; // suppress messages on stderr
 
-    std::cerr << "ERROR: Requested OpenCL device not found, check configuration: " << (configuration == NULL ? "" : configuration) << std::endl
+    std::cerr << "ERROR: Requested OpenCL device not found, check configuration: " << configuration << std::endl
             << "    Platform: " << (platform.length() == 0 ? "any" : platform) << std::endl
             << "    Device types: ";
     for (size_t t = 0; t < deviceTypes.size(); t++)

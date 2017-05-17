@@ -448,6 +448,7 @@ Mat& Mat::operator = (const Scalar& s)
             for( size_t j = 0; j < elsize; j += blockSize )
             {
                 size_t sz = MIN(blockSize, elsize - j);
+                CV_Assert(sz <= sizeof(scalar));
                 memcpy( dptr + j, scalar, sz );
             }
         }
