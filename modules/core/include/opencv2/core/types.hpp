@@ -1040,7 +1040,8 @@ Complex<_Tp> operator / (const Complex<_Tp>& a, const Complex<_Tp>& b)
 template<typename _Tp> static inline
 Complex<_Tp>& operator /= (Complex<_Tp>& a, const Complex<_Tp>& b)
 {
-    return (a = a / b);
+    a = a / b;
+    return a;
 }
 
 template<typename _Tp> static inline
