@@ -1103,6 +1103,28 @@ protected:
     int addedDescCount;
 };
 
+
+/** @brief GMS feature matching strategy
+
+@param size1 Input size of image1.
+@param size2 Input size of image2.
+@param keypoints1 Input keypoints of image1.
+@param keypoints2 Input keypoints of image2.
+@param matches_all Input neighborhood matches.
+@param InlierMask Output Mask. 1 for inlier, 0 for outlier
+@return the number of inliers
+
+@note 
+	Since GMS works well when features number is large, we recommend that you use ORB feature and set FastThreshold to 0 to get as many as possible features quickly.
+	If matching results are not satisfied, please add more features.(We use 10000 for images with 640 X 480).
+	If your images have big rotation and scale changes, please set rotation or scale true.
+ */
+ 
+CV_EXPORTS int gms_matching( const cv::Size size1, const cv::Size size2, const std::vector<KeyPoint>& keypoints1, const std::vector<KeyPoint>& keypoints2,
+                             const std::vector<DMatch>& matches_all, std::vector<bool>& InlierMask, bool rotation = false, bool scales = false );
+							   
+							   
+
 //! @} features2d_match
 
 /****************************************************************************************\
