@@ -463,7 +463,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             }
             break;
         default:
-            return CV_Error( CV_StsBadArg, "" );
+            CV_Error( CV_StsBadArg, "" ); return;
         }
     }
     else
@@ -517,7 +517,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             }
             break;
         default:
-            return CV_Error( CV_StsBadArg, "" );
+            CV_Error( CV_StsBadArg, "" ); return;
         }
     }
 }
@@ -698,7 +698,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 }
                 break;
             default:
-                return CV_Error( CV_StsBadArg, "" );
+                CV_Error( CV_StsBadArg, "" ); return;
         }
     }
     else
@@ -752,7 +752,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 }
                 break;
             default:
-                return CV_Error( CV_StsBadArg, "" );
+                CV_Error( CV_StsBadArg, "" ); return;
         }
     }
 }
@@ -893,7 +893,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             }
             break;
         default:
-            return CV_Error(CV_StsBadArg, "");
+            CV_Error(CV_StsBadArg, ""); return;
         }
     }
     else
@@ -952,7 +952,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             }
             break;
         default:
-            return CV_Error(CV_StsBadArg, "");
+            CV_Error(CV_StsBadArg, ""); return;
         }
     }
 }
