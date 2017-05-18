@@ -381,6 +381,17 @@ CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const ch
 #define CV_Func ""
 #endif
 
+#ifdef CV_STATIC_ANALYSIS
+// In practice, some macro are not processed correctly (noreturn is not detected).
+// We need to use simplified definition for them.
+#define CV_Error(...) do { abort(); } while (0)
+#define CV_Error_(...) do { abort(); } while (0)
+#define CV_Assert(cond) do { if (!(cond)) abort(); } while (0)
+#define CV_ErrorNoReturn(...) do { abort(); } while (0)
+#define CV_ErrorNoReturn_(...) do { abort(); } while (0)
+
+#else // CV_STATIC_ANALYSIS
+
 /** @brief Call the error handler.
 
 Currently, the error handler prints the error code and the error message to the standard
@@ -420,6 +431,8 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
 
 /** same as CV_Error_(code,args), but does not return */
 #define CV_ErrorNoReturn_( code, args ) cv::errorNoReturn( code, cv::format args, CV_Func, __FILE__, __LINE__ )
+
+#endif // CV_STATIC_ANALYSIS
 
 /** replaced with CV_Assert(expr) in Debug configuration */
 #ifdef _DEBUG
