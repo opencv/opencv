@@ -109,6 +109,11 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   include("tutorial_code/calib3d/real_time_pose_estimation/CMakeLists.txt")
 endif()
 
+if(COMMAND ocv_warnings_disable)
+  #disable warnings from clang occured in viz samples
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Winconsistent-missing-override)
+endif()
+
 if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB C_SAMPLES *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${C_SAMPLES}

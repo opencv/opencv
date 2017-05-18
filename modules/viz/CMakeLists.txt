@@ -27,6 +27,8 @@ endif()
 ocv_define_module(viz opencv_core WRAP python)
 ocv_target_link_libraries(${the_module} ${VTK_LIBRARIES})
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Winconsistent-missing-override)
+
 if(APPLE AND BUILD_opencv_viz)
   ocv_target_link_libraries(${the_module} "-framework Cocoa")
 endif()
