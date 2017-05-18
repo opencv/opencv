@@ -97,6 +97,58 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK_full, testing::Combine(
     SANITY_CHECK(err, 2);
 }
 
+typedef tr1::tuple<std::string, int, tr1::tuple<int, int>, int> Path_Idx_NPoints_WSize_t;
+typedef TestBaseWithParam<Path_Idx_NPoints_WSize_t> Path_Idx_NPoints_WSize;
+
+PERF_TEST_P(Path_Idx_NPoints_WSize, OpticalFlowPyrLK_ovx, testing::Combine(
+                testing::Values<std::string>("cv/optflow/frames/VGA_%02d.png", "cv/optflow/frames/720p_%02d.png"),
+                testing::Range(1, 3),
+                testing::Values(make_tuple(9, 9), make_tuple(15, 15)),
+                testing::Values(7, 11)
+                )
+            )
+{
+    string filename1 = getDataPath(cv::format(get<0>(GetParam()).c_str(), get<1>(GetParam())));
+    string filename2 = getDataPath(cv::format(get<0>(GetParam()).c_str(), get<1>(GetParam()) + 1));
+    Mat img1 = imread(filename1);
+    Mat img2 = imread(filename2);
+    if (img1.empty()) FAIL() << "Unable to load source image " << filename1;
+    if (img2.empty()) FAIL() << "Unable to load source image " << filename2;
+
+    int nPointsX = min(get<0>(get<2>(GetParam())), img1.cols);
+    int nPointsY = min(get<1>(get<2>(GetParam())), img1.rows);
+    int winSize = get<3>(GetParam());
+
+    int maxLevel = 2;
+    TermCriteria criteria(TermCriteria::COUNT|TermCriteria::EPS, 7, 0.001);
+    int flags = 0;
+    double minEigThreshold = 1e-4;
+
+    Mat frame1, frame2;
+    cvtColor(img1, frame1, COLOR_BGR2GRAY, 1);
+    cvtColor(img2, frame2, COLOR_BGR2GRAY, 1);
+
+    vector<Point2f> inPoints;
+    vector<Point2f> outPoints;
+    vector<uchar> status;
+
+    FormTrackingPointsArray(inPoints, frame1.cols, frame1.rows, nPointsX, nPointsY);
+    outPoints.resize(inPoints.size());
+    status.resize(inPoints.size());
+
+    declare.in(frame1, frame2, inPoints).out(outPoints);
+
+    TEST_CYCLE_N(30)
+    {
+        calcOpticalFlowPyrLK(frame1, frame2, inPoints, outPoints, status, cv::noArray(),
+                             Size(winSize, winSize), maxLevel, criteria,
+                             flags, minEigThreshold);
+    }
+
+    SANITY_CHECK(outPoints, 0.3);
+    SANITY_CHECK(status);
+}
+
 typedef tr1::tuple<std::string, int, int, tr1::tuple<int,int>, int, bool> Path_Idx_Cn_NPoints_WSize_Deriv_t;
 typedef TestBaseWithParam<Path_Idx_Cn_NPoints_WSize_Deriv_t> Path_Idx_Cn_NPoints_WSize_Deriv;
 

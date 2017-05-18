@@ -1052,12 +1052,20 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     int cn = channels();
     Mat hdr = *this;
 
-    if( dims > 2 && new_rows == 0 && new_cn != 0 && size[dims-1]*cn % new_cn == 0 )
+    if( dims > 2 )
     {
-        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
-        hdr.step[dims-1] = CV_ELEM_SIZE(hdr.flags);
-        hdr.size[dims-1] = hdr.size[dims-1]*cn / new_cn;
-        return hdr;
+        if( new_rows == 0 && new_cn != 0 && size[dims-1]*cn % new_cn == 0 )
+        {
+            hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
+            hdr.step[dims-1] = CV_ELEM_SIZE(hdr.flags);
+            hdr.size[dims-1] = hdr.size[dims-1]*cn / new_cn;
+            return hdr;
+        }
+        if( new_rows > 0 )
+        {
+            int sz[] = { new_rows, (int)(total()/new_rows) };
+            return reshape(new_cn, 2, sz);
+        }
     }
 
     CV_Assert( dims <= 2 );
@@ -4705,6 +4713,18 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
     // TBD
     return Mat();
 }
+
+Mat Mat::reshape(int _cn, const std::vector<int>& _newshape) const
+{
+    if(_newshape.empty())
+    {
+        CV_Assert(empty());
+        return *this;
+    }
+
+    return reshape(_cn, (int)_newshape.size(), &_newshape[0]);
+}
+
 
 NAryMatIterator::NAryMatIterator()
     : arrays(0), planes(0), ptrs(0), narrays(0), nplanes(0), size(0), iterdepth(0), idx(0)

@@ -849,6 +849,9 @@ namespace
                 return false;
             if (maxLevel < 0 || winSize.width <= 2 || winSize.height <= 2)
                 return false;
+            if (winSize.width < 16 || winSize.height < 16 ||
+                winSize.width > 24 || winSize.height > 24)
+                return false;
             calcPatchSize();
             if (patch.x <= 0 || patch.x >= 6 || patch.y <= 0 || patch.y >= 6)
                 return false;

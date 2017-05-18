@@ -587,6 +587,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
         ocv_append_dependant_targets(${TARGET_BASE_NAME} ${TARGET_BASE_NAME}_${OPT})
         set_target_properties(${TARGET_BASE_NAME}_${OPT} PROPERTIES COMPILE_DEFINITIONS "${CPU_DISPATCH_DEFINITIONS_${OPT}}")
         set_target_properties(${TARGET_BASE_NAME}_${OPT} PROPERTIES COMPILE_FLAGS "${CPU_DISPATCH_FLAGS_${OPT}}")
+        target_include_directories(${TARGET_BASE_NAME}_${OPT} PRIVATE $<TARGET_PROPERTY:${TARGET_BASE_NAME},INCLUDE_DIRECTORIES>)
         #list(APPEND __result_libs ${TARGET_BASE_NAME}_${OPT})
         list(APPEND __result "$<TARGET_OBJECTS:${TARGET_BASE_NAME}_${OPT}>")
       else()

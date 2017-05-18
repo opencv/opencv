@@ -1,5 +1,7 @@
 #include <nmmintrin.h>
-int main() {
-    int i = _mm_popcnt_u64(1);
+
+int main()
+{
+    unsigned int res = _mm_crc32_u8(1, 2);
     return 0;
 }

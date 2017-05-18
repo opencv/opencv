@@ -784,3 +784,22 @@ protected:
 
 TEST(Calib3d_StereoBM, regression) { CV_StereoBMTest test; test.safe_run(); }
 TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
+
+TEST(Calib3d_StereoSGBM_HH4, regression)
+{
+    String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
+    Mat leftImg = imread(path + "im2.png", 0);
+    Mat rightImg = imread(path + "im6.png", 0);
+    Mat testData = imread(path + "disp2_hh4.png",-1);
+    Mat leftDisp;
+    Mat toCheck;
+    {
+        Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4);
+        sgbm->compute( leftImg, rightImg, leftDisp);
+        CV_Assert( leftDisp.type() == CV_16SC1 );
+        leftDisp.convertTo(toCheck, CV_16UC1,1,16);
+    }
+    Mat diff;
+    absdiff(toCheck, testData,diff);
+    CV_Assert( countNonZero(diff)==0);
+}

@@ -217,8 +217,6 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #define IPP_DISABLE_PERF_MAG_SSE42      1 // cv::magnitude optimizations problem
 #define IPP_DISABLE_PERF_BOX16S_SSE42   1 // cv::boxFilter optimizations problem
 
-#define IPP_DISABLE_BLOCK               0 // legacy switch
-
 #ifdef HAVE_IPP
 #include "ippversion.h"
 #ifndef IPP_VERSION_UPDATE // prior to 7.1

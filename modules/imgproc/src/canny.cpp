@@ -51,14 +51,6 @@
 #pragma warning( disable: 4127 ) // conditional expression is constant
 #endif
 
-
-#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
-#define USE_IPP_CANNY 1
-#else
-#define USE_IPP_CANNY 0
-#endif
-
-
 namespace cv
 {
 
@@ -66,73 +58,79 @@ static void CannyImpl(Mat& dx_, Mat& dy_, Mat& _dst, double low_thresh, double h
 
 
 #ifdef HAVE_IPP
-template <bool useCustomDeriv>
-static bool ippCanny(const Mat& _src, const Mat& dx_, const Mat& dy_, Mat& _dst, float low, float high)
+static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst, float low,  float high, bool L2gradient, int aperture_size)
 {
+#ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
 
-#if USE_IPP_CANNY
-    if (!useCustomDeriv && _src.isSubmatrix())
-        return false; // IPP Sobel doesn't support transparent ROI border
+#if IPP_DISABLE_PERF_CANNY_MT
+    if(cv::getNumThreads()>1)
+        return false;
+#endif
 
-    int size = 0, size1 = 0;
-    IppiSize roi = { _src.cols, _src.rows };
+    ::ipp::IwiSize size(dst.cols, dst.rows);
+    IppDataType    type     = ippiGetDataType(dst.depth());
+    int            channels = dst.channels();
+    IppNormType    norm     = (L2gradient)?ippNormL2:ippNormL1;
 
-    if (ippiCannyGetSize(roi, &size) < 0)
+    if(size.width <= 3 || size.height <= 3)
         return false;
 
-    if (!useCustomDeriv)
+    if(channels != 1)
+        return false;
+
+    if(type != ipp8u)
+        return false;
+
+    if(src.empty())
     {
-#if IPP_VERSION_X100 < 900
-        if (ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
-            return false;
-        size = std::max(size, size1);
-        if (ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1) < 0)
-            return false;
-#else
-        if (ippiFilterSobelNegVertBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size1) < 0)
-            return false;
-        size = std::max(size, size1);
-        if (ippiFilterSobelHorizBorderGetBufferSize(roi, ippMskSize3x3, ipp8u, ipp16s, 1, &size1) < 0)
-            return false;
-#endif
-        size = std::max(size, size1);
-    }
+        try
+        {
+            ::ipp::IwiImage iwSrcDx;
+            ::ipp::IwiImage iwSrcDy;
+            ::ipp::IwiImage iwDst;
 
-    AutoBuffer<uchar> buf(size + 64);
-    uchar* buffer = alignPtr((uchar*)buf, 32);
+            ippiGetImage(dx_, iwSrcDx);
+            ippiGetImage(dy_, iwSrcDy);
+            ippiGetImage(dst, iwDst);
 
-    Mat dx, dy;
-    if (!useCustomDeriv)
-    {
-        Mat _dx(_src.rows, _src.cols, CV_16S);
-        if( CV_INSTRUMENT_FUN_IPP(ippiFilterSobelNegVertBorder_8u16s_C1R, _src.ptr(), (int)_src.step,
-                        _dx.ptr<short>(), (int)_dx.step, roi,
-                        ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, &iwSrcDx, &iwSrcDy, &iwDst, norm, low, high);
+        }
+        catch (::ipp::IwException ex)
+        {
             return false;
-
-        Mat _dy(_src.rows, _src.cols, CV_16S);
-        if( CV_INSTRUMENT_FUN_IPP(ippiFilterSobelHorizBorder_8u16s_C1R, _src.ptr(), (int)_src.step,
-                        _dy.ptr<short>(), (int)_dy.step, roi,
-                        ippMskSize3x3, ippBorderRepl, 0, buffer) < 0 )
-            return false;
-
-        swap(dx, _dx);
-        swap(dy, _dy);
+        }
     }
     else
     {
-        dx = dx_;
-        dy = dy_;
+        IppiMaskSize kernel;
+
+        if(aperture_size == 3)
+            kernel = ippMskSize3x3;
+        else if(aperture_size == 5)
+            kernel = ippMskSize5x5;
+        else
+            return false;
+
+        try
+        {
+            ::ipp::IwiImage iwSrc;
+            ::ipp::IwiImage iwDst;
+
+            ippiGetImage(src, iwSrc);
+            ippiGetImage(dst, iwDst);
+
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCanny, &iwSrc, &iwDst, ippFilterSobel, kernel, norm, low, high, ippBorderRepl);
+        }
+        catch (::ipp::IwException)
+        {
+            return false;
+        }
     }
 
-    if( CV_INSTRUMENT_FUN_IPP(ippiCanny_16s8u_C1R, dx.ptr<short>(), (int)dx.step,
-                               dy.ptr<short>(), (int)dy.step,
-                              _dst.ptr(), (int)_dst.step, roi, low, high, buffer) < 0 )
-        return false;
     return true;
 #else
-    CV_UNUSED(_src); CV_UNUSED(dx_); CV_UNUSED(dy_); CV_UNUSED(_dst); CV_UNUSED(low); CV_UNUSED(high);
+    CV_UNUSED(src); CV_UNUSED(dx_); CV_UNUSED(dy_); CV_UNUSED(dst); CV_UNUSED(low); CV_UNUSED(high); CV_UNUSED(L2gradient); CV_UNUSED(aperture_size);
     return false;
 #endif
 }
@@ -318,6 +316,8 @@ public:
         // In sobel transform we calculate ksize2 extra lines for the first and last rows of each slice
         // because IPPDerivSobel expects only isolated ROIs, in contrast with the opencv version which
         // uses the pixels outside of the ROI to form a border.
+        //
+        // TODO: statement above is not true anymore, so adjustments may be required
         int ksize2 = aperture_size / 2;
         // If Scharr filter: aperture_size is 3 and ksize2 is 1
         if(aperture_size == -1)
@@ -882,18 +882,18 @@ void Canny( InputArray _src, OutputArray _dst,
         return;
 #endif
 
-    CV_IPP_RUN(USE_IPP_CANNY && (aperture_size == 3 && !L2gradient && 1 == cn), ippCanny<false>(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh))
+    CV_IPP_RUN_FAST(ipp_Canny(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh, L2gradient, aperture_size))
 
-if (L2gradient)
-{
-    low_thresh = std::min(32767.0, low_thresh);
-    high_thresh = std::min(32767.0, high_thresh);
+    if (L2gradient)
+    {
+        low_thresh = std::min(32767.0, low_thresh);
+        high_thresh = std::min(32767.0, high_thresh);
 
-    if (low_thresh > 0) low_thresh *= low_thresh;
-    if (high_thresh > 0) high_thresh *= high_thresh;
-}
-int low = cvFloor(low_thresh);
-int high = cvFloor(high_thresh);
+        if (low_thresh > 0) low_thresh *= low_thresh;
+        if (high_thresh > 0) high_thresh *= high_thresh;
+    }
+    int low = cvFloor(low_thresh);
+    int high = cvFloor(high_thresh);
 
     ptrdiff_t mapstep = src.cols + 2;
     AutoBuffer<uchar> buffer((src.cols+2)*(src.rows+2) + cn * mapstep * 3 * sizeof(int));
@@ -938,15 +938,15 @@ int high = cvFloor(high_thresh);
     {
         m = borderPeaksParallel.front();
         borderPeaksParallel.pop();
-    if (!m[-1])         CANNY_PUSH_SERIAL(m - 1);
-    if (!m[1])          CANNY_PUSH_SERIAL(m + 1);
-    if (!m[-mapstep-1]) CANNY_PUSH_SERIAL(m - mapstep - 1);
-    if (!m[-mapstep])   CANNY_PUSH_SERIAL(m - mapstep);
-    if (!m[-mapstep+1]) CANNY_PUSH_SERIAL(m - mapstep + 1);
-    if (!m[mapstep-1])  CANNY_PUSH_SERIAL(m + mapstep - 1);
-    if (!m[mapstep])    CANNY_PUSH_SERIAL(m + mapstep);
-    if (!m[mapstep+1])  CANNY_PUSH_SERIAL(m + mapstep + 1);
-}
+        if (!m[-1])         CANNY_PUSH_SERIAL(m - 1);
+        if (!m[1])          CANNY_PUSH_SERIAL(m + 1);
+        if (!m[-mapstep-1]) CANNY_PUSH_SERIAL(m - mapstep - 1);
+        if (!m[-mapstep])   CANNY_PUSH_SERIAL(m - mapstep);
+        if (!m[-mapstep+1]) CANNY_PUSH_SERIAL(m - mapstep + 1);
+        if (!m[mapstep-1])  CANNY_PUSH_SERIAL(m + mapstep - 1);
+        if (!m[mapstep])    CANNY_PUSH_SERIAL(m + mapstep);
+        if (!m[mapstep+1])  CANNY_PUSH_SERIAL(m + mapstep + 1);
+    }
 
     parallel_for_(Range(0, dst.rows), finalPass(map, dst, mapstep), dst.total()/(double)(1<<16));
 }
@@ -955,6 +955,8 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 bool L2gradient )
 {
+    CV_INSTRUMENT_REGION()
+
     CV_Assert(_dx.dims() == 2);
     CV_Assert(_dx.type() == CV_16SC1 || _dx.type() == CV_16SC3);
     CV_Assert(_dy.type() == _dx.type());
@@ -975,7 +977,7 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
     Mat dx = _dx.getMat();
     Mat dy = _dy.getMat();
 
-    CV_IPP_RUN(USE_IPP_CANNY && (!L2gradient && 1 == cn), ippCanny<true>(Mat(), dx, dy, dst, (float)low_thresh, (float)high_thresh))
+    CV_IPP_RUN_FAST(ipp_Canny(Mat(), dx, dy, dst, (float)low_thresh, (float)high_thresh, L2gradient, 0))
 
     if (cn > 1)
     {

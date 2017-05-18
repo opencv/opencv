@@ -44,7 +44,7 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
     CV_INSTRUMENT_REGION()
 
     CALL_HAL(magnitude32f, cv_hal_magnitude32f, x, y, mag, len);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0);
+    CV_IPP_RUN(!IPP_DISABLE_PERF_MAG_SSE42 || (ipp::getIppFeatures()&ippCPUID_AVX), CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0);
 
     CV_CPU_DISPATCH(magnitude32f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -55,7 +55,7 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
     CV_INSTRUMENT_REGION()
 
     CALL_HAL(magnitude64f, cv_hal_magnitude64f, x, y, mag, len);
-    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64f, x, y, mag, len) >= 0);
+    CV_IPP_RUN(!IPP_DISABLE_PERF_MAG_SSE42 || (ipp::getIppFeatures()&ippCPUID_AVX), CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64f, x, y, mag, len) >= 0);
 
     CV_CPU_DISPATCH(magnitude64f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
