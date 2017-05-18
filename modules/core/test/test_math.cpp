@@ -3402,7 +3402,9 @@ TEST(Core_SoftFloat, pow32)
         ASSERT_EQ(f32_pow(-inf, -x32), zero);
     }
 
-    // x ** y == nan, if x < 0
+    // x ** y ==   (-x) ** y, if y % 2 == 0
+    // x ** y == - (-x) ** y, if y % 2 == 1
+    // x ** y == nan, if x < 0 and y is not integer
     for(size_t i = 0; i < nValues; i++)
     {
         Cv32suf x;
@@ -3412,10 +3414,17 @@ TEST(Core_SoftFloat, pow32)
         softfloat32_t x32(x.f);
         Cv32suf y;
         y.fmt.sign = rng() % 2;
-        y.fmt.exponent = rng() % 255;
+        //bigger exponent produces integer numbers only
+        y.fmt.exponent = rng() % (23 + 127);
         y.fmt.significand = rng() % (1 << 23);
         softfloat32_t y32(y.f);
-        ASSERT_TRUE(f32_pow(x32, y32).isNaN());
+        int yi = y32.toI32();
+        if(y32 != y32.round())
+            ASSERT_TRUE(f32_pow(x32, y32).isNaN());
+        else if(yi % 2)
+            ASSERT_EQ(f32_pow(-x32, y32), -f32_pow(x32, y32));
+        else
+            ASSERT_EQ(f32_pow(-x32, y32),  f32_pow(x32, y32));
     }
 
     // (0 ** 0) == 1
@@ -3524,7 +3533,9 @@ TEST(Core_SoftFloat, pow64)
         ASSERT_EQ(f64_pow(-inf, -x64), zero);
     }
 
-    // x ** y == nan, if x < 0
+    // x ** y ==   (-x) ** y, if y % 2 == 0
+    // x ** y == - (-x) ** y, if y % 2 == 1
+    // x ** y == nan, if x < 0 and y is not integer
     for(size_t i = 0; i < nValues; i++)
     {
         Cv64suf x;
@@ -3535,11 +3546,20 @@ TEST(Core_SoftFloat, pow64)
         softfloat64_t x64(x.f);
         Cv64suf y;
         sign = rng() % 2;
-        exponent = rng() % 2047;
+        //bigger exponent produces integer numbers only
+        //exponent = rng() % (52 + 1023);
+        //bigger exponent is too big
+        exponent = rng() % (23 + 1023);
         mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
         y.u = (sign << 63) | (exponent << 52) | mantissa;
         softfloat64_t y64(y.f);
-        ASSERT_TRUE(f64_pow(x64, y64).isNaN());
+        uint64 yi = y64.toI64();
+        if(y64 != y64.round())
+            ASSERT_TRUE(f64_pow(x64, y64).isNaN());
+        else if(yi % 2)
+            ASSERT_EQ(f64_pow(-x64, y64), -f64_pow(x64, y64));
+        else
+            ASSERT_EQ(f64_pow(-x64, y64),  f64_pow(x64, y64));
     }
 
     // (0 ** 0) == 1

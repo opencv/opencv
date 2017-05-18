@@ -311,12 +311,10 @@ CV_INLINE softfloat64_t f64_abs( softfloat64_t a) { softfloat64_t x; x.v = a.v &
 CV_EXPORTS softfloat32_t f32_exp( softfloat32_t );
 CV_EXPORTS softfloat32_t f32_log( softfloat32_t );
 CV_EXPORTS softfloat32_t f32_pow( softfloat32_t, softfloat32_t );
-CV_EXPORTS softfloat32_t f32_pow( softfloat32_t, int );
 
 CV_EXPORTS softfloat64_t f64_exp( softfloat64_t );
 CV_EXPORTS softfloat64_t f64_log( softfloat64_t );
 CV_EXPORTS softfloat64_t f64_pow( softfloat64_t, softfloat64_t );
-CV_EXPORTS softfloat64_t f64_pow( softfloat64_t, int) ;
 
 CV_EXPORTS softfloat32_t f32_cbrt( softfloat32_t );
 

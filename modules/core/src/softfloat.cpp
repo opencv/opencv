@@ -4617,31 +4617,32 @@ float32_t f32_cbrt(float32_t x)
 }
 
 /// POW functions ///
+//these functions are for internal use only
+float32_t f32_powi( float32_t x, int y);
+float64_t f64_powi( float64_t x, int y);
 
 float32_t f32_pow( float32_t x, float32_t y)
 {
     const float32_t zero = float32_t::zero(), one = float32_t::one(), inf = float32_t::inf(), nan = float32_t::nan();
     bool xinf = x.isInf(), yinf = y.isInf(), xnan = x.isNaN(), ynan = y.isNaN();
+    float32_t ax = f32_abs(x);
+    bool useInf = (y > zero) == (ax > one);
     float32_t v;
     //special cases
     if(ynan) v = nan;
-    else
+    else if(yinf) v = (ax == one || xnan) ? nan : (useInf ? inf : zero);
+    else if(y == zero) v = one;
+    else if(y == one ) v = x;
+    else //here y is ok
     {
-        float32_t ax = f32_abs(x);
-        bool useInf = (y > zero) == (ax > one);
-        if(yinf) v = (ax == one || xnan) ? nan : (useInf ? inf : zero);
-        else if(y == zero) v = one;
-        else if(y == one ) v = x;
-        else //here y is ok
-        {
-            if(xnan) v = nan;
-            else if(xinf) v = (y < zero) ? zero : inf;
-            else if(x  < zero) v = nan;
-            // (0 ** 0) == 1
-            else if(x == zero) v = (y < zero) ? inf : (y == zero ? one : zero);
-            // here x and y are ok
-            else v = f32_exp(y * f32_log(x));
-        }
+        if(xnan) v = nan;
+        else if(xinf) v = (y < zero) ? zero : inf;
+        else if(y == y.round()) v = f32_powi(x, y.toI32());
+        else if(x  < zero) v = nan;
+        // (0 ** 0) == 1
+        else if(x == zero) v = (y < zero) ? inf : (y == zero ? one : zero);
+        // here x and y are ok
+        else v = f32_exp(y * f32_log(x));
     }
 
     return v;
@@ -4651,94 +4652,79 @@ float64_t f64_pow( float64_t x, float64_t y)
 {
     const float64_t zero = float64_t::zero(), one = float64_t::one(), inf = float64_t::inf(), nan = float64_t::nan();
     bool xinf = x.isInf(), yinf = y.isInf(), xnan = x.isNaN(), ynan = y.isNaN();
+    float64_t ax = f64_abs(x);
+    bool useInf = (y > zero) == (ax > one);
     float64_t v;
     //special cases
     if(ynan) v = nan;
-    else
+    else if(yinf) v = (ax == one || xnan) ? nan : (useInf ? inf : zero);
+    else if(y == zero) v = one;
+    else if(y == one ) v = x;
+    else //here y is ok
     {
-        float64_t ax = f64_abs(x);
-        bool useInf = (y > zero) == (ax > one);
-        if(yinf) v = (ax == one || xnan) ? nan : (useInf ? inf : zero);
-        else if(y == zero) v = one;
-        else if(y == one ) v = x;
-        else //here y is ok
-        {
-            if(xnan) v = nan;
-            else if(xinf) v = (y < zero) ? zero : inf;
-            else if(x  < zero) v = nan;
-            // (0 ** 0) == 1
-            else if(x == zero) v = (y < zero) ? inf : (y == zero ? one : zero);
-            // here x and y are ok
-            else v = f64_exp(y * f64_log(x));
-        }
+        if(xnan) v = nan;
+        else if(xinf) v = (y < zero) ? zero : inf;
+        else if(y == y.round()) v = f64_powi(x, y.toI32());
+        else if(x  < zero) v = nan;
+        // (0 ** 0) == 1
+        else if(x == zero) v = (y < zero) ? inf : (y == zero ? one : zero);
+        // here x and y are ok
+        else v = f64_exp(y * f64_log(x));
     }
 
     return v;
 }
 
-float32_t f32_pow( float32_t x, int y)
+float32_t f32_powi( float32_t x, int y)
 {
     float32_t v;
-    //special cases
-    if(y == 0) v = float32_t::one();
-    else if(y == 1) v = x;
-    else //here y is ok
+    //special case: (0 ** 0) == 1
+    if(x == float32_t::zero())
+        v = (y < 0) ? float32_t::inf() : (y == 0 ? float32_t::one() : float32_t::zero());
+    // here x and y are ok
+    else
     {
-        if(x.isNaN()) v = float32_t::nan();
-        else if(x.isInf()) v = (y < 0) ? float32_t::zero() : float32_t::inf();
-        // (0 ** 0) == 1
-        else if(x == float32_t::zero()) v = (y < 0) ? float32_t::inf() : (y == 0 ? float32_t::one() : float32_t::zero());
-        // here x and y are ok
-        else
+        float32_t a = float32_t::one(), b = x;
+        int p = std::abs(y);
+        if( y < 0 )
+            b = float32_t::one()/b;
+        while( p > 1 )
         {
-            float32_t a = float32_t::one(), b = x;
-            int p = std::abs(y);
-            if( y < 0 )
-                b = float32_t::one()/b;
-            while( p > 1 )
-            {
-                if( p & 1 )
-                    a *= b;
-                b *= b;
-                p >>= 1;
-            }
-            v = a * b;
+            if( p & 1 )
+                a *= b;
+            b *= b;
+            p >>= 1;
         }
+        v = a * b;
     }
+
     return v;
 }
 
-float64_t f64_pow( float64_t x, int y)
+float64_t f64_powi( float64_t x, int y)
 {
     float64_t v;
-    //special cases
-    if(y == 0) v = float64_t::one();
-    else if(y == 1) v = x;
-    else //here y is ok
+    //special case: (0 ** 0) == 1
+    if(x == float64_t::zero())
+        v = (y < 0) ? float64_t::inf() : (y == 0 ? float64_t::one() : float64_t::zero());
+    // here x and y are ok
+    else
     {
-        if(x.isNaN()) v = float64_t::nan();
-        else if(x.isInf()) v = (y < 0) ? float64_t::zero() : float64_t::inf();
-        // (0 ** 0) == 1
-        else if(x == float64_t::zero()) v = (y < 0) ? float64_t::inf() : (y == 0 ? float64_t::one() : float64_t::zero());
-        // here x and y are ok
-        else
+        float64_t a = float64_t::one(), b = x;
+        int p = std::abs(y);
+        if( y < 0 )
+            b = float64_t::one()/b;
+        while( p > 1 )
         {
-            float64_t a = float64_t::one(), b = x;
-            int p = std::abs(y);
-            if( y < 0 )
-                b = float64_t::one()/b;
-            while( p > 1 )
-            {
-                if( p & 1 )
-                    a *= b;
-                b *= b;
-                p >>= 1;
-            }
-            v = a * b;
+            if( p & 1 )
+                a *= b;
+            b *= b;
+            p >>= 1;
         }
+        v = a * b;
     }
+
     return v;
 }
-
 
 }
