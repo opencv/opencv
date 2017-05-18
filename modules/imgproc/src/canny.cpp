@@ -287,6 +287,13 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
 #endif
 
 #define CANNY_PUSH(map, stack) *map = 2, stack.push_back(map)
+
+#define CANNY_CHECK_SIMD(m, high, map, stack) \
+    if (m > high) \
+        CANNY_PUSH(map, stack); \
+    else \
+        *map = 0
+
 #define CANNY_CHECK(m, high, map, stack) \
     if (m > high) \
         CANNY_PUSH(map, stack); \
@@ -566,13 +573,15 @@ public:
 
                     if (mask)
                     {
-                        for (int k = j, m; mask; mask >>= 1, ++k)
+                        int k = j;
+
+                        do
                         {
                             int l = trailingZeros32(mask);
                             k += l;
                             mask >>= l;
 
-                            m = _mag_a[k];
+                            int m = _mag_a[k];
                             short xs = _dx[k];
                             short ys = _dy[k];
                             int x = (int)std::abs(xs);
@@ -584,7 +593,7 @@ public:
                             {
                                 if (m > _mag_a[k - 1] && m >= _mag_a[k + 1])
                                 {
-                                    CANNY_CHECK(m, high, (_pmap+k), stack);
+                                    CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
                                 }
                             }
                             else
@@ -594,7 +603,7 @@ public:
                                 {
                                     if (m > _mag_p[k] && m >= _mag_n[k])
                                     {
-                                        CANNY_CHECK(m, high, (_pmap+k), stack);
+                                        CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
                                     }
                                 }
                                 else
@@ -602,11 +611,12 @@ public:
                                     int s = (xs ^ ys) < 0 ? -1 : 1;
                                     if(m > _mag_p[k - s] && m > _mag_n[k + s])
                                     {
-                                        CANNY_CHECK(m, high, (_pmap+k), stack);
+                                        CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
                                     }
                                 }
                             }
-                        }
+                            ++k;
+                        } while((mask >>= 1));
                     }
                 }
 
@@ -632,12 +642,15 @@ public:
 
                     if (mask)
                     {
-                        for (int k = j, m; mask; mask >>= 1, ++k)
+                        int k = j;
+
+                        do
                         {
                             int l = trailingZeros32(mask);
                             k += l;
                             mask >>= l;
-                            m = _mag_a[k];
+
+                            int m = _mag_a[k];
                             short xs = _dx[k];
                             short ys = _dy[k];
                             int x = (int)std::abs(xs);
@@ -649,7 +662,7 @@ public:
                             {
                                 if (m > _mag_a[k - 1] && m >= _mag_a[k + 1])
                                 {
-                                    CANNY_CHECK(m, high, (_pmap+k), stack);
+                                    CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
                                 }
                             }
                             else
@@ -659,7 +672,7 @@ public:
                                 {
                                     if (m > _mag_p[k] && m >= _mag_n[k])
                                     {
-                                        CANNY_CHECK(m, high, (_pmap+k), stack);
+                                        CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
                                     }
                                 }
                                 else
@@ -667,11 +680,12 @@ public:
                                     int s = (xs ^ ys) < 0 ? -1 : 1;
                                     if(m > _mag_p[k - s] && m > _mag_n[k + s])
                                     {
-                                        CANNY_CHECK(m, high, (_pmap+k), stack);
+                                        CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
                                     }
                                 }
                             }
-                        }
+                            ++k;
+                        } while((mask >>= 1));
                     }
                     j += 16;
                 }
