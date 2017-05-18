@@ -18,7 +18,7 @@ PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
                 )
             )
 {
-    Mat src = imread(getDataPath("gpu/hog/road.png"));
+    Mat src = imread(getDataPath("gpu/hog/road.bmp"));
 
     Size sz = get<0>(GetParam());
     int inpaintingMethod = get<1>(GetParam());
@@ -34,5 +34,5 @@ PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
     TEST_CYCLE() inpaint(src, mask, result, 10.0, inpaintingMethod);
 
     Mat inpaintedArea = result(inpaintArea);
-    SANITY_CHECK(inpaintedArea);
+    SANITY_CHECK(inpaintedArea, 1e-1, ERROR_RELATIVE);
 }
