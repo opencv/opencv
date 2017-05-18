@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/hal/intrin.hpp"
 
 #include "fast_nlmeans_denoising_invoker.hpp"
 #include "fast_nlmeans_multi_denoising_invoker.hpp"
@@ -442,4 +443,219 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     mixChannels(l_ab_denoised, 2, &dst_lab, 1, from_to, 3);
 
     cvtColor(dst_lab, dst, COLOR_Lab2LBGR);
+}
+
+void cv::halNlMeansDenoising( InputArray _src, OutputArray _dst, float h )
+{
+    // Prepare InputArray src
+    const Mat src = _src.getMat();
+    CV_Assert( !src.empty() );
+    CV_Assert( src.type() == CV_8UC3 ); // TODO: Support more types, 8UC1 and C4 for Bayer
+
+    // Prepare OutputArray dst
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+
+    // NOTE: templateWindowSize = 7
+    //       searchWindowSize   = 21
+    // TODO: Ask @vpisarev, are these defaults fine?
+    //       @ref mentions 7, 35 for colour images
+    // @ref http://www.ipol.im/pub/art/2011/bcm_nlm/
+    const int T  = 7,         // Template window width
+              hT = T / 2,     // 3
+              S  = 21,        // Search window width
+              N  = S - T + 1, // Neighbour search width
+              hN = N / 2;
+
+    // OPTIMISATION TODOS:
+    // - exploit symmetry in sum_abs(P_a - P_b) == sum_abs(P_b - P_a)
+
+    // STEP 0) Calculate weight lookup table W
+    //             Wij = exp( -dij / (3*h*h) )
+    //         NOTE: dij = sum_abs(P_i - P_j)
+    double max_d = 255*T*T,
+           fac = - 1.f / (9*h*h);
+    std::vector<float> W((int)max_d);
+    for ( size_t i = 0; i < W.size(); i++ )
+    {
+        float w = std::exp(fac*i);
+        W[i] = w;
+        if ( w < 1e-3 ) // TODO: Make parameter
+        {
+            max_d = i;
+            W.resize(i);
+        }
+
+    }
+
+    int Y = src.rows,
+        X = src.cols;
+
+    // Intermediate structures
+    Array2d<unsigned int> S_d(Y, X); // Sum of differences
+    Mat Z = Mat::zeros(src.size(), CV_32FC1);
+    Mat O = Mat::zeros(src.size(), CV_32FC3);
+    dst = Scalar(0);
+
+    // Pointer vars
+    const Vec3b *p_src;
+    unsigned int *p_Sd0, *p_Sd1;
+    Vec3f *p_O;
+    float *p_Z;
+    Vec3b *p_dst;
+
+    // For each search window translation
+    for ( int sy = -hN; sy <= hN; sy++ )
+    for ( int sx = -hN; sx <= hN; sx++ )
+    {
+        // Build S_d
+        for ( int y = 0; y < Y; y++ )
+        {
+            p_src = src.ptr<Vec3b>(y);
+            p_Sd0 = S_d.row_ptr(y-1);
+            p_Sd1 = S_d.row_ptr(y);
+
+            for ( int x = 0; x < X; x++ )
+            {
+                // Offset pixel position
+                int _y = y + sy,
+                    _x = x + sx;
+
+                // BORDER_DEFAULT: gfedcb|abcdefgh|gfedcba
+                // Handle top/left border
+                _y = _y < 0 ? -_y : _y;
+                _x = _x < 0 ? -_x : _x;
+                // Handle bottom/right border
+                _y = _y < Y ? _y : Y - (_y - Y) - 2;
+                _x = _x < X ? _x : X - (_x - X) - 2;
+
+                // Calculate distance value
+                Vec3b p  = p_src[x], _p = src.at<Vec3b>(_y, _x);
+                unsigned int d = std::abs(p[0] - _p[0]) +
+                                 std::abs(p[1] - _p[1]) +
+                                 std::abs(p[2] - _p[2]);
+
+                // Accumulate to form summed area table
+                unsigned int dd;
+                if ( x == 0 && y == 0 ) dd = 0;
+                else if ( x == 0 )      dd = p_Sd0[x];
+                else if ( y == 0 )      dd = p_Sd1[x-1];
+                else                    dd = p_Sd0[x] - p_Sd0[x-1] + p_Sd1[x-1];
+                p_Sd1[x] = d + dd;
+            }
+        }
+
+        for ( int y = 0; y < Y; y++ )
+        {
+            p_O = O.ptr<Vec3f>(y);
+            p_Z = Z.ptr<float>(y);
+
+            for ( int x = 0; x < X; x++ )
+            {
+                // Compute weights
+                int _y = y + sy,
+                    _x = x + sx;
+                if ( _y < 0 || _x < 0 || _y >= Y || _x >= X ) continue;
+
+                int px0 = MAX(x-hT-2, 0), px1 = MIN(x+hT, X-1),
+                    py0 = MAX(y-hT-2, 0), py1 = MIN(y+hT, Y-1);
+                p_Sd0 = S_d.row_ptr(py0);
+                p_Sd1 = S_d.row_ptr(py1);
+                unsigned int d = (p_Sd1[px1] - p_Sd1[px0]) - (p_Sd0[px1] - p_Sd0[px0]);
+                if ( d < max_d )
+                {
+                    float w = W[d];
+                    Vec3b i = src.at<Vec3b>(_y, _x);
+                    Vec3f o = p_O[x];
+                    o[0] += w*i[0];
+                    o[1] += w*i[1];
+                    o[2] += w*i[2];
+                    p_O[x] = o;
+                    p_Z[x] += w;
+                }
+            }
+        }
+    }
+
+    // Apply to destination image
+    int i = 0, y = 0, x = 0;
+#if CV_SIMD128
+    int XY = X * Y;
+    p_O = O.ptr<Vec3f>(0);
+    p_Z = Z.ptr<float>(0);
+
+    for ( ; i < XY-17; i += 16 )
+    {
+        // Load Zs
+        v_float32x4 v_Z0 = v_load(&p_Z[i]);
+        v_float32x4 v_Z1 = v_load(&p_Z[i+4]);
+        v_float32x4 v_Z2 = v_load(&p_Z[i+8]);
+        v_float32x4 v_Z3 = v_load(&p_Z[i+12]);
+
+        // Load 16 values from O
+        v_uint32x4 v_O00, v_O01, v_O02,
+                   v_O10, v_O11, v_O12,
+                   v_O20, v_O21, v_O22,
+                   v_O30, v_O31, v_O32;
+        v_load_deinterleave((const unsigned*)&p_O[i], v_O00, v_O01, v_O02);
+        v_load_deinterleave((const unsigned*)&p_O[i+4], v_O10, v_O11, v_O12);
+        v_load_deinterleave((const unsigned*)&p_O[i+8], v_O20, v_O21, v_O22);
+        v_load_deinterleave((const unsigned*)&p_O[i+12], v_O30, v_O31, v_O32);
+
+        // Calculate final pixel values
+        v_float32x4 v_fD00 = v_reinterpret_as_f32(v_O00) / v_Z0;
+        v_float32x4 v_fD01 = v_reinterpret_as_f32(v_O01) / v_Z0;
+        v_float32x4 v_fD02 = v_reinterpret_as_f32(v_O02) / v_Z0;
+
+        v_float32x4 v_fD10 = v_reinterpret_as_f32(v_O10) / v_Z1;
+        v_float32x4 v_fD11 = v_reinterpret_as_f32(v_O11) / v_Z1;
+        v_float32x4 v_fD12 = v_reinterpret_as_f32(v_O12) / v_Z1;
+
+        v_float32x4 v_fD20 = v_reinterpret_as_f32(v_O20) / v_Z2;
+        v_float32x4 v_fD21 = v_reinterpret_as_f32(v_O21) / v_Z2;
+        v_float32x4 v_fD22 = v_reinterpret_as_f32(v_O22) / v_Z2;
+
+        v_float32x4 v_fD30 = v_reinterpret_as_f32(v_O30) / v_Z3;
+        v_float32x4 v_fD31 = v_reinterpret_as_f32(v_O31) / v_Z3;
+        v_float32x4 v_fD32 = v_reinterpret_as_f32(v_O32) / v_Z3;
+
+        // Round and pack into u8
+        v_uint16x8 v_sD00 = v_pack(v_reinterpret_as_u32(v_round(v_fD00)),
+                                   v_reinterpret_as_u32(v_round(v_fD10)));
+        v_uint16x8 v_sD10 = v_pack(v_reinterpret_as_u32(v_round(v_fD20)),
+                                   v_reinterpret_as_u32(v_round(v_fD30)));
+
+        v_uint16x8 v_sD01 = v_pack(v_reinterpret_as_u32(v_round(v_fD01)),
+                                   v_reinterpret_as_u32(v_round(v_fD11)));
+        v_uint16x8 v_sD11 = v_pack(v_reinterpret_as_u32(v_round(v_fD21)),
+                                   v_reinterpret_as_u32(v_round(v_fD31)));
+
+        v_uint16x8 v_sD02 = v_pack(v_reinterpret_as_u32(v_round(v_fD02)),
+                                   v_reinterpret_as_u32(v_round(v_fD12)));
+        v_uint16x8 v_sD12 = v_pack(v_reinterpret_as_u32(v_round(v_fD22)),
+                                   v_reinterpret_as_u32(v_round(v_fD32)));
+
+        // Store
+        v_uint8x16 v_uD0 = v_pack(v_sD00, v_sD10);
+        v_uint8x16 v_uD1 = v_pack(v_sD01, v_sD11);
+        v_uint8x16 v_uD2 = v_pack(v_sD02, v_sD12);
+
+        y = i / X;
+        x = i % X;
+        v_store_interleave((uchar*)&dst.ptr<Vec3b>(y)[x], v_uD0, v_uD1, v_uD2);
+    }
+    y = i / X;
+    x = i % X;
+#endif
+    for ( ; y < Y; y++ )
+    {
+        p_O = O.ptr<Vec3f>(y);
+        p_Z = Z.ptr<float>(y);
+        p_dst = dst.ptr<Vec3b>(y);
+        for ( ; x < X; x++ )
+        {
+            p_dst[x] = p_O[x] / p_Z[x];
+        }
+        x = 0; // Subsequent rows need x = 0 to start inner loop
+    }
 }
