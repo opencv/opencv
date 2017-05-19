@@ -44,10 +44,8 @@
 #ifndef OPENCV_CORE_CVSTDINL_HPP
 #define OPENCV_CORE_CVSTDINL_HPP
 
-#ifndef OPENCV_NOSTL
-#  include <complex>
-#  include <ostream>
-#endif
+#include <complex>
+#include <ostream>
 
 //! @cond IGNORED
 
@@ -58,7 +56,6 @@
 
 namespace cv
 {
-#ifndef OPENCV_NOSTL
 
 template<typename _Tp> class DataType< std::complex<_Tp> >
 {
@@ -211,7 +208,6 @@ static inline std::ostream& operator << (std::ostream& out, const MatSize& msize
     return out;
 }
 
-#endif // OPENCV_NOSTL
 } // cv
 
 #ifdef _MSC_VER

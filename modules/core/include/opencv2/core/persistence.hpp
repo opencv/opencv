@@ -568,9 +568,7 @@ public:
     operator float() const;
     //! returns the node content as double
     operator double() const;
-#ifndef OPENCV_NOSTL
     operator std::string() const;
-#endif
 
     //! returns pointer to the underlying file node
     CvFileNode* operator *();

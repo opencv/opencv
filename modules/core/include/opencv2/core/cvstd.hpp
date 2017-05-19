@@ -53,12 +53,9 @@
 #include <cstring>
 #include <cctype>
 
-#ifndef OPENCV_NOSTL
-#  include <string>
-#endif
+#include <string>
 
 // import useful primitives from stl
-#ifndef OPENCV_NOSTL_TRANSITIONAL
 #  include <algorithm>
 #  include <utility>
 #  include <cstdlib> //for abs(int)
@@ -80,21 +77,6 @@ namespace cv
     using std::pow;
     using std::log;
 }
-
-#else
-namespace cv
-{
-    template<typename T> static inline T min(T a, T b) { return a < b ? a : b; }
-    template<typename T> static inline T max(T a, T b) { return a > b ? a : b; }
-    template<typename T> static inline T abs(T a) { return a < 0 ? -a : a; }
-    template<typename T> static inline void swap(T& a, T& b) { T tmp = a; a = b; b = tmp; }
-
-    template<> inline uchar abs(uchar a) { return a; }
-    template<> inline ushort abs(ushort a) { return a; }
-    template<> inline unsigned abs(unsigned a) { return a; }
-    template<> inline uint64 abs(uint64 a) { return a; }
-}
-#endif
 
 namespace cv {
 
