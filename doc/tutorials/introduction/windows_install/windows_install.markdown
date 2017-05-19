@@ -300,7 +300,7 @@ our OpenCV library that we use in our projects. Start up a command window and en
 
     setx -m OPENCV_DIR D:\OpenCV\Build\x86\vc12     (suggested for Visual Studio 2013 - 32 bit Windows)
     setx -m OPENCV_DIR D:\OpenCV\Build\x64\vc12     (suggested for Visual Studio 2013 - 64 bit Windows)
- 
+
     setx -m OPENCV_DIR D:\OpenCV\Build\x64\vc14     (suggested for Visual Studio 2015 - 64 bit Windows)
 @endcode
 Here the directory is where you have your OpenCV binaries (*extracted* or *built*). You can have
