@@ -73,6 +73,10 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 #endif
 #endif
 
+#if defined ANDROID
+#  include <cpu-features.h>
+#endif
+
 #if defined WIN32 || defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
@@ -467,6 +471,11 @@ struct HWFeatures
 
             close(cpufile);
         }
+    #ifdef ANDROID
+        uint64_t features = android_getCpuFeatures();
+        have[CV_CPU_NEON] = (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
+        have[CV_CPU_FP16] = (features & ANDROID_CPU_ARM_FEATURE_VFP_FP16) != 0;
+    #endif
     #endif
     #elif (defined __clang__ || defined __APPLE__)
     #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
