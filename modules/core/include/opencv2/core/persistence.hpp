@@ -568,8 +568,6 @@ public:
     operator float() const;
     //! returns the node content as double
     operator double() const;
-    //! returns the node content as text string
-    operator String() const;
 #ifndef OPENCV_NOSTL
     operator std::string() const;
 #endif
@@ -1333,7 +1331,6 @@ inline const CvFileNode* FileNode::operator* () const { return node; }
 inline FileNode::operator int() const    { int value;    read(*this, value, 0);     return value; }
 inline FileNode::operator float() const  { float value;  read(*this, value, 0.f);   return value; }
 inline FileNode::operator double() const { double value; read(*this, value, 0.);    return value; }
-inline FileNode::operator String() const { String value; read(*this, value, value); return value; }
 inline double FileNode::real() const  { return double(*this); }
 inline String FileNode::string() const { return String(*this); }
 inline Mat FileNode::mat() const { Mat value; read(*this, value, value);    return value; }
@@ -1342,7 +1339,6 @@ inline FileNodeIterator FileNode::end() const   { return FileNodeIterator(fs, no
 inline void FileNode::readRaw( const String& fmt, uchar* vec, size_t len ) const { begin().readRaw( fmt, vec, len ); }
 inline FileNode FileNodeIterator::operator *() const  { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
 inline FileNode FileNodeIterator::operator ->() const { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
-inline String::String(const FileNode& fn): cstr_(0), len_(0) { read(fn, *this, *this); }
 
 //! @endcond
 

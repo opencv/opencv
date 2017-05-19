@@ -1021,18 +1021,6 @@ AutoBuffer<_Tp, fixed_size>::operator _Tp* ()
 template<typename _Tp, size_t fixed_size> inline
 AutoBuffer<_Tp, fixed_size>::operator const _Tp* () const
 { return ptr; }
-
-#ifndef OPENCV_NOSTL
-template<> inline std::string CommandLineParser::get<std::string>(int index, bool space_delete) const
-{
-    return get<String>(index, space_delete);
-}
-template<> inline std::string CommandLineParser::get<std::string>(const String& name, bool space_delete) const
-{
-    return get<String>(name, space_delete);
-}
-#endif // OPENCV_NOSTL
-
 //! @endcond
 
 

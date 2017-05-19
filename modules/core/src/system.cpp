@@ -1909,7 +1909,9 @@ public:
         ippFeatures  = 0;
 
         const char* pIppEnv = getenv("OPENCV_IPP");
-        cv::String env = pIppEnv;
+        cv::String env;
+        if(pIppEnv != NULL)
+            env = pIppEnv;
         if(env.size())
         {
             if(env == "disabled")
