@@ -1076,18 +1076,23 @@ static inline void ICV_HLINE_X(uchar* ptr, int xl, int xr, const uchar* color, i
     uchar* hline_min_ptr = (uchar*)(ptr) + (xl)*(pix_size);
     uchar* hline_end_ptr = (uchar*)(ptr) + (xr+1)*(pix_size);
     uchar* hline_ptr = hline_min_ptr;
-    if (hline_min_ptr < hline_end_ptr)
+    if (pix_size == 1)
+      memset(hline_min_ptr, *color, hline_end_ptr-hline_min_ptr);
+    else//if (pix_size != 1)
     {
-      memcpy(hline_ptr, color, pix_size);
-      hline_ptr += pix_size;
-    }//end if (hline_min_ptr < hline_end_ptr)
-    size_t sizeToCopy = pix_size;
-    while(hline_ptr < hline_end_ptr)
-    {
-      memcpy(hline_ptr, hline_min_ptr, sizeToCopy);
-      hline_ptr += sizeToCopy;
-      sizeToCopy = std::min(2*sizeToCopy, static_cast<size_t>(hline_end_ptr-hline_ptr));
-    }//end while(hline_ptr < hline_end_ptr)
+      if (hline_min_ptr < hline_end_ptr)
+      {
+        memcpy(hline_ptr, color, pix_size);
+        hline_ptr += pix_size;
+      }//end if (hline_min_ptr < hline_end_ptr)
+      size_t sizeToCopy = pix_size;
+      while(hline_ptr < hline_end_ptr)
+      {
+        memcpy(hline_ptr, hline_min_ptr, sizeToCopy);
+        hline_ptr += sizeToCopy;
+        sizeToCopy = std::min(2*sizeToCopy, static_cast<size_t>(hline_end_ptr-hline_ptr));
+      }//end while(hline_ptr < hline_end_ptr)
+    }//end if (pix_size != 1)
 }
 //end ICV_HLINE_X()
 
