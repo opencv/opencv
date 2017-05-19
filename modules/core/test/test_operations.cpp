@@ -1254,3 +1254,35 @@ TEST(MatTestRoi, adjustRoiOverflow)
 
     ASSERT_EQ(roi.rows, m.rows);
 }
+
+TEST(MatxTestConstructor, inplace_8374)
+{
+    Mat_<double> a = (Mat_<double>(2,2) << 3, 5, 7, 11);
+    Matx22d b(a.ptr<double>(), false);
+    b *= 13;
+    ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
+}
+
+TEST(MatxTestConstructor, inplaceMatx_8374)
+{
+    Matx22d a(5, 7, 13, 3);
+    Matx22d b(a, false);
+    b *= 11;
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}
+
+TEST(VecTestConstructor, inplace_8374)
+{
+    Mat_<double> a = (Mat_<double>(4, 1) << 13, 11, 7, 5);
+    Vec4d b(a.ptr<double>(), false);
+    b *= 3;
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}
+
+TEST(VecTestConstructor, inplaceVec_8374)
+{
+    Vec4d a(3, 5, 7, 11);
+    Vec4d b(a, false);
+    b *= 13;
+    ASSERT_EQ(cvtest::norm(a, b, NORM_INF), 0.);
+}

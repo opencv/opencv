@@ -123,7 +123,9 @@ public:
          _Tp v4, _Tp v5, _Tp v6, _Tp v7,
          _Tp v8, _Tp v9, _Tp v10, _Tp v11,
          _Tp v12, _Tp v13, _Tp v14, _Tp v15); //!< 1x16, 4x4 or 16x1 matrix
-    explicit Matx(const _Tp* vals); //!< initialize from a plain array
+    explicit Matx(const _Tp* vals, bool copyData = true); //!< initialize from a plain array or point to it
+
+    Matx(const Matx<_Tp, m, n>& matx, bool copyData = true);
 
     static Matx all(_Tp alpha);
     static Matx zeros();
@@ -189,7 +191,9 @@ public:
     template<int l> Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp);
     Matx(const Matx<_Tp, n, m>& a, Matx_TOp);
 
-    _Tp val[m*n]; //< matrix elements
+    _Tp* val; //< pointer to matrix elements
+private:
+    _Tp _val[m*n]; //< statically-allocated matrix elements
 };
 
 typedef Matx<float, 1, 2> Matx12f;
@@ -325,9 +329,9 @@ public:
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8); //!< 9-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9); //!< 10-element vector constructor
     Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13); //!< 14-element vector constructor
-    explicit Vec(const _Tp* values);
+    explicit Vec(const _Tp* values, bool copyData = true);
 
-    Vec(const Vec<_Tp, cn>& v);
+    Vec(const Vec<_Tp, cn>& v, bool copyData = true);
 
     static Vec all(_Tp alpha);
 
@@ -486,12 +490,14 @@ template<typename _Tp> Vec<_Tp, 4> inline conjugate(const Vec<_Tp, 4>& v)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx()
+    : val(_val)
 {
     for(int i = 0; i < channels; i++) val[i] = _Tp(0);
 }
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0)
+    : val(_val)
 {
     val[0] = v0;
     for(int i = 1; i < channels; i++) val[i] = _Tp(0);
@@ -499,6 +505,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 2, "Matx should have at least 2 elements.");
     val[0] = v0; val[1] = v1;
@@ -507,6 +514,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 3, "Matx should have at least 3 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2;
@@ -515,6 +523,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 4, "Matx should have at least 4 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -523,6 +532,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 5, "Matx should have at least 5 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3; val[4] = v4;
@@ -531,6 +541,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 6, "Matx should have at least 6 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -540,6 +551,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 7, "Matx should have at least 7 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -549,6 +561,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 8, "Matx should have at least 8 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -558,6 +571,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _T
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 9, "Matx should have at least 9 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -568,6 +582,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _T
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 10, "Matx should have at least 10 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -579,6 +594,7 @@ Matx<_Tp, m, n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _T
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 12, "Matx should have at least 12 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -589,6 +605,7 @@ Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp 
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 14, "Matx should have at least 14 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -601,6 +618,7 @@ Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp 
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7, _Tp v8, _Tp v9, _Tp v10, _Tp v11, _Tp v12, _Tp v13, _Tp v14, _Tp v15)
+    : val(_val)
 {
     CV_StaticAssert(channels >= 16, "Matx should have at least 16 elements.");
     val[0] = v0; val[1] = v1; val[2] = v2; val[3] = v3;
@@ -611,9 +629,27 @@ Matx<_Tp,m,n>::Matx(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp 
 }
 
 template<typename _Tp, int m, int n> inline
-Matx<_Tp, m, n>::Matx(const _Tp* values)
+Matx<_Tp, m, n>::Matx(const _Tp* values, bool copyData)
+    : val(_val)
 {
+    if (!copyData)
+    {
+        val = const_cast<_Tp*>(values);
+        return;
+    }
     for( int i = 0; i < channels; i++ ) val[i] = values[i];
+}
+
+template<typename _Tp, int m, int n> inline
+Matx<_Tp, m, n>::Matx(const Matx<_Tp, m, n>& matx, bool copyData)
+    : val(_val)
+{
+    if (!copyData)
+    {
+        val = const_cast<_Tp*>(matx.val);
+        return;
+    }
+    for (int i = 0; i < channels; i++) val[i] = matx.val[i];
 }
 
 template<typename _Tp, int m, int n> inline
@@ -755,6 +791,7 @@ _Tp& Matx<_Tp, m, n>::operator ()(int i)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_AddOp)
+    : val(_val)
 {
     for( int i = 0; i < channels; i++ )
         val[i] = saturate_cast<_Tp>(a.val[i] + b.val[i]);
@@ -762,6 +799,7 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_Add
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_SubOp)
+    : val(_val)
 {
     for( int i = 0; i < channels; i++ )
         val[i] = saturate_cast<_Tp>(a.val[i] - b.val[i]);
@@ -769,6 +807,7 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_Sub
 
 template<typename _Tp, int m, int n> template<typename _T2> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, _T2 alpha, Matx_ScaleOp)
+    : val(_val)
 {
     for( int i = 0; i < channels; i++ )
         val[i] = saturate_cast<_Tp>(a.val[i] * alpha);
@@ -776,6 +815,7 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, _T2 alpha, Matx_ScaleOp)
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_MulOp)
+    : val(_val)
 {
     for( int i = 0; i < channels; i++ )
         val[i] = saturate_cast<_Tp>(a.val[i] * b.val[i]);
@@ -783,6 +823,7 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_Mul
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_DivOp)
+    : val(_val)
 {
     for( int i = 0; i < channels; i++ )
         val[i] = saturate_cast<_Tp>(a.val[i] / b.val[i]);
@@ -790,6 +831,7 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_Div
 
 template<typename _Tp, int m, int n> template<int l> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp)
+    : val(_val)
 {
     for( int i = 0; i < m; i++ )
         for( int j = 0; j < n; j++ )
@@ -803,6 +845,7 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_Mat
 
 template<typename _Tp, int m, int n> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, n, m>& a, Matx_TOp)
+    : val(_val)
 {
     for( int i = 0; i < m; i++ )
         for( int j = 0; j < n; j++ )
@@ -954,12 +997,12 @@ Vec<_Tp, cn>::Vec(_Tp v0, _Tp v1, _Tp v2, _Tp v3, _Tp v4, _Tp v5, _Tp v6, _Tp v7
     : Matx<_Tp, cn, 1>(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) {}
 
 template<typename _Tp, int cn> inline
-Vec<_Tp, cn>::Vec(const _Tp* values)
-    : Matx<_Tp, cn, 1>(values) {}
+Vec<_Tp, cn>::Vec(const _Tp* values, bool copyData)
+    : Matx<_Tp, cn, 1>(values, copyData) {}
 
 template<typename _Tp, int cn> inline
-Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& m)
-    : Matx<_Tp, cn, 1>(m.val) {}
+Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& m, bool copyData)
+    : Matx<_Tp, cn, 1>(m.val, copyData) {}
 
 template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_AddOp op)
