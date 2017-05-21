@@ -169,7 +169,7 @@ public:
     descriptor for keypoint j-th keypoint.
      */
     CV_WRAP virtual void compute( InputArray image,
-                                  CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints,
+                                  CV_IN_OUT std::vector<KeyPoint>& keypoints,
                                   OutputArray descriptors );
 
     /** @overload
