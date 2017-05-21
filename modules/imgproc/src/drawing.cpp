@@ -1070,19 +1070,18 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 \****************************************************************************************/
 
 /* helper macros: filling horizontal row */
-#define ICV_HLINE( ptr, xl, xr, color, pix_size )            \
-{                                                            \
-    uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);      \
-    uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);  \
-                                                             \
+#define ICV_HLINE( ptr, xl, xr, color, pix_size )              \
+{                                                              \
+    uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);        \
+    uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);    \
     for( ; hline_ptr <= hline_max_ptr; hline_ptr += (pix_size))\
-    {                                                        \
-        int hline_j;                                         \
-        for( hline_j = 0; hline_j < (pix_size); hline_j++ )  \
-        {                                                    \
-            hline_ptr[hline_j] = ((uchar*)color)[hline_j];   \
-        }                                                    \
-    }                                                        \
+    {                                                          \
+      int hline_j;                                             \
+      for( hline_j = 0; hline_j < (pix_size); hline_j++ )      \
+      {                                                        \
+          hline_ptr[hline_j] = ((uchar*)color)[hline_j];       \
+      }                                                        \
+    }                                                          \
 }
 
 
