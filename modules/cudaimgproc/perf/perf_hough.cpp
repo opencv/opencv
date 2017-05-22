@@ -153,7 +153,7 @@ PERF_TEST_P(Image, HoughLinesP,
         const cv::cuda::GpuMat d_mask(mask);
         cv::cuda::GpuMat d_lines;
 
-        cv::Ptr<cv::cuda::HoughSegmentDetector> hough = cv::cuda::createHoughSegmentDetector(rho, theta, minLineLength, maxLineGap);
+        cv::Ptr<cv::cuda::HoughSegmentDetector> hough = cv::cuda::createHoughSegmentDetector(rho, theta, threshold, minLineLength, maxLineGap);
 
         TEST_CYCLE() hough->detect(d_mask, d_lines);
 
