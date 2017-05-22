@@ -1096,7 +1096,7 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
         int64 x, dx;
         int ye;
     }
-    edge[2];
+    edge[2]{};
 
     int delta = 1 << shift >> 1;
     int i, y, imin = 0;
