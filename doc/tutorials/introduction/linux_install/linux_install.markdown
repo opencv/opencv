@@ -33,7 +33,7 @@ repository](https://github.com/opencv/opencv.git).
 
 ### Getting the Latest Stable OpenCV Version
 
--   Go to our [downloads page](http://opencv.org/downloads.html).
+-   Go to our [downloads page](http://opencv.org/releases.html).
 -   Download the source archive and unpack it.
 
 ### Getting the Cutting-edge OpenCV from the Git Repository
