@@ -206,7 +206,6 @@ private:
     pthread_mutex_t m_manager_access_mutex;
 
     static const char m_env_name[];
-    static const unsigned int m_default_number_of_threads;
 
     work_load m_work_load;
 
@@ -222,14 +221,6 @@ private:
 };
 
 const char ThreadManager::m_env_name[] = "OPENCV_FOR_THREADS_NUM";
-
-#ifdef ANDROID
-// many modern phones/tables have 4-core CPUs. Let's use no more
-// than 2 threads by default not to overheat the devices
-const unsigned int ThreadManager::m_default_number_of_threads = 2;
-#else
-const unsigned int ThreadManager::m_default_number_of_threads = 8;
-#endif
 
 ForThread::~ForThread()
 {
@@ -534,7 +525,15 @@ void ThreadManager::setNumOfThreads(size_t n)
 
 size_t ThreadManager::defaultNumberOfThreads()
 {
-    unsigned int result = m_default_number_of_threads;
+#ifdef ANDROID
+    // many modern phones/tables have 4-core CPUs. Let's use no more
+    // than 2 threads by default not to overheat the devices
+    const unsigned int default_number_of_threads = 2;
+#else
+    const unsigned int default_number_of_threads = (unsigned int)std::max(1, cv::getNumberOfCPUs());
+#endif
+
+    unsigned int result = default_number_of_threads;
 
     char * env = getenv(m_env_name);
 
