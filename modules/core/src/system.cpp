@@ -751,8 +751,12 @@ String format( const char* fmt, ... )
     {
         va_list va;
         va_start(va, fmt);
-        int bsize = static_cast<int>(buf.size()),
-                len = vsnprintf((char *)buf, bsize, fmt, va);
+        int bsize = static_cast<int>(buf.size());
+#if defined _MSC_VER && __cplusplus < 201103L
+        int len = _vsnprintf_s((char *)buf, bsize, _TRUNCATE, fmt, va);
+#else
+        int len = vsnprintf((char *)buf, bsize, fmt, va);
+#endif
         va_end(va);
 
         if (len < 0 || len >= bsize)
@@ -760,6 +764,7 @@ String format( const char* fmt, ... )
             buf.resize(std::max(bsize << 1, len + 1));
             continue;
         }
+        buf[bsize - 1] = 0;
         return String((char *)buf, len);
     }
 }
@@ -851,6 +856,22 @@ bool setBreakOnError(bool value)
     return prevVal;
 }
 
+static bool cv_snprintf(char* buf, int len, const char* fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+#if defined _MSC_VER && __cplusplus < 201103L
+    int res = _vsnprintf_s((char *)buf, len - 1, _TRUNCATE, fmt, va);
+    va_end(va);
+    buf[len - 1] = 0;
+    return res >= 0 && res < len - 1;
+#else
+    int res = vsnprintf((char *)buf, len, fmt, va);
+    va_end(va);
+    return res >= 0 && res < len;
+#endif
+}
+
 void error( const Exception& exc )
 {
     if (customErrorCallback != 0)
@@ -861,10 +882,10 @@ void error( const Exception& exc )
         const char* errorStr = cvErrorStr(exc.code);
         char buf[1 << 12];
 
-        snprintf( buf, sizeof(buf),
-          "OpenCV Error: %s (%s) in %s, file %s, line %d",
+        cv_snprintf(buf, sizeof(buf),
+            "OpenCV Error: %s (%s) in %s, file %s, line %d",
             errorStr, exc.err.c_str(), exc.func.size() > 0 ?
-            exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
+            exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line);
         fprintf( stderr, "%s\n", buf );
         fflush( stderr );
 #  ifdef __ANDROID__
@@ -885,6 +906,7 @@ void error(int _code, const String& _err, const char* _func, const char* _file, 
 {
     error(cv::Exception(_code, _err, _func, _file, _line));
 }
+
 
 ErrorCallback
 redirectError( ErrorCallback errCallback, void* userdata, void** prevUserdata)
