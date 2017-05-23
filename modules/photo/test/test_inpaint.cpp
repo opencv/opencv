@@ -117,3 +117,26 @@ void CV_InpaintTest::run( int )
 }
 
 TEST(Photo_Inpaint, regression) { CV_InpaintTest test; test.safe_run(); }
+
+typedef testing::TestWithParam<std::tr1::tuple<int> > formats;
+
+TEST_P(formats, 1c)
+{
+    const int type = std::tr1::get<0>(GetParam());
+    Mat src(100, 100, type);
+    src.setTo(Scalar::all(128));
+    Mat ref = src.clone();
+    Mat dst, mask = Mat::zeros(src.size(), CV_8U);
+
+    circle(src, Point(50, 50), 5, Scalar(200), 6);
+    circle(mask, Point(50, 50), 5, Scalar(200), 6);
+    inpaint(src, mask, dst, 10, INPAINT_NS);
+
+    Mat dst2;
+    inpaint(src, mask, dst2, 10, INPAINT_TELEA);
+
+    ASSERT_LE(cv::norm(dst, ref, NORM_INF), 3.);
+    ASSERT_LE(cv::norm(dst2, ref, NORM_INF), 3.);
+}
+
+INSTANTIATE_TEST_CASE_P(Photo_Inpaint, formats, testing::Values(CV_32F, CV_16U, CV_8U));
