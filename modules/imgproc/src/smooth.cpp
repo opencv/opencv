@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
@@ -467,6 +468,8 @@ template<>
 struct ColumnSum<ushort, uchar> :
 public BaseColumnFilter
 {
+    enum { SHIFT = 23 };
+
     ColumnSum( int _ksize, int _anchor, double _scale ) :
     BaseColumnFilter()
     {
@@ -479,7 +482,7 @@ public BaseColumnFilter
         if( scale != 1 )
         {
             int d = cvRound(1./scale);
-            double scalef = ((double)(1 << 16))/d;
+            double scalef = ((double)(1 << SHIFT))/d;
             divScale = cvFloor(scalef);
             scalef -= divScale;
             divDelta = d/2;
@@ -554,35 +557,43 @@ public BaseColumnFilter
             if( haveScale )
             {
                 int i = 0;
-    #if CV_SSE2
-                if(haveSSE2)
+            #if CV_SIMD128
+                v_uint32x4 ds4 = v_setall_u32((unsigned)ds);
+                v_uint16x8 dd8 = v_setall_u16((ushort)dd);
+
+                for( ; i <= width-16; i+=16 )
                 {
-                    __m128i ds8 = _mm_set1_epi16((short)ds);
-                    __m128i dd8 = _mm_set1_epi16((short)dd);
+                    v_uint16x8 _sm0 = v_load(Sm + i);
+                    v_uint16x8 _sm1 = v_load(Sm + i + 8);
 
-                    for( ; i <= width-16; i+=16 )
-                    {
-                        __m128i _sm0  = _mm_loadu_si128((const __m128i*)(Sm+i));
-                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+8));
+                    v_uint16x8 _s0 = v_add_wrap(v_load(SUM + i), v_load(Sp + i));
+                    v_uint16x8 _s1 = v_add_wrap(v_load(SUM + i + 8), v_load(Sp + i + 8));
 
-                        __m128i _s0  = _mm_add_epi16(_mm_loadu_si128((const __m128i*)(SUM+i)),
-                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
-                        __m128i _s1  = _mm_add_epi16(_mm_loadu_si128((const __m128i*)(SUM+i+8)),
-                                                     _mm_loadu_si128((const __m128i*)(Sp+i+8)));
-                        __m128i _s2 = _mm_mulhi_epu16(_mm_adds_epu16(_s0, dd8), ds8);
-                        __m128i _s3 = _mm_mulhi_epu16(_mm_adds_epu16(_s1, dd8), ds8);
-                        _s0 = _mm_sub_epi16(_s0, _sm0);
-                        _s1 = _mm_sub_epi16(_s1, _sm1);
-                        _mm_storeu_si128((__m128i*)(D+i), _mm_packus_epi16(_s2, _s3));
-                        _mm_storeu_si128((__m128i*)(SUM+i), _s0);
-                        _mm_storeu_si128((__m128i*)(SUM+i+8), _s1);
-                    }
+                    v_uint32x4 _s00, _s01, _s10, _s11;
+
+                    v_expand(_s0 + dd8, _s00, _s01);
+                    v_expand(_s1 + dd8, _s10, _s11);
+
+                    _s00 = v_shr<SHIFT>(_s00*ds4);
+                    _s01 = v_shr<SHIFT>(_s01*ds4);
+                    _s10 = v_shr<SHIFT>(_s10*ds4);
+                    _s11 = v_shr<SHIFT>(_s11*ds4);
+
+                    v_int16x8 r0 = v_pack(v_reinterpret_as_s32(_s00), v_reinterpret_as_s32(_s01));
+                    v_int16x8 r1 = v_pack(v_reinterpret_as_s32(_s10), v_reinterpret_as_s32(_s11));
+
+                    _s0 = v_sub_wrap(_s0, _sm0);
+                    _s1 = v_sub_wrap(_s1, _sm1);
+
+                    v_store(D + i, v_pack_u(r0, r1));
+                    v_store(SUM + i, _s0);
+                    v_store(SUM + i + 8, _s1);
                 }
-    #endif
+            #endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
-                    D[i] = (uchar)((s0 + dd)*ds >> 16);
+                    D[i] = (uchar)((s0 + dd)*ds >> SHIFT);
                     SUM[i] = (ushort)(s0 - Sm[i]);
                 }
             }
