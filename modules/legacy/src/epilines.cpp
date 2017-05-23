@@ -50,24 +50,27 @@
 
 #define EPS64D 1e-9
 
-int cvComputeEssentialMatrix(  CvMatr32f rotMatr,
+/* static local func */
+
+static int cvComputeEssentialMatrix(  CvMatr32f rotMatr,
                                     CvMatr32f transVect,
                                     CvMatr32f essMatr);
 
-int cvConvertEssential2Fundamental( CvMatr32f essMatr,
+static int cvConvertEssential2Fundamental( CvMatr32f essMatr,
                                          CvMatr32f fundMatr,
                                          CvMatr32f cameraMatr1,
                                          CvMatr32f cameraMatr2);
 
-int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
+static int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
                                          CvPoint3D32f* epipole1,
                                          CvPoint3D32f* epipole2);
 
-void icvTestPoint( CvPoint2D64d testPoint,
+static void icvTestPoint( CvPoint2D64d testPoint,
                 CvVect64d line1,CvVect64d line2,
                 CvPoint2D64d basePoint,
                 int* result);
 
+/* global func */
 
 
 int icvGetSymPoint3D(  CvPoint3D64d pointCorner,
@@ -181,7 +184,7 @@ int icvConvertPointSystem(CvPoint3D64d  M2,
 
     icvMulMatrix_64d(   rotMatr,
                         3,3,
-                        (double*)&M2,
+                        (const double*)&M2,
                         1,3,
                         tmpVect);
 
@@ -211,11 +214,12 @@ static int icvComputeCoeffForStereoV3( double quad1[4][2],
     CvPoint2D64d point4;
 
     int currLine;
+    const double inv_numScanlines = 1.0 / numScanlines;
     *needSwapCamera = 0;
     for( currLine = 0; currLine < numScanlines; currLine++ )
     {
         /* Compute points */
-        double alpha = ((double)currLine)/((double)(numScanlines)); /* maybe - 1 */
+        double alpha = ((double)currLine) * inv_numScanlines; /* maybe - 1 */
 
         point1.x = (1.0 - alpha) * quad1[0][0] + alpha * quad1[3][0];
         point1.y = (1.0 - alpha) * quad1[0][1] + alpha * quad1[3][1];
@@ -467,9 +471,9 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
     zC = pointNewC.z;
 
     double len1,len2;
-    len1 = sqrt( (xA-xB)*(xA-xB) + (yA-yB)*(yA-yB) + (zA-zB)*(zA-zB) );
-    len2 = sqrt( (xB-xC)*(xB-xC) + (yB-yC)*(yB-yC) + (zB-zC)*(zB-zC) );
-    gamma = len2 / len1;
+    len1 = (xA-xB)*(xA-xB) + (yA-yB)*(yA-yB) + (zA-zB)*(zA-zB);
+    len2 = (xB-xC)*(xB-xC) + (yB-yC)*(yB-yC) + (zB-zC)*(zB-zC);
+    gamma = sqrt(len2 / len1);/* sqrt(a)/sqrt(b) == sqrt(a/b) */
 
     icvComputeStereoLineCoeffs( pointNewA,
                                 pointB,
@@ -561,12 +565,13 @@ int icvGetCrossLines(CvPoint3D64d point11,CvPoint3D64d point12,
     {
         /*return ERROR;*/
     }
+    delta = 1 / delta;
 
     deltaA = b1*a22-b2*a12;
     deltaB = a11*b2-b1*a21;
 
-    alpha = deltaA / delta;
-    betta = deltaB / delta;
+    alpha = deltaA * delta;
+    betta = deltaB * delta;
 
     xM = xA+alpha*(xB-xA);
     yM = yA+alpha*(yB-yA);
@@ -806,6 +811,7 @@ static void icvGetCommonArea( CvSize imageSize,
     double pointW22[3];
 
     double transFundMatr[3*3];
+    double inv_epipole_z;
     /* Compute transpose of fundamental matrix */
     icvTransposeMatrix_64d( fundMatr, 3, 3, transFundMatr );
 
@@ -817,16 +823,18 @@ static void icvGetCommonArea( CvSize imageSize,
         *result = 0;
         return;
     }
-    epipole1_2d.x = epipole1.x / epipole1.z;
-    epipole1_2d.y = epipole1.y / epipole1.z;
+    inv_epipole_z = 1.0 / epipole1.z;
+    epipole1_2d.x = epipole1.x * inv_epipole_z;
+    epipole1_2d.y = epipole1.y * inv_epipole_z;
 
     if( fabs(epipole2.z) < 1e-8 )
     {/* epipole2 in infinity */
         *result = 0;
         return;
     }
-    epipole2_2d.x = epipole2.x / epipole2.z;
-    epipole2_2d.y = epipole2.y / epipole2.z;
+    inv_epipole_z = 1.0 / epipole2.z;
+    epipole2_2d.x = epipole2.x * inv_epipole_z;
+    epipole2_2d.y = epipole2.y * inv_epipole_z;
 
     int stat = icvGetAngleLine( epipole1_2d, imageSize,&point11,&point12);
     if( stat == 2 )
@@ -1014,8 +1022,9 @@ void icvGetCrossDirectDirect(  CvVect64d direct1,CvVect64d direct2,
 
     if( fabs(det) > EPS64D )
     {/* Have cross */
-        cross->x = detx/det;
-        cross->y = (-direct1[0]*direct2[2] + direct2[0]*direct1[2])/det;
+        det = 1 / det;
+        cross->x = detx*det;
+        cross->y = (-direct1[0]*direct2[2] + direct2[0]*direct1[2])*det;
         *result = 1;
     }
     else
@@ -1058,7 +1067,6 @@ void icvGetCrossPieceDirect(   CvPoint2D64d p_start,CvPoint2D64d p_end,
             if(  fabs(a*p_start.x + b*p_start.y + c) < EPS64D )
             {/* line is point or not diff */
                 *result = 3;
-                return;
             }
             else
             {
@@ -1070,8 +1078,9 @@ void icvGetCrossPieceDirect(   CvPoint2D64d p_start,CvPoint2D64d p_end,
         detxc = b*(p_end.y*p_start.x - p_start.y*p_end.x) + c*(p_start.x - p_end.x);
         detyc = a*(p_end.x*p_start.y - p_start.x*p_end.y) + c*(p_start.y - p_end.y);
 
-        cross->x = detxc / det;
-        cross->y = detyc / det;
+        det = 1 / det;
+        cross->x = detxc * det;
+        cross->y = detyc * det;
         *result = 1;
 
     }
@@ -1110,12 +1119,12 @@ void icvGetCrossPiecePiece( CvPoint2D64d p1_start,CvPoint2D64d p1_end,
         *result = 0;
         return;
     }
-
+    del = 1 / del;
     delA =  (ey1-ey2)*(ex1-px1) + (ex1-ex2)*(py1-ey1);
     delB =  (py1-py2)*(ex1-px1) + (px1-px2)*(py1-ey1);
 
-    alpha = delA / del;
-    betta = delB / del;
+    alpha = delA * del;
+    betta = delB * del;
 
     if( alpha < 0 || alpha > 1.0 || betta < 0 || betta > 1.0)
     {
@@ -1129,8 +1138,8 @@ void icvGetCrossPiecePiece( CvPoint2D64d p1_start,CvPoint2D64d p1_end,
     delY =  (py1-py2)*(ey1*(ex1-ex2)-ex1*(ey1-ey2))+
             (ey1-ey2)*(px1*(py1-py2)-py1*(px1-px2));
 
-    cross->x = delX / del;
-    cross->y = delY / del;
+    cross->x = delX * del;
+    cross->y = delY * del;
 
     *result = 1;
     return;
@@ -1144,6 +1153,15 @@ void icvGetPieceLength(CvPoint2D64d point1,CvPoint2D64d point2,double* dist)
     double dx = point2.x - point1.x;
     double dy = point2.y - point1.y;
     *dist = sqrt( dx*dx + dy*dy );
+    return;
+}
+
+static void icvGetPieceLength_Sqr(const CvPoint2D64d point1, const CvPoint2D64d point2, double* dist);
+static void icvGetPieceLength_Sqr(const CvPoint2D64d point1, const CvPoint2D64d point2, double* dist)
+{
+    double dx = point2.x - point1.x;
+    double dy = point2.y - point1.y;
+    *dist = (dx*dx) + (dy*dy);
     return;
 }
 
@@ -1211,8 +1229,6 @@ void icvGetCrossRectDirect(    CvSize imageSize,
 
     maxDist = -1.0;
 
-    double distance;
-
     for( i = 0; i < 3; i++ )
     {
         if( haveCross[i] == 1 )
@@ -1221,7 +1237,8 @@ void icvGetCrossRectDirect(    CvSize imageSize,
             {
                 if( haveCross[j] == 1)
                 {/* Compute dist */
-                    icvGetPieceLength(cross[i],cross[j],&distance);
+                    double distance;
+                    icvGetPieceLength_Sqr(cross[i],cross[j],&distance);
                     if( distance > maxDist )
                     {
                         maxI = i;
@@ -1262,7 +1279,7 @@ void icvProjectPointToImage(   CvPoint3D64d point,
 
     icvMulMatrix_64d (  rotMatr,
                         3,3,
-                        (double*)&point,
+                        (const double*)&point,
                         1,3,
                         tmpVect1);
 
@@ -1274,8 +1291,9 @@ void icvProjectPointToImage(   CvPoint3D64d point,
                         1,3,
                         tmpVect1);
 
-    projPoint->x = tmpVect1[0] / tmpVect1[2];
-    projPoint->y = tmpVect1[1] / tmpVect1[2];
+    const double inv = 1 / tmpVect1[2];
+    projPoint->x = tmpVect1[0] * inv;
+    projPoint->y = tmpVect1[1] * inv;
 
     return;
 }
@@ -1383,8 +1401,9 @@ void icvGetQuadsTransform(
     {
         return;
     }
-    epipole1_2d.x = epipole1->x / epipole1->z;
-    epipole1_2d.y = epipole1->y / epipole1->z;
+    double inv = 1 / epipole1->z;
+    epipole1_2d.x  = epipole1->x * inv;
+    epipole1_2d.y  = epipole1->y * inv;
 
     icvGetCutPiece( coeff11,coeff12,
                 epipole1_2d,
@@ -1394,9 +1413,9 @@ void icvGetQuadsTransform(
                 &res);
 
     /* Compute distance */
-    icvGetPieceLength(point11,point21,&width1);
-    icvGetPieceLength(point11,point12,&tmpHeight1);
-    icvGetPieceLength(point21,point22,&tmpHeight2);
+    icvGetPieceLength_Sqr(point11, point21, &width1);
+    icvGetPieceLength_Sqr(point11, point12, &tmpHeight1);
+    icvGetPieceLength_Sqr(point21, point22, &tmpHeight2);
     height1 = MAX(tmpHeight1,tmpHeight2);
 
     quad1[0][0] = point11.x;
@@ -1416,8 +1435,9 @@ void icvGetQuadsTransform(
     {
         return;
     }
-    epipole2_2d.x = epipole2->x / epipole2->z;
-    epipole2_2d.y = epipole2->y / epipole2->z;
+    inv = 1 / epipole2->z;
+    epipole2_2d.x = epipole2->x * inv;
+    epipole2_2d.y = epipole2->y * inv;
 
     icvGetCutPiece( coeff21,coeff22,
                 epipole2_2d,
@@ -1427,9 +1447,9 @@ void icvGetQuadsTransform(
                 &res);
 
     /* Compute distance */
-    icvGetPieceLength(point11,point21,&width2);
-    icvGetPieceLength(point11,point12,&tmpHeight1);
-    icvGetPieceLength(point21,point22,&tmpHeight2);
+    icvGetPieceLength_Sqr(point11,point21,&width2);
+    icvGetPieceLength_Sqr(point11,point12,&tmpHeight1);
+    icvGetPieceLength_Sqr(point21,point22,&tmpHeight2);
     height2 = MAX(tmpHeight1,tmpHeight2);
 
     quad2[0][0] = point11.x;
@@ -1641,8 +1661,8 @@ void icvGetQuadsTransform(
 
     double warpWidth,warpHeight;
 
-    warpWidth  = MAX(width1,width2);
-    warpHeight = MAX(height1,height2);
+    warpWidth  = sqrt( MAX(width1,width2) );
+    warpHeight = sqrt( MAX(height1,height2) );
 
     warpSize->width  = (int)warpWidth;
     warpSize->height = (int)warpHeight;
@@ -1937,24 +1957,25 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
     CvPoint2D64d maxPoint; maxPoint.x = maxPoint.y = -FLT_MAX;
 
 
-    double dist;
     double maxDist = 0;
     double minDist = 10000000;
+    minDist *= minDist;
 
 
     for( i = 0; i < numPoints; i++ )
     {
+        double dist; // squared
         icvProjectPointToDirect(candPoints[i], midLine, &projPoint);
-        icvGetPieceLength(epipole,projPoint,&dist);
+        icvGetPieceLength_Sqr(epipole, projPoint, &dist);
         if( dist < minDist)
         {
-            minDist = dist;
+            minDist  = dist;
             minPoint = projPoint;
         }
 
         if( dist > maxDist)
         {
-            maxDist = dist;
+            maxDist  = dist;
             maxPoint = projPoint;
         }
     }
@@ -1994,13 +2015,12 @@ void icvGetMiddleAnglePoint(   CvPoint2D64d basePoint,
                             CvPoint2D64d* midPoint)
 {/* !!! May be need to return error */
 
-    double dist1;
-    double dist2;
-    icvGetPieceLength(basePoint,point1,&dist1);
-    icvGetPieceLength(basePoint,point2,&dist2);
+    double dist1, dist2;
+    icvGetPieceLength_Sqr(basePoint,point1,&dist1);
+    icvGetPieceLength_Sqr(basePoint,point2,&dist2);
     CvPoint2D64d pointNew1;
     CvPoint2D64d pointNew2;
-    double alpha = dist2/dist1;
+    const double alpha = sqrt( dist2 / dist1 );
 
     pointNew1.x = basePoint.x + (1.0/alpha) * ( point2.x - basePoint.x );
     pointNew1.y = basePoint.y + (1.0/alpha) * ( point2.y - basePoint.y );
@@ -2044,12 +2064,12 @@ void icvTestPoint( CvPoint2D64d testPoint,
     icvProjectPointToDirect(testPoint,line1,&point1);
     icvProjectPointToDirect(testPoint,line2,&point2);
 
-    double sign1 = icvGetVect(basePoint,point1,point2);
-    double sign2 = icvGetVect(basePoint,point1,testPoint);
+    float sign1 = (float) icvGetVect(basePoint,point1,point2);
+    float sign2 = (float) icvGetVect(basePoint,point1,testPoint);
     if( sign1 * sign2 > 0 )
     {/* Correct for first line */
         sign1 = - sign1;
-        sign2 = icvGetVect(basePoint,point2,testPoint);
+        sign2 = (float) icvGetVect(basePoint,point2,testPoint);
         if( sign1 * sign2 > 0 )
         {/* Correct for both lines */
             *result = 1;
@@ -2097,7 +2117,7 @@ void icvGetDistanceFromPointToDirect( CvPoint2D64d point,CvVect64d lineCoef,doub
 }
 /*---------------------------------------------------------------------------------------*/
 
-CV_IMPL IplImage* icvCreateIsometricImage( IplImage* src, IplImage* dst,
+CV_IMPL IplImage* icvCreateIsometricImage( const IplImage* src, IplImage* dst,
                                        int desired_depth, int desired_num_channels )
 {
     CvSize src_size ;
@@ -2127,8 +2147,9 @@ CV_IMPL IplImage* icvCreateIsometricImage( IplImage* src, IplImage* dst,
     return dst;
 }
 
+#if 0 // _matrix.h
 static int
-icvCvt_32f_64d( float *src, double *dst, int size )
+icvCvt_32f_64d( const float *src, double *dst, int size ) // cover in _matrix.h
 {
     int t;
 
@@ -2148,7 +2169,7 @@ icvCvt_32f_64d( float *src, double *dst, int size )
 /*======================================================================================*/
 /* Type conversion double -> float */
 static int
-icvCvt_64d_32f( double *src, float *dst, int size )
+icvCvt_64d_32f( const double *src, float *dst, int size ) // cover in _matrix.h
 {
     int t;
 
@@ -2164,7 +2185,7 @@ icvCvt_64d_32f( double *src, float *dst, int size )
 
     return CV_OK;
 }
-
+#endif
 /*----------------------------------------------------------------------------------*/
 
 #if 0
@@ -2217,8 +2238,8 @@ static void FindLineForEpiline(    CvSize imageSize,
     int maxN = -1;
     int minN = -1;
 
-    double midPointX = imageSize.width  / 2.0;
-    double midPointY = imageSize.height / 2.0;
+    double midPointX = imageSize.width  * 0.5;
+    double midPointY = imageSize.height * 0.5;
 
     for( n = 0; n < 4; n++ )
     {
@@ -2343,9 +2364,7 @@ static int GetAngleLinee( CvPoint2D32f epipole, CvSize imageSize,CvPoint2D32f po
             return 2;
         }
 
-
     }
-
 
     return 0;
 }
@@ -2635,9 +2654,9 @@ void icvComputeeInfiniteProject1(   CvMatr64d     rotMatr,
                         P2,
                         1,3,
                         projP);
-
-    point2->x = (float)(projP[0] / projP[2]);
-    point2->y = (float)(projP[1] / projP[2]);
+    const float inv = 1.0f / (float) projP[2];
+    point2->x = (float)projP[0] * inv;
+    point2->y = (float)projP[1] * inv;
 
     return;
 }
@@ -2681,9 +2700,9 @@ void icvComputeeInfiniteProject2(   CvMatr64d     rotMatr,
                         P1,
                         1,3,
                         projP);
-
-    point1->x = (float)(projP[0] / projP[2]);
-    point1->y = (float)(projP[1] / projP[2]);
+    const float inv = 1.0f / (float) projP[2];
+    point1->x = (float)projP[0] * inv;
+    point1->y = (float)projP[1] * inv;
 
     return;
 }
@@ -2732,6 +2751,10 @@ static int icvSelectBestRt(         int           numImages,
     for(int i = 0; i < numImages; i++ )
     {
         totalNum += numPoints[i];
+    }
+    if (totalNum < 4) /* even 4 is not enough */
+    {
+        return CV_BADARG_ERR;
     }
 
     objectPoints_64d = (CvPoint3D64d*)calloc(totalNum,sizeof(CvPoint3D64d));
@@ -2812,14 +2835,15 @@ static int icvSelectBestRt(         int           numImages,
             /* Compute error for given pair and Rt */
             /* We must project points to image and compute error */
 
+            const int numberPnt = numPoints[currImagePair];
+            const float inv_numberPnt = 1.0f / numberPnt;
+
             CvPoint2D64d* projImagePoints1;
             CvPoint2D64d* projImagePoints2;
 
             CvPoint3D64d* points1;
             CvPoint3D64d* points2;
 
-            int numberPnt;
-            numberPnt = numPoints[currImagePair];
             projImagePoints1 = (CvPoint2D64d*)calloc(numberPnt,sizeof(CvPoint2D64d));
             projImagePoints2 = (CvPoint2D64d*)calloc(numberPnt,sizeof(CvPoint2D64d));
 
@@ -2939,10 +2963,9 @@ static int icvSelectBestRt(         int           numImages,
                 err2 += len2;
             }
 
-            err1 /= (float)(numberPnt);
-            err2 /= (float)(numberPnt);
+            // err1 *= inv_numberPnt; err2 *= inv_numberPnt;
 
-            err = (err1+err2) * 0.5;
+            err = (err1+err2) * (0.5 * inv_numberPnt);
             begPoint += numberPnt;
 
             /* Set this error to */
@@ -2957,6 +2980,7 @@ static int icvSelectBestRt(         int           numImages,
 
     /* Just select R and t with minimal average error */
 
+    const float inv_numImages = 1.0f / numImages;
     int bestnumRt = 0;
     float minError = 0;/* Just for no warnings. Uses 'first' flag. */
     int first = 1;
@@ -2967,7 +2991,7 @@ static int icvSelectBestRt(         int           numImages,
         {
             avErr += errors[numImages*currImagePair+currRt];
         }
-        avErr /= (float)(numImages);
+        avErr *= inv_numImages;
 
         if( first )
         {
@@ -3001,6 +3025,7 @@ static int icvSelectBestRt(         int           numImages,
 
 
     free(errors);
+    free(objectPoints_64d); /* was mem leak in 2.4.6 */
 
     return CV_OK;
 }
@@ -3020,7 +3045,7 @@ float icvDefinePointPosition(CvPoint2D32f point1,CvPoint2D32f point2,CvPoint2D32
 }
 
 /* Convert function for stereo warping */
-int icvConvertWarpCoordinates(double coeffs[3][3],
+int icvConvertWarpCoordinates(const double coeffs[3][3],
                                 CvPoint2D32f* cameraPoint,
                                 CvPoint2D32f* warpPoint,
                                 int direction)
@@ -3035,8 +3060,9 @@ int icvConvertWarpCoordinates(double coeffs[3][3],
         det = (coeffs[2][0] * x + coeffs[2][1] * y + coeffs[2][2]);
         if( fabs(det) > 1e-8 )
         {
-            cameraPoint->x = (float)((coeffs[0][0] * x + coeffs[0][1] * y + coeffs[0][2]) / det);
-            cameraPoint->y = (float)((coeffs[1][0] * x + coeffs[1][1] * y + coeffs[1][2]) / det);
+            const float inv = 1 / (float)det; // float is enough
+            cameraPoint->x = (float)(coeffs[0][0] * x + coeffs[0][1] * y + coeffs[0][2]) * inv;
+            cameraPoint->y = (float)(coeffs[1][0] * x + coeffs[1][1] * y + coeffs[1][2]) * inv;
             return CV_OK;
         }
     }
@@ -3049,8 +3075,9 @@ int icvConvertWarpCoordinates(double coeffs[3][3],
 
         if( fabs(det) > 1e-8 )
         {
-            warpPoint->x = (float)(((coeffs[0][2]-coeffs[2][2]*x)*(coeffs[2][1]*y-coeffs[1][1])-(coeffs[2][1]*x-coeffs[0][1])*(coeffs[1][2]-coeffs[2][2]*y))/det);
-            warpPoint->y = (float)(((coeffs[2][0]*x-coeffs[0][0])*(coeffs[1][2]-coeffs[2][2]*y)-(coeffs[0][2]-coeffs[2][2]*x)*(coeffs[2][0]*y-coeffs[1][0]))/det);
+            const float inv = 1 / (float) det;
+            warpPoint->x = (float)((coeffs[0][2]-coeffs[2][2]*x)*(coeffs[2][1]*y-coeffs[1][1])-(coeffs[2][1]*x-coeffs[0][1])*(coeffs[1][2]-coeffs[2][2]*y))*inv;
+            warpPoint->y = (float)((coeffs[2][0]*x-coeffs[0][0])*(coeffs[1][2]-coeffs[2][2]*y)-(coeffs[0][2]-coeffs[2][2]*x)*(coeffs[2][0]*y-coeffs[1][0]))*inv;
             return CV_OK;
         }
     }
@@ -3356,8 +3383,8 @@ static void FindLineForEpiline(CvSize imageSize,float a,float b,float c,CvPoint2
     int maxN = -1;
     int minN = -1;
 
-    double midPointX = imageSize.width  / 2.0;
-    double midPointY = imageSize.height / 2.0;
+    double midPointX = imageSize.width  * 0.5;
+    double midPointY = imageSize.height * 0.5;
 
     for( n = 0; n < 4; n++ )
     {
@@ -3421,12 +3448,12 @@ static int GetCrossLines(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32f 
     {
         return -1;
     }
-
+    const double inv_del = 1 / del;
     delA =  (px1-ex1)*(py1-py2) + (ey1-py1)*(px1-px2);
     delB =  (ex1-px1)*(ey1-ey2) + (py1-ey1)*(ex1-ex2);
 
-    alpha =  delA / del;
-    betta = -delB / del;
+    alpha =  delA * inv_del;
+    betta = -delB * inv_del;
 
     if( alpha < 0 || alpha > 1.0 || betta < 0 || betta > 1.0)
     {
@@ -3439,8 +3466,8 @@ static int GetCrossLines(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32f 
     delY =  (ey1-ey2)*(px1*(py1-py2)-py1*(px1-px2))+
             (py1-py2)*(ey1*(ex1-ex2)-ex1*(ey1-ey2));
 
-    cross->x = (float)( delX / del);
-    cross->y = (float)(-delY / del);
+    cross->x = (float)( delX * inv_del);
+    cross->y = (float)(-delY * inv_del);
     return 1;
 }
 #endif
@@ -3462,11 +3489,11 @@ int icvGetCrossPieceVector(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32
     {
         return -1;
     }
-
+    const double inv_del = 1 / del;
     double delA =  (px1-ex1)*(py1-py2) + (ey1-py1)*(px1-px2);
     //double delB =  (ex1-px1)*(ey1-ey2) + (py1-ey1)*(ex1-ex2);
 
-    double alpha =  delA / del;
+    double alpha =  delA * inv_del;
     //double betta = -delB / del;
 
     if( alpha < 0 || alpha > 1.0 )
@@ -3480,8 +3507,8 @@ int icvGetCrossPieceVector(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32
     double delY =  (ey1-ey2)*(px1*(py1-py2)-py1*(px1-px2))+
             (py1-py2)*(ey1*(ex1-ex2)-ex1*(ey1-ey2));
 
-    cross->x = (float)( delX / del);
-    cross->y = (float)(-delY / del);
+    cross->x = (float)( delX * inv_del);
+    cross->y = (float)(-delY * inv_del);
     return 1;
 }
 
@@ -3505,9 +3532,9 @@ int icvGetCrossLineDirect(CvPoint2D32f p1,CvPoint2D32f p2,float a,float b,float 
     {
         return -1;
     }
-
+    const double inv_del = 1 / del;
     delA = - c - a*px1 - b*py1;
-    alpha = delA / del;
+    alpha = delA * inv_del;
 
     if( alpha < 0 || alpha > 1.0 )
     {
@@ -3517,8 +3544,8 @@ int icvGetCrossLineDirect(CvPoint2D32f p1,CvPoint2D32f p2,float a,float b,float 
     delX = b * (py1*(px1-px2) - px1*(py1-py2)) + c * (px1-px2);
     delY = a * (px1*(py1-py2) - py1*(px1-px2)) + c * (py1-py2);
 
-    X = delX / del;
-    Y = delY / del;
+    X = delX * inv_del;
+    Y = delY * inv_del;
 
     cross->x = (float)X;
     cross->y = (float)Y;
@@ -3609,7 +3636,7 @@ static int cvComputeEpipoles( CvMatr32f camMatr1,  CvMatr32f camMatr2,
 #endif
 
 /* Compute epipoles for fundamental matrix */
-int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
+static int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
                                          CvPoint3D32f* epipole1,
                                          CvPoint3D32f* epipole2)
 {
@@ -3640,7 +3667,7 @@ int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
     return CV_OK;
 }
 
-int cvConvertEssential2Fundamental( CvMatr32f essMatr,
+static int cvConvertEssential2Fundamental( CvMatr32f essMatr,
                                          CvMatr32f fundMatr,
                                          CvMatr32f cameraMatr1,
                                          CvMatr32f cameraMatr2)
@@ -3675,7 +3702,7 @@ int cvConvertEssential2Fundamental( CvMatr32f essMatr,
 
 /* Compute essential matrix */
 
-int cvComputeEssentialMatrix(  CvMatr32f rotMatr,
+static int cvComputeEssentialMatrix(  CvMatr32f rotMatr,
                                     CvMatr32f transVect,
                                     CvMatr32f essMatr)
 {

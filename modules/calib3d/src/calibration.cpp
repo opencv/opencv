@@ -326,10 +326,9 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
 
     if( CV_MAT_TYPE(A->type) == CV_32F )
     {
+        int i1 = 0, i2 = 0;/* int i1 = i / N,  i2 = i % N; */
         for( i = 0; i < M*N; i++ )
         {
-            int i1 = i / N,  i2 = i % N;
-
             if( dABdA )
             {
                 float* dcda = (float*)(dABdA->data.ptr + dABdA->step*i);
@@ -351,14 +350,17 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
                 for( j = 0; j < L; j++ )
                     dcdb[j*N + i2] = a[j];
             }
+            i2++;
+            if (i2 >= N) {
+                i1++, i2=0;
+            }
         }
     }
     else
     {
+        int i1 = 0, i2 = 0;/* int i1 = i / N,  i2 = i % N; */
         for( i = 0; i < M*N; i++ )
         {
-            int i1 = i / N,  i2 = i % N;
-
             if( dABdA )
             {
                 double* dcda = (double*)(dABdA->data.ptr + dABdA->step*i);
@@ -379,6 +381,10 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
                     dcdb[j] = 0;
                 for( j = 0; j < L; j++ )
                     dcdb[j*N + i2] = a[j];
+            }
+            i2++;
+            if (i2 >= N) {
+                i1++, i2=0;
             }
         }
     }
@@ -546,9 +552,9 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
             ry = src->data.db[step];
             rz = src->data.db[step*2];
         }
-        theta = sqrt(rx*rx + ry*ry + rz*rz);
+        theta = (rx*rx + ry*ry + rz*rz); /* sqrt */
 
-        if( theta < DBL_EPSILON )
+        if( theta < DBL_EPSILON*DBL_EPSILON )
         {
             cvSetIdentity( dst );
 
@@ -562,11 +568,11 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         else
         {
             const double I[] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
-
+            theta = sqrt(theta);
             double c = cos(theta);
             double s = sin(theta);
             double c1 = 1. - c;
-            double itheta = theta ? 1./theta : 0.;
+            double itheta = 1. / theta; /* theta >= DBL_EPSILON */
 
             rx *= itheta; ry *= itheta; rz *= itheta;
 
@@ -632,12 +638,12 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         ry = R[2] - R[6];
         rz = R[3] - R[1];
 
-        s = sqrt((rx*rx + ry*ry + rz*rz)*0.25);
+        s = (rx*rx + ry*ry + rz*rz)*0.25; /* sqrt */
         c = (R[0] + R[4] + R[8] - 1)*0.5;
         c = c > 1. ? 1. : c < -1. ? -1. : c;
         theta = acos(c);
 
-        if( s < 1e-5 )
+        if( s < 1e-5*1e-5 )
         {
             double t;
 
@@ -645,14 +651,18 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
                 rx = ry = rz = 0;
             else
             {
-                t = (R[0] + 1)*0.5;
-                rx = sqrt(MAX(t,0.));
-                t = (R[4] + 1)*0.5;
-                ry = sqrt(MAX(t,0.))*(R[1] < 0 ? -1. : 1.);
-                t = (R[8] + 1)*0.5;
-                rz = sqrt(MAX(t,0.))*(R[2] < 0 ? -1. : 1.);
-                if( fabs(rx) < fabs(ry) && fabs(rx) < fabs(rz) && (R[5] > 0) != (ry*rz > 0) )
-                    rz = -rz;
+                t = (R[0] + 1);
+                rx = (t > 0.0) ? sqrt(t*0.5) : 0.0;
+                t = (R[4] + 1);
+                ry = (t > 0.0) ? sqrt(t*0.5) * (R[1] < 0 ? -1. : 1.) : 0.0;
+                t = (R[8] + 1);
+                if (t > 0.0) {
+                    rz = sqrt(t*0.5) * (R[2] < 0 ? -1. : 1.);
+                    if( fabs(rx) < fabs(ry) && fabs(rx) < fabs(rz) && (R[5] > 0) != (ry*rz > 0) )
+                        rz = -rz;
+                } else {
+                    rz = 0.0;
+                }
                 theta /= sqrt(rx*rx + ry*ry + rz*rz);
                 rx *= theta;
                 ry *= theta;
@@ -671,15 +681,15 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         }
         else
         {
-            double vth = 1/(2*s);
+            double dtheta_dtr = -1./sqrt(s), vth = -0.5*dtheta_dtr;/* 1/(2*s) */
 
             if( jacobian )
             {
-                double t, dtheta_dtr = -1./s;
+                double t;
                 // var1 = [vth;theta]
                 // var = [om1;var1] = [om1;vth;theta]
-                double dvth_dtheta = -vth*c/s;
-                double d1 = 0.5*dvth_dtheta*dtheta_dtr;
+                double dvth_dtheta = vth*c*dtheta_dtr;
+                double d1 = 0.5*dtheta_dtr*dvth_dtheta;
                 double d2 = 0.5*dtheta_dtr;
                 // dvar1/dR = dvar1/dtheta*dtheta/dR = [dvth/dtheta; 1] * dtheta/dtr * dtr/dR
                 double dvardR[5*9] =
@@ -1438,8 +1448,8 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
     }
 
     cvSolve( matA, _b, &_f, CV_NORMAL + CV_SVD );
-    a[0] = sqrt(fabs(1./f[0]));
-    a[4] = sqrt(fabs(1./f[1]));
+    a[0] = 1./sqrt(fabs(f[0]));
+    a[4] = 1./sqrt(fabs(f[1]));
     if( aspectRatio != 0 )
     {
         double tf = (a[0] + a[4])/(aspectRatio + 1.);
@@ -1730,7 +1740,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
             }
 
             double errNorm = cvNorm( &_mp, 0, CV_L2 );
-            reprojErr += errNorm*errNorm;
+            reprojErr += errNorm*errNorm;/* x==sqrt(x)^2 */
         }
         if( _errNorm )
             *_errNorm = reprojErr;
@@ -1771,7 +1781,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
          }
     }
 
-    return std::sqrt(reprojErr/total);
+    return sqrt(reprojErr/total);
 }
 
 
@@ -1779,7 +1789,7 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
     double apertureWidth, double apertureHeight, double *fovx, double *fovy,
     double *focalLength, CvPoint2D64f *principalPoint, double *pasp )
 {
-    double alphax, alphay, mx, my;
+    double alphax, alphay, mx, my, imx = 1.0;
     int imgWidth = imgSize.width, imgHeight = imgSize.height;
 
     /* Validate parameters. */
@@ -1806,28 +1816,29 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
     if(apertureWidth != 0.0 && apertureHeight != 0.0) {
         mx = imgWidth / apertureWidth;
         my = imgHeight / apertureHeight;
+        imx = 1 / mx;
     } else {
         mx = 1.0;
-        my = *pasp;
+        my = pasp ? *pasp : alphay / alphax;/* pasp could be NULL */
     }
 
     /* Calculate fovx and fovy. */
 
     if(fovx)
-        *fovx = 2 * atan(imgWidth / (2 * alphax)) * 180.0 / CV_PI;
+        *fovx = atan(imgWidth / (2 * alphax)) * (2 * 180.0 / CV_PI);
 
     if(fovy)
-        *fovy = 2 * atan(imgHeight / (2 * alphay)) * 180.0 / CV_PI;
+        *fovy = atan(imgHeight / (2 * alphay)) * (2 * 180.0 / CV_PI);
 
     /* Calculate focal length. */
 
     if(focalLength)
-        *focalLength = alphax / mx;
+        *focalLength = alphax * imx;
 
     /* Calculate principle point. */
 
     if(principalPoint)
-        *principalPoint = cvPoint2D64f(cvmGet(calibMatr, 0, 2) / mx, cvmGet(calibMatr, 1, 2) / my);
+        *principalPoint = cvPoint2D64f(cvmGet(calibMatr, 0, 2) * imx, cvmGet(calibMatr, 1, 2) / my);
 }
 
 
@@ -2282,7 +2293,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         }
     }
 
-    return std::sqrt(reprojErr/(pointsTotal*2));
+    return sqrt(reprojErr/(pointsTotal*2));
 }
 
 
@@ -2422,8 +2433,8 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
         _a_tmp[1][2]=0.0;
         cvProjectPoints2( &pts_3, k == 0 ? _R1 : _R2, &Z, &A_tmp, 0, &pts );
         CvScalar avg = cvAvg(&pts);
-        cc_new[k].x = (nx-1)/2 - avg.val[0];
-        cc_new[k].y = (ny-1)/2 - avg.val[1];
+        cc_new[k].x = (nx-1)*0.5 - avg.val[0];
+        cc_new[k].y = (ny-1)*0.5 - avg.val[1];
     }
 
     // vertical focal length must be the same for both images to keep the epipolar constraint
@@ -2461,14 +2472,15 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
 
     {
     newImgSize = newImgSize.width*newImgSize.height != 0 ? newImgSize : imageSize;
+    double inv_width = 1.0/imageSize.width, inv_height = 1.0/imageSize.height;
     double cx1_0 = cc_new[0].x;
     double cy1_0 = cc_new[0].y;
     double cx2_0 = cc_new[1].x;
     double cy2_0 = cc_new[1].y;
-    double cx1 = newImgSize.width*cx1_0/imageSize.width;
-    double cy1 = newImgSize.height*cy1_0/imageSize.height;
-    double cx2 = newImgSize.width*cx2_0/imageSize.width;
-    double cy2 = newImgSize.height*cy2_0/imageSize.height;
+    double cx1 = newImgSize.width*cx1_0*inv_width;
+    double cy1 = newImgSize.height*cy1_0*inv_height;
+    double cx2 = newImgSize.width*cx2_0*inv_width;
+    double cy2 = newImgSize.height*cy2_0*inv_height;
     double s = 1.;
 
     if( alpha >= 0 )
@@ -2526,13 +2538,14 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
 
     if( matQ )
     {
+        double inv_tidx = 1./_t[idx];
         double q[] =
         {
             1, 0, 0, -cc_new[0].x,
             0, 1, 0, -cc_new[0].y,
             0, 0, 0, fc_new,
-            0, 0, -1./_t[idx],
-            (idx == 0 ? cc_new[0].x - cc_new[1].x : cc_new[0].y - cc_new[1].y)/_t[idx]
+            0, 0, -inv_tidx,
+            (idx == 0 ? cc_new[0].x - cc_new[1].x : cc_new[0].y - cc_new[1].y)*inv_tidx
         };
         CvMat Q = cvMat(4, 4, CV_64F, q);
         cvConvert( &Q, matQ );
@@ -2723,9 +2736,10 @@ CV_IMPL int cvStereoRectifyUncalibrated(
     cvMatMul( &T, &E2, &E2 );
 
     int mirror = e2[0] < 0;
-    double d = MAX(sqrt(e2[0]*e2[0] + e2[1]*e2[1]),DBL_EPSILON);
-    double alpha = e2[0]/d;
-    double beta = e2[1]/d;
+    double d = (e2[0]*e2[0] + e2[1]*e2[1]);
+    d = (d > DBL_EPSILON*DBL_EPSILON) ? 1/sqrt(d) : 1/DBL_EPSILON;
+    double alpha = e2[0]*d;
+    double beta = e2[1]*d;
     double r[] =
     {
         alpha, beta, 0,
@@ -3798,8 +3812,9 @@ float cv::rectify3Collinear( InputArray _cameraMatrix1, InputArray _distCoeffs1,
         adjust3rdMatrix(_imgpt1, _imgpt3, _cameraMatrix1.getMat(), _distCoeffs1.getMat(),
                         _cameraMatrix3.getMat(), _distCoeffs3.getMat(), _Rmat1.getMat(), R3, P1, P3);
 
-    return (float)((P3.at<double>(idx,3)/P3.at<double>(idx,idx))/
-                   (P2.at<double>(idx,3)/P2.at<double>(idx,idx)));
+    /*  (a/b)/(c/d) = (a*d)/(b*c), [saves 2 slow FDIV]  */
+    return (float)((P3.at<double>(idx,3)*P2.at<double>(idx,idx)) /
+                   (P3.at<double>(idx,idx)*P2.at<double>(idx,3)) );
 }
 
 

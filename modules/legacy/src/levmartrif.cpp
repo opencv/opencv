@@ -131,8 +131,8 @@ static void icvJacobianFunction_ProjTrifocal(const CvMat *vectX,CvMat *Jacobian)
             int i,j;
             /* fill derivate by point */
 
-            double tmp3 = 1/(piX[2]*piX[2]);
-
+            double t3 = 1 / piX[2], tmp3 = (t3 * t3);
+            int cn2c2 = (currMatr*numPoints*2) + (currProjPoint*2);
             double tmp1 = -piX[0]*tmp3;
             double tmp2 = -piX[1]*tmp3;
             for( j = 0; j < 2; j++ )//for x and y
@@ -140,7 +140,7 @@ static void icvJacobianFunction_ProjTrifocal(const CvMat *vectX,CvMat *Jacobian)
                 for( i = 0; i < 4; i++ )// for X,Y,Z,W
                 {
                     cvmSet( Jacobian,
-                            currMatr*numPoints*2+currProjPoint*2+j, 36+currProjPoint*4+i,
+                            cn2c2+j, 36+(currProjPoint*4)+i,
                             (p[j*4+i]*piX[2]-p[8+i]*piX[j]) * tmp3  );
                 }
             }
@@ -148,12 +148,12 @@ static void icvJacobianFunction_ProjTrifocal(const CvMat *vectX,CvMat *Jacobian)
             for( i = 0; i < 4; i++ )
             {
                 /* derivate for x */
-                cvmSet(Jacobian,currMatr*numPoints*2+currProjPoint*2,currMatr*12+i,X[i]/piX[2]);//x' p1i
-                cvmSet(Jacobian,currMatr*numPoints*2+currProjPoint*2,currMatr*12+8+i,X[i]*tmp1);//x' p3i
+                cvmSet(Jacobian, cn2c2, (currMatr*12)+i, X[i]*t3);//x' p1i
+                cvmSet(Jacobian, cn2c2, (currMatr*12)+8+i, X[i]*tmp1);//x' p3i
 
                 /* derivate for y */
-                cvmSet(Jacobian,currMatr*numPoints*2+currProjPoint*2+1,currMatr*12+4+i,X[i]/piX[2]);//y' p2i
-                cvmSet(Jacobian,currMatr*numPoints*2+currProjPoint*2+1,currMatr*12+8+i,X[i]*tmp2);//y' p3i
+                cvmSet(Jacobian, cn2c2+1, (currMatr*12)+4+i, X[i]*t3);//y' p2i
+                cvmSet(Jacobian, cn2c2+1, (currMatr*12)+8+i, X[i]*tmp2);//y' p3i
             }
 
         }
@@ -253,9 +253,9 @@ static void icvFunc_ProjTrifocal(const CvMat *vectX, CvMat *resFunc)
         {
             /* Compute projection for current point */
             cvmMul(&projMatrs[currMatr],&point4D,&point3D);
-            double z = point3D_dat[2];
-            cvmSet(resFunc,currMatr*numPoints*2 + currPoint*2,  0,point3D_dat[0]/z);
-            cvmSet(resFunc,currMatr*numPoints*2 + currPoint*2+1,0,point3D_dat[1]/z);
+            double z = 1 / point3D_dat[2];
+            cvmSet(resFunc,currMatr*numPoints*2 + currPoint*2,  0,point3D_dat[0]*z);
+            cvmSet(resFunc,currMatr*numPoints*2 + currPoint*2+1,0,point3D_dat[1]*z);
         }
     }
 
