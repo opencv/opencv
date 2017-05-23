@@ -127,7 +127,6 @@ typedef softfloat64_t float64_t;
 /*----------------------------------------------------------------------------
 | Integer-to-floating-point conversion routines.
 *----------------------------------------------------------------------------*/
-//TODO: no CV_EXPORTS
 float32_t ui32_to_f32( uint32_t );
 float64_t ui32_to_f64( uint32_t );
 float32_t ui64_to_f32( uint64_t );
@@ -202,14 +201,22 @@ softfloat32_t::softfloat32_t( const uint64_t a ) { *this = ui64_to_f32(a); }
 softfloat32_t::softfloat32_t( const  int32_t a ) { *this =  i32_to_f32(a); }
 softfloat32_t::softfloat32_t( const  int64_t a ) { *this =  i64_to_f32(a); }
 
-uint_fast32_t softfloat32_t::toUI32_minMag( bool exact ) const { return f32_to_ui32_r_minMag(*this, exact); }
-uint_fast64_t softfloat32_t::toUI64_minMag( bool exact ) const { return f32_to_ui64_r_minMag(*this, exact); }
-int_fast32_t  softfloat32_t:: toI32_minMag( bool exact ) const { return f32_to_i32_r_minMag (*this, exact); }
-int_fast64_t  softfloat32_t:: toI64_minMag( bool exact ) const { return f32_to_i64_r_minMag (*this, exact); }
-uint_fast32_t softfloat32_t::toUI32( uint_fast8_t roundingMode, bool exact ) const { return f32_to_ui32(*this, roundingMode, exact); }
-uint_fast64_t softfloat32_t::toUI64( uint_fast8_t roundingMode, bool exact ) const { return f32_to_ui64(*this, roundingMode, exact); }
-int_fast32_t  softfloat32_t:: toI32( uint_fast8_t roundingMode, bool exact ) const { return f32_to_i32 (*this, roundingMode, exact); }
-int_fast64_t  softfloat32_t:: toI64( uint_fast8_t roundingMode, bool exact ) const { return f32_to_i64 (*this, roundingMode, exact); }
+uint_fast32_t softfloat32_t::toUI32( uint_fast8_t roundingMode, bool exact ) const
+{
+    return (roundingMode == round_minMag) ? f32_to_ui32_r_minMag(*this, exact) : f32_to_ui32(*this, roundingMode, exact);
+}
+uint_fast64_t softfloat32_t::toUI64( uint_fast8_t roundingMode, bool exact ) const
+{
+    return (roundingMode == round_minMag) ? f32_to_ui64_r_minMag(*this, exact) : f32_to_ui64(*this, roundingMode, exact);
+}
+int_fast32_t  softfloat32_t:: toI32( uint_fast8_t roundingMode, bool exact ) const
+{
+    return (roundingMode == round_minMag) ? f32_to_i32_r_minMag (*this, exact) : f32_to_i32 (*this, roundingMode, exact);
+}
+int_fast64_t  softfloat32_t:: toI64( uint_fast8_t roundingMode, bool exact ) const
+{
+    return (roundingMode == round_minMag) ? f32_to_i64_r_minMag (*this, exact) : f32_to_i64 (*this, roundingMode, exact);
+}
 
 softfloat32_t softfloat32_t::round( uint_fast8_t roundingMode, bool exact ) const { return f32_roundToInt(*this, roundingMode, exact); }
 softfloat64_t softfloat32_t::toF64() const { return f32_to_f64(*this); }
@@ -232,14 +239,22 @@ softfloat64_t::softfloat64_t( const uint64_t a ) { *this = ui64_to_f64(a); }
 softfloat64_t::softfloat64_t( const  int32_t a ) { *this =  i32_to_f64(a); }
 softfloat64_t::softfloat64_t( const  int64_t a ) { *this =  i64_to_f64(a); }
 
-uint_fast32_t softfloat64_t::toUI32_minMag( bool exact ) const { return f64_to_ui32_r_minMag(*this, exact); }
-uint_fast64_t softfloat64_t::toUI64_minMag( bool exact ) const { return f64_to_ui64_r_minMag(*this, exact); }
-int_fast32_t  softfloat64_t:: toI32_minMag( bool exact ) const { return f64_to_i32_r_minMag (*this, exact); }
-int_fast64_t  softfloat64_t:: toI64_minMag( bool exact ) const { return f64_to_i64_r_minMag (*this, exact); }
-uint_fast32_t softfloat64_t::toUI32( uint_fast8_t roundingMode, bool exact ) const { return f64_to_ui32(*this, roundingMode, exact); }
-uint_fast64_t softfloat64_t::toUI64( uint_fast8_t roundingMode, bool exact ) const { return f64_to_ui64(*this, roundingMode, exact); }
-int_fast32_t  softfloat64_t:: toI32( uint_fast8_t roundingMode, bool exact ) const { return f64_to_i32 (*this, roundingMode, exact); }
-int_fast64_t  softfloat64_t:: toI64( uint_fast8_t roundingMode, bool exact ) const { return f64_to_i64 (*this, roundingMode, exact); }
+uint_fast32_t softfloat64_t::toUI32( uint_fast8_t roundingMode, bool exact ) const
+{
+    return (roundingMode == round_minMag) ? f64_to_ui32_r_minMag(*this, exact) : f64_to_ui32(*this, roundingMode, exact);
+}
+uint_fast64_t softfloat64_t::toUI64( uint_fast8_t roundingMode, bool exact ) const
+{
+    return (roundingMode == round_minMag) ? f64_to_ui64_r_minMag(*this, exact) : f64_to_ui64(*this, roundingMode, exact);
+}
+int_fast32_t  softfloat64_t:: toI32( uint_fast8_t roundingMode, bool exact ) const
+{
+    return (roundingMode == round_minMag) ? f64_to_i32_r_minMag (*this, exact) : f64_to_i32 (*this, roundingMode, exact);
+}
+int_fast64_t  softfloat64_t:: toI64( uint_fast8_t roundingMode, bool exact ) const
+{
+    return (roundingMode == round_minMag) ? f64_to_i64_r_minMag (*this, exact) : f64_to_i64 (*this, roundingMode, exact);
+}
 
 softfloat64_t softfloat64_t::round(uint_fast8_t roundingMode, bool exact) const { return f64_roundToInt(*this, roundingMode, exact); }
 softfloat32_t softfloat64_t::toF32() const { return f64_to_f32(*this); }

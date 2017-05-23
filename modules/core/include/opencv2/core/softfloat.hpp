@@ -142,10 +142,6 @@ public:
     softfloat32_t( const int64_t );
     softfloat32_t( const float a ) { Cv32suf s; s.f = a; v = s.u; }
 
-    uint_fast32_t toUI32_minMag( bool exact = false ) const;
-    uint_fast64_t toUI64_minMag( bool exact = false ) const;
-    int_fast32_t   toI32_minMag( bool exact = false ) const;
-    int_fast64_t   toI64_minMag( bool exact = false ) const;
     uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
@@ -207,10 +203,6 @@ public:
     softfloat64_t( const  int64_t );
     softfloat64_t( const double a ) { Cv64suf s; s.f = a; v = s.u; }
 
-    uint_fast32_t toUI32_minMag( bool exact = false ) const;
-    uint_fast64_t toUI64_minMag( bool exact = false ) const;
-    int_fast32_t   toI32_minMag( bool exact = false ) const;
-    int_fast64_t   toI64_minMag( bool exact = false ) const;
     uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
