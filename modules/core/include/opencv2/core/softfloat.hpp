@@ -87,16 +87,6 @@ namespace cv
 {
 
 /*----------------------------------------------------------------------------
-| Software floating-point underflow tininess-detection mode.
-*----------------------------------------------------------------------------*/
-enum {
-    tininess_beforeRounding = 0,
-    tininess_afterRounding  = 1
-};
-//fixed to make softfloat code stateless
-const uint_fast8_t globalDetectTininess = tininess_afterRounding;
-
-/*----------------------------------------------------------------------------
 | Software floating-point rounding mode.
 *----------------------------------------------------------------------------*/
 enum {
@@ -107,26 +97,6 @@ enum {
     round_near_maxMag = 4,
     round_odd         = 5
 };
-//fixed to make softfloat code stateless
-const uint_fast8_t globalRoundingMode = round_near_even;
-
-/*----------------------------------------------------------------------------
-| Software floating-point exception flags.
-*----------------------------------------------------------------------------*/
-enum {
-    flag_inexact   =  1,
-    flag_underflow =  2,
-    flag_overflow  =  4,
-    flag_infinite  =  8,
-    flag_invalid   = 16
-};
-
-// Disabled to make softfloat code stateless
-// The user has to check values manually with *_isSignalingNaN() functions
-inline void raiseFlags( uint_fast8_t /* flags */)
-{
-    //exceptionFlags |= flags;
-}
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/

@@ -83,6 +83,37 @@ namespace cv
 {
 
 /*----------------------------------------------------------------------------
+| Software floating-point underflow tininess-detection mode.
+*----------------------------------------------------------------------------*/
+enum {
+    tininess_beforeRounding = 0,
+    tininess_afterRounding  = 1
+};
+//fixed to make softfloat code stateless
+const uint_fast8_t globalDetectTininess = tininess_afterRounding;
+
+//fixed to make softfloat code stateless
+const uint_fast8_t globalRoundingMode = round_near_even;
+
+/*----------------------------------------------------------------------------
+| Software floating-point exception flags.
+*----------------------------------------------------------------------------*/
+enum {
+    flag_inexact   =  1,
+    flag_underflow =  2,
+    flag_overflow  =  4,
+    flag_infinite  =  8,
+    flag_invalid   = 16
+};
+
+// Disabled to make softfloat code stateless
+// This function may be changed in the future for better error handling
+inline void raiseFlags( uint_fast8_t /* flags */)
+{
+    //exceptionFlags |= flags;
+}
+
+/*----------------------------------------------------------------------------
 | Types used to pass 32-bit and 64-bit floating-point
 | arguments and results to/from functions.  These types must be exactly
 | 32 bits and 64 bits in size, respectively.  Where a
