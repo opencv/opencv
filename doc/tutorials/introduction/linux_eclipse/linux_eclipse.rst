@@ -65,28 +65,33 @@ Making a project
 
    .. code-block:: cpp
 
-      #include <cv.h>
-      #include <highgui.h>
+      #include <opencv2/core/core.hpp>
+      #include <opencv2/highgui/highgui.hpp>
 
       using namespace cv;
 
       int main( int argc, char** argv )
       {
-        Mat image;
-        image = imread( argv[1], 1 );
-
-        if( argc != 2 || !image.data )
+          if( argc != 2 )
           {
-            printf( "No image data \n" );
-            return -1;
+              printf( "Please supply an image path on the cmdline.\n" );
+              return -1;
+          }
+          Mat image;
+          image = imread( argv[1], 1 );
+
+          if( ! image.data )
+          {
+              printf( "No image data, your image did not load properly.\n" );
+              return -1;
           }
 
-        namedWindow( "Display Image", CV_WINDOW_AUTOSIZE );
-        imshow( "Display Image", image );
+          namedWindow( "Display Image", CV_WINDOW_AUTOSIZE );
+          imshow( "Display Image", image );
 
-        waitKey(0);
+          waitKey(0);
 
-        return 0;
+          return 0;
       }
 
 #. We are only missing one final step: To tell OpenCV where the OpenCV headers and libraries are. For this, do the following:
@@ -206,22 +211,19 @@ Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
 .. code-block:: cpp
 
 
-   #include <cv.h>
-   #include <highgui.h>
+   #include <opencv2/core/core.hpp>
+   #include <opencv2/highgui/highgui.hpp>
+   using namespace cv;
+   
    int main ( int argc, char **argv )
    {
-     cvNamedWindow( "My Window", 1 );
-     IplImage *img = cvCreateImage( cvSize( 640, 480 ), IPL_DEPTH_8U, 1 );
-     CvFont font;
-     double hScale = 1.0;
-     double vScale = 1.0;
-     int lineWidth = 1;
-     cvInitFont( &font, CV_FONT_HERSHEY_SIMPLEX | CV_FONT_ITALIC,
-                 hScale, vScale, 0, lineWidth );
-     cvPutText( img, "Hello World!", cvPoint( 200, 400 ), &font,
-                cvScalar( 255, 255, 0 ) );
-     cvShowImage( "My Window", img );
-     cvWaitKey();
+     namedWindow( "My Window", 1 );
+     Mat img = Mat::zeros(480,640,CV_8UC3);                    // rows,cols,type(8bit bgr)
+     putText( img, "Hello World!", Point( 200, 400 ), 
+                CV_FONT_HERSHEY_SIMPLEX | CV_FONT_ITALIC, 1.0, // font,size
+                Scalar( 255, 255, 0 ), 2 );                    // color,thickness
+     imshow( "My Window", img );
+     waitKey();
      return 0;
    }
 
