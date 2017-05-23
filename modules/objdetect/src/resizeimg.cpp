@@ -2,7 +2,7 @@
 #include "_lsvm_resizeimg.h"
 #include <stdio.h>
 #include <assert.h>
-#include <math.h>
+#include <cmath>
 
 IplImage* resize_opencv(IplImage* img, float scale)
 {

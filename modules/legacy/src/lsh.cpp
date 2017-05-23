@@ -59,7 +59,7 @@
 // NY, 253-262. DOI= http://doi.acm.org/10.1145/997817.997857
 
 #include "precomp.hpp"
-#include <math.h>
+#include <cmath>
 #include <vector>
 #include <algorithm>
 #include <limits>

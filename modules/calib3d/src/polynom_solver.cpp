@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 #include <iostream>
 using namespace std;
 #include "precomp.hpp"

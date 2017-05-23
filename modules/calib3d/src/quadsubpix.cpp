@@ -45,7 +45,7 @@
 #include <utility>
 #include <algorithm>
 
-#include <math.h>
+#include <cmath>
 
 //#define _SUBPIX_VERBOSE
 

@@ -310,7 +310,7 @@ class GTEST_API_ SingleFailureChecker {
 #endif  // GTEST_INCLUDE_GTEST_GTEST_SPI_H_
 
 #include <ctype.h>
-#include <math.h>
+#include <cmath>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

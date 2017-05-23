@@ -48,7 +48,7 @@
 
 #include "precomp.hpp"
 
-#include <math.h>
+#include <cmath>
 #include <assert.h>
 
 #define CV_MAX_NUM_GREY_LEVELS_8U  256

@@ -4,7 +4,7 @@
 
 #include "test_precomp.hpp"
 #include <float.h>
-#include <math.h>
+#include <cmath>
 
 using namespace cv;
 using namespace std;

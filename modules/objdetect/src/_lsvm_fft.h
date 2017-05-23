@@ -3,7 +3,7 @@
 
 #include "_lsvm_types.h"
 #include "_lsvm_error.h"
-#include <math.h>
+#include <cmath>
 
 /*
 // 1-dimensional FFT
