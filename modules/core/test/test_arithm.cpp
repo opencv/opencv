@@ -1912,3 +1912,13 @@ TEST(Subtract, scalarc4_matc4)
 
     ASSERT_EQ(0, cv::norm(cv::Mat(5, 5, CV_8UC4, cv::Scalar::all(250)), destImage, cv::NORM_INF));
 }
+
+TEST(Compare, empty)
+{
+    cv::Mat temp, dst1, dst2;
+    cv::compare(temp, temp, dst1, cv::CMP_EQ);
+    dst2 = temp > 5;
+
+    EXPECT_TRUE(dst1.empty());
+    EXPECT_TRUE(dst2.empty());
+}
