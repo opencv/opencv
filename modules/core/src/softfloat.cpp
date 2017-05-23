@@ -141,8 +141,8 @@ inline void raiseFlags( uint_fast8_t /* flags */)
 | the types below may, if desired, be defined as aliases for the native types
 | (typically 'float' and 'double').
 *----------------------------------------------------------------------------*/
-typedef softfloat32_t float32_t;
-typedef softfloat64_t float64_t;
+typedef softfloat float32_t;
+typedef softdouble float64_t;
 
 /*----------------------------------------------------------------------------
 | Integer-to-floating-point conversion routines.
@@ -213,84 +213,84 @@ bool f64_lt_quiet( float64_t, float64_t );
 bool f64_isSignalingNaN( float64_t );
 
 /*----------------------------------------------------------------------------
-| softfloat32_t and softfloat64_t methods and members
+| softfloat and softdouble methods and members
 *----------------------------------------------------------------------------*/
 
-softfloat32_t::softfloat32_t( const uint32_t a ) { *this = ui32_to_f32(a); }
-softfloat32_t::softfloat32_t( const uint64_t a ) { *this = ui64_to_f32(a); }
-softfloat32_t::softfloat32_t( const  int32_t a ) { *this =  i32_to_f32(a); }
-softfloat32_t::softfloat32_t( const  int64_t a ) { *this =  i64_to_f32(a); }
+softfloat::softfloat( const uint32_t a ) { *this = ui32_to_f32(a); }
+softfloat::softfloat( const uint64_t a ) { *this = ui64_to_f32(a); }
+softfloat::softfloat( const  int32_t a ) { *this =  i32_to_f32(a); }
+softfloat::softfloat( const  int64_t a ) { *this =  i64_to_f32(a); }
 
-uint_fast32_t softfloat32_t::toUI32( uint_fast8_t roundingMode, bool exact ) const
+uint_fast32_t softfloat::toUI32( uint_fast8_t roundingMode, bool exact ) const
 {
     return (roundingMode == round_minMag) ? f32_to_ui32_r_minMag(*this, exact) : f32_to_ui32(*this, roundingMode, exact);
 }
-uint_fast64_t softfloat32_t::toUI64( uint_fast8_t roundingMode, bool exact ) const
+uint_fast64_t softfloat::toUI64( uint_fast8_t roundingMode, bool exact ) const
 {
     return (roundingMode == round_minMag) ? f32_to_ui64_r_minMag(*this, exact) : f32_to_ui64(*this, roundingMode, exact);
 }
-int_fast32_t  softfloat32_t:: toI32( uint_fast8_t roundingMode, bool exact ) const
+int_fast32_t  softfloat:: toI32( uint_fast8_t roundingMode, bool exact ) const
 {
     return (roundingMode == round_minMag) ? f32_to_i32_r_minMag (*this, exact) : f32_to_i32 (*this, roundingMode, exact);
 }
-int_fast64_t  softfloat32_t:: toI64( uint_fast8_t roundingMode, bool exact ) const
+int_fast64_t  softfloat:: toI64( uint_fast8_t roundingMode, bool exact ) const
 {
     return (roundingMode == round_minMag) ? f32_to_i64_r_minMag (*this, exact) : f32_to_i64 (*this, roundingMode, exact);
 }
 
-softfloat32_t softfloat32_t::round( uint_fast8_t roundingMode, bool exact ) const { return f32_roundToInt(*this, roundingMode, exact); }
-softfloat64_t softfloat32_t::toF64() const { return f32_to_f64(*this); }
+softfloat softfloat::round( uint_fast8_t roundingMode, bool exact ) const { return f32_roundToInt(*this, roundingMode, exact); }
+softfloat::operator softdouble() const { return f32_to_f64(*this); }
 
-softfloat32_t softfloat32_t::operator + (const softfloat32_t& a) const { return f32_add(*this, a); }
-softfloat32_t softfloat32_t::operator - (const softfloat32_t& a) const { return f32_sub(*this, a); }
-softfloat32_t softfloat32_t::operator * (const softfloat32_t& a) const { return f32_mul(*this, a); }
-softfloat32_t softfloat32_t::operator / (const softfloat32_t& a) const { return f32_div(*this, a); }
-softfloat32_t softfloat32_t::operator % (const softfloat32_t& a) const { return f32_rem(*this, a); }
+softfloat softfloat::operator + (const softfloat& a) const { return f32_add(*this, a); }
+softfloat softfloat::operator - (const softfloat& a) const { return f32_sub(*this, a); }
+softfloat softfloat::operator * (const softfloat& a) const { return f32_mul(*this, a); }
+softfloat softfloat::operator / (const softfloat& a) const { return f32_div(*this, a); }
+softfloat softfloat::operator % (const softfloat& a) const { return f32_rem(*this, a); }
 
-bool softfloat32_t::operator == ( const softfloat32_t& a ) const { return  f32_eq(*this, a); }
-bool softfloat32_t::operator != ( const softfloat32_t& a ) const { return !f32_eq(*this, a); }
-bool softfloat32_t::operator >  ( const softfloat32_t& a ) const { return  f32_lt(a, *this); }
-bool softfloat32_t::operator >= ( const softfloat32_t& a ) const { return  f32_le(a, *this); }
-bool softfloat32_t::operator <  ( const softfloat32_t& a ) const { return  f32_lt(*this, a); }
-bool softfloat32_t::operator <= ( const softfloat32_t& a ) const { return  f32_le(*this, a); }
+bool softfloat::operator == ( const softfloat& a ) const { return  f32_eq(*this, a); }
+bool softfloat::operator != ( const softfloat& a ) const { return !f32_eq(*this, a); }
+bool softfloat::operator >  ( const softfloat& a ) const { return  f32_lt(a, *this); }
+bool softfloat::operator >= ( const softfloat& a ) const { return  f32_le(a, *this); }
+bool softfloat::operator <  ( const softfloat& a ) const { return  f32_lt(*this, a); }
+bool softfloat::operator <= ( const softfloat& a ) const { return  f32_le(*this, a); }
 
-softfloat64_t::softfloat64_t( const uint32_t a ) { *this = ui32_to_f64(a); }
-softfloat64_t::softfloat64_t( const uint64_t a ) { *this = ui64_to_f64(a); }
-softfloat64_t::softfloat64_t( const  int32_t a ) { *this =  i32_to_f64(a); }
-softfloat64_t::softfloat64_t( const  int64_t a ) { *this =  i64_to_f64(a); }
+softdouble::softdouble( const uint32_t a ) { *this = ui32_to_f64(a); }
+softdouble::softdouble( const uint64_t a ) { *this = ui64_to_f64(a); }
+softdouble::softdouble( const  int32_t a ) { *this =  i32_to_f64(a); }
+softdouble::softdouble( const  int64_t a ) { *this =  i64_to_f64(a); }
 
-uint_fast32_t softfloat64_t::toUI32( uint_fast8_t roundingMode, bool exact ) const
+uint_fast32_t softdouble::toUI32( uint_fast8_t roundingMode, bool exact ) const
 {
     return (roundingMode == round_minMag) ? f64_to_ui32_r_minMag(*this, exact) : f64_to_ui32(*this, roundingMode, exact);
 }
-uint_fast64_t softfloat64_t::toUI64( uint_fast8_t roundingMode, bool exact ) const
+uint_fast64_t softdouble::toUI64( uint_fast8_t roundingMode, bool exact ) const
 {
     return (roundingMode == round_minMag) ? f64_to_ui64_r_minMag(*this, exact) : f64_to_ui64(*this, roundingMode, exact);
 }
-int_fast32_t  softfloat64_t:: toI32( uint_fast8_t roundingMode, bool exact ) const
+int_fast32_t  softdouble:: toI32( uint_fast8_t roundingMode, bool exact ) const
 {
     return (roundingMode == round_minMag) ? f64_to_i32_r_minMag (*this, exact) : f64_to_i32 (*this, roundingMode, exact);
 }
-int_fast64_t  softfloat64_t:: toI64( uint_fast8_t roundingMode, bool exact ) const
+int_fast64_t  softdouble:: toI64( uint_fast8_t roundingMode, bool exact ) const
 {
     return (roundingMode == round_minMag) ? f64_to_i64_r_minMag (*this, exact) : f64_to_i64 (*this, roundingMode, exact);
 }
 
-softfloat64_t softfloat64_t::round(uint_fast8_t roundingMode, bool exact) const { return f64_roundToInt(*this, roundingMode, exact); }
-softfloat32_t softfloat64_t::toF32() const { return f64_to_f32(*this); }
+softdouble softdouble::round(uint_fast8_t roundingMode, bool exact) const { return f64_roundToInt(*this, roundingMode, exact); }
+softdouble::operator softfloat() const { return f64_to_f32(*this); }
 
-softfloat64_t softfloat64_t::operator + (const softfloat64_t& a) const { return f64_add(*this, a); }
-softfloat64_t softfloat64_t::operator - (const softfloat64_t& a) const { return f64_sub(*this, a); }
-softfloat64_t softfloat64_t::operator * (const softfloat64_t& a) const { return f64_mul(*this, a); }
-softfloat64_t softfloat64_t::operator / (const softfloat64_t& a) const { return f64_div(*this, a); }
-softfloat64_t softfloat64_t::operator % (const softfloat64_t& a) const { return f64_rem(*this, a); }
+softdouble softdouble::operator + (const softdouble& a) const { return f64_add(*this, a); }
+softdouble softdouble::operator - (const softdouble& a) const { return f64_sub(*this, a); }
+softdouble softdouble::operator * (const softdouble& a) const { return f64_mul(*this, a); }
+softdouble softdouble::operator / (const softdouble& a) const { return f64_div(*this, a); }
+softdouble softdouble::operator % (const softdouble& a) const { return f64_rem(*this, a); }
 
-bool softfloat64_t::operator == (const softfloat64_t& a) const { return  f64_eq(*this, a); }
-bool softfloat64_t::operator != (const softfloat64_t& a) const { return !f64_eq(*this, a); }
-bool softfloat64_t::operator >  (const softfloat64_t& a) const { return  f64_lt(a, *this); }
-bool softfloat64_t::operator >= (const softfloat64_t& a) const { return  f64_le(a, *this); }
-bool softfloat64_t::operator <  (const softfloat64_t& a) const { return  f64_lt(*this, a); }
-bool softfloat64_t::operator <= (const softfloat64_t& a) const { return  f64_le(*this, a); }
+bool softdouble::operator == (const softdouble& a) const { return  f64_eq(*this, a); }
+bool softdouble::operator != (const softdouble& a) const { return !f64_eq(*this, a); }
+bool softdouble::operator >  (const softdouble& a) const { return  f64_lt(a, *this); }
+bool softdouble::operator >= (const softdouble& a) const { return  f64_le(a, *this); }
+bool softdouble::operator <  (const softdouble& a) const { return  f64_lt(*this, a); }
+bool softdouble::operator <= (const softdouble& a) const { return  f64_le(*this, a); }
 
 /*----------------------------------------------------------------------------
 | The values to return on conversions to 32-bit integer formats that raise an
@@ -4185,78 +4185,78 @@ float64_t ui64_to_f64( uint64_t a )
 #define EXPTAB_SCALE 6
 #define EXPTAB_MASK  ((1 << EXPTAB_SCALE) - 1)
 
-#define EXPPOLY_32F_A0 float64_t(.9670371139572337719125840413672004409288e-2)
+static const softdouble EXPPOLY_32F_A0(.9670371139572337719125840413672004409288e-2);
 
-static const float64_t expTab[] = {
-    EXPPOLY_32F_A0 * 1.0,
-    EXPPOLY_32F_A0 * 1.0108892860517004600204097905619,
-    EXPPOLY_32F_A0 * 1.0218971486541166782344801347833,
-    EXPPOLY_32F_A0 * 1.0330248790212284225001082839705,
-    EXPPOLY_32F_A0 * 1.0442737824274138403219664787399,
-    EXPPOLY_32F_A0 * 1.0556451783605571588083413251529,
-    EXPPOLY_32F_A0 * 1.0671404006768236181695211209928,
-    EXPPOLY_32F_A0 * 1.0787607977571197937406800374385,
-    EXPPOLY_32F_A0 * 1.0905077326652576592070106557607,
-    EXPPOLY_32F_A0 * 1.1023825833078409435564142094256,
-    EXPPOLY_32F_A0 * 1.1143867425958925363088129569196,
-    EXPPOLY_32F_A0 * 1.126521618608241899794798643787 ,
-    EXPPOLY_32F_A0 * 1.1387886347566916537038302838415,
-    EXPPOLY_32F_A0 * 1.151189229952982705817759635202 ,
-    EXPPOLY_32F_A0 * 1.1637248587775775138135735990922,
-    EXPPOLY_32F_A0 * 1.1763969916502812762846457284838,
-    EXPPOLY_32F_A0 * 1.1892071150027210667174999705605,
-    EXPPOLY_32F_A0 * 1.2021567314527031420963969574978,
-    EXPPOLY_32F_A0 * 1.2152473599804688781165202513388,
-    EXPPOLY_32F_A0 * 1.2284805361068700056940089577928,
-    EXPPOLY_32F_A0 * 1.2418578120734840485936774687266,
-    EXPPOLY_32F_A0 * 1.2553807570246910895793906574423,
-    EXPPOLY_32F_A0 * 1.2690509571917332225544190810323,
-    EXPPOLY_32F_A0 * 1.2828700160787782807266697810215,
-    EXPPOLY_32F_A0 * 1.2968395546510096659337541177925,
-    EXPPOLY_32F_A0 * 1.3109612115247643419229917863308,
-    EXPPOLY_32F_A0 * 1.3252366431597412946295370954987,
-    EXPPOLY_32F_A0 * 1.3396675240533030053600306697244,
-    EXPPOLY_32F_A0 * 1.3542555469368927282980147401407,
-    EXPPOLY_32F_A0 * 1.3690024229745906119296011329822,
-    EXPPOLY_32F_A0 * 1.3839098819638319548726595272652,
-    EXPPOLY_32F_A0 * 1.3989796725383111402095281367152,
-    EXPPOLY_32F_A0 * 1.4142135623730950488016887242097,
-    EXPPOLY_32F_A0 * 1.4296133383919700112350657782751,
-    EXPPOLY_32F_A0 * 1.4451808069770466200370062414717,
-    EXPPOLY_32F_A0 * 1.4609177941806469886513028903106,
-    EXPPOLY_32F_A0 * 1.476826145939499311386907480374 ,
-    EXPPOLY_32F_A0 * 1.4929077282912648492006435314867,
-    EXPPOLY_32F_A0 * 1.5091644275934227397660195510332,
-    EXPPOLY_32F_A0 * 1.5255981507445383068512536895169,
-    EXPPOLY_32F_A0 * 1.5422108254079408236122918620907,
-    EXPPOLY_32F_A0 * 1.5590044002378369670337280894749,
-    EXPPOLY_32F_A0 * 1.5759808451078864864552701601819,
-    EXPPOLY_32F_A0 * 1.5931421513422668979372486431191,
-    EXPPOLY_32F_A0 * 1.6104903319492543081795206673574,
-    EXPPOLY_32F_A0 * 1.628027421857347766848218522014 ,
-    EXPPOLY_32F_A0 * 1.6457554781539648445187567247258,
-    EXPPOLY_32F_A0 * 1.6636765803267364350463364569764,
-    EXPPOLY_32F_A0 * 1.6817928305074290860622509524664,
-    EXPPOLY_32F_A0 * 1.7001063537185234695013625734975,
-    EXPPOLY_32F_A0 * 1.7186192981224779156293443764563,
-    EXPPOLY_32F_A0 * 1.7373338352737062489942020818722,
-    EXPPOLY_32F_A0 * 1.7562521603732994831121606193753,
-    EXPPOLY_32F_A0 * 1.7753764925265212525505592001993,
-    EXPPOLY_32F_A0 * 1.7947090750031071864277032421278,
-    EXPPOLY_32F_A0 * 1.8142521755003987562498346003623,
-    EXPPOLY_32F_A0 * 1.8340080864093424634870831895883,
-    EXPPOLY_32F_A0 * 1.8539791250833855683924530703377,
-    EXPPOLY_32F_A0 * 1.8741676341102999013299989499544,
-    EXPPOLY_32F_A0 * 1.8945759815869656413402186534269,
-    EXPPOLY_32F_A0 * 1.9152065613971472938726112702958,
-    EXPPOLY_32F_A0 * 1.9360617934922944505980559045667,
-    EXPPOLY_32F_A0 * 1.9571441241754002690183222516269,
-    EXPPOLY_32F_A0 * 1.9784560263879509682582499181312,
+static const double expTab[] = {
+    1.0,
+    1.0108892860517004600204097905619,
+    1.0218971486541166782344801347833,
+    1.0330248790212284225001082839705,
+    1.0442737824274138403219664787399,
+    1.0556451783605571588083413251529,
+    1.0671404006768236181695211209928,
+    1.0787607977571197937406800374385,
+    1.0905077326652576592070106557607,
+    1.1023825833078409435564142094256,
+    1.1143867425958925363088129569196,
+    1.126521618608241899794798643787 ,
+    1.1387886347566916537038302838415,
+    1.151189229952982705817759635202 ,
+    1.1637248587775775138135735990922,
+    1.1763969916502812762846457284838,
+    1.1892071150027210667174999705605,
+    1.2021567314527031420963969574978,
+    1.2152473599804688781165202513388,
+    1.2284805361068700056940089577928,
+    1.2418578120734840485936774687266,
+    1.2553807570246910895793906574423,
+    1.2690509571917332225544190810323,
+    1.2828700160787782807266697810215,
+    1.2968395546510096659337541177925,
+    1.3109612115247643419229917863308,
+    1.3252366431597412946295370954987,
+    1.3396675240533030053600306697244,
+    1.3542555469368927282980147401407,
+    1.3690024229745906119296011329822,
+    1.3839098819638319548726595272652,
+    1.3989796725383111402095281367152,
+    1.4142135623730950488016887242097,
+    1.4296133383919700112350657782751,
+    1.4451808069770466200370062414717,
+    1.4609177941806469886513028903106,
+    1.476826145939499311386907480374 ,
+    1.4929077282912648492006435314867,
+    1.5091644275934227397660195510332,
+    1.5255981507445383068512536895169,
+    1.5422108254079408236122918620907,
+    1.5590044002378369670337280894749,
+    1.5759808451078864864552701601819,
+    1.5931421513422668979372486431191,
+    1.6104903319492543081795206673574,
+    1.628027421857347766848218522014 ,
+    1.6457554781539648445187567247258,
+    1.6636765803267364350463364569764,
+    1.6817928305074290860622509524664,
+    1.7001063537185234695013625734975,
+    1.7186192981224779156293443764563,
+    1.7373338352737062489942020818722,
+    1.7562521603732994831121606193753,
+    1.7753764925265212525505592001993,
+    1.7947090750031071864277032421278,
+    1.8142521755003987562498346003623,
+    1.8340080864093424634870831895883,
+    1.8539791250833855683924530703377,
+    1.8741676341102999013299989499544,
+    1.8945759815869656413402186534269,
+    1.9152065613971472938726112702958,
+    1.9360617934922944505980559045667,
+    1.9571441241754002690183222516269,
+    1.9784560263879509682582499181312,
 };
 
 // 1 / ln(2) == 1.4426950408889634073599246810019
-static const float64_t exp_prescale = float64_t(1.4426950408889634073599246810019) * (1 << EXPTAB_SCALE);
-static const float64_t exp_postscale = float64_t::one()/(1 << EXPTAB_SCALE);
+static const float64_t exp_prescale = float64_t(1.4426950408889634073599246810019) * float64_t(1 << EXPTAB_SCALE);
+static const float64_t exp_postscale = float64_t::one()/float64_t(1 << EXPTAB_SCALE);
 static const float64_t exp_max_val(3000*(1 << EXPTAB_SCALE)); // log10(DBL_MAX) < 3000
 
 float32_t f32_exp( float32_t x)
@@ -4275,7 +4275,7 @@ float32_t f32_exp( float32_t x)
     if(expF32UI(x.v) > 127 + 10)
         x0 = signF32UI(x.v) ? -exp_max_val : exp_max_val;
     else
-        x0 = x.toF64() * exp_prescale;
+        x0 = (softdouble)x * exp_prescale;
 
     int val0 = x0.toI32();
     int t = (val0 >> EXPTAB_SCALE) + 1023;
@@ -4284,7 +4284,7 @@ float32_t f32_exp( float32_t x)
 
     x0 = (x0 - x0.round()) * exp_postscale;
 
-    return (buf * expTab[val0 & EXPTAB_MASK] * ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)).toF32();
+    return (buf * EXPPOLY_32F_A0 * float64_t(expTab[val0 & EXPTAB_MASK]) * ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4));
 }
 
 float64_t f64_exp(float64_t x)
@@ -4314,7 +4314,7 @@ float64_t f64_exp(float64_t x)
 
     x0 = (x0 - x0.round()) * exp_postscale;
 
-    return buf * expTab[val0 & EXPTAB_MASK] * (((((A0*x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)*x0 + A5);
+    return buf * EXPPOLY_32F_A0 * float64_t(expTab[val0 & EXPTAB_MASK]) * (((((A0*x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)*x0 + A5);
 }
 
 #undef EXPTAB_SCALE
@@ -4603,11 +4603,11 @@ float32_t f32_log(float32_t x)
 
     float64_t x0 = buf * tab1;
     //if last elements of icvLogTab
-    if(h0 == 255) x0 += -1./512;
+    if(h0 == 255) x0 += float64_t(-1./512);
 
-    float64_t y0 = ln_2 * (expF32UI(x.v) - 127) + tab0 + x0*x0*x0/3 - x0*x0/2 + x0;
+    float64_t y0 = ln_2 * float64_t(expF32UI(x.v) - 127) + tab0 + x0*x0*x0/float64_t(3) - x0*x0/float64_t(2) + x0;
 
-    return y0.toF32();
+    return y0;
 }
 
 float64_t f64_log(float64_t x)
@@ -4637,10 +4637,10 @@ float64_t f64_log(float64_t x)
 
     float64_t x0 = buf * tab1;
     //if last elements of icvLogTab
-    if(h0 == 255) x0 += -1./512;
+    if(h0 == 255) x0 += float64_t(-1./512);
     float64_t xq = x0*x0;
 
-    return ln_2 * ( expF64UI(x.v) - 1023) + tab0 + (((A0*xq + A2)*xq + A4)*xq + A6)*xq +
+    return ln_2 * float64_t( expF64UI(x.v) - 1023) + tab0 + (((A0*xq + A2)*xq + A4)*xq + A6)*xq +
            (((A1*xq + A3)*xq + A5)*xq + A7)*x0;
 }
 

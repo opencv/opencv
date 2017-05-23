@@ -101,63 +101,63 @@ enum {
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-struct softfloat32_t;
-struct softfloat64_t;
+struct softfloat;
+struct softdouble;
 
-struct CV_EXPORTS softfloat32_t
+struct CV_EXPORTS softfloat
 {
 public:
-    softfloat32_t() { v = 0; }
-    softfloat32_t( const softfloat32_t& c) { v = c.v; }
-    softfloat32_t& operator=( const softfloat32_t& c )
+    softfloat() { v = 0; }
+    softfloat( const softfloat& c) { v = c.v; }
+    softfloat& operator=( const softfloat& c )
     {
         if(&c != this) v = c.v;
         return *this;
     }
-    static const softfloat32_t fromRaw( const uint32_t a ) { softfloat32_t x; x.v = a; return x; }
+    static const softfloat fromRaw( const uint32_t a ) { softfloat x; x.v = a; return x; }
 
-    softfloat32_t( const uint32_t );
-    softfloat32_t( const uint64_t );
-    softfloat32_t( const int32_t );
-    softfloat32_t( const int64_t );
-    softfloat32_t( const float a ) { Cv32suf s; s.f = a; v = s.u; }
+    explicit softfloat( const uint32_t );
+    explicit softfloat( const uint64_t );
+    explicit softfloat( const int32_t );
+    explicit softfloat( const int64_t );
+    explicit softfloat( const float a ) { Cv32suf s; s.f = a; v = s.u; }
 
     uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     int_fast64_t   toI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
 
-    softfloat32_t  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
-    softfloat64_t toF64() const;
+    softfloat  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
+    operator softdouble() const;
     float toFloat() const { Cv32suf s; s.u = v; return s.f; }
 
-    softfloat32_t operator + (const softfloat32_t&) const;
-    softfloat32_t operator - (const softfloat32_t&) const;
-    softfloat32_t operator * (const softfloat32_t&) const;
-    softfloat32_t operator / (const softfloat32_t&) const;
-    softfloat32_t operator % (const softfloat32_t&) const;
-    softfloat32_t operator - () const { softfloat32_t x; x.v = v ^ (1U << 31); return x; }
+    softfloat operator + (const softfloat&) const;
+    softfloat operator - (const softfloat&) const;
+    softfloat operator * (const softfloat&) const;
+    softfloat operator / (const softfloat&) const;
+    softfloat operator % (const softfloat&) const;
+    softfloat operator - () const { softfloat x; x.v = v ^ (1U << 31); return x; }
 
-    softfloat32_t& operator += (const softfloat32_t& a) { *this = *this + a; return *this; }
-    softfloat32_t& operator -= (const softfloat32_t& a) { *this = *this - a; return *this; }
-    softfloat32_t& operator *= (const softfloat32_t& a) { *this = *this * a; return *this; }
-    softfloat32_t& operator /= (const softfloat32_t& a) { *this = *this / a; return *this; }
-    softfloat32_t& operator %= (const softfloat32_t& a) { *this = *this % a; return *this; }
+    softfloat& operator += (const softfloat& a) { *this = *this + a; return *this; }
+    softfloat& operator -= (const softfloat& a) { *this = *this - a; return *this; }
+    softfloat& operator *= (const softfloat& a) { *this = *this * a; return *this; }
+    softfloat& operator /= (const softfloat& a) { *this = *this / a; return *this; }
+    softfloat& operator %= (const softfloat& a) { *this = *this % a; return *this; }
 
-    bool operator == ( const softfloat32_t& ) const;
-    bool operator != ( const softfloat32_t& ) const;
-    bool operator >  ( const softfloat32_t& ) const;
-    bool operator >= ( const softfloat32_t& ) const;
-    bool operator <  ( const softfloat32_t& ) const;
-    bool operator <= ( const softfloat32_t& ) const;
+    bool operator == ( const softfloat& ) const;
+    bool operator != ( const softfloat& ) const;
+    bool operator >  ( const softfloat& ) const;
+    bool operator >= ( const softfloat& ) const;
+    bool operator <  ( const softfloat& ) const;
+    bool operator <= ( const softfloat& ) const;
 
     bool isNaN() const { return (v & 0x7fffffff)  > 0x7f800000; }
     bool isInf() const { return (v & 0x7fffffff) == 0x7f800000; }
 
-    static softfloat32_t zero() { return softfloat32_t::fromRaw( 0 ); }
-    static softfloat32_t  inf() { return softfloat32_t::fromRaw( 0xFF << 23 ); }
-    static softfloat32_t  nan() { return softfloat32_t::fromRaw( 0x7fffffff ); }
-    static softfloat32_t  one() { return softfloat32_t::fromRaw(  127 << 23 ); }
+    static softfloat zero() { return softfloat::fromRaw( 0 ); }
+    static softfloat  inf() { return softfloat::fromRaw( 0xFF << 23 ); }
+    static softfloat  nan() { return softfloat::fromRaw( 0x7fffffff ); }
+    static softfloat  one() { return softfloat::fromRaw(  127 << 23 ); }
 
     uint32_t v;
 };
@@ -165,60 +165,60 @@ public:
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-struct CV_EXPORTS softfloat64_t
+struct CV_EXPORTS softdouble
 {
 public:
-    softfloat64_t() { }
-    softfloat64_t( const softfloat64_t& c) { v = c.v; }
-    softfloat64_t& operator=( const softfloat64_t& c )
+    softdouble() { }
+    softdouble( const softdouble& c) { v = c.v; }
+    softdouble& operator=( const softdouble& c )
     {
         if(&c != this) v = c.v;
         return *this;
     }
-    static softfloat64_t fromRaw( const uint64_t a ) { softfloat64_t x; x.v = a; return x; }
+    static softdouble fromRaw( const uint64_t a ) { softdouble x; x.v = a; return x; }
 
-    softfloat64_t( const uint32_t );
-    softfloat64_t( const uint64_t );
-    softfloat64_t( const  int32_t );
-    softfloat64_t( const  int64_t );
-    softfloat64_t( const double a ) { Cv64suf s; s.f = a; v = s.u; }
+    explicit softdouble( const uint32_t );
+    explicit softdouble( const uint64_t );
+    explicit softdouble( const  int32_t );
+    explicit softdouble( const  int64_t );
+    explicit softdouble( const double a ) { Cv64suf s; s.f = a; v = s.u; }
 
     uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
     int_fast64_t   toI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
 
-    softfloat64_t  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
-    softfloat32_t toF32() const;
+    softdouble  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
+    operator softfloat() const;
     double toDouble() const { Cv64suf s; s.u = v; return s.f; }
 
-    softfloat64_t operator + (const softfloat64_t&) const;
-    softfloat64_t operator - (const softfloat64_t&) const;
-    softfloat64_t operator * (const softfloat64_t&) const;
-    softfloat64_t operator / (const softfloat64_t&) const;
-    softfloat64_t operator % (const softfloat64_t&) const;
-    softfloat64_t operator - () const { softfloat64_t x; x.v = v ^ (1ULL << 63); return x; }
+    softdouble operator + (const softdouble&) const;
+    softdouble operator - (const softdouble&) const;
+    softdouble operator * (const softdouble&) const;
+    softdouble operator / (const softdouble&) const;
+    softdouble operator % (const softdouble&) const;
+    softdouble operator - () const { softdouble x; x.v = v ^ (1ULL << 63); return x; }
 
-    softfloat64_t& operator += (const softfloat64_t& a) { *this = *this + a; return *this; }
-    softfloat64_t& operator -= (const softfloat64_t& a) { *this = *this - a; return *this; }
-    softfloat64_t& operator *= (const softfloat64_t& a) { *this = *this * a; return *this; }
-    softfloat64_t& operator /= (const softfloat64_t& a) { *this = *this / a; return *this; }
-    softfloat64_t& operator %= (const softfloat64_t& a) { *this = *this % a; return *this; }
+    softdouble& operator += (const softdouble& a) { *this = *this + a; return *this; }
+    softdouble& operator -= (const softdouble& a) { *this = *this - a; return *this; }
+    softdouble& operator *= (const softdouble& a) { *this = *this * a; return *this; }
+    softdouble& operator /= (const softdouble& a) { *this = *this / a; return *this; }
+    softdouble& operator %= (const softdouble& a) { *this = *this % a; return *this; }
 
-    bool operator == ( const softfloat64_t& ) const;
-    bool operator != ( const softfloat64_t& ) const;
-    bool operator >  ( const softfloat64_t& ) const;
-    bool operator >= ( const softfloat64_t& ) const;
-    bool operator <  ( const softfloat64_t& ) const;
-    bool operator <= ( const softfloat64_t& ) const;
+    bool operator == ( const softdouble& ) const;
+    bool operator != ( const softdouble& ) const;
+    bool operator >  ( const softdouble& ) const;
+    bool operator >= ( const softdouble& ) const;
+    bool operator <  ( const softdouble& ) const;
+    bool operator <= ( const softdouble& ) const;
 
     bool isNaN() const { return (v & 0x7fffffffffffffff)  > 0x7ff0000000000000; }
     bool isInf() const { return (v & 0x7fffffffffffffff) == 0x7ff0000000000000; }
 
-    static softfloat64_t zero() { return softfloat64_t::fromRaw( 0 ); }
-    static softfloat64_t  inf() { return softfloat64_t::fromRaw( (uint_fast64_t)(0x7FF) << 52 ); }
-    static softfloat64_t  nan() { return softfloat64_t::fromRaw( CV_BIG_INT(0x7FFFFFFFFFFFFFFF) ); }
-    static softfloat64_t  one() { return softfloat64_t::fromRaw( (uint_fast64_t)( 1023) << 52 ); }
+    static softdouble zero() { return softdouble::fromRaw( 0 ); }
+    static softdouble  inf() { return softdouble::fromRaw( (uint_fast64_t)(0x7FF) << 52 ); }
+    static softdouble  nan() { return softdouble::fromRaw( CV_BIG_INT(0x7FFFFFFFFFFFFFFF) ); }
+    static softdouble  one() { return softdouble::fromRaw( (uint_fast64_t)( 1023) << 52 ); }
 
     uint64_t v;
 };
@@ -226,39 +226,39 @@ public:
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-CV_EXPORTS softfloat32_t f32_mulAdd( softfloat32_t, softfloat32_t, softfloat32_t );
-CV_EXPORTS softfloat32_t f32_sqrt( softfloat32_t );
-CV_EXPORTS softfloat64_t f64_mulAdd( softfloat64_t, softfloat64_t, softfloat64_t );
-CV_EXPORTS softfloat64_t f64_sqrt( softfloat64_t );
+CV_EXPORTS softfloat f32_mulAdd( softfloat, softfloat, softfloat );
+CV_EXPORTS softfloat f32_sqrt( softfloat );
+CV_EXPORTS softdouble f64_mulAdd( softdouble, softdouble, softdouble );
+CV_EXPORTS softdouble f64_sqrt( softdouble );
 
 /*----------------------------------------------------------------------------
 | Ported from OpenCV and added for usability
 *----------------------------------------------------------------------------*/
 
-inline softfloat32_t min(const softfloat32_t a, const softfloat32_t b);
-inline softfloat64_t min(const softfloat64_t a, const softfloat64_t b);
+inline softfloat min(const softfloat a, const softfloat b);
+inline softdouble min(const softdouble a, const softdouble b);
 
-inline softfloat32_t max(const softfloat32_t a, const softfloat32_t b);
-inline softfloat64_t max(const softfloat64_t a, const softfloat64_t b);
+inline softfloat max(const softfloat a, const softfloat b);
+inline softdouble max(const softdouble a, const softdouble b);
 
-inline softfloat32_t min(const softfloat32_t a, const softfloat32_t b) { return (a > b) ? b : a; }
-inline softfloat64_t min(const softfloat64_t a, const softfloat64_t b) { return (a > b) ? b : a; }
+inline softfloat min(const softfloat a, const softfloat b) { return (a > b) ? b : a; }
+inline softdouble min(const softdouble a, const softdouble b) { return (a > b) ? b : a; }
 
-inline softfloat32_t max(const softfloat32_t a, const softfloat32_t b) { return (a > b) ? a : b; }
-inline softfloat64_t max(const softfloat64_t a, const softfloat64_t b) { return (a > b) ? a : b; }
+inline softfloat max(const softfloat a, const softfloat b) { return (a > b) ? a : b; }
+inline softdouble max(const softdouble a, const softdouble b) { return (a > b) ? a : b; }
 
-inline softfloat32_t f32_abs( softfloat32_t a) { softfloat32_t x; x.v = a.v & ((1U   << 31) - 1); return x; }
-inline softfloat64_t f64_abs( softfloat64_t a) { softfloat64_t x; x.v = a.v & ((1ULL << 63) - 1); return x; }
+inline softfloat f32_abs( softfloat a) { softfloat x; x.v = a.v & ((1U   << 31) - 1); return x; }
+inline softdouble f64_abs( softdouble a) { softdouble x; x.v = a.v & ((1ULL << 63) - 1); return x; }
 
-CV_EXPORTS softfloat32_t f32_exp( softfloat32_t );
-CV_EXPORTS softfloat32_t f32_log( softfloat32_t );
-CV_EXPORTS softfloat32_t f32_pow( softfloat32_t, softfloat32_t );
+CV_EXPORTS softfloat f32_exp( softfloat );
+CV_EXPORTS softfloat f32_log( softfloat );
+CV_EXPORTS softfloat f32_pow( softfloat, softfloat );
 
-CV_EXPORTS softfloat64_t f64_exp( softfloat64_t );
-CV_EXPORTS softfloat64_t f64_log( softfloat64_t );
-CV_EXPORTS softfloat64_t f64_pow( softfloat64_t, softfloat64_t );
+CV_EXPORTS softdouble f64_exp( softdouble );
+CV_EXPORTS softdouble f64_log( softdouble );
+CV_EXPORTS softdouble f64_pow( softdouble, softdouble );
 
-CV_EXPORTS softfloat32_t f32_cbrt( softfloat32_t );
+CV_EXPORTS softfloat f32_cbrt( softfloat );
 
 }
 
