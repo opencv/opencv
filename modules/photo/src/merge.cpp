@@ -52,7 +52,7 @@ class MergeDebevecImpl : public MergeDebevec
 public:
     MergeDebevecImpl() :
         name("MergeDebevec"),
-        weights(tringleWeights())
+        weights(triangleWeights())
     {
     }
 

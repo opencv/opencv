@@ -15,15 +15,15 @@ Installing OpenCV from prebuilt binaries
 
 -#  Below Python packages are to be downloaded and installed to their default locations.
 
-    -#  [Python-2.7.x](http://python.org/ftp/python/2.7.5/python-2.7.5.msi).
+    -#  [Python-2.7.x](http://www.python.org/ftp/python/2.7.13/python-2.7.13.msi).
 
-    -#  [Numpy](http://sourceforge.net/projects/numpy/files/NumPy/1.7.1/numpy-1.7.1-win32-superpack-python2.7.exe/download).
+    -#  [Numpy](https://sourceforge.net/projects/numpy/files/NumPy/1.10.2/numpy-1.10.2-win32-superpack-python2.7.exe/download).
 
-    -#  [Matplotlib](https://downloads.sourceforge.net/project/matplotlib/matplotlib/matplotlib-1.3.0/matplotlib-1.3.0.win32-py2.7.exe) (*Matplotlib is optional, but recommended since we use it a lot in our tutorials*).
+    -#  [Matplotlib](https://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.5.0/windows/matplotlib-1.5.0.win32-py2.7.exe/download) (*Matplotlib is optional, but recommended since we use it a lot in our tutorials*).
 
 -#  Install all packages into their default locations. Python will be installed to `C:/Python27/`.
 
--#  After installation, open Python IDLE. Enter import numpy and make sure Numpy is working fine.
+-#  After installation, open Python IDLE. Enter **import numpy** and make sure Numpy is working fine.
 
 -#  Download latest OpenCV release from [sourceforge
     site](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/2.4.6/OpenCV-2.4.6.0.exe/download)

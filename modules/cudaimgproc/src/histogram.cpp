@@ -69,20 +69,32 @@ void cv::cuda::histRange(InputArray, GpuMat*, const GpuMat*, Stream&) { throw_no
 namespace hist
 {
     void histogram256(PtrStepSzb src, int* hist, cudaStream_t stream);
+    void histogram256(PtrStepSzb src, PtrStepSzb mask, int* hist, cudaStream_t stream);
 }
 
 void cv::cuda::calcHist(InputArray _src, OutputArray _hist, Stream& stream)
 {
+    calcHist(_src, cv::cuda::GpuMat(), _hist, stream);
+}
+
+void cv::cuda::calcHist(InputArray _src, InputArray _mask, OutputArray _hist, Stream& stream)
+{
     GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
 
     CV_Assert( src.type() == CV_8UC1 );
+    CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
+    CV_Assert( mask.empty() || mask.size() == src.size() );
 
     _hist.create(1, 256, CV_32SC1);
     GpuMat hist = _hist.getGpuMat();
 
     hist.setTo(Scalar::all(0), stream);
 
-    hist::histogram256(src, hist.ptr<int>(), StreamAccessor::getStream(stream));
+    if (mask.empty())
+        hist::histogram256(src, hist.ptr<int>(), StreamAccessor::getStream(stream));
+    else
+        hist::histogram256(src, mask, hist.ptr<int>(), StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////

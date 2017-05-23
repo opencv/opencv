@@ -51,6 +51,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace cv
 {
@@ -168,9 +169,9 @@ public:
     /**
      * @brief ExifReader constructor. Constructs an object of exif reader
      *
-     * @param [in]filename The name of file to look exif info in
+     * @param [in]stream An istream to look for EXIF bytes from
      */
-    explicit ExifReader( std::string filename );
+    explicit ExifReader( std::istream& stream );
     ~ExifReader();
 
 
@@ -190,7 +191,7 @@ public:
     ExifEntry_t getTag( const ExifTagName tag );
 
 private:
-    std::string m_filename;
+    std::istream& m_stream;
     std::vector<unsigned char> m_data;
     std::map<int, ExifEntry_t > m_exif;
     Endianess_t m_format;
@@ -198,7 +199,7 @@ private:
     void parseExif();
     bool checkTagMark() const;
 
-    size_t getFieldSize ( FILE* f ) const;
+    size_t getFieldSize ();
     size_t getNumDirEntry() const;
     uint32_t getStartOffset() const;
     uint16_t getExifTag( const size_t offset ) const;
@@ -245,7 +246,6 @@ private:
     //number of Reference Black&White components
     static const size_t refBWComponents = 6;
 };
-
 
 
 }

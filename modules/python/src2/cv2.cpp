@@ -394,6 +394,15 @@ bool pyopencv_to(PyObject* o, Mat& m, const char* name)
     return pyopencv_to(o, m, ArgInfo(name, 0));
 }
 
+template <typename T>
+bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
+{
+    if (!o || o == Py_None)
+        return true;
+    p = makePtr<T>();
+    return pyopencv_to(o, *p, name);
+}
+
 template<>
 PyObject* pyopencv_from(const Mat& m)
 {
@@ -415,6 +424,14 @@ template<typename _Tp, int m, int n>
 PyObject* pyopencv_from(const Matx<_Tp, m, n>& matx)
 {
     return pyopencv_from(Mat(matx));
+}
+
+template<typename T>
+PyObject* pyopencv_from(const cv::Ptr<T>& p)
+{
+    if (!p)
+        Py_RETURN_NONE;
+    return pyopencv_from(*p);
 }
 
 typedef struct {
@@ -508,13 +525,71 @@ static PyObject * UMatWrapper_get(cv2_UMatWrapperObject* self)
     return pyopencv_from(m);
 }
 
+// UMatWrapper.handle() - returns the OpenCL handle of the UMat object
+static PyObject * UMatWrapper_handle(cv2_UMatWrapperObject* self, PyObject *args, PyObject *kwds)
+{
+    const char *kwlist[] = {"accessFlags", NULL};
+    int accessFlags;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", (char**) kwlist, &accessFlags))
+        return 0;
+    return PyLong_FromVoidPtr(self->um->handle(accessFlags));
+}
+
+// UMatWrapper.isContinuous() - returns true if the matrix data is continuous
+static PyObject * UMatWrapper_isContinuous(cv2_UMatWrapperObject* self)
+{
+    return PyBool_FromLong(self->um->isContinuous());
+}
+
+// UMatWrapper.isContinuous() - returns true if the matrix is a submatrix of another matrix
+static PyObject * UMatWrapper_isSubmatrix(cv2_UMatWrapperObject* self)
+{
+    return PyBool_FromLong(self->um->isSubmatrix());
+}
+
+// UMatWrapper.context() - returns the OpenCL context used by OpenCV UMat
+static PyObject * UMatWrapper_context(cv2_UMatWrapperObject*)
+{
+    return PyLong_FromVoidPtr(cv::ocl::Context::getDefault().ptr());
+}
+
+// UMatWrapper.context() - returns the OpenCL queue used by OpenCV UMat
+static PyObject * UMatWrapper_queue(cv2_UMatWrapperObject*)
+{
+    return PyLong_FromVoidPtr(cv::ocl::Queue::getDefault().ptr());
+}
+
+static PyObject * UMatWrapper_offset_getter(cv2_UMatWrapperObject* self, void*)
+{
+    return PyLong_FromSsize_t(self->um->offset);
+}
+
 static PyMethodDef UMatWrapper_methods[] = {
         {"get", (PyCFunction)UMatWrapper_get, METH_NOARGS,
                 "Returns numpy array"
         },
+        {"handle", (PyCFunction)UMatWrapper_handle, METH_VARARGS | METH_KEYWORDS,
+                "Returns UMat native handle"
+        },
+        {"isContinuous", (PyCFunction)UMatWrapper_isContinuous, METH_NOARGS,
+                "Returns true if the matrix data is continuous"
+        },
+        {"isSubmatrix", (PyCFunction)UMatWrapper_isSubmatrix, METH_NOARGS,
+                "Returns true if the matrix is a submatrix of another matrix"
+        },
+        {"context", (PyCFunction)UMatWrapper_context, METH_NOARGS | METH_STATIC,
+                "Returns OpenCL context handle"
+        },
+        {"queue", (PyCFunction)UMatWrapper_queue, METH_NOARGS | METH_STATIC,
+                "Returns OpenCL queue handle"
+        },
         {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
+static PyGetSetDef UMatWrapper_getset[] = {
+        {(char*) "offset", (getter) UMatWrapper_offset_getter, NULL, NULL, NULL},
+        {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
 
 static PyTypeObject cv2_UMatWrapperType = {
 #if PY_MAJOR_VERSION >= 3
@@ -551,7 +626,7 @@ static PyTypeObject cv2_UMatWrapperType = {
         0,                             /* tp_iternext */
         UMatWrapper_methods,           /* tp_methods */
         0,                             /* tp_members */
-        0,                             /* tp_getset */
+        UMatWrapper_getset,            /* tp_getset */
         0,                             /* tp_base */
         0,                             /* tp_dict */
         0,                             /* tp_descr_get */
@@ -1269,13 +1344,6 @@ PyObject* pyopencv_from(const Moments& m)
                          "mu30", m.mu30, "mu21", m.mu21, "mu12", m.mu12, "mu03", m.mu03,
                          "nu20", m.nu20, "nu11", m.nu11, "nu02", m.nu02,
                          "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
-}
-
-template <typename T>
-bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
-{
-    p = makePtr<T>();
-    return pyopencv_to(o, *p, name);
 }
 
 #include "pyopencv_custom_headers.h"

@@ -591,7 +591,7 @@ public:
 @param samples number of pixel locations to use
 @param lambda smoothness term weight. Greater values produce smoother results, but can alter the
 response.
-@param random if true sample pixel locations are chosen at random, otherwise the form a
+@param random if true sample pixel locations are chosen at random, otherwise they form a
 rectangular grid.
  */
 CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 70, float lambda = 10.0f, bool random = false);
@@ -748,7 +748,7 @@ complex outlines into a new background
 consuming and often leaves an undesirable halo. Seamless cloning, even averaged with the
 original image, is not effective. Mixed seamless cloning based on a loose selection proves
 effective.
--   **FEATURE_EXCHANGE** Feature exchange allows the user to easily replace certain features of
+-   **MONOCHROME_TRANSFER** Monochrome transfer allows the user to easily replace certain features of
 one object by alternative features.
  */
 CV_EXPORTS_W void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p,

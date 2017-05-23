@@ -65,6 +65,7 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
   unset(OPENCV_MODULE_${mod}_PRIVATE_OPT_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_LINK_DEPS CACHE)
   unset(OPENCV_MODULE_${mod}_WRAPPERS CACHE)
+  unset(OPENCV_DEPENDANT_TARGETS_${mod} CACHE)
 endforeach()
 
 # clean modules info which needs to be recalculated
@@ -313,6 +314,7 @@ macro(ocv_glob_modules)
   set(OPENCV_INITIAL_PASS OFF)
   if(${BUILD_opencv_world})
     foreach(m ${OPENCV_MODULES_BUILD})
+      set(the_module "${m}")
       if("${m}" STREQUAL opencv_world)
         add_subdirectory("${OPENCV_MODULE_opencv_world_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/world")
       elseif(NOT OPENCV_MODULE_${m}_IS_PART_OF_WORLD AND NOT ${m} STREQUAL opencv_world)
@@ -328,6 +330,7 @@ macro(ocv_glob_modules)
     endforeach()
   else()
     foreach(m ${OPENCV_MODULES_BUILD})
+      set(the_module "${m}")
       if(m MATCHES "^opencv_")
         string(REGEX REPLACE "^opencv_" "" __shortname "${m}")
         add_subdirectory("${OPENCV_MODULE_${m}_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/${__shortname}")
@@ -645,6 +648,10 @@ macro(ocv_set_module_sources)
     ocv_get_module_external_sources()
   endif()
 
+  if(OPENCV_MODULE_${the_module}_SOURCES_DISPATCHED)
+    list(APPEND OPENCV_MODULE_${the_module}_SOURCES ${OPENCV_MODULE_${the_module}_SOURCES_DISPATCHED})
+  endif()
+
   # use full paths for module to be independent from the module location
   ocv_convert_to_full_paths(OPENCV_MODULE_${the_module}_HEADERS)
 
@@ -763,6 +770,11 @@ macro(ocv_create_module)
 endmacro()
 
 macro(_ocv_create_module)
+
+  ocv_compiler_optimization_process_sources(OPENCV_MODULE_${the_module}_SOURCES OPENCV_MODULE_${the_module}_DEPS_EXT ${the_module})
+  set(OPENCV_MODULE_${the_module}_HEADERS ${OPENCV_MODULE_${the_module}_HEADERS} CACHE INTERNAL "List of header files for ${the_module}")
+  set(OPENCV_MODULE_${the_module}_SOURCES ${OPENCV_MODULE_${the_module}_SOURCES} CACHE INTERNAL "List of source files for ${the_module}")
+
   # The condition we ought to be testing here is whether ocv_add_precompiled_headers will
   # be called at some point in the future. We can't look into the future, though,
   # so this will have to do.

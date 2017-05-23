@@ -1,4 +1,7 @@
 set(the_description "The Core Functionality")
+
+ocv_add_dispatched_file(mathfuncs_core SSE2 AVX AVX2)
+
 ocv_add_module(core
                "${OPENCV_HAL_LINKER_LIBS}"
                OPTIONAL opencv_cudev

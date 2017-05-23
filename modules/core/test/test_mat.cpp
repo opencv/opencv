@@ -659,6 +659,18 @@ struct InitializerFunctor{
     }
 };
 
+template<typename Pixel>
+struct InitializerFunctor5D{
+    /// Initializer for cv::Mat::forEach test (5 dimensional case)
+    void operator()(Pixel & pixel, const int * idx) const {
+        pixel[0] = idx[0];
+        pixel[1] = idx[1];
+        pixel[2] = idx[2];
+        pixel[3] = idx[3];
+        pixel[4] = idx[4];
+    }
+};
+
 void Core_ArrayOpTest::run( int /* start_from */)
 {
     int errcount = 0;
@@ -729,6 +741,57 @@ void Core_ArrayOpTest::run( int /* start_from */)
         uint64 total2 = 0;
         for (size_t i = 0; i < sizeof(dims) / sizeof(dims[0]); ++i) {
             total2 += ((dims[i] - 1) * dims[i] / 2) * dims[0] * dims[1] * dims[2] / dims[i];
+        }
+        if (total != total2) {
+            ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
+            errcount++;
+        }
+    }
+
+    // test cv::Mat::forEach
+    // with a matrix that has more dimensions than columns
+    // See https://github.com/opencv/opencv/issues/8447
+    {
+        const int dims[5] = { 2, 2, 2, 2, 2 };
+        typedef cv::Vec<int, 5> Pixel;
+
+        cv::Mat a = cv::Mat::zeros(5, dims, CV_32SC(5));
+        InitializerFunctor5D<Pixel> initializer;
+
+        a.forEach<Pixel>(initializer);
+
+        uint64 total = 0;
+        bool error_reported = false;
+        for (int i0 = 0; i0 < dims[0]; ++i0) {
+            for (int i1 = 0; i1 < dims[1]; ++i1) {
+                for (int i2 = 0; i2 < dims[2]; ++i2) {
+                    for (int i3 = 0; i3 < dims[3]; ++i3) {
+                        for (int i4 = 0; i4 < dims[4]; ++i4) {
+                            const int i[5] = { i0, i1, i2, i3, i4 };
+                            Pixel& pixel = a.at<Pixel>(i);
+                            if (pixel[0] != i0 || pixel[1] != i1 || pixel[2] != i2 || pixel[3] != i3 || pixel[4] != i4) {
+                                if (!error_reported) {
+                                    ts->printf(cvtest::TS::LOG, "forEach is not correct.\n"
+                                        "First error detected at position (%d, %d, %d, %d, %d), got value (%d, %d, %d, %d, %d).\n",
+                                        i0, i1, i2, i3, i4,
+                                        pixel[0], pixel[1], pixel[2], pixel[3], pixel[4]);
+                                    error_reported = true;
+                                }
+                                errcount++;
+                            }
+                            total += pixel[0];
+                            total += pixel[1];
+                            total += pixel[2];
+                            total += pixel[3];
+                            total += pixel[4];
+                        }
+                    }
+                }
+            }
+        }
+        uint64 total2 = 0;
+        for (size_t i = 0; i < sizeof(dims) / sizeof(dims[0]); ++i) {
+            total2 += ((dims[i] - 1) * dims[i] / 2) * dims[0] * dims[1] * dims[2] * dims[3] * dims[4] / dims[i];
         }
         if (total != total2) {
             ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
@@ -1570,4 +1633,104 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(1, sub_mat.size[0]);
     ASSERT_EQ(3, sub_mat.size[1]);
     ASSERT_EQ(2, sub_mat.size[2]);
+}
+
+#ifdef CV_CXX_STD_ARRAY
+TEST(Core_Mat_array, outputArray_create_getMat)
+{
+    cv::Mat_<uchar> src_base(5, 1);
+    std::array<uchar, 5> dst8;
+
+    src_base << 1, 2, 3, 4, 5;
+
+    Mat src(src_base);
+    OutputArray _dst(dst8);
+
+    {
+        _dst.create(src.rows, src.cols, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(src.cols, dst.cols);
+        EXPECT_EQ(src.rows, dst.rows);
+    }
+}
+
+TEST(Core_Mat_array, copyTo_roi_column)
+{
+    cv::Mat_<uchar> src_base(5, 2);
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.col(0));
+
+    std::array<uchar, 5> dst1;
+    src.copyTo(dst1);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst1) << std::endl;
+    EXPECT_EQ((size_t)5, dst1.size());
+    EXPECT_EQ(1, (int)dst1[0]);
+    EXPECT_EQ(3, (int)dst1[1]);
+    EXPECT_EQ(5, (int)dst1[2]);
+    EXPECT_EQ(7, (int)dst1[3]);
+    EXPECT_EQ(9, (int)dst1[4]);
+}
+
+TEST(Core_Mat_array, copyTo_roi_row)
+{
+    cv::Mat_<uchar> src_base(2, 5);
+    std::array<uchar, 5> dst1;
+
+    src_base << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+    Mat src_full(src_base);
+    Mat src(src_full.row(0));
+    OutputArray _dst(dst1);
+    {
+        _dst.create(5, 1, src.type());
+        Mat dst = _dst.getMat();
+        EXPECT_EQ(src.dims, dst.dims);
+        EXPECT_EQ(1, dst.cols);
+        EXPECT_EQ(5, dst.rows);
+    }
+
+    std::array<uchar, 5> dst2;
+    src.copyTo(dst2);
+    std::cout << "src = " << src << std::endl;
+    std::cout << "dst = " << Mat(dst2) << std::endl;
+    EXPECT_EQ(1, (int)dst2[0]);
+    EXPECT_EQ(2, (int)dst2[1]);
+    EXPECT_EQ(3, (int)dst2[2]);
+    EXPECT_EQ(4, (int)dst2[3]);
+    EXPECT_EQ(5, (int)dst2[4]);
+}
+
+TEST(Core_Mat_array, SplitMerge)
+{
+    std::array<cv::Mat, 3> src;
+    for(size_t i=0; i<src.size(); ++i) {
+        src[i].create(10, 10, CV_8U);
+        src[i] = 127 * i;
+    }
+
+    Mat merged;
+    merge(src, merged);
+
+    std::array<cv::Mat, 3> dst;
+    split(merged, dst);
+
+    Mat diff;
+    for(size_t i=0; i<dst.size(); ++i) {
+        absdiff(src[i], dst[i], diff);
+        EXPECT_EQ(0, countNonZero(diff));
+    }
+}
+#endif
+
+TEST(Mat, regression_8680)
+{
+   Mat_<Point2i> mat(3,1);
+   ASSERT_EQ(mat.channels(), 2);
+   mat.release();
+   ASSERT_EQ(mat.channels(), 2);
 }

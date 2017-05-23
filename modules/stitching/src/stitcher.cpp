@@ -261,6 +261,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
     double compose_scale = 1;
     bool is_compose_scale_set = false;
 
+    std::vector<detail::CameraParams> cameras_scaled(cameras_);
+
     UMat full_img, img;
     for (size_t img_idx = 0; img_idx < imgs_.size(); ++img_idx)
     {
@@ -282,16 +284,16 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
             compose_work_aspect = compose_scale / work_scale_;
 
             // Update warped image scale
-            warped_image_scale_ *= static_cast<float>(compose_work_aspect);
-            w = warper_->create((float)warped_image_scale_);
+            float warp_scale = static_cast<float>(warped_image_scale_ * compose_work_aspect);
+            w = warper_->create(warp_scale);
 
             // Update corners and sizes
             for (size_t i = 0; i < imgs_.size(); ++i)
             {
                 // Update intrinsics
-                cameras_[i].focal *= compose_work_aspect;
-                cameras_[i].ppx *= compose_work_aspect;
-                cameras_[i].ppy *= compose_work_aspect;
+                cameras_scaled[i].ppx *= compose_work_aspect;
+                cameras_scaled[i].ppy *= compose_work_aspect;
+                cameras_scaled[i].focal *= compose_work_aspect;
 
                 // Update corner and size
                 Size sz = full_img_sizes_[i];
@@ -302,8 +304,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
                 }
 
                 Mat K;
-                cameras_[i].K().convertTo(K, CV_32F);
-                Rect roi = w->warpRoi(sz, K, cameras_[i].R);
+                cameras_scaled[i].K().convertTo(K, CV_32F);
+                Rect roi = w->warpRoi(sz, K, cameras_scaled[i].R);
                 corners[i] = roi.tl();
                 sizes[i] = roi.size();
             }
@@ -324,7 +326,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         LOGLN(" after resize time: " << ((getTickCount() - compositing_t) / getTickFrequency()) << " sec");
 
         Mat K;
-        cameras_[img_idx].K().convertTo(K, CV_32F);
+        cameras_scaled[img_idx].K().convertTo(K, CV_32F);
 
 #if ENABLE_LOG
         int64 pt = getTickCount();

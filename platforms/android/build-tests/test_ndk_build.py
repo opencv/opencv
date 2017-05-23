@@ -73,12 +73,12 @@ class TestNDKBuild(unittest.TestCase):
         p = []
         if self.libtype == "static":
             p.append("OPENCV_LIB_TYPE := STATIC")
-        elif self.libtype == "shared_debug":
-            p.append("OPENCV_LIB_TYPE := SHARED")
-            p.append("OPENCV_CAMERA_MODULES:=on")
-            p.append("OPENCV_INSTALL_MODULES:=on")
         elif self.libtype == "shared":
             p.append("OPENCV_LIB_TYPE := SHARED")
+            p.append("OPENCV_INSTALL_MODULES:=on")
+        elif self.libtype == "shared_opencv_manager":
+            p.append("OPENCV_LIB_TYPE := SHARED")
+            p.append("OPENCV_INSTALL_MODULES:=off")
         p.append("include %s" % os.path.join(self.opencv_mk_path, "OpenCV.mk"))
         return TEMPLATE_ANDROID_MK.format(cut = "\n".join(p), cpp1 = self.cpp1, cpp2 = self.cpp2)
 
@@ -115,14 +115,17 @@ class TestNDKBuild(unittest.TestCase):
 def suite(workdir, opencv_mk_path):
     abis = ["armeabi", "armeabi-v7a", "x86", "mips"]
     ndk_path = os.environ["ANDROID_NDK"]
-    with open(os.path.join(ndk_path, "RELEASE.TXT"), "r") as f:
-        s = f.read()
-        if re.search(r'r10[b-e]', s):
-            abis.extend(["arm64-v8a", "x86", "x86_64"])
+    if os.path.exists(os.path.join(ndk_path, "RELEASE.TXT")):
+        with open(os.path.join(ndk_path, "RELEASE.TXT"), "r") as f:
+            s = f.read()
+            if re.search(r'r10[b-e]', s):
+                abis.extend(["arm64-v8a", "x86_64"])
+    if os.path.exists(os.path.join(ndk_path, "source.properties")): # Android NDK 11+
+        abis.extend(["arm64-v8a", "x86_64"])
     abis.append("all")
 
     suite = unittest.TestSuite()
-    for libtype in  ["static", "shared", "shared_debug"]:
+    for libtype in  ["static", "shared", "shared_opencv_manager"]:
         for abi in abis:
             suite.addTest(TestNDKBuild(abi, libtype, opencv_mk_path, workdir))
     return suite

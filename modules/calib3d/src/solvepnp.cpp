@@ -45,6 +45,7 @@
 #include "dls.h"
 #include "epnp.h"
 #include "p3p.h"
+#include "ap3p.h"
 #include "opencv2/calib3d/calib3d_c.h"
 
 #include <iostream>
@@ -112,6 +113,18 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         p3p P3Psolver(cameraMatrix);
+
+        Mat R;
+        result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
+        if (result)
+            Rodrigues(R, rvec);
+    }
+    else if (flags == SOLVEPNP_AP3P)
+    {
+        CV_Assert( npoints == 4);
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        ap3p P3Psolver(cameraMatrix);
 
         Mat R;
         result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
@@ -291,7 +304,8 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         opoints_inliers.resize(npoints1);
         ipoints_inliers.resize(npoints1);
         result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
-                          distCoeffs, rvec, tvec, false, flags == SOLVEPNP_P3P ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+                          distCoeffs, rvec, tvec, false,
+                          (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
     }
 
     if( result <= 0 || _local_model.rows <= 0)

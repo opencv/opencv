@@ -236,8 +236,8 @@ enum { SOLVEPNP_ITERATIVE = 0,
        SOLVEPNP_EPNP      = 1, //!< EPnP: Efficient Perspective-n-Point Camera Pose Estimation @cite lepetit2009epnp
        SOLVEPNP_P3P       = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
        SOLVEPNP_DLS       = 3, //!< A Direct Least-Squares (DLS) Method for PnP  @cite hesch2011direct
-       SOLVEPNP_UPNP      = 4  //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
-
+       SOLVEPNP_UPNP      = 4, //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
+       SOLVEPNP_AP3P      = 5  //!< An Efficient Algebraic Solution to the Perspective-Three-Point Problem @cite Ke17
 };
 
 enum { CALIB_CB_ADAPTIVE_THRESH = 1,
@@ -1862,7 +1862,8 @@ public:
     {
         MODE_SGBM = 0,
         MODE_HH   = 1,
-        MODE_SGBM_3WAY = 2
+        MODE_SGBM_3WAY = 2,
+        MODE_HH4  = 3
     };
 
     CV_WRAP virtual int getPreFilterCap() const = 0;
@@ -1917,7 +1918,7 @@ public:
     set StereoSGBM::numDisparities at minimum. The second constructor enables you to set each parameter
     to a custom value.
      */
-    CV_WRAP static Ptr<StereoSGBM> create(int minDisparity, int numDisparities, int blockSize,
+    CV_WRAP static Ptr<StereoSGBM> create(int minDisparity = 0, int numDisparities = 16, int blockSize = 3,
                                           int P1 = 0, int P2 = 0, int disp12MaxDiff = 0,
                                           int preFilterCap = 0, int uniquenessRatio = 0,
                                           int speckleWindowSize = 0, int speckleRange = 0,

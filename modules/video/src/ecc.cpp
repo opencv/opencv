@@ -325,6 +325,16 @@ double cv::findTransformECC(InputArray templateImage,
     CV_Assert(!src.empty());
     CV_Assert(!dst.empty());
 
+    // If the user passed an un-initialized warpMatrix, initialize to identity
+    if(map.empty()) {
+        int rowCount = 2;
+        if(motionType == MOTION_HOMOGRAPHY)
+            rowCount = 3;
+
+        warpMatrix.create(rowCount, 3, CV_32FC1);
+        map = warpMatrix.getMat();
+        map = Mat::eye(rowCount, 3, CV_32F);
+    }
 
     if( ! (src.type()==dst.type()))
         CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );

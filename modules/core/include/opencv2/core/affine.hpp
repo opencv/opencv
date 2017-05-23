@@ -213,11 +213,13 @@ cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
     {
         rotation(data(Rect(0, 0, 3, 3)));
         translation(data(Rect(3, 0, 1, 3)));
-        return;
+    }
+    else
+    {
+        rotation(data);
+        translation(t);
     }
 
-    rotation(data);
-    translation(t);
     matrix.val[12] = matrix.val[13] = matrix.val[14] = 0;
     matrix.val[15] = 1;
 }

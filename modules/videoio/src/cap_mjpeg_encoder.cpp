@@ -384,7 +384,7 @@ public:
         }
         else
         {
-            data[m_pos] |= (tempval << bits_free);
+            data[m_pos] |= (bits_free == 32) ? tempval : (tempval << bits_free);
         }
     }
 

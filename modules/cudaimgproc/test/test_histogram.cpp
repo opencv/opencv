@@ -136,6 +136,49 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CalcHist, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES));
 
+PARAM_TEST_CASE(CalcHistWithMask, cv::cuda::DeviceInfo, cv::Size)
+{
+    cv::cuda::DeviceInfo devInfo;
+
+    cv::Size size;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+CUDA_TEST_P(CalcHistWithMask, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+    cv::Mat mask = randomMat(size, CV_8UC1);
+    cv::Mat(mask, cv::Rect(0, 0, size.width / 2, size.height / 2)).setTo(0);
+
+    cv::cuda::GpuMat hist;
+    cv::cuda::calcHist(loadMat(src), loadMat(mask), hist);
+
+    cv::Mat hist_gold;
+
+    const int hbins = 256;
+    const float hranges[] = {0.0f, 256.0f};
+    const int histSize[] = {hbins};
+    const float* ranges[] = {hranges};
+    const int channels[] = {0};
+
+    cv::calcHist(&src, 1, channels, mask, hist_gold, 1, histSize, ranges);
+    hist_gold = hist_gold.reshape(1, 1);
+    hist_gold.convertTo(hist_gold, CV_32S);
+
+    EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CalcHistWithMask, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES));
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // EqualizeHist
 

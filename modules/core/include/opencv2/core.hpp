@@ -626,7 +626,7 @@ then pass the matrix to calcCovarMatrix .
 @param src input array that should have from 1 to 4 channels so that the results can be stored in
 Scalar_ 's.
 @param mean output parameter: calculated mean value.
-@param stddev output parameter: calculateded standard deviation.
+@param stddev output parameter: calculated standard deviation.
 @param mask optional operation mask.
 @sa  countNonZero, mean, norm, minMaxLoc, calcCovarMatrix
 */
@@ -1639,7 +1639,7 @@ CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
 
 The function cv::transpose transposes the matrix src :
 \f[\texttt{dst} (i,j) =  \texttt{src} (j,i)\f]
-@note No complex conjugation is done in case of a complex matrix. It it
+@note No complex conjugation is done in case of a complex matrix. It
 should be done separately if needed.
 @param src input array.
 @param dst output array of the same type as src.
@@ -2762,7 +2762,7 @@ public:
     double a1 = rng.uniform((double)0, (double)1);
 
     // produces float from [0, 1)
-    double b = rng.uniform(0.f, 1.f);
+    float b = rng.uniform(0.f, 1.f);
 
     // produces double from [0, 1)
     double c = rng.uniform(0., 1.);
@@ -2778,8 +2778,8 @@ public:
     want a floating-point random number, but the range boundaries are
     integer numbers, either put dots in the end, if they are constants, or
     use explicit type cast operators, as in the a1 initialization above.
-    @param a lower inclusive boundary of the returned random numbers.
-    @param b upper non-inclusive boundary of the returned random numbers.
+    @param a lower inclusive boundary of the returned random number.
+    @param b upper non-inclusive boundary of the returned random number.
       */
     int uniform(int a, int b);
     /** @overload */

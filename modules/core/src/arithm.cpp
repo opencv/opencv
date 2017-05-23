@@ -523,7 +523,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     float usrdata_f[3];
     int i, n = oclop == OCL_OP_MUL_SCALE || oclop == OCL_OP_DIV_SCALE ||
         oclop == OCL_OP_RDIV_SCALE || oclop == OCL_OP_RECIP_SCALE ? 1 : oclop == OCL_OP_ADDW ? 3 : 0;
-    if( n > 0 && wdepth == CV_32F )
+    if( usrdata && n > 0 && wdepth == CV_32F )
     {
         for( i = 0; i < n; i++ )
             usrdata_f[i] = (float)usrdata_d[i];
@@ -1276,7 +1276,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     src1 = src1.reshape(1); src2 = src2.reshape(1);
     Mat dst = _dst.getMat().reshape(1);
 
-    size_t esz = src1.elemSize();
+    size_t esz = std::max(src1.elemSize(), (size_t)1);
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
     BinaryFuncC func = getCmpFunc(depth1);
 
