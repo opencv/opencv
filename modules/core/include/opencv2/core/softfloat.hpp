@@ -101,26 +101,6 @@ enum {
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-#define signF32UI( a ) (((uint32_t) (a)>>31) != 0)
-#define expF32UI( a ) ((int_fast16_t) ((a)>>23) & 0xFF)
-#define fracF32UI( a ) ((a) & 0x007FFFFF)
-#define packToF32UI( sign, exp, sig ) (((uint32_t) (sign)<<31) + ((uint32_t) (exp)<<23) + (sig))
-
-#define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
-
-/*----------------------------------------------------------------------------
-*----------------------------------------------------------------------------*/
-
-#define signF64UI( a ) (((uint64_t) (a)>>63) != 0)
-#define expF64UI( a ) ((int_fast16_t) ((a)>>52) & 0x7FF)
-#define fracF64UI( a ) ((a) & UINT64_C( 0x000FFFFFFFFFFFFF ))
-#define packToF64UI( sign, exp, sig ) ((uint64_t) (((uint_fast64_t) (sign)<<63) + ((uint_fast64_t) (exp)<<52) + (sig)))
-
-#define isNaNF64UI( a ) (((~(a) & UINT64_C( 0x7FF0000000000000 )) == 0) && ((a) & UINT64_C( 0x000FFFFFFFFFFFFF )))
-
-/*----------------------------------------------------------------------------
-*----------------------------------------------------------------------------*/
-
 struct softfloat32_t;
 struct softfloat64_t;
 
@@ -175,9 +155,9 @@ public:
     bool isInf() const { return (v & 0x7fffffff) == 0x7f800000; }
 
     static softfloat32_t zero() { return softfloat32_t::fromRaw( 0 ); }
-    static softfloat32_t  inf() { return softfloat32_t::fromRaw( packToF32UI( 0, 0xFF, 0 ) ); }
+    static softfloat32_t  inf() { return softfloat32_t::fromRaw( 0xFF << 23 ); }
     static softfloat32_t  nan() { return softfloat32_t::fromRaw( 0x7fffffff ); }
-    static softfloat32_t  one() { return softfloat32_t::fromRaw( packToF32UI( 0,  127, 0 ) ); }
+    static softfloat32_t  one() { return softfloat32_t::fromRaw(  127 << 23 ); }
 
     uint32_t v;
 };
@@ -236,9 +216,9 @@ public:
     bool isInf() const { return (v & 0x7fffffffffffffff) == 0x7ff0000000000000; }
 
     static softfloat64_t zero() { return softfloat64_t::fromRaw( 0 ); }
-    static softfloat64_t  inf() { return softfloat64_t::fromRaw( packToF64UI( 0, 0x7FF, 0 ) ); }
+    static softfloat64_t  inf() { return softfloat64_t::fromRaw( (uint_fast64_t)(0x7FF) << 52 ); }
     static softfloat64_t  nan() { return softfloat64_t::fromRaw( CV_BIG_INT(0x7FFFFFFFFFFFFFFF) ); }
-    static softfloat64_t  one() { return softfloat64_t::fromRaw( packToF64UI( 0, 1023, 0 ) ); }
+    static softfloat64_t  one() { return softfloat64_t::fromRaw( (uint_fast64_t)( 1023) << 52 ); }
 
     uint64_t v;
 };

@@ -114,6 +114,26 @@ inline void raiseFlags( uint_fast8_t /* flags */)
 }
 
 /*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+
+#define signF32UI( a ) (((uint32_t) (a)>>31) != 0)
+#define expF32UI( a ) ((int_fast16_t) ((a)>>23) & 0xFF)
+#define fracF32UI( a ) ((a) & 0x007FFFFF)
+#define packToF32UI( sign, exp, sig ) (((uint32_t) (sign)<<31) + ((uint32_t) (exp)<<23) + (sig))
+
+#define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
+
+/*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+
+#define signF64UI( a ) (((uint64_t) (a)>>63) != 0)
+#define expF64UI( a ) ((int_fast16_t) ((a)>>52) & 0x7FF)
+#define fracF64UI( a ) ((a) & UINT64_C( 0x000FFFFFFFFFFFFF ))
+#define packToF64UI( sign, exp, sig ) ((uint64_t) (((uint_fast64_t) (sign)<<63) + ((uint_fast64_t) (exp)<<52) + (sig)))
+
+#define isNaNF64UI( a ) (((~(a) & UINT64_C( 0x7FF0000000000000 )) == 0) && ((a) & UINT64_C( 0x000FFFFFFFFFFFFF )))
+
+/*----------------------------------------------------------------------------
 | Types used to pass 32-bit and 64-bit floating-point
 | arguments and results to/from functions.  These types must be exactly
 | 32 bits and 64 bits in size, respectively.  Where a
