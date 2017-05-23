@@ -434,6 +434,77 @@ class table(object):
 
         out.write(" </tbody>\n</table>\n</div>\n")
 
+class CSVTable(table):
+    def consolePrintTable(self, out):
+        # Code is updated from base class for CSV output
+        columns = self.layoutTable()
+
+        if self.caption:
+            out.write('\n'.join(self.reformatTextValue(self.caption)) + '\n\n')
+
+        headerRow = tblRow(len(columns), {"align": "center", "valign": "top", "bold": True, "header": True})
+        headerRow.cells = columns
+        headerRow.minheight = self.headerHeight
+
+        self.consolePrintRow2(out, headerRow, columns)
+
+        for i in range(0, len(self.rows)):
+            self.consolePrintRow2(out, i, columns)
+
+    def consolePrintRow2(self, out, r, columns):
+        # Code is updated from base class for CSV output
+        if isinstance(r, tblRow):
+            row = r
+            r = -1
+        else:
+            row = self.rows[r]
+
+        #evaluate initial values for line numbers
+        i = 0
+        while i < len(row.cells):
+            cell = row.cells[i]
+            colspan = self.getValue("colspan", cell)
+            if cell is not None:
+                if cell.line is None:
+                    if r < 0:
+                        rows = [row]
+                    else:
+                        rows = self.rows[r:r + self.getValue("rowspan", cell)]
+                    cell.line = self.evalLine(cell, rows, columns[i])
+                    if len(rows) > 1:
+                        for rw in rows:
+                            rw.cells[i] = cell
+            i += colspan
+
+        #print content
+        for ln in range(row.minheight):
+            i = 0
+            while i < len(row.cells):
+                if i > 0:
+                    out.write(";")
+                cell = row.cells[i]
+                column = columns[i]
+                if cell is None:
+                    i += 1
+                else:
+                    self.consolePrintLine(cell, row, column, out)
+                    colspan = self.getValue("colspan", cell)
+                    for k in range(1, colspan):
+                        out.write(";")
+                    i += colspan
+            out.write('\n')
+
+    def consolePrintLine(self, cell, row, column, out):
+        # Code is updated from base class for CSV output
+        if cell.line < 0 or cell.line >= cell.height:
+            line = ""
+        else:
+            line = cell.text[cell.line]
+
+        out.write(line)
+        cell.line += 1
+
+
 def htmlPrintHeader(out, title = None):
     if title:
         titletag = "<title>%s</title>\n" % htmlEncode([str(title)])
@@ -693,6 +764,8 @@ def formatValue(val, metric, units = None):
         if val > 0:
             return "slower"
         #return "%.4f" % val
+    if units is None:
+        return "%.3f" % val
     return "%.3f %s" % (val, units)
 
 if __name__ == "__main__":
