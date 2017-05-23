@@ -2,6 +2,10 @@
 #include "_latentsvm.h"
 #include "_lsvm_resizeimg.h"
 
+#ifdef HAVE_TBB
+#include <tbb/tbb.h>
+#endif
+
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
@@ -429,26 +433,67 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
     return LATENT_SVM_OK;
 }
 
+#ifdef HAVE_TBB
+struct FeaturePyramid {
+
+    FeaturePyramid(IplImage* _image,
+    const float _step,
+    const int _startIndex,
+    const int _sideLength,
+    CvLSVMFeaturePyramid **_maps) :
+        image(_image),
+        step(_step),
+        startIndex(_startIndex),
+        sideLength(_sideLength),
+        maps(_maps)
+    {}
+
+    IplImage * image;
+    const float step;
+    const int startIndex;
+    const int sideLength;
+    CvLSVMFeaturePyramid **maps;
+
+    void operator()( const tbb::blocked_range<int>& range ) const {
+        for( int i=range.begin(); i!=range.end(); ++i ) {
+            CvLSVMFeatureMap *map;
+            float scale = 1.0f / powf(step, (float)i);
+            IplImage* scaleTmp = resize_opencv (image, scale);
+            getFeatureMaps(scaleTmp, sideLength, &map);
+            normalizeAndTruncate(map, VAL_OF_TRUNCATE);
+            PCAFeatureMaps(map);
+            (*maps)->pyramid[startIndex + i] = map;
+            cvReleaseImage(&scaleTmp);
+        }
+    }
+};
+#endif
 
 static int getPathOfFeaturePyramid(IplImage * image,
                             float step, int numStep, int startIndex,
                             int sideLength, CvLSVMFeaturePyramid **maps)
 {
-    CvLSVMFeatureMap *map;
-    IplImage *scaleTmp;
-    float scale;
-    int   i;
+#ifdef HAVE_TBB
 
-    for(i = 0; i < numStep; i++)
+    FeaturePyramid fp(image, step, startIndex, sideLength, maps);
+    tbb::parallel_for( tbb::blocked_range<int>( 0, numStep ), fp );
+
+#else
+
+    for(int i = 0; i < numStep; i++)
     {
-        scale = 1.0f / powf(step, (float)i);
-        scaleTmp = resize_opencv (image, scale);
+        CvLSVMFeatureMap *map;
+        float scale = 1.0f / powf(step, (float)i);
+        IplImage* scaleTmp = resize_opencv (image, scale);
         getFeatureMaps(scaleTmp, sideLength, &map);
         normalizeAndTruncate(map, VAL_OF_TRUNCATE);
         PCAFeatureMaps(map);
         (*maps)->pyramid[startIndex + i] = map;
         cvReleaseImage(&scaleTmp);
     }/*for(i = 0; i < numStep; i++)*/
+
+#endif
+
     return LATENT_SVM_OK;
 }
 
