@@ -124,6 +124,22 @@ CV_EXPORTS WString toUtf16(const string& str);
 CV_EXPORTS string format( const char* fmt, ... );
 CV_EXPORTS string tempfile( const char* suffix CV_DEFAULT(0));
 
+
+enum
+{
+    U8 = 0, S8 = 1, U16 = 2, S16 = 3,
+    S32 = 4, F32 = 5, F64 = 6,
+
+    U8C1 = U8, U8C2 = U8 + 8, U8C3 = U8 + 16, U8C4 = U8 + 24,
+    S8C1 = S8, S8C2 = S8 + 8, S8C3 = S8 + 16, S8C4 = S8 + 24,
+    U16C1 = U16, U16C2 = U16 + 8, U16C3 = U16 + 16, U16C4 = U16 + 24,
+    S16C1 = S16, S16C2 = S16 + 8, S16C3 = S16 + 16, S16C4 = S16 + 24,
+    S32C1 = S32, S32C2 = S32 + 8, S32C3 = S32 + 16, S32C4 = S32 + 24,
+    F32C1 = F32, F32C2 = F32 + 8, F32C3 = F32 + 16, F32C4 = F32 + 24,
+    F64C1 = F64, F64C2 = F64 + 8, F64C3 = F64 + 16, F64C4 = F64 + 24
+};
+
+
 // matrix decomposition types
 enum { DECOMP_LU=0, DECOMP_SVD=1, DECOMP_EIG=2, DECOMP_CHOLESKY=3, DECOMP_QR=4, DECOMP_NORMAL=16 };
 enum { NORM_INF=1, NORM_L1=2, NORM_L2=4, NORM_L2SQR=5, NORM_HAMMING=6, NORM_HAMMING2=7, NORM_TYPE_MASK=7, NORM_RELATIVE=8, NORM_MINMAX=32 };
