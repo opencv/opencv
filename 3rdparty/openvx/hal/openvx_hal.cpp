@@ -888,6 +888,62 @@ int ovx_hal_cvtGraytoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep,
     return CV_HAL_ERROR_OK;
 }
 
+inline void extendYUVRange(ivx::Context &ctx, vxImage &ia, vxImage &ib, int w, int h, int hw, int hh)
+{
+    //full_range_y = saturate_cast<uchar>( (restricted_range_y - 16) * 256.0 / 219.0 )
+    //full_range_uv = saturate_cast<uchar>( (restricted_range_uv - 128) *256.0 / 224.0 ) + 128
+
+    std::vector<uchar> buf(3 * w*h + 2 * hw*hh);
+    {
+        vxImage
+            yCh = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(w, h, 1, w), &buf[0]),
+            uCh = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(hw, hh, 1, hw), &buf[w*h]),
+            vCh = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                ivx::Image::createAddressing(hw, hh, 1, hw), &buf[w*h + hw*hh]);
+        uchar * temp = &buf[w*h + 2 * hw*hh];
+        {
+            {
+                vxImage yChR = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                    ivx::Image::createAddressing(w, h, 1, w), temp);
+                ivx::IVX_CHECK_STATUS(vxuChannelExtract(ctx, ia, VX_CHANNEL_Y, yChR));
+                ivx::IVX_CHECK_STATUS(vxuSubtract(ctx, yChR, ivx::Image::createUniform(ctx, w, h, uchar(16)), VX_CONVERT_POLICY_SATURATE, yCh));
+            }
+            vxImage yChM = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_S16,
+                ivx::Image::createAddressing(w, h, 2, 2*w), temp);
+            ivx::IVX_CHECK_STATUS(vxuMultiply(ctx, yCh, ivx::Image::createUniform(ctx, w, h, short(256)), 1.0f / 219.0f,
+                                                                        VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_NEAREST_EVEN, yChM));
+            ivx::IVX_CHECK_STATUS(vxuConvertDepth(ctx, yChM, yCh, VX_CONVERT_POLICY_SATURATE, 0));
+        }
+        {
+            vxImage uChS = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_S16,
+                ivx::Image::createAddressing(hw, hh, 2, 2*hw), temp);
+            ivx::IVX_CHECK_STATUS(vxuChannelExtract(ctx, ia, VX_CHANNEL_U, uCh));
+            ivx::IVX_CHECK_STATUS(vxuSubtract(ctx, uCh, ivx::Image::createUniform(ctx, hw, hh, short(128)), VX_CONVERT_POLICY_SATURATE, uChS));
+            vxImage uChM = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_S16,
+                ivx::Image::createAddressing(hw, hh, 2, 2*hw), temp + 2 * hw*hh);
+            ivx::IVX_CHECK_STATUS(vxuMultiply(ctx, uChS, ivx::Image::createUniform(ctx, hw, hh, short(256)), 1.0f / 224.0f,
+                                                                         VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_NEAREST_EVEN, uChM));
+            ivx::IVX_CHECK_STATUS(vxuAdd(ctx, uChM, ivx::Image::createUniform(ctx, hw, hh, short(128)), VX_CONVERT_POLICY_SATURATE, uChS));
+            ivx::IVX_CHECK_STATUS(vxuConvertDepth(ctx, uChS, uCh, VX_CONVERT_POLICY_SATURATE, 0));
+        }
+        {
+            vxImage vChS = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_S16,
+                ivx::Image::createAddressing(hw, hh, 2, 2 * hw), temp);
+            ivx::IVX_CHECK_STATUS(vxuChannelExtract(ctx, ia, VX_CHANNEL_V, vCh));
+            ivx::IVX_CHECK_STATUS(vxuSubtract(ctx, vCh, ivx::Image::createUniform(ctx, hw, hh, short(128)), VX_CONVERT_POLICY_SATURATE, vChS));
+            vxImage vChM = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_S16,
+                ivx::Image::createAddressing(hw, hh, 2, 2 * hw), temp + 2 * hw*hh);
+            ivx::IVX_CHECK_STATUS(vxuMultiply(ctx, vChS, ivx::Image::createUniform(ctx, hw, hh, short(256)), 1.0f / 224.0f,
+                                                                         VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_NEAREST_EVEN, vChM));
+            ivx::IVX_CHECK_STATUS(vxuAdd(ctx, vChM, ivx::Image::createUniform(ctx, hw, hh, short(128)), VX_CONVERT_POLICY_SATURATE, vChS));
+            ivx::IVX_CHECK_STATUS(vxuConvertDepth(ctx, vChS, vCh, VX_CONVERT_POLICY_SATURATE, 0));
+        }
+        ivx::IVX_CHECK_STATUS(vxuChannelCombine(ctx, yCh, uCh, vCh, NULL, ib));
+    }
+}
+
 int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx)
 {
     if (dimTooBig(w) || dimTooBig(h))
@@ -911,13 +967,25 @@ int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
             ptrs.push_back((void*)(a + h * astep));
 
         vxImage
-            ia = ivx::Image::createFromHandle(ctx, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, addr, ptrs);
-        if (ia.range() == VX_CHANNEL_RANGE_FULL)
-            return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
-        vxImage
+            ia = ivx::Image::createFromHandle(ctx, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, addr, ptrs),
             ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
                 ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
-        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
+        ia.setColorSpace(VX_COLOR_SPACE_BT601_625);
+        if (ia.range() == VX_CHANNEL_RANGE_FULL)
+        {
+            std::vector<uchar> tmp(3 * w*h / 2);
+            addr[0] = ivx::Image::createAddressing(w, h, 1, (vx_int32)w);
+            ptrs[0] = (void*)&tmp[0];
+            addr[1] = ivx::Image::createAddressing(w / 2, h / 2, 2, (vx_int32)w);
+            ptrs[1] = (void*)&tmp[w*h];
+
+            vxImage itmp = ivx::Image::createFromHandle(ctx, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, addr, ptrs);
+            itmp.setColorSpace(VX_COLOR_SPACE_BT601_625);
+            extendYUVRange(ctx, ia, itmp, w, h, w / 2, h / 2);
+            ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, itmp, ib));
+        }
+        else
+            ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
     {
@@ -959,13 +1027,24 @@ int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size
         ptrs.push_back((void*)(a + h * astep + addr[1].dim_y * addr[1].stride_y));
 
         vxImage
-            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_IYUV, addr, ptrs);
-        if (ia.range() == VX_CHANNEL_RANGE_FULL)
-            return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
-        vxImage
+            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_IYUV, addr, ptrs),
             ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
                 ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
-        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
+        ia.setColorSpace(VX_COLOR_SPACE_BT601_625);
+        if (ia.range() == VX_CHANNEL_RANGE_FULL)
+        {
+            std::vector<uchar> tmp(3 * w*h / 2);
+            addr[0] = ivx::Image::createAddressing(w, h, 1, (vx_int32)w);
+            ptrs[0] = (void*)&tmp[0];
+            ptrs[1] = (void*)&tmp[w*h];
+            ptrs[2] = (void*)&tmp[w*h + addr[1].dim_y * addr[1].stride_y];
+            vxImage itmp = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_IYUV, addr, ptrs);
+            itmp.setColorSpace(VX_COLOR_SPACE_BT601_625);
+            extendYUVRange(ctx, ia, itmp, w, h, w / 2, h / 2);
+            ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, itmp, ib));
+        }
+        else
+            ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
     {
@@ -1011,6 +1090,7 @@ int ovx_hal_cvtBGRtoThreePlaneYUV(const uchar * a, size_t astep, uchar * b, size
 
         vxImage
             ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_IYUV, addr, ptrs);
+        ib.setColorSpace(VX_COLOR_SPACE_BT601_625);
         ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
@@ -1042,13 +1122,21 @@ int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
         ivx::Context ctx = getOpenVXHALContext();
         vxImage
             ia = ivx::Image::createFromHandle(ctx, ycn ? VX_DF_IMAGE_UYVY : VX_DF_IMAGE_YUYV,
-                ivx::Image::createAddressing(w, h, 2, (vx_int32)astep), (void*)a);
-        if (ia.range() == VX_CHANNEL_RANGE_FULL)
-            return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
-        vxImage
+                ivx::Image::createAddressing(w, h, 2, (vx_int32)astep), (void*)a),
             ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
                 ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
-        ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
+        ia.setColorSpace(VX_COLOR_SPACE_BT601_625);
+        if (ia.range() == VX_CHANNEL_RANGE_FULL)
+        {
+            std::vector<uchar> tmp(2 * w*h);
+            vxImage itmp = ivx::Image::createFromHandle(ctx, ycn ? VX_DF_IMAGE_UYVY : VX_DF_IMAGE_YUYV,
+                    ivx::Image::createAddressing(w, h, 2, (vx_int32)(2*w)), (void*)&tmp[0]);
+            itmp.setColorSpace(VX_COLOR_SPACE_BT601_625);
+            extendYUVRange(ctx, ia, itmp, w, h, w / 2, h);
+            ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, itmp, ib));
+        }
+        else
+            ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
     {
