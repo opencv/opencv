@@ -236,6 +236,8 @@ Predicts the response for input sample(s).
 
 .. ocv:function:: float CvSVM::predict( const CvMat* samples, CvMat* results ) const
 
+.. ocv:function:: float CvSVM::predict_( const CvMat* samples, CvMat* results, bool returnDFVal ) const
+
 .. ocv:pyfunction:: cv2.SVM.predict(sample[, returnDFVal]) -> retval
 
 .. ocv:pyfunction:: cv2.SVM.predict_all(samples[, results]) -> results
