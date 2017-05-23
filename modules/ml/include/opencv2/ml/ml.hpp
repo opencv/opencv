@@ -476,7 +476,7 @@ public:
 
     virtual bool train( const CvMat* trainData, const CvMat* responses,
                         const CvMat* varIdx=0, const CvMat* sampleIdx=0,
-                        CvSVMParams params=CvSVMParams() );
+                        CvSVMParams params=CvSVMParams(), bool optimize = false );
 
     virtual bool train_auto( const CvMat* trainData, const CvMat* responses,
         const CvMat* varIdx, const CvMat* sampleIdx, CvSVMParams params,
@@ -487,7 +487,7 @@ public:
         CvParamGrid nuGrid     = get_default_grid(CvSVM::NU),
         CvParamGrid coeffGrid  = get_default_grid(CvSVM::COEF),
         CvParamGrid degreeGrid = get_default_grid(CvSVM::DEGREE),
-        bool balanced=false );
+        bool balanced=false, bool optimize = false );
 
     virtual float predict( const CvMat* sample, bool returnDFVal=false ) const;
     virtual float predict( const CvMat* samples, CV_OUT CvMat* results ) const;
@@ -498,7 +498,7 @@ public:
 
     CV_WRAP virtual bool train( const cv::Mat& trainData, const cv::Mat& responses,
                        const cv::Mat& varIdx=cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),
-                       CvSVMParams params=CvSVMParams() );
+                       CvSVMParams params=CvSVMParams(), bool optimize = false);
 
     CV_WRAP virtual bool train_auto( const cv::Mat& trainData, const cv::Mat& responses,
                             const cv::Mat& varIdx, const cv::Mat& sampleIdx, CvSVMParams params,
@@ -509,7 +509,7 @@ public:
                             CvParamGrid nuGrid     = CvSVM::get_default_grid(CvSVM::NU),
                             CvParamGrid coeffGrid  = CvSVM::get_default_grid(CvSVM::COEF),
                             CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE),
-                            bool balanced=false);
+                            bool balanced=false, bool optimize = false);
     CV_WRAP virtual float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
     CV_WRAP_AS(predict_all) void predict( cv::InputArray samples, cv::OutputArray results ) const;
 
@@ -531,7 +531,7 @@ protected:
                     const void* responses, double Cp, double Cn,
                     CvMemStorage* _storage, double* alpha, double& rho );
     virtual bool do_train( int svm_type, int sample_count, int var_count, const float** samples,
-                    const CvMat* responses, CvMemStorage* _storage, double* alpha );
+                    const CvMat* responses, CvMemStorage* _storage, double* alpha, bool optimize );
     virtual void create_kernel();
     virtual void create_solver();
 
