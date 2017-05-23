@@ -226,10 +226,11 @@ public:
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-CV_EXPORTS softfloat f32_mulAdd( softfloat, softfloat, softfloat );
-CV_EXPORTS softfloat f32_sqrt( softfloat );
-CV_EXPORTS softdouble f64_mulAdd( softdouble, softdouble, softdouble );
-CV_EXPORTS softdouble f64_sqrt( softdouble );
+CV_EXPORTS softfloat  mulAdd( const softfloat&  a, const softfloat&  b, const softfloat & c);
+CV_EXPORTS softdouble mulAdd( const softdouble& a, const softdouble& b, const softdouble& c);
+
+CV_EXPORTS softfloat  sqrt( const softfloat&  a );
+CV_EXPORTS softdouble sqrt( const softdouble& a );
 
 /*----------------------------------------------------------------------------
 | Ported from OpenCV and added for usability
@@ -247,18 +248,19 @@ inline softdouble min(const softdouble a, const softdouble b) { return (a > b) ?
 inline softfloat max(const softfloat a, const softfloat b) { return (a > b) ? a : b; }
 inline softdouble max(const softdouble a, const softdouble b) { return (a > b) ? a : b; }
 
-inline softfloat f32_abs( softfloat a) { softfloat x; x.v = a.v & ((1U   << 31) - 1); return x; }
-inline softdouble f64_abs( softdouble a) { softdouble x; x.v = a.v & ((1ULL << 63) - 1); return x; }
+inline softfloat  abs( softfloat  a) { softfloat  x; x.v = a.v & ((1U   << 31) - 1); return x; }
+inline softdouble abs( softdouble a) { softdouble x; x.v = a.v & ((1ULL << 63) - 1); return x; }
 
-CV_EXPORTS softfloat f32_exp( softfloat );
-CV_EXPORTS softfloat f32_log( softfloat );
-CV_EXPORTS softfloat f32_pow( softfloat, softfloat );
+CV_EXPORTS softfloat  exp( const softfloat&  a);
+CV_EXPORTS softdouble exp( const softdouble& a);
 
-CV_EXPORTS softdouble f64_exp( softdouble );
-CV_EXPORTS softdouble f64_log( softdouble );
-CV_EXPORTS softdouble f64_pow( softdouble, softdouble );
+CV_EXPORTS softfloat  log( const softfloat&  a );
+CV_EXPORTS softdouble log( const softdouble& a );
 
-CV_EXPORTS softfloat f32_cbrt( softfloat );
+CV_EXPORTS softfloat  pow( const softfloat&  a, const softfloat&  b);
+CV_EXPORTS softdouble pow( const softdouble& a, const softdouble& b);
+
+CV_EXPORTS softfloat cbrt(const softfloat& a);
 
 }
 
