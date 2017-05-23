@@ -580,7 +580,7 @@ public:
       TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2
     };
 
-    CV_WRAP FastFeatureDetector( int threshold=10, bool nonmaxSuppression=true );
+    CV_WRAP FastFeatureDetector( int threshold=10, bool nonmaxSuppression=true, int type );
     AlgorithmInfo* info() const;
 
 protected:
