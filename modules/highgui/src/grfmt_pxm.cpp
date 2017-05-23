@@ -194,7 +194,7 @@ bool  PxMDecoder::readData( Mat& img )
     PaletteEntry palette[256];
     bool   result = false;
     int  bit_depth = CV_ELEM_SIZE1(m_type)*8;
-    int  src_pitch = (m_width*m_bpp*bit_depth/8 + 7)/8;
+    ptrdiff_t  src_pitch = (((ptrdiff_t)m_width)*m_bpp*bit_depth/8 + 7)/8;
     int  nch = CV_MAT_CN(m_type);
     int  width3 = m_width*nch;
     int  i, x, y;

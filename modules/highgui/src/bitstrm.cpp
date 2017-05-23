@@ -101,11 +101,11 @@ void  RBaseStream::readBlock()
     }
 
     fseek( m_file, m_block_pos, SEEK_SET );
-    size_t readed = fread( m_start, 1, m_block_size, m_file );
-    m_end = m_start + readed;
+    size_t read = fread( m_start, 1, m_block_size, m_file );
+    m_end = m_start + read;
     m_current = m_start;
 
-    if( readed == 0 || m_current >= m_end )
+    if( read == 0 || m_current >= m_end )
         throw RBS_THROW_EOS;
 }
 
@@ -162,7 +162,7 @@ void  RBaseStream::release()
 }
 
 
-void  RBaseStream::setPos( int pos )
+void  RBaseStream::setPos( ptrdiff_t pos )
 {
     assert( isOpened() && pos >= 0 );
 
@@ -173,16 +173,16 @@ void  RBaseStream::setPos( int pos )
         return;
     }
 
-    int offset = pos % m_block_size;
+    ptrdiff_t offset = pos % m_block_size;
     m_block_pos = pos - offset;
     m_current = m_start + offset;
 }
 
 
-int  RBaseStream::getPos()
+ptrdiff_t RBaseStream::getPos()
 {
     assert( isOpened() );
-    return m_block_pos + (int)(m_current - m_start);
+    return m_block_pos + m_current - m_start;
 }
 
 void  RBaseStream::skip( int bytes )
@@ -214,19 +214,20 @@ int  RLByteStream::getByte()
 }
 
 
-int RLByteStream::getBytes( void* buffer, int count )
+int RLByteStream::getBytes( void* buffer, ptrdiff_t count )
 {
-    uchar*  data = (uchar*)buffer;
-    int readed = 0;
     assert( count >= 0 );
+
+    uchar*  data = (uchar*)buffer;
+    int read = 0;
 
     while( count > 0 )
     {
-        int l;
+        ptrdiff_t l;
 
         for(;;)
         {
-            l = (int)(m_end - m_current);
+            l = m_end - m_current;
             if( l > count ) l = count;
             if( l > 0 ) break;
             readBlock();
@@ -235,9 +236,9 @@ int RLByteStream::getBytes( void* buffer, int count )
         m_current += l;
         data += l;
         count -= l;
-        readed += l;
+        read += l;
     }
-    return readed;
+    return read;
 }
 
 
@@ -367,7 +368,7 @@ void  WBaseStream::allocate()
 
 void  WBaseStream::writeBlock()
 {
-    int size = (int)(m_current - m_start);
+    ptrdiff_t size = m_current - m_start;
 
     assert( isOpened() );
     if( size == 0 )
