@@ -2285,7 +2285,7 @@ public:
         int* refcount;
         size_t size;
         size_t capacity;
-    };
+    }
 
     Vector() {}
     Vector(size_t _size)  { resize(_size); }
