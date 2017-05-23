@@ -56,6 +56,11 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       target_link_libraries(${the_target} opencv_ocl)
     endif()
 
+    if(UNIX)
+        find_package (Threads)
+        target_link_libraries(${the_target} "${CMAKE_THREAD_LIBS_INIT}" m)
+    endif()
+
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "cpp-${sample_kind}-${name}"
       PROJECT_LABEL "(${sample_KIND}) ${name}")
