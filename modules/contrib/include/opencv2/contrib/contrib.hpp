@@ -934,6 +934,9 @@ namespace cv
 
         // Updates a FaceRecognizer.
         CV_WRAP void update(InputArrayOfArrays src, InputArray labels);
+        
+        // Untrains a FaceRecognizer.
+        CV_WRAP void forget(InputArray labels);
 
         // Gets a prediction from a FaceRecognizer.
         virtual int predict(InputArray src) const = 0;

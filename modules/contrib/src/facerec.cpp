@@ -348,6 +348,10 @@ public:
     // corresponding labels in labels.
     void update(InputArrayOfArrays src, InputArray labels);
 
+    // Removes the images with the given corresponding labels
+    // from the LBPH model.
+    void forget(InputArray labels);
+
     // Predicts the label of a query image in src.
     int predict(InputArray src) const;
 
@@ -381,6 +385,17 @@ void FaceRecognizer::update(InputArrayOfArrays src, InputArray labels ) {
     }
 
     string error_msg = format("This FaceRecognizer (%s) does not support updating, you have to use FaceRecognizer::train to update it.", this->name().c_str());
+    CV_Error(CV_StsNotImplemented, error_msg);
+}
+    
+void FaceRecognizer::forget(InputArray labels) {
+    if( dynamic_cast<LBPH*>(this) != 0 )
+    {
+        dynamic_cast<LBPH*>(this)->forget(labels);
+        return;
+    }
+
+    string error_msg = format("This FaceRecognizer (%s) does not support forgetting, you have to use FaceRecognizer::train to retrain it.", this->name().c_str());
     CV_Error(CV_StsNotImplemented, error_msg);
 }
 
@@ -905,6 +920,55 @@ void LBPH::update(InputArrayOfArrays _in_src, InputArray _in_labels) {
         return;
 
     this->train(_in_src, _in_labels, true);
+}
+    
+void LBPH::forget(InputArray _in_labels) {
+    // got no data, just return
+    if(_in_labels.total() == 0)
+        return;
+    
+    if(_in_labels.getMat().type() != CV_32SC1) {
+        string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _in_labels.type());
+        CV_Error(CV_StsUnsupportedFormat, error_message);
+    }
+    
+    // get the label matrix
+    Mat labels = _in_labels.getMat();
+    // store the forgotten labels
+    cv::Mat indexes;
+    for (int i = 0; i < _labels.rows; i++) {
+        int _label = _labels.at<int>(i);
+        for (size_t j = 0; j < labels.total(); j++) {
+            int label = labels.at<int>((int)j);
+            if (_label == label) {
+                indexes.push_back(i);
+                break;
+            }
+        }
+    }
+    // remove the forgotten labels and histograms
+    cv::Mat good_labels;
+    vector<cv::Mat> good_histograms;
+    
+    for (int i = 0; i < _labels.rows; i++) {
+        bool found = false;
+        for (int j = 0; j < indexes.rows; j++) {
+            int index = indexes.at<int>(j);
+            if (i == index) {
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            // forget this label
+            continue;
+        }
+        good_labels.push_back(_labels.at<int>(i));
+        good_histograms.push_back(_histograms[i]);
+    }
+    
+    _labels = good_labels;
+    _histograms = good_histograms;
 }
 
 void LBPH::train(InputArrayOfArrays _in_src, InputArray _in_labels, bool preserveData) {
