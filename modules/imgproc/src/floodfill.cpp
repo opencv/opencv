@@ -552,16 +552,24 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
                                    "and 2 pixel taller than filled image" );
     }
 
+    // Add a 1 pixel wide border of 1's along the edges of the mask.
+    // This way no boundary checks are needed since the floodfilling
+    // cannot go accross nonzero pixels.
     int width = tempMask ? mask->step : size.width + 2;
     uchar* mask_row = mask->data.ptr + mask->step;
+
+    // Set the first row to 1's
     memset( mask_row - mask->step, 1, width );
 
+    // Set both the left and right columns to 1's
     for( i = 1; i <= size.height; i++, mask_row += mask->step )
     {
         if( tempMask )
             memset( mask_row, 0, width );
         mask_row[0] = mask_row[size.width+1] = (uchar)1;
     }
+
+    // Set the last row to 1's
     memset( mask_row, 1, width );
 
     if( depth == CV_8U )
@@ -627,6 +635,23 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
                               comp, flags, &buffer);
     else
         CV_Error(CV_StsUnsupportedFormat, "");
+
+    // Remove the 1 pixel wide border of 1's along the edges of the mask,
+    // otherwise there will be non-zero pixels in the mask which do not
+    // correspond to filled pixels.
+    mask_row = mask->data.ptr + mask->step;
+
+    // Set the first row to 0's
+    memset( mask_row - mask->step, 0, width );
+
+    // Set both the left and right columns to 0's
+    for( i = 1; i <= size.height; i++, mask_row += mask->step )
+    {
+       mask_row[0] = mask_row[size.width+1] = (uchar)0;
+    }
+
+    // Set the last row to 0's
+    memset( mask_row, 0, width );
 }
 
 
