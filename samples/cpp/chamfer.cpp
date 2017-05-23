@@ -51,7 +51,7 @@ int main( int argc, const char** argv )
 
     vector<vector<Point> > results;
     vector<float> costs;
-    int best = chamerMatching( img, tpl, results, costs );
+    int best = chamferMatching( img, tpl, results, costs );
     if( best < 0 )
     {
         cout << "matching not found" << endl;

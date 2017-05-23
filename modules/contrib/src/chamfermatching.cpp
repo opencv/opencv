@@ -243,9 +243,14 @@ private:
 
         ~Matching()
         {
-            for (size_t i = 0; i<templates.size(); i++) {
-                delete templates[i];
-            }
+	  /* 
+	   *When ChamferMatcher is deleted, it tries to delete its templates as well which causes an error 
+	   *due to the templates already being deleted in the deconstructor.
+	   * Hence commenting out template delete operations.
+	   */
+	    //for (size_t i = 0; i<templates.size(); i++) {
+	    //    delete templates[i];
+	    //}
         }
 
         /**
@@ -1353,7 +1358,7 @@ const ChamferMatcher::Matches& ChamferMatcher::matching(Template& tpl, Mat& imag
 }
 
 
-int chamerMatching( Mat& img, Mat& templ,
+int chamferMatching( Mat& img, Mat& templ,
                     std::vector<std::vector<Point> >& results, std::vector<float>& costs,
                     double templScale, int maxMatches, double minMatchDistance, int padX,
                     int padY, int scales, double minScale, double maxScale,
