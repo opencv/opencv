@@ -946,6 +946,7 @@ protected:
     CvDTreeNode* root;
     CvMat* var_importance;
     CvDTreeTrainData* data;
+    CvMat train_data_hdr, responses_hdr;
 
 public:
     int pruned_tree_idx;
@@ -1057,6 +1058,7 @@ protected:
     // array of the trees of the forest
     CvForestTree** trees;
     CvDTreeTrainData* data;
+    CvMat train_data_hdr, responses_hdr;
     int ntrees;
     int nclasses;
     double oob_error;
@@ -1272,6 +1274,7 @@ protected:
     virtual void read_params( CvFileStorage* fs, CvFileNode* node );
 
     CvDTreeTrainData* data;
+    CvMat train_data_hdr, responses_hdr;
     CvBoostParams params;
     CvSeq* weak;
 
