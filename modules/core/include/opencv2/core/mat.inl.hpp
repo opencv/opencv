@@ -872,7 +872,7 @@ size_t Mat::step1(int i) const
 inline
 bool Mat::empty() const
 {
-    return data == 0 || total() == 0;
+    return data == 0 || total() == 0 || dims == 0;
 }
 
 inline
@@ -3739,7 +3739,7 @@ size_t UMat::step1(int i) const
 inline
 bool UMat::empty() const
 {
-    return u == 0 || total() == 0;
+    return u == 0 || total() == 0 || dims == 0;
 }
 
 inline

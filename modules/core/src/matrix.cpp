@@ -5786,10 +5786,10 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
     else
         CV_Error( CV_StsUnsupportedFormat, "Only 32f and 64f are supported" );
 
-    if( _minidx )
+    if( _minidx && minidx )
         for( i = 0; i < d; i++ )
             _minidx[i] = minidx[i];
-    if( _maxidx )
+    if( _maxidx && maxidx )
         for( i = 0; i < d; i++ )
             _maxidx[i] = maxidx[i];
 }
@@ -5898,7 +5898,7 @@ _IplImage::_IplImage(const cv::Mat& m)
 
 CvSparseMat* cvCreateSparseMat(const cv::SparseMat& sm)
 {
-    if( !sm.hdr )
+    if( !sm.hdr || sm.hdr->dims > (int)cv::SparseMat::MAX_DIM)
         return 0;
 
     CvSparseMat* m = cvCreateSparseMat(sm.hdr->dims, sm.hdr->size, sm.type());

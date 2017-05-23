@@ -523,7 +523,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     float usrdata_f[3];
     int i, n = oclop == OCL_OP_MUL_SCALE || oclop == OCL_OP_DIV_SCALE ||
         oclop == OCL_OP_RDIV_SCALE || oclop == OCL_OP_RECIP_SCALE ? 1 : oclop == OCL_OP_ADDW ? 3 : 0;
-    if( n > 0 && wdepth == CV_32F )
+    if( usrdata && n > 0 && wdepth == CV_32F )
     {
         for( i = 0; i < n; i++ )
             usrdata_f[i] = (float)usrdata_d[i];

@@ -835,6 +835,7 @@ void UMat::copyTo(OutputArray _dst) const
     if( _dst.isUMat() )
     {
         UMat dst = _dst.getUMat();
+        CV_Assert(dst.u);
         if( u == dst.u && dst.offset == offset )
             return;
 

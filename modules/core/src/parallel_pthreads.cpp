@@ -141,10 +141,10 @@ private:
     pthread_t       m_posix_thread;
     pthread_mutex_t m_thread_mutex;
     pthread_cond_t  m_cond_thread_task;
-    bool            m_task_start;
+    volatile bool   m_task_start;
 
     ThreadManager*  m_parent;
-    ForThreadState  m_state;
+    volatile ForThreadState m_state;
     size_t          m_id;
 };
 
