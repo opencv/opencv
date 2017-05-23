@@ -2185,6 +2185,8 @@ public:
     void create(Size _size);
     //! equivalent to Mat::create(_ndims, _sizes, DatType<_Tp>::type)
     void create(int _ndims, const int* _sizes);
+    //! equivalent to Mat::release()
+    void release();
     //! cross-product
     Mat_ cross(const Mat_& m) const;
     //! data type conversion
@@ -2676,11 +2678,11 @@ public:
     /*!
         @param [out] m - output matrix; if it does not have a proper size or type before the operation,
             it is reallocated
-        @param [in] rtype – desired output matrix type or, rather, the depth since the number of channels
+        @param [in] rtype - desired output matrix type or, rather, the depth since the number of channels
             are the same as the input has; if rtype is negative, the output matrix will have the
             same type as the input.
-        @param [in] alpha – optional scale factor
-        @param [in] beta – optional delta added to the scaled values
+        @param [in] alpha - optional scale factor
+        @param [in] beta - optional delta added to the scaled values
     */
     void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
 
