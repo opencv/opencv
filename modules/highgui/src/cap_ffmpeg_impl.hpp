@@ -921,7 +921,6 @@ bool CvCapture_FFMPEG::grabFrame()
             //picture_pts = picture->best_effort_timestamp;
             if( picture_pts == AV_NOPTS_VALUE_ )
                 picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
-            frame_number++;
             valid = true;
         }
         else
@@ -932,8 +931,14 @@ bool CvCapture_FFMPEG::grabFrame()
         }
     }
 
-    if( valid && first_frame_number < 0 )
-        first_frame_number = dts_to_frame_number(picture_pts);
+    if( valid )
+    {
+        if ( first_frame_number < 0 )
+            first_frame_number = dts_to_frame_number(picture_pts);
+        int64_t _frame_number_temp = dts_to_frame_number(picture_pts) - first_frame_number;
+        if ( _frame_number_temp >= 0 )
+            frame_number = _frame_number_temp;
+    }
 
 #if USE_AV_INTERRUPT_CALLBACK
     // deactivate interrupt callback
