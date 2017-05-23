@@ -197,10 +197,10 @@ protected:
  * Variable-Lighting Conditions for a Responsive Audio Art Installation," A. Godbehere,
  * A. Matsukawa, K. Goldberg, American Control Conference, Montreal, June 2012.
  */
-class CV_EXPORTS BackgroundSubtractorGMG: public cv::BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorGMG: public cv::BackgroundSubtractor
 {
 public:
-    BackgroundSubtractorGMG();
+    CV_WRAP BackgroundSubtractorGMG();
     virtual ~BackgroundSubtractorGMG();
     virtual AlgorithmInfo* info() const;
 
