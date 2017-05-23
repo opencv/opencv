@@ -326,6 +326,9 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
             (i < ndims-1 && _strides[i] < _strides[i+1]) )
             needcopy = true;
     }
+    
+    if( ismultichannel && _strides[1] != (npy_intp)elemsize*_sizes[2] )
+        needcopy = true;
 
     if( ismultichannel && _strides[1] != (npy_intp)elemsize*_sizes[2] )
         needcopy = true;
