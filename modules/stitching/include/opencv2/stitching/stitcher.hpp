@@ -64,7 +64,12 @@ class CV_EXPORTS Stitcher
 {
 public:
     enum { ORIG_RESOL = -1 };
-    enum Status { OK, ERR_NEED_MORE_IMGS };
+    enum Status
+    {
+        OK = 0,
+        ERR_NEED_MORE_IMGS = 1,
+        ERR_EST_CAMERA_PARAMS_FAIL = 2
+    };
 
     // Creates stitcher with default parameters
     static Stitcher createDefault(bool try_use_gpu = false);
@@ -143,7 +148,7 @@ private:
     Stitcher() {}
 
     Status matchImages();
-    void estimateCameraParams();
+    Status estimateCameraParams();
 
     double registr_resol_;
     double seam_est_resol_;

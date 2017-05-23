@@ -104,7 +104,8 @@ Stitcher::Status Stitcher::estimateTransform(InputArray images, const vector<vec
     if ((status = matchImages()) != OK)
         return status;
 
-    estimateCameraParams();
+    if ((status = estimateCameraParams()) != OK)
+        return status;
 
     return OK;
 }
@@ -444,7 +445,7 @@ Stitcher::Status Stitcher::matchImages()
 }
 
 
-void Stitcher::estimateCameraParams()
+Stitcher::Status Stitcher::estimateCameraParams()
 {
     detail::HomographyBasedEstimator estimator;
     estimator(features_, pairwise_matches_, cameras_);
@@ -465,6 +466,8 @@ void Stitcher::estimateCameraParams()
     for (size_t i = 0; i < cameras_.size(); ++i)
     {
         LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
+        if (!isnormal(cameras_[i].focal))
+            return ERR_EST_CAMERA_PARAMS_FAIL;
         focals.push_back(cameras_[i].focal);
     }
 
@@ -483,6 +486,8 @@ void Stitcher::estimateCameraParams()
         for (size_t i = 0; i < cameras_.size(); ++i)
             cameras_[i].R = rmats[i];
     }
+
+    return OK;
 }
 
 } // namespace cv
