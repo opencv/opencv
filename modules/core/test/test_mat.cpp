@@ -1726,3 +1726,11 @@ TEST(Core_Mat_array, SplitMerge)
     }
 }
 #endif
+
+TEST(Mat, regression_8680)
+{
+   Mat_<Point2i> mat(3,1);
+   ASSERT_EQ(mat.channels(), 2);
+   mat.release();
+   ASSERT_EQ(mat.channels(), 2);
+}
