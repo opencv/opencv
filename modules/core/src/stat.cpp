@@ -1333,23 +1333,23 @@ static bool ipp_countNonZero( Mat &src, int &res )
     {
         IppStatus       status;
         const Mat      *arrays[] = {&src, NULL};
-        uchar          *ptrs[1]  = {NULL};
-        NAryMatIterator it(arrays, ptrs);
+        Mat            planes[1];
+        NAryMatIterator it(arrays, planes, 1);
         IppiSize        size  = {(int)it.size*src.channels(), 1};
-
+        res = 0;
         for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
             if(depth == CV_8U)
-                status = CV_INSTRUMENT_FUN_IPP(ippiCountInRange_8u_C1R, (const Ipp8u *)src.ptr(), (int)src.step, size, &count, 0, 0);
+                status = CV_INSTRUMENT_FUN_IPP(ippiCountInRange_8u_C1R, it.planes->ptr<Ipp8u>(), (int)it.planes->step, size, &count, 0, 0);
             else if(depth == CV_32F)
-                status = CV_INSTRUMENT_FUN_IPP(ippiCountInRange_32f_C1R, (const Ipp32f *)src.ptr(), (int)src.step, size, &count, 0, 0);
+                status = CV_INSTRUMENT_FUN_IPP(ippiCountInRange_32f_C1R, it.planes->ptr<Ipp32f>(), (int)it.planes->step, size, &count, 0, 0);
             else
                 return false;
 
-            if(status < 0)
+            if(status < 0 || (int)it.planes->total()*src.channels() < count)
                 return false;
 
-            res += (size.width*size.height - count);
+            res += (int)it.planes->total()*src.channels() - count;
         }
     }
 
