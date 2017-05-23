@@ -131,6 +131,7 @@ inline Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
     data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend(0),
     datalimit(0), allocator(0), size(&rows)
 {
+    CV_DbgAssert( data != 0 );
     size_t esz = CV_ELEM_SIZE(_type), minstep = cols*esz;
     if( _step == AUTO_STEP )
     {
@@ -153,6 +154,7 @@ inline Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend(0),
     datalimit(0), allocator(0), size(&rows)
 {
+    CV_DbgAssert( data != 0 );
     size_t esz = CV_ELEM_SIZE(_type), minstep = cols*esz;
     if( _step == AUTO_STEP )
     {
