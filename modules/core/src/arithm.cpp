@@ -1276,7 +1276,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     src1 = src1.reshape(1); src2 = src2.reshape(1);
     Mat dst = _dst.getMat().reshape(1);
 
-    size_t esz = src1.elemSize();
+    size_t esz = std::max(src1.elemSize(), (size_t)1);
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
     BinaryFuncC func = getCmpFunc(depth1);
 
