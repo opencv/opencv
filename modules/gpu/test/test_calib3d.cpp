@@ -96,7 +96,11 @@ struct StereoBeliefPropagation : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
+#ifdef ANDROID
+GPU_TEST_P(StereoBeliefPropagation, DISABLED_Regression)
+#else
 GPU_TEST_P(StereoBeliefPropagation, Regression)
+#endif
 {
     cv::Mat left_image  = readImage("stereobp/aloe-L.png");
     cv::Mat right_image = readImage("stereobp/aloe-R.png");
