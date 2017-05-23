@@ -280,6 +280,7 @@ struct CvCaptureCAM_V4L : public CvCapture
    __u32 fps;
    bool convert_rgb;
    bool frame_allocated;
+   bool returnFrame;
 
    /* V4L2 variables */
    buffer buffers[MAX_V4L_BUFFERS + 1];
@@ -820,6 +821,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     fps = DEFAULT_V4L_FPS;
     convert_rgb = true;
     deviceName = _deviceName;
+    returnFrame = true;
 
     return _capture_V4L2(this) == 1;
 }
@@ -847,6 +849,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
 
         default:
             /* display the error and stop processing */
+            capture->returnFrame = false;
             perror ("VIDIOC_DQBUF");
             return -1;
         }
@@ -1581,7 +1584,10 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         break;
     }
 
-    return(&capture->frame);
+    if (capture->returnFrame)
+        return(&capture->frame);
+    else
+        return 0;
 }
 
 static inline __u32 capPropertyToV4L2(int prop) {
