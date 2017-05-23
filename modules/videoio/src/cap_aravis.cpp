@@ -79,12 +79,13 @@
 //      video/x-raw, fourcc:'Y800'  -> 8bit, 1 channel
 //      video/x-raw, fourcc:'Y12 '  -> 12bit, 1 channel
 //      video/x-raw, fourcc:'Y16 '  -> 16bit, 1 channel
-//
+//      video/x-raw, fourcc:'BGR8'  -> 8bit, 1 channel
 
-#define MODE_GREY   CV_FOURCC_MACRO('G','R','E','Y')
-#define MODE_Y800   CV_FOURCC_MACRO('Y','8','0','0')
-#define MODE_Y12    CV_FOURCC_MACRO('Y','1','2',' ')
-#define MODE_Y16    CV_FOURCC_MACRO('Y','1','6',' ')
+#define MODE_GREY         CV_FOURCC_MACRO('G','R','E','Y')
+#define MODE_Y800         CV_FOURCC_MACRO('Y','8','0','0')
+#define MODE_Y12          CV_FOURCC_MACRO('Y','1','2',' ')
+#define MODE_Y16          CV_FOURCC_MACRO('Y','1','6',' ')
+#define MODE_BAYER_GR_8   CV_FOURCC_MACRO('B','G','R','8')
 
 #define CLIP(a,b,c) (cv::max(cv::min((a),(c)),(b)))
 
@@ -168,6 +169,7 @@ protected:
     unsigned        prevFrameID;
 
     IplImage        *frame;                 // local frame copy
+    ArvPixelFormat  framePixelFormat;       // local frame pixel format
 };
 
 
@@ -312,33 +314,46 @@ bool CvCaptureCAM_Aravis::grabFrame()
 IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
 {
     if(framebuffer) {
-        int depth = 0, channels = 0;
+        int inputDepth = 0, inputChannels = 0, outputDepth = 0, outputChannels = 0;
         switch(pixelFormat) {
             case ARV_PIXEL_FORMAT_MONO_8:
-                depth = IPL_DEPTH_8U;
-                channels = 1;
+                inputDepth = outputDepth = IPL_DEPTH_8U;
+                inputChannels = outputChannels = 1;
                 break;
             case ARV_PIXEL_FORMAT_MONO_12:
-            case ARV_PIXEL_FORMAT_MONO_16:
-                depth = IPL_DEPTH_16U;
-                channels = 1;
+                inputDepth = outputDepth = IPL_DEPTH_16U;
+                inputChannels = outputChannels = 1;
                 break;
+            case ARV_PIXEL_FORMAT_MONO_16:
+                inputDepth = outputDepth = = IPL_DEPTH_16U;
+                inputChannels = outputChannels = 1;
+                break;
+            case ARV_PIXEL_FORMAT_BAYER_GR_8:
+                inputDepth = outputDepth = IPL_DEPTH_8U;
+                inputChannels = 1;
+                outputChannels = 3;
         }
-        if(depth && channels) {
+        if(inputDepth && inputChannels && outputDepth && outputChannels) {
             IplImage src;
-            cvInitImageHeader( &src, cvSize( width, height ), depth, channels, IPL_ORIGIN_TL, 4 );
+            cvInitImageHeader( &src, cvSize( width, height ), inputDepth, inputChannels, IPL_ORIGIN_TL, 4 );
 
             cvSetData( &src, framebuffer, src.widthStep );
             if( !frame ||
                  frame->width != src.width ||
                  frame->height != src.height ||
-                 frame->depth != src.depth ||
-                 frame->nChannels != src.nChannels) {
+                 pixelFormat != framePixelFormat) {
 
                 cvReleaseImage( &frame );
-                frame = cvCreateImage( cvGetSize(&src), src.depth, channels );
+                frame = cvCreateImage( cvGetSize(&src), outputDepth, outputChannels );
             }
-            cvCopy(&src, frame);
+
+            if (pixelFormat == ARV_PIXEL_FORMAT_BAYER_GR_8) {
+                // Output RGB directly
+                cvCvtColor(&src, frame, CV_BayerGR2RGB);
+            }
+            else{
+                cvCopy(&src, frame);
+            }
 
             if(controlExposure && ((frameID - prevFrameID) >= 3)) {
                 // control exposure every third frame
@@ -475,6 +490,8 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                         return MODE_Y12;
                     case ARV_PIXEL_FORMAT_MONO_16:
                         return MODE_Y16;
+                    case ARV_PIXEL_FORMAT_BAYER_GR_8:
+                        return MODE_BAYER_GR_8;
                 }
             }
             break;
@@ -546,6 +563,9 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                     case MODE_Y16:
                         newFormat = ARV_PIXEL_FORMAT_MONO_16;
                         targetGrey = 32768;
+                    case MODE_BAYER_GR_8:
+                        newFormat = ARV_PIXEL_FORMAT_BAYER_GR_8;
+                        targetGrey = 128;
                         break;
                 }
                 if(newFormat != pixelFormat) {
