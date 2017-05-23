@@ -10,9 +10,6 @@ IF(VTK_FOUND)
   ELSE(VTK_RENDERING_BACKEND)
       find_package(VTK QUIET COMPONENTS vtkRenderingOpenGL vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
   ENDIF(VTK_RENDERING_BACKEND)
-  if(VTK_MAJOR_VERSION GREATER 7)
-      set(CMAKE_CXX_STANDARD 11)
-  endif()
 ENDIF(VTK_FOUND)
 
 # VTK 5.x components
