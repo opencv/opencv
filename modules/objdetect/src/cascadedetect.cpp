@@ -952,9 +952,9 @@ public:
 
         int y1 = range.start * stripSize;
         int y2 = min(range.end * stripSize, processingRectSize.height);
-        for( int y = y1; y < y2; y += yStep )
+        for( int y = y1; y <= y2; y += yStep )
         {
-            for( int x = 0; x < processingRectSize.width; x += yStep )
+            for( int x = 0; x <= processingRectSize.width; x += yStep )
             {
                 if ( (!mask.empty()) && (mask.at<uchar>(Point(x,y))==0)) {
                     continue;
