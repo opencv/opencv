@@ -1441,7 +1441,7 @@ public:
     virtual bool open( const char* filename );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -1477,7 +1477,7 @@ IplImage* CvCapture_QT_Movie_CPP::retrieveFrame(int)
     return captureQT ? (IplImage*)icvRetrieveFrame_QT_Movie( captureQT, 0 ) : 0;
 }
 
-double CvCapture_QT_Movie_CPP::getProperty( int propId )
+double CvCapture_QT_Movie_CPP::getProperty( int propId ) const
 {
     return captureQT ? icvGetProperty_QT_Movie( captureQT, propId ) : 0;
 }
@@ -1510,7 +1510,7 @@ public:
     virtual bool open( int index );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -1546,7 +1546,7 @@ IplImage* CvCapture_QT_Cam_CPP::retrieveFrame(int)
     return captureQT ? (IplImage*)icvRetrieveFrame_QT_Cam( captureQT, 0 ) : 0;
 }
 
-double CvCapture_QT_Cam_CPP::getProperty( int propId )
+double CvCapture_QT_Cam_CPP::getProperty( int propId ) const
 {
     return captureQT ? icvGetProperty_QT_Cam( captureQT, propId ) : 0;
 }

@@ -63,7 +63,7 @@ public:
     }
 public:
     virtual bool initStream(PXCSession *session)            = 0;
-    virtual double getProperty(int propIdx)
+    virtual double getProperty(int propIdx) const
     {
         double ret = 0.0;
         switch (propIdx)
@@ -236,7 +236,7 @@ public:
         enumProfiles();
         return true;
     }
-    virtual double getProperty(int propIdx)
+    virtual double getProperty(int propIdx) const
     {
         switch (propIdx)
         {
@@ -454,7 +454,7 @@ public:
         enumProfiles();
         return true;
     }
-    virtual double getProperty(int propIdx)
+    virtual double getProperty(int propIdx) const
     {
         switch (propIdx)
         {
@@ -613,7 +613,7 @@ public:
     }
     virtual ~CvCapture_IntelPerC(){}
 
-    virtual double getProperty(int propIdx)
+    virtual double getProperty(int propIdx) const
     {
         double propValue = 0;
         int purePropIdx = propIdx & ~CV_CAP_INTELPERC_GENERATORS_MASK;

@@ -60,7 +60,7 @@ public:
     virtual void close();
     bool isOpened() { return index >= 0; }
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double) { return false; }
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -185,7 +185,7 @@ IplImage * CvCaptureCAM_TYZX::retrieveFrame(int)
     return image;
 }
 
-double CvCaptureCAM_TYZX::getProperty(int property_id)
+double CvCaptureCAM_TYZX::getProperty(int property_id) const
 {
     CvSize size;
     switch(capture->index)

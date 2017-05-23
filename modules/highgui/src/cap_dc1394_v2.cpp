@@ -207,7 +207,7 @@ public:
     virtual bool open(int index);
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -653,7 +653,7 @@ IplImage* CvCaptureCAM_DC1394_v2_CPP::retrieveFrame(int idx)
     return 0 <= idx && idx < nimages ? img[idx] : 0;
 }
 
-double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId)
+double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId) const
 {
     switch (propId)
     {

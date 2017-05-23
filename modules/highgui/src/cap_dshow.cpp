@@ -3125,7 +3125,7 @@ public:
 
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -3215,7 +3215,7 @@ IplImage* CvCaptureCAM_DShow::retrieveFrame(int)
         return NULL;
 }
 
-double CvCaptureCAM_DShow::getProperty( int property_id )
+double CvCaptureCAM_DShow::getProperty( int property_id ) const
 {
 
     long min_value,max_value,stepping_delta,current_value,flags,defaultValue;
