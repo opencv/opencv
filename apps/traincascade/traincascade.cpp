@@ -6,6 +6,9 @@
 
 using namespace std;
 using namespace cv;
+/*
+testing
+*/
 
 int main( int argc, char* argv[] )
 {
