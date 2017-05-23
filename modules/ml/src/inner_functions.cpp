@@ -90,7 +90,7 @@ void CvStatModel::load( const char* filename, const char* name )
 
     CV_CALL( fs = cvOpenFileStorage( filename, 0, CV_STORAGE_READ ));
     if( !fs )
-        EXIT;
+        CV_ERROR( CV_StsError, "Could not open the file storage. Check the path and permissions" ); 
 
     if( name )
         model_node = cvGetFileNodeByName( fs, 0, name );
