@@ -162,7 +162,7 @@ void  RBaseStream::release()
 }
 
 
-void  RBaseStream::setPos( int pos )
+void  RBaseStream::setPos( size_t pos )
 {
     assert( isOpened() && pos >= 0 );
 
@@ -179,7 +179,7 @@ void  RBaseStream::setPos( int pos )
 }
 
 
-int  RBaseStream::getPos()
+size_t RBaseStream::getPos()
 {
     assert( isOpened() );
     return m_block_pos + (int)(m_current - m_start);
@@ -214,19 +214,18 @@ int  RLByteStream::getByte()
 }
 
 
-int RLByteStream::getBytes( void* buffer, int count )
+int RLByteStream::getBytes( void* buffer, size_t count )
 {
     uchar*  data = (uchar*)buffer;
-    int readed = 0;
-    assert( count >= 0 );
+    int read = 0;
 
     while( count > 0 )
     {
-        int l;
+        size_t l;
 
         for(;;)
         {
-            l = (int)(m_end - m_current);
+            l = (size_t)(m_end - m_current);
             if( l > count ) l = count;
             if( l > 0 ) break;
             readBlock();
@@ -235,9 +234,9 @@ int RLByteStream::getBytes( void* buffer, int count )
         m_current += l;
         data += l;
         count -= l;
-        readed += l;
+        read += l;
     }
-    return readed;
+    return read;
 }
 
 

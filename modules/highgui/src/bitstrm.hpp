@@ -70,8 +70,8 @@ public:
     virtual bool  open( const Mat& buf );
     virtual void  close();
     bool          isOpened();
-    void          setPos( int pos );
-    int           getPos();
+    void          setPos( size_t pos );
+    size_t        getPos();
     void          skip( int bytes );
 
 protected:
@@ -82,7 +82,7 @@ protected:
     uchar*  m_current;
     FILE*   m_file;
     int     m_block_size;
-    int     m_block_pos;
+    long    m_block_pos;
     bool    m_is_opened;
 
     virtual void  readBlock();
@@ -99,7 +99,7 @@ public:
     virtual ~RLByteStream();
 
     int     getByte();
-    int     getBytes( void* buffer, int count );
+    int     getBytes( void* buffer, size_t count );
     int     getWord();
     int     getDWord();
 };
