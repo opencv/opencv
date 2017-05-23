@@ -96,7 +96,7 @@
 struct CvCapture
 {
     virtual ~CvCapture() {}
-    virtual double getProperty(int) { return 0; }
+    virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return 0; }
     virtual bool grabFrame() { return true; }
     virtual IplImage* retrieveFrame(int) { return 0; }

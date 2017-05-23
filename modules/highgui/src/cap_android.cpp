@@ -65,7 +65,7 @@ public:
     CvCapture_Android(int);
     virtual ~CvCapture_Android();
 
-    virtual double getProperty(int propIdx);
+    virtual double getProperty(int propIdx) const;
     virtual bool setProperty(int probIdx, double propVal);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int outputType);
@@ -257,7 +257,7 @@ CvCapture_Android::~CvCapture_Android()
     }
 }
 
-double CvCapture_Android::getProperty( int propIdx )
+double CvCapture_Android::getProperty( int propIdx ) const
 {
     switch ( propIdx )
     {

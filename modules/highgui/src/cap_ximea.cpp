@@ -16,7 +16,7 @@ public:
 
     virtual bool open( int index );
     virtual void close();
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -243,7 +243,7 @@ void CvCaptureCAM_XIMEA::resetCvImage()
 }
 /**********************************************************************************/
 
-double CvCaptureCAM_XIMEA::getProperty( int property_id )
+double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
 {
     if(hmv == NULL)
         return 0;

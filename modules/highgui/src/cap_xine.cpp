@@ -786,7 +786,7 @@ public:
     virtual bool open( const char* filename );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -821,7 +821,7 @@ IplImage* CvCaptureAVI_XINE_CPP::retrieveFrame(int)
     return captureXINE ? (IplImage*)icvRetrieveFrameAVI_XINE( captureXINE, 0 ) : 0;
 }
 
-double CvCaptureAVI_XINE_CPP::getProperty( int propId )
+double CvCaptureAVI_XINE_CPP::getProperty( int propId ) const
 {
     return captureXINE ? icvGetPropertyAVI_XINE( captureXINE, propId ) : 0;
 }

@@ -1712,7 +1712,7 @@ public:
     virtual bool open( int index );
     virtual void close();
 
-    virtual double getProperty(int);
+    virtual double getProperty(int) const;
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
@@ -1747,7 +1747,7 @@ IplImage* CvCaptureCAM_V4L_CPP::retrieveFrame(int)
     return captureV4L ? icvRetrieveFrameCAM_V4L( captureV4L, 0 ) : 0;
 }
 
-double CvCaptureCAM_V4L_CPP::getProperty( int propId )
+double CvCaptureCAM_V4L_CPP::getProperty( int propId ) const
 {
     return captureV4L ? icvGetPropertyCAM_V4L( captureV4L, propId ) : 0.0;
 }
