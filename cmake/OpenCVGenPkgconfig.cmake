@@ -86,6 +86,16 @@ endif()
 list(REMOVE_DUPLICATES OpenCV_LIB_COMPONENTS_)
 string(REPLACE ";" " " OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS_}")
 
+# add interface definitions
+foreach(m ${OPENCV_MODULES_PUBLIC})
+  list(APPEND OpenCV_INTERFACE_DEFS_ ${OPENCV_MODULE_${m}_INTERFACE_DEFS})
+endforeach()
+
+if(OpenCV_INTERFACE_DEFS_)
+  list(REMOVE_DUPLICATES OpenCV_INTERFACE_DEFS_)
+  string(REPLACE ";" " " OpenCV_INTERFACE_DEFS "${OpenCV_INTERFACE_DEFS_}")
+endif()
+
 #generate the .pc file
 set(prefix      "${CMAKE_INSTALL_PREFIX}")
 set(exec_prefix "\${prefix}")
