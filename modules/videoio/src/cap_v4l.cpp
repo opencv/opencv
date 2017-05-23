@@ -861,11 +861,11 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
    //printf("got data in buff %d, len=%d, flags=0x%X, seq=%d, used=%d)\n",
    //	  buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
 
-   if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf))
-       perror ("VIDIOC_QBUF");
-
    //set timestamp in capture struct to be timestamp of most recent frame
    capture->timestamp = buf.timestamp;
+
+   if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf))
+       perror ("VIDIOC_QBUF");
 
    return 1;
 }
