@@ -500,7 +500,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     Mat mat = _mat.getMat(), _param1 = _param1arg.getMat(), _param2 = _param2arg.getMat();
     int depth = mat.depth(), cn = mat.channels();
     AutoBuffer<double> _parambuf;
-    int j, k, fast_int_mode = 0, smallFlag = 1;
+    int j, k;
+    bool fast_int_mode = false;
+    bool smallFlag = true;
     RandFunc func = 0;
     RandnScaleFunc scaleFunc = 0;
 
@@ -553,7 +555,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         if( depth <= CV_32S )
         {
             ip = (Vec2i*)(parambuf + cn*2);
-            for( j = 0, fast_int_mode = 1; j < cn; j++ )
+            for( j = 0, fast_int_mode = true; j < cn; j++ )
             {
                 double a = std::min(p1[j], p2[j]);
                 double b = std::max(p1[j], p2[j]);
@@ -568,9 +570,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 int idiff = ip[j][0] = cvFloor(b) - ip[j][1] - 1;
                 double diff = b - a;
 
-                fast_int_mode &= diff <= 4294967296. && (idiff & (idiff+1)) == 0;
+                fast_int_mode = fast_int_mode && diff <= 4294967296. && (idiff & (idiff+1)) == 0;
                 if( fast_int_mode )
-                    smallFlag &= idiff <= 255;
+                    smallFlag = smallFlag && (idiff <= 255);
                 else
                 {
                     if( diff > INT_MAX )
@@ -596,7 +598,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 }
             }
 
-            func = randTab[fast_int_mode][depth];
+            func = randTab[fast_int_mode ? 1 : 0][depth];
         }
         else
         {
@@ -687,9 +689,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         buf.allocate(blockSize*cn*4);
         param = (uchar*)(double*)buf;
 
-        if( ip )
+        if( depth <= CV_32S )
         {
-            if( ds )
+            if( !fast_int_mode )
             {
                 DivStruct* p = (DivStruct*)param;
                 for( j = 0; j < blockSize*cn; j += cn )
@@ -704,7 +706,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                         p[j + k] = ip[k];
             }
         }
-        else if( fp )
+        else if( depth == CV_32F )
         {
             Vec2f* p = (Vec2f*)param;
             for( j = 0; j < blockSize*cn; j += cn )
@@ -732,7 +734,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
             int len = std::min(total - j, blockSize);
 
             if( disttype == CV_RAND_UNI )
-                func( ptr, len*cn, &state, param, smallFlag != 0 );
+                func( ptr, len*cn, &state, param, smallFlag );
             else
             {
                 randn_0_1_32f(nbuf, len*cn, &state);

@@ -76,6 +76,13 @@ struct Sum_SIMD
     }
 };
 
+template <typename ST, typename DT>
+inline void addChannels(DT * dst, ST * buf, int cn)
+{
+    for (int i = 0; i < 4; ++i)
+        dst[i % cn] += buf[i];
+}
+
 #if CV_SSE2
 
 template <>
@@ -113,9 +120,7 @@ struct Sum_SIMD<schar, int>
         int CV_DECL_ALIGNED(16) ar[4];
         _mm_store_si128((__m128i*)ar, v_sum);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-                dst[j] += ar[j + i];
+        addChannels(dst, ar, cn);
 
         return x / cn;
     }
@@ -143,9 +148,7 @@ struct Sum_SIMD<int, double>
         _mm_store_pd(ar, v_sum0);
         _mm_store_pd(ar + 2, v_sum1);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-                dst[j] += ar[j + i];
+        addChannels(dst, ar, cn);
 
         return x / cn;
     }
@@ -174,9 +177,7 @@ struct Sum_SIMD<float, double>
         _mm_store_pd(ar, v_sum0);
         _mm_store_pd(ar + 2, v_sum1);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-                dst[j] += ar[j + i];
+        addChannels(dst, ar, cn);
 
         return x / cn;
     }
@@ -220,9 +221,7 @@ struct Sum_SIMD<uchar, int>
         unsigned int CV_DECL_ALIGNED(16) ar[4];
         vst1q_u32(ar, v_sum);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-                dst[j] += ar[j + i];
+        addChannels(dst, ar, cn);
 
         return x / cn;
     }
@@ -263,9 +262,7 @@ struct Sum_SIMD<schar, int>
         int CV_DECL_ALIGNED(16) ar[4];
         vst1q_s32(ar, v_sum);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-                dst[j] += ar[j + i];
+        addChannels(dst, ar, cn);
 
         return x / cn;
     }
@@ -296,9 +293,7 @@ struct Sum_SIMD<ushort, int>
         unsigned int CV_DECL_ALIGNED(16) ar[4];
         vst1q_u32(ar, v_sum);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-                dst[j] += ar[j + i];
+        addChannels(dst, ar, cn);
 
         return x / cn;
     }
@@ -329,9 +324,7 @@ struct Sum_SIMD<short, int>
         int CV_DECL_ALIGNED(16) ar[4];
         vst1q_s32(ar, v_sum);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-                dst[j] += ar[j + i];
+        addChannels(dst, ar, cn);
 
         return x / cn;
     }
@@ -748,6 +741,16 @@ struct SumSqr_SIMD
     }
 };
 
+template <typename T>
+inline void addSqrChannels(T * sum, T * sqsum, T * buf, int cn)
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        sum[i % cn] += buf[i];
+        sqsum[i % cn] += buf[4 + i];
+    }
+}
+
 #if CV_SSE2
 
 template <>
@@ -796,12 +799,7 @@ struct SumSqr_SIMD<uchar, int, int>
         _mm_store_si128((__m128i*)ar, v_sum);
         _mm_store_si128((__m128i*)(ar + 4), v_sqsum);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-            {
-                sum[j] += ar[j + i];
-                sqsum[j] += ar[4 + j + i];
-            }
+        addSqrChannels(sum, sqsum, ar, cn);
 
         return x / cn;
     }
@@ -853,12 +851,7 @@ struct SumSqr_SIMD<schar, int, int>
         _mm_store_si128((__m128i*)ar, v_sum);
         _mm_store_si128((__m128i*)(ar + 4), v_sqsum);
 
-        for (int i = 0; i < 4; i += cn)
-            for (int j = 0; j < cn; ++j)
-            {
-                sum[j] += ar[j + i];
-                sqsum[j] += ar[4 + j + i];
-            }
+        addSqrChannels(sum, sqsum, ar, cn);
 
         return x / cn;
     }
@@ -1144,6 +1137,8 @@ static bool ipp_sum(Mat &src, Scalar &_res)
 
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
+    if (cn > 4)
+        return false;
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
@@ -1402,6 +1397,9 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
 
 #if IPP_VERSION_X100 >= 700
     size_t total_size = src.total();
+    int cn = src.channels();
+    if (cn > 4)
+        return false;
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
@@ -1471,7 +1469,7 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
                                 CV_INSTRUMENT_FUN_IPP(ippiMean, src.ptr(), (int)src.step[0], sz, res);
                 if( status >= 0 )
                 {
-                    for( int i = 0; i < src.channels(); i++ )
+                    for( int i = 0; i < cn; i++ )
                         ret[i] = res[i];
                     return true;
                 }
@@ -1560,9 +1558,12 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
     bool haveMask = _mask.kind() != _InputArray::NONE;
     int nz = haveMask ? -1 : (int)_src.total();
     Scalar mean, stddev;
+    const int cn = _src.channels();
+    if (cn > 4)
+        return false;
 
     {
-        int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        int type = _src.type(), depth = CV_MAT_DEPTH(type);
         bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
                 isContinuous = _src.isContinuous(),
                 isMaskContinuous = _mask.isContinuous();
@@ -1585,7 +1586,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
             wgs2_aligned <<= 1;
         wgs2_aligned >>= 1;
 
-        if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
+        if ( (!doubleSupport && depth == CV_64F) )
             return false;
 
         char cvt[2][40];
@@ -1638,7 +1639,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
     }
 
     double total = nz != 0 ? 1.0 / nz : 0;
-    int k, j, cn = _src.channels();
+    int k, j;
     for (int i = 0; i < cn; ++i)
     {
         mean[i] *= total;
@@ -2975,8 +2976,10 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     if (d.isNVidia())
         return false;
 #endif
-
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    const int cn = _src.channels();
+    if (cn > 4)
+        return false;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
     bool doubleSupport = d.doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
 
@@ -3001,11 +3004,8 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
                     OCL_OP_SUM_SQR : (unstype ? OCL_OP_SUM : OCL_OP_SUM_ABS), _mask) )
             return false;
 
-        if (!haveMask)
-            cn = 1;
-
         double s = 0.0;
-        for (int i = 0; i < cn; ++i)
+        for (int i = 0; i < (haveMask ? cn : 1); ++i)
             s += sc[i];
 
         result = normType == NORM_L1 || normType == NORM_L2SQR ? s : std::sqrt(s);
@@ -3320,7 +3320,10 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
 #endif
 
     Scalar sc1, sc2;
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int cn = _src1.channels();
+    if (cn > 4)
+        return false;
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type);
     bool relative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
     bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;

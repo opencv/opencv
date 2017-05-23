@@ -303,6 +303,18 @@ Cv64suf;
 #endif
 
 /****************************************************************************************\
+*                                    static analysys                                     *
+\****************************************************************************************/
+
+// In practice, some macro are not processed correctly (noreturn is not detected).
+// We need to use simplified definition for them.
+#ifndef CV_STATIC_ANALYSIS
+# if defined(__KLOCWORK__) || defined(__clang_analyzer__) || defined(__COVERITY__)
+#   define CV_STATIC_ANALYSIS
+# endif
+#endif
+
+/****************************************************************************************\
 *          exchange-add operation for atomic operations on reference counters            *
 \****************************************************************************************/
 
