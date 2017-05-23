@@ -40,6 +40,8 @@
 //M*/
 #include "precomp.hpp"
 
+#include <stdint.h>
+
 namespace cv
 {
 
@@ -1069,22 +1071,36 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 *                                Polygons filling                                        *
 \****************************************************************************************/
 
-/* helper macros: filling horizontal row */
-#define ICV_HLINE( ptr, xl, xr, color, pix_size )            \
-{                                                            \
-    uchar* hline_ptr = (uchar*)(ptr) + (xl)*(pix_size);      \
-    uchar* hline_max_ptr = (uchar*)(ptr) + (xr)*(pix_size);  \
-                                                             \
-    for( ; hline_ptr <= hline_max_ptr; hline_ptr += (pix_size))\
-    {                                                        \
-        int hline_j;                                         \
-        for( hline_j = 0; hline_j < (pix_size); hline_j++ )  \
-        {                                                    \
-            hline_ptr[hline_j] = ((uchar*)color)[hline_j];   \
-        }                                                    \
-    }                                                        \
+static inline void ICV_HLINE_X(uchar* ptr, int xl, int xr, const uchar* color, int pix_size)
+{
+    uchar* hline_min_ptr = (uchar*)(ptr) + (xl)*(pix_size);
+    uchar* hline_end_ptr = (uchar*)(ptr) + (xr+1)*(pix_size);
+    uchar* hline_ptr = hline_min_ptr;
+    if (pix_size == 1)
+      memset(hline_min_ptr, *color, hline_end_ptr-hline_min_ptr);
+    else//if (pix_size != 1)
+    {
+      if (hline_min_ptr < hline_end_ptr)
+      {
+        memcpy(hline_ptr, color, pix_size);
+        hline_ptr += pix_size;
+      }//end if (hline_min_ptr < hline_end_ptr)
+      size_t sizeToCopy = pix_size;
+      while(hline_ptr < hline_end_ptr)
+      {
+        memcpy(hline_ptr, hline_min_ptr, sizeToCopy);
+        hline_ptr += sizeToCopy;
+        sizeToCopy = std::min(2*sizeToCopy, static_cast<size_t>(hline_end_ptr-hline_ptr));
+      }//end while(hline_ptr < hline_end_ptr)
+    }//end if (pix_size != 1)
 }
+//end ICV_HLINE_X()
 
+static inline void ICV_HLINE(uchar* ptr, int xl, int xr, const void* color, int pix_size)
+{
+  ICV_HLINE_X(ptr, xl, xr, reinterpret_cast<const uchar*>(color), pix_size);
+}
+//end ICV_HLINE()
 
 /* filling convex polygon. v - array of vertices, ntps - number of points */
 static void
