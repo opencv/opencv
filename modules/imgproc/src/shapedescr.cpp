@@ -801,11 +801,10 @@ cvFitEllipse2( const CvArr* array )
     /*
      *  New fitellipse algorithm, contributed by Dr. Daniel Weiss
      */
-    CvPoint2D32f c = {0,0};
     double gfp[5], rp[5], t;
     CvMat A, b, x;
     const double min_eps = 1e-8;
-    int i, is_float;
+    int i;
     CvSeqReader reader;
 
     Ad.allocate(n*5);
@@ -817,7 +816,7 @@ cvFitEllipse2( const CvArr* array )
     x = cvMat( 5, 1, CV_64F, gfp );
 
     cvStartReadSeq( ptseq, &reader );
-    is_float = CV_SEQ_ELTYPE(ptseq) == CV_32FC2;
+    const bool is_float = CV_SEQ_ELTYPE(ptseq) == CV_32FC2;
 
     for( i = 0; i < n; i++ )
     {
@@ -830,25 +829,6 @@ cvFitEllipse2( const CvArr* array )
             p.y = (float)((int*)reader.ptr)[1];
         }
         CV_NEXT_SEQ_ELEM( sizeof(p), reader );
-        c.x += p.x;
-        c.y += p.y;
-    }
-    c.x /= n;
-    c.y /= n;
-
-    for( i = 0; i < n; i++ )
-    {
-        CvPoint2D32f p;
-        if( is_float )
-            p = *(CvPoint2D32f*)(reader.ptr);
-        else
-        {
-            p.x = (float)((int*)reader.ptr)[0];
-            p.y = (float)((int*)reader.ptr)[1];
-        }
-        CV_NEXT_SEQ_ELEM( sizeof(p), reader );
-        p.x -= c.x;
-        p.y -= c.y;
 
         bd[i] = 10000.0; // 1.0?
         Ad[i*5] = -(double)p.x * p.x; // A - C signs inverted as proposed by APP
@@ -859,6 +839,11 @@ cvFitEllipse2( const CvArr* array )
     }
 
     cvSolve( &A, &b, &x, CV_SVD );
+    // Check if we have an ellipse: B^2 - 4*A*C < 0
+    // gfp[0] = A, gfp[1] = C (!), gfp[2] = B
+    // If not, return empty box.
+    if ( gfp[2]*gfp[2] - 4*gfp[0]*gfp[1] >= 0 )
+        return box;
 
     // now use general-form parameters A - E to find the ellipse center:
     // differentiate general form wrt x/y to get two equations for cx and cy
@@ -887,12 +872,12 @@ cvFitEllipse2( const CvArr* array )
             p.y = (float)((int*)reader.ptr)[1];
         }
         CV_NEXT_SEQ_ELEM( sizeof(p), reader );
-        p.x -= c.x;
-        p.y -= c.y;
         bd[i] = 1.0;
-        Ad[i * 3] = (p.x - rp[0]) * (p.x - rp[0]);
-        Ad[i * 3 + 1] = (p.y - rp[1]) * (p.y - rp[1]);
-        Ad[i * 3 + 2] = (p.x - rp[0]) * (p.y - rp[1]);
+        const double px = p.x - rp[0];
+        const double py = p.y - rp[1];
+        Ad[i * 3] = px * px;
+        Ad[i * 3 + 1] = py * py;
+        Ad[i * 3 + 2] = px * py;
     }
     cvSolve(&A, &b, &x, CV_SVD);
 
@@ -910,8 +895,8 @@ cvFitEllipse2( const CvArr* array )
     if( rp[3] > min_eps )
         rp[3] = sqrt(2.0 / rp[3]);
 
-    box.center.x = (float)rp[0] + c.x;
-    box.center.y = (float)rp[1] + c.y;
+    box.center.x = (float)rp[0];
+    box.center.y = (float)rp[1];
     box.size.width = (float)(rp[2]*2);
     box.size.height = (float)(rp[3]*2);
     if( box.size.width > box.size.height )
