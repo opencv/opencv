@@ -40,6 +40,9 @@
 //
 //M*/
 
+//New enum for CAP_PROP_DEPTH & CAP_PROP_STREAM
+//Shawn Fernandes shawndfernandes@yahoo.com
+
 #ifndef OPENCV_VIDEOIO_HPP
 #define OPENCV_VIDEOIO_HPP
 
@@ -162,7 +165,10 @@ enum VideoCaptureProperties {
        CAP_PROP_IRIS          =36,
        CAP_PROP_SETTINGS      =37, //!< Pop up video/camera filter dialog (note: only supported by DSHOW backend currently. The property value is ignored)
        CAP_PROP_BUFFERSIZE    =38,
-       CAP_PROP_AUTOFOCUS     =39
+       CAP_PROP_AUTOFOCUS     =39,
+       CAP_PROP_STREAM        =42,  // V4L2 STREAM chooser bwteeen BGR24,Y16,YVUV,
+       CAP_PROP_DEPTH         =43  // 8 or 16 for 8U or 16U
+
      };
 
 
