@@ -79,7 +79,6 @@ CVAPI(void) cvDisplayStatusBar(const char* name, const char* text, int delayms C
 CVAPI(void) cvSaveWindowParameters(const char* name);
 CVAPI(void) cvLoadWindowParameters(const char* name);
 CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
-CVAPI(void) cvStopLoop( void );
 
 typedef void (CV_CDECL *CvButtonCallback)(int state, void* userdata);
 enum {CV_PUSH_BUTTON = 0, CV_CHECKBOX = 1, CV_RADIOBOX = 2};
