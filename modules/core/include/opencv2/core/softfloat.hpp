@@ -123,7 +123,7 @@ enum {
 
 // Disabled to make softfloat code stateless
 // The user has to check values manually with *_isSignalingNaN() functions
-CV_INLINE void raiseFlags( uint_fast8_t /* flags */)
+inline void raiseFlags( uint_fast8_t /* flags */)
 {
     //exceptionFlags |= flags;
 }
@@ -293,20 +293,20 @@ CV_EXPORTS softfloat64_t f64_sqrt( softfloat64_t );
 | Ported from OpenCV and added for usability
 *----------------------------------------------------------------------------*/
 
-CV_INLINE softfloat32_t min(const softfloat32_t a, const softfloat32_t b);
-CV_INLINE softfloat64_t min(const softfloat64_t a, const softfloat64_t b);
+inline softfloat32_t min(const softfloat32_t a, const softfloat32_t b);
+inline softfloat64_t min(const softfloat64_t a, const softfloat64_t b);
 
-CV_INLINE softfloat32_t max(const softfloat32_t a, const softfloat32_t b);
-CV_INLINE softfloat64_t max(const softfloat64_t a, const softfloat64_t b);
+inline softfloat32_t max(const softfloat32_t a, const softfloat32_t b);
+inline softfloat64_t max(const softfloat64_t a, const softfloat64_t b);
 
-CV_INLINE softfloat32_t min(const softfloat32_t a, const softfloat32_t b) { return (a > b) ? b : a; }
-CV_INLINE softfloat64_t min(const softfloat64_t a, const softfloat64_t b) { return (a > b) ? b : a; }
+inline softfloat32_t min(const softfloat32_t a, const softfloat32_t b) { return (a > b) ? b : a; }
+inline softfloat64_t min(const softfloat64_t a, const softfloat64_t b) { return (a > b) ? b : a; }
 
-CV_INLINE softfloat32_t max(const softfloat32_t a, const softfloat32_t b) { return (a > b) ? a : b; }
-CV_INLINE softfloat64_t max(const softfloat64_t a, const softfloat64_t b) { return (a > b) ? a : b; }
+inline softfloat32_t max(const softfloat32_t a, const softfloat32_t b) { return (a > b) ? a : b; }
+inline softfloat64_t max(const softfloat64_t a, const softfloat64_t b) { return (a > b) ? a : b; }
 
-CV_INLINE softfloat32_t f32_abs( softfloat32_t a) { softfloat32_t x; x.v = a.v & ((1U   << 31) - 1); return x; }
-CV_INLINE softfloat64_t f64_abs( softfloat64_t a) { softfloat64_t x; x.v = a.v & ((1ULL << 63) - 1); return x; }
+inline softfloat32_t f32_abs( softfloat32_t a) { softfloat32_t x; x.v = a.v & ((1U   << 31) - 1); return x; }
+inline softfloat64_t f64_abs( softfloat64_t a) { softfloat64_t x; x.v = a.v & ((1ULL << 63) - 1); return x; }
 
 CV_EXPORTS softfloat32_t f32_exp( softfloat32_t );
 CV_EXPORTS softfloat32_t f32_log( softfloat32_t );
