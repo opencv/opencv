@@ -256,7 +256,11 @@ icvFindEnslosingCicle4pts_32f( CvPoint2D32f * pts, CvPoint2D32f * _center, float
   function_exit:
 
     *_center = center;
-    *_radius = radius;
+
+    if( radius > 2.f )
+        *_radius = radius / 1.03f;
+    else
+        *_radius = radius;
 
     /* reorder output points */
     for( i = 0; i < 4; i++ )
