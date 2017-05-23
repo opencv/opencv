@@ -4271,11 +4271,12 @@ float32_t f32_exp( float32_t x)
         A2 = float64_t(.2402265109513301490103372422686535526573) / EXPPOLY_32F_A0,
         A1 = float64_t(.5550339366753125211915322047004666939128e-1) / EXPPOLY_32F_A0;
 
+    float64_t x64 = x;
     float64_t x0;
     if(expF32UI(x.v) > 127 + 10)
         x0 = signF32UI(x.v) ? -exp_max_val : exp_max_val;
     else
-        x0 = (softdouble)x * exp_prescale;
+        x0 = x64 * exp_prescale;
 
     int val0 = x0.toI32();
     int t = (val0 >> EXPTAB_SCALE) + 1023;

@@ -129,7 +129,7 @@ public:
 
     softfloat  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
     operator softdouble() const;
-    float toFloat() const { Cv32suf s; s.u = v; return s.f; }
+    operator float() const { Cv32suf s; s.u = v; return s.f; }
 
     softfloat operator + (const softfloat&) const;
     softfloat operator - (const softfloat&) const;
@@ -190,7 +190,7 @@ public:
 
     softdouble  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
     operator softfloat() const;
-    double toDouble() const { Cv64suf s; s.u = v; return s.f; }
+    operator double() const { Cv64suf s; s.u = v; return s.f; }
 
     softdouble operator + (const softdouble&) const;
     softdouble operator - (const softdouble&) const;

@@ -3257,7 +3257,7 @@ TEST(Core_SoftFloat, log64)
 
     vector<double> inputs;
     inputs.push_back(1);
-    inputs.push_back(f64_exp(softdouble::one()).toDouble());
+    inputs.push_back(f64_exp(softdouble::one()));
     inputs.push_back(DBL_MIN);
     inputs.push_back(DBL_MAX);
     for(int i = 0; i < nValues; i++)
