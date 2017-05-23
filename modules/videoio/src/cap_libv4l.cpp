@@ -312,6 +312,7 @@ typedef struct CvCaptureCAM_V4L
     int deviceHandle;
     int bufferIndex;
     int FirstCapture;
+    bool returnFrame;
 
     int width; int height;
     int mode;
@@ -1094,6 +1095,8 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (const char* deviceName)
        capture->is_v4l2_device = 1;
    }
 
+   capture->returnFrame = true;
+
    return capture;
 }; /* End icvOpenCAM_V4L */
 
@@ -1119,6 +1122,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
 
         default:
             /* display the error and stop processing */
+            capture->returnFrame = false;
             perror ("VIDIOC_DQBUF");
             return -1;
         }
@@ -1360,7 +1364,10 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
   }
 
-   return(&capture->frame);
+  if (capture->returnFrame)
+    return(&capture->frame);
+  else
+    return 0;
 }
 
 static int zeroPropertyQuietly(CvCaptureCAM_V4L* capture, int property_id, int value)
