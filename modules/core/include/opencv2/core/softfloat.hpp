@@ -141,9 +141,6 @@ public:
     uint32_t v;
 };
 
-CV_EXPORTS int_fast64_t round( const softfloat& a );
-CV_EXPORTS int_fast64_t trunc( const softfloat& a );
-
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
@@ -199,11 +196,14 @@ public:
     uint64_t v;
 };
 
-CV_EXPORTS int_fast64_t round( const softdouble& a );
-CV_EXPORTS int_fast64_t trunc( const softdouble& a );
-
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
+
+CV_EXPORTS int_fast64_t round( const softfloat&  a );
+CV_EXPORTS int_fast64_t round( const softdouble& a );
+
+CV_EXPORTS int_fast64_t trunc( const softfloat&  a );
+CV_EXPORTS int_fast64_t trunc( const softdouble& a );
 
 CV_EXPORTS softfloat  mulAdd( const softfloat&  a, const softfloat&  b, const softfloat & c);
 CV_EXPORTS softdouble mulAdd( const softdouble& a, const softdouble& b, const softdouble& c);
