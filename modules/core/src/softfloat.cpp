@@ -2637,7 +2637,6 @@ uint_fast32_t f64_to_ui32( float64_t a, uint_fast8_t roundingMode, bool exact )
     shiftDist = 0x427 - exp;
     if ( 0 < shiftDist ) sig = softfloat_shiftRightJam64( sig, shiftDist );
     return softfloat_roundToUI32( sign, sig, roundingMode, exact );
-
 }
 
 uint_fast32_t f64_to_ui32_r_minMag( float64_t a, bool exact )
@@ -2680,7 +2679,6 @@ uint_fast32_t f64_to_ui32_r_minMag( float64_t a, bool exact )
         raiseFlags(flag_inexact);
     }
     return z;
-
 }
 
 uint_fast64_t f64_to_ui64( float64_t a, uint_fast8_t roundingMode, bool exact )
@@ -2719,7 +2717,6 @@ uint_fast64_t f64_to_ui64( float64_t a, uint_fast8_t roundingMode, bool exact )
     return
         (exp == 0x7FF) && fracF64UI( uiA ) ? ui64_fromNaN
             : sign ? ui64_fromNegOverflow : ui64_fromPosOverflow;
-
 }
 
 uint_fast64_t f64_to_ui64_r_minMag( float64_t a, bool exact )
@@ -2767,7 +2764,6 @@ uint_fast64_t f64_to_ui64_r_minMag( float64_t a, bool exact )
     return
         (exp == 0x7FF) && sig ? ui64_fromNaN
             : sign ? ui64_fromNegOverflow : ui64_fromPosOverflow;
-
 }
 
 float32_t i32_to_f32( int32_t a )
@@ -2782,7 +2778,6 @@ float32_t i32_to_f32( int32_t a )
     //fixed unsigned unary minus: -x == ~x + 1
     absA = sign ? (~(uint_fast32_t) a + 1) : (uint_fast32_t) a;
     return softfloat_normRoundPackToF32( sign, 0x9C, absA );
-
 }
 
 float64_t i32_to_f64( int32_t a )
@@ -2804,7 +2799,6 @@ float64_t i32_to_f64( int32_t a )
                 sign, 0x432 - shiftDist, (uint_fast64_t) absA<<shiftDist );
     }
     return float64_t::fromRaw(uiZ);
-
 }
 
 float32_t i64_to_f32( int64_t a )
@@ -2828,7 +2822,6 @@ float32_t i64_to_f32( int64_t a )
                 : (uint_fast32_t) absA<<shiftDist;
         return softfloat_roundPackToF32( sign, 0x9C - shiftDist, sig );
     }
-
 }
 
 float64_t i64_to_f64( int64_t a )
@@ -2843,7 +2836,6 @@ float64_t i64_to_f64( int64_t a )
     //fixed unsigned unary minus: -x == ~x + 1
     absA = sign ? (~(uint_fast64_t) a + 1) : (uint_fast64_t) a;
     return softfloat_normRoundPackToF64( sign, 0x43C, absA );
-
 }
 
 float32_t softfloat_addMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
@@ -3034,7 +3026,6 @@ uint32_t softfloat_approxRecipSqrt32_1( unsigned int oddExpA, uint32_t a )
              >>48;
     if ( ! (r & 0x80000000) ) r = 0x80000000;
     return r;
-
 }
 
 /*----------------------------------------------------------------------------
@@ -3043,9 +3034,7 @@ uint32_t softfloat_approxRecipSqrt32_1( unsigned int oddExpA, uint32_t a )
 *----------------------------------------------------------------------------*/
 uint_fast32_t softfloat_commonNaNToF32UI( const struct commonNaN *aPtr )
 {
-
     return (uint_fast32_t) aPtr->sign<<31 | 0x7FC00000 | aPtr->v64>>41;
-
 }
 
 /*----------------------------------------------------------------------------
@@ -3054,11 +3043,9 @@ uint_fast32_t softfloat_commonNaNToF32UI( const struct commonNaN *aPtr )
 *----------------------------------------------------------------------------*/
 uint_fast64_t softfloat_commonNaNToF64UI( const struct commonNaN *aPtr )
 {
-
     return
         (uint_fast64_t) aPtr->sign<<63 | UINT64_C( 0x7FF8000000000000 )
             | aPtr->v64>>12;
-
 }
 
 uint_fast8_t softfloat_countLeadingZeros64( uint64_t a )
@@ -3085,7 +3072,6 @@ uint_fast8_t softfloat_countLeadingZeros64( uint64_t a )
     }
     count += softfloat_countLeadingZeros8[a32>>24];
     return count;
-
 }
 
 /*----------------------------------------------------------------------------
@@ -3513,7 +3499,6 @@ float64_t
     }
  uiZ:
     return float64_t::fromRaw(uiZ);
-
 }
 
 float32_t
@@ -3528,7 +3513,6 @@ float32_t
     } else {
         return softfloat_roundPackToF32( sign, exp, sig<<shiftDist );
     }
-
 }
 
 float64_t
@@ -3543,7 +3527,6 @@ float64_t
     } else {
         return softfloat_roundPackToF64( sign, exp, sig<<shiftDist );
     }
-
 }
 
 struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t sig )
@@ -3566,7 +3549,6 @@ struct exp16_sig64 softfloat_normSubnormalF64Sig( uint_fast64_t sig )
     z.exp = 1 - shiftDist;
     z.sig = sig<<shiftDist;
     return z;
-
 }
 
 /*----------------------------------------------------------------------------
@@ -3671,7 +3653,6 @@ float32_t
     uiZ = packToF32UI( sign, exp, sig );
  uiZ:
     return float32_t::fromRaw(uiZ);
-
 }
 
 float64_t
@@ -3783,7 +3764,6 @@ int_fast32_t
  invalid:
     raiseFlags( flag_invalid );
     return sign ? i32_fromNegOverflow : i32_fromPosOverflow;
-
 }
 
 int_fast64_t
@@ -3830,7 +3810,6 @@ int_fast64_t
  invalid:
     raiseFlags( flag_invalid );
     return sign ? i64_fromNegOverflow : i64_fromPosOverflow;
-
 }
 
 uint_fast32_t
@@ -3867,7 +3846,6 @@ uint_fast32_t
  invalid:
     raiseFlags( flag_invalid );
     return sign ? ui32_fromNegOverflow : ui32_fromPosOverflow;
-
 }
 
 uint_fast64_t
@@ -3909,7 +3887,6 @@ uint_fast64_t
  invalid:
     raiseFlags( flag_invalid );
     return sign ? ui64_fromNegOverflow : ui64_fromPosOverflow;
-
 }
 
 struct uint128
@@ -3935,7 +3912,6 @@ struct uint128
                 : ((a64 | a0) != 0);
     }
     return z;
-
 }
 
 float32_t softfloat_subMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
@@ -4128,7 +4104,6 @@ float64_t
     uiZ = softfloat_propagateNaNF64UI( uiA, uiB );
  uiZ:
     return float64_t::fromRaw(uiZ);
-
 }
 
 float32_t ui32_to_f32( uint32_t a )
@@ -4141,7 +4116,6 @@ float32_t ui32_to_f32( uint32_t a )
     } else {
         return softfloat_normRoundPackToF32( 0, 0x9C, a );
     }
-
 }
 
 float64_t ui32_to_f64( uint32_t a )
@@ -4157,7 +4131,6 @@ float64_t ui32_to_f64( uint32_t a )
             packToF64UI( 0, 0x432 - shiftDist, (uint_fast64_t) a<<shiftDist );
     }
     return float64_t::fromRaw(uiZ);
-
 }
 
 float32_t ui64_to_f32( uint64_t a )
@@ -4175,7 +4148,6 @@ float32_t ui64_to_f32( uint64_t a )
                 : (uint_fast32_t) a<<shiftDist;
         return softfloat_roundPackToF32( 0, 0x9C - shiftDist, sig );
     }
-
 }
 
 float64_t ui64_to_f64( uint64_t a )
