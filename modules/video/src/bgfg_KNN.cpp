@@ -236,7 +236,7 @@ protected:
     // Tau - shadow threshold. The shadow is detected if the pixel is darker
     //version of the background. Tau is a threshold on how much darker the shadow can be.
     //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
-    //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+    //See: Prati,Mikic,Trivedi,Cucchiara,"Detecting Moving Shadows...",IEEE PAMI,2003.
 
     //model data
     int nLongCounter;//circular counter
