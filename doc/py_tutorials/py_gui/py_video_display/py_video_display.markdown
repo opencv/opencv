@@ -42,11 +42,11 @@ while(True):
 cap.release()
 cv2.destroyAllWindows()
 @endcode
-cap.read() returns a bool (True/False). If frame is read correctly, it will be True. So you can
+`cap.read()` returns a bool (`True`/`False`). If frame is read correctly, it will be `True`. So you can
 check end of the video by checking this return value.
 
 Sometimes, cap may not have initialized the capture. In that case, this code shows error. You can
-check whether it is initialized or not by the method **cap.isOpened()**. If it is True, OK.
+check whether it is initialized or not by the method **cap.isOpened()**. If it is `True`, OK.
 Otherwise open it using **cap.open()**.
 
 You can also access some of the features of this video using **cap.get(propId)** method where propId
@@ -55,9 +55,9 @@ video) and full details can be seen here: cv::VideoCapture::get() .
 Some of these values can be modified using **cap.set(propId, value)**. Value is the new value you
 want.
 
-For example, I can check the frame width and height by cap.get(3) and cap.get(4). It gives me
-640x480 by default. But I want to modify it to 320x240. Just use ret = cap.set(3,320) and
-ret = cap.set(4,240).
+For example, I can check the frame width and height by `cap.get(cv2.CAP_PROP_FRAME_WIDTH)` and `cap.get(cv2.CAP_PROP_FRAME_HEIGHT)`. It gives me
+640x480 by default. But I want to modify it to 320x240. Just use `ret = cap.set(cv2.CAP_PROP_FRAME_WIDTH,320)` and
+`ret = cap.set(cv2.CAP_PROP_FRAME_HEIGHT,240)`.
 
 @note If you are getting error, make sure camera is working fine using any other camera application
 (like Cheese in Linux).
@@ -100,7 +100,7 @@ very simple, just use cv2.imwrite(). Here a little more work is required.
 This time we create a **VideoWriter** object. We should specify the output file name (eg:
 output.avi). Then we should specify the **FourCC** code (details in next paragraph). Then number of
 frames per second (fps) and frame size should be passed. And last one is **isColor** flag. If it is
-True, encoder expect color frame, otherwise it works with grayscale frame.
+`True`, encoder expect color frame, otherwise it works with grayscale frame.
 
 [FourCC](http://en.wikipedia.org/wiki/FourCC) is a 4-byte code used to specify the video codec. The
 list of available codes can be found in [fourcc.org](http://www.fourcc.org/codecs.php). It is
