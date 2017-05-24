@@ -1706,22 +1706,46 @@ int cv::connectedComponents(InputArray _img, OutputArray _labels, int connectivi
     return cv::connectedComponents(_img, _labels, connectivity, ltype, CCL_DEFAULT);
 }
 
-int cv::connectedComponents(InputArray _img, OutputArray _labels, int connectivity, int ltype, int ccltype){
+int cv::connectedComponents(InputArray _img, OutputArray _labels, int connectivity, int ltype, int ccltype) {
     const cv::Mat img = _img.getMat();
     _labels.create(img.size(), CV_MAT_DEPTH(ltype));
     cv::Mat labels = _labels.getMat();
     connectedcomponents::NoOp sop;
-    if (ltype == CV_16U){
-        return connectedComponents_sub1(img, labels, connectivity, ccltype, sop);
+    int nbComponents=0;
+    if (ltype == CV_8U) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
     }
-    else if (ltype == CV_32S){
-        return connectedComponents_sub1(img, labels, connectivity, ccltype, sop);
+    else if (ltype == CV_16U) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
     }
-    else{
+    else if (ltype == CV_32S) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
+    }
+    else {
         CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
         return 0;
     }
+    if (!(ccltype & CCL_FORE_BACK_GROUND))
+        return nbComponents;
+    bitwise_not(img,img);
+    Mat labelsnot(img.size(), CV_MAT_DEPTH(ltype));
+    connectedcomponents::NoOp sop2;
+    int nbComponentsNot=0;
+    if (ltype == CV_8U) {
+        nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
+    }
+    else if (ltype == CV_16U) {
+        nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
+    }
+    else if (ltype == CV_32S) {
+        nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
+    }
+    Mat mask = labels == 0;
+    add(labelsnot, nbComponents-1, labelsnot, mask);
+    labels = labels + labelsnot - 1;
+    return nbComponentsNot+ nbComponents-2;
 }
+
 
 // Simple wrapper to ensure binary and source compatibility (ABI)
 int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, OutputArray statsv,
@@ -1737,14 +1761,46 @@ int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, Outpu
     _labels.create(img.size(), CV_MAT_DEPTH(ltype));
     cv::Mat labels = _labels.getMat();
     connectedcomponents::CCStatsOp sop(statsv, centroids);
-    if (ltype == CV_16U){
-        return connectedComponents_sub1(img, labels, connectivity, ccltype, sop);
+    int nbComponents;
+    if (ltype == CV_8U) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
     }
-    else if (ltype == CV_32S){
-        return connectedComponents_sub1(img, labels, connectivity, ccltype, sop);
+    else if (ltype == CV_16U) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
     }
-    else{
+    else if (ltype == CV_32S) {
+        nbComponents = connectedComponents_sub1(img, labels, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop);
+    }
+    else {
         CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
         return 0;
     }
+    if (!(ccltype & CCL_FORE_BACK_GROUND))
+        return nbComponents;
+    bitwise_not(img, img);
+    Mat labelsnot(img.size(), CV_MAT_DEPTH(ltype));
+    Mat statsv2, centroids2;
+    connectedcomponents::CCStatsOp sop2(statsv2, centroids2);
+    int nbComponentsNot=0;
+    if (ltype == CV_8U) {
+        nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
+    }
+    else if (ltype == CV_16U) {
+        nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
+    }
+    else if (ltype == CV_32S) {
+        nbComponentsNot = connectedComponents_sub1(img, labelsnot, connectivity, ccltype&(~CCL_FORE_BACK_GROUND), sop2);
+    }
+    Mat mask = labels == 0;
+    add(labelsnot, nbComponents-1, labelsnot, mask);
+    labels = labels + labelsnot - 1;
+    Mat a= statsv.getMat(),b,c;
+    a(cv::Range(1, a.rows), Range::all()).copyTo(b);
+    statsv2(Range(1, statsv2.rows), Range::all()).copyTo(c);
+    vconcat(b,c,statsv);
+    a = centroids.getMat();
+    a(cv::Range(1, a.rows), Range::all()).copyTo(b);
+    centroids2(Range(1, centroids2.rows), Range::all()).copyTo(c);
+    vconcat(b, c, centroids);
+    return nbComponentsNot + nbComponents - 2;
 }
