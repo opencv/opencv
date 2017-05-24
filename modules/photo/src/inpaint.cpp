@@ -277,7 +277,7 @@ icvCalcFMM(const CvMat *f, CvMat *t, CvPriorityQueueFloat *Heap, bool negate) {
    }
 }
 
-
+template <typename data_type>
 static void
 icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueueFloat *Heap ) {
    int i = 0, j = 0, ii = 0, jj = 0, k, l, q, color = 0;
@@ -463,31 +463,31 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
 
                               if (CV_MAT_ELEM(*f,uchar,k,l+1)!=INSIDE) {
                                  if (CV_MAT_ELEM(*f,uchar,k,l-1)!=INSIDE) {
-                                    gradI.x=(float)((CV_MAT_ELEM(*out,uchar,km,lp+1)-CV_MAT_ELEM(*out,uchar,km,lm-1)))*2.0f;
+                                    gradI.x=(float)((CV_MAT_ELEM(*out,data_type,km,lp+1)-CV_MAT_ELEM(*out,data_type,km,lm-1)))*2.0f;
                                  } else {
-                                    gradI.x=(float)((CV_MAT_ELEM(*out,uchar,km,lp+1)-CV_MAT_ELEM(*out,uchar,km,lm)));
+                                    gradI.x=(float)((CV_MAT_ELEM(*out,data_type,km,lp+1)-CV_MAT_ELEM(*out,data_type,km,lm)));
                                  }
                               } else {
                                  if (CV_MAT_ELEM(*f,uchar,k,l-1)!=INSIDE) {
-                                    gradI.x=(float)((CV_MAT_ELEM(*out,uchar,km,lp)-CV_MAT_ELEM(*out,uchar,km,lm-1)));
+                                    gradI.x=(float)((CV_MAT_ELEM(*out,data_type,km,lp)-CV_MAT_ELEM(*out,data_type,km,lm-1)));
                                  } else {
                                     gradI.x=0;
                                  }
                               }
                               if (CV_MAT_ELEM(*f,uchar,k+1,l)!=INSIDE) {
                                  if (CV_MAT_ELEM(*f,uchar,k-1,l)!=INSIDE) {
-                                    gradI.y=(float)((CV_MAT_ELEM(*out,uchar,kp+1,lm)-CV_MAT_ELEM(*out,uchar,km-1,lm)))*2.0f;
+                                    gradI.y=(float)((CV_MAT_ELEM(*out,data_type,kp+1,lm)-CV_MAT_ELEM(*out,data_type,km-1,lm)))*2.0f;
                                  } else {
-                                    gradI.y=(float)((CV_MAT_ELEM(*out,uchar,kp+1,lm)-CV_MAT_ELEM(*out,uchar,km,lm)));
+                                    gradI.y=(float)((CV_MAT_ELEM(*out,data_type,kp+1,lm)-CV_MAT_ELEM(*out,data_type,km,lm)));
                                  }
                               } else {
                                  if (CV_MAT_ELEM(*f,uchar,k-1,l)!=INSIDE) {
-                                    gradI.y=(float)((CV_MAT_ELEM(*out,uchar,kp,lm)-CV_MAT_ELEM(*out,uchar,km-1,lm)));
+                                    gradI.y=(float)((CV_MAT_ELEM(*out,data_type,kp,lm)-CV_MAT_ELEM(*out,data_type,km-1,lm)));
                                  } else {
                                     gradI.y=0;
                                  }
                               }
-                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,uchar,km,lm));
+                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,data_type,km,lm));
                               Jx -= (float)w * (float)(gradI.x*r.x);
                               Jy -= (float)w * (float)(gradI.y*r.y);
                               s  += w;
@@ -497,7 +497,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                   }
                   sat = (float)((Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f)+0.5f));
                   {
-                  CV_MAT_ELEM(*out,uchar,i-1,j-1) = cv::saturate_cast<uchar>(sat);
+                  CV_MAT_ELEM(*out,data_type,i-1,j-1) = cv::saturate_cast<data_type>(sat);
                   }
                }
 
@@ -509,7 +509,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
    }
 }
 
-
+template <typename data_type>
 static void
 icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueueFloat *Heap) {
    int i = 0, j = 0, ii = 0, jj = 0, k, l, q, color = 0;
@@ -640,28 +640,28 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
 
                               if (CV_MAT_ELEM(*f,uchar,k+1,l)!=INSIDE) {
                                  if (CV_MAT_ELEM(*f,uchar,k-1,l)!=INSIDE) {
-                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,uchar,kp+1,lm)-CV_MAT_ELEM(*out,uchar,kp,lm))+
-                                                    abs(CV_MAT_ELEM(*out,uchar,kp,lm)-CV_MAT_ELEM(*out,uchar,km-1,lm)));
+                                    gradI.x=(float)(std::abs(CV_MAT_ELEM(*out,data_type,kp+1,lm)-CV_MAT_ELEM(*out,data_type,kp,lm))+
+                                                    std::abs(CV_MAT_ELEM(*out,data_type,kp,lm)-CV_MAT_ELEM(*out,data_type,km-1,lm)));
                                  } else {
-                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,uchar,kp+1,lm)-CV_MAT_ELEM(*out,uchar,kp,lm)))*2.0f;
+                                    gradI.x=(float)(std::abs(CV_MAT_ELEM(*out,data_type,kp+1,lm)-CV_MAT_ELEM(*out,data_type,kp,lm)))*2.0f;
                                  }
                               } else {
                                  if (CV_MAT_ELEM(*f,uchar,k-1,l)!=INSIDE) {
-                                    gradI.x=(float)(abs(CV_MAT_ELEM(*out,uchar,kp,lm)-CV_MAT_ELEM(*out,uchar,km-1,lm)))*2.0f;
+                                    gradI.x=(float)(std::abs(CV_MAT_ELEM(*out,data_type,kp,lm)-CV_MAT_ELEM(*out,data_type,km-1,lm)))*2.0f;
                                  } else {
                                     gradI.x=0;
                                  }
                               }
                               if (CV_MAT_ELEM(*f,uchar,k,l+1)!=INSIDE) {
                                  if (CV_MAT_ELEM(*f,uchar,k,l-1)!=INSIDE) {
-                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,uchar,km,lp+1)-CV_MAT_ELEM(*out,uchar,km,lm))+
-                                                    abs(CV_MAT_ELEM(*out,uchar,km,lm)-CV_MAT_ELEM(*out,uchar,km,lm-1)));
+                                    gradI.y=(float)(std::abs(CV_MAT_ELEM(*out,data_type,km,lp+1)-CV_MAT_ELEM(*out,data_type,km,lm))+
+                                                    std::abs(CV_MAT_ELEM(*out,data_type,km,lm)-CV_MAT_ELEM(*out,data_type,km,lm-1)));
                                  } else {
-                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,uchar,km,lp+1)-CV_MAT_ELEM(*out,uchar,km,lm)))*2.0f;
+                                    gradI.y=(float)(std::abs(CV_MAT_ELEM(*out,data_type,km,lp+1)-CV_MAT_ELEM(*out,data_type,km,lm)))*2.0f;
                                  }
                               } else {
                                  if (CV_MAT_ELEM(*f,uchar,k,l-1)!=INSIDE) {
-                                    gradI.y=(float)(abs(CV_MAT_ELEM(*out,uchar,km,lm)-CV_MAT_ELEM(*out,uchar,km,lm-1)))*2.0f;
+                                    gradI.y=(float)(std::abs(CV_MAT_ELEM(*out,data_type,km,lm)-CV_MAT_ELEM(*out,data_type,km,lm-1)))*2.0f;
                                  } else {
                                     gradI.y=0;
                                  }
@@ -676,13 +676,13 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                                  dir = (float)fabs(VectorScalMult(r,gradI)/sqrt(VectorLength(r)*VectorLength(gradI)));
                               }
                               w = dst*dir;
-                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,uchar,km,lm));
+                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,data_type,km,lm));
                               s  += w;
                            }
                         }
                      }
                   }
-                  CV_MAT_ELEM(*out,uchar,i-1,j-1) = cv::saturate_cast<uchar>((double)Ia/s);
+                  CV_MAT_ELEM(*out,data_type,i-1,j-1) = cv::saturate_cast<data_type>((double)Ia/s);
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
@@ -744,11 +744,13 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     if( !CV_ARE_SIZES_EQ(input_img,output_img) || !CV_ARE_SIZES_EQ(input_img,inpaint_mask))
         CV_Error( CV_StsUnmatchedSizes, "All the input and output images must have the same size" );
 
-    if( (CV_MAT_TYPE(input_img->type) != CV_8UC1 &&
+    if( (CV_MAT_TYPE(input_img->type) != CV_8U &&
+         CV_MAT_TYPE(input_img->type) != CV_16U &&
+         CV_MAT_TYPE(input_img->type) != CV_32F &&
         CV_MAT_TYPE(input_img->type) != CV_8UC3) ||
         !CV_ARE_TYPES_EQ(input_img,output_img) )
         CV_Error( CV_StsUnsupportedFormat,
-        "Only 8-bit 1-channel and 3-channel input/output images are supported" );
+        "8-bit, 16-bit unsigned or 32-bit float 1-channel and 8-bit 3-channel input/output images are supported" );
 
     if( CV_MAT_TYPE(inpaint_mask->type) != CV_8UC1 )
         CV_Error( CV_StsUnsupportedFormat, "The mask must be 8-bit 1-channel image" );
@@ -798,10 +800,36 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
         cvSub(out,band,out,NULL);
         SET_BORDER1_C1(out,uchar,0);
         icvCalcFMM(out,t,Out,true);
-        icvTeleaInpaintFMM(mask,t,output_img,range,Heap);
+        switch(CV_MAT_DEPTH(output_img->type))
+        {
+            case CV_8U:
+                icvTeleaInpaintFMM<uchar>(mask,t,output_img,range,Heap);
+                break;
+            case CV_16U:
+                icvTeleaInpaintFMM<ushort>(mask,t,output_img,range,Heap);
+                break;
+            case CV_32F:
+                icvTeleaInpaintFMM<float>(mask,t,output_img,range,Heap);
+                break;
+            default:
+                CV_Error( cv::Error::StsBadArg, "Unsupportedformat of the input image" );
+        }
     }
     else if (flags == cv::INPAINT_NS) {
-        icvNSInpaintFMM(mask,t,output_img,range,Heap);
+        switch(CV_MAT_DEPTH(output_img->type))
+        {
+            case CV_8U:
+                icvNSInpaintFMM<uchar>(mask,t,output_img,range,Heap);
+                break;
+            case CV_16U:
+                icvNSInpaintFMM<ushort>(mask,t,output_img,range,Heap);
+                break;
+            case CV_32F:
+                icvNSInpaintFMM<float>(mask,t,output_img,range,Heap);
+                break;
+            default:
+                CV_Error( cv::Error::StsBadArg, "Unsupported format of the input image" );
+        }
     } else {
         CV_Error( cv::Error::StsBadArg, "The flags argument must be one of CV_INPAINT_TELEA or CV_INPAINT_NS" );
     }
