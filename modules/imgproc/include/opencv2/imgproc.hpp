@@ -4133,8 +4133,16 @@ enum ColormapTypes
 @param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
 @param dst The result is the colormapped source image. Note: Mat::create is called on dst.
 @param colormap The colormap to apply, see cv::ColormapTypes
- */
+*/
 CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
+
+/** @brief Applies a user colormap on a given image.
+
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
+@param dst The result is the colormapped source image. Note: Mat::create is called on dst.
+@param userColor The colormap to apply of type CV_8UC1 or CV_8UC3 and size 256
+*/
+CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray userColor);
 
 //! @} imgproc_colormap
 
