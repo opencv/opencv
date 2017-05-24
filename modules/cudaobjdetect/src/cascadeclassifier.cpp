@@ -809,7 +809,7 @@ namespace
 Ptr<cuda::CascadeClassifier> cv::cuda::CascadeClassifier::create(const String& filename)
 {
     String fext = filename.substr(filename.find_last_of(".") + 1);
-    std::transform(fext.begin(), fext.end(), fext.begin(), ::tolower);
+    fext = toLowerCase(fext);
 
     if (fext == "nvbin")
     {

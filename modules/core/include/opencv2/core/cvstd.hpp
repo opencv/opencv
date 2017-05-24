@@ -457,6 +457,19 @@ class CV_EXPORTS FileNode; //for string constructor from FileNode
 
 typedef std::string String;
 
+/**
+Converts a given cv::String into lower case.
+@param str input string
+@return string in lower case.
+ */
+CV_EXPORTS inline String toLowerCase(const String& str)
+{
+    String lowerCase;
+    lowerCase.resize(str.size());
+    std::transform(str.begin(), str.end(), lowerCase.begin(), ::tolower);
+    return lowerCase;
+}
+
 //! @} core_basic
 } // cv
 
