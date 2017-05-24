@@ -1233,6 +1233,8 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
                op == CMP_NE || op == CMP_GE || op == CMP_GT );
 
+    CV_Assert(_src1.dims() > 0);
+
     bool haveScalar = false;
 
     if ((_src1.isMatx() + _src2.isMatx()) == 1
