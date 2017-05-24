@@ -386,7 +386,7 @@ protected:
     // Tau - shadow threshold. The shadow is detected if the pixel is darker
     //version of the background. Tau is a threshold on how much darker the shadow can be.
     //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
-    //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+    //See: Prati,Mikic,Trivedi,Cucchiara,"Detecting Moving Shadows...",IEEE PAMI,2003.
 
     String name_;
 
@@ -461,7 +461,7 @@ struct GaussBGStatModel2Params
     // Tau - shadow threshold. The shadow is detected if the pixel is darker
     //version of the background. Tau is a threshold on how much darker the shadow can be.
     //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
-    //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+    //See: Prati,Mikic,Trivedi,Cucchiara,"Detecting Moving Shadows...",IEEE PAMI,2003.
 };
 
 struct GMM
@@ -472,7 +472,7 @@ struct GMM
 
 // shadow detection performed per pixel
 // should work for rgb data, could be usefull for gray scale and depth data as well
-// See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+// See: Prati,Mikic,Trivedi,Cucchiara,"Detecting Moving Shadows...",IEEE PAMI,2003.
 CV_INLINE bool
 detectShadowGMM(const float* data, int nchannels, int nmodes,
                 const GMM* gmm, const float* mean,
