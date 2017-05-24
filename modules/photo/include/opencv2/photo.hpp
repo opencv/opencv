@@ -89,7 +89,7 @@ enum
 
 /** @brief Restores the selected region in an image using the region neighborhood.
 
-@param src Input 8-bit 1-channel or 3-channel image.
+@param src Input 8-bit, 16-bit unsigned or 32-bit float 1-channel or 8-bit 3-channel image.
 @param inpaintMask Inpainting mask, 8-bit 1-channel image. Non-zero pixels indicate the area that
 needs to be inpainted.
 @param dst Output image with the same size and type as src .
