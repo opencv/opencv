@@ -199,9 +199,15 @@ namespace cv{
         CV_Assert(connectivity == 8 || connectivity == 4);
         const int rows = L.rows;
         const int cols = L.cols;
-        //A quick and dirty upper bound for the maximimum number of labels.  The 4 comes from
-        //the fact that a 3x3 block can never have more than 4 unique labels for both 4 & 8-way
-        const size_t Plength = 4 * (size_t(rows + 3 - 1)/3) * (size_t(cols + 3 - 1)/3);
+        //A quick and dirty upper bound for the maximimum number of labels.
+        //Following formula comes from the fact that a 2x2 block in 4-connectivity case
+        //can never have more than 2 new labels and 1 label for background.
+        //Worst case image example pattern:
+        //1 0 1 0 1...
+        //0 1 0 1 0...
+        //1 0 1 0 1...
+        //............
+        const size_t Plength = (size_t(rows) * size_t(cols) + 1) / 2 + 1;
         LabelT *P = (LabelT *) fastMalloc(sizeof(LabelT) * Plength);
         P[0] = 0;
         LabelT lunique = 1;
@@ -343,13 +349,20 @@ namespace cv{
     LabelT operator()(const cv::Mat &img, cv::Mat &imgLabels, int connectivity,  StatsOp &sop){
         CV_Assert(img.rows == imgLabels.rows);
         CV_Assert(img.cols == imgLabels.cols);
-        CV_Assert(connectivity == 8 || connectivity == 4);
+        CV_Assert(connectivity == 8);
 
         const int h = img.rows;
         const int w = img.cols;
 
         //A quick and dirty upper bound for the maximimum number of labels.
-        const size_t Plength = img.rows*img.cols / 4;
+        //Following formula comes from the fact that a 2x2 block in 8-connectivity case
+        //can never have more than 1 new label and 1 label for background.
+        //Worst case image example pattern:
+        //1 0 1 0 1...
+        //0 0 0 0 0...
+        //1 0 1 0 1...
+        //............
+        const size_t Plength = size_t((h + 1) / 2) * size_t((w + 1) / 2) + 1;
         LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT)* Plength);
         P[0] = 0;
         LabelT lunique = 1;
