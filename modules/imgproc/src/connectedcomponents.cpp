@@ -627,7 +627,7 @@ namespace cv{
 
                 //merge labels of different chunks
                 mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels);
-                
+
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
                     flattenL(P, int(i * w + 1) / 2 + 1, chunksSizeAndLabels[i + 1], nLabels);
                 }
