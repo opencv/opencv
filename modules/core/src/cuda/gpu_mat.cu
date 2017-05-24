@@ -87,6 +87,7 @@ namespace
 }
 
 
+
 cv::cuda::device::ThrustAllocator& cv::cuda::device::ThrustAllocator::getAllocator()
 {
     return *g_thrustAllocator;
@@ -99,6 +100,29 @@ void cv::cuda::device::ThrustAllocator::setAllocator(cv::cuda::device::ThrustAll
     else
         g_thrustAllocator = allocator;
 }
+
+#ifndef CV_THREAD_LOCAL
+#  if defined __GNUC__
+#    if __GNUC__ > 4 && __GNUC_MINOR__ >= 8
+#      define CV_THREAD_LOCAL thread_local
+#    else
+#      ifdef __APPLE__
+#        if TARGET_OS_MAC
+#          define CV_THREAD_LOCAL __thread
+#        endif
+#      else
+#        define CV_THREAD_LOCAL __thread
+#      endif
+#   endif
+#  else
+#    if defined _MSC_VER
+#      if _MSC_VER >= 1900
+#        define CV_THREAD_LOCAL thread_local
+#      else
+#      endif
+#    endif
+#  endif
+#endif
 
 namespace
 {
@@ -135,16 +159,36 @@ namespace
 
     DefaultAllocator cudaDefaultAllocator;
     GpuMat::Allocator* g_defaultAllocator = &cudaDefaultAllocator;
+#ifdef CV_THREAD_LOCAL
+    CV_THREAD_LOCAL GpuMat::Allocator* t_defaultAllocator = NULL;
+#endif
+}
+
+GpuMat::Allocator* cv::cuda::GpuMat::getStdAllocator()
+{
+    return &cudaDefaultAllocator;
 }
 
 GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
 {
+#ifdef CV_THREAD_LOCAL
+    if(t_defaultAllocator)
+        return t_defaultAllocator;
+#endif
     return g_defaultAllocator;
+}
+
+void cv::cuda::GpuMat::setDefaultThreadAllocator(Allocator* allocator)
+{
+#ifdef CV_THREAD_LOCAL
+    t_defaultAllocator = allocator;
+#else
+    cv::error(Error::StsNotImplemented, "Your platform doesn't support thread local allocators", __FUNCTION__, __FILE__, __LINE__);
+#endif
 }
 
 void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
 {
-    CV_Assert( allocator != 0 );
     g_defaultAllocator = allocator;
 }
 

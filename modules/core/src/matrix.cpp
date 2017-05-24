@@ -44,6 +44,7 @@
 #include "opencl_kernels_core.hpp"
 
 #include "bufferpool.impl.hpp"
+#include "opencv2/core/utility.hpp"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *
@@ -220,24 +221,69 @@ public:
         delete u;
     }
 };
+
+#ifndef CV_THREAD_LOCAL
+#  if defined __GNUC__
+#    if __GNUC__ > 4 && __GNUC_MINOR__ >= 8
+#      define CV_THREAD_LOCAL thread_local
+#    else
+#      ifdef __APPLE__
+#        if TARGET_OS_MAC
+#          define CV_THREAD_LOCAL __thread
+#        endif
+#      else
+#        define CV_THREAD_LOCAL __thread
+#      endif
+#   endif
+#  else
+#    if defined _MSC_VER
+#      if _MSC_VER >= 1900
+#        define CV_THREAD_LOCAL thread_local
+#      else
+#      endif
+#    endif
+#  endif
+#endif
+
 namespace
 {
     MatAllocator* g_matAllocator = NULL;
+#ifdef CV_THREAD_LOCAL
+    CV_THREAD_LOCAL MatAllocator* t_matAllocator = NULL;
+#endif
 }
 
 
 MatAllocator* Mat::getDefaultAllocator()
 {
+#ifdef CV_THREAD_LOCAL
+    if(t_matAllocator)
+    {
+        return t_matAllocator;
+    }
+#endif
     if (g_matAllocator == NULL)
     {
         g_matAllocator = getStdAllocator();
     }
     return g_matAllocator;
 }
+
+void Mat::setDefaultThreadAllocator(MatAllocator* allocator)
+{
+#ifdef CV_THREAD_LOCAL
+    t_matAllocator = allocator;
+#else
+    (void)allocator;
+    cv::error(Error::StsNotImplemented, "Your platform doesn't support thread local allocators", __FUNCTION__, __FILE__, __LINE__);
+#endif
+}
+
 void Mat::setDefaultAllocator(MatAllocator* allocator)
 {
     g_matAllocator = allocator;
 }
+
 MatAllocator* Mat::getStdAllocator()
 {
     CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
