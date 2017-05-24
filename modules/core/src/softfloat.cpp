@@ -92,9 +92,6 @@ enum {
 //fixed to make softfloat code stateless
 const uint_fast8_t globalDetectTininess = tininess_afterRounding;
 
-//fixed to make softfloat code stateless
-const uint_fast8_t globalRoundingMode = round_near_even;
-
 /*----------------------------------------------------------------------------
 | Software floating-point exception flags.
 *----------------------------------------------------------------------------*/
@@ -112,6 +109,21 @@ inline void raiseFlags( uint_fast8_t /* flags */)
 {
     //exceptionFlags |= flags;
 }
+
+/*----------------------------------------------------------------------------
+| Software floating-point rounding mode.
+*----------------------------------------------------------------------------*/
+enum {
+    round_near_even   = 0,
+    round_minMag      = 1,
+    round_min         = 2,
+    round_max         = 3,
+    round_near_maxMag = 4,
+    round_odd         = 5
+};
+
+//fixed to make softfloat code stateless
+const uint_fast8_t globalRoundingMode = round_near_even;
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
@@ -236,24 +248,8 @@ softfloat::softfloat( const uint64_t a ) { *this = ui64_to_f32(a); }
 softfloat::softfloat( const  int32_t a ) { *this =  i32_to_f32(a); }
 softfloat::softfloat( const  int64_t a ) { *this =  i64_to_f32(a); }
 
-uint_fast32_t softfloat::toUI32( uint_fast8_t roundingMode, bool exact ) const
-{
-    return (roundingMode == round_minMag) ? f32_to_ui32_r_minMag(*this, exact) : f32_to_ui32(*this, roundingMode, exact);
-}
-uint_fast64_t softfloat::toUI64( uint_fast8_t roundingMode, bool exact ) const
-{
-    return (roundingMode == round_minMag) ? f32_to_ui64_r_minMag(*this, exact) : f32_to_ui64(*this, roundingMode, exact);
-}
-int_fast32_t  softfloat:: toI32( uint_fast8_t roundingMode, bool exact ) const
-{
-    return (roundingMode == round_minMag) ? f32_to_i32_r_minMag (*this, exact) : f32_to_i32 (*this, roundingMode, exact);
-}
-int_fast64_t  softfloat:: toI64( uint_fast8_t roundingMode, bool exact ) const
-{
-    return (roundingMode == round_minMag) ? f32_to_i64_r_minMag (*this, exact) : f32_to_i64 (*this, roundingMode, exact);
-}
-
-softfloat softfloat::round( uint_fast8_t roundingMode, bool exact ) const { return f32_roundToInt(*this, roundingMode, exact); }
+int_fast64_t trunc( const softfloat& a ) { return f32_to_i64_r_minMag(a, false); }
+int_fast64_t round( const softfloat& a ) { return f32_to_i64(a, round_near_even, false); }
 softfloat::operator softdouble() const { return f32_to_f64(*this); }
 
 softfloat softfloat::operator + (const softfloat& a) const { return f32_add(*this, a); }
@@ -274,24 +270,8 @@ softdouble::softdouble( const uint64_t a ) { *this = ui64_to_f64(a); }
 softdouble::softdouble( const  int32_t a ) { *this =  i32_to_f64(a); }
 softdouble::softdouble( const  int64_t a ) { *this =  i64_to_f64(a); }
 
-uint_fast32_t softdouble::toUI32( uint_fast8_t roundingMode, bool exact ) const
-{
-    return (roundingMode == round_minMag) ? f64_to_ui32_r_minMag(*this, exact) : f64_to_ui32(*this, roundingMode, exact);
-}
-uint_fast64_t softdouble::toUI64( uint_fast8_t roundingMode, bool exact ) const
-{
-    return (roundingMode == round_minMag) ? f64_to_ui64_r_minMag(*this, exact) : f64_to_ui64(*this, roundingMode, exact);
-}
-int_fast32_t  softdouble:: toI32( uint_fast8_t roundingMode, bool exact ) const
-{
-    return (roundingMode == round_minMag) ? f64_to_i32_r_minMag (*this, exact) : f64_to_i32 (*this, roundingMode, exact);
-}
-int_fast64_t  softdouble:: toI64( uint_fast8_t roundingMode, bool exact ) const
-{
-    return (roundingMode == round_minMag) ? f64_to_i64_r_minMag (*this, exact) : f64_to_i64 (*this, roundingMode, exact);
-}
-
-softdouble softdouble::round(uint_fast8_t roundingMode, bool exact) const { return f64_roundToInt(*this, roundingMode, exact); }
+int_fast64_t trunc( const softdouble& a ) { return f64_to_i64_r_minMag(a, false); }
+int_fast64_t round( const softdouble& a ) { return f64_to_i64(a, round_near_even, false); }
 softdouble::operator softfloat() const { return f64_to_f32(*this); }
 
 softdouble softdouble::operator + (const softdouble& a) const { return f64_add(*this, a); }
@@ -4307,19 +4287,18 @@ float32_t f32_exp( float32_t x)
         A2 = float64_t(.2402265109513301490103372422686535526573) / EXPPOLY_32F_A0,
         A1 = float64_t(.5550339366753125211915322047004666939128e-1) / EXPPOLY_32F_A0;
 
-    float64_t x64 = x;
     float64_t x0;
     if(expF32UI(x.v) > 127 + 10)
         x0 = signF32UI(x.v) ? -exp_max_val : exp_max_val;
     else
-        x0 = x64 * exp_prescale;
+        x0 = f32_to_f64(x) * exp_prescale;
 
-    int val0 = x0.toI32();
+    int val0 = f64_to_i32(x0, round_near_even, false);
     int t = (val0 >> EXPTAB_SCALE) + 1023;
     t = t < 0 ? 0 : (t > 2047 ? 2047 : t);
     float64_t buf; buf.v = packToF64UI(0, t, 0);
 
-    x0 = (x0 - x0.round()) * exp_postscale;
+    x0 = (x0 - f64_roundToInt(x0, round_near_even, false)) * exp_postscale;
 
     return (buf * EXPPOLY_32F_A0 * float64_t(expTab[val0 & EXPTAB_MASK]) * ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4));
 }
@@ -4344,12 +4323,12 @@ float64_t f64_exp(float64_t x)
     else
         x0 = x * exp_prescale;
 
-    int val0 = x0.toI32();
+    int val0 = round(x0);
     int t = (val0 >> EXPTAB_SCALE) + 1023;
     t = t < 0 ? 0 : (t > 2047 ? 2047 : t);
     float64_t buf; buf.v = packToF64UI(0, t, 0);
 
-    x0 = (x0 - x0.round()) * exp_postscale;
+    x0 = (x0 - f64_roundToInt(x0, round_near_even, false)) * exp_postscale;
 
     return buf * EXPPOLY_32F_A0 * float64_t(expTab[val0 & EXPTAB_MASK]) * (((((A0*x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)*x0 + A5);
 }
@@ -4737,7 +4716,7 @@ float32_t f32_pow( float32_t x, float32_t y)
     {
         if(xnan) v = nan;
         else if(xinf) v = (y < zero) ? zero : inf;
-        else if(y == y.round()) v = f32_powi(x, y.toI32());
+        else if(y == f32_roundToInt(y, round_near_even, false)) v = f32_powi(x, f32_to_i32(y, round_near_even, false));
         else if(x  < zero) v = nan;
         // (0 ** 0) == 1
         else if(x == zero) v = (y < zero) ? inf : (y == zero ? one : zero);
@@ -4764,7 +4743,7 @@ float64_t f64_pow( float64_t x, float64_t y)
     {
         if(xnan) v = nan;
         else if(xinf) v = (y < zero) ? zero : inf;
-        else if(y == y.round()) v = f64_powi(x, y.toI32());
+        else if(y == f64_roundToInt(y, round_near_even, false)) v = f64_powi(x, f64_to_i32(y, round_near_even, false));
         else if(x  < zero) v = nan;
         // (0 ** 0) == 1
         else if(x == zero) v = (y < zero) ? inf : (y == zero ? one : zero);

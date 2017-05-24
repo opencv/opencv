@@ -86,21 +86,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace cv
 {
 
-/*----------------------------------------------------------------------------
-| Software floating-point rounding mode.
-*----------------------------------------------------------------------------*/
-enum {
-    round_near_even   = 0,
-    round_minMag      = 1,
-    round_min         = 2,
-    round_max         = 3,
-    round_near_maxMag = 4,
-    round_odd         = 5
-};
-
-/*----------------------------------------------------------------------------
-*----------------------------------------------------------------------------*/
-
 struct softfloat;
 struct softdouble;
 
@@ -122,12 +107,6 @@ public:
     explicit softfloat( const int64_t );
     explicit softfloat( const float a ) { Cv32suf s; s.f = a; v = s.u; }
 
-    uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
-    uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
-    int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
-    int_fast64_t   toI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
-
-    softfloat  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
     operator softdouble() const;
     operator float() const { Cv32suf s; s.u = v; return s.f; }
 
@@ -162,6 +141,9 @@ public:
     uint32_t v;
 };
 
+CV_EXPORTS int_fast64_t round( const softfloat& a );
+CV_EXPORTS int_fast64_t trunc( const softfloat& a );
+
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
@@ -183,12 +165,6 @@ public:
     explicit softdouble( const  int64_t );
     explicit softdouble( const double a ) { Cv64suf s; s.f = a; v = s.u; }
 
-    uint_fast32_t toUI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
-    uint_fast64_t toUI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
-    int_fast32_t   toI32( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
-    int_fast64_t   toI64( uint_fast8_t roundingMode = round_near_even, bool exact = false ) const;
-
-    softdouble  round( uint_fast8_t roundingMode = round_near_even, bool exact = false) const;
     operator softfloat() const;
     operator double() const { Cv64suf s; s.u = v; return s.f; }
 
@@ -223,6 +199,9 @@ public:
     uint64_t v;
 };
 
+CV_EXPORTS int_fast64_t round( const softdouble& a );
+CV_EXPORTS int_fast64_t trunc( const softdouble& a );
+
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
@@ -236,17 +215,11 @@ CV_EXPORTS softdouble sqrt( const softdouble& a );
 | Ported from OpenCV and added for usability
 *----------------------------------------------------------------------------*/
 
-inline softfloat min(const softfloat a, const softfloat b);
-inline softdouble min(const softdouble a, const softdouble b);
+inline softfloat  min(const softfloat&  a, const softfloat&  b) { return (a > b) ? b : a; }
+inline softdouble min(const softdouble& a, const softdouble& b) { return (a > b) ? b : a; }
 
-inline softfloat max(const softfloat a, const softfloat b);
-inline softdouble max(const softdouble a, const softdouble b);
-
-inline softfloat min(const softfloat a, const softfloat b) { return (a > b) ? b : a; }
-inline softdouble min(const softdouble a, const softdouble b) { return (a > b) ? b : a; }
-
-inline softfloat max(const softfloat a, const softfloat b) { return (a > b) ? a : b; }
-inline softdouble max(const softdouble a, const softdouble b) { return (a > b) ? a : b; }
+inline softfloat  max(const softfloat&  a, const softfloat&  b) { return (a > b) ? a : b; }
+inline softdouble max(const softdouble& a, const softdouble& b) { return (a > b) ? a : b; }
 
 inline softfloat  abs( softfloat  a) { softfloat  x; x.v = a.v & ((1U   << 31) - 1); return x; }
 inline softdouble abs( softdouble a) { softdouble x; x.v = a.v & ((1ULL << 63) - 1); return x; }
