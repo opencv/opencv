@@ -1267,6 +1267,9 @@ private:
 #ifdef HAVE_OPENVX
 namespace cv
 {
+    namespace ovx {
+        template <> inline bool skipSmallImages<VX_KERNEL_HISTOGRAM>(int w, int h) { return w*h < 2048 * 1536; }
+    }
     static bool openvx_calchist(const Mat& image, OutputArray _hist, const int histSize,
         const float* _range)
     {
