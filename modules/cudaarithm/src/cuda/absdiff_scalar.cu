@@ -56,14 +56,14 @@ void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const G
 
 namespace
 {
-    template <typename T, typename S> struct AbsDiffScalarOp : unary_function<T, T>
+    template <typename SrcType, typename ScalarType, typename DstType> struct AbsDiffScalarOp : unary_function<SrcType, DstType>
     {
-        S val;
+        ScalarType val;
 
-        __device__ __forceinline__ T operator ()(T a) const
+        __device__ __forceinline__ DstType operator ()(SrcType a) const
         {
-            abs_func<S> f;
-            return saturate_cast<T>(f(a - val));
+            abs_func<ScalarType> f;
+            return saturate_cast<DstType>(f(saturate_cast<ScalarType>(a) - val));
         }
     };
 
@@ -78,33 +78,57 @@ namespace
     };
 
     template <typename SrcType, typename ScalarDepth>
-    void absDiffScalarImpl(const GpuMat& src, double value, GpuMat& dst, Stream& stream)
+    void absDiffScalarImpl(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream)
     {
-        AbsDiffScalarOp<SrcType, ScalarDepth> op;
-        op.val = static_cast<ScalarDepth>(value);
+        typedef typename MakeVec<ScalarDepth, VecTraits<SrcType>::cn>::type ScalarType;
+
+        cv::Scalar_<ScalarDepth> value_ = value;
+
+        AbsDiffScalarOp<SrcType, ScalarType, SrcType> op;
+        op.val = VecTraits<ScalarType>::make(value_.val);
         gridTransformUnary_< TransformPolicy<ScalarDepth> >(globPtr<SrcType>(src), globPtr<SrcType>(dst), op, stream);
     }
 }
 
 void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int)
 {
-    typedef void (*func_t)(const GpuMat& src, double val, GpuMat& dst, Stream& stream);
-    static const func_t funcs[] =
+    typedef void (*func_t)(const GpuMat& src, cv::Scalar val, GpuMat& dst, Stream& stream);
+    static const func_t funcs[7][4] =
     {
-        absDiffScalarImpl<uchar, float>,
-        absDiffScalarImpl<schar, float>,
-        absDiffScalarImpl<ushort, float>,
-        absDiffScalarImpl<short, float>,
-        absDiffScalarImpl<int, float>,
-        absDiffScalarImpl<float, float>,
-        absDiffScalarImpl<double, double>
+        {
+            absDiffScalarImpl<uchar, float>, absDiffScalarImpl<uchar2, float>, absDiffScalarImpl<uchar3, float>, absDiffScalarImpl<uchar4, float>
+        },
+        {
+            absDiffScalarImpl<schar, float>, absDiffScalarImpl<char2, float>, absDiffScalarImpl<char3, float>, absDiffScalarImpl<char4, float>
+        },
+        {
+            absDiffScalarImpl<ushort, float>, absDiffScalarImpl<ushort2, float>, absDiffScalarImpl<ushort3, float>, absDiffScalarImpl<ushort4, float>
+        },
+        {
+            absDiffScalarImpl<short, float>, absDiffScalarImpl<short2, float>, absDiffScalarImpl<short3, float>, absDiffScalarImpl<short4, float>
+        },
+        {
+            absDiffScalarImpl<int, float>, absDiffScalarImpl<int2, float>, absDiffScalarImpl<int3, float>, absDiffScalarImpl<int4, float>
+        },
+        {
+          absDiffScalarImpl<float, float>, absDiffScalarImpl<float2, float>, absDiffScalarImpl<float3, float>, absDiffScalarImpl<float4, float>
+        },
+        {
+          absDiffScalarImpl<double, double>, absDiffScalarImpl<double2, double>, absDiffScalarImpl<double3, double>, absDiffScalarImpl<double4, double>
+        }
     };
 
-    const int depth = src.depth();
+    const int sdepth = src.depth();
+    const int ddepth = dst.depth();
+    const int cn = src.channels();
 
-    CV_DbgAssert( depth <= CV_64F );
+    CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F && cn <= 4 && src.type() == dst.type());
 
-    funcs[depth](src, val[0], dst, stream);
+    const func_t func = funcs[sdepth][cn - 1];
+    if (!func)
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
+
+    func(src, val, dst, stream);
 }
 
 #endif
