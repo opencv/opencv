@@ -51,6 +51,8 @@
 #include "opencv2/core.hpp"
 #include "cvconfig.h"
 
+#include <opencv2/core/utils/trace.hpp>
+
 #ifdef HAVE_EIGEN
 #  if defined __GNUC__ && defined __APPLE__
 #    pragma GCC diagnostic ignored "-Wshadow"
@@ -548,6 +550,7 @@ static struct __IppInitializer__ __ipp_initializer__;
     {                                                                       \
         if (cv::ipp::useIPP() && (condition))                               \
         {                                                                   \
+            CV__TRACE_REGION_("IPP:" #func, CV_TRACE_NS::details::REGION_FLAG_IMPL_IPP) \
             if(func)                                                        \
             {                                                               \
                 CV_IMPL_ADD(CV_IMPL_IPP);                                   \
@@ -562,23 +565,21 @@ static struct __IppInitializer__ __ipp_initializer__;
     }
 #else
 #define CV_IPP_RUN_(condition, func, ...)                                   \
-    if (cv::ipp::useIPP() && (condition) && (func))                         \
-    {                                                                       \
-        CV_IMPL_ADD(CV_IMPL_IPP);                                           \
-        return __VA_ARGS__;                                                 \
-    }
+        if (cv::ipp::useIPP() && (condition))                               \
+        {                                                                   \
+            CV__TRACE_REGION_("IPP:" #func, CV_TRACE_NS::details::REGION_FLAG_IMPL_IPP) \
+            if(func)                                                        \
+            {                                                               \
+                CV_IMPL_ADD(CV_IMPL_IPP);                                   \
+                return __VA_ARGS__;                                         \
+            }                                                               \
+        }
 #endif
-#define CV_IPP_RUN_FAST(func, ...)                                          \
-    if (cv::ipp::useIPP() && (func))                                        \
-    {                                                                       \
-        CV_IMPL_ADD(CV_IMPL_IPP);                                           \
-        return __VA_ARGS__;                                                 \
-    }
 #else
 #define CV_IPP_RUN_(condition, func, ...)
-#define CV_IPP_RUN_FAST(func, ...)
 #endif
 
+#define CV_IPP_RUN_FAST(func, ...) CV_IPP_RUN_(true, func, __VA_ARGS__)
 #define CV_IPP_RUN(condition, func, ...) CV_IPP_RUN_((condition), (func), __VA_ARGS__)
 
 
@@ -768,15 +769,15 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #else
 #define CV_INSTRUMENT_REGION_META(...)
 
-#define CV_INSTRUMENT_REGION_()
-#define CV_INSTRUMENT_REGION_NAME(...)
+#define CV_INSTRUMENT_REGION_()                            CV_TRACE_FUNCTION()
+#define CV_INSTRUMENT_REGION_NAME(...)                     CV_TRACE_REGION(__VA_ARGS__)
 #define CV_INSTRUMENT_REGION_MT_FORK()
 
-#define CV_INSTRUMENT_REGION_IPP()
+#define CV_INSTRUMENT_REGION_IPP()                         CV__TRACE_REGION_("IPP", CV_TRACE_NS::details::REGION_FLAG_IMPL_IPP)
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...) ((FUN)(__VA_ARGS__))
 #define CV_INSTRUMENT_MARK_IPP(...)
 
-#define CV_INSTRUMENT_REGION_OPENCL()
+#define CV_INSTRUMENT_REGION_OPENCL()                      CV__TRACE_REGION_("OpenCL", CV_TRACE_NS::details::REGION_FLAG_IMPL_OPENCL)
 #define CV_INSTRUMENT_REGION_OPENCL_COMPILE(...)
 #define CV_INSTRUMENT_REGION_OPENCL_RUN(...)
 #define CV_INSTRUMENT_MARK_OPENCL(...)

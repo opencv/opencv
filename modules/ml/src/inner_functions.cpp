@@ -45,6 +45,7 @@ namespace cv { namespace ml {
 ParamGrid::ParamGrid() { minVal = maxVal = 0.; logStep = 1; }
 ParamGrid::ParamGrid(double _minVal, double _maxVal, double _logStep)
 {
+    CV_TRACE_FUNCTION();
     minVal = std::min(_minVal, _maxVal);
     maxVal = std::max(_minVal, _maxVal);
     logStep = std::max(_logStep, 1.);
@@ -60,17 +61,20 @@ int StatModel::getVarCount() const { return 0; }
 
 bool StatModel::train( const Ptr<TrainData>&, int )
 {
+    CV_TRACE_FUNCTION();
     CV_Error(CV_StsNotImplemented, "");
     return false;
 }
 
 bool StatModel::train( InputArray samples, int layout, InputArray responses )
 {
+    CV_TRACE_FUNCTION();
     return train(TrainData::create(samples, layout, responses));
 }
 
 float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArray _resp ) const
 {
+    CV_TRACE_FUNCTION_SKIP_NESTED();
     Mat samples = data->getSamples();
     int layout = data->getLayout();
     Mat sidx = testerr ? data->getTestSampleIdx() : data->getTrainSampleIdx();
@@ -119,6 +123,7 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
 /* Calculates upper triangular matrix S, where A is a symmetrical matrix A=S'*S */
 static void Cholesky( const Mat& A, Mat& S )
 {
+    CV_TRACE_FUNCTION();
     CV_Assert(A.type() == CV_32F);
 
     S = A.clone();
@@ -133,6 +138,7 @@ static void Cholesky( const Mat& A, Mat& S )
    average row vector, <cov> - symmetric covariation matrix */
 void randMVNormal( InputArray _mean, InputArray _cov, int nsamples, OutputArray _samples )
 {
+    CV_TRACE_FUNCTION();
     // check mean vector and covariance matrix
     Mat mean = _mean.getMat(), cov = _cov.getMat();
     int dim = (int)mean.total();  // dimensionality

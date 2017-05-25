@@ -8,6 +8,13 @@ if(NOT ITT_LIBRARY)
 endif()
 project(${ITT_LIBRARY} C)
 
+if(NOT WIN32)
+  include(CheckLibraryExists)
+  if(COMMAND CHECK_LIBRARY_EXISTS)
+    CHECK_LIBRARY_EXISTS(dl dlerror "" HAVE_DL_LIBRARY)
+  endif()
+endif()
+
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(ITT_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -29,6 +36,12 @@ set(ITT_SRCS
 )
 
 add_library(${ITT_LIBRARY} STATIC ${ITT_SRCS} ${ITT_PUBLIC_HDRS} ${ITT_PRIVATE_HDRS})
+
+if(NOT WIN32)
+  if(HAVE_DL_LIBRARY)
+    target_link_libraries(${ITT_LIBRARY} dl)
+  endif()
+endif()
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)

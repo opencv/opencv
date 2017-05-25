@@ -37,6 +37,7 @@ ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda")
 ocv_list_filterout(opencv_hdrs "modules/cuda.*")
 ocv_list_filterout(opencv_hdrs "modules/cudev")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
+ocv_list_filterout(opencv_hdrs "modules/.+/utils/.*")
 ocv_list_filterout(opencv_hdrs "modules/.*/detection_based_tracker.hpp") # Conditional compilation
 
 set(cv2_generated_hdrs
