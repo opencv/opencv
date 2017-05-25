@@ -184,6 +184,9 @@ cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
 #ifdef HAVE_OPENVX
 namespace cv
 {
+    namespace ovx {
+        template <> inline bool skipSmallImages<VX_KERNEL_SOBEL_3x3>(int w, int h) { return w*h < 320 * 240; }
+    }
     static bool openvx_sobel(InputArray _src, OutputArray _dst,
                              int dx, int dy, int ksize,
                              double scale, double delta, int borderType)

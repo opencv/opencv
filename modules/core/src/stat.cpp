@@ -2300,6 +2300,9 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 #endif
 
 #ifdef HAVE_OPENVX
+namespace ovx {
+    template <> inline bool skipSmallImages<VX_KERNEL_MINMAXLOC>(int w, int h) { return w*h < 3840 * 2160; }
+}
 static bool openvx_minMaxIdx(Mat &src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, Mat &mask)
 {
     int stype = src.type();

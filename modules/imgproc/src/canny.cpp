@@ -778,6 +778,9 @@ private:
 };
 
 #ifdef HAVE_OPENVX
+namespace ovx {
+    template <> inline bool skipSmallImages<VX_KERNEL_CANNY_EDGE_DETECTOR>(int w, int h) { return w*h < 640 * 480; }
+}
 static bool openvx_canny(const Mat& src, Mat& dst, int loVal, int hiVal, int kSize, bool useL2)
 {
     using namespace ivx;

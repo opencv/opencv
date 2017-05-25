@@ -1942,6 +1942,9 @@ enum
     VX_ACCUMULATE_WEIGHTED_OP = 2
 };
 
+namespace ovx {
+    template <> inline bool skipSmallImages<VX_KERNEL_ACCUMULATE>(int w, int h) { return w*h < 120 * 60; }
+}
 static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray _mask, double _weight, int opType)
 {
     Mat srcMat = _src.getMat(), dstMat = _dst.getMat();

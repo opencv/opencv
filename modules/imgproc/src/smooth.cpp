@@ -1639,6 +1639,9 @@ cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ks
 #ifdef HAVE_OPENVX
 namespace cv
 {
+    namespace ovx {
+        template <> inline bool skipSmallImages<VX_KERNEL_BOX_3x3>(int w, int h) { return w*h < 640 * 480; }
+    }
     static bool openvx_boxfilter(InputArray _src, OutputArray _dst, int ddepth,
                                  Size ksize, Point anchor,
                                  bool normalize, int borderType)
@@ -2172,6 +2175,9 @@ static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize,
 
 #ifdef HAVE_OPENVX
 
+namespace ovx {
+    template <> inline bool skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(int w, int h) { return w*h < 320 * 240; }
+}
 static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                                 double sigma1, double sigma2, int borderType)
 {
@@ -3302,6 +3308,9 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 #ifdef HAVE_OPENVX
 namespace cv
 {
+    namespace ovx {
+        template <> inline bool skipSmallImages<VX_KERNEL_MEDIAN_3x3>(int w, int h) { return w*h < 1280 * 720; }
+    }
     static bool openvx_medianFilter(InputArray _src, OutputArray _dst, int ksize)
     {
         if (_src.type() != CV_8UC1 || _dst.type() != CV_8U
