@@ -79,6 +79,115 @@ inline uint32x4_t cv_vrndq_u32_f32(float32x4_t v)
     return vcvtq_u32_f32(vaddq_f32(v, v_05));
 }
 
+inline uint16x8_t cv_vpacks_u16_u32(uint32x4_t v0, uint32x4_t v1)
+{
+    return vcombine_u16(vqmovn_u32(v0), vqmovn_u32(v1));
+}
+
+inline uint8x16_t cv_vpacks_u8_u16(uint16x8_t v0, uint16x8_t v1)
+{
+    return vcombine_u8(vqmovn_u16(v0), vqmovn_u16(v1));
+}
+
+inline int16x8_t cv_vpacks_s16_s32(int32x4_t v0, int32x4_t v1)
+{
+    return vcombine_s16(vqmovn_s32(v0), vqmovn_s32(v1));
+}
+
+inline int8x16_t cv_vpacks_s8_s16(int16x8_t v0, int16x8_t v1)
+{
+    return vcombine_s8(vqmovn_s16(v0), vqmovn_s16(v1));
+}
+
+inline uint8x16_t cv_vpacks_u8_s16(int16x8_t v0, int16x8_t v1)
+{
+    return vcombine_u8(vqmovun_s16(v0), vqmovun_s16(v1));
+}
+
+inline float32x4_t cv_vunpack_lo_f32(float32x4_t v0, float32x4_t v1)
+{
+    float32x2x2_t result = vzip_f32(vget_low_f32(v0), vget_low_f32(v1));
+    return vcombine_f32(result.val[0], result.val[1]);
+}
+
+inline float32x4_t cv_vunpack_hi_f32(float32x4_t v0, float32x4_t v1)
+{
+    float32x2x2_t result = vzip_f32(vget_high_f32(v0), vget_high_f32(v1));
+    return vcombine_f32(result.val[0], result.val[1]);
+}
+
+inline uint32x4_t cv_vunpack_lo_u32(uint32x4_t v0, uint32x4_t v1)
+{
+    uint32x2x2_t result = vzip_u32(vget_low_u32(v0), vget_low_u32(v1));
+    return vcombine_u32(result.val[0], result.val[1]);
+}
+
+inline uint32x4_t cv_vunpack_hi_u32(uint32x4_t v0, uint32x4_t v1)
+{
+    uint32x2x2_t result = vzip_u32(vget_high_u32(v0), vget_high_u32(v1));
+    return vcombine_u32(result.val[0], result.val[1]);
+}
+
+inline uint16x8_t cv_vunpack_lo_u16(uint16x8_t v0, uint16x8_t v1)
+{
+    uint16x4x2_t result = vzip_u16(vget_low_u16(v0), vget_low_u16(v1));
+    return vcombine_u16(result.val[0], result.val[1]);
+}
+
+inline uint16x8_t cv_vunpack_hi_u16(uint16x8_t v0, uint16x8_t v1)
+{
+    uint16x4x2_t result = vzip_u16(vget_high_u16(v0), vget_high_u16(v1));
+    return vcombine_u16(result.val[0], result.val[1]);
+}
+
+inline uint8x16_t cv_vunpack_lo_u8(uint8x16_t v0, uint8x16_t v1)
+{
+    uint8x8x2_t result = vzip_u8(vget_low_u8(v0), vget_low_u8(v1));
+    return vcombine_u8(result.val[0], result.val[1]);
+}
+
+inline uint8x16_t cv_vunpack_hi_u8(uint8x16_t v0, uint8x16_t v1)
+{
+    uint8x8x2_t result = vzip_u8(vget_high_u8(v0), vget_high_u8(v1));
+    return vcombine_u8(result.val[0], result.val[1]);
+}
+
+inline int32x4_t cv_vunpack_lo_s32(int32x4_t v0, int32x4_t v1)
+{
+    int32x2x2_t result = vzip_s32(vget_low_s32(v0), vget_low_s32(v1));
+    return vcombine_s32(result.val[0], result.val[1]);
+}
+
+inline int32x4_t cv_vunpack_hi_s32(int32x4_t v0, int32x4_t v1)
+{
+    int32x2x2_t result = vzip_s32(vget_high_s32(v0), vget_high_s32(v1));
+    return vcombine_s32(result.val[0], result.val[1]);
+}
+
+inline int16x8_t cv_vunpack_lo_s16(int16x8_t v0, int16x8_t v1)
+{
+    int16x4x2_t result = vzip_s16(vget_low_s16(v0), vget_low_s16(v1));
+    return vcombine_s16(result.val[0], result.val[1]);
+}
+
+inline int16x8_t cv_vunpack_hi_s16(int16x8_t v0, int16x8_t v1)
+{
+    int16x4x2_t result = vzip_s16(vget_high_s16(v0), vget_high_s16(v1));
+    return vcombine_s16(result.val[0], result.val[1]);
+}
+
+inline int8x16_t cv_vunpack_lo_s8(int8x16_t v0, int8x16_t v1)
+{
+    int8x8x2_t result = vzip_s8(vget_low_s8(v0), vget_low_s8(v1));
+    return vcombine_s8(result.val[0], result.val[1]);
+}
+
+inline int8x16_t cv_vunpack_hi_s8(int8x16_t v0, int8x16_t v1)
+{
+    int8x8x2_t result = vzip_s8(vget_high_s8(v0), vget_high_s8(v1));
+    return vcombine_s8(result.val[0], result.val[1]);
+}
+
 inline float32x4_t cv_vrecpq_f32(float32x4_t val)
 {
     float32x4_t reciprocal = vrecpeq_f32(val);
