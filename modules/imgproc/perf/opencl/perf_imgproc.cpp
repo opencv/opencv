@@ -47,8 +47,6 @@
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-#ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
 
@@ -318,11 +316,11 @@ OCL_PERF_TEST_P(CannyFixture, Canny, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF
 
     declare.in(img).out(edges);
 
-    OCL_TEST_CYCLE() cv::Canny(img, edges, 50.0, 100.0, apertureSize, L2Grad);
+    PERF_SAMPLE_BEGIN();
+        cv::Canny(img, edges, 50.0, 100.0, apertureSize, L2Grad);
+    PERF_SAMPLE_END();
 
     SANITY_CHECK_NOTHING();
 }
 
 } } // namespace cvtest::ocl
-
-#endif // HAVE_OPENCL

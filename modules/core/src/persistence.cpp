@@ -6921,7 +6921,7 @@ FileNode FileStorage::root(int streamidx) const
 
 FileStorage& operator << (FileStorage& fs, const String& str)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_REGION_VERBOSE();
 
     enum { NAME_EXPECTED = FileStorage::NAME_EXPECTED,
         VALUE_EXPECTED = FileStorage::VALUE_EXPECTED,

@@ -590,28 +590,33 @@ VideoCapture::VideoCapture()
 
 VideoCapture::VideoCapture(const String& filename, int apiPreference)
 {
+    CV_TRACE_FUNCTION();
     open(filename, apiPreference);
 }
 
 VideoCapture::VideoCapture(const String& filename)
 {
+    CV_TRACE_FUNCTION();
     open(filename, CAP_ANY);
 }
 
 VideoCapture::VideoCapture(int index)
 {
+    CV_TRACE_FUNCTION();
     open(index);
 }
 
 VideoCapture::~VideoCapture()
 {
+    CV_TRACE_FUNCTION();
+
     icap.release();
     cap.release();
 }
 
 bool VideoCapture::open(const String& filename, int apiPreference)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_FUNCTION();
 
     if (isOpened()) release();
     icap = IVideoCapture_create(filename);
@@ -624,14 +629,14 @@ bool VideoCapture::open(const String& filename, int apiPreference)
 
 bool VideoCapture::open(const String& filename)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_FUNCTION();
 
     return open(filename, CAP_ANY);
 }
 
 bool VideoCapture::open(int index)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_FUNCTION();
 
     if (isOpened()) release();
     icap = IVideoCapture_create(index);
@@ -642,6 +647,8 @@ bool VideoCapture::open(int index)
 }
 bool  VideoCapture::open(int cameraNum, int apiPreference)
 {
+    CV_TRACE_FUNCTION();
+
     cameraNum = cameraNum + apiPreference;
     return open(cameraNum);
 }
@@ -653,6 +660,7 @@ bool VideoCapture::isOpened() const
 
 void VideoCapture::release()
 {
+    CV_TRACE_FUNCTION();
     icap.release();
     cap.release();
 }
