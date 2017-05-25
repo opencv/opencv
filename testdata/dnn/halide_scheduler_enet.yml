@@ -1,0 +1,517 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for ENet architecture.
+
+patterns:
+  stripe:
+    reorder: [c, x, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 16 }
+  tile_xy:
+    split: { x: x_split, y: y_split }
+    fuse: { src: [xo, yo], dst: tile }
+    reorder: [xi, yi, tile]
+    parallel: tile
+    vectorize: { xi: 16 }
+  tile_xyc:
+    split: { x: x_split, y: y_split, c: c_split }
+    fuse: { src: [xo, yo, co], dst: tile }
+    reorder: [xi, yi, ci, tile]
+    parallel: tile
+    vectorize: { xi: 16 }
+
+scheduling:
+  # Initial bottleneck.
+  l2_Convolution:
+    pattern: stripe
+  l2_Convolution_constant_exterior:
+    compute_at: { l2_Convolution: yi }
+  l3_Pooling:
+    pattern: tile_xy
+    params: { x_split: 32, y_split: 32 }
+  l6_ChannelsPReLU:
+    pattern: tile_xy
+    params: { x_split: 32, y_split: 32 }
+
+  # Pooling bottleneck.
+  l10_ChannelsPReLU:
+    pattern: stripe
+  l8_Convolution_constant_exterior:
+    compute_at: { l10_ChannelsPReLU: yi }
+  l13_ChannelsPReLU:
+    pattern: stripe
+  l11_Convolution_constant_exterior:
+    compute_at: { l13_ChannelsPReLU: yi }
+  l16_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l18_Pooling:
+    pattern: tile_xy
+    params: { x_split: 64, y_split: 64 }
+  l21_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+
+  # Bottleneck 1.1.
+  l25_ChannelsPReLU:
+    pattern: stripe
+  l23_Convolution_constant_exterior:
+    compute_at: { l25_ChannelsPReLU: yi }
+  l28_ChannelsPReLU:
+    pattern: stripe
+  l26_Convolution_constant_exterior:
+    compute_at: { l28_ChannelsPReLU: yi }
+  l31_Power:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+  l34_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+
+  # Bottleneck 1.2.
+  l38_ChannelsPReLU:
+    pattern: stripe
+  l36_Convolution_constant_exterior:
+    compute_at: { l38_ChannelsPReLU: yi }
+  l41_ChannelsPReLU:
+    pattern: stripe
+  l39_Convolution_constant_exterior:
+    compute_at: { l41_ChannelsPReLU: yi }
+  l44_Power:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+  l47_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+
+  # Bottleneck 1.3.
+  l51_ChannelsPReLU:
+    pattern: stripe
+  l49_Convolution_constant_exterior:
+    compute_at: { l51_ChannelsPReLU: yi }
+  l54_ChannelsPReLU:
+    pattern: stripe
+  l52_Convolution_constant_exterior:
+    compute_at: { l54_ChannelsPReLU: yi }
+  l57_Power:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+  l60_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+
+  # Bottleneck 1.4.
+  l64_ChannelsPReLU:
+    pattern: stripe
+  l62_Convolution_constant_exterior:
+    compute_at: { l64_ChannelsPReLU: yi }
+  l67_ChannelsPReLU:
+    pattern: stripe
+  l65_Convolution_constant_exterior:
+    compute_at: { l67_ChannelsPReLU: yi }
+  l70_Power:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+  l73_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+
+  # Pooling bottleneck.
+  l77_ChannelsPReLU:
+    pattern: stripe
+  l75_Convolution_constant_exterior:
+    compute_at: { l77_ChannelsPReLU: yi }
+  l80_ChannelsPReLU:
+    pattern: stripe
+  l78_Convolution_constant_exterior:
+    compute_at: { l80_ChannelsPReLU: yi }
+  l83_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l85_Pooling:
+    pattern: tile_xy
+    params: { x_split: 32, y_split: 32 }
+  l88_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+
+  # Bottleneck 2.1.
+  l92_ChannelsPReLU:
+    pattern: stripe
+  l90_Convolution_constant_exterior:
+    compute_at: { l92_ChannelsPReLU: yi }
+  l95_ChannelsPReLU:
+    pattern: stripe
+  l93_Convolution_constant_exterior:
+    compute_at: { l95_ChannelsPReLU: yi }
+  l98_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l101_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 2.2.
+  l105_ChannelsPReLU:
+    pattern: stripe
+  l103_Convolution_constant_exterior:
+    compute_at: { l105_ChannelsPReLU: yi }
+  l108_ChannelsPReLU:
+    pattern: stripe
+  l106_Convolution_constant_exterior:
+    compute_at: { l108_ChannelsPReLU: yi }
+  l111_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l114_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 2.3, asymmetric.
+  l118_ChannelsPReLU:
+    pattern: stripe
+  l116_Convolution_constant_exterior:
+    compute_at: { l118_ChannelsPReLU: yi }
+  l119_Convolution:
+    pattern: stripe
+  l119_Convolution_constant_exterior:
+    compute_at: { l119_Convolution: yi }
+  l122_ChannelsPReLU:
+    pattern: stripe
+  l120_Convolution_constant_exterior:
+    compute_at: { l122_ChannelsPReLU: yi }
+  l125_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 32 }
+  l128_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 32 }
+
+  # Bottleneck 2.4.
+  l132_ChannelsPReLU:
+    pattern: stripe
+  l130_Convolution_constant_exterior:
+    compute_at: { l132_ChannelsPReLU: yi }
+  l135_ChannelsPReLU:
+    pattern: stripe
+  l133_Convolution_constant_exterior:
+    compute_at: { l135_ChannelsPReLU: yi }
+  l138_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l141_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 2.5.
+  l145_ChannelsPReLU:
+    pattern: stripe
+  l143_Convolution_constant_exterior:
+    compute_at: { l145_ChannelsPReLU: yi }
+  l148_ChannelsPReLU:
+    pattern: stripe
+  l146_Convolution_constant_exterior:
+    compute_at: { l148_ChannelsPReLU: yi }
+  l151_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l154_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 2.6.
+  l158_ChannelsPReLU:
+    pattern: stripe
+  l156_Convolution_constant_exterior:
+    compute_at: { l158_ChannelsPReLU: yi }
+  l161_ChannelsPReLU:
+    pattern: stripe
+  l159_Convolution_constant_exterior:
+    compute_at: { l161_ChannelsPReLU: yi }
+  l164_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l167_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 2.7, asymmetric.
+  l171_ChannelsPReLU:
+    pattern: stripe
+  l169_Convolution_constant_exterior:
+    compute_at: { l171_ChannelsPReLU: yi }
+  l172_Convolution:
+    pattern: stripe
+  l172_Convolution_constant_exterior:
+    compute_at: { l172_Convolution: yi }
+  l175_ChannelsPReLU:
+    pattern: stripe
+  l173_Convolution_constant_exterior:
+    compute_at: { l175_ChannelsPReLU: yi }
+  l178_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 32 }
+  l181_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 32 }
+
+  # Bottleneck 2.8.
+  l185_ChannelsPReLU:
+    pattern: stripe
+  l183_Convolution_constant_exterior:
+    compute_at: { l185_ChannelsPReLU: yi }
+  l188_ChannelsPReLU:
+    pattern: stripe
+  l186_Convolution_constant_exterior:
+    compute_at: { l188_ChannelsPReLU: yi }
+  l191_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l194_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 3.1.
+  l198_ChannelsPReLU:
+    pattern: stripe
+  l196_Convolution_constant_exterior:
+    compute_at: { l198_ChannelsPReLU: yi }
+  l201_ChannelsPReLU:
+    pattern: stripe
+  l199_Convolution_constant_exterior:
+    compute_at: { l201_ChannelsPReLU: yi }
+  l204_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l207_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+ # Bottleneck 3.2.
+  l211_ChannelsPReLU:
+    pattern: stripe
+  l209_Convolution_constant_exterior:
+    compute_at: { l211_ChannelsPReLU: yi }
+  l214_ChannelsPReLU:
+    pattern: stripe
+  l212_Convolution_constant_exterior:
+    compute_at: { l214_ChannelsPReLU: yi }
+  l217_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l220_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 3.3, asymmetric.
+  l224_ChannelsPReLU:
+    pattern: stripe
+  l222_Convolution_constant_exterior:
+    compute_at: { l224_ChannelsPReLU: yi }
+  l225_Convolution:
+    pattern: stripe
+  l225_Convolution_constant_exterior:
+    compute_at: { l225_Convolution: yi }
+  l228_ChannelsPReLU:
+    pattern: stripe
+  l226_Convolution_constant_exterior:
+    compute_at: { l228_ChannelsPReLU: yi }
+  l231_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 32 }
+  l234_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 32 }
+
+  # Bottleneck 3.4.
+  l238_ChannelsPReLU:
+    pattern: stripe
+  l236_Convolution_constant_exterior:
+    compute_at: { l238_ChannelsPReLU: yi }
+  l241_ChannelsPReLU:
+    pattern: stripe
+  l239_Convolution_constant_exterior:
+    compute_at: { l241_ChannelsPReLU: yi }
+  l244_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l247_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 3.5.
+  l251_ChannelsPReLU:
+    pattern: stripe
+  l249_Convolution_constant_exterior:
+    compute_at: { l251_ChannelsPReLU: yi }
+  l254_ChannelsPReLU:
+    pattern: stripe
+  l252_Convolution_constant_exterior:
+    compute_at: { l254_ChannelsPReLU: yi }
+  l257_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l260_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 3.6.
+  l264_ChannelsPReLU:
+    pattern: stripe
+  l262_Convolution_constant_exterior:
+    compute_at: { l264_ChannelsPReLU: yi }
+  l267_ChannelsPReLU:
+    pattern: stripe
+  l265_Convolution_constant_exterior:
+    compute_at: { l267_ChannelsPReLU: yi }
+  l270_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l273_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 3.7, asymmetric.
+  l277_ChannelsPReLU:
+    pattern: stripe
+  l275_Convolution_constant_exterior:
+    compute_at: { l277_ChannelsPReLU: yi }
+  l278_Convolution:
+    pattern: stripe
+  l278_Convolution_constant_exterior:
+    compute_at: { l278_Convolution: yi }
+  l281_ChannelsPReLU:
+    pattern: stripe
+  l279_Convolution_constant_exterior:
+    compute_at: { l281_ChannelsPReLU: yi }
+  l284_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 32 }
+  l287_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 32 }
+
+  # Bottleneck 3.8.
+  l291_ChannelsPReLU:
+    pattern: stripe
+  l289_Convolution_constant_exterior:
+    compute_at: { l291_ChannelsPReLU: yi }
+  l294_ChannelsPReLU:
+    pattern: stripe
+  l292_Convolution_constant_exterior:
+    compute_at: { l294_ChannelsPReLU: yi }
+  l297_Power:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l300_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 4.0, upsampling.
+  l304_ChannelsPReLU:
+    pattern: stripe
+  l302_Convolution_constant_exterior:
+    compute_at: { l304_ChannelsPReLU: yi }
+  l307_ChannelsPReLU:
+    pattern: stripe
+  l305_Deconvolution_constant_exterior:
+    compute_at: { l307_ChannelsPReLU: yi }
+  l309_BatchNorm:
+    pattern: stripe
+  l308_Convolution_constant_exterior:
+    compute_at: { l309_BatchNorm: yi }
+  l312_BatchNorm:
+    pattern: stripe
+  l311_Convolution_constant_exterior:
+    compute_at: { l312_BatchNorm: yi }
+  l313_torchMaxUnpooling:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l315_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+
+  # Bottleneck 4.1.
+  l319_ChannelsPReLU:
+    pattern: stripe
+  l317_Convolution_constant_exterior:
+    compute_at: { l319_ChannelsPReLU: yi }
+  l322_ChannelsPReLU:
+    pattern: stripe
+  l320_Convolution_constant_exterior:
+    compute_at: { l322_ChannelsPReLU: yi }
+  l324_BatchNorm:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l327_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+
+  # Bottleneck 4.2.
+  l331_ChannelsPReLU:
+    pattern: stripe
+  l329_Convolution_constant_exterior:
+    compute_at: { l331_ChannelsPReLU: yi }
+  l334_ChannelsPReLU:
+    pattern: stripe
+  l332_Convolution_constant_exterior:
+    compute_at: { l334_ChannelsPReLU: yi }
+  l336_BatchNorm:
+    pattern: tile_xyc
+    params: { x_split: 16, y_split: 16, c_split: 16 }
+  l339_ChannelsPReLU:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 16 }
+
+  # Bottleneck 5.0, upsampling.
+  l343_ChannelsPReLU:
+    pattern: stripe
+  l341_Convolution_constant_exterior:
+    compute_at: { l343_ChannelsPReLU: yi }
+  l346_ChannelsPReLU:
+    pattern: stripe
+  l344_Deconvolution_constant_exterior:
+    compute_at: { l346_ChannelsPReLU: yi }
+  l348_BatchNorm:
+    pattern: stripe
+  l347_Convolution_constant_exterior:
+    compute_at: { l348_BatchNorm: yi }
+  l351_BatchNorm:
+    pattern: stripe
+  l350_Convolution_constant_exterior:
+    compute_at: { l351_BatchNorm: yi }
+  l352_torchMaxUnpooling:
+    pattern: tile_xy
+    params: { x_split: 32, y_split: 32 }
+  l354_ChannelsPReLU:
+    pattern: tile_xy
+    params: { x_split: 32, y_split: 32 }
+
+  # Bottleneck 5.1.
+  l358_ChannelsPReLU:
+    pattern: stripe
+  l356_Convolution_constant_exterior:
+    compute_at: { l358_ChannelsPReLU: yi }
+  l361_ChannelsPReLU:
+    pattern: stripe
+  l359_Convolution_constant_exterior:
+    compute_at: { l361_ChannelsPReLU: yi }
+  l363_BatchNorm:
+    pattern: tile_xy
+    params: { x_split: 32, y_split: 32 }
+  l366_ChannelsPReLU:
+    pattern: tile_xy
+    params: { x_split: 32, y_split: 32 }
+  l367_Deconvolution:
+    pattern: tile_xyc
+    params: { x_split: 32, y_split: 32, c_split: 4 }
+  l367_Deconvolution_constant_exterior:
+    compute_at: { l367_Deconvolution: tile }

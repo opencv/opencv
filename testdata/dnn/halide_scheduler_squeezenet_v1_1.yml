@@ -1,0 +1,188 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for SqueezeNet v1.1 architecture.
+
+patterns:
+  stripe_vec_16:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 16 }
+  stripe_vec_8:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 8 }
+  tile_xyc:
+    split: { x: x_split, y: y_split, c: c_split }
+    fuse: { src: [xo, yo, co], dst: tile }
+    reorder: [xi, yi, ci, tile]
+    parallel: tile
+    vectorize: { xi: x_split }
+  fully_connected:
+    split: { c: 8 }
+    fuse: { src: [x, y, co], dst: block }
+    parallel: block
+    vectorize: { ci: 8 }
+
+scheduling:
+  relu_conv1:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 16 }
+  conv1_constant_exterior:
+    compute_at: { relu_conv1: tile }
+  pool1:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 16 }
+
+  fire2/relu_squeeze1x1:
+    pattern: stripe_vec_16
+  fire2/squeeze1x1_constant_exterior:
+    compute_at: { fire2/relu_squeeze1x1: yi }
+  fire2/relu_expand1x1:
+    pattern: stripe_vec_16
+  fire2/expand1x1_constant_exterior:
+    compute_at: { fire2/relu_expand1x1: yi }
+  fire2/relu_expand3x3:
+    pattern: stripe_vec_16
+  fire2/expand3x3_constant_exterior:
+    compute_at: { fire2/relu_expand3x3: yi }
+  fire2/concat:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+
+  fire3/relu_squeeze1x1:
+    pattern: stripe_vec_16
+  fire3/squeeze1x1_constant_exterior:
+    compute_at: { fire3/relu_squeeze1x1: yi }
+  fire3/relu_expand1x1:
+    pattern: stripe_vec_16
+  fire3/expand1x1_constant_exterior:
+    compute_at: { fire3/relu_expand1x1: yi }
+  fire3/relu_expand3x3:
+    pattern: stripe_vec_16
+  fire3/expand3x3_constant_exterior:
+    compute_at: { fire3/relu_expand3x3: yi }
+  fire3/concat:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+  pool3:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+
+  fire4/relu_squeeze1x1:
+    pattern: stripe_vec_16
+  fire4/squeeze1x1_constant_exterior:
+    compute_at: { fire4/relu_squeeze1x1: yi }
+  fire4/relu_expand1x1:
+    pattern: stripe_vec_16
+  fire4/expand1x1_constant_exterior:
+    compute_at: { fire4/relu_expand1x1: yi }
+  fire4/relu_expand3x3:
+    pattern: stripe_vec_16
+  fire4/expand3x3_constant_exterior:
+    compute_at: { fire4/relu_expand3x3: yi }
+  fire4/concat:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+
+  fire5/relu_squeeze1x1:
+    pattern: stripe_vec_16
+  fire5/squeeze1x1_constant_exterior:
+    compute_at: { fire5/relu_squeeze1x1: yi }
+  fire5/relu_expand1x1:
+    pattern: stripe_vec_16
+  fire5/expand1x1_constant_exterior:
+    compute_at: { fire5/relu_expand1x1: yi }
+  fire5/relu_expand3x3:
+    pattern: stripe_vec_16
+  fire5/expand3x3_constant_exterior:
+    compute_at: { fire5/relu_expand3x3: yi }
+  fire5/concat:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+  pool5:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+
+  fire6/relu_squeeze1x1:
+    pattern: stripe_vec_8
+  fire6/squeeze1x1_constant_exterior:
+    compute_at: { fire6/relu_squeeze1x1: yi }
+  fire6/relu_expand1x1:
+    pattern: stripe_vec_8
+  fire6/expand1x1_constant_exterior:
+    compute_at: { fire6/relu_expand1x1: yi }
+  fire6/relu_expand3x3:
+    pattern: stripe_vec_8
+  fire6/expand3x3_constant_exterior:
+    compute_at: { fire6/relu_expand3x3: yi }
+  fire6/concat:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+
+  fire7/relu_squeeze1x1:
+    pattern: stripe_vec_8
+  fire7/squeeze1x1_constant_exterior:
+    compute_at: { fire7/relu_squeeze1x1: yi }
+  fire7/relu_expand1x1:
+    pattern: stripe_vec_8
+  fire7/expand1x1_constant_exterior:
+    compute_at: { fire7/relu_expand1x1: yi }
+  fire7/relu_expand3x3:
+    pattern: stripe_vec_8
+  fire7/expand3x3_constant_exterior:
+    compute_at: { fire7/relu_expand3x3: yi }
+  fire7/concat:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+
+  fire8/relu_squeeze1x1:
+    pattern: stripe_vec_8
+  fire8/squeeze1x1_constant_exterior:
+    compute_at: { fire8/relu_squeeze1x1: yi }
+  fire8/relu_expand1x1:
+    pattern: stripe_vec_8
+  fire8/expand1x1_constant_exterior:
+    compute_at: { fire8/relu_expand1x1: yi }
+  fire8/relu_expand3x3:
+    pattern: stripe_vec_8
+  fire8/expand3x3_constant_exterior:
+    compute_at: { fire8/relu_expand3x3: yi }
+  fire8/concat:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+
+  fire9/relu_squeeze1x1:
+    pattern: stripe_vec_8
+  fire9/squeeze1x1_constant_exterior:
+    compute_at: { fire9/relu_squeeze1x1: yi }
+  fire9/relu_expand1x1:
+    pattern: stripe_vec_8
+  fire9/expand1x1_constant_exterior:
+    compute_at: { fire9/relu_expand1x1: yi }
+  fire9/relu_expand3x3:
+    pattern: stripe_vec_8
+  fire9/expand3x3_constant_exterior:
+    compute_at: { fire9/relu_expand3x3: yi }
+  fire9/concat:
+    pattern: tile_xyc
+    params: { x_split: 8, y_split: 8, c_split: 32 }
+
+  relu_conv10:
+    pattern: stripe_vec_8
+  conv10_constant_exterior:
+    compute_at: { relu_conv10: yi }
+
+  pool10:
+    pattern: fully_connected
+  prob:
+    pattern: fully_connected
