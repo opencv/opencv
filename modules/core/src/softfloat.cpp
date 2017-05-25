@@ -4295,7 +4295,7 @@ float64_t f64_exp(float64_t x)
     else
         x0 = x * exp_prescale;
 
-    int val0 = round(x0);
+    int val0 = (int) round(x0);
     int t = (val0 >> EXPTAB_SCALE) + 1023;
     t = t < 0 ? 0 : (t > 2047 ? 2047 : t);
     float64_t buf; buf.v = packToF64UI(0, t, 0);

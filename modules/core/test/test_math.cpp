@@ -3423,7 +3423,7 @@ TEST(Core_SoftFloat, pow32)
         y.fmt.exponent = rng() % (23 + 127);
         y.fmt.significand = rng() % (1 << 23);
         softfloat y32(y.f);
-        int yi = round(y32);
+        int yi = (int) round(y32);
         if(y32 != softfloat(yi))
             ASSERT_TRUE(pow(x32, y32).isNaN());
         else if(yi % 2)
