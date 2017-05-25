@@ -83,11 +83,23 @@ static NSMutableDictionary *windows = nil;
 static bool wasInitialized = false;
 
 @interface CVView : NSView
+{
+    NSImage *_image;
+}
 @property(strong) NSImage *image;
 - (void)setImageData:(CvArr *)arr;
 @end
 
 @interface CVSlider : NSView
+{
+    NSSlider *_slider;
+    NSTextField *_name;
+    int *_value;
+    void *_userData;
+    CvTrackbarCallback _callback;
+    CvTrackbarCallback2 _callback2;
+}
+
 @property(strong) NSSlider *slider;
 @property(strong) NSTextField *name;
 @property(assign) int *value;
@@ -97,6 +109,14 @@ static bool wasInitialized = false;
 @end
 
 @interface CVWindow : NSWindow
+{
+    CvMouseCallback _mouseCallback;
+    void *_mouseParam;
+    BOOL _autosize;
+    BOOL _firstContent;
+    NSMutableDictionary *_sliders;
+    int _status;
+}
 @property(assign) CvMouseCallback mouseCallback;
 @property(assign) void *mouseParam;
 @property(assign) BOOL autosize;
@@ -681,14 +701,21 @@ void cv::setWindowTitle(const String& winname, const String& title)
 }
 
 @implementation CVWindow
-
+#if defined(__LP64__)
 @synthesize mouseCallback;
 @synthesize mouseParam;
 @synthesize autosize;
 @synthesize firstContent;
 @synthesize sliders;
 @synthesize status;
-
+#else // 32-bit Obj-C does not have automatic synthesize
+@synthesize mouseCallback = _mouseCallback;
+@synthesize mouseParam = _mouseParam;
+@synthesize autosize = _autosize;
+@synthesize firstContent = _firstContent;
+@synthesize sliders = _sliders;
+@synthesize status = _status;
+#endif
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags {
     (void)event;
     //cout << "cvSendMouseEvent" << endl;
@@ -713,12 +740,13 @@ void cv::setWindowTitle(const String& winname, const String& title)
     mp.y = mp.y * imageSize.height / std::max(viewHeight, 1.);
 
     if( mp.x >= 0 && mp.y >= 0 && mp.x < imageSize.width && mp.y < imageSize.height )
-        mouseCallback(type, mp.x, mp.y, flags, mouseParam);
+        _mouseCallback(type, mp.x, mp.y, flags, _mouseParam);
 }
 
 - (void)cvMouseEvent:(NSEvent *)event {
     //cout << "cvMouseEvent" << endl;
-    if(!mouseCallback)
+
+    if([self mouseCallback] == nil)
         return;
 
     int flags = 0;
@@ -778,13 +806,13 @@ void cv::setWindowTitle(const String& winname, const String& title)
 
 - (void)createSliderWithName:(const char *)name maxValue:(int)max value:(int *)value callback:(CvTrackbarCallback)callback {
     //cout << "createSliderWithName" << endl;
-    if(sliders == nil)
-        sliders = [[NSMutableDictionary alloc] init];
+    if(_sliders == nil)
+        _sliders = [[NSMutableDictionary alloc] init];
 
     NSString *cvname = [NSString stringWithFormat:@"%s", name];
 
     // Avoid overwriting slider
-    if([sliders valueForKey:cvname]!=nil)
+    if([_sliders valueForKey:cvname]!=nil)
         return;
 
     // Create slider
@@ -803,11 +831,11 @@ void cv::setWindowTitle(const String& winname, const String& title)
         [slider setCallback:callback];
 
     // Save slider
-    [sliders setValue:slider forKey:cvname];
+    [_sliders setValue:slider forKey:cvname];
     [[self contentView] addSubview:slider];
 
 
-    //update contentView size to contain sliders
+    //update contentView size to contain _sliders
     NSSize viewSize=[[self contentView] frame].size,
            sliderSize=[slider frame].size;
     viewSize.height += sliderSize.height;
@@ -817,7 +845,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
     [[self contentView] setFrameSize:viewSize];
     [[self contentView] setNeedsDisplay:YES];
 
-    //update window size to contain sliders
+    //update window size to contain _sliders
     NSRect rect = [self frame];
     rect.size.height += [slider frame].size.height;
     rect.size.width = std::max<int>(rect.size.width, MIN_SLIDER_WIDTH);
@@ -834,13 +862,16 @@ void cv::setWindowTitle(const String& winname, const String& title)
 @end
 
 @implementation CVView
-
+#if defined(__LP64__)
 @synthesize image;
+#else // 32-bit Obj-C does not have automatic synthesize
+@synthesize image = _image;
+#endif
 
 - (id)init {
     //cout << "CVView init" << endl;
     [super init];
-    image = [[NSImage alloc] init];
+    _image = [[NSImage alloc] init];
     return self;
 }
 
@@ -895,11 +926,11 @@ void cv::setWindowTitle(const String& winname, const String& title)
         dst[i * 4 + 2] = src[i * 3 + 2];
     }
 
-    if( image )
-        [image release];
+    if( _image )
+        [_image release];
 
-    image = [[NSImage alloc] init];
-    [image addRepresentation:bitmap];
+    _image = [[NSImage alloc] init];
+    [_image addRepresentation:bitmap];
     [bitmap release];
 
     /*CGColorSpaceRelease(colorspace);
@@ -920,7 +951,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
     int height = size.height;
 
     CVWindow *cvwindow = (CVWindow *)[self window];
-    if ([cvwindow respondsToSelector:@selector(sliders)]) {
+    if ([cvwindow respondsToSelector:@selector(_sliders)]) {
         for(NSString *key in [cvwindow sliders]) {
             NSSlider *slider = [[cvwindow sliders] valueForKey:key];
             NSRect r = [slider frame];
@@ -940,17 +971,17 @@ void cv::setWindowTitle(const String& winname, const String& title)
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     CVWindow *cvwindow = (CVWindow *)[self window];
     int height = 0;
-    if ([cvwindow respondsToSelector:@selector(sliders)]) {
+    if ([cvwindow respondsToSelector:@selector(_sliders)]) {
         for(NSString *key in [cvwindow sliders]) {
             height += [[[cvwindow sliders] valueForKey:key] frame].size.height;
         }
     }
 
 
-    NSRect imageRect = {{0,0}, {[image size].width, [image size].height}};
+    NSRect imageRect = {{0,0}, {[_image size].width, [_image size].height}};
 
-    if(image != nil) {
-        [image drawInRect: imageRect
+    if(_image != nil) {
+        [_image drawInRect: imageRect
                               fromRect: NSZeroRect
                              operation: NSCompositeSourceOver
                               fraction: 1.0];
@@ -962,40 +993,47 @@ void cv::setWindowTitle(const String& winname, const String& title)
 @end
 
 @implementation CVSlider
-
+#if defined(__LP64__)
 @synthesize slider;
 @synthesize name;
 @synthesize value;
 @synthesize userData;
 @synthesize callback;
 @synthesize callback2;
-
+#else // 32-bit Obj-C does not have automatic synthesize
+@synthesize slider = _slider;
+@synthesize name = _name;
+@synthesize value = _value;
+@synthesize userData = _userData;
+@synthesize callback = _callback;
+@synthesize callback2 = _callback2;
+#endif
 - (id)init {
     [super init];
 
-    callback = NULL;
-    value = NULL;
-    userData = NULL;
+    _callback = NULL;
+    _value = NULL;
+    _userData = NULL;
 
     [self setFrame:NSMakeRect(0,0,200,30)];
 
-    name = [[NSTextField alloc] initWithFrame:NSMakeRect(10, 0,110, 25)];
-    [name setEditable:NO];
-    [name setSelectable:NO];
-    [name setBezeled:NO];
-    [name setBordered:NO];
-    [name setDrawsBackground:NO];
-    [[name cell] setLineBreakMode:NSLineBreakByTruncatingTail];
-    [self addSubview:name];
+    _name = [[NSTextField alloc] initWithFrame:NSMakeRect(10, 0,110, 25)];
+    [_name setEditable:NO];
+    [_name setSelectable:NO];
+    [_name setBezeled:NO];
+    [_name setBordered:NO];
+    [_name setDrawsBackground:NO];
+    [[_name cell] setLineBreakMode:NSLineBreakByTruncatingTail];
+    [self addSubview:_name];
 
-    slider = [[NSSlider alloc] initWithFrame:NSMakeRect(120, 0, 70, 25)];
-    [slider setAutoresizingMask:NSViewWidthSizable];
-    [slider setMinValue:0];
-    [slider setMaxValue:100];
-    [slider setContinuous:YES];
-    [slider setTarget:self];
-    [slider setAction:@selector(sliderChanged:)];
-    [self addSubview:slider];
+    _slider = [[NSSlider alloc] initWithFrame:NSMakeRect(120, 0, 70, 25)];
+    [_slider setAutoresizingMask:NSViewWidthSizable];
+    [_slider setMinValue:0];
+    [_slider setMaxValue:100];
+    [_slider setContinuous:YES];
+    [_slider setTarget:self];
+    [_slider setAction:@selector(sliderChanged:)];
+    [self addSubview:_slider];
 
     [self setAutoresizingMask:NSViewWidthSizable];
 
@@ -1006,13 +1044,13 @@ void cv::setWindowTitle(const String& winname, const String& title)
 
 - (void)sliderChanged:(NSNotification *)notification {
     (void)notification;
-    int pos = [slider intValue];
-    if(value)
-        *value = pos;
-    if(callback)
-        callback(pos);
-    if(callback2)
-        callback2(pos, userData);
+    int pos = [_slider intValue];
+    if(_value)
+        *_value = pos;
+    if(_callback)
+        _callback(pos);
+    if(_callback2)
+        _callback2(pos, _userData);
 }
 
 @end
