@@ -335,6 +335,8 @@ public:
             head = comp1->head;
             tail = comp2->tail;
             size = comp1->size + comp2->size;
+            // update the history size
+            history->size =size;
 
             CompHistory *h1 = history->child_;
             CompHistory *h2 = comp2->history;
