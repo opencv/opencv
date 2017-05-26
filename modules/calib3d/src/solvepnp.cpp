@@ -61,7 +61,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
-    CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+    CV_Assert( npoints >= 4 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
 
     Mat rvec, tvec;
     if( flags != SOLVEPNP_ITERATIVE )
