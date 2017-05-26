@@ -338,6 +338,9 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 
 
 #ifdef HAVE_OPENVX
+namespace ovx {
+    template <> inline bool skipSmallImages<VX_KERNEL_FAST_CORNERS>(int w, int h) { return w*h < 800 * 600; }
+}
 static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
                         int _threshold, bool nonmaxSuppression, int type)
 {
@@ -350,6 +353,9 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
 
     Mat imgMat = _img.getMat();
     if(imgMat.empty() || imgMat.type() != CV_8UC1)
+        return false;
+
+    if (ovx::skipSmallImages<VX_KERNEL_FAST_CORNERS>(imgMat.cols, imgMat.rows))
         return false;
 
     try

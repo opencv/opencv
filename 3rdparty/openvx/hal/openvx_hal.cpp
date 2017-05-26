@@ -81,6 +81,15 @@ inline bool dimTooBig(int size)
         return false;
 }
 
+//OpenVX calls have essential overhead so it make sense to skip them for small images
+template <int kernel_id> inline bool                  skipSmallImages(int w, int h) { return w*h < 7680 * 4320; }
+template <> inline bool           skipSmallImages<VX_KERNEL_MULTIPLY>(int w, int h) { return w*h <  640 *  480; }
+template <> inline bool      skipSmallImages<VX_KERNEL_COLOR_CONVERT>(int w, int h) { return w*h < 2048 * 1536; }
+template <> inline bool     skipSmallImages<VX_KERNEL_INTEGRAL_IMAGE>(int w, int h) { return w*h <  640 *  480; }
+template <> inline bool        skipSmallImages<VX_KERNEL_WARP_AFFINE>(int w, int h) { return w*h < 1280 *  720; }
+template <> inline bool   skipSmallImages<VX_KERNEL_WARP_PERSPECTIVE>(int w, int h) { return w*h <  320 *  240; }
+template <> inline bool skipSmallImages<VX_KERNEL_CUSTOM_CONVOLUTION>(int w, int h) { return w*h <  320 *  240; }
+
 inline void setConstantBorder(ivx::border_t &border, vx_uint8 val)
 {
     border.mode = VX_BORDER_CONSTANT;
@@ -122,10 +131,12 @@ public:
 // real code starts here
 // ...
 
-#define OVX_BINARY_OP(hal_func, ovx_call)                                                                           \
+#define OVX_BINARY_OP(hal_func, ovx_call, kernel_id)                                                                \
 template <typename T>                                                                                               \
 int ovx_hal_##hal_func(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h)        \
 {                                                                                                                   \
+    if(skipSmallImages<kernel_id>(w, h))                                                                            \
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;                                                                        \
     if(dimTooBig(w) || dimTooBig(h))                                                                                \
         return CV_HAL_ERROR_NOT_IMPLEMENTED;                                                                        \
     refineStep(w, h, ivx::TypeToEnum<T>::imgType, astep);                                                           \
@@ -156,18 +167,22 @@ int ovx_hal_##hal_func(const T *a, size_t astep, const T *b, size_t bstep, T *c,
     return CV_HAL_ERROR_OK;                                                                                         \
 }
 
-OVX_BINARY_OP(add, { ivx::IVX_CHECK_STATUS(vxuAdd(ctx, ia, ib, VX_CONVERT_POLICY_SATURATE, ic)); })
-OVX_BINARY_OP(sub, { ivx::IVX_CHECK_STATUS(vxuSubtract(ctx, ia, ib, VX_CONVERT_POLICY_SATURATE, ic)); })
+OVX_BINARY_OP(add, { ivx::IVX_CHECK_STATUS(vxuAdd(ctx, ia, ib, VX_CONVERT_POLICY_SATURATE, ic)); }, VX_KERNEL_ADD)
+OVX_BINARY_OP(sub, { ivx::IVX_CHECK_STATUS(vxuSubtract(ctx, ia, ib, VX_CONVERT_POLICY_SATURATE, ic)); }, VX_KERNEL_SUBTRACT)
 
-OVX_BINARY_OP(absdiff, { ivx::IVX_CHECK_STATUS(vxuAbsDiff(ctx, ia, ib, ic)); })
+OVX_BINARY_OP(absdiff, { ivx::IVX_CHECK_STATUS(vxuAbsDiff(ctx, ia, ib, ic)); }, VX_KERNEL_ABSDIFF)
 
-OVX_BINARY_OP(and, { ivx::IVX_CHECK_STATUS(vxuAnd(ctx, ia, ib, ic)); })
-OVX_BINARY_OP(or , { ivx::IVX_CHECK_STATUS(vxuOr(ctx, ia, ib, ic)); })
-OVX_BINARY_OP(xor, { ivx::IVX_CHECK_STATUS(vxuXor(ctx, ia, ib, ic)); })
+OVX_BINARY_OP(and, { ivx::IVX_CHECK_STATUS(vxuAnd(ctx, ia, ib, ic)); }, VX_KERNEL_AND)
+OVX_BINARY_OP(or , { ivx::IVX_CHECK_STATUS(vxuOr(ctx, ia, ib, ic)); }, VX_KERNEL_OR)
+OVX_BINARY_OP(xor, { ivx::IVX_CHECK_STATUS(vxuXor(ctx, ia, ib, ic)); }, VX_KERNEL_XOR)
 
 template <typename T>
 int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t cstep, int w, int h, double scale)
 {
+    if(scale == 1.0 || sizeof(T) > 1 ?
+       skipSmallImages<VX_KERNEL_ADD>(w, h) : /*actually it could be any kernel with generic minimum size*/
+       skipSmallImages<VX_KERNEL_MULTIPLY>(w, h) )
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     refineStep(w, h, ivx::TypeToEnum<T>::imgType, astep);
@@ -234,6 +249,8 @@ template int ovx_hal_mul<short>(const short *a, size_t astep, const short *b, si
 
 int ovx_hal_not(const uchar *a, size_t astep, uchar *c, size_t cstep, int w, int h)
 {
+    if (skipSmallImages<VX_KERNEL_NOT>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     refineStep(w, h, VX_DF_IMAGE_U8, astep);
@@ -263,6 +280,8 @@ int ovx_hal_not(const uchar *a, size_t astep, uchar *c, size_t cstep, int w, int
 
 int ovx_hal_merge8u(const uchar **src_data, uchar *dst_data, int len, int cn)
 {
+    if (skipSmallImages<VX_KERNEL_CHANNEL_COMBINE>(len, 1))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(len))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (cn != 3 && cn != 4)
@@ -299,6 +318,8 @@ int ovx_hal_merge8u(const uchar **src_data, uchar *dst_data, int len, int cn)
 
 int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, double inv_scale_x, double inv_scale_y, int interpolation)
 {
+    if (skipSmallImages<VX_KERNEL_SCALE_IMAGE>(aw, ah))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(aw) || dimTooBig(ah) || dimTooBig(bw) || dimTooBig(bh))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     refineStep(aw, ah, VX_DF_IMAGE_U8, astep);
@@ -350,6 +371,8 @@ int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int ah, ucha
 
 int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
+    if (skipSmallImages<VX_KERNEL_WARP_AFFINE>(aw, ah))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(aw) || dimTooBig(ah) || dimTooBig(bw) || dimTooBig(bh))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     refineStep(aw, ah, VX_DF_IMAGE_U8, astep);
@@ -410,6 +433,8 @@ int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, 
 
 int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
+    if (skipSmallImages<VX_KERNEL_WARP_PERSPECTIVE>(aw, ah))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(aw) || dimTooBig(ah) || dimTooBig(bw) || dimTooBig(bh))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     refineStep(aw, ah, VX_DF_IMAGE_U8, astep);
@@ -531,6 +556,7 @@ int ovx_hal_filterInit(cvhalFilter2D **filter_context, uchar *kernel_data, size_
             for (int i = 0; i < kernel_width; ++i)
                 data.push_back(row[i]);
         }
+        break;
     default:
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
@@ -558,6 +584,8 @@ int ovx_hal_filterFree(cvhalFilter2D *filter_context)
 
 int ovx_hal_filter(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *b, size_t bstep, int w, int h, int, int, int, int)
 {
+    if (skipSmallImages<VX_KERNEL_CUSTOM_CONVOLUTION>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     try
@@ -782,6 +810,8 @@ int ovx_hal_morphFree(cvhalFilter2D *filter_context)
 
 int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *b, size_t bstep, int w, int h, int, int, int, int, int, int, int, int)
 {
+    if (skipSmallImages<VX_KERNEL_DILATE_3x3>(w, h))//Actually it make sense to separate checks if implementations of dilation and erosion have different performance gain
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     refineStep(w, h, VX_DF_IMAGE_U8, astep);
@@ -823,6 +853,8 @@ int ovx_hal_morph(cvhalFilter2D *filter_context, uchar *a, size_t astep, uchar *
 
 int ovx_hal_cvtBGRtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int depth, int acn, int bcn, bool swapBlue)
 {
+    if (skipSmallImages<VX_KERNEL_COLOR_CONVERT>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (depth != CV_8U || swapBlue || acn == bcn || (acn != 3 && acn != 4) || (bcn != 3 && bcn != 4))
@@ -857,6 +889,8 @@ int ovx_hal_cvtBGRtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, 
 
 int ovx_hal_cvtGraytoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int depth, int bcn)
 {
+    if (skipSmallImages<VX_KERNEL_CHANNEL_COMBINE>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (depth != CV_8U || (bcn != 3 && bcn != 4))
@@ -890,6 +924,8 @@ int ovx_hal_cvtGraytoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep,
 
 int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx)
 {
+    if (skipSmallImages<VX_KERNEL_COLOR_CONVERT>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (!swapBlue || (bcn != 3 && bcn != 4))
@@ -934,6 +970,8 @@ int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
 
 int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx)
 {
+    if (skipSmallImages<VX_KERNEL_COLOR_CONVERT>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (!swapBlue || (bcn != 3 && bcn != 4) || uIdx || (size_t)w / 2 != astep - (size_t)w / 2)
@@ -982,6 +1020,8 @@ int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size
 
 int ovx_hal_cvtBGRtoThreePlaneYUV(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int acn, bool swapBlue, int uIdx)
 {
+    if (skipSmallImages<VX_KERNEL_COLOR_CONVERT>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (!swapBlue || (acn != 3 && acn != 4) || uIdx || (size_t)w / 2 != bstep - (size_t)w / 2)
@@ -1028,6 +1068,8 @@ int ovx_hal_cvtBGRtoThreePlaneYUV(const uchar * a, size_t astep, uchar * b, size
 
 int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx, int ycn)
 {
+    if (skipSmallImages<VX_KERNEL_COLOR_CONVERT>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (!swapBlue || (bcn != 3 && bcn != 4) || uIdx)
@@ -1065,6 +1107,8 @@ int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
 
 int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, uchar * b, size_t bstep, uchar * c, size_t, uchar * d, size_t, int w, int h, int cn)
 {
+    if (skipSmallImages<VX_KERNEL_INTEGRAL_IMAGE>(w, h))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (depth != CV_8U || sdepth != CV_32S || c != NULL || d != NULL || cn != 1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     refineStep(w, h, VX_DF_IMAGE_U8, astep);

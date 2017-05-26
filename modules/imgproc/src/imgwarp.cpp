@@ -4946,6 +4946,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     CV_OVX_RUN(
         src.type() == CV_8UC1 && dst.type() == CV_8UC1 &&
+        !ovx::skipSmallImages<VX_KERNEL_REMAP>(src.cols, src.rows) &&
         (borderType& ~BORDER_ISOLATED) == BORDER_CONSTANT &&
         ((map1.type() == CV_32FC2 && map2.empty() && map1.size == dst.size) ||
          (map1.type() == CV_32FC1 && map2.type() == CV_32FC1 && map1.size == dst.size && map2.size == dst.size) ||

@@ -4862,6 +4862,9 @@ static bool _openvx_cvt(const T* src, size_t sstep,
 
     int srcType = DataType<T>::type, dstType = DataType<DT>::type;
 
+    if (ovx::skipSmallImages<VX_KERNEL_CONVERTDEPTH>(imgSize.width, imgSize.height))
+        return false;
+
     try
     {
         Context context = ovx::getOpenVXContext();
@@ -5964,7 +5967,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
-    CV_OVX_RUN(true,
+    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(src.cols, src.rows),
                openvx_LUT(src, dst, lut))
 
 #if !IPP_DISABLE_PERF_LUT
