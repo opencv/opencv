@@ -3423,7 +3423,7 @@ TEST(Core_SoftFloat, pow32)
         y.fmt.exponent = rng() % (23 + 127);
         y.fmt.significand = rng() % (1 << 23);
         softfloat y32(y.f);
-        int yi = (int) round(y32);
+        int yi = cvRound(y32);
         if(y32 != softfloat(yi))
             ASSERT_TRUE(pow(x32, y32).isNaN());
         else if(yi % 2)
@@ -3558,7 +3558,7 @@ TEST(Core_SoftFloat, pow64)
         mantissa = (((long long int)((unsigned int)(rng)) << 32 ) | (unsigned int)(rng)) & ((1LL << 52) - 1);
         y.u = (sign << 63) | (exponent << 52) | mantissa;
         softdouble y64(y.f);
-        uint64 yi = round(y64);
+        uint64 yi = cvRound(y64);
         if(y64 != softdouble(yi))
             ASSERT_TRUE(pow(x64, y64).isNaN());
         else if(yi % 2)

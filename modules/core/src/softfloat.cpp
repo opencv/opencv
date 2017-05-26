@@ -248,8 +248,6 @@ softfloat::softfloat( const uint64_t a ) { *this = ui64_to_f32(a); }
 softfloat::softfloat( const  int32_t a ) { *this =  i32_to_f32(a); }
 softfloat::softfloat( const  int64_t a ) { *this =  i64_to_f32(a); }
 
-int_fast64_t trunc( const softfloat& a ) { return f32_to_i64_r_minMag(a, false); }
-int_fast64_t round( const softfloat& a ) { return f32_to_i64(a, round_near_even, false); }
 softfloat::operator softdouble() const { return f32_to_f64(*this); }
 
 softfloat softfloat::operator + (const softfloat& a) const { return f32_add(*this, a); }
@@ -270,8 +268,20 @@ softdouble::softdouble( const uint64_t a ) { *this = ui64_to_f64(a); }
 softdouble::softdouble( const  int32_t a ) { *this =  i32_to_f64(a); }
 softdouble::softdouble( const  int64_t a ) { *this =  i64_to_f64(a); }
 
-int_fast64_t trunc( const softdouble& a ) { return f64_to_i64_r_minMag(a, false); }
-int_fast64_t round( const softdouble& a ) { return f64_to_i64(a, round_near_even, false); }
+}
+
+int cvTrunc(const cv::softfloat& a) { return cv::f32_to_i32_r_minMag(a, false); }
+int cvRound(const cv::softfloat& a) { return cv::f32_to_i32(a, cv::round_near_even, false); }
+int cvFloor(const cv::softfloat& a) { return cv::f32_to_i32(a, cv::round_min, false); }
+int cvCeil (const cv::softfloat& a) { return cv::f32_to_i32(a, cv::round_max, false); }
+
+int cvTrunc(const cv::softdouble& a) { return cv::f64_to_i32_r_minMag(a, false); }
+int cvRound(const cv::softdouble& a) { return cv::f64_to_i32(a, cv::round_near_even, false); }
+int cvFloor(const cv::softdouble& a) { return cv::f64_to_i32(a, cv::round_min, false); }
+int cvCeil (const cv::softdouble& a) { return cv::f64_to_i32(a, cv::round_max, false); }
+
+namespace cv
+{
 softdouble::operator softfloat() const { return f64_to_f32(*this); }
 
 softdouble softdouble::operator + (const softdouble& a) const { return f64_add(*this, a); }
@@ -4295,7 +4305,7 @@ float64_t f64_exp(float64_t x)
     else
         x0 = x * exp_prescale;
 
-    int val0 = (int) round(x0);
+    int val0 = cvRound(x0);
     int t = (val0 >> EXPTAB_SCALE) + 1023;
     t = t < 0 ? 0 : (t > 2047 ? 2047 : t);
     float64_t buf; buf.v = packToF64UI(0, t, 0);

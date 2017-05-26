@@ -199,12 +199,9 @@ public:
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-CV_EXPORTS int_fast64_t round( const softfloat&  a );
-CV_EXPORTS int_fast64_t round( const softdouble& a );
 
-CV_EXPORTS int_fast64_t trunc( const softfloat&  a );
-CV_EXPORTS int_fast64_t trunc( const softdouble& a );
 
+}
 CV_EXPORTS softfloat  mulAdd( const softfloat&  a, const softfloat&  b, const softfloat & c);
 CV_EXPORTS softdouble mulAdd( const softdouble& a, const softdouble& b, const softdouble& c);
 
@@ -214,6 +211,42 @@ CV_EXPORTS softdouble sqrt( const softdouble& a );
 /*----------------------------------------------------------------------------
 | Ported from OpenCV and added for usability
 *----------------------------------------------------------------------------*/
+
+CV_EXPORTS int cvTrunc(const cv::softfloat&  a);
+CV_EXPORTS int cvTrunc(const cv::softdouble& a);
+
+CV_EXPORTS int cvRound(const cv::softfloat&  a);
+CV_EXPORTS int cvRound(const cv::softdouble& a);
+
+CV_EXPORTS int cvFloor(const cv::softfloat&  a);
+CV_EXPORTS int cvFloor(const cv::softdouble& a);
+
+CV_EXPORTS int  cvCeil(const cv::softfloat&  a);
+CV_EXPORTS int  cvCeil(const cv::softdouble& a);
+
+namespace cv
+{
+template<typename _Tp> static inline _Tp saturate_cast(softfloat  a) { return _Tp(a); }
+template<typename _Tp> static inline _Tp saturate_cast(softdouble a) { return _Tp(a); }
+
+template<> inline uchar saturate_cast<uchar>(softfloat  a) { return (uchar)std::max(std::min(cvRound(a), UCHAR_MAX), 0); }
+template<> inline uchar saturate_cast<uchar>(softdouble a) { return (uchar)std::max(std::min(cvRound(a), UCHAR_MAX), 0); }
+
+template<> inline schar saturate_cast<schar>(softfloat  a) { return (schar)std::min(std::max(cvRound(a), SCHAR_MIN), SCHAR_MAX); }
+template<> inline schar saturate_cast<schar>(softdouble a) { return (schar)std::min(std::max(cvRound(a), SCHAR_MIN), SCHAR_MAX); }
+
+template<> inline ushort saturate_cast<ushort>(softfloat  a) { return (ushort)std::max(std::min(cvRound(a), USHRT_MAX), 0); }
+template<> inline ushort saturate_cast<ushort>(softdouble a) { return (ushort)std::max(std::min(cvRound(a), USHRT_MAX), 0); }
+
+template<> inline short saturate_cast<short>(softfloat  a) { return (short)std::min(std::max(cvRound(a), SHRT_MIN), SHRT_MAX); }
+template<> inline short saturate_cast<short>(softdouble a) { return (short)std::min(std::max(cvRound(a), SHRT_MIN), SHRT_MAX); }
+
+template<> inline int saturate_cast<int>(softfloat  a) { return cvRound(a); }
+template<> inline int saturate_cast<int>(softdouble a) { return cvRound(a); }
+
+// we intentionally do not clip negative numbers, to make -1 become 0xffffffff etc.
+template<> inline unsigned saturate_cast<unsigned>(softfloat  a) { return cvRound(a); }
+template<> inline unsigned saturate_cast<unsigned>(softdouble a) { return cvRound(a); }
 
 inline softfloat  min(const softfloat&  a, const softfloat&  b) { return (a > b) ? b : a; }
 inline softdouble min(const softdouble& a, const softdouble& b) { return (a > b) ? b : a; }
