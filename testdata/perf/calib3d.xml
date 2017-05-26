@@ -836,4 +836,78 @@
       <y>209</y>
       <val>415.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM_3WAY->
  <!-- resumed -->
+ <!-- resumed -->
+
+<TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_HH4->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-16.</min>
+    <max>4080.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1269</x>
+      <y>78</y>
+      <val>-16.</val></rng1>
+    <rng2>
+      <x>600</x>
+      <y>336</y>
+      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_HH4->
+<TestStereoCorresp_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_HH4->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-16.</min>
+    <max>2032.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>699</x>
+      <y>663</y>
+      <val>-16.</val></rng1>
+    <rng2>
+      <x>887</x>
+      <y>662</y>
+      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_HH4->
+<TestStereoCorresp_SGBM--SGBM---640x480--256--StereoSGBM--MODE_HH4->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-16.</min>
+    <max>4016.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>148</x>
+      <y>62</y>
+      <val>-16.</val></rng1>
+    <rng2>
+      <x>636</x>
+      <y>381</y>
+      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--256--StereoSGBM--MODE_HH4->
+<TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_HH4->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-16.</min>
+    <max>2019.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>192</x>
+      <y>455</y>
+      <val>-16.</val></rng1>
+    <rng2>
+      <x>598</x>
+      <y>206</y>
+      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_HH4->
 </opencv_storage>
