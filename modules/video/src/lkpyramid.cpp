@@ -1077,6 +1077,9 @@ namespace
         if(prevImgMat.type() != CV_8UC1 || nextImgMat.type() != CV_8UC1)
             return false;
 
+        if (ovx::skipSmallImages<VX_KERNEL_OPTICAL_FLOW_PYR_LK>(prevImgMat.cols, prevImgMat.rows))
+            return false;
+
         CV_Assert(prevImgMat.size() == nextImgMat.size());
         Mat prevPtsMat = _prevPts.getMat();
         int checkPrev = prevPtsMat.checkVector(2, CV_32F, false);

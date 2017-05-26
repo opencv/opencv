@@ -1390,7 +1390,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
             return thresh;
         }
 
-       CV_OVX_RUN(true,
+       CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_THRESHOLD>(src.cols, src.rows),
                   openvx_threshold(src, dst, ithresh, imaxval, type), (double)ithresh)
 
         thresh = ithresh;

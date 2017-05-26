@@ -1865,7 +1865,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
 
-    CV_OVX_RUN(true,
+    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MEAN_STDDEV>(src.cols, src.rows),
                openvx_meanStdDev(src, _mean, _sdv, mask))
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
@@ -2322,6 +2322,9 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 #endif
 
 #ifdef HAVE_OPENVX
+namespace ovx {
+    template <> inline bool skipSmallImages<VX_KERNEL_MINMAXLOC>(int w, int h) { return w*h < 3840 * 2160; }
+}
 static bool openvx_minMaxIdx(Mat &src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, Mat &mask)
 {
     int stype = src.type();
@@ -2682,7 +2685,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-    CV_OVX_RUN(true,
+    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MINMAXLOC>(src.cols, src.rows),
                openvx_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
     CV_IPP_RUN_FAST(ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))

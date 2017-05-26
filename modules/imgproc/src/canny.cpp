@@ -899,6 +899,9 @@ private:
 };
 
 #ifdef HAVE_OPENVX
+namespace ovx {
+    template <> inline bool skipSmallImages<VX_KERNEL_CANNY_EDGE_DETECTOR>(int w, int h) { return w*h < 640 * 480; }
+}
 static bool openvx_canny(const Mat& src, Mat& dst, int loVal, int hiVal, int kSize, bool useL2)
 {
     using namespace ivx;
@@ -989,7 +992,8 @@ void Canny( InputArray _src, OutputArray _dst,
             src.type() == CV_8UC1 &&
             !src.isSubmatrix() &&
             src.cols >= aperture_size &&
-            src.rows >= aperture_size,
+            src.rows >= aperture_size &&
+            !ovx::skipSmallImages<VX_KERNEL_CANNY_EDGE_DETECTOR>(src.cols, src.rows),
         openvx_canny(
             src,
             dst,

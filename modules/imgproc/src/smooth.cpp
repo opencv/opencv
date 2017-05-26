@@ -1650,26 +1650,24 @@ cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ks
 #ifdef HAVE_OPENVX
 namespace cv
 {
+    namespace ovx {
+        template <> inline bool skipSmallImages<VX_KERNEL_BOX_3x3>(int w, int h) { return w*h < 640 * 480; }
+    }
     static bool openvx_boxfilter(InputArray _src, OutputArray _dst, int ddepth,
                                  Size ksize, Point anchor,
                                  bool normalize, int borderType)
     {
-        int stype = _src.type();
         if (ddepth < 0)
             ddepth = CV_8UC1;
-        if (stype != CV_8UC1 || (ddepth != CV_8U && ddepth != CV_16S) ||
-            (anchor.x >= 0 && anchor.x != ksize.width / 2) ||
-            (anchor.y >= 0 && anchor.y != ksize.height / 2) ||
-            ksize.width % 2 != 1 || ksize.height % 2 != 1 ||
-            ksize.width < 3 || ksize.height < 3)
+        if (_src.type() != CV_8UC1 || ddepth != CV_8U || !normalize ||
+            _src.cols() < 3 || _src.rows() < 3 ||
+            ksize.width != 3 || ksize.height != 3 ||
+            (anchor.x >= 0 && anchor.x != 1) ||
+            (anchor.y >= 0 && anchor.y != 1) ||
+            ovx::skipSmallImages<VX_KERNEL_BOX_3x3>(_src.cols(), _src.rows()))
             return false;
 
         Mat src = _src.getMat();
-        _dst.create(src.size(), CV_MAKETYPE(ddepth, 1));
-        Mat dst = _dst.getMat();
-
-        if (src.cols < ksize.width || src.rows < ksize.height)
-            return false;
 
         if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
             return false; //Process isolated borders only
@@ -1686,11 +1684,12 @@ namespace cv
             return false;
         }
 
+        _dst.create(src.size(), CV_8UC1);
+        Mat dst = _dst.getMat();
+
         try
         {
             ivx::Context ctx = ovx::getOpenVXContext();
-            if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
-                return false;
 
             Mat a;
             if (dst.data != src.data)
@@ -1701,34 +1700,14 @@ namespace cv
             ivx::Image
                 ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
                                                   ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
-                ib = ivx::Image::createFromHandle(ctx, ddepth == CV_16S ? VX_DF_IMAGE_S16 : VX_DF_IMAGE_U8,
-                                                  ivx::Image::createAddressing(dst.cols, dst.rows, ddepth == CV_16S ? 2 : 1, (vx_int32)(dst.step)), dst.data);
+                ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                                                  ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
             //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
             //since OpenVX standart says nothing about thread-safety for now
             ivx::border_t prevBorder = ctx.immediateBorder();
             ctx.setImmediateBorder(border, (vx_uint8)(0));
-            if (ddepth == CV_8U && ksize.width == 3 && ksize.height == 3 && normalize)
-            {
-                ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
-            }
-            else
-            {
-#if VX_VERSION <= VX_VERSION_1_0
-                if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(src.cols) <= ctx.convolutionMaxDimension() || (vx_size)(src.rows) <= ctx.convolutionMaxDimension()))
-                {
-                    ctx.setImmediateBorder(prevBorder);
-                    return false;
-                }
-#endif
-                Mat convData(ksize, CV_16SC1);
-                convData = normalize ? (1 << 15) / (ksize.width * ksize.height) : 1;
-                ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
-                cnv.copyFrom(convData);
-                if (normalize)
-                    cnv.setScale(1 << 15);
-                ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
-            }
+            ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
             ctx.setImmediateBorder(prevBorder);
         }
         catch (ivx::RuntimeError & e)
@@ -2181,10 +2160,12 @@ static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize,
 
 #ifdef HAVE_OPENVX
 
+namespace ovx {
+    template <> inline bool skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(int w, int h) { return w*h < 320 * 240; }
+}
 static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                                 double sigma1, double sigma2, int borderType)
 {
-    int stype = _src.type();
     if (sigma2 <= 0)
         sigma2 = sigma1;
     // automatic detection of kernel size from sigma
@@ -2193,19 +2174,20 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     if (ksize.height <= 0 && sigma2 > 0)
         ksize.height = cvRound(sigma2*6 + 1) | 1;
 
-    if (stype != CV_8UC1 ||
-        ksize.width < 3 || ksize.height < 3 ||
-        ksize.width % 2 != 1 || ksize.height % 2 != 1)
+    if (_src.type() != CV_8UC1 ||
+        _src.cols() < 3 || _src.rows() < 3 ||
+        ksize.width != 3 || ksize.height != 3)
         return false;
 
     sigma1 = std::max(sigma1, 0.);
     sigma2 = std::max(sigma2, 0.);
 
+    if (!(sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) || !(sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON) ||
+        ovx::skipSmallImages<VX_KERNEL_GAUSSIAN_3x3>(_src.cols(), _src.rows()))
+        return false;
+
     Mat src = _src.getMat();
     Mat dst = _dst.getMat();
-
-    if (src.cols < ksize.width || src.rows < ksize.height)
-        return false;
 
     if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
         return false; //Process isolated borders only
@@ -2225,8 +2207,6 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     try
     {
         ivx::Context ctx = ovx::getOpenVXContext();
-        if ((vx_size)(ksize.width) > ctx.convolutionMaxDimension() || (vx_size)(ksize.height) > ctx.convolutionMaxDimension())
-            return false;
 
         Mat a;
         if (dst.data != src.data)
@@ -2244,26 +2224,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
         //since OpenVX standart says nothing about thread-safety for now
         ivx::border_t prevBorder = ctx.immediateBorder();
         ctx.setImmediateBorder(border, (vx_uint8)(0));
-        if (ksize.width == 3 && ksize.height == 3 && (sigma1 == 0.0 || (sigma1 - 0.8) < DBL_EPSILON) && (sigma2 == 0.0 || (sigma2 - 0.8) < DBL_EPSILON))
-        {
-            ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
-        }
-        else
-        {
-#if VX_VERSION <= VX_VERSION_1_0
-            if (ctx.vendorID() == VX_ID_KHRONOS && ((vx_size)(a.cols) <= ctx.convolutionMaxDimension() || (vx_size)(a.rows) <= ctx.convolutionMaxDimension()))
-            {
-                ctx.setImmediateBorder(prevBorder);
-                return false;
-            }
-#endif
-            Mat convData;
-            cv::Mat(cv::getGaussianKernel(ksize.height, sigma2)*cv::getGaussianKernel(ksize.width, sigma1).t()).convertTo(convData, CV_16SC1, (1 << 15));
-            ivx::Convolution cnv = ivx::Convolution::create(ctx, convData.cols, convData.rows);
-            cnv.copyFrom(convData);
-            cnv.setScale(1 << 15);
-            ivx::IVX_CHECK_STATUS(vxuConvolve(ctx, ia, cnv, ib));
-        }
+        ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
         ctx.setImmediateBorder(prevBorder);
     }
     catch (ivx::RuntimeError & e)
@@ -3286,6 +3247,9 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 #ifdef HAVE_OPENVX
 namespace cv
 {
+    namespace ovx {
+        template <> inline bool skipSmallImages<VX_KERNEL_MEDIAN_3x3>(int w, int h) { return w*h < 1280 * 720; }
+    }
     static bool openvx_medianFilter(InputArray _src, OutputArray _dst, int ksize)
     {
         if (_src.type() != CV_8UC1 || _dst.type() != CV_8U
@@ -3297,6 +3261,14 @@ namespace cv
 
         Mat src = _src.getMat();
         Mat dst = _dst.getMat();
+
+        if (
+#ifdef VX_VERSION_1_1
+             ksize != 3 ? ovx::skipSmallImages<VX_KERNEL_NON_LINEAR_FILTER>(src.cols, src.rows) :
+#endif
+             ovx::skipSmallImages<VX_KERNEL_MEDIAN_3x3>(src.cols, src.rows)
+           )
+            return false;
 
         try
         {

@@ -1331,6 +1331,9 @@ private:
 #ifdef HAVE_OPENVX
 namespace cv
 {
+    namespace ovx {
+        template <> inline bool skipSmallImages<VX_KERNEL_HISTOGRAM>(int w, int h) { return w*h < 2048 * 1536; }
+    }
     static bool openvx_calchist(const Mat& image, OutputArray _hist, const int histSize,
         const float* _range)
     {
@@ -1440,7 +1443,8 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
         images && histSize &&
         nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && _mask.getMat().empty() &&
         (!channels || channels[0] == 0) && !accumulate && uniform &&
-        ranges && ranges[0],
+        ranges && ranges[0] &&
+        !ovx::skipSmallImages<VX_KERNEL_HISTOGRAM>(images[0].cols, images[0].rows),
         openvx_calchist(images[0], _hist, histSize[0], ranges[0]))
 
     Mat mask = _mask.getMat();
@@ -3882,7 +3886,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
 
-    CV_OVX_RUN(true,
+    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_EQUALIZE_HISTOGRAM>(src.cols, src.rows),
                openvx_equalize_hist(src, dst))
 
     Mutex histogramLockInstance;
