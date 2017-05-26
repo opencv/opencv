@@ -47,7 +47,7 @@ using namespace cv;
 
 void MakeArtificialExample(RNG rng, Mat& dst_left_view, Mat& dst_view);
 
-CV_ENUM(SGBMModes, StereoSGBM::MODE_SGBM, StereoSGBM::MODE_SGBM_3WAY);
+CV_ENUM(SGBMModes, StereoSGBM::MODE_SGBM, StereoSGBM::MODE_SGBM_3WAY, StereoSGBM::MODE_HH4);
 typedef tuple<Size, int, SGBMModes> SGBMParams;
 typedef TestBaseWithParam<SGBMParams> TestStereoCorresp;
 
