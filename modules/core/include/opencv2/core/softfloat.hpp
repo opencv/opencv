@@ -227,17 +227,17 @@ namespace cv
 template<typename _Tp> static inline _Tp saturate_cast(softfloat  a) { return _Tp(a); }
 template<typename _Tp> static inline _Tp saturate_cast(softdouble a) { return _Tp(a); }
 
-template<> inline uchar saturate_cast<uchar>(softfloat  a) { return (uchar)std::max(std::min(cvRound(a), UCHAR_MAX), 0); }
-template<> inline uchar saturate_cast<uchar>(softdouble a) { return (uchar)std::max(std::min(cvRound(a), UCHAR_MAX), 0); }
+template<> inline uchar saturate_cast<uchar>(softfloat  a) { return (uchar)std::max(std::min(cvRound(a), (int)UCHAR_MAX), 0); }
+template<> inline uchar saturate_cast<uchar>(softdouble a) { return (uchar)std::max(std::min(cvRound(a), (int)UCHAR_MAX), 0); }
 
-template<> inline schar saturate_cast<schar>(softfloat  a) { return (schar)std::min(std::max(cvRound(a), SCHAR_MIN), SCHAR_MAX); }
-template<> inline schar saturate_cast<schar>(softdouble a) { return (schar)std::min(std::max(cvRound(a), SCHAR_MIN), SCHAR_MAX); }
+template<> inline schar saturate_cast<schar>(softfloat  a) { return (schar)std::min(std::max(cvRound(a), (int)SCHAR_MIN), (int)SCHAR_MAX); }
+template<> inline schar saturate_cast<schar>(softdouble a) { return (schar)std::min(std::max(cvRound(a), (int)SCHAR_MIN), (int)SCHAR_MAX); }
 
-template<> inline ushort saturate_cast<ushort>(softfloat  a) { return (ushort)std::max(std::min(cvRound(a), USHRT_MAX), 0); }
-template<> inline ushort saturate_cast<ushort>(softdouble a) { return (ushort)std::max(std::min(cvRound(a), USHRT_MAX), 0); }
+template<> inline ushort saturate_cast<ushort>(softfloat  a) { return (ushort)std::max(std::min(cvRound(a), (int)USHRT_MAX), 0); }
+template<> inline ushort saturate_cast<ushort>(softdouble a) { return (ushort)std::max(std::min(cvRound(a), (int)USHRT_MAX), 0); }
 
-template<> inline short saturate_cast<short>(softfloat  a) { return (short)std::min(std::max(cvRound(a), SHRT_MIN), SHRT_MAX); }
-template<> inline short saturate_cast<short>(softdouble a) { return (short)std::min(std::max(cvRound(a), SHRT_MIN), SHRT_MAX); }
+template<> inline short saturate_cast<short>(softfloat  a) { return (short)std::min(std::max(cvRound(a), (int)SHRT_MIN), (int)SHRT_MAX); }
+template<> inline short saturate_cast<short>(softdouble a) { return (short)std::min(std::max(cvRound(a), (int)SHRT_MIN), (int)SHRT_MAX); }
 
 template<> inline int saturate_cast<int>(softfloat  a) { return cvRound(a); }
 template<> inline int saturate_cast<int>(softdouble a) { return cvRound(a); }
