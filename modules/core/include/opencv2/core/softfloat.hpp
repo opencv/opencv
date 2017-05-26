@@ -199,14 +199,12 @@ public:
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-
-
-}
 CV_EXPORTS softfloat  mulAdd( const softfloat&  a, const softfloat&  b, const softfloat & c);
 CV_EXPORTS softdouble mulAdd( const softdouble& a, const softdouble& b, const softdouble& c);
 
 CV_EXPORTS softfloat  sqrt( const softfloat&  a );
 CV_EXPORTS softdouble sqrt( const softdouble& a );
+}
 
 /*----------------------------------------------------------------------------
 | Ported from OpenCV and added for usability
