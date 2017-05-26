@@ -156,9 +156,7 @@ FileNode::operator std::string() const
 template<> inline
 void operator >> (const FileNode& n, std::string& value)
 {
-    String val;
-    read(n, val, val);
-    value = val;
+    read(n, value, std::string());
 }
 
 template<> inline
