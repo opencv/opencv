@@ -7396,6 +7396,13 @@ void read(const FileNode& node, String& value, const String& default_value)
     value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? String(node.node->data.str.ptr) : default_value;
 }
 
+#ifndef OPENCV_NOSTL
+void read(const FileNode& node, std::string& value, const std::string& default_value)
+{
+    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? std::string(node.node->data.str.ptr) : default_value;
+}
+#endif
+
 }
 
 
