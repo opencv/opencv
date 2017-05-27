@@ -9,6 +9,8 @@ static const char* noneValue = "<none>";
 
 static String cat_string(const String& str)
 {
+    if (str.length() == 0)
+        return String("");
     int left = 0, right = (int)str.length();
     while( left < right && str[left] == ' ' )
         left++;
