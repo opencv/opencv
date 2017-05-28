@@ -118,9 +118,9 @@ knn = cv2.ml.KNearest_create()
 knn.train(trainData, cv2.ml.ROW_SAMPLE, responses)
 ret, results, neighbours ,dist = knn.findNearest(newcomer, 3)
 
-print "result: ", results,"\n"
-print "neighbours: ", neighbours,"\n"
-print "distance: ", dist
+print( "result:  {}\n".format(results) )
+print( "neighbours:  {}\n".format(neighbours) )
+print( "distance:  {}\n".format(dist) )
 
 plt.show()
 @endcode

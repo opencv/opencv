@@ -92,7 +92,7 @@ examples are shown in Python terminal since it is just same as SIFT only.
 While matching, we may need all those features, but not now. So we increase the Hessian Threshold.
 @code{.py}
 # Check present Hessian threshold
->>> print surf.getHessianThreshold()
+>>> print( surf.getHessianThreshold() )
 400.0
 
 # We set it to some 50000. Remember, it is just for representing in picture.
@@ -102,7 +102,7 @@ While matching, we may need all those features, but not now. So we increase the 
 # Again compute keypoints and check its number.
 >>> kp, des = surf.detectAndCompute(img,None)
 
->>> print len(kp)
+>>> print( len(kp) )
 47
 @endcode
 It is less than 50. Let's draw it on the image.
@@ -119,7 +119,7 @@ on wings of butterfly. You can test it with other images.
 Now I want to apply U-SURF, so that it won't find the orientation.
 @code{.py}
 # Check upright flag, if it False, set it to True
->>> print surf.getUpright()
+>>> print( surf.getUpright() )
 False
 
 >>> surf.setUpright(True)
@@ -139,7 +139,7 @@ etc, this is better.
 Finally we check the descriptor size and change it to 128 if it is only 64-dim.
 @code{.py}
 # Find size of descriptor
->>> print surf.descriptorSize()
+>>> print( surf.descriptorSize() )
 64
 
 # That means flag, "extended" is False.
@@ -149,9 +149,9 @@ Finally we check the descriptor size and change it to 128 if it is only 64-dim.
 # So we make it to True to get 128-dim descriptors.
 >>> surf.extended = True
 >>> kp, des = surf.detectAndCompute(img,None)
->>> print surf.descriptorSize()
+>>> print( surf.descriptorSize() )
 128
->>> print des.shape
+>>> print( des.shape )
 (47, 128)
 @endcode
 Remaining part is matching which we will do in another chapter.

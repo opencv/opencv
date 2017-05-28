@@ -218,7 +218,7 @@ for i in xrange(len(objpoints)):
     error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
     mean_error += error
 
-print "total error: ", mean_error/len(objpoints)
+print( "total error: {}".format(mean_error/len(objpoints)) )
 @endcode
 Additional Resources
 --------------------

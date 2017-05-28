@@ -218,7 +218,7 @@ for i in xrange(1,256):
 
 # find otsu's threshold value with OpenCV function
 ret, otsu = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-print thresh,ret
+print( "{} {}".format(thresh,ret) )
 @endcode
 *(Some of the functions may be new here, but we will cover them in coming chapters)*
 

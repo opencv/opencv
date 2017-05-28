@@ -186,12 +186,12 @@ using IPython magic command %timeit.
 @code{.py}
 In [16]: img = cv2.imread('messi5.jpg',0)
 In [17]: rows,cols = img.shape
-In [18]: print rows,cols
+In [18]: print("{} {}".format(rows,cols))
 342 548
 
 In [19]: nrows = cv2.getOptimalDFTSize(rows)
 In [20]: ncols = cv2.getOptimalDFTSize(cols)
-In [21]: print nrows, ncols
+In [21]: print("{} {}".format(nrows,ncols))
 360 576
 @endcode
 See, the size (342,548) is modified to (360, 576). Now let's pad it with zeros (for OpenCV) and find
