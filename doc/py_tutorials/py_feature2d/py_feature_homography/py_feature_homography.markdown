@@ -85,7 +85,7 @@ if len(good)>MIN_MATCH_COUNT:
     img2 = cv2.polylines(img2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
 
 else:
-    print "Not enough matches are found - %d/%d" % (len(good),MIN_MATCH_COUNT)
+    print( "Not enough matches are found - {}/{}".format(len(good), MIN_MATCH_COUNT) )
     matchesMask = None
 @endcode
 Finally we draw our inliers (if successfully found the object) or matching keypoints (if failed).

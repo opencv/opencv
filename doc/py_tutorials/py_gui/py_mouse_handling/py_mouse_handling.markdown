@@ -21,7 +21,7 @@ in Python terminal:
 @code{.py}
 import cv2
 events = [i for i in dir(cv2) if 'EVENT' in i]
-print events
+print( events )
 @endcode
 Creating mouse callback function has a specific format which is same everywhere. It differs only in
 what the function does. So our mouse callback function does one thing, it draws a circle where we
