@@ -349,7 +349,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
 
 #elif defined HAVE_OPENMP
 
-        #pragma omp parallel for schedule(dynamic)
+        #pragma omp parallel for schedule(dynamic) num_threads(numThreads > 0 ? numThreads : numThreadsMax)
         for (int i = stripeRange.start; i < stripeRange.end; ++i)
             pbody(Range(i, i + 1));
 
@@ -418,7 +418,10 @@ int cv::getNumThreads(void)
 
 #elif defined HAVE_OPENMP
 
-    return omp_get_max_threads();
+    return numThreads > 0
+           ? numThreads
+           : numThreadsMax;
+
 
 #elif defined HAVE_GCD
 
@@ -463,10 +466,7 @@ void cv::setNumThreads( int threads )
 
 #elif defined HAVE_OPENMP
 
-    if(omp_in_parallel())
-        return; // can't change number of openmp threads inside a parallel region
-
-    omp_set_num_threads(threads > 0 ? threads : numThreadsMax);
+    return; // nothing needed as num_threads clause is used in #pragma omp parallel for
 
 #elif defined HAVE_GCD
 
