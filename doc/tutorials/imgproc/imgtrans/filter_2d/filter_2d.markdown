@@ -38,7 +38,7 @@ convolution is calculated in the following way:
 
 Expressing the procedure above in the form of an equation we would have:
 
-\f[H(x,y) = \sum_{i=0}^{M_{i} - 1} \sum_{j=0}^{M_{j}-1} I(x+i - a_{i}, y + j - a_{j})K(i,j)\f]
+\f[H(x,y) = \sum_{i=0}^{M_{i} - 1} \sum_{j=0}^{M_{j}-1} I(x+i + a_{i}, y + j + a_{j})K(i,j)\f]
 
 Fortunately, OpenCV provides you with the function @ref cv::filter2D so you do not have to code all
 these operations.
