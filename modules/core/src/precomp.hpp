@@ -318,6 +318,7 @@ cv::Mutex& getInitializationMutex();
 #define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
+bool cv_snprintf(char* buf, int len, const char* fmt, ...);
 }
 
 #endif /*_CXCORE_INTERNAL_H_*/
