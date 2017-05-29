@@ -58,6 +58,8 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
+#include "opencv2/core/softfloat.hpp"
+
 #include <assert.h>
 #include <ctype.h>
 #include <float.h>

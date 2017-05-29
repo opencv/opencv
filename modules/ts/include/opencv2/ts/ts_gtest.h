@@ -10334,7 +10334,12 @@ class TypeWithoutFormatter<T, kConvertibleToInteger> {
   // T is not an enum, printing it as an integer is the best we can do
   // given that it has no user-defined printer.
   static void PrintValue(const T& value, ::std::ostream* os) {
+    // MSVC warns about implicitly converting from double and float to int for
+    // possible loss of data, so we need to temporarily disable the
+    // warning.
+    GTEST_DISABLE_MSC_WARNINGS_PUSH_(4244)
     const internal::BiggestInt kBigInt = value;
+    GTEST_DISABLE_MSC_WARNINGS_POP_()
     *os << kBigInt;
   }
 };
