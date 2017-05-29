@@ -52,7 +52,7 @@ namespace row_filter
 {
     #define MAX_KERNEL_SIZE 32
 
-    __constant__ float c_kernel[MAX_KERNEL_SIZE];
+    __global__ float c_kernel[MAX_KERNEL_SIZE];
 
     template <int KSIZE, typename T, typename D, typename B>
     __global__ void linearRowFilter(const PtrStepSz<T> src, PtrStep<D> dst, const int anchor, const B brd)
