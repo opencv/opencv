@@ -139,7 +139,7 @@ namespace
 
         CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
         CV_Assert( !scalar.empty() || (src2.type() == src1.type() && src2.size() == src1.size()) );
-        CV_Assert( mask.empty() || (cn == 1 && mask.size() == size && mask.type() == CV_8UC1) );
+        CV_Assert( mask.empty() || (mask.channels() == 1 && mask.size() == size && mask.type() == CV_8UC1) );
 
         if (sdepth == CV_64F || ddepth == CV_64F)
         {
