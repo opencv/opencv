@@ -856,7 +856,7 @@ bool setBreakOnError(bool value)
     return prevVal;
 }
 
-static bool cv_snprintf(char* buf, int len, const char* fmt, ...)
+bool cv_snprintf(char* buf, int len, const char* fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
