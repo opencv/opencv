@@ -534,10 +534,10 @@ where N is the number of points. vector\<Point2f\> can be also passed here.
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
-@param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
+@param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
-@param useExtrinsicGuess Parameter used for SOLVEPNP_ITERATIVE. If true (1), the function uses
+@param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
 the provided rvec and tvec values as initial approximations of the rotation and translation
 vectors, respectively, and further optimizes them.
 @param flags Method for solving a PnP problem:
@@ -546,15 +546,18 @@ this case the function finds such a pose that minimizes reprojection error, that
 of squared distances between the observed projections imagePoints and the projected (using
 projectPoints ) objectPoints .
 -   **SOLVEPNP_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem". In this case the
-function requires exactly four object and image points.
+"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
+In this case the function requires exactly four object and image points.
+-   **SOLVEPNP_AP3P** Method is based on the paper of T. Ke, S. Roumeliotis
+"An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
+In this case the function requires exactly four object and image points.
 -   **SOLVEPNP_EPNP** Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the
-paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation".
+paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation" (@cite lepetit2009epnp).
 -   **SOLVEPNP_DLS** Method is based on the paper of Joel A. Hesch and Stergios I. Roumeliotis.
-"A Direct Least-Squares (DLS) Method for PnP".
+"A Direct Least-Squares (DLS) Method for PnP" (@cite hesch2011direct).
 -   **SOLVEPNP_UPNP** Method is based on the paper of A.Penate-Sanchez, J.Andrade-Cetto,
 F.Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Length
-Estimation". In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
+Estimation" (@cite penate2013exhaustive). In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
 assuming that both have the same value. Then the cameraMatrix is updated with the estimated
 focal length.
 
@@ -575,8 +578,11 @@ projections, as well as the camera matrix and the distortion coefficients.
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
    -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
-       unstable and sometimes give completly wrong results. If you pass one of these two flags,
-       **SOLVEPNP_EPNP** method will be used instead.
+       unstable and sometimes give completly wrong results. If you pass one of these two
+       flags, **SOLVEPNP_EPNP** method will be used instead.
+   -   The minimum number of points is 4. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
+       methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
+       of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
