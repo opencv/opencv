@@ -325,8 +325,14 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 #if CV_SSE2
         __m128i ithree = _mm_set1_epi32(3);
         for ( ; x <= end - 4; x += 4)
-            _mm_storeu_si128((__m128i*)(xmap + x), _mm_mullo_epi16(ithree,
-                _mm_loadu_si128((const __m128i*)(xmap + x))));
+        {
+            //emulation of _mm_mullo_epi32
+            __m128i mul_res = _mm_loadu_si128((const __m128i*)(xmap + x));
+            __m128i tmp1 = _mm_mul_epu32(ithree, mul_res);
+            __m128i tmp2 = _mm_mul_epu32( _mm_srli_si128(ithree,4), _mm_srli_si128(mul_res,4));
+            mul_res = _mm_unpacklo_epi32(_mm_shuffle_epi32(tmp1, _MM_SHUFFLE (0,0,2,0)), _mm_shuffle_epi32(tmp2, _MM_SHUFFLE (0,0,2,0)));
+            _mm_storeu_si128((__m128i*)(xmap + x), mul_res);
+        }
 #elif CV_NEON
         int32x4_t ithree = vdupq_n_s32(3);
         for ( ; x <= end - 4; x += 4)
