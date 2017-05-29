@@ -117,6 +117,10 @@ public:
      * Remove duplicated keypoints.
      */
     static void removeDuplicated( std::vector<KeyPoint>& keypoints );
+    /*
+     * Remove duplicated keypoints and sort the remaining keypoints
+     */
+    static void removeDuplicatedSorted( std::vector<KeyPoint>& keypoints );
 
     /*
      * Retain the specified number of the best keypoints (according to the response)
