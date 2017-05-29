@@ -69,8 +69,8 @@ kp = star.detect(img,None)
 # compute the descriptors with BRIEF
 kp, des = brief.compute(img, kp)
 
-print brief.descriptorSize()
-print des.shape
+print( brief.descriptorSize() )
+print( des.shape )
 @endcode
 The function brief.getDescriptorSize() gives the \f$n_d\f$ size used in bytes. By default it is 32. Next one
 is matching, which will be done in another chapter.

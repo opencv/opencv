@@ -51,7 +51,7 @@ ret,result,neighbours,dist = knn.findNearest(test,k=5)
 matches = result==test_labels
 correct = np.count_nonzero(matches)
 accuracy = correct*100.0/result.size
-print accuracy
+print( accuracy )
 @endcode
 So our basic OCR app is ready. This particular example gave me an accuracy of 91%. One option
 improve accuracy is to add more data for training, especially the wrong ones. So instead of finding
@@ -64,7 +64,7 @@ np.savez('knn_data.npz',train=train, train_labels=train_labels)
 
 # Now load the data
 with np.load('knn_data.npz') as data:
-    print data.files
+    print( data.files )
     train = data['train']
     train_labels = data['train_labels']
 @endcode
@@ -109,7 +109,7 @@ ret, result, neighbours, dist = knn.findNearest(testData, k=5)
 
 correct = np.count_nonzero(result == labels)
 accuracy = correct*100.0/10000
-print accuracy
+print( accuracy )
 @endcode
 It gives me an accuracy of 93.22%. Again, if you want to increase accuracy, you can iteratively add
 error data in each level.

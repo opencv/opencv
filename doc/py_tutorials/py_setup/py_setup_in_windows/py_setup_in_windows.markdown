@@ -36,7 +36,7 @@ Installing OpenCV from prebuilt binaries
 -#  Open Python IDLE and type following codes in Python terminal.
     @code
         >>> import cv2
-        >>> print cv2.__version__
+        >>> print( cv2.__version__ )
     @endcode
 
 If the results are printed out without any errors, congratulations !!! You have installed

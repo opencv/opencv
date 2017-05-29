@@ -24,7 +24,7 @@ commands in your Python terminal :
 @code{.py}
 >>> import cv2
 >>> flags = [i for i in dir(cv2) if i.startswith('COLOR_')]
->>> print flags
+>>> print( flags )
 @endcode
 @note For HSV, Hue range is [0,179], Saturation range is [0,255] and Value range is [0,255].
 Different softwares use different scales. So if you are comparing OpenCV values with them, you need
@@ -96,7 +96,7 @@ terminal:
 @code{.py}
 >>> green = np.uint8([[[0,255,0 ]]])
 >>> hsv_green = cv2.cvtColor(green,cv2.COLOR_BGR2HSV)
->>> print hsv_green
+>>> print( hsv_green )
 [[[ 60 255 255]]]
 @endcode
 Now you take [H-10, 100,100] and [H+10, 255, 255] as lower bound and upper bound respectively. Apart

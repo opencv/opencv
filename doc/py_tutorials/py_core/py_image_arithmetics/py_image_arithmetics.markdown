@@ -23,10 +23,10 @@ For example, consider below sample:
 >>> x = np.uint8([250])
 >>> y = np.uint8([10])
 
->>> print cv2.add(x,y) # 250+10 = 260 => 255
+>>> print( cv2.add(x,y) ) # 250+10 = 260 => 255
 [[255]]
 
->>> print x+y          # 250+10 = 260 % 256 = 4
+>>> print( x+y )          # 250+10 = 260 % 256 = 4
 [4]
 @endcode
 It will be more visible when you add two images. OpenCV function will provide a better result. So
