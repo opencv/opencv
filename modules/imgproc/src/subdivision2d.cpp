@@ -38,7 +38,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
+#include <cmath>
 
 namespace cv
 {
@@ -356,12 +358,12 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
         edgeOrg(edge, &org_pt);
         edgeDst(edge, &dst_pt);
 
-        double t1 = fabs( pt.x - org_pt.x );
-        t1 += fabs( pt.y - org_pt.y );
-        double t2 = fabs( pt.x - dst_pt.x );
-        t2 += fabs( pt.y - dst_pt.y );
-        double t3 = fabs( org_pt.x - dst_pt.x );
-        t3 += fabs( org_pt.y - dst_pt.y );
+        double t1 = std::fabs( pt.x - org_pt.x );
+        t1 += std::fabs( pt.y - org_pt.y );
+        double t2 = std::fabs( pt.x - dst_pt.x );
+        t2 += std::fabs( pt.y - dst_pt.y );
+        double t3 = std::fabs( org_pt.x - dst_pt.x );
+        t3 += std::fabs( org_pt.y - dst_pt.y );
 
         if( t1 < FLT_EPSILON )
         {

@@ -43,6 +43,7 @@
  */
 
 #include "precomp.hpp"
+#include <cmath>
 #include <fstream>
 #include <stdlib.h>
 
@@ -730,7 +731,7 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
           direction0 += tmp0;
           direction1 += tmp1;
         }
-        kp.angle = (float)(atan2((float) direction1, (float) direction0) / CV_PI * 180.0);
+        kp.angle = (float) (std::atan2((float) direction1, (float) direction0) / CV_PI * 180.0);
 
         if (!doDescriptors)
         {

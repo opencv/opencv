@@ -46,6 +46,8 @@
 #include "opencv2/objdetect/objdetect_c.h"
 #include <stdio.h>
 
+#include <cmath>
+
 #if CV_SSE2
 #   if 1 /*!CV_SSE4_1 && !CV_SSE4_2*/
 #       define _mm_blendv_pd(a, b, m) _mm_xor_pd(a, _mm_and_pd(_mm_xor_pd(b, a), m))
@@ -325,7 +327,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
                 node->left = classifier->left[l];
                 node->right = classifier->right[l];
 
-                if( fabs(feature->rect[2].weight) < DBL_EPSILON ||
+                if( std::fabs(feature->rect[2].weight) < DBL_EPSILON ||
                     feature->rect[2].r.width == 0 ||
                     feature->rect[2].r.height == 0 )
                     memset( &(node->feature.rect[2]), 0, sizeof(node->feature.rect[2]) );

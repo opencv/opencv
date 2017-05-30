@@ -40,8 +40,10 @@
 //
 //M*/
 
+
 #include "precomp.hpp"
 #include "opencv2/imgproc/detail/distortion_model.hpp"
+#include <cmath>
 
 cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
@@ -690,8 +692,8 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
             if( ymax < q.y ) ymax = q.y;
         }
 
-    float scale = (float)std::min(dcenter.x/fabs(xmax), dcenter.x/fabs(xmin));
-    Size dsize(destImageWidth, cvCeil(std::max(scale*fabs(ymin)*2, scale*fabs(ymax)*2)));
+    float scale = (float)std::min(dcenter.x/std::fabs(xmax), dcenter.x/std::fabs(xmin));
+    Size dsize(destImageWidth, cvCeil(std::max(scale*std::fabs(ymin)*2, scale*std::fabs(ymax)*2)));
     dcenter.y = (dsize.height - 1)*0.5f;
 
     Mat mapxy(dsize, CV_32FC2);

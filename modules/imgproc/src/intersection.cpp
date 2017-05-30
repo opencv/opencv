@@ -42,7 +42,10 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
+#include <cmath>
+
 
 namespace cv
 {
@@ -69,7 +72,7 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
 
         for( int i = 0; i < 4; i++ )
         {
-            if( fabs(pts1[i].x - pts2[i].x) > samePointEps || (fabs(pts1[i].y - pts2[i].y) > samePointEps) )
+            if( std::fabs(pts1[i].x - pts2[i].x) > samePointEps || (std::fabs(pts1[i].y - pts2[i].y) > samePointEps) )
             {
                 same = false;
                 break;

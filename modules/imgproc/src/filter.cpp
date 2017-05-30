@@ -44,6 +44,7 @@
 #include "opencv2/core/opencl/ocl_defs.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
+#include <cmath>
 
 /****************************************************************************************\
                                     Base Image Filter
@@ -1104,7 +1105,7 @@ struct SymmColumnSmallVec_32s16s
         }
         else
         {
-            if( fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
+            if( std::fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
             {
                 if( ky[1] < 0 )
                     std::swap(S0, S2);
@@ -1982,7 +1983,7 @@ struct SymmColumnSmallVec_32f
         }
         else
         {
-            if( fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
+            if( std::fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
             {
                 if( ky[1] < 0 )
                     std::swap(S0, S2);

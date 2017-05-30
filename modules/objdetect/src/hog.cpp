@@ -45,6 +45,7 @@
 #include "opencv2/core/core_c.h"
 #include "opencl_kernels_objdetect.hpp"
 
+#include <cmath>
 #include <cstdio>
 #include <iterator>
 #include <limits>
@@ -1543,7 +1544,7 @@ static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _d
             gaussian_lut.at<float>(idx++) = std::exp(-(j * j + i * i) * scale);
     for(int i=-8; i<8; i++)
         for(int j=-8; j<8; j++)
-            gaussian_lut.at<float>(idx++) = (8.f - fabs(j + 0.5f)) * (8.f - fabs(i + 0.5f)) / 64.f;
+            gaussian_lut.at<float>(idx++) = (8.f - std::fabs(j + 0.5f)) * (8.f - std::fabs(i + 0.5f)) / 64.f;
 
     if(!ocl_computeGradient(_img, grad, qangle, nbins, effect_size, gammaCorrection, signedGradient))
         return false;
@@ -1968,7 +1969,7 @@ static bool ocl_detect(InputArray img, std::vector<Point> &hits, double hit_thre
             gaussian_lut.at<float>(idx++) = std::exp(-(j * j + i * i) * scale);
     for(int i=-8; i<8; i++)
         for(int j=-8; j<8; j++)
-            gaussian_lut.at<float>(idx++) = (8.f - fabs(j + 0.5f)) * (8.f - fabs(i + 0.5f)) / 64.f;
+            gaussian_lut.at<float>(idx++) = (8.f - std::fabs(j + 0.5f)) * (8.f - std::fabs(i + 0.5f)) / 64.f;
 
     if(!ocl_computeGradient(img, grad, qangle, nbins, effect_size, gammaCorrection, signedGradient))
         return false;

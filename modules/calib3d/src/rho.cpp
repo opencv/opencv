@@ -45,6 +45,7 @@
 
 /* Includes */
 #include "precomp.hpp"
+#include <cmath>
 #include <opencv2/core.hpp>
 #include <stdlib.h>
 #include <stdio.h>
@@ -2222,7 +2223,7 @@ static inline void   sacCalcJacobianErrors(const float* H,
         float X       = dst[2*i+0];
         float Y       = dst[2*i+1];
         float W       = (H[6]*x + H[7]*y + 1.0f);
-        float iW      = fabs(W) > FLT_EPSILON ? 1.0f/W : 0;
+        float iW      = std::fabs(W) > FLT_EPSILON ? 1.0f/W : 0;
 
         float reprojX = (H[0]*x + H[1]*y + H[2]) * iW;
         float reprojY = (H[3]*x + H[4]*y + H[5]) * iW;
@@ -2347,7 +2348,7 @@ static inline float  sacLMGain(const float*  dH,
     dL *= 0.5;
 
     /* Return gain as S-newS / L0 - LH. */
-    return fabs(dL) < FLT_EPSILON ? dS : dS / dL;
+    return std::fabs(dL) < FLT_EPSILON ? dS : dS / dL;
 }
 
 

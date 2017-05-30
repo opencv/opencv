@@ -120,10 +120,10 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
         float c_2 = c * c;
         float cosAlpha = ( b_2 + c_2 - a_2 ) / ( kp2.size * c );
         float cosBeta  = ( a_2 + c_2 - b_2 ) / ( kp1.size * c );
-        float alpha = acos( cosAlpha );
-        float beta = acos( cosBeta );
-        float sinAlpha = sin(alpha);
-        float sinBeta  = sin(beta);
+        float alpha = std::acos( cosAlpha );
+        float beta = std::acos( cosBeta );
+        float sinAlpha = std::sin(alpha);
+        float sinBeta  = std::sin(beta);
 
         float segmentAreaA = a_2 * beta;
         float segmentAreaB = b_2 * alpha;

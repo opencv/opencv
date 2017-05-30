@@ -173,12 +173,12 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
                 old = imgVectors[i];
                 imgVectors[i] = imagePoints[i + 1].x * tmp - imagePoints[0].x;
 
-                diff = MAX( diff, (float) fabs( imgVectors[i] - old ));
+                diff = MAX( diff, std::fabs( imgVectors[i] - old ));
 
                 old = imgVectors[N + i];
                 imgVectors[N + i] = imagePoints[i + 1].y * tmp - imagePoints[0].y;
 
-                diff = MAX( diff, (float) fabs( imgVectors[N + i] - old ));
+                diff = MAX( diff, std::fabs( imgVectors[N + i] - old ));
             }
         }
 

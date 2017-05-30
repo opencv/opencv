@@ -36,6 +36,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_features2d.hpp"
+#include <cmath>
 #include <iterator>
 
 #ifndef CV_IMPL_ADD
@@ -227,7 +228,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
         float angle = kpt.angle;
 
         angle *= (float)(CV_PI/180.f);
-        float a = (float)cos(angle), b = (float)sin(angle);
+        float a = std::cos(angle), b = std::sin(angle);
 
         const uchar* center = &imagePyramid.at<uchar>(cvRound(kpt.pt.y*scale) + layer.y,
                                                       cvRound(kpt.pt.x*scale) + layer.x);

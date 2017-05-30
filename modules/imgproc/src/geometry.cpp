@@ -38,7 +38,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
+#include <cmath>
 
 
 CV_IMPL CvRect
@@ -591,5 +593,5 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
 
         temp.copyTo(_p12);
     }
-    return (float)fabs(area);
+    return (float)std::fabs(area);
 }

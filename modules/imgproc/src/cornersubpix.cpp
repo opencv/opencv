@@ -39,6 +39,8 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+#include <cmath>
+
 #include "precomp.hpp"
 
 void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
@@ -148,7 +150,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
 
         // if new point is too far from initial, it means poor convergence.
         // leave initial point as the result
-        if( fabs( cI.x - cT.x ) > win.width || fabs( cI.y - cT.y ) > win.height )
+        if( std::fabs( cI.x - cT.x ) > win.width || std::fabs( cI.y - cT.y ) > win.height )
             cI = cT;
 
         corners[pt_i] = cI;

@@ -40,7 +40,9 @@
 //
 //M*/
 
+
 #include "precomp.hpp"
+#include <cmath>
 
 namespace cv
 {
@@ -281,7 +283,7 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     //Setting transform Cost and Shape reference
     Mat w(tpsParameters, Rect(0,0,2,tpsParameters.rows-3));
     Mat Q=w.t()*matK*w;
-    transformCost=fabs(Q.at<float>(0,0)*Q.at<float>(1,1));//fabs(mean(Q.diag(0))[0]);//std::max(Q.at<float>(0,0),Q.at<float>(1,1));
+    transformCost=std::fabs(Q.at<float>(0,0)*Q.at<float>(1,1));//fabs(mean(Q.diag(0))[0]);//std::max(Q.at<float>(0,0),Q.at<float>(1,1));
     tpsComputed=true;
 }
 

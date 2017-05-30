@@ -43,6 +43,8 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include <cmath>
+
 
 namespace cv
 {
@@ -248,7 +250,7 @@ HoughLinesSDiv( const Mat& img,
     float* sinTable = &_sinTable[0];
 
     for( index = 0; index < 5 * tn * stn; index++ )
-        sinTable[index] = (float)cos( stheta * index * 0.2f );
+        sinTable[index] = (float)std::cos( stheta * index * 0.2f );
 
     std::vector<uchar> _caccum(rn * tn, (uchar)0);
     uchar* caccum = &_caccum[0];
@@ -285,7 +287,7 @@ HoughLinesSDiv( const Mat& img,
                 xc = (float) col + 0.5f;
 
                 /* Update the accumulator */
-                t = (float) fabs( cvFastArctan( yc, xc ) * d2r );
+                t = (float) std::fabs( cvFastArctan( yc, xc ) * d2r );
                 r = (float) std::sqrt( (double)xc * xc + (double)yc * yc );
                 r0 = r * irho;
                 ti0 = cvFloor( (t + CV_PI*0.5) * itheta );
@@ -353,7 +355,7 @@ HoughLinesSDiv( const Mat& img,
                     xc = (float) x[index] + 0.5f;
 
                     // Update the accumulator
-                    t = (float) fabs( cvFastArctan( yc, xc ) * d2r );
+                    t = (float) std::fabs( cvFastArctan( yc, xc ) * d2r );
                     r = (float) std::sqrt( (double)xc * xc + (double)yc * yc ) * isrho;
                     ti0 = cvFloor( (t + CV_PI * 0.5) * istheta );
                     ti2 = (ti * stn - ti0) * 5;
@@ -534,18 +536,18 @@ HoughLinesProbabilistic( Mat& image,
         b = ttab[max_n*2];
         x0 = j;
         y0 = i;
-        if( fabs(a) > fabs(b) )
+        if( std::fabs(a) > std::fabs(b) )
         {
             xflag = 1;
             dx0 = a > 0 ? 1 : -1;
-            dy0 = cvRound( b*(1 << shift)/fabs(a) );
+            dy0 = cvRound( b*(1 << shift)/std::fabs(a) );
             y0 = (y0 << shift) + (1 << (shift-1));
         }
         else
         {
             xflag = 0;
             dy0 = b > 0 ? 1 : -1;
-            dx0 = cvRound( a*(1 << shift)/fabs(b) );
+            dx0 = cvRound( a*(1 << shift)/std::fabs(b) );
             x0 = (x0 << shift) + (1 << (shift-1));
         }
 

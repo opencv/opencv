@@ -40,11 +40,13 @@
 //
 //M*/
 
+
 #include "precomp.hpp"
 #include "opencv2/videostab/motion_stabilizing.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
 #include "clp.hpp"
+#include <cmath>
 
 namespace cv
 {
@@ -643,8 +645,8 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
 
     const float w = static_cast<float>(size.width);
     const float h = static_cast<float>(size.height);
-    const float dx = floor(w * trimRatio);
-    const float dy = floor(h * trimRatio);
+    const float dx = std::floor(w * trimRatio);
+    const float dy = std::floor(h * trimRatio);
     const float srcM[] =
             {M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2),
              M.at<float>(1,0), M.at<float>(1,1), M.at<float>(1,2),
@@ -699,8 +701,8 @@ float estimateOptimalTrimRatio(const Mat &M, Size size)
     while (r - l > 1e-3f)
     {
         float t = (l + r) * 0.5f;
-        float dx = floor(w * t);
-        float dy = floor(h * t);
+        float dx = std::floor(w * t);
+        float dy = std::floor(h * t);
         pt[0] = Point2f(dx, dy);
         pt[1] = Point2f(w - dx, dy);
         pt[2] = Point2f(w - dx, h - dy);

@@ -48,6 +48,7 @@
 #include "precomp.hpp"
 #include "opencv2/core.hpp"
 #include "scd_def.hpp"
+#include <cmath>
 #include <limits>
 
 namespace cv
@@ -607,7 +608,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
             }
             i0 = colsol[j1];
 
-            if (fabs(umin-usubmin) > LOWV) //if( umin < usubmin )
+            if (std::fabs(umin-usubmin) > LOWV) //if( umin < usubmin )
             {
                 v[j1] = v[j1] - (usubmin - umin);
             }
@@ -626,7 +627,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
             if (i0 >= 0)
             {
                 //if( umin < usubmin )
-                if (fabs(umin-usubmin) > LOWV)
+                if (std::fabs(umin-usubmin) > LOWV)
                 {
                     free[--k] = i0;
                 }

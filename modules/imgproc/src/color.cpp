@@ -92,6 +92,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include <cmath>
 #include <limits>
 #include "hal_replacement.hpp"
 
@@ -4539,7 +4540,7 @@ struct RGB2HSV_f
             if( vmin > b ) vmin = b;
 
             diff = v - vmin;
-            s = diff/(float)(fabs(v) + FLT_EPSILON);
+            s = diff/(float)(std::fabs(v) + FLT_EPSILON);
             diff = (float)(60./(diff + FLT_EPSILON));
             if( v == r )
                 h = (g - b)*diff;

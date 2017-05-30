@@ -44,6 +44,8 @@
 #include "precomp.hpp"
 #include <stdio.h>
 
+#include <cmath>
+
 namespace cv
 {
 
@@ -247,7 +249,7 @@ static bool convert(const String& oldcascade, const String& newcascade)
         newfs << "{" << "rects" << "[";
         for( j = 0; j < HaarFeature::RECT_NUM; j++ )
         {
-            if( j >= 2 && fabs(f.rect[j].weight) < FLT_EPSILON )
+            if( j >= 2 && std::fabs(f.rect[j].weight) < FLT_EPSILON )
                 break;
             newfs << "[" << f.rect[j].r.x << f.rect[j].r.y <<
                 f.rect[j].r.width << f.rect[j].r.height << f.rect[j].weight << "]";

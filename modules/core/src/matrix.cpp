@@ -5832,7 +5832,7 @@ RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const P
     if( abs(vecs[1][1]) < abs(vecs[1][0]) ) wd_i = 1;
     int ht_i = (wd_i + 1) % 2;
 
-    float _angle = atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
+    float _angle = std::atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
     float _width = (float) norm(vecs[wd_i]);
     float _height = (float) norm(vecs[ht_i]);
 

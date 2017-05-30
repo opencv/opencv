@@ -38,7 +38,9 @@
 //
 //M*/
 
+
 #include "precomp.hpp"
+#include <cmath>
 
 namespace cv { namespace ml {
 
@@ -99,7 +101,7 @@ float StatModel::calcError( const Ptr<TrainData>& data, bool testerr, OutputArra
         float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
 
         if( isclassifier )
-            err += fabs(val - val0) > FLT_EPSILON;
+            err += std::fabs(val - val0) > FLT_EPSILON;
         else
             err += (val - val0)*(val - val0);
         if( !resp.empty() )

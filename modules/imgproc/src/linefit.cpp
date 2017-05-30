@@ -38,7 +38,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
+#include <cmath>
 
 namespace cv
 {
@@ -89,8 +91,8 @@ static void fitLine2D_wods( const Point2f* points, int count, float *weights, fl
     dxy = xy - x * y;
 
     t = (float) atan2( 2 * dxy, dx2 - dy2 ) / 2;
-    line[0] = (float) cos( t );
-    line[1] = (float) sin( t );
+    line[0] = (float) std::cos( t );
+    line[1] = (float) std::sin( t );
 
     line[2] = (float) x;
     line[3] = (float) y;
@@ -213,7 +215,7 @@ static double calcDist2D( const Point2f* points, int count, float *_line, float 
         x = points[j].x - px;
         y = points[j].y - py;
 
-        dist[j] = (float) fabs( nx * x + ny * y );
+        dist[j] = (float) std::fabs( nx * x + ny * y );
         sum_dist += dist[j];
     }
 
@@ -396,8 +398,8 @@ static void fitLine2D( const Point2f * points, int count, int dist,
                 {
                     float x, y, d;
 
-                    x = (float) fabs( _line[2] - _lineprev[2] );
-                    y = (float) fabs( _line[3] - _lineprev[3] );
+                    x = (float) std::fabs( _line[2] - _lineprev[2] );
+                    y = (float) std::fabs( _line[3] - _lineprev[3] );
 
                     d = x > y ? x : y;
                     if( d < rdelta )
@@ -537,9 +539,9 @@ static void fitLine3D( Point3f * points, int count, int dist,
                     ax = _line[0] - _lineprev[0];
                     ay = _line[1] - _lineprev[1];
                     az = _line[2] - _lineprev[2];
-                    dx = (float) fabs( y * az - z * ay );
-                    dy = (float) fabs( z * ax - x * az );
-                    dz = (float) fabs( x * ay - y * ax );
+                    dx = (float) std::fabs( y * az - z * ay );
+                    dy = (float) std::fabs( z * ax - x * az );
+                    dz = (float) std::fabs( x * ay - y * ax );
 
                     d = dx > dy ? (dx > dz ? dx : dz) : (dy > dz ? dy : dz);
                     if( d < rdelta )

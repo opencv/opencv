@@ -42,6 +42,8 @@
 #include "precomp.hpp"
 #include <float.h>
 #include <stdio.h>
+
+#include <cmath>
 #include "lkpyramid.hpp"
 #include "opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
@@ -1615,11 +1617,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
                     if( idx[j] == idx[i] )
                         break;
                     // check that the points are not very close one each other
-                    if( fabs(pA[idx[i]].x - pA[idx[j]].x) +
-                        fabs(pA[idx[i]].y - pA[idx[j]].y) < FLT_EPSILON )
+                    if( std::fabs(pA[idx[i]].x - pA[idx[j]].x) +
+                        std::fabs(pA[idx[i]].y - pA[idx[j]].y) < FLT_EPSILON )
                         break;
-                    if( fabs(pB[idx[i]].x - pB[idx[j]].x) +
-                        fabs(pB[idx[i]].y - pB[idx[j]].y) < FLT_EPSILON )
+                    if( std::fabs(pB[idx[i]].x - pB[idx[j]].x) +
+                        std::fabs(pB[idx[i]].y - pB[idx[j]].y) < FLT_EPSILON )
                         break;
                 }
 

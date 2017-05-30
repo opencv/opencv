@@ -258,7 +258,7 @@ void CV_ImageWarpBaseTest::validate_results() const
         const float* D = _dst.ptr<float>(dy);
 
         for (int dx = 0; dx < dsize.width; ++dx)
-            if (fabs(rD[dx] - D[dx]) > t &&
+            if (std::fabs(rD[dx] - D[dx]) > t &&
 //                fabs(rD[dx] - D[dx]) < 250.0f &&
                 rD[dx] <= 255.0f && D[dx] <= 255.0f && rD[dx] >= 0.0f && D[dx] >= 0.0f)
             {

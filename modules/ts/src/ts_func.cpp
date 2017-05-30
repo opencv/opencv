@@ -1,6 +1,8 @@
 #include "precomp.hpp"
 #include <float.h>
 #include <limits.h>
+
+#include <cmath>
 #include "opencv2/imgproc/types_c.h"
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -2661,7 +2663,7 @@ void  patchZeros( Mat& mat, double level )
         {
             float* data = mat.ptr<float>(i);
             for( j = 0; j < ncols; j++ )
-                if( fabs(data[j]) < level )
+                if( std::fabs(data[j]) < level )
                     data[j] += 1;
         }
         else

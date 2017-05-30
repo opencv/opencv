@@ -40,9 +40,11 @@
 //
 //M*/
 
+
 #include "precomp.hpp"
 #include "opencv2/videostab/stabilizer.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
+#include <cmath>
 
 // for debug purposes
 #define SAVE_MOTIONS 0
@@ -237,8 +239,8 @@ void StabilizerBase::stabilizeFrame()
 Mat StabilizerBase::postProcessFrame(const Mat &frame)
 {
     // trim frame
-    int dx = static_cast<int>(floor(trimRatio_ * frame.cols));
-    int dy = static_cast<int>(floor(trimRatio_ * frame.rows));
+    int dx = static_cast<int>(std::floor(trimRatio_ * frame.cols));
+    int dy = static_cast<int>(std::floor(trimRatio_ * frame.rows));
     return frame(Rect(dx, dy, frame.cols - 2*dx, frame.rows - 2*dy));
 }
 
