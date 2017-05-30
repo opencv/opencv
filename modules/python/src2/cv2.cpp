@@ -1052,7 +1052,7 @@ PyObject* pyopencv_from(const Point2d& p)
 template<>
 PyObject* pyopencv_from(const Point3d& p)
 {
-    return Py_BuildValue("(ddd)", p.x, p.y, p.y);
+    return Py_BuildValue("(ddd)", p.x, p.y, p.z);
 }
 
 template<typename _Tp> struct pyopencvVecConverter
