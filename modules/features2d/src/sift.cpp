@@ -534,91 +534,159 @@ static bool adjustLocalExtrema( const std::vector<Mat>& dog_pyr, KeyPoint& kpt, 
 }
 
 
-//
-// Detects features at extrema in DoG scale space.  Bad features are discarded
-// based on contrast and ratio of principal curvatures.
-void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
-                                  std::vector<KeyPoint>& keypoints ) const
+class findScaleSpaceExtremaComputer : public ParallelLoopBody
 {
-    int nOctaves = (int)gauss_pyr.size()/(nOctaveLayers + 3);
-    int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
-    const int n = SIFT_ORI_HIST_BINS;
-    float hist[n];
-    KeyPoint kpt;
+public:
+    findScaleSpaceExtremaComputer(
+        int _o,
+        int _i,
+        int _threshold,
+        int _idx,
+        int _step,
+        int _cols,
+        int _nOctaveLayers,
+        double _contrastThreshold,
+        double _edgeThreshold,
+        double _sigma,
+        const std::vector<Mat>& _gauss_pyr,
+        const std::vector<Mat>& _dog_pyr,
+        std::vector<KeyPoint>& _keypoints,
+        Mutex &_mutex)
 
-    keypoints.clear();
+        : o(_o),
+          i(_i),
+          threshold(_threshold),
+          idx(_idx),
+          step(_step),
+          cols(_cols),
+          nOctaveLayers(_nOctaveLayers),
+          contrastThreshold(_contrastThreshold),
+          edgeThreshold(_edgeThreshold),
+          sigma(_sigma),
+          gauss_pyr(_gauss_pyr),
+          dog_pyr(_dog_pyr),
+          keypoints(_keypoints),
+          mutex(_mutex) { }
+    void operator()( const cv::Range& range ) const
+    {
+        const int begin = range.start;
+        const int end = range.end;
 
-    for( int o = 0; o < nOctaves; o++ )
-        for( int i = 1; i <= nOctaveLayers; i++ )
+        static const int n = SIFT_ORI_HIST_BINS;
+        float hist[n];
+
+        const Mat& img = dog_pyr[idx];
+        const Mat& prev = dog_pyr[idx-1];
+        const Mat& next = dog_pyr[idx+1];
+
+        KeyPoint kpt;
+        for( int r = begin; r < end; r++)
         {
-            int idx = o*(nOctaveLayers+2)+i;
-            const Mat& img = dog_pyr[idx];
-            const Mat& prev = dog_pyr[idx-1];
-            const Mat& next = dog_pyr[idx+1];
-            int step = (int)img.step1();
-            int rows = img.rows, cols = img.cols;
+            const sift_wt* currptr = img.ptr<sift_wt>(r);
+            const sift_wt* prevptr = prev.ptr<sift_wt>(r);
+            const sift_wt* nextptr = next.ptr<sift_wt>(r);
 
-            for( int r = SIFT_IMG_BORDER; r < rows-SIFT_IMG_BORDER; r++)
+            for( int c = SIFT_IMG_BORDER; c < cols-SIFT_IMG_BORDER; c++)
             {
-                const sift_wt* currptr = img.ptr<sift_wt>(r);
-                const sift_wt* prevptr = prev.ptr<sift_wt>(r);
-                const sift_wt* nextptr = next.ptr<sift_wt>(r);
+                sift_wt val = currptr[c];
 
-                for( int c = SIFT_IMG_BORDER; c < cols-SIFT_IMG_BORDER; c++)
+                // find local extrema with pixel accuracy
+                if( std::abs(val) > threshold &&
+                   ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
+                     val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
+                     val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
+                     val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
+                     val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
+                     val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
+                     val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
+                     val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
+                     val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
+                    (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
+                     val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
+                     val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
+                     val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
+                     val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
+                     val <= nextptr[c+step-1] && val <= nextptr[c+step] && val <= nextptr[c+step+1] &&
+                     val <= prevptr[c] && val <= prevptr[c-1] && val <= prevptr[c+1] &&
+                     val <= prevptr[c-step-1] && val <= prevptr[c-step] && val <= prevptr[c-step+1] &&
+                     val <= prevptr[c+step-1] && val <= prevptr[c+step] && val <= prevptr[c+step+1])))
                 {
-                    sift_wt val = currptr[c];
-
-                    // find local extrema with pixel accuracy
-                    if( std::abs(val) > threshold &&
-                       ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
-                         val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
-                         val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
-                         val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
-                         val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
-                         val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
-                         val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
-                         val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
-                         val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
-                        (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
-                         val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
-                         val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
-                         val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
-                         val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
-                         val <= nextptr[c+step-1] && val <= nextptr[c+step] && val <= nextptr[c+step+1] &&
-                         val <= prevptr[c] && val <= prevptr[c-1] && val <= prevptr[c+1] &&
-                         val <= prevptr[c-step-1] && val <= prevptr[c-step] && val <= prevptr[c-step+1] &&
-                         val <= prevptr[c+step-1] && val <= prevptr[c+step] && val <= prevptr[c+step+1])))
+                    int r1 = r, c1 = c, layer = i;
+                    if( !adjustLocalExtrema(dog_pyr, kpt, o, layer, r1, c1,
+                                            nOctaveLayers, (float)contrastThreshold,
+                                            (float)edgeThreshold, (float)sigma) )
+                        continue;
+                    float scl_octv = kpt.size*0.5f/(1 << o);
+                    float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers+3) + layer],
+                                                     Point(c1, r1),
+                                                     cvRound(SIFT_ORI_RADIUS * scl_octv),
+                                                     SIFT_ORI_SIG_FCTR * scl_octv,
+                                                     hist, n);
+                    float mag_thr = (float)(omax * SIFT_ORI_PEAK_RATIO);
+                    for( int j = 0; j < n; j++ )
                     {
-                        int r1 = r, c1 = c, layer = i;
-                        if( !adjustLocalExtrema(dog_pyr, kpt, o, layer, r1, c1,
-                                                nOctaveLayers, (float)contrastThreshold,
-                                                (float)edgeThreshold, (float)sigma) )
-                            continue;
-                        float scl_octv = kpt.size*0.5f/(1 << o);
-                        float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers+3) + layer],
-                                                         Point(c1, r1),
-                                                         cvRound(SIFT_ORI_RADIUS * scl_octv),
-                                                         SIFT_ORI_SIG_FCTR * scl_octv,
-                                                         hist, n);
-                        float mag_thr = (float)(omax * SIFT_ORI_PEAK_RATIO);
-                        for( int j = 0; j < n; j++ )
-                        {
-                            int l = j > 0 ? j - 1 : n - 1;
-                            int r2 = j < n-1 ? j + 1 : 0;
+                        int l = j > 0 ? j - 1 : n - 1;
+                        int r2 = j < n-1 ? j + 1 : 0;
 
-                            if( hist[j] > hist[l]  &&  hist[j] > hist[r2]  &&  hist[j] >= mag_thr )
+                        if( hist[j] > hist[l]  &&  hist[j] > hist[r2]  &&  hist[j] >= mag_thr )
+                        {
+                            float bin = j + 0.5f * (hist[l]-hist[r2]) / (hist[l] - 2*hist[j] + hist[r2]);
+                            bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
+                            kpt.angle = 360.f - (float)((360.f/n) * bin);
+                            if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
+                                kpt.angle = 0.f;
                             {
-                                float bin = j + 0.5f * (hist[l]-hist[r2]) / (hist[l] - 2*hist[j] + hist[r2]);
-                                bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
-                                kpt.angle = 360.f - (float)((360.f/n) * bin);
-                                if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
-                                    kpt.angle = 0.f;
+                                AutoLock autoLock(mutex);
                                 keypoints.push_back(kpt);
                             }
                         }
                     }
                 }
             }
+        }
+    }
+private:
+    int o, i;
+    int threshold;
+    int idx, step, cols;
+    int nOctaveLayers;
+    double contrastThreshold;
+    double edgeThreshold;
+    double sigma;
+    const std::vector<Mat>& gauss_pyr;
+    const std::vector<Mat>& dog_pyr;
+    std::vector<KeyPoint>& keypoints;
+    Mutex &mutex;
+};
+
+//
+// Detects features at extrema in DoG scale space.  Bad features are discarded
+// based on contrast and ratio of principal curvatures.
+void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
+                                  std::vector<KeyPoint>& keypoints ) const
+{
+    const int nOctaves = (int)gauss_pyr.size()/(nOctaveLayers + 3);
+    const int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
+
+    keypoints.clear();
+    Mutex mutex;
+
+    for( int o = 0; o < nOctaves; o++ )
+        for( int i = 1; i <= nOctaveLayers; i++ )
+        {
+            const int idx = o*(nOctaveLayers+2)+i;
+            const Mat& img = dog_pyr[idx];
+            const int step = (int)img.step1();
+            const int rows = img.rows, cols = img.cols;
+
+            parallel_for_(Range(SIFT_IMG_BORDER, rows-SIFT_IMG_BORDER),
+                findScaleSpaceExtremaComputer(
+                    o, i, threshold, idx, step, cols,
+                    nOctaveLayers,
+                    contrastThreshold,
+                    edgeThreshold,
+                    sigma,
+                    gauss_pyr, dog_pyr, keypoints, mutex));
         }
 }
 
@@ -1046,7 +1114,7 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
     {
         //t = (double)getTickCount();
         findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
-        KeyPointsFilter::removeDuplicated( keypoints );
+        KeyPointsFilter::removeDuplicatedSorted( keypoints );
 
         if( nfeatures > 0 )
             KeyPointsFilter::retainBest(keypoints, nfeatures);
