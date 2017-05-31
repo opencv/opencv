@@ -388,9 +388,8 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
     for (int i = 0; i < solutions; i++) {
         Mat rvec;
         Rodrigues(Rs[i], rvec);
-        _rvecs.getMatRef(i) = rvec;
-
-        _tvecs.getMatRef(i) = ts[i];
+        rvec.copyTo(_rvecs.getMat(i));
+        ts[i].copyTo(_tvecs.getMat(i));
     }
 
     return solutions;
