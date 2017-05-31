@@ -64,7 +64,7 @@ Building OpenCV from Source Using CMake
 
     For example
     @code{.bash}
-    cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local ..
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..
     @endcode
     or cmake-gui
 
