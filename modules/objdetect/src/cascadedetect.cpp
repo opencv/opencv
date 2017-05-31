@@ -1726,6 +1726,19 @@ void CascadeClassifier::detectMultiScale( InputArray image,
     clipObjects(image.size(), objects, &rejectLevels, &levelWeights);
 }
 
+int CascadeClassifier::classify(InputArray image, double &weight)
+{
+    Ptr<CascadeClassifierImpl> ccimpl = cc.dynamicCast<CascadeClassifierImpl>();
+    Ptr<FeatureEvaluator> evaluator = ccimpl->FeatureEvaluator->clone();
+    size = ccimpl->data.getOriginalWindowSize();
+    OutputArray dst;
+    resize(image, dst, size)
+    if(!ccimpl->setImage(dst, std::vector<float>(1, 1.0)))
+        return -1;
+    int result = ccimpl->runAt(evaluator, Point(0,0), 0, weight);
+    return result;
+}
+    
 bool CascadeClassifier::isOldFormatCascade() const
 {
     CV_Assert(!empty());

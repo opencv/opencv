@@ -319,6 +319,13 @@ public:
                                   Size minSize = Size(),
                                   Size maxSize = Size(),
                                   bool outputRejectLevels = false );
+    /** 
+     @brief Classify whether the image is the positive object.
+     @param image The image will be resized to training image size.
+     @param weight The weight on the reject level.
+     @note The function returns 1 if the cascade classifier detects an object in the given location. Otherwise, it returns negated index of the stage at which the candidate has been rejected.
+     **/
+    CV_WRAP int classify(InputArray image, double&weight);
 
     CV_WRAP bool isOldFormatCascade() const;
     CV_WRAP Size getOriginalWindowSize() const;
