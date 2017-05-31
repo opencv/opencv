@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/test/test_detection.cpp",
+			"labels" : [ "Extra", "opencv_text", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_text", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_text", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_text", "AccuracyTest" ],
+		"name" : "opencv_test_text"
+	}
+}

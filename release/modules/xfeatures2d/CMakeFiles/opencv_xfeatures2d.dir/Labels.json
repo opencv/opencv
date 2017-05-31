@@ -1,0 +1,203 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/include/opencv2/xfeatures2d.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/include/opencv2/xfeatures2d/cuda.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/include/opencv2/xfeatures2d/nonfree.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/affine_feature2d.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/boostdesc.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/brief.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/daisy.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/ellipticKeyPoint.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/freak.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/harris_lapace_detector.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/latch.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/lucid.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/msd.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/grayscale_bitmap.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/pct_clusterizer.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/pct_sampler.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures_sqfd.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/sift.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/stardetector.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/surf.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/surf.cuda.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/surf.ocl.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/vgg.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/xfeatures2d_init.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/opencl/surf.cl",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/xfeatures2d/opencl_kernels_xfeatures2d.cpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/xfeatures2d/opencl_kernels_xfeatures2d.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/constants.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/distance.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/grayscale_bitmap.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/pct_clusterizer.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/pct_sampler.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/similarity.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/surf.hpp",
+			"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/xfeatures2d/opencl_kernels_xfeatures2d.cpp.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_xfeatures2d", "Module" ],
+		"name" : "opencv_xfeatures2d"
+	}
+}

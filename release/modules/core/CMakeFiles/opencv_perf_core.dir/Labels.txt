@@ -1,0 +1,129 @@
+# Target labels
+ Main
+ opencv_core
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/cuda/perf_gpumat.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_arithm.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_bufferpool.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_channels.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_dxt.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_gemm.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_matop.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/opencl/perf_usage_flags.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_abs.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_addWeighted.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_arithm.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_bitwise.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_compare.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_convertTo.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_cvround.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_dft.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_dot.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_inRange.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_io_base64.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_main.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_mat.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_math.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_merge.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_minmaxloc.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_norm.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_reduce.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_sort.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_split.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_stat.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_umat.cpp
+ Main
+ opencv_core
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/perf/perf_precomp.hpp
+ Main
+ opencv_core
+ PerfTest

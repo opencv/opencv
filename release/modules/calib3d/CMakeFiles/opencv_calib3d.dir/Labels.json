@@ -1,0 +1,223 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/include/opencv2/calib3d.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/include/opencv2/calib3d/calib3d.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/include/opencv2/calib3d/calib3d_c.h",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/calibinit.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/calibration.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/checkchessboard.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/circlesgrid.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/compat_ptsetreg.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/compat_stereo.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/dls.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/epnp.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/fisheye.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/five-point.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/fundam.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/homography_decomp.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/levmarq.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/main.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/p3p.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/polynom_solver.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/posit.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/ptsetreg.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/quadsubpix.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/rho.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/solvepnp.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/stereobm.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/stereosgbm.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/triangulate.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/upnp.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/opencl/stereobm.cl",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/calib3d/opencl_kernels_calib3d.cpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/calib3d/opencl_kernels_calib3d.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/circlesgrid.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/fisheye.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/dls.h",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/epnp.h",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/p3p.h",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/polynom_solver.h",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/rho.h",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/calib3d/src/upnp.h",
+			"labels" : [ "Main", "opencv_calib3d", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/calib3d/opencl_kernels_calib3d.cpp.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_calib3d", "Module" ],
+		"name" : "opencv_calib3d"
+	}
+}

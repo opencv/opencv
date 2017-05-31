@@ -1,0 +1,59 @@
+# Target labels
+ Extra
+ opencv_dpm
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/include/opencv2/dpm.hpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_cascade.cpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_cascade_detector.cpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_convolution.cpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_feature.cpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_model.cpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_nms.cpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_cascade.hpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_convolution.hpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_feature.hpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_model.hpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_nms.hpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/precomp.hpp
+ Extra
+ opencv_dpm
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

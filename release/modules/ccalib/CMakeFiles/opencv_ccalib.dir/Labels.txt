@@ -1,0 +1,43 @@
+# Target labels
+ Extra
+ opencv_ccalib
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/include/opencv2/ccalib.hpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/include/opencv2/ccalib/multicalib.hpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/include/opencv2/ccalib/omnidir.hpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/include/opencv2/ccalib/randpattern.hpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/src/ccalib.cpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/src/multicalib.cpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/src/omnidir.cpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/src/randpattern.cpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/ccalib/src/precomp.hpp
+ Extra
+ opencv_ccalib
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

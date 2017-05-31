@@ -1,0 +1,660 @@
+# Target labels
+ Main
+ opencv_core
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/block.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/border_interpolate.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/color.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/common.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/datamov_utils.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/dynamic_smem.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/emulation.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/filters.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/funcattrib.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/functional.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/limits.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/reduce.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/saturate_cast.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/scan.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/simd_functions.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/transform.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/type_traits.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/utility.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/vec_distance.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/vec_math.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/vec_traits.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/warp.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/warp_reduce.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/warp_shuffle.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/color_detail.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/reduce.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/reduce_key_val.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/transform_detail.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/type_traits_detail.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda/detail/vec_distance_detail.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/affine.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/base.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/bufferpool.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/core.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda.inl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda_stream_accessor.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cuda_types.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cvstd.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cvstd.inl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/directx.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/eigen.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/fast_math.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ippasync.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/mat.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/mat.inl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/matx.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/neon_utils.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ocl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ocl_genbase.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/opengl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/operations.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/optim.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ovx.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/persistence.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/private.cuda.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/private.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/ptr.inl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/saturate.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/sse_utils.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/traits.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/types.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/utility.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/va_intel.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/version.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/wimage.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/core_c.h
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/cvdef.h
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/types_c.h
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/hal.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/intrin.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/intrin_cpp.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/intrin_neon.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/intrin_sse.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/include/opencv2/core/hal/interface.h
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/core/version_string.inc
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/algorithm.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/alloc.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/arithm.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/array.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/command_line_parser.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/conjugate_gradient.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/convert.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/copy.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/cuda_gpu_mat.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/cuda_host_mem.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/cuda_info.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/cuda_stream.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/datastructs.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/directx.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/downhill_simplex.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/dxt.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/gl_core_3_1.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/glob.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/hal_internal.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/kmeans.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/lapack.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/lda.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/lpsolver.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/mathfuncs.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/mathfuncs_core.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/matmul.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/matop.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/matrix.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/matrix_decomp.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/merge.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/ocl.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/opencl_clamdblas.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/opencl_clamdfft.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/opencl_core.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opengl.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/out.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/ovx.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/parallel.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/parallel_pthreads.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/pca.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/persistence.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/rand.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/split.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/stat.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/stl.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/system.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/tables.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/types.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/umatrix.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/va_intel.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/arithm.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/convert.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/copymakeborder.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/copyset.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/cvtclr_dx.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/fft.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/flip.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/gemm.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/inrange.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/lut.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/meanstddev.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/minmaxloc.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/mixchannels.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/mulspectrums.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/normalize.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/reduce.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/reduce2.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/repeat.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/set_identity.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/split_merge.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/transpose.cl
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/core/opencl_kernels_core.cpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/core/opencl_kernels_core.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/arithm_core.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/arithm_simd.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/bufferpool.impl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/directx.inc.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/gl_core_3_1.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/hal_internal.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/hal_replacement.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/autogenerated/opencl_clamdblas_impl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/autogenerated/opencl_clamdfft_impl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/autogenerated/opencl_core_impl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/autogenerated/opencl_gl_impl.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/opencl/runtime/runtime_common.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/core/src/precomp.hpp
+ Main
+ opencv_core
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
+/Users/chihiro/Programs/opencv/opencv/release/modules/core/opencl_kernels_core.cpp.rule

@@ -1,0 +1,17 @@
+# Target labels
+ Extra
+ opencv_tracking
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/perf/perf_Tracker.cpp
+ Extra
+ opencv_tracking
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/perf/perf_main.cpp
+ Extra
+ opencv_tracking
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/perf/perf_precomp.hpp
+ Extra
+ opencv_tracking
+ PerfTest

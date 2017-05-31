@@ -1,0 +1,41 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_aukf.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_trackerParametersIO.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_trackers.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_ukf.cpp",
+			"labels" : [ "Extra", "opencv_tracking", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/tracking/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_tracking", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_tracking", "AccuracyTest" ],
+		"name" : "opencv_test_tracking"
+	}
+}

@@ -1,0 +1,66 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/cnpy.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/test_caffe_importer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/test_googlenet.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/test_layers.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/test_tf_importer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/test_torch_importer.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/npy_blob.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/test_common.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/test/cnpy.h",
+			"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_dnn", "AccuracyTest" ],
+		"name" : "opencv_test_dnn"
+	}
+}

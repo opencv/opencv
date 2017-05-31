@@ -1,0 +1,196 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_3vs4.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_accumulate.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_blend.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_color.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_filters.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_gftt.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_houghLines.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_imgproc.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_imgwarp.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_matchTemplate.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_moments.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/opencl/perf_pyramid.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_bilateral.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_blur.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_canny.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_corners.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_cvt_color.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_distanceTransform.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_filter2d.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_floodfill.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_goodFeaturesToTrack.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_histogram.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_houghLines.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_integral.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_main.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_matchTemplate.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_moments.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_morph.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_phasecorr.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_pyramids.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_remap.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_resize.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_sepfilters.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_spatialgradient.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_threshold.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_warp.cpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgproc/perf/perf_precomp.hpp",
+			"labels" : [ "Main", "opencv_imgproc", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_imgproc", "PerfTest" ],
+		"name" : "opencv_perf_imgproc"
+	}
+}

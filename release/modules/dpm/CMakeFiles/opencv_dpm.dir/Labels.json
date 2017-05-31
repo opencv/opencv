@@ -1,0 +1,84 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/include/opencv2/dpm.hpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_cascade.cpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_cascade_detector.cpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_convolution.cpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_feature.cpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_model.cpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_nms.cpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_cascade.hpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_convolution.hpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_feature.hpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_model.hpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/dpm_nms.hpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dpm/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_dpm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_dpm", "Module" ],
+		"name" : "opencv_dpm"
+	}
+}

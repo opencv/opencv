@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/highgui/test/test_gui.cpp",
+			"labels" : [ "Main", "opencv_highgui", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/highgui/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_highgui", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/highgui/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_highgui", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_highgui", "AccuracyTest" ],
+		"name" : "opencv_test_highgui"
+	}
+}

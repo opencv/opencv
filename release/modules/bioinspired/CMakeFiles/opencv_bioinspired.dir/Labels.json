@@ -1,0 +1,158 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired/bioinspired.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired/retina.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired/retinafasttonemapping.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/include/opencv2/bioinspired/transientareassegmentationmodule.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/basicretinafilter.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/imagelogpolprojection.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/magnoretinafilter.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/parvoretinafilter.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retina.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retina_ocl.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinacolor.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinafasttonemapping.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinafilter.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/transientareassegmentationmodule.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/opencl/retina_kernel.cl",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/bioinspired/opencl_kernels_bioinspired.cpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/bioinspired/opencl_kernels_bioinspired.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/basicretinafilter.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/imagelogpolprojection.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/magnoretinafilter.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/parvoretinafilter.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retina_ocl.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinacolor.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/retinafilter.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bioinspired/src/templatebuffer.hpp",
+			"labels" : [ "Extra", "opencv_bioinspired", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/modules/bioinspired/opencl_kernels_bioinspired.cpp.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_bioinspired", "Module" ],
+		"name" : "opencv_bioinspired"
+	}
+}

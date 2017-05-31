@@ -1,0 +1,39 @@
+# Target labels
+ Extra
+ opencv_text
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/include/opencv2/text.hpp
+ Extra
+ opencv_text
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/include/opencv2/text/erfilter.hpp
+ Extra
+ opencv_text
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/include/opencv2/text/ocr.hpp
+ Extra
+ opencv_text
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/src/erfilter.cpp
+ Extra
+ opencv_text
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/src/ocr_beamsearch_decoder.cpp
+ Extra
+ opencv_text
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/src/ocr_hmm_decoder.cpp
+ Extra
+ opencv_text
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/src/ocr_tesseract.cpp
+ Extra
+ opencv_text
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/text/src/precomp.hpp
+ Extra
+ opencv_text
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

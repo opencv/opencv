@@ -1,0 +1,36 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_arucodetection.cpp",
+			"labels" : [ "Extra", "opencv_aruco", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_boarddetection.cpp",
+			"labels" : [ "Extra", "opencv_aruco", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_charucodetection.cpp",
+			"labels" : [ "Extra", "opencv_aruco", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_aruco", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_aruco", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_aruco", "AccuracyTest" ],
+		"name" : "opencv_test_aruco"
+	}
+}

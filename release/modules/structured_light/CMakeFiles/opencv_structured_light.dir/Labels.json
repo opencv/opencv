@@ -1,0 +1,54 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/include/opencv2/structured_light.hpp",
+			"labels" : [ "Extra", "opencv_structured_light", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/include/opencv2/structured_light/graycodepattern.hpp",
+			"labels" : [ "Extra", "opencv_structured_light", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/include/opencv2/structured_light/sinusoidalpattern.hpp",
+			"labels" : [ "Extra", "opencv_structured_light", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/include/opencv2/structured_light/structured_light.hpp",
+			"labels" : [ "Extra", "opencv_structured_light", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/src/graycodepattern.cpp",
+			"labels" : [ "Extra", "opencv_structured_light", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/src/sinusoidalpattern.cpp",
+			"labels" : [ "Extra", "opencv_structured_light", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_structured_light", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_structured_light", "Module" ],
+		"name" : "opencv_structured_light"
+	}
+}

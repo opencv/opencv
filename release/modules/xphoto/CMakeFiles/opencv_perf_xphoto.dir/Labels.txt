@@ -1,0 +1,21 @@
+# Target labels
+ Extra
+ opencv_xphoto
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/perf/perf_grayworld.cpp
+ Extra
+ opencv_xphoto
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/perf/perf_learning_based_color_balance.cpp
+ Extra
+ opencv_xphoto
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/perf/perf_main.cpp
+ Extra
+ opencv_xphoto
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/perf/perf_precomp.hpp
+ Extra
+ opencv_xphoto
+ PerfTest

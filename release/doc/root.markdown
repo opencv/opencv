@@ -1,0 +1,76 @@
+OpenCV modules {#mainpage}
+==============
+
+- @ref intro
+- @ref tutorial_root
+- @ref tutorial_py_root
+- @ref tutorial_contrib_root
+- @ref faq
+- @ref citelist
+
+- Main modules:
+	- core. @ref core
+	- imgproc. @ref imgproc
+	- imgcodecs. @ref imgcodecs
+	- videoio. @ref videoio
+	- highgui. @ref highgui
+	- video. @ref video
+	- calib3d. @ref calib3d
+	- features2d. @ref features2d
+	- objdetect. @ref objdetect
+	- ml. @ref ml
+	- flann. @ref flann
+	- photo. @ref photo
+	- stitching. @ref stitching
+	- cudaarithm. @ref cudaarithm
+	- cudabgsegm. @ref cudabgsegm
+	- cudacodec. @ref cudacodec
+	- cudafeatures2d. @ref cudafeatures2d
+	- cudafilters. @ref cudafilters
+	- cudaimgproc. @ref cudaimgproc
+	- cudalegacy. @ref cudalegacy
+	- cudaobjdetect. @ref cudaobjdetect
+	- cudaoptflow. @ref cudaoptflow
+	- cudastereo. @ref cudastereo
+	- cudawarping. @ref cudawarping
+	- cudev. @ref cudev
+	- shape. @ref shape
+	- superres. @ref superres
+	- videostab. @ref videostab
+	- viz. @ref viz
+
+
+- Extra modules:
+	- aruco. @ref aruco
+	- bgsegm. @ref bgsegm
+	- bioinspired. @ref bioinspired
+	- ccalib. @ref ccalib
+	- cnn_3dobj. @ref cnn_3dobj
+	- cvv. @ref cvv
+	- datasets. @ref datasets
+	- dnn. @ref dnn
+	- dnn_modern. @ref dnn_modern
+	- dpm. @ref dpm
+	- face. @ref face
+	- freetype. @ref freetype
+	- fuzzy. @ref fuzzy
+	- hdf. @ref hdf
+	- line_descriptor. @ref line_descriptor
+	- matlab. @ref matlab
+	- optflow. @ref optflow
+	- phase_unwrapping. @ref phase_unwrapping
+	- plot. @ref plot
+	- reg. @ref reg
+	- rgbd. @ref rgbd
+	- saliency. @ref saliency
+	- sfm. @ref sfm
+	- stereo. @ref stereo
+	- structured_light. @ref structured_light
+	- surface_matching. @ref surface_matching
+	- text. @ref text
+	- tracking. @ref tracking
+	- xfeatures2d. @ref xfeatures2d
+	- ximgproc. @ref ximgproc
+	- xobjdetect. @ref xobjdetect
+	- xphoto. @ref xphoto
+

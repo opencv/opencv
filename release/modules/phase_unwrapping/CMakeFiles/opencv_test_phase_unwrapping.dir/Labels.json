@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/phase_unwrapping/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_phase_unwrapping", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/phase_unwrapping/test/test_unwrapping.cpp",
+			"labels" : [ "Extra", "opencv_phase_unwrapping", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/phase_unwrapping/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_phase_unwrapping", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_phase_unwrapping", "AccuracyTest" ],
+		"name" : "opencv_test_phase_unwrapping"
+	}
+}

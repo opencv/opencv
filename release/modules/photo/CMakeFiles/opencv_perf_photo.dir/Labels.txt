@@ -1,0 +1,25 @@
+# Target labels
+ Main
+ opencv_photo
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/opencl/perf_denoising.cpp
+ Main
+ opencv_photo
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/perf_cuda.cpp
+ Main
+ opencv_photo
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/perf_inpaint.cpp
+ Main
+ opencv_photo
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/perf_main.cpp
+ Main
+ opencv_photo
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/perf/perf_precomp.hpp
+ Main
+ opencv_photo
+ PerfTest

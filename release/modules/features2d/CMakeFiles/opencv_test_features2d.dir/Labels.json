@@ -1,0 +1,81 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/ocl/test_brute_force_matcher.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_agast.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_brisk.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_descriptors_regression.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_detectors_regression.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_fast.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_keypoints.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_matchers_algorithmic.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_mser.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_nearestneighbors.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_orb.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_rotation_and_scale_invariance.cpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/features2d/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_features2d", "AccuracyTest" ],
+		"name" : "opencv_test_features2d"
+	}
+}

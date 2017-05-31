@@ -1,0 +1,21 @@
+# Target labels
+ Extra
+ opencv_stereo
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/perf/perf_bm.cpp
+ Extra
+ opencv_stereo
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/perf/perf_descriptor.cpp
+ Extra
+ opencv_stereo
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/perf/perf_main.cpp
+ Extra
+ opencv_stereo
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/perf/perf_precomp.hpp
+ Extra
+ opencv_stereo
+ PerfTest

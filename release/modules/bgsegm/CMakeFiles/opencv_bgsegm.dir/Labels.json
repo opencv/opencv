@@ -1,0 +1,39 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/include/opencv2/bgsegm.hpp",
+			"labels" : [ "Extra", "opencv_bgsegm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/src/bgfg_gaussmix.cpp",
+			"labels" : [ "Extra", "opencv_bgsegm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/src/bgfg_gmg.cpp",
+			"labels" : [ "Extra", "opencv_bgsegm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_bgsegm", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_bgsegm", "Module" ],
+		"name" : "opencv_bgsegm"
+	}
+}

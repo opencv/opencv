@@ -1,0 +1,33 @@
+# Target labels
+ Extra
+ opencv_xphoto
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/dct_image_denoising.cpp
+ Extra
+ opencv_xphoto
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/simple_color_balance.cpp
+ Extra
+ opencv_xphoto
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_denoise_bm3d.cpp
+ Extra
+ opencv_xphoto
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_grayworld.cpp
+ Extra
+ opencv_xphoto
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_learning_based_color_balance.cpp
+ Extra
+ opencv_xphoto
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_main.cpp
+ Extra
+ opencv_xphoto
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_precomp.hpp
+ Extra
+ opencv_xphoto
+ AccuracyTest

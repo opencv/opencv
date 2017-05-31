@@ -1,0 +1,25 @@
+# Target labels
+ Extra
+ opencv_structured_light
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_faps.cpp
+ Extra
+ opencv_structured_light
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_getProjPixel.cpp
+ Extra
+ opencv_structured_light
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_main.cpp
+ Extra
+ opencv_structured_light
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_plane.cpp
+ Extra
+ opencv_structured_light
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_precomp.hpp
+ Extra
+ opencv_structured_light
+ AccuracyTest

@@ -1,0 +1,31 @@
+# Target labels
+ Main
+ opencv_highgui
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/highgui/include/opencv2/highgui.hpp
+ Main
+ opencv_highgui
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/highgui/include/opencv2/highgui/highgui.hpp
+ Main
+ opencv_highgui
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/highgui/include/opencv2/highgui/highgui_c.h
+ Main
+ opencv_highgui
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/highgui/src/window.cpp
+ Main
+ opencv_highgui
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/highgui/src/window_cocoa.mm
+ Main
+ opencv_highgui
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/highgui/src/precomp.hpp
+ Main
+ opencv_highgui
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

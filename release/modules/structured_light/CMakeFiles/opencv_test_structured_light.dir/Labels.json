@@ -1,0 +1,36 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_faps.cpp",
+			"labels" : [ "Extra", "opencv_structured_light", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_getProjPixel.cpp",
+			"labels" : [ "Extra", "opencv_structured_light", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_structured_light", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_plane.cpp",
+			"labels" : [ "Extra", "opencv_structured_light", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/structured_light/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_structured_light", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_structured_light", "AccuracyTest" ],
+		"name" : "opencv_test_structured_light"
+	}
+}

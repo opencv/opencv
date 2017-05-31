@@ -1,0 +1,49 @@
+# Target labels
+ Main
+ opencv_photo
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/ocl/test_denoising.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_cloning.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_decolor.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_denoise_tvl1.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_denoising.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_denoising.cuda.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_hdr.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_inpaint.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_main.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_npr.cpp
+ Main
+ opencv_photo
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_precomp.hpp
+ Main
+ opencv_photo
+ AccuracyTest

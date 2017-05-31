@@ -1,0 +1,31 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/test/test_f0.cpp",
+			"labels" : [ "Extra", "opencv_fuzzy", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/test/test_image.cpp",
+			"labels" : [ "Extra", "opencv_fuzzy", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_fuzzy", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/fuzzy/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_fuzzy", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_fuzzy", "AccuracyTest" ],
+		"name" : "opencv_test_fuzzy"
+	}
+}

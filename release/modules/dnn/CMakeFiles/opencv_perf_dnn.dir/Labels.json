@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/perf/perf_convolution.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/perf/perf_main.cpp",
+			"labels" : [ "Extra", "opencv_dnn", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/dnn/perf/perf_precomp.hpp",
+			"labels" : [ "Extra", "opencv_dnn", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_dnn", "PerfTest" ],
+		"name" : "opencv_perf_dnn"
+	}
+}

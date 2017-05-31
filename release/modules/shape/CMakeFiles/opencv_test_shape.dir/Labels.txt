@@ -1,0 +1,17 @@
+# Target labels
+ Main
+ opencv_shape
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/shape/test/test_main.cpp
+ Main
+ opencv_shape
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/shape/test/test_shape.cpp
+ Main
+ opencv_shape
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/shape/test/test_precomp.hpp
+ Main
+ opencv_shape
+ AccuracyTest

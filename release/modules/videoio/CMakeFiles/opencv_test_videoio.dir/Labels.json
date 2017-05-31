@@ -1,0 +1,56 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_basic_props.cpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_ffmpeg.cpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_fourcc.cpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_framecount.cpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_positioning.cpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_video_io.cpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_video_pos.cpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_videoio", "AccuracyTest" ],
+		"name" : "opencv_test_videoio"
+	}
+}

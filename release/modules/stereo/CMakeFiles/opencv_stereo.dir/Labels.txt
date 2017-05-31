@@ -1,0 +1,39 @@
+# Target labels
+ Extra
+ opencv_stereo
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/include/opencv2/stereo.hpp
+ Extra
+ opencv_stereo
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/include/opencv2/stereo/descriptor.hpp
+ Extra
+ opencv_stereo
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/include/opencv2/stereo/matching.hpp
+ Extra
+ opencv_stereo
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/include/opencv2/stereo/stereo.hpp
+ Extra
+ opencv_stereo
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/src/descriptor.cpp
+ Extra
+ opencv_stereo
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/src/stereo_binary_bm.cpp
+ Extra
+ opencv_stereo
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/src/stereo_binary_sgbm.cpp
+ Extra
+ opencv_stereo
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/stereo/src/precomp.hpp
+ Extra
+ opencv_stereo
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

@@ -1,0 +1,152 @@
+# Target labels
+ Extra
+ opencv_xfeatures2d
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/include/opencv2/xfeatures2d.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/include/opencv2/xfeatures2d/cuda.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/include/opencv2/xfeatures2d/nonfree.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/affine_feature2d.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/boostdesc.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/brief.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/daisy.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/ellipticKeyPoint.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/freak.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/harris_lapace_detector.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/latch.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/lucid.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/msd.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/grayscale_bitmap.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/pct_clusterizer.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/pct_sampler.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures_sqfd.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/sift.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/stardetector.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/surf.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/surf.cuda.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/surf.ocl.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/vgg.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/xfeatures2d_init.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/opencl/surf.cl
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/xfeatures2d/opencl_kernels_xfeatures2d.cpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/xfeatures2d/opencl_kernels_xfeatures2d.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/constants.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/distance.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/grayscale_bitmap.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/pct_clusterizer.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/pct_sampler.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/pct_signatures/similarity.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/precomp.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/xfeatures2d/src/surf.hpp
+ Extra
+ opencv_xfeatures2d
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
+/Users/chihiro/Programs/opencv/opencv/release/modules/xfeatures2d/opencl_kernels_xfeatures2d.cpp.rule

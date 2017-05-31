@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/perf/perf_main.cpp",
+			"labels" : [ "Main", "opencv_superres", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/perf/perf_superres.cpp",
+			"labels" : [ "Main", "opencv_superres", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/perf/perf_precomp.hpp",
+			"labels" : [ "Main", "opencv_superres", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_superres", "PerfTest" ],
+		"name" : "opencv_perf_superres"
+	}
+}

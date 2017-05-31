@@ -1,0 +1,46 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/dct_image_denoising.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/simple_color_balance.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_denoise_bm3d.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_grayworld.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_learning_based_color_balance.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_xphoto", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xphoto/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_xphoto", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_xphoto", "AccuracyTest" ],
+		"name" : "opencv_test_xphoto"
+	}
+}

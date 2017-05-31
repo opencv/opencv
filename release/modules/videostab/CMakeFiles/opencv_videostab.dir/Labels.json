@@ -1,0 +1,159 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/deblurring.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/fast_marching.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/fast_marching_inl.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/frame_source.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/global_motion.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/inpainting.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/log.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/motion_core.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/motion_stabilizing.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/optical_flow.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/outlier_rejection.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/ring_buffer.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/stabilizer.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/include/opencv2/videostab/wobble_suppression.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/deblurring.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/fast_marching.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/frame_source.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/global_motion.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/inpainting.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/log.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/motion_stabilizing.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/optical_flow.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/outlier_rejection.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/stabilizer.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/wobble_suppression.cpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/clp.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videostab/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_videostab", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_videostab", "Module" ],
+		"name" : "opencv_videostab"
+	}
+}

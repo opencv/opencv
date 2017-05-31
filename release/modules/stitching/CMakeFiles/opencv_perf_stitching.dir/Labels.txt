@@ -1,0 +1,33 @@
+# Target labels
+ Main
+ opencv_stitching
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/opencl/perf_stitch.cpp
+ Main
+ opencv_stitching
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/opencl/perf_warpers.cpp
+ Main
+ opencv_stitching
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_estimators.cpp
+ Main
+ opencv_stitching
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_main.cpp
+ Main
+ opencv_stitching
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_matchers.cpp
+ Main
+ opencv_stitching
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_stich.cpp
+ Main
+ opencv_stitching
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_precomp.hpp
+ Main
+ opencv_stitching
+ PerfTest

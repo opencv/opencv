@@ -1,0 +1,25 @@
+# Target labels
+ Extra
+ opencv_line_descriptor
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/perf/perf_descriptors.cpp
+ Extra
+ opencv_line_descriptor
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/perf/perf_detection.cpp
+ Extra
+ opencv_line_descriptor
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/perf/perf_main.cpp
+ Extra
+ opencv_line_descriptor
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/perf/perf_matching.cpp
+ Extra
+ opencv_line_descriptor
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/line_descriptor/perf/perf_precomp.hpp
+ Extra
+ opencv_line_descriptor
+ PerfTest

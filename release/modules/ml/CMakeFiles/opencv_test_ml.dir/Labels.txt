@@ -1,0 +1,45 @@
+# Target labels
+ Main
+ opencv_ml
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_emknearestkmeans.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_gbttest.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_lr.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_main.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_mltests.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_mltests2.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_save_load.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_svmsgd.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_svmtrainauto.cpp
+ Main
+ opencv_ml
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/ml/test/test_precomp.hpp
+ Main
+ opencv_ml
+ AccuracyTest

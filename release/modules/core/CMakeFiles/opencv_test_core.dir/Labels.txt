@@ -1,0 +1,133 @@
+# Target labels
+ Main
+ opencv_core
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_arithm.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_channels.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_dft.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_gemm.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_image2d.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_matrix_expr.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/ocl/test_matrix_operation.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_arithm.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_concatenation.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_conjugate_gradient.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_countnonzero.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_downhill_simplex.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_ds.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_dxt.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_eigen.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_hal_core.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_intrin.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_io.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_ippasync.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_lpsolver.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_main.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_mat.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_math.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_misc.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_operations.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_ptr.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_rand.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_rotatedrect.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_umat.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_utils.cpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_intrin_utils.hpp
+ Main
+ opencv_core
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv/modules/core/test/test_precomp.hpp
+ Main
+ opencv_core
+ AccuracyTest

@@ -1,0 +1,365 @@
+<html>
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=UTF-8">
+<title>Intel(R) Integrated Performance Primitives Documentation</title>
+<style>
+body { 
+	color:#333333;
+	background-color:#ffffff; 
+	font-family: Verdana, Arial, sans-serif; 
+	font-size: 10pt; 
+	margin-left: 30px;
+}
+p { 
+	font-size: inherit; 
+	line-height: 120%; 
+	margin-top: 0; 
+	margin-bottom: 5pt;
+	margin-left: 0;
+}
+p.Note { 
+	margin-top:0; 
+	margin-left:25px;
+	margin-bottom:10pt;
+}
+p.twoColumnListHead { 
+	color:#000000; 
+/*	padding:4px; */
+/*	text-align:left; */
+/*	width:auto; */
+	margin-top:0; 
+	margin-bottom:0; 
+/*	margin-left:0; */
+	font-weight:bold;
+}	
+p.pRelatedLink { 
+	margin-top: 0px; 
+	margin-bottom: 0px;
+}
+table { 
+	margin-bottom:5pt; 
+	border-collapse:collapse; 
+	margin-top:0.3em; 
+	font-size: 10pt;
+}	
+td { 
+	border: 1px #bababa solid; 
+	vertical-align: top; 
+	font-size: inherit;
+	margin-bottom: 0px;
+}
+td, P.TableCell, td p, td h3 { 
+	margin-top: 0; 
+	margin-left: 0;
+	padding: 4px; 
+	text-align: left; 
+	font-size: inherit; 
+	line-height: 120%;
+}
+td p.TableCell, td p, td h3{
+	padding:0;
+}
+tr { 
+	vertical-align:top;
+}
+td.noBorder { 
+	border:0px none;
+}
+th { 
+	padding: 4px; 
+	text-align: left; 
+	background-color: #555555; 
+	font-weight: bold; 
+	margin-top: 0; 
+	margin-bottom: 0; 
+	color: #FFFFFF; 
+	font-size: 11pt;	
+}
+th { 
+	border:1px #bababa solid;
+}
+th h3.TableHead, th h3 { 
+	padding:0;
+}		
+h3.TableHead{ 
+	padding: 4px; 
+	text-align: left; 
+	background-color: #555555; 
+	font-weight: bold; 
+	margin-top: 0; 
+	margin-bottom: 0; 
+	color: #FFFFFF; 
+	font-size: 11pt;	
+}
+h1 {
+	color: #0860a8;
+	font-size: 15pt;
+	padding-bottom: 1px;
+	margin-left: 0pt;
+	margin-bottom: 0px;
+	border-bottom: 1px solid #0860A8;
+	font-weight: normal;
+}
+h1.title { 
+	border-bottom:0 none; 
+	margin-left:0;
+	font-weight: normal;
+}
+h2 {
+	color: #0860a8;
+	font-weight: lighter;
+	margin-top: 5pt;
+	margin-bottom: 0;
+	font-size: 13pt;
+}
+h3 {
+	color: #333333;
+	font-weight: bold;
+	margin-top: 5pt;
+	margin-bottom: 0;
+	font-size: 10.5pt;
+}
+h3.NoteTipHead {
+	color:#006699;
+	margin-top:11pt;
+	padding-bottom:0;
+	line-height: 18px;
+	text-transform: uppercase;
+}
+h3.NoteTipHead img {
+	vertical-align: middle;
+}
+ul { 
+	margin-bottom: 1em; 
+	font-size: inherit; 
+	margin-top: 0px; 
+	line-height: 100%; 
+}
+ul ol { 
+	margin-bottom: 0em; 
+	font-size: inherit;
+	list-style-type: decimal;
+}
+ul ul { 
+	margin-bottom:0px; 
+	font-size:inherit;
+}
+ul.Note {
+	margin-left:25px;
+}
+td ul { 
+	font-size:inherit;
+}
+ol { 
+	margin-bottom: 1em; 
+	font-size: inherit; 
+	margin-top: 0px; 
+	line-height: 100%;
+	list-style-type: decimal;
+}
+ol ol { 
+	list-style: lower-alpha; 
+	margin-bottom: 0em; 
+	font-size: inherit;
+}
+ol.Note {
+	margin-left:25px;
+}
+td ol { 
+	font-size:inherit;
+}
+ol ul { 
+	margin-bottom:0px; 
+	font-size:inherit;
+}
+li { 
+	font-size: inherit; 
+	margin-top: 0px; 
+	line-height: 130%;
+}
+li p, ol p, ul p { 
+	margin-bottom:0.2em; 
+	margin-top:0.2em; 
+	margin-left:0; 
+	padding-left:0; 
+	font-size:inherit;
+}
+li table, td table, dd table { 
+	margin-left:0;
+}
+
+P.Preformatted, pre { 
+	x-text-tab-stops: repeat 1in; 
+	margin-top:0; 
+	margin-bottom:0; 
+	font-size: 10pt; 
+	font-family: "Courier New", Courier, monospace; 
+	background-color: #eeeeee;
+}
+td P.Preformatted, td pre { 
+	/* line-height: 90%; */
+	x-text-tab-stops: repeat 1in; 
+	margin-top:0; 
+	margin-bottom:0; 
+	margin-left: 0px;
+	font-size: 10pt; 
+	font-family: "Courier New", Courier, monospace; 
+	background-color: #eeeeee;
+}
+SPAN.Code, span.aCode, .Code { 
+	font-family: "Courier New", Courier, monospace;
+}
+var, span.Variable {
+	font-family: Courier, monospace;
+	font-style: italic;
+}
+blockquote { 
+	margin-top: 0; 
+	margin-bottom: 0;
+}
+HR { 
+	color: #555555; 
+	border: 0; 
+	background: #555555; 
+	height: 1px; 
+	margin-left: 0;
+}
+SPAN.Big { 
+	font-weight:bold; 
+	font-size:105%;
+}
+.welcomeImg { 
+	padding-left: 0px; 
+	padding-bottom: 0px; 
+	margin-left: 0px;
+}
+.IntelExt {
+	color:#008080;
+} 
+dl { 
+	margin-bottom: 1em; 
+	font-size: inherit; 
+	margin-top: 0px; 
+	
+}	
+dt { 
+	font-weight: bold; 
+	margin-top: 1em;
+}
+dd {
+	font-size: inherit; 
+/*	margin-top: -1.2em; */
+	margin-top: 0;
+
+}
+dd p {
+	margin-bottom: 0.2em; 
+	margin-top: 0.2em; 
+	font-size: inherit;
+}
+.link_buttons {
+	background-color: #EEEEEE;
+	border-color: #EEEEEE;
+	border-width: 1px;
+	padding: 4px;
+}
+a:link {
+	color: #0860a8;
+	text-decoration: none;
+}
+a:visited { 
+	color:#0860a8;
+	text-decoration: none;	
+}
+a:active {
+	color: #0860a8;
+	text-decoration: underline;
+}
+a:hover {
+	color: #0860a8;
+	text-decoration: underline;
+}
+sup {
+	font-size: 80%;
+	vertical-align: top;
+}
+
+</style>
+</head>
+<body>
+<h1>Intel&reg; Integrated Performance Primitives (Intel&reg; IPP) Library for OpenCV</h1>
+<p>Intel® Integrated Performance Primitives (Intel® IPP) library for OpenCV is a subset of Intel IPP functions for image processing and computer vision.
+<p> For detailed descriptions of Intel IPP functions and interfaces refer to the Intel IPP Reference Manual available from the Intel IPP documentation Web page at <a href="http://software.intel.com/en-us/articles/intel-integrated-performance-primitives-documentation/">http://software.intel.com/en-us/articles/intel-integrated-performance-primitives-documentation/</a>. Note that not all functions described in the Reference Manual are included into the Intel IPP library for OpenCV.
+<h2><a name="legal"></a>Legal Information</h2>
+
+<p>
+
+INFORMATION IN THIS DOCUMENT IS PROVIDED IN CONNECTION WITH INTEL&reg; PRODUCTS. 
+NO LICENSE, EXPRESS OR IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL 
+PROPERTY RIGHTS IS GRANTED BY THIS DOCUMENT. EXCEPT AS PROVIDED IN INTEL&#39;S TERMS 
+AND CONDITIONS OF SALE FOR SUCH PRODUCTS, INTEL ASSUMES NO LIABILITY WHATSOEVER, 
+AND INTEL DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY, RELATING TO SALE AND/OR USE 
+OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING TO FITNESS FOR A 
+PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT OF ANY PATENT, COPYRIGHT OR 
+OTHER INTELLECTUAL PROPERTY RIGHT. <BR>A "Mission Critical Application"
+ is any application in which failure of the Intel Product could result, directly or indirectly, 
+ in personal injury or death. SHOULD YOU PURCHASE OR USE INTEL'S PRODUCTS FOR ANY SUCH MISSION CRITICAL APPLICATION, 
+ YOU SHALL INDEMNIFY AND HOLD INTEL AND ITS SUBSIDIARIES, SUBCONTRACTORS AND AFFILIATES, AND THE DIRECTORS, OFFICERS, 
+ AND EMPLOYEES OF EACH, HARMLESS AGAINST ALL CLAIMS COSTS, DAMAGES, AND EXPENSES AND REASONABLE ATTORNEYS' 
+ FEES ARISING OUT OF, DIRECTLY OR INDIRECTLY, ANY CLAIM OF PRODUCT LIABILITY, PERSONAL INJURY, OR DEATH ARISING IN ANY 
+ WAY OUT OF SUCH MISSION CRITICAL APPLICATION, WHETHER OR NOT INTEL OR ITS SUBCONTRACTOR WAS NEGLIGENT IN THE DESIGN, 
+ MANUFACTURE, OR WARNING OF THE INTEL PRODUCT OR ANY OF ITS PARTS.
+
+<br>
+
+Intel may make changes to specifications and product descriptions at any time, 
+without notice. Designers must not rely on the absence or characteristics of any 
+features or instructions marked &quot;reserved&quot; or &quot;undefined.&quot; Intel reserves these 
+for future definition and shall have no responsibility whatsoever for conflicts 
+or incompatibilities arising from future changes to them. The information here 
+is subject to change without notice. Do not finalize a design with this 
+information.
+
+</p><p>
+
+The products described in this document may contain design defects or errors 
+known as errata which may cause the product to deviate from published 
+specifications. Current characterized errata are available on request.
+
+</p><p>
+Contact your local Intel sales office or your distributor to obtain the latest 
+specifications and before placing your product order.
+
+</p>
+	<p class="tenpt">Copies of documents which have an order number and are 
+	referenced in this document, or other Intel literature, may be obtained by 
+	calling 1-800-548-4725, or go to</p>
+	<p class="tenpt">http://www.intel.com/design/literature.htm<p>
+
+Intel processor numbers are not a measure of performance. Processor numbers 
+differentiate features within each processor family, not across different 
+processor families. See http://ww.intel.com/products/processor_number for 
+details.
+
+</p><p>
+
+BunnyPeople, Celeron, Celeron Inside, Centrino, Centrino Inside, Cilk, Core Inside, i960, Intel, the Intel logo, Intel AppUp, Intel Atom, Intel Atom Inside, Intel Core, Intel Inside, Intel Inside logo, Intel NetBurst, Intel NetMerge, Intel NetStructure, Intel SingleDriver, Intel SpeedStep, Intel Sponsors of Tomorrow., the Intel Sponsors of Tomorrow. logo, Intel StrataFlash, Intel Viiv, Intel vPro, Intel XScale, InTru, the InTru logo, InTru soundmark, Itanium, Itanium Inside, MCS, MMX, Moblin, Pentium, Pentium Inside, skoool, the skoool logo, Sound Mark, The Journey Inside, vPro Inside, VTune, Xeon, and Xeon Inside are trademarks of Intel Corporation in the U.S. and other countries.
+
+</p><p>
+
+* Other names and brands may be claimed as the property of others.
+
+
+</p>
+<div xmlns:MSHelp="http://www.microsoft.com/MSHelp/">
+	<p class="tenpt">Microsoft, Windows, and the Windows logo are trademarks, or registered trademarks of Microsoft Corporation in the United States and/or other countries. 
+</div>
+<p>
+
+Copyright (C) 2014, Intel Corporation. All rights reserved.
+
+</p>
+
+</body>
+
+</html>

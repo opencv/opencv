@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_superres", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/test/test_superres.cpp",
+			"labels" : [ "Main", "opencv_superres", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/superres/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_superres", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_superres", "AccuracyTest" ],
+		"name" : "opencv_test_superres"
+	}
+}

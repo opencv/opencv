@@ -1,0 +1,26 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/test/test_backgroundsubtractor_gbh.cpp",
+			"labels" : [ "Extra", "opencv_bgsegm", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_bgsegm", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/bgsegm/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_bgsegm", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_bgsegm", "AccuracyTest" ],
+		"name" : "opencv_test_bgsegm"
+	}
+}

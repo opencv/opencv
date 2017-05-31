@@ -1,0 +1,66 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/ocl/test_denoising.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_cloning.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_decolor.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_denoise_tvl1.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_denoising.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_denoising.cuda.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_hdr.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_inpaint.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_main.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_npr.cpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/photo/test/test_precomp.hpp",
+			"labels" : [ "Main", "opencv_photo", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_photo", "AccuracyTest" ],
+		"name" : "opencv_test_photo"
+	}
+}

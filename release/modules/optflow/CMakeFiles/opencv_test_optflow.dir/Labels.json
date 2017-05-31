@@ -1,0 +1,41 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/test/ocl/test_motempl.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/test/test_OF_accuracy.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/test/test_OF_reproducibility.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/test/test_main.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/test/test_motiontemplates.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "AccuracyTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/test/test_precomp.hpp",
+			"labels" : [ "Extra", "opencv_optflow", "AccuracyTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_optflow", "AccuracyTest" ],
+		"name" : "opencv_test_optflow"
+	}
+}

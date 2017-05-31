@@ -1,0 +1,36 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/perf/perf_deepflow.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/perf/perf_disflow.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/perf/perf_main.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/perf/perf_variational_refinement.cpp",
+			"labels" : [ "Extra", "opencv_optflow", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/optflow/perf/perf_precomp.hpp",
+			"labels" : [ "Extra", "opencv_optflow", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_optflow", "PerfTest" ],
+		"name" : "opencv_perf_optflow"
+	}
+}

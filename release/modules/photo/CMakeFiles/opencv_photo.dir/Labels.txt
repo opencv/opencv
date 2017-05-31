@@ -1,0 +1,128 @@
+# Target labels
+ Main
+ opencv_photo
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/photo/include/opencv2/photo.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/include/opencv2/photo/cuda.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/include/opencv2/photo/photo.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/include/opencv2/photo/photo_c.h
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/align.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/calibrate.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/contrast_preserve.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/denoise_tvl1.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/denoising.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/denoising.cuda.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/hdr_common.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/inpaint.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/merge.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/npr.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/seamless_cloning.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/seamless_cloning_impl.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/tonemap.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/opencl/nlmeans.cl
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/photo/opencl_kernels_photo.cpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/photo/opencl_kernels_photo.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/arrays.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/contrast_preserve.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/fast_nlmeans_denoising_invoker.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/fast_nlmeans_denoising_invoker_commons.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/fast_nlmeans_denoising_opencl.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/fast_nlmeans_multi_denoising_invoker.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/hdr_common.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/npr.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/precomp.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/photo/src/seamless_cloning.hpp
+ Main
+ opencv_photo
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
+/Users/chihiro/Programs/opencv/opencv/release/modules/photo/opencl_kernels_photo.cpp.rule

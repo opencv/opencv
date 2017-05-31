@@ -1,0 +1,33 @@
+# Target labels
+ Main
+ opencv_calib3d
+ PerfTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/opencl/perf_stereobm.cpp
+ Main
+ opencv_calib3d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_affine2d.cpp
+ Main
+ opencv_calib3d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_cicrlesGrid.cpp
+ Main
+ opencv_calib3d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_main.cpp
+ Main
+ opencv_calib3d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_pnp.cpp
+ Main
+ opencv_calib3d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_stereosgbm.cpp
+ Main
+ opencv_calib3d
+ PerfTest
+/Users/chihiro/Programs/opencv/opencv/modules/calib3d/perf/perf_precomp.hpp
+ Main
+ opencv_calib3d
+ PerfTest

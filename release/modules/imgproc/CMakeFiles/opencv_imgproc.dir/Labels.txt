@@ -1,0 +1,440 @@
+# Target labels
+ Main
+ opencv_imgproc
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/imgproc.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/imgproc_c.h
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/types_c.h
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/hal/hal.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/hal/interface.h
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/include/opencv2/imgproc/detail/distortion_model.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/accum.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/approx.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/blend.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/canny.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/clahe.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/color.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/colormap.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/connectedcomponents.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/contours.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/convhull.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/corner.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/cornersubpix.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/demosaicing.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/deriv.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/distransform.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/drawing.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/emd.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/featureselect.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/filter.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/floodfill.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/gabor.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/generalized_hough.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/geometry.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/grabcut.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/hershey_fonts.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/histogram.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/hough.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/imgwarp.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/intersection.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/linefit.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/lsd.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/main.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/matchcontours.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/min_enclosing_triangle.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/moments.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/morph.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/phasecorr.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/pyramids.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/rotcalipers.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/samplers.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/segmentation.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/shapedescr.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/smooth.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/spatialgradient.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/subdivision2d.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/sumpixels.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/tables.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/templmatch.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/thresh.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/undistort.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/utils.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/accumulate.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/bilateral.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/blend_linear.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/boxFilter.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/boxFilter3x3.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/calc_back_project.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/canny.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/clahe.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/corner.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/covardata.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/cvtcolor.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filter2D.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filter2DSmall.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filterSepCol.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filterSepRow.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filterSep_singlePass.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/filterSmall.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/gaussianBlur3x3.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/gaussianBlur5x5.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/gftt.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/histogram.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/hough_lines.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/integral_sum.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/laplacian3.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/laplacian5.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/linearPolar.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/logPolar.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/match_template.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/medianFilter.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/moments.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/morph.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/morph3x3.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/precornerdetect.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/pyr_down.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/pyr_up.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/pyramid_up.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/remap.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/resize.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/sepFilter3x3.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/threshold.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/warp_affine.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/warp_perspective.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/opencl/warp_transform.cl
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/imgproc/opencl_kernels_imgproc.cpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/imgproc/opencl_kernels_imgproc.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/filterengine.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/gcgraph.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/hal_replacement.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/precomp.hpp
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/imgproc/src/_geom.h
+ Main
+ opencv_imgproc
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
+/Users/chihiro/Programs/opencv/opencv/release/modules/imgproc/opencl_kernels_imgproc.cpp.rule

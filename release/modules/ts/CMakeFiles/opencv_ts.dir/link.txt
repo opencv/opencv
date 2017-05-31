@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc ../../lib/libopencv_ts.a  CMakeFiles/opencv_ts.dir/src/cuda_perf.cpp.o CMakeFiles/opencv_ts.dir/src/cuda_test.cpp.o CMakeFiles/opencv_ts.dir/src/ocl_perf.cpp.o CMakeFiles/opencv_ts.dir/src/ocl_test.cpp.o CMakeFiles/opencv_ts.dir/src/ts.cpp.o CMakeFiles/opencv_ts.dir/src/ts_arrtest.cpp.o CMakeFiles/opencv_ts.dir/src/ts_func.cpp.o CMakeFiles/opencv_ts.dir/src/ts_gtest.cpp.o CMakeFiles/opencv_ts.dir/src/ts_perf.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib ../../lib/libopencv_ts.a

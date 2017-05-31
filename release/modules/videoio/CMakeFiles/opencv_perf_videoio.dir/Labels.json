@@ -1,0 +1,31 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/perf/perf_input.cpp",
+			"labels" : [ "Main", "opencv_videoio", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/perf/perf_main.cpp",
+			"labels" : [ "Main", "opencv_videoio", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/perf/perf_output.cpp",
+			"labels" : [ "Main", "opencv_videoio", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/videoio/perf/perf_precomp.hpp",
+			"labels" : [ "Main", "opencv_videoio", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_videoio", "PerfTest" ],
+		"name" : "opencv_perf_videoio"
+	}
+}

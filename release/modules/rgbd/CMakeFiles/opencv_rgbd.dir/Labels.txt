@@ -1,0 +1,59 @@
+# Target labels
+ Extra
+ opencv_rgbd
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/include/opencv2/rgbd.hpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/include/opencv2/rgbd/linemod.hpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/depth_cleaner.cpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/depth_registration.cpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/depth_to_3d.cpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/linemod.cpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/normal.cpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/odometry.cpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/plane.cpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/utils.cpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/precomp.hpp
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/depth_to_3d.h
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/rgbd/src/utils.h
+ Extra
+ opencv_rgbd
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

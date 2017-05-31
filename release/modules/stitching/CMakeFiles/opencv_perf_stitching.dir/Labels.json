@@ -1,0 +1,46 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/opencl/perf_stitch.cpp",
+			"labels" : [ "Main", "opencv_stitching", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/opencl/perf_warpers.cpp",
+			"labels" : [ "Main", "opencv_stitching", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_estimators.cpp",
+			"labels" : [ "Main", "opencv_stitching", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_main.cpp",
+			"labels" : [ "Main", "opencv_stitching", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_matchers.cpp",
+			"labels" : [ "Main", "opencv_stitching", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_stich.cpp",
+			"labels" : [ "Main", "opencv_stitching", "PerfTest" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/stitching/perf/perf_precomp.hpp",
+			"labels" : [ "Main", "opencv_stitching", "PerfTest" ]
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_stitching", "PerfTest" ],
+		"name" : "opencv_perf_stitching"
+	}
+}

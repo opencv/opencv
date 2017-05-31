@@ -1,0 +1,74 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/include/opencv2/xobjdetect.hpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/feature_evaluator.cpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/lbpfeatures.cpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/waldboost.cpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/wbdetector.cpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/feature_evaluator.hpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/precomp.hpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/waldboost.hpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/wbdetector.hpp",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/cascadeclassifier.h",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv_contrib/modules/xobjdetect/src/lbpfeatures.h",
+			"labels" : [ "Extra", "opencv_xobjdetect", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Extra", "opencv_xobjdetect", "Module" ],
+		"name" : "opencv_xobjdetect"
+	}
+}

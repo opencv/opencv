@@ -1,0 +1,234 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/include/opencv2/imgcodecs/imgcodecs.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/include/opencv2/imgcodecs/imgcodecs_c.h",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/include/opencv2/imgcodecs/ios.h",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/loadsave.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/utils.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/precomp.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/utils.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_base.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_bmp.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_exr.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_gdal.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_gdcm.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_hdr.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_jpeg.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_jpeg2000.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_pam.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_png.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_pxm.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_sunras.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_tiff.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_webp.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/bitstrm.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/rgbe.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/exif.cpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_base.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_bmp.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_exr.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_gdal.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_gdcm.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_hdr.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_jpeg.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_jpeg2000.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_pam.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_png.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_pxm.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_sunras.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_tiff.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmt_webp.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/grfmts.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/bitstrm.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/rgbe.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/modules/imgcodecs/src/exif.hpp",
+			"labels" : [ "Main", "opencv_imgcodecs", "Module" ]
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h"
+		},
+		
+		{
+			"file" : "/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "Main", "opencv_imgcodecs", "Module" ],
+		"name" : "opencv_imgcodecs"
+	}
+}

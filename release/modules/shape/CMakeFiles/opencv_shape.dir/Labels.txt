@@ -1,0 +1,67 @@
+# Target labels
+ Main
+ opencv_shape
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/emdL1.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/hist_cost.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/shape.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/shape_distance.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/include/opencv2/shape/shape_transformer.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/aff_trans.cpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/emdL1.cpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/haus_dis.cpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/hist_cost.cpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/sc_dis.cpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/tps_trans.cpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/emdL1_def.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/precomp.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/shape/src/scd_def.hpp
+ Main
+ opencv_shape
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp

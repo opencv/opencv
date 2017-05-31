@@ -1,0 +1,25 @@
+# Target labels
+ Extra
+ opencv_aruco
+ AccuracyTest
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_arucodetection.cpp
+ Extra
+ opencv_aruco
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_boarddetection.cpp
+ Extra
+ opencv_aruco
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_charucodetection.cpp
+ Extra
+ opencv_aruco
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_main.cpp
+ Extra
+ opencv_aruco
+ AccuracyTest
+/Users/chihiro/Programs/opencv/opencv_contrib/modules/aruco/test/test_precomp.hpp
+ Extra
+ opencv_aruco
+ AccuracyTest

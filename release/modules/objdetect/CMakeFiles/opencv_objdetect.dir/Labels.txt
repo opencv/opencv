@@ -1,0 +1,72 @@
+# Target labels
+ Main
+ opencv_objdetect
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/include/opencv2/objdetect.hpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/include/opencv2/objdetect/detection_based_tracker.hpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/include/opencv2/objdetect/objdetect.hpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/include/opencv2/objdetect/objdetect_c.h
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/cascadedetect.cpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/cascadedetect_convert.cpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/detection_based_tracker.cpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/haar.cpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/hog.cpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/main.cpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/opencl/cascadedetect.cl
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/opencl/objdetect_hog.cl
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/objdetect/opencl_kernels_objdetect.cpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/objdetect/opencl_kernels_objdetect.hpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/cascadedetect.hpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/objdetect/src/precomp.hpp
+ Main
+ opencv_objdetect
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
+/Users/chihiro/Programs/opencv/opencv/release/modules/objdetect/opencl_kernels_objdetect.cpp.rule

@@ -1,0 +1,136 @@
+# Target labels
+ Main
+ opencv_stitching
+ Module
+# Source files and their labels
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/warpers.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/autocalib.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/blenders.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/camera.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/exposure_compensate.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/matchers.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/motion_estimators.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/seam_finders.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/timelapsers.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/util.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/util_inl.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/warpers.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/include/opencv2/stitching/detail/warpers_inl.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/autocalib.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/blenders.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/camera.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/exposure_compensate.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/matchers.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/motion_estimators.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/seam_finders.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/stitcher.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/timelapsers.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/util.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/warpers.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/warpers_cuda.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/opencl/multibandblend.cl
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/opencl/warpers.cl
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/stitching/opencl_kernels_stitching.cpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/modules/stitching/opencl_kernels_stitching.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/precomp.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/modules/stitching/src/util_log.hpp
+ Main
+ opencv_stitching
+ Module
+/Users/chihiro/Programs/opencv/opencv/release/cvconfig.h
+/Users/chihiro/Programs/opencv/opencv/release/opencv2/opencv_modules.hpp
+/Users/chihiro/Programs/opencv/opencv/release/modules/stitching/opencl_kernels_stitching.cpp.rule
