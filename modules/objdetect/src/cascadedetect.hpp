@@ -74,7 +74,7 @@ protected:
 };
 
 
-class CascadeClassifierImpl : public BaseCascadeClassifier
+class CascadeClassifierImpl : public BaseCascadeClassifier2
 {
 public:
     CascadeClassifierImpl();
@@ -84,13 +84,16 @@ public:
     bool load( const String& filename );
     void read( const FileNode& node );
     bool read_( const FileNode& node );
+
+    // Add multi-scale cascade classifier detection interfaces
+    // INTERFACE 1: Basic interface
     void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
                           double scaleFactor = 1.1,
                           int minNeighbors = 3, int flags = 0,
                           Size minSize = Size(),
                           Size maxSize = Size() );
-
+    // INTERFACE 2: Interface that returns numDetections for each object
     void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
                           CV_OUT std::vector<int>& numDetections,
@@ -98,7 +101,7 @@ public:
                           int minNeighbors=3, int flags=0,
                           Size minSize=Size(),
                           Size maxSize=Size() );
-
+    // INTERFACE 3: Interface that returns rejectLevels and levelWeights for each object
     void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
                           CV_OUT std::vector<int>& rejectLevels,
@@ -109,6 +112,25 @@ public:
                           Size maxSize = Size(),
                           bool outputRejectLevels = false );
 
+    // Add single-scale cascade classifier detection interfaces
+    // INTERFACE 1: Basic interface
+    void detectSingleScale( InputArray image,
+                          CV_OUT std::vector<Rect>& objects,
+                          Size desiredScale = Size(),
+                          int minNeighbors = 3);
+    // INTERFACE 2: Interface that returns numDetections for each object
+    void detectSingleScale( InputArray image,
+                          CV_OUT std::vector<Rect>& objects,
+                          CV_OUT std::vector<int>& numDetections,
+                          Size desiredScale = Size(),
+                          int minNeighbors = 3);
+    // INTERFACE 3: Interface that returns rejectLevels and levelWeights for each object
+    void detectSingleScale( InputArray image,
+                          CV_OUT std::vector<Rect>& objects,
+                          CV_OUT std::vector<int>& rejectLevels,
+                          CV_OUT std::vector<double>& levelWeights,
+                          Size desiredScale = Size(),
+                          int minNeighbors = 3, bool outputRejectLevels = true);
 
     bool isOldFormatCascade() const;
     Size getOriginalWindowSize() const;
@@ -121,10 +143,6 @@ public:
 protected:
     enum { SUM_ALIGN = 64 };
 
-    bool detectSingleScale( InputArray image, Size processingRectSize,
-                            int yStep, double factor, std::vector<Rect>& candidates,
-                            std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
-                            Size sumSize0, bool outputRejectLevels = false );
 #ifdef HAVE_OPENCL
     bool ocl_detectMultiScaleNoGrouping( const std::vector<float>& scales,
                                          std::vector<Rect>& candidates );
