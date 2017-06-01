@@ -2241,6 +2241,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 #endif
 
 #ifdef HAVE_IPP
+#define IPP_DISABLE_FILTERING_INMEM_PARTIAL 1 // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
 #define IPP_GAUSSIANBLUR_PARALLEL 1
 
 #ifdef HAVE_IPP_IW
@@ -2319,26 +2320,23 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
         if(!ippBorder.m_borderType)
             return false;
 
-        // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
-        if((((ippBorder.m_borderFlags)&ippBorderInMem) && ((ippBorder.m_borderFlags)&ippBorderInMem) != ippBorderInMem)) {
-            return false;
-        }
-
-        bool ok;
-        ipp_gaussianBlurParallel invoker(iwSrc, iwDst, ksize.width, (float) sigma1, ippBorder, &ok);
-
-        if(!ok)
-            return false;
-
-        const Range range(0, (int) iwDst.m_size.height);
+        const bool disableThreading = IPP_DISABLE_FILTERING_INMEM_PARTIAL &&
+            ((ippBorder.m_borderFlags)&ippBorderInMem) && ((ippBorder.m_borderFlags)&ippBorderInMem) != ippBorderInMem;
         const int threads = ippiSuggestThreadsNum(iwDst, 2);
-        if(IPP_GAUSSIANBLUR_PARALLEL && threads > 1)
-            parallel_for_(range, invoker, threads*4);
-        else
-            invoker(range);
+        if(!disableThreading && IPP_GAUSSIANBLUR_PARALLEL && threads > 1) {
+            bool ok;
+            ipp_gaussianBlurParallel invoker(iwSrc, iwDst, ksize.width, (float) sigma1, ippBorder, &ok);
 
-        if(!ok)
-            return false;
+            if(!ok)
+                return false;
+            const Range range(0, (int) iwDst.m_size.height);
+            parallel_for_(range, invoker, threads*4);
+
+            if(!ok)
+                return false;
+        } else {
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterGaussian, &iwSrc, &iwDst, ksize.width, (float) sigma1, ippBorder);
+        }
     }
     catch (::ipp::IwException ex)
     {
@@ -4321,24 +4319,23 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
         if(!ippBorder.m_borderType)
             return false;
 
-        // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
-        if((((ippBorder.m_borderFlags)&ippBorderInMem) && ((ippBorder.m_borderFlags)&ippBorderInMem) != ippBorderInMem))
-            return false;
+        const bool disableThreading = IPP_DISABLE_FILTERING_INMEM_PARTIAL &&
+            ((ippBorder.m_borderFlags)&ippBorderInMem) && ((ippBorder.m_borderFlags)&ippBorderInMem) != ippBorderInMem;
+        const int threads = ippiSuggestThreadsNum(iwDst, 2);
+        if(!disableThreading && IPP_BILATERAL_PARALLEL && threads > 1) {
+            bool  ok      = true;
+            Range range(0, (int)iwDst.m_size.height);
+            ipp_bilateralFilterParallel invoker(iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ippBorder, &ok);
+            if(!ok)
+                return false;
 
-        bool  ok      = true;
-        int   threads = ippiSuggestThreadsNum(iwDst, 2);
-        Range range(0, (int)iwDst.m_size.height);
-        ipp_bilateralFilterParallel invoker(iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ippBorder, &ok);
-        if(!ok)
-            return false;
-
-        if(IPP_BILATERAL_PARALLEL && threads > 1)
             parallel_for_(range, invoker, threads*4);
-        else
-            invoker(range);
 
-        if(!ok)
-            return false;
+            if(!ok)
+                return false;
+        } else {
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, &iwSrc, &iwDst, radius, valSquareSigma, posSquareSigma, ippiFilterBilateralGauss, ippDistNormL1, ippBorder);
+        }
     }
     catch (::ipp::IwException)
     {
