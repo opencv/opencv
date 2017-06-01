@@ -725,7 +725,7 @@ function(ocv_install_target)
     set(${__package}_TARGETS "${${__package}_TARGETS}" CACHE INTERNAL "List of ${__package} targets")
   endif()
 
-  if(MSVS)
+  if(MSVC)
     if(NOT INSTALL_IGNORE_PDB AND
         (INSTALL_PDB OR
           (INSTALL_CREATE_DISTRIB AND NOT BUILD_SHARED_LIBS)
