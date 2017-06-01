@@ -99,6 +99,9 @@ if(MINGW)
   if(NOT HAVE_CXX_MSTACKREALIGN)
     add_extra_compiler_option(-mpreferred-stack-boundary=2)
   endif()
+
+  # Use mingw's sprintf instead of windows's
+  add_definitions(-D__USE_MINGW_ANSI_STDIO=1) 
 endif()
 
 if(CV_ICC AND NOT ENABLE_FAST_MATH)
