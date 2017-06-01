@@ -11,7 +11,7 @@
 
 Please read before starting work on a pull request: <https://github.com/opencv/opencv/wiki/How_to_contribute>
 
-Summary of guidelines:
+#### Summary of guidelines:
 
 * One pull request per issue;
 * Choose the right base branch;
