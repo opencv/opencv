@@ -858,19 +858,24 @@ bool setBreakOnError(bool value)
 
 bool cv_snprintf(char* buf, int len, const char* fmt, ...)
 {
+
+
     if (len <= 0) return false;
     va_list va;
     va_start(va, fmt);
 #if defined _MSC_VER
     int res = _vsnprintf_s((char *)buf, len, _TRUNCATE, fmt, va);
+    va_end(va);
     // ensure null terminating on VS
-    if (res < 0) buf[len - 1] = 0;
+    bool ok = (res >= 0) && (res < len);
+    if (!ok) buf[len - 1] = 0; // truncate happened
     else buf[res] = 0;
+    return ok;
 #else
     int res = vsnprintf((char *)buf, len, fmt, va);
-#endif
     va_end(va);
     return res >= 0 && res < len;
+#endif
 }
 
 void error( const Exception& exc )
