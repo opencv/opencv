@@ -221,7 +221,7 @@ if(WIN32)
   include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
 endif()
 
-if(UNIX)
+if(UNIX OR (WIN32 AND HAVE_GSTREAMER))
   #these variables are set by CHECK_MODULE macro
   foreach(P ${VIDEOIO_INCLUDE_DIRS})
     ocv_include_directories(${P})
