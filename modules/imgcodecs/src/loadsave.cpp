@@ -587,6 +587,29 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
     return imreadmulti_(filename, flags, mats);
 }
 
+static void
+convertToCV8U(const Mat& src, const Mat& dst)
+{
+    switch (src.depth())
+    {
+    case CV_16U:
+        src.convertTo(dst, CV_8U, 1./(1<<8));
+        break;
+    case CV_16S:
+        src.convertTo(dst, CV_8U, 1./(1<<8), 1<<7);
+        break;
+    case CV_32S:
+        src.convertTo(dst, CV_8U, 1./(1<<24), 1<<7);
+        break;
+    case CV_32F: case CV_64F:
+        src.convertTo(dst, CV_8U, 255.0);
+        break;
+    default:
+        src.convertTo(dst, CV_8U);
+        break;
+    }
+}
+
 static bool imwrite_( const String& filename, const Mat& image,
                       const std::vector<int>& params, bool flipv )
 {
@@ -601,7 +624,7 @@ static bool imwrite_( const String& filename, const Mat& image,
     if( !encoder->isFormatSupported(image.depth()) )
     {
         CV_Assert( encoder->isFormatSupported(CV_8U) );
-        image.convertTo( temp, CV_8U );
+        convertToCV8U(image, temp);
         pimage = &temp;
     }
 
@@ -768,7 +791,7 @@ bool imencode( const String& ext, InputArray _image,
     {
         CV_Assert( encoder->isFormatSupported(CV_8U) );
         Mat temp;
-        image.convertTo(temp, CV_8U);
+        convertToCV8U(image, temp);
         image = temp;
     }
 
