@@ -3,8 +3,9 @@
 namespace tbb {
 namespace internal {
 
-void affinity_helper::protect_affinity_mask() {}
+void affinity_helper::protect_affinity_mask(bool) {}
 affinity_helper::~affinity_helper() {}
+void destroy_process_mask() {}
 
 }
 }
