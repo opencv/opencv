@@ -694,6 +694,12 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
     {
         return writeHdr(img);
     }
+    else if(img.type() == CV_32FC1)
+    {
+        cv::Mat img8U; 
+        img.convertTo(img8U, CV_8UC1);
+        return writeLibTiff(img8U, params);
+    }
 #endif
 
     if (depth != CV_8U && depth != CV_16U)
