@@ -28,6 +28,7 @@
 
 #include <map>
 #include <opencv2\core.hpp>
+#include <opencv2/highgui/highgui_c.h>
 
 using namespace Windows::UI::Xaml::Controls;
 
