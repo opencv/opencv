@@ -213,7 +213,12 @@ TEST(Photo_MergeRobertson, regression)
     loadImage(test_path + "merge/robertson.hdr", expected);
     merge->process(images, result, times);
 
-    checkEqual(expected, result, 5.f, "MergeRobertson");
+#ifdef __aarch64__
+    const float eps = 6.f;
+#else
+    const float eps = 5.f;
+#endif
+    checkEqual(expected, result, eps, "MergeRobertson");
 }
 
 TEST(Photo_CalibrateDebevec, regression)
