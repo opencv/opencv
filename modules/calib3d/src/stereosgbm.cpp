@@ -1069,7 +1069,7 @@ struct CalcVerticalSums: public ParallelLoopBody
                         v_int32x4 min1, min2, min12;
                         v_expand(_minL, min1, min2);
                         min12 = v_min(min1,min2);
-                        minLr[0][x] = v_reduce_min(min12);
+                        minLr[0][x] = (CostType)v_reduce_min(min12);
                     }
                     else
                 #endif
@@ -1239,7 +1239,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
                     v_int32x4 min1, min2, min12;
                     v_expand(_minL, min1, min2);
                     min12 = v_min(min1,min2);
-                    minLr = v_reduce_min(min12);
+                    minLr = (CostType)v_reduce_min(min12);
                 }
                 else
             #endif
@@ -1252,7 +1252,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
                         L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
 
                         Lr_p[d] = (CostType)L;
-                        minLr = std::min((int)minLr, L);
+                        minLr = (CostType)std::min((int)minLr, L);
 
                         Sp[d] = saturate_cast<CostType>(Sp[d] + L);
                     }
@@ -1319,7 +1319,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
                     v_int32x4 min1, min2, min12;
                     v_expand(_minL, min1, min2);
                     min12 = v_min(min1,min2);
-                    minLr = v_reduce_min(min12);
+                    minLr = (CostType)v_reduce_min(min12);
 
                     v_int32x4 _d0, _d1;
                     v_expand(_minS, _d0, _d1);
@@ -1340,7 +1340,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
                         L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
 
                         Lr_p[d] = (CostType)L;
-                        minLr = std::min((int)minLr, L);
+                        minLr = (CostType)std::min((int)minLr, L);
 
                         Sp[d] = saturate_cast<CostType>(Sp[d] + L);
                         if( Sp[d] < minS )
