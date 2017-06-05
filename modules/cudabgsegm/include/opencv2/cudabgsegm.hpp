@@ -147,6 +147,37 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG2>
     createBackgroundSubtractorMOG2(int history = 500, double varThreshold = 16,
                                    bool detectShadows = true);
 
+////////////////////////////////////////////////////
+// KNN
+
+/** @brief K-nearest neigbours - based Background/Foreground Segmentation Algorithm.
+
+The class implements the K-nearest neigbours background subtraction described in @cite Zivkovic2006 .
+Very efficient if number of foreground pixels is low.
+ */
+class CV_EXPORTS BackgroundSubtractorKNN : public cv::BackgroundSubtractorKNN
+{
+public:
+    using cv::BackgroundSubtractorKNN::apply;
+    using cv::BackgroundSubtractorKNN::getBackgroundImage;
+
+    virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
+
+    virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
+};
+
+/** @brief Creates KNN Background Subtractor
+
+@param history Length of the history.
+@param dist2Threshold Threshold on the squared distance between the pixel and the sample to decide
+whether a pixel is close to that sample. This parameter does not affect the background update.
+@param detectShadows If true, the algorithm will detect shadows and mark them. It decreases the
+speed a bit, so if you do not need this feature, set the parameter to false.
+ */
+CV_EXPORTS Ptr<cuda::BackgroundSubtractorKNN>
+    createBackgroundSubtractorKNN(int history=500, double dist2Threshold=400.0,
+                                   bool detectShadows=true);
+
 //! @}
 
 }} // namespace cv { namespace cuda {
