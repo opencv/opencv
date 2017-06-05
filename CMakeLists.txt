@@ -569,7 +569,7 @@ endif()
 # ----------------------------------------------------------------------------
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
   set(BUILD_opencv_bioinspired_INIT OFF)
-  set(BUILD_opencv_calib3d_INIT OFF)
+  set(BUILD_opencv_calib3d_INIT ON)
   set(BUILD_opencv_cuda_INIT OFF)
   set(BUILD_opencv_cudaarithm_INIT OFF)
   set(BUILD_opencv_cudabgsegm_INIT OFF)
