@@ -59,8 +59,12 @@ namespace cv
 //! @addtogroup core_basic
 //! @{
 
-enum { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
-    ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW, ACCESS_FAST=1<<26 };
+enum {
+    ACCESS_READ=1<<24,  //!< device read only, @sa Mat::getUMat
+    ACCESS_WRITE=1<<25, //!< device write only, @sa Mat::getUMat
+    ACCESS_RW=3<<24,    //!< device read and write, @sa Mat::getUMat
+    ACCESS_MASK=ACCESS_RW,
+    ACCESS_FAST=1<<26 };
 
 class CV_EXPORTS _OutputArray;
 
@@ -1031,6 +1035,11 @@ public:
     Mat& operator = (const MatExpr& expr);
 
     //! retrieve UMat from Mat
+    //! @param accessFlags It indicates which kind of permission the device has to access the data.
+    //! @param usageFlags It controls how the memory on the device is allocated. For example, use
+    //! UMatUsageFlags::USAGE_ALLOCATE_HOST_MEMORY to set the flag `CL_MEM_ALLOC_HOST_PTR` while creating a memory buffer
+    //! in OpenCL.
+    //! @sa cv::ACCESS_READ, cv::ACCESS_WRITE, cv::ACCESS_RW, OpenCLAllocator::allocate
     UMat getUMat(int accessFlags, UMatUsageFlags usageFlags = USAGE_DEFAULT) const;
 
     /** @brief Creates a matrix header for the specified matrix row.
