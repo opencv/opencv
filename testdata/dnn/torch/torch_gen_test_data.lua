@@ -89,3 +89,13 @@ local sum = nn.ConcatTable()
 sum:add(nn.Identity()):add(nn.Identity())
 net_cadd_table:add(sum):add(nn.CAddTable())
 save(net_cadd_table, torch.rand(1, 5, 40, 50) - 0.5, 'net_cadd_table')
+
+local net_softmax = nn.Sequential()
+net_softmax:add(nn.SoftMax())
+save(net_softmax, torch.rand(1, 5, 1, 1), 'net_softmax')
+save(net_softmax, torch.rand(2, 5, 3, 4), 'net_softmax_spatial')
+
+local net_logsoftmax = nn.Sequential()
+net_logsoftmax:add(nn.LogSoftMax())
+save(net_logsoftmax, torch.rand(3, 4, 1, 1), 'net_logsoftmax')
+save(net_logsoftmax, torch.rand(1, 6, 4, 3), 'net_logsoftmax_spatial')
