@@ -287,6 +287,8 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         }
 
         int depth = 3;
+        bool height_extend = false;
+
 #if GST_VERSION_MAJOR > 0
         depth = 0;
         const gchar* name = gst_structure_get_name(structure);
@@ -295,9 +297,16 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         if (!name)
             return 0;
 
-        // we support 3 types of data:
+        // we support 11 types of data:
         //     video/x-raw, format=BGR   -> 8bit, 3 channels
         //     video/x-raw, format=GRAY8 -> 8bit, 1 channel
+        //     video/x-raw, format=UYVY  -> 8bit, 2 channel
+        //     video/x-raw, format=YUY2  -> 8bit, 2 channel
+        //     video/x-raw, format=YVYU  -> 8bit, 2 channel
+        //     video/x-raw, format=NV12  -> 8bit, 1 channel (height is 1.5x larger than true height)
+        //     video/x-raw, format=NV21  -> 8bit, 1 channel (height is 1.5x larger than true height)
+        //     video/x-raw, format=YV12  -> 8bit, 1 channel (height is 1.5x larger than true height)
+        //     video/x-raw, format=I420  -> 8bit, 1 channel (height is 1.5x larger than true height)
         //     video/x-bayer             -> 8bit, 1 channel
         //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
         // bayer data is never decoded, the user is responsible for that
@@ -310,6 +319,13 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
 
             if (strcasecmp(format, "BGR") == 0) {
                 depth = 3;
+            }
+            else if( (strcasecmp(format, "UYVY") == 0) || (strcasecmp(format, "YUY2") == 0) || (strcasecmp(format, "YVYU") == 0) ){
+                depth = 2;
+            }
+            else if( (strcasecmp(format, "NV12") == 0) || (strcasecmp(format, "NV21") == 0) || (strcasecmp(format, "YV12") == 0) || (strcasecmp(format, "I420") == 0) ){
+                depth = 1;
+                height_extend = true;
             }
             else if(strcasecmp(format, "GRAY8") == 0){
                 depth = 1;
@@ -324,7 +340,11 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         }
 #endif
         if (depth > 0) {
-            frame = cvCreateImageHeader(cvSize(width, height), IPL_DEPTH_8U, depth);
+            if(height_extend){
+                frame = cvCreateImageHeader(cvSize(width, height*3/2), IPL_DEPTH_8U, depth);
+            }else{
+                frame = cvCreateImageHeader(cvSize(width, height), IPL_DEPTH_8U, depth);
+            }
         } else {
             gst_caps_unref(buffer_caps);
             return 0;
@@ -810,8 +830,18 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
                                "blue_mask",  G_TYPE_INT, 0xFF0000,
                                NULL);
 #else
-    // support 1 and 3 channel 8 bit data, as well as bayer (also  1 channel, 8bit)
+
     caps = gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg");
+
+    GstPad* sink_pad = gst_element_get_static_pad(sink, "sink");
+    GstCaps* peer_caps = gst_pad_peer_query_caps(sink_pad,NULL);
+    if (!gst_caps_can_intersect(caps, peer_caps)) {
+        gst_caps_unref(caps);
+        caps = gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420}");
+    }
+    gst_object_unref(sink_pad);
+    gst_caps_unref(peer_caps);
+
 #endif
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
     gst_caps_unref(caps);
