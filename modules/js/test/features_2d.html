@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>OpenCV JS Binding - Image Processing Demo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #336677;
+				margin: 0px;
+			}
+			#showcase {
+				position: absolute;
+				display: flex;
+				align-items: center;
+				height: 80%;
+				width: 80%;
+				margin: -100px 0 0 -500px;
+				top: 50%;
+				left: 50%;
+			}
+	        canvas{
+				background-color: #999999;
+			}
+			a {
+				color: #0040ff;
+			}
+		</style>
+	</head>
+	<body>
+
+	<a href='#' onclick='downloadCSV({ filename: "OpenCV_features_2d_results.csv" });'>Download CSV</a>
+	<a id="downloadLnk" download="YourFileName.jpg">Download processed images</a>
+
+	<div class="spinner" id='spinner'></div>
+    <div class="emscripten" id="status">Downloading...</div>
+    <div class="emscripten">
+      <progress value="0" max="100" id="progress" hidden=1></progress>
+    </div>
+
+	<div id="showcase">
+		<div>
+	        <canvas  id="canvas1"  ></canvas>
+			<canvas  id="canvas2"  ></canvas>
+		</div>
+		<input type="file" id="input" name="file" />
+	</div>
+
+	<script src='dat.gui.js'></script>
+	<script async src="cv.js"></script>
+
+		<script>
+
+		var face_cascade ;
+  		var eye_cascade ;
+		var smile_cascade ;
+
+		show_image = function (mat, canvas_id ){
+			var data = mat.data(); 	// output is a Uint8Array that aliases directly into the Emscripten heap
+
+			channels = mat.channels();
+			channelSize = mat.elemSize1();
+
+			var canvas = document.getElementById(canvas_id);
+
+			ctx = canvas.getContext("2d");
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			canvas.width = mat.cols;
+			canvas.height = mat.rows;
+
+			imdata = ctx.createImageData(mat.cols, mat.rows);
+
+			for (var i = 0,j=0; i < data.length; i += channels, j+=4) {
+				imdata.data[j] = data[i];
+				imdata.data[j + 1] = data[i+1%channels];
+				imdata.data[j + 2] = data[i+2%channels];
+				imdata.data[j + 3] = 255;
+			}
+			ctx.putImageData(imdata, 0, 0);
+		}
+
+		var inputElement = document.getElementById("input");
+	 	inputElement.addEventListener("change", handleFiles, false);
+		function handleFiles(e) {
+			var canvas = document.getElementById('canvas1');
+			var canvasWidth = 600 ;
+			var canvasHeight = 400 ;
+			var ctx = canvas.getContext('2d');
+			var url = URL.createObjectURL(e.target.files[0]);
+			var img = new Image();
+			img.onload = function() {
+				//ctx.drawImage(img, 20, 20);
+
+				var scaleFactor=Math.min((canvasWidth/img.width),(canvasHeight/img.height));
+				canvas.width = img.width*scaleFactor ;
+				canvas.height = img.height*scaleFactor ;
+				ctx.drawImage(img,0,0,img.width*scaleFactor,img.height*scaleFactor);
+			}
+			img.src = url;
+		}
+
+		function getInput() {
+			var canvas = document.getElementById('canvas1');
+			var ctx = canvas.getContext('2d');
+			var imgData = ctx.getImageData(0,0,canvas.width, canvas.height);
+			return imgData;
+		}
+
+		function orb() {
+			var img = cv.matFromArray(getInput(), 24); // 24 for rgba
+			var img_color = new cv.Mat(); // Opencv likes RGB
+			cv.cvtColor(img, img_color, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+			img.delete();
+
+			var noArray = new cv.Mat();
+
+			// Initiate STAR detector
+			var orb = new cv.ORB(500, 1.2, 8, 31, 0, 2, 0, 31, 20);
+
+			// find the keypoints with ORB
+			var kp = new cv.KeyPointVector();
+			orb.detect(img_color, kp, noArray);
+
+			// compute the descriptors with ORB
+			var des = new cv.Mat();
+			orb.compute(img_color, kp, des);
+
+			// draw only keypoints location,not size and orientation
+			var img2 = new cv.Mat();
+			var color = new cv.Scalar(0, 255, 0);
+			cv.drawKeypoints(img_color, kp, img2, color, 0);
+			show_image(img2, "canvas2");
+
+			img2.delete();
+			kp.delete();
+			color.delete();
+			orb.delete();
+			des.delete();
+			img_color.delete();
+		}
+
+		function brisk() {
+			var img = cv.matFromArray(getInput(), 24); // 24 for rgba
+			var img_color = new cv.Mat(); // Opencv likes RGB
+			cv.cvtColor(img, img_color, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+			img.delete();
+
+			// Initiate STAR detector
+			var brisk = new cv.BRISK(30, 1, 3);
+
+			// find the keypoints with ORB
+			var kp = new cv.KeyPointVector();
+			brisk.detect(img_color,kp, new cv.Mat());
+
+			// compute the descriptors with ORB
+			var des = new cv.Mat();
+			brisk.compute(img_color, kp, des);
+
+			// draw only keypoints location,not size and orientation
+			var img2 = new cv.Mat();
+			var color = new cv.Scalar(0,255,0);
+			cv.drawKeypoints(img_color, kp, img2, color, 0);
+			show_image(img2, "canvas2");
+
+			kp.delete();
+			color.delete();
+			brisk.delete();
+			des.delete();
+			img_color.delete();
+		}
+
+
+		function mser() {
+			var img = cv.matFromArray(getInput(), 24); // 24 for rgba
+			var img_color = new cv.Mat(); // Opencv likes RGB
+			cv.cvtColor(img, img_color, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+			img.delete();
+
+			// Initiate STAR detector
+			var mser = new cv.MSER(5, 60, 14400, 0.25, 0.2, 200, 1.01, 0.003, 5);
+
+			var contours = new cv.PointVectorVector();
+			var kp = new cv.KeyPointVector();
+			var boxes = new cv.RectVector();
+
+			mser.detectRegions(img_color, contours, boxes);
+			var img2 = img_color.clone();
+
+			var channels = img2.channels();
+			var cols = img2.cols;
+
+			var data = img2.data();
+			for (var i = 0 ;i < contours.size(); i+=1) {
+				var contour = contours.get(i);
+				for (var j = 0 ; j < contour.size(); j+=1) {
+					var p = contour.get(j);
+					data[(p[1] * cols + p[0] )* channels] = 255;
+				}
+				contour.delete();
+			}
+
+			contours.delete();
+			mser.delete();
+
+			show_image(img2, "canvas2");
+			img2.delete();
+			img_color.delete();
+			kp.delete();
+			boxes.delete();
+		}
+
+		function shiThomasCornerDetection() {
+
+			var img = cv.matFromArray(getInput(), 24); // 24 for rgba
+			var img_gray = new cv.Mat();
+			var img_color = new cv.Mat(); // Opencv likes RGB
+			cv.cvtColor(img, img_gray, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
+			cv.cvtColor(img, img_color, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+			img.delete();
+
+			var corners = new cv.Mat();
+			var qualityLevel = 0.01;
+			var minDistance = 10;
+			var blockSize = 3;
+			var useHarrisDetector = false;
+			var k = 0.04;
+			var maxCorners = Control.maxCorners ;
+
+			var copy = new cv.Mat();
+			copy = img_color.clone();
+
+			/// Apply corner detection
+			cv.goodFeaturesToTrack(img_gray,
+									corners,
+									maxCorners,
+									qualityLevel,
+									minDistance,
+									new cv.Mat(),
+									blockSize,
+									useHarrisDetector,
+									k);
+			img_gray.delete();
+			img_color.delete();
+
+			/// Draw corners detected
+			var r = 4;
+			for(var i = 0; i < corners.rows; i++ )
+			{
+				var x = corners.get_float_at(i, 0);
+				var y = corners.get_float_at(i, 1);
+				var color =  new cv.Scalar(10,200,10);
+				cv.circle(copy, [x, y], r, color, -1, 8, 0);
+				color.delete();
+			}
+			/// Show what you got
+			show_image(copy, "canvas2");
+			copy.delete();
+			corners.delete();
+		}
+
+		function harrisCornerDetection() {
+
+			var img = cv.matFromArray(getInput(), 24); // 24 for rgba
+			var img_gray = new cv.Mat();
+			var img_color = new cv.Mat();
+			cv.cvtColor(img, img_gray, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
+			cv.cvtColor(img, img_color, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+			img.delete();
+
+
+			var dst = cv.Mat.zeros(img_color.cols, img_color.rows, cv.CV_32FC1);
+
+			/// Detector parameters
+
+			var thresh = Control.threshold;
+			var max_thresh = 255;
+
+			var blockSize = 2;
+			var apertureSize = 3;
+			var k = 0.04;
+
+			/// Detecting corners
+			cv.cornerHarris(img_gray, dst, blockSize, apertureSize, k, cv.BORDER_DEFAULT);
+
+			/// Normalizing
+			var dst_norm = new cv.Mat();
+			var dst_norm_scaled = new cv.Mat();
+			cv.normalize(dst, dst_norm, 0, 255, 32, cv.CV_32FC1, new cv.Mat());
+			cv.convertScaleAbs(dst_norm, dst_norm_scaled, 1, 0);
+
+			/// Drawing a circle around corners
+			for(var j = 0; j < dst_norm.rows ; j++ )
+			{ for(var i = 0; i < dst_norm.cols; i++ )
+			  {
+			    if( dst_norm.get_float_at(j,i) > thresh )
+			      {
+						var color = new cv.Scalar(0);
+			        	cv.circle(dst_norm_scaled, [i, j], 5,  color, 2, 8, 0);
+						color.delete();
+			      }
+			  }
+			}
+			/// Showing the result
+			show_image( dst_norm_scaled, "canvas2");
+			dst.delete();
+			dst_norm.delete();
+			dst_norm_scaled.delete();
+			img_gray.delete();
+			img_color.delete();
+		}
+
+		function download() {
+			var dt = canvas2.toDataURL('image/jpeg');
+			this.href = dt;
+		};
+		downloadLnk.addEventListener('click', download, false);
+
+		var ress = [];
+
+		function runTest(fct){
+			var start = performance.now();
+			fct()
+			var end = performance.now();
+			var time = end - start;
+			var res = {testName:fct.name , executionTime_ms:time};
+			ress.push(res);
+			var d = new Date().toString();
+			var filename = "file_" + fct.name + "_" + d;
+			downloadLnk.setAttribute('download', filename);
+			downloadLnk.click();
+		}
+
+		function runAllTests(){
+			ress = [];
+			//runTest(harrisCornerDetection);
+			runTest(shiThomasCornerDetection);
+			runTest(orb);
+			runTest(brisk);
+			runTest(mser);
+			var d = new Date().toString();
+			downloadCSV({ filename: "OpenCV_features_2d_results_" + d + ".csv" });
+		}
+
+		function convertArrayOfObjectsToCSV(args) {
+			var result, ctr, keys, columnDelimiter, lineDelimiter, data;
+
+			data = args.data || null;
+			if (data == null || !data.length) {
+				return null;
+			}
+
+			columnDelimiter = args.columnDelimiter || ',';
+			lineDelimiter = args.lineDelimiter || '\n';
+
+			keys = Object.keys(data[0]);
+
+			result = '';
+			result += keys.join(columnDelimiter);
+			result += lineDelimiter;
+
+			data.forEach(function(item) {
+				ctr = 0;
+				keys.forEach(function(key) {
+					if (ctr > 0) result += columnDelimiter;
+
+					result += item[key];
+					ctr++;
+				});
+				result += lineDelimiter;
+			});
+
+			return result;
+		}
+
+		function downloadCSV(args) {
+			var data, filename, link;
+			var csv = convertArrayOfObjectsToCSV({
+				data: ress
+			});
+			if (csv == null) return;
+
+			filename = args.filename || 'export.csv';
+
+			if (!csv.match(/^data:text\/csv/i)) {
+				csv = 'data:text/csv;charset=utf-8,' + csv;
+			}
+			data = encodeURI(csv);
+
+			link = document.createElement('a');
+			link.setAttribute('href', data);
+			link.setAttribute('download', filename);
+			link.click();
+		}
+
+			var container ;
+			var Zee ;
+			var Control =  {
+				threshold : 200 ,
+				maxCorners : 10 ,
+				Harris : harrisCornerDetection,
+				ShiThomas : shiThomasCornerDetection ,
+				orb : orb ,
+				brisk : brisk ,
+				runAllTests:runAllTests,
+				mser : mser
+			};
+
+		function init() {
+			container = document.createElement('div');
+			document.body.appendChild(container);
+
+			gui = new dat.GUI({autoPlace: false});
+			document.body.appendChild(gui.domElement);
+			gui.domElement.style.position = "absolute";
+			gui.domElement.style.top = "0px";
+			gui.domElement.style.right = "5px";
+
+			//Run All Tests
+			gui.add(Control,'runAllTests');
+
+			//Color Space Changed
+			var cornereFolder = gui.addFolder('Corner Detectoin');
+			cornereFolder.add(Control, 'threshold' ).min(120).max(255);
+			cornereFolder.add(Control,'Harris');
+			cornereFolder.add(Control, 'maxCorners' ).min(1).max(50);
+			cornereFolder.add(Control,'ShiThomas');
+
+			var orbFolder = gui.addFolder('ORB Feature Extraction');
+			orbFolder.add(Control,'orb');
+
+			var orbFolder = gui.addFolder('BRISK Feature Extraction');
+			orbFolder.add(Control,'brisk');
+
+			var orbFolder = gui.addFolder('MSER Feature Extraction');
+			orbFolder.add(Control,'mser');
+
+		}
+		init();
+
+		</script>
+		<script  type='text/javascript'>
+
+	    function getCV() {
+
+			var zip ;
+			var oReq = new XMLHttpRequest();
+			oReq.open("GET", "/opencvjs/examples/cv.js.gz", "application/x-gzip");
+			oReq.responseType = "arraybuffer";
+
+			oReq.onload = function (oEvent) {
+			  var arrayBuffer = oReq.response; // Note: not oReq.responseText
+			  if (arrayBuffer) {
+					zip = new Uint8Array(arrayBuffer);
+					console.log("decompressing script");
+					var decompressed = Zee.decompress(zip);
+					console.log("script decompressed");
+					var head= document.getElementsByTagName('head')[0];
+					var script= document.createElement('script');
+					script.type= 'text/javascript';
+					var length = decompressed.length ;
+					//fr = new FileReader();
+					// fr.readAsText(decompressed);
+					//var x = fr.result;
+					//script.text = decompressed.join();
+					decoder = new TextDecoder();
+					script.text = decoder.decode(decompressed);
+					head.appendChild(script);
+					console.log("script added");
+			  }
+
+
+			};
+
+			oReq.send(null);
+		}
+		var statusElement = document.getElementById('status');
+		var progressElement = document.getElementById('progress');
+		var spinnerElement = document.getElementById('spinner');
+		var Module = {
+        preRun: [],
+        postRun: [],
+        print: (function() {
+          var element = document.getElementById('output');
+          if (element) element.value = ''; // clear browser cache
+          return function(text) {
+            text = Array.prototype.slice.call(arguments).join(' ');
+            // These replacements are necessary if you render to raw HTML
+            //text = text.replace(/&/g, "&amp;");
+            //text = text.replace(/</g, "&lt;");
+            //text = text.replace(/>/g, "&gt;");
+            //text = text.replace('\n', '<br>', 'g');
+            console.log(text);
+            if (element) {
+              element.value += text + "\n";
+              element.scrollTop = element.scrollHeight; // focus on bottom
+            }
+          };
+        })(),
+        printErr: function(text) {
+          text = Array.prototype.slice.call(arguments).join(' ');
+          if (0) { // XXX disabled for safety typeof dump == 'function') {
+            dump(text + '\n'); // fast, straight to the real console
+          } else {
+            console.error(text);
+          }
+        },
+        canvas: (function() {
+          var canvas = document.getElementById('resCanvas');
+          return canvas;
+        })(),
+        setStatus: function(text) {
+          if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+          if (text === Module.setStatus.text) return;
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Date.now() < 30) return; // if this is a progress update, skip it if too soon
+          if (m) {
+            text = m[1];
+            progressElement.value = parseInt(m[2])*100;
+            progressElement.max = parseInt(m[4])*100;
+            progressElement.hidden = false;
+            spinnerElement.hidden = false;
+          } else {
+            progressElement.value = null;
+            progressElement.max = null;
+            progressElement.hidden = true;
+            if (!text) spinnerElement.style.display = 'none';
+          }
+          statusElement.innerHTML = text;
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+      Module.setStatus('Downloading...');
+      window.onerror = function(event) {
+        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+        Module.setStatus('Exception thrown, see JavaScript console');
+        spinnerElement.style.display = 'none';
+        Module.setStatus = function(text) {
+          if (text) Module.printErr('[post-exception status] ' + text);
+        };
+      };
+	</script>
+	</body>
+</html>

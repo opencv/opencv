@@ -1,0 +1,628 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>OpenCV JS Binding - Image Processing Demo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #336677;
+				margin: 0px;
+			}
+			#showcase {
+				position: absolute;
+				display: flex;
+				align-items: center;
+				height: 80%;
+				width: 80%;
+				margin: -100px 0 0 -500px;
+				top: 50%;
+				left: 50%;
+			}
+	        canvas{
+				background-color: #999999;
+			}
+			a {
+				color: #0040ff;
+			}
+		</style>
+	</head>
+	<body>
+	<a href='#' onclick='downloadCSV({ filename: "OpenCV_img_proc_results.csv" });'>Download CSV</a>
+	<a id="downloadLnk" download="YourFileName.jpg">Download processed images</a>
+	<div class="spinner" id='spinner'></div>
+    <div class="emscripten" id="status">Downloading...</div>
+    <div class="emscripten">
+      <progress value="0" max="100" id="progress" hidden=1></progress>
+    </div>
+
+	<div id="showcase">
+		<div>
+	        <canvas  id="canvas1"  ></canvas>
+			<canvas  id="canvas2"  ></canvas>
+		</div>
+		<input type="file" id="input" name="file" />
+	</div>
+
+	<script src='dat.gui.js'></script>
+	<script async src="cv.js"></script>
+
+	<script>
+	show_image = function(mat, canvas_id) {
+		var data = mat.data(); 	// output is a Uint8Array that aliases directly into the Emscripten heap
+
+		channels = mat.channels();
+		channelSize = mat.elemSize1();
+
+		var canvas = document.getElementById(canvas_id);
+
+		ctx = canvas.getContext("2d");
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		canvas.width = mat.cols;
+		canvas.height = mat.rows;
+
+		imdata = ctx.createImageData(mat.cols, mat.rows);
+
+		for (var i = 0,j=0; i < data.length; i += channels, j+=4) {
+			imdata.data[j] = data[i];
+			imdata.data[j + 1] = data[i+1%channels];
+			imdata.data[j + 2] = data[i+2%channels];
+			imdata.data[j + 3] = 255;
+		}
+		ctx.putImageData(imdata, 0, 0);
+	}
+
+	var inputElement = document.getElementById("input");
+	inputElement.addEventListener("change", handleFiles, false);
+	var canvasWidth = 600 ;
+	var canvasHeight = 400 ;
+	function handleFiles(e) {
+		var canvas = document.getElementById('canvas1');
+		var ctx = canvas.getContext('2d');
+	    var url = URL.createObjectURL(e.target.files[0]);
+	    var img = new Image();
+	    img.onload = function() {
+		        var scaleFactor=Math.min((canvasWidth/img.width),(canvasHeight/img.height));
+				canvas.width = img.width*scaleFactor ;
+				canvas.height = img.height*scaleFactor ;
+				ctx.drawImage(img,0,0,img.width*scaleFactor,img.height*scaleFactor);
+	    }
+	    img.src = url;
+	}
+
+	function getInput() {
+		var canvas = document.getElementById('canvas1');
+		var ctx = canvas.getContext('2d');
+		var imgData = ctx.getImageData(0,0,canvas.width, canvas.height);
+		return imgData;
+	}
+
+	function makeGray() {
+		var src = cv.matFromArray(getInput(), 24); // 24 for rgba
+		var res = new cv.Mat();
+		cv.cvtColor(src, res, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0 )
+		show_image(res, "canvas2")
+		src.delete();
+		res.delete();
+	}
+
+	function makeHSV() {
+		var src = cv.matFromArray(getInput(), 24); // 24 for rgba
+		var tmp = new cv.Mat();
+		var res = new cv.Mat();
+		cv.cvtColor(src, tmp, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0 )
+		cv.cvtColor(tmp, res, cv.ColorConversionCodes.COLOR_RGB2HSV.value, 0);
+		show_image(res, "canvas2");
+		tmp.delete();
+		src.delete();
+		res.delete();
+	}
+
+	function makeYUV() {
+		var src = cv.matFromArray(getInput(), 24); // 24 for rgba
+		var res = new cv.Mat();
+		cv.cvtColor(src, res, cv.ColorConversionCodes.COLOR_RGB2YUV.value, 0 )
+		show_image(res, "canvas2")
+		src.delete();
+		res.delete();
+	}
+
+	function makeBGRA() {
+		var src = cv.matFromArray(getInput(), 24); // 24 for rgba
+		var res = new cv.Mat();
+		cv.cvtColor(src, res, cv.ColorConversionCodes.COLOR_RGBA2BGRA.value, 0);
+		show_image(res, "canvas2")
+		src.delete();
+		res.delete();
+	}
+
+	function blur() {
+		var raw = cv.matFromArray(getInput(), cv.CV_8UC4);
+		var src = new cv.Mat();
+
+		cv.cvtColor(raw, src, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+		var blurred = new cv.Mat();
+		var threshold = Control.blurThreshold;
+
+		cv.blur(src, blurred, [Control.blurSize, Control.blurSize], [-1, -1], cv.BORDER_DEFAULT);
+		show_image(blurred, "canvas2")
+		raw.delete();
+		src.delete();
+		blurred.delete();
+	}
+
+	function gaussianBlur() {
+		var src = cv.matFromArray(getInput(), cv.CV_8UC4);
+		cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+
+		var blurred = new cv.Mat();
+		var size = [2*Control.blurSize+1, 2*Control.blurSize+1];
+
+		cv.GaussianBlur(src, blurred, size, 0, 0, cv.BORDER_DEFAULT);
+		show_image(blurred, "canvas2")
+		src.delete();
+		blurred.delete();
+	}
+
+	function medianBlur(){
+		var src = cv.matFromArray(getInput(), cv.CV_8UC4);
+		cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+		var blurred = new cv.Mat();
+
+		cv.medianBlur(src, blurred, 2*Control.blurSize+1);
+		show_image(blurred, "canvas2")
+		src.delete();
+		blurred.delete();
+	}
+
+	function split() {
+		var src = cv.matFromArray(getInput(), cv.CV_8UC4); // 24 for rgba
+		var rgbPlanes = new cv.MatVector();
+		cv.split(src, rgbPlanes);
+		show_image(rgbPlanes.get(0), "canvas2")
+		rgbPlanes.delete();
+		return;
+	}
+
+	function histogram() {
+		var numBins = 255 ;
+
+		var src = cv.matFromArray(getInput(), cv.CV_8UC4); // 24 for rgba
+		var rgbPlanes = new cv.MatVector();
+		cv.split(src, rgbPlanes);
+
+		var planes = new cv.IntVector();
+
+		var ranges = new cv.FloatVector();
+		ranges.push_back(0);
+		ranges.push_back(255);
+
+		var histSize = new cv.IntVector();
+		histSize.push_back(numBins);
+
+		var histr = new cv.Mat();
+		var histg = new cv.Mat();
+		var histb = new cv.Mat();
+		planes.push_back(0);
+		cv.calcHist(rgbPlanes, planes, new cv.Mat(), histr, histSize, ranges, false);
+		planes.set(0,1);
+		cv.calcHist(rgbPlanes, planes, new cv.Mat(), histg, histSize, ranges, false);
+		planes.set(0,2);
+		cv.calcHist(rgbPlanes, planes, new cv.Mat(), histb, histSize, ranges, false);
+
+		var total = 0 ;
+		for (var i = 0 ; i < numBins ; ++i ){
+			console.log(histr.get_float_at(i));
+			total += histr.get_float_at(i);
+		}
+
+		// Normalize
+
+		var noArray = new cv.Mat();
+
+		cv.normalize(histr, histr, 1, 0, cv.NORM_L2, -1, noArray);
+		cv.normalize(histg, histg, 1, 0, cv.NORM_L2, -1, noArray);
+		cv.normalize(histb, histb, 1, 0, cv.NORM_L2, -1, noArray);
+
+		// Draw histogram
+		var hist_w = 300;
+		var hist_h = 300;
+		var bin_w = hist_w/numBins|0 ;
+		var histImage = cv.Mat.ones([hist_h, hist_w], cv.CV_8UC4);
+
+		for(var i = 1; i < numBins	 ; i++ )
+		{
+			cv.line(histImage,
+						[bin_w*(i-1), hist_h - histr.get_float_at(i-1)*hist_h],
+						[bin_w*(i), hist_h - histr.get_float_at(i)*hist_h],
+						new cv.Scalar(255, 0, 0),
+						1, cv.LineTypes.LINE_8.value, 0
+					);
+			cv.line(histImage,
+						[bin_w*(i-1), hist_h - histg.get_float_at(i-1)*hist_h],
+						[bin_w*(i), hist_h - histg.get_float_at(i)*hist_h],
+						new cv.Scalar(0, 255, 0),
+						1, cv.LineTypes.LINE_8.value, 0
+					);
+			cv.line(histImage,
+						[bin_w*(i-1), hist_h - histb.get_float_at(i-1)*hist_h],
+						[bin_w*(i), hist_h - histb.get_float_at(i)*hist_h],
+						new cv.Scalar(0, 0, 255),
+						1, cv.LineTypes.LINE_8.value, 0
+					);
+		}
+		show_image(histImage, "canvas2")
+	}
+
+	function erode() {
+		var src = cv.matFromArray(getInput(), cv.CV_8UC4);
+		cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+
+        var borderValue = cv.Scalar.all(Number.MAX_VALUE);
+
+		var erosion_type = cv.MorphShapes.MORPH_RECT.value;
+	    var erosion_size = [2*Control.erosion_size+1, 2*Control.erosion_size+1];
+		var element = cv.getStructuringElement(erosion_type, erosion_size, [-1, -1]);
+		var dst = new cv.Mat();
+		cv.erode(src, dst, element, [-1, -1], 1, cv.BORDER_CONSTANT, borderValue);
+		show_image(dst, "canvas2");
+		src.delete();
+		dst.delete();
+	}
+
+	function dilate() {
+		var src = cv.matFromArray(getInput(), cv.CV_8UC4);
+		cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+		//cv.MorphShapes.MORPH_RECT
+		//cv.MorphShapes.MORPH_CROSS
+		//cv.MorphShapes.MORPH_ELLIPSE
+
+		var borderValue = cv.Scalar.all(Number.MIN_VALUE);
+
+		var erosion_type = cv.MorphShapes.MORPH_RECT.value;
+	    var erosion_size = [2*Control.erosion_size+1, 2*Control.erosion_size+1];
+		var element = cv.getStructuringElement(erosion_type, erosion_size, [-1, -1]);
+		var dst = new cv.Mat();
+		cv.dilate(src, dst, element, [-1, -1], 1, cv.BORDER_CONSTANT, borderValue);
+		show_image(dst, "canvas2");
+		src.delete();
+		dst.delete();
+	}
+
+
+	function findEdges() {
+		var src = cv.matFromArray(getInput(), cv.CV_8UC4);
+		var canny_output = new cv.Mat();
+		var blurred = new cv.Mat();
+		var cthresh = Control.canny_threshold;
+		cv.blur(src, blurred, [5, 5], [-1, -1], 4);
+		cv.Canny(blurred, canny_output, cthresh, cthresh*2, 3, 0);
+		show_image(canny_output, "canvas2")
+		src.delete();
+		blurred.delete();
+		canny_output.delete();
+	}
+
+	function findContours() {
+		var src = cv.matFromArray(getInput(), cv.CV_8UC4);
+		var canny_output = new cv.Mat();
+		var blurred = new cv.Mat();
+		var cthresh = Control.canny_threshold;
+		cv.blur(src, blurred, [5, 5], [-1, -1], cv.BORDER_DEFAULT);
+
+		cv.Canny(blurred, canny_output, cthresh, cthresh*2, 3, 0);
+
+		/// Find contours
+		var contours = new cv.MatVector();
+		var hierarchy = new cv.Mat();
+		cv.findContours(canny_output, contours, hierarchy, 3, 2, [0, 0]);
+
+		// Convex hull
+		var hull = new cv.MatVector();
+		for( i = 0; i < contours.size(); i++ )
+		{
+			var item = new cv.Mat();
+			cv.convexHull(contours.get(i), item, false, true);
+			hull.push_back(item);
+			item.delete();
+		}
+
+		// Draw contours + hull results
+		var size = canny_output.size();
+		var drawing = cv.Mat.zeros(size.get(0), size.get(1), cv.CV_8UC4);
+		for(i = 0; i< contours.size(); i++ )
+		{
+			var color = new cv.Scalar(Math.random()*255, Math.random()*255, Math.random()*255);
+			cv.drawContours(drawing, contours, i, color, 2, 8, hierarchy, 0, [0, 0]);
+			var green = new cv.Scalar(30, 150, 30);
+			cv.drawContours(drawing, hull, i, green, 1, 8, new cv.Mat(), 0, [0, 0]);
+			color.delete();
+			green.delete();
+		}
+
+		show_image(drawing, "canvas2");
+		src.delete();
+		blurred.delete();
+		drawing.delete();
+		hull.delete();
+		contours.delete();
+		hierarchy.delete();
+		canny_output.delete();
+	}
+
+	function download() {
+		var dt = canvas2.toDataURL('image/jpeg');
+		this.href = dt;
+	};
+	downloadLnk.addEventListener('click', download, false);
+
+	var ress = [];
+
+	function runTest(fct){
+		var start = performance.now();
+		fct()
+		var end = performance.now();
+		var time = end - start;
+		var res = {testName:fct.name , executionTime_ms:time};
+		ress.push(res);
+		var d = new Date().toString();
+		var filename = "file_" + fct.name + "_" + d;
+		downloadLnk.setAttribute('download', filename);
+		downloadLnk.click();
+	}
+
+	function runAllTests(){
+		ress = [];
+		runTest(blur);
+		runTest(dilate);
+		runTest(erode);
+		//runTest(findContours);
+		runTest(findEdges);
+		runTest(gaussianBlur);
+		runTest(dilate);
+		//runTest(histogram);
+		runTest(makeBGRA);
+		runTest(makeGray);
+		runTest(makeHSV);
+		runTest(makeYUV);
+		runTest(medianBlur);
+		var d = new Date().toString();
+		downloadCSV({ filename: "OpenCV_img_proc_results_" + d + ".csv" });
+	}
+
+	function convertArrayOfObjectsToCSV(args) {
+        var result, ctr, keys, columnDelimiter, lineDelimiter, data;
+
+        data = args.data || null;
+        if (data == null || !data.length) {
+            return null;
+        }
+
+        columnDelimiter = args.columnDelimiter || ',';
+        lineDelimiter = args.lineDelimiter || '\n';
+
+        keys = Object.keys(data[0]);
+
+        result = '';
+        result += keys.join(columnDelimiter);
+        result += lineDelimiter;
+
+        data.forEach(function(item) {
+            ctr = 0;
+            keys.forEach(function(key) {
+                if (ctr > 0) result += columnDelimiter;
+
+                result += item[key];
+                ctr++;
+            });
+            result += lineDelimiter;
+        });
+
+        return result;
+    }
+
+    function downloadCSV(args) {
+        var data, filename, link;
+        var csv = convertArrayOfObjectsToCSV({
+            data: ress
+        });
+        if (csv == null) return;
+
+        filename = args.filename || 'export.csv';
+
+        if (!csv.match(/^data:text\/csv/i)) {
+            csv = 'data:text/csv;charset=utf-8,' + csv;
+        }
+        data = encodeURI(csv);
+
+        link = document.createElement('a');
+        link.setAttribute('href', data);
+        link.setAttribute('download', filename);
+        link.click();
+    }
+
+	var container ;
+	var Zee ;
+	var Control =  {
+		blurThreshold:  100 ,
+		blurSize : 1 ,
+		canny_threshold:  75  ,
+		erosion_size : 1 ,
+		makeGray : makeGray ,
+		makeBGRA : makeBGRA ,
+		makeHSV : makeHSV,
+		makeYUV : makeYUV ,
+		blur:blur,
+		gaussianBlur:gaussianBlur,
+		medianBlur:medianBlur,
+		runAllTests:runAllTests,
+		findEdges:findEdges,
+		threshold:7 ,
+		findContours:findContours,
+		histogram:histogram ,
+		erode : erode ,
+		dilate : dilate
+	};
+
+	function init() {
+		container = document.createElement('div');
+		document.body.appendChild(container);
+
+		gui = new dat.GUI({autoPlace: false});
+		document.body.appendChild(gui.domElement);
+		gui.domElement.style.position = "absolute";
+		gui.domElement.style.top = "0px";
+		gui.domElement.style.right = "5px";
+
+		//Run All Tests
+		gui.add(Control,'runAllTests');
+
+		//Color Space Changed
+		var cSpaceFolder = gui.addFolder('Change Color Space');
+		cSpaceFolder.add(Control,'makeGray');
+		cSpaceFolder.add(Control,'makeBGRA');
+		cSpaceFolder.add(Control,'makeHSV');
+		cSpaceFolder.add(Control,'makeYUV');
+		//cSpaceFolder.open();
+
+		//Blurring
+		var blurFolder = gui.addFolder('Blurring');
+		blurFolder.add(Control, 'blurSize' ).min(1).max(25).step(1);
+		blurFolder.add(Control,'blur');
+		blurFolder.add(Control,'medianBlur');
+		blurFolder.add(Control,'gaussianBlur');
+
+		//Canny Edge Detection
+		var edgeDetectFolder = gui.addFolder('Canny Edge Detection');
+		edgeDetectFolder.add(Control, 'canny_threshold' ).min(10).max(150);
+		edgeDetectFolder.add(Control,'findEdges');
+		//edgeDetectFolder.open();
+
+		//Erosion
+		//Dilation
+		//Finding Contours
+		var findContoursFolder = gui.addFolder('Find Contours');
+		findContoursFolder.add(Control, 'canny_threshold' ).min(10).max(150);
+		findContoursFolder.add(Control, 'threshold' ).min(10).max(250);
+		findContoursFolder.add(Control,'findContours');
+		//findContoursFolder.open();
+
+		// Histogram
+		var findContoursFolder = gui.addFolder('Histogram');
+		findContoursFolder.add(Control,'histogram');
+
+		// Erosion-Dilation
+		var erosionDilationFolder = gui.addFolder('Erosion/Dilation');
+		erosionDilationFolder.add(Control, 'erosion_size' ).min(0).max(21);
+		erosionDilationFolder.add(Control,'erode');
+		erosionDilationFolder.add(Control,'dilate');
+
+	}
+	init();
+
+	</script>
+	<script  type='text/javascript'>
+
+	function getCV(){
+
+		var zip ;
+		var oReq = new XMLHttpRequest();
+		oReq.open("GET", "/opencvjs/examples/cv.js.gz", "application/x-gzip");
+		oReq.responseType = "arraybuffer";
+
+		oReq.onload = function (oEvent) {
+		  var arrayBuffer = oReq.response; // Note: not oReq.responseText
+		  if (arrayBuffer) {
+				zip = new Uint8Array(arrayBuffer);
+				console.log("decompressing script");
+				var decompressed = Zee.decompress(zip);
+				console.log("script decompressed");
+				var head= document.getElementsByTagName('head')[0];
+				var script= document.createElement('script');
+				script.type= 'text/javascript';
+				var length = decompressed.length ;
+				decoder = new TextDecoder();
+				script.text = decoder.decode(decompressed);
+				head.appendChild(script);
+				console.log("script added");
+		  }
+		};
+		oReq.send(null);
+	}
+	var statusElement = document.getElementById('status');
+	var progressElement = document.getElementById('progress');
+	var spinnerElement = document.getElementById('spinner');
+	var Module = {
+	preRun: [],
+	postRun: [],
+	print: (function() {
+	  var element = document.getElementById('output');
+	  if (element) element.value = ''; // clear browser cache
+	  return function(text) {
+	    text = Array.prototype.slice.call(arguments).join(' ');
+	    // These replacements are necessary if you render to raw HTML
+	    //text = text.replace(/&/g, "&amp;");
+	    //text = text.replace(/</g, "&lt;");
+	    //text = text.replace(/>/g, "&gt;");
+	    //text = text.replace('\n', '<br>', 'g');
+	    console.log(text);
+	    if (element) {
+	      element.value += text + "\n";
+	      element.scrollTop = element.scrollHeight; // focus on bottom
+	    }
+	  };
+	})(),
+	printErr: function(text) {
+	  text = Array.prototype.slice.call(arguments).join(' ');
+	  if (0) { // XXX disabled for safety typeof dump == 'function') {
+	    dump(text + '\n'); // fast, straight to the real console
+	  } else {
+	    console.error(text);
+	  }
+	},
+	canvas: (function() {
+	  var canvas = document.getElementById('resCanvas');
+	  return canvas;
+	})(),
+	setStatus: function(text) {
+	  if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+	  if (text === Module.setStatus.text) return;
+	  var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+	  var now = Date.now();
+	  if (m && now - Date.now() < 30) return; // if this is a progress update, skip it if too soon
+	  if (m) {
+	    text = m[1];
+	    progressElement.value = parseInt(m[2])*100;
+	    progressElement.max = parseInt(m[4])*100;
+	    progressElement.hidden = false;
+	    spinnerElement.hidden = false;
+	  } else {
+	    progressElement.value = null;
+	    progressElement.max = null;
+	    progressElement.hidden = true;
+	    if (!text) spinnerElement.style.display = 'none';
+	  }
+	  statusElement.innerHTML = text;
+	},
+	totalDependencies: 0,
+		monitorRunDependencies: function(left) {
+		  this.totalDependencies = Math.max(this.totalDependencies, left);
+		  Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+		}
+	};
+	Module.setStatus('Downloading...');
+		window.onerror = function(event) {
+		// TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+		Module.setStatus('Exception thrown, see JavaScript console');
+		spinnerElement.style.display = 'none';
+		Module.setStatus = function(text) {
+		  if (text) Module.printErr('[post-exception status] ' + text);
+		};
+	};
+    </script>
+	</body>
+</html>

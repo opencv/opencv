@@ -28,7 +28,7 @@ link_libraries(${OPENCV_MODULE_${the_module}_DEPS})
 
 ocv_add_executable(${the_module} ${CMAKE_CURRENT_SOURCE_DIR}/src/bindings.cpp)
 
-set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-s TOTAL_MEMORY=134217728 -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME=\"'cv'\" -s DEMANGLE_SUPPORT=1 --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/data@/ --bind")
+set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-s TOTAL_MEMORY=134217728 -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME=\"'cv'\" -s DEMANGLE_SUPPORT=1 --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/test/data@/ --bind")
 
 unset(MODULE_NAME)
 
