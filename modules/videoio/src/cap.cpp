@@ -182,11 +182,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         TRY_OPEN(capture, cvCreateCameraCapture_MSMF(index))
         if (pref) break;
 #endif
-#ifdef HAVE_TYZX
-    case CV_CAP_STEREO:
-        TRY_OPEN(capture, cvCreateCameraCapture_TYZX(index))
-        if (pref) break;
-#endif
     case CV_CAP_VFW:
 #ifdef HAVE_VFW
         TRY_OPEN(capture, cvCreateCameraCapture_VFW(index))

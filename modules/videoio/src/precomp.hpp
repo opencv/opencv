@@ -108,7 +108,6 @@ CvCapture * cvCreateCameraCapture_DC1394_2( int index );
 CvCapture* cvCreateCameraCapture_MIL( int index );
 CvCapture* cvCreateCameraCapture_Giganetix( int index );
 CvCapture * cvCreateCameraCapture_CMU( int index );
-CV_IMPL CvCapture * cvCreateCameraCapture_TYZX( int index );
 CvCapture* cvCreateFileCapture_Win32( const char* filename );
 CvCapture* cvCreateCameraCapture_VFW( int index );
 CvCapture* cvCreateFileCapture_VFW( const char* filename );
