@@ -97,8 +97,8 @@ MACRO(_PCH_WRITE_PCHDEP_CXX _targetName _include_file _dephelp)
 
     set(${_dephelp} "${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch_dephelp.cxx")
     set(_content "")
-    if(EXISTS "${_dephelp}")
-      file(READ "${_dephelp}" _content)
+    if(EXISTS "${${_dephelp}}")
+      file(READ "${${_dephelp}}" _content)
     endif()
     set(_dummy_str
 "#include \"${_include_file}\"
