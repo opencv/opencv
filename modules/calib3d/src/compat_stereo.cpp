@@ -84,6 +84,30 @@ void cvReleaseStereoBMState( CvStereoBMState** state )
     cvFree( state );
 }
 
+void cvFindStereoCorrespondenceSGBM( const CvArr* leftarr, const CvArr* rightarr,
+                                           CvArr* disparr, CvStereoSGBMState* state )
+{
+    cv::Mat left = cv::cvarrToMat(leftarr), right = cv::cvarrToMat(rightarr);
+    const cv::Mat disp = cv::cvarrToMat(disparr);
+
+    CV_Assert( state != 0 );
+
+    cv::Ptr<cv::StereoMatcher> sm = cv::createStereoSGBM(state->minDisparity,
+      state->numDisparities,
+      state->blockSize,
+      state->P1,
+      state->P2,
+      state->disp12MaxDiff,
+      state->preFilterCap,
+      state->uniquenessRatio,
+      state->speckleWindowSize,
+      state->speckleRange,
+      state->mode
+    );
+
+    sm->compute(left, right, disp);
+}
+
 void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* rightarr,
                                    CvArr* disparr, CvStereoBMState* state )
 {
