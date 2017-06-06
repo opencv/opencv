@@ -22,6 +22,17 @@
 		<div id="qunit-fixture"></div>
 
 		<script src="http://code.jquery.com/qunit/qunit-2.0.1.js"></script>
+		<script type="application/javascript" src="opencv_js.js"></script>
+		<script type="application/javascript" src="test_commons.js"></script>
+		<script type="application/javascript" src="test_mat.js"></script>
+		<script type="application/javascript" src="test_utils.js"></script>
+		<script type="application/javascript" src="test_imgproc.js"></script>
+		<script type="application/javascript" src="test_photo.js"></script>
+		<script type="application/javascript" src="test_objdetect.js"></script>
+		<script type="application/javascript" src="test_shape.js"></script>
+		<script type="application/javascript" src="test_ml.js"></script>
+		<script type="application/javascript" src="test_io.js"></script>
+		<script type="application/javascript" src="test_video.js"></script>		
 		<script  type='text/javascript'>
 			QUnit.config.autostart = false;
 
@@ -58,19 +69,8 @@
 	          if (text) Module.printErr('[post-exception status] ' + text);
 	        };
 	      };
-			</script>
-
-			<script type="application/javascript" src="cv.js"></script>
-			<script type="application/javascript" src="test_commons.js"></script>
-			<script type="application/javascript" src="test_mat.js"></script>
-			<script type="application/javascript" src="test_utils.js"></script>
-			<script type="application/javascript" src="test_imgproc.js"></script>
-			<script type="application/javascript" src="test_photo.js"></script>
-			<script type="application/javascript" src="test_objdetect.js"></script>
-			<script type="application/javascript" src="test_shape.js"></script>
-			<script type="application/javascript" src="test_ml.js"></script>
-			<script type="application/javascript" src="test_io.js"></script>
-			<script type="application/javascript" src="test_video.js"></script>
+		  window.cv = cv(Module);
+		</script>
 
 <!--
 	TODO
