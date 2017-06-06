@@ -565,7 +565,7 @@ endif()
 
 
 # ----------------------------------------------------------------------------
-# Configure modules to be built for emscripten
+# Configure modules to be built for Emscripten
 # ----------------------------------------------------------------------------
 if (EMSCRIPTEN)
   set(BUILD_opencv_bioinspired_INIT OFF)
@@ -610,6 +610,8 @@ if (EMSCRIPTEN)
   set(BUILD_opencv_js_INIT ON)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --llvm-lto 1 -s ASSERTIONS=0 -s AGGRESSIVE_VARIABLE_ELIMINATION=0 -s NO_DYNAMIC_EXECUTION=0 --memory-init-file 0 -s NO_FILESYSTEM=0")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --llvm-lto 1 -s ASSERTIONS=0 -s AGGRESSIVE_VARIABLE_ELIMINATION=0 -s NO_DYNAMIC_EXECUTION=0 --memory-init-file 0 -s NO_FILESYSTEM=0")
+else ()
+  set(BUILD_opencv_js_INIT OFF)
 endif()
 
 include(cmake/OpenCVPCHSupport.cmake)
