@@ -41,7 +41,6 @@
 #include "precomp.hpp"
 #include <climits>
 #include <algorithm>
-#include <cstdarg>
 
 #define dprintf(x)
 #define print_matrix(x)
