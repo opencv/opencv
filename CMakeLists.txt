@@ -608,6 +608,8 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
   set(BUILD_opencv_python_INIT OFF)
   set(BUILD_opencv_java_INIT OFF)
   set(BUILD_opencv_js_INIT ON)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --llvm-lto 1 -s ASSERTIONS=0 -s AGGRESSIVE_VARIABLE_ELIMINATION=0 -s NO_DYNAMIC_EXECUTION=0 --memory-init-file 0 -s NO_FILESYSTEM=0")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --llvm-lto 1 -s ASSERTIONS=0 -s AGGRESSIVE_VARIABLE_ELIMINATION=0 -s NO_DYNAMIC_EXECUTION=0 --memory-init-file 0 -s NO_FILESYSTEM=0")
 endif()
 
 include(cmake/OpenCVPCHSupport.cmake)
