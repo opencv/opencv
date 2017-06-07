@@ -1,0 +1,278 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for ResNet-50 architecture. OpenCL target.
+
+patterns:
+  gpu_tile:
+    split: { x: x_split, y: y_split, c: c_split }
+    gpu_blocks: [xo, yo, co]
+    gpu_threads: [xi, yi]
+    reorder: [xi, yi, ci, xo, yo, co]
+    vectorize: { ci: c_split }
+  fully_connected_gpu:
+    split: { c: c_split }
+    fuse: { src: [x, y, co], dst: block }
+    gpu_blocks: block
+    gpu_threads: ci
+
+scheduling:
+  # Block 1.
+  conv1_relu:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  pool1:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Block 2a.
+  scale2a_branch1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res2a_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res2a_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  scale2a_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  # Block 2b.
+  res2b_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res2b_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  scale2b_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  # Block 2c.
+  res2c_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res2c_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  scale2c_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res2c_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  # Block 3a.
+  scale3a_branch1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3a_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3a_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  scale3a_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  # Block 3b.
+  res3b_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3b_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  scale3b_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  # Block 3c.
+  res3c_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3c_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  scale3c_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3c_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  # Block 3d.
+  res3d_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3d_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  scale3d_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  res3d_relu:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  # Block 4a.
+  scale4a_branch1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4a_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4a_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  scale4a_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4a_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Block 4b.
+  res4b_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4b_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  scale4b_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4b_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Block 4c.
+  res4c_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4c_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  scale4c_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4c_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Block 4d.
+  res4d_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4d_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  scale4d_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4d_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Block 4e.
+  res4e_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4e_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  scale4e_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4e_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Block 4f.
+  res4f_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4f_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  scale4f_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  res4f_relu:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Block 5a.
+  scale5a_branch1:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  res5a_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  res5a_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  scale5a_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  res5a_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+
+  # Block 5b.
+  res5b_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  res5b_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  scale5b_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  res5b_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+
+  # Block 5c.
+  res5c_branch2a_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  res5c_branch2b_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  scale5c_branch2c:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+  res5c_relu:
+    pattern: gpu_tile
+    params: { x_split: 7, y_split: 7, c_split: 16 }
+
+  # The rest.
+  pool5:
+    pattern: fully_connected_gpu
+    params: { c_split: 8 }
+  fc1000:
+    pattern: fully_connected_gpu
+    params: { c_split: 8 }
+  prob:
+    pattern: fully_connected_gpu
+    params: { c_split: 8 }

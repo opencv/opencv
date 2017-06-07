@@ -1,0 +1,151 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for SqueezeNet v1.1 architecture. OpenCL target.
+
+patterns:
+  gpu_tile:
+    split: { x: x_split, y: y_split, c: c_split }
+    gpu_blocks: [xo, yo, co]
+    gpu_threads: [xi, yi]
+    reorder: [xi, yi, ci, xo, yo, co]
+    vectorize: { ci: c_split }
+  gpu_tile_channels:
+    split: { c: 8 }
+    gpu_blocks: co
+    gpu_threads: [x, y]
+    reorder: [x, y, ci, co]
+    vectorize: { ci: 8 }
+
+scheduling:
+  relu_conv1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  pool1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  fire2/relu_squeeze1x1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire2/relu_expand1x1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire2/relu_expand3x3:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire2/concat:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  fire3/relu_squeeze1x1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire3/relu_expand1x1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire3/relu_expand3x3:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire3/concat:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  pool3:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  fire4/relu_squeeze1x1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire4/relu_expand1x1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire4/relu_expand3x3:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire4/concat:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+
+  fire5/relu_squeeze1x1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire5/relu_expand1x1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire5/relu_expand3x3:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  fire5/concat:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 8 }
+  pool5:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+
+  fire6/relu_squeeze1x1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire6/relu_expand1x1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire6/relu_expand3x3:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire6/concat:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+
+  fire7/relu_squeeze1x1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire7/relu_expand1x1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire7/relu_expand3x3:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire7/concat:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+
+  fire8/relu_squeeze1x1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire8/relu_expand1x1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire8/relu_expand3x3:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire8/concat:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+
+  fire9/relu_squeeze1x1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire9/relu_expand1x1:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire9/relu_expand3x3:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+  fire9/concat:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 8 }
+
+  relu_conv10:
+    pattern: gpu_tile_channels
+    params: { c_split: 8 }
+  pool10:
+    pattern: gpu_tile_channels
+    params: { c_split: 8 }
+  prob:
+    pattern: gpu_tile_channels
+    params: { c_split: 8 }
