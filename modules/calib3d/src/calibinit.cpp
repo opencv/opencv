@@ -451,9 +451,14 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     if( !out_corners )
         CV_Error( CV_StsNullPtr, "Null pointer to corners" );
 
-    if (img.channels() != 1)
+    if (img.channels() == 3)
     {
         cvtColor(img, img, COLOR_BGR2GRAY);
+    }
+
+    if(img.channels() == 4)
+    {
+        cvtColor(img, img, COLOR_BGRA2GRAY);
     }
 
 

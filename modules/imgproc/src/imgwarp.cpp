@@ -6006,6 +6006,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
+    CV_Assert( _src.channels() <= 4 || !(flags & (INTER_LANCZOS4 | INTER_CUBIC) ) );
+
     CV_INSTRUMENT_REGION()
 
     int interpolation = flags & INTER_MAX;
