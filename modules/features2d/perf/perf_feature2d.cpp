@@ -10,15 +10,18 @@ using std::tr1::get;
     FAST_DEFAULT, FAST_20_TRUE_TYPE5_8, FAST_20_TRUE_TYPE7_12, FAST_20_TRUE_TYPE9_16,   \
     FAST_20_FALSE_TYPE5_8, FAST_20_FALSE_TYPE7_12, FAST_20_FALSE_TYPE9_16,              \
                                                                                         \
-    AGAST_DEFAULT, AGAST_5_8, AGAST_7_12d, AGAST_7_12s, AGAST_OAST_9_16
-
-#define DETECTORS_DESCRIPTORS                                                           \
-    ORB_DEFAULT, ORB_1500_13_1,                                                         \
+    AGAST_DEFAULT, AGAST_5_8, AGAST_7_12d, AGAST_7_12s, AGAST_OAST_9_16,                \
                                                                                         \
-    AKAZE_DEFAULT, AKAZE_DESCRIPTOR_KAZE
+    MSER_DEFAULT
 
-enum { DETECTORS_DESCRIPTORS, DETECTORS_ONLY };
-CV_ENUM(Feature2DType, DETECTORS_DESCRIPTORS, DETECTORS_ONLY)
+#define DETECTORS_EXTRACTORS                                                            \
+    ORB_DEFAULT, ORB_1500_13_1,                                                         \
+    AKAZE_DEFAULT, AKAZE_DESCRIPTOR_KAZE,                                               \
+    BRISK_DEFAULT,                                                                      \
+    KAZE_DEFAULT
+
+enum { DETECTORS_ONLY, DETECTORS_EXTRACTORS };
+CV_ENUM(Feature2DType, DETECTORS_ONLY, DETECTORS_EXTRACTORS)
 
 typedef std::tr1::tuple<Feature2DType, string> Feature2DType_String_t;
 typedef perf::TestBaseWithParam<Feature2DType_String_t> feature2d;
@@ -62,6 +65,12 @@ static inline Ptr<Feature2D> getFeature2D(Feature2DType type)
         return AKAZE::create();
     case AKAZE_DESCRIPTOR_KAZE:
         return AKAZE::create(AKAZE::DESCRIPTOR_KAZE);
+    case BRISK_DEFAULT:
+        return BRISK::create();
+    case KAZE_DEFAULT:
+        return KAZE::create();
+    case MSER_DEFAULT:
+        return MSER::create();
     default:
         return Ptr<Feature2D>();
     }
@@ -86,14 +95,15 @@ PERF_TEST_P(feature2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGE
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(feature2d, extract, testing::Combine(testing::Values(DETECTORS_DESCRIPTORS), TEST_IMAGES))
+PERF_TEST_P(feature2d, extract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
 {
-    Ptr<Feature2D> detector = getFeature2D(get<0>(GetParam()));
+    Ptr<Feature2D> detector = AKAZE::create();
+    Ptr<Feature2D> extractor = getFeature2D(get<0>(GetParam()));
     std::string filename = getDataPath(get<1>(GetParam()));
     Mat img = imread(filename, IMREAD_GRAYSCALE);
 
     ASSERT_FALSE(img.empty());
-    ASSERT_TRUE(detector);
+    ASSERT_TRUE(extractor);
 
     declare.in(img);
     Mat mask;
@@ -104,13 +114,13 @@ PERF_TEST_P(feature2d, extract, testing::Combine(testing::Values(DETECTORS_DESCR
 
     Mat descriptors;
 
-    TEST_CYCLE() detector->compute(img, points, descriptors);
+    TEST_CYCLE() extractor->compute(img, points, descriptors);
 
     EXPECT_EQ((size_t)descriptors.rows, points.size());
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(feature2d, detectAndExtract, testing::Combine(testing::Values(DETECTORS_DESCRIPTORS), TEST_IMAGES))
+PERF_TEST_P(feature2d, detectAndExtract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
 {
     Ptr<Feature2D> detector = getFeature2D(get<0>(GetParam()));
     std::string filename = getDataPath(get<1>(GetParam()));
