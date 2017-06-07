@@ -82,6 +82,9 @@ public class FdActivity extends Activity implements CvCameraViewListener2 {
                         os.close();
 
                         mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+                        //the bug has been fixed :'( This bug caused me to cry for a while but I am fine now :')
+                        mJavaDetector.load( mCascadeFile.getAbsolutePath() );
+                        
                         if (mJavaDetector.empty()) {
                             Log.e(TAG, "Failed to load cascade classifier");
                             mJavaDetector = null;
