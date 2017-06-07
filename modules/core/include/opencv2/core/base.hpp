@@ -267,6 +267,14 @@ enum BorderTypes {
     BORDER_ISOLATED    = 16 //!< do not look outside of ROI
 };
 
+enum PeronaMalikFluxFunctions
+{
+    CV_PERONA_MALIK_EXPONENTIAL = 0,
+    CV_PERONA_MALIK_INVERSE_QUADRATIC = 1
+};
+
+
+
 //! @} core_array
 
 //! @addtogroup core_utils

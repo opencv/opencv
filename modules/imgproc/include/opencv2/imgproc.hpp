@@ -1718,6 +1718,36 @@ CV_EXPORTS_W void Canny( InputArray dx, InputArray dy,
                          double threshold1, double threshold2,
                          bool L2gradient = false );
 
+
+/** @example peronamalik.cpp
+  An example of Perona-Malik Anisotropic Diffusion
+*/
+
+/** @brief Performs anisotropic diffusian on an image.
+
+The function applies Perona-Malik anisotropic diffusion to an image. This is the solution to the partial differential equation:
+
+\f[{\frac  {\partial I}{\partial t}}={\mathrm  {div}}\left(c(x,y,t)\nabla I\right)=\nabla c\cdot \nabla I+c(x,y,t)\Delta I\f]
+
+Suggested functions for c(x,y,t) are:
+
+\f[c\left(\|\nabla I\|\right)=e^{{-\left(\|\nabla I\|/K\right)^{2}}}\f]
+
+or
+
+\f[ c\left(\|\nabla I\|\right)={\frac {1}{1+\left({\frac  {\|\nabla I\|}{K}}\right)^{2}}} \f]
+
+@param src Grayscale Source image.
+@param dst Destination image of the same size and the same number of channels as src .
+@param timeStepSize The ammount of time to step forward by on each iteration
+@param k double non-zero constant representing the sensitivity to edges
+@param noOfTimeSteps The number of timestep iterations 
+@param fluxFunc Choice between an CV_PERONA_MALIK_EXPONENTIAL or CV_PERONA_MALIK_INVERSE_QUADRATIC funtion for C(x,y,t)
+
+ */
+CV_EXPORTS_W void PeronaMalik(InputArray src, OutputArray dst, double timeStepSize, double k, int noOfTimeSteps, int fluxFunc = CV_PERONA_MALIK_EXPONENTIAL);
+
+
 /** @brief Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 The function is similar to cornerEigenValsAndVecs but it calculates and stores only the minimal
