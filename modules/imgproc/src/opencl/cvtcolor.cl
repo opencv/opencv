@@ -1362,7 +1362,7 @@ __kernel void RGB2HLS(__global const uchar* src, int src_step, int src_offset,
                     else
                         h = fma(r - g, diff, 240.f);
 
-                    if( h < 0.f )
+                    if( h <= -0.5f*hscale )
                         h += 360.f;
                 }
 
