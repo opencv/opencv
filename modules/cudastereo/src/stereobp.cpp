@@ -339,7 +339,7 @@ namespace
             mem_idx = (mem_idx + 1) & 1;
         }
 
-        const int dtype = disp.fixedType() ? disp.type() : CV_16SC1;
+        const int dtype = disp.empty() ? CV_16SC1 : disp.type();
 
         disp.create(rows_, cols_, dtype);
         GpuMat out = disp.getGpuMat();

@@ -300,7 +300,7 @@ namespace
             }
         }
 
-        const int dtype = disp.fixedType() ? disp.type() : CV_16SC1;
+        const int dtype = disp.empty() ? CV_16SC1 : disp.type();
 
         disp.create(rows, cols, dtype);
         GpuMat out = disp.getGpuMat();
