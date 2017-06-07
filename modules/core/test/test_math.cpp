@@ -5,6 +5,7 @@
 #include "test_precomp.hpp"
 #include <float.h>
 #include <math.h>
+#include "opencv2/core/softfloat.hpp"
 
 using namespace cv;
 using namespace std;
