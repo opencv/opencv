@@ -736,7 +736,34 @@ Mat KeypointBasedMotionEstimator::estimate(InputArray frame0, InputArray frame1,
         pointsPrev_[i] = keypointsPrev_[i].pt;
 
     // find correspondences
-    optFlowEstimator_->run(frame0, frame1, pointsPrev_, points_, status_, noArray());
+    if (frame0.isUMat() || frame1.isUMat())
+    {
+        UMat ugrayImage0;
+        UMat ugrayImage1;
+        if ( frame0.type() != CV_8U )
+        {
+            cvtColor( frame0, ugrayImage0, COLOR_BGR2GRAY );
+        }
+        else
+        {
+            ugrayImage0 = frame0.getUMat();
+        }
+
+        if ( frame1.type() != CV_8U )
+        {
+            cvtColor( frame1, ugrayImage1, COLOR_BGR2GRAY );
+        }
+        else
+        {
+            ugrayImage1 = frame1.getUMat();
+        }
+
+        optFlowEstimator_->run(ugrayImage0, ugrayImage1, pointsPrev_, points_, status_, noArray());
+    }
+    else
+    {
+        optFlowEstimator_->run(frame0, frame1, pointsPrev_, points_, status_, noArray());
+    }
 
     // leave good correspondences only
 
@@ -780,6 +807,7 @@ Mat KeypointBasedMotionEstimator::estimate(InputArray frame0, InputArray frame1,
 
     // estimate motion
     return motionEstimator_->estimate(pointsPrevGood_, pointsGood_, ok);
+
 }
 
 #if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAOPTFLOW)
