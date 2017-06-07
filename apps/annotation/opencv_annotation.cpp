@@ -66,7 +66,7 @@ using namespace cv;
 
 // Function prototypes
 void on_mouse(int, int, int, int, void*);
-vector<Rect> get_annotations(Mat);
+vector<Rect> get_annotations(const Mat&);
 
 // Public parameters
 Mat image;
@@ -108,7 +108,7 @@ void on_mouse(int event, int x, int y, int , void * )
 }
 
 // FUNCTION : returns a vector of Rect objects given an image containing positive object instances
-vector<Rect> get_annotations(Mat input_image)
+vector<Rect> get_annotations(const Mat &input_image)
 {
     vector<Rect> current_annotations;
 

@@ -1137,13 +1137,13 @@ public:
 protected:
     int newEdge();
     void deleteEdge(int edge);
-    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0);
+    int newPoint(const Point2f &pt, bool isvirtual, int firstEdge = 0);
     void deletePoint(int vtx);
     void setEdgePoints( int edge, int orgPt, int dstPt );
     void splice( int edgeA, int edgeB );
     int connectEdges( int edgeA, int edgeB );
     void swapEdges( int edge );
-    int isRightOf(Point2f pt, int edge) const;
+    int isRightOf(const Point2f &pt, int edge) const;
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;

@@ -125,7 +125,7 @@ CvCascadeImageReader::PosReader::PosReader()
     vec = 0;
 }
 
-bool CvCascadeImageReader::PosReader::create( const string _filename )
+bool CvCascadeImageReader::PosReader::create( const string &_filename )
 {
     if ( file )
         fclose( file );

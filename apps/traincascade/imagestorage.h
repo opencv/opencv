@@ -16,7 +16,7 @@ private:
     public:
         PosReader();
         virtual ~PosReader();
-        bool create( const std::string _filename );
+        bool create( const std::string &_filename );
         bool get( cv::Mat &_img );
         void restart();
 
