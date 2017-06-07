@@ -1925,6 +1925,42 @@ public:
                                           int mode = StereoSGBM::MODE_SGBM);
 };
 
+/** @brief The class for photometric calibration algorithms.
+*/
+class CV_EXPORTS_W PhotometricCalibrator : public Algorithm
+{
+
+};
+
+/** @brief The class implements the non-parametric photometric calbration algorithm from J. Engel et al. @cite engel2016monodataset
+
+ */
+class CV_EXPORTS_W PhotoCalbrNonPara : public PhotometricCalibrator
+{
+public:
+/** @brief Check if the images and corresponding exposure times are valid for response calibration.
+
+    @param inputImgs Vector containing all the images used for response calibration.
+    @param exposureTimes Vector containing all the exposure times for response calibration.
+     */
+    CV_WRAP virtual bool validResponseCalibrImgs(std::vector<Mat> &inputImgs, std::vector<double> &exposureTimes) = 0;
+
+    /** @brief Creates PhotoCalbrNonPara object
+
+    @param numDisparities the disparity search range. For each pixel algorithm will find the best
+    disparity from 0 (default minimum disparity) to numDisparities. The search range can then be
+    shifted by changing the minimum disparity.
+    @param blockSize the linear size of the blocks compared by the algorithm. The size should be odd
+    (as the block is centered at the current pixel). Larger block size implies smoother, though less
+    accurate disparity map. Smaller block size gives more detailed disparity map, but there is higher
+    chance for algorithm to find a wrong correspondence.
+
+    The function create StereoBM object. You can then call StereoBM::compute() to compute disparity for
+    a specific stereo pair.
+     */
+    CV_WRAP static Ptr<PhotoCalbrNonPara> create();
+};
+
 //! @} calib3d
 
 /** @brief The methods in this namespace use a so-called fisheye camera model.
