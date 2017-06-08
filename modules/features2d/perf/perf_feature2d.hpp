@@ -22,7 +22,7 @@ using std::tr1::get;
     BRISK_DEFAULT,                                                                      \
     KAZE_DEFAULT
 
-enum { DETECTORS_ONLY, DETECTORS_EXTRACTORS };
+enum Feature2DVals { DETECTORS_ONLY, DETECTORS_EXTRACTORS };
 CV_ENUM(Feature2DType, DETECTORS_ONLY, DETECTORS_EXTRACTORS)
 
 typedef std::tr1::tuple<Feature2DType, string> Feature2DType_String_t;
