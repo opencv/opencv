@@ -704,10 +704,17 @@ macro(ocv_glob_module_sources)
     file(GLOB lib_cuda_srcs
          "${CMAKE_CURRENT_LIST_DIR}/src/cuda/*.cu"
     )
-    file(GLOB lib_cuda_hdrs
+    file(GLOB lib_cuda_int_hdrs
          "${CMAKE_CURRENT_LIST_DIR}/src/cuda/*.hpp"
     )
-    source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
+    file(GLOB lib_cuda_hdrs
+         "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.hpp"
+    )
+    file(GLOB lib_cuda_hdrs_detail
+         "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.hpp"
+    )
+    source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_int_hdrs})
+    source_group("Include\\Cuda"      FILES ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
   endif()
 
   file(GLOB cl_kernels
@@ -724,8 +731,8 @@ macro(ocv_glob_module_sources)
     list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.cpp" "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME}.hpp")
   endif()
 
-  ocv_set_module_sources(${_argn} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
+  ocv_set_module_sources(${_argn} HEADERS ${lib_hdrs} ${lib_hdrs_detail} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail}
+                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${lib_cuda_srcs} ${lib_cuda_int_hdrs})
 endmacro()
 
 # creates OpenCV module in current folder
