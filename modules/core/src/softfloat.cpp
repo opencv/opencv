@@ -79,6 +79,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "precomp.hpp"
 
+#include "opencv2/core/softfloat.hpp"
+
 namespace cv
 {
 
