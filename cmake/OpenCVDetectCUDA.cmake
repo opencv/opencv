@@ -123,7 +123,7 @@ if(CUDA_FOUND)
   endif()
 
   # NVCC flags to be set
-  set(NVCC_FLAGS_EXTRA "")
+  set(NVCC_FLAGS_EXTRA "--std=c++98")
 
   # These vars will be passed into the templates
   set(OPENCV_CUDA_ARCH_BIN "")
