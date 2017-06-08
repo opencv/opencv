@@ -70,6 +70,14 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     A tutorial on how to use OpenCV Java with Eclipse.
 
+-   @subpage tutorial_java_mem_mgt
+
+    _Compatibility:_ \>= OpenCV 3.0.0
+
+    _Author:_ Steven P. Goldsmith
+
+    A tutorial on how to manage native memory in Java.
+
 -   @subpage tutorial_clojure_dev_intro
 
     _Compatibility:_ \> OpenCV 2.4.4
