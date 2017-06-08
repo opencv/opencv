@@ -98,6 +98,12 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
 
     if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
     {
+        if (flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
+        {
+            cout << "Flags SOLVEPNP_DLS and SOLVEPNP_UPNP are currently disabled due to instable results.\n"
+                 << "Switch to SOLVEPNP_EPNP method automatically." << endl;
+        }
+
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
         epnp PnP(cameraMatrix, opoints, undistortedPoints);
@@ -164,7 +170,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         return true;
     }*/
     else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
+        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP, SOLVEPNP_DLS or SOLVEPNP_UPNP.");
     return result;
 }
 
