@@ -134,11 +134,11 @@ public:
 
     CV_WRAP virtual void build(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
     CV_WRAP virtual void knnSearch(InputArray query, OutputArray indices,
-                   OutputArray dists, int knn, const SearchParams& params=SearchParams());
+                   OutputArray dists, int knn, const SearchParams& params=SearchParams()) const;
 
     CV_WRAP virtual int radiusSearch(InputArray query, OutputArray indices,
                              OutputArray dists, double radius, int maxResults,
-                             const SearchParams& params=SearchParams());
+                             const SearchParams& params=SearchParams()) const;
 
     CV_WRAP virtual void save(const String& filename) const;
     CV_WRAP virtual bool load(InputArray features, const String& filename);

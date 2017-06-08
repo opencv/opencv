@@ -211,7 +211,7 @@ public:
      * \param[in] knn Number of nearest neighbors to return
      * \param[in] params Search parameters
      */
-    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params)
+    void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params) const
     {
         nnIndex_->knnSearch(queries, indices, dists, knn, params);
     }
@@ -225,7 +225,7 @@ public:
      * \param[in] params Search parameters
      * \returns Number of neighbors found
      */
-    int radiusSearch(const Matrix<ElementType>& query, Matrix<int>& indices, Matrix<DistanceType>& dists, float radius, const SearchParams& params)
+    int radiusSearch(const Matrix<ElementType>& query, Matrix<int>& indices, Matrix<DistanceType>& dists, float radius, const SearchParams& params) const
     {
         return nnIndex_->radiusSearch(query, indices, dists, radius, params);
     }
@@ -233,7 +233,7 @@ public:
     /**
      * \brief Method that searches for nearest-neighbours
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
     {
         nnIndex_->findNeighbors(result, vec, searchParams);
     }

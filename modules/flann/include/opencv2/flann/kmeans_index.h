@@ -495,7 +495,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     searchParams = parameters that influence the search algorithm (checks, cb_index)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
     {
 
         int maxChecks = get_param(searchParams,"checks",32);
@@ -894,7 +894,7 @@ private:
 
 
     void findNN(KMeansNodePtr node, ResultSet<DistanceType>& result, const ElementType* vec, int& checks, int maxChecks,
-                Heap<BranchSt>* heap)
+                Heap<BranchSt>* heap) const
     {
         // Ignore those clusters that are too far away
         {
@@ -938,7 +938,7 @@ private:
      *     distances = array with the distances to each child node.
      * Returns:
      */
-    int exploreNodeBranches(KMeansNodePtr node, const ElementType* q, DistanceType* domain_distances, Heap<BranchSt>* heap)
+    int exploreNodeBranches(KMeansNodePtr node, const ElementType* q, DistanceType* domain_distances, Heap<BranchSt>* heap) const
     {
 
         int best_index = 0;
@@ -970,7 +970,7 @@ private:
     /**
      * Function the performs exact nearest neighbor search by traversing the entire tree.
      */
-    void findExactNN(KMeansNodePtr node, ResultSet<DistanceType>& result, const ElementType* vec)
+    void findExactNN(KMeansNodePtr node, ResultSet<DistanceType>& result, const ElementType* vec) const
     {
         // Ignore those clusters that are too far away
         {
@@ -1014,7 +1014,7 @@ private:
      *
      * I computes the order in which to traverse the child nodes of a particular node.
      */
-    void getCenterOrdering(KMeansNodePtr node, const ElementType* q, int* sort_indices)
+    void getCenterOrdering(KMeansNodePtr node, const ElementType* q, int* sort_indices) const
     {
         DistanceType* domain_distances = new DistanceType[branching_];
         for (int i=0; i<branching_; ++i) {

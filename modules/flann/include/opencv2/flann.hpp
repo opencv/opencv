@@ -214,13 +214,13 @@ public:
         @param params SearchParams
          */
         void knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices,
-                       std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
-        void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& params);
+                       std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params) const;
+        void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& params) const;
 
         int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices,
-                         std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
+                         std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params) const;
         int radiusSearch(const Mat& query, Mat& indices, Mat& dists,
-                         DistanceType radius, const ::cvflann::SearchParams& params);
+                         DistanceType radius, const ::cvflann::SearchParams& params) const;
 
         void save(String filename) { nnIndex->save(filename); }
 
@@ -268,7 +268,7 @@ GenericIndex<Distance>::~GenericIndex()
 }
 
 template <typename Distance>
-void GenericIndex<Distance>::knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& searchParams)
+void GenericIndex<Distance>::knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& searchParams) const
 {
     ::cvflann::Matrix<ElementType> m_query((ElementType*)&query[0], 1, query.size());
     ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());
@@ -281,7 +281,7 @@ void GenericIndex<Distance>::knnSearch(const std::vector<ElementType>& query, st
 
 
 template <typename Distance>
-void GenericIndex<Distance>::knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& searchParams)
+void GenericIndex<Distance>::knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& searchParams) const
 {
     CV_Assert(queries.type() == CvType<ElementType>::type());
     CV_Assert(queries.isContinuous());
@@ -301,7 +301,7 @@ void GenericIndex<Distance>::knnSearch(const Mat& queries, Mat& indices, Mat& di
 }
 
 template <typename Distance>
-int GenericIndex<Distance>::radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
+int GenericIndex<Distance>::radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams) const
 {
     ::cvflann::Matrix<ElementType> m_query((ElementType*)&query[0], 1, query.size());
     ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());
@@ -313,7 +313,7 @@ int GenericIndex<Distance>::radiusSearch(const std::vector<ElementType>& query, 
 }
 
 template <typename Distance>
-int GenericIndex<Distance>::radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
+int GenericIndex<Distance>::radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams) const
 {
     CV_Assert(query.type() == CvType<ElementType>::type());
     CV_Assert(query.isContinuous());
@@ -374,7 +374,7 @@ public:
         if (nnIndex_L2) delete nnIndex_L2;
     }
 
-    CV_DEPRECATED void knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& searchParams)
+    CV_DEPRECATED void knnSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& searchParams) const
     {
         ::cvflann::Matrix<ElementType> m_query((ElementType*)&query[0], 1, query.size());
         ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());
@@ -383,7 +383,7 @@ public:
         if (nnIndex_L1) nnIndex_L1->knnSearch(m_query,m_indices,m_dists,knn,searchParams);
         if (nnIndex_L2) nnIndex_L2->knnSearch(m_query,m_indices,m_dists,knn,searchParams);
     }
-    CV_DEPRECATED void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& searchParams)
+    CV_DEPRECATED void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& searchParams) const
     {
         CV_Assert(queries.type() == CvType<ElementType>::type());
         CV_Assert(queries.isContinuous());
@@ -401,7 +401,7 @@ public:
         if (nnIndex_L2) nnIndex_L2->knnSearch(m_queries,m_indices,m_dists,knn, searchParams);
     }
 
-    CV_DEPRECATED int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
+    CV_DEPRECATED int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices, std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams) const
     {
         ::cvflann::Matrix<ElementType> m_query((ElementType*)&query[0], 1, query.size());
         ::cvflann::Matrix<int> m_indices(&indices[0], 1, indices.size());
@@ -411,7 +411,7 @@ public:
         if (nnIndex_L2) return nnIndex_L2->radiusSearch(m_query,m_indices,m_dists,radius,searchParams);
     }
 
-    CV_DEPRECATED int radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams)
+    CV_DEPRECATED int radiusSearch(const Mat& query, Mat& indices, Mat& dists, DistanceType radius, const ::cvflann::SearchParams& searchParams) const
     {
         CV_Assert(query.type() == CvType<ElementType>::type());
         CV_Assert(query.isContinuous());

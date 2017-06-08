@@ -150,7 +150,7 @@ public:
     /**
      *      Method that searches for nearest-neighbors
      */
-    virtual void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    virtual void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
     {
         int checks = get_param<int>(searchParams,"checks",FLANN_CHECKS_AUTOTUNED);
         if (checks == FLANN_CHECKS_AUTOTUNED) {
