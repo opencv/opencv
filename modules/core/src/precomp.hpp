@@ -65,6 +65,7 @@
 #include <float.h>
 #include <limits.h>
 #include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -319,6 +320,8 @@ cv::Mutex& getInitializationMutex();
 #define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
+int cv_snprintf(char* buf, int len, const char* fmt, ...);
+int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
 }
 
 #endif /*_CXCORE_INTERNAL_H_*/
