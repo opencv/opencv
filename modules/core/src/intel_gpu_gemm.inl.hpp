@@ -87,7 +87,7 @@ static bool intel_gpu_gemm(
 
     ocl::Queue q;
     String errmsg;
-    const ocl::Program program = ocl::Context::getDefault().getProg(ocl::core::intel_gemm_oclsrc, "", errmsg);
+    const ocl::Program program = ocl::Context::getDefault().getProg(ocl::core::gemm_oclsrc, "", errmsg);
 
     if(!atrans && btrans)
     {
