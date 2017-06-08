@@ -93,11 +93,6 @@ private:
 *     CV_ENUM and CV_FLAGS - macro to create printable wrappers for defines and enums     *
 \*****************************************************************************************/
 
-// helper macros to force expansion of macro arguments before stringification
-// "#" normally blocks argument expansion
-#define CV_STRINGIFY_ARGS(...) CV_STRINGIFY_ARGS_(__VA_ARGS__)
-#define CV_STRINGIFY_ARGS_(...) #__VA_ARGS__
-
 #define CV_ENUM(class_name, ...)                                                        \
     namespace {                                                                         \
     using namespace cv;using namespace cv::cuda; using namespace cv::ocl;               \
@@ -106,7 +101,7 @@ private:
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
             const int vals[] = { __VA_ARGS__ };                                         \
-            const char* svals = CV_STRINGIFY_ARGS(__VA_ARGS__);                         \
+            const char* svals = #__VA_ARGS__;                                           \
             for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i) {         \
                 while(isspace(svals[pos]) || svals[pos] == ',') ++pos;                  \
                 int start = pos;                                                        \
@@ -135,7 +130,7 @@ private:
         void PrintTo(std::ostream* os) const {                                          \
             using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             const int vals[] = { __VA_ARGS__ };                                         \
-            const char* svals = CV_STRINGIFY_ARGS(__VA_ARGS__);                         \
+            const char* svals = #__VA_ARGS__;                                           \
             int value = val_;                                                           \
             bool first = true;                                                          \
             for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i) {         \
