@@ -196,8 +196,6 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include "omp.h"
 #endif
 
-#include <stdarg.h>
-
 #if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__
 #include <unistd.h>
 #include <stdio.h>
@@ -752,16 +750,13 @@ String format( const char* fmt, ... )
         va_list va;
         va_start(va, fmt);
         int bsize = static_cast<int>(buf.size());
-#if defined _MSC_VER && __cplusplus < 201103L
-        int len = _vsnprintf_s((char *)buf, bsize, _TRUNCATE, fmt, va);
-#else
-        int len = vsnprintf((char *)buf, bsize, fmt, va);
-#endif
+        int len = cv_vsnprintf((char *)buf, bsize, fmt, va);
         va_end(va);
 
-        if (len < 0 || len >= bsize)
+        CV_Assert(len >= 0 && "Check format string for errors");
+        if (len >= bsize)
         {
-            buf.resize(std::max(bsize << 1, len + 1));
+            buf.resize(len + 1);
             continue;
         }
         buf[bsize - 1] = 0;
@@ -856,19 +851,33 @@ bool setBreakOnError(bool value)
     return prevVal;
 }
 
-static bool cv_snprintf(char* buf, int len, const char* fmt, ...)
+int cv_snprintf(char* buf, int len, const char* fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-#if defined _MSC_VER && __cplusplus < 201103L
-    int res = _vsnprintf_s((char *)buf, len - 1, _TRUNCATE, fmt, va);
+    int res = cv_vsnprintf(buf, len, fmt, va);
     va_end(va);
-    buf[len - 1] = 0;
-    return res >= 0 && res < len - 1;
+    return res;
+}
+
+int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args)
+{
+#if defined _MSC_VER
+    if (len <= 0) return len == 0 ? 1024 : -1;
+    int res = _vsnprintf_s(buf, len, _TRUNCATE, fmt, args);
+    // ensure null terminating on VS
+    if (res >= 0 && res < len)
+    {
+        buf[res] = 0;
+        return res;
+    }
+    else
+    {
+        buf[len - 1] = 0; // truncate happened
+        return res >= len ? res : (len * 2);
+    }
 #else
-    int res = vsnprintf((char *)buf, len, fmt, va);
-    va_end(va);
-    return res >= 0 && res < len;
+    return vsnprintf(buf, len, fmt, args);
 #endif
 }
 
