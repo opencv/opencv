@@ -148,7 +148,7 @@
 
 - (void)dealloc;
 {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
     [super dealloc];
 }
@@ -266,7 +266,9 @@
 - (void)createCaptureSession;
 {
     // set a av capture session preset
-    self.captureSession = [[AVCaptureSession alloc] init];
+    AVCaptureSession *session = [[AVCaptureSession alloc] init];
+    self.captureSession = session;
+    [session release];
     if ([self.captureSession canSetSessionPreset:self.defaultAVCaptureSessionPreset]) {
         [self.captureSession setSessionPreset:self.defaultAVCaptureSessionPreset];
     } else if ([self.captureSession canSetSessionPreset:AVCaptureSessionPresetLow]) {
@@ -288,8 +290,9 @@
 
 - (void)createVideoPreviewLayer;
 {
-    self.captureVideoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
-
+    AVCaptureVideoPreviewLayer *layer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
+    self.captureVideoPreviewLayer = layer;
+    [layer release];
     if ([self.captureVideoPreviewLayer respondsToSelector:@selector(connection)])
     {
         if ([self.captureVideoPreviewLayer.connection isVideoOrientationSupported])

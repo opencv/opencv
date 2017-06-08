@@ -82,7 +82,7 @@
      {
          if (error == nil && imageSampleBuffer != NULL)
          {
-             // TODO check
+             // TODO: check
              //			 NSNumber* imageOrientation = [UIImage cgImageOrientationForUIDeviceOrientation:currentDeviceOrientation];
              //			 CMSetAttachment(imageSampleBuffer, kCGImagePropertyOrientation, imageOrientation, 1);
 
@@ -138,7 +138,9 @@
 - (void)createStillImageOutput;
 {
     // setup still image output with jpeg codec
-    self.stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
+    AVCaptureStillImageOutput *output = [[AVCaptureStillImageOutput alloc] init];
+    self.stillImageOutput = output;
+    [output release];
     NSDictionary *outputSettings = [NSDictionary dictionaryWithObjectsAndKeys:AVVideoCodecJPEG, AVVideoCodecKey, nil];
     [self.stillImageOutput setOutputSettings:outputSettings];
     [self.captureSession addOutput:self.stillImageOutput];
