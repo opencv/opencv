@@ -849,7 +849,7 @@ namespace
                 return false;
             if (maxLevel < 0 || winSize.width <= 2 || winSize.height <= 2)
                 return false;
-            if (winSize.width < 16 || winSize.height < 16 ||
+            if (winSize.width < 8 || winSize.height < 8 ||
                 winSize.width > 24 || winSize.height > 24)
                 return false;
             calcPatchSize();
@@ -967,11 +967,17 @@ namespace
             size_t globalThreads[3] = { 8 * (size_t)ptcount, 8};
             char calcErr = (0 == level) ? 1 : 0;
 
+            int wsx = 1, wsy = 1;
+            if(winSize.width < 16)
+                wsx = 0;
+            if(winSize.height < 16)
+                wsy = 0;
             cv::String build_options;
             if (isDeviceCPU())
                 build_options = " -D CPU";
             else
-                build_options = cv::format("-D WAVE_SIZE=%d", waveSize);
+                build_options = cv::format("-D WAVE_SIZE=%d -D WSX=%d -D WSY=%d",
+                                           waveSize, wsx, wsy);
 
             ocl::Kernel kernel;
             if (!kernel.create("lkSparse", cv::ocl::video::pyrlk_oclsrc, build_options))
