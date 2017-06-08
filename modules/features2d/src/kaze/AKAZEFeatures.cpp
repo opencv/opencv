@@ -1055,19 +1055,28 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
           y2 = fRound(sample_y + 0.5f);
           x2 = fRound(sample_x + 0.5f);
 
+          // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
+          // clip values so they fit into the image
+          const MatSize& size = evolution[level].Lx.size;
+          y1 = min(max(0, y1), size[0] - 1);
+          x1 = min(max(0, x1), size[1] - 1);
+          y2 = min(max(0, y2), size[0] - 1);
+          x2 = min(max(0, x2), size[1] - 1);
+          CV_DbgAssert(evolution[level].Lx.size == evolution[level].Ly.size);
+
           fx = sample_x - x1;
           fy = sample_y - y1;
 
-          res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
-          res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
-          res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
-          res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
+          res1 = *(evolution[level].Lx.ptr<float>(y1, x1));
+          res2 = *(evolution[level].Lx.ptr<float>(y1, x2));
+          res3 = *(evolution[level].Lx.ptr<float>(y2, x1));
+          res4 = *(evolution[level].Lx.ptr<float>(y2, x2));
           rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-          res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
-          res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
-          res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
-          res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
+          res1 = *(evolution[level].Ly.ptr<float>(y1, x1));
+          res2 = *(evolution[level].Ly.ptr<float>(y1, x2));
+          res3 = *(evolution[level].Ly.ptr<float>(y2, x1));
+          res4 = *(evolution[level].Ly.ptr<float>(y2, x2));
           ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
           // Get the x and y derivatives on the rotated axis
