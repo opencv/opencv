@@ -200,8 +200,7 @@ namespace cv
             if (!useProvidedKeypoints)
             {
                 impl.Feature_Detection(keypoints);
-                if( !descriptors.needed() )
-                    impl.Compute_Keypoints_Orientation(keypoints);
+                impl.Compute_Keypoints_Orientation(keypoints);
             }
 
             if (!mask.empty())
