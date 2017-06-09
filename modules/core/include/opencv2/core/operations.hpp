@@ -54,7 +54,7 @@
 /////// exchange-add operation for atomic operations on reference counters ///////
 #ifdef CV_XADD
   // allow to use user-defined macro
-#elif defined __GNUC__
+#elif !defined(__c2__) && defined __GNUC__
 
   #if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__  && !defined(__CUDACC__)
     #ifdef __ATOMIC_SEQ_CST
