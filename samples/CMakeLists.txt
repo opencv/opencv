@@ -53,7 +53,9 @@ option(BUILD_EXAMPLES "Build samples" ON)
 find_package(OpenCV REQUIRED)
 
 if(MSVC)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  if(NOT ENABLE_BUILD_HARDENING)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  endif()
 
   if(NOT OpenCV_SHARED)
     foreach(flag_var

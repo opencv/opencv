@@ -205,7 +205,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 if(MSVC)
-  set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
+  #TODO Code refactoring is required to resolve security warnings
+  #if(NOT ENABLE_BUILD_HARDENING)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
+  #endif()
+
   # 64-bit portability warnings, in MSVC80
   if(MSVC80)
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /Wp64")
@@ -327,4 +331,9 @@ endif()
 
 if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/usr/local/lib")
   link_directories("/usr/local/lib")
+endif()
+
+
+if(ENABLE_BUILD_HARDENING)
+  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake)
 endif()
