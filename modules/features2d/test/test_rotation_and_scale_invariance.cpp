@@ -104,8 +104,12 @@ void rotateKeyPoints(const vector<KeyPoint>& src, const Mat& H, float angle, vec
 void scaleKeyPoints(const vector<KeyPoint>& src, vector<KeyPoint>& dst, float scale)
 {
     dst.resize(src.size());
-    for(size_t i = 0; i < src.size(); i++)
-        dst[i] = KeyPoint(src[i].pt.x * scale, src[i].pt.y * scale, src[i].size * scale, src[i].angle);
+    for (size_t i = 0; i < src.size(); i++) {
+        dst[i] = src[i];
+        dst[i].pt.x *= scale;
+        dst[i].pt.y *= scale;
+        dst[i].size *= scale;
+    }
 }
 
 static
@@ -630,6 +634,22 @@ TEST(Features2d_RotationInvariance_Detector_ORB, regression)
     test.safe_run();
 }
 
+TEST(Features2d_RotationInvariance_Detector_AKAZE, regression)
+{
+    DetectorRotationInvarianceTest test(AKAZE::create(),
+                                        0.5f,
+                                        0.76f);
+    test.safe_run();
+}
+
+TEST(Features2d_RotationInvariance_Detector_AKAZE_DESCRIPTOR_KAZE, regression)
+{
+    DetectorRotationInvarianceTest test(AKAZE::create(AKAZE::DESCRIPTOR_KAZE),
+                                        0.5f,
+                                        0.76f);
+    test.safe_run();
+}
+
 /*
  * Descriptors's rotation invariance check
  */
@@ -644,6 +664,20 @@ TEST(Features2d_RotationInvariance_Descriptor_BRISK, regression)
 TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 {
     Ptr<Feature2D> f2d = ORB::create();
+    DescriptorRotationInvarianceTest test(f2d, f2d, f2d->defaultNorm(), 0.99f);
+    test.safe_run();
+}
+
+TEST(Features2d_RotationInvariance_Descriptor_AKAZE, regression)
+{
+    Ptr<Feature2D> f2d = AKAZE::create();
+    DescriptorRotationInvarianceTest test(f2d, f2d, f2d->defaultNorm(), 0.99f);
+    test.safe_run();
+}
+
+TEST(Features2d_RotationInvariance_Descriptor_AKAZE_DESCRIPTOR_KAZE, regression)
+{
+    Ptr<Feature2D> f2d = AKAZE::create(AKAZE::DESCRIPTOR_KAZE);
     DescriptorRotationInvarianceTest test(f2d, f2d, f2d->defaultNorm(), 0.99f);
     test.safe_run();
 }
@@ -679,6 +713,12 @@ TEST(Features2d_ScaleInvariance_Detector_AKAZE, regression)
     test.safe_run();
 }
 
+TEST(Features2d_ScaleInvariance_Detector_AKAZE_DESCRIPTOR_KAZE, regression)
+{
+    DetectorScaleInvarianceTest test(AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.08f, 0.49f);
+    test.safe_run();
+}
+
 TEST(Features2d_ScaleInvariance_Detector_ORB, regression)
 {
     DetectorScaleInvarianceTest test(ORB::create(), 0.08f, 0.49f);
@@ -688,6 +728,20 @@ TEST(Features2d_ScaleInvariance_Detector_ORB, regression)
 /*
  * Descriptor's scale invariance check
  */
+
+TEST(Features2d_ScaleInvariance_Descriptor_AKAZE, regression)
+{
+    Ptr<Feature2D> akaze = AKAZE::create();
+    DescriptorScaleInvarianceTest test(akaze, akaze, akaze->defaultNorm(), 0.01f);
+    test.safe_run();
+}
+
+TEST(Features2d_ScaleInvariance_Descriptor_AKAZE_DESCRIPTOR_KAZE, regression)
+{
+    Ptr<Feature2D> akaze = AKAZE::create(AKAZE::DESCRIPTOR_KAZE);
+    DescriptorScaleInvarianceTest test(akaze, akaze, akaze->defaultNorm(), 0.01f);
+    test.safe_run();
+}
 
 //TEST(Features2d_ScaleInvariance_Descriptor_BRISK, regression)
 //{
