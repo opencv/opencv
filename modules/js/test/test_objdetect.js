@@ -30,6 +30,13 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /////////////////////////////////////////////////////////////////////////////*/
+if (typeof module !== 'undefined' && module.exports) {
+    // The envrionment is Node.js
+    var cv = require('./opencv.js');
+    cv.FS_createLazyFile('/', 'haarcascade_eye.xml', 'data/haarcascade_eye.xml', true, false);
+    cv.FS_createLazyFile('/', 'haarcascade_frontalface_default.xml', 'data/haarcascade_frontalface_default.xml', true, false);
+    cv.FS_createLazyFile('/', 'hogcascade_pedestrians.xml', 'data/hogcascade_pedestrians.xml', true, false);
+}
 
 QUnit.module ("Object Detection", {});
 QUnit.test("Cascade classification", function(assert) {

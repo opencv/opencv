@@ -26,6 +26,8 @@ def make_umd(opencvjs, cvjs):
   }
 }(this, function () {
   %s
+  if (typeof Module === 'undefined')
+    Module = {};
   return cv(Module);
 }));
     """ % (content)).lstrip())

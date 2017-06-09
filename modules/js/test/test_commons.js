@@ -86,3 +86,5 @@ var Commons = {
 	// }
 	//
 };
+
+if (typeof module !== 'undefined' && module.exports) exports.Commons = Commons;

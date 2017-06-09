@@ -30,6 +30,10 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /////////////////////////////////////////////////////////////////////////////*/
+if (typeof module !== 'undefined' && module.exports) {
+    // The envrionment is Node.js
+    var cv = require('./test_node.js');
+}
 
 QUnit.module( "Feature2D", {});
 QUnit.test( "Test Feature detection/extraction", function(assert) {
