@@ -186,9 +186,9 @@ Reduces a matrix to a vector.
 
     :param mtx: Source 2D matrix.
 
-    :param vec: Destination vector. Its size and type is defined by  ``dim``  and  ``dtype``  parameters.
+    :param vec: Destination row vector. Its type is defined by ``dtype`` parameter.
 
-    :param dim: Dimension index along which the matrix is reduced. 0 means that the matrix is reduced to a single row. 1 means that the matrix is reduced to a single column.
+    :param dim: Dimension index along which the matrix is reduced. 0 means that the matrix is reduced to a single row(of length equal to number of matrix columns). 1 means that the matrix is reduced to a single column(of length equal to the number of matrix rows). In either case, the output is always stored as a row vector of appropriate length.
 
     :param reduceOp: Reduction operation that could be one of the following:
 
@@ -202,6 +202,6 @@ Reduces a matrix to a vector.
 
     :param dtype: When it is negative, the destination vector will have the same type as the source matrix. Otherwise, its type will be  ``CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), mtx.channels())`` .
 
-The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
+The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single column/row is obtained. However, the result is always stored as a row vector. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
 .. seealso:: :ocv:func:`reduce`
