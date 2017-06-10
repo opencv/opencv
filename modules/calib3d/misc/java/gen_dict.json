@@ -1,0 +1,42 @@
+{
+    "class_ignore_list": [
+        "CirclesGridFinderParameters"
+    ],
+    "missing_consts" : {
+        "Calib3d": {
+            "public" : [
+                ["CALIB_USE_INTRINSIC_GUESS", "1"],
+                ["CALIB_RECOMPUTE_EXTRINSIC", "2"],
+                ["CALIB_CHECK_COND", "4"],
+                ["CALIB_FIX_SKEW", "8"],
+                ["CALIB_FIX_K1", "16"],
+                ["CALIB_FIX_K2", "32"],
+                ["CALIB_FIX_K3", "64"],
+                ["CALIB_FIX_K4", "128"],
+                ["CALIB_FIX_INTRINSIC", "256"]
+            ]
+        }
+    },
+    "func_arg_fix" : {
+        "findFundamentalMat"  : { "points1" : {"ctype" : "vector_Point2f"},
+                                  "points2" : {"ctype" : "vector_Point2f"} },
+        "cornerSubPix" : { "corners" : {"ctype" : "vector_Point2f"} },
+        "findHomography" : { "srcPoints" : {"ctype" : "vector_Point2f"},
+                             "dstPoints" : {"ctype" : "vector_Point2f"} },
+        "solvePnP" : { "objectPoints" : {"ctype" : "vector_Point3f"},
+                       "imagePoints"  : {"ctype" : "vector_Point2f"},
+                       "distCoeffs"   : {"ctype" : "vector_double" } },
+        "solvePnPRansac" : { "objectPoints" : {"ctype" : "vector_Point3f"},
+                             "imagePoints"  : {"ctype" : "vector_Point2f"},
+                             "distCoeffs"   : {"ctype" : "vector_double" } },
+        "undistortPoints" : { "src" : {"ctype" : "vector_Point2f"},
+                              "dst" : {"ctype" : "vector_Point2f"} },
+        "projectPoints" : { "objectPoints" : {"ctype" : "vector_Point3f"},
+                            "imagePoints"  : {"ctype" : "vector_Point2f"},
+                            "distCoeffs"   : {"ctype" : "vector_double" } },
+        "initCameraMatrix2D" : { "objectPoints" : {"ctype" : "vector_vector_Point3f"},
+                                 "imagePoints"  : {"ctype" : "vector_vector_Point2f"} },
+        "findChessboardCorners" : { "corners" : {"ctype" : "vector_Point2f"} },
+        "drawChessboardCorners" : { "corners" : {"ctype" : "vector_Point2f"} }
+    }
+}
