@@ -16,9 +16,11 @@ endif()
 #find android SDK: search in ANDROID_SDK first
 find_host_program(ANDROID_EXECUTABLE
   NAMES android.bat android
-  PATH_SUFFIXES tools
+  PATH_SUFFIXES tools tools/bin
   PATHS
     ENV ANDROID_SDK
+    ${ANDROID_NDK}/..
+    ${CMAKE_ANDROID_NDK}/..
   DOC "Android SDK location"
   NO_DEFAULT_PATH
   )
