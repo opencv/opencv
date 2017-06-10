@@ -104,12 +104,12 @@ Building OpenCV from Source Using CMake
     make -j7 # runs 7 jobs in parallel
     @endcode
 -#  [optional] Building documents. Enter \<cmake_build_dir/doc/\> and run make with target
-    "html_docs"
+    "doxygen"
 
     For example
     @code{.bash}
     cd ~/opencv/build/doc/
-    make -j7 html_docs
+    make -j7 doxygen
     @endcode
 -#  To install libraries, execute the following command from build directory
     @code{.bash}
