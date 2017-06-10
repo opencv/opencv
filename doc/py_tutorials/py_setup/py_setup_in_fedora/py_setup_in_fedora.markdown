@@ -234,10 +234,9 @@ Thus OpenCV installation is finished. Open a terminal and try import cv2.
 
 To build the documentation, just enter following commands:
 @code{.sh}
-make docs
-make html_docs
+make doxygen
 @endcode
-Then open opencv/build/doc/_html/index.html and bookmark it in the browser.
+Then open opencv/build/doc/doxygen/html/index.html and bookmark it in the browser.
 
 Additional Resources
 --------------------
