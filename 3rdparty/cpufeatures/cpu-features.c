@@ -515,6 +515,25 @@ cpulist_read_from(CpuList* list, const char* filename)
 // its implementation does not parse /proc/self/auxv. Instead it depends
 // on values  that are passed by the kernel at process-init time to the
 // C runtime initialization layer.
+#if 1
+// OpenCV calls CPU features check during library initialization stage
+// (under other dlopen() call).
+// Unfortunatelly, calling dlopen() recursively is not supported on some old
+// Android versions. Android fix is here:
+// - https://android-review.googlesource.com/#/c/32951/
+// - GitHub mirror: https://github.com/android/platform_bionic/commit/e19d702b8e330cef87e0983733c427b5f7842144
+__attribute__((weak)) unsigned long getauxval(unsigned long); // Lets linker to handle this symbol
+static uint32_t
+get_elf_hwcap_from_getauxval(int hwcap_type) {
+    uint32_t ret = 0;
+    if(getauxval != 0) {
+        ret = (uint32_t)getauxval(hwcap_type);
+    } else {
+        D("getauxval() is not available\n");
+    }
+    return ret;
+}
+#else
 static uint32_t
 get_elf_hwcap_from_getauxval(int hwcap_type) {
     typedef unsigned long getauxval_func_t(unsigned long);
@@ -538,6 +557,7 @@ get_elf_hwcap_from_getauxval(int hwcap_type) {
     dlclose(libc_handle);
     return ret;
 }
+#endif
 #endif
 
 #if defined(__arm__)
