@@ -98,6 +98,10 @@ if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW)
 endif()
 
+if(POLICY CMP0046)
+  cmake_policy(SET CMP0046 OLD)
+endif()
+
 if(POLICY CMP0051)
   cmake_policy(SET CMP0051 NEW)
 endif()
@@ -573,6 +577,10 @@ endif()
 # ----------------------------------------------------------------------------
 #  Detect 3rd-party libraries
 # ----------------------------------------------------------------------------
+
+if(ANDROID)
+   add_subdirectory(3rdparty/cpufeatures)
+endif()
 
 include(cmake/OpenCVFindLibsGrfmt.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
