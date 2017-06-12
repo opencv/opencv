@@ -73,6 +73,10 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 #endif
 #endif
 
+#if defined ANDROID
+#  include <cpu-features.h>
+#endif
+
 #if defined WIN32 || defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
@@ -441,10 +445,16 @@ struct HWFeatures
         CV_UNUSED(cpuid_data_ex);
     #endif // OPENCV_HAVE_X86_CPUID
 
-    #if defined ANDROID || defined __linux__
+    #if defined __ANDROID__ || defined __linux__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
+    #elif defined __arm__ && defined __ANDROID__
+        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "calling android_getCpuFeatures() ...");
+        uint64_t features = android_getCpuFeatures();
+        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "calling android_getCpuFeatures() ... Done (%llx)", features);
+        have[CV_CPU_NEON] = (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
+        have[CV_CPU_FP16] = (features & ANDROID_CPU_ARM_FEATURE_VFP_FP16) != 0;
     #elif defined __arm__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
