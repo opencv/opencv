@@ -331,7 +331,7 @@ void gaussianPyramidDown(const Size2D &srcSize,
             for (; x < roiw8; x += 8)
             {
                 internal::prefetch(lane + 2 * x);
-#if __GNUC_MINOR__ < 7
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
                 __asm__ (
                     "vld2.16 {d0-d3}, [%[in0]]                               \n\t"
                     "vld2.16 {d4-d7}, [%[in4]]                               \n\t"
@@ -538,7 +538,7 @@ void gaussianPyramidDown(const Size2D &srcSize,
             for (; x < roiw4; x += 4)
             {
                 internal::prefetch(lane + 2 * x);
-#if __GNUC_MINOR__ < 7
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
                 __asm__ (
                     "vld2.32 {d0-d3}, [%[in0]]                              \n\t"
                     "vld2.32 {d4-d7}, [%[in4]]                              \n\t"
@@ -672,7 +672,7 @@ void gaussianPyramidDown(const Size2D &srcSize,
     std::vector<f32> _buf(cn*(srcSize.width + 4) + 32/sizeof(f32));
     f32* lane = internal::alignPtr(&_buf[2*cn], 32);
 
-#if __GNUC_MINOR__ < 7
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
     register float32x4_t vc6d4f32  asm ("q11") = vmovq_n_f32(1.5f);  // 6/4
     register float32x4_t vc1d4f32  asm ("q12") = vmovq_n_f32(0.25f); // 1/4
 
@@ -739,7 +739,7 @@ void gaussianPyramidDown(const Size2D &srcSize,
             for (; x < roiw4; x += 4)
             {
                 internal::prefetch(lane + 2 * x);
-#if __GNUC_MINOR__ < 7
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
                 __asm__ __volatile__ (
                     "vld2.32 {d0-d3}, [%[in0]]                              \n\t"
                     "vld2.32 {d8-d11}, [%[in4]]                             \n\t"

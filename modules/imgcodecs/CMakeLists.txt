@@ -23,7 +23,7 @@ if(HAVE_JPEG)
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
 
-if(WITH_WEBP)
+if(HAVE_WEBP)
   add_definitions(-DHAVE_WEBP)
   ocv_include_directories(${WEBP_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
