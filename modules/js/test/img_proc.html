@@ -48,7 +48,7 @@
 	</div>
 
 	<script src='dat.gui.js'></script>
-	<script src="opencv_js.js"></script>
+	<script async src="opencv.js"></script>
 
 	<script>
 	show_image = function(mat, canvas_id) {
@@ -623,7 +623,6 @@
 		  if (text) Module.printErr('[post-exception status] ' + text);
 		};
 	};
-	window.cv = cv(Module);
     </script>
 	</body>
 </html>

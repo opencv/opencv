@@ -60,7 +60,7 @@ QUnit.test("Cascade classification", function(assert) {
 	// CascadeClassifier
 	{
 		let classifier = new cv.CascadeClassifier(),
-			modelPath = 'haarcascade_frontalface_default.xml';
+			modelPath = '/haarcascade_frontalface_default.xml';
 
 		assert.equal(classifier.empty(), true);
 
