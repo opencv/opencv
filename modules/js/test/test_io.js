@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////*/
 if (typeof module !== 'undefined' && module.exports) {
     // The envrionment is Node.js
-    var cv = require('./test_node.js');
+    var cv = require('./opencv.js');
     var Commons = require('./test_commons.js').Commons;
 }
 
