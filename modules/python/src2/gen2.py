@@ -405,7 +405,9 @@ class FuncVariant(object):
         self.name = self.wname = name
         self.isconstructor = isconstructor
 
-        self.rettype = decl[4] if len(decl) >=5 else handle_ptr(decl[1])
+        self.docstring = decl[5]
+
+        self.rettype = decl[4] or handle_ptr(decl[1])
         if self.rettype == "void":
             self.rettype = ""
         self.args = []
@@ -494,7 +496,7 @@ class FuncVariant(object):
         else:
             outstr = "None"
 
-        self.py_docstring = "%s(%s) -> %s" % (self.wname, argstr, outstr)
+        self.py_prototype = "%s(%s) -> %s" % (self.wname, argstr, outstr)
         self.py_noptargs = noptargs
         self.py_arglist = arglist
         for aname, argno in arglist:
@@ -536,28 +538,49 @@ class FuncInfo(object):
         return "static PyObject* %s(PyObject* %s, PyObject* args, PyObject* kw)" % (full_fname, self_arg)
 
     def get_tab_entry(self):
+        prototype_list = []
         docstring_list = []
+
         have_empty_constructor = False
         for v in self.variants:
-            s = v.py_docstring
+            s = v.py_prototype
             if (not v.py_arglist) and self.isconstructor:
                 have_empty_constructor = True
-            if s not in docstring_list:
-                docstring_list.append(s)
+            if s not in prototype_list:
+                prototype_list.append(s)
+                docstring_list.append(v.docstring)
+
         # if there are just 2 constructors: default one and some other,
         # we simplify the notation.
         # Instead of ClassName(args ...) -> object or ClassName() -> object
         # we write ClassName([args ...]) -> object
         if have_empty_constructor and len(self.variants) == 2:
             idx = self.variants[1].py_arglist != []
-            s = self.variants[idx].py_docstring
+            s = self.variants[idx].py_prototype
             p1 = s.find("(")
             p2 = s.rfind(")")
-            docstring_list = [s[:p1+1] + "[" + s[p1+1:p2] + "]" + s[p2:]]
+            prototype_list = [s[:p1+1] + "[" + s[p1+1:p2] + "]" + s[p2:]]
+
+        # The final docstring will be: Each prototype, followed by
+        # their relevant doxygen comment
+        full_docstring = ""
+        for prototype, body in zip(prototype_list, docstring_list):
+            full_docstring += Template("$prototype\n$docstring\n\n\n\n").substitute(
+                prototype=prototype,
+                docstring='\n'.join(
+                    ['.   ' + line
+                     for line in body.split('\n')]
+                )
+            )
+
+        # Escape backslashes, newlines, and double quotes
+        full_docstring = full_docstring.strip().replace("\\", "\\\\").replace('\n', '\\n').replace("\"", "\\\"")
+        # Convert unicode chars to xml representation, but keep as string instead of bytes
+        full_docstring = full_docstring.encode('ascii', errors='xmlcharrefreplace').decode()
 
         return Template('    {"$py_funcname", (PyCFunction)$wrap_funcname, METH_VARARGS | METH_KEYWORDS, "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
-                                     py_docstring = "  or  ".join(docstring_list))
+                                     py_docstring = full_docstring)
 
     def gen_code(self, all_classes):
         proto = self.get_wrapper_prototype()
