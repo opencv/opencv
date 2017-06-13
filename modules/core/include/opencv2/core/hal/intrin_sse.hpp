@@ -1126,6 +1126,14 @@ OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_uint32x4, unsigned, __m128i, epi32, OPENCV
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_int32x4, int, __m128i, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP, si128_si32)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_float32x4, float, __m128, ps, _mm_castps_si128, _mm_castsi128_ps, ss_f32)
 
+inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
+                                 const v_float32x4& c, const v_float32x4& d)
+{
+    __m128 ab = _mm_hadd_ps(a.val, b.val);
+    __m128 cd = _mm_hadd_ps(c.val, d.val);
+    return v_float32x4(_mm_hadd_ps(ab, cd));
+}
+
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_uint32x4, unsigned, max, std::max)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_uint32x4, unsigned, min, std::min)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_int32x4, int, max, std::max)

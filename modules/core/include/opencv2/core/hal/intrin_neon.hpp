@@ -815,6 +815,21 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, sum, add, f32)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, max, max, f32)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, min, min, f32)
 
+inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
+                                 const v_float32x4& c, const v_float32x4& d)
+{
+    float32x4x2_t ab = vtrnq_f32(a.val, b.val);
+    float32x4x2_t cd = vtrnq_f32(c.val, d.val);
+
+    float32x4_t u0 = vaddq_f32(ab.val[0], ab.val[1]); // a0+a1 b0+b1 a2+a3 b2+b3
+    float32x4_t u1 = vaddq_f32(cd.val[0], cd.val[1]); // c0+c1 d0+d1 c2+c3 d2+d3
+
+    float32x4_t v0 = vcombine_f32(vget_low_f32(u0), vget_low_f32(u1));
+    float32x4_t v1 = vcombine_f32(vget_high_f32(u0), vget_high_f32(u1));
+
+    return v_float32x4(vaddq_f32(v0, v1));
+}
+
 #define OPENCV_HAL_IMPL_NEON_POPCOUNT(_Tpvec, cast) \
 inline v_uint32x4 v_popcount(const _Tpvec& a) \
 { \

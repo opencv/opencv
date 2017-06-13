@@ -907,6 +907,27 @@ template<typename _Tp, int n> inline typename V_TypeTraits<_Tp>::sum_type v_redu
     return c;
 }
 
+/** @brief Sums all elements of each input vector, returns the vector of sums
+
+ Scheme:
+ @code
+ result[0] = a[0] + a[1] + a[2] + a[3]
+ result[1] = b[0] + b[1] + b[2] + b[3]
+ result[2] = c[0] + c[1] + c[2] + c[3]
+ result[3] = d[0] + d[1] + d[2] + d[3]
+ @endcode
+*/
+inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
+                                 const v_float32x4& c, const v_float32x4& d)
+{
+    v_float32x4 r;
+    r.s[0] = a.s[0] + a.s[1] + a.s[2] + a.s[3];
+    r.s[1] = b.s[0] + b.s[1] + b.s[2] + b.s[3];
+    r.s[2] = c.s[0] + c.s[1] + c.s[2] + c.s[3];
+    r.s[3] = d.s[0] + d.s[1] + d.s[2] + d.s[3];
+    return r;
+}
+
 /** @brief Get negative values mask
 
 Returned value is a bit mask with bits set to 1 on places corresponding to negative packed values indexes.
