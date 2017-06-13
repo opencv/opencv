@@ -435,13 +435,7 @@ public:
         int y, x, pix_size = (int)src.elemSize();
         int width = dsize.width;
         int avxWidth = width - (width & 0x7);
-#if (defined WIN32 || defined _WIN32 || defined __CYGWIN__)
-        const __declspec(align(64)) __m256i mask = _mm256_set1_epi32(-1);
-#elif defined __GNUC__ && __GNUC__ >= 4
-        const __m256i mask __attribute__((aligned(64))) = _mm256_set1_epi32(-1);
-#else
-        const __m256i mask = _mm256_set1_epi32(-1);
-#endif
+        const __m256i CV_DECL_ALIGNED(64) mask = _mm256_set1_epi32(-1);
         if(((int64)(dst.data + dst.step) & 0x1f) == 0)
         {
             for(y = range.start; y < range.end; y++)
@@ -453,19 +447,9 @@ public:
 #pragma unroll(4)
                 for(x = 0; x < avxWidth; x += 8)
                 {
-                #if (defined WIN32 || defined _WIN32 || defined __CYGWIN__)
-                    __declspec(align(64)) const __m256i *addr = (__m256i*)(x_ofs + x);
-                    __declspec(align(64)) __m256i indices = _mm256_lddqu_si256(addr);
-                    __declspec(align(64)) __m256i pixels = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                #elif defined __GNUC__ && __GNUC__ >= 4
-                    const __m256i *addr __attribute__((aligned(64))) = (__m256i*)(x_ofs + x);
-                    __m256i indices __attribute__((aligned(64))) = _mm256_lddqu_si256(addr);
-                    __m256i pixels  __attribute__((aligned(64))) = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                #else
-                    const __m256i *addr = (__m256i*)(x_ofs + x);
-                    __m256i indices = _mm256_lddqu_si256(addr);
-                    __m256i pixels  = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                #endif
+                    const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
+                    __m256i CV_DECL_ALIGNED(64) indices = _mm256_lddqu_si256(addr);
+                    __m256i CV_DECL_ALIGNED(64) pixels = _mm256_i32gather_epi32((const int*)S, indices, 1);
                     _mm256_maskstore_epi32((int*)D, mask, pixels);
                     D += 32;
                 }
@@ -486,19 +470,9 @@ public:
 #pragma unroll(4)
                 for(x = 0; x < avxWidth; x += 8)
                 {
-                #if (defined WIN32 || defined _WIN32 || defined __CYGWIN__)
-                    __declspec(align(64)) const __m256i *addr = (__m256i*)(x_ofs + x);
-                    __declspec(align(64)) __m256i indices = _mm256_lddqu_si256(addr);
-                    __declspec(align(64)) __m256i pixels = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                #elif defined __GNUC__ && __GNUC__ >= 4
-                    const __m256i *addr __attribute__((aligned(64))) = (__m256i*)(x_ofs + x);
-                    __m256i indices __attribute__((aligned(64))) = _mm256_lddqu_si256(addr);
-                    __m256i pixels  __attribute__((aligned(64))) = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                #else
-                    const __m256i *addr = (__m256i*)(x_ofs + x);
-                    __m256i indices = _mm256_lddqu_si256(addr);
-                    __m256i pixels = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                #endif
+                    const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
+                    __m256i CV_DECL_ALIGNED(64) indices = _mm256_lddqu_si256(addr);
+                    __m256i CV_DECL_ALIGNED(64) pixels = _mm256_i32gather_epi32((const int*)S, indices, 1);
                     _mm256_storeu_si256((__m256i*)D, pixels);
                     D += 32;
                 }
@@ -538,29 +512,12 @@ public:
         int width = dsize.width;
         //int avxWidth = (width - 1) - ((width - 1) & 0x7);
         int avxWidth = width - (width & 0xf);
-#if (defined WIN32 || defined _WIN32 || defined __CYGWIN__)
-        const __declspec(align(64)) __m256i mask = _mm256_set1_epi32(-1);
-        const __declspec(align(64)) __m256i shuffle_mask = _mm256_set_epi8(15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0,
-                                                                           15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0);
-        const __declspec(align(64)) __m256i permute_mask = _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0);
-        const __declspec(align(64)) __m256i shift_shuffle_mask = _mm256_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2,
-                                                                                 13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2);
-#elif defined __GNUC__ && __GNUC__ >= 4
-        const __m256i mask __attribute__((aligned(64))) = _mm256_set1_epi32(-1);
-        const __m256i shuffle_mask __attribute__((aligned(64))) = _mm256_set_epi8(15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0,
-                                                     15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0);
-        const __m256i permute_mask __attribute__((aligned(64))) = _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0);
-        const __m256i shift_shuffle_mask __attribute__((aligned(64))) = _mm256_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2,
-                                                                                 13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2);
-
-#else
-        const __m256i mask = _mm256_set1_epi32(-1);
-        const __m256i shuffle_mask = _mm256_set_epi8(15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0,
-                                                     15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0);
-        const __m256i permute_mask = _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0);
-        const __m256i shift_shuffle_mask = _mm256_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2,
-                                                                                 13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2);
-#endif
+        const __m256i CV_DECL_ALIGNED(64) mask = _mm256_set1_epi32(-1);
+        const __m256i CV_DECL_ALIGNED(64) shuffle_mask = _mm256_set_epi8(15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0,
+                                                                         15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0);
+        const __m256i CV_DECL_ALIGNED(64) permute_mask = _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0);
+        const __m256i CV_DECL_ALIGNED(64) shift_shuffle_mask = _mm256_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2,
+                                                                               13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2);
         if(((int64)(dst.data + dst.step) & 0x1f) == 0)
         {
             for(y = range.start; y < range.end; y++)
@@ -573,40 +530,16 @@ public:
 #pragma unroll(4)
                 for(x = 0; x < avxWidth; x += 16)
                 {
-                #if (defined WIN32 || defined _WIN32 || defined __CYGWIN__)
-                    __declspec(align(64)) const __m256i *addr = (__m256i*)(x_ofs + x);
-                    __declspec(align(64)) __m256i indices = _mm256_lddqu_si256(addr);
-                    __declspec(align(64)) __m256i pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                    __declspec(align(64)) const __m256i *addr2 = (__m256i*)(x_ofs + x + 8);
-                    __declspec(align(64)) __m256i indices2 = _mm256_lddqu_si256(addr2);
-                    __declspec(align(64)) __m256i pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
-                    __declspec(align(64)) __m256i unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
+                    const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
+                    __m256i CV_DECL_ALIGNED(64) indices = _mm256_lddqu_si256(addr);
+                    __m256i CV_DECL_ALIGNED(64) pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
+                    const __m256i CV_DECL_ALIGNED(64) *addr2 = (__m256i*)(x_ofs + x + 8);
+                    __m256i CV_DECL_ALIGNED(64) indices2 = _mm256_lddqu_si256(addr2);
+                    __m256i CV_DECL_ALIGNED(64) pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
+                    __m256i CV_DECL_ALIGNED(64) unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
 
-                    __declspec(align(64)) __m256i bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
-                    __declspec(align(64)) __m256i ints_permuted = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
-                #elif defined __GNUC__ && __GNUC__ >= 4
-                    const __m256i *addr __attribute__((aligned(64))) = (__m256i*)(x_ofs + x);
-                    __m256i indices __attribute__((aligned(64))) = _mm256_lddqu_si256(addr);
-                    __m256i pixels1 __attribute__((aligned(64))) = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                    const __m256i *addr2 __attribute__((aligned(64))) = (__m256i*)(x_ofs + x + 8);
-                    __m256i indices2 __attribute__((aligned(64))) = _mm256_lddqu_si256(addr2);
-                    __m256i pixels2 __attribute__((aligned(64))) = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
-                    __m256i unpacked __attribute__((aligned(64))) = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
-
-                    __m256i bytes_shuffled __attribute__((aligned(64))) = _mm256_shuffle_epi8(unpacked, shuffle_mask);
-                    __m256i ints_permuted __attribute__((aligned(64))) = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
-                #else
-                    const __m256i *addr = (__m256i*)(x_ofs + x);
-                    __m256i indices = _mm256_lddqu_si256(addr);
-                    __m256i pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                    const __m256i *addr2 = (__m256i*)(x_ofs + x + 8);
-                    __m256i indices2 = _mm256_lddqu_si256(addr2);
-                    __m256i pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
-                    __m256i unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
-
-                    __m256i bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
-                    __m256i ints_permuted = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
-                #endif
+                    __m256i CV_DECL_ALIGNED(64) bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
+                    __m256i CV_DECL_ALIGNED(64) ints_permuted = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
                     _mm256_maskstore_epi32((int*)D, mask, ints_permuted);
                     D += 32;
                 }
@@ -629,40 +562,16 @@ public:
 #pragma unroll(4)
                 for(x = 0; x < avxWidth; x += 16)
                 {
-                #if (defined WIN32 || defined _WIN32 || defined __CYGWIN__)
-                    __declspec(align(64)) const __m256i *addr = (__m256i*)(x_ofs + x);
-                    __declspec(align(64)) __m256i indices = _mm256_lddqu_si256(addr);
-                    __declspec(align(64)) __m256i pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                    __declspec(align(64)) const __m256i *addr2 = (__m256i*)(x_ofs + x + 8);
-                    __declspec(align(64)) __m256i indices2 = _mm256_lddqu_si256(addr2);
-                    __declspec(align(64)) __m256i pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
-                    __declspec(align(64)) __m256i unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
+                    const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
+                    __m256i CV_DECL_ALIGNED(64) indices = _mm256_lddqu_si256(addr);
+                    __m256i CV_DECL_ALIGNED(64) pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
+                    const __m256i CV_DECL_ALIGNED(64) *addr2 = (__m256i*)(x_ofs + x + 8);
+                    __m256i CV_DECL_ALIGNED(64) indices2 = _mm256_lddqu_si256(addr2);
+                    __m256i CV_DECL_ALIGNED(64) pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
+                    __m256i CV_DECL_ALIGNED(64) unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
 
-                    __declspec(align(64)) __m256i bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
-                    __declspec(align(64)) __m256i ints_permuted = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
-                #elif defined __GNUC__ && __GNUC__ >= 4
-                    const __m256i *addr __attribute__((aligned(64))) = (__m256i*)(x_ofs + x);
-                    __m256i indices __attribute__((aligned(64))) = _mm256_lddqu_si256(addr);
-                    __m256i pixels1 __attribute__((aligned(64))) = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                    const __m256i *addr2 __attribute__((aligned(64))) = (__m256i*)(x_ofs + x + 8);
-                    __m256i indices2 __attribute__((aligned(64))) = _mm256_lddqu_si256(addr2);
-                    __m256i pixels2 __attribute__((aligned(64))) = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
-                    __m256i unpacked __attribute__((aligned(64))) = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
-
-                    __m256i bytes_shuffled __attribute__((aligned(64))) = _mm256_shuffle_epi8(unpacked, shuffle_mask);
-                    __m256i ints_permuted __attribute__((aligned(64))) = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
-                #else
-                    const __m256i *addr = (__m256i*)(x_ofs + x);
-                    __m256i indices = _mm256_lddqu_si256(addr);
-                    __m256i pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
-                    const __m256i *addr2 = (__m256i*)(x_ofs + x + 8);
-                    __m256i indices2 = _mm256_lddqu_si256(addr2);
-                    __m256i pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
-                    __m256i unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
-
-                    __m256i bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
-                    __m256i ints_permuted = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
-                #endif
+                    __m256i CV_DECL_ALIGNED(64) bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
+                    __m256i CV_DECL_ALIGNED(64) ints_permuted = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
                     _mm256_storeu_si256((__m256i*)D, ints_permuted);
                     D += 32;
                 }
@@ -709,13 +618,7 @@ public:
             uchar* Dstart = D;
             int sy = std::min(cvFloor(y*ify), ssize.height-1);
             const uchar* S = src.data + sy*src.step;
-        #if (defined WIN32 || defined _WIN32 || defined __CYGWIN__)
-            __declspec(align(64)) __m128i pixels = _mm_set1_epi16(0);
-        #elif defined __GNUC__ && __GNUC__ >= 4
-            __m128i pixels __attribute__((aligned(64))) = _mm_set1_epi16(0);
-        #else
-            __m128i pixels = _mm_set1_epi16(0);
-        #endif
+            __m128i CV_DECL_ALIGNED(64) pixels = _mm_set1_epi16(0);
             for(x = 0; x < sseWidth; x += 8)
             {
                 ushort imm = *(ushort*)(S + x_ofs[x + 0]);
@@ -776,13 +679,7 @@ public:
             uchar* Dstart = D;
             int sy = std::min(cvFloor(y*ify), ssize.height-1);
             const uchar* S = src.data + sy*src.step;
-        #if (defined WIN32 || defined _WIN32 || defined __CYGWIN__)
-            __declspec(align(64)) __m128i pixels = _mm_set1_epi16(0);
-        #elif defined __GNUC__ && __GNUC__ >= 4
-            __m128i pixels __attribute__((aligned(64))) = _mm_set1_epi16(0);
-        #else
-            __m128i pixels = _mm_set1_epi16(0);
-        #endif
+            __m128i CV_DECL_ALIGNED(64) pixels = _mm_set1_epi16(0);
             for(x = 0; x < sseWidth; x += 4)
             {
                 int imm = *(int*)(S + x_ofs[x + 0]);
