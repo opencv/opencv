@@ -417,6 +417,300 @@ private:
     resizeNNInvoker& operator=(const resizeNNInvoker&);
 };
 
+#if CV_AVX2
+class resizeNNInvokerAVX4 :
+    public ParallelLoopBody
+{
+public:
+    resizeNNInvokerAVX4(const Mat& _src, Mat &_dst, int *_x_ofs, int _pix_size4, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs), pix_size4(_pix_size4),
+        ify(_ify)
+    {
+    }
+
+#pragma optimization_parameter target_arch=AVX
+    virtual void operator() (const Range& range) const
+    {
+        Size ssize = src.size(), dsize = dst.size();
+        int y, x, pix_size = (int)src.elemSize();
+        int width = dsize.width;
+        int avxWidth = width - (width & 0x7);
+        const __m256i CV_DECL_ALIGNED(64) mask = _mm256_set1_epi32(-1);
+        if(((int64)(dst.data + dst.step) & 0x1f) == 0)
+        {
+            for(y = range.start; y < range.end; y++)
+            {
+                uchar* D = dst.data + dst.step*y;
+                uchar* Dstart = D;
+                int sy = std::min(cvFloor(y*ify), ssize.height-1);
+                const uchar* S = src.data + sy*src.step;
+#pragma unroll(4)
+                for(x = 0; x < avxWidth; x += 8)
+                {
+                    const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
+                    __m256i CV_DECL_ALIGNED(64) indices = _mm256_lddqu_si256(addr);
+                    __m256i CV_DECL_ALIGNED(64) pixels = _mm256_i32gather_epi32((const int*)S, indices, 1);
+                    _mm256_maskstore_epi32((int*)D, mask, pixels);
+                    D += 32;
+                }
+                for(; x < width; x++)
+                {
+                    *(int*)(Dstart + x*4) = *(int*)(S + x_ofs[x]);
+                }
+            }
+        }
+        else
+        {
+            for(y = range.start; y < range.end; y++)
+            {
+                uchar* D = dst.data + dst.step*y;
+                uchar* Dstart = D;
+                int sy = std::min(cvFloor(y*ify), ssize.height-1);
+                const uchar* S = src.data + sy*src.step;
+#pragma unroll(4)
+                for(x = 0; x < avxWidth; x += 8)
+                {
+                    const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
+                    __m256i CV_DECL_ALIGNED(64) indices = _mm256_lddqu_si256(addr);
+                    __m256i CV_DECL_ALIGNED(64) pixels = _mm256_i32gather_epi32((const int*)S, indices, 1);
+                    _mm256_storeu_si256((__m256i*)D, pixels);
+                    D += 32;
+                }
+                for(; x < width; x++)
+                {
+                    *(int*)(Dstart + x*4) = *(int*)(S + x_ofs[x]);
+                }
+            }
+        }
+    }
+
+private:
+    const Mat src;
+    Mat dst;
+    int* x_ofs, pix_size4;
+    double ify;
+
+    resizeNNInvokerAVX4(const resizeNNInvokerAVX4&);
+    resizeNNInvokerAVX4& operator=(const resizeNNInvokerAVX4&);
+};
+
+class resizeNNInvokerAVX2 :
+    public ParallelLoopBody
+{
+public:
+    resizeNNInvokerAVX2(const Mat& _src, Mat &_dst, int *_x_ofs, int _pix_size4, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs), pix_size4(_pix_size4),
+        ify(_ify)
+    {
+    }
+
+#pragma optimization_parameter target_arch=AVX
+    virtual void operator() (const Range& range) const
+    {
+        Size ssize = src.size(), dsize = dst.size();
+        int y, x, pix_size = (int)src.elemSize();
+        int width = dsize.width;
+        //int avxWidth = (width - 1) - ((width - 1) & 0x7);
+        int avxWidth = width - (width & 0xf);
+        const __m256i CV_DECL_ALIGNED(64) mask = _mm256_set1_epi32(-1);
+        const __m256i CV_DECL_ALIGNED(64) shuffle_mask = _mm256_set_epi8(15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0,
+                                                                         15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0);
+        const __m256i CV_DECL_ALIGNED(64) permute_mask = _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0);
+        const __m256i CV_DECL_ALIGNED(64) shift_shuffle_mask = _mm256_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2,
+                                                                               13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2);
+        if(((int64)(dst.data + dst.step) & 0x1f) == 0)
+        {
+            for(y = range.start; y < range.end; y++)
+            {
+                uchar* D = dst.data + dst.step*y;
+                uchar* Dstart = D;
+                int sy = std::min(cvFloor(y*ify), ssize.height-1);
+                const uchar* S = src.data + sy*src.step;
+                const uchar* S2 = S - 2;
+#pragma unroll(4)
+                for(x = 0; x < avxWidth; x += 16)
+                {
+                    const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
+                    __m256i CV_DECL_ALIGNED(64) indices = _mm256_lddqu_si256(addr);
+                    __m256i CV_DECL_ALIGNED(64) pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
+                    const __m256i CV_DECL_ALIGNED(64) *addr2 = (__m256i*)(x_ofs + x + 8);
+                    __m256i CV_DECL_ALIGNED(64) indices2 = _mm256_lddqu_si256(addr2);
+                    __m256i CV_DECL_ALIGNED(64) pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
+                    __m256i CV_DECL_ALIGNED(64) unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
+
+                    __m256i CV_DECL_ALIGNED(64) bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
+                    __m256i CV_DECL_ALIGNED(64) ints_permuted = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
+                    _mm256_maskstore_epi32((int*)D, mask, ints_permuted);
+                    D += 32;
+                }
+                for(; x < width; x++)
+                {
+                    *(ushort*)(Dstart + x*2) = *(ushort*)(S + x_ofs[x]);
+                }
+
+            }
+        }
+        else
+        {
+            for(y = range.start; y < range.end; y++)
+            {
+                uchar* D = dst.data + dst.step*y;
+                uchar* Dstart = D;
+                int sy = std::min(cvFloor(y*ify), ssize.height-1);
+                const uchar* S = src.data + sy*src.step;
+                const uchar* S2 = S - 2;
+#pragma unroll(4)
+                for(x = 0; x < avxWidth; x += 16)
+                {
+                    const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
+                    __m256i CV_DECL_ALIGNED(64) indices = _mm256_lddqu_si256(addr);
+                    __m256i CV_DECL_ALIGNED(64) pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
+                    const __m256i CV_DECL_ALIGNED(64) *addr2 = (__m256i*)(x_ofs + x + 8);
+                    __m256i CV_DECL_ALIGNED(64) indices2 = _mm256_lddqu_si256(addr2);
+                    __m256i CV_DECL_ALIGNED(64) pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
+                    __m256i CV_DECL_ALIGNED(64) unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
+
+                    __m256i CV_DECL_ALIGNED(64) bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
+                    __m256i CV_DECL_ALIGNED(64) ints_permuted = _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
+                    _mm256_storeu_si256((__m256i*)D, ints_permuted);
+                    D += 32;
+                }
+                for(; x < width; x++)
+                {
+                    *(ushort*)(Dstart + x*2) = *(ushort*)(S + x_ofs[x]);
+                }
+            }
+        }
+    }
+
+private:
+    const Mat src;
+    Mat dst;
+    int* x_ofs, pix_size4;
+    double ify;
+
+    resizeNNInvokerAVX2(const resizeNNInvokerAVX2&);
+    resizeNNInvokerAVX2& operator=(const resizeNNInvokerAVX2&);
+};
+#endif
+
+#if CV_SSE4_1
+class resizeNNInvokerSSE2 :
+    public ParallelLoopBody
+{
+public:
+    resizeNNInvokerSSE2(const Mat& _src, Mat &_dst, int *_x_ofs, int _pix_size4, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs), pix_size4(_pix_size4),
+        ify(_ify)
+    {
+    }
+
+#pragma optimization_parameter target_arch=SSE4.2
+    virtual void operator() (const Range& range) const
+    {
+        Size ssize = src.size(), dsize = dst.size();
+        int y, x, pix_size = (int)src.elemSize();
+        int width = dsize.width;
+        int sseWidth = width - (width & 0x7);
+        for(y = range.start; y < range.end; y++)
+        {
+            uchar* D = dst.data + dst.step*y;
+            uchar* Dstart = D;
+            int sy = std::min(cvFloor(y*ify), ssize.height-1);
+            const uchar* S = src.data + sy*src.step;
+            __m128i CV_DECL_ALIGNED(64) pixels = _mm_set1_epi16(0);
+            for(x = 0; x < sseWidth; x += 8)
+            {
+                ushort imm = *(ushort*)(S + x_ofs[x + 0]);
+                pixels = _mm_insert_epi16(pixels, imm, 0);
+                imm = *(ushort*)(S + x_ofs[x + 1]);
+                pixels = _mm_insert_epi16(pixels, imm, 1);
+                imm = *(ushort*)(S + x_ofs[x + 2]);
+                pixels = _mm_insert_epi16(pixels, imm, 2);
+                imm = *(ushort*)(S + x_ofs[x + 3]);
+                pixels = _mm_insert_epi16(pixels, imm, 3);
+                imm = *(ushort*)(S + x_ofs[x + 4]);
+                pixels = _mm_insert_epi16(pixels, imm, 4);
+                imm = *(ushort*)(S + x_ofs[x + 5]);
+                pixels = _mm_insert_epi16(pixels, imm, 5);
+                imm = *(ushort*)(S + x_ofs[x + 6]);
+                pixels = _mm_insert_epi16(pixels, imm, 6);
+                imm = *(ushort*)(S + x_ofs[x + 7]);
+                pixels = _mm_insert_epi16(pixels, imm, 7);
+                _mm_storeu_si128((__m128i*)D, pixels);
+                D += 16;
+            }
+            for(; x < width; x++)
+            {
+                *(ushort*)(Dstart + x*2) = *(ushort*)(S + x_ofs[x]);
+            }
+        }
+    }
+
+private:
+    const Mat src;
+    Mat dst;
+    int* x_ofs, pix_size4;
+    double ify;
+
+    resizeNNInvokerSSE2(const resizeNNInvokerSSE2&);
+    resizeNNInvokerSSE2& operator=(const resizeNNInvokerSSE2&);
+};
+
+class resizeNNInvokerSSE4 :
+    public ParallelLoopBody
+{
+public:
+    resizeNNInvokerSSE4(const Mat& _src, Mat &_dst, int *_x_ofs, int _pix_size4, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs), pix_size4(_pix_size4),
+        ify(_ify)
+    {
+    }
+#pragma optimization_parameter target_arch=SSE4.2
+    virtual void operator() (const Range& range) const
+    {
+        Size ssize = src.size(), dsize = dst.size();
+        int y, x, pix_size = (int)src.elemSize();
+        int width = dsize.width;
+        int sseWidth = width - (width & 0x3);
+        for(y = range.start; y < range.end; y++)
+        {
+            uchar* D = dst.data + dst.step*y;
+            uchar* Dstart = D;
+            int sy = std::min(cvFloor(y*ify), ssize.height-1);
+            const uchar* S = src.data + sy*src.step;
+            __m128i CV_DECL_ALIGNED(64) pixels = _mm_set1_epi16(0);
+            for(x = 0; x < sseWidth; x += 4)
+            {
+                int imm = *(int*)(S + x_ofs[x + 0]);
+                pixels = _mm_insert_epi32(pixels, imm, 0);
+                imm = *(int*)(S + x_ofs[x + 1]);
+                pixels = _mm_insert_epi32(pixels, imm, 1);
+                imm = *(int*)(S + x_ofs[x + 2]);
+                pixels = _mm_insert_epi32(pixels, imm, 2);
+                imm = *(int*)(S + x_ofs[x + 3]);
+                pixels = _mm_insert_epi32(pixels, imm, 3);
+                _mm_storeu_si128((__m128i*)D, pixels);
+                D += 16;
+            }
+            for(; x < width; x++)
+            {
+                *(int*)(Dstart + x*4) = *(int*)(S + x_ofs[x]);
+            }
+        }
+    }
+
+private:
+    const Mat src;
+    Mat dst;
+    int* x_ofs, pix_size4;
+    double ify;
+
+    resizeNNInvokerSSE4(const resizeNNInvokerSSE4&);
+    resizeNNInvokerSSE4& operator=(const resizeNNInvokerSSE4&);
+};
+#endif
+
 static void
 resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 {
@@ -435,8 +729,42 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     }
 
     Range range(0, dsize.height);
-    resizeNNInvoker invoker(src, dst, x_ofs, pix_size4, ify);
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+#if CV_AVX2
+    if(checkHardwareSupport(CV_CPU_AVX2) && ((pix_size == 2) || (pix_size == 4)))
+    {
+        if(pix_size == 2)
+        {
+            resizeNNInvokerAVX2 invoker(src, dst, x_ofs, pix_size4, ify);
+            parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+        }
+        else if (pix_size == 4)
+        {
+            resizeNNInvokerAVX4 invoker(src, dst, x_ofs, pix_size4, ify);
+            parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+        }
+    }
+    else
+#endif
+#if CV_SSE4_1
+    if(checkHardwareSupport(CV_CPU_SSE4_1) && ((pix_size == 2) || (pix_size == 4)))
+    {
+        if(pix_size == 2)
+        {
+            resizeNNInvokerSSE2 invoker(src, dst, x_ofs, pix_size4, ify);
+            parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+        }
+        else if(pix_size == 4)
+        {
+            resizeNNInvokerSSE4 invoker(src, dst, x_ofs, pix_size4, ify);
+            parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+        }
+    }
+    else
+#endif
+    {
+        resizeNNInvoker invoker(src, dst, x_ofs, pix_size4, ify);
+        parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+    }
 }
 
 
