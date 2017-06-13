@@ -325,7 +325,7 @@ public:
                 wp.pix0[comp1->tail].setNext(comp2->head);
                 tail = comp2->tail;
             }
-            
+
             size = comp1->size + comp2->size;
             history = comp1->history;
 
@@ -508,15 +508,19 @@ public:
                 ptr = *heap[curr_gray];
                 heap[curr_gray]--;
 
-                if( curr_gray < comptr[-1].gray_level )
+                if (curr_gray < comptr[-1].gray_level)
+                {
                     comptr->growHistory(histptr, wp, curr_gray, false);
+                    CV_DbgAssert(comptr->size == comptr->history->size);
+                }
                 else
                 {
-                    // keep merging top two comp in stack until the gray level >= pixel_val
+                    // there must one pixel with the second component's gray level in the heap,
+                    // so curr_gray is not large than the second component's gray level
                     comptr--;
-                    assert(curr_gray == comptr->gray_level);
+                    CV_DbgAssert(curr_gray == comptr->gray_level);
                     comptr->merge(comptr, comptr + 1, histptr, wp);
-                    assert(curr_gray == comptr->gray_level);
+                    CV_DbgAssert(curr_gray == comptr->gray_level);
                 }
             }
         }
@@ -1025,6 +1029,8 @@ extractMSER_8uC3( const Mat& src,
 
 void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, vector<Rect>& bboxes )
 {
+    CV_INSTRUMENT_REGION()
+
     Mat src = _src.getMat();
 
     msers.clear();
@@ -1061,6 +1067,8 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
 
 void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArray _mask )
 {
+    CV_INSTRUMENT_REGION()
+
     vector<Rect> bboxes;
     vector<vector<Point> > msers;
     Mat mask = _mask.getMat();
