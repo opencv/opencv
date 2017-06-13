@@ -425,7 +425,7 @@ int cv::getNumThreads(void)
 
 #elif defined HAVE_GCD
 
-    return 512; // the GCD thread pool limit
+    return cv::getNumberOfCPUs(); // the GCD thread pool limit
 
 #elif defined WINRT
 
