@@ -1210,10 +1210,11 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
         // Check if the circle has enough support
         if( max_count > acc_threshold )
         {
-            float c[3];
+            float c[4];
             c[0] = cx;
             c[1] = cy;
             c[2] = (float)r_best;
+            c[3] = (float)max_count;
             cvSeqPush( circles, c );
             if( circles->total > circles_max )
                 return;
