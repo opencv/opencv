@@ -4582,6 +4582,7 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
 {
     CV_CPU_CALL_FP16(cvtScaleHalf_SIMD32f16f, (src, sstep, dst, dstep, size));
 
+#if !defined(CV_CPU_COMPILE_FP16)
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
@@ -4592,6 +4593,7 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
             dst[x] = convertFp16SW(src[x]);
         }
     }
+#endif
 }
 
 template<> void
@@ -4599,6 +4601,7 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 {
     CV_CPU_CALL_FP16(cvtScaleHalf_SIMD16f32f, (src, sstep, dst, dstep, size));
 
+#if !defined(CV_CPU_COMPILE_FP16)
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
@@ -4609,6 +4612,7 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
             dst[x] = convertFp16SW(src[x]);
         }
     }
+#endif
 }
 
 #ifdef HAVE_OPENVX
