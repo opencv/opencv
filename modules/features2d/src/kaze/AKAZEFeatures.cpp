@@ -1235,12 +1235,20 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 int y1 = fRound(sample_y);
                 int x1 = fRound(sample_x);
 
-                float ri = *(evolution[level].Lt.ptr<float>(y1)+x1);
+                // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
+                // clip values so they fit into the image
+                const MatSize& size = evolution[level].Lt.size;
+                CV_DbgAssert(size == evolution[level].Lx.size &&
+                             size == evolution[level].Ly.size);
+                y1 = min(max(0, y1), size[0] - 1);
+                x1 = min(max(0, x1), size[1] - 1);
+
+                float ri = *(evolution[level].Lt.ptr<float>(y1, x1));
                 di += ri;
 
                 if(chan > 1) {
-                    float rx = *(evolution[level].Lx.ptr<float>(y1)+x1);
-                    float ry = *(evolution[level].Ly.ptr<float>(y1)+x1);
+                    float rx = *(evolution[level].Lx.ptr<float>(y1, x1));
+                    float ry = *(evolution[level].Ly.ptr<float>(y1, x1));
                     if (chan == 2) {
                       dx += sqrtf(rx*rx + ry*ry);
                     }
