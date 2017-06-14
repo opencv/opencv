@@ -371,47 +371,59 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
 CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color )
 {
-    // If none of the writers is used
-    // these statements suppress 'unused parameter' warnings.
+    return cvCreateVideoWriterWithPreference(CV_CAP_ANY, filename, fourcc, fps, frameSize, is_color);
+}
+
+CvVideoWriter* cvCreateVideoWriterWithPreference(int apiPreference, const char* filename, int fourcc,
+                                            double fps, CvSize frameSize, int is_color )
+{
     CV_UNUSED(frameSize);
     CV_UNUSED(is_color);
-
-    //CV_FUNCNAME( "cvCreateVideoWriter" );
 
     CvVideoWriter *result = 0;
 
     if(!fourcc || !fps)
         TRY_OPEN(result, cvCreateVideoWriter_Images(filename))
 
-#ifdef HAVE_FFMPEG
-    TRY_OPEN(result, cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color))
-#endif
-
-#ifdef HAVE_VFW
-    TRY_OPEN(result, cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, is_color))
-#endif
-
-#ifdef HAVE_MSMF
-    TRY_OPEN(result, cvCreateVideoWriter_MSMF(filename, fourcc, fps, frameSize, is_color))
-#endif
-
-/*  #ifdef HAVE_XINE
-    TRY_OPEN(result, cvCreateVideoWriter_XINE(filename, fourcc, fps, frameSize, is_color))
-    #endif
-*/
-#ifdef HAVE_AVFOUNDATION
-    TRY_OPEN(result, cvCreateVideoWriter_AVFoundation(filename, fourcc, fps, frameSize, is_color))
-#endif
-
-#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
-    TRY_OPEN(result, cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color))
-#endif
-
-#ifdef HAVE_GSTREAMER
-    TRY_OPEN(result, cvCreateVideoWriter_GStreamer(filename, fourcc, fps, frameSize, is_color))
-#endif
-
-    TRY_OPEN(result, cvCreateVideoWriter_Images(filename))
+    switch(apiPreference)
+    {
+        default:
+            //exit if the specified API is unavaliable
+            if (apiPreference != CV_CAP_ANY) break;
+        #ifdef HAVE_FFMPEG
+        case CV_CAP_FFMPEG:
+            TRY_OPEN(result, cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color))
+            if (apiPreference != CV_CAP_ANY) break;
+        #endif
+        #ifdef HAVE_VFW
+        case CV_CAP_VFW:
+            TRY_OPEN(result, cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, is_color))
+            if (apiPreference != CV_CAP_ANY) break;
+        #endif
+        #ifdef HAVE_MSMF
+        case CV_CAP_MSMF:
+            TRY_OPEN(result, cvCreateVideoWriter_MSMF(filename, fourcc, fps, frameSize, is_color))
+            if (apiPreference != CV_CAP_ANY) break;
+        #endif
+        #ifdef HAVE_AVFOUNDATION
+        case CV_CAP_AVFOUNDATION:
+            TRY_OPEN(result, cvCreateVideoWriter_AVFoundation(filename, fourcc, fps, frameSize, is_color))
+            if (apiPreference != CV_CAP_ANY) break;
+        #endif
+        #if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
+        case(CV_CAP_QT):
+            TRY_OPEN(result, cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color))
+            if (apiPreference != CV_CAP_ANY) break;
+        #endif
+        #ifdef HAVE_GSTREAMER
+        case CV_CAP_GSTREAMER:
+            TRY_OPEN(result, cvCreateVideoWriter_GStreamer (filename, fourcc, fps, frameSize, is_color))
+            if (apiPreference != CV_CAP_ANY) break;
+        #endif
+        case CV_CAP_IMAGES:
+            TRY_OPEN(result, cvCreateVideoWriter_Images(filename))
+            if (apiPreference != CV_CAP_ANY) break;
+    }
 
     return result;
 }
@@ -543,10 +555,11 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
     return Ptr<IVideoCapture>();
 }
 
-static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
+static Ptr<IVideoWriter> IVideoWriter_create(int apiPreference, const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
     Ptr<IVideoWriter> iwriter;
-    if( _fourcc == CV_FOURCC('M', 'J', 'P', 'G') )
+    if( (apiPreference == CAP_OCV_MJPEG || apiPreference == CAP_ANY)
+            && _fourcc == CV_FOURCC('M', 'J', 'P', 'G') )
         iwriter = createMotionJpegWriter(filename, fps, frameSize, isColor);
     return iwriter;
 }
@@ -725,6 +738,12 @@ VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size f
     open(filename, _fourcc, fps, frameSize, isColor);
 }
 
+
+VideoWriter::VideoWriter(int apiPreference, const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
+{
+    open(apiPreference, filename, _fourcc, fps, frameSize, isColor);
+}
+
 void VideoWriter::release()
 {
     iwriter.release();
@@ -738,13 +757,18 @@ VideoWriter::~VideoWriter()
 
 bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
+    return open(CAP_ANY, filename, _fourcc, fps, frameSize, isColor);
+}
+
+bool VideoWriter::open(int apiPreference, const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
+{
     CV_INSTRUMENT_REGION()
 
     if (isOpened()) release();
-    iwriter = IVideoWriter_create(filename, _fourcc, fps, frameSize, isColor);
+    iwriter = IVideoWriter_create(apiPreference, filename, _fourcc, fps, frameSize, isColor);
     if (!iwriter.empty())
         return true;
-    writer.reset(cvCreateVideoWriter(filename.c_str(), _fourcc, fps, frameSize, isColor));
+    writer.reset(cvCreateVideoWriterWithPreference(apiPreference, filename.c_str(), _fourcc, fps, frameSize, isColor));
     return isOpened();
 }
 
