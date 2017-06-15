@@ -33,6 +33,7 @@
 from __future__ import print_function
 import hdr_parser, sys, re
 from templates import *
+from sets import Set
 
 if sys.version_info[0] >= 3:
     from io import StringIO
@@ -49,7 +50,9 @@ ignore_list = ['locate',  #int&
                'minMaxLoc',
                'floodFill',
                'phaseCorrelate',
-               'randShuffle'
+               'randShuffle',
+               'calibrationMatrixValues', #double&
+               'undistortPoints' # global redefinition
                ]
 
 # Features to be exported
@@ -95,6 +98,7 @@ class ClassInfo(object):
         self.consts = {}
         customname = False
         self.jsfuncs = {}
+        self.constructor_arg_num = Set()
 
         self.has_smart_ptr = False
 
@@ -387,7 +391,7 @@ class JSWrapperGenerator(object):
 
 
             # Wrapper function
-            wrap_func_name = (func.class_name+"_" if class_info != None else "") + func.cname.split("::")[-1] + "_wrapper"
+            wrap_func_name = (func.class_name+"_" if class_info != None else "") + func.name.split("::")[-1] + "_wrapper"
             js_func_name = func.name
 
             # TODO: Name functions based wrap directives or based on arguments list
@@ -517,6 +521,17 @@ class JSWrapperGenerator(object):
             # Binding
             if class_info:
                 if factory:
+                    print("Factory Function: ", c_func_name, len(variant.args), class_info.name)
+                    if variant.is_pure_virtual:
+                        # FIXME: workaround for pure virtual in constructor
+                        # e.g. DescriptorMatcher_clone_wrapper
+                        continue
+                    args_num = len(variant.args)
+                    if args_num in class_info.constructor_arg_num:
+                        # FIXME: workaournd for constructor overload with same args number
+                        # e.g. DescriptorMatcher
+                        continue
+                    class_info.constructor_arg_num.add(args_num)
                     binding_text = ctr_template.substitute(const='const' if variant.is_const else '',
                                                        cpp_name=c_func_name,
                                                        ret=ret_type,
@@ -642,15 +657,28 @@ class JSWrapperGenerator(object):
 
         return binding_text_list
 
+    def print_decls(self, decls):
+        """
+        Prints the list of declarations, retrieived by the parse() method
+        """
+        for d in decls:
+            print(d[0], d[1], ";".join(d[2]))
+            for a in d[3]:
+                print("   ", a[0], a[1], a[2], end="")
+                if a[3]:
+                    print("; ".join(a[3]))
+                else:
+                    print()
 
-
-    def gen(self, src_files):
+    def gen(self, dst_file, src_files, core_bindings):
 
         global with_default_params
 
         # step 1: scan the headers and extract classes, enums and functions
         for hdr in src_files:
             decls = self.parser.parse(hdr)
+            print(hdr);
+            self.print_decls(decls);
             if len(decls) == 0:
                 continue
             for decl in decls:
@@ -717,6 +745,11 @@ class JSWrapperGenerator(object):
                         args = []
                         for arg in variant.args:
                             args.append(arg.tp)
+                        print('Constructor: ', class_info.name, len(variant.args))
+                        args_num = len(variant.args)
+                        if args_num in class_info.constructor_arg_num:
+                            continue
+                        class_info.constructor_arg_num.add(args_num)
                         class_bindings.append(constructor_template.substitute(signature=', '.join(args)))
                 else:
                     if with_wrapped_functions and (len(method.variants) > 1 or len(method.variants[0].args)>0 or "String" in method.variants[0].rettype):
@@ -779,7 +812,7 @@ class JSWrapperGenerator(object):
                         print(name)
                         #TODO: represent anonymous enums with constants
 
-        with open("core_bindings.cpp") as f:
+        with open(core_bindings) as f:
             ret = f.read()
 
         defis = '\n'.join(self.wrapper_funcs)
@@ -787,37 +820,16 @@ class JSWrapperGenerator(object):
         ret += emscripten_binding_template.substitute(binding_name='testBinding', bindings=''.join(self.bindings))
 
 
-        print(ret)
-        text_file = open("../bindings.cpp", "w")
+        # print(ret)
+        text_file = open(dst_file, "w")
         text_file.write(ret)
         text_file.close()
 
 
 if __name__ == "__main__":
-    srcFiles = opencv_hdr_list = [
-                    "../opencv/Modules/core/include/opencv2/core.hpp",
-                    "../opencv/Modules/core/include/opencv2/core/types.hpp",
-                    "../opencv/Modules/core/include/opencv2/core/ocl.hpp",
-                    "../opencv/Modules/core/include/opencv2/core/mat.hpp",
-                    "../opencv/Modules/flann/include/opencv2/flann.hpp",
-                    "../opencv/Modules/flann/include/opencv2/flann/miniflann.hpp",
-                    "../opencv/Modules/ml/include/opencv2/ml.hpp",
-                    "../opencv/Modules/photo/include/opencv2/photo.hpp",
-                    "../opencv/Modules/imgproc/include/opencv2/imgproc.hpp",
-                    "../opencv/Modules/shape/include/opencv2/shape.hpp",
-                    "../opencv/Modules/shape/include/opencv2/shape/hist_cost.hpp",
-                    "../opencv/Modules/shape/include/opencv2/shape/shape_distance.hpp",
-                    "../opencv/Modules/shape/include/opencv2/shape/shape_transformer.hpp",
-                    "../opencv/Modules/features2d/include/opencv2/features2d.hpp",
-                    "../opencv/Modules/video/include/opencv2/video/tracking.hpp",
-                    "../opencv/Modules/video/include/opencv2/video/background_segm.hpp",
-                    "../opencv/Modules/objdetect/include/opencv2/objdetect.hpp",
-                    "../opencv/Modules/imgcodecs/include/opencv2/imgcodecs.hpp"
-                    ]
-
-    if len(sys.argv) > 1:
-        dstDir = sys.argv[1]
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
+        dstFile = sys.argv[1]
         srcFiles = open(sys.argv[2], 'r').read().split(';')
+        coreBindings = sys.argv[3]
     generator = JSWrapperGenerator()
-    generator.gen(srcFiles)
+    generator.gen(dstFile, srcFiles, coreBindings)
