@@ -59,6 +59,11 @@ local net_reshape_batch = nn.Sequential()
 net_reshape_batch:add(nn.Reshape(5, 4, 3, true))
 save(net_reshape_batch, torch.rand(2, 3, 4, 5), 'net_reshape_batch')
 
+local net_reshape_single_sample = nn.Sequential()
+net_reshape_single_sample:add(nn.Reshape(3 * 4 * 5))
+net_reshape_single_sample:add(nn.Linear(3 * 4 * 5, 10))
+save(net_reshape_single_sample, torch.rand(1, 3, 4, 5), 'net_reshape_single_sample')
+
 save(nn.Linear(7, 3), torch.rand(13, 7), 'net_linear_2d')
 
 local net_parallel = nn.Parallel(4, 2)
