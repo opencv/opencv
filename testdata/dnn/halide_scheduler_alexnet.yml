@@ -1,0 +1,99 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for AlexNet architecture.
+
+patterns:
+  relu_345:
+    reorder: [x, c, y]
+    split: { y: 2, c: 16 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 13 }
+  fully_connected:
+    split: { c: 8 }
+    fuse: { src: [x, y, co], dst: block }
+    parallel: block
+    vectorize: { ci: 8 }
+
+scheduling:
+  relu1:
+    reorder: [x, c, y]
+    split: { y: 2, c: 8 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 4 }
+  conv1_constant_exterior:
+    compute_at: { relu1: yi }
+
+  norm1:
+    reorder: [x, c, y]
+    split: { y: 4 }
+    parallel: yo
+    vectorize: { x: 16 }
+  norm1_padded_sq:
+    store_at: { norm1: yo }
+    compute_at: { norm1: yi }
+
+  pool1:
+    split: { c: 16 }
+    parallel: co
+    vectorize: { x: 8 }
+
+  relu2:
+    reorder: [x, c, y]
+    split: { y: 2, c: 8 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  conv2_constant_exterior:
+    compute_at: { relu2: yi }
+
+  norm2:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 16 }
+  norm2_padded_sq:
+    store_at: { norm2: yo }
+    compute_at: { norm2: yi }
+
+  pool2:
+    split: { c: 16 }
+    parallel: co
+    vectorize: { x: 8 }
+
+  relu3:
+    pattern: relu_345
+  conv3_constant_exterior:
+    compute_at: { relu3: yi }
+
+  relu4:
+    pattern: relu_345
+  conv4_constant_exterior:
+    compute_at: { relu4: yi }
+
+  relu5:
+    pattern: relu_345
+  conv5_constant_exterior:
+    compute_at: { relu5: yi }
+
+  pool5:
+    split: { c: 16 }
+    parallel: co
+    vectorize: { x: 4 }
+
+  relu6:
+    pattern: fully_connected
+  relu7:
+    pattern: fully_connected
+  fc8:
+    pattern: fully_connected
+  prob:
+    pattern: fully_connected

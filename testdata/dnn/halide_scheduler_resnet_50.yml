@@ -1,0 +1,460 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for ResNet-50 architecture.
+
+patterns:
+  stripe:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 16 }
+  tile_xy:
+    split: { x: x_split, y: y_split }
+    fuse: { src: [xo, yo], dst: tile }
+    reorder: [xi, yi, tile]
+    parallel: tile
+    vectorize: { xi: x_split }
+  tile_xyc:
+    split: { x: x_split, y: y_split, c: c_split }
+    fuse: { src: [xo, yo, co], dst: tile }
+    reorder: [xi, yi, ci, tile]
+    parallel: tile
+    vectorize: { xi: x_split }
+  tile_xc:
+    split: { x: x_split, c: c_split }
+    fuse: { src: [xo, y, co], dst: tile }
+    reorder: [xi, ci, tile]
+    parallel: tile
+    vectorize: { xi: x_split }
+
+scheduling:
+  # Block 1.
+  conv1_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 16 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  conv1_constant_exterior:
+    compute_at: { conv1_relu: yi }
+  pool1:
+    split: { c: 16 }
+    parallel: co
+    vectorize: { x: 8 }
+
+  # Block 2a.
+  scale2a_branch1:
+    pattern: stripe
+  res2a_branch1_constant_exterior:
+    compute_at: { scale2a_branch1: yi }
+  res2a_branch2a_relu:
+    pattern: stripe
+  res2a_branch2a_constant_exterior:
+    compute_at: { res2a_branch2a_relu: yi }
+  res2a_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 16 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  res2a_branch2b_constant_exterior:
+    compute_at: { res2a_branch2b_relu: yi }
+  scale2a_branch2c:
+    pattern: stripe
+  res2a_branch2c_constant_exterior:
+    compute_at: { scale2a_branch2c: yi }
+  res2a_relu:
+    pattern: stripe
+
+  # Block 2b.
+  res2b_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 16 }
+  res2b_branch2a_constant_exterior:
+    compute_at: { res2b_branch2a_relu: tile }
+  res2b_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 16 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  res2b_branch2b_constant_exterior:
+    compute_at: { res2b_branch2b_relu: yi }
+  scale2b_branch2c:
+    pattern: stripe
+  res2b_branch2c_constant_exterior:
+    compute_at: { scale2b_branch2c: yi }
+  res2b_relu:
+    pattern: stripe
+
+  # Block 2c.
+  res2c_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 16 }
+  res2c_branch2a_constant_exterior:
+    compute_at: { res2c_branch2a_relu: tile }
+  res2c_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 16 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  res2c_branch2b_constant_exterior:
+    compute_at: { res2c_branch2b_relu: yi }
+  scale2c_branch2c:
+    pattern: stripe
+  res2c_branch2c_constant_exterior:
+    compute_at: { scale2c_branch2c: yi }
+  res2c_relu:
+    pattern: stripe
+
+  # Block 3a.
+  scale3a_branch1:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3a_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3a_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 16 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  res3a_branch2b_constant_exterior:
+    compute_at: { res3a_branch2b_relu: yi }
+  scale3a_branch2c:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3a_relu:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+
+  # Block 3b.
+  res3b_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3b_branch2a_constant_exterior:
+    compute_at: { res3b_branch2a_relu: tile }
+  res3b_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  res3b_branch2b_constant_exterior:
+    compute_at: { res3b_branch2b_relu: yi }
+  scale3b_branch2c:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3b_branch2c_constant_exterior:
+    compute_at: { scale3b_branch2c: tile }
+  res3b_relu:
+    pattern: stripe
+
+  # Block 3c.
+  res3c_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3c_branch2a_constant_exterior:
+    compute_at: { res3c_branch2a_relu: tile }
+  res3c_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  res3c_branch2b_constant_exterior:
+    compute_at: { res3c_branch2b_relu: yi }
+  scale3c_branch2c:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3c_branch2c_constant_exterior:
+    compute_at: { scale3c_branch2c: tile }
+  res3c_relu:
+    pattern: stripe
+
+  # Block 3d.
+  res3d_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3d_branch2a_constant_exterior:
+    compute_at: { res3d_branch2a_relu: tile }
+  res3d_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 16 }
+  res3d_branch2b_constant_exterior:
+    compute_at: { res3d_branch2b_relu: yi }
+  scale3d_branch2c:
+    pattern: tile_xc
+    params: { x_split: 16, c_split: 32 }
+  res3d_branch2c_constant_exterior:
+    compute_at: { scale3d_branch2c: tile }
+  res3d_relu:
+    pattern: stripe
+
+  # Block 4a.
+  scale4a_branch1:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 64 }
+  res4a_branch1_constant_exterior:
+    compute_at: { scale4a_branch1: tile }
+  res4a_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 32 }
+  res4a_branch2a_constant_exterior:
+    compute_at: { res4a_branch2a_relu: tile }
+  res4a_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 14 }
+  res4a_branch2b_constant_exterior:
+    compute_at: { res4a_branch2b_relu: yi }
+  scale4a_branch2c:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 32 }
+  res4a_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 14 }
+
+  # Block 4b.
+  res4b_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 64 }
+  res4b_branch2a_constant_exterior:
+    compute_at: { res4b_branch2a_relu: tile }
+  res4b_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 14 }
+  res4b_branch2b_constant_exterior:
+    compute_at: { res4b_branch2b_relu: yi }
+  scale4b_branch2c:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 32 }
+  res4b_branch2c_constant_exterior:
+    compute_at: { scale4b_branch2c: tile }
+  res4b_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 14 }
+
+  # Block 4c.
+  res4c_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 64 }
+  res4c_branch2a_constant_exterior:
+    compute_at: { res4c_branch2a_relu: tile }
+  res4c_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 14 }
+  res4c_branch2b_constant_exterior:
+    compute_at: { res4c_branch2b_relu: yi }
+  scale4c_branch2c:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 32 }
+  res4c_branch2c_constant_exterior:
+    compute_at: { scale4c_branch2c: tile }
+  res4c_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 14 }
+
+  # Block 4d.
+  res4d_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 64 }
+  res4d_branch2a_constant_exterior:
+    compute_at: { res4d_branch2a_relu: tile }
+  res4d_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 14 }
+  res4d_branch2b_constant_exterior:
+    compute_at: { res4d_branch2b_relu: yi }
+  scale4d_branch2c:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 32 }
+  res4d_branch2c_constant_exterior:
+    compute_at: { scale4d_branch2c: tile }
+  res4d_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 14 }
+
+  # Block 4e.
+  res4e_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 64 }
+  res4e_branch2a_constant_exterior:
+    compute_at: { res4e_branch2a_relu: tile }
+  res4e_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 14 }
+  res4e_branch2b_constant_exterior:
+    compute_at: { res4e_branch2b_relu: yi }
+  scale4e_branch2c:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 32 }
+  res4e_branch2c_constant_exterior:
+    compute_at: { scale4e_branch2c: tile }
+  res4e_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 14 }
+
+  # Block 4f.
+  res4f_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 64 }
+  res4f_branch2a_constant_exterior:
+    compute_at: { res4f_branch2a_relu: tile }
+  res4f_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 14 }
+  res4f_branch2b_constant_exterior:
+    compute_at: { res4f_branch2b_relu: yi }
+  scale4f_branch2c:
+    pattern: tile_xc
+    params: { x_split: 8, c_split: 32 }
+  res4f_branch2c_constant_exterior:
+    compute_at: { scale4f_branch2c: tile }
+  res4f_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 14 }
+
+  # Block 5a.
+  scale5a_branch1:
+    pattern: tile_xc
+    params: { x_split: 7, c_split: 64 }
+  res5a_branch1_constant_exterior:
+    compute_at: { scale5a_branch1: tile }
+  res5a_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 7, c_split: 32 }
+  res5a_branch2a_constant_exterior:
+    compute_at: { res5a_branch2a_relu: tile }
+  res5a_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 32 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 7 }
+  res5a_branch2b_constant_exterior:
+    compute_at: { res5a_branch2b_relu: yi }
+  scale5a_branch2c:
+    pattern: tile_xc
+    params: { x_split: 7, c_split: 64 }
+  res5a_branch2c_constant_exterior:
+    compute_at: { scale5a_branch2c: tile }
+  res5a_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 7 }
+
+  # Block 5b.
+  res5b_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 7, c_split: 64 }
+  res5b_branch2a_constant_exterior:
+    compute_at: { res5b_branch2a_relu: tile }
+  res5b_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 64 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 7 }
+  res5b_branch2b_constant_exterior:
+    compute_at: { res5b_branch2b_relu: yi }
+  scale5b_branch2c:
+    pattern: tile_xc
+    params: { x_split: 7, c_split: 64 }
+  res5b_branch2c_constant_exterior:
+    compute_at: { scale5b_branch2c: tile }
+  res5b_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 7 }
+
+  # Block 5c.
+  res5c_branch2a_relu:
+    pattern: tile_xc
+    params: { x_split: 7, c_split: 64 }
+  res5c_branch2a_constant_exterior:
+    compute_at: { res5c_branch2a_relu: tile }
+  res5c_branch2b_relu:
+    reorder: [x, c, y]
+    split: { y: 2, c: 64 }
+    parallel: [yo, co]
+    unroll: yi
+    vectorize: { x: 7 }
+  res5c_branch2b_constant_exterior:
+    compute_at: { res5c_branch2b_relu: yi }
+  scale5c_branch2c:
+    pattern: tile_xc
+    params: { x_split: 7, c_split: 64 }
+  res5c_branch2c_constant_exterior:
+    compute_at: { scale5c_branch2c: tile }
+  res5c_relu:
+    reorder: [x, c, y]
+    split: { y: 2 }
+    parallel: yo
+    unroll: yi
+    vectorize: { x: 7 }
+
+  # The rest.
+  pool5:
+    split: { c: 32 }
+    parallel: co
+    vectorize: { ci: 16 }
+  fc1000:
+    split: { c: 32 }
+    parallel: co
+    vectorize: { ci: 8 }
+  prob:
+    split: { c: 32 }
+    parallel: co
+    vectorize: { ci: 8 }
