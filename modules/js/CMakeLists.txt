@@ -24,11 +24,39 @@ foreach(m ${OPENCV_MODULES_BUILD})
   endif()
 endforeach()
 
+set(opencv_hdrs "")
+foreach(m ${OPENCV_JS_MODULES})
+  list(APPEND opencv_hdrs ${OPENCV_MODULE_${m}_HEADERS})
+endforeach(m)
+
+# header blacklist
+ocv_list_filterout(opencv_hdrs "modules/.*.h$")
+ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda")
+ocv_list_filterout(opencv_hdrs "modules/core/include/opencv2/core/opengl.hpp")
+ocv_list_filterout(opencv_hdrs "modules/cuda.*")
+ocv_list_filterout(opencv_hdrs "modules/cudev")
+ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
+ocv_list_filterout(opencv_hdrs "modules/.*/detection_based_tracker.hpp") # Conditional compilation
+
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
+
+set(bindings_cpp "${CMAKE_CURRENT_BINARY_DIR}/bindings.cpp")
+
+add_custom_command(
+   OUTPUT ${bindings_cpp}
+   COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src/embindgen.py" ${bindings_cpp} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${CMAKE_CURRENT_SOURCE_DIR}/src/core_bindings.cpp"
+   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/core_bindings.cpp
+   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/embindgen.py
+   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates.py
+   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/hdr_parser.py
+   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
+   DEPENDS ${opencv_hdrs})
+
 add_definitions("-std=c++11")
 
 link_libraries(${OPENCV_MODULE_${the_module}_DEPS})
 
-ocv_add_executable(${the_module} ${CMAKE_CURRENT_SOURCE_DIR}/src/bindings.cpp)
+ocv_add_executable(${the_module} ${bindings_cpp})
 
 set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-s TOTAL_MEMORY=134217728 -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME=\"'cv'\" -s DEMANGLE_SUPPORT=1 -s FORCE_FILESYSTEM=1 --use-preload-plugins --bind")
 
@@ -51,7 +79,7 @@ set(test_dir ${CMAKE_CURRENT_SOURCE_DIR}/test)
 
 set(opencv_test_js_file_deps "")
 
-message(STATUS "${opencv_test_js_bin_dir}")
+# message(STATUS "${opencv_test_js_bin_dir}")
 
 # make sure the build directory exists
 file(MAKE_DIRECTORY "${opencv_test_js_bin_dir}")
@@ -59,7 +87,7 @@ file(MAKE_DIRECTORY "${opencv_test_js_bin_dir}")
 # gather and copy specific files for js test
 file(GLOB_RECURSE test_files RELATIVE "${test_dir}" "${test_dir}/*")
 foreach(f ${test_files})
-  message(STATUS "copy ${test_dir}/${f} ${opencv_test_js_bin_dir}/${f}")
+  # message(STATUS "copy ${test_dir}/${f} ${opencv_test_js_bin_dir}/${f}")
   add_custom_command(OUTPUT "${opencv_test_js_bin_dir}/${f}"
                      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_dir}/${f}" "${opencv_test_js_bin_dir}/${f}"
                      DEPENDS "${test_dir}/${f}"
