@@ -428,7 +428,9 @@ public:
     {
     }
 
+#if defined(__INTEL_COMPILER)
 #pragma optimization_parameter target_arch=AVX
+#endif
     virtual void operator() (const Range& range) const
     {
         Size ssize = src.size(), dsize = dst.size();
@@ -504,7 +506,9 @@ public:
     {
     }
 
+#if defined(__INTEL_COMPILER)
 #pragma optimization_parameter target_arch=AVX
+#endif
     virtual void operator() (const Range& range) const
     {
         Size ssize = src.size(), dsize = dst.size();
@@ -605,11 +609,13 @@ public:
     {
     }
 
+#if defined(__INTEL_COMPILER)
 #pragma optimization_parameter target_arch=SSE4.2
+#endif
     virtual void operator() (const Range& range) const
     {
         Size ssize = src.size(), dsize = dst.size();
-        int y, x, pix_size = (int)src.elemSize();
+        int y, x;
         int width = dsize.width;
         int sseWidth = width - (width & 0x7);
         for(y = range.start; y < range.end; y++)
@@ -666,11 +672,13 @@ public:
         ify(_ify)
     {
     }
+#if defined(__INTEL_COMPILER)
 #pragma optimization_parameter target_arch=SSE4.2
+#endif
     virtual void operator() (const Range& range) const
     {
         Size ssize = src.size(), dsize = dst.size();
-        int y, x, pix_size = (int)src.elemSize();
+        int y, x;
         int width = dsize.width;
         int sseWidth = width - (width & 0x3);
         for(y = range.start; y < range.end; y++)
