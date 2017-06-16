@@ -24,9 +24,9 @@ using namespace std::tr1;
 typedef TestBaseWithParam<string> stitch;
 
 #ifdef HAVE_OPENCV_XFEATURES2D
-#define TEST_DETECTORS testing::Values("surf", "orb")
+#define TEST_DETECTORS testing::Values("surf", "orb", "akaze")
 #else
-#define TEST_DETECTORS testing::Values<string>("orb")
+#define TEST_DETECTORS testing::Values("orb", "akaze")
 #endif
 
 OCL_PERF_TEST_P(stitch, a123, TEST_DETECTORS)
@@ -39,10 +39,7 @@ OCL_PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     _imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
     vector<UMat> imgs = ToUMat(_imgs);
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
-
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
             : makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
@@ -76,10 +73,7 @@ OCL_PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/b1.png") ) );
     imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
-
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
             : makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
@@ -118,10 +112,7 @@ OCL_PERF_TEST_P(stitch, boat, TEST_DETECTORS)
     _imgs.push_back( imread( getDataPath("stitching/boat6.jpg") ) );
     vector<UMat> imgs = ToUMat(_imgs);
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
-
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
             : makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);

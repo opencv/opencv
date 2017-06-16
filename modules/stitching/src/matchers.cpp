@@ -558,10 +558,7 @@ AKAZEFeaturesFinder::AKAZEFeaturesFinder(int descriptor_type,
 void AKAZEFeaturesFinder::find(InputArray image, detail::ImageFeatures &features)
 {
     CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
-    Mat descriptors;
-    UMat uimage = image.getUMat();
-    akaze->detectAndCompute(uimage, UMat(), features.keypoints, descriptors);
-    features.descriptors = descriptors.getUMat(ACCESS_READ);
+    akaze->detectAndCompute(image, noArray(), features.keypoints, features.descriptors);
 }
 
 #ifdef HAVE_OPENCV_XFEATURES2D
