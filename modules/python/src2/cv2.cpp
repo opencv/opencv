@@ -1609,14 +1609,20 @@ void initcv2()
     return;
 #endif
 
+
 #if PY_MAJOR_VERSION >= 3
-  Py_INCREF(&cv2_UMatWrapperType);
+#define PUBLISH_OBJECT(name, type) Py_INCREF(&type);\
+  PyModule_AddObject(m, name, (PyObject *)&type);
 #else
-  // Unrolled Py_INCREF(&cv2_UMatWrapperType) without (PyObject*) cast
-  // due to "warning: dereferencing type-punned pointer will break strict-aliasing rules"
-  _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&cv2_UMatWrapperType)->ob_refcnt++;
+// Unrolled Py_INCREF(&type) without (PyObject*) cast
+// due to "warning: dereferencing type-punned pointer will break strict-aliasing rules"
+#define PUBLISH_OBJECT(name, type) _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&type)->ob_refcnt++;\
+  PyModule_AddObject(m, name, (PyObject *)&type);
 #endif
-  PyModule_AddObject(m, "UMat", (PyObject *)&cv2_UMatWrapperType);
+
+  PUBLISH_OBJECT("UMat", cv2_UMatWrapperType);
+
+#include "pyopencv_generated_type_publish.h"
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
 //#define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))
