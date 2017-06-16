@@ -331,20 +331,26 @@ public:
 
             CompHistory *h1 = history->child_;
             CompHistory *h2 = comp2->history;
-            if (h2->size > wp.p.minArea)
+            // the child_'s size should be the large one
+            if (h1 && h1->size > h2->size)
             {
-                // the child_'s size should be the large one
-                if (h1 && h1->size > h2->size)
+                // add h2 as a child only if its size is large enough
+                if(h2->size >= wp.p.minArea)
                 {
                     h2->next_ = h1->next_;
                     h1->next_ = h2;
+                    h2->parent_ = history;
                 }
-                else
+            }
+            else
+            {
+                history->child_ = h2;
+                h2->parent_ = history;
+                // reserve h1 as a child only if its size is large enough
+                if (h1 && h1->size >= wp.p.minArea)
                 {
-                    history->child_ = h2;
                     h2->next_ = h1;
                 }
-                h2->parent_ = history;
             }
         }
 
