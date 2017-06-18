@@ -1281,6 +1281,8 @@ cvRunHaarClassifierCascade( const CvHaarClassifierCascade* _cascade,
 namespace cv
 {
 
+const size_t PARALLEL_LOOP_BATCH_SIZE = 100;
+
 class HaarDetectObjects_ScaleImage_Invoker : public ParallelLoopBody
 {
 public:
@@ -1318,6 +1320,10 @@ public:
 
         Size ssz(sum1.cols - 1 - winSize0.width, y2 - y1);
         int x, y, ystep = factor > 2 ? 1 : 2;
+
+        std::vector<Rect> vecLocal;
+        std::vector<int> rejectLevelsLocal;
+        std::vector<double> levelWeightsLocal;
 
 #ifdef HAVE_IPP
         if(CV_IPP_CHECK_COND && cascade->hid_cascade->ipp_stages )
@@ -1365,10 +1371,17 @@ public:
                     for( x = 0; x < ssz.width; x += ystep )
                         if( mask1row[x] != 0 )
                         {
-                            mtx->lock();
-                            vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
-                                                winSize.width, winSize.height));
-                            mtx->unlock();
+                            vecLocal.push_back(Rect(cvRound(x*factor), cvRound(y*factor),
+                                               winSize.width, winSize.height));
+
+                            if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
+                            {
+                                mtx->lock();
+                                vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+                                mtx->unlock();
+
+                                vecLocal.clear();
+                            }
                             if( --positive == 0 )
                                 break;
                         }
@@ -1389,25 +1402,59 @@ public:
                             result = -1*cascade->count;
                         if( cascade->count + result < 4 )
                         {
-                            mtx->lock();
-                            vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
-                                           winSize.width, winSize.height));
-                            rejectLevels->push_back(-result);
-                            levelWeights->push_back(gypWeight);
-                            mtx->unlock();
+                            vecLocal.push_back(Rect(cvRound(x*factor), cvRound(y*factor),
+                                               winSize.width, winSize.height));
+                            rejectLevelsLocal.push_back(-result);
+                            levelWeightsLocal.push_back(gypWeight);
+
+                            if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
+                            {
+                                mtx->lock();
+                                vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+                                rejectLevels->insert(rejectLevels->end(), rejectLevelsLocal.begin(), rejectLevelsLocal.end());
+                                levelWeights->insert(levelWeights->end(), levelWeightsLocal.begin(), levelWeightsLocal.end());
+                                mtx->unlock();
+
+                                vecLocal.clear();
+                                rejectLevelsLocal.clear();
+                                levelWeightsLocal.clear();
+                            }
                         }
                     }
                     else
                     {
                         if( result > 0 )
                         {
-                            mtx->lock();
-                            vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
-                                           winSize.width, winSize.height));
-                            mtx->unlock();
+                            vecLocal.push_back(Rect(cvRound(x*factor), cvRound(y*factor),
+                                               winSize.width, winSize.height));
+
+                            if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
+                            {
+                                mtx->lock();
+                                vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+                                mtx->unlock();
+
+                                vecLocal.clear();
+                            }
                         }
                     }
                 }
+
+        if (rejectLevelsLocal.size())
+        {
+            mtx->lock();
+            vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+            rejectLevels->insert(rejectLevels->end(), rejectLevelsLocal.begin(), rejectLevelsLocal.end());
+            levelWeights->insert(levelWeights->end(), levelWeightsLocal.begin(), levelWeightsLocal.end());
+            mtx->unlock();
+        }
+        else
+            if (vecLocal.size())
+            {
+                mtx->lock();
+                vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+                mtx->unlock();
+            }
     }
 
     const CvHaarClassifierCascade* cascade;
@@ -1450,6 +1497,8 @@ public:
         bool doCannyPruning = p0 != 0;
         int sstep = (int)(sumstep/sizeof(p0[0]));
 
+        std::vector<Rect> vecLocal;
+
         for( iy = startY; iy < endY; iy++ )
         {
             int ix, y = cvRound(iy*ystep), ixstep = 1;
@@ -1472,12 +1521,26 @@ public:
                 int result = cvRunHaarClassifierCascade( cascade, cvPoint(x, y), 0 );
                 if( result > 0 )
                 {
-                    mtx->lock();
-                    vec->push_back(Rect(x, y, winsize.width, winsize.height));
-                    mtx->unlock();
+                    vecLocal.push_back(Rect(x, y, winsize.width, winsize.height));
+
+                    if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
+                    {
+                        mtx->lock();
+                        vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+                        mtx->unlock();
+
+                        vecLocal.clear();
+                    }
                 }
                 ixstep = result != 0 ? 1 : 2;
             }
+        }
+
+        if (vecLocal.size())
+        {
+            mtx->lock();
+            vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+            mtx->unlock();
         }
     }
 
