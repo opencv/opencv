@@ -62,17 +62,18 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
 
     for (int j = 0; j < options_.nsublevels; j++) {
       TEvolution step;
-      step.Lx = Mat::zeros(level_height, level_width, CV_32F);
-      step.Ly = Mat::zeros(level_height, level_width, CV_32F);
-      step.Lxx = Mat::zeros(level_height, level_width, CV_32F);
-      step.Lxy = Mat::zeros(level_height, level_width, CV_32F);
-      step.Lyy = Mat::zeros(level_height, level_width, CV_32F);
-      step.Lt = Mat::zeros(level_height, level_width, CV_32F);
-      step.Ldet = Mat::zeros(level_height, level_width, CV_32F);
-      step.Lsmooth = Mat::zeros(level_height, level_width, CV_32F);
+      Size size(level_width, level_height);
+      step.Lx.create(size, CV_32F);
+      step.Ly.create(size, CV_32F);
+      step.Lxx.create(size, CV_32F);
+      step.Lxy.create(size, CV_32F);
+      step.Lyy.create(size, CV_32F);
+      step.Lt.create(size, CV_32F);
+      step.Ldet.create(size, CV_32F);
+      step.Lsmooth.create(size, CV_32F);
       step.esigma = options_.soffset*pow(2.f, (float)(j) / (float)(options_.nsublevels) + i);
-      step.sigma_size = fRound(step.esigma);
-      step.etime = 0.5f*(step.esigma*step.esigma);
+      step.sigma_size = fRound(step.esigma * options_.derivative_factor / power);  // In fact sigma_size only depends on j
+      step.etime = 0.5f * (step.esigma * step.esigma);
       step.octave = i;
       step.sublevel = j;
       evolution_.push_back(step);
@@ -180,54 +181,54 @@ void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 }
 
 /* ************************************************************************* */
-class MultiscaleDerivativesAKAZEInvoker : public ParallelLoopBody
+class DeterminantHessianResponse : public ParallelLoopBody
 {
 public:
-    explicit MultiscaleDerivativesAKAZEInvoker(std::vector<TEvolution>& ev, const AKAZEOptions& opt)
+    explicit DeterminantHessianResponse(std::vector<TEvolution>& ev)
     : evolution_(&ev)
-    , options_(opt)
   {
   }
 
   void operator()(const Range& range) const
   {
-    std::vector<TEvolution>& evolution = *evolution_;
-
     for (int i = range.start; i < range.end; i++)
     {
-      float ratio = (float)fastpow(2, evolution[i].octave);
-      int sigma_size_ = fRound(evolution[i].esigma * options_.derivative_factor / ratio);
+      TEvolution &e = (*evolution_)[i];
 
-      compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Lx, 1, 0, sigma_size_);
-      compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Ly, 0, 1, sigma_size_);
-      compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxx, 1, 0, sigma_size_);
-      compute_scharr_derivatives(evolution[i].Ly, evolution[i].Lyy, 0, 1, sigma_size_);
-      compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxy, 0, 1, sigma_size_);
+      const int total = e.Lsmooth.cols * e.Lsmooth.rows;
+      const int sigma_size_quat = e.sigma_size * e.sigma_size * e.sigma_size * e.sigma_size;
+      float *lxx = e.Lxx.ptr<float>();
+      float *lxy = e.Lxy.ptr<float>();
+      float *lyy = e.Lyy.ptr<float>();
+      float *ldet = e.Ldet.ptr<float>();
 
-      evolution[i].Lx = evolution[i].Lx*((sigma_size_));
-      evolution[i].Ly = evolution[i].Ly*((sigma_size_));
-      evolution[i].Lxx = evolution[i].Lxx*((sigma_size_)*(sigma_size_));
-      evolution[i].Lxy = evolution[i].Lxy*((sigma_size_)*(sigma_size_));
-      evolution[i].Lyy = evolution[i].Lyy*((sigma_size_)*(sigma_size_));
+      // we cannot use cv:Scharr here, because we need to handle also
+      // kernel sizes other than 3
+
+      // compute kernels
+      Mat DxKx, DxKy, DyKx, DyKy;
+      compute_derivative_kernels(DxKx, DxKy, 1, 0, e.sigma_size);
+      compute_derivative_kernels(DyKx, DyKy, 0, 1, e.sigma_size);
+
+      // compute the multiscale derivatives
+      sepFilter2D(e.Lsmooth, e.Lx, CV_32F, DxKx, DxKy);
+      sepFilter2D(e.Lx, e.Lxx, CV_32F, DxKx, DxKy);
+      sepFilter2D(e.Lx, e.Lxy, CV_32F, DyKx, DyKy);
+      sepFilter2D(e.Lsmooth, e.Ly, CV_32F, DyKx, DyKy);
+      sepFilter2D(e.Ly, e.Lyy, CV_32F, DyKx, DyKy);
+
+      // compute Ldet by Lxx.mul(Lyy) - Lxy.mul(Lxy)
+      for (int j = 0; j < total; j++) {
+        ldet[j] = (lxx[j] * lyy[j] - lxy[j] * lxy[j]) * sigma_size_quat;
+      }
     }
   }
 
 private:
   std::vector<TEvolution>*  evolution_;
-  AKAZEOptions              options_;
 };
 
-/* ************************************************************************* */
-/**
- * @brief This method computes the multiscale derivatives for the nonlinear scale space
- */
-void AKAZEFeatures::Compute_Multiscale_Derivatives(void)
-{
-  parallel_for_(Range(0, (int)evolution_.size()),
-                                        MultiscaleDerivativesAKAZEInvoker(evolution_, options_));
-}
 
-/* ************************************************************************* */
 /**
  * @brief This method computes the feature detector response for the nonlinear scale space
  * @note We use the Hessian determinant as the feature detector response
@@ -235,22 +236,8 @@ void AKAZEFeatures::Compute_Multiscale_Derivatives(void)
 void AKAZEFeatures::Compute_Determinant_Hessian_Response(void) {
   CV_INSTRUMENT_REGION()
 
-  // Firstly compute the multiscale derivatives
-  Compute_Multiscale_Derivatives();
-
-  for (size_t i = 0; i < evolution_.size(); i++)
-  {
-    for (int ix = 0; ix < evolution_[i].Ldet.rows; ix++)
-    {
-      for (int jx = 0; jx < evolution_[i].Ldet.cols; jx++)
-      {
-        float lxx = *(evolution_[i].Lxx.ptr<float>(ix)+jx);
-        float lxy = *(evolution_[i].Lxy.ptr<float>(ix)+jx);
-        float lyy = *(evolution_[i].Lyy.ptr<float>(ix)+jx);
-        *(evolution_[i].Ldet.ptr<float>(ix)+jx) = (lxx*lyy - lxy*lxy);
-      }
-    }
-  }
+  parallel_for_(Range(0, (int)evolution_.size()),
+                                        DeterminantHessianResponse(evolution_));
 }
 
 /* ************************************************************************* */

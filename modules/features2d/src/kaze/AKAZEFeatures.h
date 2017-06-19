@@ -47,7 +47,6 @@ public:
   int Create_Nonlinear_Scale_Space(const cv::Mat& img);
   void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
   void Compute_Determinant_Hessian_Response(void);
-  void Compute_Multiscale_Derivatives(void);
   void Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts);
   void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);
 
