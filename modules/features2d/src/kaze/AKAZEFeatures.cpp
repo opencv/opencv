@@ -43,6 +43,7 @@ AKAZEFeatures::AKAZEFeatures(const AKAZEOptions& options) : options_(options) {
  * @brief This method allocates the memory for the nonlinear diffusion evolution
  */
 void AKAZEFeatures::Allocate_Memory_Evolution(void) {
+  CV_INSTRUMENT_REGION()
 
   float rfactor = 0.0f;
   int level_height = 0, level_width = 0;
@@ -99,6 +100,7 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
  */
 int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
 {
+  CV_INSTRUMENT_REGION()
   CV_Assert(evolution_.size() > 0);
 
   // Copy the original image to the first level of the evolution
@@ -169,6 +171,8 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
  */
 void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 {
+  CV_INSTRUMENT_REGION()
+
   kpts.clear();
   Compute_Determinant_Hessian_Response();
   Find_Scale_Space_Extrema(kpts);
@@ -229,6 +233,7 @@ void AKAZEFeatures::Compute_Multiscale_Derivatives(void)
  * @note We use the Hessian determinant as the feature detector response
  */
 void AKAZEFeatures::Compute_Determinant_Hessian_Response(void) {
+  CV_INSTRUMENT_REGION()
 
   // Firstly compute the multiscale derivatives
   Compute_Multiscale_Derivatives();
@@ -255,6 +260,7 @@ void AKAZEFeatures::Compute_Determinant_Hessian_Response(void) {
  */
 void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<KeyPoint>& kpts)
 {
+  CV_INSTRUMENT_REGION()
 
   float value = 0.0;
   float dist = 0.0, ratio = 0.0, smax = 0.0;
@@ -394,6 +400,8 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<KeyPoint>& kpts)
  */
 void AKAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint>& kpts)
 {
+  CV_INSTRUMENT_REGION()
+
   float Dx = 0.0, Dy = 0.0, ratio = 0.0;
   float Dxx = 0.0, Dyy = 0.0, Dxy = 0.0;
   int x = 0, y = 0;
@@ -705,6 +713,8 @@ private:
  */
 void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, Mat& desc)
 {
+  CV_INSTRUMENT_REGION()
+
   for(size_t i = 0; i < kpts.size(); i++)
   {
       CV_Assert(0 <= kpts[i].class_id && kpts[i].class_id < static_cast<int>(evolution_.size()));
@@ -849,6 +859,8 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
  */
 void AKAZEFeatures::Compute_Keypoints_Orientation(std::vector<KeyPoint>& kpts) const
 {
+  CV_INSTRUMENT_REGION()
+
      for(size_t i = 0; i < kpts.size(); i++)
          Compute_Main_Orientation(kpts[i], evolution_);
 }
