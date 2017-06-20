@@ -252,6 +252,7 @@ OCV_OPTION(WITH_IPP_A          "Include Intel IPP_A support"                 OFF
 OCV_OPTION(WITH_MATLAB         "Include Matlab support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT))
 OCV_OPTION(WITH_VA             "Include VA support"                          OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
+OCV_OPTION(WITH_MFX            "Include Intel Media SDK support"             OFF   IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              ON   IF (NOT ANDROID AND NOT IOS) )
@@ -1227,6 +1228,10 @@ endif(DEFINED WITH_XINE)
 if(DEFINED WITH_INTELPERC)
   status("    Intel PerC:"     HAVE_INTELPERC      THEN "YES"                                 ELSE NO)
 endif(DEFINED WITH_INTELPERC)
+
+if(DEFINED WITH_MFX)
+  status("    Intel Media SDK:" HAVE_MFX      THEN "YES (${MFX_LIBRARY})" ELSE NO)
+endif()
 
 if(DEFINED WITH_GPHOTO2)
   status("    gPhoto2:"        HAVE_GPHOTO2        THEN "YES"                                 ELSE NO)
