@@ -111,7 +111,7 @@ const static int cVectorWidth = 4;
 template <typename T> static inline float16x4_t vld1_f16(const T* ptr)
 { return (float16x4_t)vld1_s16((const short*)ptr); }
 template <typename T> static inline void vst1_f16(T* ptr, float16x4_t a)
-{ vst1_s16((short*)ptr, a); }
+{ vst1_s16((short*)ptr, (int16x4_t)a); }
 
 void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t dstep, cv::Size size )
 {
