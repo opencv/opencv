@@ -268,6 +268,7 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_TILTED_MODEL        = 0x40000,
        CALIB_FIX_TAUX_TAUY       = 0x80000,
        CALIB_USE_QR              = 0x100000, //!< use QR instead of SVD decomposition for solving. Faster but potentially less precise
+       CALIB_FIX_TANGENT_DIST    = 0x200000,
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
