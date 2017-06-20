@@ -1,4 +1,4 @@
-set(the_description "All the selected OpenCV modules in a single binary")
+set(the_description "All OpenCV modules")
 set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
 set(BUILD_opencv_world_INIT OFF)
 
