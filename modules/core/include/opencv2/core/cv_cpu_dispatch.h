@@ -71,7 +71,11 @@
 #  define CV_AVX 1
 #endif
 #ifdef CV_CPU_COMPILE_FP16
-#  include <immintrin.h>
+#  if defined(__x86_64__) || defined(_M_X64)
+#    include <immintrin.h>
+#  elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
+#    include <arm_neon.h>
+#  endif
 #  define CV_FP16 1
 #endif
 #ifdef CV_CPU_COMPILE_AVX2
