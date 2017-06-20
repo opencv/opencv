@@ -800,11 +800,35 @@ macro(_ocv_create_module)
     endforeach()
   endif()
 
+  if(WIN32 AND BUILD_SHARED_LIBS AND NOT OPENCV_VS_VERSIONINFO_SKIP)
+    if(DEFINED OPENCV_VS_VERSIONINFO_FILE)
+      set(_VS_VERSION_FILE "${OPENCV_VS_VERSIONINFO_FILE}")
+    elseif(DEFINED OPENCV_VS_VERSIONINFO_${the_module}_FILE)
+      set(_VS_VERSION_FILE "${OPENCV_VS_VERSIONINFO_${the_module}_FILE")
+    elseif(NOT OPENCV_VS_VERSIONINFO_SKIP_GENERATION)
+      set(_VS_VERSION_FILE "${CMAKE_CURRENT_BINARY_DIR}/vs_version.rc")
+      ocv_generate_vs_version_file("${_VS_VERSION_FILE}"
+        NAME "${the_module}"
+        FILEDESCRIPTION "OpenCV module: ${OPENCV_MODULE_${the_module}_DESCRIPTION}"
+        INTERNALNAME "${the_module}${OPENCV_DLLVERSION}"
+        ORIGINALFILENAME "${the_module}${OPENCV_DLLVERSION}.dll"
+      )
+    endif()
+    if(_VS_VERSION_FILE)
+      if(NOT EXISTS "${_VS_VERSION_FILE}")
+        message(STATUS "${the_module}: Required .rc file is missing: ${_VS_VERSION_FILE}")
+      endif()
+      source_group("Src" FILES "${_VS_VERSION_FILE}")
+    endif()
+  endif()
+
   source_group("Include" FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp")
   source_group("Src" FILES "${${the_module}_pch}")
   ocv_add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
     "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
-    ${${the_module}_pch} ${sub_objs})
+    ${${the_module}_pch} ${sub_objs}
+    ${_VS_VERSION_FILE}
+  )
 
   if (cuda_objs)
     target_link_libraries(${the_module} ${cuda_objs})
