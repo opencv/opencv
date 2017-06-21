@@ -28,6 +28,8 @@ struct TEvolution
   Mat Lt;               ///< Evolution image
   Mat Lsmooth;          ///< Smoothed image
   Mat Ldet;             ///< Detector response
+  Mat Lflow;
+  Mat Lstep;
   float etime;              ///< Evolution time
   float esigma;             ///< Evolution sigma. For linear diffusion t = sigma^2 / 2
   int octave;               ///< Image octave
