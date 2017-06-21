@@ -1,4 +1,4 @@
-set(the_description "High-level GUI and Media I/O")
+set(the_description "High-level GUI")
 ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
 
 # ----------------------------------------------------------------------------
