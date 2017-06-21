@@ -1,4 +1,4 @@
-set(the_description "Image codecs")
+set(the_description "Image I/O")
 ocv_add_module(imgcodecs opencv_imgproc WRAP java python)
 
 # ----------------------------------------------------------------------------
