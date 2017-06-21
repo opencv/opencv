@@ -167,7 +167,28 @@ function(ocv_download)
         set(${DL_STATUS} FALSE PARENT_SCOPE)
         set(msg_level WARNING)
       endif()
-      message(${msg_level} "${__msg_prefix}Download failed: ${status}")
+      if(status MATCHES "Couldn't resolve host name")
+        message(STATUS "
+=======================================================================
+  Couldn't download files from the Internet.
+  Please check the Internet access on this host.
+=======================================================================
+")
+      elseif(status MATCHES "Couldn't connect to server")
+        message(STATUS "
+=======================================================================
+  Couldn't connect to server from the Internet.
+  Perhaps direct connections are not allowed in the current network.
+  To use proxy please check/specify these environment variables:
+  - http_proxy/https_proxy
+  - and/or HTTP_PROXY/HTTPS_PROXY
+=======================================================================
+")
+      endif()
+      message(${msg_level} "${__msg_prefix}Download failed: ${status}
+For details please refer to the download log file:
+${OPENCV_DOWNLOAD_LOG}
+")
       return()
     endif()
 
