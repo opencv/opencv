@@ -1,0 +1,68 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for AlexNet architecture. OpenCL target.
+
+patterns:
+  gpu_tile:
+    split: { x: x_split, y: y_split, c: c_split }
+    gpu_blocks: [xo, yo, co]
+    gpu_threads: [xi, yi]
+    reorder: [xi, yi, ci, xo, yo, co]
+    vectorize: { ci: c_split }
+  fully_connected_gpu:
+    split: { c: c_split }
+    fuse: { src: [x, y, co], dst: block }
+    gpu_blocks: block
+    gpu_threads: ci
+
+scheduling:
+  relu1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 16 }
+  conv1_constant_exterior:
+    compute_root: 1
+  norm1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 4 }
+  pool1:
+    pattern: gpu_tile
+    params: { x_split: 8, y_split: 8, c_split: 16 }
+  relu2:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  norm2:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 4 }
+  pool2:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  relu3:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  relu4:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  relu5:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  pool5:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+  relu6:
+    pattern: fully_connected_gpu
+    params: { c_split: 8 }
+  relu7:
+    pattern: fully_connected_gpu
+    params: { c_split: 4 }
+  fc8:
+    pattern: fully_connected_gpu
+    params: { c_split: 4 }
+  prob:
+    pattern: fully_connected_gpu
+    params: { c_split: 4 }

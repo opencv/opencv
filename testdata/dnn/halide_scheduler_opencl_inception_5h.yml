@@ -1,0 +1,347 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for Inception-5h architecture. OpenCL target.
+
+patterns:
+  gpu_tile:
+    split: { x: x_split, y: y_split, c: c_split }
+    gpu_blocks: [xo, yo, co]
+    gpu_threads: [xi, yi]
+    reorder: [xi, yi, ci, xo, yo, co]
+    vectorize: { ci: c_split }
+  gpu_tile_8_8_8:
+    split: { x: 8, y: 8, c: 8 }
+    gpu_blocks: [xo, yo, co]
+    gpu_threads: [xi, yi]
+    reorder: [xi, yi, ci, xo, yo, co]
+    vectorize: { ci: 8 }
+  gpu_tile_channels:
+    split: { c: 16 }
+    gpu_blocks: co
+    gpu_threads: [x, y]
+    reorder: [x, y, ci, co]
+    vectorize: { ci: 16 }
+  fully_connected_gpu:
+    split: { c: c_split }
+    fuse: { src: [x, y, co], dst: block }
+    gpu_blocks: block
+    gpu_threads: ci
+
+scheduling:
+  # Conv+ReLU, kernel: 7x7, stride: 2x2, pad: 2x2 => 64x112x112
+  conv2d0:
+    pattern: gpu_tile_8_8_8
+  # MaxPool, kernel: 3x3, stride: 2x2, pad: 0x0 => 64x56x56
+  maxpool0:
+    pattern: gpu_tile_8_8_8
+  # LRN, local_size: 11 => 64x56x56
+  localresponsenorm0:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0 => 64x56x56
+  conv2d1:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1 => 192x56x56
+  conv2d2:
+    pattern: gpu_tile_8_8_8
+  # LRN, local_size: 11 => 192x56x56
+  localresponsenorm1:
+    pattern: gpu_tile_8_8_8
+  # MaxPool, kernel: 3x3, stride: 2x2, pad: 0x0 => 192x28x28
+  maxpool1:
+    pattern: gpu_tile_8_8_8
+
+  # Block 1.
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 192x28x28 => 64x28x28
+  mixed3a_1x1:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 192x28x28 => 96x28x28
+  mixed3a_3x3_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 96x28x28 => 128x28x28
+  mixed3a_3x3:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 192x28x28 => 16x28x28
+  mixed3a_5x5_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 5x5, stride: 1x1, pad: 2x2, 16x28x28 => 32x28x28
+  mixed3a_5x5:
+    pattern: gpu_tile_8_8_8
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 192x28x28
+  mixed3a_pool:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 192x28x28 => 32x28x28
+  mixed3a_pool_reduce:
+    pattern: gpu_tile_8_8_8
+  # Concat: 64, 128, 32, 32 channels
+  mixed3a:
+    pattern: gpu_tile_8_8_8
+
+  # Block 2.
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 256x28x28 => 128x28x28
+  mixed3b_1x1:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 256x28x28 => 128x28x28
+  mixed3b_3x3_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 128x28x28 => 192x28x28
+  mixed3b_3x3:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 256x28x28 => 32x28x28
+  mixed3b_5x5_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 5x5, stride: 1x1, pad: 2x2, 32x28x28 => 96x28x28
+  mixed3b_5x5:
+    pattern: gpu_tile_8_8_8
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 256x28x28
+  mixed3b_pool:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 256x28x28 => 64x28x28
+  mixed3b_pool_reduce:
+    pattern: gpu_tile_8_8_8
+  # Concat: 128, 192, 96, 96 channels
+  mixed3b:
+    pattern: gpu_tile_8_8_8
+
+  # Block 3.
+  # MaxPool, kernel: 3x3, stride: 2x2, pad: 0x0 => 480x14x14
+  maxpool4:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 480x14x14 => 192x14x14
+  mixed4a_1x1:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 480x14x14 => 96x14x14
+  mixed4a_3x3_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 96x14x14 => 204x14x14
+  mixed4a_3x3:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 480x14x14 => 16x14x14
+  mixed4a_5x5_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 5x5, stride: 1x1, pad: 2x2, 16x14x14 => 48x14x14
+  mixed4a_5x5:
+    pattern: gpu_tile_8_8_8
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 480x14x14
+  mixed4a_pool:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 480x14x14 => 64x14x14
+  mixed4a_pool_reduce:
+    pattern: gpu_tile_8_8_8
+  # Concat: 192, 204, 48, 64 channels
+  mixed4a:
+    pattern: gpu_tile_8_8_8
+
+  # Block 4.
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 508x14x14 => 160x14x14
+  mixed4b_1x1:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 508x14x14 => 112x14x14
+  mixed4b_3x3_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 112x14x14 => 224x14x14
+  mixed4b_3x3:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 508x14x14 => 24x14x14
+  mixed4b_5x5_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 5x5, stride: 1x1, pad: 2x2, 24x14x14 => 64x14x14
+  mixed4b_5x5:
+    pattern: gpu_tile_8_8_8
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 508x14x14
+  mixed4b_pool:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 508x14x14 => 64x14x14
+  mixed4b_pool_reduce:
+    pattern: gpu_tile_8_8_8
+  # Concat: 160, 224, 64, 64 channels
+  mixed4b:
+    pattern: gpu_tile_8_8_8
+
+  # Block 5.
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 512x14x14 => 128x14x14
+  mixed4c_1x1:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 512x14x14 => 128x14x14
+  mixed4c_3x3_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 128x14x14 => 256x14x14
+  mixed4c_3x3:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 1x1, 512x14x14 => 24x14x14
+  mixed4c_5x5_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 5x5, stride: 1x1, pad: 2x2, 24x14x14 => 64x14x14
+  mixed4c_5x5:
+    pattern: gpu_tile_8_8_8
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 512x14x14
+  mixed4c_pool:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 512x14x14 => 64x14x14
+  mixed4c_pool_reduce:
+    pattern: gpu_tile_8_8_8
+  # Concat: 160, 224, 64, 64 channels
+  mixed4c:
+    pattern: gpu_tile_8_8_8
+
+  # Block 6.
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 512x14x14 => 112x14x14
+  mixed4d_1x1:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 512x14x14 => 144x14x14
+  mixed4d_3x3_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 144x14x14 => 288x14x14
+  mixed4d_3x3:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 512x14x14 => 32x14x14
+  mixed4d_5x5_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 5x5, stride: 1x1, pad: 2x2, 32x14x14 => 64x14x14
+  mixed4d_5x5:
+    pattern: gpu_tile_8_8_8
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 512x14x14
+  mixed4d_pool:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 512x14x14 => 64x14x14
+  mixed4d_pool_reduce:
+    pattern: gpu_tile_8_8_8
+  # Concat: 112, 288, 64, 64 channels
+  mixed4d:
+    pattern: gpu_tile_8_8_8
+
+  # Block 7.
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 528x14x14 => 256x14x14
+  mixed4e_1x1:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 528x14x14 => 160x14x14
+  mixed4e_3x3_bottleneck:
+    pattern: gpu_tile_8_8_8
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 160x14x14 => 320x14x14
+  mixed4e_3x3:
+    pattern: gpu_tile
+    params: { x_split: 4, y_split: 4, c_split: 16 }
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 528x14x14 => 32x14x14
+  mixed4e_5x5_bottleneck:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 32x14x14 => 128x14x14
+  mixed4e_5x5:
+    pattern: gpu_tile_8_8_8
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 528x14x14
+  mixed4e_pool:
+    pattern: gpu_tile_8_8_8
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 528x14x14 => 128x14x14
+  mixed4e_pool_reduce:
+    pattern: gpu_tile_8_8_8
+  # Concat: 256, 320, 128, 128 channels
+  mixed4e:
+    pattern: gpu_tile_8_8_8
+
+  # Block 8.
+  # MaxPool, kernel: 3x3, stride: 2x2, pad: 0x0 => 832x7x7
+  maxpool10:
+    pattern: gpu_tile_channels
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 832x7x7 => 256x7x7
+  mixed5a_1x1:
+    pattern: gpu_tile_channels
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 832x7x7 => 160x7x7
+  mixed5a_3x3_bottleneck:
+    pattern: gpu_tile_channels
+
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 160x7x7 => 320x7x7
+  mixed5a_3x3:
+    pattern: gpu_tile_channels
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 832x7x7 => 48x7x7
+  mixed5a_5x5_bottleneck:
+    pattern: gpu_tile_channels
+  # Conv+ReLU, kernel: 5x5, stride: 1x1, pad: 2x2, 48x7x7 => 128x7x7
+  mixed5a_5x5:
+    pattern: gpu_tile_channels
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 832x7x7
+  mixed5a_pool:
+    pattern: gpu_tile_channels
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 832x7x7 => 128x7x7
+  mixed5a_pool_reduce:
+    pattern: gpu_tile_channels
+  # Concat: 256, 320, 128, 128 channels
+  mixed5a:
+    pattern: gpu_tile_channels
+
+  # Block 9.
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 832x7x7 => 384x7x7
+  mixed5b_1x1:
+    pattern: gpu_tile_channels
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 832x7x7 => 192x7x7
+  mixed5b_3x3_bottleneck:
+    pattern: gpu_tile_channels
+  # Conv+ReLU, kernel: 3x3, stride: 1x1, pad: 1x1, 192x7x7 => 384x7x7
+  mixed5b_3x3:
+    pattern: gpu_tile_channels
+
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 832x7x7 => 48x7x7
+  mixed5b_5x5_bottleneck:
+    pattern: gpu_tile_channels
+  # Conv+ReLU, kernel: 5x5, stride: 1x1, pad: 2x2, 48x7x7 => 128x7x7
+  mixed5b_5x5:
+    pattern: gpu_tile_channels
+
+  # MaxPool, kernel: 3x3, stride: 1x1, pad: 1x1 => 832x7x7
+  mixed5b_pool:
+    pattern: gpu_tile_channels
+  # Conv+ReLU, kernel: 1x1, stride: 1x1, pad: 0x0, 832x7x7 => 128x7x7
+  mixed5b_pool_reduce:
+    pattern: gpu_tile_channels
+  # Concat: 384, 384, 128, 128 channels
+  mixed5b:
+    pattern: gpu_tile_channels
+
+  # AvePooling => 1024x1x1
+  avgpool0:
+    pattern: fully_connected_gpu
+    params: { c_split: 16 }
+
+  # FC, 1024x1x1 => 1008x1x1
+  softmax2_pre_activation/matmul:
+    pattern: fully_connected_gpu
+    params: { c_split: 16 }
+
+  # SoftMax, 1008x1x1 => 1008x1x1
+  softmax2:
+    pattern: fully_connected_gpu
+    params: { c_split: 16 }

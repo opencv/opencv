@@ -1,0 +1,440 @@
+%YAML:1.0
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+#
+# Copyright (C) 2017, Intel Corporation, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
+# Halide scheduling directives for ENet architecture. OpenCL target.
+
+patterns:
+  gpu_tile:
+    split: { x: x_split, y: y_split, c: c_split }
+    gpu_blocks: [xo, yo, co]
+    gpu_threads: [xi, yi]
+    reorder: [xi, yi, ci, xo, yo, co]
+    vectorize: { ci: c_split }
+
+scheduling:
+  # Initial bottleneck
+  l2_Convolution:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l3_Pooling:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 3 }
+  l6_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Pooling bottleneck
+  l10_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l13_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l16_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l18_Pooling:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l21_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 1.1
+  l25_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l28_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l31_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l34_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 1.2
+  l38_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l41_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l44_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l47_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 1.3
+  l51_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l54_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l57_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l60_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 1.4
+  l64_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l67_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l70_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l73_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Pooling bottleneck
+  l77_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l80_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l83_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l85_Pooling:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l88_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 2.1
+  l92_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l95_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l98_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l101_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 2.2
+  l105_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l108_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l111_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l114_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 2.3, asymmetric
+  l118_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l119_Convolution:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l122_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l125_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l128_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 2.4
+  l132_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l135_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l138_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l141_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 2.5
+  l145_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l148_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l151_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l154_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 2.6
+  l158_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l161_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l164_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l167_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 2.7, asymmetric
+  l171_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l172_Convolution:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l175_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l178_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l181_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 2.8
+  l185_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l188_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l191_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l194_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 3.1
+  l198_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l201_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l204_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l207_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 3.2
+  l211_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l214_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l217_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l220_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 3.3, asymmetric
+  l224_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l225_Convolution:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l228_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l231_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l234_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 3.4
+  l238_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l241_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l244_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l247_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 3.5
+  l251_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l254_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l257_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l260_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 3.6
+  l264_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l267_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l270_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l273_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 3.7, asymmetric
+  l277_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l278_Convolution:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l281_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l284_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l287_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 3.8
+  l291_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l294_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l297_Power:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l300_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 4.0, upsampling
+  l304_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l307_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l309_BatchNorm:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l312_BatchNorm:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l313_torchMaxUnpooling:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l315_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 4.1
+  l319_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l322_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l324_BatchNorm:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l327_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 4.2
+  l331_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l334_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l336_BatchNorm:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l339_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 5.0, upsampling
+  l343_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 4 }
+  l346_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 4 }
+  l348_BatchNorm:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l351_BatchNorm:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l352_torchMaxUnpooling:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l354_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+
+  # Bottleneck 5.1.
+  l358_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 4 }
+  l361_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 4 }
+  l363_BatchNorm:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l366_ChannelsPReLU:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 8 }
+  l367_Deconvolution:
+    pattern: gpu_tile
+    params: { x_split: 16, y_split: 16, c_split: 4 }
