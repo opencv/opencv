@@ -79,7 +79,7 @@ endmacro()
 
 macro(ocv_check_environment_variables)
   foreach(_var ${ARGN})
-    if(NOT DEFINED ${_var} AND DEFINED ENV{${_var}})
+    if(" ${${_var}}" STREQUAL " " AND DEFINED ENV{${_var}})
       set(__value "$ENV{${_var}}")
       file(TO_CMAKE_PATH "${__value}" __value) # Assume that we receive paths
       set(${_var} "${__value}")
