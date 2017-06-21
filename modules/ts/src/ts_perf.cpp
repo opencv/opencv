@@ -1958,6 +1958,11 @@ void TestBase::RunPerfTestBody()
             implConf.GetImpl();
 #endif
     }
+    catch(SkipTestException&)
+    {
+        metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
+        return;
+    }
     catch(PerfSkipTestException&)
     {
         metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
