@@ -151,8 +151,9 @@ namespace cv
 
             if( descriptors.needed() )
             {
-                Mat& desc = descriptors.getMatRef();
+                Mat desc;
                 impl.Feature_Description(keypoints, desc);
+                desc.copyTo(descriptors);
 
                 CV_Assert((!desc.rows || desc.cols == descriptorSize()));
                 CV_Assert((!desc.rows || (desc.type() == descriptorType())));

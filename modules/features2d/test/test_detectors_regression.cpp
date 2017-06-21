@@ -302,6 +302,13 @@ TEST( Features2d_Detector_AKAZE, regression )
     test.safe_run();
 }
 
+TEST( Features2d_Detector_AKAZE_DESCRIPTOR_KAZE, regression )
+{
+    CV_FeatureDetectorTest test( "detector-akaze-with-kaze-desc", AKAZE::create(AKAZE::DESCRIPTOR_KAZE) );
+    test.safe_run();
+}
+
+
 TEST( Features2d_Detector_AKAZE, detect_and_compute_split )
 {
     Mat testImg(100, 100, CV_8U);
