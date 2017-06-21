@@ -18,9 +18,9 @@ typedef TestBaseWithParam<string> stitch;
 typedef TestBaseWithParam<tuple<string, string> > stitchDatasets;
 
 #ifdef HAVE_OPENCV_XFEATURES2D
-#define TEST_DETECTORS testing::Values("surf", "orb")
+#define TEST_DETECTORS testing::Values("surf", "orb", "akaze")
 #else
-#define TEST_DETECTORS testing::Values<string>("orb")
+#define TEST_DETECTORS testing::Values("orb", "akaze")
 #endif
 #define AFFINE_DATASETS testing::Values("s", "budapest", "newspaper", "prague")
 
@@ -33,9 +33,7 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/a2.png") ) );
     imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
@@ -70,9 +68,7 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/b1.png") ) );
     imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
-            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
@@ -107,12 +103,7 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
     Mat pano;
     vector<Mat> imgs;
     int width, height, allowed_diff = 10;
-    Ptr<detail::FeaturesFinder> featuresFinder;
-
-    if(detector == "orb")
-        featuresFinder = makePtr<detail::OrbFeaturesFinder>();
-    else
-        featuresFinder = makePtr<detail::SurfFeaturesFinder>();
+    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(detector);
 
     if(dataset == "budapest")
     {

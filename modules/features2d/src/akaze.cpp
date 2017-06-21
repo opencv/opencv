@@ -200,8 +200,7 @@ namespace cv
             if (!useProvidedKeypoints)
             {
                 impl.Feature_Detection(keypoints);
-                if( !descriptors.needed() )
-                    impl.Compute_Keypoints_Orientation(keypoints);
+                impl.Compute_Keypoints_Orientation(keypoints);
             }
 
             if (!mask.empty())
@@ -211,8 +210,10 @@ namespace cv
 
             if( descriptors.needed() )
             {
-                Mat& desc = descriptors.getMatRef();
+                Mat desc;
                 impl.Compute_Descriptors(keypoints, desc);
+                // TODO optimize this copy
+                desc.copyTo(descriptors);
 
                 CV_Assert((!desc.rows || desc.cols == descriptorSize()));
                 CV_Assert((!desc.rows || (desc.type() == descriptorType())));
