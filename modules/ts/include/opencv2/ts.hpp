@@ -6,6 +6,14 @@
 
 #include "cvconfig.h"
 
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iterator>
+#include <limits>
+#include <numeric>
+
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
@@ -46,14 +54,10 @@ namespace cvtest
 
 using std::vector;
 using std::string;
-using cv::RNG;
-using cv::Mat;
-using cv::Scalar;
-using cv::Size;
-using cv::Point;
-using cv::Rect;
-using cv::InputArray;
-using cv::noArray;
+using namespace cv;
+using testing::Values;
+using testing::Combine;
+
 
 class SkipTestException: public cv::Exception
 {
@@ -632,9 +636,11 @@ int main(int argc, char **argv) \
 
 } //namespace cvtest
 
-#endif // OPENCV_TS_HPP
-
 #include "opencv2/ts/ts_perf.hpp"
+
+namespace cvtest {
+using perf::MatDepth;
+}
 
 #ifdef WINRT
 #ifndef __FSTREAM_EMULATED__
@@ -734,3 +740,5 @@ public:
 } // namespace std
 #endif // __FSTREAM_EMULATED__
 #endif // WINRT
+
+#endif // OPENCV_TS_HPP
