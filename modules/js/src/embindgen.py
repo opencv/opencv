@@ -55,6 +55,28 @@ ignore_list = ['locate',  #int&
                'undistortPoints' # global redefinition
                ]
 
+# Classes and methods whitelist
+white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bitwise_or', 'bitwise_xor', 'cartToPolar',\
+                   'compare', 'copyMakeBorder', 'countNonZero', 'determinant', 'divide', 'eigen', 'exp', 'flip', 'gemm',\
+                   'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude', 'max', 'max', 'mean', 'meanStdDev', 'merge',\
+                   'min', 'minMaxLoc', 'mixChannels', 'multiply', 'norm', 'normalize', 'perspectiveTransform', 'polarToCart',\
+                   'pow', 'randn', 'randu', 'reduce', 'repeat', 'setIdentity', 'setRNGSeed', 'solve', 'solvePoly', 'split', 'sqrt',\
+                   'subtract', 'trace', 'transform', 'transpose', 'vconcat', 'Canny', 'GaussianBlur', 'Laplacian',\
+                   'Scharr','Sobel','adaptiveThreshold','approxPolyDP','arcLength','bilateralFilter','blur','boundingRect','boxFilter',\
+                   'calcBackProject','calcHist','circle','compareHist','connectedComponents','connectedComponentsWithStats','contourArea',\
+                   'convexHull','cornerHarris','cornerMinEigenVal','createLineSegmentDetector','cvtColor','demosaicing','dilate',\
+                   'distanceTransform','distanceTransformWithLabels','drawContours','ellipse','ellipse2Poly','equalizeHist','erode',\
+                   'findContours','fitEllipse','floodFill','getAffineTransform','goodFeaturesToTrack','grabCut','initUndistortRectifyMap',\
+                   'integral','integral2','line','matchTemplate','medianBlur','moments','putText','pyrDown','pyrUp','rectangle','remap',\
+                   'resize','sepFilter2D','threshold','undistort','warpAffine','warpPerspective','watershed', 'CamShift',\
+                   'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', 'estimateRigidTransform',\
+                   'findTransformECC', 'meanShift'],
+              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
+              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'detectMultiScale'],
+              'BackgroundSubtractorMOG2': ['apply'],
+              'BackgroundSubtractor': ['apply', 'getBackgroundImage']
+              }
+
 # Features to be exported
 export_enums = True
 with_wrapped_functions = True
@@ -700,6 +722,8 @@ class JSWrapperGenerator(object):
             for name, func in sorted(ns.funcs.items()):
                 if name in ignore_list:
                     continue
+                if not name in white_list['']:
+                    continue
 
                 ext_cnst = False
                 # Check if the method is an external constructor
@@ -735,10 +759,14 @@ class JSWrapperGenerator(object):
         with_default_params = False
         for name, class_info in class_list:
             class_bindings = []
+            if not name in white_list:
+                continue
 
             # Generate bindings for methods
             for method_name, method in class_info.methods.iteritems():
                 if method.cname in ignore_list:
+                    continue
+                if not method.cname in white_list[method.class_name]:
                     continue
                 if method.is_constructor:
                     for variant in method.variants:
