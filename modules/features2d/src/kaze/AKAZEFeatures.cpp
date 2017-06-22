@@ -931,7 +931,7 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TEvolution>& evol
   }
 
   // Store the final result
-  kpt.angle = getAngle(maxX, maxY) * 180.f / static_cast<float>(CV_PI);;
+  kpt.angle = fastAtan2(maxY, maxX);
 }
 
 /**
