@@ -35,6 +35,7 @@ struct TEvolution
   int octave;               ///< Image octave
   int sublevel;             ///< Image sublevel in each octave
   int sigma_size;           ///< Integer esigma. For computing the feature detector responses
+  float octave_ratio;       ///< Scaling ratio of this octave. ratio = 2^octave
 };
 
 }

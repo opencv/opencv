@@ -80,6 +80,7 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
       step.etime = 0.5f * (step.esigma * step.esigma);
       step.octave = i;
       step.sublevel = j;
+      step.octave_ratio = (float)power;
       evolution_.push_back(step);
     }
   }
@@ -487,7 +488,6 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      AKAZEFeatures::Compute_Main_Orientation((*keypoints_)[i], *evolution_);
       Get_SURF_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i));
     }
   }
@@ -672,7 +672,6 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      AKAZEFeatures::Compute_Main_Orientation((*keypoints_)[i], *evolution_);
       Get_MLDB_Descriptor_Subset((*keypoints_)[i], descriptors_->ptr<unsigned char>(i));
     }
   }
@@ -752,12 +751,20 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, Mat& desc)
 
 /* ************************************************************************* */
 /**
- * @brief This method computes the main orientation for a given keypoint
- * @param kpt Input keypoint
- * @note The orientation is computed using a similar approach as described in the
- * original SURF method. See Bay et al., Speeded Up Robust Features, ECCV 2006
+ * @brief This function samples the derivative responses Lx and Ly for the points
+ * within the radius of 6*scale from (x0, y0), then multiply 2D Gaussian weight
+ * @param Lx Horizontal derivative
+ * @param Ly Vertical derivative
+ * @param x0 X-coordinate of the center point
+ * @param y0 Y-coordinate of the center point
+ * @param scale The sampling step
+ * @param resX Output array of the weighted horizontal derivative responses
+ * @param resY Output array of the weighted vertical derivative responses
  */
-void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TEvolution>& evolution_)
+static inline
+void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
+                                  const int x0, const int y0, const int scale,
+                                  float *resX, float *resY)
 {
     /* ************************************************************************* */
     /// Lookup table for 2d gaussian (sigma = 2.5) where (0,0) is top left and (6,6) is bottom right
@@ -771,71 +778,162 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
         { 0.00344629f, 0.00318132f, 0.00250252f, 0.00167749f, 0.00095820f, 0.00046640f, 0.00019346f },
         { 0.00142946f, 0.00131956f, 0.00103800f, 0.00069579f, 0.00039744f, 0.00019346f, 0.00008024f }
     };
+    static const int id[] = { 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6 };
+    static const struct gtable
+    {
+      float weight[109];
+      int8_t xidx[109];
+      int8_t yidx[109];
 
-  int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
-  float xf = 0.0, yf = 0.0, gweight = 0.0, ratio = 0.0;
-  const int ang_size = 109;
-  float resX[ang_size] = {0}, resY[ang_size] = {0}, Ang[ang_size];
-  const int id[] = { 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6 };
-
-  // Variables for computing the dominant direction
-  float sumX = 0.0, sumY = 0.0, max = 0.0, ang1 = 0.0, ang2 = 0.0;
-
-  // Get the information from the keypoint
-  level = kpt.class_id;
-  ratio = (float)(1 << evolution_[level].octave);
-  s = fRound(0.5f*kpt.size / ratio);
-  xf = kpt.pt.x / ratio;
-  yf = kpt.pt.y / ratio;
-
-  // Calculate derivatives responses for points within radius of 6*scale
-  for (int i = -6; i <= 6; ++i) {
-    for (int j = -6; j <= 6; ++j) {
-      if (i*i + j*j < 36) {
-        iy = fRound(yf + j*s);
-        ix = fRound(xf + i*s);
-
-        gweight = gauss25[id[i + 6]][id[j + 6]];
-        resX[idx] = gweight*(*(evolution_[level].Lx.ptr<float>(iy)+ix));
-        resY[idx] = gweight*(*(evolution_[level].Ly.ptr<float>(iy)+ix));
-
-        ++idx;
+      explicit gtable(void)
+      {
+        // Generate the weight and indices by one-time initialization
+        int k = 0;
+        for (int i = -6; i <= 6; ++i) {
+          for (int j = -6; j <= 6; ++j) {
+            if (i*i + j*j < 36) {
+              weight[k] = gauss25[id[i + 6]][id[j + 6]];
+              yidx[k] = i;
+              xidx[k] = j;
+              ++k;
+            }
+          }
+        }
+        CV_DbgAssert(k == 109);
       }
-    }
-  }
-  hal::fastAtan32f(resY, resX, Ang, ang_size, false);
-  // Loop slides pi/3 window around feature point
-  for (ang1 = 0; ang1 < (float)(2.0 * CV_PI); ang1 += 0.15f) {
-    ang2 = (ang1 + (float)(CV_PI / 3.0) >(float)(2.0*CV_PI) ? ang1 - (float)(5.0*CV_PI / 3.0) : ang1 + (float)(CV_PI / 3.0));
-    sumX = sumY = 0.f;
+    } g;
 
-    for (int k = 0; k < ang_size; ++k) {
-      // Get angle from the x-axis of the sample point
-      const float & ang = Ang[k];
+  const float * lx = Lx.ptr<float>(0);
+  const float * ly = Ly.ptr<float>(0);
+  int cols = Lx.cols;
 
-      // Determine whether the point is within the window
-      if (ang1 < ang2 && ang1 < ang && ang < ang2) {
-        sumX += resX[k];
-        sumY += resY[k];
-      }
-      else if (ang2 < ang1 &&
-               ((ang > 0 && ang < ang2) || (ang > ang1 && ang < 2.0f*CV_PI))) {
-        sumX += resX[k];
-        sumY += resY[k];
-      }
-    }
+  for (int i = 0; i < 109; i++) {
+    int j = (y0 + g.yidx[i] * scale) * cols + (x0 + g.xidx[i] * scale);
 
-    // if the vector produced from this window is longer than all
-    // previous vectors then this forms the new dominant direction
-    if (sumX*sumX + sumY*sumY > max) {
-      // store largest orientation
-      max = sumX*sumX + sumY*sumY;
-      kpt.angle = getAngle(sumX, sumY) * 180.f / static_cast<float>(CV_PI);
-    }
+    resX[i] = g.weight[i] * lx[j];
+    resY[i] = g.weight[i] * ly[j];
   }
 }
 
-/* ************************************************************************* */
+/**
+ * @brief This function sorts a[] by quantized float values
+ * @param a[] Input floating point array to sort
+ * @param n The length of a[]
+ * @param quantum The interval to convert a[i]'s float values to integers
+ * @param max The upper bound of a[], meaning a[i] must be in [0, max]
+ * @param idx[] Output array of the indices: a[idx[i]] forms a sorted array
+ * @param cum[] Output array of the starting indices of quantized floats
+ * @note The values of a[] in [k*quantum, (k + 1)*quantum) is labeled by
+ * the integer k, which is calculated by floor(a[i]/quantum).  After sorting,
+ * the values from a[idx[cum[k]]] to a[idx[cum[k+1]-1]] are all labeled by k.
+ * This sorting is unstable to reduce the memory access.
+ */
+static inline
+void quantized_counting_sort(const float a[], const int n,
+                             const float quantum, const float max,
+                             uint8_t idx[], uint8_t cum[])
+{
+  const int nkeys = (int)(max / quantum);
+
+  // The size of cum[] must be nkeys + 1
+  memset(cum, 0, nkeys + 1);
+
+  // Count up the quantized values
+  for (int i = 0; i < n; i++)
+    cum[(int)(a[i] / quantum)]++;
+
+  // Compute the inclusive prefix sum i.e. the end indices; cum[nkeys] is the total
+  for (int i = 1; i <= nkeys; i++)
+    cum[i] += cum[i - 1];
+
+  // Generate the sorted indices; cum[] becomes the exclusive prefix sum i.e. the start indices of keys
+  for (int i = 0; i < n; i++)
+    idx[--cum[(int)(a[i] / quantum)]] = i;
+}
+
+/**
+ * @brief This function computes the main orientation for a given keypoint
+ * @param kpt Input keypoint
+ * @note The orientation is computed using a similar approach as described in the
+ * original SURF method. See Bay et al., Speeded Up Robust Features, ECCV 2006
+ */
+static inline
+void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TEvolution>& evolution)
+{
+  // get the right evolution level for this keypoint
+  const TEvolution& e = evolution[kpt.class_id];
+  // Get the information from the keypoint
+  int scale = fRound(0.5f * kpt.size / e.octave_ratio);
+  int x0 = fRound(kpt.pt.x / e.octave_ratio);
+  int y0 = fRound(kpt.pt.y / e.octave_ratio);
+
+  // Sample derivatives responses for the points within radius of 6*scale
+  const int ang_size = 109;
+  float resX[ang_size], resY[ang_size];
+  Sample_Derivative_Response_Radius6(e.Lx, e.Ly, x0, y0, scale, resX, resY);
+
+  // Compute the angle of each gradient vector
+  float Ang[ang_size];
+  hal::fastAtan2(resY, resX, Ang, ang_size, false);
+
+  // Sort by the angles; angles are labeled by slices of 0.15 radian
+  const int slices = 42;
+  const float ang_step = (float)(2.0 * CV_PI / slices);
+  uint8_t slice[slices + 1];
+  uint8_t sorted_idx[ang_size];
+  quantized_counting_sort(Ang, ang_size, ang_step, (float)(2.0 * CV_PI), sorted_idx, slice);
+
+  // Find the main angle by sliding a window of 7-slice size(=PI/3) around the keypoint
+  const int win = 7;
+
+  float maxX = 0.0f, maxY = 0.0f;
+  for (int i = slice[0]; i < slice[win]; i++) {
+    maxX += resX[sorted_idx[i]];
+    maxY += resY[sorted_idx[i]];
+  }
+  float maxNorm = maxX * maxX + maxY * maxY;
+
+  for (int sn = 1; sn <= slices - win; sn++) {
+
+    if (slice[sn] == slice[sn - 1] && slice[sn + win] == slice[sn + win - 1])
+      continue;  // The contents of the window didn't change; don't repeat the computation
+
+    float sumX = 0.0f, sumY = 0.0f;
+    for (int i = slice[sn]; i < slice[sn + win]; i++) {
+      sumX += resX[sorted_idx[i]];
+      sumY += resY[sorted_idx[i]];
+    }
+
+    float norm = sumX * sumX + sumY * sumY;
+    if (norm > maxNorm)
+        maxNorm = norm, maxX = sumX, maxY = sumY;  // Found bigger one; update
+  }
+
+  for (int sn = slices - win + 1; sn < slices; sn++) {
+    int remain = sn + win - slices;
+
+    if (slice[sn] == slice[sn - 1] && slice[remain] == slice[remain - 1])
+      continue;
+
+    float sumX = 0.0f, sumY = 0.0f;
+    for (int i = slice[sn]; i < slice[slices]; i++) {
+      sumX += resX[sorted_idx[i]];
+      sumY += resY[sorted_idx[i]];
+    }
+    for (int i = slice[0]; i < slice[remain]; i++) {
+      sumX += resX[sorted_idx[i]];
+      sumY += resY[sorted_idx[i]];
+    }
+
+    float norm = sumX * sumX + sumY * sumY;
+    if (norm > maxNorm)
+        maxNorm = norm, maxX = sumX, maxY = sumY;
+  }
+
+  // Store the final result
+  kpt.angle = getAngle(maxX, maxY) * 180.f / static_cast<float>(CV_PI);;
+}
+
 /**
  * @brief This method computes the main orientation for a given keypoints
  * @param kpts Input keypoints
