@@ -804,7 +804,7 @@ macro(_ocv_create_module)
     if(DEFINED OPENCV_VS_VERSIONINFO_FILE)
       set(_VS_VERSION_FILE "${OPENCV_VS_VERSIONINFO_FILE}")
     elseif(DEFINED OPENCV_VS_VERSIONINFO_${the_module}_FILE)
-      set(_VS_VERSION_FILE "${OPENCV_VS_VERSIONINFO_${the_module}_FILE")
+      set(_VS_VERSION_FILE "${OPENCV_VS_VERSIONINFO_${the_module}_FILE}")
     elseif(NOT OPENCV_VS_VERSIONINFO_SKIP_GENERATION)
       set(_VS_VERSION_FILE "${CMAKE_CURRENT_BINARY_DIR}/vs_version.rc")
       ocv_generate_vs_version_file("${_VS_VERSION_FILE}"
