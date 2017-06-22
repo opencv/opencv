@@ -42,13 +42,15 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
 
 set(bindings_cpp "${CMAKE_CURRENT_BINARY_DIR}/bindings.cpp")
 
+set(scripts_hdr_parser "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
+
 add_custom_command(
    OUTPUT ${bindings_cpp}
-   COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src/embindgen.py" ${bindings_cpp} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${CMAKE_CURRENT_SOURCE_DIR}/src/core_bindings.cpp"
+   COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src/embindgen.py" ${scripts_hdr_parser} ${bindings_cpp} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${CMAKE_CURRENT_SOURCE_DIR}/src/core_bindings.cpp"
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/core_bindings.cpp
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/embindgen.py
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates.py
-   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/hdr_parser.py
+   DEPENDS ${scripts_hdr_parser}
    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
    DEPENDS ${opencv_hdrs})
 

@@ -31,7 +31,7 @@
 ###############################################################################
 
 from __future__ import print_function
-import hdr_parser, sys, re
+import sys, re, os
 from templates import *
 from sets import Set
 
@@ -226,7 +226,7 @@ class JSWrapperGenerator(object):
         self.namespaces = {}
         self.enums = {}
 
-        self.parser = hdr_parser.CppHeaderParser()
+        self.parser = hdr_parser.CppHeaderParser(js=True)
         self.class_idx = 0
 
     def add_class(self, stype, name, decl):
@@ -827,9 +827,22 @@ class JSWrapperGenerator(object):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 3:
-        dstFile = sys.argv[1]
-        srcFiles = open(sys.argv[2], 'r').read().split(';')
-        coreBindings = sys.argv[3]
+    if len(sys.argv) < 4:
+        print("Usage:\n", \
+            os.path.basename(sys.argv[0]), \
+            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp>")
+        print("Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv]))
+        exit(0)
+
+    dstdir = "."
+    hdr_parser_path = os.path.abspath(sys.argv[1])
+    if hdr_parser_path.endswith(".py"):
+        hdr_parser_path = os.path.dirname(hdr_parser_path)
+    sys.path.append(hdr_parser_path)
+    import hdr_parser
+
+    bindingsCpp = sys.argv[2]
+    headers = open(sys.argv[3], 'r').read().split(';')
+    coreBindings = sys.argv[4]
     generator = JSWrapperGenerator()
-    generator.gen(dstFile, srcFiles, coreBindings)
+    generator.gen(bindingsCpp, headers, coreBindings)

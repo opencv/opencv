@@ -32,8 +32,9 @@ original_return_type is None if the original_return_type is the same as return_v
 
 class CppHeaderParser(object):
 
-    def __init__(self, generate_umat_decls=False):
+    def __init__(self, generate_umat_decls=False, js=False):
         self._generate_umat_decls = generate_umat_decls
+        self._js = js
 
         self.BLOCK_TYPE = 0
         self.BLOCK_NAME = 1
@@ -206,6 +207,8 @@ class CppHeaderParser(object):
 
         arg_type = self.batch_replace(arg_type, [("std::", ""), ("cv::", ""), ("::", "_")])
 
+        if arg_name in arg_str and self._js:
+            arg_type = arg_str.strip()[:-1*len(arg_name)]
         return arg_type, arg_name, modlist, argno
 
     def parse_enum(self, decl_str):
@@ -227,7 +230,10 @@ class CppHeaderParser(object):
             else:
                 prev_val_delta = 0
                 prev_val = val = pv[1].strip()
-            decl.append(["const " + self.get_dotted_name(pv[0].strip()), val, [], [], None, ""])
+            if not self._js:
+                decl.append(["const " + self.get_dotted_name(pv[0].strip()), val, [], [], None, ""])
+            else:
+                decl.append([self.get_dotted_name(pv[0].strip()), val, [], []])
         return decl
 
     def parse_class_decl(self, decl_str):
@@ -406,12 +412,30 @@ class CppHeaderParser(object):
             func_modlist.append("="+arg)
             decl_str = decl_str[:npos] + decl_str[npos3+1:]
 
-        # filter off some common prefixes, which are meaningless for Python wrappers.
-        # note that we do not strip "static" prefix, which does matter;
-        # it means class methods, not instance methods
-        decl_str = self.batch_replace(decl_str, [("virtual", ""), ("static inline", ""), ("inline", ""),\
-            ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""), ("CV_WRAP ", " "), ("CV_INLINE", ""),
-            ("CV_DEPRECATED", "")]).strip()
+        virtual_method = False
+        pure_virtual_method = False
+        if not self._js:
+            # filter off some common prefixes, which are meaningless for Python wrappers.
+            # note that we do not strip "static" prefix, which does matter;
+            # it means class methods, not instance methods
+            decl_str = self.batch_replace(decl_str, [("virtual", ""), ("static inline", ""), ("inline", ""),\
+                ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""), ("CV_WRAP ", " "), ("CV_INLINE", ""),
+                ("CV_DEPRECATED", "")]).strip()
+        else:
+            # "virtual" prefix matters for JS wrappers.
+            decl_str = self.batch_replace(decl_str, [("static inline", ""), ("inline", ""),\
+                ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""), ("CV_WRAP ", " "), ("CV_INLINE", ""),
+                ("CV_DEPRECATED", "")]).strip()
+
+
+            if decl_str.strip().startswith('virtual'):
+                virtual_method = True
+
+            decl_str = decl_str.replace('virtual' , '')
+
+            end_tokens = decl_str[decl_str.rfind(')'):].split()
+            const_method = 'const' in end_tokens
+            pure_virtual_method = '=' in end_tokens and '0' in end_tokens
 
         static_method = False
         context = top[0]
@@ -540,7 +564,7 @@ class CppHeaderParser(object):
                     if eqpos >= 0:
                         a = a[:eqpos].strip()
                     arg_type, arg_name, modlist, argno = self.parse_arg(a, argno)
-                    if self.wrap_mode:
+                    if self.wrap_mode and not self._js:
                         mat = "UMat" if use_umat else "Mat"
 
                         # TODO: Vectors should contain UMat, but this is not very easy to support and not very needed
@@ -575,6 +599,12 @@ class CppHeaderParser(object):
 
         if static_method:
             func_modlist.append("/S")
+        if const_method:
+            func_modlist.append("/C")
+        if virtual_method:
+            func_modlist.append("/V")
+        if pure_virtual_method:
+            func_modlist.append("/PV")
 
         return [funcname, rettype, func_modlist, args, original_type, docstring]
 
@@ -679,7 +709,14 @@ class CppHeaderParser(object):
                     return stmt_type, classname, True, decl
 
             if stmt.startswith("enum"):
-                return "enum", "", True, None
+                if not self._js:
+                    return "enum", "", True, None
+                else:
+                    items = stmt.split()
+                    if len (items) == 1 :
+                        return "enum", '' , True, None
+                    elif len (items) == 2 :
+                        return "enum", items[1] , True, None
 
             if stmt.startswith("namespace"):
                 stmt_list = stmt.split()
@@ -691,7 +728,13 @@ class CppHeaderParser(object):
 
         if end_token == "}" and context == "enum":
             decl = self.parse_enum(stmt)
-            return "enum", "", False, decl
+            if not self._js:
+                return "enum", "", False, decl
+            else:
+                name = self.get_dotted_name(stack_top[1]).strip()
+                if stack_top[1].strip() == '':
+                    name += '.anonymous'
+                return "enum", name , False, decl
 
         if end_token == ";" and stmt.startswith("typedef"):
             # TODO: handle typedef's more intelligently
@@ -869,8 +912,12 @@ class CppHeaderParser(object):
                     stmt_type, name, parse_flag, decl = self.parse_stmt(stmt, token, docstring=docstring)
                     if decl:
                         if stmt_type == "enum":
-                            for d in decl:
-                                decls.append(d)
+                            if self._js:
+                                #TODO anonymous enums
+                                decls.append(['enum' , name , [],  decl ])
+                            else:
+                                for d in decl:
+                                    decls.append(d)
                         else:
                             decls.append(decl)
 
