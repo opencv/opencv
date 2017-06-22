@@ -934,6 +934,28 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TEvolution>& evol
   kpt.angle = fastAtan2(maxY, maxX);
 }
 
+class ComputeKeypointOrientation : public ParallelLoopBody
+{
+public:
+  ComputeKeypointOrientation(std::vector<KeyPoint>& kpts,
+                             const std::vector<TEvolution>& evolution)
+    : keypoints_(&kpts)
+    , evolution_(&evolution)
+  {
+  }
+
+  void operator() (const Range& range) const
+  {
+    for (int i = range.start; i < range.end; i++)
+    {
+      Compute_Main_Orientation((*keypoints_)[i], *evolution_);
+    }
+  }
+private:
+  std::vector<KeyPoint>* keypoints_;
+  const std::vector<TEvolution>* evolution_;
+};
+
 /**
  * @brief This method computes the main orientation for a given keypoints
  * @param kpts Input keypoints
@@ -942,8 +964,7 @@ void AKAZEFeatures::Compute_Keypoints_Orientation(std::vector<KeyPoint>& kpts) c
 {
   CV_INSTRUMENT_REGION()
 
-     for(size_t i = 0; i < kpts.size(); i++)
-         Compute_Main_Orientation(kpts[i], evolution_);
+  parallel_for_(Range(0, (int)kpts.size()), ComputeKeypointOrientation(kpts, evolution_));
 }
 
 /* ************************************************************************* */
