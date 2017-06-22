@@ -749,6 +749,12 @@ function(ocv_source_group group)
   source_group(${group} FILES ${srcs})
 endfunction()
 
+macro(ocv_get_libname var_name)
+  get_filename_component(__libname "${ARGN}" NAME)
+  string(REGEX REPLACE "^lib(.+).(a|so)(.[.0-9]+)?$" "\\1" __libname "${__libname}")
+  set(${var_name} "${__libname}")
+endmacro()
+
 # build the list of simple dependencies, that links via "-l"
 #  _all_libs - name of variable with input list
 #  _simple - name of variable with output list of simple libs
