@@ -862,11 +862,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 @end
 
 @implementation CVView
-#if defined(__LP64__)
-@synthesize image;
-#else // 32-bit Obj-C does not have automatic synthesize
 @synthesize image = _image;
-#endif
 
 - (id)init {
     //cout << "CVView init" << endl;
