@@ -74,7 +74,12 @@ if(OpenCV_EXTRA_COMPONENTS)
       list(APPEND OpenCV_LIB_COMPONENTS_ "${extra_component}")
     elseif(extra_component MATCHES "[\\/]")
       get_filename_component(libdir "${extra_component}" PATH)
-      get_filename_component(libname "${extra_component}" NAME_WE)
+# cannot use longest extension function, since some libnames contain
+# multiple dots, like libglib-2.0.a.
+# Instead write out own shortest extension function:
+      get_filename_component(libname "${extra_component}" NAME)
+      string(FIND ${libname} "." SHORTEST_EXT_POS REVERSE)
+      string(SUBSTRING ${libname} 0 ${SHORTEST_EXT_POS} libname)
       string(REGEX REPLACE "^lib" "" libname "${libname}")
       list(APPEND OpenCV_LIB_COMPONENTS_ "-L${libdir}" "-l${libname}")
     else()
