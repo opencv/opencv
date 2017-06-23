@@ -5,7 +5,9 @@
 project(${WEBP_LIBRARY})
 
 ocv_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-ocv_include_directories(${CPUFEATURES_INCLUDE_DIRS})
+if(ANDROID)
+  ocv_include_directories(${CPUFEATURES_INCLUDE_DIRS})
+endif()
 
 file(GLOB lib_srcs dec/*.c demux/*.c dsp/*.c enc/*.c mux/*.c utils/*.c webp/*.c)
 file(GLOB lib_hdrs dec/*.h demux/*.h dsp/*.h enc/*.h mux/*.h utils/*.h webp/*.h)
@@ -28,7 +30,9 @@ endif()
 add_definitions(-DWEBP_USE_THREAD)
 
 add_library(${WEBP_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
-target_link_libraries(${WEBP_LIBRARY} ${CPUFEATURES_LIBRARIES})
+if(ANDROID)
+  target_link_libraries(${WEBP_LIBRARY} ${CPUFEATURES_LIBRARIES})
+endif()
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
