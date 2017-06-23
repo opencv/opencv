@@ -793,8 +793,8 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
           for (int j = -6; j <= 6; ++j) {
             if (i*i + j*j < 36) {
               weight[k] = gauss25[id[i + 6]][id[j + 6]];
-              yidx[k] = i;
-              xidx[k] = j;
+              yidx[k] = static_cast<int8_t>(i);
+              xidx[k] = static_cast<int8_t>(j);
               ++k;
             }
           }
@@ -848,7 +848,7 @@ void quantized_counting_sort(const float a[], const int n,
 
   // Generate the sorted indices; cum[] becomes the exclusive prefix sum i.e. the start indices of keys
   for (int i = 0; i < n; i++)
-    idx[--cum[(int)(a[i] / quantum)]] = i;
+    idx[--cum[(int)(a[i] / quantum)]] = static_cast<uint8_t>(i);
 }
 
 /**
