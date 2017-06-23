@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<cascade_depth>10</cascade_depth>
+<tree_depth>4</tree_depth>
+<num_trees_per_cascade_level>500</num_trees_per_cascade_level>
+<learning_rate>1.0000000149011612e-01</learning_rate>
+<oversampling_amount>20</oversampling_amount>
+<num_test_coordinates>400</num_test_coordinates>
+<lambda>1.0000000149011612e-01</lambda>
+<num_test_splits>20</num_test_splits>
+</opencv_storage>
