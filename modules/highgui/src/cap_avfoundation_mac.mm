@@ -697,7 +697,15 @@ CvCaptureFile::CvCaptureFile(const char* filename) {
         return;
     }
 
-    mAssetTrack = [[mAsset tracksWithMediaType: AVMediaTypeVideo][0] retain];
+    NSArray *tracks = [mAsset tracksWithMediaType:AVMediaTypeAudio];
+    if ([tracks count] == 0) {
+      fprintf(stderr, "OpenCV: Couldn't read movie file \"%s\"\n", filename);
+      [localpool drain];
+      started = 0;
+      return;
+    }
+
+    mAssetTrack = [tracks[0] retain];
 
     if ( ! setupReadingAt(kCMTimeZero) ) {
         fprintf(stderr, "OpenCV: Couldn't read movie file \"%s\"\n", filename);
