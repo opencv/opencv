@@ -7374,22 +7374,21 @@ size_t FileNode::size() const
 void read(const FileNode& node, int& value, int default_value)
 {
     value = !node.node ? default_value :
-    CV_NODE_IS_INT(node.node->tag) ? node.node->data.i :
-    CV_NODE_IS_REAL(node.node->tag) ? cvRound(node.node->data.f) : 0x7fffffff;
+    CV_NODE_IS_INT(node.node->tag) ? node.node->data.i : std::numeric_limits<int>::max();
 }
 
 void read(const FileNode& node, float& value, float default_value)
 {
     value = !node.node ? default_value :
         CV_NODE_IS_INT(node.node->tag) ? (float)node.node->data.i :
-        CV_NODE_IS_REAL(node.node->tag) ? (float)node.node->data.f : 1e30f;
+        CV_NODE_IS_REAL(node.node->tag) ? saturate_cast<float>(node.node->data.f) : std::numeric_limits<float>::max();
 }
 
 void read(const FileNode& node, double& value, double default_value)
 {
     value = !node.node ? default_value :
         CV_NODE_IS_INT(node.node->tag) ? (double)node.node->data.i :
-        CV_NODE_IS_REAL(node.node->tag) ? node.node->data.f : 1e300;
+        CV_NODE_IS_REAL(node.node->tag) ? node.node->data.f : std::numeric_limits<double>::max();
 }
 
 void read(const FileNode& node, String& value, const String& default_value)
