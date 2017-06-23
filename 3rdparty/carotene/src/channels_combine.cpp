@@ -77,7 +77,7 @@ namespace CAROTENE_NS {
                  dstStride == src2Stride && \
                  dstStride == src3Stride &&
 
-#if __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
 
 #define MERGE_ASM2(sgn, bits) __asm__ ( \
                                           "vld1." #bits " {d0-d1}, [%[in0]]             \n\t" \
@@ -128,7 +128,7 @@ namespace CAROTENE_NS {
                                      vst##n##q_##sgn##bits(dst + dj, v_dst); \
                                  }
 
-#endif // __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#endif
 
 #define COMBINE(sgn,bits,n) void combine##n(const Size2D &_size                                             \
                                         FILL_LINES##n(FARG, sgn##bits),                                     \

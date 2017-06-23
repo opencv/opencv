@@ -108,11 +108,6 @@ void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t
 #elif CV_NEON
 const static int cVectorWidth = 4;
 
-template <typename T> static inline float16x4_t vld1_f16(const T* ptr)
-{ return (float16x4_t)vld1_s16((const short*)ptr); }
-template <typename T> static inline void vst1_f16(T* ptr, float16x4_t a)
-{ vst1_s16((short*)ptr, a); }
-
 void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t dstep, cv::Size size )
 {
     CV_INSTRUMENT_REGION()
@@ -129,7 +124,7 @@ void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t
 
             float16x4_t v_dst = vcvt_f16_f32(v_src);
 
-            vst1_f16((__fp16*)dst + x, v_dst);
+            cv_vst1_f16((__fp16*)dst + x, v_dst);
         }
 
         for ( ; x < size.width; x++ )
@@ -151,7 +146,7 @@ void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t
         int x = 0;
         for ( ; x <= size.width - cVectorWidth ; x += cVectorWidth )
         {
-            float16x4_t v_src = vld1_f16((__fp16*)src + x);
+            float16x4_t v_src = cv_vld1_f16((__fp16*)src + x);
 
             float32x4_t v_dst = vcvt_f32_f16(v_src);
 
