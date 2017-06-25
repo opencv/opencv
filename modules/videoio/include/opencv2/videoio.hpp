@@ -855,7 +855,7 @@ public:
     The `apiPreference` parameter allows to specify API backends to use. Can be used to enforce a specific reader implementation
     if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_GSTREAMER.
      */
-    CV_WRAP VideoWriter(int apiPreference, const String& filename, int fourcc, double fps,
+    CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
 
     /** @brief Default destructor
@@ -875,15 +875,9 @@ public:
     CV_WRAP virtual bool open(const String& filename, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
 
-    /** @brief Initializes or reinitializes video writer.
-
-    The method opens video writer. Parameters are the same as in the constructor
-    VideoWriter::VideoWriter.
-    @return `true` if video writer has been successfully initialized
-
-    The method first calls VideoWriter::release to close the already opened file.
+    /** @overload
      */
-    CV_WRAP bool open(int apiPreference, const String& filename, int fourcc, double fps,
+    CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
 
     /** @brief Returns true if video writer has been successfully initialized.

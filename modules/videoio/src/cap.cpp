@@ -368,13 +368,7 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
  * Videowriter dispatching method: it tries to find the first
  * API that can write a given stream.
  */
-CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color )
-{
-    return cvCreateVideoWriterWithPreference(CV_CAP_ANY, filename, fourcc, fps, frameSize, is_color);
-}
-
-CvVideoWriter* cvCreateVideoWriterWithPreference(int apiPreference, const char* filename, int fourcc,
+static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, int apiPreference, int fourcc,
                                             double fps, CvSize frameSize, int is_color )
 {
     CV_UNUSED(frameSize);
@@ -426,6 +420,12 @@ CvVideoWriter* cvCreateVideoWriterWithPreference(int apiPreference, const char* 
     }
 
     return result;
+}
+
+CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
+                                            double fps, CvSize frameSize, int is_color )
+{
+    return cvCreateVideoWriterWithPreference(filename, CV_CAP_ANY, fourcc, fps, frameSize, is_color);
 }
 
 CV_IMPL int cvWriteFrame( CvVideoWriter* writer, const IplImage* image )
@@ -563,7 +563,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename)
     return Ptr<IVideoCapture>();
 }
 
-static Ptr<IVideoWriter> IVideoWriter_create(int apiPreference, const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
+static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
 {
     Ptr<IVideoWriter> iwriter;
 #ifdef HAVE_MFX
@@ -757,9 +757,9 @@ VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size f
 }
 
 
-VideoWriter::VideoWriter(int apiPreference, const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
+VideoWriter::VideoWriter(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    open(apiPreference, filename, _fourcc, fps, frameSize, isColor);
+    open(filename, apiPreference, _fourcc, fps, frameSize, isColor);
 }
 
 void VideoWriter::release()
@@ -775,18 +775,18 @@ VideoWriter::~VideoWriter()
 
 bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    return open(CAP_ANY, filename, _fourcc, fps, frameSize, isColor);
+    return open(filename, CAP_ANY, _fourcc, fps, frameSize, isColor);
 }
 
-bool VideoWriter::open(int apiPreference, const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
+bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
 {
     CV_INSTRUMENT_REGION()
 
     if (isOpened()) release();
-    iwriter = IVideoWriter_create(apiPreference, filename, _fourcc, fps, frameSize, isColor);
+    iwriter = IVideoWriter_create(filename, apiPreference, _fourcc, fps, frameSize, isColor);
     if (!iwriter.empty())
         return true;
-    writer.reset(cvCreateVideoWriterWithPreference(apiPreference, filename.c_str(), _fourcc, fps, frameSize, isColor));
+    writer.reset(cvCreateVideoWriterWithPreference(filename.c_str(), apiPreference, _fourcc, fps, frameSize, isColor));
     return isOpened();
 }
 
