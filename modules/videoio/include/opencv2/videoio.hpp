@@ -115,7 +115,7 @@ enum VideoCaptureAPIs {
        CAP_FFMPEG       = 1900,         //!< Open and record video file or stream using the FFMPEG library
        CAP_IMAGES       = 2000,         //!< OpenCV Image Sequence (e.g. img_%02d.jpg)
        CAP_ARAVIS       = 2100,         //!< Aravis SDK
-       CAP_OCV_MJPEG    = 2200,         //!< Built-in MotionJPEG codec
+       CAP_OPENCV_MJPEG = 2200,         //!< Built-in OpenCV MotionJPEG codec
        CAP_INTEL_MFX    = 2300          //!< Intel MediaSDK
      };
 

@@ -575,7 +575,7 @@ static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPref
     }
 #endif
 
-    if( (apiPreference == CAP_OCV_MJPEG || apiPreference == CAP_ANY)
+    if( (apiPreference == CAP_OPENCV_MJPEG || apiPreference == CAP_ANY)
             && _fourcc == CV_FOURCC('M', 'J', 'P', 'G') )
         iwriter = createMotionJpegWriter(filename, fps, frameSize, isColor);
 
