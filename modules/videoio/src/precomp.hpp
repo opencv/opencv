@@ -90,7 +90,7 @@ struct CvCapture
     virtual bool setProperty(int, double) { return 0; }
     virtual bool grabFrame() { return true; }
     virtual IplImage* retrieveFrame(int) { return 0; }
-    virtual int getCaptureDomain() { return CV_CAP_ANY; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
 };
 
 /*************************** CvVideoWriter structure ****************************/

@@ -1,6 +1,7 @@
 {
     "const_ignore_list": [
         "CV_CAP_OPENNI",
+        "CV_CAP_OPENNI2",
         "CV_CAP_PROP_OPENNI_",
         "CV_CAP_INTELPERC",
         "CV_CAP_PROP_INTELPERC_",
@@ -20,6 +21,7 @@
         "CV_CAP_UNICAP",
         "CV_CAP_DSHOW",
         "CV_CAP_PVAPI",
+        "CV_CAP_ARAVIS",
         "CV_CAP_PROP_DC1394_OFF",
         "CV_CAP_PROP_DC1394_MODE_MANUAL",
         "CV_CAP_PROP_DC1394_MODE_AUTO",
