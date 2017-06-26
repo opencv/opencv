@@ -81,6 +81,13 @@ ExrDecoder::ExrDecoder()
     m_signature = "\x76\x2f\x31\x01";
     m_file = 0;
     m_red = m_green = m_blue = 0;
+    m_type = ((Imf::PixelType)0);
+    m_iscolor = false;
+    m_bit_depth = 0;
+    m_isfloat = false;
+    m_ischroma = false;
+    m_native_depth = false;
+
 }
 
 

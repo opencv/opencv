@@ -184,7 +184,7 @@ protected:
 
         struct Stump
         {
-            Stump() { }
+            Stump() : featureIdx(0), threshold(0), left(0), right(0) { }
             Stump(int _featureIdx, float _threshold, float _left, float _right)
             : featureIdx(_featureIdx), threshold(_threshold), left(_left), right(_right) {}
 

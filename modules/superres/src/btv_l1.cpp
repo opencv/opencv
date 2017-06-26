@@ -854,6 +854,9 @@ namespace
     BTVL1::BTVL1()
     {
         temporalAreaRadius_ = 4;
+        procPos_ = 0;
+        outPos_ = 0;
+        storePos_ = 0;
     }
 
     void BTVL1::collectGarbage()

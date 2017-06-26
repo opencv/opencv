@@ -81,6 +81,7 @@ public:
         params.use1SERule = false;
         params.truncatePrunedTree = false;
         params.priors = Mat();
+        oobError = 0;
     }
     virtual ~DTreesImplForRTrees() {}
 

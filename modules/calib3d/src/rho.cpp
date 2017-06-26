@@ -556,7 +556,55 @@ unsigned rhoHest(Ptr<RHO_HEST> p,       /* Homography estimation context. */
  */
 
 RHO_HEST_REFC::RHO_HEST_REFC() : initialized(0){
+    arg.src = 0;
+    arg.dst = 0;
+    arg.inl = 0;
+    arg.N = 0;
+    arg.maxD = 0;
+    arg.maxI = 0;
+    arg.rConvg = 0;
+    arg.cfd = 0;
+    arg.minInl = 0;
+    arg.beta = 0;
+    arg.flags = 0;
+    arg.guessH = 0;
+    arg.finalH = 0;
 
+    ctrl.i = 0;
+    ctrl.phNum = 0;
+    ctrl.phEndI = 0;
+    ctrl.phEndFpI = 0;
+    ctrl.phMax = 0;
+    ctrl.phNumInl = 0;
+    ctrl.numModels = 0;
+    ctrl.smpl = 0;
+
+    curr.pkdPts = 0;
+    curr.H = 0;
+    curr.inl = 0;
+    curr.numInl = 0;
+
+    best.H = 0;
+    best.inl = 0;
+    best.numInl = 0;
+
+    nr.size = 0;
+    nr.beta = 0;
+
+    eval.t_M = 0;
+    eval.m_S = 0;
+    eval.epsilon = 0;
+    eval.delta = 0;
+    eval.A = 0;
+    eval.Ntested = 0;
+    eval.Ntestedtotal = 0;
+    eval.good = 0;
+    eval.lambdaAccept = 0;
+    eval.lambdaReject = 0;
+
+    lm.JtJ = 0;
+    lm.tmp1 = 0;
+    lm.Jte = 0;
 }
 
 /**

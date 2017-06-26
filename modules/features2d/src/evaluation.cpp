@@ -481,7 +481,7 @@ void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H
 struct DMatchForEvaluation : public DMatch
 {
     uchar isCorrect;
-    DMatchForEvaluation( const DMatch &dm ) : DMatch( dm ) {}
+    DMatchForEvaluation( const DMatch &dm ) : DMatch( dm ), isCorrect(0) {}
 };
 
 static inline float recall( int correctMatchCount, int correspondenceCount )

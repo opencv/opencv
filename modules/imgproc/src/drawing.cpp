@@ -178,6 +178,9 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         {
             ptr = img.data;
             err = plusDelta = minusDelta = plusStep = minusStep = count = 0;
+            ptr0 = 0;
+            step = 0;
+            elemSize = 0;
             return;
         }
     }

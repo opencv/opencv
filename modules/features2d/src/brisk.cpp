@@ -703,7 +703,6 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
   {
     cv::KeyPoint& kp = keypoints[k];
     const int& scale = kscales[k];
-    int* pvalues = _values;
     const float& x = kp.pt.x;
     const float& y = kp.pt.y;
 
@@ -712,7 +711,7 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
         // get the gray values in the unrotated pattern
         for (unsigned int i = 0; i < points_; i++)
         {
-          *(pvalues++) = smoothedIntensity(image, _integral, x, y, scale, 0, i);
+            _values[i] = smoothedIntensity(image, _integral, x, y, scale, 0, i);
         }
 
         int direction0 = 0;
@@ -765,11 +764,10 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
     int shifter = 0;
 
     //unsigned int mean=0;
-    pvalues = _values;
     // get the gray values in the rotated pattern
     for (unsigned int i = 0; i < points_; i++)
     {
-      *(pvalues++) = smoothedIntensity(image, _integral, x, y, scale, theta, i);
+        _values[i] = smoothedIntensity(image, _integral, x, y, scale, theta, i);
     }
 
     // now iterate through all the pairings

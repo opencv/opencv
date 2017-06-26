@@ -577,7 +577,7 @@ std::pair<uint64, bool> CodedInputStream::ReadVarint64Fallback() {
     buffer_ = p.second;
     return std::make_pair(temp, true);
   } else {
-    uint64 temp;
+    uint64 temp = 0;
     bool success = ReadVarint64Slow(&temp);
     return std::make_pair(temp, success);
   }
