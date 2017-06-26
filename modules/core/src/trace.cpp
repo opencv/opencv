@@ -167,7 +167,7 @@ public:
 #endif
 #ifdef HAVE_OPENVX
         if (result.durationImplOpenVX)
-            ok &= this->printf(",tOVX=%lld", (long long int)result.durationImplOpenVX));
+            ok &= this->printf(",tOVX=%lld", (long long int)result.durationImplOpenVX);
 #endif
         ok &= this->printf("\n");
         return ok;
