@@ -175,13 +175,10 @@ static void THDiskFile_seek(THFile *self, long position)
   THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
 
 #if defined(_WIN64)
-  THArgCheck(position <= (_int64)INT64_MAX, 2, "position must be smaller than INT64_MAX");
   if(_fseeki64(dfself->handle, (__int64)position, SEEK_SET) < 0)
 #elif defined(_WIN32)
-  THArgCheck(position <= (long)LONG_MAX, 2, "position must be smaller than LONG_MAX");
   if(fseek(dfself->handle, (long)position, SEEK_SET) < 0)
 #else
-  THArgCheck(position <= (long)LLONG_MAX, 2, "position must be smaller than LLONG_MAX");
   if(fseeko(dfself->handle, (off_t)position, SEEK_SET) < 0)
 #endif
   {
