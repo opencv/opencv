@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_DNN_DNN_SHAPE_UTILS_HPP__
-#define __OPENCV_DNN_DNN_SHAPE_UTILS_HPP__
+#ifndef OPENCV_DNN_DNN_SHAPE_UTILS_HPP
+#define OPENCV_DNN_DNN_SHAPE_UTILS_HPP
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/types_c.h>

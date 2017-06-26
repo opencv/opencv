@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_DNN_DNN_INL_HPP__
-#define __OPENCV_DNN_DNN_INL_HPP__
+#ifndef OPENCV_DNN_DNN_INL_HPP
+#define OPENCV_DNN_DNN_INL_HPP
 
 #include <opencv2/dnn.hpp>
 
