@@ -13,22 +13,22 @@ using namespace std;
 const size_t width = 300;
 const size_t height = 300;
 
-Mat getMean(const size_t& imageHeight, const size_t& imageWidth)
+static Mat getMean(const size_t& imageHeight, const size_t& imageWidth)
 {
     Mat mean;
 
     const int meanValues[3] = {104, 117, 123};
     vector<Mat> meanChannels;
-    for(size_t i = 0; i < 3; i++)
+    for(int i = 0; i < 3; i++)
     {
-        Mat channel(imageHeight, imageWidth, CV_32F, Scalar(meanValues[i]));
+        Mat channel((int)imageHeight, (int)imageWidth, CV_32F, Scalar(meanValues[i]));
         meanChannels.push_back(channel);
     }
     cv::merge(meanChannels, mean);
     return mean;
 }
 
-Mat preprocess(const Mat& frame)
+static Mat preprocess(const Mat& frame)
 {
     Mat preprocessed;
     frame.convertTo(preprocessed, CV_32F);
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
 
         if(confidence > confidenceThreshold)
         {
-            size_t objectClass = detectionMat.at<float>(i, 1);
+            size_t objectClass = (size_t)(detectionMat.at<float>(i, 1));
 
             float xLeftBottom = detectionMat.at<float>(i, 3) * frame.cols;
             float yLeftBottom = detectionMat.at<float>(i, 4) * frame.rows;
@@ -139,9 +139,9 @@ int main(int argc, char** argv)
                       << " " << xRightTop
                       << " " << yRightTop << std::endl;
 
-            Rect object(xLeftBottom, yLeftBottom,
-                        xRightTop - xLeftBottom,
-                        yRightTop - yLeftBottom);
+            Rect object((int)xLeftBottom, (int)yLeftBottom,
+                        (int)(xRightTop - xLeftBottom),
+                        (int)(yRightTop - yLeftBottom));
 
             rectangle(frame, object, Scalar(0, 255, 0));
         }

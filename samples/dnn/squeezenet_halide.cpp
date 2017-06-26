@@ -19,7 +19,7 @@ using namespace cv::dnn;
 #include <cstdlib>
 
 /* Find best class for the blob (i. e. class with maximal probability) */
-void getMaxClass(const Mat &probBlob, int *classId, double *classProb)
+static void getMaxClass(const Mat &probBlob, int *classId, double *classProb)
 {
     Mat probMat = probBlob.reshape(1, 1); //reshape the blob to 1x1000 matrix
     Point classNumber;
@@ -28,7 +28,7 @@ void getMaxClass(const Mat &probBlob, int *classId, double *classProb)
     *classId = classNumber.x;
 }
 
-std::vector<std::string> readClassNames(const char *filename = "synset_words.txt")
+static std::vector<std::string> readClassNames(const char *filename = "synset_words.txt")
 {
     std::vector<std::string> classNames;
 

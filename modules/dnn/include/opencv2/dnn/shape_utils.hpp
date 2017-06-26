@@ -60,7 +60,7 @@ inline std::ostream &operator<< (std::ostream &s, cv::Range &r)
 struct _Range : public cv::Range
 {
     _Range(const Range &r) : cv::Range(r) {}
-    _Range(int start, int size = 1) : cv::Range(start, start + size) {}
+    _Range(int start_, int size_ = 1) : cv::Range(start_, start_ + size_) {}
 };
 
 static inline Mat slice(const Mat &m, const _Range &r0)
@@ -148,13 +148,13 @@ static inline MatShape shape(int a0, int a1=-1, int a2=-1, int a3=-1)
 static inline int total(const MatShape& shape, int start = -1, int end = -1)
 {
     if (start == -1) start = 0;
-    if (end == -1) end = shape.size();
+    if (end == -1) end = (int)shape.size();
 
     if (shape.empty())
         return 0;
 
     int elems = 1;
-    CV_Assert(start < shape.size() && end <= shape.size() &&
+    CV_Assert(start < (int)shape.size() && end <= (int)shape.size() &&
               start <= end);
     for(int i = start; i < end; i++)
     {
@@ -187,7 +187,7 @@ inline int clamp(int ax, int dims)
 
 inline int clamp(int ax, const MatShape& shape)
 {
-    return clamp(ax, shape.size());
+    return clamp(ax, (int)shape.size());
 }
 
 }

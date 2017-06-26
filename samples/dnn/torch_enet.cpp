@@ -141,7 +141,7 @@ static void colorizeSegmentation(const Mat &score, Mat &segm, Mat &legend, vecto
                 if (ptrScore[col] > ptrMaxVal[col])
                 {
                     ptrMaxVal[col] = ptrScore[col];
-                    ptrMaxCl[col] = ch;
+                    ptrMaxCl[col] = (uchar)ch;
                 }
             }
         }
@@ -161,8 +161,8 @@ static void colorizeSegmentation(const Mat &score, Mat &segm, Mat &legend, vecto
     if (classNames.size() == colors.size())
     {
         int blockHeight = 30;
-        legend.create(blockHeight*classNames.size(), 200, CV_8UC3);
-        for(int i = 0; i < classNames.size(); i++)
+        legend.create(blockHeight*(int)classNames.size(), 200, CV_8UC3);
+        for(int i = 0; i < (int)classNames.size(); i++)
         {
             cv::Mat block = legend.rowRange(i*blockHeight, (i+1)*blockHeight);
             block = colors[i];
@@ -194,9 +194,9 @@ static vector<Vec3b> readColors(const String &filename, vector<String>& classNam
             string name; ss >> name;
             int temp;
             cv::Vec3b color;
-            ss >> temp; color[0] = temp;
-            ss >> temp; color[1] = temp;
-            ss >> temp; color[2] = temp;
+            ss >> temp; color[0] = (uchar)temp;
+            ss >> temp; color[1] = (uchar)temp;
+            ss >> temp; color[2] = (uchar)temp;
             classNames.push_back(name);
             colors.push_back(color);
         }
