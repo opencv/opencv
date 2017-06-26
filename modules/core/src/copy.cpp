@@ -856,6 +856,7 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
     CV_INSTRUMENT_REGION()
 
+    CV_Assert(_src.getObj() != _dst.getObj());
     CV_Assert( _src.dims() <= 2 );
     CV_Assert( ny > 0 && nx > 0 );
 
