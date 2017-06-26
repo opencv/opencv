@@ -217,6 +217,7 @@ Rect FeatherBlender::createWeightMaps(const std::vector<UMat> &masks, const std:
 
 MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 {
+    num_bands_ = 0;
     setNumBands(num_bands);
 
 #if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)

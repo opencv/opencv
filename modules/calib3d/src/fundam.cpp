@@ -423,7 +423,7 @@ namespace cv
 
 static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 {
-    double a[7*9], w[7], u[9*9], v[9*9], c[4], r[3];
+    double a[7*9], w[7], u[9*9], v[9*9], c[4], r[3] = {0};
     double* f1, *f2;
     double t0, t1, t2;
     Mat A( 7, 9, CV_64F, a );
@@ -766,7 +766,7 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
 {
     CV_INSTRUMENT_REGION()
 
-    double f[9];
+    double f[9] = {0};
     Mat tempF(3, 3, CV_64F, f);
     Mat points = _points.getMat(), F = _Fmat.getMat();
 

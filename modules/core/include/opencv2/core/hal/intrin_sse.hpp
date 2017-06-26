@@ -63,7 +63,7 @@ struct v_uint8x16
     typedef uchar lane_type;
     enum { nlanes = 16 };
 
-    v_uint8x16() {}
+    v_uint8x16() : val(_mm_setzero_si128()) {}
     explicit v_uint8x16(__m128i v) : val(v) {}
     v_uint8x16(uchar v0, uchar v1, uchar v2, uchar v3, uchar v4, uchar v5, uchar v6, uchar v7,
                uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
@@ -86,7 +86,7 @@ struct v_int8x16
     typedef schar lane_type;
     enum { nlanes = 16 };
 
-    v_int8x16() {}
+    v_int8x16() : val(_mm_setzero_si128()) {}
     explicit v_int8x16(__m128i v) : val(v) {}
     v_int8x16(schar v0, schar v1, schar v2, schar v3, schar v4, schar v5, schar v6, schar v7,
               schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
@@ -109,7 +109,7 @@ struct v_uint16x8
     typedef ushort lane_type;
     enum { nlanes = 8 };
 
-    v_uint16x8() {}
+    v_uint16x8() : val(_mm_setzero_si128()) {}
     explicit v_uint16x8(__m128i v) : val(v) {}
     v_uint16x8(ushort v0, ushort v1, ushort v2, ushort v3, ushort v4, ushort v5, ushort v6, ushort v7)
     {
@@ -129,7 +129,7 @@ struct v_int16x8
     typedef short lane_type;
     enum { nlanes = 8 };
 
-    v_int16x8() {}
+    v_int16x8() : val(_mm_setzero_si128()) {}
     explicit v_int16x8(__m128i v) : val(v) {}
     v_int16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
     {
@@ -148,7 +148,7 @@ struct v_uint32x4
     typedef unsigned lane_type;
     enum { nlanes = 4 };
 
-    v_uint32x4() {}
+    v_uint32x4() : val(_mm_setzero_si128()) {}
     explicit v_uint32x4(__m128i v) : val(v) {}
     v_uint32x4(unsigned v0, unsigned v1, unsigned v2, unsigned v3)
     {
@@ -166,7 +166,7 @@ struct v_int32x4
     typedef int lane_type;
     enum { nlanes = 4 };
 
-    v_int32x4() {}
+    v_int32x4() : val(_mm_setzero_si128()) {}
     explicit v_int32x4(__m128i v) : val(v) {}
     v_int32x4(int v0, int v1, int v2, int v3)
     {
@@ -184,7 +184,7 @@ struct v_float32x4
     typedef float lane_type;
     enum { nlanes = 4 };
 
-    v_float32x4() {}
+    v_float32x4() : val(_mm_setzero_ps()) {}
     explicit v_float32x4(__m128 v) : val(v) {}
     v_float32x4(float v0, float v1, float v2, float v3)
     {
@@ -202,7 +202,7 @@ struct v_uint64x2
     typedef uint64 lane_type;
     enum { nlanes = 2 };
 
-    v_uint64x2() {}
+    v_uint64x2() : val(_mm_setzero_si128()) {}
     explicit v_uint64x2(__m128i v) : val(v) {}
     v_uint64x2(uint64 v0, uint64 v1)
     {
@@ -222,7 +222,7 @@ struct v_int64x2
     typedef int64 lane_type;
     enum { nlanes = 2 };
 
-    v_int64x2() {}
+    v_int64x2() : val(_mm_setzero_si128()) {}
     explicit v_int64x2(__m128i v) : val(v) {}
     v_int64x2(int64 v0, int64 v1)
     {
@@ -242,7 +242,7 @@ struct v_float64x2
     typedef double lane_type;
     enum { nlanes = 2 };
 
-    v_float64x2() {}
+    v_float64x2() : val(_mm_setzero_pd()) {}
     explicit v_float64x2(__m128d v) : val(v) {}
     v_float64x2(double v0, double v1)
     {
@@ -261,7 +261,7 @@ struct v_float16x4
     typedef short lane_type;
     enum { nlanes = 4 };
 
-    v_float16x4() {}
+    v_float16x4() : val(_mm_setzero_si128()) {}
     explicit v_float16x4(__m128i v) : val(v) {}
     v_float16x4(short v0, short v1, short v2, short v3)
     {

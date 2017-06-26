@@ -284,7 +284,7 @@ void Mat::copyTo( OutputArray _dst ) const
         _dst.create( dims, size.p, type() );
         UMat dst = _dst.getUMat();
 
-        size_t i, sz[CV_MAX_DIM], dstofs[CV_MAX_DIM], esz = elemSize();
+        size_t i, sz[CV_MAX_DIM] = {0}, dstofs[CV_MAX_DIM], esz = elemSize();
         for( i = 0; i < (size_t)dims; i++ )
             sz[i] = size.p[i];
         sz[dims-1] *= esz;

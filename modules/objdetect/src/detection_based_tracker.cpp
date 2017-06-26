@@ -218,6 +218,7 @@ cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(Detectio
 
     cascadeInThread = _detector;
 #ifndef USE_STD_THREADS
+    second_workthread = 0;
     int res=0;
     res=pthread_mutex_init(&mutex, NULL);//TODO: should be attributes?
     if (res) {

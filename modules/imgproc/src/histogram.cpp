@@ -1219,15 +1219,14 @@ public:
         m_type           = ippiGetDataType(src.type());
         m_levelsNum      = histSize+1;
         ippiHistogram_C1 = getIppiHistogramFunction_C1(src.type());
+        m_fullRoi    = ippiSize(src.size());
+        m_bufferSize = 0;
+        m_specSize   = 0;
         if(!ippiHistogram_C1)
         {
             ok = false;
             return;
         }
-
-        m_fullRoi    = ippiSize(src.size());
-        m_bufferSize = 0;
-        m_specSize   = 0;
 
         if(ippiHistogramGetBufferSize(m_type, m_fullRoi, &m_levelsNum, 1, 1, &m_specSize, &m_bufferSize) < 0)
         {
@@ -3530,6 +3529,8 @@ cvCalcArrBackProjectPatch( CvArr** arr, CvArr* dst, CvSize patch_size, CvHistogr
         CV_Error( CV_StsBadSize, "The patch width and height must be positive" );
 
     dims = cvGetDims( hist->bins );
+    if (dims < 1)
+        CV_Error( CV_StsOutOfRange, "Invalid number of dimensions");
     cvNormalizeHist( hist, norm_factor );
 
     for( i = 0; i < dims; i++ )

@@ -127,6 +127,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   add_extra_compiler_option(-Wpointer-arith)
   add_extra_compiler_option(-Wshadow)
   add_extra_compiler_option(-Wsign-promo)
+  add_extra_compiler_option(-Wuninitialized)
+  add_extra_compiler_option(-Winit-self)
 
   if(ENABLE_NOISY_WARNINGS)
     add_extra_compiler_option(-Wcast-align)

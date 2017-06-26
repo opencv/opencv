@@ -85,7 +85,7 @@ namespace cv
 namespace videostab
 {
 
-WobbleSuppressorBase::WobbleSuppressorBase() : motions_(0), stabilizationMotions_(0)
+WobbleSuppressorBase::WobbleSuppressorBase() : frameCount_(0), motions_(0), motions2_(0), stabilizationMotions_(0)
 {
     setMotionEstimator(makePtr<KeypointBasedMotionEstimator>(makePtr<MotionEstimatorRansacL2>(MM_HOMOGRAPHY)));
 }
