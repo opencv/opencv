@@ -33,9 +33,9 @@ static vector<cv::Vec3b> readColors(const string &filename = "pascal-classes.txt
             string name; ss >> name;
             int temp;
             cv::Vec3b color;
-            ss >> temp; color[0] = temp;
-            ss >> temp; color[1] = temp;
-            ss >> temp; color[2] = temp;
+            ss >> temp; color[0] = (uchar)temp;
+            ss >> temp; color[1] = (uchar)temp;
+            ss >> temp; color[2] = (uchar)temp;
             colors.push_back(color);
         }
     }
@@ -64,7 +64,7 @@ static void colorizeSegmentation(const Mat &score, const vector<cv::Vec3b> &colo
                 if (ptrScore[col] > ptrMaxVal[col])
                 {
                     ptrMaxVal[col] = ptrScore[col];
-                    ptrMaxCl[col] = ch;
+                    ptrMaxCl[col] = (uchar)ch;
                 }
             }
         }
