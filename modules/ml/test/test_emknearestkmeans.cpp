@@ -50,6 +50,7 @@ using cv::ml::KNearest;
 static
 void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
 {
+    CV_TRACE_FUNCTION();
     float mp0[] = {0.0f, 0.0f}, cp0[] = {0.67f, 0.0f, 0.0f, 0.67f};
     float mp1[] = {5.0f, 0.0f}, cp1[] = {1.0f, 0.0f, 0.0f, 1.0f};
     float mp2[] = {1.0f, 5.0f}, cp2[] = {1.0f, 0.0f, 0.0f, 1.0f};
@@ -76,6 +77,7 @@ void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
 static
 void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& _means, const vector<Mat>& covs, int dataType, int labelType )
 {
+    CV_TRACE_FUNCTION();
     vector<int>::const_iterator sit = sizes.begin();
     int total = 0;
     for( ; sit != sizes.end(); ++sit )
@@ -226,6 +228,7 @@ protected:
 
 void CV_KMeansTest::run( int /*start_from*/ )
 {
+    CV_TRACE_FUNCTION();
     const int iters = 100;
     int sizesArr[] = { 5000, 7000, 8000 };
     int pointsCount = sizesArr[0]+ sizesArr[1] + sizesArr[2];

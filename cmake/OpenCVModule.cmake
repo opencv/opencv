@@ -683,6 +683,8 @@ macro(ocv_glob_module_sources)
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.h"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/utils/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/utils/*.h"
   )
   file(GLOB lib_hdrs_detail
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.hpp"
@@ -927,7 +929,7 @@ macro(_ocv_create_module)
     if(OPENCV_MODULE_${m}_HEADERS AND ";${OPENCV_MODULES_PUBLIC};" MATCHES ";${m};")
       foreach(hdr ${OPENCV_MODULE_${m}_HEADERS})
         string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
-        if(NOT hdr2 MATCHES "opencv2/${m}/private.*" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
+        if(NOT hdr2 MATCHES "private" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
           install(FILES ${hdr} OPTIONAL DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT dev)
         endif()
       endforeach()
@@ -1157,6 +1159,8 @@ function(ocv_add_accuracy_tests)
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
         RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
       )
+
+      ocv_append_target_property(${the_target} COMPILE_DEFINITIONS "__OPENCV_TESTS=1")
 
       if(ENABLE_SOLUTION_FOLDERS)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")

@@ -264,6 +264,7 @@ OCV_OPTION(WITH_MFX            "Include Intel Media SDK support"             OFF
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              ON   IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_ITT            "Include Intel ITT support"                   ON   IF (NOT APPLE_FRAMEWORK) )
 
 # OpenCV build components
 # ===================================================
@@ -291,6 +292,7 @@ OCV_OPTION(BUILD_PNG                "Build libpng from source"           WIN32 O
 OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (WIN32 OR ANDROID OR APPLE) AND NOT WINRT)
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" ANDROID )
 OCV_OPTION(BUILD_IPP_IW             "Build IPP IW from source"           NOT MINGW IF (X86_64 OR X86) AND NOT WINRT )
+OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"        NOT MINGW IF (X86_64 OR X86) AND NOT WINRT AND NOT APPLE_FRAMEWORK )
 
 # OpenCV installation options
 # ===================================================
@@ -324,7 +326,7 @@ OCV_OPTION(ENABLE_BUILD_HARDENING     "Enable hardening of the resulting binarie
 OCV_OPTION(GENERATE_ABI_DESCRIPTOR    "Generate XML file for abi_compliance_checker tool" OFF IF UNIX)
 OCV_OPTION(CV_ENABLE_INTRINSICS       "Use intrinsic-based optimized code" ON )
 OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatched code/intrinsics/loop unrolling/etc)" OFF )
-
+OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 
 
 if(ENABLE_IMPL_COLLECTION)
@@ -733,6 +735,16 @@ if(HAVE_CUDA)
     endif()
   endforeach()
 endif()
+
+
+# ----------------------------------------------------------------------------
+# Code trace support
+# ----------------------------------------------------------------------------
+if(CV_TRACE)
+  include(cmake/OpenCVDetectTrace.cmake)
+endif()
+
+
 # ----------------------------------------------------------------------------
 # Solution folders:
 # ----------------------------------------------------------------------------
@@ -1278,6 +1290,14 @@ endif()
 status("")
 status("  Parallel framework:" TRUE THEN "${CV_PARALLEL_FRAMEWORK}" ELSE NO)
 
+if(CV_TRACE OR OPENCV_TRACE)
+  set(__msg "")
+  if(HAVE_ITT)
+    set(__msg "with Intel ITT")
+  endif()
+  status("")
+  status("  Trace: " OPENCV_TRACE THEN "YES (${__msg})" ELSE NO)
+endif()
 
 # ========================== Other third-party libraries ==========================
 status("")

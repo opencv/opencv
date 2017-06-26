@@ -907,7 +907,7 @@ Mat repeat(const Mat& src, int ny, int nx)
  */
 int cv::borderInterpolate( int p, int len, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_FUNCTION_VERBOSE();
 
     if( (unsigned)p < (unsigned)len )
         ;
