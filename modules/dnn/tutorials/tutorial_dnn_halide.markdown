@@ -85,8 +85,6 @@ When you build OpenCV add the following configuration flags:
 
 - `HALIDE_ROOT_DIR` - path to Halide build directory
 
-How to build OpenCV with DNN module you may find in @ref tutorial_dnn_build.
-
 ## Sample
 
 @include dnn/squeezenet_halide.cpp
