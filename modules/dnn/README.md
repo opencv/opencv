@@ -1,2 +1,0 @@
-Deep Neural Network module
-==========================
