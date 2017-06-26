@@ -65,67 +65,6 @@
 # endif
 #endif
 
-
-// TODO Move to some common place
-static bool getBoolParameter(const char* name, bool defaultValue)
-{
-/*
- * If your system doesn't support getenv(), define NO_GETENV to disable
- * this feature.
- */
-#ifdef NO_GETENV
-    const char* envValue = NULL;
-#else
-    const char* envValue = getenv(name);
-#endif
-    if (envValue == NULL)
-    {
-        return defaultValue;
-    }
-    cv::String value = envValue;
-    if (value == "1" || value == "True" || value == "true" || value == "TRUE")
-    {
-        return true;
-    }
-    if (value == "0" || value == "False" || value == "false" || value == "FALSE")
-    {
-        return false;
-    }
-    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
-}
-
-
-// TODO Move to some common place
-static size_t getConfigurationParameterForSize(const char* name, size_t defaultValue)
-{
-#ifdef NO_GETENV
-    const char* envValue = NULL;
-#else
-    const char* envValue = getenv(name);
-#endif
-    if (envValue == NULL)
-    {
-        return defaultValue;
-    }
-    cv::String value = envValue;
-    size_t pos = 0;
-    for (; pos < value.size(); pos++)
-    {
-        if (!isdigit(value[pos]))
-            break;
-    }
-    cv::String valueStr = value.substr(0, pos);
-    cv::String suffixStr = value.substr(pos, value.length() - pos);
-    int v = atoi(valueStr.c_str());
-    if (suffixStr.length() == 0)
-        return v;
-    else if (suffixStr == "MB" || suffixStr == "Mb" || suffixStr == "mb")
-        return v * 1024 * 1024;
-    else if (suffixStr == "KB" || suffixStr == "Kb" || suffixStr == "kb")
-        return v * 1024;
-    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
-}
-
 #if CV_OPENCL_SHOW_SVM_LOG
 // TODO add timestamp logging
 #define CV_OPENCL_SVM_TRACE_P printf("line %d (ocl.cpp): ", __LINE__); printf
@@ -159,7 +98,7 @@ static bool isRaiseError()
     static bool value = false;
     if (!initialized)
     {
-        value = getBoolParameter("OPENCV_OPENCL_RAISE_ERROR", false);
+        value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_RAISE_ERROR", false);
         initialized = true;
     }
     return value;
@@ -1232,7 +1171,7 @@ static bool checkForceSVMUmatUsage()
     static bool force = false;
     if (!initialized)
     {
-        force = getBoolParameter("OPENCV_OPENCL_SVM_FORCE_UMAT_USAGE", false);
+        force = utils::getConfigurationParameterBool("OPENCV_OPENCL_SVM_FORCE_UMAT_USAGE", false);
         initialized = true;
     }
     return force;
@@ -1243,7 +1182,7 @@ static bool checkDisableSVMUMatUsage()
     static bool force = false;
     if (!initialized)
     {
-        force = getBoolParameter("OPENCV_OPENCL_SVM_DISABLE_UMAT_USAGE", false);
+        force = utils::getConfigurationParameterBool("OPENCV_OPENCL_SVM_DISABLE_UMAT_USAGE", false);
         initialized = true;
     }
     return force;
@@ -1254,7 +1193,7 @@ static bool checkDisableSVM()
     static bool force = false;
     if (!initialized)
     {
-        force = getBoolParameter("OPENCV_OPENCL_SVM_DISABLE", false);
+        force = utils::getConfigurationParameterBool("OPENCV_OPENCL_SVM_DISABLE", false);
         initialized = true;
     }
     return force;
@@ -1285,7 +1224,7 @@ static size_t getProgramCountLimit()
     static size_t count = 0;
     if (!initialized)
     {
-        count = getConfigurationParameterForSize("OPENCV_OPENCL_PROGRAM_CACHE", 0);
+        count = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_PROGRAM_CACHE", 0);
         initialized = true;
     }
     return count;
@@ -3195,12 +3134,12 @@ public:
     {
         size_t defaultPoolSize, poolSize;
         defaultPoolSize = ocl::Device::getDefault().isIntel() ? 1 << 27 : 0;
-        poolSize = getConfigurationParameterForSize("OPENCV_OPENCL_BUFFERPOOL_LIMIT", defaultPoolSize);
+        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_BUFFERPOOL_LIMIT", defaultPoolSize);
         bufferPool.setMaxReservedSize(poolSize);
-        poolSize = getConfigurationParameterForSize("OPENCV_OPENCL_HOST_PTR_BUFFERPOOL_LIMIT", defaultPoolSize);
+        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_HOST_PTR_BUFFERPOOL_LIMIT", defaultPoolSize);
         bufferPoolHostPtr.setMaxReservedSize(poolSize);
 #ifdef HAVE_OPENCL_SVM
-        poolSize = getConfigurationParameterForSize("OPENCV_OPENCL_SVM_BUFFERPOOL_LIMIT", defaultPoolSize);
+        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_SVM_BUFFERPOOL_LIMIT", defaultPoolSize);
         bufferPoolSVM.setMaxReservedSize(poolSize);
 #endif
 
@@ -4980,7 +4919,7 @@ bool internal::isOpenCLForced()
     static bool value = false;
     if (!initialized)
     {
-        value = getBoolParameter("OPENCV_OPENCL_FORCE", false);
+        value = utils::getConfigurationParameterBool("OPENCV_OPENCL_FORCE", false);
         initialized = true;
     }
     return value;
@@ -4992,7 +4931,7 @@ bool internal::isPerformanceCheckBypassed()
     static bool value = false;
     if (!initialized)
     {
-        value = getBoolParameter("OPENCV_OPENCL_PERF_CHECK_BYPASS", false);
+        value = utils::getConfigurationParameterBool("OPENCV_OPENCL_PERF_CHECK_BYPASS", false);
         initialized = true;
     }
     return value;

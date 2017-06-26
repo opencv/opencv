@@ -42,31 +42,9 @@
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
 //M*/
+#include "opencv2/ts.hpp"
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
-
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
-
-#include <opencv2/core/version.hpp>
 #include <opencv2/viz/vizcore.hpp>
-
-namespace cv
-{
-    Mat imread(const String& filename, int flags = 1);
-}
-
-#if CV_MAJOR_VERSION < 3
-    #include "opencv2/ts/ts.hpp"
-#else
-    #include "opencv2/ts.hpp"
-#endif
 
 #include <iostream>
 #include <fstream>
@@ -108,5 +86,3 @@ namespace cv
         return 0.114 * chs[0] + 0.58 * chs[1] + 0.3 * chs[2];
     }
 }
-
-#endif

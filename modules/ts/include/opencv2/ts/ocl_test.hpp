@@ -42,8 +42,6 @@
 #ifndef OPENCV_TS_OCL_TEST_HPP
 #define OPENCV_TS_OCL_TEST_HPP
 
-#include "opencv2/opencv_modules.hpp"
-
 #include "opencv2/ts.hpp"
 
 #include "opencv2/imgcodecs.hpp"

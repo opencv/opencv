@@ -641,6 +641,7 @@ public:
     inline TLSData()        {}
     inline ~TLSData()       { release();            } // Release key and delete associated data
     inline T* get() const   { return (T*)getData(); } // Get data associated with key
+    inline T& getRef() const { T* ptr = (T*)getData(); CV_Assert(ptr); return *ptr; } // Get data associated with key
 
     // Get data from all threads
     inline void gather(std::vector<T*> &data) const
@@ -1167,6 +1168,12 @@ CV_EXPORTS void       setFlags(FLAGS modeFlags);
 static inline void    setFlags(int modeFlags) { setFlags((FLAGS)modeFlags); }
 CV_EXPORTS FLAGS      getFlags();
 }
+
+namespace utils {
+
+CV_EXPORTS int getThreadID();
+
+} // namespace
 
 } //namespace cv
 

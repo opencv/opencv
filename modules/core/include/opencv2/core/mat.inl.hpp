@@ -49,6 +49,11 @@
 #  error mat.inl.hpp header must be compiled as C++
 #endif
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable: 4127 )
+#endif
+
 namespace cv
 {
 
@@ -3854,5 +3859,9 @@ inline UMatDataAutoLock::~UMatDataAutoLock() { u->unlock(); }
 //! @endcond
 
 } //cv
+
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 
 #endif

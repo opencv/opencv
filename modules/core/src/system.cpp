@@ -44,6 +44,8 @@
 #include "precomp.hpp"
 #include <iostream>
 
+#include <opencv2/core/utils/trace.private.hpp>
+
 namespace cv {
 
 static Mutex* __initialization_mutex = NULL;
@@ -1490,6 +1492,7 @@ void TLSDataContainer::cleanup()
 
 void* TLSDataContainer::getData() const
 {
+    CV_Assert(key_ != -1 && "Can't fetch data from terminated TLS container.");
     void* pData = getTlsStorage().getData(key_); // Check if data was already allocated
     if(!pData)
     {
@@ -1533,6 +1536,99 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
     return TRUE;
 }
 #endif
+
+
+namespace {
+static int g_threadNum = 0;
+class ThreadID {
+public:
+    const int id;
+    ThreadID() :
+        id(CV_XADD(&g_threadNum, 1))
+    {
+#ifdef OPENCV_WITH_ITT
+        __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
+#endif
+    }
+};
+
+static TLSData<ThreadID>& getThreadIDTLS()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<ThreadID>, new TLSData<ThreadID>());
+}
+
+} // namespace
+int utils::getThreadID() { return getThreadIDTLS().get()->id; }
+
+bool utils::getConfigurationParameterBool(const char* name, bool defaultValue)
+{
+#ifdef NO_GETENV
+    const char* envValue = NULL;
+#else
+    const char* envValue = getenv(name);
+#endif
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    if (value == "1" || value == "True" || value == "true" || value == "TRUE")
+    {
+        return true;
+    }
+    if (value == "0" || value == "False" || value == "false" || value == "FALSE")
+    {
+        return false;
+    }
+    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
+}
+
+
+size_t utils::getConfigurationParameterSizeT(const char* name, size_t defaultValue)
+{
+#ifdef NO_GETENV
+    const char* envValue = NULL;
+#else
+    const char* envValue = getenv(name);
+#endif
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    size_t pos = 0;
+    for (; pos < value.size(); pos++)
+    {
+        if (!isdigit(value[pos]))
+            break;
+    }
+    cv::String valueStr = value.substr(0, pos);
+    cv::String suffixStr = value.substr(pos, value.length() - pos);
+    int v = atoi(valueStr.c_str());
+    if (suffixStr.length() == 0)
+        return v;
+    else if (suffixStr == "MB" || suffixStr == "Mb" || suffixStr == "mb")
+        return v * 1024 * 1024;
+    else if (suffixStr == "KB" || suffixStr == "Kb" || suffixStr == "kb")
+        return v * 1024;
+    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
+}
+
+cv::String utils::getConfigurationParameterString(const char* name, const char* defaultValue)
+{
+#ifdef NO_GETENV
+    const char* envValue = NULL;
+#else
+    const char* envValue = getenv(name);
+#endif
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    return value;
+}
+
 
 #ifdef CV_COLLECT_IMPL_DATA
 ImplCollector& getImplData()

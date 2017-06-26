@@ -225,6 +225,7 @@ bool BaseTest::can_do_fast_forward()
 
 void BaseTest::safe_run( int start_from )
 {
+    CV_TRACE_FUNCTION();
     read_params( ts->get_file_storage() );
     ts->update_context( 0, -1, true );
     ts->update_context( this, -1, true );

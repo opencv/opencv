@@ -3130,7 +3130,7 @@ void cv::hconcat(InputArray _src, OutputArray dst)
 
 void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_FUNCTION_SKIP_NESTED()
 
     if( nsrc == 0 || !src )
     {
