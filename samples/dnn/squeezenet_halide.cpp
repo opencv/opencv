@@ -6,7 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 // Sample of using Halide backend in OpenCV deep learning module.
-// Based on dnn/samples/caffe_googlenet.cpp.
+// Based on caffe_googlenet.cpp.
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
