@@ -5,12 +5,11 @@ import argparse
 import time
 
 from imagenet_cls_test_alexnet import CaffeModel, DnnCaffeModel
-sys.path.append('/home/arrybn/build/opencv_w_contrib/lib')
 try:
     import cv2 as cv
 except ImportError:
-    raise ImportError('Can\'t find opencv. If you\'ve built it from sources without installation, '
-                      'uncomment the line before and insert there path to opencv_build_dir/lib dir')
+    raise ImportError('Can\'t find OpenCV Python module. If you\'ve built it from sources without installation, '
+                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 
 
 def get_metrics(conf_mat):

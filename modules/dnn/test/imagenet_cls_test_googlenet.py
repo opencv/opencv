@@ -3,20 +3,16 @@ import sys
 import os
 import argparse
 from imagenet_cls_test_alexnet import MeanChannelsFetch, CaffeModel, DnnCaffeModel, ClsAccEvaluation
-# sys.path.append('<path to git/caffe/python dir>')
-sys.path.append('/home/arrybn/git/caffe/python')
 try:
     import caffe
 except ImportError:
-    raise ImportError('Can\'t find caffe. If you\'ve built it from sources without installation, '
-                      'uncomment the line before and insert there path to git/caffe/python dir')
-# sys.path.append('<path to opencv_build_dir/lib>')
-sys.path.append('/home/arrybn/build/opencv_w_contrib/lib')
+    raise ImportError('Can\'t find Caffe Python module. If you\'ve built it from sources without installation, '
+                      'configure environemnt variable PYTHONPATH to "git/caffe/python" directory')
 try:
     import cv2 as cv
 except ImportError:
-    raise ImportError('Can\'t find opencv. If you\'ve built it from sources without installation, '
-                      'uncomment the line before and insert there path to opencv_build_dir/lib dir')
+    raise ImportError('Can\'t find OpenCV Python module. If you\'ve built it from sources without installation, '
+                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

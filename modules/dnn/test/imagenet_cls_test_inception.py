@@ -5,13 +5,11 @@ import argparse
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 from imagenet_cls_test_alexnet import MeanValueFetch, DnnCaffeModel, Framework, ClsAccEvaluation
-# sys.path.append('<path to opencv_build_dir/lib>')
-sys.path.append('/home/arrybn/build/opencv_w_contrib/lib')
 try:
     import cv2 as cv
 except ImportError:
-    raise ImportError('Can\'t find opencv. If you\'ve built it from sources without installation, '
-                      'uncomment the line before and insert there path to opencv_build_dir/lib dir')
+    raise ImportError('Can\'t find OpenCV Python module. If you\'ve built it from sources without installation, '
+                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 
 # If you've got an exception "Cannot load libmkl_avx.so or libmkl_def.so" or similar, try to export next variable
 # before runnigng the script:
