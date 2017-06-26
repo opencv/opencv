@@ -39,8 +39,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_DNN_DNN_HPP__
-#define __OPENCV_DNN_DNN_HPP__
+#ifndef OPENCV_DNN_DNN_HPP
+#define OPENCV_DNN_DNN_HPP
 
 #include <vector>
 #include <opencv2/core.hpp>
