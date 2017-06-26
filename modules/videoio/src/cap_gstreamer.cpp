@@ -833,14 +833,16 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     caps = gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg");
 
-    GstPad* sink_pad = gst_element_get_static_pad(sink, "sink");
-    GstCaps* peer_caps = gst_pad_peer_query_caps(sink_pad,NULL);
-    if (!gst_caps_can_intersect(caps, peer_caps)) {
-        gst_caps_unref(caps);
-        caps = gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420}");
+    {
+        GstPad* sink_pad = gst_element_get_static_pad(sink, "sink");
+        GstCaps* peer_caps = gst_pad_peer_query_caps(sink_pad,NULL);
+        if (!gst_caps_can_intersect(caps, peer_caps)) {
+            gst_caps_unref(caps);
+            caps = gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420}");
+        }
+        gst_object_unref(sink_pad);
+        gst_caps_unref(peer_caps);
     }
-    gst_object_unref(sink_pad);
-    gst_caps_unref(peer_caps);
 
 #endif
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
