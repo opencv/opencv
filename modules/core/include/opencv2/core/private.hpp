@@ -154,11 +154,6 @@ static inline cv::Size cvGetMatSize( const CvMat* mat )
 }
 #endif
 
-namespace cv
-{
-CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);
-}
-
 // property implementation macros
 
 #define CV_IMPL_PROPERTY_RO(type, name, member) \

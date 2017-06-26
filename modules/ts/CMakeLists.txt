@@ -1,3 +1,9 @@
+if(NOT DEFINED OPENCV_INITIAL_PASS)
+  cmake_minimum_required(VERSION 2.8)
+  include(standalone.cmake)
+  return()
+endif()
+
 set(the_description "The ts module")
 
 if(NOT BUILD_opencv_ts AND NOT BUILD_TESTS AND NOT BUILD_PERF_TESTS)

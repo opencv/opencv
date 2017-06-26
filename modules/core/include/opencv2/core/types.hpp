@@ -622,7 +622,7 @@ public:
     typedef Vec<channel_type, channels> vec_type;
 };
 
-
+CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);
 
 /////////////////////////////// KeyPoint ////////////////////////////////
 

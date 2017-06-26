@@ -2992,12 +2992,14 @@ void printVersionInfo(bool useStdOut)
     ::testing::Test::RecordProperty("cv_build_type", build_type);
     if (useStdOut) std::cout << "Build type: " << build_type << std::endl;
 
+#if __OPENCV_BUILD
     const char* parallel_framework = currentParallelFramework();
 
     if (parallel_framework) {
         ::testing::Test::RecordProperty("cv_parallel_framework", parallel_framework);
         if (useStdOut) std::cout << "Parallel framework: " << parallel_framework << std::endl;
     }
+#endif
 
     std::string cpu_features;
 
