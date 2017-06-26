@@ -50,6 +50,8 @@
 namespace cv {
 namespace dnn {
 
+#define _mm256_load_ps _mm256_loadu_ps // "weights" in fastConv_avx2 is not always aligned to 32 bytes
+
 void fastConv_avx2( const float* weights, size_t wstep, const float* bias,
                     const float* rowbuf, float* output, const int* outShape,
                     int blockSize, int vecsize, int vecsize_aligned,
