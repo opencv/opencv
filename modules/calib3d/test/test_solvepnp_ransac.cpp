@@ -285,7 +285,7 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
     projectPoints(Mat(opoints), trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
 
     int num_of_solutions = solveP3P(opoints, projectedPoints, intrinsics, distCoeffs, rvecs, tvecs, method);
-    if (num_of_solutions != rvecs.size() || num_of_solutions != tvecs.size() || num_of_solutions == 0)
+    if (num_of_solutions != (int) rvecs.size() || num_of_solutions != (int) tvecs.size() || num_of_solutions == 0)
       return false;
 
     double min_rvecDiff = DBL_MAX, min_tvecDiff = DBL_MAX;
