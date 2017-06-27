@@ -3,8 +3,8 @@
 
 //#include "THStorage.h"
 #if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
-#include "THGeneral.h"
 #include "opencv2/core/hal/interface.h"
+#include "THGeneral.h"
 
 typedef struct THFile__ THFile;
 

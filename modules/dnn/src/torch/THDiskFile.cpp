@@ -1,3 +1,4 @@
+#include "../precomp.hpp"
 #if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 #include "THGeneral.h"
 #include "THDiskFile.h"
