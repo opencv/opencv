@@ -63,9 +63,7 @@ void getConvPoolPaddings(const Size& inp, const Size& out,
                          const Size &kernel, const Size &stride,
                          const String &padMode, Size &pad);
 
-#if CV_SSE2
-#define CV_DNN_TRY_AVX2 1
-
+#if CV_TRY_AVX2
 void fastConv_avx2(const float* weights, size_t wstep, const float* bias,
                    const float* rowbuf, float* output, const int* outShape,
                    int blockSize, int vecsize, int vecsize_aligned,
@@ -76,9 +74,6 @@ void fastGEMM1T_avx2( const float* vec, const float* weights,
 void fastGEMM_avx2( const float* aptr, size_t astep, const float* bptr0,
                    size_t bstep, float* cptr, size_t cstep,
                    int ma, int na, int nb );
-
-#else
-#define CV_DNN_TRY_AVX2 0
 #endif
 
 }

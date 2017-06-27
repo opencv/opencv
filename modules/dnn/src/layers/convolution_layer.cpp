@@ -315,7 +315,7 @@ public:
             int inpCnAll = input.size[1], width = input.size[3], height = input.size[2];
             int inpCn = inpCnAll / ngroups;
             p.is1x1_ = kernel == Size(0,0) && pad == Size(0, 0);
-            p.useAVX2 = checkHardwareSupport(CPU_AVX2);
+            p.useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
 
             int ncn = std::min(inpCn, (int)BLK_SIZE_CN);
             p.ofstab_.resize(kernel.width*kernel.height*ncn);
@@ -486,7 +486,7 @@ public:
                         // now compute dot product of the weights
                         // and im2row-transformed part of the tensor
                         int bsz = ofs1 - ofs0;
-                    #if CV_DNN_TRY_AVX2
+                    #if CV_TRY_AVX2
                         if(useAVX2)
                             fastConv_avx2(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                           outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
@@ -776,7 +776,7 @@ public:
             b_ = &b;
             c_ = &c;
             nstripes_ = nstripes;
-            useAVX2 = checkHardwareSupport(CPU_AVX2);
+            useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
         }
 
         void operator()(const Range& range_) const
@@ -794,7 +794,7 @@ public:
             size_t bstep = b_->step1();
             size_t cstep = c_->step1();
 
-        #if CV_DNN_TRY_AVX2
+        #if CV_TRY_AVX2
             if( useAVX2 )
                 fastGEMM_avx2( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
             else
