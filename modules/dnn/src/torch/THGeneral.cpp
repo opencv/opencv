@@ -1,3 +1,4 @@
+#include "../precomp.hpp"
 #if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 #include <opencv2/core.hpp>
 
@@ -14,7 +15,9 @@ extern "C"
 {
 
 #ifndef TH_HAVE_THREAD
-#define __thread
+#define TH_THREAD
+#else
+#define TH_THREAD __thread
 #endif
 
 /* Torch Error Handling */
@@ -23,8 +26,8 @@ static void defaultTorchErrorHandlerFunction(const char *msg, void*)
   CV_Error(cv::Error::StsError, cv::String("Torch Error: ") + msg);
 }
 
-static __thread void (*torchErrorHandlerFunction)(const char *msg, void *data) = defaultTorchErrorHandlerFunction;
-static __thread void *torchErrorHandlerData;
+static TH_THREAD void (*torchErrorHandlerFunction)(const char *msg, void *data) = defaultTorchErrorHandlerFunction;
+static TH_THREAD void *torchErrorHandlerData;
 
 void _THError(const char *file, const int line, const char *fmt, ...)
 {
@@ -71,8 +74,8 @@ static void defaultTorchArgErrorHandlerFunction(int argNumber, const char *msg, 
     CV_Error(cv::Error::StsError, cv::format("Invalid argument %d", argNumber));
 }
 
-static __thread void (*torchArgErrorHandlerFunction)(int argNumber, const char *msg, void *data) = defaultTorchArgErrorHandlerFunction;
-static __thread void *torchArgErrorHandlerData;
+static TH_THREAD void (*torchArgErrorHandlerFunction)(int argNumber, const char *msg, void *data) = defaultTorchArgErrorHandlerFunction;
+static TH_THREAD void *torchArgErrorHandlerData;
 
 void _THArgCheck(const char *file, int line, int condition, int argNumber, const char *fmt, ...)
 {
@@ -103,10 +106,10 @@ void THSetArgErrorHandler( void (*torchArgErrorHandlerFunction_)(int argNumber, 
   torchArgErrorHandlerData = data;
 }
 
-static __thread void (*torchGCFunction)(void *data) = NULL;
-static __thread void *torchGCData;
-static __thread long torchHeapSize = 0;
-static __thread long torchHeapSizeSoftMax = 300000000; // 300MB, adjusted upward dynamically
+static TH_THREAD void (*torchGCFunction)(void *data) = NULL;
+static TH_THREAD void *torchGCData;
+static TH_THREAD long torchHeapSize = 0;
+static TH_THREAD long torchHeapSizeSoftMax = 300000000; // 300MB, adjusted upward dynamically
 
 /* Optional hook for integrating with a garbage-collected frontend.
  *
@@ -240,16 +243,6 @@ void THFree(void *ptr)
 {
   THHeapUpdate(-getAllocSize(ptr));
   free(ptr);
-}
-
-double THLog1p(const double x)
-{
-#if (defined(_MSC_VER) || defined(__MINGW32__))
-  volatile double y = 1 + x;
-  return log(y) - ((y-1)-x)/y ;  /* cancels errors with IEEE arithmetic */
-#else
-  return log1p(x);
-#endif
 }
 
 }
