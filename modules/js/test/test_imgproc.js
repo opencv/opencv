@@ -473,57 +473,6 @@ QUnit.test("test_filter", function(assert) {
   }
 
 
-  // Acc
-  {
-      var data1 = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-      var data2 = new Uint8Array([0, 2, 4, 6, 8, 10, 12, 14, 16]);
-      var data3 = new Float32Array([0, 1, 0, 1, 0, 1, 0, 1, 0]);
-
-      // data3 += data1
-      var expectedAcc = new Float32Array([0, 2, 2, 4, 4, 6, 6, 8, 8]);
-      // data3 += data1*data2
-      var expectedAccMul = new Float32Array([0, 3, 8, 19, 32, 51, 72, 99, 128]);
-      // data3 += data1*data1
-      var expectedAccSquare = new Float32Array([0, 3, 8, 15, 24, 37, 48, 63, 80]);
-
-      var dataPtr1 = cv._malloc(3*3*1);
-      var dataPtr2 = cv._malloc(3*3*1);
-      var dataPtr3 = cv._malloc(3*3*4);
-
-      var dataHeap = new Uint8Array(cv.HEAPU8.buffer, dataPtr1, 3*3*1);
-      dataHeap.set(new Uint8Array(data1.buffer));
-      dataHeap = new Uint8Array(cv.HEAPU8.buffer, dataPtr2, 3*3*1);
-      dataHeap.set(new Uint8Array(data2.buffer));
-      dataHeap = new Uint8Array(cv.HEAPU8.buffer, dataPtr3, 3*3*4);
-      dataHeap.set(new Uint8Array(data3.buffer));
-
-
-      let mat1 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr1, 0);
-          mat2 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr2, 0),
-          mat3 = new cv.Mat([3, 3], cv.CV_32FC1, dataPtr3, 0),
-          none = new cv.Mat();
-
-
-      let mat4 = mat3.clone();
-      cv.accumulate(mat1, mat4, none);
-      // Verify result.
-      size = mat4.size();
-      assert.equal(mat4.channels(), 1);
-      assert.equal(size.get(0), 3);
-      assert.equal(size.get(1), 3);
-
-      assert.deepEqual(mat4.data32f(), expectedAcc);
-
-      cv.accumulateProduct(mat1, mat2, mat3, none);
-      // Verify result.
-      size = mat3.size();
-      assert.equal(mat3.channels(), 1);
-      assert.equal(size.get(0), 3);
-      assert.equal(size.get(1), 3);
-
-      assert.deepEqual(mat3.data32f(), expectedAccMul);
-
-  }
   // Arithmatic operations
   {
       var data1 = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
@@ -602,41 +551,6 @@ QUnit.test("test_filter", function(assert) {
   }
 
 
-  // getStructuringElement, Erode, dilate
-  {
-      let mat1 = cv.Mat.ones([100, 100], cv.CV_8UC3);
-      let mat2 = new cv.Mat();
-      let size = 3;
-
-      let element = cv.getStructuringElement(cv.MorphShapes.MORPH_RECT.value,
-                                        [2*size + 1, 2*size+1 ],
-                                        [size, size] );
-
-      cv.erode(mat1, mat2, element, [-1, -1], 1, cv.BORDER_CONSTANT, cv.Scalar.all(Number.MAX_VALUE));
-
-      // Verify result.
-      let view = mat2.data();
-      let matSize = mat2.size();
-      assert.equal(mat2.channels(), 3);
-      assert.equal(matSize.get(0), 100);
-      assert.equal(matSize.get(1), 100);
-
-      element = cv.getStructuringElement(cv.MorphShapes.MORPH_ELLIPSE.value,
-                                       [2*size + 1, 2*size+1],
-                                       [size, size] );
-      cv.dilate(mat1, mat2, element, [-1, -1], 1, cv.BORDER_CONSTANT, cv.Scalar.all(Number.MAX_VALUE));
-      // Verify result.
-      view = mat2.data();
-      matSize = mat2.size();
-      assert.equal(mat2.channels(), 3);
-      assert.equal(matSize.get(0), 100);
-      assert.equal(matSize.get(1), 100);
-
-      mat1.delete();
-      mat2.delete();
-      element.delete();
-  }
-
   // Integral variants
   {
       let mat = cv.Mat.eye([100, 100], cv.CV_8UC3);
@@ -661,23 +575,6 @@ QUnit.test("test_filter", function(assert) {
 
       size = sqSum.size();
       assert.equal(sqSum.channels(), 3);
-      assert.equal(size.get(0), 100+1);
-      assert.equal(size.get(1), 100+1);
-
-      cv.integral3(mat, sum, sqSum, title, -1, -1);
-      // Verify result.
-      size = sum.size();
-      assert.equal(sum.channels(), 3);
-      assert.equal(size.get(0), 100+1);
-      assert.equal(size.get(1), 100+1);
-
-      size = sqSum.size();
-      assert.equal(sqSum.channels(), 3);
-      assert.equal(size.get(0), 100+1);
-      assert.equal(size.get(1), 100+1);
-
-      size = title.size();
-      assert.equal(title.channels(), 3);
       assert.equal(size.get(0), 100+1);
       assert.equal(size.get(1), 100+1);
 
@@ -711,23 +608,6 @@ QUnit.test("test_filter", function(assert) {
 
       size = sqSum.size();
       assert.equal(sqSum.channels(), 3);
-      assert.equal(size.get(0), 100+1);
-      assert.equal(size.get(1), 100+1);
-
-      cv.integral3(mat, sum, sqSum, title, -1, -1);
-      // Verify result.
-      size = sum.size();
-      assert.equal(sum.channels(), 3);
-      assert.equal(size.get(0), 100+1);
-      assert.equal(size.get(1), 100+1);
-
-      size = sqSum.size();
-      assert.equal(sqSum.channels(), 3);
-      assert.equal(size.get(0), 100+1);
-      assert.equal(size.get(1), 100+1);
-
-      size = title.size();
-      assert.equal(title.channels(), 3);
       assert.equal(size.get(0), 100+1);
       assert.equal(size.get(1), 100+1);
 
