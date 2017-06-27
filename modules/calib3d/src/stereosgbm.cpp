@@ -155,9 +155,13 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
     int n1 = y > 0 ? -(int)img1.step : 0, s1 = y < img1.rows-1 ? (int)img1.step : 0;
     int n2 = y > 0 ? -(int)img2.step : 0, s2 = y < img2.rows-1 ? (int)img2.step : 0;
 
+    int minX_cmn = std::min(minX1,minX2)-1;
+    int maxX_cmn = std::max(maxX1,maxX2)+1;
+    minX_cmn = std::max(minX_cmn, 1);
+    maxX_cmn = std::min(maxX_cmn, width - 1);
     if( cn == 1 )
     {
-        for( x = 1; x < width-1; x++ )
+        for( x = minX_cmn; x < maxX_cmn; x++ )
         {
             prow1[x] = tab[(row1[x+1] - row1[x-1])*2 + row1[x+n1+1] - row1[x+n1-1] + row1[x+s1+1] - row1[x+s1-1]];
             prow2[width-1-x] = tab[(row2[x+1] - row2[x-1])*2 + row2[x+n2+1] - row2[x+n2-1] + row2[x+s2+1] - row2[x+s2-1]];
@@ -168,7 +172,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
     }
     else
     {
-        for( x = 1; x < width-1; x++ )
+        for( x = minX_cmn; x < maxX_cmn; x++ )
         {
             prow1[x] = tab[(row1[x*3+3] - row1[x*3-3])*2 + row1[x*3+n1+3] - row1[x*3+n1-3] + row1[x*3+s1+3] - row1[x*3+s1-3]];
             prow1[x+width] = tab[(row1[x*3+4] - row1[x*3-2])*2 + row1[x*3+n1+4] - row1[x*3+n1-2] + row1[x*3+s1+4] - row1[x*3+s1-2]];
@@ -864,6 +868,7 @@ struct CalcVerticalSums: public ParallelLoopBody
         Cbuf = alignedBuf;
         Sbuf = Cbuf + CSBufSize;
         hsumBuf = Sbuf + CSBufSize;
+        useSIMD = hasSIMD128();
     }
 
     void operator()( const Range& range ) const
@@ -951,6 +956,24 @@ struct CalcVerticalSums: public ParallelLoopBody
                                     const CostType* pixAdd = pixDiff + std::min(x + SW2*D, (width1-1)*D);
                                     const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
 
+                                #if CV_SIMD128
+                                    if( useSIMD )
+                                    {
+                                        for( d = 0; d < D; d += 8 )
+                                        {
+                                            v_int16x8 hv = v_load(hsumAdd + x - D + d);
+                                            v_int16x8 Cx = v_load(Cprev + x + d);
+                                            v_int16x8 psub = v_load(pixSub + d);
+                                            v_int16x8 padd = v_load(pixAdd + d);
+                                            hv = (hv - psub + padd);
+                                            psub = v_load(hsumSub + x + d);
+                                            Cx = Cx - psub + hv;
+                                            v_store(hsumAdd + x + d, hv);
+                                            v_store(C + x + d, Cx);
+                                        }
+                                    }
+                                    else
+                                #endif
                                     {
                                         for( d = 0; d < D; d++ )
                                         {
@@ -1010,6 +1033,46 @@ struct CalcVerticalSums: public ParallelLoopBody
                     const CostType* Cp = C + x*D;
                     CostType* Sp = S + x*D;
 
+                #if CV_SIMD128
+                    if( useSIMD )
+                    {
+                        v_int16x8 _P1 = v_setall_s16((short)P1);
+
+                        v_int16x8 _delta = v_setall_s16((short)delta);
+                        v_int16x8 _minL = v_setall_s16((short)MAX_COST);
+
+                        for( d = 0; d < D; d += 8 )
+                        {
+                            v_int16x8 Cpd = v_load(Cp + d);
+                            v_int16x8 L;
+
+                            L = v_load(Lr_ppr + d);
+
+                            L = v_min(L, (v_load(Lr_ppr + d - 1) + _P1));
+                            L = v_min(L, (v_load(Lr_ppr + d + 1) + _P1));
+
+                            L = v_min(L, _delta);
+                            L = ((L - _delta) + Cpd);
+
+                            v_store(Lr_p + d, L);
+
+                            // Get minimum from in L-L3
+                            _minL = v_min(_minL, L);
+
+                            v_int16x8 Sval = v_load(Sp + d);
+
+                            Sval = Sval + L;
+
+                            v_store(Sp + d, Sval);
+                        }
+
+                        v_int32x4 min1, min2, min12;
+                        v_expand(_minL, min1, min2);
+                        min12 = v_min(min1,min2);
+                        minLr[0][x] = (CostType)v_reduce_min(min12);
+                    }
+                    else
+                #endif
                     {
                         int minL = MAX_COST;
 
@@ -1058,6 +1121,7 @@ struct CalcVerticalSums: public ParallelLoopBody
     size_t LrSize;
     size_t hsumBufNRows;
     int ftzero;
+    bool useSIMD;
 };
 
 struct CalcHorizontalSums: public ParallelLoopBody
@@ -1085,6 +1149,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
         LrSize = 2 * D2;
         Cbuf = alignedBuf;
         Sbuf = Cbuf + CSBufSize;
+        useSIMD = hasSIMD128();
     }
 
     void operator()( const Range& range ) const
@@ -1138,20 +1203,60 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 const CostType* Cp = C + x*D;
                 CostType* Sp = S + x*D;
 
-                int minL = MAX_COST;
-
-                for( d = 0; d < D; d++ )
+            #if CV_SIMD128
+                if( useSIMD )
                 {
-                    int Cpd = Cp[d], L;
+                    v_int16x8 _P1 = v_setall_s16((short)P1);
 
-                    L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+                    v_int16x8 _delta = v_setall_s16((short)delta);
+                    v_int16x8 _minL = v_setall_s16((short)MAX_COST);
 
-                    Lr_p[d] = (CostType)L;
-                    minL = std::min(minL, L);
+                    for( d = 0; d < D; d += 8 )
+                    {
+                        v_int16x8 Cpd = v_load(Cp + d);
+                        v_int16x8 L;
 
-                    Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                        L = v_load(Lr_ppr + d);
+
+                        L = v_min(L, (v_load(Lr_ppr + d - 1) + _P1));
+                        L = v_min(L, (v_load(Lr_ppr + d + 1) + _P1));
+
+                        L = v_min(L, _delta);
+                        L = ((L - _delta) + Cpd);
+
+                        v_store(Lr_p + d, L);
+
+                        // Get minimum from in L-L3
+                        _minL = v_min(_minL, L);
+
+                        v_int16x8 Sval = v_load(Sp + d);
+
+                        Sval = Sval + L;
+
+                        v_store(Sp + d, Sval);
+                    }
+
+                    v_int32x4 min1, min2, min12;
+                    v_expand(_minL, min1, min2);
+                    min12 = v_min(min1,min2);
+                    minLr = (CostType)v_reduce_min(min12);
                 }
-                minLr = (CostType)minL;
+                else
+            #endif
+                {
+                    minLr = MAX_COST;
+                    for( d = 0; d < D; d++ )
+                    {
+                        int Cpd = Cp[d], L;
+
+                        L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+
+                        Lr_p[d] = (CostType)L;
+                        minLr = (CostType)std::min((int)minLr, L);
+
+                        Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                    }
+                }
             }
 
             memset( Lr - 8, 0, LrSize*sizeof(CostType) );
@@ -1169,26 +1274,82 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 const CostType* Cp = C + x*D;
                 CostType* Sp = S + x*D;
                 int minS = MAX_COST, bestDisp = -1;
+                minLr = MAX_COST;
 
-                int minL = MAX_COST;
-
-                for( d = 0; d < D; d++ )
+            #if CV_SIMD128
+                if( useSIMD )
                 {
-                    int Cpd = Cp[d], L;
+                    v_int16x8 _P1 = v_setall_s16((short)P1);
 
-                    L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+                    v_int16x8 _delta = v_setall_s16((short)delta);
+                    v_int16x8 _minL = v_setall_s16((short)MAX_COST);
 
-                    Lr_p[d] = (CostType)L;
-                    minL = std::min(minL, L);
+                    v_int16x8 _minS = v_setall_s16(MAX_COST), _bestDisp = v_setall_s16(-1);
+                    v_int16x8 _d8 = v_int16x8(0, 1, 2, 3, 4, 5, 6, 7), _8 = v_setall_s16(8);
 
-                    Sp[d] = saturate_cast<CostType>(Sp[d] + L);
-                    if( Sp[d] < minS )
+                    for( d = 0; d < D; d+= 8 )
                     {
-                        minS = Sp[d];
-                        bestDisp = d;
+                        v_int16x8 Cpd = v_load(Cp + d);
+                        v_int16x8 L;
+
+                        L = v_load(Lr_ppr + d);
+
+                        L = v_min(L, (v_load(Lr_ppr + d - 1) + _P1));
+                        L = v_min(L, (v_load(Lr_ppr + d + 1) + _P1));
+
+                        L = v_min(L, _delta);
+                        L = ((L - _delta) + Cpd);
+
+                        v_store(Lr_p + d, L);
+
+                        // Get minimum from in L-L3
+                        _minL = v_min(_minL, L);
+
+                        v_int16x8 Sval = v_load(Sp + d);
+
+                        Sval = Sval + L;
+
+                        v_int16x8 mask = Sval < _minS;
+                        _minS = v_min( Sval, _minS );
+                        _bestDisp = _bestDisp ^ ((_bestDisp ^ _d8) & mask);
+                        _d8 = _d8 + _8;
+
+                        v_store(Sp + d, Sval);
+                    }
+                    v_int32x4 min1, min2, min12;
+                    v_expand(_minL, min1, min2);
+                    min12 = v_min(min1,min2);
+                    minLr = (CostType)v_reduce_min(min12);
+
+                    v_int32x4 _d0, _d1;
+                    v_expand(_minS, _d0, _d1);
+                    minS = (int)std::min(v_reduce_min(_d0), v_reduce_min(_d1));
+                    v_int16x8 v_mask = v_setall_s16((short)minS) == _minS;
+
+                    _bestDisp = (_bestDisp & v_mask) | (v_setall_s16(SHRT_MAX) & ~v_mask);
+                    v_expand(_bestDisp, _d0, _d1);
+                    bestDisp = (int)std::min(v_reduce_min(_d0), v_reduce_min(_d1));
+                }
+                else
+            #endif
+                {
+                    for( d = 0; d < D; d++ )
+                    {
+                        int Cpd = Cp[d], L;
+
+                        L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+
+                        Lr_p[d] = (CostType)L;
+                        minLr = (CostType)std::min((int)minLr, L);
+
+                        Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                        if( Sp[d] < minS )
+                        {
+                            minS = Sp[d];
+                            bestDisp = d;
+                        }
                     }
                 }
-                    minLr = (CostType)minL;
                 //Some postprocessing procedures and saving
                 for( d = 0; d < D; d++ )
                 {
@@ -1263,6 +1424,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
     int INVALID_DISP_SCALED;
     int uniquenessRatio;
     int disp12MaxDiff;
+    bool useSIMD;
 };
 /*
  computes disparity for "roi" in img1 w.r.t. img2 and write it to disp1buf.

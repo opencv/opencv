@@ -74,6 +74,7 @@ public:
 
     void operator()( const cv::Range& range ) const
     {
+        CV_TRACE_FUNCTION();
         const int begin = range.start;
         const int end = range.end;
 
@@ -101,6 +102,7 @@ Arthur & Vassilvitskii (2007) k-means++: The Advantages of Careful Seeding
 static void generateCentersPP(const Mat& _data, Mat& _out_centers,
                               int K, RNG& rng, int trials)
 {
+    CV_TRACE_FUNCTION();
     int i, j, k, dims = _data.cols, N = _data.rows;
     const float* data = _data.ptr<float>(0);
     size_t step = _data.step/sizeof(data[0]);

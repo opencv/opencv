@@ -271,6 +271,8 @@ public:
 
     virtual void operator()(const Range& range) const
     {
+        CV_TRACE_FUNCTION();
+
         const uchar* yS = src_data + static_cast<size_t>(range.start) * src_step;
         uchar* yD = dst_data + static_cast<size_t>(range.start) * dst_step;
 

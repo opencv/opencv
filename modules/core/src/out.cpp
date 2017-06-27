@@ -103,7 +103,7 @@ namespace cv
             }
             else
             {
-                snprintf(floatFormat, 8, "%%.%dg", std::min(precision, 20));
+                cv_snprintf(floatFormat, sizeof(floatFormat), "%%.%dg", std::min(precision, 20));
             }
 
             switch(mtx.depth())

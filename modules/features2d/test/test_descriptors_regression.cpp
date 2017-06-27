@@ -350,6 +350,14 @@ TEST( Features2d_DescriptorExtractor_AKAZE, regression )
     test.safe_run();
 }
 
+TEST( Features2d_DescriptorExtractor_AKAZE_DESCRIPTOR_KAZE, regression )
+{
+    CV_DescriptorExtractorTest< L2<float> > test( "descriptor-akaze-with-kaze-desc", 0.03f,
+                                              AKAZE::create(AKAZE::DESCRIPTOR_KAZE),
+                                              L2<float>(), AKAZE::create(AKAZE::DESCRIPTOR_KAZE));
+    test.safe_run();
+}
+
 TEST( Features2d_DescriptorExtractor, batch )
 {
     string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");

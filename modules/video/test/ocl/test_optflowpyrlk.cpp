@@ -144,7 +144,7 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlow,
                             Combine(
-                                Values(21, 25),
+                                Values(11, 15, 21, 25),
                                 Values(3, 5)
                                 )
                            );

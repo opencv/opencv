@@ -31,7 +31,9 @@ PERF_TEST_P(Img_Aperture_L2_thresholds, canny,
 
     declare.in(img).out(edges);
 
-    TEST_CYCLE() Canny(img, edges, thresh_low, thresh_high, aperture, useL2);
+    PERF_SAMPLE_BEGIN();
+        Canny(img, edges, thresh_low, thresh_high, aperture, useL2);
+    PERF_SAMPLE_END();
 
     SANITY_CHECK(edges);
 }

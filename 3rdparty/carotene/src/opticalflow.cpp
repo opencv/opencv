@@ -210,7 +210,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
             internal::prefetch(dsrc + dstep * 2, 0);
             for(x = 0; x <= wwcn - 4; x += 4, dsrc += 4*2, dIptr += 4*2 )
             {
-#if __GNUC_MINOR__ < 0
+#if 0
                 __asm__ (
                     "vld2.16 {d0-d1}, [%[dsrc00]]                         \n\t"
                     "vld2.16 {d2-d3}, [%[dsrc10]]                         \n\t"

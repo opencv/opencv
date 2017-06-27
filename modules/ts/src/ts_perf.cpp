@@ -954,6 +954,8 @@ void TestBase::Init(int argc, const char* const argv[])
 void TestBase::Init(const std::vector<std::string> & availableImpls,
                  int argc, const char* const argv[])
 {
+    CV_TRACE_FUNCTION();
+
     available_impls = availableImpls;
 
     const std::string command_line_keys =
@@ -1182,6 +1184,7 @@ enum PERF_STRATEGY TestBase::getCurrentModulePerformanceStrategy()
 
 int64 TestBase::_calibrate()
 {
+    CV_TRACE_FUNCTION();
     class _helper : public ::perf::TestBase
     {
         public:
@@ -1248,6 +1251,7 @@ void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpTyp
 
 void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
+    CV_TRACE_FUNCTION();
     if (a.empty())
         return;
     else if (a.isUMat())
@@ -1419,6 +1423,7 @@ bool TestBase::next()
                             median_ms > perf_validation_time_threshold_ms &&
                             (grow || metrics.stddev > perf_stability_criteria * fabs(metrics.mean)))
                     {
+                        CV_TRACE_REGION("idle_delay");
                         printf("Performance is unstable, it may be a result of overheat problems\n");
                         printf("Idle delay for %d ms... \n", perf_validation_idle_delay_ms);
 #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
@@ -1682,7 +1687,16 @@ void TestBase::validateMetrics()
 
 void TestBase::reportMetrics(bool toJUnitXML)
 {
+    CV_TRACE_FUNCTION();
+
     performance_metrics& m = calcMetrics();
+
+    CV_TRACE_ARG_VALUE(samples, "samples", (int64)m.samples);
+    CV_TRACE_ARG_VALUE(outliers, "outliers", (int64)m.outliers);
+    CV_TRACE_ARG_VALUE(median, "mean_ms", (double)(m.mean * 1000.0f / metrics.frequency));
+    CV_TRACE_ARG_VALUE(median, "median_ms", (double)(m.median * 1000.0f / metrics.frequency));
+    CV_TRACE_ARG_VALUE(stddev, "stddev_ms", (double)(m.stddev * 1000.0f / metrics.frequency));
+    CV_TRACE_ARG_VALUE(stddev_percents, "stddev_percents", (double)(m.stddev / (double)m.mean * 100.0f));
 
     if (m.terminationReason == performance_metrics::TERM_SKIP_TEST)
     {
@@ -1957,6 +1971,11 @@ void TestBase::RunPerfTestBody()
         if(param_collect_impl)
             implConf.GetImpl();
 #endif
+    }
+    catch(SkipTestException&)
+    {
+        metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
+        return;
     }
     catch(PerfSkipTestException&)
     {
