@@ -127,7 +127,7 @@ public:
             biasMat_ = &biasMat;
             dstMat_ = &dstMat;
             nstripes_ = nstripes;
-            useAVX2_ = checkHardwareSupport(CPU_AVX2);
+            useAVX2_ = CV_CPU_HAS_SUPPORT_AVX2;
         }
 
         void operator()(const Range& r) const
@@ -161,7 +161,7 @@ public:
 
                 memcpy(sptr, sptr_, vecsize*sizeof(sptr[0]));
 
-            #if CV_DNN_TRY_AVX2
+            #if CV_TRY_AVX2
                 if( useAVX2_ )
                     fastGEMM1T_avx2( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
                 else
