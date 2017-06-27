@@ -81,6 +81,7 @@ white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not'
 export_enums = True
 with_wrapped_functions = True
 with_default_params = with_wrapped_functions and False  # Emscripten::val is used to support default parameters
+with_vec_from_js_array = True
 
 wrapper_namespace = "Wrappers"
 type_dict = {
@@ -401,6 +402,7 @@ class JSWrapperGenerator(object):
                     arg_types.append('emscripten::val')
                 else:
                     arg_types.append(arg_type)
+
                 unwrapped_arg_types.append(arg_type)
 
             # Function attribure
@@ -424,9 +426,24 @@ class JSWrapperGenerator(object):
             c_func_name = 'Wrappers::' + wrap_func_name
 
             # Binding template-
-            arg_names = ['arg' + str(i + 1) for i in range(0, len(variant.args))]
-            w_signature = [" ".join(pair) for pair in zip(arg_types, arg_names)]
+            raw_arg_names = ['arg' + str(i + 1) for i in range(0, len(variant.args))]
+            arg_names = []
+            w_signature = []
+            casted_arg_types = []
+            for arg_type, arg_name in zip(arg_types, raw_arg_names):
+                casted_arg_name = arg_name
+                if with_vec_from_js_array:
+                    # Only support const vector reference as input parameter
+                    match = re.search(r'const std::vector<(.*)>&', arg_type)
+                    if match:
+                        type_in_vect = match.group(1)
+                        casted_arg_name = 'emscripten::vecFromJSArray<' + type_in_vect + '>(' + arg_name + ')'
+                        arg_type = re.sub(r'std::vector<(.*)>', 'emscripten::val', arg_type)
+                w_signature.append(arg_type + ' ' + arg_name)
+                arg_names.append(casted_arg_name)
+                casted_arg_types.append(arg_type)
 
+            arg_types = casted_arg_types
 
             # Argument list, signature
             arg_names_casted = [c if a == b else c + '.as<' + a + '>()' for a, b, c in

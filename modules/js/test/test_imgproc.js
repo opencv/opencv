@@ -41,18 +41,14 @@ QUnit.test("test_imgProc", function(assert) {
  // calcHist
   {
     var aa = 1;
-    var source = new cv.MatVector();
-    var channels = new cv.IntVector();
-    var histSize = new cv.IntVector();
-    var ranges = new cv.FloatVector();
 
     //var vec0 = new cv.Mat.zeros([20, 20], cv.CV_8UC1);
     var vec1 = new cv.Mat.ones([20, 20], cv.CV_8UC1);
     //source.push_back(vec0);
-    source.push_back(vec1);
-    channels.push_back(0);
-    histSize.push_back(256);
-    ranges.push_back(0); ranges.push_back(256);
+    var source = [vec1];
+    var channels = [0];
+    var histSize = [256];
+    var ranges =[0, 256];
 
     let hist = new cv.Mat();
     let mask = new cv.Mat();
@@ -77,7 +73,6 @@ QUnit.test("test_imgProc", function(assert) {
     cv._free(binSize);
     mask.delete();
     hist.delete();
-    source.delete();
   }
 
   // C++
@@ -283,10 +278,7 @@ QUnit.test("test_filter", function(assert) {
 
 
       let out = new cv.Mat();
-      let input = new cv.MatVector();
-      input.push_back(mat);
-      input.push_back(mat2);
-      input.push_back(mat3);
+      let input = [mat, mat2, mat3];
 
       cv.vconcat(input, out);
 
@@ -310,7 +302,6 @@ QUnit.test("test_filter", function(assert) {
       mat2.delete();
       mat3.delete();
       out.delete();
-      input.delete();
   }
 
 
