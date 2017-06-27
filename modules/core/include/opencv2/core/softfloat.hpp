@@ -121,7 +121,7 @@ public:
 struct CV_EXPORTS softdouble
 {
 public:
-    softdouble() { }
+    softdouble() : v(0) { }
     softdouble( const softdouble& c) { v = c.v; }
     softdouble& operator=( const softdouble& c )
     {

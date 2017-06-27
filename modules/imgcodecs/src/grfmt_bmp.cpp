@@ -55,6 +55,9 @@ BmpDecoder::BmpDecoder()
     m_signature = fmtSignBmp;
     m_offset = -1;
     m_buf_supported = true;
+    m_origin = 0;
+    m_bpp = 0;
+    m_rle_code = BMP_RGB;
 }
 
 
@@ -191,7 +194,7 @@ bool  BmpDecoder::readData( Mat& img )
     uchar* data = img.ptr();
     int step = (int)img.step;
     bool color = img.channels() > 1;
-    uchar  gray_palette[256];
+    uchar  gray_palette[256] = {0};
     bool   result = false;
     int  src_pitch = ((m_width*(m_bpp != 15 ? m_bpp : 16) + 7)/8 + 3) & -4;
     int  nch = color ? 3 : 1;

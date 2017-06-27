@@ -63,6 +63,11 @@ StabilizerBase::StabilizerBase()
     setTrimRatio(0);
     setCorrectionForInclusion(false);
     setBorderMode(BORDER_REPLICATE);
+    curPos_ = 0;
+    doDeblurring_ = false;
+    doInpainting_ = false;
+    processingStartTime_ = 0;
+    curStabilizedPos_ = 0;
 }
 
 

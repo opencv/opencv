@@ -782,7 +782,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
   int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
   float xf = 0.0, yf = 0.0, gweight = 0.0, ratio = 0.0;
   const int ang_size = 109;
-  float resX[ang_size], resY[ang_size], Ang[ang_size];
+  float resX[ang_size] = {0}, resY[ang_size] = {0}, Ang[ang_size];
   const int id[] = { 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6 };
 
   // Variables for computing the dominant direction

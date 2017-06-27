@@ -112,7 +112,7 @@ class ForThread
 {
 public:
 
-    ForThread(): m_task_start(false), m_parent(0), m_state(eFTNotStarted), m_id(0)
+    ForThread(): m_posix_thread(0), m_task_start(false), m_parent(0), m_state(eFTNotStarted), m_id(0)
     {
     }
 

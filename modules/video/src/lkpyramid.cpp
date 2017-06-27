@@ -1451,7 +1451,7 @@ getRTMatrix( const Point2f* a, const Point2f* b,
     }
     else
     {
-        double sa[4][4]={{0.}}, sb[4]={0.}, m[4];
+        double sa[4][4]={{0.}}, sb[4]={0.}, m[4] = {0};
         Mat A( 4, 4, CV_64F, sa ), B( 4, 1, CV_64F, sb );
         Mat MM( 4, 1, CV_64F, m );
 

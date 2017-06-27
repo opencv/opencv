@@ -115,7 +115,7 @@ DTreesImpl::WorkData::WorkData(const Ptr<TrainData>& _data)
     maxSubsetSize = 0;
 }
 
-DTreesImpl::DTreesImpl() {}
+DTreesImpl::DTreesImpl() : _isClassifier(false) {}
 DTreesImpl::~DTreesImpl() {}
 void DTreesImpl::clear()
 {

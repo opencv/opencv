@@ -104,6 +104,7 @@ GMM::GMM( Mat& _model )
     for( int ci = 0; ci < componentsCount; ci++ )
         if( coefs[ci] > 0 )
              calcInverseCovAndDeterm( ci );
+    totalSampleCount = 0;
 }
 
 double GMM::operator()( const Vec3d color ) const

@@ -146,6 +146,8 @@ public:
      */
     LshTable()
     {
+        key_size_ = 0;
+        speed_level_ = kArray;
     }
 
     /** Default constructor
