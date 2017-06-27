@@ -2,7 +2,7 @@
 #  CMake file for Java tutorials compilation.
 #
 # ----------------------------------------------------------------------------
-if(NOT ANT_EXECUTABLE)
+if(NOT ANT_EXECUTABLE OR NOT TARGET opencv_java)
   return()
 endif()
 
@@ -10,31 +10,30 @@ project(compile_java_tutorials)
 
 set(curdir "${CMAKE_CURRENT_SOURCE_DIR}")
 set(opencv_tutorial_java_bin_dir "${CMAKE_CURRENT_BINARY_DIR}/.compiled")
-set(target_name "compile_java_tutorials")
 set(TUTORIALS_DIRS "")
 
-FILE(GLOB children RELATIVE ${curdir} ${curdir}/*/*)
-FOREACH(child ${children})
+file(GLOB children RELATIVE ${curdir} ${curdir}/*/*)
+foreach(child ${children})
   if(IS_DIRECTORY ${curdir}/${child})
-    FILE(GLOB contains_java_files "${child}/*.java")
+    file(GLOB contains_java_files "${child}/*.java")
     if(contains_java_files)
-      LIST(APPEND TUTORIALS_DIRS ${child})
+      list(APPEND TUTORIALS_DIRS ${child})
     endif()
   endif()
-ENDFOREACH()
+endforeach()
 
-add_custom_target("${target_name}" ALL
+add_custom_target("${PROJECT_NAME}"
                   DEPENDS opencv_java
                  )
 
-FOREACH(tutorial_dir ${TUTORIALS_DIRS})
-  get_filename_component(tutorial_name ${tutorial_dir} NAME_WE)
-  add_custom_command(TARGET "${target_name}"
+foreach(TUTORIAL_DIR ${TUTORIALS_DIRS})
+  get_filename_component(TUTORIAL_NAME ${TUTORIAL_DIR} NAME_WE)
+  add_custom_command(TARGET "${PROJECT_NAME}"
                      COMMAND ${ANT_EXECUTABLE} -q
                           -DocvJarDir="${OpenCV_BINARY_DIR}/bin"
-                          -DsrcDir="${tutorial_dir}"
-                          -DdstDir="${opencv_tutorial_java_bin_dir}/${tutorial_name}"
+                          -DsrcDir="${TUTORIAL_DIR}"
+                          -DdstDir="${opencv_tutorial_java_bin_dir}/${TUTORIAL_NAME}"
                      WORKING_DIRECTORY "${curdir}"
-                     COMMENT "Compile the tutorial: ${tutorial_name}"
+                     COMMENT "Compile the tutorial: ${TUTORIAL_NAME}"
                     )
-ENDFOREACH()
+endforeach()
