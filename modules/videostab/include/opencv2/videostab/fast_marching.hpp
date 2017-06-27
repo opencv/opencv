@@ -63,7 +63,7 @@ namespace videostab
 class CV_EXPORTS FastMarchingMethod
 {
 public:
-    FastMarchingMethod() : inf_(1e6f) {}
+    FastMarchingMethod() : inf_(1e6f), size_(0) {}
 
     /** @brief Template method that runs the Fast Marching Method.
 
