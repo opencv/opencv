@@ -56,6 +56,10 @@ namespace details {
 
 #ifdef OPENCV_TRACE
 
+#ifdef _MSC_VER
+#pragma warning(disable:4065) // switch statement contains 'default' but no 'case' labels
+#endif
+
 static int64 g_zero_timestamp = 0;
 
 static int64 getTimestamp()
