@@ -430,7 +430,7 @@ TEST_P(ReLU, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, ReLU, Values(
-/*negative slope*/ 2.0f, 0.3f, -0.1f
+/*negative slope*/ 2.0f, 0.3f, -0.1f, 0.0f
 ));
 
 typedef TestWithParam<tuple<std::string> > NoParamActivation;
@@ -515,12 +515,7 @@ TEST_P(Concat, Accuracy)
 
     Net net;
 
-    LayerParams concatParam;
-    concatParam.type = "Concat";
-    concatParam.name = "testLayer";
-    int concatId = net.addLayer(concatParam.name, concatParam.type, concatParam);
-    net.connect(0, 0, concatId, 0);
-
+    std::vector<int> convLayerIds(numChannels.channels);
     for (int i = 0, n = numChannels.channels; i < n; ++i)
     {
         if (!numChannels[i])
@@ -540,9 +535,18 @@ TEST_P(Concat, Accuracy)
         convParam.name = ss.str();
         convParam.blobs.push_back(weights);
 
-        int convId = net.addLayer(convParam.name, convParam.type, convParam);
-        net.connect(0, 0, convId, 0);
-        net.connect(convId, 0, concatId, i + 1);
+        convLayerIds[i] = net.addLayer(convParam.name, convParam.type, convParam);
+        net.connect(0, 0, convLayerIds[i], 0);
+    }
+
+    LayerParams concatParam;
+    concatParam.type = "Concat";
+    concatParam.name = "testLayer";
+    int concatId = net.addLayer(concatParam.name, concatParam.type, concatParam);
+    net.connect(0, 0, concatId, 0);
+    for (int i = 0; i < convLayerIds.size(); ++i)
+    {
+        net.connect(convLayerIds[i], 0, concatId, i + 1);
     }
 
     Mat input({1, inSize[0], inSize[1], inSize[2]}, CV_32F);
@@ -578,12 +582,7 @@ TEST_P(Eltwise, Accuracy)
 
     Net net;
 
-    LayerParams eltwiseParam;
-    eltwiseParam.type = "Eltwise";
-    eltwiseParam.name = "testLayer";
-    int eltwiseId = net.addLayer(eltwiseParam.name, eltwiseParam.type, eltwiseParam);
-    net.connect(0, 0, eltwiseId, 0);
-
+    std::vector<int> convLayerIds(numConv);
     for (int i = 0; i < numConv; ++i)
     {
         Mat weights({inSize[0], inSize[0], 1, 1}, CV_32F);
@@ -600,9 +599,18 @@ TEST_P(Eltwise, Accuracy)
         convParam.name = ss.str();
         convParam.blobs.push_back(weights);
 
-        int convId = net.addLayer(convParam.name, convParam.type, convParam);
-        net.connect(0, 0, convId, 0);
-        net.connect(convId, 0, eltwiseId, i + 1);
+        convLayerIds[i] = net.addLayer(convParam.name, convParam.type, convParam);
+        net.connect(0, 0, convLayerIds[i], 0);
+    }
+
+    LayerParams eltwiseParam;
+    eltwiseParam.type = "Eltwise";
+    eltwiseParam.name = "testLayer";
+    int eltwiseId = net.addLayer(eltwiseParam.name, eltwiseParam.type, eltwiseParam);
+    net.connect(0, 0, eltwiseId, 0);
+    for (int i = 0; i < numConv; ++i)
+    {
+        net.connect(convLayerIds[i], 0, eltwiseId, i + 1);
     }
 
     Mat input({1, inSize[0], inSize[1], inSize[2]}, CV_32F);
