@@ -1539,9 +1539,7 @@ void Net::deleteLayer(LayerId)
 Ptr<Layer> Net::getLayer(LayerId layerId)
 {
     LayerData &ld = impl->getLayerData(layerId);
-    if (!ld.layerInstance)
-        CV_Error(Error::StsNullPtr, format("Requested layer \"%s\" was not initialized", ld.name.c_str()));
-    return ld.layerInstance;
+    return ld.getLayerInstance();
 }
 
 std::vector<Ptr<Layer> > Net::getLayerInputs(LayerId layerId)

@@ -46,11 +46,10 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_USE using namespace experimental_dnn_v1;
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v1 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
+namespace cv { namespace dnn { namespace experimental_dnn_v1 { } using namespace experimental_dnn_v1; }}
 #else
-#define CV__DNN_EXPERIMENTAL_NS_USE
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
 #endif
@@ -59,7 +58,6 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_USE
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 //! @addtogroup dnn
 //! @{
@@ -160,7 +158,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      * Each class, derived from Layer, must implement allocate() methods to declare own outputs and forward() to compute outputs.
      * Also before using the new layer into networks you must register your layer by using one of @ref dnnLayerFactory "LayerFactory" macros.
      */
-    class CV_EXPORTS_W Layer
+    class CV_EXPORTS_W Layer : public Algorithm
     {
     public:
 
@@ -329,7 +327,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         /** @brief Container for strings and integers. */
         typedef DictValue LayerId;
 
-        /** @brief Returns pointer to layer with specified name which the network use. */
+        /** @brief Returns pointer to layer with specified id or name which the network use. */
         CV_WRAP Ptr<Layer> getLayer(LayerId layerId);
 
         /** @brief Returns pointers to input layers of specific layer. */
@@ -517,7 +515,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          /** @brief Returns list of types for layer used in model.
           * @param layersTypes output parameter for returning types.
           */
-         CV_WRAP void getLayerTypes(std::vector<String>& layersTypes) const;
+         CV_WRAP void getLayerTypes(CV_OUT std::vector<String>& layersTypes) const;
 
          /** @brief Returns count of layers of specified type.
           * @param layerType type.
@@ -532,18 +530,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
           * @param blobs output parameter to store resulting bytes for intermediate blobs.
           */
          CV_WRAP void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
-                                           size_t& weights, size_t& blobs) const;
+                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
          /** @overload */
          CV_WRAP void getMemoryConsumption(const MatShape& netInputShape,
-                                           size_t& weights, size_t& blobs) const;
+                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
          /** @overload */
          CV_WRAP void getMemoryConsumption(const int layerId,
                                            const std::vector<MatShape>& netInputShapes,
-                                           size_t& weights, size_t& blobs) const;
+                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
          /** @overload */
          CV_WRAP void getMemoryConsumption(const int layerId,
                                            const MatShape& netInputShape,
-                                           size_t& weights, size_t& blobs) const;
+                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
 
          /** @brief Computes bytes number which are requered to store
           * all weights and intermediate blobs for each layer.
@@ -553,12 +551,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
           * @param blobs output parameter to store resulting bytes for intermediate blobs.
           */
          CV_WRAP void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
-                                           std::vector<int>& layerIds, std::vector<size_t>& weights,
-                                           std::vector<size_t>& blobs) const;
+                                           CV_OUT std::vector<int>& layerIds, CV_OUT std::vector<size_t>& weights,
+                                           CV_OUT std::vector<size_t>& blobs) const;
          /** @overload */
          CV_WRAP void getMemoryConsumption(const MatShape& netInputShape,
-                                           std::vector<int>& layerIds, std::vector<size_t>& weights,
-                                           std::vector<size_t>& blobs) const;
+                                           CV_OUT std::vector<int>& layerIds, CV_OUT std::vector<size_t>& weights,
+                                           CV_OUT std::vector<size_t>& blobs) const;
     private:
 
         struct Impl;
@@ -566,7 +564,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     };
 
     /** @brief Small interface class for loading trained serialized models of different dnn-frameworks. */
-    class CV_EXPORTS_W Importer
+    class CV_EXPORTS_W Importer : public Algorithm
     {
     public:
 
@@ -602,7 +600,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param model   path to the .pb file with binary protobuf description of the network architecture.
      *  @returns Pointer to the created importer, NULL in failure cases.
      */
-    CV_EXPORTS Ptr<Importer> createTensorflowImporter(const String &model);
+    CV_EXPORTS_W Ptr<Importer> createTensorflowImporter(const String &model);
 
     /** @brief Creates the importer of <a href="http://torch.ch">Torch7</a> framework network.
      *  @param filename path to the file, dumped from Torch by using torch.save() function.
@@ -676,4 +674,4 @@ CV__DNN_EXPERIMENTAL_NS_END
 #include <opencv2/dnn/layer.hpp>
 #include <opencv2/dnn/dnn.inl.hpp>
 
-#endif  /* __OPENCV_DNN_DNN_HPP__ */
+#endif  /* OPENCV_DNN_DNN_HPP */
