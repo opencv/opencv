@@ -83,8 +83,6 @@ add_subdirectory(cpp)
 add_subdirectory(dnn)
 # FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
 
-add_subdirectory(java/tutorial_code)
-
 add_subdirectory(opencl)
 
 if(WIN32)
