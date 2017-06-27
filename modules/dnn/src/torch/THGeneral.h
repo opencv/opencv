@@ -30,7 +30,6 @@
 # define M_PI 3.14159265358979323846
 #endif
 
-TH_API double THLog1p(const double x);
 TH_API void _THError(const char *file, const int line, const char *fmt, ...);
 TH_API void _THAssertionFailed(const char *file, const int line, const char *exp, const char *fmt, ...);
 TH_API void THSetErrorHandler( void (*torchErrorHandlerFunction)(const char *msg, void *data), void *data );
@@ -80,7 +79,6 @@ do {                                                                  \
 #define THMax(X, Y)  ((X) > (Y) ? (X) : (Y))
 
 #if (defined(_MSC_VER) || defined(__MINGW32__))
-# define log1p(x) THLog1p(x)
 #define snprintf _snprintf
 #define popen _popen
 #define pclose _pclose
