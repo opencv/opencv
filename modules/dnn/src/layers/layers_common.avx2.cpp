@@ -43,10 +43,6 @@
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#if CV_DNN_TRY_AVX2
-
-#include <immintrin.h>
-
 namespace cv {
 namespace dnn {
 
@@ -334,7 +330,6 @@ void fastGEMM_avx2( const float* aptr, size_t astep, const float* bptr,
             _mm256_storeu_ps(cptr3 + n + 8, d31);
         }
     }
-    _mm256_zeroupper();
 
     for( ; n < nb; n++ )
     {
@@ -350,9 +345,8 @@ void fastGEMM_avx2( const float* aptr, size_t astep, const float* bptr,
             cptr0[n] = d0;
         }
     }
+    _mm256_zeroupper();
 }
 
 }
 }
-
-#endif
