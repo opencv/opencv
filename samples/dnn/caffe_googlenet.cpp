@@ -84,8 +84,6 @@ static std::vector<String> readClassNames(const char *filename = "synset_words.t
 
 int main(int argc, char **argv)
 {
-    cv::dnn::initModule();  //Required if OpenCV is built as static libs
-
     String modelTxt = "bvlc_googlenet.prototxt";
     String modelBin = "bvlc_googlenet.caffemodel";
     String imageFile = (argc > 1) ? argv[1] : "space_shuttle.jpg";
