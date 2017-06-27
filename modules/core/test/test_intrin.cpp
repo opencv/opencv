@@ -741,6 +741,23 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_reduce_sum4()
+    {
+        R a(0.1f, 0.02f, 0.003f, 0.0004f);
+        R b(1, 20, 300, 4000);
+        R c(10, 2, 0.3f, 0.04f);
+        R d(1, 2, 3, 4);
+
+        R sum = v_reduce_sum4(a, b, c, d);
+
+        Data<R> res = sum;
+        EXPECT_EQ(0.1234f, res[0]);
+        EXPECT_EQ(4321.0f, res[1]);
+        EXPECT_EQ(12.34f, res[2]);
+        EXPECT_EQ(10.0f, res[3]);
+        return *this;
+    }
+
     TheTest & test_loadstore_fp16()
     {
 #if CV_FP16 && CV_SIMD128
@@ -986,6 +1003,7 @@ TEST(hal_intrin, float32x4) {
         .test_float_cvt64()
         .test_matmul()
         .test_transpose()
+        .test_reduce_sum4()
         ;
 }
 

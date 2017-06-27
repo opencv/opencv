@@ -41,17 +41,10 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/ts/ocl_test.hpp" // T-API like tests
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <iterator>
-#include <limits>
-#include <numeric>
-
-using namespace cv;
-using namespace std;
-
+namespace cvtest {
+namespace {
 
 class CV_OperationsTest : public cvtest::BaseTest
 {
@@ -1120,8 +1113,8 @@ void CV_OperationsTest::run( int /* start_from */)
     if (!TestTemplateMat())
         return;
 
- /*   if (!TestMatND())
-        return;*/
+    if (!TestMatND())
+        return;
 
     if (!TestSparseMat())
         return;
@@ -1254,3 +1247,145 @@ TEST(MatTestRoi, adjustRoiOverflow)
 
     ASSERT_EQ(roi.rows, m.rows);
 }
+
+
+CV_ENUM(SortRowCol, SORT_EVERY_COLUMN, SORT_EVERY_ROW)
+CV_ENUM(SortOrder, SORT_ASCENDING, SORT_DESCENDING)
+
+PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
+{
+    int type;
+    Size size;
+    int flags;
+    bool use_roi;
+
+    Mat src, src_roi;
+    Mat dst, dst_roi;
+
+    virtual void SetUp()
+    {
+        int depth = GET_PARAM(0);
+        int rowFlags = GET_PARAM(1);
+        int orderFlags = GET_PARAM(2);
+        size = GET_PARAM(3);
+        use_roi = GET_PARAM(4);
+
+        type = CV_MAKE_TYPE(depth, 1);
+
+        flags = rowFlags | orderFlags;
+    }
+
+    void generateTestData()
+    {
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, size, srcBorder, type, -100, 100);
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, size, dstBorder, CV_32S, 5, 16);
+    }
+
+    template<typename T>
+    void check_(const cv::Mat& values_, const cv::Mat_<int>& idx_)
+    {
+        cv::Mat_<T>& values = (cv::Mat_<T>&)values_;
+        cv::Mat_<int>& idx = (cv::Mat_<int>&)idx_;
+        size_t N = values.total();
+        std::vector<bool> processed(N, false);
+        int prevIdx = idx(0);
+        T prevValue = values(prevIdx);
+        processed[prevIdx] = true;
+        for (size_t i = 1; i < N; i++)
+        {
+            int nextIdx = idx((int)i);
+            T value = values(nextIdx);
+            ASSERT_EQ(false, processed[nextIdx]) << "Indexes must be unique. i=" << i << " idx=" << nextIdx << std::endl << idx;
+            processed[nextIdx] = true;
+            if ((flags & SORT_DESCENDING) == SORT_DESCENDING)
+                ASSERT_GE(prevValue, value) << "i=" << i << " prevIdx=" << prevIdx << " idx=" << nextIdx;
+            else
+                ASSERT_LE(prevValue, value) << "i=" << i << " prevIdx=" << prevIdx << " idx=" << nextIdx;
+            prevValue = value;
+            prevIdx = nextIdx;
+        }
+    }
+
+    void validate()
+    {
+        ASSERT_EQ(CV_32SC1, dst_roi.type());
+        ASSERT_EQ(size, dst_roi.size());
+        bool isColumn = (flags & SORT_EVERY_COLUMN) == SORT_EVERY_COLUMN;
+        size_t N = isColumn ? src_roi.cols : src_roi.rows;
+        Mat values_row((int)N, 1, type), idx_row((int)N, 1, CV_32S);
+        for (size_t i = 0; i < N; i++)
+        {
+            SCOPED_TRACE(cv::format("row/col=%d", (int)i));
+            if (isColumn)
+            {
+                src_roi.col((int)i).copyTo(values_row);
+                dst_roi.col((int)i).copyTo(idx_row);
+            }
+            else
+            {
+                src_roi.row((int)i).copyTo(values_row);
+                dst_roi.row((int)i).copyTo(idx_row);
+            }
+            switch(type)
+            {
+            case CV_8U: check_<uchar>(values_row, idx_row); break;
+            case CV_8S: check_<char>(values_row, idx_row); break;
+            case CV_16S: check_<short>(values_row, idx_row); break;
+            case CV_32S: check_<int>(values_row, idx_row); break;
+            case CV_32F: check_<float>(values_row, idx_row); break;
+            case CV_64F: check_<double>(values_row, idx_row); break;
+            default: ASSERT_FALSE(true) << "Unsupported type: " << type;
+            }
+        }
+    }
+};
+
+TEST_P(sortIdx, simple)
+{
+    for (int j = 0; j < 5; j++)
+    {
+        generateTestData();
+
+        cv::sortIdx(src_roi, dst_roi, flags);
+        validate();
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Core, sortIdx, Combine(
+        Values(CV_8U, CV_8S, CV_16S, CV_32S, CV_32F, CV_64F), // depth
+        Values(SORT_EVERY_COLUMN, SORT_EVERY_ROW),
+        Values(SORT_ASCENDING, SORT_DESCENDING),
+        Values(Size(3, 3), Size(16, 8)),
+        ::testing::Bool()
+));
+
+
+TEST(Core_sortIdx, regression_8941)
+{
+    cv::Mat src = (cv::Mat_<int>(3, 3) <<
+        1, 2, 3,
+        0, 9, 5,
+        8, 1, 6
+    );
+    cv::Mat expected = (cv::Mat_<int>(3, 1) <<
+        1,
+        0,
+        2
+    );
+
+    cv::Mat result;
+    cv::sortIdx(src.col(0), result, CV_SORT_EVERY_COLUMN | CV_SORT_ASCENDING);
+#if 0
+    std::cout << src.col(0) << std::endl;
+    std::cout << result << std::endl;
+#endif
+    ASSERT_EQ(expected.size(), result.size());
+    EXPECT_EQ(0, cvtest::norm(expected, result, NORM_INF)) <<
+        "result=" << std::endl << result << std::endl <<
+        "expected=" << std::endl << expected;
+}
+
+}} // namespace

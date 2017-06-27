@@ -21,6 +21,10 @@ if(HAVE_CUDA)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
+if(CV_TRACE AND HAVE_ITT AND BUILD_ITT)
+  add_definitions(-DOPENCV_WITH_ITT=1)
+endif()
+
 file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
 file(GLOB lib_cuda_hdrs_detail "include/opencv2/${name}/cuda/detail/*.hpp" "include/opencv2/${name}/cuda/detail/*.h")
 
@@ -33,9 +37,20 @@ ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version
                         HEADERS ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
+if(ANDROID AND HAVE_CPUFEATURES)
+  ocv_append_sourge_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/system.cpp "HAVE_CPUFEATURES=1")
+  ocv_module_include_directories(${CPUFEATURES_INCLUDE_DIRS})
+endif()
+if(ITT_INCLUDE_DIRS)
+  ocv_module_include_directories(${ITT_INCLUDE_DIRS})
+endif()
 ocv_create_module(${extra_libs})
 
-ocv_target_link_libraries(${the_module} ${ZLIB_LIBRARIES} "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}" "${LAPACK_LIBRARIES}")
+ocv_target_link_libraries(${the_module}
+    "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
+    "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
+    "${ITT_LIBRARIES}"
+)
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()

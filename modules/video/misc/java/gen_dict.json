@@ -1,0 +1,16 @@
+{
+    "missing_consts": {
+        "Video" : {
+            "private" : [
+                ["CV_LKFLOW_INITIAL_GUESSES",    4 ],
+                ["CV_LKFLOW_GET_MIN_EIGENVALS",  8 ]
+            ]
+        }
+    },
+    "func_arg_fix" : {
+        "calcOpticalFlowPyrLK" : { "prevPts" : {"ctype" : "vector_Point2f"},
+                                   "nextPts" : {"ctype" : "vector_Point2f"},
+                                   "status"  : {"ctype" : "vector_uchar"},
+                                   "err"     : {"ctype" : "vector_float"} }
+    }
+}

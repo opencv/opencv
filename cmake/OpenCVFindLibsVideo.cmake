@@ -294,6 +294,10 @@ if(WITH_INTELPERC)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIntelPerCSDK.cmake")
 endif(WITH_INTELPERC)
 
+if(WITH_MFX)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectMediaSDK.cmake")
+endif()
+
 # --- gPhoto2 ---
 ocv_clear_vars(HAVE_GPHOTO2)
 if(WITH_GPHOTO2)

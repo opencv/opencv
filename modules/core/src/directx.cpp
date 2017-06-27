@@ -794,7 +794,9 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 
     cl_int status = 0;
     cl_mem clImage = 0;
+#ifdef HAVE_DIRECTX_NV12
     cl_mem clImageUV = 0;
+#endif
 
     clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 0, &status);
     if (status != CL_SUCCESS)

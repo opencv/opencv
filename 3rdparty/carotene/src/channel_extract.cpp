@@ -231,7 +231,7 @@ void extract4(const Size2D &size,
                  srcStride == dst2Stride && \
                  srcStride == dst3Stride &&
 
-#if __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
 
 #define SPLIT_ASM2(sgn, bits) __asm__ ( \
                                           "vld2." #bits " {d0, d2}, [%[in0]]            \n\t" \
@@ -280,7 +280,7 @@ void extract4(const Size2D &size,
                                      FILL_LINES##n(VST1Q, sgn##bits) \
                                  }
 
-#endif // __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#endif
 
 #define SPLIT(sgn,bits,n) void split##n(const Size2D &_size,                                            \
                                     const sgn##bits * srcBase, ptrdiff_t srcStride                      \
@@ -351,7 +351,7 @@ void extract4(const Size2D &size,
     }                                                                                                   \
 }
 
-#if __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
 
 #define ALPHA_QUAD(sgn, bits) { \
                                   internal::prefetch(src + sj); \
@@ -378,7 +378,7 @@ void extract4(const Size2D &size,
                                   vst1q_##sgn##bits(dst1 + d1j, vals.v4.val[3]); \
                               }
 
-#endif // __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#endif 
 
 #define SPLIT4ALPHA(sgn,bits) void split4(const Size2D &_size,                                          \
                                           const sgn##bits * srcBase, ptrdiff_t srcStride,               \

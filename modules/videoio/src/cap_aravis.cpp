@@ -109,7 +109,7 @@ public:
     virtual IplImage* retrieveFrame(int);
     virtual int getCaptureDomain()
     {
-        return CV_CAP_ARAVIS;
+        return cv::CAP_ARAVIS;
     }
 
 protected:

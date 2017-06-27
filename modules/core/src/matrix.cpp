@@ -3130,7 +3130,7 @@ void cv::hconcat(InputArray _src, OutputArray dst)
 
 void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_FUNCTION_SKIP_NESTED()
 
     if( nsrc == 0 || !src )
     {
@@ -4384,11 +4384,10 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 {
     CV_INSTRUMENT_REGION_IPP()
 
-    bool        sortRows        = (flags & 1) == CV_SORT_EVERY_ROW;
-    bool        sortDescending  = (flags & CV_SORT_DESCENDING) != 0;
+    bool        sortRows        = (flags & 1) == SORT_EVERY_ROW;
+    bool        sortDescending  = (flags & SORT_DESCENDING) != 0;
     int         depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
-    Ipp32s      elemSize        = (Ipp32s)src.elemSize1();
 
     IppSortIndexFunc ippsSortRadixIndex = getSortIndexFunc(depth, sortDescending);
     if(!ippsSortRadixIndex)
@@ -4405,7 +4404,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
         for(int i = 0; i < src.rows; i++)
         {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (void*)src.ptr(i), elemSize, (Ipp32s*)dst.ptr(i), src.cols, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(i), (Ipp32s)src.step[1], (Ipp32s*)dst.ptr(i), src.cols, buffer) < 0)
                 return false;
         }
     }
@@ -4422,13 +4421,13 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
         buffer.allocate(bufferSize);
 
-        Ipp32s pixStride = elemSize*dst.cols;
+        Ipp32s srcStep = (Ipp32s)src.step[0];
         for(int i = 0; i < src.cols; i++)
         {
             subRect.x = i;
             dstSub = Mat(dst, subRect);
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (void*)src.ptr(0, i), pixStride, (Ipp32s*)dstRow.ptr(), src.rows, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(0, i), srcStep, (Ipp32s*)dstRow.ptr(), src.rows, buffer) < 0)
                 return false;
 
             dstRow = dstRow.reshape(1, dstSub.rows);

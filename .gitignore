@@ -21,3 +21,4 @@ bin/
 *.log
 *.tlog
 build
+.cache

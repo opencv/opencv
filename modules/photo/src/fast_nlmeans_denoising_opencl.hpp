@@ -52,8 +52,8 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight,
     FT almostDist2ActualDistMultiplier = (FT)(1 << almostTemplateWindowSizeSqBinShift) / templateWindowSizeSq;
 
     const FT WEIGHT_THRESHOLD = 1e-3f;
-    int maxDist = normType == NORM_L1 ? std::numeric_limits<ST>::max() * cn :
-        std::numeric_limits<ST>::max() * std::numeric_limits<ST>::max() * cn;
+    WT maxDist = normType == NORM_L1 ? (WT)std::numeric_limits<ST>::max() * cn :
+        (WT)std::numeric_limits<ST>::max() * (WT)std::numeric_limits<ST>::max() * cn;
     int almostMaxDist = (int)(maxDist / almostDist2ActualDistMultiplier + 1);
     FT den[4];
     CV_Assert(hn > 0 && hn <= 4);

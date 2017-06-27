@@ -87,6 +87,7 @@ int str_to_ann_train_method( String& str )
 
 void ann_check_data( Ptr<TrainData> _data )
 {
+    CV_TRACE_FUNCTION();
     Mat values = _data->getSamples();
     Mat var_idx = _data->getVarIdx();
     int nvars = (int)var_idx.total();
@@ -99,6 +100,7 @@ void ann_check_data( Ptr<TrainData> _data )
 // unroll the categorical responses to binary vectors
 Mat ann_get_new_responses( Ptr<TrainData> _data, map<int, int>& cls_map )
 {
+    CV_TRACE_FUNCTION();
     Mat train_sidx = _data->getTrainSampleIdx();
     int* train_sidx_ptr = train_sidx.ptr<int>();
     Mat responses = _data->getResponses();
@@ -130,6 +132,7 @@ Mat ann_get_new_responses( Ptr<TrainData> _data, map<int, int>& cls_map )
 
 float ann_calc_error( Ptr<StatModel> ann, Ptr<TrainData> _data, map<int, int>& cls_map, int type, vector<float> *resp_labels )
 {
+    CV_TRACE_FUNCTION();
     float err = 0;
     Mat samples = _data->getSamples();
     Mat responses = _data->getResponses();
@@ -241,6 +244,7 @@ CV_MLBaseTest::~CV_MLBaseTest()
 
 int CV_MLBaseTest::read_params( CvFileStorage* __fs )
 {
+    CV_TRACE_FUNCTION();
     FileStorage _fs(__fs, false);
     if( !_fs.isOpened() )
         test_case_count = -1;
@@ -265,6 +269,7 @@ int CV_MLBaseTest::read_params( CvFileStorage* __fs )
 
 void CV_MLBaseTest::run( int )
 {
+    CV_TRACE_FUNCTION();
     string filename = ts->get_data_path();
     filename += get_validation_filename();
     validationFS.open( filename, FileStorage::READ );
@@ -273,6 +278,7 @@ void CV_MLBaseTest::run( int )
     int code = cvtest::TS::OK;
     for (int i = 0; i < test_case_count; i++)
     {
+        CV_TRACE_REGION("iteration");
         int temp_code = run_test_case( i );
         if (temp_code == cvtest::TS::OK)
             temp_code = validate_test_results( i );
@@ -289,6 +295,7 @@ void CV_MLBaseTest::run( int )
 
 int CV_MLBaseTest::prepare_test_case( int test_case_idx )
 {
+    CV_TRACE_FUNCTION();
     clear();
 
     string dataPath = ts->get_data_path();
@@ -331,6 +338,7 @@ string& CV_MLBaseTest::get_validation_filename()
 
 int CV_MLBaseTest::train( int testCaseIdx )
 {
+    CV_TRACE_FUNCTION();
     bool is_trained = false;
     FileNode modelParamsNode =
         validationFS.getFirstTopLevelNode()["validation"][modelName][dataSetNames[testCaseIdx]]["model_params"];
@@ -489,6 +497,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
 
 float CV_MLBaseTest::get_test_error( int /*testCaseIdx*/, vector<float> *resp )
 {
+    CV_TRACE_FUNCTION();
     int type = CV_TEST_ERROR;
     float err = 0;
     Mat _resp;
@@ -506,11 +515,13 @@ float CV_MLBaseTest::get_test_error( int /*testCaseIdx*/, vector<float> *resp )
 
 void CV_MLBaseTest::save( const char* filename )
 {
+    CV_TRACE_FUNCTION();
     model->save( filename );
 }
 
 void CV_MLBaseTest::load( const char* filename )
 {
+    CV_TRACE_FUNCTION();
     if( modelName == CV_NBAYES )
         model = Algorithm::load<NormalBayesClassifier>( filename );
     else if( modelName == CV_KNEAREST )
