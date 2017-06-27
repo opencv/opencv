@@ -5,6 +5,7 @@
 // Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
+#include "precomp.hpp"
 #include "halide_scheduler.hpp"
 #include "op_halide.hpp"
 
