@@ -647,12 +647,15 @@ macro(ocv_compiler_optimization_fill_cpu_config)
     if(NOT DEFINED CPU_${OPT}_FEATURE_ALIAS OR NOT "x${CPU_${OPT}_FEATURE_ALIAS}" STREQUAL "x")
       set(OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE "${OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE}
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_${OPT}
+#  define CV_TRY_${OPT} 1
 #  define CV_CPU_HAS_SUPPORT_${OPT} 1
 #  define CV_CPU_CALL_${OPT}(fn, args) return (opt_${OPT}::fn args)
 #elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_${OPT}
+#  define CV_TRY_${OPT} 1
 #  define CV_CPU_HAS_SUPPORT_${OPT} (cv::checkHardwareSupport(CV_CPU_${OPT}))
 #  define CV_CPU_CALL_${OPT}(fn, args) if (CV_CPU_HAS_SUPPORT_${OPT}) return (opt_${OPT}::fn args)
 #else
+#  define CV_TRY_${OPT} 0
 #  define CV_CPU_HAS_SUPPORT_${OPT} 0
 #  define CV_CPU_CALL_${OPT}(fn, args)
 #endif
