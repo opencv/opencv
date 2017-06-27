@@ -43,3 +43,8 @@
 #include "cvconfig.h"
 #include <opencv2/dnn.hpp>
 #include <opencv2/dnn/all_layers.hpp>
+
+namespace cv { namespace dnn {
+Mutex& getInitializationMutex();
+void initializeLayerFactory();
+}} // namespace

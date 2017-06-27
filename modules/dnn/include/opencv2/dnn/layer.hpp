@@ -61,87 +61,25 @@ public:
     //! Each Layer class must provide this function to the factory
     typedef Ptr<Layer>(*Constuctor)(LayerParams &params);
 
-    //! Registers the layer class with typename @p type and specified @p constructor.
+    //! Registers the layer class with typename @p type and specified @p constructor. Thread-safe.
     static void registerLayer(const String &type, Constuctor constructor);
 
-    //! Unregisters registered layer with specified type name.
+    //! Unregisters registered layer with specified type name. Thread-safe.
     static void unregisterLayer(const String &type);
 
     /** @brief Creates instance of registered layer.
      *  @param type type name of creating layer.
      *  @param params parameters which will be used for layer initialization.
+     *  @note Thread-safe.
      */
     static Ptr<Layer> createLayerInstance(const String &type, LayerParams& params);
 
 private:
     LayerFactory();
-
-    struct Impl;
-    static Ptr<Impl> impl();
 };
-
-/** @brief Registers layer constructor in runtime.
-*   @param type string, containing type name of the layer.
-*   @param constuctorFunc pointer to the function of type LayerRegister::Constuctor, which creates the layer.
-*   @details This macros must be placed inside the function code.
-*/
-#define REG_RUNTIME_LAYER_FUNC(type, constuctorFunc) \
-    cv::dnn::LayerFactory::registerLayer(#type, constuctorFunc);
-
-/** @brief Registers layer class in runtime.
- *  @param type string, containing type name of the layer.
- *  @param class C++ class, derived from Layer.
- *  @details This macros must be placed inside the function code.
- */
-#define REG_RUNTIME_LAYER_CLASS(type, class) \
-    cv::dnn::LayerFactory::registerLayer(#type, _layerDynamicRegisterer<class>);
-
-/** @brief Registers layer constructor on module load time.
-*   @param type string, containing type name of the layer.
-*   @param constuctorFunc pointer to the function of type LayerRegister::Constuctor, which creates the layer.
-*   @details This macros must be placed outside the function code.
-*/
-#define REG_STATIC_LAYER_FUNC(type, constuctorFunc) \
-static cv::dnn::_LayerStaticRegisterer __LayerStaticRegisterer_##type(#type, constuctorFunc);
-
-/** @brief Registers layer class on module load time.
- *  @param type string, containing type name of the layer.
- *  @param class C++ class, derived from Layer.
- *  @details This macros must be placed outside the function code.
- */
-#define REG_STATIC_LAYER_CLASS(type, class)                         \
-Ptr<Layer> __LayerStaticRegisterer_func_##type(LayerParams &params) \
-    { return Ptr<Layer>(new class(params)); }                       \
-static _LayerStaticRegisterer __LayerStaticRegisterer_##type(#type, __LayerStaticRegisterer_func_##type);
-
 
 //! @}
 //! @}
-
-
-template<typename LayerClass>
-Ptr<Layer> _layerDynamicRegisterer(LayerParams &params)
-{
-    return Ptr<Layer>(LayerClass::create(params));
-}
-
-//allows automatically register created layer on module load time
-class _LayerStaticRegisterer
-{
-    String type;
-public:
-
-    _LayerStaticRegisterer(const String &layerType, LayerFactory::Constuctor layerConstuctor)
-    {
-        this->type = layerType;
-        LayerFactory::registerLayer(layerType, layerConstuctor);
-    }
-
-    ~_LayerStaticRegisterer()
-    {
-        LayerFactory::unregisterLayer(type);
-    }
-};
 
 }
 }
