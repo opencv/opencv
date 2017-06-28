@@ -268,7 +268,12 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     int model_points = 5;
     int ransac_kernel_method = SOLVEPNP_EPNP;
 
-    if( npoints == 4 )
+    if( flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P)
+    {
+        model_points = 4;
+        ransac_kernel_method = flags;
+    }
+    else if( npoints == 4 )
     {
         model_points = 4;
         ransac_kernel_method = SOLVEPNP_P3P;
@@ -335,6 +340,59 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         _local_inliers.copyTo(_inliers);
     }
     return true;
+}
+
+int solveP3P( InputArray _opoints, InputArray _ipoints,
+              InputArray _cameraMatrix, InputArray _distCoeffs,
+              OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags) {
+    CV_INSTRUMENT_REGION()
+
+    Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
+    int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
+    CV_Assert( npoints == 3 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+    CV_Assert( flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P );
+
+    Mat cameraMatrix0 = _cameraMatrix.getMat();
+    Mat distCoeffs0 = _distCoeffs.getMat();
+    Mat cameraMatrix = Mat_<double>(cameraMatrix0);
+    Mat distCoeffs = Mat_<double>(distCoeffs0);
+
+    Mat undistortedPoints;
+    undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+    std::vector<Mat> Rs, ts;
+
+    int solutions = 0;
+    if (flags == SOLVEPNP_P3P)
+    {
+        p3p P3Psolver(cameraMatrix);
+        solutions = P3Psolver.solve(Rs, ts, opoints, undistortedPoints);
+    }
+    else if (flags == SOLVEPNP_AP3P)
+    {
+        ap3p P3Psolver(cameraMatrix);
+        solutions = P3Psolver.solve(Rs, ts, opoints, undistortedPoints);
+    }
+
+    if (solutions == 0) {
+        return 0;
+    }
+
+    if (_rvecs.needed()) {
+        _rvecs.create(solutions, 1, CV_64F);
+    }
+
+    if (_tvecs.needed()) {
+        _tvecs.create(solutions, 1, CV_64F);
+    }
+
+    for (int i = 0; i < solutions; i++) {
+        Mat rvec;
+        Rodrigues(Rs[i], rvec);
+        _tvecs.getMatRef(i) = ts[i];
+        _rvecs.getMatRef(i) = rvec;
+    }
+
+    return solutions;
 }
 
 }
