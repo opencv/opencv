@@ -638,7 +638,7 @@ public:
         {
             // prepare weightsMat where each row is aligned and has enough zero padding on the right to
             // use vectorized (i.e. with intrinsics) loops without tail processing
-            Mat wm = blobs[0].reshape(1, outCn);
+            Mat wm = blobs[0].reshape(1, outCn).clone();
             if( wm.step1() % VEC_ALIGN != 0 )
             {
                 int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
