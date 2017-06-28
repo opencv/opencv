@@ -135,7 +135,7 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     const double blockScale = 4.5;
     const int minBlockSize = 256;
 
-    block_size.width = cvRound(result_size.width*blockScale);
+    block_size.width = cvRound(templ_size.width*blockScale);
     block_size.width = std::max( block_size.width, minBlockSize - templ_size.width + 1 );
     block_size.width = std::min( block_size.width, result_size.width );
     block_size.height = cvRound(templ_size.height*blockScale);

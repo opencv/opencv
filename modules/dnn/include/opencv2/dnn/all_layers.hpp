@@ -201,15 +201,9 @@ namespace dnn
         String padMode;
     };
 
-    class CV_EXPORTS ActivationLayer;
-    class CV_EXPORTS BatchNormLayer;
-
     class CV_EXPORTS ConvolutionLayer : public BaseConvolutionLayer
     {
     public:
-        virtual bool setActivation(const Ptr<ActivationLayer>& layer) = 0;
-        virtual bool setBatchNorm(const Ptr<BatchNormLayer>& layer) = 0;
-
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 

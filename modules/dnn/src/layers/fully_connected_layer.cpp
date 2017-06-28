@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved. 
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -110,39 +111,52 @@ public:
                backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1;
     }
 
-    class FullConnected : public ParallelLoopBody
+    virtual bool setActivation(const Ptr<ActivationLayer>& layer)
+    {
+        activ = layer;
+        return true;
+    }
+
+    class FullyConnected : public ParallelLoopBody
     {
     public:
-        FullConnected(const Mat& srcMat, const Mat& weights, const Mat& biasMat, Mat& dstMat, int nstripes)
+        FullyConnected() {}
+
+        static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat,
+                        Mat& dstMat, const ActivationLayer* activ, int nstripes)
         {
             CV_Assert( srcMat.dims == 2 && srcMat.cols == weights.cols &&
                        dstMat.rows == srcMat.rows && dstMat.cols == weights.rows &&
                        srcMat.type() == weights.type() && weights.type() == dstMat.type() &&
                        srcMat.type() == CV_32F &&
                        (biasMat.empty() || (biasMat.type() == srcMat.type() &&
-                        biasMat.isContinuous() && (int)biasMat.total() == dstMat.cols)) );
+                                           biasMat.isContinuous() && (int)biasMat.total() == dstMat.cols)) );
 
-            srcMat_ = &srcMat;
-            weights_ = &weights;
-            biasMat_ = &biasMat;
-            dstMat_ = &dstMat;
-            nstripes_ = nstripes;
-            useAVX2_ = CV_CPU_HAS_SUPPORT_AVX2;
+            FullyConnected p;
+
+            p.srcMat = &srcMat;
+            p.weights = &weights;
+            p.biasMat = &biasMat;
+            p.dstMat = &dstMat;
+            p.nstripes = nstripes;
+            p.activ = activ;
+            p.useAVX2 = checkHardwareSupport(CPU_AVX2);
+
+            parallel_for_(Range(0, nstripes), p, nstripes);
         }
 
         void operator()(const Range& r) const
         {
             int valign = FullyConnectedLayerImpl::VEC_ALIGN;
-            int nsamples = srcMat_->rows;
-            int nw0 = weights_->rows;
-            int k, vecsize = srcMat_->cols;
+            int nsamples = srcMat->rows;
+            int nw0 = weights->rows;
+            int k, vecsize = srcMat->cols;
             int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
-            int nstripes = nstripes_;
             size_t total = (size_t)nsamples*nw0;
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = r.end == nstripes ? total : std::min(r.end*stripeSize, total);
-            size_t wstep = weights_->step1();
+            size_t wstep = weights->step1();
             AutoBuffer<float> srcbuf(vecsize_aligned + valign);
             float* sptr = alignPtr((float*)srcbuf, (int)(valign*sizeof(float)));
 
@@ -153,16 +167,16 @@ public:
             {
                 int sampleIdx = (int)(ofs / nw0);
                 int delta = (int)(ofs - (size_t)sampleIdx*nw0);
-                const float* sptr_ = srcMat_->ptr<float>(sampleIdx);
-                const float* wptr = weights_->ptr<float>(delta);
-                float* dptr = dstMat_->ptr<float>(sampleIdx) + delta;
-                const float* biasptr = biasMat_->ptr<float>() + delta;
+                const float* sptr_ = srcMat->ptr<float>(sampleIdx);
+                const float* wptr = weights->ptr<float>(delta);
+                float* dptr = dstMat->ptr<float>(sampleIdx) + delta;
+                const float* biasptr = biasMat->ptr<float>() + delta;
                 int nw = std::min(nw0 - delta, (int)(stripeEnd - ofs));
 
                 memcpy(sptr, sptr_, vecsize*sizeof(sptr[0]));
 
             #if CV_TRY_AVX2
-                if( useAVX2_ )
+                if( useAVX2 )
                     fastGEMM1T_avx2( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
                 else
             #endif
@@ -202,14 +216,20 @@ public:
                         dptr[i] = s0;
                     }
                 }
+
+                // TODO: check whether this is correct in the case of ChannelsPReLU.
+                if(activ)
+                    activ->forwardSlice(dptr, dptr, nw, 0, 0, 1);
+
                 ofs += nw;
             }
         }
 
-        const Mat *srcMat_, *weights_, *biasMat_;
-        Mat* dstMat_;
-        int nstripes_;
-        bool useAVX2_;
+        const Mat *srcMat, *weights, *biasMat;
+        const ActivationLayer* activ;
+        Mat* dstMat;
+        int nstripes;
+        bool useAVX2;
     };
 
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &)
@@ -223,8 +243,7 @@ public:
             Mat dstMat = output[i].reshape(1, outerSize);
 
             const int nstripes = getNumThreads();
-            FullConnected fconn(srcMat, weightsMat, biasMat, dstMat, nstripes);
-            parallel_for_(Range(0, nstripes), fconn, nstripes);
+            FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
         }
     }
 
@@ -270,6 +289,7 @@ public:
 
     bool bias;
     Mat weightsMat, biasMat;
+    Ptr<ActivationLayer> activ;
 };
 
 Ptr<InnerProductLayer> InnerProductLayer::create(const LayerParams& params)

@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -45,8 +46,6 @@
 
 namespace cv {
 namespace dnn {
-
-#define _mm256_load_ps _mm256_loadu_ps // "weights" in fastConv_avx2 is not always aligned to 32 bytes
 
 void fastConv_avx2( const float* weights, size_t wstep, const float* bias,
                     const float* rowbuf, float* output, const int* outShape,
