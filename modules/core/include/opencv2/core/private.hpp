@@ -131,7 +131,7 @@ namespace cv
 \****************************************************************************************/
 
 /* the alignment of all the allocated buffers */
-#define  CV_MALLOC_ALIGN    16
+#define  CV_MALLOC_ALIGN    64
 
 /* IEEE754 constants and macros */
 #define  CV_TOGGLE_FLT(x) ((x)^((int)(x) < 0 ? 0x7fffffff : 0))
@@ -240,11 +240,6 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #ifdef HAVE_IPP_IW
 #include "iw++/iw.hpp"
 #endif
-
-#ifdef CV_MALLOC_ALIGN
-#undef CV_MALLOC_ALIGN
-#endif
-#define CV_MALLOC_ALIGN 32 // required for AVX optimization
 
 #if IPP_VERSION_X100 >= 201700
 #define CV_IPP_MALLOC(SIZE) ippMalloc_L(SIZE)

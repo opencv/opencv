@@ -148,6 +148,9 @@ namespace dnn //! This namespace is used for dnn module functionlaity.
         int targetId;   //!< Target identifier.
     };
 
+    class CV_EXPORTS ActivationLayer;
+    class CV_EXPORTS BatchNormLayer;
+
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
      * Each class, derived from Layer, must implement allocate() methods to declare own outputs and forward() to compute outputs.
@@ -247,6 +250,22 @@ namespace dnn //! This namespace is used for dnn module functionlaity.
          * Fuse only over the last function.
          */
         virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node);
+
+        /**
+         * @brief Tries to attach to the layer the subsequent activation layer, i.e. do the layer fusion in a partial case.
+         * @param[in] layer The subsequent activation layer.
+         *
+         * Returns true if the activation layer has been attached successfully.
+         */
+        virtual bool setActivation(const Ptr<ActivationLayer>& layer);
+
+        /**
+         * @brief Tries to attach to the layer the subsequent batch normalization layer, i.e. do the layer fusion in a partial case.
+         * @param[in] layer The subsequent batch normalization layer.
+         *
+         * Returns true if the batch normalization layer has been attached successfully.
+         */
+        virtual bool setBatchNorm(const Ptr<BatchNormLayer>& layer);
 
         virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                      const int requiredOutputs,
