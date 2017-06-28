@@ -489,7 +489,7 @@ public:
 
     static const size_t npos = size_t(-1);
 
-    explicit String();
+    String();
     String(const String& str);
     String(const String& str, size_t pos, size_t len = npos);
     String(const char* s);
@@ -627,6 +627,7 @@ String::String(const char* s, size_t n)
     : cstr_(0), len_(0)
 {
     if (!n) return;
+    if (!s) return;
     memcpy(allocate(n), s, n);
 }
 
@@ -634,6 +635,7 @@ inline
 String::String(size_t n, char c)
     : cstr_(0), len_(0)
 {
+    if (!n) return;
     memset(allocate(n), c, n);
 }
 
@@ -642,6 +644,7 @@ String::String(const char* first, const char* last)
     : cstr_(0), len_(0)
 {
     size_t len = (size_t)(last - first);
+    if (!len) return;
     memcpy(allocate(len), first, len);
 }
 
@@ -650,6 +653,7 @@ String::String(Iterator first, Iterator last)
     : cstr_(0), len_(0)
 {
     size_t len = (size_t)(last - first);
+    if (!len) return;
     char* str = allocate(len);
     while (first != last)
     {
