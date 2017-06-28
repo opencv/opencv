@@ -156,6 +156,8 @@ public:
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        CV_TRACE_FUNCTION();
+
         for (size_t i = 0; i < inputs.size(); i++)
         {
             const Mat &src = *inputs[i];

@@ -118,6 +118,9 @@ public:
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
         const Mat& inpMat = *inputs[0];
         std::vector<Range> ranges(inpMat.dims, Range::all());
         int cAxis = clamp(axis, inpMat.dims);

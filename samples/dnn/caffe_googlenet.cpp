@@ -41,6 +41,7 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/core/utils/trace.hpp>
 using namespace cv;
 using namespace cv::dnn;
 
@@ -84,6 +85,8 @@ static std::vector<String> readClassNames(const char *filename = "synset_words.t
 
 int main(int argc, char **argv)
 {
+    CV_TRACE_FUNCTION();
+
     String modelTxt = "bvlc_googlenet.prototxt";
     String modelBin = "bvlc_googlenet.caffemodel";
     String imageFile = (argc > 1) ? argv[1] : "space_shuttle.jpg";
@@ -117,13 +120,20 @@ int main(int argc, char **argv)
                                   Scalar(104, 117, 123));   //Convert Mat to batch of images
     //! [Prepare blob]
 
-    //! [Set input blob]
-    net.setInput(inputBlob, "data");        //set the network input
-    //! [Set input blob]
-
-    //! [Make forward pass]
-    Mat prob = net.forward("prob");                          //compute output
-    //! [Make forward pass]
+    Mat prob;
+    cv::TickMeter t;
+    for (int i = 0; i < 10; i++)
+    {
+        CV_TRACE_REGION("forward");
+        //! [Set input blob]
+        net.setInput(inputBlob, "data");        //set the network input
+        //! [Set input blob]
+        t.start();
+        //! [Make forward pass]
+        prob = net.forward("prob");                          //compute output
+        //! [Make forward pass]
+        t.stop();
+    }
 
     //! [Gather output]
     int classId;
@@ -136,6 +146,7 @@ int main(int argc, char **argv)
     std::cout << "Best class: #" << classId << " '" << classNames.at(classId) << "'" << std::endl;
     std::cout << "Probability: " << classProb * 100 << "%" << std::endl;
     //! [Print results]
+    std::cout << "Time: " << (double)t.getTimeMilli() / t.getCounter() << " ms (average from " << t.getCounter() << " iterations)" << std::endl;
 
     return 0;
 } //main

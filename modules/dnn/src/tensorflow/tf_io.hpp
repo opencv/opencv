@@ -11,7 +11,7 @@ Declaration of various functions which are related to Tensorflow models reading.
 
 #ifndef __OPENCV_DNN_TF_IO_HPP__
 #define __OPENCV_DNN_TF_IO_HPP__
-#if HAVE_PROTOBUF
+#ifdef HAVE_PROTOBUF
 
 #include "graph.pb.h"
 

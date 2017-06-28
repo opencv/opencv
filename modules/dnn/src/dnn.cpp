@@ -90,6 +90,7 @@ static String toString(const T &v)
 Mat blobFromImage(const Mat& image, double scalefactor, const Size& size,
                   const Scalar& mean, bool swapRB)
 {
+    CV_TRACE_FUNCTION();
     std::vector<Mat> images(1, image);
     return blobFromImages(images, scalefactor, size, mean, swapRB);
 }
@@ -97,6 +98,7 @@ Mat blobFromImage(const Mat& image, double scalefactor, const Size& size,
 Mat blobFromImages(const std::vector<Mat>& images_, double scalefactor, Size size,
                    const Scalar& mean_, bool swapRB)
 {
+    CV_TRACE_FUNCTION();
     std::vector<Mat> images = images_;
     for (int i = 0; i < images.size(); i++)
     {
@@ -207,6 +209,8 @@ class BackendWrapManager
 public:
     Ptr<BackendWrapper> wrap(const Mat& m, int backendId, int targetId)
     {
+        CV_TRACE_FUNCTION();
+
         CV_Assert(backendId != DNN_BACKEND_DEFAULT);
 
         std::map<void*, Ptr<BackendWrapper> >::iterator hostsIt;
@@ -261,6 +265,8 @@ public:
 
     void reset()
     {
+        CV_TRACE_FUNCTION();
+
         hostWrappers.clear();
         extraWrappers.clear();
     }
@@ -321,6 +327,8 @@ struct LayerData
     LayerData(int _id, const String &_name, const String &_type, LayerParams &_params)
         : id(_id), name(_name), type(_type), params(_params)
     {
+        CV_TRACE_FUNCTION();
+
         //add logging info
         params.name = name;
         params.type = type;
@@ -349,6 +357,9 @@ struct LayerData
 
     Ptr<Layer> getLayerInstance()
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+
         if (layerInstance)
             return layerInstance;
 
@@ -500,6 +511,8 @@ public:
     void allocateBlobsForLayer(LayerData &ld, const LayerShapes& layerShapes,
                                std::vector<LayerPin>& pinsForInternalBlobs)
     {
+        CV_TRACE_FUNCTION();
+
         pinsForInternalBlobs.clear();
 
         std::vector<Mat>& outputBlobs = ld.outputBlobs,
@@ -578,6 +591,8 @@ public:
     // Clear internal state. Calls before an every reallocation.
     void reset()
     {
+        CV_TRACE_FUNCTION();
+
         refCounter.clear();
         reuseMap.clear();
         memHosts.clear();
@@ -639,6 +654,8 @@ struct Net::Impl
 
     void compileHalide()
     {
+        CV_TRACE_FUNCTION();
+
         CV_Assert(preferableBackend == DNN_BACKEND_HALIDE);
 
         HalideScheduler scheduler(halideConfigFile);
@@ -666,6 +683,8 @@ struct Net::Impl
 
     void clear()
     {
+        CV_TRACE_FUNCTION();
+
         MapIdToLayerData::iterator it;
         for (it = layers.begin(); it != layers.end(); it++)
         {
@@ -694,6 +713,8 @@ struct Net::Impl
 
     void setUpNet(const std::vector<LayerPin>& blobsToKeep_ = std::vector<LayerPin>())
     {
+        CV_TRACE_FUNCTION();
+
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
         {
             clear();
@@ -862,6 +883,8 @@ struct Net::Impl
 
     void computeNetOutputLayers()
     {
+        CV_TRACE_FUNCTION();
+
         netOutputs.clear();
 
         MapIdToLayerData::iterator it;
@@ -883,6 +906,8 @@ struct Net::Impl
 
     void initBackend()
     {
+        CV_TRACE_FUNCTION();
+
         backendWrapper.reset();
         if (preferableBackend == DNN_BACKEND_DEFAULT)
         {
@@ -953,6 +978,8 @@ struct Net::Impl
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes)
     {
+        CV_TRACE_FUNCTION();
+
         LayerData &ld = layers[lid];
 
         //already allocated
@@ -1026,6 +1053,8 @@ struct Net::Impl
 
     void fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
     {
+        CV_TRACE_FUNCTION();
+
         // scan through all the layers. If there is convolution layer followed by the activation layer,
         // we try to embed this activation into the convolution and disable separate execution of the activation
         std::vector<String> outnames;
@@ -1094,6 +1123,8 @@ struct Net::Impl
 
     void allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
     {
+        CV_TRACE_FUNCTION();
+
         MapIdToLayerData::iterator it;
         for (it = layers.begin(); it != layers.end(); it++)
             it->second.flag = 0;
@@ -1131,6 +1162,8 @@ struct Net::Impl
 
     void forwardLayer(LayerData &ld)
     {
+        CV_TRACE_FUNCTION();
+
         Ptr<Layer> layer = ld.layerInstance;
 
         if (preferableBackend == DNN_BACKEND_DEFAULT ||
@@ -1159,6 +1192,8 @@ struct Net::Impl
 
     void forwardToLayer(LayerData &ld, bool clearFlags = true)
     {
+        CV_TRACE_FUNCTION();
+
         if (clearFlags)
         {
             MapIdToLayerData::iterator it;
@@ -1186,6 +1221,8 @@ struct Net::Impl
 
     void forwardAll()
     {
+        CV_TRACE_FUNCTION();
+
         forwardToLayer(layers.rbegin()->second, true);
     }
 
@@ -1247,6 +1284,8 @@ struct Net::Impl
 
     Mat getBlob(const LayerPin& pin)
     {
+        CV_TRACE_FUNCTION();
+
         if (!pin.valid())
             CV_Error(Error::StsObjectNotFound, "Requested blob not found");
 
@@ -1285,6 +1324,8 @@ Net::~Net()
 
 int Net::addLayer(const String &name, const String &type, LayerParams &params)
 {
+    CV_TRACE_FUNCTION();
+
     if (name.find('.') != String::npos)
     {
         CV_Error(Error::StsBadArg, "Added layer name \"" + name + "\" must not contain dot symbol");
@@ -1306,6 +1347,8 @@ int Net::addLayer(const String &name, const String &type, LayerParams &params)
 
 int Net::addLayerToPrev(const String &name, const String &type, LayerParams &params)
 {
+    CV_TRACE_FUNCTION();
+
     int prvLid = impl->lastLayerId;
     int newLid = this->addLayer(name, type, params);
     this->connect(prvLid, 0, newLid, 0);
@@ -1314,11 +1357,15 @@ int Net::addLayerToPrev(const String &name, const String &type, LayerParams &par
 
 void Net::connect(int outLayerId, int outNum, int inpLayerId, int inpNum)
 {
+    CV_TRACE_FUNCTION();
+
     impl->connect(outLayerId, outNum, inpLayerId, inpNum);
 }
 
 void Net::connect(String _outPin, String _inPin)
 {
+    CV_TRACE_FUNCTION();
+
     LayerPin outPin = impl->getPinByAlias(_outPin);
     LayerPin inpPin = impl->getPinByAlias(_inPin);
 
@@ -1329,6 +1376,8 @@ void Net::connect(String _outPin, String _inPin)
 
 Mat Net::forward(const String& outputName)
 {
+    CV_TRACE_FUNCTION();
+
     String layerName = outputName;
 
     if (layerName.empty())
@@ -1342,6 +1391,8 @@ Mat Net::forward(const String& outputName)
 
 void Net::forward(std::vector<Mat>& outputBlobs, const String& outputName)
 {
+    CV_TRACE_FUNCTION();
+
     impl->setUpNet();
 
     String layerName = outputName;
@@ -1359,6 +1410,8 @@ void Net::forward(std::vector<Mat>& outputBlobs, const String& outputName)
 void Net::forward(std::vector<Mat>& outputBlobs,
                   const std::vector<String>& outBlobNames)
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
     {
@@ -1381,6 +1434,8 @@ void Net::forward(std::vector<Mat>& outputBlobs,
 void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
                      const std::vector<String>& outBlobNames)
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
     {
@@ -1407,6 +1462,9 @@ void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
 
 void Net::setPreferableBackend(int backendId)
 {
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG(backendId);
+
     impl->netWasAllocated = impl->netWasAllocated &&
                             impl->preferableBackend == backendId;
     impl->preferableBackend = backendId;
@@ -1414,6 +1472,9 @@ void Net::setPreferableBackend(int backendId)
 
 void Net::setPreferableTarget(int targetId)
 {
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG(targetId);
+
     impl->netWasAllocated = impl->netWasAllocated &&
                             impl->preferableTarget == targetId;
     impl->preferableTarget = targetId;
@@ -1421,11 +1482,16 @@ void Net::setPreferableTarget(int targetId)
 
 void Net::setInputsNames(const std::vector<String> &inputBlobNames)
 {
+    CV_TRACE_FUNCTION();
+
     impl->netInputLayer->setNames(inputBlobNames);
 }
 
 void Net::setInput(const Mat &blob_, const String& name)
 {
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
     LayerPin pin;
     pin.lid = 0;
     pin.oid = impl->resolvePinOutputName(impl->getLayerData(pin.lid), name);
@@ -1595,6 +1661,8 @@ void Net::getLayerShapes(const ShapesVec& netInputShapes,
 
 int64 Net::getFLOPS(const std::vector<MatShape>& netInputShapes) const
 {
+    CV_TRACE_FUNCTION();
+
     int64 flops = 0;
     std::vector<int> ids;
     std::vector<std::vector<MatShape> > inShapes, outShapes;
@@ -1670,6 +1738,8 @@ void Net::getMemoryConsumption(const int layerId,
                                const std::vector<MatShape>& netInputShapes,
                                size_t& weights, size_t& blobs) const
 {
+    CV_TRACE_FUNCTION();
+
     Impl::MapIdToLayerData::iterator layer = impl->layers.find(layerId);
     CV_Assert(layer != impl->layers.end());
 
@@ -1692,6 +1762,8 @@ void Net::getMemoryConsumption(const int layerId,
 void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
                                size_t& weights, size_t& blobs) const
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<int> layerIds;
     std::vector<size_t> w, b;
     getMemoryConsumption(netInputShapes, layerIds, w, b);
@@ -1723,6 +1795,8 @@ void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
                                   std::vector<int>& layerIds, std::vector<size_t>& weights,
                                   std::vector<size_t>& blobs) const
 {
+    CV_TRACE_FUNCTION();
+
     layerIds.clear();
     weights.clear();
     blobs.clear();
@@ -1762,6 +1836,9 @@ void Net::getMemoryConsumption(const MatShape& netInputShape, std::vector<int>& 
 
 void Net::setHalideScheduler(const String& scheduler)
 {
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(scheduler, "scheduler", scheduler.c_str());
+
     impl->halideConfigFile = scheduler;
 }
 
@@ -1810,6 +1887,8 @@ void Layer::applyHalideScheduler(Ptr<BackendNode>& node, const std::vector<Mat*>
                                  const std::vector<Mat> &outputs, int targetId) const
 {
 #ifdef  HAVE_HALIDE
+    CV_TRACE_FUNCTION();
+
     Halide::Var x("x"), y("y"), c("c"), n("n"), co("co"), ci("ci"),
                 xo("xo"), xi("xi"), yo("yo"), yi("yi"), tile("tile");
     Halide::Func& top = node.dynamicCast<HalideBackendNode>()->funcs.back();
@@ -1891,6 +1970,8 @@ static void vecToPVec(const std::vector<T> &v, std::vector<T*> &pv)
 
 void Layer::finalize(const std::vector<Mat> &inputs, std::vector<Mat> &outputs)
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<Mat*> inputsp;
     vecToPVec(inputs, inputsp);
     this->finalize(inputsp, outputs);
@@ -1903,6 +1984,8 @@ void Layer::finalize(const std::vector<Mat*> &input, std::vector<Mat> &output)
 
 std::vector<Mat> Layer::finalize(const std::vector<Mat> &inputs)
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<Mat> outputs;
     this->finalize(inputs, outputs);
     return outputs;
@@ -1910,6 +1993,8 @@ std::vector<Mat> Layer::finalize(const std::vector<Mat> &inputs)
 
 void Layer::forward(const std::vector<Mat> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<Mat*> inputsp;
     vecToPVec(inputs, inputsp);
     this->forward(inputsp, outputs, internals);
@@ -1917,6 +2002,8 @@ void Layer::forward(const std::vector<Mat> &inputs, std::vector<Mat> &outputs, s
 
 void Layer::run(const std::vector<Mat> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<Mat*> inputsp;
     vecToPVec(inputs, inputsp);
     this->finalize(inputsp, outputs);
@@ -1972,32 +2059,41 @@ static LayerFactory_Impl& getLayerFactoryImpl()
     return *instance;
 }
 
-void LayerFactory::registerLayer(const String &_type, Constuctor constructor)
+void LayerFactory::registerLayer(const String &type, Constuctor constructor)
 {
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+
     cv::AutoLock lock(getLayerFactoryMutex());
-    String type = _type.toLowerCase();
-    LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type);
+    String type_ = type.toLowerCase();
+    LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type_);
 
     if (it != getLayerFactoryImpl().end() && it->second != constructor)
     {
-        CV_Error(cv::Error::StsBadArg, "Layer \"" + type + "\" already was registered");
+        CV_Error(cv::Error::StsBadArg, "Layer \"" + type_ + "\" already was registered");
     }
 
-    getLayerFactoryImpl().insert(std::make_pair(type, constructor));
+    getLayerFactoryImpl().insert(std::make_pair(type_, constructor));
 }
 
-void LayerFactory::unregisterLayer(const String &_type)
+void LayerFactory::unregisterLayer(const String &type)
 {
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+
     cv::AutoLock lock(getLayerFactoryMutex());
-    String type = _type.toLowerCase();
-    getLayerFactoryImpl().erase(type);
+    String type_ = type.toLowerCase();
+    getLayerFactoryImpl().erase(type_);
 }
 
-Ptr<Layer> LayerFactory::createLayerInstance(const String &_type, LayerParams& params)
+Ptr<Layer> LayerFactory::createLayerInstance(const String &type, LayerParams& params)
 {
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+
     cv::AutoLock lock(getLayerFactoryMutex());
-    String type = _type.toLowerCase();
-    LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type);
+    String type_ = type.toLowerCase();
+    LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type_);
 
     if (it != getLayerFactoryImpl().end())
     {

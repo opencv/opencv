@@ -251,6 +251,9 @@ public:
 
     void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
         CV_Assert(outputs.size() == 1);
         const int nstripes = getNumThreads();
         EltwiseInvoker::run((const Mat**)&inputs[0], (int)inputs.size(), outputs[0],
