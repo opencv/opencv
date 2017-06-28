@@ -56,7 +56,7 @@
 #include "opencv2/core.hpp"
 #include <ostream>
 
-#if __cplusplus >= 201103L
+#ifdef CV_CXX_11
 #include <functional>
 #endif
 
@@ -482,7 +482,7 @@ public:
 */
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
-#if __cplusplus >= 201103L
+#ifdef CV_CXX_11
 class ParallelLoopBodyLambdaWrapper : public ParallelLoopBody
 {
 private:

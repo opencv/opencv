@@ -102,7 +102,7 @@ int main()
 
     double t1 = (double) getTickCount();
 
-    #if __cplusplus >= 201103L
+    #ifdef CV_CXX_11
 
     //! [mandelbrot-parallel-call-cxx11]
     parallel_for_(Range(0, mandelbrotImg.rows*mandelbrotImg.cols), [&](const Range& range){
