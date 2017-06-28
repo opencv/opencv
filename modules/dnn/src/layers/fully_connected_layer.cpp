@@ -78,7 +78,6 @@ public:
             wpadding.setTo(Scalar::all(0.));
             weightsMat = weightsBuf.colRange(0, vecsize);
             blobs[0].copyTo(weightsMat);
-            blobs[0] = weightsMat;
         }
 
         if (bias)
