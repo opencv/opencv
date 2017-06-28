@@ -219,7 +219,7 @@ public:
                           _shareLocation, &allLocationPredictions);
 
         // Retrieve all confidences.
-        std::vector<std::map<int, std::vector<float> > > allConfidenceScores;
+        std::vector<std::vector<std::vector<float> > > allConfidenceScores;
         GetConfidenceScores(confidenceData, num, numPriors, _numClasses,
                             &allConfidenceScores);
 
@@ -241,7 +241,7 @@ public:
         for (int i = 0; i < num; ++i)
         {
             const LabelBBox& decodeBBoxes = allDecodedBBoxes[i];
-            const std::map<int, std::vector<float> >& confidenceScores =
+            const std::vector<std::vector<float> >& confidenceScores =
             allConfidenceScores[i];
             std::map<int, std::vector<int> > indices;
             int numDetections = 0;
@@ -252,13 +252,13 @@ public:
                     // Ignore background class.
                     continue;
                 }
-                if (confidenceScores.find(c) == confidenceScores.end())
+                if (confidenceScores.size() <= c)
                 {
                     // Something bad happened if there are no predictions for current label.
                     util::make_error<int>("Could not find confidence predictions for label ", c);
                 }
 
-                const std::vector<float>& scores = confidenceScores.find(c)->second;
+                const std::vector<float>& scores = confidenceScores[c];
                 int label = _shareLocation ? -1 : c;
                 if (decodeBBoxes.find(label) == decodeBBoxes.end())
                 {
@@ -280,13 +280,13 @@ public:
                 {
                     int label = it->first;
                     const std::vector<int>& labelIndices = it->second;
-                    if (confidenceScores.find(label) == confidenceScores.end())
+                    if (confidenceScores.size() <= label)
                     {
                         // Something bad happened for current label.
                         util::make_error<int>("Could not find location predictions for label ", label);
                         continue;
                     }
-                    const std::vector<float>& scores = confidenceScores.find(label)->second;
+                    const std::vector<float>& scores = confidenceScores[label];
                     for (size_t j = 0; j < labelIndices.size(); ++j)
                     {
                         size_t idx = labelIndices[j];
@@ -329,20 +329,20 @@ public:
         int count = 0;
         for (int i = 0; i < num; ++i)
         {
-            const std::map<int, std::vector<float> >& confidenceScores =
+            const std::vector<std::vector<float> >& confidenceScores =
             allConfidenceScores[i];
             const LabelBBox& decodeBBoxes = allDecodedBBoxes[i];
             for (std::map<int, std::vector<int> >::iterator it = allIndices[i].begin();
                  it != allIndices[i].end(); ++it)
             {
                 int label = it->first;
-                if (confidenceScores.find(label) == confidenceScores.end())
+                if (confidenceScores.size() <= label)
                 {
                     // Something bad happened if there are no predictions for current label.
                     util::make_error<int>("Could not find confidence predictions for label ", label);
                     continue;
                 }
-                const std::vector<float>& scores = confidenceScores.find(label)->second;
+                const std::vector<float>& scores = confidenceScores[label];
                 int locLabel = _shareLocation ? -1 : label;
                 if (decodeBBoxes.find(locLabel) == decodeBBoxes.end())
                 {
@@ -642,13 +642,14 @@ public:
     //      confidence prediction for an image.
     void GetConfidenceScores(const float* confData, const int num,
                              const int numPredsPerClass, const int numClasses,
-                             std::vector<std::map<int, std::vector<float> > >* confPreds)
+                             std::vector<std::vector<std::vector<float> > >* confPreds)
     {
         confPreds->clear();
         confPreds->resize(num);
         for (int i = 0; i < num; ++i)
         {
-            std::map<int, std::vector<float> >& labelScores = (*confPreds)[i];
+            std::vector<std::vector<float> >& labelScores = (*confPreds)[i];
+            labelScores.resize(numClasses);
             for (int p = 0; p < numPredsPerClass; ++p)
             {
                 int startIdx = p * numClasses;
