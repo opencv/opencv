@@ -4,7 +4,7 @@
 #include "THDiskFile.h"
 #include "THFilePrivate.h"
 
-extern "C"
+namespace TH
 {
 
 typedef struct THDiskFile__
@@ -36,7 +36,7 @@ static size_t fread__(void *ptr, size_t size, size_t nitems, FILE *stream)
 {
   size_t nread = 0;
   while(!feof(stream) && !ferror(stream) && (nread < nitems))
-    nread += fread((char*)ptr+nread*size, size, THMin(2147483648UL/size, nitems-nread), stream);
+    nread += fread((char*)ptr+nread*size, size, std::min<size_t>(2147483648UL/size, nitems-nread), stream);
   return nread;
 }
 #else
@@ -81,57 +81,7 @@ static size_t fread__(void *ptr, size_t size, size_t nitems, FILE *stream)
     }                                                                   \
                                                                         \
     return nread;                                                       \
-  }                                                                     \
-                                                                        \
-  static long THDiskFile_write##TYPEC(THFile *self, TYPE *data, long n) \
-  {                                                                     \
-    THDiskFile *dfself = (THDiskFile*)(self);                           \
-    long nwrite = 0L;                                                   \
-                                                                        \
-    THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file"); \
-    THArgCheck(dfself->file.isWritable, 1, "attempt to write in a read-only file"); \
-                                                                        \
-    if(dfself->file.isBinary)                                           \
-    {                                                                   \
-      if(dfself->isNativeEncoding)                                      \
-      {                                                                 \
-        nwrite = fwrite(data, sizeof(TYPE), n, dfself->handle);         \
-      }                                                                 \
-      else                                                              \
-      {                                                                 \
-        if(sizeof(TYPE) > 1)                                            \
-        {                                                               \
-          char *buffer = (char*)THAlloc(sizeof(TYPE)*n);                \
-          THDiskFile_reverseMemory(buffer, data, sizeof(TYPE), n);      \
-          nwrite = fwrite(buffer, sizeof(TYPE), n, dfself->handle);     \
-          THFree(buffer);                                               \
-        }                                                               \
-        else                                                            \
-          nwrite = fwrite(data, sizeof(TYPE), n, dfself->handle);       \
-      }                                                                 \
-    }                                                                   \
-    else                                                                \
-    {                                                                   \
-      long i;                                                           \
-      for(i = 0; i < n; i++)                                            \
-      {                                                                 \
-        ASCII_WRITE_ELEM;                                               \
-        if( dfself->file.isAutoSpacing && (i < n-1) )                   \
-          fprintf(dfself->handle, " ");                                 \
-      }                                                                 \
-      if(dfself->file.isAutoSpacing && (n > 0))                         \
-        fprintf(dfself->handle, "\n");                                  \
-    }                                                                   \
-                                                                        \
-    if(nwrite != n)                                                     \
-    {                                                                   \
-      dfself->file.hasError = 1;                                        \
-      if(!dfself->file.isQuiet)                                         \
-        THError("write error: wrote %d blocks instead of %d", nwrite, n); \
-    }                                                                   \
-                                                                        \
-    return nwrite;                                                      \
-}
+  }
 
 static int THDiskFile_mode(const char *mode, int *isReadable, int *isWritable)
 {
@@ -160,13 +110,6 @@ static int THDiskFile_mode(const char *mode, int *isReadable, int *isWritable)
     }
   }
   return 0;
-}
-
-static void THDiskFile_synchronize(THFile *self)
-{
-  THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
-  fflush(dfself->handle);
 }
 
 static void THDiskFile_seek(THFile *self, long position)
@@ -326,11 +269,6 @@ static void THDiskFile_free(THFile *self)
   THFree(dfself);
 }
 
-/* READ_WRITE_METHODS(int, Bool, */
-/*                    int value = 0; int ret = fscanf(file->handle, "%d", &value); array[i] = (value ? 1 : 0); if(ret <= 0) break; else result++, */
-/*                    int value = (array[i] ? 1 : 0); nElemWritten = fprintf(file->handle, "%d", value), */
-/*                    true) */
-
 /* Note that we do a trick */
 READ_WRITE_METHODS(unsigned char, Byte,
                    nread = fread(data, 1, n, dfself->handle); break,
@@ -426,79 +364,6 @@ static long THDiskFile_readLong(THFile *self, int64 *data, long n)
   return nread;
 }
 
-static long THDiskFile_writeLong(THFile *self, int64 *data, long n)
-{
-  THDiskFile *dfself = (THDiskFile*)(self);
-  long nwrite = 0L;
-
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
-  THArgCheck(dfself->file.isWritable, 1, "attempt to write in a read-only file");
-
-  if(dfself->file.isBinary)
-  {
-    if(dfself->longSize == 0 || dfself->longSize == sizeof(long))
-    {
-      if(dfself->isNativeEncoding)
-      {
-        nwrite = fwrite(data, sizeof(long), n, dfself->handle);
-      }
-      else
-      {
-        char *buffer = (char*)THAlloc(sizeof(long)*n);
-        THDiskFile_reverseMemory(buffer, data, sizeof(long), n);
-        nwrite = fwrite(buffer, sizeof(long), n, dfself->handle);
-        THFree(buffer);
-      }
-    } else if(dfself->longSize == 4)
-    {
-      int32_t *buffer = (int32_t *)THAlloc(4*n);
-      long i;
-      for(i = 0; i < n; i++)
-        buffer[i] = data[i];
-      if(!dfself->isNativeEncoding)
-        THDiskFile_reverseMemory(buffer, buffer, 4, n);
-      nwrite = fwrite(buffer, 4, n, dfself->handle);
-      THFree(buffer);
-    }
-    else /* if(dfself->longSize == 8) */
-    {
-      int big_endian = !THDiskFile_isLittleEndianCPU();
-      int32_t *buffer = (int32_t*)THAlloc(8*n);
-      long i;
-      for(i = 0; i < n; i++)
-      {
-        buffer[2*i + !big_endian] = 0;
-        buffer[2*i + big_endian] = data[i];
-      }
-      if(!dfself->isNativeEncoding)
-        THDiskFile_reverseMemory(buffer, buffer, 8, n);
-      nwrite = fwrite(buffer, 8, n, dfself->handle);
-      THFree(buffer);
-    }
-  }
-  else
-  {
-    long i;
-    for(i = 0; i < n; i++)
-    {
-      long res = 0;
-      int ret = fprintf(dfself->handle, "%ld", res); data[i] = res; if(ret <= 0) break; else nwrite++;
-      if( dfself->file.isAutoSpacing && (i < n-1) )
-        fprintf(dfself->handle, " ");
-    }
-    if(dfself->file.isAutoSpacing && (n > 0))
-      fprintf(dfself->handle, "\n");
-  }
-
-  if(nwrite != n)
-  {
-    dfself->file.hasError = 1;
-    if(!dfself->file.isQuiet)
-      THError("write error: wrote %d blocks instead of %d", nwrite, n);
-  }
-
-  return nwrite;
-}
 
 static long THDiskFile_readString(THFile *self, const char *format, char **str_)
 {
@@ -592,25 +457,6 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
 }
 
 
-static long THDiskFile_writeString(THFile *self, const char *str, long size)
-{
-  THDiskFile *dfself = (THDiskFile*)(self);
-  long nwrite;
-
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
-  THArgCheck(dfself->file.isWritable, 1, "attempt to write in a read-only file");
-
-  nwrite = fwrite(str, 1, size, dfself->handle);
-  if(nwrite != size)
-  {
-    dfself->file.hasError = 1;
-    if(!dfself->file.isQuiet)
-      THError("write error: wrote %ld blocks instead of %ld", nwrite, size);
-  }
-
-  return nwrite;
-}
-
 THFile *THDiskFile_new(const char *name, const char *mode, int isQuiet)
 {
   static struct THFileVTable vtable = {
@@ -625,16 +471,6 @@ THFile *THDiskFile_new(const char *name, const char *mode, int isQuiet)
     THDiskFile_readDouble,
     THDiskFile_readString,
 
-    THDiskFile_writeByte,
-    THDiskFile_writeChar,
-    THDiskFile_writeShort,
-    THDiskFile_writeInt,
-    THDiskFile_writeLong,
-    THDiskFile_writeFloat,
-    THDiskFile_writeDouble,
-    THDiskFile_writeString,
-
-    THDiskFile_synchronize,
     THDiskFile_seek,
     THDiskFile_seekEnd,
     THDiskFile_position,
@@ -649,122 +485,12 @@ THFile *THDiskFile_new(const char *name, const char *mode, int isQuiet)
 
   THArgCheck(THDiskFile_mode(mode, &isReadable, &isWritable), 2, "file mode should be 'r','w' or 'rw'");
 
-  if( isReadable && isWritable )
-  {
-    handle = fopen(name, "r+b");
-    if(!handle)
-    {
-      handle = fopen(name, "wb");
-      if(handle)
-      {
-        fclose(handle);
-        handle = fopen(name, "r+b");
-      }
-    }
-  }
-  else
-    handle = fopen(name, (isReadable ? "rb" : "wb"));
-
-  if(!handle)
-  {
-    if(isQuiet)
-      return 0;
-    else
-      THError("cannot open <%s> in mode %c%c", name, (isReadable ? 'r' : ' '), (isWritable ? 'w' : ' '));
-  }
-
-  self = (THDiskFile*)THAlloc(sizeof(THDiskFile));
-
-  self->handle = handle;
-  self->name = (char*)THAlloc(strlen(name)+1);
-  strcpy(self->name, name);
-  self->isNativeEncoding = 1;
-  self->longSize = 0;
-
-  self->file.vtable = &vtable;
-  self->file.isQuiet = isQuiet;
-  self->file.isReadable = isReadable;
-  self->file.isWritable = isWritable;
-  self->file.isBinary = 0;
-  self->file.isAutoSpacing = 1;
-  self->file.hasError = 0;
-
-  return (THFile*)self;
-}
-
-/* PipeFile */
-
-static int THPipeFile_mode(const char *mode, int *isReadable, int *isWritable)
-{
-  *isReadable = 0;
-  *isWritable = 0;
-  if(strlen(mode) == 1)
-  {
-    if(*mode == 'r')
-    {
-      *isReadable = 1;
-      return 1;
-    }
-    else if(*mode == 'w')
-    {
-      *isWritable = 1;
-      return 1;
-    }
-  }
-  return 0;
-}
-
-static void THPipeFile_free(THFile *self)
-{
-  THDiskFile *dfself = (THDiskFile*)(self);
-  if(dfself->handle)
-    pclose(dfself->handle);
-  THFree(dfself->name);
-  THFree(dfself);
-}
-
-THFile *THPipeFile_new(const char *name, const char *mode, int isQuiet)
-{
-  static struct THFileVTable vtable = {
-    THDiskFile_isOpened,
-
-    THDiskFile_readByte,
-    THDiskFile_readChar,
-    THDiskFile_readShort,
-    THDiskFile_readInt,
-    THDiskFile_readLong,
-    THDiskFile_readFloat,
-    THDiskFile_readDouble,
-    THDiskFile_readString,
-
-    THDiskFile_writeByte,
-    THDiskFile_writeChar,
-    THDiskFile_writeShort,
-    THDiskFile_writeInt,
-    THDiskFile_writeLong,
-    THDiskFile_writeFloat,
-    THDiskFile_writeDouble,
-    THDiskFile_writeString,
-
-    THDiskFile_synchronize,
-    THDiskFile_seek,
-    THDiskFile_seekEnd,
-    THDiskFile_position,
-    THDiskFile_close,
-    THPipeFile_free
-  };
-
-  int isReadable;
-  int isWritable;
-  FILE *handle;
-  THDiskFile *self;
-
-  THArgCheck(THPipeFile_mode(mode, &isReadable, &isWritable), 2, "file mode should be 'r','w'");
-
-#ifdef _WIN32
-  handle = popen(name, (isReadable ? "rb" : "wb"));
+  CV_Assert(isReadable && !isWritable);
+#ifdef _MSC_VER
+  if (fopen_s(&handle, name, "rb") != 0)
+      handle = NULL;
 #else
-  handle = popen(name, (isReadable ? "r" : "w"));
+  handle = fopen(name,"rb");
 #endif
 
   if(!handle)
