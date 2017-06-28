@@ -314,7 +314,11 @@ public:
         return flops;
     }
 
-    bool setActivation(const Ptr<ActivationLayer>& layer) { activ = layer; return true; }
+    bool setActivation(const Ptr<ActivationLayer>& layer)
+    {
+        activ = layer;
+        return !activ.empty();
+    }
 
     Ptr<ActivationLayer> activ;
 };

@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
-// Copyright (C) 2017, Intel Corporation, all rights reserved. 
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -194,14 +194,19 @@ public:
         return false;
     }
 
-    bool setActivation(const Ptr<ActivationLayer>& layer) { activ = layer; return true; }
+    bool setActivation(const Ptr<ActivationLayer>& layer)
+    {
+        activ = layer;
+        return !activ.empty();
+    }
+
     bool setBatchNorm(const Ptr<BatchNormLayer>& layer )
     {
         bnorm = layer;
         // we will need to re-compute the weights with the batch
         // norm coefficients taken into account
         weightsMat.release();
-        return true;
+        return !bnorm.empty();
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)

@@ -187,13 +187,13 @@ public:
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(r.end*stripeSize, total);
-            const int* ofsptr = &ofsbuf[0];
             int kernel_w = kernel.width, kernel_h = kernel.height;
             int pad_w = pad.width, pad_h = pad.height;
             int stride_w = stride.width, stride_h = stride.height;
             bool compMaxIdx = computeMaxIdx;
 
 #if CV_SIMD128
+            const int* ofsptr = &ofsbuf[0];
             v_float32x4 idx00(0.f, (float)stride_w, (float)(stride_w*2), (float)(stride_w*3));
             v_float32x4 ones = v_setall_f32(1.f);
             v_float32x4 idx_delta = v_setall_f32((float)(inp_width - kernel_w));

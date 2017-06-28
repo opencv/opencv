@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
-// Copyright (C) 2017, Intel Corporation, all rights reserved. 
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -114,7 +114,7 @@ public:
     virtual bool setActivation(const Ptr<ActivationLayer>& layer)
     {
         activ = layer;
-        return true;
+        return !activ.empty();
     }
 
     class FullyConnected : public ParallelLoopBody
