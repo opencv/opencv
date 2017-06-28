@@ -46,10 +46,9 @@
 #include <map>
 #include <ostream>
 
-namespace cv
-{
-namespace dnn
-{
+namespace cv {
+namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
@@ -140,6 +139,7 @@ public:
 };
 
 //! @}
+CV__DNN_EXPERIMENTAL_NS_END
 }
 }
 

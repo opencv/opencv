@@ -44,12 +44,23 @@
 
 #include <vector>
 #include <opencv2/core.hpp>
+
+#if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
+#define CV__DNN_EXPERIMENTAL_NS_USE using namespace experimental_dnn_v1;
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v1 {
+#define CV__DNN_EXPERIMENTAL_NS_END }
+#else
+#define CV__DNN_EXPERIMENTAL_NS_USE
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN
+#define CV__DNN_EXPERIMENTAL_NS_END
+#endif
+
 #include <opencv2/dnn/dict.hpp>
 
-namespace cv
-{
-namespace dnn //! This namespace is used for dnn module functionlaity.
-{
+namespace cv {
+namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_USE
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
@@ -658,6 +669,7 @@ namespace dnn //! This namespace is used for dnn module functionlaity.
                                     Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true);
 
 //! @}
+CV__DNN_EXPERIMENTAL_NS_END
 }
 }
 

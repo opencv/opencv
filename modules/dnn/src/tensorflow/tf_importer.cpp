@@ -10,8 +10,6 @@ Implementation of Tensorflow models parser
 */
 
 #include "../precomp.hpp"
-using namespace cv;
-using namespace cv::dnn;
 
 #if HAVE_PROTOBUF
 #include "graph.pb.h"
@@ -24,6 +22,13 @@ using namespace cv::dnn;
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "tf_io.hpp"
+#endif
+
+namespace cv {
+namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
+
+#if HAVE_PROTOBUF
 
 using ::google::protobuf::RepeatedField;
 using ::google::protobuf::RepeatedPtrField;
@@ -734,14 +739,14 @@ void TFImporter::populateNet(Net dstNet)
 
 } // namespace
 
-Ptr<Importer> cv::dnn::createTensorflowImporter(const String &model)
+Ptr<Importer> createTensorflowImporter(const String &model)
 {
     return Ptr<Importer>(new TFImporter(model.c_str()));
 }
 
 #else //HAVE_PROTOBUF
 
-Ptr<Importer> cv::dnn::createTensorflowImporter(const String&)
+Ptr<Importer> createTensorflowImporter(const String&)
 {
     CV_Error(cv::Error::StsNotImplemented, "libprotobuf required to import data from TensorFlow models");
     return Ptr<Importer>();
@@ -749,7 +754,7 @@ Ptr<Importer> cv::dnn::createTensorflowImporter(const String&)
 
 #endif //HAVE_PROTOBUF
 
-Net cv::dnn::readNetFromTensorflow(const String &model)
+Net readNetFromTensorflow(const String &model)
 {
     Ptr<Importer> importer = createTensorflowImporter(model);
     Net net;
@@ -757,3 +762,6 @@ Net cv::dnn::readNetFromTensorflow(const String &model)
         importer->populateNet(net);
     return net;
 }
+
+CV__DNN_EXPERIMENTAL_NS_END
+}} // namespace
