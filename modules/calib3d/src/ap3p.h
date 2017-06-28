@@ -17,8 +17,9 @@ private:
     template<typename OpointType, typename IpointType>
     void extract_points(const cv::Mat &opoints, const cv::Mat &ipoints, std::vector<double> &points) {
         points.clear();
-        points.resize(20);
-        for (int i = 0; i < 4; i++) {
+        int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
+        points.resize(5*npoints);
+        for (int i = 0; i < npoints; i++) {
             points[i * 5] = ipoints.at<IpointType>(i).x * fx + cx;
             points[i * 5 + 1] = ipoints.at<IpointType>(i).y * fy + cy;
             points[i * 5 + 2] = opoints.at<OpointType>(i).x;
@@ -39,6 +40,7 @@ public:
     ap3p(cv::Mat cameraMatrix);
 
     bool solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Mat &ipoints);
+    int solve(std::vector<cv::Mat> &Rs, std::vector<cv::Mat> &tvecs, const cv::Mat &opoints, const cv::Mat &ipoints);
 
     int solve(double R[4][3][3], double t[4][3],
               double mu0, double mv0, double X0, double Y0, double Z0,
