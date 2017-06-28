@@ -123,8 +123,9 @@ public:
 
             for (size_t cnDim = 0; cnDim < channels; cnDim++)
             {
+                const int offset = srcOffset + cnDim * cnStep;
                 for (size_t i = 0; i < innerSize; i++)
-                    dstPtr[srcOffset + cnDim * cnStep + i] = srcPtr[srcOffset + cnDim * cnStep + i] - bufPtr[bufOffset + i];
+                    dstPtr[offset + i] = srcPtr[offset + i] - bufPtr[bufOffset + i];
             }
         }
 
@@ -141,22 +142,25 @@ public:
 
             for (size_t cnDim = 0; cnDim < channels; cnDim++)
             {
+                const int offset = srcOffset + cnDim * cnStep;
                 for (size_t i = 0; i < innerSize; i++)
-                    bufPtr[bufOffset + i] += dstPtr[srcOffset + cnDim * cnStep + i];
+                    bufPtr[bufOffset + i] += dstPtr[offset + i];
             }
 
             //divide by computed sum
             for (size_t cnDim = 0; cnDim < channels; cnDim++)
             {
+                const int offset = srcOffset + cnDim * cnStep;
                 for (size_t i = 0; i < innerSize; i++)
-                    dstPtr[srcOffset + cnDim * cnStep + i] /= bufPtr[bufOffset + i];
+                    dstPtr[offset + i] /= bufPtr[bufOffset + i];
             }
             if (logSoftMax)
             {
                 for (size_t cnDim = 0; cnDim < channels; cnDim++)
                 {
+                    const int offset = srcOffset + cnDim * cnStep;
                     for (size_t i = 0; i < innerSize; i++)
-                        dstPtr[srcOffset + cnDim * cnStep + i] = log(dstPtr[srcOffset + cnDim * cnStep + i]);
+                        dstPtr[offset + i] = log(dstPtr[offset + i]);
                 }
             }
         }
