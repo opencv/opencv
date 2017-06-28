@@ -94,6 +94,7 @@ class LSTMLayerImpl : public LSTMLayer
 public:
 
     LSTMLayerImpl(const LayerParams& params)
+        : numTimeStamps(0), numSamples(0)
     {
         setParamsFrom(params);
         type = "LSTM";
@@ -307,6 +308,7 @@ class RNNLayerImpl : public RNNLayer
 public:
 
     RNNLayerImpl(const LayerParams& params)
+        : numX(0), numH(0), numO(0), numSamples(0), numTimestamps(0), numSamplesTotal(0), dtype(0)
     {
         setParamsFrom(params);
         type = "RNN";

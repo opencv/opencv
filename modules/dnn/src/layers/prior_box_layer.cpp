@@ -160,6 +160,7 @@ public:
     }
 
     PriorBoxLayerImpl(const LayerParams &params)
+        : _boxWidth(0), _boxHeight(0)
     {
         setParamsFrom(params);
         _minSize = getParameter<unsigned>(params, "min_size");

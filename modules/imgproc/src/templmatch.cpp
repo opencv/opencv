@@ -888,12 +888,14 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
         templNorm = std::sqrt(templNorm);
         templNorm /= std::sqrt(invArea); // care of accuracy here
 
+        CV_Assert(sqsum.data != NULL);
         q0 = (double*)sqsum.data;
         q1 = q0 + templ.cols*cn;
         q2 = (double*)(sqsum.data + templ.rows*sqsum.step);
         q3 = q2 + templ.cols*cn;
     }
 
+    CV_Assert(sum.data != NULL);
     double* p0 = (double*)sum.data;
     double* p1 = p0 + templ.cols*cn;
     double* p2 = (double*)(sum.data + templ.rows*sum.step);

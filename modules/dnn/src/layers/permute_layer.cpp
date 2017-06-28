@@ -83,10 +83,10 @@ public:
     }
 
     PermuteLayerImpl(const LayerParams &params)
+        : _count(0), _needsPermute(false), _numAxes(0)
     {
         if (!params.has("order"))
         {
-            _needsPermute = false;
             return;
         }
 

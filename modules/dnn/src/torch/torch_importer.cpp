@@ -876,7 +876,7 @@ struct TorchImporter : public ::cv::dnn::Importer
                 return mergeId;
             }
             else if (module->thName == "ConcatTable") {
-                int newId, splitId;
+                int newId = -1, splitId;
                 LayerParams splitParams;
 
                 splitId = net.addLayer(generateLayerName("torchSplit"), "Split", splitParams);

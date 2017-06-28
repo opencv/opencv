@@ -209,7 +209,7 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
     char *at = strchr(name, '%');
     if(at)
     {
-        int dummy;
+        unsigned int dummy;
         if(sscanf(at + 1, "%ud", &dummy) != 1)
             return 0;
         name = strdup(filename);
@@ -236,6 +236,7 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
 
         int size = (int)strlen(filename) + 20;
         name = (char *)malloc(size);
+        CV_Assert(name != NULL);
         strncpy(name, filename, at - filename);
         name[at - filename] = 0;
 
@@ -245,7 +246,7 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
         char *extension;
         for(i = 0, extension = at; isdigit(at[i]); i++, extension++)
             ;
-        char places[10];
+        char places[13] = {0};
         sprintf(places, "%dd", i);
 
         strcat(name, places);

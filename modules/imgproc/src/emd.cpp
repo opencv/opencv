@@ -773,6 +773,7 @@ icvNewSolution( CvEMDState * state )
     }
 
     /* remove the leaving basic variable */
+    CV_Assert(leave_x != NULL);
     i = leave_x->i;
     j = leave_x->j;
     state->is_x[i][j] = 0;

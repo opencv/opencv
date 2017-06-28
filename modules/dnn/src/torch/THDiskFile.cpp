@@ -556,6 +556,8 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
         total += TBRS_BSZ;
         p = (char*)THRealloc(p, total);
       }
+      if (p == NULL)
+        THError("read error: failed to allocate buffer");
       if (fgets(p+pos, total-pos, dfself->handle) == NULL) /* eof? */
       {
         if(pos == 0L)
