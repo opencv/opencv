@@ -2507,6 +2507,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
     h_fine[ 16 * (n*(16*c+(x>>4)) + j) + (x & 0xF) ] op
 
     int cn = _dst.channels(), m = _dst.rows, r = (ksize-1)/2;
+    CV_Assert(cn > 0 && cn <= 4);
     size_t sstep = _src.step, dstep = _dst.step;
     Histogram CV_DECL_ALIGNED(16) H[4];
     HT CV_DECL_ALIGNED(16) luc[4][16];
@@ -2712,6 +2713,7 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
     int     src_step = (int)_src.step, dst_step = (int)_dst.step;
     int     cn = _src.channels();
     const uchar*  src_max = src + size.height*src_step;
+    CV_Assert(cn > 0 && cn <= 4);
 
     #define UPDATE_ACC01( pix, cn, op ) \
     {                                   \

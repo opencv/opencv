@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "fisheye.hpp"
+#include <limits>
 
 namespace cv { namespace
 {
@@ -760,7 +761,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
 
     //-------------------------------Optimization
-    for(int iter = 0; ; ++iter)
+    for(int iter = 0; iter <= std::numeric_limits<int>::max(); ++iter)
     {
         if ((criteria.type == 1 && iter >= criteria.maxCount)  ||
             (criteria.type == 2 && change <= criteria.epsilon) ||

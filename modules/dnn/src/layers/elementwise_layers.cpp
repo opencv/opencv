@@ -105,7 +105,7 @@ public:
         }
     };
 
-    ElementWiseLayer(const Func &f=Func()) { func = f; }
+    ElementWiseLayer(const Func &f=Func()) : run_parallel(false) { func = f; }
 
     virtual bool supportBackend(int backendId)
     {
