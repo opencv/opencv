@@ -234,7 +234,7 @@ struct ReLUFunctor
         Halide::Var x("x"), y("y"), c("c"), n("n");
         if (slope)
         {
-            top(x, y, c, n) = select(input >= 0.0f, input, slope);
+            top(x, y, c, n) = select(input >= 0.0f, input, slope * input);
         }
         else
         {
