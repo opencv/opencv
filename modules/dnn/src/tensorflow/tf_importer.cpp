@@ -13,7 +13,7 @@ Implementation of Tensorflow models parser
 using namespace cv;
 using namespace cv::dnn;
 
-#if HAVE_PROTOBUF
+#ifdef HAVE_PROTOBUF
 #include "graph.pb.h"
 
 #include <iostream>
