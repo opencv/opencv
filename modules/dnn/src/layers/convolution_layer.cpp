@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -95,8 +96,6 @@ public:
         (stride.height == 1 && stride.width == 1) &&
         (dilation.height == 1 && dilation.width == 1);
     }
-    bool setActivation(const Ptr<ActivationLayer>& ) { return false; }
-    bool setBatchNorm(const Ptr<BatchNormLayer>& ) { return false; }
 
     virtual void applyHalideScheduler(Ptr<BackendNode>& node,
                                       const std::vector<Mat*> &inputs,
@@ -195,14 +194,19 @@ public:
         return false;
     }
 
-    bool setActivation(const Ptr<ActivationLayer>& layer) { activ = layer; return true; }
+    bool setActivation(const Ptr<ActivationLayer>& layer)
+    {
+        activ = layer;
+        return !activ.empty();
+    }
+
     bool setBatchNorm(const Ptr<BatchNormLayer>& layer )
     {
         bnorm = layer;
         // we will need to re-compute the weights with the batch
         // norm coefficients taken into account
         weightsMat.release();
-        return true;
+        return !bnorm.empty();
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
@@ -289,7 +293,7 @@ public:
                          const std::vector<float>& biasvec,
                          const std::vector<float>& reluslope,
                          Size kernel, Size pad, Size stride, Size dilation,
-                         int ngroups, int nstripes, const ActivationLayer* activ )
+                         const ActivationLayer* activ, int ngroups, int nstripes )
         {
             CV_Assert( input.dims == 4 && output.dims == 4 &&
                        input.size[0] == output.size[0] &&
@@ -315,7 +319,7 @@ public:
             int inpCnAll = input.size[1], width = input.size[3], height = input.size[2];
             int inpCn = inpCnAll / ngroups;
             p.is1x1_ = kernel == Size(0,0) && pad == Size(0, 0);
-            p.useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
+            p.useAVX2 = checkHardwareSupport(CPU_AVX2);
 
             int ncn = std::min(inpCn, (int)BLK_SIZE_CN);
             p.ofstab_.resize(kernel.width*kernel.height*ncn);
@@ -418,64 +422,73 @@ public:
                     for( int ofs0 = stripeStart; ofs0 < stripeEnd; ofs0 += BLK_SIZE )
                     {
                         int ofs, ofs1 = std::min(ofs0 + BLK_SIZE, stripeEnd);
+                        int out_i = ofs0 / outW;
+                        int out_j = ofs0 - out_i * outW;
 
                         // do im2row for a part of input tensor
-                        if( is1x1 )
+                        float* rowbuf = rowbuf0;
+                        for( ofs = ofs0; ofs < ofs1; out_j = 0, ++out_i )
                         {
-                            for( ofs = ofs0; ofs < ofs1; ofs++ )
+                            int delta = std::min(ofs1 - ofs, outW - out_j);
+                            int out_j1 = out_j + delta;
+                            int in_i = out_i * stride_h - pad_h;
+                            int in_j = out_j * stride_w - pad_w;
+                            const float* imgptr = data_inp0 + (cn0*height + in_i)*width + in_j;
+                            ofs += delta;
+
+                            // do im2row for a part of input tensor
+                            if( is1x1 )
                             {
-                                int out_i = ofs / outW;
-                                int out_j = ofs - out_i * outW;
-                                float* rowbuf = rowbuf0 + (ofs - ofs0)*vsz_a;
-
-                                int in_i = out_i * stride_h - pad_h;
-                                int in_j = out_j * stride_w - pad_w;
-                                const float* imgptr = data_inp0 + (cn0*height + in_i)*width + in_j;
-
-                                for( k = 0; k < vsz; k++ )
-                                    rowbuf[k] = imgptr[k*inpPlaneSize];
-                            }
-                        }
-                        else
-                        {
-                            for( ofs = ofs0; ofs < ofs1; ofs++ )
-                            {
-                                int out_i = ofs / outW;
-                                int out_j = ofs - out_i * outW;
-                                float* rowbuf = rowbuf0 + (ofs - ofs0)*vsz_a;
-
-                                int in_i = out_i * stride_h - pad_h;
-                                int in_j = out_j * stride_w - pad_w;
-                                const float* imgptr = data_inp0 + (cn0*height + in_i)*width + in_j;
-
-                                // this condition should be true for most of the tensor elements, i.e.
-                                // most of the time the kernel aperture is inside the tensor X-Y plane.
-                                if( 0 <= in_i && in_i < height - (kernel_h-1)*dilation_h &&
-                                    0 <= in_j && in_j < width - (kernel_w-1)*dilation_w )
+                                for( ; out_j < out_j1; out_j++, rowbuf += vsz_a, imgptr += stride_w )
                                 {
                                     for( k = 0; k < vsz; k++ )
-                                        rowbuf[k] = imgptr[ofstab[k]];
+                                        rowbuf[k] = imgptr[k*inpPlaneSize];
                                 }
-                                else
-                                {
-                                    int i0 = std::max(0, (-in_i + dilation_h-1)/dilation_h);
-                                    int i1 = std::min(kernel_h, (height - in_i + dilation_h-1)/dilation_h);
-                                    int j0 = std::max(0, (-in_j + dilation_w-1)/dilation_w);
-                                    int j1 = std::min(kernel_w, (width - in_j + dilation_w-1)/dilation_w);
+                            }
+                            else
+                            {
+                                bool ok_i = 0 <= in_i && in_i < height - (kernel_h-1)*dilation_h;
+                                int i0 = std::max(0, (-in_i + dilation_h-1)/dilation_h);
+                                int i1 = std::min(kernel_h, (height - in_i + dilation_h-1)/dilation_h);
 
-                                    // here some non-continous sub-row of the row will not be
-                                    // filled from the tensor; we need to make sure that the uncovered
-                                    // elements are explicitly set to 0's. the easiest way is to
-                                    // set all the elements to 0's before the loop.
-                                    memset(rowbuf, 0, vsz*sizeof(rowbuf[0]));
-                                    for( k = 0; k < ncn; k++, imgptr += width*height )
+                                for( ; out_j < out_j1; out_j++, rowbuf += vsz_a, imgptr += stride_w, in_j += stride_w )
+                                {
+                                    // this condition should be true for most of the tensor elements, i.e.
+                                    // most of the time the kernel aperture is inside the tensor X-Y plane.
+                                    if( ok_i && out_j + 2 <= out_j1 && 0 <= in_j && in_j + stride_w*2 <= width - (kernel_w-1)*dilation_w )
                                     {
-                                        for( i = i0; i < i1; i++ )
+                                        for( k = 0; k < vsz; k++ )
                                         {
-                                            for( j = j0; j < j1; j++ )
+                                            int k1 = ofstab[k];
+                                            float v0 = imgptr[k1];
+                                            float v1 = imgptr[k1 + stride_w];
+                                            rowbuf[k] = v0;
+                                            rowbuf[k+vsz_a] = v1;
+                                        }
+                                        out_j++;
+                                        rowbuf += vsz_a;
+                                        imgptr += stride_w;
+                                        in_j += stride_w;
+                                    }
+                                    else
+                                    {
+                                        int j0 = std::max(0, (-in_j + dilation_w-1)/dilation_w);
+                                        int j1 = std::min(kernel_w, (width - in_j + dilation_w-1)/dilation_w);
+
+                                        // here some non-continous sub-row of the row will not be
+                                        // filled from the tensor; we need to make sure that the uncovered
+                                        // elements are explicitly set to 0's. the easiest way is to
+                                        // set all the elements to 0's before the loop.
+                                        memset(rowbuf, 0, vsz*sizeof(rowbuf[0]));
+                                        for( k = 0; k < ncn; k++ )
+                                        {
+                                            for( i = i0; i < i1; i++ )
                                             {
-                                                int imgofs = i*(dilation_h*width) + j*dilation_w;
-                                                rowbuf[(k*kernel_h + i)*kernel_w + j] = imgptr[imgofs];
+                                                for( j = j0; j < j1; j++ )
+                                                {
+                                                    int imgofs = k*(width*height) + i*(dilation_h*width) + j*dilation_w;
+                                                    rowbuf[(k*kernel_h + i)*kernel_w + j] = imgptr[imgofs];
+                                                }
                                             }
                                         }
                                     }
@@ -625,7 +638,7 @@ public:
         {
             // prepare weightsMat where each row is aligned and has enough zero padding on the right to
             // use vectorized (i.e. with intrinsics) loops without tail processing
-            Mat wm = blobs[0].reshape(1, outCn).clone();
+            Mat wm = blobs[0].reshape(1, outCn);
             if( wm.step1() % VEC_ALIGN != 0 )
             {
                 int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
@@ -698,7 +711,7 @@ public:
         int nstripes = std::max(getNumThreads(), 1);
 
         ParallelConv::run(*inputs[0], outputs[0], weightsMat, biasvec, reluslope,
-                          kernel, pad, stride, dilation, ngroups, nstripes, activ.get());
+                          kernel, pad, stride, dilation, activ.get(), ngroups, nstripes);
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
@@ -776,7 +789,7 @@ public:
             b_ = &b;
             c_ = &c;
             nstripes_ = nstripes;
-            useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
+            useAVX2 = checkHardwareSupport(CPU_AVX2);
         }
 
         void operator()(const Range& range_) const

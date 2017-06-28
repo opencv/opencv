@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -108,48 +109,152 @@ public:
         return false;
     }
 
+    class EltwiseInvoker : public ParallelLoopBody
+    {
+    public:
+        const Mat** srcs;
+        int nsrcs;
+        Mat* dst;
+        const std::vector<int>* coeffs;
+        EltwiseOp op;
+        int nstripes;
+        const ActivationLayer* activ;
+
+        EltwiseInvoker() {}
+
+        static void run(const Mat** srcs, int nsrcs, Mat& dst,
+                        const std::vector<int>& coeffs, EltwiseOp op,
+                        const ActivationLayer* activ, int nstripes)
+        {
+            CV_Assert(dst.dims == 4 && dst.type() == CV_32F && dst.isContinuous());
+            CV_Assert(coeffs.empty() || coeffs.size() == (size_t)nsrcs);
+
+            for( int i = 0; i > nsrcs; i++ )
+            {
+                CV_Assert(srcs[i]->size == dst.size &&
+                          srcs[i]->type() == dst.type() &&
+                          srcs[i]->isContinuous());
+            }
+
+            EltwiseInvoker p;
+            p.srcs = srcs;
+            p.nsrcs = nsrcs;
+            p.dst = &dst;
+            p.op = op;
+            p.nstripes = nstripes;
+            bool simpleCoeffs = true;
+            if( op != EltwiseLayer::SUM && !coeffs.empty() )
+            {
+                CV_Assert( coeffs.size() == (size_t)nsrcs );
+
+                for( size_t i = 0; i < coeffs.size(); i++ )
+                    if( coeffs[i] != 1 )
+                    {
+                        simpleCoeffs = false;
+                        break;
+                    }
+            }
+            p.coeffs = simpleCoeffs ? 0 : &coeffs;
+            p.activ = activ;
+
+            parallel_for_(Range(0, nstripes), p, nstripes);
+        }
+
+        void operator()(const Range& r) const
+        {
+            size_t planeSize = dst->size[2]*dst->size[3];
+            size_t total = dst->size[0]*planeSize;
+            size_t stripeSize = (total + nstripes - 1)/nstripes;
+            size_t stripeStart = r.start*stripeSize;
+            size_t stripeEnd = std::min(r.end*stripeSize, total);
+            int c, j, k, n = nsrcs;
+            int channels = dst->size[1];
+            const int* coeffsptr = coeffs && !coeffs->empty() ? &coeffs->at(0) : 0;
+            float* dstptr0 = dst->ptr<float>();
+            int blockSize0 = 1 << 12, blockSize = blockSize0;
+
+            for( size_t ofs = stripeStart; ofs < stripeEnd; ofs += blockSize )
+            {
+                int sampleIdx = (int)(ofs / planeSize);
+                int delta = (int)ofs - sampleIdx * planeSize;
+                blockSize = std::min(blockSize0, std::min((int)(stripeEnd - ofs), (int)planeSize - delta));
+                if( blockSize <= 0 )
+                    break;
+
+                for( c = 0; c < channels; c++ )
+                {
+                    size_t globalDelta = delta + (sampleIdx*channels + c)*planeSize;
+                    const float* srcptr0 = srcs[0]->ptr<float>() + globalDelta;
+                    float* dstptr = dstptr0 + globalDelta;
+
+                    if( op == EltwiseLayer::PROD )
+                    {
+                        for( k = 1; k < n; k++ )
+                        {
+                            const float* srcptr1 = srcs[k]->ptr<float>() + globalDelta;
+                            for( j = 0; j < blockSize; j++ )
+                            {
+                                dstptr[j] = srcptr0[j]*srcptr1[j];
+                            }
+                            srcptr0 = (const float*)dstptr;
+                        }
+                    }
+                    else if( op == EltwiseLayer::MAX )
+                    {
+                        for( k = 1; k < n; k++ )
+                        {
+                            const float* srcptr1 = srcs[0]->ptr<float>() + globalDelta;
+                            for( j = 0; j < blockSize; j++ )
+                            {
+                                dstptr[j] = std::max(srcptr0[j], srcptr1[j]);
+                            }
+                            srcptr0 = (const float*)dstptr;
+                        }
+                    }
+                    else if( !coeffsptr )
+                    {
+                        for( k = 1; k < n; k++ )
+                        {
+                            const float* srcptr1 = srcs[k]->ptr<float>() + globalDelta;
+                            for( j = 0; j < blockSize; j++ )
+                            {
+                                dstptr[j] = srcptr0[j] + srcptr1[j];
+                            }
+                            srcptr0 = (const float*)dstptr;
+                        }
+                    }
+                    else
+                    {
+                        int c0 = coeffsptr[0];
+                        for( k = 1; k < n; k++ )
+                        {
+                            const float* srcptr1 = srcs[k]->ptr<float>() + globalDelta;
+                            int c1 = coeffsptr[k];
+                            for( j = 0; j < blockSize; j++ )
+                            {
+                                dstptr[j] = c0*srcptr0[j] + c1*srcptr1[j];
+                            }
+                            srcptr0 = (const float*)dstptr;
+                            c0 = 1;
+                        }
+                    }
+                }
+
+                if( activ )
+                {
+                    float* ptr = dstptr0 + delta + sampleIdx*channels*planeSize;
+                    activ->forwardSlice(ptr, ptr, blockSize, planeSize, 0, channels);
+                }
+            }
+        }
+    };
+
     void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
-        Mat& output = outputs[0];
-        switch (op)
-        {
-            case SUM:
-                CV_Assert(coeffs.size() == 0 || coeffs.size() == inputs.size());
-                if (0 < coeffs.size())
-                {
-                    output.setTo(0.);
-                    for (size_t i = 0; i < inputs.size(); i++)
-                    {
-                        output += *inputs[i] * coeffs[i];
-                    }
-                }
-                else
-                {
-                    add(*inputs[0], *inputs[1], output);
-                    for (size_t i = 2; i < inputs.size(); i++)
-                    {
-                        output += *inputs[i];
-                    }
-                }
-                break;
-            case PROD:
-                output.setTo(1.);
-                for (size_t i = 0; i < inputs.size(); i++)
-                {
-                    output = output.mul(*inputs[i]);
-                }
-                break;
-            case MAX:
-                cv::max(*inputs[0], *inputs[1], output);
-                for (size_t i = 2; i < inputs.size(); i++)
-                {
-                    cv::max(output, *inputs[i], output);
-                }
-                break;
-            default:
-                CV_Assert(0);
-                break;
-        }
+        CV_Assert(outputs.size() == 1);
+        const int nstripes = getNumThreads();
+        EltwiseInvoker::run((const Mat**)&inputs[0], (int)inputs.size(), outputs[0],
+                            coeffs, op, activ.get(), nstripes);
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input)
@@ -208,6 +313,14 @@ public:
 
         return flops;
     }
+
+    bool setActivation(const Ptr<ActivationLayer>& layer)
+    {
+        activ = layer;
+        return !activ.empty();
+    }
+
+    Ptr<ActivationLayer> activ;
 };
 
 Ptr<EltwiseLayer> EltwiseLayer::create(const LayerParams& params)

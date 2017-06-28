@@ -674,16 +674,16 @@ struct Net::Impl
                 it->second.internals.clear();
             }
             it->second.skipFlags.clear();
-            it->second.consumers.clear();
-            Ptr<ConvolutionLayer> convLayer = it->second.layerInstance.dynamicCast<ConvolutionLayer>();
+            //it->second.consumers.clear();
+            Ptr<Layer> currLayer = it->second.layerInstance;
 
-            if( !convLayer.empty() )
-            {
-                convLayer->setActivation(Ptr<ActivationLayer>());
-                convLayer->setBatchNorm(Ptr<BatchNormLayer>());
-            }
+            if( currLayer.empty() )
+                continue;
 
-            Ptr<PoolingLayer> poolingLayer = it->second.layerInstance.dynamicCast<PoolingLayer>();
+            currLayer->setActivation(Ptr<ActivationLayer>());
+            currLayer->setBatchNorm(Ptr<BatchNormLayer>());
+
+            Ptr<PoolingLayer> poolingLayer = currLayer.dynamicCast<PoolingLayer>();
             if( !poolingLayer.empty() )
             {
                 poolingLayer->computeMaxIdx = true;
@@ -1042,10 +1042,9 @@ struct Net::Impl
             }
             if( ld.consumers.size() == 0 )
                 outnames.push_back(ld.layerInstance->name);
-            Ptr<ConvolutionLayer> convLayer = ld.layerInstance.dynamicCast<ConvolutionLayer>();
-            LayerPin lp(lid, 0);
-            if( !convLayer.empty() && ld.consumers.size() == 1 &&
-                pinsToKeep.count(lp) == 0 )
+
+            Ptr<Layer>& currLayer = ld.layerInstance;
+            if( ld.consumers.size() == 1 && pinsToKeep.count(LayerPin(lid, 0)) == 0 )
             {
                 LayerData* nextData = &layers[ld.consumers[0].lid];
                 Ptr<BatchNormLayer> nextBNormLayer =
@@ -1055,7 +1054,7 @@ struct Net::Impl
                 {
                     LayerData* bnormData = nextData;
                     nextData = 0;
-                    if( convLayer->setBatchNorm(nextBNormLayer) )
+                    if( currLayer->setBatchNorm(nextBNormLayer) )
                     {
                         bnormData->skipFlags[DNN_BACKEND_DEFAULT] = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
@@ -1068,8 +1067,9 @@ struct Net::Impl
                 if( nextData )
                     nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
 
-                if( !nextActivLayer.empty() && convLayer->setActivation(nextActivLayer) )
+                if( !nextActivLayer.empty() && currLayer->setActivation(nextActivLayer) )
                 {
+                    //printf("successfully merged %s and %s\n", currLayer->name.c_str(), nextActivLayer->name.c_str());
                     nextData->skipFlags[DNN_BACKEND_DEFAULT] = true;
                     ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                 }
@@ -1084,7 +1084,10 @@ struct Net::Impl
                 // if there is no layer that takes the second output pin of the pooling layer
                 // on input then we don't need to compute the indices
                 if( i >= nconsumers )
+                {
                     poolingLayer->computeMaxIdx = false;
+                    //printf("simplified pooling layer %s\n", poolingLayer->name.c_str());
+                }
             }
         }
     }
@@ -1874,6 +1877,9 @@ Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
 {
     return Ptr<BackendNode>();
 }
+
+bool Layer::setActivation(const Ptr<ActivationLayer>&) { return false; }
+bool Layer::setBatchNorm(const Ptr<BatchNormLayer>&) { return false; }
 
 template <typename T>
 static void vecToPVec(const std::vector<T> &v, std::vector<T*> &pv)

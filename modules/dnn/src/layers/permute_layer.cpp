@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -170,6 +171,78 @@ public:
         computeStrides(shape(*inputs[0]), shape(outputs[0]));
     }
 
+    class PermuteInvoker : public ParallelLoopBody
+    {
+    public:
+        const Mat* inp;
+        Mat* out;
+        const std::vector<size_t>* order;
+        int nstripes;
+
+        static void run(const Mat& inp, Mat& out, const std::vector<size_t>& order, int nstripes)
+        {
+            PermuteInvoker p;
+            p.inp = &inp;
+            p.out = &out;
+            p.order = &order;
+            p.nstripes = nstripes;
+
+            CV_Assert( out.size[0] == inp.size[order[0]] &&
+                      out.size[1] == inp.size[order[1]] &&
+                      out.size[2] == inp.size[order[2]] &&
+                      out.size[3] == inp.size[order[3]]);
+
+            parallel_for_(Range(0, nstripes), p, nstripes);
+        }
+
+        PermuteInvoker() {}
+
+        void operator()(const Range& r) const
+        {
+            int n0 = out->size[0], n1 = out->size[1], n2 = out->size[2], n3 = out->size[3];
+
+            size_t orows = (size_t)n0*n1*n2;
+            size_t stripeSize = (orows + nstripes - 1)/nstripes;
+            size_t stripeStart = r.start*stripeSize;
+            size_t stripeEnd = std::min(r.end*stripeSize, orows);
+
+            const size_t esz = sizeof(float);
+            size_t ostep0 = out->step[0]/esz, ostep1 = out->step[1]/esz, ostep2 = out->step[2]/esz;
+            const size_t* ord = &order->at(0);
+            size_t istep0 = inp->step[ord[0]]/esz, istep1 = inp->step[ord[1]]/esz,
+            istep2 = inp->step[ord[2]]/esz, istep3 = inp->step[ord[3]]/esz;
+
+            size_t val = stripeStart;
+            int i2 = (int)(val % n2);
+            val /= n2;
+            int i1 = (int)(val % n1);
+            int i0 = (int)(val / n1);
+
+            const float* inptr_orig = inp->ptr<float>();
+            float* outptr_orig = out->ptr<float>();
+
+            for( size_t ofs = stripeStart; ofs < stripeEnd; ofs++ )
+            {
+                const float* inptr = inptr_orig + i0*istep0 + i1*istep1 + i2*istep2;
+                float* outptr = outptr_orig + i0*ostep0 + i1*ostep1 + i2*ostep2;
+
+                for( int i3 = 0; i3 < n3; i3++ )
+                    outptr[i3] = inptr[i3*istep3];
+
+                if( ++i2 >= n2 )
+                {
+                    i2 = 0;
+                    if( ++i1 >= n1 )
+                    {
+                        i1 = 0;
+                        if( ++i0 >= n0 )
+                            break;
+                    }
+                }
+            }
+        }
+    };
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         size_t k, ninputs = inputs.size();
@@ -193,29 +266,31 @@ public:
                 CV_Assert(inp.dims == numAxes && inp.size == inputs[0]->size);
                 CV_Assert(out.dims == numAxes && out.size == outputs[0].size);
 
-//                for( i = 0; i < numAxes; i++ )
-//                {
-//                    CV_Assert(inp.size[i] == _oldDimensionSize[i]);
-//                    CV_Assert(out.size[i] == _newDimensionSize[i]);
-//                }
-
                 CV_Assert(inp.isContinuous() && out.isContinuous());
                 CV_Assert(inp.type() == CV_32F && out.type() == CV_32F);
 
-                const float *srcData = inp.ptr<float>();
-                float *dstData = out.ptr<float>();
-
-                for (i = 0; i < count; ++i)
+                if( numAxes == 4 )
                 {
-                    size_t oldPosition = 0;
-                    size_t newPosition = i;
+                    int nstripes = getNumThreads();
+                    PermuteInvoker::run(inp, out, _order, nstripes);
+                }
+                else
+                {
+                    const float *srcData = inp.ptr<float>();
+                    float *dstData = out.ptr<float>();
 
-                    for (j = 0; j < numAxes; ++j)
+                    for (i = 0; i < count; ++i)
                     {
-                        oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
-                        newPosition %= newStride[j];
+                        size_t oldPosition = 0;
+                        size_t newPosition = i;
+
+                        for (j = 0; j < numAxes; ++j)
+                        {
+                            oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
+                            newPosition %= newStride[j];
+                        }
+                        dstData[i] = srcData[oldPosition];
                     }
-                    dstData[i] = srcData[oldPosition];
                 }
             }
         }
