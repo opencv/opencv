@@ -1239,7 +1239,10 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             || !_src1.sameSize(_src2)
             || _src1.type() != _src2.type())
     {
-        if (checkScalar(_src1, _src2.type(), _src1.kind(), _src2.kind()))
+        bool is_src1_scalar = checkScalar(_src1, _src2.type(), _src1.kind(), _src2.kind());
+        bool is_src2_scalar = checkScalar(_src2, _src1.type(), _src2.kind(), _src1.kind());
+
+        if (is_src1_scalar && !is_src2_scalar)
         {
             op = op == CMP_LT ? CMP_GT : op == CMP_LE ? CMP_GE :
                 op == CMP_GE ? CMP_LE : op == CMP_GT ? CMP_LT : op;
@@ -1247,7 +1250,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             compare(_src2, _src1, _dst, op);
             return;
         }
-        else if( !checkScalar(_src2, _src1.type(), _src2.kind(), _src1.kind()) )
+        else if( (is_src1_scalar && is_src2_scalar) || (!is_src1_scalar && !is_src2_scalar) )
             CV_Error( CV_StsUnmatchedSizes,
                      "The operation is neither 'array op array' (where arrays have the same size and the same type), "
                      "nor 'array op scalar', nor 'scalar op array'" );
