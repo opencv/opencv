@@ -49,6 +49,8 @@
 
 namespace cv {
 namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
+
 #if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 #include "THDiskFile.h"
 
@@ -1021,5 +1023,5 @@ Net readNetFromTorch(const String &model, bool isBinary)
     return net;
 }
 
-}
-}
+CV__DNN_EXPERIMENTAL_NS_END
+}} // namespace

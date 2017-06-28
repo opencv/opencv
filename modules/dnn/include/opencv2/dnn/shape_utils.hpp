@@ -48,6 +48,7 @@
 
 namespace cv {
 namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 //Useful shortcut
 inline std::ostream &operator<< (std::ostream &s, cv::Range &r)
@@ -190,6 +191,7 @@ inline int clamp(int ax, const MatShape& shape)
     return clamp(ax, (int)shape.size());
 }
 
+CV__DNN_EXPERIMENTAL_NS_END
 }
 }
 #endif

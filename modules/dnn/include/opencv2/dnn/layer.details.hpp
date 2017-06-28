@@ -7,10 +7,9 @@
 
 #include <opencv2/dnn/layer.hpp>
 
-namespace cv
-{
-namespace dnn
-{
+namespace cv {
+namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 /** @brief Registers layer constructor in runtime.
 *   @param type string, containing type name of the layer.
@@ -72,6 +71,8 @@ public:
     }
 };
 
-}}} //namespace
+} // namespace
+CV__DNN_EXPERIMENTAL_NS_END
+}} // namespace
 
 #endif

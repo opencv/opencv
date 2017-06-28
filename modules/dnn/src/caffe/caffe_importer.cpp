@@ -40,8 +40,6 @@
 //M*/
 
 #include "../precomp.hpp"
-using namespace cv;
-using namespace cv::dnn;
 
 #if HAVE_PROTOBUF
 #include "caffe.pb.h"
@@ -54,7 +52,13 @@ using namespace cv::dnn;
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "caffe_io.hpp"
+#endif
 
+namespace cv {
+namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
+
+#ifdef HAVE_PROTOBUF
 using ::google::protobuf::RepeatedField;
 using ::google::protobuf::RepeatedPtrField;
 using ::google::protobuf::Message;
@@ -357,14 +361,14 @@ public:
 
 }
 
-Ptr<Importer> cv::dnn::createCaffeImporter(const String &prototxt, const String &caffeModel)
+Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeModel)
 {
     return Ptr<Importer>(new CaffeImporter(prototxt.c_str(), caffeModel.c_str()));
 }
 
 #else //HAVE_PROTOBUF
 
-Ptr<Importer> cv::dnn::createCaffeImporter(const String&, const String&)
+Ptr<Importer> createCaffeImporter(const String&, const String&)
 {
     CV_Error(cv::Error::StsNotImplemented, "libprotobuf required to import data from Caffe models");
     return Ptr<Importer>();
@@ -372,7 +376,7 @@ Ptr<Importer> cv::dnn::createCaffeImporter(const String&, const String&)
 
 #endif //HAVE_PROTOBUF
 
-Net cv::dnn::readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
+Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
 {
     Ptr<Importer> caffeImporter = createCaffeImporter(prototxt, caffeModel);
     Net net;
@@ -380,3 +384,6 @@ Net cv::dnn::readNetFromCaffe(const String &prototxt, const String &caffeModel /
         caffeImporter->populateNet(net);
     return net;
 }
+
+CV__DNN_EXPERIMENTAL_NS_END
+}} // namespace

@@ -44,10 +44,9 @@
 
 #include <opencv2/dnn.hpp>
 
-namespace cv
-{
-namespace dnn
-{
+namespace cv {
+namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 template<typename TypeIter>
 DictValue DictValue::arrayInt(TypeIter begin, int size)
@@ -351,6 +350,7 @@ inline std::ostream &operator<<(std::ostream &stream, const Dict &dict)
     return stream;
 }
 
+CV__DNN_EXPERIMENTAL_NS_END
 }
 }
 
