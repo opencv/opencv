@@ -2,19 +2,13 @@
 #if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
 #include "THFile.h"
 #include "THFilePrivate.h"
-#include <opencv2/core.hpp>
-extern "C"
-{
+
+namespace TH {
 
 #define IMPLEMENT_THFILE_RW(TYPEC, TYPE)                          \
   long THFile_read##TYPEC##Raw(THFile *self, TYPE *data, long n)  \
   {                                                               \
     return (*self->vtable->read##TYPEC)(self, data, n);           \
-  }                                                               \
-                                                                  \
-  long THFile_write##TYPEC##Raw(THFile *self, TYPE *data, long n) \
-  {                                                               \
-    return (*self->vtable->write##TYPEC)(self, data, n);          \
   }
 
 IMPLEMENT_THFILE_RW(Byte, unsigned char)
@@ -28,16 +22,6 @@ IMPLEMENT_THFILE_RW(Double, double)
 long THFile_readStringRaw(THFile *self, const char *format, char **str_)
 {
   return self->vtable->readString(self, format, str_);
-}
-
-long THFile_writeStringRaw(THFile *self, const char *str, long size)
-{
-  return self->vtable->writeString(self, str, size);
-}
-
-void THFile_synchronize(THFile *self)
-{
-  self->vtable->synchronize(self);
 }
 
 void THFile_seek(THFile *self, long position)
@@ -124,11 +108,6 @@ void THFile_clearError(THFile *self)
     TYPE scalar;                                              \
     THFile_read##TYPEC##Raw(self, &scalar, 1);                \
     return scalar;                                            \
-  }                                                           \
-                                                              \
-  void THFile_write##TYPEC##Scalar(THFile *self, TYPE scalar) \
-  {                                                           \
-    THFile_write##TYPEC##Raw(self, &scalar, 1);               \
   }
 
 IMPLEMENT_THFILE_SCALAR(Byte, unsigned char)
@@ -139,26 +118,5 @@ IMPLEMENT_THFILE_SCALAR(Long, int64)
 IMPLEMENT_THFILE_SCALAR(Float, float)
 IMPLEMENT_THFILE_SCALAR(Double, double)
 
-/*
-#define IMPLEMENT_THFILE_STORAGE(TYPEC, TYPE)                           \
-  long THFile_read##TYPEC(THFile *self, TH##TYPEC##Storage *storage)    \
-  {                                                                     \
-    return THFile_read##TYPEC##Raw(self, storage->data, storage->size); \
-  }                                                                     \
-                                                                        \
-  long THFile_write##TYPEC(THFile *self, TH##TYPEC##Storage *storage)   \
-  {                                                                     \
-    return THFile_write##TYPEC##Raw(self, storage->data, storage->size); \
-  }
-
-IMPLEMENT_THFILE_STORAGE(Byte, unsigned char)
-IMPLEMENT_THFILE_STORAGE(Char, char)
-IMPLEMENT_THFILE_STORAGE(Short, short)
-IMPLEMENT_THFILE_STORAGE(Int, int)
-IMPLEMENT_THFILE_STORAGE(Long, long)
-IMPLEMENT_THFILE_STORAGE(Float, float)
-IMPLEMENT_THFILE_STORAGE(Double, double)
-*/
-
-}
+} // namespace
 #endif
