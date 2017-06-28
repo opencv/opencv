@@ -1937,42 +1937,69 @@ bool Layer::getMemoryShapes(const std::vector<MatShape> &inputs,
 
 //////////////////////////////////////////////////////////////////////////
 
-struct LayerFactory::Impl : public std::map<String, LayerFactory::Constuctor>
+static Mutex& getLayerFactoryMutex()
 {
-};
+    static Mutex* volatile instance = NULL;
+    if (instance == NULL)
+    {
+        cv::AutoLock lock(getInitializationMutex());
+        if (instance == NULL)
+            instance = new Mutex();
+    }
+    return *instance;
+}
 
-Ptr<LayerFactory::Impl> LayerFactory::impl ()
+typedef std::map<String, LayerFactory::Constuctor> LayerFactory_Impl;
+
+static LayerFactory_Impl& getLayerFactoryImpl_()
 {
-    // allocate on first use
-    static Ptr<LayerFactory::Impl> impl_(new LayerFactory::Impl());
-    return impl_;
+    static LayerFactory_Impl impl;
+    return impl;
+}
+
+static LayerFactory_Impl& getLayerFactoryImpl()
+{
+    static LayerFactory_Impl* volatile instance = NULL;
+    if (instance == NULL)
+    {
+        cv::AutoLock lock(getLayerFactoryMutex());
+        if (instance == NULL)
+        {
+            instance = &getLayerFactoryImpl_();
+            initializeLayerFactory();
+        }
+    }
+    return *instance;
 }
 
 void LayerFactory::registerLayer(const String &_type, Constuctor constructor)
 {
+    cv::AutoLock lock(getLayerFactoryMutex());
     String type = _type.toLowerCase();
-    Impl::iterator it = impl()->find(type);
+    LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type);
 
-    if (it != impl()->end() && it->second != constructor)
+    if (it != getLayerFactoryImpl().end() && it->second != constructor)
     {
         CV_Error(cv::Error::StsBadArg, "Layer \"" + type + "\" already was registered");
     }
 
-    impl()->insert(std::make_pair(type, constructor));
+    getLayerFactoryImpl().insert(std::make_pair(type, constructor));
 }
 
 void LayerFactory::unregisterLayer(const String &_type)
 {
+    cv::AutoLock lock(getLayerFactoryMutex());
     String type = _type.toLowerCase();
-    impl()->erase(type);
+    getLayerFactoryImpl().erase(type);
 }
 
 Ptr<Layer> LayerFactory::createLayerInstance(const String &_type, LayerParams& params)
 {
+    cv::AutoLock lock(getLayerFactoryMutex());
     String type = _type.toLowerCase();
-    Impl::const_iterator it = LayerFactory::impl()->find(type);
+    LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type);
 
-    if (it != impl()->end())
+    if (it != getLayerFactoryImpl().end())
     {
         return it->second(params);
     }

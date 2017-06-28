@@ -85,8 +85,6 @@ static void colorizeSegmentation(const Mat &score, const vector<cv::Vec3b> &colo
 
 int main(int argc, char **argv)
 {
-    cv::dnn::initModule();          //Required if OpenCV is built as static libs
-
     String modelTxt = fcnType + "-heavy-pascal.prototxt";
     String modelBin = fcnType + "-heavy-pascal.caffemodel";
     String imageFile = (argc > 1) ? argv[1] : "rgb.jpg";

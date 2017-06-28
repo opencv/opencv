@@ -73,13 +73,6 @@ namespace dnn //! This namespace is used for dnn module functionlaity.
         DNN_TARGET_OPENCL
     };
 
-    /** @brief Initialize dnn module and built-in layers.
-     *
-     * This function automatically called on most of OpenCV builds,
-     * but you need to call it manually on some specific configurations (iOS for example).
-     */
-    CV_EXPORTS_W void initModule();
-
     /** @brief This class provides all data needed to initialize layer.
      *
      * It includes dictionary with scalar params (which can be readed by using Dict interface),
