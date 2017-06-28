@@ -40,16 +40,40 @@ if (typeof module !== 'undefined' && module.exports) {
 
 QUnit.module ("Object Detection", {});
 QUnit.test("Cascade classification", function(assert) {
+	// Group rectangle
+	// CV_EXPORTS_W void groupRectangles(CV_IN_OUT std::vector<Rect>& rectList, CV_OUT std::vector<int>& weights,
+	//                                int groupThreshold, double eps = 0.2);
+	{
+		let rectList = new cv.RectVector(),
+			weights = new cv.IntVector(),
+			groupThreshold = 1,
+			eps = 0.2;
+
+		let rect1 = new cv.Rect(1, 2, 3, 4),
+			rect2 = new cv.Rect(1, 4, 2, 3);
+
+		rectList.push_back(rect1);
+		rectList.push_back(rect2);
+
+		cv.groupRectangles(rectList, weights, groupThreshold, eps);
+
+
+		rectList.delete();
+		weights.delete();
+		rect1.delete();
+		rect2.delete();
+	}
+
 	// CascadeClassifier
 	{
 		let classifier = new cv.CascadeClassifier(),
 			modelPath = '/haarcascade_frontalface_default.xml';
 
-		//assert.equal(classifier.empty(), true);
+		assert.equal(classifier.empty(), true);
 
 
 		classifier.load(modelPath);
-		//assert.equal(classifier.empty(), false);
+		assert.equal(classifier.empty(), false);
 
 		// cv.HAAR = 0
 		//assert.equal(classifier.getFeatureType(), 0);

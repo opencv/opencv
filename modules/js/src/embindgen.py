@@ -68,11 +68,11 @@ white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not'
                    'distanceTransform','distanceTransformWithLabels','drawContours','ellipse','ellipse2Poly','equalizeHist','erode',\
                    'findContours','fitEllipse','floodFill','getAffineTransform','goodFeaturesToTrack','grabCut','initUndistortRectifyMap',\
                    'integral','integral2','line','matchTemplate','medianBlur','moments','putText','pyrDown','pyrUp','rectangle','remap',\
-                   'resize','sepFilter2D','threshold','undistort','warpAffine','warpPerspective','watershed', 'CamShift',\
+                   'resize','sepFilter2D','threshold','undistort','warpAffine','warpPerspective','watershed', 'groupRectangles', 'CamShift',\
                    'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', 'estimateRigidTransform',\
                    'findTransformECC', 'meanShift'],
               'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
-              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'detectMultiScale'],
+              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
               'BackgroundSubtractorMOG2': ['apply'],
               'BackgroundSubtractor': ['apply', 'getBackgroundImage']
               }
