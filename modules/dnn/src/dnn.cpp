@@ -317,9 +317,9 @@ private:
 
 struct LayerData
 {
-    LayerData() {}
+    LayerData() : id(-1), flag(0) {}
     LayerData(int _id, const String &_name, const String &_type, LayerParams &_params)
-        : id(_id), name(_name), type(_type), params(_params)
+        : id(_id), name(_name), type(_type), params(_params), flag(0)
     {
         //add logging info
         params.name = name;

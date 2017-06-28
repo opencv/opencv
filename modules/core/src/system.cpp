@@ -1193,10 +1193,13 @@ Mutex::Mutex(const Mutex& m)
 
 Mutex& Mutex::operator = (const Mutex& m)
 {
-    CV_XADD(&m.impl->refcount, 1);
-    if( CV_XADD(&impl->refcount, -1) == 1 )
-        delete impl;
-    impl = m.impl;
+    if (this != &m)
+    {
+        CV_XADD(&m.impl->refcount, 1);
+        if( CV_XADD(&impl->refcount, -1) == 1 )
+            delete impl;
+        impl = m.impl;
+    }
     return *this;
 }
 

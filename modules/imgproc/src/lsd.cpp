@@ -1000,6 +1000,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(leftmost != NULL);
     leftmost->taken = true;
 
     // Find rightmost untaken point;
@@ -1018,6 +1019,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(rightmost != NULL);
     rightmost->taken = true;
 
     // Find last untaken point;
@@ -1036,6 +1038,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
             }
         }
     }
+    CV_Assert(tailp != NULL);
     tailp->taken = true;
 
     double flstep = (min_y->p.y != leftmost->p.y) ?

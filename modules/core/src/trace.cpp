@@ -225,6 +225,11 @@ Region::LocationExtraData::LocationExtraData(const LocationStaticStorage& locati
         ittHandle_name = __itt_string_handle_create(location.name);
         ittHandle_filename = __itt_string_handle_create(location.filename);
     }
+    else
+    {
+        ittHandle_name = 0;
+        ittHandle_filename = 0;
+    }
 #endif
 }
 
@@ -1018,6 +1023,10 @@ struct TraceArg::ExtraData
             // https://software.intel.com/en-us/node/544203:
             //     Consecutive calls to __itt_string_handle_create with the same name return the same value.
             ittHandle_name = __itt_string_handle_create(arg.name);
+        }
+        else
+        {
+            ittHandle_name = 0;
         }
 #endif
     }
