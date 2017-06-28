@@ -53,8 +53,6 @@ static std::vector<std::string> readClassNames(const char *filename = "synset_wo
 
 int main(int argc, char **argv)
 {
-    initModule();  // Required if OpenCV is built as static libs.
-
     std::string modelTxt = "train_val.prototxt";
     std::string modelBin = "squeezenet_v1.1.caffemodel";
     std::string imageFile = (argc > 1) ? argv[1] : "space_shuttle.jpg";

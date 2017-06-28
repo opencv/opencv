@@ -40,68 +40,62 @@
 //M*/
 
 #include "precomp.hpp"
+#include <opencv2/dnn/layer.details.hpp>
 
 namespace cv
 {
 namespace dnn
 {
 
-struct AutoInitializer
+static Mutex* __initialization_mutex = NULL;
+Mutex& getInitializationMutex()
 {
-    bool status;
+    if (__initialization_mutex == NULL)
+        __initialization_mutex = new Mutex();
+    return *__initialization_mutex;
+}
+// force initialization (single-threaded environment)
+Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 
-    AutoInitializer() : status(false)
-    {
-        initModule();
-    }
-};
 
-static AutoInitializer init;
-
-void initModule()
+void initializeLayerFactory()
 {
-    if (init.status)
-        return;
+    CV_DNN_REGISTER_LAYER_CLASS(Slice,          SliceLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Split,          SplitLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Concat,         ConcatLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Reshape,        ReshapeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Flatten,        FlattenLayer);
 
-    REG_RUNTIME_LAYER_CLASS(Slice,          SliceLayer);
-    REG_RUNTIME_LAYER_CLASS(Split,          SplitLayer);
-    REG_RUNTIME_LAYER_CLASS(Concat,         ConcatLayer);
-    REG_RUNTIME_LAYER_CLASS(Reshape,        ReshapeLayer);
-    REG_RUNTIME_LAYER_CLASS(Flatten,        FlattenLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Convolution,    ConvolutionLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Deconvolution,  DeconvolutionLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Pooling,        PoolingLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(LRN,            LRNLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(InnerProduct,   InnerProductLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Softmax,        SoftmaxLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(MVN,            MVNLayer);
 
-    REG_RUNTIME_LAYER_CLASS(Convolution,    ConvolutionLayer);
-    REG_RUNTIME_LAYER_CLASS(Deconvolution,  DeconvolutionLayer);
-    REG_RUNTIME_LAYER_CLASS(Pooling,        PoolingLayer);
-    REG_RUNTIME_LAYER_CLASS(LRN,            LRNLayer);
-    REG_RUNTIME_LAYER_CLASS(InnerProduct,   InnerProductLayer);
-    REG_RUNTIME_LAYER_CLASS(Softmax,        SoftmaxLayer);
-    REG_RUNTIME_LAYER_CLASS(MVN,            MVNLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ReLU,           ReLULayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ChannelsPReLU,  ChannelsPReLULayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Sigmoid,        SigmoidLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(TanH,           TanHLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(BNLL,           BNLLLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(AbsVal,         AbsLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Power,          PowerLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(BatchNorm,      BatchNormLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(MaxUnpool,      MaxUnpoolLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Dropout,        BlankLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Identity,       BlankLayer);
 
-    REG_RUNTIME_LAYER_CLASS(ReLU,           ReLULayer);
-    REG_RUNTIME_LAYER_CLASS(ChannelsPReLU,  ChannelsPReLULayer);
-    REG_RUNTIME_LAYER_CLASS(Sigmoid,        SigmoidLayer);
-    REG_RUNTIME_LAYER_CLASS(TanH,           TanHLayer);
-    REG_RUNTIME_LAYER_CLASS(BNLL,           BNLLLayer);
-    REG_RUNTIME_LAYER_CLASS(AbsVal,         AbsLayer);
-    REG_RUNTIME_LAYER_CLASS(Power,          PowerLayer);
-    REG_RUNTIME_LAYER_CLASS(BatchNorm,      BatchNormLayer);
-    REG_RUNTIME_LAYER_CLASS(MaxUnpool,      MaxUnpoolLayer);
-    REG_RUNTIME_LAYER_CLASS(Dropout,        BlankLayer);
-    REG_RUNTIME_LAYER_CLASS(Identity,       BlankLayer);
-
-    REG_RUNTIME_LAYER_CLASS(Crop,           CropLayer);
-    REG_RUNTIME_LAYER_CLASS(Eltwise,        EltwiseLayer);
-    REG_RUNTIME_LAYER_CLASS(Permute,        PermuteLayer);
-    REG_RUNTIME_LAYER_CLASS(PriorBox,       PriorBoxLayer);
-    REG_RUNTIME_LAYER_CLASS(DetectionOutput, DetectionOutputLayer);
-    REG_RUNTIME_LAYER_CLASS(NormalizeBBox,  NormalizeBBoxLayer);
-    REG_RUNTIME_LAYER_CLASS(Normalize,      NormalizeBBoxLayer);
-    REG_RUNTIME_LAYER_CLASS(Shift,          ShiftLayer);
-    REG_RUNTIME_LAYER_CLASS(Padding,        PaddingLayer);
-    REG_RUNTIME_LAYER_CLASS(Scale,          ScaleLayer);
-
-    init.status = true;
+    CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Permute,        PermuteLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(PriorBox,       PriorBoxLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(DetectionOutput, DetectionOutputLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(NormalizeBBox,  NormalizeBBoxLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Normalize,      NormalizeBBoxLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Shift,          ShiftLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Padding,        PaddingLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Scale,          ScaleLayer);
 }
 
-}
-}
+}} //namespace
