@@ -100,6 +100,18 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
 
 /* ************************************************************************* */
 /**
+ * @brief Computes kernel size for Gaussian smoothing if the image
+ * @param sigma Kernel standard deviation
+ * @returns kernel size
+ */
+static inline int getGaussianKernelSize(float sigma) {
+  // Compute an appropriate kernel size according to the specified sigma
+  int ksize = (int)ceil(2.0f*(1.0f + (sigma - 0.8f) / (0.3f)));
+  ksize |= 1; // kernel should be odd
+  return ksize;
+}
+
+/**
  * @brief This method creates the nonlinear scale space for a given image
  * @param img Input image for which the nonlinear scale space needs to be created
  * @return 0 if the nonlinear scale space was created successfully, -1 otherwise
@@ -109,10 +121,15 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
   CV_INSTRUMENT_REGION()
   CV_Assert(evolution_.size() > 0);
 
-  // Copy the original image to the first level of the evolution
-  img.copyTo(evolution_[0].Lt);
-  gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lt, 0, 0, options_.soffset);
-  evolution_[0].Lt.copyTo(evolution_[0].Lsmooth);
+  // create first level of the evolution
+  int ksize = getGaussianKernelSize(options_.soffset);
+  GaussianBlur(img, evolution_[0].Lt, Size(ksize, ksize), options_.soffset, options_.soffset, BORDER_REPLICATE);
+  evolution_[0].Lsmooth = evolution_[0].Lt;
+
+  if (evolution_.size() == 1) {
+    // we don't need to compute kcontrast factor
+    return 0;
+  }
 
   // First compute the kcontrast factor
   options_.kcontrast = compute_k_percentile(img, options_.kcontrast_percentile, 1.0f, options_.kcontrast_nbins, 0, 0);
@@ -121,18 +138,21 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
   for (size_t i = 1; i < evolution_.size(); i++) {
 
     if (evolution_[i].octave > evolution_[i - 1].octave) {
-      halfsample_image(evolution_[i - 1].Lt, evolution_[i].Lt);
+      Size half_size = evolution_[i - 1].Lt.size();
+      half_size.width /= 2;
+      half_size.height /= 2;
+      resize(evolution_[i - 1].Lt, evolution_[i].Lt, half_size, 0, 0, INTER_AREA);
       options_.kcontrast = options_.kcontrast*0.75f;
     }
     else {
       evolution_[i - 1].Lt.copyTo(evolution_[i].Lt);
     }
 
-    gaussian_2D_convolution(evolution_[i].Lt, evolution_[i].Lsmooth, 0, 0, 1.0f);
+    GaussianBlur(evolution_[i].Lt, evolution_[i].Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
 
     // Compute the Gaussian derivatives Lx and Ly
-    image_derivatives_scharr(evolution_[i].Lsmooth, evolution_[i].Lx, 1, 0);
-    image_derivatives_scharr(evolution_[i].Lsmooth, evolution_[i].Ly, 0, 1);
+    Scharr(evolution_[i].Lsmooth, evolution_[i].Lx, CV_32F, 1, 0, 1.0, 0, BORDER_DEFAULT);
+    Scharr(evolution_[i].Lsmooth, evolution_[i].Ly, CV_32F, 0, 1, 1.0, 0, BORDER_DEFAULT);
 
     // Compute the conductivity equation
     switch (options_.diffusivity) {
