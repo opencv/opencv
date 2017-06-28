@@ -287,7 +287,10 @@ public:
         bool is1x1_;
         bool useAVX2;
 
-        ParallelConv() {}
+        ParallelConv()
+            : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
+              is1x1_(false), useAVX2(false)
+        {}
 
         static void run( const Mat& input, Mat& output, const Mat& weights,
                          const std::vector<float>& biasvec,
@@ -921,7 +924,11 @@ public:
         int nstripes;
         bool is1x1;
 
-        Col2ImInvoker() {}
+        Col2ImInvoker()
+            : data_col(0), biasvec(0), channels(0), height(0), width(0),
+              kernel_h(0), kernel_w(0), pad_h(0), pad_w(0), stride_h(0), stride_w(0), data_im(0),
+              height_col(0), width_col(0), nstripes(0), is1x1(0)
+        {}
 
         static void run(const float* data_col,
                         int channels, int height, int width,

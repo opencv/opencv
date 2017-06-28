@@ -70,16 +70,10 @@ BaseFilter::~BaseFilter() {}
 void BaseFilter::reset() {}
 
 FilterEngine::FilterEngine()
+    : srcType(-1), dstType(-1), bufType(-1), maxWidth(0), wholeSize(-1, -1), dx1(0), dx2(0),
+      rowBorderType(BORDER_REPLICATE), columnBorderType(BORDER_REPLICATE),
+      borderElemSize(0), bufStep(0), startY(0), startY0(0), endY(0), rowCount(0), dstY(0)
 {
-    srcType = dstType = bufType = -1;
-    rowBorderType = columnBorderType = BORDER_REPLICATE;
-    bufStep = startY = startY0 = endY = rowCount = dstY = 0;
-    maxWidth = 0;
-
-    wholeSize = Size(-1,-1);
-    dx1 = 0;
-    borderElemSize = 0;
-    dx2 = 0;
 }
 
 
@@ -89,12 +83,10 @@ FilterEngine::FilterEngine( const Ptr<BaseFilter>& _filter2D,
                             int _srcType, int _dstType, int _bufType,
                             int _rowBorderType, int _columnBorderType,
                             const Scalar& _borderValue )
+    : srcType(-1), dstType(-1), bufType(-1), maxWidth(0), wholeSize(-1, -1), dx1(0), dx2(0),
+      rowBorderType(BORDER_REPLICATE), columnBorderType(BORDER_REPLICATE),
+      borderElemSize(0), bufStep(0), startY(0), startY0(0), endY(0), rowCount(0), dstY(0)
 {
-    startY0 = 0;
-    endY = 0;
-    dstY = 0;
-    dx2 = 0;
-    rowCount = 0;
     init(_filter2D, _rowFilter, _columnFilter, _srcType, _dstType, _bufType,
          _rowBorderType, _columnBorderType, _borderValue);
 }
@@ -194,6 +186,7 @@ int FilterEngine::start(const Size &_wholeSize, const Size &sz, const Point &ofs
         srcRow.resize(esz*(maxWidth + ksize.width - 1));
         if( columnBorderType == BORDER_CONSTANT )
         {
+            CV_Assert(constVal != NULL);
             constBorderRow.resize(getElemSize(bufType)*(maxWidth + ksize.width - 1 + VEC_ALIGN));
             uchar *dst = alignPtr(&constBorderRow[0], VEC_ALIGN), *tdst;
             int n = (int)constBorderValue.size(), N;
@@ -227,6 +220,7 @@ int FilterEngine::start(const Size &_wholeSize, const Size &sz, const Point &ofs
     {
         if( rowBorderType == BORDER_CONSTANT )
         {
+            CV_Assert(constVal != NULL);
             int nr = isSeparable() ? 1 : (int)rows.size();
             for( i = 0; i < nr; i++ )
             {

@@ -1129,7 +1129,7 @@ Mat Mat::diag(const Mat& d)
 
 int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) const
 {
-    return (depth() == _depth || _depth <= 0) &&
+    return data && (depth() == _depth || _depth <= 0) &&
         (isContinuous() || !_requireContinuous) &&
         ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
                         (cols == _elemChannels && channels() == 1))) ||

@@ -1617,6 +1617,10 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
         if( pos > trackbar->maxval )
             pos = trackbar->maxval;
     }
+    else
+    {
+        CV_ERROR( CV_StsNullPtr, "No trackbar found" );
+    }
 
     CV_LOCK_MUTEX();
 
