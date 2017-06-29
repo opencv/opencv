@@ -120,7 +120,7 @@ public:
         int nstripes;
         const ActivationLayer* activ;
 
-        EltwiseInvoker() {}
+        EltwiseInvoker() : srcs(0), nsrcs(0), dst(0), coeffs(0), op(EltwiseLayer::PROD), nstripes(0), activ(0) {}
 
         static void run(const Mat** srcs, int nsrcs, Mat& dst,
                         const std::vector<int>& coeffs, EltwiseOp op,

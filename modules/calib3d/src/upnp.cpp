@@ -720,6 +720,8 @@ void upnp::qr_solve(Mat * A, Mat * b, Mat * X)
 {
   const int nr = A->rows;
   const int nc = A->cols;
+  if (nr <= 0 || nc <= 0)
+      return;
 
   if (max_nr != 0 && max_nr < nr)
   {

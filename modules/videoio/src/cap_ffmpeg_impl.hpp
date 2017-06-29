@@ -669,13 +669,13 @@ struct ImplMutex::Impl
 
 void ImplMutex::init()
 {
-    impl = (Impl*)malloc(sizeof(Impl));
+    impl = new Impl();
     impl->init();
 }
 void ImplMutex::destroy()
 {
     impl->destroy();
-    free(impl);
+    delete(impl);
     impl = NULL;
 }
 void ImplMutex::lock() { impl->lock(); }
@@ -1387,7 +1387,7 @@ void CvVideoWriter_FFMPEG::init()
 static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bool alloc)
 {
     AVFrame * picture;
-    uint8_t * picture_buf;
+    uint8_t * picture_buf = 0;
     int size;
 
 #if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
@@ -1416,6 +1416,7 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
     }
     else {
     }
+
     return picture;
 }
 
@@ -1511,6 +1512,8 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
                 best= p;
             }
         }
+        if (best == NULL)
+            return NULL;
         c->time_base.den= best->num;
         c->time_base.num= best->den;
     }
@@ -1796,24 +1799,27 @@ void CvVideoWriter_FFMPEG::close()
 
     av_free(outbuf);
 
-    if (!(fmt->flags & AVFMT_NOFILE))
+    if (oc)
     {
-        /* close the output file */
+        if (!(fmt->flags & AVFMT_NOFILE))
+        {
+            /* close the output file */
 
 #if LIBAVCODEC_VERSION_INT < ((52<<16)+(123<<8)+0)
 #if LIBAVCODEC_VERSION_INT >= ((51<<16)+(49<<8)+0)
-        url_fclose(oc->pb);
+            url_fclose(oc->pb);
 #else
-        url_fclose(&oc->pb);
+            url_fclose(&oc->pb);
 #endif
 #else
-        avio_close(oc->pb);
+            avio_close(oc->pb);
 #endif
 
+        }
+
+        /* free the stream */
+        avformat_free_context(oc);
     }
-
-    /* free the stream */
-    avformat_free_context(oc);
 
     av_freep(&aligned_input);
 
@@ -2114,6 +2120,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 CvCapture_FFMPEG* cvCreateFileCapture_FFMPEG( const char* filename )
 {
     CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));
+    if (!capture)
+        return 0;
     capture->init();
     if( capture->open( filename ))
         return capture;
@@ -2158,6 +2166,8 @@ CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int four
                                                   int width, int height, int isColor )
 {
     CvVideoWriter_FFMPEG* writer = (CvVideoWriter_FFMPEG*)malloc(sizeof(*writer));
+    if (!writer)
+        return 0;
     writer->init();
     if( writer->open( filename, fourcc, fps, width, height, isColor != 0 ))
         return writer;
@@ -2322,6 +2332,8 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
                 }
             }
 
+            if (best == NULL)
+                return NULL;
             c->time_base.den= best->num;
             c->time_base.num= best->den;
         }
@@ -2463,6 +2475,8 @@ void OutputMediaStream_FFMPEG::write(unsigned char* data, int size, int keyFrame
 struct OutputMediaStream_FFMPEG* create_OutputMediaStream_FFMPEG(const char* fileName, int width, int height, double fps)
 {
     OutputMediaStream_FFMPEG* stream = (OutputMediaStream_FFMPEG*) malloc(sizeof(OutputMediaStream_FFMPEG));
+    if (!stream)
+        return 0;
 
     if (stream->open(fileName, width, height, fps))
         return stream;
@@ -2730,6 +2744,8 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
 InputMediaStream_FFMPEG* create_InputMediaStream_FFMPEG(const char* fileName, int* codec, int* chroma_format, int* width, int* height)
 {
     InputMediaStream_FFMPEG* stream = (InputMediaStream_FFMPEG*) malloc(sizeof(InputMediaStream_FFMPEG));
+    if (!stream)
+        return 0;
 
     if (stream && stream->open(fileName, codec, chroma_format, width, height))
         return stream;

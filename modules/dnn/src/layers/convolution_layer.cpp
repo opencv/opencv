@@ -289,7 +289,7 @@ public:
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
-              is1x1_(false), useAVX2(false)
+              biasvec_(0), reluslope_(0), activ_(0), is1x1_(false), useAVX2(false)
         {}
 
         static void run( const Mat& input, Mat& output, const Mat& weights,

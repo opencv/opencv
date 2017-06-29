@@ -195,7 +195,7 @@ public:
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
 
-        PermuteInvoker() {}
+        PermuteInvoker() : inp(0), out(0), order(0), nstripes(0) {}
 
         void operator()(const Range& r) const
         {

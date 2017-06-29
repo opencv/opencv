@@ -610,7 +610,8 @@ cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector
             && trackingDetector );
 
     if (mainDetector) {
-        separateDetectionWork.reset(new SeparateDetectionWork(*this, mainDetector, params));
+        Ptr<SeparateDetectionWork> tmp(new SeparateDetectionWork(*this, mainDetector, params));
+        separateDetectionWork.swap(tmp);
     }
 
     weightsPositionsSmoothing.push_back(1);

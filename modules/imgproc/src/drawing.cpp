@@ -2600,6 +2600,7 @@ cvDrawContours( void* _img, CvSeq* contour,
         void* clr = (contour->flags & CV_SEQ_FLAG_HOLE) == 0 ? ext_buf : hole_buf;
 
         cvStartReadSeq( contour, &reader, 0 );
+        CV_Assert(reader.ptr != NULL);
         if( thickness < 0 )
             pts.resize(0);
 
