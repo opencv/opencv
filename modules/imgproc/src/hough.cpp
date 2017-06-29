@@ -1258,7 +1258,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
 
     if( CV_IS_STORAGE( circle_storage ))
     {
-        circles = cvCreateSeq( CV_32FC3, sizeof(CvSeq),
+        circles = cvCreateSeq( CV_32FC4, sizeof(CvSeq),
             sizeof(float)*4, (CvMemStorage*)circle_storage );
     }
     else if( CV_IS_MAT( circle_storage ))
@@ -1270,7 +1270,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
             CV_Error( CV_StsBadArg,
             "The destination matrix should be continuous and have a single row or a single column" );
 
-        circles = cvMakeSeqHeaderForArray( CV_32FC3, sizeof(CvSeq), sizeof(float)*4,
+        circles = cvMakeSeqHeaderForArray( CV_32FC4, sizeof(CvSeq), sizeof(float)*4,
                 mat->data.ptr, mat->rows + mat->cols - 1, &circles_header, &circles_block );
         circles_max = circles->total;
         cvClearSeq( circles );
