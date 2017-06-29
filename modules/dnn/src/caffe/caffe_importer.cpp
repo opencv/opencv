@@ -43,7 +43,7 @@
 using namespace cv;
 using namespace cv::dnn;
 
-#if HAVE_PROTOBUF
+#ifdef HAVE_PROTOBUF
 #include "caffe.pb.h"
 
 #include <iostream>
@@ -82,6 +82,8 @@ public:
 
     CaffeImporter(const char *pototxt, const char *caffeModel)
     {
+        CV_TRACE_FUNCTION();
+
         ReadNetParamsFromTextFileOrDie(pototxt, &net);
 
         if (caffeModel && caffeModel[0])
@@ -264,6 +266,8 @@ public:
 
     void populateNet(Net dstNet)
     {
+        CV_TRACE_FUNCTION();
+
         int layersSize = net.layer_size();
         layerCounter.clear();
         addedBlobs.clear();

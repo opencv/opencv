@@ -64,6 +64,9 @@ public:
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
         for (int i = 0, n = outputs.size(); i < n; ++i)
             if (outputs[i].data != inputs[i]->data)
                 inputs[i]->copyTo(outputs[i]);

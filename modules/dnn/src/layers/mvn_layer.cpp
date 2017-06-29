@@ -62,6 +62,9 @@ public:
 
     void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
         for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
         {
             Mat &inpBlob = *inputs[inpIdx];

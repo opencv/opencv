@@ -89,7 +89,7 @@
 
 #ifndef __OPENCV_DNN_CAFFE_IO_HPP__
 #define __OPENCV_DNN_CAFFE_IO_HPP__
-#if HAVE_PROTOBUF
+#ifdef HAVE_PROTOBUF
 
 #include "caffe.pb.h"
 
