@@ -11,7 +11,7 @@
  *  Redistribution and use in source and binary forms, with or without modification,
  *  are permitted provided that the following conditions are met :
  *
- *  *Redistributions of source code must retain the above copyright notice,
+ *  * Redistributions of source code must retain the above copyright notice,
  *  this list of conditions and the following disclaimer.
  *
  *  * Redistributions in binary form must reproduce the above copyright notice,
@@ -38,20 +38,20 @@
 
 namespace cvtest
 {
-
-using std::tr1::tuple;
-using std::tr1::get;
 using namespace perf;
 using namespace testing;
-using namespace cv;
 
-void MakeArtificialExample(RNG rng, Mat& dst_left_view, Mat& dst_view);
+static void MakeArtificialExample(RNG rng, Mat& dst_left_view, Mat& dst_view);
 
 CV_ENUM(SGBMModes, StereoSGBM::MODE_SGBM, StereoSGBM::MODE_SGBM_3WAY, StereoSGBM::MODE_HH4);
 typedef tuple<Size, int, SGBMModes> SGBMParams;
 typedef TestBaseWithParam<SGBMParams> TestStereoCorresp;
 
+#ifndef _DEBUG
 PERF_TEST_P( TestStereoCorresp, SGBM, Combine(Values(Size(1280,720),Size(640,480)), Values(256,128), SGBMModes::all()) )
+#else
+PERF_TEST_P( TestStereoCorresp, DISABLED_TooLongInDebug_SGBM, Combine(Values(Size(1280,720),Size(640,480)), Values(256,128), SGBMModes::all()) )
+#endif
 {
     RNG rng(0);
 
