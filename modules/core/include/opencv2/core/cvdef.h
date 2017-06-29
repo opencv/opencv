@@ -63,10 +63,6 @@
 #endif
 
 
-#if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
-#  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
-#endif
-
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
 #undef small
 #undef min
