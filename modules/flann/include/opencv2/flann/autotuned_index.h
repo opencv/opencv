@@ -83,6 +83,7 @@ public:
         memory_weight_ = get_param(params, "memory_weight", 0.0f);
         sample_fraction_ = get_param(params,"sample_fraction", 0.1f);
         bestIndex_ = NULL;
+        speedup_ = 0;
     }
 
     AutotunedIndex(const AutotunedIndex&);

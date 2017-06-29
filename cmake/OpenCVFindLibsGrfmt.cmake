@@ -96,17 +96,23 @@ if(WITH_WEBP)
     ocv_clear_vars(WEBP_FOUND WEBP_LIBRARY WEBP_LIBRARIES WEBP_INCLUDE_DIR)
   else()
     include(cmake/OpenCVFindWebP.cmake)
+    if(WEBP_FOUND)
+      set(HAVE_WEBP 1)
+    endif()
   endif()
 endif()
 
 # --- Add libwebp to 3rdparty/libwebp and compile it if not available ---
-if(WITH_WEBP AND NOT WEBP_FOUND)
+if(WITH_WEBP AND NOT WEBP_FOUND
+    AND (NOT ANDROID OR HAVE_CPUFEATURES)
+)
 
   set(WEBP_LIBRARY libwebp)
   set(WEBP_LIBRARIES ${WEBP_LIBRARY})
 
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libwebp")
   set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}")
+  set(HAVE_WEBP 1)
 endif()
 
 if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)

@@ -62,6 +62,7 @@ namespace cv
 WebPDecoder::WebPDecoder()
 {
     m_buf_supported = true;
+    channels = 0;
 }
 
 WebPDecoder::~WebPDecoder() {}

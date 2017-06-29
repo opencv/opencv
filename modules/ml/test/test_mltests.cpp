@@ -51,6 +51,7 @@ CV_AMLTest::CV_AMLTest( const char* _modelName ) : CV_MLBaseTest( _modelName )
 
 int CV_AMLTest::run_test_case( int testCaseIdx )
 {
+    CV_TRACE_FUNCTION();
     int code = cvtest::TS::OK;
     code = prepare_test_case( testCaseIdx );
 
@@ -91,6 +92,7 @@ int CV_AMLTest::run_test_case( int testCaseIdx )
 
 int CV_AMLTest::validate_test_results( int testCaseIdx )
 {
+    CV_TRACE_FUNCTION();
     int iters;
     float mean, sigma;
     // read validation params

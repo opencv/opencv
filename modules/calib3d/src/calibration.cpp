@@ -252,7 +252,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
 {
     int depth, elem_size;
     int i, k;
-    double J[27];
+    double J[27] = {0};
     CvMat matJ = cvMat( 3, 9, CV_64F, J );
 
     if( !CV_IS_MAT(src) )
@@ -1189,7 +1189,7 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
 
     int i, j, pos, nimages, ni = 0;
     double a[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 1 };
-    double H[9], f[2];
+    double H[9] = {0}, f[2] = {0};
     CvMat _a = cvMat( 3, 3, CV_64F, a );
     CvMat matH = cvMat( 3, 3, CV_64F, H );
     CvMat _f = cvMat( 2, 1, CV_64F, f );
@@ -1319,7 +1319,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
         (npoints->rows != 1 && npoints->cols != 1) )
         CV_Error( CV_StsUnsupportedFormat,
             "the array of point counters must be 1-dimensional integer vector" );
-    if(flags & CV_CALIB_TILTED_MODEL)
+    if(flags & CALIB_TILTED_MODEL)
     {
         //when the tilted sensor model is used the distortion coefficients matrix must have 14 parameters
         if (distCoeffs->cols*distCoeffs->rows != 14)
@@ -1328,7 +1328,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     else
     {
         //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
-        if(flags & CV_CALIB_THIN_PRISM_MODEL)
+        if(flags & CALIB_THIN_PRISM_MODEL)
             if (distCoeffs->cols*distCoeffs->rows != 12)
                 CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
     }
@@ -1498,24 +1498,28 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
 
     if(flags & CALIB_FIX_ASPECT_RATIO)
         mask[0] = 0;
-    if( flags & CV_CALIB_FIX_FOCAL_LENGTH )
+    if( flags & CALIB_FIX_FOCAL_LENGTH )
         mask[0] = mask[1] = 0;
-    if( flags & CV_CALIB_FIX_PRINCIPAL_POINT )
+    if( flags & CALIB_FIX_PRINCIPAL_POINT )
         mask[2] = mask[3] = 0;
-    if( flags & CV_CALIB_ZERO_TANGENT_DIST )
+    if( flags & CALIB_ZERO_TANGENT_DIST )
     {
         param[6] = param[7] = 0;
         mask[6] = mask[7] = 0;
     }
     if( !(flags & CALIB_RATIONAL_MODEL) )
         flags |= CALIB_FIX_K4 + CALIB_FIX_K5 + CALIB_FIX_K6;
-    if( !(flags & CV_CALIB_THIN_PRISM_MODEL))
+    if( !(flags & CALIB_THIN_PRISM_MODEL))
         flags |= CALIB_FIX_S1_S2_S3_S4;
-    if( !(flags & CV_CALIB_TILTED_MODEL))
+    if( !(flags & CALIB_TILTED_MODEL))
         flags |= CALIB_FIX_TAUX_TAUY;
 
     mask[ 4] = !(flags & CALIB_FIX_K1);
     mask[ 5] = !(flags & CALIB_FIX_K2);
+    if( flags & CALIB_FIX_TANGENT_DIST )
+    {
+      mask[6]  = mask[7]  = 1;
+    }
     mask[ 8] = !(flags & CALIB_FIX_K3);
     mask[ 9] = !(flags & CALIB_FIX_K4);
     mask[10] = !(flags & CALIB_FIX_K5);
@@ -1727,7 +1731,7 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
     if(!CV_IS_MAT(calibMatr))
         CV_Error(CV_StsUnsupportedFormat, "Input parameters must be a matrices!");
 
-    double dummy;
+    double dummy = .0;
     Point2d pp;
     cv::calibrationMatrixValues(cvarrToMat(calibMatr), imgSize, apertureWidth, apertureHeight,
             fovx ? *fovx : dummy,
@@ -1817,39 +1821,39 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         cvConvert( points, imagePoints[k] );
         cvReshape( imagePoints[k], imagePoints[k], 2, 1 );
 
-        if( flags & (CV_CALIB_FIX_INTRINSIC|CV_CALIB_USE_INTRINSIC_GUESS|
-            CV_CALIB_FIX_ASPECT_RATIO|CV_CALIB_FIX_FOCAL_LENGTH) )
+        if( flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS|
+            CALIB_FIX_ASPECT_RATIO|CALIB_FIX_FOCAL_LENGTH) )
             cvConvert( cameraMatrix, &K[k] );
 
-        if( flags & (CV_CALIB_FIX_INTRINSIC|CV_CALIB_USE_INTRINSIC_GUESS|
-            CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6) )
+        if( flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS|
+            CALIB_FIX_K1|CALIB_FIX_K2|CALIB_FIX_K3|CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6) )
         {
             CvMat tdist = cvMat( distCoeffs->rows, distCoeffs->cols,
                 CV_MAKETYPE(CV_64F,CV_MAT_CN(distCoeffs->type)), Dist[k].data.db );
             cvConvert( distCoeffs, &tdist );
         }
 
-        if( !(flags & (CV_CALIB_FIX_INTRINSIC|CV_CALIB_USE_INTRINSIC_GUESS)))
+        if( !(flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS)))
         {
             cvCalibrateCamera2( objectPoints, imagePoints[k],
                 npoints, imageSize, &K[k], &Dist[k], NULL, NULL, flags );
         }
     }
 
-    if( flags & CV_CALIB_SAME_FOCAL_LENGTH )
+    if( flags & CALIB_SAME_FOCAL_LENGTH )
     {
         static const int avg_idx[] = { 0, 4, 2, 5, -1 };
         for( k = 0; avg_idx[k] >= 0; k++ )
             A[0][avg_idx[k]] = A[1][avg_idx[k]] = (A[0][avg_idx[k]] + A[1][avg_idx[k]])*0.5;
     }
 
-    if( flags & CV_CALIB_FIX_ASPECT_RATIO )
+    if( flags & CALIB_FIX_ASPECT_RATIO )
     {
         for( k = 0; k < 2; k++ )
             aspectRatio[k] = A[k][0]/A[k][4];
     }
 
-    recomputeIntrinsics = (flags & CV_CALIB_FIX_INTRINSIC) == 0;
+    recomputeIntrinsics = (flags & CALIB_FIX_INTRINSIC) == 0;
 
     err.reset(cvCreateMat( maxPoints*2, 1, CV_64F ));
     Je.reset(cvCreateMat( maxPoints*2, 6, CV_64F ));
@@ -1873,40 +1877,40 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
     if( recomputeIntrinsics )
     {
         uchar* imask = solver.mask->data.ptr + nparams - NINTRINSIC*2;
-        if( !(flags & CV_CALIB_RATIONAL_MODEL) )
-            flags |= CV_CALIB_FIX_K4 | CV_CALIB_FIX_K5 | CV_CALIB_FIX_K6;
-        if( !(flags & CV_CALIB_THIN_PRISM_MODEL) )
-            flags |= CV_CALIB_FIX_S1_S2_S3_S4;
-        if( !(flags & CV_CALIB_TILTED_MODEL) )
-            flags |= CV_CALIB_FIX_TAUX_TAUY;
-        if( flags & CV_CALIB_FIX_ASPECT_RATIO )
+        if( !(flags & CALIB_RATIONAL_MODEL) )
+            flags |= CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6;
+        if( !(flags & CALIB_THIN_PRISM_MODEL) )
+            flags |= CALIB_FIX_S1_S2_S3_S4;
+        if( !(flags & CALIB_TILTED_MODEL) )
+            flags |= CALIB_FIX_TAUX_TAUY;
+        if( flags & CALIB_FIX_ASPECT_RATIO )
             imask[0] = imask[NINTRINSIC] = 0;
-        if( flags & CV_CALIB_FIX_FOCAL_LENGTH )
+        if( flags & CALIB_FIX_FOCAL_LENGTH )
             imask[0] = imask[1] = imask[NINTRINSIC] = imask[NINTRINSIC+1] = 0;
-        if( flags & CV_CALIB_FIX_PRINCIPAL_POINT )
+        if( flags & CALIB_FIX_PRINCIPAL_POINT )
             imask[2] = imask[3] = imask[NINTRINSIC+2] = imask[NINTRINSIC+3] = 0;
-        if( flags & CV_CALIB_ZERO_TANGENT_DIST )
+        if( flags & CALIB_ZERO_TANGENT_DIST )
             imask[6] = imask[7] = imask[NINTRINSIC+6] = imask[NINTRINSIC+7] = 0;
-        if( flags & CV_CALIB_FIX_K1 )
+        if( flags & CALIB_FIX_K1 )
             imask[4] = imask[NINTRINSIC+4] = 0;
-        if( flags & CV_CALIB_FIX_K2 )
+        if( flags & CALIB_FIX_K2 )
             imask[5] = imask[NINTRINSIC+5] = 0;
-        if( flags & CV_CALIB_FIX_K3 )
+        if( flags & CALIB_FIX_K3 )
             imask[8] = imask[NINTRINSIC+8] = 0;
-        if( flags & CV_CALIB_FIX_K4 )
+        if( flags & CALIB_FIX_K4 )
             imask[9] = imask[NINTRINSIC+9] = 0;
-        if( flags & CV_CALIB_FIX_K5 )
+        if( flags & CALIB_FIX_K5 )
             imask[10] = imask[NINTRINSIC+10] = 0;
-        if( flags & CV_CALIB_FIX_K6 )
+        if( flags & CALIB_FIX_K6 )
             imask[11] = imask[NINTRINSIC+11] = 0;
-        if( flags & CV_CALIB_FIX_S1_S2_S3_S4 )
+        if( flags & CALIB_FIX_S1_S2_S3_S4 )
         {
             imask[12] = imask[NINTRINSIC+12] = 0;
             imask[13] = imask[NINTRINSIC+13] = 0;
             imask[14] = imask[NINTRINSIC+14] = 0;
             imask[15] = imask[NINTRINSIC+15] = 0;
         }
-        if( flags & CV_CALIB_FIX_TAUX_TAUY )
+        if( flags & CALIB_FIX_TAUX_TAUY )
         {
             imask[16] = imask[NINTRINSIC+16] = 0;
             imask[17] = imask[NINTRINSIC+17] = 0;
@@ -1977,7 +1981,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         for( k = 0; k < 2; k++ )
         {
             double* iparam = solver.param->data.db + (nimages+1)*6 + k*NINTRINSIC;
-            if( flags & CV_CALIB_ZERO_TANGENT_DIST )
+            if( flags & CALIB_ZERO_TANGENT_DIST )
                 dk[k][2] = dk[k][3] = 0;
             iparam[0] = A[k][0]; iparam[1] = A[k][4]; iparam[2] = A[k][2]; iparam[3] = A[k][5];
             iparam[4] = dk[k][0]; iparam[5] = dk[k][1]; iparam[6] = dk[k][2];
@@ -2027,14 +2031,14 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
             dpdf = &dpdf_hdr;
             dpdc = &dpdc_hdr;
             dpdk = &dpdk_hdr;
-            if( flags & CV_CALIB_SAME_FOCAL_LENGTH )
+            if( flags & CALIB_SAME_FOCAL_LENGTH )
             {
                 iparam[NINTRINSIC] = iparam[0];
                 iparam[NINTRINSIC+1] = iparam[1];
                 ipparam[NINTRINSIC] = ipparam[0];
                 ipparam[NINTRINSIC+1] = ipparam[1];
             }
-            if( flags & CV_CALIB_FIX_ASPECT_RATIO )
+            if( flags & CALIB_FIX_ASPECT_RATIO )
             {
                 iparam[0] = iparam[1]*aspectRatio[0];
                 iparam[NINTRINSIC] = iparam[NINTRINSIC+1]*aspectRatio[1];
@@ -2096,7 +2100,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
                 if( JtJ || JtErr )
                     cvProjectPoints2( &objpt_i, &om[k], &T[k], &K[k], &Dist[k],
                             &tmpimagePoints, dpdrot, dpdt, dpdf, dpdc, dpdk,
-                            (flags & CV_CALIB_FIX_ASPECT_RATIO) ? aspectRatio[k] : 0);
+                            (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio[k] : 0);
                 else
                     cvProjectPoints2( &objpt_i, &om[k], &T[k], &K[k], &Dist[k], &tmpimagePoints );
                 cvSub( &tmpimagePoints, &imgpt_i[k], &tmpimagePoints );
@@ -2277,7 +2281,7 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
                       CvMat* matQ, int flags, double alpha, CvSize newImgSize,
                       CvRect* roi1, CvRect* roi2 )
 {
-    double _om[3], _t[3], _uu[3]={0,0,0}, _r_r[3][3], _pp[3][4];
+    double _om[3], _t[3] = {0}, _uu[3]={0,0,0}, _r_r[3][3], _pp[3][4];
     double _ww[3], _wr[3][3], _z[3] = {0,0,0}, _ri[3][3];
     cv::Rect_<float> inner1, inner2, outer1, outer2;
 
@@ -2372,7 +2376,7 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
 
     // For simplicity, set the principal points for both cameras to be the average
     // of the two principal points (either one of or both x- and y- coordinates)
-    if( flags & CV_CALIB_ZERO_DISPARITY )
+    if( flags & CALIB_ZERO_DISPARITY )
     {
         cc_new[0].x = cc_new[1].x = (cc_new[0].x + cc_new[1].x)*0.5;
         cc_new[0].y = cc_new[1].y = (cc_new[0].y + cc_new[1].y)*0.5;
@@ -2570,7 +2574,7 @@ CV_IMPL int cvStereoRectifyUncalibrated(
 
     int i, j, npoints;
     double cx, cy;
-    double u[9], v[9], w[9], f[9], h1[9], h2[9], h0[9], e2[3];
+    double u[9], v[9], w[9], f[9], h1[9], h2[9], h0[9], e2[3] = {0};
     CvMat E2 = cvMat( 3, 1, CV_64F, e2 );
     CvMat U = cvMat( 3, 3, CV_64F, u );
     CvMat V = cvMat( 3, 3, CV_64F, v );
@@ -2718,7 +2722,7 @@ CV_IMPL int cvStereoRectifyUncalibrated(
     cvPerspectiveTransform( _m1, _m1, &H0 );
     cvPerspectiveTransform( _m2, _m2, &H2 );
     CvMat A = cvMat( 1, npoints, CV_64FC3, lines1 ), BxBy, B;
-    double x[3];
+    double x[3] = {0};
     CvMat X = cvMat( 3, 1, CV_64F, x );
     cvConvertPointsHomogeneous( _m1, &A );
     cvReshape( &A, &A, 1, npoints );

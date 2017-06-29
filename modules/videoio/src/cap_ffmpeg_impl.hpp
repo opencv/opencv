@@ -716,12 +716,25 @@ static int LockCallBack(void **mutex, AVLockOp op)
 static ImplMutex _mutex;
 static bool _initialized = false;
 
+class AutoLock
+{
+public:
+    AutoLock(ImplMutex& m) : mutex(&m) { mutex->lock(); }
+    ~AutoLock() { mutex->unlock(); }
+protected:
+    ImplMutex* mutex;
+private:
+    AutoLock(const AutoLock&); // disabled
+    AutoLock& operator = (const AutoLock&); // disabled
+};
+
+
 class InternalFFMpegRegister
 {
 public:
     InternalFFMpegRegister()
     {
-        _mutex.lock();
+        AutoLock lock(_mutex);
         if (!_initialized)
         {
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
@@ -738,7 +751,6 @@ public:
 
             _initialized = true;
         }
-        _mutex.unlock();
     }
 
     ~InternalFFMpegRegister()
@@ -752,6 +764,7 @@ static InternalFFMpegRegister _init;
 
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
+    AutoLock lock(_mutex);
     unsigned i;
     bool valid = false;
 

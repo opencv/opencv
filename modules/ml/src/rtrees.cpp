@@ -49,6 +49,7 @@ namespace ml {
 //////////////////////////////////////////////////////////////////////////////////////////
 RTreeParams::RTreeParams()
 {
+    CV_TRACE_FUNCTION();
     calcVarImportance = false;
     nactiveVars = 0;
     termCrit = TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 50, 0.1);
@@ -58,6 +59,7 @@ RTreeParams::RTreeParams(bool _calcVarImportance,
                          int _nactiveVars,
                          TermCriteria _termCrit )
 {
+    CV_TRACE_FUNCTION();
     calcVarImportance = _calcVarImportance;
     nactiveVars = _nactiveVars;
     termCrit = _termCrit;
@@ -69,6 +71,7 @@ class DTreesImplForRTrees : public DTreesImpl
 public:
     DTreesImplForRTrees()
     {
+        CV_TRACE_FUNCTION();
         params.setMaxDepth(5);
         params.setMinSampleCount(10);
         params.setRegressionAccuracy(0.f);
@@ -78,11 +81,13 @@ public:
         params.use1SERule = false;
         params.truncatePrunedTree = false;
         params.priors = Mat();
+        oobError = 0;
     }
     virtual ~DTreesImplForRTrees() {}
 
     void clear()
     {
+        CV_TRACE_FUNCTION();
         DTreesImpl::clear();
         oobError = 0.;
         rng = RNG((uint64)-1);
@@ -90,6 +95,7 @@ public:
 
     const vector<int>& getActiveVars()
     {
+        CV_TRACE_FUNCTION();
         int i, nvars = (int)allVars.size(), m = (int)activeVars.size();
         for( i = 0; i < nvars; i++ )
         {
@@ -104,6 +110,7 @@ public:
 
     void startTraining( const Ptr<TrainData>& trainData, int flags )
     {
+        CV_TRACE_FUNCTION();
         DTreesImpl::startTraining(trainData, flags);
         int nvars = w->data->getNVars();
         int i, m = rparams.nactiveVars > 0 ? rparams.nactiveVars : cvRound(std::sqrt((double)nvars));
@@ -116,6 +123,7 @@ public:
 
     void endTraining()
     {
+        CV_TRACE_FUNCTION();
         DTreesImpl::endTraining();
         vector<int> a, b;
         std::swap(allVars, a);
@@ -124,6 +132,7 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags )
     {
+        CV_TRACE_FUNCTION();
         startTraining(trainData, flags);
         int treeidx, ntrees = (rparams.termCrit.type & TermCriteria::COUNT) != 0 ?
             rparams.termCrit.maxCount : 10000;
@@ -286,12 +295,14 @@ public:
 
     void writeTrainingParams( FileStorage& fs ) const
     {
+        CV_TRACE_FUNCTION();
         DTreesImpl::writeTrainingParams(fs);
         fs << "nactive_vars" << rparams.nactiveVars;
     }
 
     void write( FileStorage& fs ) const
     {
+        CV_TRACE_FUNCTION();
         if( roots.empty() )
             CV_Error( CV_StsBadArg, "RTrees have not been trained" );
 
@@ -319,6 +330,7 @@ public:
 
     void readParams( const FileNode& fn )
     {
+        CV_TRACE_FUNCTION();
         DTreesImpl::readParams(fn);
 
         FileNode tparams_node = fn["training_params"];
@@ -327,6 +339,7 @@ public:
 
     void read( const FileNode& fn )
     {
+        CV_TRACE_FUNCTION();
         clear();
 
         //int nclasses = (int)fn["nclasses"];
@@ -351,6 +364,7 @@ public:
 
     void getVotes( InputArray input, OutputArray output, int flags ) const
     {
+        CV_TRACE_FUNCTION();
         CV_Assert( !roots.empty() );
         int nclasses = (int)classLabels.size(), ntrees = (int)roots.size();
         Mat samples = input.getMat(), results;
@@ -435,6 +449,7 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags )
     {
+        CV_TRACE_FUNCTION();
         if (impl.getCVFolds() != 0)
             CV_Error(Error::StsBadArg, "Cross validation for RTrees is not implemented");
         return impl.train(trainData, flags);
@@ -442,22 +457,26 @@ public:
 
     float predict( InputArray samples, OutputArray results, int flags ) const
     {
+        CV_TRACE_FUNCTION();
         return impl.predict(samples, results, flags);
     }
 
     void write( FileStorage& fs ) const
     {
+        CV_TRACE_FUNCTION();
         impl.write(fs);
     }
 
     void read( const FileNode& fn )
     {
+        CV_TRACE_FUNCTION();
         impl.read(fn);
     }
 
     void getVotes_( InputArray samples, OutputArray results, int flags ) const
     {
-      impl.getVotes(samples, results, flags);
+        CV_TRACE_FUNCTION();
+        impl.getVotes(samples, results, flags);
     }
 
     Mat getVarImportance() const { return Mat_<float>(impl.varImportance, true); }
@@ -477,17 +496,20 @@ public:
 
 Ptr<RTrees> RTrees::create()
 {
+    CV_TRACE_FUNCTION();
     return makePtr<RTreesImpl>();
 }
 
 //Function needed for Python and Java wrappers
 Ptr<RTrees> RTrees::load(const String& filepath, const String& nodeName)
 {
+    CV_TRACE_FUNCTION();
     return Algorithm::load<RTrees>(filepath, nodeName);
 }
 
 void RTrees::getVotes(InputArray input, OutputArray output, int flags) const
 {
+    CV_TRACE_FUNCTION();
     const RTreesImpl* this_ = dynamic_cast<const RTreesImpl*>(this);
     if(!this_)
         CV_Error(Error::StsNotImplemented, "the class is not RTreesImpl");

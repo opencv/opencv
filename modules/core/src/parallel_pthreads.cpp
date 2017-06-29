@@ -112,7 +112,7 @@ class ForThread
 {
 public:
 
-    ForThread(): m_task_start(false), m_parent(0), m_state(eFTNotStarted), m_id(0)
+    ForThread(): m_posix_thread(0), m_task_start(false), m_parent(0), m_state(eFTNotStarted), m_id(0)
     {
     }
 
@@ -309,6 +309,8 @@ void ForThread::execute()
 
 void ForThread::thread_body()
 {
+    (void)cv::utils::getThreadID(); // notify OpenCV about new thread
+
     m_parent->m_is_work_thread.get()->value = true;
 
     pthread_mutex_lock(&m_thread_mutex);

@@ -43,14 +43,10 @@
 #ifndef OPENCV_CUDA_TEST_UTILITY_HPP
 #define OPENCV_CUDA_TEST_UTILITY_HPP
 
-#include <stdexcept>
-#include "cvconfig.h"
-#include "opencv2/core.hpp"
-#include "opencv2/core/cuda.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
 #include "opencv2/ts.hpp"
+
+#include <stdexcept>
+#include "opencv2/core/cuda.hpp"
 
 namespace cvtest
 {
@@ -109,6 +105,7 @@ namespace cvtest
 
     CV_EXPORTS testing::AssertionResult assertMatNear(const char* expr1, const char* expr2, const char* eps_expr, cv::InputArray m1, cv::InputArray m2, double eps);
 
+    #undef EXPECT_MAT_NEAR
     #define EXPECT_MAT_NEAR(m1, m2, eps) EXPECT_PRED_FORMAT3(cvtest::assertMatNear, m1, m2, eps)
     #define ASSERT_MAT_NEAR(m1, m2, eps) ASSERT_PRED_FORMAT3(cvtest::assertMatNear, m1, m2, eps)
 
@@ -153,6 +150,7 @@ namespace cvtest
 
     CV_EXPORTS double checkSimilarity(cv::InputArray m1, cv::InputArray m2);
 
+    #undef EXPECT_MAT_SIMILAR
     #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
         { \
             ASSERT_EQ(mat1.type(), mat2.type()); \

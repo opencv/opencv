@@ -96,6 +96,8 @@ public:
         m_end = m_start + DEFAULT_BLOCK_SIZE;
         m_is_opened = false;
         m_f = 0;
+        m_current = 0;
+        m_pos = 0;
     }
 
     ~BitStream()
@@ -591,6 +593,12 @@ public:
     {
         rawstream = false;
         nstripes = -1;
+        height = 0;
+        width = 0;
+        moviPointer = 0;
+        channels = 0;
+        outfps = 0;
+        quality = 0;
     }
 
     MotionJpegWriter(const String& filename, double fps, Size size, bool iscolor)

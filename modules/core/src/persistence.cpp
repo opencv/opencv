@@ -804,7 +804,7 @@ cvGetFileNode( CvFileStorage* fs, CvFileNode* _map_node,
 
         if( !map_node )
             map_node = (CvFileNode*)cvGetSeqElem( fs->roots, k );
-
+        CV_Assert(map_node != NULL);
         if( !CV_NODE_IS_MAP(map_node->tag) )
         {
             if( (!CV_NODE_IS_SEQ(map_node->tag) || map_node->data.seq->total != 0) &&
@@ -6777,6 +6777,7 @@ cvLoad( const char* filename, CvMemStorage* memstorage,
             CvSeqReader reader;
 
             node = (CvFileNode*)cvGetSeqElem( (*fs)->roots, k );
+            CV_Assert(node != NULL);
             if( !CV_NODE_IS_MAP( node->tag ))
                 return 0;
             seq = node->data.seq;
@@ -6921,7 +6922,7 @@ FileNode FileStorage::root(int streamidx) const
 
 FileStorage& operator << (FileStorage& fs, const String& str)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_REGION_VERBOSE();
 
     enum { NAME_EXPECTED = FileStorage::NAME_EXPECTED,
         VALUE_EXPECTED = FileStorage::VALUE_EXPECTED,

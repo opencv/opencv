@@ -63,10 +63,6 @@
 #endif
 
 
-#if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER && _MSC_VER > 1300
-#  define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio warnings */
-#endif
-
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
 #undef small
 #undef min
@@ -354,6 +350,20 @@ Cv64suf;
 #    define CV_NORETURN __declspec(noreturn)
 #  else
 #    define CV_NORETURN /* nothing by default */
+#  endif
+#endif
+
+
+/****************************************************************************************\
+*                                    C++ 11                                              *
+\****************************************************************************************/
+#ifndef CV_CXX_11
+#  if __cplusplus >= 201103L || defined(_MSC_VER) && _MSC_VER >= 1600
+#    define CV_CXX_11 1
+#  endif
+#else
+#  if CV_CXX_11 == 0
+#    undef CV_CXX_11
 #  endif
 #endif
 

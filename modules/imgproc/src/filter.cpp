@@ -70,13 +70,10 @@ BaseFilter::~BaseFilter() {}
 void BaseFilter::reset() {}
 
 FilterEngine::FilterEngine()
+    : srcType(-1), dstType(-1), bufType(-1), maxWidth(0), wholeSize(-1, -1), dx1(0), dx2(0),
+      rowBorderType(BORDER_REPLICATE), columnBorderType(BORDER_REPLICATE),
+      borderElemSize(0), bufStep(0), startY(0), startY0(0), endY(0), rowCount(0), dstY(0)
 {
-    srcType = dstType = bufType = -1;
-    rowBorderType = columnBorderType = BORDER_REPLICATE;
-    bufStep = startY = startY0 = endY = rowCount = dstY = 0;
-    maxWidth = 0;
-
-    wholeSize = Size(-1,-1);
 }
 
 
@@ -86,6 +83,9 @@ FilterEngine::FilterEngine( const Ptr<BaseFilter>& _filter2D,
                             int _srcType, int _dstType, int _bufType,
                             int _rowBorderType, int _columnBorderType,
                             const Scalar& _borderValue )
+    : srcType(-1), dstType(-1), bufType(-1), maxWidth(0), wholeSize(-1, -1), dx1(0), dx2(0),
+      rowBorderType(BORDER_REPLICATE), columnBorderType(BORDER_REPLICATE),
+      borderElemSize(0), bufStep(0), startY(0), startY0(0), endY(0), rowCount(0), dstY(0)
 {
     init(_filter2D, _rowFilter, _columnFilter, _srcType, _dstType, _bufType,
          _rowBorderType, _columnBorderType, _borderValue);
@@ -186,6 +186,7 @@ int FilterEngine::start(const Size &_wholeSize, const Size &sz, const Point &ofs
         srcRow.resize(esz*(maxWidth + ksize.width - 1));
         if( columnBorderType == BORDER_CONSTANT )
         {
+            CV_Assert(constVal != NULL);
             constBorderRow.resize(getElemSize(bufType)*(maxWidth + ksize.width - 1 + VEC_ALIGN));
             uchar *dst = alignPtr(&constBorderRow[0], VEC_ALIGN), *tdst;
             int n = (int)constBorderValue.size(), N;
@@ -219,6 +220,7 @@ int FilterEngine::start(const Size &_wholeSize, const Size &sz, const Point &ofs
     {
         if( rowBorderType == BORDER_CONSTANT )
         {
+            CV_Assert(constVal != NULL);
             int nr = isSeparable() ? 1 : (int)rows.size();
             for( i = 0; i < nr; i++ )
             {
@@ -566,7 +568,7 @@ struct RowVec_8u32s
 
 struct SymmRowSmallVec_8u32s
 {
-    SymmRowSmallVec_8u32s() { smallValues = false; }
+    SymmRowSmallVec_8u32s() { smallValues = false; symmetryType = 0; }
     SymmRowSmallVec_8u32s( const Mat& _kernel, int _symmetryType )
     {
         kernel = _kernel;
@@ -870,7 +872,7 @@ struct SymmRowSmallVec_8u32s
 
 struct SymmColumnVec_32s8u
 {
-    SymmColumnVec_32s8u() { symmetryType=0; }
+    SymmColumnVec_32s8u() { symmetryType=0; delta = 0; }
     SymmColumnVec_32s8u(const Mat& _kernel, int _symmetryType, int _bits, double _delta)
     {
         symmetryType = _symmetryType;
@@ -1018,7 +1020,7 @@ struct SymmColumnVec_32s8u
 
 struct SymmColumnSmallVec_32s16s
 {
-    SymmColumnSmallVec_32s16s() { symmetryType=0; }
+    SymmColumnSmallVec_32s16s() { symmetryType=0; delta = 0; }
     SymmColumnSmallVec_32s16s(const Mat& _kernel, int _symmetryType, int _bits, double _delta)
     {
         symmetryType = _symmetryType;
@@ -1152,7 +1154,7 @@ struct SymmColumnSmallVec_32s16s
 
 struct RowVec_16s32f
 {
-    RowVec_16s32f() {}
+    RowVec_16s32f() { sse2_supported = false; }
     RowVec_16s32f( const Mat& _kernel )
     {
         kernel = _kernel;
@@ -1199,7 +1201,7 @@ struct RowVec_16s32f
 
 struct SymmColumnVec_32f16s
 {
-    SymmColumnVec_32f16s() { symmetryType=0; }
+    SymmColumnVec_32f16s() { symmetryType=0; delta = 0; sse2_supported = false; }
     SymmColumnVec_32f16s(const Mat& _kernel, int _symmetryType, int, double _delta)
     {
         symmetryType = _symmetryType;
@@ -1355,6 +1357,9 @@ struct RowVec_32f
     {
         haveSSE = checkHardwareSupport(CV_CPU_SSE);
         haveAVX2 = checkHardwareSupport(CV_CPU_AVX2);
+#if defined USE_IPP_SEP_FILTERS
+        bufsz = -1;
+#endif
     }
 
     RowVec_32f( const Mat& _kernel )
@@ -1478,7 +1483,7 @@ private:
 
 struct SymmRowSmallVec_32f
 {
-    SymmRowSmallVec_32f() {}
+    SymmRowSmallVec_32f() { symmetryType = 0; }
     SymmRowSmallVec_32f( const Mat& _kernel, int _symmetryType )
     {
         kernel = _kernel;
@@ -1675,6 +1680,7 @@ struct SymmColumnVec_32f
         symmetryType=0;
         haveSSE = checkHardwareSupport(CV_CPU_SSE);
         haveAVX2 = checkHardwareSupport(CV_CPU_AVX2);
+        delta = 0;
     }
     SymmColumnVec_32f(const Mat& _kernel, int _symmetryType, int, double _delta)
     {
@@ -1898,7 +1904,7 @@ if ( haveAVX2 )
 
 struct SymmColumnSmallVec_32f
 {
-    SymmColumnSmallVec_32f() { symmetryType=0; }
+    SymmColumnSmallVec_32f() { symmetryType=0; delta = 0; }
     SymmColumnSmallVec_32f(const Mat& _kernel, int _symmetryType, int, double _delta)
     {
         symmetryType = _symmetryType;
@@ -2030,7 +2036,7 @@ struct SymmColumnSmallVec_32f
 
 struct FilterVec_8u
 {
-    FilterVec_8u() {}
+    FilterVec_8u() { delta = 0; _nz = 0; }
     FilterVec_8u(const Mat& _kernel, int _bits, double _delta)
     {
         Mat kernel;
@@ -2113,7 +2119,7 @@ struct FilterVec_8u
 
 struct FilterVec_8u16s
 {
-    FilterVec_8u16s() {}
+    FilterVec_8u16s() { delta = 0; _nz = 0; }
     FilterVec_8u16s(const Mat& _kernel, int _bits, double _delta)
     {
         Mat kernel;
@@ -2196,7 +2202,7 @@ struct FilterVec_8u16s
 
 struct FilterVec_32f
 {
-    FilterVec_32f() {}
+    FilterVec_32f() { delta = 0; _nz = 0; }
     FilterVec_32f(const Mat& _kernel, int, double _delta)
     {
         delta = (float)_delta;
