@@ -769,7 +769,7 @@ class CppHeaderParser(object):
 
         for l0 in linelist:
             self.lineno += 1
-            #print self.lineno
+            #print(state, self.lineno, l0)
 
             l = l0.strip()
 
@@ -798,8 +798,13 @@ class CppHeaderParser(object):
                 l = l[pos+2:]
                 state = SCAN
 
+            if l.startswith('CV__'): # just ignore this lines
+                #print('IGNORE: ' + l)
+                state = SCAN
+                continue
+
             if state != SCAN:
-                print("Error at %d: invlid state = %d" % (self.lineno, state))
+                print("Error at %d: invalid state = %d" % (self.lineno, state))
                 sys.exit(-1)
 
             while 1:
@@ -848,6 +853,7 @@ class CppHeaderParser(object):
 
                 stmt = (block_head + " " + l[:pos]).strip()
                 stmt = " ".join(stmt.split()) # normalize the statement
+                #print(stmt)
                 stack_top = self.block_stack[-1]
 
                 if stmt.startswith("@"):
