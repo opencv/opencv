@@ -43,6 +43,10 @@ Generate documentation {#tutorial_documentation_generate}
     make doxygen
     @endcode
 -   Open <i>doc/doxygen/html/index.html</i> file in your favorite browser
+-   Test your python code:
+    @code{.sh}
+    make run_pylint_on_tutorials
+    @endcode
 
 Quick start {#tutorial_documentation_quick_start}
 ===========
@@ -600,7 +604,8 @@ Document the function {#tutorial_documentation_steps_fun}
 6. _Optional_: describe return value of the function using the _returns_ command.
 7. _Optional_: add "See also" section with links to similar functions or classes
 8. _Optional_: add bibliographic reference if any.
-9. Generate doxygen documentation and verify results.
+9. Test your code. (Python: "make run_pylint_on_tutorials")
+10. Generate doxygen documentation and verify results.
 
 Write the tutorial {#tutorial_documentation_steps_tutorial}
 ------------------
