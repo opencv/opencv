@@ -2063,7 +2063,7 @@ protected:
 
 /** @brief Template matrix class derived from Mat
 
-@code
+@code{.cpp}
     template<typename _Tp> class Mat_ : public Mat
     {
     public:
@@ -2075,7 +2075,7 @@ protected:
 The class `Mat_<_Tp>` is a *thin* template wrapper on top of the Mat class. It does not have any
 extra data fields. Nor this class nor Mat has any virtual methods. Thus, references or pointers to
 these two classes can be freely but carefully converted one to another. For example:
-@code
+@code{.cpp}
     // create a 100x100 8-bit matrix
     Mat M(100,100,CV_8U);
     // this will be compiled fine. no any data conversion will be done.
@@ -2087,7 +2087,7 @@ While Mat is sufficient in most cases, Mat_ can be more convenient if you use a 
 access operations and if you know matrix type at the compilation time. Note that
 `Mat::at(int y,int x)` and `Mat_::operator()(int y,int x)` do absolutely the same
 and run at the same speed, but the latter is certainly shorter:
-@code
+@code{.cpp}
     Mat_<double> M(20,20);
     for(int i = 0; i < M.rows; i++)
         for(int j = 0; j < M.cols; j++)
@@ -2097,7 +2097,7 @@ and run at the same speed, but the latter is certainly shorter:
     cout << E.at<double>(0,0)/E.at<double>(M.rows-1,0);
 @endcode
 To use Mat_ for multi-channel images/matrices, pass Vec as a Mat_ parameter:
-@code
+@code{.cpp}
     // allocate a 320x240 color image and fill it with green (in RGB space)
     Mat_<Vec3b> img(240, 320, Vec3b(0,255,0));
     // now draw a diagonal white line
@@ -2107,6 +2107,17 @@ To use Mat_ for multi-channel images/matrices, pass Vec as a Mat_ parameter:
     for(int i = 0; i < img.rows; i++)
         for(int j = 0; j < img.cols; j++)
             img(i,j)[2] ^= (uchar)(i ^ j);
+@endcode
+Mat_ is fully compatible with C++11 range-based for loop. For example such loop
+can be used to safely apply look-up table:
+@code{.cpp}
+void applyTable(Mat_<uchar>& I, const uchar* const table)
+{
+    for(auto& pixel : I)
+    {
+        pixel = table[pixel];
+    }
+}
 @endcode
  */
 template<typename _Tp> class Mat_ : public Mat
