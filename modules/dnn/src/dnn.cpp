@@ -50,8 +50,9 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 
-using namespace cv;
-using namespace cv::dnn;
+namespace cv {
+namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 using std::vector;
 using std::map;
@@ -73,11 +74,6 @@ namespace
         LayerShapes() {supportInPlace = false;}
     };
 }
-
-namespace cv
-{
-namespace dnn
-{
 
 template<typename T>
 static String toString(const T &v)
@@ -2126,5 +2122,5 @@ BackendWrapper::BackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& 
 
 BackendWrapper::~BackendWrapper() {}
 
-}
-}
+CV__DNN_EXPERIMENTAL_NS_END
+}} // namespace
