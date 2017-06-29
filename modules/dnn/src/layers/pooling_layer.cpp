@@ -147,7 +147,7 @@ public:
         std::vector<int> ofsbuf;
         int poolingType;
 
-        PoolingInvoker() {}
+        PoolingInvoker() : src(0), dst(0), mask(0), nstripes(0), computeMaxIdx(0), poolingType(PoolingLayer::MAX) {}
 
         static void run(const Mat& src, Mat& dst, Mat& mask, Size kernel,
                         Size stride, Size pad, int poolingType,
@@ -263,8 +263,11 @@ public:
                                 }
                                 v_store(dstData + x0, max_val0);
                                 v_store(dstData + x0 + 4, max_val1);
-                                v_store(dstMaskData + x0, max_idx0);
-                                v_store(dstMaskData + x0 + 4, max_idx1);
+                                if (dstMaskData)
+                                {
+                                    v_store(dstMaskData + x0, max_idx0);
+                                    v_store(dstMaskData + x0 + 4, max_idx1);
+                                }
                                 x0 += 7;
                             }
                             else
@@ -350,7 +353,8 @@ public:
                                     }
 
                                 dstData[x0] = max_val;
-                                dstMaskData[x0] = max_index;
+                                if (dstMaskData)
+                                    dstMaskData[x0] = max_index;
                             }
                             else
                             {

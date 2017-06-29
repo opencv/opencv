@@ -525,6 +525,8 @@ void epnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
 {
   const int nr = A->rows;
   const int nc = A->cols;
+  if (nc <= 0 || nr <= 0)
+      return;
 
   if (max_nr != 0 && max_nr < nr)
   {

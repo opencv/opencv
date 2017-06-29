@@ -584,7 +584,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
 
         hull = cvMakeSeqHeaderForArray(
                                        CV_SEQ_KIND_CURVE|CV_MAT_TYPE(mat->type)|CV_SEQ_FLAG_CLOSED,
-                                       sizeof(CvContour), CV_ELEM_SIZE(mat->type), mat->data.ptr,
+                                       sizeof(hull_header), CV_ELEM_SIZE(mat->type), mat->data.ptr,
                                        mat->cols + mat->rows - 1, &hull_header, &hullblock );
     }
 
@@ -664,6 +664,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
             int t = *(int*)hull_reader.ptr;
             hull_next = CV_GET_SEQ_ELEM( CvPoint, ptseq, t );
         }
+        CV_Assert(hull_next != NULL && hull_cur != NULL);
 
         dx0 = (double)hull_next->x - (double)hull_cur->x;
         dy0 = (double)hull_next->y - (double)hull_cur->y;
