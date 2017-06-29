@@ -8,6 +8,8 @@
 // This tests doesn't require any external data. They just compare outputs of
 // layers using different computation backends. Input and parameters are random.
 
+#include "test_precomp.hpp"
+
 namespace cvtest
 {
 
