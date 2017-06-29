@@ -47,12 +47,16 @@
 #include <iostream>
 #include <fstream>
 
+#if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
+#include "THDiskFile.h"
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 #if defined(ENABLE_TORCH_IMPORTER) && ENABLE_TORCH_IMPORTER
-#include "THDiskFile.h"
+using namespace TH;
 
 //#ifdef NDEBUG
 static bool dbgPrint = false;
