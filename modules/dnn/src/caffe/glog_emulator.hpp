@@ -59,7 +59,7 @@ class GLogWrapper
 {
     const char *file, *func, *type, *cond_str;
     int line;
-    bool cond_staus, exit_loop;
+    bool cond_status, exit_loop;
     std::stringstream sstream;
 
 public:
@@ -69,7 +69,7 @@ public:
           const char *_cond_str = NULL, bool _cond_status = true
     ) :
         file(_file), func(_func), type(_type), cond_str(_cond_str),
-        line(_line), cond_staus(_cond_status), exit_loop(true) {}
+        line(_line), cond_status(_cond_status), exit_loop(true) {}
 
     std::iostream &stream()
     {
@@ -85,16 +85,18 @@ public:
     {
         exit_loop = false;
 
-        if (cond_str && !cond_staus)
+        if (cond_str && !cond_status)
         {
             cv::error(cv::Error::StsError, "FAILED: " + String(cond_str) + ". " + sstream.str(), func, file, line);
         }
         else if (!cond_str && strcmp(type, "CHECK"))
         {
+            #ifndef NDEBUG
             if (!std::strcmp(type, "INFO"))
                 std::cout << sstream.str() << std::endl;
             else
                 std::cerr << sstream.str() << std::endl;
+            #endif
         }
     }
 };
