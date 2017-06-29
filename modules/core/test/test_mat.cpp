@@ -1398,6 +1398,15 @@ TEST(Core_Matx, fromMat_)
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
+#ifdef CV_CXX_11
+TEST(Core_Matx, from_initializer_list)
+{
+    Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
+    Matx22d b = {10, 11, 12, 13};
+    ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
+}
+#endif
+
 TEST(Core_InputArray, empty)
 {
     vector<vector<Point> > data;
