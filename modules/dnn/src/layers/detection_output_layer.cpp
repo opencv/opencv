@@ -206,6 +206,9 @@ public:
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
         const float* locationData = inputs[0]->ptr<float>();
         const float* confidenceData = inputs[1]->ptr<float>();
         const float* priorData = inputs[2]->ptr<float>();

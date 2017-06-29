@@ -233,6 +233,9 @@ public:
 
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &)
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
         int axisCan = clamp(axis, input[0]->dims);
         int outerSize = input[0]->total(0, axisCan);
 

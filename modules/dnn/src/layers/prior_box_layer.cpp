@@ -228,6 +228,9 @@ public:
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
         int _layerWidth = inputs[0]->size[3];
         int _layerHeight = inputs[0]->size[2];
 
