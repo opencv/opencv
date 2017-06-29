@@ -694,6 +694,7 @@ struct Net::Impl
         for (it = layers.begin(); it != layers.end(); it++)
         {
             if (it->second.id != 0) {
+                it->second.inputBlobs.clear();
                 it->second.outputBlobs.clear();
                 it->second.internals.clear();
             }
@@ -1106,8 +1107,10 @@ struct Net::Impl
                         bnormData->skipFlags[DNN_BACKEND_DEFAULT] = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         if( bnormData->consumers.size() == 1 )
+                        {
                             nextData = &layers[bnormData->consumers[0].lid];
-                        lpNext = LayerPin(bnormData->consumers[0].lid, 0);
+                            lpNext = LayerPin(bnormData->consumers[0].lid, 0);
+                        }
                     }
                 }
 
@@ -1124,7 +1127,10 @@ struct Net::Impl
                         scaleData->skipFlags[DNN_BACKEND_DEFAULT] = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         if( scaleData->consumers.size() == 1 )
+                        {
                             nextData = &layers[scaleData->consumers[0].lid];
+                            lpNext = LayerPin(scaleData->consumers[0].lid, 0);
+                        }
                     }
                 }
 
@@ -1132,7 +1138,8 @@ struct Net::Impl
                 if( nextData )
                     nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
 
-                if( !nextActivLayer.empty() && currLayer->setActivation(nextActivLayer) )
+                if( !nextActivLayer.empty() && pinsToKeep.count(lpNext) == 0
+                        && currLayer->setActivation(nextActivLayer) )
                 {
                     printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
                     nextData->skipFlags[DNN_BACKEND_DEFAULT] = true;

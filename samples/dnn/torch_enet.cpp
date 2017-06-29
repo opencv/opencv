@@ -85,7 +85,9 @@ int main(int argc, char **argv)
     }
 
     //! [Make forward pass]
+    tm.start();
     Mat result = net.forward(oBlob);
+    tm.stop();
 
     if (!resultFile.empty()) {
         CV_Assert(result.isContinuous());

@@ -198,6 +198,8 @@ public:
     bool setActivation(const Ptr<ActivationLayer>& layer)
     {
         activ = layer;
+        if (activ.empty())
+            reluslope.clear();
         return !activ.empty();
     }
 

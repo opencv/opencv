@@ -146,9 +146,8 @@ class DnnCaffeModel(Framework):
         return 'DNN'
 
     def get_output(self, input_blob):
-        self.net.setBlob(self.in_blob_name, input_blob)
-        self.net.forward()
-        return self.net.getBlob(self.out_blob_name)
+        self.net.setInput(input_blob, self.in_blob_name)
+        return self.net.forward(self.out_blob_name)
 
 
 class ClsAccEvaluation:
