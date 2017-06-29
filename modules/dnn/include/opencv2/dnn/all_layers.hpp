@@ -43,10 +43,9 @@
 #define OPENCV_DNN_DNN_ALL_LAYERS_HPP
 #include <opencv2/dnn.hpp>
 
-namespace cv
-{
-namespace dnn
-{
+namespace cv {
+namespace dnn {
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
@@ -459,7 +458,7 @@ namespace dnn
 
 //! @}
 //! @}
-
+CV__DNN_EXPERIMENTAL_NS_END
 }
 }
 #endif
