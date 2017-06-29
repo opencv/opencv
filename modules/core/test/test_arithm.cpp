@@ -1922,3 +1922,13 @@ TEST(Compare, empty)
     EXPECT_TRUE(dst1.empty());
     EXPECT_TRUE(dst2.empty());
 }
+
+TEST(Compare, regression_8999)
+{
+    Mat_<double> A(4,1); A << 1, 3, 2, 4;
+    Mat_<double> B(1,1); B << 2;
+    Mat C;
+    ASSERT_ANY_THROW({
+                        compare(A, B, C, CMP_LT);
+                     });
+}
