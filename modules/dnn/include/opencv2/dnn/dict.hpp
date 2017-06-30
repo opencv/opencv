@@ -46,6 +46,8 @@
 #include <map>
 #include <ostream>
 
+#include <opencv2/dnn/dnn.hpp>
+
 namespace cv {
 namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
