@@ -218,7 +218,7 @@ int cv::waitKey(int delay)
 {
     CV_TRACE_FUNCTION();
     int code = waitKeyEx(delay);
-#ifndef HAVE_WINRT
+#ifndef WINRT
     static int use_legacy = -1;
     if (use_legacy < 0)
     {
