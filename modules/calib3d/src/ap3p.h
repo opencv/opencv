@@ -33,7 +33,7 @@ private:
     double fx, fy, cx, cy;
     double inv_fx, inv_fy, cx_fx, cy_fy;
 public:
-    ap3p() {}
+    ap3p() : fx(0), fy(0), cx(0), cy(0), inv_fx(0), inv_fy(0), cx_fx(0), cy_fy(0) {}
 
     ap3p(double fx, double fy, double cx, double cy);
 

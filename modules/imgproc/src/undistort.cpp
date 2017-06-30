@@ -149,6 +149,14 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
         double _x = i*ir[1] + ir[2], _y = i*ir[4] + ir[5], _w = i*ir[7] + ir[8];
 
         int j = 0;
+
+        if (m1type == CV_16SC2)
+            CV_Assert(m1 != NULL && m2 != NULL);
+        else if (m1type == CV_32FC1)
+            CV_Assert(m1f != NULL && m2f != NULL);
+        else
+            CV_Assert(m1 != NULL);
+
 #if CV_AVX2
 if( USE_AVX2 )
 {

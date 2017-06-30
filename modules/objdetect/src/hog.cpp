@@ -3694,23 +3694,31 @@ void HOGDescriptor::readALTModel(String modelfile)
         String eerr("version?");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
+        fclose(modelfl);
+
         throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     if(strcmp(version_buffer,"V6.01")) {
         String eerr("version doesnot match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
+        fclose(modelfl);
+
         throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     /* read version number */
     int version = 0;
     if (!fread (&version,sizeof(int),1,modelfl))
-    { throw Exception(); }
+    {
+        fclose(modelfl);
+        throw Exception();
+    }
     if (version < 200)
     {
         String eerr("version doesnot match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
+        fclose(modelfl);
         throw Exception();
     }
     int kernel_type;
@@ -3729,6 +3737,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         nread=fread(&(coef_const),sizeof(double),1,modelfl);
         int l;
         nread=fread(&l,sizeof(int),1,modelfl);
+        CV_Assert(l >= 0 && l < 0xFFFF);
         char* custom = new char[l];
         nread=fread(custom,sizeof(char),l,modelfl);
         delete[] custom;
@@ -3749,11 +3758,13 @@ void HOGDescriptor::readALTModel(String modelfile)
     detector.clear();
     if(kernel_type == 0) { /* linear kernel */
         /* save linear wts also */
+        CV_Assert(totwords + 1 > 0 && totwords < 0xFFFF);
         double *linearwt = new double[totwords+1];
         int length = totwords;
         nread = fread(linearwt, sizeof(double), totwords + 1, modelfl);
         if(nread != static_cast<size_t>(length) + 1) {
             delete [] linearwt;
+            fclose(modelfl);
             throw Exception();
         }
 
@@ -3764,6 +3775,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         setSVMDetector(detector);
         delete [] linearwt;
     } else {
+        fclose(modelfl);
         throw Exception();
     }
     fclose(modelfl);

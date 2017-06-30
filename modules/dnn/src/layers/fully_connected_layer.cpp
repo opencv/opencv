@@ -119,7 +119,7 @@ public:
     class FullyConnected : public ParallelLoopBody
     {
     public:
-        FullyConnected() {}
+        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX2(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat,
                         Mat& dstMat, const ActivationLayer* activ, int nstripes)

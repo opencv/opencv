@@ -83,7 +83,7 @@ calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
             }
         }
     }
-    else
+    else if (ranges)
     {
         for( i = 0; i < dims; i++ )
         {
@@ -110,6 +110,10 @@ calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
                 }
             }
         }
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Either ranges, either uniform ranges should be provided");
     }
 }
 
@@ -938,7 +942,7 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             }
         }
     }
-    else
+    else if (_ranges)
     {
         // non-uniform histogram
         const float* ranges[CV_MAX_DIM];
@@ -979,6 +983,10 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             for( i = 0; i < dims; i++ )
                 ptrs[i] += deltas[i*2 + 1];
         }
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Either ranges, either uniform ranges should be provided");
     }
 }
 
@@ -1457,8 +1465,10 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     if(histdata != hist.data)
         accumulate = false;
 
-    CV_IPP_RUN(nimages == 1 && dims == 1 && channels && channels[0] == 0 && _mask.empty() && images[0].dims <= 2,
-                ipp_calchist(images[0], hist, histSize[0], ranges, uniform, accumulate));
+    CV_IPP_RUN(
+        nimages == 1 && dims == 1 && channels && channels[0] == 0
+            && _mask.empty() && images[0].dims <= 2 && ranges && ranges[0],
+        ipp_calchist(images[0], hist, histSize[0], ranges, uniform, accumulate));
 
     Mat ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
@@ -1537,7 +1547,7 @@ calcSparseHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                 ptrs[i] += deltas[i*2 + 1];
         }
     }
-    else
+    else if (_ranges)
     {
         // non-uniform histogram
         const float* ranges[CV_MAX_DIM];
@@ -1576,6 +1586,10 @@ calcSparseHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             for( i = 0; i < dims; i++ )
                 ptrs[i] += deltas[i*2 + 1];
         }
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Either ranges, either uniform ranges should be provided");
     }
 }
 
@@ -1636,6 +1650,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
         SparseMatIterator it = hist.begin();
         for( i = 0, N = hist.nzcount(); i < N; i++, ++it )
         {
+            CV_Assert(it.ptr != NULL);
             Cv32suf* val = (Cv32suf*)it.ptr;
             val->i = cvRound(val->f);
         }
@@ -1666,6 +1681,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
         SparseMatIterator it = hist.begin();
         for( i = 0, N = hist.nzcount(); i < N; i++, ++it )
         {
+            CV_Assert(it.ptr != NULL);
             Cv32suf* val = (Cv32suf*)it.ptr;
             val->f = (float)val->i;
         }
@@ -1907,7 +1923,7 @@ calcBackProj_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             }
         }
     }
-    else
+    else if (_ranges)
     {
         // non-uniform histogram
         const float* ranges[CV_MAX_DIM];
@@ -1948,6 +1964,10 @@ calcBackProj_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             for( i = 0; i < dims; i++ )
                 ptrs[i] += deltas[i*2 + 1];
         }
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Either ranges, either uniform ranges should be provided");
     }
 }
 
@@ -2153,7 +2173,7 @@ calcSparseBackProj_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas
                 ptrs[i] += deltas[i*2 + 1];
         }
     }
-    else
+    else if (_ranges)
     {
         // non-uniform histogram
         const float* ranges[CV_MAX_DIM];
@@ -2192,6 +2212,10 @@ calcSparseBackProj_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas
             for( i = 0; i < dims; i++ )
                 ptrs[i] += deltas[i*2 + 1];
         }
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Either ranges, either uniform ranges should be provided");
     }
 }
 
@@ -2260,7 +2284,6 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                        dims, hist.hdr->size, ranges,
                        uniform, ptrs, deltas, imsize, uniranges );
     const double* _uniranges = uniform ? &uniranges[0] : 0;
-
     int depth = images[0].depth();
     if( depth == CV_8U )
         calcSparseBackProj_8u(ptrs, deltas, imsize, hist, dims, ranges,
@@ -2702,12 +2725,14 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         std::swap(PH1, PH2);
 
     SparseMatConstIterator it = PH1->begin();
+
     int N1 = (int)PH1->nzcount(), N2 = (int)PH2->nzcount();
 
     if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT) )
     {
         for( i = 0; i < N1; i++, ++it )
         {
+            CV_Assert(it.ptr != NULL);
             float v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2723,6 +2748,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 
         for( i = 0; i < N1; i++, ++it )
         {
+            CV_Assert(it.ptr != NULL);
             double v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             s12 += v1*PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2733,6 +2759,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         it = PH2->begin();
         for( i = 0; i < N2; i++, ++it )
         {
+            CV_Assert(it.ptr != NULL);
             double v2 = it.value<float>();
             s2 += v2;
             s22 += v2*v2;
@@ -2750,6 +2777,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     {
         for( i = 0; i < N1; i++, ++it )
         {
+            CV_Assert(it.ptr != NULL);
             float v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2763,6 +2791,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 
         for( i = 0; i < N1; i++, ++it )
         {
+            CV_Assert(it.ptr != NULL);
             double v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             double v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2772,7 +2801,10 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 
         it = PH2->begin();
         for( i = 0; i < N2; i++, ++it )
+        {
+            CV_Assert(it.ptr != NULL);
             s2 += it.value<float>();
+        }
 
         s1 *= s2;
         s1 = fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
@@ -2782,6 +2814,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     {
         for( i = 0; i < N1; i++, ++it )
         {
+            CV_Assert(it.ptr != NULL);
             double v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             double v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -3444,7 +3477,10 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
         cv::SparseMatConstIterator it = sH.begin();
         int nz = (int)sH.nzcount();
         for( i = 0; i < nz; i++, ++it )
+        {
+            CV_Assert(it.ptr != NULL);
             *(float*)cvPtrND(sparsemat, it.node()->idx, 0, -2) = (float)*(const int*)it.ptr;
+        }
     }
 }
 

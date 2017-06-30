@@ -4486,7 +4486,7 @@ struct RGB2HSV_b
         {
             int b = src[bidx], g = src[1], r = src[bidx^2];
             int h, s, v = b;
-            int vmin = b, diff;
+            int vmin = b;
             int vr, vg;
 
             CV_CALC_MAX_8U( v, g );
@@ -4494,7 +4494,7 @@ struct RGB2HSV_b
             CV_CALC_MIN_8U( vmin, g );
             CV_CALC_MIN_8U( vmin, r );
 
-            diff = v - vmin;
+            uchar diff = saturate_cast<uchar>(v - vmin);
             vr = v == r ? -1 : 0;
             vg = v == g ? -1 : 0;
 
