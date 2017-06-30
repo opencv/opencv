@@ -179,7 +179,7 @@ INSTANTIATE_TEST_CASE_P(AKAZE, DescriptorRotationInvariance,
                         Value(IMAGE_TSUKUBA, AKAZE::create(), AKAZE::create(), 0.99f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DescriptorRotationInvariance,
-                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.002f));
+                        Value(IMAGE_TSUKUBA, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.99f));
 
 /*
  * Descriptor's scale invariance check
@@ -189,4 +189,4 @@ INSTANTIATE_TEST_CASE_P(AKAZE, DescriptorScaleInvariance,
                         Value(IMAGE_BIKES, AKAZE::create(), AKAZE::create(), 0.6f));
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DescriptorScaleInvariance,
-                        Value(IMAGE_BIKES, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.0004f));
+                        Value(IMAGE_BIKES, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.55f));

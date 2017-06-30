@@ -294,6 +294,8 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
     }
   }
 
+  Compute_Determinant_Hessian_Response();
+
   return 0;
 }
 
@@ -307,7 +309,6 @@ void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
   CV_INSTRUMENT_REGION()
 
   kpts.clear();
-  Compute_Determinant_Hessian_Response();
   Find_Scale_Space_Extrema(kpts);
   Do_Subpixel_Refinement(kpts);
 }
