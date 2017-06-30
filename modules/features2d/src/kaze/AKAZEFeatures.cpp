@@ -112,16 +112,18 @@ static inline int getGaussianKernelSize(float sigma) {
 /* ************************************************************************* */
 /**
 * @brief This function computes a scalar non-linear diffusion step
-* @param Ld Base image in the evolution
-* @param c Conductivity image
+* @param Lt Base image in the evolution
+* @param Lf Conductivity image
 * @param Lstep Output image that gives the difference between the current
 * Ld and the next Ld being evolved
+* @param row_begin row where to start
+* @param row_end last row to fill exclusive. the range is [row_begin, row_end).
 * @note Forward Euler Scheme 3x3 stencil
 * The function c is a scalar value that depends on the gradient norm
 * dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
 */
 static inline void
-nld_step_scalar_one_lane(const cv::Mat& Lt, const cv::Mat& Lf, cv::Mat& Lstep, int idx, int skip)
+nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, int row_begin, int row_end)
 {
   CV_INSTRUMENT_REGION()
   /* The labeling scheme for this five star stencil:
@@ -132,7 +134,7 @@ nld_step_scalar_one_lane(const cv::Mat& Lt, const cv::Mat& Lf, cv::Mat& Lstep, i
 
   Lstep.create(Lt.size(), Lt.type());
   const int cols = Lt.cols - 2;
-  int row = idx;
+  int row = row_begin;
 
   const float *lt_a, *lt_c, *lt_b;
   const float *lf_a, *lf_c, *lf_b;
@@ -151,11 +153,12 @@ nld_step_scalar_one_lane(const cv::Mat& Lt, const cv::Mat& Lf, cv::Mat& Lstep, i
                  (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
                  (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]);
     }
-    row += skip;
+    ++row;
   }
 
   // Process the middle rows
-  for (; row < Lt.rows - 1; row += skip)
+  int middle_end = std::min(Lt.rows - 1, row_end);
+  for (; row < middle_end; ++row)
   {
     lt_a = Lt.ptr<float>(row - 1);
     lf_a = Lf.ptr<float>(row - 1);
@@ -189,8 +192,8 @@ nld_step_scalar_one_lane(const cv::Mat& Lt, const cv::Mat& Lf, cv::Mat& Lstep, i
                 (lf_c[cols] + lf_a[cols    ])*(lt_a[cols    ] - lt_c[cols]);
   }
 
-  // Process the bottom row
-  if (row == Lt.rows - 1) {
+  // Process the bottom row (row == Lt.rows - 1)
+  if (row_end == Lt.rows) {
     lt_a = Lt.ptr<float>(row - 1) + 1;  /* Skip the left-most column by +1 */
     lf_a = Lf.ptr<float>(row - 1) + 1;
     lt_c = Lt.ptr<float>(row    ) + 1;
@@ -204,6 +207,24 @@ nld_step_scalar_one_lane(const cv::Mat& Lt, const cv::Mat& Lf, cv::Mat& Lstep, i
     }
   }
 }
+
+class NonLinearScalarDiffusionStep : public ParallelLoopBody
+{
+public:
+  NonLinearScalarDiffusionStep(const Mat& Lt, const Mat& Lf, Mat& Lstep)
+    : Lt_(&Lt), Lf_(&Lf), Lstep_(&Lstep)
+  {}
+
+  void operator()(const Range& range) const
+  {
+    nld_step_scalar_one_lane(*Lt_, *Lf_, *Lstep_, range.start, range.end);
+  }
+
+private:
+  const Mat* Lt_;
+  const Mat* Lf_;
+  Mat* Lstep_;
+};
 
 /**
  * @brief This method creates the nonlinear scale space for a given image
@@ -288,7 +309,9 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
     // Perform Fast Explicit Diffusion on Lt
     std::vector<float> &tsteps = tsteps_[i - 1];
     for (size_t j = 0; j < tsteps.size(); j++) {
-      nld_step_scalar_one_lane(e.Lt, Lflow, Lstep, 0, 1);
+      // Lstep must be preallocated before this parallel loop
+      parallel_for_(Range(0, e.Lt.rows), NonLinearScalarDiffusionStep(e.Lt, Lflow, Lstep),
+        (double)e.Lt.total()/(1 << 16));
       const float step_size = tsteps[j];
       e.Lt += Lstep * (0.5f * step_size);
     }
