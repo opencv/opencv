@@ -123,7 +123,7 @@ static inline int getGaussianKernelSize(float sigma) {
 * dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
 */
 static inline void
-nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, int row_begin, int row_end)
+nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size, int row_begin, int row_end)
 {
   CV_INSTRUMENT_REGION()
   /* The labeling scheme for this five star stencil:
@@ -139,6 +139,7 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, int row_begin
   const float *lt_a, *lt_c, *lt_b;
   const float *lf_a, *lf_c, *lf_b;
   float *dst;
+  float step_r = 0.f;
 
   // Process the top row
   if (row == 0) {
@@ -149,9 +150,10 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, int row_begin
     dst = Lstep.ptr<float>(0) + 1;
 
     for (int j = 0; j < cols; j++) {
-        dst[j] = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-                 (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-                 (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]);
+      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
+               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
+               (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]);
+      dst[j] = step_r * step_size;
     }
     ++row;
   }
@@ -169,9 +171,10 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, int row_begin
     dst = Lstep.ptr<float>(row);
 
     // The left-most column
-    dst[0] = (lf_c[0] + lf_c[1])*(lt_c[1] - lt_c[0]) +
+    step_r = (lf_c[0] + lf_c[1])*(lt_c[1] - lt_c[0]) +
              (lf_c[0] + lf_b[0])*(lt_b[0] - lt_c[0]) +
              (lf_c[0] + lf_a[0])*(lt_a[0] - lt_c[0]);
+    dst[0] = step_r * step_size;
 
     lt_a++; lt_c++; lt_b++;
     lf_a++; lf_c++; lf_b++;
@@ -180,16 +183,18 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, int row_begin
     // The middle columns
     for (int j = 0; j < cols; j++)
     {
-      dst[j] = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
+      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
                (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
                (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]) +
                (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
+      dst[j] = step_r * step_size;
     }
 
     // The right-most column
-    dst[cols] = (lf_c[cols] + lf_c[cols - 1])*(lt_c[cols - 1] - lt_c[cols]) +
-                (lf_c[cols] + lf_b[cols    ])*(lt_b[cols    ] - lt_c[cols]) +
-                (lf_c[cols] + lf_a[cols    ])*(lt_a[cols    ] - lt_c[cols]);
+    step_r = (lf_c[cols] + lf_c[cols - 1])*(lt_c[cols - 1] - lt_c[cols]) +
+             (lf_c[cols] + lf_b[cols    ])*(lt_b[cols    ] - lt_c[cols]) +
+             (lf_c[cols] + lf_a[cols    ])*(lt_a[cols    ] - lt_c[cols]);
+    dst[cols] = step_r * step_size;
   }
 
   // Process the bottom row (row == Lt.rows - 1)
@@ -201,9 +206,10 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, int row_begin
     dst = Lstep.ptr<float>(row) +1;
 
     for (int j = 0; j < cols; j++) {
-        dst[j] = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-                 (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-                 (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
+      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
+               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
+               (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
+      dst[j] = step_r * step_size;
     }
   }
 }
@@ -211,19 +217,20 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, int row_begin
 class NonLinearScalarDiffusionStep : public ParallelLoopBody
 {
 public:
-  NonLinearScalarDiffusionStep(const Mat& Lt, const Mat& Lf, Mat& Lstep)
-    : Lt_(&Lt), Lf_(&Lf), Lstep_(&Lstep)
+  NonLinearScalarDiffusionStep(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size)
+    : Lt_(&Lt), Lf_(&Lf), Lstep_(&Lstep), step_size_(step_size)
   {}
 
   void operator()(const Range& range) const
   {
-    nld_step_scalar_one_lane(*Lt_, *Lf_, *Lstep_, range.start, range.end);
+    nld_step_scalar_one_lane(*Lt_, *Lf_, *Lstep_, step_size_, range.start, range.end);
   }
 
 private:
   const Mat* Lt_;
   const Mat* Lf_;
   Mat* Lstep_;
+  float step_size_;
 };
 
 /**
@@ -310,10 +317,9 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
     std::vector<float> &tsteps = tsteps_[i - 1];
     for (size_t j = 0; j < tsteps.size(); j++) {
       // Lstep must be preallocated before this parallel loop
-      parallel_for_(Range(0, e.Lt.rows), NonLinearScalarDiffusionStep(e.Lt, Lflow, Lstep),
-        (double)e.Lt.total()/(1 << 16));
-      const float step_size = tsteps[j];
-      e.Lt += Lstep * (0.5f * step_size);
+      const float step_size = tsteps[j] * 0.5f;
+      parallel_for_(Range(0, e.Lt.rows), NonLinearScalarDiffusionStep(e.Lt, Lflow, Lstep, step_size));
+      e.Lt += Lstep;
     }
   }
 
