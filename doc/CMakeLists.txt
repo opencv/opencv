@@ -166,7 +166,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
 
   add_custom_target(doxygen
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
-    DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps}
+    DEPENDS copy_js_interactive_tutorials ${doxyfile} ${rootfile} ${bibfile} ${deps}
   )
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
     DESTINATION "${OPENCV_DOC_INSTALL_PATH}"
@@ -178,4 +178,37 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
       DEPENDS doxygen
       COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=docs -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   )
+
+  # js interactive tutorials
+  set(opencv_tutorial_html_dir "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html")
+  set(js_interactive_tutorials_dir "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials/js_interactive_tutorials")
+  set(ocv_js_dir "${CMAKE_BINARY_DIR}/bin")
+  set(ocv_js "opencv.js")
+
+  set(opencv_interactive_tutorials_deps "")
+
+  # make sure the build directory exists
+  file(MAKE_DIRECTORY "${opencv_tutorial_html_dir}")
+
+  # gather and copy specific files for js test
+  file(GLOB_RECURSE js_interactive_html RELATIVE "${js_interactive_tutorials_dir}" "${js_interactive_tutorials_dir}/*")
+  foreach(f ${js_interactive_html})
+    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${f}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${js_interactive_tutorials_dir}/${f}" "${opencv_tutorial_html_dir}/${f}"
+                       DEPENDS "${js_interactive_tutorials_dir}/${f}"
+                       COMMENT "Copying ${f}"
+                      )
+    list(APPEND opencv_interactive_tutorials_deps "${js_interactive_tutorials_dir}/${f}" "${opencv_tutorial_html_dir}/${f}")
+  endforeach()
+
+  # add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${ocv_js}"
+  #                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ocv_js_dir}/${ocv_js}" "${opencv_tutorial_html_dir}/${ocv_js}"
+  #                    DEPENDS "${ocv_js_dir}/${ocv_js}"
+  #                    COMMENT "Copying ${ocv_js}"
+  #                   )
+  # list(APPEND opencv_interactive_tutorials_deps "${opencv_tutorial_html_dir}/${ocv_js}")
+  
+  add_custom_target(copy_js_interactive_tutorials ALL
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/bin/opencv.js" "${opencv_tutorial_html_dir}/opencv.js"
+                    DEPENDS ${opencv_interactive_tutorials_deps})
 endif()

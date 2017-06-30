@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<title>Getting Started with Images</title>
+<head>
+<style>
+canvas {
+    border: 1px solid black;
+}
+</style>
+</head>
+<body>
+	<div id="showcase">
+		<div>
+	        <canvas  id="canvas1"  ></canvas>
+			<canvas  id="canvas2"  ></canvas>
+		</div>
+		<input type="file" id="input" name="file" />
+	</div>
+	<script async src="opencv.js"></script>
+<button onclick="myFunction()">Try it</button>
+<script>
+function myFunction() {
+    var text = document.getElementById("TestCode").value;
+    eval(text);
+}
+var inputElement = document.getElementById("input");
+inputElement.addEventListener("change", handleFiles, false);
+function handleFiles(e) {
+	var canvas = document.getElementById('canvas1');
+	var canvasWidth = 600 ;
+	var canvasHeight = 400 ;
+	var ctx = canvas.getContext('2d');
+	var url = URL.createObjectURL(e.target.files[0]);
+	var img = new Image();
+	img.onload = function() {
+		var scaleFactor=Math.min((canvasWidth/img.width),(canvasHeight/img.height));
+		canvas.width = img.width*scaleFactor ;
+		canvas.height = img.height*scaleFactor ;
+		ctx.drawImage(img,0,0,img.width*scaleFactor,img.height*scaleFactor);
+	}
+	img.src = url;
+}
+</script>
+
+<div id="CodeArea">
+<h2>Input your code</h2>
+<textarea rows="20" cols="80" id="TestCode" wrap="logical">
+var canvas1 = document.getElementById("canvas1");
+var ctx1 = canvas1.getContext('2d');
+var imgData1 = ctx1.getImageData(0,0,canvas1.width, canvas1.height);
+var src = cv.matFromArray(imgData1, cv.CV_8UC4);
+var dst = new cv.Mat();
+cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
+cv.cvtColor(dst, dst, cv.ColorConversionCodes.COLOR_GRAY2RGBA.value, 0);
+var imgData2 = new ImageData(new Uint8ClampedArray(dst.data()), dst.cols, dst.rows);
+var canvas2 = document.getElementById("canvas2");
+var ctx2 = canvas2.getContext("2d");
+ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+canvas2.width = imgData2.width;
+canvas2.height = imgData2.height;
+ctx2.putImageData(imgData2, 0, 0);
+src.delete();
+dst.delete();
+</textarea>
+</div>
+</body>
+</html>
