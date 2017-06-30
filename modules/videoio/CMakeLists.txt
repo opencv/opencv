@@ -256,6 +256,9 @@ endif()
 
 if(MSVC)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
+  if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
+    set_target_properties(${the_module} PROPERTIES VS_DESKTOP_EXTENSIONS_VERSION "${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
+  endif()
 endif()
 
 #stop automatic dependencies propagation for this module
