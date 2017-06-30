@@ -49,7 +49,6 @@
 #endif
 
 #include "opencv2/core/cvdef.h"
-
 #include <cstddef>
 #include <cstring>
 #include <cctype>
@@ -959,8 +958,9 @@ size_t String::find_last_of(const char* s, size_t pos) const
 inline
 String String::toLowerCase() const
 {
+    if (!cstr_)
+        return String();
     String res(cstr_, len_);
-
     for (size_t i = 0; i < len_; ++i)
         res.cstr_[i] = (char) ::tolower(cstr_[i]);
 

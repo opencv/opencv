@@ -328,6 +328,8 @@ static long THDiskFile_readLong(THFile *self, int64 *data, long n)
     {
       int big_endian = !THDiskFile_isLittleEndianCPU();
       int32_t *buffer = (int32_t*)THAlloc(8*n);
+      if (!buffer)
+          THError("can not allocate buffer");
       nread = fread__(buffer, 8, n, dfself->handle);
       long i;
       for(i = nread; i > 0; i--)
@@ -389,6 +391,8 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
         total += TBRS_BSZ;
         p = (char*)THRealloc(p, total);
       }
+      if (p == NULL)
+        THError("read error: failed to allocate buffer");
       pos += fread(p+pos, 1, total-pos, dfself->handle);
       if (pos < total) /* eof? */
       {
@@ -502,9 +506,13 @@ THFile *THDiskFile_new(const char *name, const char *mode, int isQuiet)
   }
 
   self = (THDiskFile*)THAlloc(sizeof(THDiskFile));
+  if (!self)
+      THError("cannot allocate memory for self");
 
   self->handle = handle;
   self->name = (char*)THAlloc(strlen(name)+1);
+  if (!self->name)
+      THError("cannot allocate memory for self->name");
   strcpy(self->name, name);
   self->isNativeEncoding = 1;
   self->longSize = 0;
