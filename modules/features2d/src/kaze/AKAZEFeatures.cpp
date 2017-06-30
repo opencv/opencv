@@ -62,18 +62,16 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
 
     for (int j = 0; j < options_.nsublevels; j++) {
       TEvolution step;
-      Size size(level_width, level_height);
+      step.size = Size(level_width, level_height);
       // TODO: investigate why these 2 need to be explicitly zero
       step.Lx = Mat::zeros(level_height, level_width, CV_32F);
       step.Ly = Mat::zeros(level_height, level_width, CV_32F);
 
-      step.Lxx.create(size, CV_32F);
-      step.Lxy.create(size, CV_32F);
-      step.Lyy.create(size, CV_32F);
-      step.Lt.create(size, CV_32F);
-      step.Ldet.create(size, CV_32F);
-      step.Lflow.create(size, CV_32F);
-      step.Lstep.create(size, CV_32F);
+      step.Lxx.create(step.size, CV_32F);
+      step.Lxy.create(step.size, CV_32F);
+      step.Lyy.create(step.size, CV_32F);
+      step.Lt.create(step.size, CV_32F);
+      step.Ldet.create(step.size, CV_32F);
 
       step.esigma = options_.soffset*pow(2.f, (float)(j) / (float)(options_.nsublevels) + i);
       step.sigma_size = fRound(step.esigma * options_.derivative_factor / power);  // In fact sigma_size only depends on j
@@ -111,6 +109,102 @@ static inline int getGaussianKernelSize(float sigma) {
   return ksize;
 }
 
+/* ************************************************************************* */
+/**
+* @brief This function computes a scalar non-linear diffusion step
+* @param Ld Base image in the evolution
+* @param c Conductivity image
+* @param Lstep Output image that gives the difference between the current
+* Ld and the next Ld being evolved
+* @note Forward Euler Scheme 3x3 stencil
+* The function c is a scalar value that depends on the gradient norm
+* dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
+*/
+static inline void
+nld_step_scalar_one_lane(const cv::Mat& Lt, const cv::Mat& Lf, cv::Mat& Lstep, int idx, int skip)
+{
+  CV_INSTRUMENT_REGION()
+  /* The labeling scheme for this five star stencil:
+   [    a    ]
+   [ -1 c +1 ]
+   [    b    ]
+   */
+
+  Lstep.create(Lt.size(), Lt.type());
+  const int cols = Lt.cols - 2;
+  int row = idx;
+
+  const float *lt_a, *lt_c, *lt_b;
+  const float *lf_a, *lf_c, *lf_b;
+  float *dst;
+
+  // Process the top row
+  if (row == 0) {
+    lt_c = Lt.ptr<float>(0) + 1;  /* Skip the left-most column by +1 */
+    lf_c = Lf.ptr<float>(0) + 1;
+    lt_b = Lt.ptr<float>(1) + 1;
+    lf_b = Lf.ptr<float>(1) + 1;
+    dst = Lstep.ptr<float>(0) + 1;
+
+    for (int j = 0; j < cols; j++) {
+        dst[j] = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
+                 (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
+                 (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]);
+    }
+    row += skip;
+  }
+
+  // Process the middle rows
+  for (; row < Lt.rows - 1; row += skip)
+  {
+    lt_a = Lt.ptr<float>(row - 1);
+    lf_a = Lf.ptr<float>(row - 1);
+    lt_c = Lt.ptr<float>(row    );
+    lf_c = Lf.ptr<float>(row    );
+    lt_b = Lt.ptr<float>(row + 1);
+    lf_b = Lf.ptr<float>(row + 1);
+    dst = Lstep.ptr<float>(row);
+
+    // The left-most column
+    dst[0] = (lf_c[0] + lf_c[1])*(lt_c[1] - lt_c[0]) +
+             (lf_c[0] + lf_b[0])*(lt_b[0] - lt_c[0]) +
+             (lf_c[0] + lf_a[0])*(lt_a[0] - lt_c[0]);
+
+    lt_a++; lt_c++; lt_b++;
+    lf_a++; lf_c++; lf_b++;
+    dst++;
+
+    // The middle columns
+    for (int j = 0; j < cols; j++)
+    {
+      dst[j] = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
+               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
+               (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]) +
+               (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
+    }
+
+    // The right-most column
+    dst[cols] = (lf_c[cols] + lf_c[cols - 1])*(lt_c[cols - 1] - lt_c[cols]) +
+                (lf_c[cols] + lf_b[cols    ])*(lt_b[cols    ] - lt_c[cols]) +
+                (lf_c[cols] + lf_a[cols    ])*(lt_a[cols    ] - lt_c[cols]);
+  }
+
+  // Process the bottom row
+  if (row == Lt.rows - 1) {
+    lt_a = Lt.ptr<float>(row - 1) + 1;  /* Skip the left-most column by +1 */
+    lf_a = Lf.ptr<float>(row - 1) + 1;
+    lt_c = Lt.ptr<float>(row    ) + 1;
+    lf_c = Lf.ptr<float>(row    ) + 1;
+    dst = Lstep.ptr<float>(row) +1;
+
+    for (int j = 0; j < cols; j++) {
+        dst[j] = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
+                 (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
+                 (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
+    }
+  }
+}
+
 /**
  * @brief This method creates the nonlinear scale space for a given image
  * @param img Input image for which the nonlinear scale space needs to be created
@@ -132,50 +226,71 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
   }
 
   // First compute the kcontrast factor
-  options_.kcontrast = compute_k_percentile(img, options_.kcontrast_percentile, 1.0f, options_.kcontrast_nbins, 0, 0);
+  float kcontrast = compute_k_percentile(img, options_.kcontrast_percentile, 1.0f, options_.kcontrast_nbins, 0, 0);
+
+  // temporaries for diffusity computation, to reuse the same memory to improve locality
+  Size base_size = evolution_[0].Lt.size();
+  // buffers
+  Mat Lx_buf (base_size, CV_32F);
+  Mat Ly_buf (base_size, CV_32F);
+  Mat Lflow_buf (base_size, CV_32F);
+  Mat Lstep_buf (base_size, CV_32F);
+  // views pointing to buffers
+  Mat Lx (base_size, CV_32F, Lx_buf.data);
+  Mat Ly (base_size, CV_32F, Ly_buf.data);
+  Mat Lflow (base_size, CV_32F, Lflow_buf.data);
+  Mat Lstep (base_size, CV_32F, Lstep_buf.data);
 
   // Now generate the rest of evolution levels
   for (size_t i = 1; i < evolution_.size(); i++) {
+    TEvolution &e = evolution_[i];
 
-    if (evolution_[i].octave > evolution_[i - 1].octave) {
-      Size half_size = evolution_[i - 1].Lt.size();
-      half_size.width /= 2;
-      half_size.height /= 2;
-      resize(evolution_[i - 1].Lt, evolution_[i].Lt, half_size, 0, 0, INTER_AREA);
-      options_.kcontrast = options_.kcontrast*0.75f;
+    if (e.octave > evolution_[i - 1].octave) {
+      // new octave will be half the size
+      resize(evolution_[i - 1].Lt, e.Lt, e.size, 0, 0, INTER_AREA);
+      kcontrast *= 0.75f;
+
+      // resize temporary views to buffers to prevent reallocation
+      Lx =  Mat(e.size, CV_32F, Lx_buf.data);
+      Ly =  Mat(e.size, CV_32F, Ly_buf.data);
+      Lflow =  Mat(e.size, CV_32F, Lflow_buf.data);
+      Lstep =  Mat(e.size, CV_32F, Lstep_buf.data);
     }
     else {
-      evolution_[i - 1].Lt.copyTo(evolution_[i].Lt);
+      evolution_[i - 1].Lt.copyTo(e.Lt);
     }
 
-    GaussianBlur(evolution_[i].Lt, evolution_[i].Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
+    GaussianBlur(e.Lt, e.Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
 
     // Compute the Gaussian derivatives Lx and Ly
-    Scharr(evolution_[i].Lsmooth, evolution_[i].Lx, CV_32F, 1, 0, 1.0, 0, BORDER_DEFAULT);
-    Scharr(evolution_[i].Lsmooth, evolution_[i].Ly, CV_32F, 0, 1, 1.0, 0, BORDER_DEFAULT);
+    Scharr(e.Lsmooth, Lx, CV_32F, 1, 0, 1.0, 0, BORDER_DEFAULT);
+    Scharr(e.Lsmooth, Ly, CV_32F, 0, 1, 1.0, 0, BORDER_DEFAULT);
 
     // Compute the conductivity equation
     switch (options_.diffusivity) {
       case KAZE::DIFF_PM_G1:
-        pm_g1(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options_.kcontrast);
+        pm_g1(Lx, Ly, Lflow, kcontrast);
       break;
       case KAZE::DIFF_PM_G2:
-        pm_g2(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options_.kcontrast);
+        pm_g2(Lx, Ly, Lflow, kcontrast);
       break;
       case KAZE::DIFF_WEICKERT:
-        weickert_diffusivity(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options_.kcontrast);
+        weickert_diffusivity(Lx, Ly, Lflow, kcontrast);
       break;
       case KAZE::DIFF_CHARBONNIER:
-        charbonnier_diffusivity(evolution_[i].Lx, evolution_[i].Ly, evolution_[i].Lflow, options_.kcontrast);
+        charbonnier_diffusivity(Lx, Ly, Lflow, kcontrast);
       break;
       default:
         CV_Error(options_.diffusivity, "Diffusivity is not supported");
       break;
     }
 
-    // Perform FED n inner steps
-    for (int j = 0; j < nsteps_[i - 1]; j++) {
-      nld_step_scalar(evolution_[i].Lt, evolution_[i].Lflow, evolution_[i].Lstep, tsteps_[i - 1][j]);
+    // Perform Fast Explicit Diffusion on Lt
+    std::vector<float> &tsteps = tsteps_[i - 1];
+    for (size_t j = 0; j < tsteps.size(); j++) {
+      nld_step_scalar_one_lane(e.Lt, Lflow, Lstep, 0, 1);
+      const float step_size = tsteps[j];
+      e.Lt += Lstep * (0.5f * step_size);
     }
   }
 
