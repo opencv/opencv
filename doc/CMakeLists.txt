@@ -202,6 +202,6 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   endforeach()
 
   add_custom_target(copy_js_interactive_tutorials ALL
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/bin/opencv.js" "${opencv_tutorial_html_dir}/opencv.js"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ocv_js_dir}/${ocv_js}" "${opencv_tutorial_html_dir}/${ocv_js}"
                     DEPENDS ${opencv_interactive_tutorials_deps})
 endif()
