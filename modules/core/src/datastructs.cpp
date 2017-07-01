@@ -2882,7 +2882,7 @@ cvGraphRemoveEdgeByPtr( CvGraph* graph, CvGraphVtx* start_vtx, CvGraphVtx* end_v
             break;
     }
 
-    assert( edge != 0 );
+    CV_Assert( edge != 0 );
 
     next_edge = edge->next[ofs];
     if( prev_edge )

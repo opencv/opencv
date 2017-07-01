@@ -1836,7 +1836,9 @@ icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
         assert( src_contour->total == 4 );
         for( i = 0; i < 4; i++ )
         {
-            CvPoint2D32f pt = cvPointTo32f(*(CvPoint*)cvGetSeqElem(src_contour, i));
+            CvPoint * onePoint = (CvPoint*)cvGetSeqElem(src_contour, i);
+            CV_Assert(onePoint != NULL);
+            CvPoint2D32f pt = cvPointTo32f(*onePoint);
             CvCBCorner* corner = &(*out_corners)[quad_count*4 + i];
 
             memset( corner, 0, sizeof(*corner) );
