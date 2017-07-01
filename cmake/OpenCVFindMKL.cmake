@@ -107,7 +107,7 @@ if(${MKL_VERSION_STR} VERSION_GREATER "11.3.0" OR ${MKL_VERSION_STR} VERSION_EQU
         if(MSVC)
             list(APPEND mkl_lib_list mkl_intel_thread libiomp5md)
         else()
-            list(APPEND mkl_lib_list libmkl_gnu_thread)
+            list(APPEND mkl_lib_list mkl_gnu_thread)
         endif()
     else()
         list(APPEND mkl_lib_list mkl_sequential)
