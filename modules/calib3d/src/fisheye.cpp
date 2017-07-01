@@ -1401,7 +1401,8 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         if (check_cond)
         {
             SVD svd(JJ_kk, SVD::NO_UV);
-            CV_Assert(svd.w.at<double>(0) / svd.w.at<double>((int)svd.w.total() - 1) < thresh_cond);
+            if(svd.w.at<double>(0) / svd.w.at<double>((int)svd.w.total() - 1) > thresh_cond )
+                CV_Error( cv::Error::StsInternal, format("CALIB_CHECK_COND - Ill-conditioned matrix for input array %d",image_idx));
         }
         omckk.reshape(3,1).copyTo(omc.getMat().col(image_idx));
         Tckk.reshape(3,1).copyTo(Tc.getMat().col(image_idx));
