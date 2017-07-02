@@ -53,16 +53,6 @@
 namespace cv
 {
 
-template<typename T> static inline Scalar rawToScalar(const T& v)
-{
-    Scalar s;
-    typedef typename DataType<T>::channel_type T1;
-    int i, n = DataType<T>::channels;
-    for( i = 0; i < n; i++ )
-        s.val[i] = ((T1*)&v)[i];
-    return s;
-}
-
 /****************************************************************************************\
 *                                        sum                                             *
 \****************************************************************************************/
@@ -4344,12 +4334,13 @@ int normHamming(const uchar* a, int n)
         result += v_reduce_sum(t);
     }
 #endif // CV_SIMD128
-
+#if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4)
     {
         result += popCountTable[a[i]] + popCountTable[a[i+1]] +
         popCountTable[a[i+2]] + popCountTable[a[i+3]];
     }
+#endif
     for(; i < n; i++)
     {
         result += popCountTable[a[i]];
@@ -4415,12 +4406,13 @@ int normHamming(const uchar* a, const uchar* b, int n)
         result += v_reduce_sum(t);
     }
 #endif // CV_SIMD128
-
+#if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4)
     {
         result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
                 popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
     }
+#endif
     for(; i < n; i++)
     {
         result += popCountTable[a[i] ^ b[i]];
@@ -4463,11 +4455,11 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-    #if CV_ENABLE_UNROLLED
+#if CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
                 tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
-    #endif
+#endif
     for( ; i < n; i++ )
         result += tab[a[i] ^ b[i]];
     return result;
