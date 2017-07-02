@@ -111,6 +111,12 @@ struct VZeroUpperGuard {
 #define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard;
 #endif
 
+#ifdef __CV_AVX_GUARD
+#define CV_AVX_GUARD __CV_AVX_GUARD
+#else
+#define CV_AVX_GUARD
+#endif
+
 #endif // __OPENCV_BUILD
 
 

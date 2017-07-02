@@ -28,6 +28,8 @@ static inline int _mm256_extract_epi32_(__m256i reg, const int i)
 
 int normHamming(const uchar* a, int n)
 {
+    CV_AVX_GUARD;
+
     int i = 0;
     int result = 0;
 #if CV_AVX2
@@ -94,6 +96,8 @@ int normHamming(const uchar* a, int n)
 
 int normHamming(const uchar* a, const uchar* b, int n)
 {
+    CV_AVX_GUARD;
+
     int i = 0;
     int result = 0;
 #if CV_AVX2
