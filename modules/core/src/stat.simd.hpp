@@ -28,7 +28,6 @@ int normHamming(const uchar* a, int n)
     int i = 0;
     int result = 0;
 #if CV_AVX2
-    if(USE_AVX2)
     {
         __m256i _r0 = _mm256_setzero_si256();
         __m256i _0 = _mm256_setzero_si256();
@@ -52,7 +51,6 @@ int normHamming(const uchar* a, int n)
 #endif // CV_AVX2
 
 #if CV_POPCNT
-    if(checkHardwareSupport(CV_CPU_POPCNT))
     {
 #  if defined CV_POPCNT_U64
         for(; i <= n - 8; i += 8)
@@ -68,7 +66,6 @@ int normHamming(const uchar* a, int n)
 #endif // CV_POPCNT
 
 #if CV_SIMD128
-    if(hasSIMD128())
     {
         v_uint32x4 t = v_setzero_u32();
         for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
@@ -97,7 +94,6 @@ int normHamming(const uchar* a, const uchar* b, int n)
     int i = 0;
     int result = 0;
 #if CV_AVX2
-    if(USE_AVX2)
     {
         __m256i _r0 = _mm256_setzero_si256();
         __m256i _0 = _mm256_setzero_si256();
@@ -124,7 +120,6 @@ int normHamming(const uchar* a, const uchar* b, int n)
 #endif // CV_AVX2
 
 #if CV_POPCNT
-    if(checkHardwareSupport(CV_CPU_POPCNT))
     {
 #  if defined CV_POPCNT_U64
         for(; i <= n - 8; i += 8)
@@ -140,7 +135,6 @@ int normHamming(const uchar* a, const uchar* b, int n)
 #endif // CV_POPCNT
 
 #if CV_SIMD128
-    if(hasSIMD128())
     {
         v_uint32x4 t = v_setzero_u32();
         for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
