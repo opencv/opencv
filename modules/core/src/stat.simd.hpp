@@ -5,6 +5,9 @@
 #include "opencv2/core/hal/intrin.hpp"
 
 namespace cv { namespace hal {
+
+extern const uchar popCountTable[256];
+
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 // forward declarations
