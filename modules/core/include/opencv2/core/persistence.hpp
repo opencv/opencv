@@ -474,7 +474,7 @@ template<> CV_EXPORTS void DefaultDeleter<CvFileStorage>::operator ()(CvFileStor
 
 The node is used to store each and every element of the file storage opened for reading. When
 XML/YAML file is read, it is first parsed and stored in the memory as a hierarchical collection of
-nodes. Each node can be a “leaf” that is contain a single number or a string, or be a collection of
+nodes. Each node can be a "leaf" that is contain a single number or a string, or be a collection of
 other nodes. There can be named collections (mappings) where each element has a name and it is
 accessed by a name, and ordered collections (sequences) where elements do not have names but rather
 accessed by index. Type of the file node can be determined using FileNode::type method.
