@@ -13,7 +13,7 @@ We will demonstrate results of this example on the following picture.
 Source Code
 -----------
 
-We will be using snippets from the example application, that can be downloaded [here](https://github.com/opencv/opencv/blob/master/modules/samples/dnn/caffe_googlenet.cpp).
+We will be using snippets from the example application, that can be downloaded [here](https://github.com/opencv/opencv/blob/master/samples/dnn/caffe_googlenet.cpp).
 
 @include dnn/caffe_googlenet.cpp
 
@@ -21,11 +21,11 @@ Explanation
 -----------
 
 -# Firstly, download GoogLeNet model files:
-   [bvlc_googlenet.prototxt  ](https://raw.githubusercontent.com/opencv/opencv/master/modules/samples/data/dnn/bvlc_googlenet.prototxt) and
+   [bvlc_googlenet.prototxt  ](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/bvlc_googlenet.prototxt) and
    [bvlc_googlenet.caffemodel](http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel)
 
    Also you need file with names of [ILSVRC2012](http://image-net.org/challenges/LSVRC/2012/browse-synsets) classes:
-   [synset_words.txt](https://raw.githubusercontent.com/opencv/opencv/master/modules/samples/data/dnn/synset_words.txt).
+   [synset_words.txt](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/synset_words.txt).
 
    Put these files into working dir of this program example.
 
