@@ -81,12 +81,21 @@ If you need a more flexible type, use Mat . The elements of the matrix M are acc
 M(i,j) notation. Most of the common matrix operations (see also @ref MatrixExpressions ) are
 available. To do an operation on Matx that is not implemented, you can easily convert the matrix to
 Mat and backwards:
-@code
+@code{.cpp}
     Matx33f m(1, 2, 3,
               4, 5, 6,
               7, 8, 9);
     cout << sum(Mat(m*m.t())) << endl;
- @endcode
+@endcode
+Except of the plain constructor which takes a list of elements, Matx can be initialized from a C-array:
+@code{.cpp}
+    float values[] = { 1, 2, 3};
+    Matx31f m(values);
+@endcode
+In case if C++ 11 features are avaliable, std::initializer_list can be also used to initizlize Matx:
+@code{.cpp}
+    Matx31f m = { 1, 2, 3};
+@endcode
  */
 template<typename _Tp, int m, int n> class Matx
 {
