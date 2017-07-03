@@ -93,7 +93,7 @@ When you build OpenCV add the following configuration flags:
 Download Caffe model from SqueezeNet repository: [train_val.prototxt](https://github.com/DeepScale/SqueezeNet/blob/master/SqueezeNet_v1.1/train_val.prototxt) and [squeezenet_v1.1.caffemodel](https://github.com/DeepScale/SqueezeNet/blob/master/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel).
 
 Also you need file with names of [ILSVRC2012](http://image-net.org/challenges/LSVRC/2012/browse-synsets) classes:
-[synset_words.txt](https://raw.githubusercontent.com/opencv/opencv/master/modules/samples/data/dnn/synset_words.txt).
+[synset_words.txt](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/dnn/synset_words.txt).
 
 Put these files into working dir of this program example.
 
