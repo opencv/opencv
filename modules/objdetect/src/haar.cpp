@@ -1879,7 +1879,7 @@ icvLoadCascadeCART( const char** input_cascade, int n, CvSize orig_window_size )
                 sscanf( stage, "%d%n", &rects, &dl );
                 stage += dl;
 
-                CV_DbgAssert( rects >= 2 && rects <= CV_HAAR_FEATURE_MAX );
+                CV_Assert( rects >= 2 && rects <= CV_HAAR_FEATURE_MAX );
 
                 for( k = 0; k < rects; k++ )
                 {

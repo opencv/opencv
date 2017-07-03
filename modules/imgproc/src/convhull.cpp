@@ -404,9 +404,6 @@ CV_IMPL CvSeq*
 cvConvexHull2( const CvArr* array, void* hull_storage,
                int orientation, int return_points )
 {
-    union { CvContour* c; CvSeq* s; } hull;
-    hull.s = 0;
-
     CvMat* mat = 0;
     CvContour contour_header;
     CvSeq hull_header;
@@ -427,7 +424,9 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
         ptseq = cvPointSeqFromMat( CV_SEQ_KIND_GENERIC, array, &contour_header, &block );
     }
 
-    if( CV_IS_STORAGE( hull_storage ))
+    bool isStorage = isStorageOrMat(hull_storage);
+
+    if(isStorage)
     {
         if( return_points )
         {
@@ -445,9 +444,6 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     }
     else
     {
-        if( !CV_IS_MAT( hull_storage ))
-            CV_Error(CV_StsBadArg, "Destination must be valid memory storage or matrix");
-
         mat = (CvMat*)hull_storage;
 
         if( (mat->cols != 1 && mat->rows != 1) || !CV_IS_MAT_CONT(mat->type))
@@ -473,10 +469,10 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     int total = ptseq->total;
     if( total == 0 )
     {
-        if( mat )
+        if( !isStorage )
             CV_Error( CV_StsBadSize,
                      "Point sequence can not be empty if the output is matrix" );
-        return hull.s;
+        return 0;
     }
 
     cv::AutoBuffer<double> _ptbuf;
@@ -498,22 +494,18 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     else
         cvSeqPushMulti(hullseq, h0.ptr(), (int)h0.total());
 
-    if( mat )
+    if (isStorage)
+    {
+        return hullseq;
+    }
+    else
     {
         if( mat->rows > mat->cols )
             mat->rows = hullseq->total;
         else
             mat->cols = hullseq->total;
+        return 0;
     }
-    else
-    {
-        hull.s = hullseq;
-        hull.c->rect = cvBoundingRect( ptseq,
-                                       ptseq->header_size < (int)sizeof(CvContour) ||
-                                       &ptseq->flags == &contour_header.flags );
-    }
-
-    return hull.s;
 }
 
 

@@ -257,14 +257,14 @@ static void* opencl_check_fn(int ID)
     const struct DynamicFnEntry* e = NULL;
     if (ID < CUSTOM_FUNCTION_ID)
     {
-        assert(ID >= 0 && ID < (int)(sizeof(opencl_fn_list)/sizeof(opencl_fn_list[0])));
+        CV_Assert(ID >= 0 && ID < (int)(sizeof(opencl_fn_list)/sizeof(opencl_fn_list[0])));
         e = opencl_fn_list[ID];
     }
 #ifdef HAVE_OPENCL_SVM
     else if (ID >= SVM_FUNCTION_ID_START && ID < SVM_FUNCTION_ID_END)
     {
         ID = ID - SVM_FUNCTION_ID_START;
-        assert(ID >= 0 && ID < (int)(sizeof(opencl_svm_fn_list)/sizeof(opencl_svm_fn_list[0])));
+        CV_Assert(ID >= 0 && ID < (int)(sizeof(opencl_svm_fn_list)/sizeof(opencl_svm_fn_list[0])));
         e = opencl_svm_fn_list[ID];
     }
 #endif
