@@ -39,14 +39,14 @@
 //
 //M*/
 
-#ifndef OPENCV_DNN_DNN_DICT_HPP
-#define OPENCV_DNN_DNN_DICT_HPP
-
 #include <opencv2/core.hpp>
 #include <map>
 #include <ostream>
 
 #include <opencv2/dnn/dnn.hpp>
+
+#ifndef OPENCV_DNN_DNN_DICT_HPP
+#define OPENCV_DNN_DNN_DICT_HPP
 
 namespace cv {
 namespace dnn {
@@ -57,14 +57,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 /** @brief This struct stores the scalar value (or array) of one of the following type: double, cv::String or int64.
  *  @todo Maybe int64 is useless because double type exactly stores at least 2^52 integers.
  */
-struct DictValue
+struct CV_EXPORTS_W DictValue
 {
     DictValue(const DictValue &r);
     DictValue(int64 i = 0)      : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
-    DictValue(int i)            : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
+    CV_WRAP DictValue(int i)            : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
     DictValue(unsigned p)       : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = p; }       //!< Constructs integer scalar
-    DictValue(double p)         : type(Param::REAL), pd(new AutoBuffer<double,1>) { (*pd)[0] = p; }     //!< Constructs floating point scalar
-    DictValue(const String &s)  : type(Param::STRING), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< Constructs string scalar
+    CV_WRAP DictValue(double p)         : type(Param::REAL), pd(new AutoBuffer<double,1>) { (*pd)[0] = p; }     //!< Constructs floating point scalar
+    CV_WRAP DictValue(const String &s)  : type(Param::STRING), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< Constructs string scalar
     DictValue(const char *s)    : type(Param::STRING), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< @overload
 
     template<typename TypeIter>
@@ -79,9 +79,13 @@ struct DictValue
 
     int size() const;
 
-    bool isInt() const;
-    bool isString() const;
-    bool isReal() const;
+    CV_WRAP bool isInt() const;
+    CV_WRAP bool isString() const;
+    CV_WRAP bool isReal() const;
+
+    CV_WRAP int getIntValue(int idx = -1) const;
+    CV_WRAP double getRealValue(int idx = -1) const;
+    CV_WRAP String getStringValue(int idx = -1) const;
 
     DictValue &operator=(const DictValue &r);
 

@@ -386,7 +386,7 @@ endif(ANDROID)
 
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable -Wundef)
 
 ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
