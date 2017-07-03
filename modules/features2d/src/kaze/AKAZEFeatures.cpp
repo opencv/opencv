@@ -234,6 +234,65 @@ private:
 };
 
 /**
+ * @brief This function computes a good empirical value for the k contrast factor
+ * given two gradient images, the percentile (0-1), the temporal storage to hold
+ * gradient norms and the histogram bins
+ * @param Lx Horizontal gradient of the input image
+ * @param Ly Vertical gradient of the input image
+ * @param nbins Number of histogram bins
+ * @return k contrast factor
+ */
+static inline float
+compute_kcontrast(const cv::Mat& Lx, const cv::Mat& Ly, float perc, int nbins)
+{
+  CV_INSTRUMENT_REGION()
+
+  CV_Assert(nbins > 2);
+  CV_Assert(!Lx.empty());
+
+  // temporary square roots of dot product
+  Mat modgs (Lx.rows - 2, Lx.cols - 2, CV_32F);
+  const int total = modgs.cols * modgs.rows;
+  float *modg = modgs.ptr<float>();
+
+  for (int i = 1; i < Lx.rows - 1; i++) {
+    const float *lx = Lx.ptr<float>(i) + 1;
+    const float *ly = Ly.ptr<float>(i) + 1;
+    const int cols = Lx.cols - 2;
+
+    for (int j = 0; j < cols; j++)
+        *modg++ = sqrtf(lx[j] * lx[j] + ly[j] * ly[j]);
+  }
+  modg = modgs.ptr<float>();
+
+  // Get the maximum
+  float hmax = *std::max_element(modg, modg + total);
+
+  if (hmax == 0.0f)
+    return 0.03f;  // e.g. a blank image
+
+  // Compute the bin numbers: the value range [0, hmax] -> [0, nbins-1]
+  modgs *= (nbins - 1) / hmax;
+
+  // Count up histogram
+  std::vector<int> hist(nbins, 0);
+  for (int i = 0; i < total; i++)
+    hist[(int)modg[i]]++;
+
+  // Now find the perc of the histogram percentile
+  const int nthreshold = (int)((total - hist[0]) * perc);  // Exclude hist[0] as background
+  int nelements = 0;
+  for (int k = 1; k < nbins; k++) {
+    if (nelements >= nthreshold)
+        return (float)hmax * k / nbins;
+
+    nelements += hist[k];
+  }
+
+  return 0.03f;
+}
+
+/**
  * @brief This method creates the nonlinear scale space for a given image
  * @param img Input image for which the nonlinear scale space needs to be created
  * @return 0 if the nonlinear scale space was created successfully, -1 otherwise
@@ -253,21 +312,15 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
     return 0;
   }
 
-  // First compute the kcontrast factor
-  float kcontrast = compute_k_percentile(img, options_.kcontrast_percentile, 1.0f, options_.kcontrast_nbins, 0, 0);
+  // derivatives, flow and diffusion step
+  Mat Lx, Ly, Lflow, Lstep;
 
-  // temporaries for diffusity computation, to reuse the same memory to improve locality
-  Size base_size = evolution_[0].Lt.size();
-  // buffers
-  Mat Lx_buf (base_size, CV_32F);
-  Mat Ly_buf (base_size, CV_32F);
-  Mat Lflow_buf (base_size, CV_32F);
-  Mat Lstep_buf (base_size, CV_32F);
-  // views pointing to buffers
-  Mat Lx (base_size, CV_32F, Lx_buf.data);
-  Mat Ly (base_size, CV_32F, Ly_buf.data);
-  Mat Lflow (base_size, CV_32F, Lflow_buf.data);
-  Mat Lstep (base_size, CV_32F, Lstep_buf.data);
+  // compute derivatives for computing k contrast, reuse Lflow for gaussian
+  GaussianBlur(img, Lflow, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
+  Scharr(Lflow, Lx, CV_32F, 1, 0, 1, 0, cv::BORDER_DEFAULT);
+  Scharr(Lflow, Ly, CV_32F, 0, 1, 1, 0, cv::BORDER_DEFAULT);
+  // compute the kcontrast factor
+  float kcontrast = compute_kcontrast(Lx, Ly, options_.kcontrast_percentile, options_.kcontrast_nbins);
 
   // Now generate the rest of evolution levels
   for (size_t i = 1; i < evolution_.size(); i++) {
@@ -277,12 +330,6 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
       // new octave will be half the size
       resize(evolution_[i - 1].Lt, e.Lt, e.size, 0, 0, INTER_AREA);
       kcontrast *= 0.75f;
-
-      // resize temporary views to buffers to prevent reallocation
-      Lx =  Mat(e.size, CV_32F, Lx_buf.data);
-      Ly =  Mat(e.size, CV_32F, Ly_buf.data);
-      Lflow =  Mat(e.size, CV_32F, Lflow_buf.data);
-      Lstep =  Mat(e.size, CV_32F, Lstep_buf.data);
     }
     else {
       evolution_[i - 1].Lt.copyTo(e.Lt);
@@ -317,6 +364,7 @@ int AKAZEFeatures::Create_Nonlinear_Scale_Space(const Mat& img)
     std::vector<float> &tsteps = tsteps_[i - 1];
     for (size_t j = 0; j < tsteps.size(); j++) {
       // Lstep must be preallocated before this parallel loop
+      Lstep.create(e.Lt.size(), e.Lt.type());
       const float step_size = tsteps[j] * 0.5f;
       parallel_for_(Range(0, e.Lt.rows), NonLinearScalarDiffusionStep(e.Lt, Lflow, Lstep, step_size));
       e.Lt += Lstep;
