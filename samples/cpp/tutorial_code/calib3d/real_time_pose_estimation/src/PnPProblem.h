@@ -50,7 +50,7 @@ private:
   cv::Mat _P_matrix;
 };
 
-// Functions for Möller–Trumbore intersection algorithm
+// Functions for Möller-Trumbore intersection algorithm
 cv::Point3f CROSS(cv::Point3f v1, cv::Point3f v2);
 double DOT(cv::Point3f v1, cv::Point3f v2);
 cv::Point3f SUB(cv::Point3f v1, cv::Point3f v2);
