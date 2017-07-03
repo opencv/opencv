@@ -1179,7 +1179,7 @@ cvFindNextContour( CvContourScanner scanner )
                         cur = cur->next;
                     }
 
-                    assert( par_info != 0 );
+                    CV_Assert( par_info != 0 );
 
                     /* if current contour is a hole and previous contour is a hole or
                        current contour is external and previous contour is external then
