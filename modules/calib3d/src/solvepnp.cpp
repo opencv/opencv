@@ -249,7 +249,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         ipoints = ipoints0;
 
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
-    CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+    CV_Assert( npoints >= 4 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
 
     CV_Assert(opoints.isContinuous());
     CV_Assert(opoints.depth() == CV_32F || opoints.depth() == CV_64F);
@@ -279,6 +279,31 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         ransac_kernel_method = SOLVEPNP_P3P;
     }
 
+    if( model_points == npoints )
+    {
+        bool result = solvePnP(opoints, ipoints, cameraMatrix, distCoeffs, _rvec, _tvec, useExtrinsicGuess, ransac_kernel_method);
+
+        if(!result)
+        {
+            if( _inliers.needed() )
+                _inliers.release();
+
+            return false;
+        }
+
+        if(_inliers.needed())
+        {
+            _inliers.create(npoints, 1, CV_32S);
+            Mat _local_inliers = _inliers.getMat();
+            for(int i = 0; i < npoints; i++)
+            {
+                _local_inliers.at<int>(i) = i;
+            }
+        }
+
+        return true;
+    }
+
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
     cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, ransac_kernel_method, useExtrinsicGuess, rvec, tvec);
 
@@ -293,26 +318,6 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     int result = createRANSACPointSetRegistrator(cb, model_points,
         param1, param2, param3)->run(opoints, ipoints, _local_model, _mask_local_inliers);
 
-    if( result > 0 )
-    {
-        vector<Point3d> opoints_inliers;
-        vector<Point2d> ipoints_inliers;
-        opoints = opoints.reshape(3);
-        ipoints = ipoints.reshape(2);
-        opoints.convertTo(opoints_inliers, CV_64F);
-        ipoints.convertTo(ipoints_inliers, CV_64F);
-
-        const uchar* mask = _mask_local_inliers.ptr<uchar>();
-        int npoints1 = compressElems(&opoints_inliers[0], mask, 1, npoints);
-        compressElems(&ipoints_inliers[0], mask, 1, npoints);
-
-        opoints_inliers.resize(npoints1);
-        ipoints_inliers.resize(npoints1);
-        result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
-                          distCoeffs, rvec, tvec, false,
-                          (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
-    }
-
     if( result <= 0 || _local_model.rows <= 0)
     {
         _rvec.assign(rvec);    // output rotation vector
@@ -323,10 +328,38 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
         return false;
     }
-    else
+
+    vector<Point3d> opoints_inliers;
+    vector<Point2d> ipoints_inliers;
+    opoints = opoints.reshape(3);
+    ipoints = ipoints.reshape(2);
+    opoints.convertTo(opoints_inliers, CV_64F);
+    ipoints.convertTo(ipoints_inliers, CV_64F);
+
+    const uchar* mask = _mask_local_inliers.ptr<uchar>();
+    int npoints1 = compressElems(&opoints_inliers[0], mask, 1, npoints);
+    compressElems(&ipoints_inliers[0], mask, 1, npoints);
+
+    opoints_inliers.resize(npoints1);
+    ipoints_inliers.resize(npoints1);
+    result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
+                      distCoeffs, rvec, tvec, useExtrinsicGuess,
+                      (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+
+    if( result <= 0 )
     {
         _rvec.assign(_local_model.col(0));    // output rotation vector
         _tvec.assign(_local_model.col(1));    // output translation vector
+
+        if( _inliers.needed() )
+            _inliers.release();
+
+        return false;
+    }
+    else
+    {
+        _rvec.assign(rvec);    // output rotation vector
+        _tvec.assign(tvec);    // output translation vector
     }
 
     if(_inliers.needed())
