@@ -83,7 +83,9 @@ public:
                 uchar* Dstart = D;
                 int sy = std::min(cvFloor(y*ify), ssize.height-1);
                 const uchar* S = src.data + sy*src.step;
+#ifdef CV_ICC
 #pragma unroll(4)
+#endif
                 for(x = 0; x < avxWidth; x += 8)
                 {
                     const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
@@ -106,7 +108,9 @@ public:
                 uchar* Dstart = D;
                 int sy = std::min(cvFloor(y*ify), ssize.height-1);
                 const uchar* S = src.data + sy*src.step;
+#ifdef CV_ICC
 #pragma unroll(4)
+#endif
                 for(x = 0; x < avxWidth; x += 8)
                 {
                     const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
@@ -157,8 +161,8 @@ public:
         const __m256i CV_DECL_ALIGNED(64) shuffle_mask = _mm256_set_epi8(15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0,
                                                                          15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0);
         const __m256i CV_DECL_ALIGNED(64) permute_mask = _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0);
-        const __m256i CV_DECL_ALIGNED(64) shift_shuffle_mask = _mm256_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2,
-                                                                               13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2);
+        //const __m256i CV_DECL_ALIGNED(64) shift_shuffle_mask = _mm256_set_epi8(13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2,
+        //                                                                       13,12,15,14,9,8,11,10,5,4,7,6,1,0,3,2);
         if(((int64)(dst.data + dst.step) & 0x1f) == 0)
         {
             for(y = range.start; y < range.end; y++)
@@ -168,7 +172,9 @@ public:
                 int sy = std::min(cvFloor(y*ify), ssize.height-1);
                 const uchar* S = src.data + sy*src.step;
                 const uchar* S2 = S - 2;
+#ifdef CV_ICC
 #pragma unroll(4)
+#endif
                 for(x = 0; x < avxWidth; x += 16)
                 {
                     const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
@@ -200,7 +206,9 @@ public:
                 int sy = std::min(cvFloor(y*ify), ssize.height-1);
                 const uchar* S = src.data + sy*src.step;
                 const uchar* S2 = S - 2;
+#ifdef CV_ICC
 #pragma unroll(4)
+#endif
                 for(x = 0; x < avxWidth; x += 16)
                 {
                     const __m256i CV_DECL_ALIGNED(64) *addr = (__m256i*)(x_ofs + x);
