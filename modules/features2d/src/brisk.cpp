@@ -745,7 +745,7 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
     int theta;
     if (kp.angle==-1)
     {
-        // don't compute the gradient direction, just assign a rotation of 0°
+        // don't compute the gradient direction, just assign a rotation of 0
         theta = 0;
     }
     else

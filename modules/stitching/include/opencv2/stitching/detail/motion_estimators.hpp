@@ -201,7 +201,7 @@ protected:
     // Threshold to filter out poorly matched image pairs
     double conf_thresh_;
 
-    //Levenberg–Marquardt algorithm termination criteria
+    //Levenberg-Marquardt algorithm termination criteria
     TermCriteria term_criteria_;
 
     // Camera parameters matrix (CV_64F)

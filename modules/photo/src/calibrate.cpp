@@ -120,7 +120,7 @@ public:
                 LDR_SIZE + (int)points.size(), CV_32F);
             Mat B = Mat::zeros(A.rows, 1, CV_32F);
 
-            // include the data−fitting equations
+            // include the data-fitting equations
             int k = 0;
             for(size_t i = 0; i < points.size(); i++) {
                 for(size_t j = 0; j < images.size(); j++) {
