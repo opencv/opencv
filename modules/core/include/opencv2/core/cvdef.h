@@ -357,13 +357,13 @@ Cv64suf;
 /****************************************************************************************\
 *                                    C++ 11                                              *
 \****************************************************************************************/
-#ifndef CV_CXX_11
-#  if __cplusplus >= 201103L || defined(_MSC_VER) && _MSC_VER >= 1600
-#    define CV_CXX_11 1
+#ifndef CV_CXX11
+#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1600)
+#    define CV_CXX11 1
 #  endif
 #else
-#  if CV_CXX_11 == 0
-#    undef CV_CXX_11
+#  if CV_CXX11 == 0
+#    undef CV_CXX11
 #  endif
 #endif
 
@@ -373,7 +373,7 @@ Cv64suf;
 \****************************************************************************************/
 
 #ifndef CV_CXX_MOVE_SEMANTICS
-#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || defined(_MSC_VER) && _MSC_VER >= 1600
+#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || (defined(_MSC_VER) && _MSC_VER >= 1600)
 #    define CV_CXX_MOVE_SEMANTICS 1
 #  elif defined(__clang)
 #    if __has_feature(cxx_rvalue_references)

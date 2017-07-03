@@ -979,7 +979,7 @@ public:
     */
     template<typename _Tp> explicit Mat(const std::vector<_Tp>& vec, bool copyData=false);
 
-#ifdef CV_CXX_11
+#ifdef CV_CXX11
     /** @overload
     */
     template<typename _Tp> explicit Mat(const std::initializer_list<_Tp> list);
@@ -2174,7 +2174,7 @@ public:
     explicit Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
     explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
-#ifdef CV_CXX_11
+#ifdef CV_CXX11
     Mat_(std::initializer_list<_Tp> values);
 #endif
 

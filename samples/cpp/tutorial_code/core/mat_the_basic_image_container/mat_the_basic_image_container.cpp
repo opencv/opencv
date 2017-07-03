@@ -59,7 +59,7 @@ int main(int,char**)
     cout << "C = " << endl << " " << C << endl << endl;
     //! [comma]
     // do the same with initializer_list
-#ifdef CV_CXX_11
+#ifdef CV_CXX11
     //! [list]
     C = (Mat_<double>({0, -1, 0, -1, 5, -1, 0, -1, 0})).reshape(3);
     cout << "C = " << endl << " " << C << endl << endl;

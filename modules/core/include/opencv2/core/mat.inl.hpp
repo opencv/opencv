@@ -570,7 +570,7 @@ Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
         Mat((int)vec.size(), 1, DataType<_Tp>::type, (uchar*)&vec[0]).copyTo(*this);
 }
 
-#ifdef CV_CXX_11
+#ifdef CV_CXX11
 template<typename _Tp> inline
 Mat::Mat(const std::initializer_list<_Tp> list)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)list.size()),
@@ -1585,7 +1585,7 @@ Mat_<_Tp>::Mat_(const std::vector<_Tp>& vec, bool copyData)
     : Mat(vec, copyData)
 {}
 
-#ifdef CV_CXX_11
+#ifdef CV_CXX11
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(std::initializer_list<_Tp> list)
     : Mat(list)
