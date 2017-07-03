@@ -1248,11 +1248,11 @@ inline void   RHO_HEST_REFC::rndSmpl(unsigned  sampleSize,
         /**
          * Selection Sampling:
          *
-         * Algorithm S (Selection sampling technique). To select n records at random from a set of N, where 0 < n ≤ N.
-         * S1. [Initialize.] Set t ← 0, m ← 0. (During this algorithm, m represents the number of records selected so far,
+         * Algorithm S (Selection sampling technique). To select n records at random from a set of N, where 0 < n <= N.
+         * S1. [Initialize.] Set t = 0, m = 0. (During this algorithm, m represents the number of records selected so far,
          *                                      and t is the total number of input records that we have dealt with.)
          * S2. [Generate U.] Generate a random number U, uniformly distributed between zero and one.
-         * S3. [Test.] If (N – t)U ≥ n – m, go to step S5.
+         * S3. [Test.] If (N - t)U >= n - m, go to step S5.
          * S4. [Select.] Select the next record for the sample, and increase m and t by 1. If m < n, go to step S2;
          *               otherwise the sample is complete and the algorithm terminates.
          * S5. [Skip.] Skip the next record (do not include it in the sample), increase t by 1, and go back to step S2.
