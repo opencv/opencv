@@ -46,7 +46,7 @@ Its strength lies that we do not need to make the calculation, we just need to r
 
 Our test case program (and the sample presented here) will do the following: read in a console line
 argument image (that may be either color or gray scale - console line argument too) and apply the
-reduction with the given console line argument integer value. In OpenCV, at the moment they are
+reduction with the given console line argument integer value. In OpenCV, at the moment there are
 three major ways of going through an image pixel by pixel. To make things a little more interesting
 will make the scanning for each image using all of these methods, and print out how long it took.
 
@@ -78,11 +78,11 @@ cout << "Times passed in seconds: " << t << endl;
 @endcode
 
 @anchor tutorial_how_to_scan_images_storing
-How the image matrix is stored in the memory?
----------------------------------------------
+How is the image matrix stored in memory?
+-----------------------------------------
 
 As you could already read in my @ref tutorial_mat_the_basic_image_container tutorial the size of the matrix
-depends of the color system used. More accurately, it depends from the number of channels used. In
+depends on the color system used. More accurately, it depends from the number of channels used. In
 case of a gray scale image we have something like:
 
 ![](tutorial_how_matrix_stored_1.png)
@@ -107,14 +107,14 @@ Therefore, the most efficient method we can recommend for making the assignment 
 @snippet how_to_scan_images.cpp scan-c
 
 Here we basically just acquire a pointer to the start of each row and go through it until it ends.
-In the special case that the matrix is stored in a continues manner we only need to request the
+In the special case that the matrix is stored in a continuous manner we only need to request the
 pointer a single time and go all the way to the end. We need to look out for color images: we have
 three channels so we need to pass through three times more items in each row.
 
 There's another way of this. The *data* data member of a *Mat* object returns the pointer to the
 first row, first column. If this pointer is null you have no valid input in that object. Checking
 this is the simplest method to check if your image loading was a success. In case the storage is
-continues we can use this to go through the whole data pointer. In case of a gray scale image this
+continuous we can use this to go through the whole data pointer. In case of a gray scale image this
 would look like:
 @code{.cpp}
 uchar* p = I.data;
@@ -150,7 +150,7 @@ On-the-fly address calculation with reference returning
 The final method isn't recommended for scanning. It was made to acquire or modify somehow random
 elements in the image. Its basic usage is to specify the row and column number of the item you want
 to access. During our earlier scanning methods you could already observe that is important through
-what type we are looking at the image. It's no different here as you need manually to specify what
+what type we are looking at the image. It's no different here as you need to manually specify what
 type to use at the automatic lookup. You can observe this in case of the gray scale images for the
 following source code (the usage of the + @ref cv::at() function):
 
@@ -164,7 +164,7 @@ nice output message of this on the standard error output stream. Compared to the
 release mode the only difference in using this is that for every element of the image you'll get a
 new row pointer for what we use the C operator[] to acquire the column element.
 
-If you need to multiple lookups using this method for an image it may be troublesome and time
+If you need to do multiple lookups using this method for an image it may be troublesome and time
 consuming to enter the type and the at keyword for each of the accesses. To solve this problem
 OpenCV has a @ref cv::Mat_ data type. It's the same as Mat with the extra need that at definition
 you need to specify the data type through what to look at the data matrix, however in return you can
@@ -177,10 +177,10 @@ to write for the lazy programmer trick.
 The Core Function
 -----------------
 
-This is a bonus method of achieving lookup table modification in an image. Because in image
-processing it's quite common that you want to replace all of a given image value to some other value
-OpenCV has a function that makes the modification without the need from you to write the scanning of
-the image. We use the @ref cv::LUT() function of the core module. First we build a Mat type of the
+This is a bonus method of achieving lookup table modification in an image. In image
+processing it's quite common that you want to modify all of a given image values to some other value.
+OpenCV provides a function for modifying image values, without the need to write the scanning logic
+of the image. We use the @ref cv::LUT() function of the core module. First we build a Mat type of the
 lookup table:
 
 @snippet how_to_scan_images.cpp table-init
@@ -192,8 +192,8 @@ Finally call the function (I is our input image and J the output one):
 Performance Difference
 ----------------------
 
-For the best result compile the program and run it on your own speed. For showing off better the
-differences I've used a quite large (2560 X 1600) image. The performance presented here are for
+For the best result compile the program and run it on your own speed. To make the differences more
+clear, I've used a quite large (2560 X 1600) image. The performance presented here are for
 color images. For a more accurate value I've averaged the value I got from the call of the function
 for hundred times.
 
@@ -205,7 +205,7 @@ On-The-Fly RA   | 93.7878 milliseconds
 LUT function    | 32.5759 milliseconds
 
 We can conclude a couple of things. If possible, use the already made functions of OpenCV (instead
-reinventing these). The fastest method turns out to be the LUT function. This is because the OpenCV
+of reinventing these). The fastest method turns out to be the LUT function. This is because the OpenCV
 library is multi-thread enabled via Intel Threaded Building Blocks. However, if you need to write a
 simple image scan prefer the pointer method. The iterator is a safer bet, however quite slower.
 Using the on-the-fly reference access method for full image scan is the most costly in debug mode.
