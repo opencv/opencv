@@ -73,7 +73,7 @@ double getOrientation(const vector<Point> &pts, Mat &img)
         eigen_vecs[i] = Point2d(pca_analysis.eigenvectors.at<double>(i, 0),
                                 pca_analysis.eigenvectors.at<double>(i, 1));
 
-        eigen_val[i] = pca_analysis.eigenvalues.at<double>(0, i);
+        eigen_val[i] = pca_analysis.eigenvalues.at<double>(i);
     }
 
 //! [pca]
