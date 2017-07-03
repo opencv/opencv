@@ -403,7 +403,7 @@ public:
             Mat(tempCatMap).copyTo(catMap);
         }
 
-        if( varType.at<uchar>(ninputvars) == VAR_CATEGORICAL )
+        if( noutputvars > 0 && varType.at<uchar>(ninputvars) == VAR_CATEGORICAL )
         {
             preprocessCategorical(responses, &normCatResponses, labels, &counters, sortbuf);
             Mat(labels).copyTo(classLabels);
