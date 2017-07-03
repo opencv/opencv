@@ -1734,3 +1734,21 @@ TEST(Mat, regression_8680)
    mat.release();
    ASSERT_EQ(mat.channels(), 2);
 }
+
+#ifdef CV_CXX_11
+
+TEST(Mat_, range_based_for)
+{
+    Mat_<uchar> img = Mat_<uchar>::zeros(3, 3);
+
+    for(auto& pixel : img)
+    {
+        pixel = 1;
+    }
+
+    Mat_<uchar> ref(3, 3);
+    ref.setTo(Scalar(1));
+    ASSERT_DOUBLE_EQ(norm(img, ref), 0.);
+}
+
+#endif
