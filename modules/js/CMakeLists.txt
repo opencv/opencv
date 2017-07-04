@@ -44,6 +44,8 @@ set(bindings_cpp "${CMAKE_CURRENT_BINARY_DIR}/bindings.cpp")
 
 set(scripts_hdr_parser "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
 
+set(JS_HELPER "${CMAKE_CURRENT_SOURCE_DIR}/src/helpers.js")
+
 add_custom_command(
    OUTPUT ${bindings_cpp}
    COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src/embindgen.py" ${scripts_hdr_parser} ${bindings_cpp} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${CMAKE_CURRENT_SOURCE_DIR}/src/core_bindings.cpp"
@@ -52,7 +54,8 @@ add_custom_command(
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates.py
    DEPENDS ${scripts_hdr_parser}
    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
-   DEPENDS ${opencv_hdrs})
+   DEPENDS ${opencv_hdrs}
+   DEPENDS ${JS_HELPER})
 
 add_definitions("-std=c++11")
 
@@ -60,7 +63,7 @@ link_libraries(${OPENCV_MODULE_${the_module}_DEPS})
 
 ocv_add_executable(${the_module} ${bindings_cpp})
 
-set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-s TOTAL_MEMORY=134217728 -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME=\"'cv'\" -s DEMANGLE_SUPPORT=1 -s FORCE_FILESYSTEM=1 --use-preload-plugins --bind")
+set_target_properties(${the_module} PROPERTIES LINK_FLAGS "-s TOTAL_MEMORY=134217728 -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME=\"'cv'\" -s DEMANGLE_SUPPORT=1 -s FORCE_FILESYSTEM=1 --use-preload-plugins --bind --post-js ${JS_HELPER}")
 
 # add UMD wrapper
 set(MODULE_JS_PATH "${OpenCV_BINARY_DIR}/bin/${the_module}.js")
