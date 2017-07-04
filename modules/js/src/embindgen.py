@@ -73,8 +73,9 @@ white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not'
                    'findTransformECC', 'meanShift'],
               'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
               'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
-              'BackgroundSubtractorMOG2': ['apply'],
-              'BackgroundSubtractor': ['apply', 'getBackgroundImage']
+              'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
+              'BackgroundSubtractor': ['apply', 'getBackgroundImage'],
+              'Algorithm': []
               }
 
 # Features to be exported
@@ -783,7 +784,7 @@ class JSWrapperGenerator(object):
             for method_name, method in class_info.methods.iteritems():
                 if method.cname in ignore_list:
                     continue
-                if not method.cname in white_list[method.class_name]:
+                if not method.name in white_list[method.class_name]:
                     continue
                 if method.is_constructor:
                     for variant in method.variants:
