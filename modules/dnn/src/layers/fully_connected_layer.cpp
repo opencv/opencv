@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -54,6 +55,7 @@ class FullyConnectedLayerImpl : public InnerProductLayer
 {
 public:
     enum { VEC_ALIGN = 8 };
+    Ptr<greentea::LibDNNInnerProduct<float>> innerProductOp;
 
     FullyConnectedLayerImpl(const LayerParams& params)
     {
@@ -238,10 +240,64 @@ public:
         bool useAVX2;
     };
 
+    bool forward_ocl(std::vector<Mat*> &input, std::vector<Mat> &output)
+    {
+        const ocl::Device & dev = ocl::Device::getDefault();
+
+        if (!dev.isIntel())
+            return false;
+
+        int axisCan = clamp(axis, input[0]->dims);
+        int numOutput = blobs[0].size[0];
+        int innerSize = blobs[0].size[1];
+        int outerSize = input[0]->total(0, axisCan);
+
+        if (innerProductOp.empty())
+        {
+            greentea::LibDNNInnerProductConfig config;
+            config.num_output = numOutput;
+            config.bias_term = bias;
+            config.M = outerSize;
+            config.K = innerSize;
+
+            innerProductOp = Ptr<greentea::LibDNNInnerProduct<float>>(new greentea::LibDNNInnerProduct<float>(config));
+        }
+
+        UMat weights, biases;
+        weightsMat.copyTo(weights);
+        biasMat.copyTo(biases);
+
+        cl_mem weight_mem = (cl_mem)weights.handle(ACCESS_READ);
+        cl_mem bias_mem = (cl_mem)biases.handle(ACCESS_READ);
+
+        for (size_t i = 0; i < input.size(); i++)
+        {
+            Mat src = input[i]->reshape(1, outerSize);
+            Mat dst = output[i].reshape(1, outerSize);
+
+            UMat srcMat, dstMat;
+            src.copyTo(srcMat);
+            dst.copyTo(dstMat);
+
+            cl_mem in_mem = (cl_mem)srcMat.handle(ACCESS_READ);
+            cl_mem out_mem = (cl_mem)dstMat.handle(ACCESS_WRITE);
+
+            if (!innerProductOp->Forward((float *)in_mem, (float *)weight_mem, (float *)bias_mem, (float *)out_mem))
+                return false;
+
+            dstMat.copyTo(dst);
+        }
+
+        return true;
+    }
+
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (forward_ocl(input, output))
+            return;
 
         int axisCan = clamp(axis, input[0]->dims);
         int outerSize = input[0]->total(0, axisCan);
