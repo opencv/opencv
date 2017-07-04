@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <algorithm>
 #include <stdlib.h>
 using std::max;
@@ -63,6 +64,8 @@ public:
         setParamsFrom(params);
     }
 
+    Ptr<greentea::LibDNNSoftmax<float>> softmaxOp;
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -82,10 +85,49 @@ public:
                backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1;
     }
 
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        const ocl::Device & dev = ocl::Device::getDefault();
+
+        if (!dev.isIntel())
+            return false;
+
+        if (softmaxOp.empty())
+        {
+            greentea::LibDNNSoftmaxConfig config;
+
+            int dims = inputs[0]->dims;
+            config.in_shape.resize(dims);
+            for (int i = 0; i < dims; i++)
+                config.in_shape[i] = inputs[0]->size[i];
+            config.axis = axisRaw;
+            config.channels = inputs[0]->size[axisRaw];
+
+            softmaxOp = Ptr<greentea::LibDNNSoftmax<float>>(new greentea::LibDNNSoftmax<float>(config));
+        }
+
+        UMat inpMat, outMat;
+        inputs[0]->copyTo(inpMat);
+        outputs[0].copyTo(outMat);
+        //outMat.create(outputs[0].size.p[-1], outputs[0].size.p, CV_32F);
+
+        cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
+        cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
+
+        if (!softmaxOp->Forward((float *)in_mem, (float *)out_mem))
+            return false;
+
+        outMat.copyTo(outputs[0]);
+        return true;
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (forward_ocl(inputs, outputs, internals))
+            return;
 
         const Mat &src = *inputs[0];
         Mat &dst = outputs[0];
