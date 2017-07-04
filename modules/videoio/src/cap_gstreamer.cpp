@@ -833,7 +833,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     caps = gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg");
 
-    {
+    if(manualpipeline){
         GstPad* sink_pad = gst_element_get_static_pad(sink, "sink");
         GstCaps* peer_caps = gst_pad_peer_query_caps(sink_pad,NULL);
         if (!gst_caps_can_intersect(caps, peer_caps)) {
