@@ -12,6 +12,8 @@ PERF_TEST_P(feature2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGE
     declare.in(img);
     Mat mask;
     vector<KeyPoint> points;
+    // initialize task scheduler for TBB
+    cv::setNumThreads(cv::getNumberOfCPUs());
 
     TEST_CYCLE() detector->detect(img, points, mask);
 
@@ -32,8 +34,10 @@ PERF_TEST_P(feature2d, extract, testing::Combine(testing::Values(DETECTORS_EXTRA
     declare.in(img);
     Mat mask;
     vector<KeyPoint> points;
-    detector->detect(img, points, mask);
+    // initialize task scheduler for TBB
+    cv::setNumThreads(cv::getNumberOfCPUs());
 
+    detector->detect(img, points, mask);
     EXPECT_GT(points.size(), 20u);
 
     Mat descriptors;
@@ -57,6 +61,8 @@ PERF_TEST_P(feature2d, detectAndExtract, testing::Combine(testing::Values(DETECT
     Mat mask;
     vector<KeyPoint> points;
     Mat descriptors;
+    // initialize task scheduler for TBB
+    cv::setNumThreads(cv::getNumberOfCPUs());
 
     TEST_CYCLE() detector->detectAndCompute(img, mask, points, descriptors, false);
 
