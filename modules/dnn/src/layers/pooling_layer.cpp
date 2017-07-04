@@ -44,6 +44,7 @@
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "op_halide.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <float.h>
 #include <algorithm>
 using std::max;
@@ -81,6 +82,8 @@ public:
         ceilMode = params.get<bool>("ceil_mode", true);
     }
 
+    Ptr<greentea::LibDNNPool<float>> poolOp;
+
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
     {
         CV_Assert(inputs.size() == 1);
@@ -104,10 +107,69 @@ public:
                 type == PoolingLayer::AVE && !pad.width && !pad.height);
     }
 
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        const ocl::Device & dev = ocl::Device::getDefault();
+
+        if (!dev.isIntel())
+            return false;
+
+        if (poolOp.empty())
+        {
+            greentea::LibDNNPoolConfig config;
+
+            config.in_shape = {inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3]};
+            config.out_shape = {outputs[0].size[0], outputs[0].size[1], outputs[0].size[2], outputs[0].size[3]};
+            config.kernel = {kernel.height, kernel.width};
+            config.pad = {pad.height, pad.width};
+            config.stride = {stride.height, stride.width};
+            config.channels = inputs[0]->size[1];
+            config.pool_method = type == MAX ? greentea::LIBDNN_POOLING_METHOD_MAX :
+                                (type == AVE ? greentea::LIBDNN_POOLING_METHOD_AVE :
+                                               greentea::LIBDNN_POOLING_METHOD_STO);
+            poolOp = Ptr<greentea::LibDNNPool<float>>(new greentea::LibDNNPool<float>(config));
+        }
+
+        for (size_t ii = 0; ii < inputs.size(); ii++)
+        {
+            UMat inpMat, outMat, maskMat;
+            cl_mem in_mem, out_mem, mask_mem = NULL;
+
+            inputs[ii]->copyTo(inpMat);
+            in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
+
+            if (type == MAX)
+            {
+                MatSize out_size = outputs[2 * ii].size;
+                outMat.create(out_size.p[-1], out_size.p, CV_32F);
+                out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
+                MatSize mask_size = outputs[2 * ii + 1].size;
+                maskMat.create(mask_size.p[-1], mask_size.p, CV_32F);
+                mask_mem = (cl_mem)maskMat.handle(ACCESS_WRITE);
+            } else {
+                MatSize out_size = outputs[ii].size;
+                outMat.create(out_size.p[-1], out_size.p, CV_32F);
+                out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
+            }
+
+            CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
+
+            if (!poolOp->Forward((float *)in_mem, (float *)out_mem, (float *)mask_mem))
+                return false;
+
+            outMat.copyTo(outputs[ii]);
+        }
+
+        return true;
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (forward_ocl(inputs, outputs, internals))
+            return;
 
         for (size_t ii = 0; ii < inputs.size(); ii++)
         {
