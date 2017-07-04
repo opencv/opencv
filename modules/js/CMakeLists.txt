@@ -72,8 +72,9 @@ add_custom_command(
    DEPENDS ${the_module}
    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/make_umd.py")
 
-add_custom_target(${PROJECT_NAME}_final ALL
-                  DEPENDS ${OCV_JS_PATH})
+add_custom_target(${OPENCV_JS} ALL
+                  DEPENDS ${OCV_JS_PATH}
+                  DEPENDS ${the_module})
 
 # test
 set(opencv_test_js_bin_dir "${EXECUTABLE_OUTPUT_PATH}")

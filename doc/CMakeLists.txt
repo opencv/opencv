@@ -201,7 +201,10 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     list(APPEND opencv_interactive_tutorials_deps "${js_interactive_tutorials_dir}/${f}" "${opencv_tutorial_html_dir}/${f}")
   endforeach()
 
-  add_custom_target(copy_js_interactive_tutorials ALL
+  # add dep on opencv.js target
+  list(APPEND opencv_interactive_tutorials_deps ${ocv_js})
+
+  add_custom_target(copy_js_interactive_tutorials
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ocv_js_dir}/${ocv_js}" "${opencv_tutorial_html_dir}/${ocv_js}"
                     DEPENDS ${opencv_interactive_tutorials_deps})
 endif()
