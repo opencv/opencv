@@ -82,7 +82,9 @@ public:
         ceilMode = params.get<bool>("ceil_mode", true);
     }
 
+#ifdef HAVE_OPENCL
     Ptr<greentea::LibDNNPool<float>> poolOp;
+#endif
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
     {
@@ -107,6 +109,7 @@ public:
                 type == PoolingLayer::AVE && !pad.width && !pad.height);
     }
 
+#ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         const ocl::Device & dev = ocl::Device::getDefault();
@@ -162,14 +165,17 @@ public:
 
         return true;
     }
+#endif
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+#ifdef HAVE_OPENCL
         if (forward_ocl(inputs, outputs, internals))
             return;
+#endif
 
         for (size_t ii = 0; ii < inputs.size(); ii++)
         {

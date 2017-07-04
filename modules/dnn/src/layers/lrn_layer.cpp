@@ -79,7 +79,9 @@ public:
         normBySize = params.get<bool>("norm_by_size", true);
     }
 
+#ifdef HAVE_OPENCL
     Ptr<greentea::LibDNNLRN<float>> lrnOp;
+#endif
 
     virtual bool supportBackend(int backendId)
     {
@@ -87,6 +89,7 @@ public:
                backendId == DNN_BACKEND_HALIDE && haveHalide();
     }
 
+#ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         const ocl::Device & dev = ocl::Device::getDefault();
@@ -130,6 +133,7 @@ public:
         outMat.copyTo(outputs[0]);
         return true;
     }
+#endif
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
@@ -138,8 +142,10 @@ public:
 
         CV_Assert(inputs.size() == outputs.size());
 
+#ifdef HAVE_OPENCL
         if (forward_ocl(inputs, outputs, internals))
             return;
+#endif
 
         for (int i = 0; i < inputs.size(); i++)
         {

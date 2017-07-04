@@ -64,7 +64,9 @@ public:
         setParamsFrom(params);
     }
 
+#ifdef HAVE_OPENCL
     Ptr<greentea::LibDNNSoftmax<float>> softmaxOp;
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
@@ -85,6 +87,7 @@ public:
                backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1;
     }
 
+#ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         const ocl::Device & dev = ocl::Device::getDefault();
@@ -120,14 +123,17 @@ public:
         outMat.copyTo(outputs[0]);
         return true;
     }
+#endif
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+#ifdef HAVE_OPENCL
         if (forward_ocl(inputs, outputs, internals))
             return;
+#endif
 
         const Mat &src = *inputs[0];
         Mat &dst = outputs[0];

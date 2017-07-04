@@ -55,7 +55,10 @@ class FullyConnectedLayerImpl : public InnerProductLayer
 {
 public:
     enum { VEC_ALIGN = 8 };
+
+#ifdef HAVE_OPENCL
     Ptr<greentea::LibDNNInnerProduct<float>> innerProductOp;
+#endif
 
     FullyConnectedLayerImpl(const LayerParams& params)
     {
@@ -240,6 +243,7 @@ public:
         bool useAVX2;
     };
 
+#ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &input, std::vector<Mat> &output)
     {
         const ocl::Device & dev = ocl::Device::getDefault();
@@ -290,14 +294,17 @@ public:
 
         return true;
     }
+#endif
 
     void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+#ifdef HAVE_OPENCL
         if (forward_ocl(input, output))
             return;
+#endif
 
         int axisCan = clamp(axis, input[0]->dims);
         int outerSize = input[0]->total(0, axisCan);
