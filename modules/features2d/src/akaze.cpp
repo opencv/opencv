@@ -210,13 +210,10 @@ namespace cv
 
             if( descriptors.needed() )
             {
-                Mat desc;
-                impl.Compute_Descriptors(keypoints, desc);
-                // TODO optimize this copy
-                desc.copyTo(descriptors);
+                impl.Compute_Descriptors(keypoints, descriptors);
 
-                CV_Assert((!desc.rows || desc.cols == descriptorSize()));
-                CV_Assert((!desc.rows || (desc.type() == descriptorType())));
+                CV_Assert((descriptors.empty() || descriptors.cols() == descriptorSize()));
+                CV_Assert((descriptors.empty() || (descriptors.type() == descriptorType())));
             }
         }
 
