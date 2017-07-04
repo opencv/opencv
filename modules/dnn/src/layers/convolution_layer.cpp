@@ -148,6 +148,7 @@ public:
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
     Ptr<BatchNormLayer> bnorm;
+    Ptr<ScaleLayer> scaleLayer;
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
     {
@@ -202,11 +203,23 @@ public:
 
     bool setBatchNorm(const Ptr<BatchNormLayer>& layer )
     {
+        // for now the scale layer followed by the batch norm cannot be fused, only vice versa.
+        if( !scaleLayer.empty() )
+            return false;
         bnorm = layer;
         // we will need to re-compute the weights with the batch
         // norm coefficients taken into account
         weightsMat.release();
         return !bnorm.empty();
+    }
+
+    bool setScale(const Ptr<ScaleLayer>& layer)
+    {
+        scaleLayer = layer;
+        // we will need to re-compute the weights with the scaling
+        // coefficients taken into account
+        weightsMat.release();
+        return !scaleLayer.empty();
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
@@ -678,32 +691,56 @@ public:
                     biasvec[k] = biasMat.at<float>(k);
             }
 
-            if( !bnorm.empty() )
+            if( !bnorm.empty() || !scaleLayer.empty() )
             {
-                Mat scale, shift;
-                bnorm->getScaleShift(scale, shift);
+                Mat scale, shift, scale2, shift2;
+                const float *scaleptr = 0, *shiftptr = 0;
+                const float *scaleptr2 = 0, *shiftptr2 = 0;
 
-                CV_Assert( scale.isContinuous() && shift.isContinuous() &&
-                           scale.type() == CV_32F && shift.type() == CV_32F &&
-                           scale.total() == (size_t)outCn &&
-                           shift.total() == (size_t)outCn );
+                if( !bnorm.empty() )
+                {
+                    bnorm->getScaleShift(scale, shift);
+                    CV_Assert( scale.isContinuous() && shift.isContinuous() &&
+                               scale.type() == CV_32F && shift.type() == CV_32F &&
+                               scale.total() == (size_t)outCn &&
+                               shift.total() == (size_t)outCn );
+                    scaleptr = scale.ptr<float>();
+                    shiftptr = shift.ptr<float>();
+                }
+                if( !scaleLayer.empty() )
+                {
+                    scale2 = scaleLayer->blobs[0];
+                    CV_Assert( scale2.isContinuous() && scale2.type() == CV_32F &&
+                               scale2.total() == (size_t)outCn );
+                    scaleptr2 = scale2.ptr<float>();
+                    if( scaleLayer->hasBias )
+                    {
+                        shift2 = scaleLayer->blobs[1];
+                        CV_Assert( shift2.isContinuous() && shift2.type() == CV_32F &&
+                                   shift2.total() == (size_t)outCn );
+                        shiftptr2 = shift2.ptr<float>();
+                    }
+                }
 
                 for( int i = 0; i < outCn; i++ )
                 {
-                    float s = scale.at<float>(i);
-                    float delta = shift.at<float>(i);
+                    float s1 = scaleptr ? scaleptr[i] : 1.f;
+                    float delta1 = shiftptr ? shiftptr[i] : 0.f;
+                    float s2 = scaleptr2 ? scaleptr2[i] : 1.f;
+                    float delta2 = shiftptr2 ? shiftptr2[i] : 0.f;
                     float* w_i = weightsMat.ptr<float>(i);
                     int j, wcols = weightsMat.cols;
 
                     for( j = 0; j < wcols; j++ )
-                        w_i[j] *= s;
+                        w_i[j] *= (s1*s2);
 
-                    biasvec[i] = biasvec[i]*s + delta;
+                    biasvec[i] = biasvec[i]*(s1*s2) + (delta1*s2 + delta2);
                 }
             }
             biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
         }
 
+        reluslope.clear();
         if( activ )
         {
             Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
