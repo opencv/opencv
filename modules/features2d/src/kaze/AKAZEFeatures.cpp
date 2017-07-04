@@ -254,19 +254,20 @@ compute_kcontrast(const cv::Mat& Lx, const cv::Mat& Ly, float perc, int nbins)
   Mat modgs (Lx.rows - 2, Lx.cols - 2, CV_32F);
   const int total = modgs.cols * modgs.rows;
   float *modg = modgs.ptr<float>();
+  float hmax = 0.0f;
 
   for (int i = 1; i < Lx.rows - 1; i++) {
     const float *lx = Lx.ptr<float>(i) + 1;
     const float *ly = Ly.ptr<float>(i) + 1;
     const int cols = Lx.cols - 2;
 
-    for (int j = 0; j < cols; j++)
-        *modg++ = sqrtf(lx[j] * lx[j] + ly[j] * ly[j]);
+    for (int j = 0; j < cols; j++) {
+      float dist = sqrtf(lx[j] * lx[j] + ly[j] * ly[j]);
+      *modg++ = dist;
+      hmax = std::max(hmax, dist);
+    }
   }
   modg = modgs.ptr<float>();
-
-  // Get the maximum
-  float hmax = *std::max_element(modg, modg + total);
 
   if (hmax == 0.0f)
     return 0.03f;  // e.g. a blank image
