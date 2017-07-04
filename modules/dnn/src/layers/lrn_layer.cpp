@@ -46,6 +46,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
 #include "opencv2/core/hal/hal.hpp"
+#include "opencl_kernels_dnn.hpp"
 #include <algorithm>
 
 namespace cv
@@ -78,10 +79,56 @@ public:
         normBySize = params.get<bool>("norm_by_size", true);
     }
 
+    Ptr<greentea::LibDNNLRN<float>> lrnOp;
+
     virtual bool supportBackend(int backendId)
     {
         return backendId == DNN_BACKEND_DEFAULT ||
                backendId == DNN_BACKEND_HALIDE && haveHalide();
+    }
+
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        const ocl::Device & dev = ocl::Device::getDefault();
+
+        if (!dev.isIntel())
+            return false;
+
+        if (lrnOp.empty())
+        {
+            greentea::LibDNNLRNConfig config;
+            config.lrn_type = type == CHANNEL_NRM ?
+                              greentea::LRNParameter_NormRegion_ACROSS_CHANNELS :
+                              greentea::LRNParameter_NormRegion_WITHIN_CHANNEL;
+
+            CHECK_EQ(size % 2, 1)<< "LRN only supports odd values for local_size";
+            config.local_size = size;
+            config.alpha = alpha;
+            config.beta = beta;
+            config.k = bias;
+            CHECK_EQ(4, inputs[0]->dims) << "Input must have 4 axes, "
+                     << "corresponding to (num, channels, height, width)";
+            config.batch_size = inputs[0]->size[0];
+            config.channels = inputs[0]->size[1];
+            config.height = inputs[0]->size[2];
+            config.width = inputs[0]->size[3];
+            config.norm_by_size = normBySize;
+
+            lrnOp = Ptr<greentea::LibDNNLRN<float>>(new greentea::LibDNNLRN<float>(config));
+        }
+
+        UMat inpMat, outMat;
+        inputs[0]->copyTo(inpMat);
+        outputs[0].copyTo(outMat);
+
+        cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
+        cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
+
+        if (!lrnOp->Forward((float *)in_mem, (float *)out_mem))
+            return false;
+
+        outMat.copyTo(outputs[0]);
+        return true;
     }
 
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
@@ -90,6 +137,10 @@ public:
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_Assert(inputs.size() == outputs.size());
+
+        if (forward_ocl(inputs, outputs, internals))
+            return;
+
         for (int i = 0; i < inputs.size(); i++)
         {
             CV_Assert(inputs[i]->dims == 4);
