@@ -149,6 +149,7 @@ public:
     Ptr<ActivationLayer> activ;
     Ptr<BatchNormLayer> bnorm;
     Ptr<ScaleLayer> scaleLayer;
+    Ptr<greentea::LibDNNConvSpatial<float>> convolutionOp;
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
     {
@@ -636,6 +637,59 @@ public:
         }
     };
 
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        const ocl::Device & dev = ocl::Device::getDefault();
+        int group = inputs[0]->size[1] / blobs[0].size[1];
+
+        if (!dev.isIntel())
+            return false;
+
+        if (convolutionOp.empty())
+        {
+            greentea::LibDNNConvConfig config;
+            config.in_shape = {inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3]};
+            config.out_shape = {outputs[0].size[0], outputs[0].size[1], outputs[0].size[2], outputs[0].size[3]};
+            config.kernel = {kernel.height, kernel.width};
+            config.pad = {pad.height, pad.width};
+            config.stride = {stride.height, stride.width};
+            config.dilation = {dilation.height, dilation.width};
+            config.group = group;
+            config.bias_term = (hasBias()) ? true : false;
+            config.weights_backward = false;
+            config.bias_backward = false;
+
+            convolutionOp = Ptr<greentea::LibDNNConvSpatial<float>>(new greentea::LibDNNConvSpatial<float>(config));
+        }
+
+        UMat weightsMat, biasesMat;
+        blobs[0].copyTo(weightsMat);
+        if (hasBias()) blobs[1].copyTo(biasesMat);
+
+        cl_mem weight_mem = (cl_mem)weightsMat.handle(ACCESS_READ);
+        cl_mem bias_mem = (cl_mem)biasesMat.handle(ACCESS_READ);
+
+        for (size_t ii = 0; ii < outputs.size(); ii++)
+        {
+            UMat inpMat, outMat;
+            inputs[ii]->copyTo(inpMat);
+
+            int dim = outputs[ii].size.p[-1];
+            outMat.create(dim, outputs[ii].size.p, CV_32F);
+
+            int batch_size = inpMat.size[0];
+            cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
+            cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
+
+            if (!convolutionOp->Forward((float *)in_mem, (float *)weight_mem, (float *)bias_mem,
+                                        (float *)out_mem, batch_size))
+               return false;
+
+            outMat.copyTo(outputs[ii]);
+        }
+        return true;
+    }
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -648,6 +702,12 @@ public:
         CV_Assert(inputs.size() == (size_t)1 && inputs[0]->size[1] % blobs[0].size[1] == 0);
         int ngroups = inputs[0]->size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
+
+        if (!bnorm && !activ)
+        {
+            bool ret = forward_ocl(inputs, outputs, internals);
+            if (ret) return;
+        }
 
         int k, outCn = blobs[0].size[0];
 
