@@ -2059,7 +2059,7 @@ void LayerFactory::registerLayer(const String &type, Constuctor constructor)
     CV_TRACE_ARG_VALUE(type, "type", type.c_str());
 
     cv::AutoLock lock(getLayerFactoryMutex());
-    String type_ = type.toLowerCase();
+    String type_ = toLowerCase(type);
     LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type_);
 
     if (it != getLayerFactoryImpl().end() && it->second != constructor)
@@ -2076,7 +2076,7 @@ void LayerFactory::unregisterLayer(const String &type)
     CV_TRACE_ARG_VALUE(type, "type", type.c_str());
 
     cv::AutoLock lock(getLayerFactoryMutex());
-    String type_ = type.toLowerCase();
+    String type_ = toLowerCase(type);
     getLayerFactoryImpl().erase(type_);
 }
 
@@ -2086,7 +2086,7 @@ Ptr<Layer> LayerFactory::createLayerInstance(const String &type, LayerParams& pa
     CV_TRACE_ARG_VALUE(type, "type", type.c_str());
 
     cv::AutoLock lock(getLayerFactoryMutex());
-    String type_ = type.toLowerCase();
+    String type_ = toLowerCase(type);
     LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type_);
 
     if (it != getLayerFactoryImpl().end())

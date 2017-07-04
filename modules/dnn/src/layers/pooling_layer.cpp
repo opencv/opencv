@@ -65,7 +65,7 @@ public:
 
         if (params.has("pool"))
         {
-            String pool = params.get<String>("pool").toLowerCase();
+            String pool = toLowerCase(params.get<String>("pool"));
             if (pool == "max")
                 type = PoolingLayer::MAX;
             else if (pool == "ave")

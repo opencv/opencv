@@ -145,7 +145,7 @@ public:
 
     void getCodeType(const LayerParams &params)
     {
-        String codeTypeString = params.get<String>("code_type").toLowerCase();
+        String codeTypeString = toLowerCase(params.get<String>("code_type"));
         if (codeTypeString == "corner")
             _codeType = caffe::PriorBoxParameter_CodeType_CORNER;
         else if (codeTypeString == "center_size")
