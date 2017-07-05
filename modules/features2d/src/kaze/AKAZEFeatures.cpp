@@ -295,8 +295,8 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
 
   // create first level of the evolution
   int ksize = getGaussianKernelSize(options_.soffset);
-  GaussianBlur(img, evolution_[0].Lt, Size(ksize, ksize), options_.soffset, options_.soffset, BORDER_REPLICATE);
-  evolution_[0].Lsmooth = evolution_[0].Lt;
+  GaussianBlur(img, evolution_[0].Lsmooth, Size(ksize, ksize), options_.soffset, options_.soffset, BORDER_REPLICATE);
+  evolution_[0].Lsmooth.copyTo(evolution_[0].Lt);
 
   if (evolution_.size() == 1) {
     // we don't need to compute kcontrast factor
@@ -305,13 +305,14 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   }
 
   // derivatives, flow and diffusion step
-  UMat Lx, Ly;
+  UMat Lx, Ly, Lsmooth;
   Mat Lflow, Lstep;
 
-  // compute derivatives for computing k contrast, reuse Lflow for gaussian
-  GaussianBlur(img, Lflow, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
-  Scharr(Lflow, Lx, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
-  Scharr(Lflow, Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
+  // compute derivatives for computing k contrast
+  GaussianBlur(img, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
+  Scharr(Lsmooth, Lx, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
+  Scharr(Lsmooth, Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
+  Lsmooth.release();
   // compute the kcontrast factor
   float kcontrast = compute_kcontrast(Lx.getMat(ACCESS_READ), Ly.getMat(ACCESS_READ),
     options_.kcontrast_percentile, options_.kcontrast_nbins);
@@ -395,6 +396,8 @@ public:
 
   void operator()(const Range& range) const
   {
+    UMat Lxx, Lxy, Lyy, Lx, Ly;
+
     for (int i = range.start; i < range.end; i++)
     {
       Evolution &e = (*evolution_)[i];
@@ -411,15 +414,18 @@ public:
       compute_derivative_kernels(DyKx, DyKy, 0, 1, e.sigma_size);
 
       // compute the multiscale derivatives
-      UMat Lxx, Lxy, Lyy;
-      sepFilter2D(e.Lsmooth, e.Lx, CV_32F, DxKx, DxKy);
-      sepFilter2D(e.Lx, Lxx, CV_32F, DxKx, DxKy);
-      sepFilter2D(e.Lx, Lxy, CV_32F, DyKx, DyKy);
-      sepFilter2D(e.Lsmooth, e.Ly, CV_32F, DyKx, DyKy);
-      sepFilter2D(e.Ly, Lyy, CV_32F, DyKx, DyKy);
+      sepFilter2D(e.Lsmooth, Lx, CV_32F, DxKx, DxKy);
+      sepFilter2D(Lx, Lxx, CV_32F, DxKx, DxKy);
+      sepFilter2D(Lx, Lxy, CV_32F, DyKx, DyKy);
+      sepFilter2D(e.Lsmooth, Ly, CV_32F, DyKx, DyKy);
+      sepFilter2D(Ly, Lyy, CV_32F, DyKx, DyKy);
 
       // free Lsmooth to same some space in the pyramid, it is not needed anymore
       e.Lsmooth.release();
+      // since the rest of the akaze is CPU only, we fetch derivatives from GPU for them here
+      Lx.copyTo(e.Lx);
+      Ly.copyTo(e.Ly);
+      // TODO this copy might be worth to optimize when not using ocl
 
       // compute Ldet by Lxx.mul(Lyy) - Lxy.mul(Lxy)
       const int sigma_size_quat = e.sigma_size * e.sigma_size * e.sigma_size * e.sigma_size;

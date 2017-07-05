@@ -29,7 +29,7 @@ struct Evolution
 
   Mat Lx, Ly;           ///< First order spatial derivatives
   Mat Lt;               ///< Evolution image
-  Mat Lsmooth;          ///< Smoothed image
+  UMat Lsmooth;          ///< Smoothed image
   Mat Ldet;             ///< Detector response
 
   Size size;                ///< Size of the layer
