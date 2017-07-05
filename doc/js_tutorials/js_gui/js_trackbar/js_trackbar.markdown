@@ -90,7 +90,7 @@ dst.delete();
         <canvas id="canvas1"></canvas>
         <canvas id="canvas2"></canvas>
     </div>
-    Weight: <input type="range"  id="trackbar" value="50" min="0" max="100" step="1" 
+    Weight: <input type="range"  id="trackbar" disabled="true" value="50" min="0" max="100" step="1" 
     oninput="addWeighted(this.value)"><input type="text" id="weightValue" size="3" value="50"><br>
     <canvas id="canvas3"></canvas>
 </div>
@@ -131,6 +131,7 @@ document.getElementById("opencvjs").onload = function() {
     var value = document.getElementById("trackbar").value;
     var text = document.getElementById("TestCode").value;
     eval(text);
+    document.getElementById("trackbar").disabled = false;
 };
 </script>
 </body>

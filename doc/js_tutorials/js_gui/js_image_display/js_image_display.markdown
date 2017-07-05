@@ -80,7 +80,7 @@ canvas {
 <body>
 <div id="CodeArea">
 <h2>Input your code</h2>
-<button onclick="executeCode()">Try it</button><br>
+<button id="tryIt" disabled="true" onclick="executeCode()">Try it</button><br>
 <textarea rows="11" cols="80" id="TestCode" spellcheck="false">
 var src = cv.imread("canvas1");
 var dst = new cv.Mat();
@@ -100,7 +100,7 @@ dst.delete();
     </div>
     <input type="file" id="input" name="file" />
 </div>
-<script async src="opencv.js"></script>
+<script async src="opencv.js" id ="opencvjs"></script>
 <script>
 function executeCode() {
     var text = document.getElementById("TestCode").value;
@@ -121,6 +121,10 @@ function handleFiles(e) {
     }
     img.src = url;
 }
+
+document.getElementById("opencvjs").onload = function() {
+    document.getElementById("tryIt").disabled = false;
+};
 </script>
 </body>
 \endhtmlonly
