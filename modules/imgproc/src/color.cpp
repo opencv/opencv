@@ -7011,6 +7011,8 @@ struct RGB2Luv_b
                const float* _whitept, bool _srgb )
     : srccn(_srccn), cvt(3, blueIdx, _coeffs, _whitept, _srgb)
     {
+        //0.72033 = 255/(220+134), 96.525 = 134*255/(220+134)
+        //0.9732 = 255/(140+122), 136.259 = 140*255/(140+122)
         #if CV_NEON
         v_scale_inv = vdupq_n_f32(1.f/255.f);
         v_scale = vdupq_n_f32(2.55f);
@@ -7211,6 +7213,8 @@ struct Luv2RGB_b
                const float* _whitept, bool _srgb )
     : dstcn(_dstcn), cvt(3, blueIdx, _coeffs, _whitept, _srgb )
     {
+        // 1.388235294117647 = (220+134)/255
+        // 1.027450980392157 = (140+122)/255
         #if CV_NEON
         v_scale_inv = vdupq_n_f32(100.f/255.f);
         v_coeff1 = vdupq_n_f32(1.388235294117647f);
