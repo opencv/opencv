@@ -6607,6 +6607,7 @@ struct RGB2Luv_f
             for( ; i <= n - 12; i += 12, src += scn * 4 )
             {
                 float32x4x3_t v_src = vld3q_f32(src);
+
                 if( gammaTab )
                 {
                     v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
@@ -6627,6 +6628,15 @@ struct RGB2Luv_f
             for( ; i <= n - 12; i += 12, src += scn * 4 )
             {
                 float32x4x4_t v_src = vld4q_f32(src);
+
+                v_src.val[0] = vmaxq_f32(v_src.val[0], vdupq_n_f32(0));
+                v_src.val[1] = vmaxq_f32(v_src.val[1], vdupq_n_f32(0));
+                v_src.val[2] = vmaxq_f32(v_src.val[2], vdupq_n_f32(0));
+
+                v_src.val[0] = vminq_f32(v_src.val[0], vdupq_n_f32(1));
+                v_src.val[1] = vminq_f32(v_src.val[1], vdupq_n_f32(1));
+                v_src.val[2] = vminq_f32(v_src.val[2], vdupq_n_f32(1));
+
                 if( gammaTab )
                 {
                     v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
@@ -6670,6 +6680,20 @@ struct RGB2Luv_f
                     _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
                 }
 
+                v_r0 = _mm_max_ps(v_r0, _mm_setzero_ps());
+                v_r1 = _mm_max_ps(v_r1, _mm_setzero_ps());
+                v_g0 = _mm_max_ps(v_g0, _mm_setzero_ps());
+                v_g1 = _mm_max_ps(v_g1, _mm_setzero_ps());
+                v_b0 = _mm_max_ps(v_b0, _mm_setzero_ps());
+                v_b1 = _mm_max_ps(v_b1, _mm_setzero_ps());
+
+                v_r0 = _mm_min_ps(v_r0, _mm_set1_ps(1.f));
+                v_r1 = _mm_min_ps(v_r1, _mm_set1_ps(1.f));
+                v_g0 = _mm_min_ps(v_g0, _mm_set1_ps(1.f));
+                v_g1 = _mm_min_ps(v_g1, _mm_set1_ps(1.f));
+                v_b0 = _mm_min_ps(v_b0, _mm_set1_ps(1.f));
+                v_b1 = _mm_min_ps(v_b1, _mm_set1_ps(1.f));
+
                 if ( gammaTab )
                 {
                     __m128 v_gscale = _mm_set1_ps(gscale);
@@ -6704,6 +6728,9 @@ struct RGB2Luv_f
         for( ; i < n; i += 3, src += scn )
         {
             float R = src[0], G = src[1], B = src[2];
+            R = std::min(std::max(R, 0.f), 1.f);
+            G = std::min(std::max(G, 0.f), 1.f);
+            B = std::min(std::max(B, 0.f), 1.f);
             if( gammaTab )
             {
                 R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
