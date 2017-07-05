@@ -643,11 +643,7 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
-        const ocl::Device & dev = ocl::Device::getDefault();
         int group = inputs[0]->size[1] / blobs[0].size[1];
-
-        if (!dev.isIntel())
-            return false;
 
         if (convolutionOp.empty())
         {
@@ -704,10 +700,8 @@ public:
         int ngroups = inputs[0]->size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
 
-#ifdef HAVE_OPENCL
-        if (forward_ocl(inputs, outputs, internals))
-            return;
-#endif
+        CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
+                   forward_ocl(inputs, outputs, internals))
 
         int k, outCn = blobs[0].size[0];
 

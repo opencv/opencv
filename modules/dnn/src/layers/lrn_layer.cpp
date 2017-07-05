@@ -92,11 +92,6 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
-        const ocl::Device & dev = ocl::Device::getDefault();
-
-        if (!dev.isIntel())
-            return false;
-
         if (lrnOp.empty())
         {
             greentea::LibDNNLRNConfig config;
@@ -141,10 +136,8 @@ public:
 
         CV_Assert(inputs.size() == outputs.size());
 
-#ifdef HAVE_OPENCL
-        if (forward_ocl(inputs, outputs, internals))
-            return;
-#endif
+        CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
+                   forward_ocl(inputs, outputs, internals))
 
         for (int i = 0; i < inputs.size(); i++)
         {

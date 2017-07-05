@@ -246,11 +246,6 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &input, std::vector<Mat> &output)
     {
-        const ocl::Device & dev = ocl::Device::getDefault();
-
-        if (!dev.isIntel())
-            return false;
-
         int axisCan = clamp(axis, input[0]->dims);
         int numOutput = blobs[0].size[0];
         int innerSize = blobs[0].size[1];
@@ -296,10 +291,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-#ifdef HAVE_OPENCL
-        if (forward_ocl(input, output))
-            return;
-#endif
+        CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
+                   forward_ocl(input, output))
 
         int axisCan = clamp(axis, input[0]->dims);
         int outerSize = input[0]->total(0, axisCan);

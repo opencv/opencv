@@ -112,11 +112,6 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
-        const ocl::Device & dev = ocl::Device::getDefault();
-
-        if (!dev.isIntel())
-            return false;
-
         if (poolOp.empty())
         {
             greentea::LibDNNPoolConfig config;
@@ -167,10 +162,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-#ifdef HAVE_OPENCL
-        if (forward_ocl(inputs, outputs, internals))
-            return;
-#endif
+        CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
+                   forward_ocl(inputs, outputs, internals))
 
         for (size_t ii = 0; ii < inputs.size(); ii++)
         {
