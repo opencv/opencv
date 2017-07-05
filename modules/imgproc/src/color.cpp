@@ -6495,7 +6495,7 @@ struct RGB2Luv_f
                       coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 1.5f );
         }
 
-        float d = 1.f/(whitept[0] + whitept[1]*15 + whitept[2]*3);
+        float d = 1.f/std::max(whitept[0] + whitept[1]*15 + whitept[2]*3, FLT_EPSILON);
         un = 4*whitept[0]*d*13;
         vn = 9*whitept[1]*d*13;
 
@@ -6755,9 +6755,9 @@ struct Luv2RGB_f
             coeffs[i+blueIdx*3] = _coeffs[i+6];
         }
 
-        float d = 1.f/(whitept[0] + whitept[1]*15 + whitept[2]*3);
-        un = 4*whitept[0]*d;
-        vn = 9*whitept[1]*d;
+        float d = 1.f/std::max(whitept[0] + whitept[1]*15 + whitept[2]*3, FLT_EPSILON);
+        un = 4*13*whitept[0]*d;
+        vn = 9*13*whitept[1]*d;
         #if CV_SSE2
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
         #endif
@@ -6769,23 +6769,42 @@ struct Luv2RGB_f
     void process(__m128& v_l0, __m128& v_l1, __m128& v_u0,
                  __m128& v_u1, __m128& v_v0, __m128& v_v1) const
     {
-        __m128 v_y0 = _mm_mul_ps(_mm_add_ps(v_l0, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
-        __m128 v_y1 = _mm_mul_ps(_mm_add_ps(v_l1, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
-        v_y0 = _mm_mul_ps(_mm_mul_ps(v_y0, v_y0), v_y0);
-        v_y1 = _mm_mul_ps(_mm_mul_ps(v_y1, v_y1), v_y1);
-        __m128 v_d0 = _mm_div_ps(_mm_set1_ps(1.f/13.f), v_l0);
-        __m128 v_d1 = _mm_div_ps(_mm_set1_ps(1.f/13.f), v_l1);
-        v_u0 = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(v_u0, v_d0), _mm_set1_ps(un)), _mm_set1_ps(3.f));
-        v_u1 = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(v_u1, v_d1), _mm_set1_ps(un)), _mm_set1_ps(3.f));
-        v_v0 = _mm_add_ps(_mm_mul_ps(v_v0, v_d0), _mm_set1_ps(vn));
-        v_v1 = _mm_add_ps(_mm_mul_ps(v_v1, v_d1), _mm_set1_ps(vn));
-        __m128 v_iv0 = _mm_div_ps(_mm_set1_ps(0.25f), v_v0);
-        __m128 v_iv1 = _mm_div_ps(_mm_set1_ps(0.25f), v_v1);
-        __m128 v_x0 = _mm_mul_ps(_mm_mul_ps(_mm_set1_ps(3.f), v_u0), v_iv0);
-        __m128 v_x1 = _mm_mul_ps(_mm_mul_ps(_mm_set1_ps(3.f), v_u1), v_iv1);
-        __m128 v_z0 = _mm_mul_ps(_mm_sub_ps(_mm_sub_ps(_mm_set1_ps(12.f), v_u0), _mm_mul_ps(_mm_set1_ps(20.f), v_v0)), v_iv0);
-        __m128 v_z1 = _mm_mul_ps(_mm_sub_ps(_mm_sub_ps(_mm_set1_ps(12.f), v_u1), _mm_mul_ps(_mm_set1_ps(20.f), v_v1)), v_iv1);
+        // L*(3./29.)^3
+        __m128 v_y00 = _mm_mul_ps(v_l0, _mm_set1_ps(1.0f/903.3f));
+        __m128 v_y01 = _mm_mul_ps(v_l1, _mm_set1_ps(1.0f/903.3f));
+        // ((L + 16)/116)^3
+        __m128 v_y10 = _mm_mul_ps(_mm_add_ps(v_l0, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
+        __m128 v_y11 = _mm_mul_ps(_mm_add_ps(v_l1, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
+        v_y10 = _mm_mul_ps(_mm_mul_ps(v_y10, v_y10), v_y10);
+        v_y11 = _mm_mul_ps(_mm_mul_ps(v_y11, v_y11), v_y11);
+        // Y = (L <= 8) ? Y0 : Y1;
+        __m128 v_cmpl0 = _mm_cmplt_ps(v_l0, _mm_set1_ps(8.f));
+        __m128 v_cmpl1 = _mm_cmplt_ps(v_l1, _mm_set1_ps(8.f));
+        v_y00 = _mm_and_ps(v_cmpl0, v_y00);
+        v_y01 = _mm_and_ps(v_cmpl1, v_y01);
+        v_y10 = _mm_andnot_ps(v_cmpl0, v_y10);
+        v_y11 = _mm_andnot_ps(v_cmpl1, v_y11);
+        __m128 v_y0 = _mm_or_ps(v_y00, v_y10);
+        __m128 v_y1 = _mm_or_ps(v_y01, v_y11);
+        // up = 3*(u + L*_un);
+        __m128 v_up0 = _mm_mul_ps(_mm_set1_ps(3.f), _mm_add_ps(v_u0, _mm_mul_ps(v_l0, _mm_set1_ps(un))));
+        __m128 v_up1 = _mm_mul_ps(_mm_set1_ps(3.f), _mm_add_ps(v_u1, _mm_mul_ps(v_l1, _mm_set1_ps(un))));
+        // vp = 0.25/(v + L*_vn);
+        __m128 v_vp0 = _mm_div_ps(_mm_set1_ps(0.25f), _mm_add_ps(v_v0, _mm_mul_ps(v_l0, _mm_set1_ps(vn))));
+        __m128 v_vp1 = _mm_div_ps(_mm_set1_ps(0.25f), _mm_add_ps(v_v1, _mm_mul_ps(v_l1, _mm_set1_ps(vn))));
+        // vp = max(-0.25, min(0.25, vp));
+        v_vp0 = _mm_max_ps(v_vp0, _mm_set1_ps(-0.25f));
+        v_vp1 = _mm_max_ps(v_vp1, _mm_set1_ps(-0.25f));
+        v_vp0 = _mm_min_ps(v_vp0, _mm_set1_ps( 0.25f));
+        v_vp1 = _mm_min_ps(v_vp1, _mm_set1_ps( 0.25f));
+        //X = 3*up*vp; // (*Y) is done later
+        __m128 v_x0 = _mm_mul_ps(_mm_set1_ps(3.f), _mm_mul_ps(v_up0, v_vp0));
+        __m128 v_x1 = _mm_mul_ps(_mm_set1_ps(3.f), _mm_mul_ps(v_up1, v_vp1));
+        //Z = ((12*13*L - up)*vp - 5); // (*Y) is done later
+        __m128 v_z0 = _mm_sub_ps(_mm_mul_ps(_mm_sub_ps(_mm_mul_ps(_mm_set1_ps(12.f*13.f), v_l0), v_up0), v_vp0), _mm_set1_ps(5.f));
+        __m128 v_z1 = _mm_sub_ps(_mm_mul_ps(_mm_sub_ps(_mm_mul_ps(_mm_set1_ps(12.f*13.f), v_l1), v_up1), v_vp1), _mm_set1_ps(5.f));
 
+        // R = (X*C0 + C1 + Z*C2)*Y; // here (*Y) is done
         v_l0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[0]));
         v_l1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[0]));
         v_u0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[3]));
@@ -6902,15 +6921,22 @@ struct Luv2RGB_f
         #endif
         for( ; i < n; i += 3, dst += dcn )
         {
-            float L = src[i], u = src[i+1], v = src[i+2], d, X, Y, Z;
-            Y = (L + 16.f) * (1.f/116.f);
-            Y = Y*Y*Y;
-            d = (1.f/13.f)/L;
-            u = u*d + _un;
-            v = v*d + _vn;
-            float iv = 1.f/v;
-            X = 2.25f * u * Y * iv ;
-            Z = (12 - 3 * u - 20 * v) * Y * 0.25f * iv;
+            float L = src[i], u = src[i+1], v = src[i+2], X, Y, Z;
+            if(L >= 8)
+            {
+                Y = (L + 16.f) * (1.f/116.f);
+                Y = Y*Y*Y;
+            }
+            else
+            {
+                Y = L * (1.0f/903.3f); // L*(3./29.)^3
+            }
+            float up = 3.f*(u + L*_un);
+            float vp = 0.25f/(v + L*_vn);
+            if(vp >  0.25f) vp =  0.25f;
+            if(vp < -0.25f) vp = -0.25f;
+            X = Y*3.f*up*vp;
+            Z = Y*(((12.f*13.f)*L - up)*vp - 5.f);
 
             float R = X*C0 + Y*C1 + Z*C2;
             float G = X*C3 + Y*C4 + Z*C5;
