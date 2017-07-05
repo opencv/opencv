@@ -110,9 +110,8 @@ public:
         }
 
         UMat inpMat, outMat;
-        inputs[0]->copyTo(inpMat);
-        outputs[0].copyTo(outMat);
-        //outMat.create(outputs[0].size.p[-1], outputs[0].size.p, CV_32F);
+        inpMat = inputs[0]->getUMat(ACCESS_READ);
+        outMat = outputs[0].getUMat(ACCESS_WRITE);
 
         cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
         cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
@@ -120,7 +119,6 @@ public:
         if (!softmaxOp->Forward((float *)in_mem, (float *)out_mem))
             return false;
 
-        outMat.copyTo(outputs[0]);
         return true;
     }
 #endif

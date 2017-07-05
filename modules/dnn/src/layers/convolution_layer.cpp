@@ -667,8 +667,8 @@ public:
         }
 
         UMat weightsMat, biasesMat;
-        blobs[0].copyTo(weightsMat);
-        if (hasBias()) blobs[1].copyTo(biasesMat);
+        weightsMat = blobs[0].getUMat(ACCESS_READ);
+        if (hasBias()) biasesMat = blobs[1].getUMat(ACCESS_READ);
 
         cl_mem weight_mem = (cl_mem)weightsMat.handle(ACCESS_READ);
         cl_mem bias_mem = (cl_mem)biasesMat.handle(ACCESS_READ);
@@ -676,10 +676,8 @@ public:
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
             UMat inpMat, outMat;
-            inputs[ii]->copyTo(inpMat);
-
-            int dim = outputs[ii].size.p[-1];
-            outMat.create(dim, outputs[ii].size.p, CV_32F);
+            inpMat = inputs[ii]->getUMat(ACCESS_READ);
+            outMat = outputs[ii].getUMat(ACCESS_WRITE);
 
             int batch_size = inpMat.size[0];
             cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
@@ -688,8 +686,6 @@ public:
             if (!convolutionOp->Forward((float *)in_mem, (float *)weight_mem, (float *)bias_mem,
                                         (float *)out_mem, batch_size))
                return false;
-
-            outMat.copyTo(outputs[ii]);
         }
         return true;
     }
@@ -709,7 +705,7 @@ public:
         CV_Assert(outputs[0].size[1] % ngroups == 0);
 
 #ifdef HAVE_OPENCL
-        if (!forward_ocl(inputs, outputs, internals))
+        if (forward_ocl(inputs, outputs, internals))
             return;
 #endif
 

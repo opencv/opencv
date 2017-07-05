@@ -268,28 +268,23 @@ public:
         }
 
         UMat weights, biases;
-        weightsMat.copyTo(weights);
-        biasMat.copyTo(biases);
+        weights = weightsMat.getUMat(ACCESS_READ);
+        biases = biasMat.getUMat(ACCESS_READ);
 
         cl_mem weight_mem = (cl_mem)weights.handle(ACCESS_READ);
         cl_mem bias_mem = (cl_mem)biases.handle(ACCESS_READ);
 
         for (size_t i = 0; i < input.size(); i++)
         {
-            Mat src = input[i]->reshape(1, outerSize);
-            Mat dst = output[i].reshape(1, outerSize);
-
             UMat srcMat, dstMat;
-            src.copyTo(srcMat);
-            dst.copyTo(dstMat);
+            srcMat = input[i]->getUMat(ACCESS_READ);
+            dstMat = output[i].getUMat(ACCESS_WRITE);
 
             cl_mem in_mem = (cl_mem)srcMat.handle(ACCESS_READ);
             cl_mem out_mem = (cl_mem)dstMat.handle(ACCESS_WRITE);
 
             if (!innerProductOp->Forward((float *)in_mem, (float *)weight_mem, (float *)bias_mem, (float *)out_mem))
                 return false;
-
-            dstMat.copyTo(dst);
         }
 
         return true;
