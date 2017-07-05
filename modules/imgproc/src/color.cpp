@@ -6608,6 +6608,14 @@ struct RGB2Luv_f
             {
                 float32x4x3_t v_src = vld3q_f32(src);
 
+                v_src.val[0] = vmaxq_f32(v_src.val[0], vdupq_n_f32(0));
+                v_src.val[1] = vmaxq_f32(v_src.val[1], vdupq_n_f32(0));
+                v_src.val[2] = vmaxq_f32(v_src.val[2], vdupq_n_f32(0));
+
+                v_src.val[0] = vminq_f32(v_src.val[0], vdupq_n_f32(1));
+                v_src.val[1] = vminq_f32(v_src.val[1], vdupq_n_f32(1));
+                v_src.val[2] = vminq_f32(v_src.val[2], vdupq_n_f32(1));
+
                 if( gammaTab )
                 {
                     v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
@@ -8574,7 +8582,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                                coeffs[j] + coeffs[j + 1] + coeffs[j + 2] < 1.5f*(lab ? LabCbrtTabScale : 1) );
                 }
 
-                float d = 1.f/(_whitept[0] + _whitept[1]*15 + _whitept[2]*3);
+                float d = 1.f/std::max(_whitept[0] + _whitept[1]*15 + _whitept[2]*3, FLT_EPSILON);
                 un = 13*4*_whitept[0]*d;
                 vn = 13*9*_whitept[1]*d;
 
@@ -8641,9 +8649,9 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 coeffs[i+bidx*3] = _coeffs[i+6] * (lab ? _whitept[i] : 1);
             }
 
-            float d = 1.f/(_whitept[0] + _whitept[1]*15 + _whitept[2]*3);
-            un = 4*_whitept[0]*d;
-            vn = 9*_whitept[1]*d;
+            float d = 1.f/std::max(_whitept[0] + _whitept[1]*15 + _whitept[2]*3, FLT_EPSILON);
+            un = 4*13*_whitept[0]*d;
+            vn = 9*13*_whitept[1]*d;
 
             Mat(1, 9, CV_32FC1, coeffs).copyTo(ucoeffs);
         }
