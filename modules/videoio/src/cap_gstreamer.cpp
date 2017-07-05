@@ -168,6 +168,10 @@ protected:
     gint          width;
     gint          height;
     double        fps;
+
+    bool          isPosFramesSupported;
+    bool          isPosFramesEmulated;
+    gint64        emulatedFrameNumber;
 };
 
 /*!
@@ -191,6 +195,10 @@ void CvCapture_GStreamer::init()
     width = -1;
     height = -1;
     fps = -1;
+
+    isPosFramesSupported = false;
+    isPosFramesEmulated = false;
+    emulatedFrameNumber = -1;
 }
 
 /*!
@@ -212,6 +220,9 @@ void CvCapture_GStreamer::close()
     width = -1;
     height = -1;
     fps = -1;
+    isPosFramesSupported = false;
+    isPosFramesEmulated = false;
+    emulatedFrameNumber = -1;
 }
 
 /*!
@@ -252,6 +263,9 @@ bool CvCapture_GStreamer::grabFrame()
 
     if(!buffer)
         return false;
+
+    if (isPosFramesEmulated)
+        emulatedFrameNumber++;
 
     return true;
 }
@@ -407,6 +421,9 @@ void CvCapture_GStreamer::startPipeline()
         CV_ERROR(CV_StsError, "GStreamer: unable to start pipeline\n");
         return;
     }
+
+    if (isPosFramesEmulated)
+        emulatedFrameNumber = 0;
 
     //printf("state now playing\n");
     handleMessage(pipeline);
@@ -847,6 +864,8 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             duration = -1;
         }
 
+        handleMessage(pipeline);
+
         GstPad* pad = gst_element_get_static_pad(sink, "sink");
 #if GST_VERSION_MAJOR == 0
         GstCaps* buffer_caps = gst_pad_get_caps(pad);
@@ -873,9 +892,32 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
         fps = (double)num/(double)denom;
 
-         // GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline")
-        if (file)
-            stopPipeline();
+        {
+            GstFormat format_;
+            gint64 value_ = -1;
+            gboolean status_;
+
+            format_ = GST_FORMAT_DEFAULT;
+#if GST_VERSION_MAJOR == 0
+#define FORMAT &format_
+#else
+#define FORMAT format_
+#endif
+            status_ = gst_element_query_position(pipeline, FORMAT, &value_);
+#undef FORMAT
+            if (!status_ || value_ != 0 || duration < 0)
+            {
+                CV_WARN(cv::format("Cannot query video position: status=%d value=%lld duration=%lld\n",
+                        (int)status_, (long long int)value_, (long long int)duration).c_str());
+                isPosFramesSupported = false;
+                isPosFramesEmulated = true;
+                emulatedFrameNumber = 0;
+            }
+            else
+                isPosFramesSupported = true;
+        }
+
+        GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
     }
 
     __END__;
@@ -914,14 +956,22 @@ double CvCapture_GStreamer::getProperty( int propId ) const
         format = GST_FORMAT_TIME;
         status = gst_element_query_position(sink, FORMAT, &value);
         if(!status) {
+            handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query position of stream");
             return 0;
         }
         return value * 1e-6; // nano seconds to milli seconds
     case CV_CAP_PROP_POS_FRAMES:
+        if (!isPosFramesSupported)
+        {
+            if (isPosFramesEmulated)
+                return emulatedFrameNumber;
+            return 0; // TODO getProperty() "unsupported" value should be changed
+        }
         format = GST_FORMAT_DEFAULT;
         status = gst_element_query_position(sink, FORMAT, &value);
         if(!status) {
+            handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query position of stream");
             return 0;
         }
@@ -930,6 +980,7 @@ double CvCapture_GStreamer::getProperty( int propId ) const
         format = GST_FORMAT_PERCENT;
         status = gst_element_query_position(sink, FORMAT, &value);
         if(!status) {
+            handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query position of stream");
             return 0;
         }
@@ -1013,23 +1064,74 @@ bool CvCapture_GStreamer::setProperty( int propId, double value )
         flags = (GstSeekFlags) (GST_SEEK_FLAG_FLUSH|GST_SEEK_FLAG_ACCURATE);
         if(!gst_element_seek_simple(GST_ELEMENT(pipeline), format,
                                     flags, (gint64) (value * GST_MSECOND))) {
+            handleMessage(pipeline);
             CV_WARN("GStreamer: unable to seek");
+        }
+        else
+        {
+            if (isPosFramesEmulated)
+            {
+                if (value == 0)
+                {
+                    emulatedFrameNumber = 0;
+                    return true;
+                }
+                else
+                {
+                    isPosFramesEmulated = false; // reset frame counter emulation
+                }
+            }
         }
         break;
     case CV_CAP_PROP_POS_FRAMES:
+    {
+        if (!isPosFramesSupported)
+        {
+            if (isPosFramesEmulated)
+            {
+                if (value == 0)
+                {
+                    restartPipeline();
+                    emulatedFrameNumber = 0;
+                    return true;
+                }
+            }
+            return false;
+        }
         format = GST_FORMAT_DEFAULT;
         flags = (GstSeekFlags) (GST_SEEK_FLAG_FLUSH|GST_SEEK_FLAG_ACCURATE);
         if(!gst_element_seek_simple(GST_ELEMENT(pipeline), format,
                                     flags, (gint64) value)) {
+            handleMessage(pipeline);
             CV_WARN("GStreamer: unable to seek");
+            break;
         }
-        break;
+        // wait for status update
+        gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
+        return true;
+    }
     case CV_CAP_PROP_POS_AVI_RATIO:
         format = GST_FORMAT_PERCENT;
         flags = (GstSeekFlags) (GST_SEEK_FLAG_FLUSH|GST_SEEK_FLAG_ACCURATE);
         if(!gst_element_seek_simple(GST_ELEMENT(pipeline), format,
                                     flags, (gint64) (value * GST_FORMAT_PERCENT_MAX))) {
+            handleMessage(pipeline);
             CV_WARN("GStreamer: unable to seek");
+        }
+        else
+        {
+            if (isPosFramesEmulated)
+            {
+                if (value == 0)
+                {
+                    emulatedFrameNumber = 0;
+                    return true;
+                }
+                else
+                {
+                    isPosFramesEmulated = false; // reset frame counter emulation
+                }
+            }
         }
         break;
     case CV_CAP_PROP_FRAME_WIDTH:
@@ -1719,7 +1821,7 @@ void handleMessage(GstElement * pipeline)
     while(gst_bus_have_pending(bus)) {
         msg = gst_bus_pop(bus);
 
-        //printf("Got %s message\n", GST_MESSAGE_TYPE_NAME(msg));
+        //printf("\t\tGot %s message\n", GST_MESSAGE_TYPE_NAME(msg));
 
         if(gst_is_missing_plugin_message(msg))
         {
@@ -1731,13 +1833,15 @@ void handleMessage(GstElement * pipeline)
             case GST_MESSAGE_STATE_CHANGED:
                 GstState oldstate, newstate, pendstate;
                 gst_message_parse_state_changed(msg, &oldstate, &newstate, &pendstate);
-                //fprintf(stderr, "state changed from %s to %s (pending: %s)\n", gst_element_state_get_name(oldstate),
+                //fprintf(stderr, "\t\t%s: state changed from %s to %s (pending: %s)\n",
+                //                gst_element_get_name(GST_MESSAGE_SRC (msg)),
+                //                gst_element_state_get_name(oldstate),
                 //                gst_element_state_get_name(newstate), gst_element_state_get_name(pendstate));
                 break;
             case GST_MESSAGE_ERROR:
                 gst_message_parse_error(msg, &err, &debug);
-                fprintf(stderr, "GStreamer Plugin: Embedded video playback halted; module %s reported: %s\n",
-                                gst_element_get_name(GST_MESSAGE_SRC (msg)), err->message);
+                //fprintf(stderr, "\t\tGStreamer Plugin: Embedded video playback halted; module %s reported: %s\n",
+                //                gst_element_get_name(GST_MESSAGE_SRC (msg)), err->message);
 
                 g_error_free(err);
                 g_free(debug);
@@ -1745,14 +1849,14 @@ void handleMessage(GstElement * pipeline)
                 gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
                 break;
             case GST_MESSAGE_EOS:
-                //fprintf(stderr, "reached the end of the stream.");
+                //fprintf(stderr, "\t\treached the end of the stream.");
                 break;
             case GST_MESSAGE_STREAM_STATUS:
                 gst_message_parse_stream_status(msg,&tp,&elem);
-                //fprintf(stderr, "stream status: elem %s, %i\n", GST_ELEMENT_NAME(elem), tp);
+                //fprintf(stderr, "\t\tstream status: elem %s, %i\n", GST_ELEMENT_NAME(elem), tp);
                 break;
             default:
-                //fprintf(stderr, "unhandled message %s\n",GST_MESSAGE_TYPE_NAME(msg));
+                //fprintf(stderr, "\t\tunhandled message %s\n",GST_MESSAGE_TYPE_NAME(msg));
                 break;
             }
         }
