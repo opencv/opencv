@@ -322,7 +322,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
     constant("CV_16S", CV_16S);
     constant("CV_32S",  CV_32S);
     constant("CV_32F", CV_32F);
-    constant("CV_32F", CV_32F);
+    constant("CV_64F", CV_64F);
 
 
     constant("BORDER_CONSTANT", +cv::BorderTypes::BORDER_CONSTANT);
