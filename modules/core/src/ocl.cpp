@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 #include <list>
 #include <map>
+#include <deque>
 #include <string>
 #include <sstream>
 #include <iostream> // std::cerr
@@ -1983,7 +1984,10 @@ struct Kernel::Impl
             if( u[i] )
             {
                 if( CV_XADD(&u[i]->urefcount, -1) == 1 )
+                {
+                    u[i]->flags |= UMatData::ASYNC_CLEANUP;
                     u[i]->currAllocator->deallocate(u[i]);
+                }
                 u[i] = 0;
             }
         nu = 0;
@@ -3157,6 +3161,10 @@ public:
 
         matStdAllocator = Mat::getDefaultAllocator();
     }
+    ~OpenCLAllocator()
+    {
+        flushCleanupQueue();
+    }
 
     UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step,
             int flags, UMatUsageFlags usageFlags) const
@@ -3193,6 +3201,7 @@ public:
         }
 
         Context& ctx = Context::getDefault();
+        flushCleanupQueue();
 
         int createFlags = 0, flags0 = 0;
         getBestFlags(ctx, flags, usageFlags, createFlags, flags0);
@@ -3246,6 +3255,8 @@ public:
     {
         if(!u)
             return false;
+
+        flushCleanupQueue();
 
         UMatDataAutoLock lock(u);
 
@@ -3381,6 +3392,15 @@ public:
 
         CV_Assert(u->handle != 0);
         CV_Assert(u->mapcount == 0);
+
+        if (u->flags & UMatData::ASYNC_CLEANUP)
+            addToCleanupQueue(u);
+        else
+            deallocate_(u);
+    }
+
+    void deallocate_(UMatData* u) const
+    {
         if(u->tempUMat())
         {
             CV_Assert(u->origdata);
@@ -4184,6 +4204,33 @@ public:
     }
 
     MatAllocator* matStdAllocator;
+
+    mutable cv::Mutex cleanupQueueMutex;
+    mutable std::deque<UMatData*> cleanupQueue;
+
+    void flushCleanupQueue() const
+    {
+        if (!cleanupQueue.empty())
+        {
+            std::deque<UMatData*> q;
+            {
+                cv::AutoLock lock(cleanupQueueMutex);
+                q.swap(cleanupQueue);
+            }
+            for (std::deque<UMatData*>::const_iterator i = q.begin(); i != q.end(); ++i)
+            {
+                deallocate_(*i);
+            }
+        }
+    }
+    void addToCleanupQueue(UMatData* u) const
+    {
+        //TODO: Validation check: CV_Assert(!u->tempUMat());
+        {
+            cv::AutoLock lock(cleanupQueueMutex);
+            cleanupQueue.push_back(u);
+        }
+    }
 };
 
 MatAllocator* getOpenCLAllocator()
