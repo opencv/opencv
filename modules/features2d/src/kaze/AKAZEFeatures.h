@@ -27,7 +27,7 @@ struct Evolution
     sigma_size = 0;
   }
 
-  Mat Lx, Ly;           ///< First order spatial derivatives
+  UMat Lx, Ly;           ///< First order spatial derivatives
   Mat Lt;               ///< Evolution image
   UMat Lsmooth;          ///< Smoothed image
   Mat Ldet;             ///< Detector response
