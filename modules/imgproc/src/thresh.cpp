@@ -269,6 +269,204 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     }
 }
 
+static void
+thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
+{
+	Size roi = _src.size();
+	roi.width *= _src.channels();
+	size_t src_step = _src.step;
+	size_t dst_step = _dst.step;
+
+	if (_src.isContinuous() && _dst.isContinuous())
+	{
+		roi.width *= roi.height;
+		roi.height = 1;
+		src_step = dst_step = roi.width;
+	}
+
+	// HAVE_TEGRA_OPTIMIZATION not supported
+
+	// HAVE_IPP not supported
+
+	int j = 0;
+	const ushort* src = _src.ptr<ushort>();
+	ushort* dst = _dst.ptr<ushort>();
+
+	// CV_SIMD128 not supported
+#if CV_SIMD128
+	bool useSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
+	if (useSIMD)
+	{
+		int i;
+		v_uint16x8 thresh_u = v_setall_u16(thresh);
+		v_uint16x8 maxval16 = v_setall_u16(maxval);
+
+		switch (type)
+		{
+		case THRESH_BINARY:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				for (j = 0; j <= roi.width - 16; j += 16)
+				{
+					v_uint16x8 v0, v1;
+					v0 = v_load(src + j);
+					v1 = v_load(src + j + 8);
+					v0 = thresh_u < v0;
+					v1 = thresh_u < v1;
+					v0 = v0 & maxval16;
+					v1 = v1 & maxval16;
+					v_store(dst + j, v0);
+					v_store(dst + j + 8, v1);
+				}
+			}
+			break;
+
+		case THRESH_BINARY_INV:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				j = 0;
+				for (; j <= roi.width - 16; j += 16)
+				{
+					v_uint16x8 v0, v1;
+					v0 = v_load(src + j);
+					v1 = v_load(src + j + 8);
+					v0 = v0 <= thresh_u;
+					v1 = v1 <= thresh_u;
+					v0 = v0 & maxval16;
+					v1 = v1 & maxval16;
+					v_store(dst + j, v0);
+					v_store(dst + j + 8, v1);
+				}
+
+				for (; j < roi.width; j++)
+					dst[j] = src[j] <= thresh ? maxval : 0;
+			}
+			break;
+
+		case THRESH_TRUNC:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				j = 0;
+				for (; j <= roi.width - 16; j += 16)
+				{
+					v_uint16x8 v0, v1;
+					v0 = v_load(src + j);
+					v1 = v_load(src + j + 8);
+					v0 = v_min(v0, thresh_u);
+					v1 = v_min(v1, thresh_u);
+					v_store(dst + j, v0);
+					v_store(dst + j + 8, v1);
+				}
+
+				for (; j < roi.width; j++)
+					dst[j] = std::min(src[j], thresh);
+			}
+			break;
+
+		case THRESH_TOZERO:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				j = 0;
+				for (; j <= roi.width - 16; j += 16)
+				{
+					v_uint16x8 v0, v1;
+					v0 = v_load(src + j);
+					v1 = v_load(src + j + 8);
+					v0 = (thresh_u < v0) & v0;
+					v1 = (thresh_u < v1) & v1;
+					v_store(dst + j, v0);
+					v_store(dst + j + 8, v1);
+				}
+
+				for (; j < roi.width; j++)
+				{
+					short v = src[j];
+					dst[j] = v > thresh ? v : 0;
+				}
+			}
+			break;
+
+		case THRESH_TOZERO_INV:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				j = 0;
+				for (; j <= roi.width - 16; j += 16)
+				{
+					v_uint16x8 v0, v1;
+					v0 = v_load(src + j);
+					v1 = v_load(src + j + 8);
+					v0 = (v0 <= thresh_u) & v0;
+					v1 = (v1 <= thresh_u) & v1;
+					v_store(dst + j, v0);
+					v_store(dst + j + 8, v1);
+				}
+
+				for (; j < roi.width; j++)
+				{
+					short v = src[j];
+					dst[j] = v <= thresh ? v : 0;
+				}
+			}
+			break;
+		}
+	}
+	else
+#endif
+	{
+		int i;
+		switch (type)
+		{
+		case THRESH_BINARY:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				for (j = 0; j < roi.width; j++)
+					dst[j] = src[j] > thresh ? maxval : 0;
+			}
+			break;
+
+		case THRESH_BINARY_INV:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				for (j = 0; j < roi.width; j++)
+					dst[j] = src[j] <= thresh ? maxval : 0;
+			}
+			break;
+
+		case THRESH_TRUNC:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				for (j = 0; j < roi.width; j++)
+					dst[j] = std::min(src[j], thresh);
+			}
+			break;
+
+		case THRESH_TOZERO:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				for (j = 0; j < roi.width; j++)
+				{
+					short v = src[j];
+					dst[j] = v > thresh ? v : 0;
+				}
+			}
+			break;
+
+		case THRESH_TOZERO_INV:
+			for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+			{
+				for (j = 0; j < roi.width; j++)
+				{
+					short v = src[j];
+					dst[j] = v <= thresh ? v : 0;
+				}
+			}
+			break;
+		default:
+			CV_Error( CV_StsBadArg, "" ); return;
+		}
+	}
+}
+
 
 static void
 thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
@@ -1180,6 +1378,10 @@ public:
         {
             thresh_16s( srcStripe, dstStripe, (short)thresh, (short)maxval, thresholdType );
         }
+		else if( srcStripe.depth() == CV_16U )
+        {
+            thresh_16u( srcStripe, dstStripe, (ushort)thresh, (ushort)maxval, thresholdType );
+        }
         else if( srcStripe.depth() == CV_32F )
         {
             thresh_32f( srcStripe, dstStripe, (float)thresh, (float)maxval, thresholdType );
@@ -1423,6 +1625,34 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         thresh = ithresh;
         maxval = imaxval;
     }
+	else if (src.depth() == CV_16U )
+	{
+		int ithresh = cvFloor(thresh);
+		thresh = ithresh;
+		int imaxval = cvRound(maxval);
+		if (type == THRESH_TRUNC)
+			imaxval = ithresh;
+		imaxval = saturate_cast<short>(imaxval);
+
+		int ushrt_min = 0;
+		if (ithresh < ushrt_min || ithresh >= USHRT_MAX)
+		{
+			if (type == THRESH_BINARY || type == THRESH_BINARY_INV ||
+				((type == THRESH_TRUNC || type == THRESH_TOZERO_INV) && ithresh < ushrt_min) ||
+				(type == THRESH_TOZERO && ithresh >= USHRT_MAX))
+			{
+				int v = type == THRESH_BINARY ? (ithresh >= USHRT_MAX ? 0 : imaxval) :
+					type == THRESH_BINARY_INV ? (ithresh >= USHRT_MAX ? imaxval : 0) :
+					/*type == THRESH_TRUNC ? imaxval :*/ 0;
+				dst.setTo(v);
+			}
+			else
+				src.copyTo(dst);
+			return thresh;
+		}
+		thresh = ithresh;
+		maxval = imaxval;
+	}
     else if( src.depth() == CV_32F )
         ;
     else if( src.depth() == CV_64F )
