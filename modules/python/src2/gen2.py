@@ -11,14 +11,18 @@ else:
 
 ignored_arg_types = ["RNG*"]
 
-gen_template_check_self = Template("""    if(!PyObject_TypeCheck(self, &pyopencv_${name}_Type))
+gen_template_check_self = Template("""    $cname* _self_ = NULL;
+    if(PyObject_TypeCheck(self, &pyopencv_${name}_Type))
+        _self_ = ${amp}((pyopencv_${name}_t*)self)->v${get};
+    if (_self_ == NULL)
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
-    $cname* _self_ = ${amp}((pyopencv_${name}_t*)self)->v${get};
 """)
 
-gen_template_check_self_algo = Template("""    if(!PyObject_TypeCheck(self, &pyopencv_${name}_Type))
+gen_template_check_self_algo = Template("""    $cname* _self_ = NULL;
+    if(PyObject_TypeCheck(self, &pyopencv_${name}_Type))
+        _self_ = dynamic_cast<$cname*>(${amp}((pyopencv_${name}_t*)self)->v.get());
+    if (_self_ == NULL)
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
-    $cname* _self_ = dynamic_cast<$cname*>(${amp}((pyopencv_${name}_t*)self)->v.get());
 """)
 
 gen_template_call_constructor_prelude = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
@@ -200,7 +204,10 @@ static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *clo
 gen_template_get_prop_algo = Template("""
 static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *closure)
 {
-    return pyopencv_from(dynamic_cast<$cname*>(p->v.get())${access}${member});
+    $cname* _self_ = dynamic_cast<$cname*>(p->v.get());
+    if (_self_ == NULL)
+        return failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
+    return pyopencv_from(_self_${access}${member});
 }
 """)
 
@@ -224,7 +231,13 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to(value, dynamic_cast<$cname*>(p->v.get())${access}${member}) ? 0 : -1;
+    $cname* _self_ = dynamic_cast<$cname*>(p->v.get());
+    if (_self_ == NULL)
+    {
+        failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
+        return -1;
+    }
+    return pyopencv_to(value, _self_${access}${member}) ? 0 : -1;
 }
 """)
 
