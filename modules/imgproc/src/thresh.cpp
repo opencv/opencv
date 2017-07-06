@@ -462,7 +462,7 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
 			}
 			break;
 		default:
-			return CV_Error(CV_StsBadArg, "");
+			CV_Error( CV_StsBadArg, "" ); return;
 		}
 	}
 }
