@@ -396,7 +396,7 @@ public:
 
   void operator()(const Range& range) const
   {
-    UMat Lxx, Lxy, Lyy, Lx, Ly;
+    UMat Lxx, Lxy, Lyy;
 
     for (int i = range.start; i < range.end; i++)
     {
@@ -414,18 +414,14 @@ public:
       compute_derivative_kernels(DyKx, DyKy, 0, 1, e.sigma_size);
 
       // compute the multiscale derivatives
-      sepFilter2D(e.Lsmooth, Lx, CV_32F, DxKx, DxKy);
-      sepFilter2D(Lx, Lxx, CV_32F, DxKx, DxKy);
-      sepFilter2D(Lx, Lxy, CV_32F, DyKx, DyKy);
-      sepFilter2D(e.Lsmooth, Ly, CV_32F, DyKx, DyKy);
-      sepFilter2D(Ly, Lyy, CV_32F, DyKx, DyKy);
+      sepFilter2D(e.Lsmooth, e.Lx, CV_32F, DxKx, DxKy);
+      sepFilter2D(e.Lx, Lxx, CV_32F, DxKx, DxKy);
+      sepFilter2D(e.Lx, Lxy, CV_32F, DyKx, DyKy);
+      sepFilter2D(e.Lsmooth, e.Ly, CV_32F, DyKx, DyKy);
+      sepFilter2D(e.Ly, Lyy, CV_32F, DyKx, DyKy);
 
       // free Lsmooth to same some space in the pyramid, it is not needed anymore
       e.Lsmooth.release();
-      // since the rest of the akaze is CPU only, we fetch derivatives from GPU for them here
-      Lx.copyTo(e.Lx);
-      Ly.copyTo(e.Ly);
-      // TODO this copy might be worth to optimize when not using ocl
 
       // compute Ldet by Lxx.mul(Lyy) - Lxy.mul(Lxy)
       const int sigma_size_quat = e.sigma_size * e.sigma_size * e.sigma_size * e.sigma_size;
@@ -452,8 +448,12 @@ private:
 void AKAZEFeatures::Compute_Determinant_Hessian_Response(void) {
   CV_INSTRUMENT_REGION()
 
-  parallel_for_(Range(0, (int)evolution_.size()),
-                                        DeterminantHessianResponse(evolution_));
+  if (ocl::useOpenCL()) {
+    DeterminantHessianResponse body (evolution_);
+    body(Range(0, (int)evolution_.size()));
+  } else {
+    parallel_for_(Range(0, (int)evolution_.size()), DeterminantHessianResponse(evolution_));
+  }
 }
 
 /* ************************************************************************* */
