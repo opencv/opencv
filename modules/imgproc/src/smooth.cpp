@@ -2386,7 +2386,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     if(sigma1 == 0 && sigma2 == 0 && tegra::useTegra() && tegra::gaussian(src, dst, ksize, borderType))
         return;
 #endif
-    bool useOpenCL = (_dst.isUMat() && _src.dims() <= 2 &&
+    bool useOpenCL = (ocl::useOpenCL() && _dst.isUMat() && _src.dims() <= 2 &&
                ((ksize.width == 3 && ksize.height == 3) ||
                (ksize.width == 5 && ksize.height == 5)) &&
                _src.rows() > ksize.height && _src.cols() > ksize.width);
