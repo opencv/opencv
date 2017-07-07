@@ -5,7 +5,7 @@ using namespace cv;
 
 namespace greentea
 {
-   
+
 #ifdef HAVE_OPENCL
 bool IsBeignet()
 {

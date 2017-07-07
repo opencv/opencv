@@ -413,7 +413,7 @@ __kernel void TEMPLATE(lrn_within_channel_backward_ratio,Dtype)(
   }
 }
 
-#define SIMD_WIDTH 16 
+#define SIMD_WIDTH 16
 #define TILE_W SIMD_WIDTH
 #define TILE_H 8
 
@@ -439,7 +439,7 @@ __kernel void TEMPLATE(lrn_fuse_pool_max,Dtype)(
   const int_tp block_x = get_global_id(0) % tiled_width;
   const int_tp block_y = (get_global_id(0) / tiled_width) % tiled_height;
   const int_tp n = get_global_id(0) / (tiled_width * tiled_height);
-  
+
   const int_tp w = block_x * tile_pooled_block_w * pool_stride_w;
   const int_tp h = block_y * tile_pooled_block_h * pool_stride_h;
   const int_tp offset = (n * channels * height + h) * width + w;
@@ -497,7 +497,7 @@ __kernel void TEMPLATE(lrn_fuse_pool_max,Dtype)(
         if (lrn_out_h - cur_out_h + 1 == pool_h) {
           if (get_local_id(1) < tile_pooled_block_w && (out_w + get_local_id(1)) < pooled_width) {
             out_off[(head - post_pad) * out_step + ph * pooled_width] = output_val;
-          
+
             output_val = h_max_val;
           }
           ++ph;

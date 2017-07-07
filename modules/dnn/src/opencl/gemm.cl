@@ -654,7 +654,7 @@ __kernel void TEMPLATE(gemm_buffer_NN, Dtype)(
     float4 dot05 = (start_index != 0) ? ((__global float4 *)(dst_write0 + 5 * N))[0] : beta * ((__global float4 *)(dst_write0 + 5 * N))[0];
     float4 dot06 = (start_index != 0) ? ((__global float4 *)(dst_write0 + 6 * N))[0] : beta * ((__global float4 *)(dst_write0 + 6 * N))[0];
     float4 dot07 = (start_index != 0) ? ((__global float4 *)(dst_write0 + 7 * N))[0] : beta * ((__global float4 *)(dst_write0 + 7 * N))[0];
-    
+
     int end_index = min(start_index + 256, K);
     int w = start_index;
     while( w + TILE_K <= end_index ) {
@@ -771,7 +771,7 @@ __kernel void TEMPLATE(gemm_buffer_NN, Dtype)(
             dst_write0[2] = dot00.z;
             dst_write0 += N; dst_write = (__global float2 *)dst_write0;
             if(mad24(global_y, 8, 1) < M) {
-                dst_write[0] = dot01.xy; 
+                dst_write[0] = dot01.xy;
                 dst_write0[2] = dot01.z;
                 dst_write0 += N; dst_write = (__global float2 *)dst_write0;
             } else
@@ -884,7 +884,7 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
     float8 dot05 = 0.f;
     float8 dot06 = 0.f;
     float8 dot07 = 0.f;
-    
+
     float4 brow0;
     float4 brow1;
     float4 brow2;
@@ -893,7 +893,7 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
     float4 brow5;
     float4 brow6;
     float4 brow7;
-    
+
     __global float *dst_write0 = dst + local_x * VEC_SIZE + ( group_x * TILE_N ) + ( group_y * LWG_HEIGHT * TILE_M + local_y * TILE_M) * N + offd;
 
     const __global float *src0_read = src0 + local_x * ( TILE_K / 8 ) + ( group_y * LWG_HEIGHT * TILE_M + local_y * TILE_M ) * K + off0;
@@ -922,7 +922,7 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
         int end_w = min(b_tile + SLM_BLOCK, K);
         while( w + TILE_K <= end_w ) {
             float4 arow;
-                            
+
             brow0 = ((__local float4 *)(slm_brow0 + 0 * SLM_BLOCK))[0];
             brow1 = ((__local float4 *)(slm_brow0 + 1 * SLM_BLOCK))[0];
             brow2 = ((__local float4 *)(slm_brow0 + 2 * SLM_BLOCK))[0];
@@ -931,14 +931,14 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
             brow5 = ((__local float4 *)(slm_brow0 + 5 * SLM_BLOCK))[0];
             brow6 = ((__local float4 *)(slm_brow0 + 6 * SLM_BLOCK))[0];
             brow7 = ((__local float4 *)(slm_brow0 + 7 * SLM_BLOCK))[0];
-             
+
 #define MM_DOT_PRODUCT( _row, _dot )   \
             arow = ((__global float4 *)(src0_read + _row * K))[0];                           \
             _dot = mad( (float8)(arow.x), (float8)(brow0.x, brow1.x, brow2.x, brow3.x, brow4.x, brow5.x, brow6.x, brow7.x), _dot ); \
             _dot = mad( (float8)(arow.y), (float8)(brow0.y, brow1.y, brow2.y, brow3.y, brow4.y, brow5.y, brow6.y, brow7.y), _dot ); \
             _dot = mad( (float8)(arow.z), (float8)(brow0.z, brow1.z, brow2.z, brow3.z, brow4.z, brow5.z, brow6.z, brow7.z), _dot ); \
             _dot = mad( (float8)(arow.w), (float8)(brow0.w, brow1.w, brow2.w, brow3.w, brow4.w, brow5.w, brow6.w, brow7.w), _dot );
-                        
+
             MM_DOT_PRODUCT( 0, dot00 );
             MM_DOT_PRODUCT( 1, dot01 );
             MM_DOT_PRODUCT( 2, dot02 );
@@ -948,7 +948,7 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
             MM_DOT_PRODUCT( 6, dot06 );
             MM_DOT_PRODUCT( 7, dot07 );
 #undef MM_DOT_PRODUCT
-       
+
             src0_read += TILE_K;
             slm_brow0 += TILE_K;
             w += TILE_K;
@@ -985,7 +985,7 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
         _dot = mad( (float8)(arow.y), (float8)(brow0.y, brow1.y, brow2.y, brow3.y, brow4.y, brow5.y, brow6.y, brow7.y), _dot ); \
         _dot = mad( (float8)(arow.z), (float8)(brow0.z, brow1.z, brow2.z, brow3.z, brow4.z, brow5.z, brow6.z, brow7.z), _dot ); \
         _dot = mad( (float8)(arow.w), (float8)(brow0.w, brow1.w, brow2.w, brow3.w, brow4.w, brow5.w, brow6.w, brow7.w), _dot );
-                        
+
         MM_DOT_PRODUCT( 0, dot00 );
         MM_DOT_PRODUCT( 1, dot01 );
         MM_DOT_PRODUCT( 2, dot02 );
@@ -1000,7 +1000,7 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
 #define REDUCE(_dot) \
     _dot = intel_sub_group_shuffle(_dot, 0) + intel_sub_group_shuffle(_dot, 1) + intel_sub_group_shuffle(_dot, 2) + intel_sub_group_shuffle(_dot, 3) +  \
            intel_sub_group_shuffle(_dot, 4) + intel_sub_group_shuffle(_dot, 5) + intel_sub_group_shuffle(_dot, 6) + intel_sub_group_shuffle(_dot, 7);
-    
+
     REDUCE(dot00);
     REDUCE(dot01);
     REDUCE(dot02);
@@ -1612,7 +1612,7 @@ __kernel void TEMPLATE(gemm_buffer_TN, Dtype)(
     const int local_y = get_local_id(1);
     const int global_x = get_global_id(0);
     const int global_y = get_global_id(1);
-   
+
     float4 brow;
 
     __global float *dst_write0 = dst + local_x * VEC_SIZE + ( group_x * TILE_N ) + ( group_y * LWG_HEIGHT * TILE_M + local_y * TILE_M) * N + offd;

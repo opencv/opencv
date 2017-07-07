@@ -534,7 +534,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         ss << "out_addr += or * output_width + oc;" << std::endl;
         ss << "float bias = biases[fm];" << std::endl;
         ss << "for(uint_tp r = 0; r < OUT_BLOCK_HEIGHT; r++) {" << std::endl;
-        ss << "if (r + or >= output_height) break;" << std::endl; 
+        ss << "if (r + or >= output_height) break;" << std::endl;
         ss << "for(uint_tp c = 0; c < OUT_BLOCK_WIDTH; c++) {" << std::endl;
         ss << "if (c + oc >= output_width) break;" << std::endl;
         ss << "outputs[out_addr + r * output_width + c] = activation_function(bias + out[r * OUT_BLOCK_WIDTH + c]);" << std::endl;
@@ -743,7 +743,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         /*
          * Load atile and btile.
          *
-         * Kernel data is partially interleaved. 
+         * Kernel data is partially interleaved.
          * Every 2 rows are interleaved at float8 granularity.
          * The exception is that if KERNEL_WIDTH is odd the last row is not
          * interleaved.
@@ -1605,7 +1605,7 @@ void LibDNNConvSpatial<Dtype>::generate_key()
 
 template<typename Dtype>
 std::string LibDNNConvSpatial<Dtype>::generate_specific_key(int_tp type, int_tp blockWidth,
-	                                                    int_tp blockHeight, int_tp blockDepth)
+                                                            int_tp blockHeight, int_tp blockDepth)
 {
     std::stringstream keyBuilder;
     keyBuilder << short_key_
@@ -1783,7 +1783,7 @@ void LibDNNConvSpatial<float>::calculate_global_size(int_tp batch,
                                                      int_tp* wio,    // work item output size
                                                      size_t* lSize,  // local size
                                                      size_t* gSize)  // global size
-{  
+{
     gSize[0] = ceil((fmax(static_cast<float>(output_w_) / wio[0], 1.0)) / lSize[0]) * lSize[0];
     gSize[1] = ceil((fmax(static_cast<float>(output_h_) / wio[1], 1.0)) / lSize[1]) * lSize[1];
     gSize[2] = ceil(static_cast<float>((ceil(static_cast<float>(M_) * batch / wio[2]))) / lSize[2]) * lSize[2];

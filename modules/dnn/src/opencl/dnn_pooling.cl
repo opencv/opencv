@@ -206,23 +206,23 @@ __kernel void TEMPLATE(ave_pool_forward_opt,Dtype)(
 
     int startx = get_global_id(0);
     int tile_y = get_global_id(1);
-    int channel = get_global_id(2);     
+    int channel = get_global_id(2);
 
     int realx = startx / SIMD_SIZE * TILE_WIDTH + (startx - startx / SIMD_SIZE * SIMD_SIZE) % TILE_WIDTH;
-    
+
     int offset = height * width * channel;
 
     __global const float* const input_image = bottom_data + offset;
     __global float* const output_image = top_data + offset;
 
 #ifdef PRINT
-    bool print = (realx == 0); 
-#endif                       
-    float input[3];    
+    bool print = (realx == 0);
+#endif
+    float input[3];
 
-    int starty = tile_y * TILE_HEIGHT;      
+    int starty = tile_y * TILE_HEIGHT;
     int endy = min(height - 1, starty + TILE_HEIGHT - 1);
-        
+
     // Read 3 lines of 16 floats
     // The 3 lines start one float before the current (to the left) and one line up:
     //
@@ -258,12 +258,12 @@ __kernel void TEMPLATE(ave_pool_forward_opt,Dtype)(
       else {
         sum = input[first] + input[second] + input[third];
       }
-            
+
       float sum1 = intel_sub_group_shuffle_down(sum, zero , 1);
       float sum2 = intel_sub_group_shuffle_down(sum, zero , 2);
 
       if (realx == 0) {
-        res = (sum1 + sum2) * ONE_OVER_POOL_SIZE;  
+        res = (sum1 + sum2) * ONE_OVER_POOL_SIZE;
       }
       else if (realx == width - 1) {
         res = (sum + sum1) * ONE_OVER_POOL_SIZE;
@@ -276,7 +276,7 @@ __kernel void TEMPLATE(ave_pool_forward_opt,Dtype)(
 
       if (local_id < TILE_WIDTH && realx < width) {
         output_image[idx] = res;
-      }     
+      }
 
       if (first == 0) {
         first = 1;
@@ -286,14 +286,14 @@ __kernel void TEMPLATE(ave_pool_forward_opt,Dtype)(
       else if (first == 1) {
         first = 2;
         second = 0;
-        third = 1;          
+        third = 1;
       }
       else {
         first = 0;
         second = 1;
         third = 2;
       }
-    }  
+    }
 }
 
 #undef SIMD_SIZE
@@ -514,4 +514,3 @@ __kernel void TEMPLATE(sto_pool_backward,Dtype)(
     bottom_diff[index] = gradient;
   }
 }
-
