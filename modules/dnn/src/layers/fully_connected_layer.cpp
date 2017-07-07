@@ -263,8 +263,8 @@ public:
         }
 
         UMat weights, biases;
-        weights = weightsMat.getUMat(ACCESS_READ);
-        biases = biasMat.getUMat(ACCESS_READ);
+        weights = blobs[0].getUMat(ACCESS_READ);
+        biases = blobs[1].getUMat(ACCESS_READ);
 
         cl_mem weight_mem = (cl_mem)weights.handle(ACCESS_READ);
         cl_mem bias_mem = (cl_mem)biases.handle(ACCESS_READ);
