@@ -36,7 +36,10 @@ Display an image
 First, convert the type of src to cv.CV_8UC4.
 @code{.js}
 var dst = new cv.Mat();
-cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_***2RGBA.value, 0); //*** is the type of src
+// scale and shift are used to map the data to [0, 255].
+src.convertTo(dst, cv.CV_8U, scale, shift); 
+// *** is GRAY, RGB, or RGBA, according to src.channels() is 1, 3 or 4.
+cv.cvtColor(dst, dst, cv.ColorConversionCodes.COLOR_***2RGBA.value, 0); 
 @endcode
 
 Then new an ImageData obj from dst.
@@ -87,7 +90,6 @@ var dst = new cv.Mat();
 // To distinguish the input and output, we graying the image.
 // You can try more different conversion
 cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
-cv.cvtColor(dst, dst, cv.ColorConversionCodes.COLOR_GRAY2RGBA.value, 0);
 cv.imshow("canvas2", dst);
 src.delete();
 dst.delete();
@@ -100,7 +102,8 @@ dst.delete();
     </div>
     <input type="file" id="input" name="file" />
 </div>
-<script async src="opencv.js" id ="opencvjs"></script>
+<script src="utils.js"></script>
+<script async src="opencv.js" id="opencvjs"></script>
 <script>
 function executeCode() {
     var text = document.getElementById("TestCode").value;
@@ -110,16 +113,8 @@ function executeCode() {
 var inputElement = document.getElementById("input");
 inputElement.addEventListener("change", handleFiles, false);
 function handleFiles(e) {
-    var canvas = document.getElementById("canvas1");
-    var ctx = canvas.getContext("2d");
     var url = URL.createObjectURL(e.target.files[0]);
-    var img = new Image();
-    img.onload = function() {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-    }
-    img.src = url;
+    loadImageToCanvas(url, "canvas1");
 }
 
 document.getElementById("opencvjs").onload = function() {

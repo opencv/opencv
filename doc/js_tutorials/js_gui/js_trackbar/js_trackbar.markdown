@@ -77,7 +77,7 @@ canvas {
 <div id="CodeArea">
 <h2>Input your code</h2>
 <textarea rows="8" cols="70" id="TestCode" spellcheck="false">
-var alpha = value/document.getElementById("trackbar").max;
+var alpha = value/trackbar.max;
 var beta = ( 1.0 - alpha );
 var dst = new cv.Mat();
 cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
@@ -90,48 +90,31 @@ dst.delete();
         <canvas id="canvas1"></canvas>
         <canvas id="canvas2"></canvas>
     </div>
-    Weight: <input type="range"  id="trackbar" disabled="true" value="50" min="0" max="100" step="1" 
+    Weight: <input type="range" id="trackbar" disabled="true" value="50" min="0" max="100" step="1" 
     oninput="addWeighted(this.value)"><input type="text" id="weightValue" size="3" value="50"><br>
     <canvas id="canvas3"></canvas>
 </div>
-<script async src="opencv.js"  id="opencvjs"></script>
+<script src="utils.js"></script>
+<script async src="opencv.js" id="opencvjs"></script>
 <script>
+var weightValue = document.getElementById('weightValue');
+var trackbar = document.getElementById('trackbar');
+
 function addWeighted(value) {
-    document.getElementById("weightValue").value = value;    
+    weightValue.value = value;    
     var text = document.getElementById("TestCode").value;
     eval(text);
 }
 
-var canvas1 = document.getElementById("canvas1");
-var ctx1 = canvas1.getContext("2d");
-var url1 = "LinuxLogo.jpg";
-var img1 = new Image();
-img1.onload = function() {
-    canvas1.width = img1.width;
-    canvas1.height = img1.height;
-    ctx1.drawImage(img1,0,0,img1.width,img1.height);
-}
-img1.src = url1;
-
-var canvas2 = document.getElementById("canvas2");
-var ctx2 = canvas2.getContext("2d");
-var url2 = "WindowsLogo.jpg";
-var img2 = new Image();
-img2.onload = function() {
-    canvas2.width = img2.width;
-    canvas2.height = img2.height;
-    ctx2.drawImage(img2,0,0,img2.width,img2.height);
-}
-img2.src = url2;
+loadImageToCanvas("LinuxLogo.jpg", "canvas1");
+loadImageToCanvas("WindowsLogo.jpg", "canvas2");
 
 var src1, src2;
 document.getElementById("opencvjs").onload = function() {
     src1 = cv.imread("canvas1");
     src2 = cv.imread("canvas2");
-    var value = document.getElementById("trackbar").value;
-    var text = document.getElementById("TestCode").value;
-    eval(text);
-    document.getElementById("trackbar").disabled = false;
+    addWeighted(trackbar.value);
+    trackbar.disabled = false;
 };
 </script>
 </body>
