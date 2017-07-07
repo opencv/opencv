@@ -73,10 +73,8 @@ LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
 
     height_ = im_in_shape_[0];
     width_ = im_in_shape_[1];
-    const int_tp kernel_extent_h = dilation_h_ * (kernel_h_ - 1) + 1;
-    const int_tp kernel_extent_w = dilation_w_ * (kernel_w_ - 1) + 1;
-    output_h_ = (height_ + 2 * pad_h_ - kernel_extent_h) / stride_h_ + 1;
-    output_w_ = (width_ + 2 * pad_w_ - kernel_extent_w) / stride_w_ + 1;
+    output_h_ = im_out_shape_[0];
+    output_w_ = im_out_shape_[1];
 
     bottom_dim_ = channels_ * in_spatial_dim_;
     top_dim_ = num_output_ * out_spatial_dim_;
