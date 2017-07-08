@@ -197,7 +197,7 @@ static bool isITTEnabled()
     static bool isEnabled = false;
     if (!isInitialized)
     {
-        isEnabled = !!(__itt_api_version());
+        isEnabled = !(__itt_api_version());
         CV_LOG_ITT("ITT is " << (isEnabled ? "enabled" : "disabled"));
         domain = __itt_domain_create("OpenCVTrace");
         isInitialized = true;
