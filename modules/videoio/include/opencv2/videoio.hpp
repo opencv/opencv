@@ -169,7 +169,8 @@ enum VideoCaptureProperties {
 
 
 /** @brief Generic camera output modes identifier.
-@note Currently, these are supported through the libv4l backend only.
+@note Currently, these are supported only through the libv4l backend (all modes)
+and the ffmpeg backend (BGR24 and GRAY).
 */
 enum VideoCaptureModes {
        CAP_MODE_BGR  = 0, //!< BGR24 (default)
