@@ -443,6 +443,8 @@ struct CvCapture_FFMPEG
 
     int64_t frame_number, first_frame_number;
 
+    int64_t desired_mode;
+
     double eps_zero;
 /*
    'filename' contains the filename of the videosource,
@@ -479,6 +481,7 @@ void CvCapture_FFMPEG::init()
     avcodec = 0;
     frame_number = 0;
     eps_zero = 0.000025;
+    desired_mode = CV_FFMPEG_CAP_MODE_BGR;
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     dict = NULL;
@@ -869,7 +872,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
             frame.width = enc->width;
             frame.height = enc->height;
-            frame.cn = 3;
+            frame.cn = (desired_mode == CV_FFMPEG_CAP_MODE_GRAY ? 1 : 3);
             frame.step = 0;
             frame.data = NULL;
             break;
@@ -999,13 +1002,14 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         // Some sws_scale optimizations have some assumptions about alignment of data/step/width/height
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
         int buffer_width = video_st->codec->coded_width, buffer_height = video_st->codec->coded_height;
+        AVPixelFormat buffer_format = (desired_mode == CV_FFMPEG_CAP_MODE_GRAY ? AV_PIX_FMT_GRAY8 : AV_PIX_FMT_BGR24);
 
         img_convert_ctx = sws_getCachedContext(
                 img_convert_ctx,
                 buffer_width, buffer_height,
                 video_st->codec->pix_fmt,
                 buffer_width, buffer_height,
-                AV_PIX_FMT_BGR24,
+                buffer_format,
                 SWS_BICUBIC,
                 NULL, NULL, NULL
                 );
@@ -1015,7 +1019,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
 #if USE_AV_FRAME_GET_BUFFER
         av_frame_unref(&rgb_picture);
-        rgb_picture.format = AV_PIX_FMT_BGR24;
+        rgb_picture.format = buffer_format;
         rgb_picture.width = buffer_width;
         rgb_picture.height = buffer_height;
         if (0 != av_frame_get_buffer(&rgb_picture, 32))
@@ -1027,14 +1031,14 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         int aligns[AV_NUM_DATA_POINTERS];
         avcodec_align_dimensions2(video_st->codec, &buffer_width, &buffer_height, aligns);
         rgb_picture.data[0] = (uint8_t*)realloc(rgb_picture.data[0],
-                _opencv_ffmpeg_av_image_get_buffer_size( AV_PIX_FMT_BGR24,
+                _opencv_ffmpeg_av_image_get_buffer_size( buffer_format,
                                     buffer_width, buffer_height ));
         _opencv_ffmpeg_av_image_fill_arrays(&rgb_picture, rgb_picture.data[0],
-                        AV_PIX_FMT_BGR24, buffer_width, buffer_height );
+                        buffer_format, buffer_width, buffer_height );
 #endif
         frame.width = video_st->codec->width;
         frame.height = video_st->codec->height;
-        frame.cn = 3;
+        frame.cn = (desired_mode == CV_FFMPEG_CAP_MODE_GRAY ? 1 : 3);
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
     }
@@ -1084,6 +1088,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
 #else
         return (double)video_st->codec.codec_tag;
 #endif
+    case CV_FFMPEG_CAP_PROP_MODE:
+        return desired_mode;
     case CV_FFMPEG_CAP_PROP_SAR_NUM:
         return get_sample_aspect_ratio(ic->streams[video_stream]).num;
     case CV_FFMPEG_CAP_PROP_SAR_DEN:
@@ -1282,6 +1288,17 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
             }
 
             picture_pts=(int64_t)value;
+        }
+        break;
+    case CV_FFMPEG_CAP_PROP_MODE:
+        switch ((int64_t)value)
+        {
+        case CV_FFMPEG_CAP_MODE_BGR:
+        case CV_FFMPEG_CAP_MODE_GRAY:
+            desired_mode = (int64_t)value;
+            break;
+        default:
+            return false;
         }
         break;
     default:
