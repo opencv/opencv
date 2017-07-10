@@ -188,6 +188,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${ocv_js}"
                      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ocv_js_dir}/${ocv_js}" "${opencv_tutorial_html_dir}/${ocv_js}"
                      DEPENDS ${ocv_js}
+                     DEPENDS "${ocv_js_dir}/${ocv_js}"
                      COMMENT "Copying ${ocv_js}"
   )
   list(APPEND js_tutorials_assets_deps ${ocv_js} "${opencv_tutorial_html_dir}/${ocv_js}")
