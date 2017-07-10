@@ -49,7 +49,7 @@ void extract2(const Size2D &size,
 {
     internal::assertSupportedConfiguration();
 #ifdef CAROTENE_NEON
-#ifndef ANDROID
+#ifndef __ANDROID__
     size_t roiw32 = size.width >= 31 ? size.width - 31 : 0;
 #endif
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
@@ -60,7 +60,7 @@ void extract2(const Size2D &size,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t sj = 0u, dj = 0u;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
         for (; dj < roiw32; sj += 64, dj += 32)
         {
             internal::prefetch(src + sj);
@@ -101,7 +101,7 @@ void extract3(const Size2D &size,
 {
     internal::assertSupportedConfiguration();
 #ifdef CAROTENE_NEON
-#ifndef ANDROID
+#ifndef __ANDROID__
     size_t roiw32 = size.width >= 31 ? size.width - 31 : 0;
 #endif
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
@@ -112,7 +112,7 @@ void extract3(const Size2D &size,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t sj = 0u, dj = 0u;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
         for (; dj < roiw32; sj += 96, dj += 32)
         {
             internal::prefetch(src + sj);
@@ -153,7 +153,7 @@ void extract4(const Size2D &size,
 {
     internal::assertSupportedConfiguration();
 #ifdef CAROTENE_NEON
-#ifndef ANDROID
+#ifndef __ANDROID__
     size_t roiw32 = size.width >= 31 ? size.width - 31 : 0;
 #endif
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
@@ -164,7 +164,7 @@ void extract4(const Size2D &size,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t sj = 0u, dj = 0u;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
         for (; dj < roiw32; sj += 128, dj += 32)
         {
             internal::prefetch(src + sj);

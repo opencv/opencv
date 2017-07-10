@@ -15,7 +15,7 @@
 #include "opencv2/core/cuda.hpp"
 #endif
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 # include <sys/time.h>
 #endif
 
@@ -57,7 +57,7 @@ extern bool         test_ipp_check;
 static int          param_cuda_device;
 #endif
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 static int          param_affinity_mask;
 static bool         log_power_checkpoints;
 
@@ -973,7 +973,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_strategy               |default  |specifies performance measuring strategy: default, base or simple (weak restrictions)}"
         "{   perf_read_validation_results |        |specifies file name with performance results from previous run}"
         "{   perf_write_validation_results |       |specifies file name to write performance validation results}"
-#ifdef ANDROID
+#ifdef __ANDROID__
         "{   perf_time_limit             |6.0      |default time limit for a single test (in seconds)}"
         "{   perf_affinity_mask          |0        |set affinity mask for the main thread}"
         "{   perf_log_power_checkpoints  |         |additional xml logging for power measurement}"
@@ -1044,7 +1044,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #ifdef ENABLE_INSTRUMENTATION
     param_instrument    = args.get<int>("perf_instrument");
 #endif
-#ifdef ANDROID
+#ifdef __ANDROID__
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
 #endif
@@ -1461,7 +1461,7 @@ bool TestBase::next()
         }
     }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (log_power_checkpoints)
     {
         timeval tim;
@@ -1758,7 +1758,7 @@ void TestBase::reportMetrics(bool toJUnitXML)
         const char* type_param = test_info->type_param();
         const char* value_param = test_info->value_param();
 
-#if defined(ANDROID) && defined(USE_ANDROID_LOGGING)
+#if defined(__ANDROID__) && defined(USE_ANDROID_LOGGING)
         LOGD("[ FAILED   ] %s.%s", test_info->test_case_name(), test_info->name());
 #endif
 
@@ -1835,7 +1835,7 @@ void TestBase::SetUp()
     if (param_threads >= 0)
         cv::setNumThreads(param_threads);
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (param_affinity_mask)
         setCurrentThreadAffinityMask(param_affinity_mask);
 #endif

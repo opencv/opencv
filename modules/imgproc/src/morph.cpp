@@ -1635,7 +1635,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         return true;
     }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     size_t localThreads[2] = { 16, 8 };
 #else
     size_t localThreads[2] = { 16, 16 };
@@ -1650,7 +1650,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     if (localThreads[0]*localThreads[1] * 2 < (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1))
         return false;
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (dev.isNVidia())
         return false;
 #endif

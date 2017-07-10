@@ -331,7 +331,7 @@ OCL_TEST_P(Mul, Mat_Scale)
         OCL_OFF(cv::multiply(src1_roi, src2_roi, dst1_roi, val[0]));
         OCL_ON(cv::multiply(usrc1_roi, usrc2_roi, udst1_roi, val[0]));
 
-#ifdef ANDROID
+#ifdef __ANDROID__
         Near(udst1_roi.depth() >= CV_32F ? 2e-1 : 1);
 #else
         Near(udst1_roi.depth() >= CV_32F ? 1e-3 : 1);
