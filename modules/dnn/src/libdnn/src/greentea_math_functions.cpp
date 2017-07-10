@@ -11,10 +11,7 @@
 #ifdef HAVE_OPENCL
 #include "greentea_math_functions.hpp"
 
-#include <sys/time.h>
-#include <thread>
 #include <mutex>
-
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -147,7 +144,7 @@ void greentea_gpu_gemm_copy_buffer_to_image(int_tp ctx_id,
                                               origin, region, wait_list_size, wait_list, event));
         return;
     }
-    ocl::Kernel oclk_gemm_copy("gemm_buffer_copy_image_float", cv::ocl::dnn::gemm_oclsrc);
+    ocl::Kernel oclk_gemm_copy("gemm_buffer_copy_image_float", cv::ocl::dnn::gemm_image_oclsrc);
 
     size_t global_copy[2];
     global_copy[0] = padding ? padded_width : width;
@@ -168,11 +165,11 @@ void greentea_gpu_gemm_copy_buffer_to_image(int_tp ctx_id,
 #ifdef GEMM_PROFILING
 #define START_TIMER(n) \
     clFinish(ctx.get_queue().handle().get()); \
-    gettimeofday(&start[n], NULL);
+    start[n] = getTickCount();
 
 #define STOP_TIMER(n) \
     clFinish(ctx.get_queue().handle().get()); \
-    gettimeofday(&end[n], NULL);
+    end[n] = getTickCount();
 #else
 #define START_TIMER(n)
 #define STOP_TIMER(n)
@@ -205,9 +202,9 @@ static void greentea_gpu_fast_image_gemm(const int_tp ctx_id, const CBLAS_TRANSP
         CHECK_EQ(offB, 0) << "Invalid input image offset." << std::endl;
 
     #ifdef GEMM_PROFILING
-    struct timeval start[4], end[4];
+    int64 start[4], end[4];
     for (int i = 0; i < 4; i++)
-        start[i] = end[i];
+        start[i] = end[i] = 0;
     #endif
     uint32_t widthA = (TransA == CblasNoTrans) ? K : M;
     uint32_t heightA = (TransA == CblasNoTrans) ? M : K;
@@ -338,7 +335,7 @@ static void greentea_gpu_fast_image_gemm(const int_tp ctx_id, const CBLAS_TRANSP
     kernel_name += "_float";
 
     String opts = "";
-    oclk_gemm_float.create(kernel_name.c_str(), cv::ocl::dnn::gemm_oclsrc, opts);
+    oclk_gemm_float.create(kernel_name.c_str(), cv::ocl::dnn::gemm_image_oclsrc, opts);
 
     size_t global[2];
 
@@ -382,7 +379,7 @@ static void greentea_gpu_fast_image_gemm(const int_tp ctx_id, const CBLAS_TRANSP
     double elapsed[4], total_elapsed;
     for ( int i = 0; i < 4; i++ )
     {
-        elapsed[i] = (end[i].tv_sec - start[i].tv_sec) * 1e6 + (end[i].tv_usec - start[i].tv_usec);
+        elapsed[i] = (double)end[i] - (double)start[i];
         total_elapsed += elapsed[i];
     }
     printf("kernel name %s \n", kernel_name.c_str());
@@ -412,7 +409,7 @@ static void greentea_gpu_fast_buffer_gemm(const int_tp ctx_id, const CBLAS_TRANS
     start[0] = end[0];
 #endif
 
-    cl_event ev;
+    cl_event ev = NULL;
 
     ocl::Context ctx = ocl::Context::getDefault();
     size_t sub_group_size = 8;
@@ -443,7 +440,7 @@ static void greentea_gpu_fast_buffer_gemm(const int_tp ctx_id, const CBLAS_TRANS
         kernel_name += "TT_float";
     }
     String opts = "";
-    oclk_gemm_float.create(kernel_name.c_str(), cv::ocl::dnn::gemm_oclsrc, opts);
+    oclk_gemm_float.create(kernel_name.c_str(), cv::ocl::dnn::gemm_buffer_oclsrc, opts);
     size_t local[2] = {};
     size_t global[2] = {};
     if (TransA == CblasNoTrans && TransB != CblasNoTrans && is_small_batch )
@@ -580,19 +577,19 @@ static void auto_tune_gemm(int ctx_id, const CBLAS_TRANSPOSE TransA,
                                  1.0f, A, 0, B, 0, 0.0f, C, 0, false, false,
                                  gemm_tests[i]);
     }
-    float fastest_time = 1e10;
+    double fastest_time = 1e10;
     int fastest_index = -1;
     clFinish((cl_command_queue)ocl::Queue::getDefault().ptr());
     for ( int i = 0; i < gemm_tests.size(); i++ )
     {
-        struct timeval start, end;
-        gettimeofday(&start, NULL);
+        int64 start, end;
+        start = getTickCount();
         greentea_gpu_gemm_common(ctx_id, TransA, TransB, M, N, K,
                                  1.0f, A, 0, B, 0, 0.0f, C, 0, false, false,
                                  gemm_tests[i]);
         clFinish((cl_command_queue)ocl::Queue::getDefault().ptr());
-        gettimeofday(&end, NULL);
-        float elapsed = (end.tv_sec - start.tv_sec) * 1e6 + (end.tv_usec - start.tv_usec);
+        end = getTickCount();
+        double elapsed = (double)end - (double)start;
         if (elapsed < fastest_time)
         {
             fastest_time = elapsed;
@@ -746,8 +743,8 @@ template void greentea_gpu_gemm<float>(const int_tp ctx_id,
                                        const cl_mem B, const int_tp offB,
                                        const float beta, cl_mem C,
                                        const int_tp offC,
-                                       const bool is_image_a = false,
-                                       const bool is_image_b = false);
+                                       const bool is_image_a,
+                                       const bool is_image_b);
 template void greentea_gpu_gemm<double>(const int_tp ctx_id,
                                         const CBLAS_TRANSPOSE TransA,
                                         const CBLAS_TRANSPOSE TransB,
@@ -757,8 +754,8 @@ template void greentea_gpu_gemm<double>(const int_tp ctx_id,
                                         const cl_mem B, const int_tp offB,
                                         const double beta, cl_mem C,
                                         const int_tp offC,
-                                        const bool is_image_a = false,
-                                        const bool is_image_b = false);
+                                        const bool is_image_a,
+                                        const bool is_image_b);
 
 template void greentea_gpu_gemm_common<float>(const int_tp ctx_id,
                                        const CBLAS_TRANSPOSE TransA,

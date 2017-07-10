@@ -64,7 +64,7 @@ bool LibDNNSoftmax<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
             oclk_softmax_forward_kernel.create(CL_KERNEL_SELECT("softmax_forward"),
                                                cv::ocl::dnn::softmax_loss_oclsrc, opts);
 
-        size_t global_size[] = { 256, outer_num_, 1 };
+        size_t global_size[] = { 256, (size_t)outer_num_, 1 };
         size_t local_size[] = { 256, 1, 1 };
         cl_uint argIdx = 0;
 

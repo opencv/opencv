@@ -5,6 +5,7 @@
 
 namespace greentea {
 
+#ifdef HAVE_OPENCL
 class Timer {
     public:
         Timer();
@@ -30,6 +31,7 @@ class Timer {
         float elapsed_milliseconds_;
         float elapsed_microseconds_;
 };
+#endif
 
 }  // namespace greentea
 

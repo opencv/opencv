@@ -662,12 +662,12 @@ public:
             convolutionOp = Ptr<greentea::LibDNNConvSpatial<float>>(new greentea::LibDNNConvSpatial<float>(config));
         }
 
-        UMat weightsMat, biasesMat;
-        weightsMat = blobs[0].getUMat(ACCESS_READ);
-        if (hasBias()) biasesMat = blobs[1].getUMat(ACCESS_READ);
+        UMat weights, biases;
+        weights = blobs[0].getUMat(ACCESS_READ);
+        if (hasBias()) biases = blobs[1].getUMat(ACCESS_READ);
 
-        cl_mem weight_mem = (cl_mem)weightsMat.handle(ACCESS_READ);
-        cl_mem bias_mem = (cl_mem)biasesMat.handle(ACCESS_READ);
+        cl_mem weight_mem = (cl_mem)weights.handle(ACCESS_READ);
+        cl_mem bias_mem = (cl_mem)biases.handle(ACCESS_READ);
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {

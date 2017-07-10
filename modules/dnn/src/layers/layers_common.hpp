@@ -52,7 +52,6 @@
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 #ifdef HAVE_OPENCL
-#include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "libdnn.hpp"
 #endif
 

@@ -81,14 +81,14 @@ bool LibDNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
                                      transpose_ ? CblasNoTrans : CblasTrans,
                                      M_, N_, K_, (Dtype) 1.,
                                      (cl_mem) bottom_data, 0, (cl_mem) weight, 0,
-                                     (Dtype) 0., (cl_mem) top_data, 0);
+                                     (Dtype) 0., (cl_mem) top_data, 0, false, false);
 
         if (bias_term_)
             greentea_gpu_gemm<Dtype>(0, CblasNoTrans,
                                      CblasNoTrans, M_, N_, 1, (Dtype) 1.,
                                      (cl_mem) bias_multiplier_, 0,
                                      (cl_mem) bias, 0,
-                                     (Dtype) 1., (cl_mem) top_data, 0);
+                                     (Dtype) 1., (cl_mem) top_data, 0, false, false);
     }
     return true;
 }

@@ -21,7 +21,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-shadow -Wno-parentheses -Wmaybe-uninit
 )
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4701 /wd4100)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/libdnn/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/libdnn/include ${OPENCL_INCLUDE_DIRS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 if(MSVC)
@@ -75,7 +75,7 @@ ocv_source_group("Src\\protobuf" FILES ${Protobuf_SRCS} ${Protobuf_HDRS})
 ocv_module_include_directories(include ${Protobuf_INCLUDE_DIRS})
 
 ocv_glob_module_sources(${Protobuf_SRCS} ${Protobuf_HDRS} ${CBLAS_H_PROXY_PATH})
-ocv_create_module(${Protobuf_LIBRARIES} ${LAPACK_LIBRARIES})
+ocv_create_module(${Protobuf_LIBRARIES} ${LAPACK_LIBRARIES} ${OPENCL_LIBRARIES})
 ocv_add_samples()
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()

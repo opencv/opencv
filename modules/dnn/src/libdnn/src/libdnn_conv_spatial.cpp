@@ -79,14 +79,12 @@ LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
     bottom_dim_ = channels_ * in_spatial_dim_;
     top_dim_ = num_output_ * out_spatial_dim_;
 
-    if (std::getenv("CLCAFFE_CACHE_PATH"))
-        cache_path_ << std::getenv("CLCAFFE_CACHE_PATH");
-    else if (std::getenv("VIENNACL_CACHE_PATH"))
-        cache_path_ << std::getenv("VIENNACL_CACHE_PATH") << "/clCaffe";
-    else if (std::getenv("HOME")) {
+    if (std::getenv("HOME")) {
         cache_path_ << std::getenv("HOME") << "/.cache/clCaffe";
     }
     cache_path_ << "/spatialkernels/";
+
+#if defined(__linux__)
     struct stat stat_buf;
     bool hasCacheDir = false;
     if (0 != stat(cache_path_.str().c_str(), &stat_buf)) {
@@ -97,9 +95,10 @@ LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
 
     if (hasCacheDir != true) {
         std::cout << "Failed to create cache directory,"
-            << "will tune again for next running" << std::endl;
+                  << "will tune again for next running" << std::endl;
         return;
     }
+#endif
 }
 
 template<typename Dtype>
@@ -2223,7 +2222,7 @@ bool LibDNNConvSpatial<float>::create_gemm_like_conv_kernel(const float *bottom,
         return false;
     }
 
-    if (err == CL_SUCCESS || err == true) {
+    if (err == CL_SUCCESS) {
         kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
                                                false, true, false, 5));
         return true;
@@ -2274,7 +2273,7 @@ bool LibDNNConvSpatial<float>::setup_IDLF(const float *bottom, const float *top,
         return false;
     }
 
-    if (err == CL_SUCCESS || err == true) {
+    if (err == CL_SUCCESS) {
         kernelQueue.push_back(new kernelConfig(kernel_name_, global_size, local_size, workItemOutput,
                                                false, true, false, 2));
         return true;
@@ -2662,19 +2661,6 @@ void LibDNNConvSpatial<Dtype>::SetUp(const Dtype *bottom, const Dtype *top)
         load_cached_kernels(bottom, top);
     }
 }
-
-template void LibDNNConvSpatial<float>::SetUp(const float *bottom, const float *top);
-
-template void LibDNNConvSpatial<double>::SetUp(const double *bottom, const double *top);
-
-template void LibDNNConvSpatial<float>::swizzleWeights(const float *bottom,
-                                                       const float *top,
-                                                       int_tp swizzle_factor,
-                                                       bool interleave = false);
-template void LibDNNConvSpatial<double>::swizzleWeights(const double *bottom,
-                                                        const double *top,
-                                                        int_tp swizzle_factor,
-                                                        bool interleave = false);
 
 template<>
 void LibDNNConvSpatial<double>::create_convolution_kernel(const double *bottom, const double *top,
