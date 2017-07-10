@@ -65,11 +65,13 @@ __kernel void kernel_channel_sum(const int num, const int channels,
 
 __kernel void kernel_channel_div(const int count,
     const int num, const int channels,
-    const int spatial_dim, __global const T* channel_sum, __global T* data) {
+    const int spatial_dim, const int logsoftmax, __global const T* channel_sum, __global T* data) {
   int index = get_global_id(0);
   if(index < count) {
     int n = index / channels / spatial_dim;
     int s = index % spatial_dim;
-    data[index] /= channel_sum[n * spatial_dim + s];
+    T v = data[index] / channel_sum[n * spatial_dim + s];
+    if (logsoftmax) v = log(v);
+    data[index] = v;
   }
 }

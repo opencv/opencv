@@ -90,6 +90,62 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        const Mat &src = *inputs[0];
+        UMat srcMat, dstMat, bufMat;
+        srcMat = src.getUMat(ACCESS_READ);
+        dstMat = outputs[0].getUMat(ACCESS_WRITE);
+        srcMat.copyTo(dstMat);
+        bufMat = internals[0].getUMat(ACCESS_WRITE);
+
+        int axis = clamp(axisRaw, src.dims);
+        size_t outerSize = src.total(0, axis);
+        size_t channels = src.size[axis];
+        size_t innerSize = src.total(axis + 1);
+
+        String buildOpts = String("-DT=") + ocl::typeToStr(src.type());
+        ocl::Kernel kmax, ksub, ksum, kdiv;
+
+        if (!kmax.create("kernel_channel_max", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (!ksub.create("kernel_channel_subtract", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (!ksum.create("kernel_channel_sum", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        if (!kdiv.create("kernel_channel_div", ocl::dnn::softmax_oclsrc, buildOpts))
+            return false;
+
+        size_t wgSize = ocl::Device::getDefault().maxWorkGroupSize();
+        size_t bufSize = internals[0].total();
+        size_t totalSize = src.total();
+
+        kmax.args((int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
+        if (!kmax.run(1, &bufSize, &wgSize, false))
+            return false;
+
+        ksub.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
+        if (!ksub.run(1, &totalSize, &wgSize, false))
+            return false;
+
+        cv::exp(dstMat, dstMat);
+
+        ksum.args((int)outerSize, (int)channels, (int)innerSize,
+                  ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
+        if (!ksum.run(1, &bufSize, &wgSize, false))
+            return false;
+
+        kdiv.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize, (int)logSoftMax,
+                  ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
+        if (!kdiv.run(1, &totalSize, &wgSize, false))
+            return false;
+
+        return true;
+
+#if 0
         if (softmaxOp.empty())
         {
             greentea::LibDNNSoftmaxConfig config;
@@ -115,6 +171,7 @@ public:
             return false;
 
         return true;
+#endif
     }
 #endif
 
