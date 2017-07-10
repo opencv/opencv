@@ -2387,8 +2387,8 @@ template<>
 void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top,
                                                  const float *verify_blob)
 {
-
-    if (ocl::Device::getDefault().intelSubgroupsSupport()) {
+    char *auto_tuning = getenv("OPENCV_OPENCL_ENABLE_PROFILING");
+    if (auto_tuning && ocl::Device::getDefault().intelSubgroupsSupport()) {
         /* IDLF kernels are using Intel specific extension which make
            them intel only. */
         // Generates static key_
@@ -2558,25 +2558,27 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
 
     tuned_ = true;
 
-    std::string outputFile;
-    outputFile = cache_path_.str() + key_;
-    std::ifstream cachedKernel(outputFile.c_str());
-    std::ofstream outputKernel;
-    outputKernel.open(outputFile.c_str());
-    outputKernel << bestKernelConfig->workItem_output[0] << " "
-                 << bestKernelConfig->workItem_output[1] << " "
-                 << bestKernelConfig->workItem_output[2] << " "
-                 << bestKernelConfig->kernelType << " "
-                 << bestKernelConfig->global_work_size[0] << " "
-                 << bestKernelConfig->global_work_size[1] << " "
-                 << bestKernelConfig->global_work_size[2] << " "
-                 << bestKernelConfig->local_work_size[0] << " "
-                 << bestKernelConfig->local_work_size[1] << " "
-                 << bestKernelConfig->local_work_size[2] << " "
-                 << bestKernelConfig->swizzle_weights << " "
-                 << 0 << " "  // deprecated
-                 << bestKernelConfig->use_null_local << " ";
-    outputKernel.close();
+    if (auto_tuning) {
+        std::string outputFile;
+        outputFile = cache_path_.str() + key_;
+        std::ifstream cachedKernel(outputFile.c_str());
+        std::ofstream outputKernel;
+        outputKernel.open(outputFile.c_str());
+        outputKernel << bestKernelConfig->workItem_output[0] << " "
+                     << bestKernelConfig->workItem_output[1] << " "
+                     << bestKernelConfig->workItem_output[2] << " "
+                     << bestKernelConfig->kernelType << " "
+                     << bestKernelConfig->global_work_size[0] << " "
+                     << bestKernelConfig->global_work_size[1] << " "
+                     << bestKernelConfig->global_work_size[2] << " "
+                     << bestKernelConfig->local_work_size[0] << " "
+                     << bestKernelConfig->local_work_size[1] << " "
+                     << bestKernelConfig->local_work_size[2] << " "
+                     << bestKernelConfig->swizzle_weights << " "
+                     << 0 << " "  // deprecated
+                     << bestKernelConfig->use_null_local << " ";
+        outputKernel.close();
+    }
 }
 
 template<typename Dtype>
