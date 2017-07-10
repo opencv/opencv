@@ -3720,7 +3720,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                                    double sigma_color, double sigma_space,
                                    int borderType)
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (ocl::Device::getDefault().isNVidia())
         return false;
 #endif

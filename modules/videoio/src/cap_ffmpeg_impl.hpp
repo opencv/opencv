@@ -635,7 +635,7 @@ struct ImplMutex::Impl
     int refcount;
 };
 
-#elif defined __linux__ && !defined ANDROID
+#elif defined __linux__ && !defined __ANDROID__
 
 struct ImplMutex::Impl
 {

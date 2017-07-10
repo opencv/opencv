@@ -414,7 +414,7 @@ OCL_TEST_P(Remap_INTER_LINEAR, Mat)
         random_roi();
 
         double eps = 2.0;
-#ifdef ANDROID
+#ifdef __ANDROID__
         // TODO investigate accuracy
         if (cv::ocl::Device::getDefault().isNVidia())
             eps = 8.0;

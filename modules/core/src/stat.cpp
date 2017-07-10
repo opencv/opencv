@@ -2187,7 +2187,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 {
     const ocl::Device & dev = ocl::Device::getDefault();
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (dev.isNVidia())
         return false;
 #endif
@@ -2975,7 +2975,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 {
     const ocl::Device & d = ocl::Device::getDefault();
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (d.isNVidia())
         return false;
 #endif
@@ -3317,7 +3317,7 @@ namespace cv {
 
 static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result )
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (ocl::Device::getDefault().isNVidia())
         return false;
 #endif
