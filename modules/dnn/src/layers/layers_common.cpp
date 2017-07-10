@@ -125,7 +125,8 @@ void getPoolingKernelParams(const LayerParams &params, int &kernelH, int &kernel
 {
     util::getStrideAndPadding(params, padH, padW, strideH, strideW, padMode);
 
-    globalPooling = params.has("global_pooling");
+    globalPooling = params.has("global_pooling") &&
+                    params.get<bool>("global_pooling");
 
     if (globalPooling)
     {
