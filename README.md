@@ -7,14 +7,6 @@
 * Q&A forum: <http://answers.opencv.org>
 * Issue tracking: <https://github.com/opencv/opencv/issues>
 
-#### Contributing
+#### Adding Fast Filter Flow algorithm for dealing with the pattern of apparent motion of image objects between two consecutive frames caused by the movemement of object or camera for OpenCV
 
-Please read before starting work on a pull request: <https://github.com/opencv/opencv/wiki/How_to_contribute>
 
-Summary of guidelines:
-
-* One pull request per issue;
-* Choose the right base branch;
-* Include tests and documentation;
-* Clean up "oops" commits before submitting;
-* Follow the coding style guide.
