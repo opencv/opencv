@@ -116,6 +116,7 @@ static void* WinGetProcAddress(const char* name)
                 else if (GetProcAddress(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
                 {
                     fprintf(stderr, ERROR_MSG_INVALID_VERSION);
+                    FreeLibrary(handle);
                     handle = NULL;
                 }
             }
