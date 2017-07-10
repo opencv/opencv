@@ -70,8 +70,11 @@ namespace Utils{
         int w=  object["width"].as<unsigned>();
         int h=  object["height"].as<unsigned>();
         std::string str = object["data"]["buffer"].as<std::string>();
+
+        cv::Mat mat(h, w, type);
+        memcpy(mat.data, str.data(), mat.total()*mat.elemSize());
         
-        return emscripten::val(cv::Mat(h, w, type, (void*)str.data(), 0));
+        return emscripten::val(mat);
     }
 
     cv::Mat* createMat(Size size, int type, intptr_t data, size_t step) {
