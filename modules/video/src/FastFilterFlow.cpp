@@ -74,7 +74,6 @@ int neigbHeight = 5;
 int reserveCap = 4 * (neigbHeight + 2) * (neigbWidth + 2);
 transMat.reserve(VectorXd::Constant(nPixels, reserveCap));
 SparseMatrix<double> dcompMat(nPixels, nPixels);
-
 vector<vector<int> > neighMat;
 
 int affineX = 2;
