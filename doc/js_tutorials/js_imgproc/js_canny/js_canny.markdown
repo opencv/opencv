@@ -84,7 +84,7 @@ magnitude. If it is True, it uses the equation mentioned above which is more acc
 Try it
 ------
 
-Here is a demo. Canvas elements named CannyCanvas1 and CannyCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named CannyCanvasInput and CannyCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -101,19 +101,19 @@ canvas {
 <h2>Input your code</h2>
 <button id="CannyTryIt" disabled="true" onclick="CannyExecuteCode()">Try it</button><br>
 <textarea rows="8" cols="80" id="CannyTestCode" spellcheck="false">
-var src = cv.imread("CannyCanvas1");
+var src = cv.imread("CannyCanvasInput");
 var dst = new cv.Mat();
 cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGB2GRAY.value, 0);
 // You can try more different conversion
 cv.Canny(src, dst, 150, 100, 3, false);
-cv.imshow("CannyCanvas2", dst);
+cv.imshow("CannyCanvasOutput", dst);
 src.delete(); dst.delete();
 </textarea>
 </div>
 <div id="CannyShowcase">
     <div>
-        <canvas id="CannyCanvas1"></canvas>
-        <canvas id="CannyCanvas2"></canvas>
+        <canvas id="CannyCanvasInput"></canvas>
+        <canvas id="CannyCanvasOutput"></canvas>
     </div>
     <input type="file" id="CannyInput" name="file" />
 </div>
@@ -125,12 +125,12 @@ function CannyExecuteCode() {
     eval(CannyText);
 }
 
-loadImageToCanvas("lena.jpg", "CannyCanvas1");
+loadImageToCanvas("lena.jpg", "CannyCanvasInput");
 var CannyInputElement = document.getElementById("CannyInput");
 CannyInputElement.addEventListener("change", CannyHandleFiles, false);
 function CannyHandleFiles(e) {
     var CannyUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(CannyUrl, "CannyCanvas1");
+    loadImageToCanvas(CannyUrl, "CannyCanvasInput");
 }
 document.getElementById("opencvjs").onload = function() {
     document.getElementById("CannyTryIt").disabled = false;

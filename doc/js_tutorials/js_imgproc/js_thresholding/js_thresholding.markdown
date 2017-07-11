@@ -40,7 +40,7 @@ Documentation clearly explain what each type is meant for. Please check out the 
 Try it
 ------
 
-Here is a demo. Canvas elements named thresholdCanvas1 and thresholdCanvas2 have been prepared. Choose an image and 
+Here is a demo. Canvas elements named thresholdCanvasInput and thresholdCanvasOutput have been prepared. Choose an image and 
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -57,19 +57,19 @@ canvas {
 <h2>Input your code</h2>
 <button id="thresholdTryIt" disabled="true" onclick="thresholdExecuteCode()">Try it</button><br>
 <textarea rows="8" cols="80" id="thresholdTestCode" spellcheck="false">
-var src = cv.imread("thresholdCanvas1");
+var src = cv.imread("thresholdCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
 cv.threshold(src, dst, 177, 200, cv.ThresholdTypes.THRESH_BINARY.value)
-cv.imshow("thresholdCanvas2", dst);
+cv.imshow("thresholdCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
 </div>
 <div id="thresholdShowcase">
     <div>
-        <canvas id="thresholdCanvas1"></canvas>
-        <canvas id="thresholdCanvas2"></canvas>
+        <canvas id="thresholdCanvasInput"></canvas>
+        <canvas id="thresholdCanvasOutput"></canvas>
     </div>
     <input type="file" id="thresholdInput" name="file" />
 </div>
@@ -81,12 +81,12 @@ function thresholdExecuteCode() {
     eval(thresholdText);
 }
 
-loadImageToCanvas("lena.jpg", "thresholdCanvas1");
+loadImageToCanvas("lena.jpg", "thresholdCanvasInput");
 var thresholdInputElement = document.getElementById("thresholdInput");
 thresholdInputElement.addEventListener("change", thresholdHandleFiles, false);
 function thresholdHandleFiles(e) {
     var thresholdUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(thresholdUrl, "thresholdCanvas1");
+    loadImageToCanvas(thresholdUrl, "thresholdCanvasInput");
 }
 </script>
 </body>
@@ -118,7 +118,7 @@ We use the function: **cv.adaptiveThreshold(src, dst, maxValue, adaptiveMethod, 
 Try it
 ------
 
-Here is a demo. Canvas elements named adaptiveThresholdCanvas1 and adaptiveThresholdCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named adaptiveThresholdCanvasInput and adaptiveThresholdCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -135,20 +135,20 @@ canvas {
 <h2>Input your code</h2>
 <button id="adaptiveThresholdTryIt" disabled="true" onclick="adaptiveThresholdExecuteCode()">Try it</button><br>
 <textarea rows="11" cols="80" id="adaptiveThresholdTestCode" spellcheck="false">
-var src = cv.imread("adaptiveThresholdCanvas1");
+var src = cv.imread("adaptiveThresholdCanvasInput");
 var dst = new cv.Mat();
 cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
 // You can try more different conversion
 cv.adaptiveThreshold(src, dst, 200, cv.AdaptiveThresholdTypes.ADAPTIVE_THRESH_GAUSSIAN_C.value, cv.ThresholdTypes.THRESH_BINARY.value, 3, 2)
-cv.imshow("adaptiveThresholdCanvas2", dst);
+cv.imshow("adaptiveThresholdCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
 </div>
 <div id="adaptiveThresholdShowcase">
     <div>
-        <canvas id="adaptiveThresholdCanvas1"></canvas>
-        <canvas id="adaptiveThresholdCanvas2"></canvas>
+        <canvas id="adaptiveThresholdCanvasInput"></canvas>
+        <canvas id="adaptiveThresholdCanvasOutput"></canvas>
     </div>
     <input type="file" id="adaptiveThresholdInput" name="file" />
 </div>
@@ -158,12 +158,12 @@ function adaptiveThresholdExecuteCode() {
     eval(adaptiveThresholdText);
 }
 
-loadImageToCanvas("lena.jpg", "adaptiveThresholdCanvas1");
+loadImageToCanvas("lena.jpg", "adaptiveThresholdCanvasInput");
 var adaptiveThresholdInputElement = document.getElementById("adaptiveThresholdInput");
 adaptiveThresholdInputElement.addEventListener("change", adaptiveThresholdHandleFiles, false);
 function adaptiveThresholdHandleFiles(e) {
     var adaptiveThresholdUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(adaptiveThresholdUrl, "adaptiveThresholdCanvas1");
+    loadImageToCanvas(adaptiveThresholdUrl, "adaptiveThresholdCanvasInput");
 }
 
 document.getElementById("opencvjs").onload = function() {

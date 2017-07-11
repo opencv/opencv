@@ -45,7 +45,7 @@ We use the function: **cv.erode(src, dst, kernel, anchor, iterations, borderType
 Try it
 ------
 
-Here is a demo. Canvas elements named erodeCanvas1 and erodeCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named erodeCanvasInput and erodeCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -62,20 +62,20 @@ canvas {
 <h2>Input your code</h2>
 <button id="erodeTryIt" disabled="true" onclick="erodeExecuteCode()">Try it</button><br>
 <textarea rows="9" cols="80" id="erodeTestCode" spellcheck="false">
-var src = cv.imread("erodeCanvas1");
+var src = cv.imread("erodeCanvasInput");
 var dst = new cv.Mat();
 var M = cv.Mat.ones(5, 5, cv.CV_8U);
 var S = new cv.Scalar();
 // You can try more different conversion
 cv.erode(src, dst, M, [-1,-1], 1, cv.BorderTypes.BORDER_DEFAULT.value, S)
-cv.imshow("erodeCanvas2", dst);
+cv.imshow("erodeCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete(); S.delete();
 </textarea>
 </div>
 <div id="erodeShowcase">
     <div>
-        <canvas id="erodeCanvas1"></canvas>
-        <canvas id="erodeCanvas2"></canvas>
+        <canvas id="erodeCanvasInput"></canvas>
+        <canvas id="erodeCanvasOutput"></canvas>
     </div>
     <input type="file" id="erodeInput" name="file" />
 </div>
@@ -87,12 +87,12 @@ function erodeExecuteCode() {
     eval(erodeText);
 }
 
-loadImageToCanvas("LinuxLogo.jpg", "erodeCanvas1");
+loadImageToCanvas("LinuxLogo.jpg", "erodeCanvasInput");
 var erodeInputElement = document.getElementById("erodeInput");
 erodeInputElement.addEventListener("change", erodeHandleFiles, false);
 function erodeHandleFiles(e) {
     var erodeUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(erodeUrl, "erodeCanvas1");
+    loadImageToCanvas(erodeUrl, "erodeCanvasInput");
 }
 </script>
 </body>
@@ -118,7 +118,7 @@ We use the function: **cv.erode(src, dst, kernel, anchor, iterations, borderType
 Try it
 ------
 
-Here is a demo. Canvas elements named dilateCanvas1 and dilateCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named dilateCanvasInput and dilateCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -135,20 +135,20 @@ canvas {
 <h2>Input your code</h2>
 <button id="dilateTryIt" disabled="true" onclick="dilateExecuteCode()">Try it</button><br>
 <textarea rows="9" cols="80" id="dilateTestCode" spellcheck="false">
-var src = cv.imread("dilateCanvas1");
+var src = cv.imread("dilateCanvasInput");
 var dst = new cv.Mat();
 var M = cv.Mat.ones(5, 5, cv.CV_8U);
 var S = new cv.Scalar();
 // You can try more different conversion
 cv.dilate(src, dst, M, [-1,-1], 1, cv.BorderTypes.BORDER_DEFAULT.value, S)
-cv.imshow("dilateCanvas2", dst);
+cv.imshow("dilateCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete(); S.delete();
 </textarea>
 </div>
 <div id="dilateShowcase">
     <div>
-        <canvas id="dilateCanvas1"></canvas>
-        <canvas id="dilateCanvas2"></canvas>
+        <canvas id="dilateCanvasInput"></canvas>
+        <canvas id="dilateCanvasOutput"></canvas>
     </div>
     <input type="file" id="dilateInput" name="file" />
 </div>
@@ -158,12 +158,12 @@ function dilateExecuteCode() {
     eval(dilateText);
 }
 
-loadImageToCanvas("LinuxLogo.jpg", "dilateCanvas1");
+loadImageToCanvas("LinuxLogo.jpg", "dilateCanvasInput");
 var dilateInputElement = document.getElementById("dilateInput");
 dilateInputElement.addEventListener("change", dilateHandleFiles, false);
 function dilateHandleFiles(e) {
     var dilateUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(dilateUrl, "dilateCanvas1");
+    loadImageToCanvas(dilateUrl, "dilateCanvasInput");
 }
 </script>
 </body>
@@ -174,7 +174,7 @@ function dilateHandleFiles(e) {
 ### 3. Opening
 
 Opening is just another name of **erosion followed by dilation**. It is useful in removing noise, as
-we explained above. Here we use the function, **cv2.morphologyEx()**
+we explained above. 
 
 
 ### 4. Closing
@@ -211,7 +211,7 @@ the kernel, you get the desired kernel.
 Try it
 ------
 
-Here is a demo. Canvas elements named getStructuringElementCanvas1 and getStructuringElementCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named getStructuringElementCanvasInput and getStructuringElementCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 @note cv.getStructuringElement() should be in the white list to implement Structuring Element.
@@ -235,8 +235,8 @@ canvas {
 </div>
 <div id="getStructuringElementShowcase">
     <div>
-        <canvas id="getStructuringElementCanvas1"></canvas>
-        <canvas id="getStructuringElementCanvas2"></canvas>
+        <canvas id="getStructuringElementCanvasInput"></canvas>
+        <canvas id="getStructuringElementCanvasOutput"></canvas>
     </div>
     <input type="file" id="getStructuringElementInput" name="file" />
 </div>
@@ -246,12 +246,12 @@ function getStructuringElementExecuteCode() {
     eval(getStructuringElementText);
 }
 
-loadImageToCanvas("lena.jpg", "getStructuringElementCanvas1");
+loadImageToCanvas("lena.jpg", "getStructuringElementCanvasInput");
 var getStructuringElementInputElement = document.getElementById("getStructuringElementInput");
 getStructuringElementInputElement.addEventListener("change", getStructuringElementHandleFiles, false);
 function getStructuringElementHandleFiles(e) {
     var getStructuringElementUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(getStructuringElementUrl, "getStructuringElementCanvas1");
+    loadImageToCanvas(getStructuringElementUrl, "getStructuringElementCanvasInput");
 }
 document.getElementById("opencvjs").onload = function() {
     document.getElementById("erodeTryIt").disabled = false;

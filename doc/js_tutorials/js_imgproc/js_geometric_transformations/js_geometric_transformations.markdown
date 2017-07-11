@@ -6,7 +6,7 @@ Goals
 
 -   Learn to apply different geometric transformation to images like translation, rotation, affine
     transformation etc.
--   You will see these functions: **resize**, **cv.warpAffine**, **cv.getAffineTransform** and **cv.warpPerspective** 
+-   You will see these functions: **cv.resize**, **cv.warpAffine**, **cv.getAffineTransform** and **cv.warpPerspective** 
 
 Transformations
 ---------------
@@ -14,7 +14,7 @@ Transformations
 
 ### Scaling
 
-Scaling is just resizing of the image. OpenCV comes with a function **cv2.resize()** for this
+Scaling is just resizing of the image. OpenCV comes with a function **cv.resize()** for this
 purpose. The size of the image can be specified manually, or you can specify the scaling factor.
 Different interpolation methods are used. Preferable interpolation methods are **cv.InterpolationFlags.INTER_AREA.value**
 for shrinking and **cv.InterpolationFlags.INTER_CUBIC.value** (slow) & **cv.InterpolationFlags.INTER_LINEAR.value** for zooming. 
@@ -22,18 +22,18 @@ for shrinking and **cv.InterpolationFlags.INTER_CUBIC.value** (slow) & **cv.Inte
 We use the function: **cv.resize(src, dst, dsize, fx, fy, interpolation)**
 @param src    input image
 @param dst     output image; it has the size dsize (when it is non-zero) or the size computed from src.size(), fx, and fy; the type of dst is the same as of src. 
-@param dsize  output image size; if it equals zero, it is computed as: 		
-    			 \f[𝚍𝚜𝚒𝚣𝚎 = 𝚂𝚒𝚣𝚎(𝚛𝚘𝚞𝚗𝚍(𝚏𝚡*𝚜𝚛𝚌.𝚌𝚘𝚕𝚜), 𝚛𝚘𝚞𝚗𝚍(𝚏𝚢*𝚜𝚛𝚌.𝚛𝚘𝚠𝚜))\f]
-    			 Either dsize or both fx and fy must be non-zero. 
-@param fx     scale factor along the horizontal axis; when it equals 0, it is computed as  \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚠𝚒𝚍𝚝𝚑/𝚜𝚛𝚌.𝚌𝚘𝚕𝚜\f]		 
-    			 
+@param dsize  output image size; if it equals zero, it is computed as:      
+                 \f[𝚍𝚜𝚒𝚣𝚎 = 𝚂𝚒𝚣𝚎(𝚛𝚘𝚞𝚗𝚍(𝚏𝚡*𝚜𝚛𝚌.𝚌𝚘𝚕𝚜), 𝚛𝚘𝚞𝚗𝚍(𝚏𝚢*𝚜𝚛𝚌.𝚛𝚘𝚠𝚜))\f]
+                 Either dsize or both fx and fy must be non-zero. 
+@param fx     scale factor along the horizontal axis; when it equals 0, it is computed as  \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚠𝚒𝚍𝚝𝚑/𝚜𝚛𝚌.𝚌𝚘𝚕𝚜\f]        
+                 
 @param fy     scale factor along the vertical axis; when it equals 0, it is computed as \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚑𝚎𝚒𝚐𝚑𝚝/𝚜𝚛𝚌.𝚛𝚘𝚠𝚜\f] 
 @param interpolation    interpolation method
 
 Try it
 ------
 
-Here is a demo. Canvas elements named resizeCanvas1 and resizeCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named resizeCanvasInput and resizeCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -50,19 +50,19 @@ canvas {
 <h2>Input your code</h2>
 <button id="resizeTryIt" disabled="true" onclick="resizeExecuteCode()">Try it</button><br>
 <textarea rows="8" cols="80" id="resizeTestCode" spellcheck="false">
-var src = cv.imread("resizeCanvas1");
+var src = cv.imread("resizeCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
 cv.resize(src, dst, [600,600], 0, 0, cv.InterpolationFlags.INTER_LINEAR.value);
-cv.imshow("resizeCanvas2", dst);
+cv.imshow("resizeCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
 </div>
 <div id="resizeShowcase">
     <div>
-        <canvas id="resizeCanvas1"></canvas>
-        <canvas id="resizeCanvas2"></canvas>
+        <canvas id="resizeCanvasInput"></canvas>
+        <canvas id="resizeCanvasOutput"></canvas>
     </div>
     <input type="file" id="resizeInput" name="file" />
 </div>
@@ -74,12 +74,12 @@ function resizeExecuteCode() {
     eval(resizeText);
 }
 
-loadImageToCanvas("lena.jpg", "resizeCanvas1");
+loadImageToCanvas("lena.jpg", "resizeCanvasInput");
 var resizeInputElement = document.getElementById("resizeInput");
 resizeInputElement.addEventListener("change", resizeHandleFiles, false);
 function resizeHandleFiles(e) {
     var resizeUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(resizeUrl, "resizeCanvas1");
+    loadImageToCanvas(resizeUrl, "resizeCanvasInput");
 }
 </script>
 </body>
@@ -97,8 +97,8 @@ We use the function: **cv.warpAffine(src, dst, M, dsize, flags, borderMode, bord
 @param dst    output image that has the size dsize and the same type as src.
 @param Mat    2×3transformation matrix.
 @param dsize  size of the output image.
-@param flags  combination of interpolation methods and the optional flag WARP_INVERSE_MAP that means that M is the inverse transformation ( 𝚍𝚜𝚝→𝚜𝚛𝚌 )		 
-@param borderMode	pixel extrapolation method; when borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.		 
+@param flags  combination of interpolation methods and the optional flag WARP_INVERSE_MAP that means that M is the inverse transformation ( 𝚍𝚜𝚝→𝚜𝚛𝚌 )        
+@param borderMode   pixel extrapolation method; when borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.      
 @param borderValue   value used in case of a constant border  
 
 **warning**
@@ -110,7 +110,7 @@ rows.
 Try it
 ------
 
-Here is a demo. Canvas elements named warpAffineCanvas1 and warpAffineCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named warpAffineCanvasInput and warpAffineCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -127,21 +127,21 @@ canvas {
 <h2>Input your code</h2>
 <button id="warpAffineTryIt" disabled="true" onclick="warpAffineExecuteCode()">Try it</button><br>
 <textarea rows="10" cols="80" id="warpAffineTestCode" spellcheck="false">
-var src = cv.imread("warpAffineCanvas1");
+var src = cv.imread("warpAffineCanvasInput");
 var dst = new cv.Mat();
 var M = new cv.Mat([2,3], cv.CV_64FC1);
 M.data64f()[0]=1; M.data64f()[1]=0; M.data64f()[2]=50;
 M.data64f()[3]=0; M.data64f()[4]=1; M.data64f()[5]=100;
 // You can try more different conversion
 cv.warpAffine(src, dst, M, [src.cols,src.rows], cv.InterpolationFlags.INTER_LINEAR.value, cv.BORDER_CONSTANT, new cv.Scalar());
-cv.imshow("warpAffineCanvas2", dst);
+cv.imshow("warpAffineCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete();
 </textarea>
 </div>
 <div id="warpAffineShowcase">
     <div>
-        <canvas id="warpAffineCanvas1"></canvas>
-        <canvas id="warpAffineCanvas2"></canvas>
+        <canvas id="warpAffineCanvasInput"></canvas>
+        <canvas id="warpAffineCanvasOutput"></canvas>
     </div>
     <input type="file" id="warpAffineInput" name="file" />
 </div>
@@ -151,12 +151,12 @@ function warpAffineExecuteCode() {
     eval(warpAffineText);
 }
 
-loadImageToCanvas("lena.jpg", "warpAffineCanvas1");
+loadImageToCanvas("lena.jpg", "warpAffineCanvasInput");
 var warpAffineInputElement = document.getElementById("warpAffineInput");
 warpAffineInputElement.addEventListener("change", warpAffineHandleFiles, false);
 function warpAffineHandleFiles(e) {
     var warpAffineUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(warpAffineUrl, "warpAffineCanvas1");
+    loadImageToCanvas(warpAffineUrl, "warpAffineCanvasInput");
 }
 </script>
 </body>
@@ -182,7 +182,7 @@ We use the function: **cv.warpAffine(src, dst, M, dsize, flags, borderMode, bord
 Try it
 ------
 
-Here is a demo. Canvas elements named rotateWarpAffineCanvas1 and rotateWarpAffineCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named rotateWarpAffineCanvasInput and rotateWarpAffineCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 @note cv.getRotationMatrix2D() should be in the white list to simplify the operation.
@@ -201,7 +201,7 @@ canvas {
 <h2>Input your code</h2>
 <button id="rotateWarpAffineTryIt" disabled="true" onclick="rotateWarpAffineExecuteCode()">Try it</button><br>
 <textarea rows="18" cols="80" id="rotateWarpAffineTestCode" spellcheck="false">
-var src = cv.imread("rotateWarpAffineCanvas1");
+var src = cv.imread("rotateWarpAffineCanvasInput");
 var dst = new cv.Mat(src.cols, src.rows, src.type());
 var M = new cv.Mat([2,3], cv.CV_64FC1);
 var degree = 45;
@@ -216,14 +216,14 @@ M.data64f()[4] = alpha,
 M.data64f()[5] = beta * src.cols / 2 + (1 - alpha) * src.rows / 2;
 // You can try more different conversion
 cv.warpAffine(src, dst, M, [src.cols,src.rows], cv.InterpolationFlags.INTER_LINEAR.value, cv.BORDER_CONSTANT, new cv.Scalar());
-cv.imshow("rotateWarpAffineCanvas2", dst);
+cv.imshow("rotateWarpAffineCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete();
 </textarea>
 </div>
 <div id="rotateWarpAffineShowcase">
     <div>
-        <canvas id="rotateWarpAffineCanvas1"></canvas>
-        <canvas id="rotateWarpAffineCanvas2"></canvas>
+        <canvas id="rotateWarpAffineCanvasInput"></canvas>
+        <canvas id="rotateWarpAffineCanvasOutput"></canvas>
     </div>
     <input type="file" id="rotateWarpAffineInput" name="file" />
 </div>
@@ -233,12 +233,12 @@ function rotateWarpAffineExecuteCode() {
     eval(rotateWarpAffineText);
 }
 
-loadImageToCanvas("lena.jpg", "rotateWarpAffineCanvas1");
+loadImageToCanvas("lena.jpg", "rotateWarpAffineCanvasInput");
 var rotateWarpAffineInputElement = document.getElementById("rotateWarpAffineInput");
 rotateWarpAffineInputElement.addEventListener("change", rotateWarpAffineHandleFiles, false);
 function rotateWarpAffineHandleFiles(e) {
     var rotateWarpAffineUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(rotateWarpAffineUrl, "rotateWarpAffineCanvas1");
+    loadImageToCanvas(rotateWarpAffineUrl, "rotateWarpAffineCanvasInput");
 }
 
 </script>
@@ -260,7 +260,7 @@ We use the function: **cv.getAffineTransform(src, dst)** and **cv.warpAffine(src
 Try it
 ------
 
-Here is a demo. Canvas elements named getAffineTransformCanvas1 and getAffineTransformCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named getAffineTransformCanvasInput and getAffineTransformCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -277,7 +277,7 @@ canvas {
 <h2>Input your code</h2>
 <button id="getAffineTransformTryIt" disabled="true" onclick="getAffineTransformExecuteCode()">Try it</button><br>
 <textarea rows="18" cols="80" id="getAffineTransformTestCode" spellcheck="false">
-var src = cv.imread("getAffineTransformCanvas1");
+var src = cv.imread("getAffineTransformCanvasInput");
 var dst = new cv.Mat(src.cols, src.rows, src.type());
 var srcTri = new cv.Mat(3, 2, cv.CV_32F); 
 var dstTri = new cv.Mat(3, 2, cv.CV_32F);
@@ -291,14 +291,14 @@ var M = new cv.Mat([2,3], cv.CV_64FC1);
 M = cv.getAffineTransform(srcTri, dstTri);
 // You can try more different conversion
 cv.warpAffine(src, dst, M, [src.cols,src.rows], cv.InterpolationFlags.INTER_LINEAR.value, cv.BORDER_CONSTANT, new cv.Scalar());
-cv.imshow("getAffineTransformCanvas2", dst);
+cv.imshow("getAffineTransformCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete();
 </textarea>
 </div>
 <div id="getAffineTransformShowcase">
     <div>
-        <canvas id="getAffineTransformCanvas1"></canvas>
-        <canvas id="getAffineTransformCanvas2"></canvas>
+        <canvas id="getAffineTransformCanvasInput"></canvas>
+        <canvas id="getAffineTransformCanvasOutput"></canvas>
     </div>
     <input type="file" id="getAffineTransformInput" name="file" />
 </div>
@@ -308,12 +308,12 @@ function getAffineTransformExecuteCode() {
     eval(getAffineTransformText);
 }
 
-loadImageToCanvas("lena.jpg", "getAffineTransformCanvas1");
+loadImageToCanvas("lena.jpg", "getAffineTransformCanvasInput");
 var getAffineTransformInputElement = document.getElementById("getAffineTransformInput");
 getAffineTransformInputElement.addEventListener("change", getAffineTransformHandleFiles, false);
 function getAffineTransformHandleFiles(e) {
     var getAffineTransformUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(getAffineTransformUrl, "getAffineTransformCanvas1");
+    loadImageToCanvas(getAffineTransformUrl, "getAffineTransformCanvasInput");
 }
 </script>
 </body>
@@ -332,7 +332,7 @@ The parameters of cv.warpPerspective() are similar to the parameters of cv.warpA
 Try it
 ------
 
-Here is a demo. Canvas elements named warpPerspectiveCanvas1 and warpPerspectiveCanvas2 have been prepared. Choose an image and
+Here is a demo. Canvas elements named warpPerspectiveCanvasInput and warpPerspectiveCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -349,7 +349,7 @@ canvas {
 <h2>Input your code</h2>
 <button id="warpPerspectiveTryIt" disabled="true" onclick="warpPerspectiveExecuteCode()">Try it</button><br>
 <textarea rows="11" cols="80" id="warpPerspectiveTestCode" spellcheck="false">
-var src = cv.imread("warpPerspectiveCanvas1");
+var src = cv.imread("warpPerspectiveCanvasInput");
 var dst = new cv.Mat();
 var M = new cv.Mat([3,3], cv.CV_64FC1);
 M.data64f()[0]=1;M.data64f()[1]=0.1;M.data64f()[2]=-65;
@@ -357,14 +357,14 @@ M.data64f()[3]=0;M.data64f()[4]=1.1;M.data64f()[5]=-75;
 M.data64f()[6]=0;M.data64f()[7]=0;  M.data64f()[8]=1;
 // You can try more different conversion
 cv.warpPerspective(src, dst, M, [src.cols,src.rows], cv.InterpolationFlags.INTER_LINEAR.value, cv.BORDER_CONSTANT, new cv.Scalar());
-cv.imshow("warpPerspectiveCanvas2", dst);
+cv.imshow("warpPerspectiveCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete();
 </textarea>
 </div>
 <div id="warpPerspectiveShowcase">
     <div>
-        <canvas id="warpPerspectiveCanvas1"></canvas>
-        <canvas id="warpPerspectiveCanvas2"></canvas>
+        <canvas id="warpPerspectiveCanvasInput"></canvas>
+        <canvas id="warpPerspectiveCanvasOutput"></canvas>
     </div>
     <input type="file" id="warpPerspectiveInput" name="file" />
 </div>
@@ -374,12 +374,12 @@ function warpPerspectiveExecuteCode() {
     eval(warpPerspectiveText);
 }
 
-loadImageToCanvas("lena.jpg", "warpPerspectiveCanvas1");
+loadImageToCanvas("lena.jpg", "warpPerspectiveCanvasInput");
 var warpPerspectiveInputElement = document.getElementById("warpPerspectiveInput");
 warpPerspectiveInputElement.addEventListener("change", warpPerspectiveHandleFiles, false);
 function warpPerspectiveHandleFiles(e) {
     var warpPerspectiveUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(warpPerspectiveUrl, "warpPerspectiveCanvas1");
+    loadImageToCanvas(warpPerspectiveUrl, "warpPerspectiveCanvasInput");
 
 }
 document.getElementById("opencvjs").onload = function() {

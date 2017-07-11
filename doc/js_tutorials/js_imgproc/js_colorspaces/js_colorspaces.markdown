@@ -25,7 +25,7 @@ For BGR \f$\rightarrow\f$ Gray conversion we use the codes cv.ColorConversionCod
 Try it
 ------
 
-Here is a demo. Canvas elements named cvtColorCanvas1 and cvtColorCanvas2 have been prepared. Choose an image and 
+Here is a demo. Canvas elements named cvtColorCanvasInput and cvtColorCanvasOutput have been prepared. Choose an image and 
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -42,20 +42,19 @@ canvas {
 <h2>Input your code</h2>
 <button id="cvtColorTryIt" disabled="true" onclick="cvtColorExecuteCode()">Try it</button><br>
 <textarea rows="8" cols="80" id="cvtColorTestCode" spellcheck="false">
-var src = cv.imread("cvtColorCanvas1");
+var src = cv.imread("cvtColorCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
 cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
-//cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGB2HSV.value, 0);
-cv.imshow("cvtColorCanvas2", dst);
+cv.imshow("cvtColorCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
 </div>
 <div id="cvtColorShowcase">
     <div>
-        <canvas id="cvtColorCanvas1"></canvas>
-        <canvas id="cvtColorCanvas2"></canvas>
+        <canvas id="cvtColorCanvasInput"></canvas>
+        <canvas id="cvtColorCanvasOutput"></canvas>
     </div>
     <input type="file" id="cvtColorInput" name="file" />
 </div>
@@ -67,12 +66,12 @@ function cvtColorExecuteCode() {
     eval(cvtColorText);
 }
 
-loadImageToCanvas("lena.jpg", "cvtColorCanvas1");
+loadImageToCanvas("lena.jpg", "cvtColorCanvasInput");
 var cvtColorInputElement = document.getElementById("cvtColorInput");
 cvtColorInputElement.addEventListener("change", cvtColorHandleFiles, false);
 function cvtColorHandleFiles(e) {
     var cvtColorUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(cvtColorUrl, "cvtColorCanvas1");
+    loadImageToCanvas(cvtColorUrl, "cvtColorCanvasInput");
 }
 
 </script>
@@ -93,7 +92,7 @@ We use the function: **cv.inRange(src, lowerb, upperb, dst)**
 Try it
 ------
 
-Here is a demo. Canvas elements named inRangeCanvas1 and inRangeCanvas2 have been prepared. Choose an image and 
+Here is a demo. Canvas elements named inRangeCanvasInput and inRangeCanvasOutput have been prepared. Choose an image and 
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -110,9 +109,7 @@ canvas {
 <h2>Input your code</h2>
 <button id="inRangeTryIt" disabled="true" onclick="inRangeExecuteCode()">Try it</button><br>
 <textarea rows="8" cols="80" id="inRangeTestCode" spellcheck="false">
-var src = cv.imread("inRangeCanvas1");
-var dst = new cv.Mat();
-var src = cv.imread("inRangeCanvas1");
+var src = cv.imread("inRangeCanvasInput");
 var dst = new cv.Mat();
 function matFromScalar (cols, rows, type, scalar) {
     var scalarMat = new cv.Mat(cols, rows, type);
@@ -124,17 +121,15 @@ function matFromScalar (cols, rows, type, scalar) {
 var low = matFromScalar(src.cols , src.rows, src.type(), [0,0,0,0]);
 var high = matFromScalar(src.cols , src.rows, src.type(), [200,150,200,255]);
 cv.inRange(src, low, high, dst);
-console.warn(dst.data());
 cv.cvtColor(dst, dst, cv.ColorConversionCodes.COLOR_GRAY2RGBA.value, 0);
-cv.imshow("inRangeCanvas2", dst);
-src.delete();
-dst.delete();
+cv.imshow("inRangeCanvasOutput", dst);
+src.delete(); dst.delete(); low.delete(); high.delete();
 </textarea>
 </div>
 <div id="inRangeShowcase">
     <div>
-        <canvas id="inRangeCanvas1"></canvas>
-        <canvas id="inRangeCanvas2"></canvas>
+        <canvas id="inRangeCanvasInput"></canvas>
+        <canvas id="inRangeCanvasOutput"></canvas>
     </div>
     <input type="file" id="inRangeInput" name="file" />
 </div>
@@ -144,19 +139,18 @@ function inRangeExecuteCode() {
     eval(inRangeText);
 }
 
-loadImageToCanvas("lena.jpg", "inRangeCanvas1");
+loadImageToCanvas("lena.jpg", "inRangeCanvasInput");
 var inRangeInputElement = document.getElementById("inRangeInput");
 inRangeInputElement.addEventListener("change", inRangeHandleFiles, false);
 function inRangeHandleFiles(e) {
     var inRangeUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(inRangeUrl, "inRangeCanvas1");
+    loadImageToCanvas(inRangeUrl, "inRangeCanvasInput");
 }
 
 document.getElementById("opencvjs").onload = function() {
     document.getElementById("inRangeTryIt").disabled = false;
     document.getElementById("cvtColorTryIt").disabled = false;
 };
-
 </script>
 </body>
 \endhtmlonly
