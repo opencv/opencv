@@ -2600,12 +2600,13 @@ cvDrawContours( void* _img, CvSeq* contour,
         void* clr = (contour->flags & CV_SEQ_FLAG_HOLE) == 0 ? ext_buf : hole_buf;
 
         cvStartReadSeq( contour, &reader, 0 );
-        CV_Assert(reader.ptr != NULL);
         if( thickness < 0 )
             pts.resize(0);
 
         if( CV_IS_SEQ_CHAIN_CONTOUR( contour ))
         {
+            CV_Assert(reader.ptr != NULL);
+
             cv::Point pt = ((CvChain*)contour)->origin;
             cv::Point prev_pt = pt;
             char prev_code = reader.ptr ? reader.ptr[0] : '\0';
@@ -2643,6 +2644,8 @@ cvDrawContours( void* _img, CvSeq* contour,
         }
         else if( CV_IS_SEQ_POLYLINE( contour ))
         {
+            CV_Assert(reader.ptr != NULL);
+
             CV_Assert( elem_type == CV_32SC2 );
             cv::Point pt1, pt2;
             int shift = 0;

@@ -485,4 +485,21 @@ TEST(Imgproc_FindContours, border)
     ASSERT_TRUE(norm(img - img_draw_contours, NORM_INF) == 0.0);
 }
 
+TEST(Imgproc_drawContours, regression_empty)
+{
+    Mat mat = Mat::zeros(Size(640,480), CV_8UC1);
+    std::vector< std::vector<Point> > contours(5);
+
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+        // One contour is "empty"
+        for (size_t j = 0; j < (unsigned)std::max(0, (int)i - 3); j++)
+        {
+            contours[i].push_back(cv::Point((int)(i + j + 10), (int)(i - j + 10)));
+        }
+    }
+
+    ASSERT_NO_THROW(drawContours(mat, contours, -1, cv::Scalar(0), CV_FILLED, 8));
+}
+
 /* End of file. */
