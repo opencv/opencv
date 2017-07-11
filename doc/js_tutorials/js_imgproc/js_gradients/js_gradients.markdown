@@ -203,6 +203,8 @@ Try it
 Here is a demo. Canvas elements named absSobelCanvas1, absSobelCanvas2 and absSobelCanvas3 have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
+@note cv.convertScaleAbs() should be in the white list to simplify the operation.
+
 \htmlonly
 <!DOCTYPE html>
 <head>

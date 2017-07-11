@@ -169,60 +169,36 @@ function dilateHandleFiles(e) {
 </body>
 \endhtmlonly
 
+@note cv.morphologyEx() should be in the white list to implement following functions.
+
 ### 3. Opening
 
 Opening is just another name of **erosion followed by dilation**. It is useful in removing noise, as
 we explained above. Here we use the function, **cv2.morphologyEx()**
-@code{.py}
-opening = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
-@endcode
-Result:
 
-![image](images/opening.png)
 
 ### 4. Closing
 
 Closing is reverse of Opening, **Dilation followed by Erosion**. It is useful in closing small holes
 inside the foreground objects, or small black points on the object.
-@code{.py}
-closing = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
-@endcode
-Result:
 
-![image](images/closing.png)
 
 ### 5. Morphological Gradient
 
 It is the difference between dilation and erosion of an image.
 
 The result will look like the outline of the object.
-@code{.py}
-gradient = cv2.morphologyEx(img, cv2.MORPH_GRADIENT, kernel)
-@endcode
-Result:
 
-![image](images/gradient.png)
 
 ### 6. Top Hat
 
-It is the difference between input image and Opening of the image. Below example is done for a 9x9
-kernel.
-@code{.py}
-tophat = cv2.morphologyEx(img, cv2.MORPH_TOPHAT, kernel)
-@endcode
-Result:
+It is the difference between input image and Opening of the image. 
 
-![image](images/tophat.png)
 
 ### 7. Black Hat
 
 It is the difference between the closing of the input image and input image.
-@code{.py}
-blackhat = cv2.morphologyEx(img, cv2.MORPH_BLACKHAT, kernel)
-@endcode
-Result:
 
-![image](images/blackhat.png)
 
 Structuring Element
 -------------------
@@ -237,6 +213,8 @@ Try it
 
 Here is a demo. Canvas elements named getStructuringElementCanvas1 and getStructuringElementCanvas2 have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+
+@note cv.getStructuringElement() should be in the white list to implement Structuring Element.
 
 \htmlonly
 <!DOCTYPE html>

@@ -26,6 +26,8 @@ Try it
 Here is a demo. Canvas elements named filter2DCanvas1 and filter2DCanvas2 have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
+@note cv.filter2D() should be in the white list to implement 2D Convolution.
+
 \htmlonly
 <!DOCTYPE html>
 <head>

@@ -185,6 +185,8 @@ Try it
 Here is a demo. Canvas elements named rotateWarpAffineCanvas1 and rotateWarpAffineCanvas2 have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
+@note cv.getRotationMatrix2D() should be in the white list to simplify the operation.
+
 \htmlonly
 <!DOCTYPE html>
 <head>
@@ -391,4 +393,4 @@ document.getElementById("opencvjs").onload = function() {
 </body>
 \endhtmlonly
 
-
+@note cv.getPerspectiveTransform() should be in the white list to find the transformation matrix from 4 points on the input image and corresponding points on the output image.
