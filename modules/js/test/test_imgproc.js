@@ -362,8 +362,8 @@ QUnit.test("test_filter", function(assert) {
       dataHeap2.set(new Uint8Array(data2.buffer));
 
 
-      let mat1 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr, 0);
-      let mat2 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr2, 0);
+      let mat1 = new cv.Mat(3, 3, cv.CV_8UC1, dataPtr, 0);
+      let mat2 = new cv.Mat(3, 3, cv.CV_8UC1, dataPtr2, 0);
 
       let mat3 = new cv.Mat();
 
@@ -413,8 +413,8 @@ QUnit.test("test_filter", function(assert) {
       dataHeap2.set(new Uint8Array(data2.buffer));
 
 
-      let mat1 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr, 0);
-      let mat2 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr2, 0);
+      let mat1 = new cv.Mat(3, 3, cv.CV_8UC1, dataPtr, 0);
+      let mat2 = new cv.Mat(3, 3, cv.CV_8UC1, dataPtr2, 0);
 
       let mat3 = new cv.Mat();
       let none = new cv.Mat();
@@ -498,9 +498,9 @@ QUnit.test("test_filter", function(assert) {
       var dataHeap3 = new Uint8Array(cv.HEAPU8.buffer, dataPtr3, 3*3*1);
       dataHeap3.set(new Uint8Array(data3.buffer));
 
-      let mat1 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr, 0);
-      let mat2 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr2, 0);
-      let mat3 = new cv.Mat([3, 3], cv.CV_8UC1, dataPtr3, 0);
+      let mat1 = new cv.Mat(3, 3, cv.CV_8UC1, dataPtr, 0);
+      let mat2 = new cv.Mat(3, 3, cv.CV_8UC1, dataPtr2, 0);
+      let mat3 = new cv.Mat(3, 3, cv.CV_8UC1, dataPtr3, 0);
 
       let dst = new cv.Mat();
       let none = new cv.Mat();
@@ -659,10 +659,10 @@ QUnit.test("test_filter", function(assert) {
       var dataHeap4 = new Float32Array(cv.HEAP32.buffer, dataPtr4, 3*3);
       dataHeap4.set(new Float32Array(data4.buffer));
 
-      let mat1 = new cv.Mat([3, 3], cv.CV_32FC1, dataPtr1, 0);
-      let mat2 = new cv.Mat([3, 3], cv.CV_32FC1, dataPtr2, 0);
-      let mat3 = new cv.Mat([4, 4], cv.CV_32FC1, dataPtr3, 0);
-      let mat4 = new cv.Mat([3, 3], cv.CV_32FC1, dataPtr4, 0);
+      let mat1 = new cv.Mat(3, 3, cv.CV_32FC1, dataPtr1, 0);
+      let mat2 = new cv.Mat(3, 3, cv.CV_32FC1, dataPtr2, 0);
+      let mat3 = new cv.Mat(4, 4, cv.CV_32FC1, dataPtr3, 0);
+      let mat4 = new cv.Mat(3, 3, cv.CV_32FC1, dataPtr4, 0);
 
       let dst = new cv.Mat();
       let none = new cv.Mat();

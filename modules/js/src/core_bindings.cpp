@@ -77,8 +77,8 @@ namespace Utils{
         return emscripten::val(mat);
     }
 
-    cv::Mat* createMat(Size size, int type, intptr_t data, size_t step) {
-        return new cv::Mat(size, type, reinterpret_cast<void*>(data), step);
+    cv::Mat* createMat(int rows, int cols, int type, intptr_t data, size_t step) {
+        return new cv::Mat(rows, cols, type, reinterpret_cast<void*>(data), step);
     }
 
 

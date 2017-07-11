@@ -78,11 +78,11 @@ QUnit.test("test_mat_creation", function(assert) {
         //mat2.delete();
     //}
 
-    // Mat::Mat(Size size, int type, void *data, size_t step=AUTO_STEP)
+    // Mat::Mat(int rows, int cols, int type, void *data, size_t step=AUTO_STEP)
     {
         // 10 * 10 and one channel
         let data = cv._malloc(10 * 10 * 1);
-        let mat = new cv.Mat([10, 10], cv.CV_8UC1, data, 0);
+        let mat = new cv.Mat(10, 10, cv.CV_8UC1, data, 0);
 
         assert.equal(mat.type(), cv.CV_8UC1);
         assert.equal(mat.depth(), cv.CV_8U);
@@ -407,7 +407,7 @@ QUnit.test("test mat access", function(assert) {
         let dataHeap = new Uint8Array(cv.HEAPU8.buffer, dataPtr, 8);
         dataHeap.set(new Uint8Array(data.buffer));
 
-        let mat = new cv.Mat([8, 1], cv.CV_8UC1, dataPtr, 0);
+        let mat = new cv.Mat(8, 1, cv.CV_8UC1, dataPtr, 0);
 
 
         let unsignedCharView = new Uint8Array(data.buffer),
@@ -436,7 +436,7 @@ QUnit.test("test mat access", function(assert) {
         let dataHeap = new Uint8Array(cv.HEAPU8.buffer, dataPtr, 8);
         dataHeap.set(new Uint8Array(data.buffer));
 
-        let mat = new cv.Mat([8, 1], cv.CV_8UC1, dataPtr, 0);
+        let mat = new cv.Mat(8, 1, cv.CV_8UC1, dataPtr, 0);
 
         assert.equal(mat.get_uchar_at(0), 0);
         assert.equal(mat.get_uchar_at(1), 0);
@@ -456,7 +456,7 @@ QUnit.test("test mat access", function(assert) {
         let dataHeap = new Uint16Array(cv.HEAPU8.buffer, dataPtr, 8);
         dataHeap.set(new Uint16Array(data.buffer));
 
-        let mat = new cv.Mat([8, 1], cv.CV_16SC1, dataPtr, 0);
+        let mat = new cv.Mat(8, 1, cv.CV_16SC1, dataPtr, 0);
 
         assert.equal(mat.get_ushort_at(0), 0);
         assert.equal(mat.get_ushort_at(1), 1000);
@@ -476,7 +476,7 @@ QUnit.test("test mat access", function(assert) {
         let dataHeap = new Int32Array(cv.HEAPU32.buffer, dataPtr, 8);
         dataHeap.set(new Int32Array(data.buffer));
 
-        let mat = new cv.Mat([8, 1], cv.CV_32SC1, dataPtr, 0);
+        let mat = new cv.Mat(8, 1, cv.CV_32SC1, dataPtr, 0);
 
         assert.equal(mat.get_int_at(0), 0);
         assert.equal(mat.get_int_at(1), -1000);
@@ -497,7 +497,7 @@ QUnit.test("test mat access", function(assert) {
         let dataHeap = new Float32Array(cv.HEAPU32.buffer, dataPtr, 8);
         dataHeap.set(new Float32Array(data.buffer));
 
-        let mat = new cv.Mat([8, 1], cv.CV_32FC1, dataPtr, 0);
+        let mat = new cv.Mat(8, 1, cv.CV_32FC1, dataPtr, 0);
 
         assert.equal(Math.abs(mat.get_float_at(0)-0)       < EPSILON, true);
         assert.equal(Math.abs(mat.get_float_at(1)+10.5)    < EPSILON, true);
