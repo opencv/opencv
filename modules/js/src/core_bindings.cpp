@@ -175,6 +175,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
         //.constructor<const Mat&>()
         .constructor<Size, int>()
         .constructor<int, int, int>()
+        .constructor<int, int, int, const Scalar&>()
         .constructor(&Utils::createMat, allow_raw_pointers())
         .constructor(&Utils::createMat2, allow_raw_pointers())
         .function("elemSize1", select_overload<size_t()const>(&cv::Mat::elemSize1))

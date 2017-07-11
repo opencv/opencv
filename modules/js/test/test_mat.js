@@ -98,6 +98,23 @@ QUnit.test("test_mat_creation", function(assert) {
         mat.delete();
     }
 
+    // Mat::Mat(int rows, int cols, int type, const Scalar& scalar)
+    {
+        // 2 * 2 8UC4 mat
+        let s = new cv.Scalar(0, 1, 2, 3);
+        let mat = new cv.Mat(2, 2, cv.CV_8UC4, s);
+
+        for (let r = 0; r < mat.rows; r++) {
+            for (let c = 0; c < mat.cols; c++) {
+                let element = mat.ptr(r, c);
+                assert.equal(element[0], 0);
+                assert.equal(element[1], 1);
+                assert.equal(element[2], 2);
+                assert.equal(element[3], 3);
+            }
+        }
+    }
+
     //  Mat::create(int, int, int)
     {
         let mat = new cv.Mat();
