@@ -575,12 +575,13 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Concat, Combine(
 //      `--- conv ----^ ^ ^
 //      `---- ... ------' '
 //      `-----------------'
-typedef TestWithParam<tuple<Vec3i, std::string, int> > Eltwise;
+typedef TestWithParam<tuple<Vec3i, std::string, int, bool> > Eltwise;
 TEST_P(Eltwise, Accuracy)
 {
     Vec3i inSize = get<0>(GetParam());
     std::string op = get<1>(GetParam());
     int numConv = get<2>(GetParam());
+    bool weighted = get<3>(GetParam());
 
     Net net;
 
@@ -606,6 +607,16 @@ TEST_P(Eltwise, Accuracy)
     }
 
     LayerParams eltwiseParam;
+    eltwiseParam.set("operation", op);
+    if (op == "sum" && weighted)
+    {
+        std::vector<float> coeff(1 + numConv);
+        for (int i = 0; i < coeff.size(); ++i)
+        {
+            coeff[i] = ((float)rand() / RAND_MAX) * 4 - 2;
+        }
+        eltwiseParam.set("coeff", DictValue::arrayReal<float*>(&coeff[0], coeff.size()));
+    }
     eltwiseParam.type = "Eltwise";
     eltwiseParam.name = "testLayer";
     int eltwiseId = net.addLayer(eltwiseParam.name, eltwiseParam.type, eltwiseParam);
@@ -629,7 +640,8 @@ TEST_P(Eltwise, Accuracy)
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Eltwise, Combine(
 /*input size*/ Values(Vec3i(1, 4, 5), Vec3i(2, 8, 6)),
 /*operation*/  Values("prod", "sum", "max"),
-/*num convs*/  Values(1, 2, 3)
+/*num convs*/  Values(1, 2, 3),
+/*weighted(for sum only)*/ Bool()
 ));
 #endif  // HAVE_HALIDE
 
