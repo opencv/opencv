@@ -91,7 +91,11 @@ void image_derivatives_scharr(const cv::Mat& src, cv::Mat& dst, int xorder, int 
  * @param dst Output image
  * @param k Contrast factor parameter
  */
-void pm_g1(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
+void pm_g1(InputArray _Lx, InputArray _Ly, OutputArray _dst, float k) {
+  _dst.create(_Lx.size(), _Lx.type());
+  Mat Lx = _Lx.getMat();
+  Mat Ly = _Ly.getMat();
+  Mat dst = _dst.getMat();
 
   Size sz = Lx.size();
   float inv_k = 1.0f / (k*k);
@@ -118,8 +122,13 @@ void pm_g1(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
  * @param dst Output image
  * @param k Contrast factor parameter
  */
-void pm_g2(const cv::Mat &Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
+void pm_g2(InputArray _Lx, InputArray _Ly, OutputArray _dst, float k) {
     CV_INSTRUMENT_REGION()
+
+    _dst.create(_Lx.size(), _Lx.type());
+    Mat Lx = _Lx.getMat();
+    Mat Ly = _Ly.getMat();
+    Mat dst = _dst.getMat();
 
     Size sz = Lx.size();
     dst.create(sz, Lx.type());
@@ -145,7 +154,11 @@ void pm_g2(const cv::Mat &Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
  * Applications of nonlinear diffusion in image processing and computer vision,
  * Proceedings of Algorithmy 2000
  */
-void weickert_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
+void weickert_diffusivity(InputArray _Lx, InputArray _Ly, OutputArray _dst, float k) {
+  _dst.create(_Lx.size(), _Lx.type());
+  Mat Lx = _Lx.getMat();
+  Mat Ly = _Ly.getMat();
+  Mat dst = _dst.getMat();
 
   Size sz = Lx.size();
   float inv_k = 1.0f / (k*k);
@@ -178,7 +191,11 @@ void weickert_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, fl
 * Applications of nonlinear diffusion in image processing and computer vision,
 * Proceedings of Algorithmy 2000
 */
-void charbonnier_diffusivity(const cv::Mat& Lx, const cv::Mat& Ly, cv::Mat& dst, float k) {
+void charbonnier_diffusivity(InputArray _Lx, InputArray _Ly, OutputArray _dst, float k) {
+  _dst.create(_Lx.size(), _Lx.type());
+  Mat Lx = _Lx.getMat();
+  Mat Ly = _Ly.getMat();
+  Mat dst = _dst.getMat();
 
   Size sz = Lx.size();
   float inv_k = 1.0f / (k*k);

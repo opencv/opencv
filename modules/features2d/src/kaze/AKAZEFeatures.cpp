@@ -11,6 +11,7 @@
 #include "fed.h"
 #include "nldiffusion_functions.h"
 #include "utils.h"
+#include "opencl_kernels_features2d.hpp"
 
 #include <iostream>
 
@@ -283,6 +284,48 @@ compute_kcontrast(const cv::Mat& Lx, const cv::Mat& Ly, float perc, int nbins)
   return 0.03f;
 }
 
+#ifdef HAVE_OPENCL
+static inline bool
+ocl_pm_g2(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast)
+{
+  size_t globalSize[] = {(size_t)(Lx.rows * Lx.cols)};
+
+  ocl::Kernel ker("AKAZE_pm_g2", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  return ker.args(
+    ocl::KernelArg::PtrReadOnly(Lx),
+    ocl::KernelArg::PtrReadOnly(Ly),
+    ocl::KernelArg::PtrWriteOnly(Lflow),
+    kcontrast).run(1, globalSize, 0, true);
+}
+#endif // HAVE_OPENCL
+
+static inline void
+compute_diffusivity(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast, int diffusivity)
+{
+  Lflow.create(Lx.size(), Lx.type());
+
+  switch (diffusivity) {
+    case KAZE::DIFF_PM_G1:
+      pm_g1(Lx, Ly, Lflow, kcontrast);
+    break;
+    case KAZE::DIFF_PM_G2:
+      CV_OCL_RUN(true, ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
+      pm_g2(Lx, Ly, Lflow, kcontrast);
+    break;
+    case KAZE::DIFF_WEICKERT:
+      weickert_diffusivity(Lx, Ly, Lflow, kcontrast);
+    break;
+    case KAZE::DIFF_CHARBONNIER:
+      charbonnier_diffusivity(Lx, Ly, Lflow, kcontrast);
+    break;
+    default:
+      CV_Error(diffusivity, "Diffusivity is not supported");
+    break;
+  }
+}
 /**
  * @brief This method creates the nonlinear scale space for a given image
  * @param img Input image for which the nonlinear scale space needs to be created
@@ -305,8 +348,8 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   }
 
   // derivatives, flow and diffusion step
-  UMat Lx, Ly, Lsmooth;
-  Mat Lflow, Lstep;
+  UMat Lx, Ly, Lsmooth, Lflow;
+  Mat Lstep;
 
   // compute derivatives for computing k contrast
   GaussianBlur(img, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
@@ -337,31 +380,16 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
     Scharr(e.Lsmooth, Ly, CV_32F, 0, 1, 1.0, 0, BORDER_DEFAULT);
 
     // Compute the conductivity equation
-    switch (options_.diffusivity) {
-      case KAZE::DIFF_PM_G1:
-        pm_g1(Lx.getMat(ACCESS_READ), Ly.getMat(ACCESS_READ), Lflow, kcontrast);
-      break;
-      case KAZE::DIFF_PM_G2:
-        pm_g2(Lx.getMat(ACCESS_READ), Ly.getMat(ACCESS_READ), Lflow, kcontrast);
-      break;
-      case KAZE::DIFF_WEICKERT:
-        weickert_diffusivity(Lx.getMat(ACCESS_READ), Ly.getMat(ACCESS_READ), Lflow, kcontrast);
-      break;
-      case KAZE::DIFF_CHARBONNIER:
-        charbonnier_diffusivity(Lx.getMat(ACCESS_READ), Ly.getMat(ACCESS_READ), Lflow, kcontrast);
-      break;
-      default:
-        CV_Error(options_.diffusivity, "Diffusivity is not supported");
-      break;
-    }
+    compute_diffusivity(Lx, Ly, Lflow, kcontrast, options_.diffusivity);
 
     // Perform Fast Explicit Diffusion on Lt
+    Mat Mflow = Lflow.getMat(ACCESS_READ);
     std::vector<float> &tsteps = tsteps_[i - 1];
     for (size_t j = 0; j < tsteps.size(); j++) {
       // Lstep must be preallocated before this parallel loop
       Lstep.create(e.Lt.size(), e.Lt.type());
       const float step_size = tsteps[j] * 0.5f;
-      parallel_for_(Range(0, e.Lt.rows), NonLinearScalarDiffusionStep(e.Lt, Lflow, Lstep, step_size));
+      parallel_for_(Range(0, e.Lt.rows), NonLinearScalarDiffusionStep(e.Lt, Mflow, Lstep, step_size));
       e.Lt += Lstep;
     }
   }
