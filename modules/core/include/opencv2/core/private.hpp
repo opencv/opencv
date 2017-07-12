@@ -209,6 +209,8 @@ CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int un
 #define IPP_DISABLE_RESIZE_NEAREST      1 // Accuracy mismatch (max diff 1)
 #define IPP_DISABLE_RESIZE_AREA         1 // Accuracy mismatch (max diff 1)
 
+#define IPP_DISABLE_MINMAX_NAN_SSE42    1 // cv::minMaxIdx problem with NaN input
+
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
 #define IPP_DISABLE_PERF_LUT            1 // there are no performance benefits (PR #2653)
