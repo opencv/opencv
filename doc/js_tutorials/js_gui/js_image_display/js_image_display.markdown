@@ -60,15 +60,15 @@ ctx.putImageData(imgData, 0, 0);
 In addition, OpenCV-JavaScript implements image read and show using the above method. You can use cv.imread and 
 cv.imshow to read image from html canvas and display it.
 @code{.js}
-var img = cv.imread("inputImage");
-cv.imshow("outputImage", img);
+var img = cv.imread("canvasInput");
+cv.imshow("canvasOutput", img);
 img.delete();
 @endcode
 
 Try it
 ------
 
-Here is the demo for above code. Canvas elements named inputImage and outputImage have been prepared. Choose an image and 
+Here is the demo for above code. Canvas elements named canvasInput and canvasOutput have been prepared. Choose an image and 
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
 \htmlonly
@@ -85,20 +85,20 @@ canvas {
 <h2>Input your code</h2>
 <button id="tryIt" disabled="true" onclick="executeCode()">Try it</button><br>
 <textarea rows="11" cols="80" id="TestCode" spellcheck="false">
-var src = cv.imread("inputImage");
+var src = cv.imread("canvasInput");
 var dst = new cv.Mat();
 // To distinguish the input and output, we graying the image.
 // You can try more different conversion
 cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
-cv.imshow("outputImage", dst);
+cv.imshow("canvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
 </div>
 <div id="showcase">
     <div>
-        <canvas id="inputImage"></canvas>
-        <canvas id="outputImage"></canvas>
+        <canvas id="canvasInput"></canvas>
+        <canvas id="canvasOutput"></canvas>
     </div>
     <input type="file" id="input" name="file" />
 </div>
@@ -110,13 +110,13 @@ function executeCode() {
     eval(text);
 }
 
-loadImageToCanvas("lena.jpg", "inputImage");
+loadImageToCanvas("lena.jpg", "canvasInput");
 
 var inputElement = document.getElementById("input");
 inputElement.addEventListener("change", handleFiles, false);
 function handleFiles(e) {
     var url = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(url, "inputImage");
+    loadImageToCanvas(url, "canvasInput");
 }
 
 document.getElementById("opencvjs").onload = function() {

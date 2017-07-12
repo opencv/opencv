@@ -15,8 +15,8 @@ weight by using the trackbar.
 First, we need to creat three canvas elements, two for input and one for output. Please refer to 
 the tutorial @ref tutorial_js_image_display.
 @code{.js}
-var src1 = cv.imread("inputImage1");
-var src2 = cv.imread("inputImage2");
+var src1 = cv.imread("canvasInput1");
+var src2 = cv.imread("canvasInput2");
 @endcode
 
 Then we use HTML DOM Input Range Object to implement the trackbar, which is shown as below. 
@@ -52,7 +52,7 @@ function addWeighted(value) {
     var beta = ( 1.0 - alpha );
     var dst = new cv.Mat();
     cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
-    cv.imshow("blendedImage", dst);
+    cv.imshow("canvasOutput", dst);
     dst.delete();
 }
 @endcode
@@ -81,18 +81,18 @@ var alpha = value/trackbar.max;
 var beta = ( 1.0 - alpha );
 var dst = new cv.Mat();
 cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
-cv.imshow("blendedImage", dst);
+cv.imshow("canvasOutput", dst);
 dst.delete();
 </textarea>
 </div>
 <div id="showcase">
     <div>
-        <canvas id="inputImage1"></canvas>
-        <canvas id="inputImage2"></canvas>
+        <canvas id="canvasInput1"></canvas>
+        <canvas id="canvasInput2"></canvas>
     </div>
     Weight: <input type="range" id="trackbar" disabled="true" value="50" min="0" max="100" step="1" 
     oninput="addWeighted(this.value)"><input type="text" id="weightValue" size="3" value="50"><br>
-    <canvas id="blendedImage"></canvas>
+    <canvas id="canvasOutput"></canvas>
 </div>
 <script src="utils.js"></script>
 <script async src="opencv.js" id="opencvjs"></script>
@@ -106,13 +106,13 @@ function addWeighted(value) {
     eval(text);
 }
 
-loadImageToCanvas("LinuxLogo.jpg", "inputImage1");
-loadImageToCanvas("WindowsLogo.jpg", "inputImage2");
+loadImageToCanvas("LinuxLogo.jpg", "canvasInput1");
+loadImageToCanvas("WindowsLogo.jpg", "canvasInput2");
 
 var src1, src2;
 document.getElementById("opencvjs").onload = function() {
-    src1 = cv.imread("inputImage1");
-    src2 = cv.imread("inputImage2");
+    src1 = cv.imread("canvasInput1");
+    src2 = cv.imread("canvasInput2");
     addWeighted(trackbar.value);
     trackbar.disabled = false;
 };
