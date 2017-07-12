@@ -3,11 +3,7 @@ Module["imread"] = function(canvasID) {
     if (canvas === null || !(canvas instanceof HTMLCanvasElement))  { console.warn("Please input the valid canvas id."); return; }
     var ctx = canvas.getContext("2d");
     var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    var src = cv.matFromArray(imgData, cv.CV_8UC4);
-    var dst = new cv.Mat();
-    dst = src.clone();
-    src.delete();
-    return dst;
+    return cv.matFromArray(imgData, cv.CV_8UC4);
 }
 
 Module["imshow"] = function(canvasID, mat) {
