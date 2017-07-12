@@ -53,7 +53,8 @@ bool LibDNNSoftmax<Dtype>::Forward(const Dtype* bottom_data, Dtype* top_data)
 {
     bool ret = true;
     ocl::Queue queue = ocl::Queue::getDefault();
-    if (ocl::Device::getDefault().intelSubgroupsSupport() && inner_num_ < 128)
+    bool intel_subgroup = 0 && ocl::Device::getDefault().intelSubgroupsSupport();
+    if (intel_subgroup && inner_num_ < 128)
     {
         String opts = " -cl-no-subgroup-ifp ";
         ocl::Kernel oclk_softmax_forward_kernel;

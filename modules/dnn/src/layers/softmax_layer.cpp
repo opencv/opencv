@@ -90,12 +90,38 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
+        if (softmaxOp.empty())
+        {
+            greentea::LibDNNSoftmaxConfig config;
+
+            int dims = inputs[0]->dims;
+            config.in_shape.resize(dims);
+            for (int i = 0; i < dims; i++)
+                config.in_shape[i] = inputs[0]->size[i];
+            config.axis = axisRaw;
+            config.channels = inputs[0]->size[axisRaw];
+
+            softmaxOp = Ptr<greentea::LibDNNSoftmax<float>>(new greentea::LibDNNSoftmax<float>(config));
+        }
+
+        UMat inpMat, outMat;
+        inpMat = inputs[0]->getUMat(ACCESS_READ);
+        outputs[0].copyTo(outMat);
+
+        cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
+        cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
+
+        if (softmaxOp->Forward((float *)in_mem, (float *)out_mem))
+        {
+            outMat.copyTo(outputs[0]);
+            return true;
+        }
+
         const Mat &src = *inputs[0];
         UMat srcMat, dstMat, bufMat;
-        srcMat = src.getUMat(ACCESS_READ);
-        dstMat = outputs[0].getUMat(ACCESS_WRITE);
+        src.copyTo(srcMat);
         srcMat.copyTo(dstMat);
-        bufMat = internals[0].getUMat(ACCESS_WRITE);
+        internals[0].copyTo(bufMat);
 
         int axis = clamp(axisRaw, src.dims);
         size_t outerSize = src.total(0, axis);
@@ -143,35 +169,9 @@ public:
         if (!kdiv.run(1, &totalSize, &wgSize, false))
             return false;
 
-        return true;
-
-#if 0
-        if (softmaxOp.empty())
-        {
-            greentea::LibDNNSoftmaxConfig config;
-
-            int dims = inputs[0]->dims;
-            config.in_shape.resize(dims);
-            for (int i = 0; i < dims; i++)
-                config.in_shape[i] = inputs[0]->size[i];
-            config.axis = axisRaw;
-            config.channels = inputs[0]->size[axisRaw];
-
-            softmaxOp = Ptr<greentea::LibDNNSoftmax<float>>(new greentea::LibDNNSoftmax<float>(config));
-        }
-
-        UMat inpMat, outMat;
-        inpMat = inputs[0]->getUMat(ACCESS_READ);
-        outMat = outputs[0].getUMat(ACCESS_WRITE);
-
-        cl_mem in_mem = (cl_mem)inpMat.handle(ACCESS_READ);
-        cl_mem out_mem = (cl_mem)outMat.handle(ACCESS_WRITE);
-
-        if (!softmaxOp->Forward((float *)in_mem, (float *)out_mem))
-            return false;
+        dstMat.copyTo(outputs[0]);
 
         return true;
-#endif
     }
 #endif
 
