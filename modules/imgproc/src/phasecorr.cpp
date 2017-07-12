@@ -372,17 +372,18 @@ static void fftShift(InputOutputArray _out)
 
     if(is_1d)
     {
+        int is_odd = (xMid > 0 && out.cols % 2 == 1) || (yMid > 0 && out.rows % 2 == 1);
         xMid = xMid + yMid;
 
         for(size_t i = 0; i < planes.size(); i++)
         {
             Mat tmp;
-            Mat half0(planes[i], Rect(0, 0, xMid, 1));
-            Mat half1(planes[i], Rect(xMid, 0, xMid, 1));
+            Mat half0(planes[i], Rect(0, 0, xMid + is_odd, 1));
+            Mat half1(planes[i], Rect(xMid + is_odd, 0, xMid, 1));
 
             half0.copyTo(tmp);
-            half1.copyTo(half0);
-            tmp.copyTo(half1);
+            half1.copyTo(planes[i](Rect(0, 0, xMid, 1)));
+            tmp.copyTo(planes[i](Rect(xMid, 0, xMid + is_odd, 1)));
         }
     }
     else
