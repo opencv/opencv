@@ -86,4 +86,21 @@ void CV_PhaseCorrelatorTest::run( int )
 
 TEST(Imgproc_PhaseCorrelatorTest, accuracy) { CV_PhaseCorrelatorTest test; test.safe_run(); }
 
+TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
+    Mat r1 = Mat::ones(Size(129, 1), CV_64F)*255; // 129 will be completed to 135 before FFT
+    Mat r2 = Mat::ones(Size(129, 1), CV_64F)*255;
+
+    const int xShift = 10;
+
+    for(int i = 6; i < 20; i++)
+    {
+        r1.at<double>(i) = 1;
+        r2.at<double>(i + xShift) = 1;
+    }
+
+    Point2d phaseShift = phaseCorrelate(r1, r2);
+
+    ASSERT_NEAR(phaseShift.x, (double)xShift, .5);
+}
+
 }
