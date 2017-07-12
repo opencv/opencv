@@ -2534,6 +2534,12 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
 #if IPP_VERSION_X100 >= 700
     CV_INSTRUMENT_REGION_IPP()
 
+#if IPP_DISABLE_MINMAX_NAN_SSE42
+    // Disable 32F processing only
+    if(src.depth() == CV_32F && !(ipp::getIppFeatures()&ippCPUID_AVX))
+        return false;
+#endif
+
     IppStatus   status;
     IppDataType dataType = ippiGetDataType(src.depth());
     float       minVal = 0;
