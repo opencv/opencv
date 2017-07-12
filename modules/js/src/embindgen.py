@@ -75,7 +75,8 @@ white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not'
               'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
               'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
               'BackgroundSubtractor': ['apply', 'getBackgroundImage'],
-              'Algorithm': []
+              'Algorithm': [],
+              'Moments': []
               }
 
 # Features to be exported
