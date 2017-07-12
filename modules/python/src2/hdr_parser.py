@@ -230,10 +230,7 @@ class CppHeaderParser(object):
             else:
                 prev_val_delta = 0
                 prev_val = val = pv[1].strip()
-            if not self._js:
-                decl.append(["const " + self.get_dotted_name(pv[0].strip()), val, [], [], None, ""])
-            else:
-                decl.append([self.get_dotted_name(pv[0].strip()), val, [], []])
+            decl.append(["const " + self.get_dotted_name(pv[0].strip()), val, [], [], None, ""])
         return decl
 
     def parse_class_decl(self, decl_str):
@@ -709,14 +706,7 @@ class CppHeaderParser(object):
                     return stmt_type, classname, True, decl
 
             if stmt.startswith("enum"):
-                if not self._js:
-                    return "enum", "", True, None
-                else:
-                    items = stmt.split()
-                    if len (items) == 1 :
-                        return "enum", '' , True, None
-                    elif len (items) == 2 :
-                        return "enum", items[1] , True, None
+                return "enum", "", True, None
 
             if stmt.startswith("namespace"):
                 stmt_list = stmt.split()
@@ -912,12 +902,8 @@ class CppHeaderParser(object):
                     stmt_type, name, parse_flag, decl = self.parse_stmt(stmt, token, docstring=docstring)
                     if decl:
                         if stmt_type == "enum":
-                            if self._js:
-                                #TODO anonymous enums
-                                decls.append(['enum' , name , [],  decl ])
-                            else:
-                                for d in decl:
-                                    decls.append(d)
+                            for d in decl:
+                                decls.append(d)
                         else:
                             decls.append(decl)
 

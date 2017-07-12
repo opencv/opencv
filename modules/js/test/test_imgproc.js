@@ -83,10 +83,10 @@ QUnit.test("test_imgProc", function(assert) {
     let source = new cv.Mat(10, 10, cv.CV_8UC3);
     let dest = new cv.Mat();
 
-    cv.cvtColor(source, dest, cv.ColorConversionCodes.COLOR_BGR2GRAY.value, 0);
+    cv.cvtColor(source, dest, cv.COLOR_BGR2GRAY, 0);
     assert.equal(dest.channels(), 1);
 
-    cv.cvtColor(source, dest, cv.ColorConversionCodes.COLOR_BGR2BGRA.value, 0);
+    cv.cvtColor(source, dest, cv.COLOR_BGR2BGRA, 0);
     assert.equal(dest.channels(), 4);
 
     dest.delete();
@@ -131,7 +131,7 @@ QUnit.test("test_segmentation", function(assert) {
 
     let dest = new cv.Mat();
 
-    cv.threshold(source, dest, THRESHOLD, THRESHOLD_MAX, cv.ThresholdTypes.THRESH_BINARY.value);
+    cv.threshold(source, dest, THRESHOLD, THRESHOLD_MAX, cv.THRESH_BINARY);
 
     let destView = dest.data();
     assert.equal(destView[0], 0);
@@ -154,8 +154,7 @@ QUnit.test("test_segmentation", function(assert) {
     let C = 0;
     const block_size = 3;
     cv.adaptiveThreshold(source, dest, THRESHOLD_MAX,
-        cv.AdaptiveThresholdTypes.ADAPTIVE_THRESH_MEAN_C.value,
-        cv.ThresholdTypes.THRESH_BINARY.value, block_size, C);
+        cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, block_size, C);
 
     let destView = dest.data();
     assert.equal(destView[0], 0);
@@ -311,7 +310,7 @@ QUnit.test("test_filter", function(assert) {
       let out = new cv.Mat(11, 11, cv.CV_32FC1);
       let labels = new cv.Mat(11, 11, cv.CV_32FC1);
       let maskSize = 3;
-      cv.distanceTransform(mat, out, cv.DistanceTypes.DIST_L2.value, maskSize, cv.CV_32F);
+      cv.distanceTransform(mat, out, cv.DIST_L2, maskSize, cv.CV_32F);
 
       // Verify result.
       let size = out.size();
@@ -321,7 +320,7 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(out.elemSize1(), 4);
 
 
-      cv.distanceTransformWithLabels(mat, out, labels, cv.DistanceTypes.DIST_L2.value, maskSize, cv.DistanceTransformLabelTypes.DIST_LABEL_CCOMP.value);
+      cv.distanceTransformWithLabels(mat, out, labels, cv.DIST_L2, maskSize, cv.DIST_LABEL_CCOMP);
 
       // Verify result.
       size = out.size();

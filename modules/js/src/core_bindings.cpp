@@ -327,29 +327,4 @@ EMSCRIPTEN_BINDINGS(Utils) {
     constant("CV_32S",  CV_32S);
     constant("CV_32F", CV_32F);
     constant("CV_64F", CV_64F);
-
-
-    constant("BORDER_CONSTANT", +cv::BorderTypes::BORDER_CONSTANT);
-    constant("BORDER_REPLICATE", +cv::BorderTypes::BORDER_REPLICATE);
-    constant("BORDER_REFLECT", +cv::BorderTypes::BORDER_REFLECT);
-    constant("BORDER_WRAP", +cv::BorderTypes::BORDER_WRAP);
-    constant("BORDER_REFLECT_101", +cv::BorderTypes::BORDER_REFLECT_101);
-    constant("BORDER_TRANSPARENT", +cv::BorderTypes::BORDER_TRANSPARENT);
-    constant("BORDER_REFLECT101", +cv::BorderTypes::BORDER_REFLECT101);
-    constant("BORDER_DEFAULT", +cv::BorderTypes::BORDER_DEFAULT);
-    constant("BORDER_ISOLATED", +cv::BorderTypes::BORDER_ISOLATED);
-
-    constant("NORM_INF", +cv::NormTypes::NORM_INF);
-    constant("NORM_L1", +cv::NormTypes::NORM_L1);
-    constant("NORM_L2", +cv::NormTypes::NORM_L2);
-    constant("NORM_L2SQR", +cv::NormTypes::NORM_L2SQR);
-    constant("NORM_HAMMING", +cv::NormTypes::NORM_HAMMING);
-    constant("NORM_HAMMING2", +cv::NormTypes::NORM_HAMMING2);
-    constant("NORM_TYPE_MASK", +cv::NormTypes::NORM_TYPE_MASK);
-    constant("NORM_RELATIVE", +cv::NormTypes::NORM_RELATIVE);
-    constant("NORM_MINMAX", +cv::NormTypes::NORM_MINMAX);
-
-    constant("INPAINT_NS", +cv::INPAINT_NS);
-    constant("INPAINT_TELEA", +cv::INPAINT_TELEA);
-
 }

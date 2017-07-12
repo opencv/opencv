@@ -138,6 +138,10 @@ enum_template = Template("""
     emscripten::enum_<$cpp_name>("$js_name")$enum_items;
 """)
 
+const_template = Template("""
+    constant("$js_name", +$value);
+""")
+
 vector_template = Template("""
      emscripten::register_vector<$cType>("$js_name");
 """)

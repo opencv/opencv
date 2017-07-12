@@ -80,7 +80,8 @@ white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not'
               }
 
 # Features to be exported
-export_enums = True
+export_enums = False
+export_consts = True
 with_wrapped_functions = True
 with_default_params = with_wrapped_functions and False  # Emscripten::val is used to support default parameters
 with_vec_from_js_array = True
@@ -239,6 +240,7 @@ class Namespace(object):
     def __init__(self):
         self.funcs = {}
         self.enums = {}
+        self.consts = {}
 
 
 class JSWrapperGenerator(object):
@@ -302,6 +304,18 @@ class JSWrapperGenerator(object):
             ns.enums[name] = []
         for item in decl[3]:
             ns.enums[name].append(item)
+
+    def add_const(self, name, decl):
+        cname = name.replace('.','::')
+        namespace, classes, name = self.split_decl_name(name)
+        namespace = '.'.join(namespace)
+        name = '_'.join(classes+[name])
+        ns = self.namespaces.setdefault(namespace, Namespace())
+        if name in ns.consts:
+            print("Generator error: constant %s (cname=%s) already exists" \
+                % (name, cname))
+            sys.exit(-1)
+        ns.consts[name] = cname
 
     def add_func(self, decl):
         namespace, classes, barename = self.split_decl_name(decl[0])
@@ -730,6 +744,9 @@ class JSWrapperGenerator(object):
                     self.add_class(type, name, decl)
                 elif name.startswith("enum"):  # enumerations
                     self.add_enum(decl)
+                elif name.startswith("const"):
+                    # constant
+                    self.add_const(name.replace("const ", "").strip(), decl)
                 else:  # class/global function
                     self.add_func(decl)
 
@@ -858,6 +875,15 @@ class JSWrapperGenerator(object):
                     else:
                         print(name)
                         #TODO: represent anonymous enums with constants
+
+        if export_consts:
+            # step 5: generate bindings for consts
+            for ns_name, ns in sorted(self.namespaces.items()):
+                if ns_name.split('.')[0] != 'cv':
+                    continue
+                for name, const in sorted(ns.consts.items()):
+                    # print("Gen consts: ", name, const)
+                    self.bindings.append(const_template.substitute(js_name=name, value=const))
 
         with open(core_bindings) as f:
             ret = f.read()
