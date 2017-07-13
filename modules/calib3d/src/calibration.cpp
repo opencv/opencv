@@ -1518,7 +1518,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     mask[ 5] = !(flags & CALIB_FIX_K2);
     if( flags & CALIB_FIX_TANGENT_DIST )
     {
-      mask[6]  = mask[7]  = 1;
+      mask[6]  = mask[7]  = 0;
     }
     mask[ 8] = !(flags & CALIB_FIX_K3);
     mask[ 9] = !(flags & CALIB_FIX_K4);
