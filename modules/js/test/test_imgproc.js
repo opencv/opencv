@@ -163,6 +163,33 @@ QUnit.test("test_segmentation", function(assert) {
   }
 });
 
+QUnit.test("test_shape", function(assert) {
+  // moments
+  {
+    let points = new cv.Mat(1, 4, cv.CV_32SC2);
+    let data32S = points.data32s();
+    data32S[0]=50;
+    data32S[1]=56;
+    data32S[2]=53;
+    data32S[3]=53;
+    data32S[4]=46;
+    data32S[5]=54;
+    data32S[6]=49;
+    data32S[7]=51;
+
+    let m = cv.moments(points, false);
+    let area = cv.contourArea(points, false);
+
+    assert.equal(m.m00, 0);
+    assert.equal(m.m01, 0);
+    assert.equal(m.m10, 0);
+    assert.equal(area, 0);
+
+    points.delete();
+    m.delete();
+  }
+});
+
 QUnit.test("test_filter", function(assert) {
   // C++
   //   void blur(InputArray, OutputArray, Size ksize, Point, int);
