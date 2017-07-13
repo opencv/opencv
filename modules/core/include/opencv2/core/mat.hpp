@@ -62,6 +62,8 @@ namespace cv
 enum { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
     ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW, ACCESS_FAST=1<<26 };
 
+CV__DEBUG_NS_BEGIN
+
 class CV_EXPORTS _OutputArray;
 
 //////////////////////// Input/Output Array Arguments /////////////////////////////////
@@ -399,6 +401,8 @@ public:
 #endif
 
 };
+
+CV__DEBUG_NS_END
 
 typedef const _InputArray& InputArray;
 typedef InputArray InputArrayOfArrays;
