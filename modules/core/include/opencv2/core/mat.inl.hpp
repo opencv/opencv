@@ -56,6 +56,8 @@
 
 namespace cv
 {
+CV__DEBUG_NS_BEGIN
+
 
 //! @cond IGNORED
 
@@ -391,6 +393,8 @@ inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
 
 inline _InputOutputArray::_InputOutputArray(const cuda::HostMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_RW, &cuda_mem); }
+
+CV__DEBUG_NS_END
 
 //////////////////////////////////////////// Mat //////////////////////////////////////////
 

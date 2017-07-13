@@ -48,6 +48,23 @@
 //! @addtogroup core_utils
 //! @{
 
+#if !defined CV_DOXYGEN && !defined CV_IGNORE_DEBUG_BUILD_GUARD
+#if (defined(_MSC_VER) && (defined(DEBUG) || defined(_DEBUG))) || \
+    (defined(_GLIBCXX_DEBUG) || defined(_GLIBCXX_DEBUG_PEDANTIC))
+// Guard to prevent using of binary incompatible binaries / runtimes
+// https://github.com/opencv/opencv/pull/9161
+#define CV__DEBUG_NS_BEGIN namespace debug_build_guard {
+#define CV__DEBUG_NS_END }
+namespace cv { namespace debug_build_guard { } using namespace debug_build_guard; }
+#endif
+#endif
+
+#ifndef CV__DEBUG_NS_BEGIN
+#define CV__DEBUG_NS_BEGIN
+#define CV__DEBUG_NS_END
+#endif
+
+
 #ifdef __OPENCV_BUILD
 #include "cvconfig.h"
 #endif
