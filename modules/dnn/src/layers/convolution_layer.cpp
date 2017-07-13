@@ -506,13 +506,13 @@ public:
                         int bsz = ofs1 - ofs0;
                     #if CV_TRY_AVX2
                         if(useAVX2)
-                            fastConv_avx2(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                            opt_AVX2::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                           outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
                         else
                     #endif
                     #if CV_TRY_AVX
                         if(useAVX)
-                            fastConv_avx(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                            opt_AVX::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                          outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
                         else
                     #endif
@@ -824,12 +824,12 @@ public:
 
         #if CV_TRY_AVX2
             if( useAVX2 )
-                fastGEMM_avx2( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
+                opt_AVX2::fastGEMM( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
             else
         #endif
         #if CV_TRY_AVX
             if( useAVX )
-                fastGEMM_avx( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
+                opt_AVX::fastGEMM( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
             else
         #endif
             for( m = 0; m < mmax; m += 2 )

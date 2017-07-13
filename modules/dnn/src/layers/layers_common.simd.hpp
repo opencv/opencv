@@ -40,16 +40,34 @@
 //
 //M*/
 
-#ifndef __DNN_LAYERS_COMMON_SIMD_HPP__
-#define __DNN_LAYERS_COMMON_SIMD_HPP__
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv {
 namespace dnn {
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-void fastConv_some_avx( const float* weights, size_t wstep, const float* bias,
-                        const float* rowbuf, float* output, const int* outShape,
-                        int blockSize, int vecsize, int vecsize_aligned,
-                        const float* relu, bool initOutput )
+void fastConv( const float* weights, size_t wstep, const float* bias,
+               const float* rowbuf, float* output, const int* outShape,
+               int blockSize, int vecsize, int vecsize_aligned,
+               const float* relu, bool initOutput );
+void fastGEMM1T( const float* vec, const float* weights,
+                 size_t wstep, const float* bias,
+                 float* dst, int nvecs, int vecsize );
+void fastGEMM( const float* aptr, size_t astep, const float* bptr,
+               size_t bstep, float* cptr, size_t cstep,
+               int ma, int na, int nb );
+
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_AVX
+
+#if !CV_FMA // AVX workaround
+#undef _mm256_fmadd_ps
+#define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
+#endif
+
+void fastConv( const float* weights, size_t wstep, const float* bias,
+               const float* rowbuf, float* output, const int* outShape,
+               int blockSize, int vecsize, int vecsize_aligned,
+               const float* relu, bool initOutput )
 {
     int outCn = outShape[1];
     size_t outPlaneSize = outShape[2]*outShape[3];
@@ -214,9 +232,9 @@ void fastConv_some_avx( const float* weights, size_t wstep, const float* bias,
 }
 
 // dst = vec * weights^t + bias
-void fastGEMM1T_some_avx( const float* vec, const float* weights,
-                          size_t wstep, const float* bias,
-                          float* dst, int nvecs, int vecsize )
+void fastGEMM1T( const float* vec, const float* weights,
+                 size_t wstep, const float* bias,
+                 float* dst, int nvecs, int vecsize )
 {
     int i = 0;
 
@@ -276,9 +294,9 @@ void fastGEMM1T_some_avx( const float* vec, const float* weights,
     _mm256_zeroupper();
 }
 
-void fastGEMM_some_avx( const float* aptr, size_t astep, const float* bptr,
-                        size_t bstep, float* cptr, size_t cstep,
-                        int ma, int na, int nb )
+void fastGEMM( const float* aptr, size_t astep, const float* bptr,
+               size_t bstep, float* cptr, size_t cstep,
+               int ma, int na, int nb )
 {
     int n = 0;
     for( ; n <= nb - 16; n += 16 )
@@ -346,7 +364,7 @@ void fastGEMM_some_avx( const float* aptr, size_t astep, const float* bptr,
     _mm256_zeroupper();
 }
 
-}
-}
+#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-#endif
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+}} // namespace
