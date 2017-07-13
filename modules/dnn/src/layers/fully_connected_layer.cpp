@@ -119,7 +119,7 @@ public:
     class FullyConnected : public ParallelLoopBody
     {
     public:
-        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX2(false) {}
+        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat,
                         Mat& dstMat, const ActivationLayer* activ, int nstripes)
@@ -139,6 +139,7 @@ public:
             p.dstMat = &dstMat;
             p.nstripes = nstripes;
             p.activ = activ;
+            p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
 
             parallel_for_(Range(0, nstripes), p, nstripes);
@@ -177,6 +178,11 @@ public:
             #if CV_TRY_AVX2
                 if( useAVX2 )
                     fastGEMM1T_avx2( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
+                else
+            #endif
+            #if CV_TRY_AVX
+                if( useAVX )
+                    fastGEMM1T_avx( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
                 else
             #endif
                 {
@@ -228,6 +234,7 @@ public:
         const ActivationLayer* activ;
         Mat* dstMat;
         int nstripes;
+        bool useAVX;
         bool useAVX2;
     };
 

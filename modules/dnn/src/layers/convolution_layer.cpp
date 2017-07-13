@@ -285,11 +285,12 @@ public:
         const std::vector<float>* reluslope_;
         const ActivationLayer* activ_;
         bool is1x1_;
+        bool useAVX;
         bool useAVX2;
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
-              biasvec_(0), reluslope_(0), activ_(0), is1x1_(false), useAVX2(false)
+              biasvec_(0), reluslope_(0), activ_(0), is1x1_(false), useAVX(false), useAVX2(false)
         {}
 
         static void run( const Mat& input, Mat& output, const Mat& weights,
@@ -322,6 +323,7 @@ public:
             int inpCnAll = input.size[1], width = input.size[3], height = input.size[2];
             int inpCn = inpCnAll / ngroups;
             p.is1x1_ = kernel == Size(0,0) && pad == Size(0, 0);
+            p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
 
             int ncn = std::min(inpCn, (int)BLK_SIZE_CN);
@@ -506,6 +508,12 @@ public:
                         if(useAVX2)
                             fastConv_avx2(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                           outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
+                        else
+                    #endif
+                    #if CV_TRY_AVX
+                        if(useAVX)
+                            fastConv_avx(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                                         outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
                         else
                     #endif
                         for( int i = 0; i < outCn; i += 2 )
@@ -795,6 +803,7 @@ public:
             b_ = &b;
             c_ = &c;
             nstripes_ = nstripes;
+            useAVX = checkHardwareSupport(CPU_AVX);
             useAVX2 = checkHardwareSupport(CPU_AVX2);
         }
 
@@ -816,6 +825,11 @@ public:
         #if CV_TRY_AVX2
             if( useAVX2 )
                 fastGEMM_avx2( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
+            else
+        #endif
+        #if CV_TRY_AVX
+            if( useAVX )
+                fastGEMM_avx( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
             else
         #endif
             for( m = 0; m < mmax; m += 2 )
@@ -910,6 +924,7 @@ public:
         const Mat *a_, *b_;
         Mat* c_;
         int nstripes_;
+        bool useAVX;
         bool useAVX2;
     };
 
