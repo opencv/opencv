@@ -239,6 +239,7 @@ static ushort LabCbrtTab_b[LAB_CBRT_TAB_SIZE_B];
 
 static bool enableBitExactness = true;
 static bool enableRGB2LabInterpolation = true;
+static bool enableLuvInterpolation = false;
 static bool enablePackedLab = true;
 enum
 {
@@ -247,13 +248,22 @@ enum
     lab_base_shift = 14,
     LAB_BASE = (1 << lab_base_shift),
     trilinear_shift = 8 - lab_lut_shift + 1,
-    TRILINEAR_BASE = (1 << trilinear_shift)
+    TRILINEAR_BASE = (1 << trilinear_shift),
+    luv_lut_shift = 5,
+    LUV_LUT_DIM = (1 << luv_lut_shift)+1
 };
 static int16_t RGB2LabLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;
 static int abToXZ_b[LAB_BASE*9/4];
+//TODO: multiply it by 8 later
+static int16_t RGB2LuvLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
+static int16_t XYZ2LuvLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
+static int16_t Luv2RGBLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
+// Luv -> XYZ is an awful function for interpolation
+static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
+static const softfloat vLow(-140), vHigh(122), vRange(uHigh-uLow);
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -505,8 +515,8 @@ static void initLabTabs()
             }
 
             softfloat D0 = coeffs[0], D1 = coeffs[1], D2 = coeffs[2],
-                          D3 = coeffs[3], D4 = coeffs[4], D5 = coeffs[5],
-                          D6 = coeffs[6], D7 = coeffs[7], D8 = coeffs[8];
+                      D3 = coeffs[3], D4 = coeffs[4], D5 = coeffs[5],
+                      D6 = coeffs[6], D7 = coeffs[7], D8 = coeffs[8];
 
             //TODO: remove
             static const float _a = 16.0f / 116.0f;
@@ -637,6 +647,141 @@ static void initLabTabs()
                         int16_t* w = &trilinearLUT[8*p + 8*TRILINEAR_BASE*q + 8*TRILINEAR_BASE*TRILINEAR_BASE*r];
                         w[0]  = pp * qq * rr; w[1]  = pp * qq * r ; w[2]  = pp * q  * rr; w[3]  = pp * q  * r ;
                         w[4]  = p  * qq * rr; w[5]  = p  * qq * r ; w[6]  = p  * q  * rr; w[7]  = p  * q  * r ;
+                    }
+                }
+            }
+        }
+
+        if(enableLuvInterpolation)
+        {
+            softfloat coeffs[9];
+
+            for( i = 0; i < 3; i++ )
+            {
+                coeffs[i*3+2] = softfloat(sRGB2XYZ_D65[i*3  ]);
+                coeffs[i*3+1] = softfloat(sRGB2XYZ_D65[i*3+1]);
+                coeffs[i*3  ] = softfloat(sRGB2XYZ_D65[i*3+2]);
+            }
+
+            softfloat dd = softfloat(D65[0]) +
+                           softfloat(D65[1])*softfloat(15) +
+                           softfloat(D65[2])*softfloat(3);
+            dd = softfloat::one()/max(dd, softfloat(FLT_EPSILON));
+            softfloat un = dd*softfloat(13*4)*softfloat(D65[0]);
+            softfloat vn = dd*softfloat(13*9)*softfloat(D65[1]);
+
+            softfloat C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+                      C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+                      C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+            for( int i = 0; i < 3; i++ )
+            {
+                coeffs[i+2*3] = softfloat(XYZ2sRGB_D65[i+0*3]);
+                coeffs[i+1*3] = softfloat(XYZ2sRGB_D65[i+1*3]);
+                coeffs[i+0*3] = softfloat(XYZ2sRGB_D65[i+2*3]);
+            }
+
+            softfloat D0 = coeffs[0], D1 = coeffs[1], D2 = coeffs[2],
+                      D3 = coeffs[3], D4 = coeffs[4], D5 = coeffs[5],
+                      D6 = coeffs[6], D7 = coeffs[7], D8 = coeffs[8];
+
+            static const softfloat lld(LUV_LUT_DIM - 1), lbase((int)LAB_BASE);
+            //u, v: [-134.0, 220.0], [-140.0, 122.0]
+            static const softfloat f100(100);
+            static const softfloat f9of4 = softfloat(9)/softfloat(4), f1of4 = softfloat::one()/softfloat(4);
+            static const softfloat f116(116), f16(16);
+            static const softfloat f9033 = softfloat(29*29*29)/softfloat(27);
+            for(int p = 0; p < LUV_LUT_DIM; p++)
+            {
+                for(int q = 0; q < LUV_LUT_DIM; q++)
+                {
+                    for(int r = 0; r < LUV_LUT_DIM; r++)
+                    {
+                        int idx = p*3 + q*LUV_LUT_DIM*3 + r*LUV_LUT_DIM*LUV_LUT_DIM*3;
+                        //RGB 2 Luv LUT building
+                        {
+                            softfloat R = softfloat(p)/lld;
+                            softfloat G = softfloat(q)/lld;
+                            softfloat B = softfloat(r)/lld;
+
+                            R = applyGamma(R);
+                            G = applyGamma(G);
+                            B = applyGamma(B);
+
+                            softfloat X = R*C0 + G*C1 + B*C2;
+                            softfloat Y = R*C3 + G*C4 + B*C5;
+                            softfloat Z = R*C6 + G*C7 + B*C8;
+
+                            softfloat L = Y < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x);
+                            L = L*f116 - f16;
+
+                            softfloat d = softfloat(4*13)/max(X + 15 * Y + 3 * Z, softfloat(FLT_EPSILON));
+                            softfloat u = L*(X*d - un);
+                            softfloat v = L*(f9of4*Y*d - vn);
+
+                            RGB2LuvLut_s16[idx  ] = (int16_t)cvRound(lbase*L/f100);
+                            RGB2LuvLut_s16[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
+                            RGB2LuvLut_s16[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
+                        }
+
+                        {
+                            //X,Y,Z ranges are lying inside white point
+                            softfloat X = softfloat(p)*softfloat(D65[0])/lld;
+                            softfloat Y = softfloat(q)*softfloat(D65[1])/lld;
+                            softfloat Z = softfloat(r)*softfloat(D65[2])/lld;
+
+                            softfloat L = Y < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x);
+                            L = L*f116 - f16;
+
+                            softfloat d = softfloat(4*13)/max(X + 15 * Y + 3 * Z, softfloat(FLT_EPSILON));
+                            softfloat u = L*(X*d - un);
+                            softfloat v = L*(f9of4*Y*d - vn);
+
+                            XYZ2LuvLut_s16[idx  ] = (int16_t)cvRound(lbase*L/f100);
+                            XYZ2LuvLut_s16[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
+                            XYZ2LuvLut_s16[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
+                        }
+
+                        //Luv 2 RGB LUT building
+                        {
+                            softfloat L = softfloat(p)*f100/lld;
+                            softfloat u = softfloat(q)*uRange/lld + uLow;
+                            softfloat v = softfloat(r)*vRange/lld + vLow;
+
+                            softfloat X, Y, Z;
+                            if(L >= softfloat(8))
+                            {
+                                Y = (L + f16)/f116;
+                                Y = Y*Y*Y;
+                            }
+                            else
+                            {
+                                Y = L / f9033;
+                            }
+                            softfloat up = softfloat(3)*(u + L*un);
+                            softfloat vp = f1of4/((v + L*vn));
+                            if(vp >  f1of4) vp =  f1of4;
+                            if(vp < -f1of4) vp = -f1of4;
+                            X = Y*softfloat(3)*up*vp;
+                            Z = Y*((softfloat(12*13)*L - up)*vp - softfloat(5));
+
+                            softfloat R = X*D0 + Y*D1 + Z*D2;
+                            softfloat G = X*D3 + Y*D4 + Z*D5;
+                            softfloat B = X*D6 + Y*D7 + Z*D8;
+
+                            R = min(softfloat::one(), max(softfloat::zero(), R));
+                            G = min(softfloat::one(), max(softfloat::zero(), G));
+                            B = min(softfloat::one(), max(softfloat::zero(), B));
+
+                            R = applyInvGamma(R);
+                            G = applyInvGamma(G);
+                            B = applyInvGamma(B);
+
+                            Luv2RGBLut_s16[idx  ] = (int16_t)cvRound(lbase*R);
+                            Luv2RGBLut_s16[idx+1] = (int16_t)cvRound(lbase*G);
+                            Luv2RGBLut_s16[idx+2] = (int16_t)cvRound(lbase*B);
+                            // Luv -> XYZ is an awful function for interpolation
+                        }
                     }
                 }
             }
@@ -1964,71 +2109,1837 @@ struct Lab2RGB_f
 
 #undef clip
 
-/////////////
+////////////////////////////////////////////////////////////////////
 
-TEST(ImgProc_Color, LabCheckWorking)
+static inline void noInterpolate(int cx, int cy, int cz, int* LUT,
+                                 int& a, int& b, int& c)
 {
-    //<bits, divisor, multiplier, toAdd>
-//    MulFracConst<14, 9033, 1000, 0> mf;
+    cx = (cx >= 0) ? (cx <= LAB_BASE ? cx : LAB_BASE) : 0;
+    cy = (cy >= 0) ? (cy <= LAB_BASE ? cy : LAB_BASE) : 0;
+    cz = (cz >= 0) ? (cz <= LAB_BASE ? cz : LAB_BASE) : 0;
 
+    //LUT idx of origin pt of cube
+    int tx = cx >> (lab_base_shift - lab_lut_shift);
+    int ty = cy >> (lab_base_shift - lab_lut_shift);
+    int tz = cz >> (lab_base_shift - lab_lut_shift);
 
-//    mf.calc()
-//    return;
+    int a0, b0, c0;
 
-    /*
-    for(int L = 0; L < 256; L++)
+    a0 = LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz];
+    b0 = LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz + 1];
+    c0 = LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz + 2];
+
+    a = a0;
+    b = b0;
+    c = c0;
+}
+
+// cx, cy, cz are in [0; LAB_BASE]
+static inline void tetraInterpolate(int cx, int cy, int cz, int* LUT,
+                                    int& a, int& b, int& c)
+{
+    //LUT idx of origin pt of cube
+    int tx = cx >> (lab_base_shift - lab_lut_shift);
+    int ty = cy >> (lab_base_shift - lab_lut_shift);
+    int tz = cz >> (lab_base_shift - lab_lut_shift);
+
+    int* baseLUT = &LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz];
+    int* p1, *p2;
+
+    //x, y, z are [0; LAB_BASE)
+    static const int bitMask = (1 << lab_base_shift) - 1;
+    int x = (cx << lab_lut_shift) & bitMask;
+    int y = (cy << lab_lut_shift) & bitMask;
+    int z = (cz << lab_lut_shift) & bitMask;
+
+    //sorted x, y, z
+    int s0, s1, s2;
+
+    if(x > y)
     {
-        int y, ify;
-        int ycheck, ifycheck;
-        static const int BASE = (1 << 14);
-        if( L <= 0.008856f * 903.3f * 255.0f / 100.0f ) //20.39904324
+        if(y > z)
         {
-            //yy = li / 903.3f;
-            //y = L*100/903.3f;
-            //y = L*BASE*1000/9033/255;
-            MulFracConst<14, 9033*255/5, 200*BASE, 0> mf0;
-            y = (L*mf0.vmul + mf0.vadd)>>mf0.r;
-            ycheck = cvRound((double)L*1000.0/9033.0/255.0*BASE);
-
-            cout << "mf0: vmul " << mf0.vmul << " vadd " << mf0.vadd << " r " << mf0.r << endl;
-
-            //fy = 7.787f * yy + 16.0f / 116.0f;
-            //ify = BASE*16/116 + L*7787*BASE/255/9033;
-
-
-            MulFracConst<14, 255*9033, 7787*BASE, BASE*16/116 +1> mf1;
-            ify = (L*mf1.vmul + mf1.vadd) >> mf1.r;
-            ifycheck = cvRound((double)L*7787.0*BASE/255.0/9033.0 +
-                               BASE*16.0/116.0);
-
-            cout << "mf1: vmul " << mf1.vmul << " vadd " << mf1.vadd << " r " << mf1.r << endl;
-
-            cout << L << ": " << y << " " << ycheck;
-            cout << " " << ify << " " << ifycheck << endl;
+            const int x1 = 1, y1 = 0, z1 = 0;
+            const int x2 = 1, y2 = 1, z2 = 0;
+            p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
+            p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+            s0 = x, s1 = y, s2 = z;
+        }
+        else if(x > z)
+        {
+            const int x1 = 1, y1 = 0, z1 = 0;
+            const int x2 = 1, y2 = 0, z2 = 1;
+            p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
+            p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+            s0 = x, s1 = z, s2 = y;
         }
         else
         {
-            //fy = (li + 16.0f) / 116.0f;
-            MulFracConst<14, 1479, 5*BASE, 16/116*BASE +1 > mf0;
-            //ify = L/255*100/116*BASE + 16/116*BASE;
-            ify = (L*mf0.vmul + mf0.vadd) >> mf0.r;
-            ifycheck = cvRound((double)L*BASE*100.0/255.0/116.0 +
-                               BASE*16.0/116.0);
-
-            cout << "mf0: vmul " << mf0.vmul << " vadd " << mf0.vadd << " r " << mf0.r << endl;
-
-            //yy = fy * fy * fy;
-            y = ify*ify/BASE*ify/BASE;
-            ycheck = cvRound(ifycheck*ifycheck/BASE*ifycheck/BASE);
-
-            cout << L << ": " << y << " " << ycheck;
-            cout << " " << ify << " " << ifycheck << endl;
+            const int x1 = 0, y1 = 0, z1 = 1;
+            const int x2 = 1, y2 = 0, z2 = 1;
+            p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
+            p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+            s0 = z, s1 = x, s2 = y;
+        }
+    }
+    else
+    {
+        if(y > z)
+        {
+            if(x > z)
+            {
+                const int x1 = 0, y1 = 1, z1 = 0;
+                const int x2 = 1, y2 = 1, z2 = 0;
+                p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
+                p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+                s0 = y, s1 = x, s2 = z;
+            }
+            else
+            {
+                const int x1 = 0, y1 = 1, z1 = 0;
+                const int x2 = 0, y2 = 1, z2 = 1;
+                p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
+                p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+                s0 = y, s1 = z, s2 = x;
+            }
+        }
+        else
+        {
+            const int x1 = 0, y1 = 0, z1 = 1;
+            const int x2 = 0, y2 = 1, z2 = 1;
+            p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
+            p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+            s0 = z, s1 = y, s2 = x;
         }
     }
 
-    return;*/
+    //weights and values
+    int w0 = LAB_BASE - s0, w1 = s0 - s1, w2 = s1 - s2, w3 = s2;
+    int a0, a1, a2, a3, b0, b1, b2, b3, c0, c1, c2, c3;
+
+    //in case of going out of LUT bounds the corresponding weights will be zero
+    if(w0)
+    {
+        a0 = baseLUT[0];
+        b0 = baseLUT[1];
+        c0 = baseLUT[2];
+    }
+    else
+    {
+        a0 = b0 = c0 = 0;
+    }
+    if(w1)
+    {
+        a1 = p1[0];
+        b1 = p1[1];
+        c1 = p1[2];
+    }
+    else
+    {
+        a1 = b1 = c1 = 0;
+    }
+    if(w2)
+    {
+        a2 = p2[0];
+        b2 = p2[1];
+        c2 = p2[2];
+    }
+    else
+    {
+        a2 = b2 = c2 = 0;
+    }
+    if(w3)
+    {
+        a3 = baseLUT[3*1 + 3*LAB_LUT_DIM*1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*1];
+        b3 = baseLUT[3*1 + 3*LAB_LUT_DIM*1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*1 + 1];
+        c3 = baseLUT[3*1 + 3*LAB_LUT_DIM*1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*1 + 2];
+    }
+    else
+    {
+        a3 = b3 = c3 = 0;
+    }
+
+#undef SETPT
+
+    a = CV_DESCALE(a0*w0 + a1*w1 + a2*w2 + a3*w3, lab_base_shift);
+    b = CV_DESCALE(b0*w0 + b1*w1 + b2*w2 + b3*w3, lab_base_shift);
+    c = CV_DESCALE(c0*w0 + c1*w1 + c2*w2 + c3*w3, lab_base_shift);
+}
+
+enum Cvt_Type
+{
+    RGB_TO_LUV, LUV_TO_RGB
+};
+enum InterType
+{
+    LUV_INTER_NO,
+    LUV_INTER_TETRA,
+    LUV_INTER_TRILINEAR,
+};
+static InterType interType = LUV_INTER_NO;
+static bool useXYZTable = false;
+
+static inline void chooseInterpolate(int cx, int cy, int cz, Cvt_Type type,
+                                     int& a, int& b, int& c)
+{
+    int ia, ib, ic;
+    int icx = cx, icy = cy, icz = cz;
+    int* iLUT;
+    iLUT = (type == LUV_TO_RGB) ?
+                Luv2RGBLut_s16 :
+                (useXYZTable ? RGB2LuvLut_s16 : XYZ2LuvLut_s16);
+    switch (interType)
+    {
+    case LUV_INTER_NO:
+        noInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
+        break;
+    case LUV_INTER_TETRA:
+        tetraInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
+        break;
+    case LUV_INTER_TRILINEAR:
+        trilinearInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
+        break;
+    default:
+        break;
+    }
+    a = ia, b = ib, c = ic;
+}
+
+///////////////////////////////////// RGB <-> L*u*v* /////////////////////////////////////
+
+struct RGB2Luvfloat
+{
+    typedef float channel_type;
+
+    RGB2Luvfloat( int _srccn, int blueIdx, const float* _coeffs,
+               const float* whitept, bool _srgb )
+    : srccn(_srccn), srgb(_srgb)
+    {
+        volatile int i;
+        initLabTabs();
+
+        useBitExactness = enableBitExactness;
+
+        useInterpolation = (!_coeffs && !_whitept && srgb && enableLuvInterpolation);
+
+        if(!_coeffs) _coeffs = sRGB2XYZ_D65;
+        if(!whitept) whitept = D65;
+
+        for( i = 0; i < 3; i++ )
+        {
+            coeffs[i*3] = _coeffs[i*3];
+            coeffs[i*3+1] = _coeffs[i*3+1];
+            coeffs[i*3+2] = _coeffs[i*3+2];
+            if( blueIdx == 0 )
+                std::swap(coeffs[i*3], coeffs[i*3+2]);
+            CV_Assert( coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
+                      softfloat(coeffs[i*3]) +
+                      softfloat(coeffs[i*3+1]) +
+                      softfloat(coeffs[i*3+2]) < softfloat(1.5f) );
+        }
+
+        softfloat d = softfloat(whitept[0]) +
+                      softfloat(whitept[1])*softfloat(15) +
+                      softfloat(whitept[2])*softfloat(3);
+        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        un = d*softfloat(13*4)*softfloat(whitept[0]);
+        vn = d*softfloat(13*9)*softfloat(whitept[1]);
+
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+
+        CV_Assert(whitept[1] == 1.f);
+    }
+
+    #if CV_NEON
+    void process(float32x4x3_t& v_src) const
+    {
+        float32x4_t v_x = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[0])), v_src.val[1], vdupq_n_f32(coeffs[1])), v_src.val[2], vdupq_n_f32(coeffs[2]));
+        float32x4_t v_y = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[3])), v_src.val[1], vdupq_n_f32(coeffs[4])), v_src.val[2], vdupq_n_f32(coeffs[5]));
+        float32x4_t v_z = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], vdupq_n_f32(coeffs[6])), v_src.val[1], vdupq_n_f32(coeffs[7])), v_src.val[2], vdupq_n_f32(coeffs[8]));
+
+        v_src.val[0] = vmulq_f32(v_y, vdupq_n_f32(LabCbrtTabScale));
+        splineInterpolate(v_src.val[0], LabCbrtTab, LAB_CBRT_TAB_SIZE);
+
+        v_src.val[0] = vmlaq_f32(vdupq_n_f32(-16.f), v_src.val[0], vdupq_n_f32(116.f));
+
+        float32x4_t v_div = vmaxq_f32(vmlaq_f32(vmlaq_f32(v_x, vdupq_n_f32(15.f), v_y), vdupq_n_f32(3.f), v_z), vdupq_n_f32(FLT_EPSILON));
+        float32x4_t v_reciprocal = vrecpeq_f32(v_div);
+        v_reciprocal = vmulq_f32(vrecpsq_f32(v_div, v_reciprocal), v_reciprocal);
+        v_reciprocal = vmulq_f32(vrecpsq_f32(v_div, v_reciprocal), v_reciprocal);
+        float32x4_t v_d = vmulq_f32(vdupq_n_f32(52.f), v_reciprocal);
+
+        v_src.val[1] = vmulq_f32(v_src.val[0], vmlaq_f32(vdupq_n_f32(-un), v_x, v_d));
+        v_src.val[2] = vmulq_f32(v_src.val[0], vmlaq_f32(vdupq_n_f32(-vn), vmulq_f32(vdupq_n_f32(2.25f), v_y), v_d));
+    }
+    #elif CV_SSE2
+    void process(__m128& v_r0, __m128& v_r1, __m128& v_g0,
+                 __m128& v_g1, __m128& v_b0, __m128& v_b1) const
+    {
+        __m128 v_x0 = _mm_mul_ps(v_r0, _mm_set1_ps(coeffs[0]));
+        __m128 v_x1 = _mm_mul_ps(v_r1, _mm_set1_ps(coeffs[0]));
+        __m128 v_y0 = _mm_mul_ps(v_r0, _mm_set1_ps(coeffs[3]));
+        __m128 v_y1 = _mm_mul_ps(v_r1, _mm_set1_ps(coeffs[3]));
+        __m128 v_z0 = _mm_mul_ps(v_r0, _mm_set1_ps(coeffs[6]));
+        __m128 v_z1 = _mm_mul_ps(v_r1, _mm_set1_ps(coeffs[6]));
+
+        v_x0 = _mm_add_ps(v_x0, _mm_mul_ps(v_g0, _mm_set1_ps(coeffs[1])));
+        v_x1 = _mm_add_ps(v_x1, _mm_mul_ps(v_g1, _mm_set1_ps(coeffs[1])));
+        v_y0 = _mm_add_ps(v_y0, _mm_mul_ps(v_g0, _mm_set1_ps(coeffs[4])));
+        v_y1 = _mm_add_ps(v_y1, _mm_mul_ps(v_g1, _mm_set1_ps(coeffs[4])));
+        v_z0 = _mm_add_ps(v_z0, _mm_mul_ps(v_g0, _mm_set1_ps(coeffs[7])));
+        v_z1 = _mm_add_ps(v_z1, _mm_mul_ps(v_g1, _mm_set1_ps(coeffs[7])));
+
+        v_x0 = _mm_add_ps(v_x0, _mm_mul_ps(v_b0, _mm_set1_ps(coeffs[2])));
+        v_x1 = _mm_add_ps(v_x1, _mm_mul_ps(v_b1, _mm_set1_ps(coeffs[2])));
+        v_y0 = _mm_add_ps(v_y0, _mm_mul_ps(v_b0, _mm_set1_ps(coeffs[5])));
+        v_y1 = _mm_add_ps(v_y1, _mm_mul_ps(v_b1, _mm_set1_ps(coeffs[5])));
+        v_z0 = _mm_add_ps(v_z0, _mm_mul_ps(v_b0, _mm_set1_ps(coeffs[8])));
+        v_z1 = _mm_add_ps(v_z1, _mm_mul_ps(v_b1, _mm_set1_ps(coeffs[8])));
+
+        __m128 v_l0 = _mm_mul_ps(v_y0, _mm_set1_ps(LabCbrtTabScale));
+        __m128 v_l1 = _mm_mul_ps(v_y1, _mm_set1_ps(LabCbrtTabScale));
+        splineInterpolate(v_l0, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+        splineInterpolate(v_l1, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+
+        v_l0 = _mm_mul_ps(v_l0, _mm_set1_ps(116.0f));
+        v_l1 = _mm_mul_ps(v_l1, _mm_set1_ps(116.0f));
+        v_r0 = _mm_sub_ps(v_l0, _mm_set1_ps(16.0f));
+        v_r1 = _mm_sub_ps(v_l1, _mm_set1_ps(16.0f));
+
+        v_z0 = _mm_mul_ps(v_z0, _mm_set1_ps(3.0f));
+        v_z1 = _mm_mul_ps(v_z1, _mm_set1_ps(3.0f));
+        v_z0 = _mm_add_ps(v_z0, v_x0);
+        v_z1 = _mm_add_ps(v_z1, v_x1);
+        v_z0 = _mm_add_ps(v_z0, _mm_mul_ps(v_y0, _mm_set1_ps(15.0f)));
+        v_z1 = _mm_add_ps(v_z1, _mm_mul_ps(v_y1, _mm_set1_ps(15.0f)));
+        v_z0 = _mm_max_ps(v_z0, _mm_set1_ps(FLT_EPSILON));
+        v_z1 = _mm_max_ps(v_z1, _mm_set1_ps(FLT_EPSILON));
+        __m128 v_d0 = _mm_div_ps(_mm_set1_ps(52.0f), v_z0);
+        __m128 v_d1 = _mm_div_ps(_mm_set1_ps(52.0f), v_z1);
+
+        v_x0 = _mm_mul_ps(v_x0, v_d0);
+        v_x1 = _mm_mul_ps(v_x1, v_d1);
+        v_x0 = _mm_sub_ps(v_x0, _mm_set1_ps(un));
+        v_x1 = _mm_sub_ps(v_x1, _mm_set1_ps(un));
+        v_g0 = _mm_mul_ps(v_x0, v_r0);
+        v_g1 = _mm_mul_ps(v_x1, v_r1);
+
+        v_y0 = _mm_mul_ps(v_y0, v_d0);
+        v_y1 = _mm_mul_ps(v_y1, v_d1);
+        v_y0 = _mm_mul_ps(v_y0, _mm_set1_ps(2.25f));
+        v_y1 = _mm_mul_ps(v_y1, _mm_set1_ps(2.25f));
+        v_y0 = _mm_sub_ps(v_y0, _mm_set1_ps(vn));
+        v_y1 = _mm_sub_ps(v_y1, _mm_set1_ps(vn));
+        v_b0 = _mm_mul_ps(v_y0, v_r0);
+        v_b1 = _mm_mul_ps(v_y1, v_r1);
+    }
+    #endif
+
+    void operator()(const float* src, float* dst, int n) const
+    {
+        int i = 0, scn = srccn;
+        float gscale = GammaTabScale;
+        const float* gammaTab = srgb ? sRGBGammaTab : 0;
+        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+        n *= 3;
+
+        if(useBitExactness)
+        {
+            for(; i < n; i += 3, src += scn)
+            {
+                float R = clip(src[bIdx]);
+                float G = clip(src[1]);
+                float B = clip(src[bIdx^2]);
+
+                if(useXYZTable)
+                {
+                    if( gammaTab )
+                    {
+                        R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
+                        G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
+                        B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
+                    }
+
+                    float X = R*C0 + G*C1 + B*C2;
+                    float Y = R*C3 + G*C4 + B*C5;
+                    float Z = R*C6 + G*C7 + B*C8;
+                    R = X; G = Y; B = Z;
+                }
+
+                int iL, iu, iv;
+                int iR = cvRound(R*LAB_BASE), iG = cvRound(G*LAB_BASE), iB = cvRound(B*LAB_BASE);
+                chooseInterpolate(iR, iG, iB, RGB_TO_LUV, iL, iu, iv);
+                float L = iL*1.0f/LAB_BASE, u = iu*1.0f/LAB_BASE, v = iv*1.0f/LAB_BASE;
+
+                dst[i] = L*100.0f;
+                dst[i + 1] = u*(float)uRange+(float)uLow;
+                dst[i + 2] = v*(float)vrange+(float)vLow;
+            }
+        }
+
+        #if CV_NEON
+        if (scn == 3)
+        {
+            for( ; i <= n - 12; i += 12, src += scn * 4 )
+            {
+                float32x4x3_t v_src = vld3q_f32(src);
+
+                v_src.val[0] = vmaxq_f32(v_src.val[0], vdupq_n_f32(0));
+                v_src.val[1] = vmaxq_f32(v_src.val[1], vdupq_n_f32(0));
+                v_src.val[2] = vmaxq_f32(v_src.val[2], vdupq_n_f32(0));
+
+                v_src.val[0] = vminq_f32(v_src.val[0], vdupq_n_f32(1));
+                v_src.val[1] = vminq_f32(v_src.val[1], vdupq_n_f32(1));
+                v_src.val[2] = vminq_f32(v_src.val[2], vdupq_n_f32(1));
+
+                if( gammaTab )
+                {
+                    v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
+                    v_src.val[1] = vmulq_f32(v_src.val[1], vdupq_n_f32(gscale));
+                    v_src.val[2] = vmulq_f32(v_src.val[2], vdupq_n_f32(gscale));
+                    splineInterpolate(v_src.val[0], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[1], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[2], gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                process(v_src);
+
+                vst3q_f32(dst + i, v_src);
+            }
+        }
+        else
+        {
+            for( ; i <= n - 12; i += 12, src += scn * 4 )
+            {
+                float32x4x4_t v_src = vld4q_f32(src);
+
+                v_src.val[0] = vmaxq_f32(v_src.val[0], vdupq_n_f32(0));
+                v_src.val[1] = vmaxq_f32(v_src.val[1], vdupq_n_f32(0));
+                v_src.val[2] = vmaxq_f32(v_src.val[2], vdupq_n_f32(0));
+
+                v_src.val[0] = vminq_f32(v_src.val[0], vdupq_n_f32(1));
+                v_src.val[1] = vminq_f32(v_src.val[1], vdupq_n_f32(1));
+                v_src.val[2] = vminq_f32(v_src.val[2], vdupq_n_f32(1));
+
+                if( gammaTab )
+                {
+                    v_src.val[0] = vmulq_f32(v_src.val[0], vdupq_n_f32(gscale));
+                    v_src.val[1] = vmulq_f32(v_src.val[1], vdupq_n_f32(gscale));
+                    v_src.val[2] = vmulq_f32(v_src.val[2], vdupq_n_f32(gscale));
+                    splineInterpolate(v_src.val[0], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[1], gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_src.val[2], gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                float32x4x3_t v_dst;
+                v_dst.val[0] = v_src.val[0];
+                v_dst.val[1] = v_src.val[1];
+                v_dst.val[2] = v_src.val[2];
+                process(v_dst);
+
+                vst3q_f32(dst + i, v_dst);
+            }
+        }
+        #elif CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, src += scn * 8 )
+            {
+                __m128 v_r0 = _mm_loadu_ps(src +  0);
+                __m128 v_r1 = _mm_loadu_ps(src +  4);
+                __m128 v_g0 = _mm_loadu_ps(src +  8);
+                __m128 v_g1 = _mm_loadu_ps(src + 12);
+                __m128 v_b0 = _mm_loadu_ps(src + 16);
+                __m128 v_b1 = _mm_loadu_ps(src + 20);
+
+                if (scn == 3)
+                {
+                    _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+                }
+                else
+                {
+                    __m128 v_a0 = _mm_loadu_ps(src + 24);
+                    __m128 v_a1 = _mm_loadu_ps(src + 28);
+
+                    _mm_deinterleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1, v_a0, v_a1);
+                }
+
+                v_r0 = _mm_max_ps(v_r0, _mm_setzero_ps());
+                v_r1 = _mm_max_ps(v_r1, _mm_setzero_ps());
+                v_g0 = _mm_max_ps(v_g0, _mm_setzero_ps());
+                v_g1 = _mm_max_ps(v_g1, _mm_setzero_ps());
+                v_b0 = _mm_max_ps(v_b0, _mm_setzero_ps());
+                v_b1 = _mm_max_ps(v_b1, _mm_setzero_ps());
+
+                v_r0 = _mm_min_ps(v_r0, _mm_set1_ps(1.f));
+                v_r1 = _mm_min_ps(v_r1, _mm_set1_ps(1.f));
+                v_g0 = _mm_min_ps(v_g0, _mm_set1_ps(1.f));
+                v_g1 = _mm_min_ps(v_g1, _mm_set1_ps(1.f));
+                v_b0 = _mm_min_ps(v_b0, _mm_set1_ps(1.f));
+                v_b1 = _mm_min_ps(v_b1, _mm_set1_ps(1.f));
+
+                if ( gammaTab )
+                {
+                    __m128 v_gscale = _mm_set1_ps(gscale);
+                    v_r0 = _mm_mul_ps(v_r0, v_gscale);
+                    v_r1 = _mm_mul_ps(v_r1, v_gscale);
+                    v_g0 = _mm_mul_ps(v_g0, v_gscale);
+                    v_g1 = _mm_mul_ps(v_g1, v_gscale);
+                    v_b0 = _mm_mul_ps(v_b0, v_gscale);
+                    v_b1 = _mm_mul_ps(v_b1, v_gscale);
+
+                    splineInterpolate(v_r0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_r1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_g0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_g1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_b0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_b1, gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                process(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+
+                _mm_interleave_ps(v_r0, v_r1, v_g0, v_g1, v_b0, v_b1);
+
+                _mm_storeu_ps(dst + i +  0, v_r0);
+                _mm_storeu_ps(dst + i +  4, v_r1);
+                _mm_storeu_ps(dst + i +  8, v_g0);
+                _mm_storeu_ps(dst + i + 12, v_g1);
+                _mm_storeu_ps(dst + i + 16, v_b0);
+                _mm_storeu_ps(dst + i + 20, v_b1);
+            }
+        }
+        #endif
+        for( ; i < n; i += 3, src += scn )
+        {
+            float R = src[0], G = src[1], B = src[2];
+            R = std::min(std::max(R, 0.f), 1.f);
+            G = std::min(std::max(G, 0.f), 1.f);
+            B = std::min(std::max(B, 0.f), 1.f);
+            if( gammaTab )
+            {
+                R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
+                G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
+                B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
+            }
+
+            float X = R*C0 + G*C1 + B*C2;
+            float Y = R*C3 + G*C4 + B*C5;
+            float Z = R*C6 + G*C7 + B*C8;
+
+            float L = splineInterpolate(Y*LabCbrtTabScale, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+            L = 116.f*L - 16.f;
+
+            float d = (4*13) / std::max(X + 15 * Y + 3 * Z, FLT_EPSILON);
+            float u = L*(X*d - un);
+            float v = L*((9*0.25f)*Y*d - vn);
+
+            dst[i] = L; dst[i+1] = u; dst[i+2] = v;
+        }
+    }
+
+    int srccn;
+    float coeffs[9], un, vn;
+    bool srgb;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
+    bool useBitExactness;
+    bool useInterpolation;
+};
+
+struct RGB2Luv_f
+{
+    typedef float channel_type;
+
+    RGB2Luv_f( int _srccn, int blueIdx, const float* _coeffs,
+               const float* whitept, bool _srgb )
+    : fcvt(_srccn, blueIdx, _coeffs, whitept, _srgb), srccn(_srccn)
+    { }
+
+    void operator()(const float* src, float* dst, int n) const
+    {
+        fcvt(src, dst, n);
+    }
+
+    RGB2Luvfloat fcvt;
+    int srccn;
+};
 
 
+struct Luv2RGBfloat
+{
+    typedef float channel_type;
+
+    Luv2RGBfloat( int _dstcn, int blueIdx, const float* _coeffs,
+                  const float* whitept, bool _srgb )
+    : dstcn(_dstcn), srgb(_srgb)
+    {
+        initLabTabs();
+
+        useBitExactness = enableBitExactness;
+
+        useInterpolation = (!_coeffs && !_whitept && srgb && enableLuvInterpolation);
+
+        if(!_coeffs) _coeffs = XYZ2sRGB_D65;
+        if(!whitept) whitept = D65;
+
+        for( int i = 0; i < 3; i++ )
+        {
+            coeffs[i+(blueIdx^2)*3] = _coeffs[i];
+            coeffs[i+3] = _coeffs[i+3];
+            coeffs[i+blueIdx*3] = _coeffs[i+6];
+        }
+
+        softfloat d = softfloat(whitept[0]) +
+                      softfloat(whitept[1])*softfloat(15) +
+                      softfloat(whitept[2])*softfloat(3);
+        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        un = softfloat(4*13)*d*softfloat(whitept[0]);
+        vn = softfloat(9*13)*d*softfloat(whitept[1]);
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+
+        CV_Assert(whitept[1] == 1.f);
+    }
+
+    #if CV_SSE2
+    void process(__m128& v_l0, __m128& v_l1, __m128& v_u0,
+                 __m128& v_u1, __m128& v_v0, __m128& v_v1) const
+    {
+        // L*(3./29.)^3
+        __m128 v_y00 = _mm_mul_ps(v_l0, _mm_set1_ps(1.0f/903.3f));
+        __m128 v_y01 = _mm_mul_ps(v_l1, _mm_set1_ps(1.0f/903.3f));
+        // ((L + 16)/116)^3
+        __m128 v_y10 = _mm_mul_ps(_mm_add_ps(v_l0, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
+        __m128 v_y11 = _mm_mul_ps(_mm_add_ps(v_l1, _mm_set1_ps(16.0f)), _mm_set1_ps(1.f/116.f));
+        v_y10 = _mm_mul_ps(_mm_mul_ps(v_y10, v_y10), v_y10);
+        v_y11 = _mm_mul_ps(_mm_mul_ps(v_y11, v_y11), v_y11);
+        // Y = (L <= 8) ? Y0 : Y1;
+        __m128 v_cmpl0 = _mm_cmplt_ps(v_l0, _mm_set1_ps(8.f));
+        __m128 v_cmpl1 = _mm_cmplt_ps(v_l1, _mm_set1_ps(8.f));
+        v_y00 = _mm_and_ps(v_cmpl0, v_y00);
+        v_y01 = _mm_and_ps(v_cmpl1, v_y01);
+        v_y10 = _mm_andnot_ps(v_cmpl0, v_y10);
+        v_y11 = _mm_andnot_ps(v_cmpl1, v_y11);
+        __m128 v_y0 = _mm_or_ps(v_y00, v_y10);
+        __m128 v_y1 = _mm_or_ps(v_y01, v_y11);
+        // up = 3*(u + L*_un);
+        __m128 v_up0 = _mm_mul_ps(_mm_set1_ps(3.f), _mm_add_ps(v_u0, _mm_mul_ps(v_l0, _mm_set1_ps(un))));
+        __m128 v_up1 = _mm_mul_ps(_mm_set1_ps(3.f), _mm_add_ps(v_u1, _mm_mul_ps(v_l1, _mm_set1_ps(un))));
+        // vp = 0.25/(v + L*_vn);
+        __m128 v_vp0 = _mm_div_ps(_mm_set1_ps(0.25f), _mm_add_ps(v_v0, _mm_mul_ps(v_l0, _mm_set1_ps(vn))));
+        __m128 v_vp1 = _mm_div_ps(_mm_set1_ps(0.25f), _mm_add_ps(v_v1, _mm_mul_ps(v_l1, _mm_set1_ps(vn))));
+        // vp = max(-0.25, min(0.25, vp));
+        v_vp0 = _mm_max_ps(v_vp0, _mm_set1_ps(-0.25f));
+        v_vp1 = _mm_max_ps(v_vp1, _mm_set1_ps(-0.25f));
+        v_vp0 = _mm_min_ps(v_vp0, _mm_set1_ps( 0.25f));
+        v_vp1 = _mm_min_ps(v_vp1, _mm_set1_ps( 0.25f));
+        //X = 3*up*vp; // (*Y) is done later
+        __m128 v_x0 = _mm_mul_ps(_mm_set1_ps(3.f), _mm_mul_ps(v_up0, v_vp0));
+        __m128 v_x1 = _mm_mul_ps(_mm_set1_ps(3.f), _mm_mul_ps(v_up1, v_vp1));
+        //Z = ((12*13*L - up)*vp - 5); // (*Y) is done later
+        __m128 v_z0 = _mm_sub_ps(_mm_mul_ps(_mm_sub_ps(_mm_mul_ps(_mm_set1_ps(12.f*13.f), v_l0), v_up0), v_vp0), _mm_set1_ps(5.f));
+        __m128 v_z1 = _mm_sub_ps(_mm_mul_ps(_mm_sub_ps(_mm_mul_ps(_mm_set1_ps(12.f*13.f), v_l1), v_up1), v_vp1), _mm_set1_ps(5.f));
+
+        // R = (X*C0 + C1 + Z*C2)*Y; // here (*Y) is done
+        v_l0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[0]));
+        v_l1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[0]));
+        v_u0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[3]));
+        v_u1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[3]));
+        v_v0 = _mm_mul_ps(v_x0, _mm_set1_ps(coeffs[6]));
+        v_v1 = _mm_mul_ps(v_x1, _mm_set1_ps(coeffs[6]));
+        v_l0 = _mm_add_ps(v_l0, _mm_set1_ps(coeffs[1]));
+        v_l1 = _mm_add_ps(v_l1, _mm_set1_ps(coeffs[1]));
+        v_u0 = _mm_add_ps(v_u0, _mm_set1_ps(coeffs[4]));
+        v_u1 = _mm_add_ps(v_u1, _mm_set1_ps(coeffs[4]));
+        v_v0 = _mm_add_ps(v_v0, _mm_set1_ps(coeffs[7]));
+        v_v1 = _mm_add_ps(v_v1, _mm_set1_ps(coeffs[7]));
+        v_l0 = _mm_add_ps(v_l0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[2])));
+        v_l1 = _mm_add_ps(v_l1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[2])));
+        v_u0 = _mm_add_ps(v_u0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[5])));
+        v_u1 = _mm_add_ps(v_u1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[5])));
+        v_v0 = _mm_add_ps(v_v0, _mm_mul_ps(v_z0, _mm_set1_ps(coeffs[8])));
+        v_v1 = _mm_add_ps(v_v1, _mm_mul_ps(v_z1, _mm_set1_ps(coeffs[8])));
+        v_l0 = _mm_mul_ps(v_l0, v_y0);
+        v_l1 = _mm_mul_ps(v_l1, v_y1);
+        v_u0 = _mm_mul_ps(v_u0, v_y0);
+        v_u1 = _mm_mul_ps(v_u1, v_y1);
+        v_v0 = _mm_mul_ps(v_v0, v_y0);
+        v_v1 = _mm_mul_ps(v_v1, v_y1);
+
+        v_l0 = _mm_max_ps(v_l0, _mm_setzero_ps());
+        v_l1 = _mm_max_ps(v_l1, _mm_setzero_ps());
+        v_u0 = _mm_max_ps(v_u0, _mm_setzero_ps());
+        v_u1 = _mm_max_ps(v_u1, _mm_setzero_ps());
+        v_v0 = _mm_max_ps(v_v0, _mm_setzero_ps());
+        v_v1 = _mm_max_ps(v_v1, _mm_setzero_ps());
+        v_l0 = _mm_min_ps(v_l0, _mm_set1_ps(1.f));
+        v_l1 = _mm_min_ps(v_l1, _mm_set1_ps(1.f));
+        v_u0 = _mm_min_ps(v_u0, _mm_set1_ps(1.f));
+        v_u1 = _mm_min_ps(v_u1, _mm_set1_ps(1.f));
+        v_v0 = _mm_min_ps(v_v0, _mm_set1_ps(1.f));
+        v_v1 = _mm_min_ps(v_v1, _mm_set1_ps(1.f));
+    }
+    #endif
+
+    void operator()(const float* src, float* dst, int n) const
+    {
+        int i = 0, dcn = dstcn;
+        const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
+        float gscale = GammaTabScale;
+        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+        float alpha = ColorChannel<float>::max();
+        float _un = un, _vn = vn;
+        n *= 3;
+
+        if(useBitExactness)
+        {
+            for (; i < n; i += 3, dst += dcn)
+            {
+                float l = src[i];
+                float u = src[i + 1];
+                float v = src[i + 2];
+
+                int iL, iu, iv;
+                iL = cvRound(l*LAB_BASE/100.f);
+                iu = cvRound((u-(float)uLow)*LAB_BASE/((float)uRange));
+                iv = cvRound((v-(float)vLow)*LAB_BASE/((float)vRange));
+                int ir, ig, ib;
+                chooseInterpolate(iL, iu, iv, LUV_TO_RGB, ir, ig, ib);
+                float ro = ir*1.f/LAB_BASE;
+                float go = ig*1.f/LAB_BASE;
+                float bo = ib*1.f/LAB_BASE;
+
+                dst[bIdx] = ro, dst[1] = go, dst[bIdx^2] = bo;
+                if( dcn == 4 )
+                    dst[3] = alpha;
+            }
+        }
+
+        #if CV_SSE2
+        if (haveSIMD)
+        {
+            for( ; i <= n - 24; i += 24, dst += dcn * 8 )
+            {
+                __m128 v_l0 = _mm_loadu_ps(src + i +  0);
+                __m128 v_l1 = _mm_loadu_ps(src + i +  4);
+                __m128 v_u0 = _mm_loadu_ps(src + i +  8);
+                __m128 v_u1 = _mm_loadu_ps(src + i + 12);
+                __m128 v_v0 = _mm_loadu_ps(src + i + 16);
+                __m128 v_v1 = _mm_loadu_ps(src + i + 20);
+
+                _mm_deinterleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                process(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                if( gammaTab )
+                {
+                    __m128 v_gscale = _mm_set1_ps(gscale);
+                    v_l0 = _mm_mul_ps(v_l0, v_gscale);
+                    v_l1 = _mm_mul_ps(v_l1, v_gscale);
+                    v_u0 = _mm_mul_ps(v_u0, v_gscale);
+                    v_u1 = _mm_mul_ps(v_u1, v_gscale);
+                    v_v0 = _mm_mul_ps(v_v0, v_gscale);
+                    v_v1 = _mm_mul_ps(v_v1, v_gscale);
+                    splineInterpolate(v_l0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_l1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_u0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_u1, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_v0, gammaTab, GAMMA_TAB_SIZE);
+                    splineInterpolate(v_v1, gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                if( dcn == 4 )
+                {
+                    __m128 v_a0 = _mm_set1_ps(alpha);
+                    __m128 v_a1 = _mm_set1_ps(alpha);
+                    _mm_interleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1, v_a0, v_a1);
+
+                    _mm_storeu_ps(dst +  0, v_l0);
+                    _mm_storeu_ps(dst +  4, v_l1);
+                    _mm_storeu_ps(dst +  8, v_u0);
+                    _mm_storeu_ps(dst + 12, v_u1);
+                    _mm_storeu_ps(dst + 16, v_v0);
+                    _mm_storeu_ps(dst + 20, v_v1);
+                    _mm_storeu_ps(dst + 24, v_a0);
+                    _mm_storeu_ps(dst + 28, v_a1);
+                }
+                else
+                {
+                    _mm_interleave_ps(v_l0, v_l1, v_u0, v_u1, v_v0, v_v1);
+
+                    _mm_storeu_ps(dst +  0, v_l0);
+                    _mm_storeu_ps(dst +  4, v_l1);
+                    _mm_storeu_ps(dst +  8, v_u0);
+                    _mm_storeu_ps(dst + 12, v_u1);
+                    _mm_storeu_ps(dst + 16, v_v0);
+                    _mm_storeu_ps(dst + 20, v_v1);
+                }
+            }
+        }
+        #endif
+        for( ; i < n; i += 3, dst += dcn )
+        {
+            float L = src[i], u = src[i+1], v = src[i+2], X, Y, Z;
+            if(L >= 8)
+            {
+                Y = (L + 16.f) * (1.f/116.f);
+                Y = Y*Y*Y;
+            }
+            else
+            {
+                Y = L * (1.0f/903.3f); // L*(3./29.)^3
+            }
+            float up = 3.f*(u + L*_un);
+            float vp = 0.25f/(v + L*_vn);
+            if(vp >  0.25f) vp =  0.25f;
+            if(vp < -0.25f) vp = -0.25f;
+            X = Y*3.f*up*vp;
+            Z = Y*(((12.f*13.f)*L - up)*vp - 5.f);
+
+            float R = X*C0 + Y*C1 + Z*C2;
+            float G = X*C3 + Y*C4 + Z*C5;
+            float B = X*C6 + Y*C7 + Z*C8;
+
+            R = std::min(std::max(R, 0.f), 1.f);
+            G = std::min(std::max(G, 0.f), 1.f);
+            B = std::min(std::max(B, 0.f), 1.f);
+
+            if( gammaTab )
+            {
+                R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
+                G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
+                B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
+            }
+
+            dst[0] = R; dst[1] = G; dst[2] = B;
+            if( dcn == 4 )
+                dst[3] = alpha;
+        }
+    }
+
+    int dstcn;
+    float coeffs[9], un, vn;
+    bool srgb;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
+    bool useBitExactness;
+    bool useInterpolation;
+};
+
+
+struct Luv2RGB_f
+{
+    typedef float channel_type;
+
+    Luv2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
+              const float* whitept, bool _srgb )
+    : fcvt(_dstcn, blueIdx, _coeffs, whitept, _srgb), dstcn(_dstcn)
+    { }
+
+    void operator()(const float* src, float* dst, int n) const
+    {
+        fcvt(src, dst, n);
+    }
+
+    Luv2RGBfloat fcvt;
+    int dstcn;
+};
+
+
+//TODO: rewrite it comletely
+struct RGB2Luvinteger
+{
+    typedef uchar channel_type;
+
+    RGB2Luvinteger( int _srccn, int blueIdx, const float* _coeffs,
+                    const float* _whitept, bool _srgb )
+    : srccn(_srccn), cvt(3, blueIdx, _coeffs, _whitept, _srgb)
+    {
+        //TODO: check correctness of this expression
+        useInterpolation = (!_coeffs && !_whitept && _srgb && enableLuvInterpolation);
+
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+    }
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        int i, j, scn = srccn;
+        float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
+
+        if(enableBitExactness)
+        {
+            //TODO: this
+            for(; i < n; i += 3, src += scn)
+            {
+                int R = src[bIdx], G = src[1], B = src[bIdx^2];
+
+                if(useXYZTable)
+                {
+                    //TODO: this
+
+                    R = tab[R], G = tab[G], B = tab[B];
+
+                    int fX = CV_DESCALE(R*C0 + G*C1 + B*C2, gamma_shift);
+                    int fY = CV_DESCALE(R*C3 + G*C4 + B*C5, gamma_shift);
+                    int fZ = CV_DESCALE(R*C6 + G*C7 + B*C8, gamma_shift);
+
+                    //fX, fY, fZ are shifted on lab_shift and x255 at tab
+                    R = (fX << (lab_base_shift - lab_shift))/255;
+                    G = (fY << (lab_base_shift - lab_shift))/255;
+                    B = (fZ << (lab_base_shift - lab_shift))/255;
+                }
+                else
+                {
+                    R = R*LAB_BASE/255, G = G*LAB_BASE/255, B = B*LAB_BASE/255;
+                }
+
+                int L, a, b;
+                chooseInterpolate(R, G, B, RGB_TO_LAB, L, a, b);
+
+
+                //TODO: rewrite this
+                dst[i] = saturate_cast<uchar>(L/(LAB_BASE/255));
+                dst[i+1] = saturate_cast<uchar>(a/(LAB_BASE/255));
+                dst[i+2] = saturate_cast<uchar>(b/(LAB_BASE/255));
+            }
+        }
+    }
+
+    int srccn;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
+    bool useInterpolation;
+};
+
+
+struct RGB2Luv_b
+{
+    typedef uchar channel_type;
+
+    RGB2Luv_b( int _srccn, int blueIdx, const float* _coeffs,
+               const float* _whitept, bool _srgb )
+    : srccn(_srccn), fcvt(3, blueIdx, _coeffs, _whitept, _srgb)
+    {
+        //TODO: check correctness of this condition
+        useBitExactness = enableBitExactness;
+
+        useInterpolation = (!_coeffs && !_whitept && _srgb && enableLuvInterpolation);
+
+        static const softfloat f255(255);
+        #if CV_NEON
+        v_scale_inv = vdupq_n_f32(softfloat::one()/f255);
+        v_scale = vdupq_n_f32(f255/softfloat(100));
+        v_coeff1 = vdupq_n_f32(f255/uRange);
+        v_coeff2 = vdupq_n_f32(-uLow*f255/uRange);
+        v_coeff3 = vdupq_n_f32(f255/vRange);
+        v_coeff4 = vdupq_n_f32(-vLow*f255/vRange);
+        v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
+        #elif CV_SSE2
+        v_zero = _mm_setzero_si128();
+        v_scale_inv = _mm_set1_ps(softfloat::one()/f255);
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+    }
+
+    #if CV_SSE2
+    void process(const float * buf,
+                 __m128 & v_coeffs, __m128 & v_res, uchar * dst) const
+    {
+        __m128 v_l0f = _mm_load_ps(buf);
+        __m128 v_l1f = _mm_load_ps(buf + 4);
+        __m128 v_u0f = _mm_load_ps(buf + 8);
+        __m128 v_u1f = _mm_load_ps(buf + 12);
+
+        v_l0f = _mm_add_ps(_mm_mul_ps(v_l0f, v_coeffs), v_res);
+        v_u1f = _mm_add_ps(_mm_mul_ps(v_u1f, v_coeffs), v_res);
+        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x92));
+        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x92));
+        v_u0f = _mm_add_ps(_mm_mul_ps(v_u0f, v_coeffs), v_res);
+        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x92));
+        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x92));
+        v_l1f = _mm_add_ps(_mm_mul_ps(v_l1f, v_coeffs), v_res);
+
+        __m128i v_l = _mm_packs_epi32(_mm_cvtps_epi32(v_l0f), _mm_cvtps_epi32(v_l1f));
+        __m128i v_u = _mm_packs_epi32(_mm_cvtps_epi32(v_u0f), _mm_cvtps_epi32(v_u1f));
+        __m128i v_l0 = _mm_packus_epi16(v_l, v_u);
+
+        _mm_storeu_si128((__m128i *)(dst), v_l0);
+    }
+    #endif
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        if(useBitExactness)
+        {
+            icvt(src, dst, n);
+            return;
+        }
+
+        int i, j, scn = srccn;
+        float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
+
+        static const softfloat f255(255);
+        #if CV_SSE2
+        __m128 v_coeffs = _mm_set_ps(f255/softfloat(100), f255/vRange, f255/uRange, f255/softfloat(100));
+        __m128 v_res = _mm_set_ps(0.f, -vLow*f255/vRange, -uLow*f255/uRange, 0.f);
+        #endif
+
+        for( i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )
+        {
+            int dn = std::min(n - i, (int)BLOCK_SIZE);
+            j = 0;
+
+            #if CV_NEON
+            for ( ; j <= (dn - 8) * 3; j += 24, src += 8 * scn)
+            {
+                uint16x8_t v_t0, v_t1, v_t2;
+
+                if (scn == 3)
+                {
+                    uint8x8x3_t v_src = vld3_u8(src);
+                    v_t0 = vmovl_u8(v_src.val[0]);
+                    v_t1 = vmovl_u8(v_src.val[1]);
+                    v_t2 = vmovl_u8(v_src.val[2]);
+                }
+                else
+                {
+                    uint8x8x4_t v_src = vld4_u8(src);
+                    v_t0 = vmovl_u8(v_src.val[0]);
+                    v_t1 = vmovl_u8(v_src.val[1]);
+                    v_t2 = vmovl_u8(v_src.val[2]);
+                }
+
+                float32x4x3_t v_dst;
+                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t0))), v_scale_inv);
+                v_dst.val[1] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t1))), v_scale_inv);
+                v_dst.val[2] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t2))), v_scale_inv);
+                vst3q_f32(buf + j, v_dst);
+
+                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t0))), v_scale_inv);
+                v_dst.val[1] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t1))), v_scale_inv);
+                v_dst.val[2] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t2))), v_scale_inv);
+                vst3q_f32(buf + j + 12, v_dst);
+            }
+            #elif CV_SSE2
+            if (scn == 3 && haveSIMD)
+            {
+                for ( ; j <= (dn * 3 - 16); j += 16, src += 16)
+                {
+                    __m128i v_src = _mm_loadu_si128((__m128i const *)src);
+
+                    __m128i v_src_p = _mm_unpacklo_epi8(v_src, v_zero);
+                    _mm_store_ps(buf + j, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src_p, v_zero)), v_scale_inv));
+                    _mm_store_ps(buf + j + 4, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src_p, v_zero)), v_scale_inv));
+
+                    v_src_p = _mm_unpackhi_epi8(v_src, v_zero);
+                    _mm_store_ps(buf + j + 8, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src_p, v_zero)), v_scale_inv));
+                    _mm_store_ps(buf + j + 12, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src_p, v_zero)), v_scale_inv));
+                }
+
+                int jr = j % 3;
+                if (jr)
+                    src -= jr, j -= jr;
+            }
+            else if (scn == 4 && haveSIMD)
+            {
+                for ( ; j <= (dn * 3 - 12); j += 12, src += 16)
+                {
+                    __m128i v_src = _mm_loadu_si128((__m128i const *)src);
+
+                    __m128i v_src_lo = _mm_unpacklo_epi8(v_src, v_zero);
+                    __m128i v_src_hi = _mm_unpackhi_epi8(v_src, v_zero);
+                    _mm_storeu_ps(buf + j, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src_lo, v_zero)), v_scale_inv));
+                    _mm_storeu_ps(buf + j + 3, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src_lo, v_zero)), v_scale_inv));
+                    _mm_storeu_ps(buf + j + 6, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src_hi, v_zero)), v_scale_inv));
+                    float tmp = buf[j + 8];
+                    _mm_storeu_ps(buf + j + 8, _mm_mul_ps(_mm_cvtepi32_ps(_mm_shuffle_epi32(_mm_unpackhi_epi16(v_src_hi, v_zero), 0x90)), v_scale_inv));
+                    buf[j + 8] = tmp;
+                }
+
+                int jr = j % 3;
+                if (jr)
+                    src -= jr, j -= jr;
+            }
+            #endif
+            static const softfloat f255inv = softfloat::one()/f255;
+            for( ; j < dn*3; j += 3, src += scn )
+            {
+                buf[j  ] = (float)(src[0]*((float)f255inv));
+                buf[j+1] = (float)(src[1]*((float)f255inv));
+                buf[j+2] = (float)(src[2]*((float)f255inv));
+            }
+            fcvt(buf, buf, dn);
+
+            j = 0;
+            #if CV_NEON
+            for ( ; j <= (dn - 8) * 3; j += 24)
+            {
+                float32x4x3_t v_src0 = vld3q_f32(buf + j), v_src1 = vld3q_f32(buf + j + 12);
+
+                uint8x8x3_t v_dst;
+                v_dst.val[0] = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[0], v_scale))),
+                                                       vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[0], v_scale)))));
+                v_dst.val[1] = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vmulq_f32(v_src0.val[1], v_coeff1), v_coeff2))),
+                                                       vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vmulq_f32(v_src1.val[1], v_coeff1), v_coeff2)))));
+                v_dst.val[2] = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vmulq_f32(v_src0.val[2], v_coeff3), v_coeff4))),
+                                                       vqmovn_u32(cv_vrndq_u32_f32(vaddq_f32(vmulq_f32(v_src1.val[2], v_coeff3), v_coeff4)))));
+
+                vst3_u8(dst + j, v_dst);
+            }
+            #elif CV_SSE2
+            if (haveSIMD)
+            {
+                for ( ; j <= (dn - 16) * 3; j += 48)
+                {
+                    process(buf + j,
+                            v_coeffs, v_res, dst + j);
+
+                    process(buf + j + 16,
+                            v_coeffs, v_res, dst + j + 16);
+
+                    process(buf + j + 32,
+                            v_coeffs, v_res, dst + j + 32);
+                }
+            }
+            #endif
+
+            static const softfloat fL = f255/softfloat(100);
+            static const softfloat fu = f255/uRange;
+            static const softfloat fv = f255/vRange;
+            static const softfloat su = -uLow*f255/uRange;
+            static const softfloat sv = -vLow*f255/vRange;
+            for( ; j < dn*3; j += 3 )
+            {
+                dst[j] = saturate_cast<uchar>(buf[j]*(float)fL);
+                dst[j+1] = saturate_cast<uchar>(buf[j+1]*(float)fu + (float)su);
+                dst[j+2] = saturate_cast<uchar>(buf[j+2]*(float)fv + (float)sv);
+            }
+        }
+    }
+
+    int srccn;
+    RGB2Luvfloat   fcvt;
+    RGB2Luvinteger icvt;
+
+    #if CV_NEON
+    float32x4_t v_scale, v_scale_inv, v_coeff1, v_coeff2, v_coeff3, v_coeff4;
+    uint8x8_t v_alpha;
+    #elif CV_SSE2
+    __m128 v_scale_inv;
+    __m128i v_zero;
+    bool haveSIMD;
+    #endif
+    bool useBitExactness;
+    bool useInterpolation;
+};
+
+
+//TODO: rewrite it completely
+struct Luv2RGBinteger
+{
+    typedef uchar channel_type;
+
+    Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
+                    const float* _whitept, bool _srgb )
+    : dstcn(_dstcn), cvt(3, blueIdx, _coeffs, _whitept, _srgb )
+    {
+        useInterpolation = (!_coeffs && !_whitept && _srgb && enableLuvInterpolation);
+
+        #if CV_SSE2
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+    }
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        int i, j, dcn = dstcn;
+        uchar alpha = ColorChannel<uchar>::max();
+
+        //TODO: this
+
+
+    }
+
+    int dstcn;
+    #if CV_SSE2
+    bool haveSIMD;
+    #endif
+    bool useInterpolation;
+};
+
+
+struct Luv2RGB_b
+{
+    typedef uchar channel_type;
+
+    Luv2RGB_b( int _dstcn, int blueIdx, const float* _coeffs,
+               const float* _whitept, bool _srgb )
+    : dstcn(_dstcn), fcvt(3, blueIdx, _coeffs, _whitept, _srgb )
+    {
+        //TODO: check correctness of this condition
+        useBitExactness = enableBitExactness;
+
+        useInterpolation = (!_coeffs && !_whitept && _srgb && enableLuvInterpolation);
+
+        #if CV_NEON
+        static const softfloat f255(255);
+        v_scale_inv = vdupq_n_f32(softfloat(100)/f255);
+        v_coeff1 = vdupq_n_f32(uRange/f255);
+        v_coeff2 = vdupq_n_f32(vRange/f255);
+        v_134 = vdupq_n_f32(-uLow);
+        v_140 = vdupq_n_f32(-vLow);
+        v_scale = vdupq_n_f32(255.f);
+        v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
+        #elif CV_SSE2
+        v_scale = _mm_set1_ps(255.f);
+        v_zero = _mm_setzero_si128();
+        v_alpha = _mm_set1_ps(ColorChannel<uchar>::max());
+        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
+    }
+
+    #if CV_SSE2
+    // 16s x 8
+    void process(__m128i v_l, __m128i v_u, __m128i v_v,
+                 const __m128& v_coeffs_, const __m128& v_res_,
+                 float * buf) const
+    {
+        __m128 v_l0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_l, v_zero));
+        __m128 v_u0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_u, v_zero));
+        __m128 v_v0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_v, v_zero));
+
+        __m128 v_l1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_l, v_zero));
+        __m128 v_u1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_u, v_zero));
+        __m128 v_v1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_v, v_zero));
+
+        __m128 v_coeffs = v_coeffs_;
+        __m128 v_res = v_res_;
+
+        v_l0 = _mm_mul_ps(v_l0, v_coeffs);
+        v_u1 = _mm_mul_ps(v_u1, v_coeffs);
+        v_l0 = _mm_sub_ps(v_l0, v_res);
+        v_u1 = _mm_sub_ps(v_u1, v_res);
+
+        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
+        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x49));
+
+        v_l1 = _mm_mul_ps(v_l1, v_coeffs);
+        v_v0 = _mm_mul_ps(v_v0, v_coeffs);
+        v_l1 = _mm_sub_ps(v_l1, v_res);
+        v_v0 = _mm_sub_ps(v_v0, v_res);
+
+        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
+        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x49));
+
+        v_u0 = _mm_mul_ps(v_u0, v_coeffs);
+        v_v1 = _mm_mul_ps(v_v1, v_coeffs);
+        v_u0 = _mm_sub_ps(v_u0, v_res);
+        v_v1 = _mm_sub_ps(v_v1, v_res);
+
+        _mm_store_ps(buf, v_l0);
+        _mm_store_ps(buf + 4, v_l1);
+        _mm_store_ps(buf + 8, v_u0);
+        _mm_store_ps(buf + 12, v_u1);
+        _mm_store_ps(buf + 16, v_v0);
+        _mm_store_ps(buf + 20, v_v1);
+    }
+    #endif
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        if(useBitExactness)
+        {
+            icvt(src, dst, n);
+            return;
+        }
+
+        int i, j, dcn = dstcn;
+        uchar alpha = ColorChannel<uchar>::max();
+        float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
+
+        static const softfloat f255(255);
+        static const softfloat f100by255 = softfloat(100)/f255;
+        static const softfloat fu = uRange/f255;
+        static const softfloat fv = vRange/f255;
+        #if CV_SSE2
+        __m128 v_coeffs = _mm_set_ps(f100by255, fv, fu, f100by255);
+        __m128 v_res = _mm_set_ps(0.f, -vLow, -uLow, 0.f);
+        #endif
+
+        for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
+        {
+            int dn = std::min(n - i, (int)BLOCK_SIZE);
+            j = 0;
+
+            #if CV_NEON
+            for ( ; j <= (dn - 8) * 3; j += 24)
+            {
+                uint8x8x3_t v_src = vld3_u8(src + j);
+                uint16x8_t v_t0 = vmovl_u8(v_src.val[0]),
+                           v_t1 = vmovl_u8(v_src.val[1]),
+                           v_t2 = vmovl_u8(v_src.val[2]);
+
+                float32x4x3_t v_dst;
+                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t0))), v_scale_inv);
+                v_dst.val[1] = vsubq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t1))), v_coeff1), v_134);
+                v_dst.val[2] = vsubq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t2))), v_coeff2), v_140);
+                vst3q_f32(buf + j, v_dst);
+
+                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t0))), v_scale_inv);
+                v_dst.val[1] = vsubq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t1))), v_coeff1), v_134);
+                v_dst.val[2] = vsubq_f32(vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t2))), v_coeff2), v_140);
+                vst3q_f32(buf + j + 12, v_dst);
+            }
+            #elif CV_SSE2
+            if (haveSIMD)
+            {
+                for ( ; j <= (dn - 8) * 3; j += 24)
+                {
+                    __m128i v_src0 = _mm_loadu_si128((__m128i const *)(src + j));
+                    __m128i v_src1 = _mm_loadl_epi64((__m128i const *)(src + j + 16));
+
+                    process(_mm_unpacklo_epi8(v_src0, v_zero),
+                            _mm_unpackhi_epi8(v_src0, v_zero),
+                            _mm_unpacklo_epi8(v_src1, v_zero),
+                            v_coeffs, v_res,
+                            buf + j);
+                }
+            }
+            #endif
+            for( ; j < dn*3; j += 3 )
+            {
+                buf[j] = src[j]*((float)f100by255);
+                buf[j+1] = (float)(src[j+1]*(float)fu - (float)uLow);
+                buf[j+2] = (float)(src[j+2]*(float)fv - (float)vLow);
+            }
+            fcvt(buf, buf, dn);
+
+            j = 0;
+            #if CV_NEON
+            for ( ; j <= (dn - 8) * 3; j += 24, dst += dcn * 8)
+            {
+                float32x4x3_t v_src0 = vld3q_f32(buf + j), v_src1 = vld3q_f32(buf + j + 12);
+                uint8x8_t v_dst0 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[0], v_scale))),
+                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[0], v_scale)))));
+                uint8x8_t v_dst1 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[1], v_scale))),
+                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[1], v_scale)))));
+                uint8x8_t v_dst2 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[2], v_scale))),
+                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[2], v_scale)))));
+
+                if (dcn == 4)
+                {
+                    uint8x8x4_t v_dst;
+                    v_dst.val[0] = v_dst0;
+                    v_dst.val[1] = v_dst1;
+                    v_dst.val[2] = v_dst2;
+                    v_dst.val[3] = v_alpha;
+                    vst4_u8(dst, v_dst);
+                }
+                else
+                {
+                    uint8x8x3_t v_dst;
+                    v_dst.val[0] = v_dst0;
+                    v_dst.val[1] = v_dst1;
+                    v_dst.val[2] = v_dst2;
+                    vst3_u8(dst, v_dst);
+                }
+            }
+            #elif CV_SSE2
+            if (dcn == 3 && haveSIMD)
+            {
+                for ( ; j <= (dn * 3 - 16); j += 16, dst += 16)
+                {
+                    __m128 v_src0 = _mm_mul_ps(_mm_load_ps(buf + j), v_scale);
+                    __m128 v_src1 = _mm_mul_ps(_mm_load_ps(buf + j + 4), v_scale);
+                    __m128 v_src2 = _mm_mul_ps(_mm_load_ps(buf + j + 8), v_scale);
+                    __m128 v_src3 = _mm_mul_ps(_mm_load_ps(buf + j + 12), v_scale);
+
+                    __m128i v_dst0 = _mm_packs_epi32(_mm_cvtps_epi32(v_src0),
+                                                     _mm_cvtps_epi32(v_src1));
+                    __m128i v_dst1 = _mm_packs_epi32(_mm_cvtps_epi32(v_src2),
+                                                     _mm_cvtps_epi32(v_src3));
+
+                    _mm_storeu_si128((__m128i *)dst, _mm_packus_epi16(v_dst0, v_dst1));
+                }
+
+                int jr = j % 3;
+                if (jr)
+                    dst -= jr, j -= jr;
+            }
+            else if (dcn == 4 && haveSIMD)
+            {
+                for ( ; j <= (dn * 3 - 12); j += 12, dst += 16)
+                {
+                    __m128 v_buf0 = _mm_mul_ps(_mm_load_ps(buf + j), v_scale);
+                    __m128 v_buf1 = _mm_mul_ps(_mm_load_ps(buf + j + 4), v_scale);
+                    __m128 v_buf2 = _mm_mul_ps(_mm_load_ps(buf + j + 8), v_scale);
+
+                    __m128 v_ba0 = _mm_unpackhi_ps(v_buf0, v_alpha);
+                    __m128 v_ba1 = _mm_unpacklo_ps(v_buf2, v_alpha);
+
+                    __m128i v_src0 = _mm_cvtps_epi32(_mm_shuffle_ps(v_buf0, v_ba0, 0x44));
+                    __m128i v_src1 = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_shuffle_ps(v_ba0, v_buf1, 0x4e)), 0x78);
+                    __m128i v_src2 = _mm_cvtps_epi32(_mm_shuffle_ps(v_buf1, v_ba1, 0x4e));
+                    __m128i v_src3 = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_shuffle_ps(v_ba1, v_buf2, 0xee)), 0x78);
+
+                    __m128i v_dst0 = _mm_packs_epi32(v_src0, v_src1);
+                    __m128i v_dst1 = _mm_packs_epi32(v_src2, v_src3);
+
+                    _mm_storeu_si128((__m128i *)dst, _mm_packus_epi16(v_dst0, v_dst1));
+                }
+
+                int jr = j % 3;
+                if (jr)
+                    dst -= jr, j -= jr;
+            }
+            #endif
+
+            for( ; j < dn*3; j += 3, dst += dcn )
+            {
+                dst[0] = saturate_cast<uchar>(buf[j]*255.f);
+                dst[1] = saturate_cast<uchar>(buf[j+1]*255.f);
+                dst[2] = saturate_cast<uchar>(buf[j+2]*255.f);
+                if( dcn == 4 )
+                    dst[3] = alpha;
+            }
+        }
+    }
+
+    int dstcn;
+    Luv2RGBfloat   fcvt;
+    Luv2RGBinteger icvt;
+
+    #if CV_NEON
+    float32x4_t v_scale, v_scale_inv, v_coeff1, v_coeff2, v_134, v_140;
+    uint8x8_t v_alpha;
+    #elif CV_SSE2
+    __m128 v_scale;
+    __m128 v_alpha;
+    __m128i v_zero;
+    bool haveSIMD;
+    #endif
+    bool useBitExactness;
+    bool useInterpolation;
+};
+
+/////////////////
+
+void printDiff(Mat a, string what, char* channel, double* maxMaxError, int nError)
+{
+    Scalar vmean, vdev;
+    double vmin[3], vmax[3]; Point minPt[3], maxPt[3];
+    meanStdDev(a, vmean, vdev);
+    std::cout << what+": mean " << vmean << " stddev " << vdev << std::endl;
+    std::vector<Mat> chDiff;
+    split(a, chDiff);
+    for(int c = 0; c < 3; c++)
+    {
+        minMaxLoc(chDiff[c], &vmin[c], &vmax[c],
+                  &minPt[c], &maxPt[c]);
+        std::cout << " ch "  << channel[c];
+        std::cout << " max " << vmax[c] << " at " << maxPt[c];
+        maxMaxError[nError] = max(maxMaxError[nError], vmax[c]);
+    }
+    std::cout << std::endl;
+};
+
+TEST(ImgProc_Color, LuvCheckWorking)
+{
+    //settings
+    const bool INT_DATA = true;
+    const bool TO_BGR   = true;
+    const string spaceName = "Luv";
+    const string baseDir = "/home/savuor/logs/ocv/lab_precision/";
+    const bool randomFill = true;
+
+    //TODO: this
+    const int lutShift = (int)lab_lut_shift;
+
+    //for Luv:
+    const int   spaceDn  [3] = {  0,    0,    0};
+    const int   spaceUp  [3] = {100,  256,  256};
+    const float spaceDn_f[3] = {  0, -134, -140};
+    const float spaceUp_f[3] = {100,  220,  122};
+    //for Lab:
+    /*
+    const     int spaceDn[3] = {  0,    0,    0};
+    const     int spaceUp[3] = {100,  256,  256};
+    const float spaceDn_f[3] = {  0, -128, -128};
+    const float spaceUp_f[3] = {100,  128,  128};
+    */
+
+    int dstChannels = 3;
+    int blueIdx = 0;
+    bool srgb = true;
+
+    enableBitExactness = true;
+    Luv2RGB_f interToBgr    (dstChannels, blueIdx, 0, 0, srgb);
+    RGB2Luv_f interFromBgr  (dstChannels, blueIdx, 0, 0, srgb);
+    Luv2RGB_b interToBgr_b  (dstChannels, blueIdx, 0, 0, srgb);
+    RGB2Luv_b interFromBgr_b(dstChannels, blueIdx, 0, 0, srgb);
+
+    enableBitExactness = false;
+    Luv2RGB_f goldToBgr    (dstChannels, blueIdx, 0, 0, srgb);
+    RGB2Luv_f goldFromBgr  (dstChannels, blueIdx, 0, 0, srgb);
+    Luv2RGB_b goldToBgr_b  (dstChannels, blueIdx, 0, 0, srgb);
+    RGB2Luv_b goldFromBgr_b(dstChannels, blueIdx, 0, 0, srgb);
+
+    const char colorChannels[3] = {'b', 'g', 'r'};
+    const char spaceChannels[3] = {spaceName[0], spaceName[1], spaceName[2]};
+    const char* channel = TO_BGR ? colorChannels : spaceChannels;
+
+    int nPerfIters = 100;
+
+    string dir;
+    dir = baseDir;
+    dir += string(TO_BGR ? spaceName+"2bgr/" : "rgb2"+spaceName+"/");
+
+    const size_t dim1size = (TO_BGR ? ((INT_DATA ? (-spaceDn[1] + spaceUp[1])
+                                                 : (-spaceDn_f[1] + spaceUp_f[1])))
+                                    : 256) + 1;
+    const size_t dim2size = (TO_BGR ? ((INT_DATA ? (-spaceDn[2] + spaceUp[2])
+                                                 : (-spaceDn_f[2] + spaceUp_f[2])))
+                                    : 256) + 1;
+    Mat  mGold(dim1size, dim2size, CV_32FC3);
+    Mat   mSrc(dim1size, dim2size, CV_32FC3);
+    Mat mInter(dim1size, dim2size, CV_32FC3);
+    Mat   mBackGold(dim1size, dim2size, CV_32FC3);
+    Mat  mBackInter(dim1size, dim2size, CV_32FC3);
+
+    if(INT_DATA)
+    {
+        mGold  = Mat(dim1size, dim2size, CV_8UC3);
+        mSrc   = Mat(dim1size, dim2size, CV_8UC3);
+        mInter = Mat(dim1size, dim2size, CV_8UC3);
+        mBackGold  = Mat(dim1size, dim2size, CV_8UC3);
+        mBackInter = Mat(dim1size, dim2size, CV_8UC3);
+    }
+
+    double maxMaxError[4] = {-100, -100, -100, -100};
+    double times[4] = {1e9, 1e9, 1e9, 1e9};
+    int count = 0;
+
+    const int lb0 = TO_BGR ? (INT_DATA ? spaceDn[0] : spaceDn_f[0]) : 0;
+    const int ub0 = TO_BGR ? (INT_DATA ? spaceUp[0] : spaceUp_f[0]) : 256;
+    for(int dim0 = lb0; dim0 < ub0+1; dim0++)
+    {
+        const int lb1 = TO_BGR ? (INT_DATA ? spaceDn[1] : spaceDn_f[1]) : 0;
+        const int ub1 = TO_BGR ? (INT_DATA ? spaceUp[1] : spaceUp_f[1]) : 256;
+        for(int dim1 = lb1; dim1 < ub1+1; dim1++)
+        {
+            int p = dim1 - lb1;
+            float* pRow   = mSrc.ptr<float>(p);
+            uchar* pRow_b = mSrc.ptr<uchar>(p);
+
+            const int lb2 = TO_BGR ? (INT_DATA ? spaceDn[2] : spaceDn_f[2]) : 0;
+            const int ub2 = TO_BGR ? (INT_DATA ? spaceUp[2] : spaceUp_f[2]) : 256;
+            for(int dim2 = lb2; dim2 < ub2; dim2++)
+            {
+                if(INT_DATA)
+                {
+                    if(TO_BGR)
+                    {
+                        pRow_b[3*q + 0] = dim0;
+                        pRow_b[3*q + 1] = dim1;
+                        pRow_b[3*q + 2] = dim2;
+                    }
+                    else
+                    {
+                        //BGR
+                        pRow_b[3*q + blueIdx]     = dim0;
+                        pRow_b[3*q + 1]           = dim1;
+                        pRow_b[3*q + (blueIdx^2)] = dim2;
+                    }
+                }
+                else
+                {
+                    if(TO_BGR)
+                    {
+                        pRow[3*q + 0] = 1.0f*dim0;
+                        pRow[3*q + 1] = 1.0f*dim1;
+                        pRow[3*q + 2] = 1.0f*dim2;
+                    }
+                    else
+                    {
+                        //BGR
+                        pRow[3*q + blueIdx]       = 1.0f*dim0;
+                        pRow[3*q + 1]             = 1.0f*dim1;
+                        pRow[3*q + (blueIdx ^ 2)] = 1.0f*dim2;
+                    }
+                }
+            }
+        }
+
+        for(int dim1 = lb1; dim1 < ub1+1; dim1++)
+        {
+            size_t p = dim1-lb1;
+            float* pSrc   =   mSrc.ptr<float>(p);
+            float* pGold  =  mGold.ptr<float>(p);
+            float* pInter = mInter.ptr<float>(p);
+            float* pBackGold  = mBackGold.ptr<float>(p);
+            float* pBackInter = mBackInter.ptr<float>(p);
+
+            uchar* pSrc_b   =   mSrc.ptr<uchar>(p);
+            uchar* pGold_b  =  mGold.ptr<uchar>(p);
+            uchar* pInter_b = mInter.ptr<uchar>(p);
+            uchar* pBackGold_b  = mBackGold.ptr<uchar>(p);
+            uchar* pBackInter_b = mBackInter.ptr<uchar>(p);
+            if(INT_DATA)
+            {
+                if(TO_BGR)
+                {
+                    interToBgr_b(pSrc_b, pInter_b, pSize);
+                    goldToBgr_b(pSrc_b, pGold_b, pSize);
+
+                    interFromBgr_b(pInter_b, pBackInter_b, pSize);
+                    goldFromBgr_b(pGold_b, pBackGold_b, pSize);
+                }
+                else
+                {
+                    interFromBgr_b(pSrc_b, pInter_b, pSize);
+                    goldFromBgr_b(pSrc_b, pGold_b, pSize);
+
+                    interToBgr_b(pInter_b, pBackInter_b, pSize);
+                    goldToBgr_b(pGold_b, pBackGold_b, pSize);
+                }
+            }
+            else
+            {
+                if(TO_BGR)
+                {
+                    interToBgr(pSrc, pInter, pSize);
+                    goldToBgr(pSrc, pGold, pSize);
+
+                    interToLab(pInter, pBackInter, pSize);
+                    goldToLab(pGold, pBackGold, pSize);
+                }
+                else
+                {
+                    interFromBgr(pSrc, pInter, pSize);
+                    goldFromBgr(pSrc, pGold, pSize);
+
+                    interToBgr(pInter, pBackInter, pSize);
+                    goldToBgr(pGold, pBackGold, pSize);
+                }
+            }
+        }
+
+        std::cout << (dim0 - lb0) << ":" << endl;
+
+        Mat diff = abs(mGold-mInter);
+        printDiff(diff, "absdiff", channel, maxMaxError, 0);
+
+        Mat backGoldDiff = abs(mBackGold - mSrc);
+        printDiff(backGoldDiff, "backGoldDiff", channel, maxMaxError, 1);
+
+        Mat backInterDiff = abs(mBackInter - mSrc);
+        printDiff(backInterDiff, "backInterDiff", channel, maxMaxError, 2);
+
+        Mat backInterGoldDiff = abs(mBackInter - mBackGold);
+        printDiff(backInterGoldDiff, "backInterGoldDiff", channel, maxMaxError, 3);
+
+        Mat tmp = INT_DATA ? mGold : (TO_BGR ? mGold*256 : mGold+Scalar(-spaceDn_f[0], -spaceDn_f[1], -spaceDn_f[2]));
+        imwrite(format((dir + "noInter%03d.png").c_str(),  (TO_BGR ? l : blue)), tmp);
+
+        tmp = INT_DATA ? mInter : (TO_BGR ? mInter*256 : mInter+Scalar(-spaceDn_f[0], -spaceDn_f[1], -spaceDn_f[2]));
+        imwrite(format((dir + "useInter%03d.png").c_str(), (TO_BGR ? l : blue)), tmp);
+
+        tmp = INT_DATA ? diff : (TO_BGR ? diff*256 : diff);
+        imwrite(format((dir + "absdiff%03d.png").c_str(),  (TO_BGR ? l : blue)), tmp);
+
+        tmp = INT_DATA ? backGoldDiff : (TO_BGR ? backGoldDiff+Scalar::all(128) : backGoldDiff*256);
+        imwrite(format((dir + "backgolddiff%03d.png").c_str(),  (TO_BGR ? l : blue)), tmp);
+
+        tmp = INT_DATA ? backInterDiff : (TO_BGR ? backInterDiff+Scalar::all(128) : backInterDiff*256);
+        imwrite(format((dir + "backinterdiff%03d.png").c_str(), (TO_BGR ? l : blue)), tmp);
+
+        if(randomFill)
+        {
+            RNG rng;
+            for(int dim1 = lb1; dim1 < ub1+1; dim1++)
+            {
+                int p = dim1 - lb1;
+                float* pRow   = mSrc.ptr<float>(p);
+                uchar* pRow_b = mSrc.ptr<uchar>(p);
+
+                const int lb2 = TO_BGR ? (INT_DATA ? spaceDn[2] : spaceDn_f[2]) : 0;
+                const int ub2 = TO_BGR ? (INT_DATA ? spaceUp[2] : spaceUp_f[2]) : 256;
+                for(int dim2 = lb2; dim2 < ub2; dim2++)
+                {
+                    if(INT_DATA)
+                    {
+                        if(TO_BGR)
+                        {
+                            pRow_b[3*q + 0] = rng(ub0-lb0)+lb0;
+                            pRow_b[3*q + 1] = rng(ub1-lb1)+lb1;
+                            pRow_b[3*q + 2] = rng(ub2-lb2)+lb2;
+                        }
+                        else
+                        {
+                            //BGR
+                            pRow_b[3*q + blueIdx]     = rng(256);
+                            pRow_b[3*q + 1]           = rng(256);
+                            pRow_b[3*q + (blueIdx^2)] = rng(256);
+                        }
+                    }
+                    else
+                    {
+                        if(TO_BGR)
+                        {
+                            pRow[3*q + 0] = (float)rng*(ub0-lb0) + lb0;
+                            pRow[3*q + 1] = (float)rng*(ub1-lb1) + lb1;
+                            pRow[3*q + 2] = (float)rng*(ub2-lb2) + lb2;
+                        }
+                        else
+                        {
+                            //BGR
+                            pRow[3*q + blueIdx]       = (float)rng;
+                            pRow[3*q + 1]             = (float)rng;
+                            pRow[3*q + (blueIdx ^ 2)] = (float)rng;
+                        }
+                    }
+                }
+            }
+        }
+
+        //TODO: rewrite and unify
+        //perf test
+        std::cout.flush();
+        std::cout << "perf: ";
+        TickMeter tm; double t;
+        //Lab to BGR
+        tm.start();
+        for(int i = 0; i < nPerfIters; i++)
+        {
+            for(int dim1 = lb1; dim1 < ub1+1; dim1++)
+            {
+                size_t p = dim1-lb1;
+                float* pSrc   =   mSrc.ptr<float>(p);
+                float* pInter = mInter.ptr<float>(p);
+                uchar* pSrc_b   =   mSrc.ptr<uchar>(p);
+                uchar* pInter_b = mInter.ptr<uchar>(p);
+                if(INT_DATA)
+                {
+                    interToBgr_b(pSrc_b, pInter_b, pSize);
+                }
+                else
+                {
+                    interToBgr(pSrc, pInter, pSize);
+                }
+            }
+        }
+        tm.stop();
+        t = tm.getTimeSec(); times[0] = min(times[0], t);
+        std::cout << "inter "+spaceName+"2bgr: " << t << " ";
+        tm.reset(); tm.start();
+        for(int i = 0; i < nPerfIters; i++)
+        {
+            for(int dim1 = lb1; dim1 < ub1+1; dim1++)
+            {
+                size_t p = dim1-lb1;
+                float* pSrc   =   mSrc.ptr<float>(p);
+                float* pGold = mGold.ptr<float>(p);
+                uchar* pSrc_b  =  mSrc.ptr<uchar>(p);
+                uchar* pGold_b = mGold.ptr<uchar>(p);
+                if(INT_DATA)
+                {
+                    goldToBgr_b(pSrc_b, pGold_b, pSize);
+                }
+                else
+                {
+                    goldToBgr(pSrc, pGold, pSize);
+                }
+            }
+        }
+        tm.stop();
+        t = tm.getTimeSec(); times[1] = min(times[1], t);
+        std::cout << "gold "+spaceName+"2bgr: " << t << " ";
+        //RGB to Lab
+        tm.reset(); tm.start();
+        for(int i = 0; i < nPerfIters; i++)
+        {
+            for(int dim1 = lb1; dim1 < ub1+1; dim1++)
+            {
+                size_t p = dim1-lb1;
+                float* pSrc   =   mSrc.ptr<float>(p);
+                float* pInter = mInter.ptr<float>(p);
+                uchar* pSrc_b   =   mSrc.ptr<uchar>(p);
+                uchar* pInter_b = mInter.ptr<uchar>(p);
+                if(INT_DATA)
+                {
+                    interFromBgr_b(pSrc_b, pInter_b, pSize);
+                }
+                else
+                {
+                    interFromBgr(pSrc, pInter, pSize);
+                }
+            }
+        }
+        tm.stop();
+        t = tm.getTimeSec(); times[2] = min(times[2], t);
+        std::cout << "inter rgb2"+spaceName+": " << t << " ";
+        tm.reset(); tm.start();
+        for(int i = 0; i < nPerfIters; i++)
+        {
+            for(size_t p = 0; p < pSize; p++)
+            {
+                float* pSrc   =   mSrc.ptr<float>(p);
+                float* pGold = mGold.ptr<float>(p);
+                uchar* pSrc_b  =  mSrc.ptr<uchar>(p);
+                uchar* pGold_b = mGold.ptr<uchar>(p);
+                if(INT_DATA)
+                {
+                    goldFromBgr_b(pSrc_b, pGold_b, pSize);
+                }
+                else
+                {
+                    goldFromBgr(pSrc, pGold, pSize);
+                }
+            }
+        }
+        tm.stop();
+        t = tm.getTimeSec(); times[3] = min(times[3], t);
+        std::cout << "gold rgb2"+spaceName+": " << t << " ";
+        std::cout << std::endl;
+        std::cout.flush();
+        count++;
+    }
+
+    //max-max channel errors
+    std::cout << std::endl << (TO_BGR ? spaceName+"2RGB" : "RGB2"+spaceName ) << " ";
+    std::cout << "lut_shift " << lutShift << " ";
+    for(int i = 0; i < 4; i++)
+    {
+        std::cout << maxMaxError[i] << "\t";
+    }
+    std::cout << std::endl;
+
+    //overall perf
+    std::cout << "perf: ";
+    std::cout << "inter "+spaceName+"2bgr: " << times[0] << " ";
+    std::cout << "gold "+spaceName+"2bgr: "  << times[1] << " ";
+    std::cout << "inter rgb2"+spaceName+": " << times[2] << " ";
+    std::cout << "gold rgb2"+spaceName+": "  << times[3] << " ";
+    std::cout << std::endl;
+
+    #undef INT_DATA
+    #undef TO_BGR
+}
+
+TEST(ImgProc_Color, LabCheckWorking)
+{
     //TODO: make good test
     //return;
 
@@ -2434,4 +4345,7 @@ TEST(ImgProc_Color, LabCheckWorking)
     std::cout << "inter rgb2lab: " << times[2] << " ";
     std::cout << "gold rgb2lab: "  << times[3] << " ";
     std::cout << std::endl;
+
+    #undef INT_DATA
+    #undef TO_BGR
 }
