@@ -337,11 +337,17 @@ interface ISampleGrabber : public IUnknown
 #ifdef _DEBUG
 #include <strsafe.h>
 
-//change for verbose debug info
-static bool gs_verbose = true;
-
 static void DebugPrintOut(const char *format, ...)
 {
+    static int gs_verbose = -1;
+    if (gs_verbose < 0)
+    {
+        // Fetch initial debug state from environment - defaults to disabled
+        const char* s = getenv("OPENCV_DSHOW_DEBUG");
+        gs_verbose = s != NULL && atoi(s) != 0;
+    }
+
+
     if (gs_verbose)
     {
         va_list args;
@@ -486,9 +492,6 @@ class videoInput{
     public:
         videoInput();
         ~videoInput();
-
-        //turns off console messages - default is to print messages
-        static void setVerbose(bool _verbose);
 
         //Functions in rough order they should be used.
         static int listDevices(bool silent = false);
@@ -1118,20 +1121,6 @@ videoInput::videoInput(){
     formatTypes[VI_SECAM_K1]    = AnalogVideo_SECAM_K1;
     formatTypes[VI_SECAM_L]     = AnalogVideo_SECAM_L;
 
-}
-
-
-// ----------------------------------------------------------------------
-// static - set whether messages get printed to console or not
-//
-// ----------------------------------------------------------------------
-
-void videoInput::setVerbose(bool _verbose){
-#ifdef _DEBUG
-    gs_verbose = _verbose;
-#else
-    (void)_verbose; // Suppress 'unreferenced parameter' warning
-#endif
 }
 
 // ----------------------------------------------------------------------
