@@ -326,6 +326,31 @@ compute_diffusivity(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast
     break;
   }
 }
+
+/**
+ * @brief Fetches pyramid from the gpu.
+ * @details Setups mapping for matrices that might be probably on the GPU, if the
+ * code executes with OpenCL. This will setup MLx, MLy, Mdet members in the pyramid with
+ * mapping to respective UMats. This must be called before CPU-only parts of AKAZE, that work
+ * only on these Mats.
+ *
+ * This prevents mapping/unmapping overhead (and possible uploads/downloads) that would occur, if
+ * we just create Mats from UMats each time we need it later. This has devastating effects on OCL
+ * performace.
+ *
+ * @param evolution Pyramid to download
+ */
+static inline void downloadPyramid(std::vector<Evolution>& evolution)
+{
+  CV_INSTRUMENT_REGION()
+
+  for (size_t i = 0; i < evolution.size(); ++i) {
+    Evolution& e = evolution[i];
+    e.Mx = e.Lx.getMat(ACCESS_READ);
+    e.My = e.Ly.getMat(ACCESS_READ);
+  }
+}
+
 /**
  * @brief This method creates the nonlinear scale space for a given image
  * @param img Input image for which the nonlinear scale space needs to be created
@@ -344,6 +369,7 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   if (evolution_.size() == 1) {
     // we don't need to compute kcontrast factor
     Compute_Determinant_Hessian_Response();
+    downloadPyramid(evolution_);
     return;
   }
 
@@ -395,6 +421,7 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   }
 
   Compute_Determinant_Hessian_Response();
+  downloadPyramid(evolution_);
 
   return;
 }
@@ -1119,8 +1146,7 @@ void Compute_Main_Orientation(KeyPoint& kpt, const std::vector<Evolution>& evolu
   // Sample derivatives responses for the points within radius of 6*scale
   const int ang_size = 109;
   float resX[ang_size], resY[ang_size];
-  Sample_Derivative_Response_Radius6(e.Lx.getMat(ACCESS_READ), e.Ly.getMat(ACCESS_READ),
-    x0, y0, scale, resX, resY);
+  Sample_Derivative_Response_Radius6(e.Mx, e.My, x0, y0, scale, resX, resY);
 
   // Compute the angle of each gradient vector
   float Ang[ang_size];
@@ -1251,8 +1277,8 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
   ratio = (float)(1 << kpt.octave);
   scale = fRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Lx.getMat(ACCESS_READ);
-  Mat Ly = evolution[level].Ly.getMat(ACCESS_READ);
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
 
@@ -1377,8 +1403,8 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   scale = fRound(0.5f*kpt.size / ratio);
   angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Lx.getMat(ACCESS_READ);
-  Mat Ly = evolution[level].Ly.getMat(ACCESS_READ);
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
   co = cos(angle);
@@ -1510,8 +1536,8 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   ratio = (float)(1 << kpt.octave);
   scale = fRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Lx.getMat(ACCESS_READ);
-  Mat Ly = evolution[level].Ly.getMat(ACCESS_READ);
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
   Mat Lt = evolution[level].Lt;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
@@ -1593,8 +1619,8 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
     int pattern_size = options_->descriptor_pattern_size;
     int chan = options_->descriptor_channels;
     int valpos = 0;
-    Mat Lx = evolution[level].Lx.getMat(ACCESS_READ);
-    Mat Ly = evolution[level].Ly.getMat(ACCESS_READ);
+    Mat Lx = evolution[level].Mx;
+    Mat Ly = evolution[level].My;
     Mat Lt = evolution[level].Lt;
 
     for (int i = -pattern_size; i < pattern_size; i += sample_step) {
@@ -1735,8 +1761,8 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   int scale = fRound(0.5f*kpt.size / ratio);
   float angle = (kpt.angle * static_cast<float>(CV_PI)) / 180.f;
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Lx.getMat(ACCESS_READ);
-  Mat Ly = evolution[level].Ly.getMat(ACCESS_READ);
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
   Mat Lt = evolution[level].Lt;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;
@@ -1833,8 +1859,8 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   float ratio = (float)(1 << kpt.octave);
   int scale = fRound(0.5f*kpt.size / ratio);
   const int level = kpt.class_id;
-  Mat Lx = evolution[level].Lx.getMat(ACCESS_READ);
-  Mat Ly = evolution[level].Ly.getMat(ACCESS_READ);
+  Mat Lx = evolution[level].Mx;
+  Mat Ly = evolution[level].My;
   Mat Lt = evolution[level].Lt;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;

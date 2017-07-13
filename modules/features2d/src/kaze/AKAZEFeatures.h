@@ -32,6 +32,9 @@ struct Evolution
   UMat Lsmooth;          ///< Smoothed image
   Mat Ldet;             ///< Detector response
 
+  // the same as above, holding CPU mapping to UMats above
+  Mat Mx, My;
+
   Size size;                ///< Size of the layer
   float etime;              ///< Evolution time
   float esigma;             ///< Evolution sigma. For linear diffusion t = sigma^2 / 2
