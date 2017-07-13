@@ -108,22 +108,18 @@ canvas {
 <div id="inRangeCodeArea">
 <h2>Input your code</h2>
 <button id="inRangeTryIt" disabled="true" onclick="inRangeExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="inRangeTestCode" spellcheck="false">
+<textarea rows="12" cols="80" id="inRangeTestCode" spellcheck="false">
 var src = cv.imread("inRangeCanvasInput");
 var dst = new cv.Mat();
-function matFromScalar (cols, rows, type, scalar) {
-    var scalarMat = new cv.Mat(cols, rows, type);
-    for (var i=0; i<cols*rows*scalarMat.channels(); ++i) {
-        scalarMat.data()[i] = scalar[i%scalarMat.channels()];
-    }
-    return scalarMat;
-}
-var low = matFromScalar(src.cols , src.rows, src.type(), [0,0,0,0]);
-var high = matFromScalar(src.cols , src.rows, src.type(), [200,150,200,255]);
+var lowScalar = new cv.Scalar(0,0,0,0);
+var highScalar = new cv.Scalar(200,150,200,255);
+var low = new cv.Mat(src.cols , src.rows, src.type(), lowScalar);
+var high = new cv.Mat(src.cols , src.rows, src.type(), highScalar);
+// You can try more different conversion
 cv.inRange(src, low, high, dst);
 cv.cvtColor(dst, dst, cv.ColorConversionCodes.COLOR_GRAY2RGBA.value, 0);
 cv.imshow("inRangeCanvasOutput", dst);
-src.delete(); dst.delete(); low.delete(); high.delete();
+src.delete(); dst.delete(); low.delete(); high.delete(); lowScalar.delete(); highScalar.delete();
 </textarea>
 </div>
 <div id="inRangeShowcase">
