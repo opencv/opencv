@@ -4,7 +4,7 @@ Getting Started with Videos {#tutorial_js_video_display}
 Goal
 ----
 
--   Learn to capture from Camera and display it.
+-   Learn to capture video from Camera and display it.
 
 Capture video from camera
 -------------------------
@@ -57,11 +57,11 @@ In addition, remember delete src and dst after clearInterval(loopIndex).
 Try it
 ------
 
-Here is the demo for above code. We add three buttons here. Click `start webcam` to start your camera 
-and dispaly it. Click `graying` to transfer the video to OpenCV-JavaScript and display the 
-grayscale video. Here we set the video width as 320, and the height will be computed based on 
-the input stream. Another tip is that the &lt;canvas&gt; used to draw video stream should be hidden.
-Some core code is in the textbox, and you can change it to investigate more.
+Here is the demo for above code. Click `start` to start your camera and paly it. The left video is from 
+your camera directly, and the right one is from OpenCV-JavaScript. Click `processing` to gray the video. 
+Here we set the video width as 320, and the height will be computed based on the input stream. Another 
+tip is that the &lt;canvas&gt; used to draw video stream should be hidden. Some core code is in the 
+textbox, and you can change it to investigate more.
 
 \htmlonly
 <head>
@@ -70,15 +70,22 @@ Some core code is in the textbox, and you can change it to investigate more.
     display:none;
 }
 .contentarea {
-    display:inline
+    display:inline;
+}
+canvas {
+    border: 1px solid black;
+}
+video {
+    border: 1px solid black;
 }
 </style>
 </head>
 <body>
 
 <div id="CodeArea">
-<h2>Input your code</h2>
-<textarea rows="6" cols="70" id="TestCode" spellcheck="false">
+<h3>Input your code</h3>
+<textarea rows="8" cols="70" id="TestCode" spellcheck="false">
+// src is cv.CV_8UC4 and dst is cv.CV_8UC1
 context.drawImage(video, 0, 0, width, height);
 src.data().set(context.getImageData(0, 0, width, height).data);
 cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
@@ -90,12 +97,13 @@ cv.imshow("canvasOutput", dst);
 <canvas id="canvasFrame"></canvas>
 </div>
 <div id="contentarea">
-    <button id="startup" onclick="startup()">start webcam</button>
-    <button id="startDisplay" disabled="true" onclick="startDisplay()">graying</button> 
-    <button id="stopDisplay" disabled="true" onclick="stopDisplay()">stop</button><br>
-    <video id="video">Click startup to open webcam</video>
+    <button id="startup" disabled="true" onclick="startup()">start</button>
+    <input type="checkbox" id="checkbox" disabled="true" onchange="checkboxChange()">processing</input>
+    <button id="stop" disabled="true" onclick="stopCamera()">stop</button><br>
+    <video id="video">Your browser does not support the video tag.</video>
     <canvas id="canvasOutput"></canvas>
 </div>
+<script src="adapter.js"></script>
 <script src="utils.js"></script>
 <script async src="opencv.js" id="opencvjs"></script>
 <script>
@@ -109,13 +117,19 @@ var streaming = false;
 // Some HTML elements we need to configure.
 var video = null;
 var canvasFrame = null;
+var checkbox = null;
+var stop = null;
+var stream = null;
 
 function startup() {
     video = document.getElementById("video");
     canvasFrame = document.getElementById("canvasFrame");
+    checkbox = document.getElementById("checkbox");
+    stop = document.getElementById("stop");
 
     navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        .then(function(stream) {
+        .then(function(s) {
+            stream = s;
             video.srcObject = stream;
             video.play();
         })
@@ -132,6 +146,9 @@ function startup() {
             canvasFrame.setAttribute("height", height);
             streaming = true;
         }
+        checkbox.disabled = false;
+        stop.disabled = false;
+        checkboxChange();
     }, false);
 }
 
@@ -139,8 +156,27 @@ var loopIndex = null;
 var src = null;
 var dst = null;
 
-function startDisplay() {
+function checkboxChange() {
+    if (checkbox.checked) playProcessedVideo();
+    else playVideo();
+}
+
+function playVideo() {
     if (!streaming) { console.warn("Please startup your webcam"); return; }
+    stopLastVideo();
+    var context = canvasFrame.getContext("2d");
+    src = new cv.Mat(height, width, cv.CV_8UC4);
+    loopIndex = setInterval(
+        function() {
+            context.drawImage(video, 0, 0, width, height);
+            src.data().set(context.getImageData(0, 0, width, height).data);
+            cv.imshow("canvasOutput", src);
+        }, 33);
+}
+
+function playProcessedVideo() {
+    if (!streaming) { console.warn("Please startup your webcam"); return; }
+    stopLastVideo();
     var context = canvasFrame.getContext("2d");
     src = new cv.Mat(height, width, cv.CV_8UC4);
     dst = new cv.Mat(height, width, cv.CV_8UC1);
@@ -149,20 +185,25 @@ function startDisplay() {
             var text = document.getElementById("TestCode").value;
             eval(text);
         }, 33);
-    document.getElementById("stopDisplay").disabled = false;
-    document.getElementById("startDisplay").disabled = true;
 }
 
-function stopDisplay() {
-    document.getElementById("stopDisplay").disabled = true;
-    document.getElementById("startDisplay").disabled = false;
+function stopLastVideo() {
     clearInterval(loopIndex);
-    src.delete();
-    dst.delete();
+    if (src != null && !src.isDeleted()) src.delete();
+    if (dst != null && !dst.isDeleted()) dst.delete();
+}
+
+function stopCamera() {
+    stopLastVideo();
+    document.getElementById("canvasOutput").getContext("2d").clearRect(0, 0, width, height);
+    checkbox.disabled = true;
+    video.pause();
+    video.srcObject=null;
+    stream.getVideoTracks()[0].stop();
 }
 
 document.getElementById("opencvjs").onload = function() {
-    document.getElementById("startDisplay").disabled = false;
+    document.getElementById("startup").disabled = false;
 };
 </script>
 </body>
