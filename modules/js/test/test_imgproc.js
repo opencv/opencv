@@ -45,7 +45,8 @@ QUnit.test("test_imgProc", function(assert) {
     //var vec0 = new cv.Mat.zeros([20, 20], cv.CV_8UC1);
     var vec1 = new cv.Mat.ones([20, 20], cv.CV_8UC1);
     //source.push_back(vec0);
-    var source = [vec1];
+    var source = new cv.MatVector();
+    source.push_back(vec1);
     var channels = [0];
     var histSize = [256];
     var ranges =[0, 256];
@@ -304,7 +305,10 @@ QUnit.test("test_filter", function(assert) {
 
 
       let out = new cv.Mat();
-      let input = [mat, mat2, mat3];
+      let input = new cv.MatVector();
+      input.push_back(mat);
+      input.push_back(mat2);
+      input.push_back(mat3);
 
       cv.vconcat(input, out);
 
@@ -324,9 +328,7 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(size.get(1), 15);
       assert.equal(out.elemSize1(), 1);
 
-      mat.delete();
-      mat2.delete();
-      mat3.delete();
+      input.delete();
       out.delete();
   }
 
