@@ -44,8 +44,11 @@
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#define fastConv_some_avx fastConv_avx2
-#define fastGEMM1T_some_avx fastGEMM1T_avx2
-#define fastGEMM_some_avx fastGEMM_avx2
+#define fastConv_some_avx fastConv_avx
+#define fastGEMM1T_some_avx fastGEMM1T_avx
+#define fastGEMM_some_avx fastGEMM_avx
+
+#undef _mm256_fmadd_ps
+#define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
 
 #include "layers_common.simd.hpp"
