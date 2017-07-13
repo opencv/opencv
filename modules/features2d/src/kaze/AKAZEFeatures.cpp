@@ -138,7 +138,11 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_si
     lf_c = Lf.ptr<float>(0) + 1;
     lt_b = Lt.ptr<float>(1) + 1;
     lf_b = Lf.ptr<float>(1) + 1;
-    dst = Lstep.ptr<float>(0) + 1;
+
+    // fill the corner to prevent uninitialized values
+    dst = Lstep.ptr<float>(0);
+    dst[0] = 0.0f;
+    ++dst;
 
     for (int j = 0; j < cols; j++) {
       step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
@@ -146,6 +150,9 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_si
                (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]);
       dst[j] = step_r * step_size;
     }
+
+    // fill the corner to prevent uninitialized values
+    dst[cols] = 0.0f;
     ++row;
   }
 
@@ -194,7 +201,11 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_si
     lf_a = Lf.ptr<float>(row - 1) + 1;
     lt_c = Lt.ptr<float>(row    ) + 1;
     lf_c = Lf.ptr<float>(row    ) + 1;
-    dst = Lstep.ptr<float>(row) +1;
+
+    // fill the corner to prevent uninitialized values
+    dst = Lstep.ptr<float>(row);
+    dst[0] = 0.0f;
+    ++dst;
 
     for (int j = 0; j < cols; j++) {
       step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
@@ -202,6 +213,9 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_si
                (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
       dst[j] = step_r * step_size;
     }
+
+    // fill the corner to prevent uninitialized values
+    dst[cols] = 0.0f;
   }
 }
 
@@ -1088,6 +1102,9 @@ void Sample_Derivative_Response_Radius6(const Mat &Lx, const Mat &Ly,
 
     resX[i] = g.weight[i] * lx[j];
     resY[i] = g.weight[i] * ly[j];
+
+    CV_DbgAssert(isfinite(resX[i]));
+    CV_DbgAssert(isfinite(resY[i]));
   }
 }
 

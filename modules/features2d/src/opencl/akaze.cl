@@ -44,20 +44,24 @@ AKAZE_nld_step_scalar(__global const float* lt, int lt_step, int lt_offset,
     {
         if (j == 0 || j == (cols - 1))
         {
-            return; // we do not compute these
+            res = 0.0f;
+        } else
+        {
+            res = (lf[c + j] + lf[c + j + 1])*(lt[c + j + 1] - lt[c + j]) +
+                  (lf[c + j] + lf[c + j - 1])*(lt[c + j - 1] - lt[c + j]) +
+                  (lf[c + j] + lf[b + j    ])*(lt[b + j    ] - lt[c + j]);
         }
-        res = (lf[c + j] + lf[c + j + 1])*(lt[c + j + 1] - lt[c + j]) +
-              (lf[c + j] + lf[c + j - 1])*(lt[c + j - 1] - lt[c + j]) +
-              (lf[c + j] + lf[b + j    ])*(lt[b + j    ] - lt[c + j]);
     } else if (i == (rows - 1)) // last row
     {
         if (j == 0 || j == (cols - 1))
         {
-            return; // we do not compute these
+            res = 0.0f;
+        } else
+        {
+            res = (lf[c + j] + lf[c + j + 1])*(lt[c + j + 1] - lt[c + j]) +
+                  (lf[c + j] + lf[c + j - 1])*(lt[c + j - 1] - lt[c + j]) +
+                  (lf[c + j] + lf[a + j    ])*(lt[a + j    ] - lt[c + j]);
         }
-        res = (lf[c + j] + lf[c + j + 1])*(lt[c + j + 1] - lt[c + j]) +
-              (lf[c + j] + lf[c + j - 1])*(lt[c + j - 1] - lt[c + j]) +
-              (lf[c + j] + lf[a + j    ])*(lt[a + j    ] - lt[c + j]);
     } else // inner rows
     {
         if (j == 0) // first column
@@ -70,7 +74,7 @@ AKAZE_nld_step_scalar(__global const float* lt, int lt_step, int lt_offset,
             res = (lf[c + j] + lf[c + j - 1])*(lt[c + j - 1] - lt[c + j]) +
                   (lf[c + j] + lf[b + j    ])*(lt[b + j    ] - lt[c + j]) +
                   (lf[c + j] + lf[a + j    ])*(lt[a + j    ] - lt[c + j]);
-        } else
+        } else // inner stencil
         {
             res = (lf[c + j] + lf[c + j + 1])*(lt[c + j + 1] - lt[c + j]) +
                   (lf[c + j] + lf[c + j - 1])*(lt[c + j - 1] - lt[c + j]) +
