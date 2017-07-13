@@ -453,8 +453,9 @@ class JSWrapperGenerator(object):
                     match = re.search(r'const std::vector<(.*)>&', arg_type)
                     if match:
                         type_in_vect = match.group(1)
-                        casted_arg_name = 'emscripten::vecFromJSArray<' + type_in_vect + '>(' + arg_name + ')'
-                        arg_type = re.sub(r'std::vector<(.*)>', 'emscripten::val', arg_type)
+                        if type_in_vect != 'cv::Mat':
+                            casted_arg_name = 'emscripten::vecFromJSArray<' + type_in_vect + '>(' + arg_name + ')'
+                            arg_type = re.sub(r'std::vector<(.*)>', 'emscripten::val', arg_type)
                 w_signature.append(arg_type + ' ' + arg_name)
                 arg_names.append(casted_arg_name)
                 casted_arg_types.append(arg_type)
