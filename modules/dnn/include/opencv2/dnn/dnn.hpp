@@ -152,6 +152,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
     class CV_EXPORTS ActivationLayer;
     class CV_EXPORTS BatchNormLayer;
+    class CV_EXPORTS ScaleLayer;
 
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
@@ -268,6 +269,19 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * Returns true if the batch normalization layer has been attached successfully.
          */
         virtual bool setBatchNorm(const Ptr<BatchNormLayer>& layer);
+
+        /**
+         * @brief Tries to attach to the layer the subsequent scaling layer, i.e. do the layer fusion in a partial case.
+         * @param[in] layer The subsequent scaling layer.
+         *
+         * Returns true if the scaling layer has been attached successfully.
+         */
+        virtual bool setScale(const Ptr<ScaleLayer>& layer);
+
+        /**
+         * @brief "Deattaches" all the layers, attached to particular layer.
+         */
+        virtual void unsetAttached();
 
         virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                      const int requiredOutputs,
@@ -495,9 +509,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         /** @overload */
         CV_WRAP void getLayerShapes(const std::vector<MatShape>& netInputShapes,
-                                     const int layerId,
-                                     std::vector<MatShape>* inLayerShapes,
-                                     std::vector<MatShape>* outLayerShapes) const;
+                                    const int layerId,
+                                    std::vector<MatShape>* inLayerShapes,
+                                    std::vector<MatShape>* outLayerShapes) const;
+
         /** @brief Computes FLOP for whole loaded model with specified input shapes.
          * @param netInputShapes vector of shapes for all net inputs.
          * @returns computed FLOP.
@@ -507,10 +522,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         CV_WRAP int64 getFLOPS(const MatShape& netInputShape) const;
         /** @overload */
         CV_WRAP int64 getFLOPS(const int layerId,
-                              const std::vector<MatShape>& netInputShapes) const;
+                               const std::vector<MatShape>& netInputShapes) const;
         /** @overload */
         CV_WRAP int64 getFLOPS(const int layerId,
-                              const MatShape& netInputShape) const;
+                               const MatShape& netInputShape) const;
 
         /** @brief Returns list of types for layer used in model.
          * @param layersTypes output parameter for returning types.
@@ -557,8 +572,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         CV_WRAP void getMemoryConsumption(const MatShape& netInputShape,
                                           CV_OUT std::vector<int>& layerIds, CV_OUT std::vector<size_t>& weights,
                                           CV_OUT std::vector<size_t>& blobs) const;
-    private:
 
+        /** @brief Enables or disables layer fusion in the network.
+         * @param fusion true to enable the fusion, false to disable. The fusion is enabled by default.
+         */
+        CV_WRAP void enableFusion(bool fusion);
+
+    private:
         struct Impl;
         Ptr<Impl> impl;
     };

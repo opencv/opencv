@@ -94,6 +94,78 @@ public:
                backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1;  // By channels
     }
 
+    class ChannelConcatInvoker : public ParallelLoopBody
+    {
+    public:
+        std::vector<Mat*>* inputs;
+        Mat* output;
+        int nstripes;
+        std::vector<const float*> chptrs;
+
+        static void run(std::vector<Mat*>& inputs, Mat& output, int nstripes)
+        {
+            ChannelConcatInvoker cc;
+            cc.inputs = &inputs;
+            cc.output = &output;
+            cc.nstripes = nstripes;
+
+            size_t i, ninputs = inputs.size();
+            int nchannels = 0, batchsz = output.size[0];
+            for( i = 0; i < ninputs; i++ )
+            {
+                Mat& inp = *inputs[i];
+                CV_Assert( inp.isContinuous() && inp.type() == CV_32F &&
+                           inp.dims == 4 && inp.size[0] == output.size[0] &&
+                           inp.size[2] == output.size[2] &&
+                           inp.size[3] == output.size[3] );
+                nchannels += inp.size[1];
+            }
+            CV_Assert( nchannels == output.size[1] );
+            CV_Assert( output.isContinuous() && output.type() == CV_32F );
+
+            cc.chptrs.resize(nchannels*batchsz);
+
+            int ofs = 0;
+            for( i = 0; i < ninputs; i++)
+            {
+                Mat& inp = *inputs[i];
+                for( int j = 0; j < batchsz; j++ )
+                    for( int k = 0; k < inp.size[1]; k++ )
+                    {
+                        const float* ptr = inp.ptr<float>(j, k);
+                        cc.chptrs[ofs + j*nchannels + k] = ptr;
+                    }
+                ofs += inp.size[1];
+            }
+
+            parallel_for_(Range(0, nstripes), cc, nstripes);
+        }
+
+        ChannelConcatInvoker() {}
+
+        void operator()(const Range& r) const
+        {
+            size_t planeSize = (size_t)output->size[2]*output->size[3];
+            size_t nch = chptrs.size();
+            size_t total = nch*planeSize;
+            size_t stripeSize = (total + nstripes - 1)/nstripes;
+            size_t stripeStart = r.start*stripeSize;
+            size_t stripeEnd = std::min(total, r.end*stripeSize);
+            const float** ptrs = (const float**)&chptrs[0];
+            float* outptr = output->ptr<float>();
+            size_t blockSize0 = 1 << 16;
+
+            for( size_t ofs0 = stripeStart; ofs0 < stripeEnd; )
+            {
+                size_t ch = ofs0/planeSize;
+                size_t ofs = ofs0 - ch*planeSize;
+                size_t blockSize = std::min(blockSize0, planeSize - ofs);
+                memcpy(outptr + ofs0, ptrs[ch] + ofs, blockSize*sizeof(outptr[0]));
+                ofs0 += blockSize;
+            }
+        }
+    };
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
@@ -101,14 +173,23 @@ public:
 
         int cAxis = clamp(axis, inputs[0]->dims);
         Mat& outMat = outputs[0];
-        std::vector<Range> ranges(outputs[0].dims, Range::all());
 
-        ranges[cAxis].start = 0;
-        for (size_t i = 0; i < inputs.size(); i++)
+        if( cAxis == 1 && outMat.dims == 4 )
         {
-            ranges[cAxis].end = ranges[cAxis].start + inputs[i]->size[cAxis];
-            inputs[i]->copyTo(outMat(&ranges[0]));
-            ranges[cAxis].start = ranges[cAxis].end;
+            int nstripes = getNumThreads();
+            ChannelConcatInvoker::run(inputs, outMat, nstripes);
+        }
+        else
+        {
+            std::vector<Range> ranges(outputs[0].dims, Range::all());
+
+            ranges[cAxis].start = 0;
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                ranges[cAxis].end = ranges[cAxis].start + inputs[i]->size[cAxis];
+                inputs[i]->copyTo(outMat(&ranges[0]));
+                ranges[cAxis].start = ranges[cAxis].end;
+            }
         }
     }
 
