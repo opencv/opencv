@@ -104,8 +104,8 @@ TEST(Reproducibility_ResNet_50_Halide, Accuracy)
 
 TEST(Reproducibility_SqueezeNet_v1_1_Halide, Accuracy)
 {
-    test(findDataFile("dnn/squeezenet_v1_1.caffemodel", false),
-         findDataFile("dnn/squeezenet_v1_1.prototxt", false),
+    test(findDataFile("dnn/squeezenet_v1.1.caffemodel", false),
+         findDataFile("dnn/squeezenet_v1.1.prototxt", false),
          findDataFile("dnn/halide_scheduler_squeezenet_v1_1.yml", false),
          227, 227, "prob", "caffe", DNN_TARGET_CPU);
 };
@@ -151,8 +151,8 @@ TEST(Reproducibility_ResNet_50_Halide_opencl, Accuracy)
 
 TEST(Reproducibility_SqueezeNet_v1_1_Halide_opencl, Accuracy)
 {
-    test(findDataFile("dnn/squeezenet_v1_1.caffemodel", false),
-         findDataFile("dnn/squeezenet_v1_1.prototxt", false),
+    test(findDataFile("dnn/squeezenet_v1.1.caffemodel", false),
+         findDataFile("dnn/squeezenet_v1.1.prototxt", false),
          findDataFile("dnn/halide_scheduler_opencl_squeezenet_v1_1.yml", false),
          227, 227, "prob", "caffe", DNN_TARGET_OPENCL);
 };
