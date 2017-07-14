@@ -2969,9 +2969,7 @@ public:
     typedef const uchar** pointer;
     typedef uchar* reference;
 
-#ifndef OPENCV_NOSTL
     typedef std::random_access_iterator_tag iterator_category;
-#endif
 
     //! default constructor
     MatConstIterator();
@@ -3036,9 +3034,7 @@ public:
     typedef const _Tp* pointer;
     typedef const _Tp& reference;
 
-#ifndef OPENCV_NOSTL
     typedef std::random_access_iterator_tag iterator_category;
-#endif
 
     //! default constructor
     MatConstIterator_();
@@ -3089,9 +3085,7 @@ public:
     typedef _Tp* pointer;
     typedef _Tp& reference;
 
-#ifndef OPENCV_NOSTL
     typedef std::random_access_iterator_tag iterator_category;
-#endif
 
     //! the default constructor
     MatIterator_();
@@ -3225,9 +3219,7 @@ template<typename _Tp> class SparseMatConstIterator_ : public SparseMatConstIter
 {
 public:
 
-#ifndef OPENCV_NOSTL
     typedef std::forward_iterator_tag iterator_category;
-#endif
 
     //! the default constructor
     SparseMatConstIterator_();
@@ -3261,9 +3253,7 @@ template<typename _Tp> class SparseMatIterator_ : public SparseMatConstIterator_
 {
 public:
 
-#ifndef OPENCV_NOSTL
     typedef std::forward_iterator_tag iterator_category;
-#endif
 
     //! the default constructor
     SparseMatIterator_();
