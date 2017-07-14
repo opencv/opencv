@@ -627,6 +627,13 @@ makes the function resistant to outliers.
 @note
    -   An example of how to use solvePNPRansac for object detection can be found at
         opencv_source_code/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/
+   -   The default method used to estimate the camera pose for the Minimal Sample Sets step
+       is #SOLVEPNP_EPNP. Exceptions are:
+         - if you choose #SOLVEPNP_P3P or #SOLVEPNP_AP3P, these methods will be used.
+         - if the number of input points is equal to 4, #SOLVEPNP_P3P is used.
+   -   The method used to estimate the camera pose using all the inliers is defined by the
+       flags parameters unless it is equal to #SOLVEPNP_P3P or #SOLVEPNP_AP3P. In this case,
+       the method #SOLVEPNP_EPNP will be used instead.
  */
 CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
