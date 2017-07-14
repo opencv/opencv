@@ -234,7 +234,7 @@ public:
 
         if (numKept == 0)
         {
-            CV_ErrorNoReturn(Error::StsError, "Couldn't find any detections");
+            return;
         }
         int outputShape[] = {1, 1, (int)numKept, 7};
         outputs[0].create(4, outputShape, CV_32F);
