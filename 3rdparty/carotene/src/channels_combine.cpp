@@ -240,7 +240,7 @@ void combineYUYV(const Size2D &size,
 {
     internal::assertSupportedConfiguration();
 #ifdef CAROTENE_NEON
-#ifndef ANDROID
+#ifndef __ANDROID__
     size_t roiw32 = size.width >= 31 ? size.width - 31 : 0;
 #endif
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
@@ -253,7 +253,7 @@ void combineYUYV(const Size2D &size,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t syj = 0u, sj = 0u, dj = 0u;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
         for (; sj < roiw32; sj += 32, syj += 64, dj += 128)
         {
             internal::prefetch(srcy + syj);
@@ -317,7 +317,7 @@ void combineUYVY(const Size2D &size,
 {
     internal::assertSupportedConfiguration();
 #ifdef CAROTENE_NEON
-#ifndef ANDROID
+#ifndef __ANDROID__
     size_t roiw32 = size.width >= 31 ? size.width - 31 : 0;
 #endif
     size_t roiw8 = size.width >= 7 ? size.width - 7 : 0;
@@ -330,7 +330,7 @@ void combineUYVY(const Size2D &size,
         u8 * dst = internal::getRowPtr(dstBase, dstStride, i);
         size_t syj = 0u, sj = 0u, dj = 0u;
 
-#ifndef ANDROID
+#ifndef __ANDROID__
         for (; sj < roiw32; sj += 32, syj += 64, dj += 128)
         {
             internal::prefetch(srcy + syj);

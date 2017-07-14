@@ -9,7 +9,7 @@
 #include <functional>
 
 #if !(defined(LOGD) || defined(LOGI) || defined(LOGW) || defined(LOGE))
-# if defined(ANDROID) && defined(USE_ANDROID_LOGGING)
+# if defined(__ANDROID__) && defined(USE_ANDROID_LOGGING)
 #  include <android/log.h>
 
 #  define PERF_TESTS_LOG_TAG "OpenCV_perf"

@@ -4171,7 +4171,7 @@ static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     size_t localsize[2] = {16, 10};
 #else
     size_t localsize[2] = {16, 16};
@@ -4236,7 +4236,7 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
     if (dst.depth() == CV_64F && !doubleSupport)
         return false;
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     size_t localsize[2] = { 16, 10 };
 #else
     size_t localsize[2] = { 16, 16 };

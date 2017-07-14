@@ -527,7 +527,7 @@ void ThreadManager::setNumOfThreads(size_t n)
 
 size_t ThreadManager::defaultNumberOfThreads()
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
     // many modern phones/tables have 4-core CPUs. Let's use no more
     // than 2 threads by default not to overheat the devices
     const unsigned int default_number_of_threads = 2;

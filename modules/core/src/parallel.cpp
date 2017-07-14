@@ -56,7 +56,7 @@
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
-    #if defined ANDROID
+    #if defined __ANDROID__
         #include <sys/sysconf.h>
     #elif defined __APPLE__
         #include <sys/sysctl.h>
@@ -590,7 +590,7 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 static inline int getNumberOfCPUsImpl()
 {
    FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
@@ -641,7 +641,7 @@ int cv::getNumberOfCPUs(void)
 #endif
 
     return (int)sysinfo.dwNumberOfProcessors;
-#elif defined ANDROID
+#elif defined __ANDROID__
     static int ncpus = getNumberOfCPUsImpl();
     return ncpus;
 #elif defined __linux__
