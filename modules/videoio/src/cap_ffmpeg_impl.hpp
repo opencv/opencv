@@ -801,6 +801,8 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 #endif
+    av_dict_set(&dict, "probesize", "32", 0);
+    av_dict_set(&dict, "scan_all_pmts", "1", 0);
     int err = avformat_open_input(&ic, _filename, NULL, &dict);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
