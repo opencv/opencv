@@ -192,9 +192,11 @@ object in multiple ways:
 
     ![](images/MatBasicContainerOut3.png)
 
--   For small matrices you may use comma separated initializers:
+-   For small matrices you may use comma separated initializers or initializer lists (C++11 support is required in the last case):
 
     @snippet mat_the_basic_image_container.cpp comma
+
+    @snippet mat_the_basic_image_container.cpp list
 
     ![](images/MatBasicContainerOut6.png)
 
