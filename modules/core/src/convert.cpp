@@ -1489,41 +1489,22 @@ struct cvtScale_SIMD<uchar, schar, float>
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 template <>
 struct cvtScale_SIMD<uchar, ushort, float>
 {
     cvtScale_SIMD()
     {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+        haveSSE = CV_CPU_HAS_SUPPORT_SSE4_1;
     }
 
     int operator () (const uchar * src, ushort * dst, int width, float scale, float shift) const
     {
-        int x = 0;
-
-        if (!haveSSE)
-            return x;
-
-        __m128i v_zero = _mm_setzero_si128();
-        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
-
-        for ( ; x <= width - 8; x += 8)
-        {
-            __m128i v_src = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i const *)(src + x)), v_zero);
-            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
-            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
-
-            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
-            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
-
-            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
-                                             _mm_cvtps_epi32(v_dst_1));
-            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
-        }
-
-        return x;
+        if (haveSSE)
+            return opt_SSE4_1::cvtScale_SIMD_u8u16f32_SSE41(src, dst, width, scale, shift);
+        else
+            return 0;
     }
 
     bool haveSSE;
@@ -1720,41 +1701,22 @@ struct cvtScale_SIMD<schar, schar, float>
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 template <>
 struct cvtScale_SIMD<schar, ushort, float>
 {
     cvtScale_SIMD()
     {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+        haveSSE = CV_CPU_HAS_SUPPORT_SSE4_1;
     }
 
     int operator () (const schar * src, ushort * dst, int width, float scale, float shift) const
     {
-        int x = 0;
-
-        if (!haveSSE)
-            return x;
-
-        __m128i v_zero = _mm_setzero_si128();
-        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
-
-        for ( ; x <= width - 8; x += 8)
-        {
-            __m128i v_src = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _mm_loadl_epi64((__m128i const *)(src + x))), 8);
-            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
-            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
-
-            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
-            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
-
-            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
-                                             _mm_cvtps_epi32(v_dst_1));
-            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
-        }
-
-        return x;
+        if (haveSSE)
+            return opt_SSE4_1::cvtScale_SIMD_s8u16f32_SSE41(src, dst, width, scale, shift);
+        else
+            return 0;
     }
 
     bool haveSSE;
@@ -1952,41 +1914,22 @@ struct cvtScale_SIMD<ushort, schar, float>
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 template <>
 struct cvtScale_SIMD<ushort, ushort, float>
 {
     cvtScale_SIMD()
     {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+        haveSSE = CV_CPU_HAS_SUPPORT_SSE4_1;
     }
 
     int operator () (const ushort * src, ushort * dst, int width, float scale, float shift) const
     {
-        int x = 0;
-
-        if (!haveSSE)
-            return x;
-
-        __m128i v_zero = _mm_setzero_si128();
-        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
-
-        for ( ; x <= width - 8; x += 8)
-        {
-            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
-            __m128 v_src_f = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero));
-            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
-
-            v_src_f = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero));
-            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
-
-            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
-                                             _mm_cvtps_epi32(v_dst_1));
-            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
-        }
-
-        return x;
+        if (haveSSE)
+            return opt_SSE4_1::cvtScale_SIMD_u16u16f32_SSE41(src, dst, width, scale, shift);
+        else
+            return 0;
     }
 
     bool haveSSE;
@@ -2183,41 +2126,22 @@ struct cvtScale_SIMD<short, schar, float>
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 template <>
 struct cvtScale_SIMD<short, ushort, float>
 {
     cvtScale_SIMD()
     {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+        haveSSE = CV_CPU_HAS_SUPPORT_SSE4_1;
     }
 
     int operator () (const short * src, ushort * dst, int width, float scale, float shift) const
     {
-        int x = 0;
-
-        if (!haveSSE)
-            return x;
-
-        __m128i v_zero = _mm_setzero_si128();
-        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
-
-        for ( ; x <= width - 8; x += 8)
-        {
-            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
-            __m128 v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
-            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
-
-            v_src_f = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
-            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src_f, v_scale), v_shift);
-
-            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
-                                             _mm_cvtps_epi32(v_dst_1));
-            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
-        }
-
-        return x;
+        if (haveSSE)
+            return opt_SSE4_1::cvtScale_SIMD_s16u16f32_SSE41(src, dst, width, scale, shift);
+        else
+            return 0;
     }
 
     bool haveSSE;
@@ -2412,39 +2336,22 @@ struct cvtScale_SIMD<int, schar, float>
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 template <>
 struct cvtScale_SIMD<int, ushort, float>
 {
     cvtScale_SIMD()
     {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+        haveSSE = CV_CPU_HAS_SUPPORT_SSE4_1;
     }
 
     int operator () (const int * src, ushort * dst, int width, float scale, float shift) const
     {
-        int x = 0;
-
-        if (!haveSSE)
-            return x;
-
-        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
-
-        for ( ; x <= width - 8; x += 8)
-        {
-            __m128i v_src = _mm_loadu_si128((__m128i const *)(src + x));
-            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
-
-            v_src = _mm_loadu_si128((__m128i const *)(src + x + 4));
-            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(_mm_cvtepi32_ps(v_src), v_scale), v_shift);
-
-            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
-                                             _mm_cvtps_epi32(v_dst_1));
-            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
-        }
-
-        return x;
+        if (haveSSE)
+            return opt_SSE4_1::cvtScale_SIMD_s32u16f32_SSE41(src, dst, width, scale, shift);
+        else
+            return 0;
     }
 
     bool haveSSE;
@@ -2629,39 +2536,22 @@ struct cvtScale_SIMD<float, schar, float>
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 template <>
 struct cvtScale_SIMD<float, ushort, float>
 {
     cvtScale_SIMD()
     {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+        haveSSE = CV_CPU_HAS_SUPPORT_SSE4_1;
     }
 
     int operator () (const float * src, ushort * dst, int width, float scale, float shift) const
     {
-        int x = 0;
-
-        if (!haveSSE)
-            return x;
-
-        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
-
-        for ( ; x <= width - 8; x += 8)
-        {
-            __m128 v_src = _mm_loadu_ps(src + x);
-            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
-
-            v_src = _mm_loadu_ps(src + x + 4);
-            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
-
-            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
-                                             _mm_cvtps_epi32(v_dst_1));
-            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
-        }
-
-        return x;
+        if (haveSSE)
+            return opt_SSE4_1::cvtScale_SIMD_f32u16f32_SSE41(src, dst, width, scale, shift);
+        else
+            return 0;
     }
 
     bool haveSSE;
@@ -2842,41 +2732,22 @@ struct cvtScale_SIMD<double, schar, float>
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 template <>
 struct cvtScale_SIMD<double, ushort, float>
 {
     cvtScale_SIMD()
     {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
+        haveSSE = CV_CPU_HAS_SUPPORT_SSE4_1;
     }
 
     int operator () (const double * src, ushort * dst, int width, float scale, float shift) const
     {
-        int x = 0;
-
-        if (!haveSSE)
-            return x;
-
-        __m128 v_scale = _mm_set1_ps(scale), v_shift = _mm_set1_ps(shift);
-
-        for ( ; x <= width - 8; x += 8)
-        {
-            __m128 v_src = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(src + x)),
-                                         _mm_cvtpd_ps(_mm_loadu_pd(src + x + 2)));
-            __m128 v_dst_0 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
-
-            v_src = _mm_movelh_ps(_mm_cvtpd_ps(_mm_loadu_pd(src + x + 4)),
-                                  _mm_cvtpd_ps(_mm_loadu_pd(src + x + 6)));
-            __m128 v_dst_1 = _mm_add_ps(_mm_mul_ps(v_src, v_scale), v_shift);
-
-            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_dst_0),
-                                             _mm_cvtps_epi32(v_dst_1));
-            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
-        }
-
-        return x;
+        if (haveSSE)
+            return opt_SSE4_1::cvtScale_SIMD_f64u16f32_SSE41(src, dst, width, scale, shift);
+        else
+            return 0;
     }
 
     bool haveSSE;
@@ -3803,24 +3674,11 @@ cvtScale_<short, int, float>( const short* src, size_t sstep,
     {
         int x = 0;
 
-        #if CV_AVX2
-        if (USE_AVX2)
+        #if CV_TRY_AVX2
+        if (CV_CPU_HAS_SUPPORT_AVX2)
         {
-            __m256 scale256 = _mm256_set1_ps(scale);
-            __m256 shift256 = _mm256_set1_ps(shift);
-            const int shuffle = 0xD8;
-
-            for ( ; x <= size.width - 16; x += 16)
-            {
-                __m256i v_src = _mm256_loadu_si256((const __m256i *)(src + x));
-                v_src = _mm256_permute4x64_epi64(v_src, shuffle);
-                __m256i v_src_lo = _mm256_srai_epi32(_mm256_unpacklo_epi16(v_src, v_src), 16);
-                __m256i v_src_hi = _mm256_srai_epi32(_mm256_unpackhi_epi16(v_src, v_src), 16);
-                __m256 v_dst0 = _mm256_add_ps(_mm256_mul_ps(_mm256_cvtepi32_ps(v_src_lo), scale256), shift256);
-                __m256 v_dst1 = _mm256_add_ps(_mm256_mul_ps(_mm256_cvtepi32_ps(v_src_hi), scale256), shift256);
-                _mm256_storeu_si256((__m256i *)(dst + x), _mm256_cvtps_epi32(v_dst0));
-                _mm256_storeu_si256((__m256i *)(dst + x + 8), _mm256_cvtps_epi32(v_dst1));
-            }
+            opt_AVX2::cvtScale_s16s32f32Line_AVX2(src, dst, scale, shift, size.width);
+            return;
         }
         #endif
         #if CV_SSE2
@@ -3933,37 +3791,20 @@ struct Cvt_SIMD<double, schar>
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 template <>
 struct Cvt_SIMD<double, ushort>
 {
     bool haveSIMD;
-    Cvt_SIMD() { haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1); }
+    Cvt_SIMD() { haveSIMD = CV_CPU_HAS_SUPPORT_SSE4_1; }
 
     int operator() (const double * src, ushort * dst, int width) const
     {
-        int x = 0;
-
-        if (!haveSIMD)
-            return x;
-
-        for ( ; x <= width - 8; x += 8)
-        {
-            __m128 v_src0 = _mm_cvtpd_ps(_mm_loadu_pd(src + x));
-            __m128 v_src1 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 2));
-            __m128 v_src2 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 4));
-            __m128 v_src3 = _mm_cvtpd_ps(_mm_loadu_pd(src + x + 6));
-
-            v_src0 = _mm_movelh_ps(v_src0, v_src1);
-            v_src1 = _mm_movelh_ps(v_src2, v_src3);
-
-            __m128i v_dst = _mm_packus_epi32(_mm_cvtps_epi32(v_src0),
-                                             _mm_cvtps_epi32(v_src1));
-            _mm_storeu_si128((__m128i *)(dst + x), v_dst);
-        }
-
-        return x;
+        if (haveSIMD)
+            return opt_SSE4_1::Cvt_SIMD_f64u16_SSE41(src, dst, width);
+        else
+            return 0;
     }
 };
 
