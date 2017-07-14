@@ -49,6 +49,9 @@ bool LibDNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
     }
     else
     {
+        return false;
+
+        /*
         size_t max_image_size = std::min(ocl::Device::getDefault().image2DMaxWidth(),
                                          ocl::Device::getDefault().image2DMaxHeight());
         if (M_ <= max_image_size &&
@@ -89,6 +92,7 @@ bool LibDNNInnerProduct<Dtype>::Forward(const Dtype* bottom_data,
                                      (cl_mem) bias_multiplier_, 0,
                                      (cl_mem) bias, 0,
                                      (Dtype) 1., (cl_mem) top_data, 0, false, false);
+        */
     }
     return true;
 }
