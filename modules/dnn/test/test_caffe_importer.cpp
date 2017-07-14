@@ -157,4 +157,35 @@ TEST(Reproducibility_SSD, Accuracy)
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
     normAssert(ref, out);
 }
+
+TEST(Reproducibility_ResNet50, Accuracy)
+{
+    Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
+                               findDataFile("dnn/ResNet-50-model.caffemodel", false));
+
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1, Size(224,224));
+    ASSERT_TRUE(!input.empty());
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
+    normAssert(ref, out);
+}
+
+TEST(Reproducibility_SqueezeNet_v1_1, Accuracy)
+{
+    Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
+                               findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1, Size(227,227));
+    ASSERT_TRUE(!input.empty());
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
+    normAssert(ref, out);
+}
+
 }
