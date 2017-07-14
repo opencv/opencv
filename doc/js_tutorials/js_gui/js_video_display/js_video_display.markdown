@@ -48,7 +48,7 @@ var loopIndex = setInterval(
     function() {
         context.drawImage(video, 0, 0, width, height);
         src.data().set(context.getImageData(0, 0, width, height).data);
-        cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
+        cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
         cv.imshow("canvasOutput", dst); // canvasOutput is the id of another <canvas>;
     }, 33);
 @endcode
@@ -88,7 +88,7 @@ video {
 // src is cv.CV_8UC4 and dst is cv.CV_8UC1
 context.drawImage(video, 0, 0, width, height);
 src.data().set(context.getImageData(0, 0, width, height).data);
-cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
+cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
 cv.imshow("canvasOutput", dst);
 </textarea>
 </div><br>
@@ -202,9 +202,14 @@ function stopCamera() {
     stream.getVideoTracks()[0].stop();
 }
 
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     document.getElementById("startup").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly

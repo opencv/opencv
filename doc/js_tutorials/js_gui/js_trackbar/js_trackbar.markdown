@@ -110,12 +110,17 @@ loadImageToCanvas("LinuxLogo.jpg", "canvasInput1");
 loadImageToCanvas("WindowsLogo.jpg", "canvasInput2");
 
 var src1, src2;
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     src1 = cv.imread("canvasInput1");
     src2 = cv.imread("canvasInput2");
     addWeighted(trackbar.value);
     trackbar.disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly

@@ -39,7 +39,7 @@ var dst = new cv.Mat();
 // scale and shift are used to map the data to [0, 255].
 src.convertTo(dst, cv.CV_8U, scale, shift); 
 // *** is GRAY, RGB, or RGBA, according to src.channels() is 1, 3 or 4.
-cv.cvtColor(dst, dst, cv.ColorConversionCodes.COLOR_***2RGBA.value, 0); 
+cv.cvtColor(dst, dst, cv.COLOR_***2RGBA, 0); 
 @endcode
 
 Then new an ImageData obj from dst.
@@ -89,7 +89,7 @@ var src = cv.imread("canvasInput");
 var dst = new cv.Mat();
 // To distinguish the input and output, we graying the image.
 // You can try more different conversion
-cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
+cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
 cv.imshow("canvasOutput", dst);
 src.delete();
 dst.delete();
@@ -119,9 +119,14 @@ function handleFiles(e) {
     loadImageToCanvas(url, "canvasInput");
 }
 
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     document.getElementById("tryIt").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly
