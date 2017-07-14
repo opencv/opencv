@@ -71,14 +71,7 @@ const int FRAME_COUNT = 20;
 
 inline void generateFrame(int i, Mat & frame)
 {
-    frame = 0;
-    ostringstream buf; buf << "Frame " << setw(2) << setfill('0') << i + 1;
-    int baseLine = 0;
-    Size box = getTextSize(buf.str(), FONT_HERSHEY_COMPLEX, 2, 5, &baseLine);
-    putText(frame, buf.str(), Point((frame.cols - box.width) / 2, (frame.rows - box.height) / 2 + baseLine),
-            FONT_HERSHEY_COMPLEX, 2, Scalar(255, 255, 255), 5, LINE_AA);
-    Point p(i * frame.cols / (FRAME_COUNT - 1), i * frame.rows / (FRAME_COUNT - 1));
-    circle(frame, p, 20, Scalar(200, 25, 55), 5, LINE_AA);
+    generateFrame(i, FRAME_COUNT, frame);
 }
 
 inline int fourccByExt(const String &ext)
