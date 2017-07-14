@@ -238,6 +238,40 @@ private:
   float step_size_;
 };
 
+#ifdef HAVE_OPENCL
+static inline bool
+ocl_non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
+{
+  if(!Lt.isContinuous())
+    return false;
+
+  size_t globalSize[] = {(size_t)Lt.cols, (size_t)Lt.rows};
+
+  ocl::Kernel ker("AKAZE_nld_step_scalar", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  return ker.args(
+    ocl::KernelArg::ReadOnly(Lt),
+    ocl::KernelArg::PtrReadOnly(Lf),
+    ocl::KernelArg::PtrWriteOnly(Lstep),
+    step_size).run(2, globalSize, 0, true);
+}
+#endif // HAVE_OPENCL
+
+static inline void
+non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
+{
+  Lstep.create(Lt.size(), Lt.type());
+
+  CV_OCL_RUN(true, ocl_non_linear_diffusion_step(Lt, Lf, Lstep, step_size));
+
+  // when on CPU UMats should be already allocated on CPU so getMat here is basicallly no-op
+  Mat Mstep = Lstep.getMat(ACCESS_WRITE);
+  parallel_for_(Range(0, Lt.rows), NonLinearScalarDiffusionStep(Lt.getMat(ACCESS_READ),
+    Lf.getMat(ACCESS_READ), Mstep, step_size));
+}
+
 /**
  * @brief This function computes a good empirical value for the k contrast factor
  * given two gradient images, the percentile (0-1), the temporal storage to hold
@@ -302,7 +336,8 @@ compute_kcontrast(const cv::Mat& Lx, const cv::Mat& Ly, float perc, int nbins)
 static inline bool
 ocl_pm_g2(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast)
 {
-  size_t globalSize[] = {(size_t)(Lx.rows * Lx.cols)};
+  int total = Lx.rows * Lx.cols;
+  size_t globalSize[] = {(size_t)total};
 
   ocl::Kernel ker("AKAZE_pm_g2", ocl::features2d::akaze_oclsrc);
   if( ker.empty() )
@@ -312,7 +347,7 @@ ocl_pm_g2(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast)
     ocl::KernelArg::PtrReadOnly(Lx),
     ocl::KernelArg::PtrReadOnly(Ly),
     ocl::KernelArg::PtrWriteOnly(Lflow),
-    kcontrast).run(1, globalSize, 0, true);
+    kcontrast, total).run(1, globalSize, 0, true);
 }
 #endif // HAVE_OPENCL
 
@@ -362,6 +397,7 @@ static inline void downloadPyramid(std::vector<Evolution>& evolution)
     Evolution& e = evolution[i];
     e.Mx = e.Lx.getMat(ACCESS_READ);
     e.My = e.Ly.getMat(ACCESS_READ);
+    e.Mt = e.Lt.getMat(ACCESS_READ);
   }
 }
 
@@ -388,8 +424,7 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
   }
 
   // derivatives, flow and diffusion step
-  UMat Lx, Ly, Lsmooth, Lflow;
-  Mat Lstep;
+  UMat Lx, Ly, Lsmooth, Lflow, Lstep;
 
   // compute derivatives for computing k contrast
   GaussianBlur(img, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
@@ -423,14 +458,11 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray img)
     compute_diffusivity(Lx, Ly, Lflow, kcontrast, options_.diffusivity);
 
     // Perform Fast Explicit Diffusion on Lt
-    Mat Mflow = Lflow.getMat(ACCESS_READ);
     std::vector<float> &tsteps = tsteps_[i - 1];
     for (size_t j = 0; j < tsteps.size(); j++) {
-      // Lstep must be preallocated before this parallel loop
-      Lstep.create(e.Lt.size(), e.Lt.type());
       const float step_size = tsteps[j] * 0.5f;
-      parallel_for_(Range(0, e.Lt.rows), NonLinearScalarDiffusionStep(e.Lt, Mflow, Lstep, step_size));
-      e.Lt += Lstep;
+      non_linear_diffusion_step(e.Lt, Lflow, Lstep, step_size);
+      add(e.Lt, Lstep, e.Lt);
     }
   }
 
@@ -1555,7 +1587,7 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
-  Mat Lt = evolution[level].Lt;
+  Mat Lt = evolution[level].Mt;
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
 
@@ -1638,7 +1670,7 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
     int valpos = 0;
     Mat Lx = evolution[level].Mx;
     Mat Ly = evolution[level].My;
-    Mat Lt = evolution[level].Lt;
+    Mat Lt = evolution[level].Mt;
 
     for (int i = -pattern_size; i < pattern_size; i += sample_step) {
         for (int j = -pattern_size; j < pattern_size; j += sample_step) {
@@ -1780,7 +1812,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
-  Mat Lt = evolution[level].Lt;
+  Mat Lt = evolution[level].Mt;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;
   float co = cos(angle);
@@ -1878,7 +1910,7 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   const int level = kpt.class_id;
   Mat Lx = evolution[level].Mx;
   Mat Ly = evolution[level].My;
-  Mat Lt = evolution[level].Lt;
+  Mat Lt = evolution[level].Mt;
   float yf = kpt.pt.y / ratio;
   float xf = kpt.pt.x / ratio;
 

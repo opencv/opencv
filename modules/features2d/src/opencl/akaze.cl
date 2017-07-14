@@ -6,21 +6,28 @@
 /**
  * @brief This function computes the Perona and Malik conductivity coefficient g2
  * g2 = 1 / (1 + dL^2 / k^2)
- * @param Lx First order image derivative in X-direction (horizontal)
- * @param Ly First order image derivative in Y-direction (vertical)
+ * @param lx First order image derivative in X-direction (horizontal)
+ * @param ly First order image derivative in Y-direction (vertical)
  * @param dst Output image
  * @param k Contrast factor parameter
  */
 __kernel void
-AKAZE_pm_g2(__global const float* lx, __global const float* ly, __global float* dst, float k)
+AKAZE_pm_g2(__global const float* lx, __global const float* ly, __global float* dst,
+    float k, int size)
 {
-    const float k2inv = 1.0f / (k * k);
     int i = get_global_id(0);
+    // OpenCV plays with dimensions so we need explicit check for this
+    if (!(i < size))
+    {
+        return;
+    }
+
+    const float k2inv = 1.0f / (k * k);
     dst[i] = 1.0f / (1.0f + ((lx[i] * lx[i] + ly[i] * ly[i]) * k2inv));
 }
 
 __kernel void
-AKAZE_nld_step_scalar(__global const float* lt, int lt_step, int lt_offset,
+AKAZE_nld_step_scalar(__global const float* lt, int lt_step, int lt_offset, int rows, int cols,
     __global const float* lf, __global float* dst, float step_size)
 {
     /* The labeling scheme for this five star stencil:
@@ -28,16 +35,20 @@ AKAZE_nld_step_scalar(__global const float* lt, int lt_step, int lt_offset,
         [ -1 c +1 ]
         [    b    ]
     */
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    size_t rows = get_global_size(0);
-    size_t cols = get_global_size(1);
+    // column-first indexing
+    int i = get_global_id(1);
+    int j = get_global_id(0);
+
+    // OpenCV plays with dimensions so we need explicit check for this
+    if (!(i < rows && j < cols))
+    {
+        return;
+    }
 
     // get row indexes
-    int a = (i - 1) * lt_step;
-    int c = (i    ) * lt_step;
-    int b = (i + 1) * lt_step;
-    int dst_idx = c;
+    int a = (i - 1) * cols;
+    int c = (i    ) * cols;
+    int b = (i + 1) * cols;
     // compute stencil
     float res = 0.0f;
     if (i == 0) // first rows
@@ -83,5 +94,5 @@ AKAZE_nld_step_scalar(__global const float* lt, int lt_step, int lt_offset,
         }
     }
 
-    dst[dst_idx] = res * step_size;
+    dst[c + j] = res * step_size;
 }
