@@ -93,7 +93,7 @@ canvas {
 var src = cv.imread("transposeCanvasInput");
 var dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
-cv.threshold(src, src, 120, 200, cv.ThresholdTypes.THRESH_BINARY.value);
+cv.threshold(src, src, 120, 200, cv.THRESH_BINARY);
 cv.transpose(src, dst)
 cv.imshow("transposeCanvasOutput", dst);
 src.delete(); dst.delete();
