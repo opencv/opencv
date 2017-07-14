@@ -43,7 +43,7 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 
     TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, borderMode, borderColor );
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
 #else
     SANITY_CHECK(dst, 1);
@@ -73,7 +73,7 @@ PERF_TEST_P(TestWarpAffine, WarpAffine_ovx,
 
     TEST_CYCLE() warpAffine(src, dst, warpMat, sz, interType, borderMode, borderColor);
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     SANITY_CHECK(dst, interType == INTER_LINEAR ? 5 : 10);
 #else
     SANITY_CHECK(dst, 1);
@@ -111,7 +111,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 
     TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode, borderColor );
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
 #else
     SANITY_CHECK(dst, 1);
@@ -149,7 +149,7 @@ PERF_TEST_P(TestWarpPerspective, WarpPerspective_ovx,
 
     TEST_CYCLE() warpPerspective(src, dst, warpMat, sz, interType, borderMode, borderColor);
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     SANITY_CHECK(dst, interType == INTER_LINEAR ? 5 : 10);
 #else
     SANITY_CHECK(dst, 1);
@@ -195,7 +195,7 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
         warpPerspective( src, dst, warpMat, size, interType, borderMode, borderColor );
     }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
 #else
     SANITY_CHECK(dst, 1);

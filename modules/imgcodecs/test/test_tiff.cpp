@@ -11,7 +11,7 @@ using namespace std::tr1;
 #define int64 int64_hack_
 #include "tiff.h"
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 // Test disabled as it uses a lot of memory.
 // It is killed with SIGKILL by out of memory killer.
 TEST(Imgcodecs_Tiff, DISABLED_decode_tile16384x16384)

@@ -66,16 +66,16 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 # endif
 #endif
 
-#if defined ANDROID || defined __linux__ || defined __FreeBSD__
+#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <elf.h>
-#if defined ANDROID || defined __linux__
+#if defined __ANDROID__ || defined __linux__
 #  include <linux/auxvec.h>
 #endif
 #endif
 
-#if defined ANDROID && defined HAVE_CPUFEATURES
+#if defined __ANDROID__ && defined HAVE_CPUFEATURES
 #  include <cpu-features.h>
 #endif
 
@@ -206,12 +206,12 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
-#if defined ANDROID
+#if defined __ANDROID__
 #include <sys/sysconf.h>
 #endif
 #endif
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 # include <android/log.h>
 #endif
 
@@ -833,7 +833,7 @@ String tempfile( const char* suffix )
     fname = temp_file;
 #endif
 # else
-#  ifdef ANDROID
+#  ifdef __ANDROID__
     //char defaultTemplate[] = "/mnt/sdcard/__opencv_temp.XXXXXX";
     char defaultTemplate[] = "/data/local/tmp/__opencv_temp.XXXXXX";
 #  else
