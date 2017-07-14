@@ -86,318 +86,7 @@ struct AccW_SIMD
     }
 };
 
-#if CV_AVX
-template <>
-struct Acc_SIMD<float, float>
-{
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8 ; x += 8)
-            {
-                __m256 v_src = _mm256_loadu_ps(src + x);
-                __m256 v_dst = _mm256_loadu_ps(dst + x);
-                v_dst = _mm256_add_ps(v_src, v_dst);
-                _mm256_storeu_ps(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct Acc_SIMD<float, double>
-{
-    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8 ; x += 8)
-            {
-                __m256 v_src = _mm256_loadu_ps(src + x);
-                __m256d v_src0 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src,0));
-                __m256d v_src1 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src,1));
-                __m256d v_dst0 = _mm256_loadu_pd(dst + x);
-                __m256d v_dst1 = _mm256_loadu_pd(dst + x + 4);
-                v_dst0 = _mm256_add_pd(v_src0, v_dst0);
-                v_dst1 = _mm256_add_pd(v_src1, v_dst1);
-                _mm256_storeu_pd(dst + x, v_dst0);
-                _mm256_storeu_pd(dst + x + 4, v_dst1);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct Acc_SIMD<double, double>
-{
-    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 4; x += 4)
-            {
-                __m256d v_src = _mm256_loadu_pd(src + x);
-                __m256d v_dst = _mm256_loadu_pd(dst + x);
-
-                v_dst = _mm256_add_pd(v_dst, v_src);
-                _mm256_storeu_pd(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct AccSqr_SIMD<float, float>
-{
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8 ; x += 8)
-            {
-                __m256 v_src = _mm256_loadu_ps(src + x);
-                __m256 v_dst = _mm256_loadu_ps(dst + x);
-
-                v_src = _mm256_mul_ps(v_src, v_src);
-                v_dst = _mm256_add_ps(v_src, v_dst);
-                _mm256_storeu_ps(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct AccSqr_SIMD<float, double>
-{
-    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8 ; x += 8)
-            {
-                __m256 v_src = _mm256_loadu_ps(src + x);
-                __m256d v_src0 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src,0));
-                __m256d v_src1 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src,1));
-                __m256d v_dst0 = _mm256_loadu_pd(dst + x);
-                __m256d v_dst1 = _mm256_loadu_pd(dst + x + 4);
-
-                v_src0 = _mm256_mul_pd(v_src0, v_src0);
-                v_src1 = _mm256_mul_pd(v_src1, v_src1);
-                v_dst0 = _mm256_add_pd(v_src0, v_dst0);
-                v_dst1 = _mm256_add_pd(v_src1, v_dst1);
-                _mm256_storeu_pd(dst + x, v_dst0);
-                _mm256_storeu_pd(dst + x + 4, v_dst1);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct AccSqr_SIMD<double, double>
-{
-    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 4; x += 4)
-            {
-                __m256d v_src = _mm256_loadu_pd(src + x);
-                __m256d v_dst = _mm256_loadu_pd(dst + x);
-
-                v_src = _mm256_mul_pd(v_src, v_src);
-                v_dst = _mm256_add_pd(v_dst, v_src);
-                _mm256_storeu_pd(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct AccProd_SIMD<float, float>
-{
-    int operator() (const float * src1, const float * src2, float * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                __m256 v_src0 = _mm256_loadu_ps(src1 + x);
-                __m256 v_src1 = _mm256_loadu_ps(src2 + x);
-                __m256 v_dst = _mm256_loadu_ps(dst + x);
-                __m256 v_src = _mm256_mul_ps(v_src0, v_src1);
-
-                v_dst = _mm256_add_ps(v_src, v_dst);
-                _mm256_storeu_ps(dst + x, v_dst);
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccProd_SIMD<float, double>
-{
-    int operator() (const float * src1, const float * src2, double * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                __m256 v_1src = _mm256_loadu_ps(src1 + x);
-                __m256 v_2src = _mm256_loadu_ps(src2 + x);
-                __m256d v_src00 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_1src,0));
-                __m256d v_src01 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_1src,1));
-                __m256d v_src10 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_2src,0));
-                __m256d v_src11 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_2src,1));
-                __m256d v_dst0 = _mm256_loadu_pd(dst + x);
-                __m256d v_dst1 = _mm256_loadu_pd(dst + x + 4);
-
-                __m256d v_src0 = _mm256_mul_pd(v_src00, v_src10);
-                __m256d v_src1 = _mm256_mul_pd(v_src01, v_src11);
-                v_dst0 = _mm256_add_pd(v_src0, v_dst0);
-                v_dst1 = _mm256_add_pd(v_src1, v_dst1);
-                _mm256_storeu_pd(dst + x, v_dst0);
-                _mm256_storeu_pd(dst + x + 4, v_dst1);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct AccProd_SIMD<double, double>
-{
-    int operator() (const double * src1, const double * src2, double * dst, const uchar * mask, int len, int cn) const
-    {
-        int x = 0;
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 4; x += 4)
-            {
-                __m256d v_src0 = _mm256_loadu_pd(src1 + x);
-                __m256d v_src1 = _mm256_loadu_pd(src2 + x);
-                __m256d v_dst = _mm256_loadu_pd(dst + x);
-
-                v_src0 = _mm256_mul_pd(v_src0, v_src1);
-                v_dst = _mm256_add_pd(v_dst, v_src0);
-                _mm256_storeu_pd(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct AccW_SIMD<float, float>
-{
-    int operator() (const float * src, float * dst, const uchar * mask, int len, int cn, float alpha) const
-    {
-        int x = 0;
-        __m256 v_alpha = _mm256_set1_ps(alpha);
-        __m256 v_beta = _mm256_set1_ps(1.0f - alpha);
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 16; x += 16)
-            {
-                _mm256_storeu_ps(dst + x, _mm256_add_ps(_mm256_mul_ps(_mm256_loadu_ps(dst + x), v_beta), _mm256_mul_ps(_mm256_loadu_ps(src + x), v_alpha)));
-                _mm256_storeu_ps(dst + x + 8, _mm256_add_ps(_mm256_mul_ps(_mm256_loadu_ps(dst + x + 8), v_beta), _mm256_mul_ps(_mm256_loadu_ps(src + x + 8), v_alpha)));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccW_SIMD<float, double>
-{
-    int operator() (const float * src, double * dst, const uchar * mask, int len, int cn, double alpha) const
-    {
-        int x = 0;
-        __m256d v_alpha = _mm256_set1_pd(alpha);
-        __m256d v_beta = _mm256_set1_pd(1.0f - alpha);
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 16; x += 16)
-            {
-                __m256 v_src0 = _mm256_loadu_ps(src + x);
-                __m256 v_src1 = _mm256_loadu_ps(src + x + 8);
-                __m256d v_src00 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src0,0));
-                __m256d v_src01 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src0,1));
-                __m256d v_src10 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src1,0));
-                __m256d v_src11 = _mm256_cvtps_pd(_mm256_extractf128_ps(v_src1,1));
-
-                _mm256_storeu_pd(dst + x, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x), v_beta), _mm256_mul_pd(v_src00, v_alpha)));
-                _mm256_storeu_pd(dst + x + 4, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 4), v_beta), _mm256_mul_pd(v_src01, v_alpha)));
-                _mm256_storeu_pd(dst + x + 8, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 8), v_beta), _mm256_mul_pd(v_src10, v_alpha)));
-                _mm256_storeu_pd(dst + x + 12, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 12), v_beta), _mm256_mul_pd(v_src11, v_alpha)));
-            }
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct AccW_SIMD<double, double>
-{
-    int operator() (const double * src, double * dst, const uchar * mask, int len, int cn, double alpha) const
-    {
-        int x = 0;
-        __m256d v_alpha = _mm256_set1_pd(alpha);
-        __m256d v_beta = _mm256_set1_pd(1.0f - alpha);
-
-        if (!mask)
-        {
-            len *= cn;
-            for ( ; x <= len - 8; x += 8)
-            {
-                __m256d v_src0 = _mm256_loadu_pd(src + x);
-                __m256d v_src1 = _mm256_loadu_pd(src + x + 4);
-
-                _mm256_storeu_pd(dst + x, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x), v_beta), _mm256_mul_pd(v_src0, v_alpha)));
-                _mm256_storeu_pd(dst + x + 4, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 4), v_beta), _mm256_mul_pd(v_src1, v_alpha)));
-            }
-        }
-
-        return x;
-    }
-};
-#elif CV_SIMD128
+#if CV_SIMD128
 template <>
 struct Acc_SIMD<float, float>
 {
@@ -1493,10 +1182,24 @@ struct AccW_SIMD<ushort, double>
 #endif //CV_SIMD128_64F
 #endif //CV_SIMD128
 
+#if CV_TRY_AVX
+template <typename T, typename AT> int Acc_AVX(const T *, AT *, const uchar *, int, int);
+template <typename T, typename AT> int AccSqr_AVX(const T *, AT *, const uchar *, int, int);
+template <typename T, typename AT> int AccProd_AVX(const T *, const T *, AT *, const uchar *, int, int);
+template <typename T, typename AT> int AccW_AVX(const T *, AT *, const uchar *, int, int, AT);
+#endif
+
 template<typename T, typename AT> void
 acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 {
-    int i = Acc_SIMD<T, AT>()(src, dst, mask, len, cn);
+    int i;
+
+#if CV_TRY_AVX
+    if (CV_CPU_HAS_SUPPORT_AVX)
+        i = Acc_AVX<T, AT>(src, dst, mask, len, cn);
+    else
+#endif
+        i = Acc_SIMD<T, AT>()(src, dst, mask, len, cn);
 
     if( !mask )
     {
@@ -1554,7 +1257,14 @@ acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 template<typename T, typename AT> void
 accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 {
-    int i = AccSqr_SIMD<T, AT>()(src, dst, mask, len, cn);
+    int i;
+
+#if CV_TRY_AVX
+    if (CV_CPU_HAS_SUPPORT_AVX)
+        i = AccSqr_AVX<T, AT>(src, dst, mask, len, cn);
+    else
+#endif
+        i = AccSqr_SIMD<T, AT>()(src, dst, mask, len, cn);
 
     if( !mask )
     {
@@ -1612,7 +1322,14 @@ accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 template<typename T, typename AT> void
 accProd_( const T* src1, const T* src2, AT* dst, const uchar* mask, int len, int cn )
 {
-    int i = AccProd_SIMD<T, AT>()(src1, src2, dst, mask, len, cn);
+    int i;
+
+#if CV_TRY_AVX
+    if (CV_CPU_HAS_SUPPORT_AVX)
+        i = AccProd_AVX<T, AT>(src1, src2, dst, mask, len, cn);
+    else
+#endif
+        i = AccProd_SIMD<T, AT>()(src1, src2, dst, mask, len, cn);
 
     if( !mask )
     {
@@ -1671,7 +1388,15 @@ template<typename T, typename AT> void
 accW_( const T* src, AT* dst, const uchar* mask, int len, int cn, double alpha )
 {
     AT a = (AT)alpha, b = 1 - a;
-    int i = AccW_SIMD<T, AT>()(src, dst, mask, len, cn, a);
+
+    int i;
+
+#if CV_TRY_AVX
+    if (CV_CPU_HAS_SUPPORT_AVX)
+        i = AccW_AVX<T, AT>(src, dst, mask, len, cn, a);
+    else
+#endif
+        i = AccW_SIMD<T, AT>()(src, dst, mask, len, cn, a);
 
     if( !mask )
     {
