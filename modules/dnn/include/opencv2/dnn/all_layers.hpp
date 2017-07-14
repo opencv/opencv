@@ -152,7 +152,19 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         int outputNameToIndex(String outputName);
     };
 
-    //! Classical recurrent layer
+    /** @brief Classical recurrent layer
+
+    Accepts two inputs @f$x_t@f$ and @f$h_{t-1}@f$ and compute two outputs @f$o_t@f$ and @f$h_t@f$.
+
+    - input: should contain packed input @f$x_t@f$.
+    - output: should contain output @f$o_t@f$ (and @f$h_t@f$ if setProduceHiddenOutput() is set to true).
+
+    input[0] should have shape [`T`, `N`, `data_dims`] where `T` and `N` is number of timestamps and number of independent samples of @f$x_t@f$ respectively.
+
+    output[0] will have shape [`T`, `N`, @f$N_o@f$], where @f$N_o@f$ is number of rows in @f$ W_{xo} @f$ matrix.
+
+    If setProduceHiddenOutput() is set to true then @p output[1] will contain a Mat with shape [`T`, `N`, @f$N_h@f$], where @f$N_h@f$ is number of rows in @f$ W_{hh} @f$ matrix.
+    */
     class CV_EXPORTS RNNLayer : public Layer
     {
     public:
@@ -180,17 +192,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          */
         virtual void setProduceHiddenOutput(bool produce = false) = 0;
 
-        /** Accepts two inputs @f$x_t@f$ and @f$h_{t-1}@f$ and compute two outputs @f$o_t@f$ and @f$h_t@f$.
-
-        @param input should contain packed input @f$x_t@f$.
-        @param output should contain output @f$o_t@f$ (and @f$h_t@f$ if setProduceHiddenOutput() is set to true).
-
-        @p input[0] should have shape [`T`, `N`, `data_dims`] where `T` and `N` is number of timestamps and number of independent samples of @f$x_t@f$ respectively.
-
-        @p output[0] will have shape [`T`, `N`, @f$N_o@f$], where @f$N_o@f$ is number of rows in @f$ W_{xo} @f$ matrix.
-
-        If setProduceHiddenOutput() is set to true then @p output[1] will contain a Mat with shape [`T`, `N`, @f$N_h@f$], where @f$N_h@f$ is number of rows in @f$ W_{hh} @f$ matrix.
-        */
     };
 
     class CV_EXPORTS BaseConvolutionLayer : public Layer

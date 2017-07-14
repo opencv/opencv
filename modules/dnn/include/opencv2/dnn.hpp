@@ -44,7 +44,7 @@
 
 // This is an umbrealla header to include into you project.
 // We are free to change headers layout in dnn subfolder, so please include
-// this header for future compartibility
+// this header for future compatibility
 
 
 /** @defgroup dnn Deep Neural Network module
