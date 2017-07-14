@@ -577,7 +577,7 @@ class JSWrapperGenerator(object):
             # Binding
             if class_info:
                 if factory:
-                    print("Factory Function: ", c_func_name, len(variant.args), class_info.name)
+                    # print("Factory Function: ", c_func_name, len(variant.args), class_info.name)
                     if variant.is_pure_virtual:
                         # FIXME: workaround for pure virtual in constructor
                         # e.g. DescriptorMatcher_clone_wrapper
@@ -733,8 +733,8 @@ class JSWrapperGenerator(object):
         # step 1: scan the headers and extract classes, enums and functions
         for hdr in src_files:
             decls = self.parser.parse(hdr)
-            print(hdr);
-            self.print_decls(decls);
+            # print(hdr);
+            # self.print_decls(decls);
             if len(decls) == 0:
                 continue
             for decl in decls:
@@ -810,7 +810,7 @@ class JSWrapperGenerator(object):
                         args = []
                         for arg in variant.args:
                             args.append(arg.tp)
-                        print('Constructor: ', class_info.name, len(variant.args))
+                        # print('Constructor: ', class_info.name, len(variant.args))
                         args_num = len(variant.args)
                         if args_num in class_info.constructor_arg_num:
                             continue
@@ -830,8 +830,8 @@ class JSWrapperGenerator(object):
                 class_bindings.append(smart_ptr_reg_template.substitute(cname=class_info.cname, name=class_info.name))
 
             # Attach external constructors
-            for method_name, method in class_info.ext_constructors.iteritems():
-                print("ext constructor", method_name)
+            # for method_name, method in class_info.ext_constructors.iteritems():
+                # print("ext constructor", method_name)
             #if class_info.ext_constructors:
 
 
