@@ -969,9 +969,6 @@ struct Net::Impl
         }
     }
 
-    #define CV_RETHROW_ERROR(err, newmsg)\
-        cv::error(err.code, newmsg, err.func.c_str(), err.file.c_str(), err.line)
-
     void allocateLayer(int lid, const LayersShapesMap& layersShapes)
     {
         CV_TRACE_FUNCTION();
