@@ -83,7 +83,7 @@ white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not'
 export_enums = False
 export_consts = True
 with_wrapped_functions = True
-with_default_params = with_wrapped_functions and False  # Emscripten::val is used to support default parameters
+with_default_params = True
 with_vec_from_js_array = True
 
 wrapper_namespace = "Wrappers"
@@ -414,11 +414,8 @@ class JSWrapperGenerator(object):
                     arg_type = arg.tp
                 # Add default value
                 if with_default_params and arg.defval != '':
-                    def_args.append(arg.defval)
-                    arg_types.append('emscripten::val')
-                else:
-                    arg_types.append(arg_type)
-
+                    def_args.append(arg.defval);
+                arg_types.append(arg_type)
                 unwrapped_arg_types.append(arg_type)
 
             # Function attribure
@@ -466,152 +463,77 @@ class JSWrapperGenerator(object):
             arg_names_casted = [c if a == b else c + '.as<' + a + '>()' for a, b, c in
                                 zip(unwrapped_arg_types, arg_types, arg_names)]
 
-
-            for arg in variant.args:
-                if arg.defval != "":
-                    has_def_param = True
-
-
             # Add self object to the parameters
             if class_info and not  factory:
                 arg_types = [class_info.cname + '&'] + arg_types
                 w_signature = [class_info.cname + '& arg0 '] + w_signature
 
-            ###################################
-            # Wrapper
-            if has_def_param and with_default_params:
-                # Generate default arguments
-                i = 0
-                while i <= len(def_args):
-                    check_arg = wrapper_overload_def_values[i]
+            for j in range(0, len(def_args) + 1):
+                postfix = ''
+                if j > 0:
+                    postfix = '_' + str(j);
 
-                    if i == 0:
-                        arg_list = arg_names_casted
-                    else:
-                        arg_list = arg_names_casted[0:-i] + def_args[-i:]
-
-                    if global_func:
-                        cpp_call_code = call_template.substitute(func=func.cname,
-                                                                 args=', '.join(arg_list))
-                    else:
-                        cpp_call_code = class_call_template.substitute(obj='arg0',
-                                                                       func=func.cname,
-                                                                       args=', '.join(arg_list))
-                        arg_list = [class_info.cname + '&'] + arg_list
-
-                    if i > 0:
-                        next_code = check_arg_text
-                    if i == 0:
-                        check_arg_text = check_arg.substitute(cpp_call=cpp_call_code)
-                    elif i == 1:
-                        check_arg_text = check_arg.substitute(next=next_code,
-                                                              cpp_call=cpp_call_code,
-                                                              arg0=arg_names[-1])
-                    elif i == 2:
-                        check_arg_text = check_arg.substitute(next=next_code,
-                                                              cpp_call=cpp_call_code,
-                                                              arg0=arg_names[-2],
-                                                              arg1=arg_names[-1])
-                    elif i == 3:
-                        check_arg_text = check_arg.substitute(next=next_code,
-                                                              cpp_call=cpp_call_code,
-                                                              arg0=arg_names[-3],
-                                                              arg1=arg_names[-2],
-                                                              arg2=arg_names[-1])
-                    elif i == 4:
-                        check_arg_text = check_arg.substitute(next=next_code,
-                                                              cpp_call=cpp_call_code,
-                                                              arg0=arg_names[-4],
-                                                              arg1=arg_names[-3],
-                                                              arg2=arg_names[-2],
-                                                              arg3=arg_names[-1])
-                    elif i == 5:
-                        check_arg_text = check_arg.substitute(next=next_code,
-                                                              cpp_call=cpp_call_code,
-                                                              arg0=arg_names[-5],
-                                                              arg1=arg_names[-4],
-                                                              arg2=arg_names[-3],
-                                                              arg3=arg_names[-2],
-                                                              arg4=arg_names[-1])
-                    elif i == 6:
-                        check_arg_text = check_arg.substitute(next=next_code,
-                                                              cpp_call=cpp_call_code,
-                                                              arg0=arg_names[-6],
-                                                              arg1=arg_names[-5],
-                                                              arg2=arg_names[-4],
-                                                              arg3=arg_names[-3],
-                                                              arg4=arg_names[-2],
-                                                              arg5=arg_names[-1])
-                    else:
-                        err = 1
-
-                    i += 1
-
-                wrapper_func_text = wrapper_function_with_def_args_template.substitute(ret_val=ret_type,
-                                                                                       func=wrap_func_name,
-                                                                                       signature=', '.join(w_signature),
-                                                                                       check_args=check_arg_text,
-                                                                                       const='' if variant.is_const else '')
-            else:
-
+                ###################################
+                # Wrapper
                 if factory: # TODO or static
                     name = class_info.cname+'::' if variant.class_name else ""
                     cpp_call_text = static_class_call_template.substitute(scope=name,
                                                                    func=func.cname,
-                                                                   args=', '.join(arg_names))
+                                                                   args=', '.join(arg_names[:len(arg_names)-j]))
                 elif class_info:
                     cpp_call_text = class_call_template.substitute(obj='arg0',
                                                                    func=func.cname,
-                                                                   args=', '.join(arg_names))
+                                                                   args=', '.join(arg_names[:len(arg_names)-j]))
                 else:
                     cpp_call_text = call_template.substitute(func=func.cname,
-                                                             args=', '.join(arg_names))
+                                                             args=', '.join(arg_names[:len(arg_names)-j]))
 
 
                 wrapper_func_text = wrapper_function_template.substitute(ret_val=ret_type,
-                                                                             func=wrap_func_name,
-                                                                             signature=', '.join(w_signature),
+                                                                             func=wrap_func_name+postfix,
+                                                                             signature=', '.join(w_signature[:len(w_signature)-j]),
                                                                              cpp_call=cpp_call_text,
                                                                              const='' if variant.is_const else '')
-            ###################################
-            # Binding
-            if class_info:
-                if factory:
-                    # print("Factory Function: ", c_func_name, len(variant.args), class_info.name)
-                    if variant.is_pure_virtual:
-                        # FIXME: workaround for pure virtual in constructor
-                        # e.g. DescriptorMatcher_clone_wrapper
-                        continue
-                    args_num = len(variant.args)
-                    if args_num in class_info.constructor_arg_num:
-                        # FIXME: workaournd for constructor overload with same args number
-                        # e.g. DescriptorMatcher
-                        continue
-                    class_info.constructor_arg_num.add(args_num)
-                    binding_text = ctr_template.substitute(const='const' if variant.is_const else '',
-                                                       cpp_name=c_func_name,
-                                                       ret=ret_type,
-                                                       args=','.join(arg_types),
-                                                       optional=func_attribs)
-                else:
-                    binding_template = overload_class_static_function_template if variant.is_class_method else \
-                        overload_class_function_template
-                    binding_text = binding_template.substitute(js_name=js_func_name,
-                                                       const='' if variant.is_const else '',
-                                                       cpp_name=c_func_name,
-                                                       ret=ret_type,
-                                                       args=','.join(arg_types),
-                                                       optional=func_attribs)
-            else:
-                binding_text = overload_function_template.substitute(js_name=js_func_name,
-                                                   cpp_name=c_func_name,
-                                                   const='const' if variant.is_const else '',
-                                                   ret=ret_type,
-                                                   args=', '.join(arg_types),
-                                                   optional=func_attribs)
 
-            bindings.append(binding_text)
-            wrappers.append(wrapper_func_text)
+                ###################################
+                # Binding
+                if class_info:
+                    if factory:
+                        # print("Factory Function: ", c_func_name, len(variant.args), class_info.name)
+                        if variant.is_pure_virtual:
+                            # FIXME: workaround for pure virtual in constructor
+                            # e.g. DescriptorMatcher_clone_wrapper
+                            continue
+                        args_num = len(variant.args)
+                        if args_num in class_info.constructor_arg_num:
+                            # FIXME: workaournd for constructor overload with same args number
+                            # e.g. DescriptorMatcher
+                            continue
+                        class_info.constructor_arg_num.add(args_num)
+                        binding_text = ctr_template.substitute(const='const' if variant.is_const else '',
+                                                           cpp_name=c_func_name+postfix,
+                                                           ret=ret_type,
+                                                           args=','.join(arg_types[:len(arg_types)-j]),
+                                                           optional=func_attribs)
+                    else:
+                        binding_template = overload_class_static_function_template if variant.is_class_method else \
+                            overload_class_function_template
+                        binding_text = binding_template.substitute(js_name=js_func_name,
+                                                           const='' if variant.is_const else '',
+                                                           cpp_name=c_func_name+postfix,
+                                                           ret=ret_type,
+                                                           args=','.join(arg_types[:len(arg_types)-j]),
+                                                           optional=func_attribs)
+                else:
+                    binding_text = overload_function_template.substitute(js_name=js_func_name,
+                                                       cpp_name=c_func_name+postfix,
+                                                       const='const' if variant.is_const else '',
+                                                       ret=ret_type,
+                                                       args=', '.join(arg_types[:len(arg_types)-j]),
+                                                       optional=func_attribs)
+
+                bindings.append(binding_text)
+                wrappers.append(wrapper_func_text)
 
         return [bindings, wrappers]
 
@@ -660,6 +582,7 @@ class JSWrapperGenerator(object):
 
             arg_types = []
             orig_arg_types = []
+            def_args = []
             for arg in variant.args:
                 if arg.tp in type_dict:
                     arg_type = type_dict[arg.tp]
@@ -670,9 +593,8 @@ class JSWrapperGenerator(object):
                 #    arg_type += '&'
                 orig_arg_types.append(arg_type)
                 if with_default_params and arg.defval != '':
-                    arg_types.append('emscripten::val')
-                else:
-                    arg_types.append(orig_arg_types[-1])
+                    def_args.append(arg.defval)
+                arg_types.append(orig_arg_types[-1])
 
             # Function attribure
             func_attribs = ''
@@ -692,24 +614,27 @@ class JSWrapperGenerator(object):
 
 
             ################################### Binding
-
-            if factory:
-                binding_text = ctr_template.substitute(const='const' if variant.is_const else '',
-                                                       cpp_name=c_func_name,
-                                                       ret=ret_type,
-                                                       args=','.join(arg_types),
-                                                       optional=func_attribs)
-            else:
-                binding_template = overload_class_static_function_template if variant.is_class_method else \
-                        overload_function_template if class_info == None else overload_class_function_template
-                binding_text = binding_template.substitute(js_name=js_func_name,
-                                                           const='const' if variant.is_const else '',
-                                                           cpp_name=c_func_name,
+            for j in range(0, len(def_args) + 1):
+                postfix = ''
+                if j > 0:
+                    postfix = '_' + str(j);
+                if factory:
+                    binding_text = ctr_template.substitute(const='const' if variant.is_const else '',
+                                                           cpp_name=c_func_name+postfix,
                                                            ret=ret_type,
-                                                           args=','.join(arg_types),
+                                                           args=','.join(arg_types[:len(arg_types)-j]),
                                                            optional=func_attribs)
+                else:
+                    binding_template = overload_class_static_function_template if variant.is_class_method else \
+                            overload_function_template if class_info == None else overload_class_function_template
+                    binding_text = binding_template.substitute(js_name=js_func_name,
+                                                               const='const' if variant.is_const else '',
+                                                               cpp_name=c_func_name+postfix,
+                                                               ret=ret_type,
+                                                               args=','.join(arg_types[:len(arg_types)-1]),
+                                                               optional=func_attribs)
 
-            binding_text_list.append(binding_text)
+                binding_text_list.append(binding_text)
 
         return binding_text_list
 
@@ -727,9 +652,6 @@ class JSWrapperGenerator(object):
                     print()
 
     def gen(self, dst_file, src_files, core_bindings):
-
-        global with_default_params
-
         # step 1: scan the headers and extract classes, enums and functions
         for hdr in src_files:
             decls = self.parser.parse(hdr)
@@ -793,7 +715,6 @@ class JSWrapperGenerator(object):
         # generate code for the classes and their methods
         class_list = list(self.classes.items())
 
-        with_default_params = False
         for name, class_info in class_list:
             class_bindings = []
             if not name in white_list:

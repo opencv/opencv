@@ -90,6 +90,15 @@ QUnit.test("Cascade classification", function(assert) {
 		classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
 		minNeighbors, flags, minSize, maxSize);
 
+		// test default parameters
+		classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
+		minNeighbors, flags, minSize);
+		classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
+		minNeighbors, flags);
+		classifier.detectMultiScale2(image, objects, numDetections, scaleFactor,
+		minNeighbors);
+		classifier.detectMultiScale2(image, objects, numDetections, scaleFactor);
+
 		classifier.delete();
 		objects.delete();
 		numDetections.delete();

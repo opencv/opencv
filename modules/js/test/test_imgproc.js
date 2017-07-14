@@ -67,6 +67,13 @@ QUnit.test("test_imgProc", function(assert) {
     assert.equal(size.get(0), 256);
     assert.equal(size.get(1), 1);
 
+    // default parameters
+    cv.calcHist(source, channels, mask, hist, histSize, ranges);
+    size = hist.size();
+    assert.equal(size.size(), 2);
+    assert.equal(size.get(0), 256);
+    assert.equal(size.get(1), 1);
+
     // Do we need to verify data in histogram?
     let dataView = hist.data();
 
@@ -87,7 +94,13 @@ QUnit.test("test_imgProc", function(assert) {
     cv.cvtColor(source, dest, cv.COLOR_BGR2GRAY, 0);
     assert.equal(dest.channels(), 1);
 
+    cv.cvtColor(source, dest, cv.COLOR_BGR2GRAY);
+    assert.equal(dest.channels(), 1);
+
     cv.cvtColor(source, dest, cv.COLOR_BGR2BGRA, 0);
+    assert.equal(dest.channels(), 4);
+
+    cv.cvtColor(source, dest, cv.COLOR_BGR2BGRA);
     assert.equal(dest.channels(), 4);
 
     dest.delete();
@@ -186,6 +199,14 @@ QUnit.test("test_shape", function(assert) {
     assert.equal(m.m10, 0);
     assert.equal(area, 0);
 
+    // default parameters
+    m = cv.moments(points);
+    area = cv.contourArea(points);
+    assert.equal(m.m00, 0);
+    assert.equal(m.m01, 0);
+    assert.equal(m.m10, 0);
+    assert.equal(area, 0);
+
     points.delete();
     m.delete();
   }
@@ -229,6 +250,27 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(mat2.channels(), 3);
       assert.equal(size.get(0), 5);
       assert.equal(size.get(1), 5);
+
+      cv.blur(mat1, mat2, [3, 3], [-1, -1]);
+
+      // Verify result.
+      view = mat2.data();
+      size = mat2.size();
+      assert.equal(mat2.channels(), 3);
+      assert.equal(size.get(0), 5);
+      assert.equal(size.get(1), 5);
+
+      cv.blur(mat1, mat2, [3, 3]);
+
+      // Verify result.
+      view = mat2.data();
+      size = mat2.size();
+      assert.equal(mat2.channels(), 3);
+      assert.equal(size.get(0), 5);
+      assert.equal(size.get(1), 5);      
+
+      mat1.delete();
+      mat2.delete();
   }
   // C++
   //  void GaussianBlur(InputArray, OutputArray, Size, double, double, int);
@@ -298,6 +340,17 @@ QUnit.test("test_filter", function(assert) {
       assert.equal(size.get(0), 11);
       assert.equal(size.get(1), 11);
 
+      // default parameters
+      cv.bilateralFilter(mat1, mat2, 3, 6, 1.5);
+      // Verify result.
+      view = mat2.data();
+      size = mat2.size();
+      assert.equal(mat2.channels(), 3);
+      assert.equal(size.get(0), 11);
+      assert.equal(size.get(1), 11);
+
+      mat1.delete();
+      mat2.delete();
   }
 
   // Watershed
@@ -584,9 +637,21 @@ QUnit.test("test_filter", function(assert) {
 
       assert.deepEqual(dst.data(), expectedWeightedAdd);
 
+      // default parameter
+      cv.addWeighted(mat1, alpha, mat2, beta, gamma, dst);
+      // Verify result.
+      view = dst.data();
+      size = dst.size();
+      assert.equal(dst.channels(), 1);
+      assert.equal(size.get(0), 3);
+      assert.equal(size.get(1), 3);
+
+      assert.deepEqual(dst.data(), expectedWeightedAdd);
+
       mat1.delete();
       mat2.delete();
       mat3.delete();
+      dst.delete();
       none.delete();
   }
 
