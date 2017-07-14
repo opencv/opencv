@@ -20,10 +20,10 @@ Module["imshow"] = function(canvasID, mat) {
     // convert the img type to cv.CV_8UC4
     switch (img.type()) {
         case cv.CV_8UC1:
-            cv.cvtColor(img, img, cv.COLOR_GRAY2RGBA, 0);
+            cv.cvtColor(img, img, cv.COLOR_GRAY2RGBA);
             break;
         case cv.CV_8UC3:
-            cv.cvtColor(img, img, cv.COLOR_RGB2RGBA, 0);
+            cv.cvtColor(img, img, cv.COLOR_RGB2RGBA);
             break;
         case cv.CV_8UC4:
             break;
