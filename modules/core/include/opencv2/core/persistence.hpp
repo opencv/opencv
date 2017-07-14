@@ -229,21 +229,29 @@ Here is how to read the file created by the code sample above:
 @code
     FileStorage fs2("test.yml", FileStorage::READ);
 
-    // first method: use (type) operator on FileNode.
+    // 1st method: use (type) operator on FileNode.
     int frameCount = (int)fs2["frameCount"];
 
     String date;
-    // second method: use FileNode::operator >>
+    // 2nd method: use FileNode::operator >>
     fs2["calibrationDate"] >> date;
 
     Mat cameraMatrix2, distCoeffs2;
     fs2["cameraMatrix"] >> cameraMatrix2;
-    fs2["distCoeffs"] >> distCoeffs2;
+
+    // 3rd method: use cv::read() with defaults;
+    // because "newKey" doesn't exists someDbl will be assigned to 5.0
+    double someDbl;
+    read(fs2["newKey"],someDbl,5.0);
+    // default is available also for complex objects
+    distCoeffs2 = (Mat_<double>(5, 1) << 0.1, 0.01, -0.001, 0, 0);
+    read(fs2["distCoeffs"], distCoeffs2, distCoeffs2);
 
     cout << "frameCount: " << frameCount << endl
          << "calibration date: " << date << endl
          << "camera matrix: " << cameraMatrix2 << endl
-         << "distortion coeffs: " << distCoeffs2 << endl;
+         << "distortion coeffs: " << distCoeffs2 << endl
+         << "newKey: " << someDbl << endl;
 
     FileNode features = fs2["features"];
     FileNodeIterator it = features.begin(), it_end = features.end();
@@ -710,10 +718,21 @@ CV_EXPORTS void writeScalar( FileStorage& fs, const String& value );
 //! @relates cv::FileNode
 //! @{
 
+/** @brief Reads data from a FileNode with default
+@param node the FileNode to read from
+@param [out] value reference to the destination variable
+@param default_value used if node is invalid or data type mismatch.
+
+`int`,`double` or `float` are mutually compatible. Saturation cast or rounding will applied where needed.
+@see FileNode::operator>>()
+*/
 CV_EXPORTS void read(const FileNode& node, int& value, int default_value);
 CV_EXPORTS void read(const FileNode& node, float& value, float default_value);
 CV_EXPORTS void read(const FileNode& node, double& value, double default_value);
 CV_EXPORTS void read(const FileNode& node, String& value, const String& default_value);
+#ifndef OPENCV_NOSTL
+CV_EXPORTS void read(const FileNode& node, std::string& value, const std::string& default_value);
+#endif
 CV_EXPORTS void read(const FileNode& node, Mat& mat, const Mat& default_mat = Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat = SparseMat() );
 CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
@@ -1235,6 +1254,10 @@ FileNodeIterator& operator >> (FileNodeIterator& it, std::vector<_Tp>& vec)
 //! @{
 
 /** @brief Reads data from a file storage.
+
+If node is invalid or type mismatch, it returns new empty object.
+`int`,`double` or `float` are mutually compatible. Saturation cast or rounding will applied where needed.
+@see read() to use defaults
  */
 template<typename _Tp> static inline
 void operator >> (const FileNode& n, _Tp& value)
@@ -1242,7 +1265,7 @@ void operator >> (const FileNode& n, _Tp& value)
     read( n, value, _Tp());
 }
 
-/** @brief Reads data from a file storage.
+/** @overload
  */
 template<typename _Tp> static inline
 void operator >> (const FileNode& n, std::vector<_Tp>& vec)

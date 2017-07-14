@@ -133,7 +133,7 @@ int main(int ac, char** av)
         Mat R, T;
 
         fs["R"] >> R;                                      // Read cv::Mat
-        fs["T"] >> T;
+        cv::read(fs["T"], T, R);                           // Read with default
         fs["MyData"] >> m;                                 // Read your own structure_
 
         cout << endl
