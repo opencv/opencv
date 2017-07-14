@@ -33,13 +33,13 @@ kernel. So the thickness or size of the foreground object decreases or simply wh
 in the image. It is useful for removing small white noises (as we have seen in colorspace chapter),
 detach two connected objects etc.
 
-We use the function: **cv.erode(src, dst, kernel, anchor, iterations, borderType, borderValue)** 
-@param src          input image; the number of channels can be arbitrary, but the depth should be one of CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+We use the function: **cv.erode (src, dst, kernel, anchor = [-1, -1], iterations = 1, borderType = cv.BORDER_CONSTANT, borderValue = cv.morphologyDefaultBorderValue())** 
+@param src          input image; the number of channels can be arbitrary, but the depth should be one of cv.CV_8U, cv.CV_16U, cv.CV_16S, cv.CV_32F or cv.CV_64F.
 @param dst          output image of the same size and type as src.
-@param kernel       structuring element used for erosion
+@param kernel       structuring element used for erosion.
 @param anchor       position of the anchor within the element; default value (-1, -1) means that the anchor is at the element center.
 @param iterations   number of times erosion is applied.
-@param borderType   pixel extrapolation method.
+@param borderType   pixel extrapolation method(see cv.BorderTypes).
 @param borderValue  border value in case of a constant border
 
 Try it
@@ -67,7 +67,7 @@ var dst = new cv.Mat();
 var M = cv.Mat.ones(5, 5, cv.CV_8U);
 var S = new cv.Scalar();
 // You can try more different conversion
-cv.erode(src, dst, M, [-1,-1], 1, cv.BorderTypes.BORDER_DEFAULT.value, S)
+cv.erode(src, dst, M, [-1, -1], 1, cv.BORDER_CONSTANT, S)
 cv.imshow("erodeCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete(); S.delete();
 </textarea>
@@ -106,10 +106,10 @@ Normally, in cases like noise removal, erosion is followed by dilation. Because,
 white noises, but it also shrinks our object. So we dilate it. Since noise is gone, they won't come
 back, but our object area increases. It is also useful in joining broken parts of an object.
 
-We use the function: **cv.erode(src, dst, kernel, anchor, iterations, borderType, borderValue)** 
-@param src          input image; the number of channels can be arbitrary, but the depth should be one of CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+We use the function: **cv.dilate (src, dst, kernel, anchor = [-1, -1], iterations = 1, borderType = cv.BORDER_CONSTANT, borderValue = cv.morphologyDefaultBorderValue())** 
+@param src          input image; the number of channels can be arbitrary, but the depth should be one of cv.CV_8U, cv.CV_16U, cv.CV_16S, cv.CV_32F or cv.CV_64F.
 @param dst          output image of the same size and type as src.
-@param kernel       structuring element used for dilation
+@param kernel       structuring element used for dilation.
 @param anchor       position of the anchor within the element; default value (-1, -1) means that the anchor is at the element center.
 @param iterations   number of times dilation is applied.
 @param borderType   pixel extrapolation method.
@@ -140,7 +140,7 @@ var dst = new cv.Mat();
 var M = cv.Mat.ones(5, 5, cv.CV_8U);
 var S = new cv.Scalar();
 // You can try more different conversion
-cv.dilate(src, dst, M, [-1,-1], 1, cv.BorderTypes.BORDER_DEFAULT.value, S)
+cv.dilate(src, dst, M, [-1, -1], 1, cv.BORDER_CONSTANT, S)
 cv.imshow("dilateCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete(); S.delete();
 </textarea>
@@ -253,11 +253,16 @@ function getStructuringElementHandleFiles(e) {
     var getStructuringElementUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(getStructuringElementUrl, "getStructuringElementCanvasInput");
 }
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     document.getElementById("erodeTryIt").disabled = false;
     document.getElementById("dilateTryIt").disabled = false;
     document.getElementById("getStructuringElementTryIt").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly

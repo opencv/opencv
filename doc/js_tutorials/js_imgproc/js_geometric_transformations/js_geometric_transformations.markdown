@@ -16,19 +16,19 @@ Transformations
 
 Scaling is just resizing of the image. OpenCV comes with a function **cv.resize()** for this
 purpose. The size of the image can be specified manually, or you can specify the scaling factor.
-Different interpolation methods are used. Preferable interpolation methods are **cv.InterpolationFlags.INTER_AREA.value**
-for shrinking and **cv.InterpolationFlags.INTER_CUBIC.value** (slow) & **cv.InterpolationFlags.INTER_LINEAR.value** for zooming. 
+Different interpolation methods are used. Preferable interpolation methods are **cv.INTER_AREA**
+for shrinking and **cv.INTER_CUBIC** (slow) & **cv.INTER_LINEAR** for zooming. 
 
-We use the function: **cv.resize(src, dst, dsize, fx, fy, interpolation)**
+We use the function: **cv.resize (src, dst, dsize, fx = 0, fy = 0, interpolation = cv.INTER_LINEAR)**
 @param src    input image
-@param dst     output image; it has the size dsize (when it is non-zero) or the size computed from src.size(), fx, and fy; the type of dst is the same as of src. 
+@param dst    output image; it has the size dsize (when it is non-zero) or the size computed from src.size(), fx, and fy; the type of dst is the same as of src. 
 @param dsize  output image size; if it equals zero, it is computed as:      
                  \f[𝚍𝚜𝚒𝚣𝚎 = 𝚂𝚒𝚣𝚎(𝚛𝚘𝚞𝚗𝚍(𝚏𝚡*𝚜𝚛𝚌.𝚌𝚘𝚕𝚜), 𝚛𝚘𝚞𝚗𝚍(𝚏𝚢*𝚜𝚛𝚌.𝚛𝚘𝚠𝚜))\f]
                  Either dsize or both fx and fy must be non-zero. 
 @param fx     scale factor along the horizontal axis; when it equals 0, it is computed as  \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚠𝚒𝚍𝚝𝚑/𝚜𝚛𝚌.𝚌𝚘𝚕𝚜\f]        
                  
 @param fy     scale factor along the vertical axis; when it equals 0, it is computed as \f[(𝚍𝚘𝚞𝚋𝚕𝚎)𝚍𝚜𝚒𝚣𝚎.𝚑𝚎𝚒𝚐𝚑𝚝/𝚜𝚛𝚌.𝚛𝚘𝚠𝚜\f] 
-@param interpolation    interpolation method
+@param interpolation    interpolation method(see **cv.InterpolationFlags**)
 
 Try it
 ------
@@ -53,7 +53,7 @@ canvas {
 var src = cv.imread("resizeCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
-cv.resize(src, dst, [600,600], 0, 0, cv.InterpolationFlags.INTER_LINEAR.value);
+cv.resize(src, dst, [300, 300], 0, 0, cv.INTER_AREA);
 cv.imshow("resizeCanvasOutput", dst);
 src.delete();
 dst.delete();
@@ -92,19 +92,15 @@ be \f$(t_x,t_y)\f$, you can create the transformation matrix \f$\textbf{M}\f$ as
 
 \f[M = \begin{bmatrix} 1 & 0 & t_x \\ 0 & 1 & t_y  \end{bmatrix}\f]
 
-We use the function: **cv.warpAffine(src, dst, M, dsize, flags, borderMode, borderValue)**
-@param src    input image.
-@param dst    output image that has the size dsize and the same type as src.
-@param Mat    2×3transformation matrix.
-@param dsize  size of the output image.
-@param flags  combination of interpolation methods and the optional flag WARP_INVERSE_MAP that means that M is the inverse transformation ( 𝚍𝚜𝚝→𝚜𝚛𝚌 )        
-@param borderMode   pixel extrapolation method; when borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.      
-@param borderValue   value used in case of a constant border  
+We use the function: **cv.warpAffine (src, dst, M, dsize, flags = cv.INTER_LINEAR, borderMode = cv.BORDER_CONSTANT, borderValue = cv.Scalar())**
+@param src          input image.
+@param dst          output image that has the size dsize and the same type as src.
+@param Mat          2 × 3 transformation matrix(cv.CV_64FC1 type).
+@param dsize        size of the output image.
+@param flags        combination of interpolation methods and the optional flag WARP_INVERSE_MAP that means that M is the inverse transformation ( 𝚍𝚜𝚝→𝚜𝚛𝚌 )        
+@param borderMode   pixel extrapolation method(see cv.InterpolationFlags) ; when borderMode = BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.      
+@param borderValue  value used in case of a constant border; by default, it is 0.
 
-**warning**
-
-Third argument of the **cv.warpAffine()** function is the size of the output image, which should
-be in the form of (width, height). Remember width = number of columns, and height = number of
 rows.
 
 Try it
@@ -126,16 +122,17 @@ canvas {
 <div id="warpAffineCodeArea">
 <h2>Input your code</h2>
 <button id="warpAffineTryIt" disabled="true" onclick="warpAffineExecuteCode()">Try it</button><br>
-<textarea rows="10" cols="80" id="warpAffineTestCode" spellcheck="false">
+<textarea rows="11" cols="80" id="warpAffineTestCode" spellcheck="false">
 var src = cv.imread("warpAffineCanvasInput");
 var dst = new cv.Mat();
-var M = new cv.Mat([2,3], cv.CV_64FC1);
+var M = new cv.Mat([2, 3], cv.CV_64FC1);
+var color = new cv.Scalar();
 M.data64f()[0]=1; M.data64f()[1]=0; M.data64f()[2]=50;
 M.data64f()[3]=0; M.data64f()[4]=1; M.data64f()[5]=100;
 // You can try more different conversion
-cv.warpAffine(src, dst, M, [src.cols,src.rows], cv.InterpolationFlags.INTER_LINEAR.value, cv.BORDER_CONSTANT, new cv.Scalar());
+cv.warpAffine(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
 cv.imshow("warpAffineCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete();
+src.delete(); dst.delete(); M.delete(); color.delete()
 </textarea>
 </div>
 <div id="warpAffineShowcase">
@@ -177,7 +174,7 @@ where:
 
 \f[\begin{array}{l} \alpha =  scale \cdot \cos \theta , \\ \beta =  scale \cdot \sin \theta \end{array}\f]
 
-We use the function: **cv.warpAffine(src, dst, M, dsize, flags, borderMode, borderValue)**
+We use the function: **cv.warpAffine (src, dst, M, dsize, flags, borderMode, borderValue)**
 
 Try it
 ------
@@ -200,10 +197,11 @@ canvas {
 <div id="rotateWarpAffineCodeArea">
 <h2>Input your code</h2>
 <button id="rotateWarpAffineTryIt" disabled="true" onclick="rotateWarpAffineExecuteCode()">Try it</button><br>
-<textarea rows="18" cols="80" id="rotateWarpAffineTestCode" spellcheck="false">
+<textarea rows="19" cols="80" id="rotateWarpAffineTestCode" spellcheck="false">
 var src = cv.imread("rotateWarpAffineCanvasInput");
-var dst = new cv.Mat(src.cols, src.rows, src.type());
-var M = new cv.Mat([2,3], cv.CV_64FC1);
+var dst = new cv.Mat();
+var M = new cv.Mat([2, 3], cv.CV_64FC1);
+var color = new cv.Scalar();
 var degree = 45;
 var angle = degree * Math.PI / 180.;
 var alpha = Math.cos(angle);
@@ -215,9 +213,9 @@ M.data64f()[3] = -beta,
 M.data64f()[4] = alpha,
 M.data64f()[5] = beta * src.cols / 2 + (1 - alpha) * src.rows / 2;
 // You can try more different conversion
-cv.warpAffine(src, dst, M, [src.cols,src.rows], cv.InterpolationFlags.INTER_LINEAR.value, cv.BORDER_CONSTANT, new cv.Scalar());
+cv.warpAffine(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
 cv.imshow("rotateWarpAffineCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete();
+src.delete(); dst.delete(); M.delete(); color.delete();
 </textarea>
 </div>
 <div id="rotateWarpAffineShowcase">
@@ -252,10 +250,10 @@ output image. To find the transformation matrix, we need three points from input
 corresponding locations in output image. Then **cv.getAffineTransform** will create a 2x3 matrix
 which is to be passed to **cv.warpAffine**.
 
-We use the function: **cv.getAffineTransform(src, dst)** and **cv.warpAffine(src, dst, M, dsize, flags, borderMode, borderValue)**
+We use the function: **cv.getAffineTransform (src, dst)** and **cv.warpAffine(src, dst, M, dsize, flags, borderMode, borderValue)**
 
-@param src    three points from input imag
-@param dst    three corresponding points in output image
+@param src    three points([3, 1] size and cv.CV_32FC2 type) from input imag.
+@param dst    three corresponding points([3, 1] size and cv.CV_32FC2 type) in output image.
 
 Try it
 ------
@@ -276,21 +274,26 @@ canvas {
 <div id="getAffineTransformCodeArea">
 <h2>Input your code</h2>
 <button id="getAffineTransformTryIt" disabled="true" onclick="getAffineTransformExecuteCode()">Try it</button><br>
-<textarea rows="18" cols="80" id="getAffineTransformTestCode" spellcheck="false">
+<textarea rows="22" cols="80" id="getAffineTransformTestCode" spellcheck="false">
 var src = cv.imread("getAffineTransformCanvasInput");
 var dst = new cv.Mat(src.cols, src.rows, src.type());
-var srcTri = new cv.Mat(3, 2, cv.CV_32F); 
-var dstTri = new cv.Mat(3, 2, cv.CV_32F);
-srcTri.data32f()[0] = 0; dstTri.data32f()[0] = 0.6;//(data32f()[0],data32f()[1]) is the first point
-srcTri.data32f()[1] = 0; dstTri.data32f()[1] = 0.2;
-srcTri.data32f()[2] = 0; dstTri.data32f()[2] = 0.1;//(data32f()[0],data32f()[1]) is the sescond point
-srcTri.data32f()[3] = 1; dstTri.data32f()[3] = 1.3;
-srcTri.data32f()[4] = 1; dstTri.data32f()[4] = 1.5;//(data32f()[0],data32f()[1]) is the third point
-srcTri.data32f()[5] = 0; dstTri.data32f()[5] = 0.3;
-var M = new cv.Mat([2,3], cv.CV_64FC1);
+var srcTri = new cv.Mat(3, 1, cv.CV_32FC2); 
+var dstTri = new cv.Mat(3, 1, cv.CV_32FC2);
+
+//(data32f()[0],data32f()[1]) is the first point
+srcTri.data32f()[0] = 0; srcTri.data32f()[1] = 0;
+//(data32f()[2],data32f()[3]) is the sescond point
+srcTri.data32f()[2] = 0; srcTri.data32f()[3] = 1;
+//(data32f()[4],data32f()[5]) is the third point
+srcTri.data32f()[4] = 1; srcTri.data32f()[5] = 0;
+
+dstTri.data32f()[0] = 0.6; dstTri.data32f()[1] = 0.2;
+dstTri.data32f()[2] = 0.1; dstTri.data32f()[3] = 1.3;
+dstTri.data32f()[4] = 1.5; dstTri.data32f()[5] = 0.3;
+var M = new cv.Mat([2, 3], cv.CV_64FC1);
 M = cv.getAffineTransform(srcTri, dstTri);
 // You can try more different conversion
-cv.warpAffine(src, dst, M, [src.cols,src.rows], cv.InterpolationFlags.INTER_LINEAR.value, cv.BORDER_CONSTANT, new cv.Scalar());
+cv.warpAffine(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
 cv.imshow("getAffineTransformCanvasOutput", dst);
 src.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete();
 </textarea>
@@ -325,9 +328,15 @@ For perspective transformation, you need a 3x3 transformation matrix. Straight l
 straight even after the transformation. Apply **cv.warpPerspective** with this 3x3 transformation
 matrix.
 
-We use the function: **cv.warpPerspective(src, dst, M, dsize, flags, borderMode, borderValue)**
+We use the function: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER_LINEAR, borderMode = cv.BORDER_CONSTANT, borderValue = cv.Scalar())**
 
-The parameters of cv.warpPerspective() are similar to the parameters of cv.warpAffine().
+@param src          input image.
+@param dst          output image that has the size dsize and the same type as src.
+@param Mat          3 × 3 transformation matrix(cv.CV_64FC1 type).
+@param dsize        size of the output image.
+@param flags        combination of interpolation methods (cv.INTER_LINEAR or cv.INTER_NEAREST) and the optional flag WARP_INVERSE_MAP, that sets M as the inverse transformation (𝚍𝚜𝚝→𝚜𝚛𝚌).    
+@param borderMode   pixel extrapolation method (cv.BORDER_CONSTANT or cv.BORDER_REPLICATE).
+@param borderValue  value used in case of a constant border; by default, it is 0.
 
 Try it
 ------
@@ -348,17 +357,18 @@ canvas {
 <div id="warpPerspectiveCodeArea">
 <h2>Input your code</h2>
 <button id="warpPerspectiveTryIt" disabled="true" onclick="warpPerspectiveExecuteCode()">Try it</button><br>
-<textarea rows="11" cols="80" id="warpPerspectiveTestCode" spellcheck="false">
+<textarea rows="12" cols="80" id="warpPerspectiveTestCode" spellcheck="false">
 var src = cv.imread("warpPerspectiveCanvasInput");
 var dst = new cv.Mat();
-var M = new cv.Mat([3,3], cv.CV_64FC1);
+var M = new cv.Mat([3, 3], cv.CV_64FC1);
+var color = new cv.Scalar()
 M.data64f()[0]=1;M.data64f()[1]=0.1;M.data64f()[2]=-65;
 M.data64f()[3]=0;M.data64f()[4]=1.1;M.data64f()[5]=-75;
 M.data64f()[6]=0;M.data64f()[7]=0;  M.data64f()[8]=1;
 // You can try more different conversion
-cv.warpPerspective(src, dst, M, [src.cols,src.rows], cv.InterpolationFlags.INTER_LINEAR.value, cv.BORDER_CONSTANT, new cv.Scalar());
+cv.warpPerspective(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
 cv.imshow("warpPerspectiveCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete();
+src.delete(); dst.delete(); M.delete(); color.delete();
 </textarea>
 </div>
 <div id="warpPerspectiveShowcase">
@@ -382,13 +392,18 @@ function warpPerspectiveHandleFiles(e) {
     loadImageToCanvas(warpPerspectiveUrl, "warpPerspectiveCanvasInput");
 
 }
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     document.getElementById("resizeTryIt").disabled = false;
     document.getElementById("warpAffineTryIt").disabled = false;
     document.getElementById("rotateWarpAffineTryIt").disabled = false;
     document.getElementById("getAffineTransformTryIt").disabled = false;
     document.getElementById("warpPerspectiveTryIt").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly

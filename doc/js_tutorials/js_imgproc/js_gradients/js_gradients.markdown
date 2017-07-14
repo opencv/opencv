@@ -23,26 +23,26 @@ resistant to noise. You can specify the direction of derivatives to be taken, ve
 argument ksize. If ksize = -1, a 3x3 Scharr filter is used which gives better results than 3x3 Sobel
 filter. Please see the docs for kernels used.
 
-We use the functions: **cv.Sobel(src, dst, ddepth, dx, dy, ksize, scale, delta, borderType)** 
+We use the functions: **cv.Sobel (src, dst, ddepth, dx, dy, ksize = 3, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)** 
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
-@param ddepth      output image depth.
+@param ddepth      output image depth(see cv.combinations); in the case of 8-bit input images it will result in truncated derivatives.
 @param dx          order of the derivative x.
 @param dy          order of the derivative y.
 @param ksize       size of the extended Sobel kernel; it must be 1, 3, 5, or 7.
 @param scale       optional scale factor for the computed derivative values.
 @param delta       optional delta value that is added to the results prior to storing them in dst.
-@param borderType  pixel extrapolation method.
+@param borderType  pixel extrapolation method(see cv.BorderTypes).
 
-**cv.Scharr(src, dst, ddepth, dx, dy, scale, delta, borderType)** 
+**cv.Scharr (src, dst, ddepth, dx, dy, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)** 
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
-@param ddepth      output image depth.
+@param ddepth      output image depth(see cv.combinations).
 @param dx          order of the derivative x.
 @param dy          order of the derivative y.
 @param scale       optional scale factor for the computed derivative values.
 @param delta       optional delta value that is added to the results prior to storing them in dst.
-@param borderType  pixel extrapolation method.
+@param borderType  pixel extrapolation method(see cv.BorderTypes).
 
 Try it
 ------
@@ -67,12 +67,12 @@ canvas {
 var src = cv.imread("SobelCanvasInput");
 var dstx = new cv.Mat();
 var dsty = new cv.Mat();
-cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGB2GRAY.value, 0);
+cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different conversion
-cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BorderTypes.BORDER_DEFAULT.value);
-cv.Sobel(src, dsty, cv.CV_8U, 1, 0, 3, 1, 0, cv.BorderTypes.BORDER_DEFAULT.value);
-//cv.Scharr(src, dstx, cv.CV_8U, 1, 0, 1, 0, cv.BorderTypes.BORDER_DEFAULT.value);
-//cv.Scharr(src, dsty, cv.CV_8U, 1, 0, 1, 0, cv.BorderTypes.BORDER_DEFAULT.value);
+cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
+cv.Sobel(src, dsty, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
+//cv.Scharr(src, dstx, cv.CV_8U, 1, 0, 1, 0, cv.BORDER_DEFAULT);
+//cv.Scharr(src, dsty, cv.CV_8U, 1, 0, 1, 0, cv.BORDER_DEFAULT);
 cv.imshow("SobelCanvasOutputX", dstx);
 cv.imshow("SobelCanvasOutputY", dsty); 
 src.delete(); dstx.delete(); dsty.delete();
@@ -80,19 +80,17 @@ src.delete(); dstx.delete(); dsty.delete();
 </div>
 <div id="SobelShowcase">
     <div>
-        <div>
-            <p>Original</p>
-            <canvas id="SobelCanvasInput"></canvas>
-            <input type="file" id="SobelInput" name="file" />
-        </div>       
-        <div>
-            <p>Sobel X</p>
-            <canvas id="SobelCanvasOutputX"></canvas>
-        </div>
-        <div>
-            <p>Sobel Y</p>
-            <canvas id="SobelCanvasOutputY"></canvas>
-        </div>
+        <p>Original</p>
+        <canvas id="SobelCanvasInput"></canvas>
+        <input type="file" id="SobelInput" name="file" />
+    </div>       
+    <div>
+        <p>Sobel X</p>
+        <canvas id="SobelCanvasOutputX"></canvas>
+    </div>
+    <div>
+        <p>Sobel Y</p>
+        <canvas id="SobelCanvasOutputY"></canvas>
     </div>
 </div>
 <script src="utils.js"></script>
@@ -123,14 +121,14 @@ filtering:
 
 \f[kernel = \begin{bmatrix} 0 & 1 & 0 \\ 1 & -4 & 1 \\ 0 & 1 & 0  \end{bmatrix}\f]
 
-We use the function: **cv.Laplacian(src, dst, ddepth, ksize, scale, delta, borderType)** 
+We use the function: **cv.Laplacian (src, dst, ddepth, ksize = 1, scale = 1, delta = 0, borderType = cv.BORDER_DEFAULT)** 
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
 @param ddepth      output image depth.
-@param ksize       Aperture size used to compute the second-derivative filters. See getDerivKernels for details. The size must be positive and odd.
-@param scale       Optional scale factor for the computed Laplacian values.
+@param ksize       aperture size used to compute the second-derivative filters. See getDerivKernels for details. The size must be positive and odd.
+@param scale       optional scale factor for the computed Laplacian values.
 @param delta       optional delta value that is added to the results prior to storing them in dst.
-@param borderType  pixel extrapolation method.
+@param borderType  pixel extrapolation method(see cv.BorderTypes).
 
 Try it
 ------
@@ -154,9 +152,9 @@ canvas {
 <textarea rows="8" cols="80" id="LaplacianTestCode" spellcheck="false">
 var src = cv.imread("LaplacianCanvasInput");
 var dst = new cv.Mat();
-cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGB2GRAY.value, 0);
+cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different conversion
-cv.Laplacian(src, dst, cv.CV_8U, 1, 1, 0, cv.BorderTypes.BORDER_DEFAULT.value);
+cv.Laplacian(src, dst, cv.CV_8U, 1, 1, 0, cv.BORDER_DEFAULT);
 cv.imshow("LaplacianCanvasOutput", dst);
 src.delete(); dst.delete();
 </textarea>
@@ -222,10 +220,10 @@ canvas {
 var src = cv.imread("absSobelCanvasInput");
 var dstx = new cv.Mat();
 var absDstx = new cv.Mat();
-cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGB2GRAY.value, 0);
+cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different conversion
-cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BorderTypes.BORDER_DEFAULT.value);
-cv.Sobel(src, absDstx, cv.CV_64F, 1, 0, 3, 1, 0, cv.BorderTypes.BORDER_DEFAULT.value);
+cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
+cv.Sobel(src, absDstx, cv.CV_64F, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 for (var i=0; i<absDstx.cols*absDstx.rows*absDstx.channels(); ++i) {
     absDstx.data64f()[i] = Math.abs(absDstx.data64f()[i]);
 }
@@ -264,11 +262,17 @@ function absSobelHandleFiles(e) {
     var absSobelUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(absSobelUrl, "absSobelCanvasInput");
 }
-document.getElementById("opencvjs").onload = function() {
+
+function onReady() {
     document.getElementById("SobelTryIt").disabled = false;
     document.getElementById("LaplacianTryIt").disabled = false;
     document.getElementById("absSobelTryIt").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly

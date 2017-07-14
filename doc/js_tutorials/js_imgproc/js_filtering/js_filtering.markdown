@@ -67,6 +67,7 @@ function filter2DHandleFiles(e) {
     var filter2DUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(filter2DUrl, "filter2DCanvasInput");
 }
+
 </script>
 </body>
 \endhtmlonly
@@ -89,24 +90,24 @@ specify the width and height of kernel. A 3x3 normalized box filter would look l
 
 \f[K =  \frac{1}{9} \begin{bmatrix} 1 & 1 & 1  \\ 1 & 1 & 1 \\ 1 & 1 & 1 \end{bmatrix}\f]
 
-We use the functions: **cv.blur(src, dst, ksize, anchor, borderType)** 
+We use the functions: **cv.blur (src, dst, ksize, anchor = [-1,-1], borderType = cv.BORDER_DEFAULT)** 
 @param src         input image; it can have any number of channels, which are processed independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
 @param dst         output image of the same size and type as src.
 @param ksize       blurring kernel size.
-@param anchor      anchor point; Point(-1,-1) means that the anchor is at the kernel center. 
-@param borderType  border mode used to extrapolate pixels outside of the image.
+@param anchor      anchor point; anchor = [-1, -1] means that the anchor is at the kernel center. 
+@param borderType  border mode used to extrapolate pixels outside of the image(see cv.BorderTypes).
 
-**cv.boxFilter(src, dst, ddepth, ksize, anchor, normalize, borderType)**
+**cv.boxFilter (src, dst, ddepth, ksize, anchor = [-1,-1], normalize = true, borderType = cv.BORDER_DEFAULT)**
 @param src         input image.
 @param dst         output image of the same size and type as src.
 @param ddepth      the output image depth (-1 to use src.depth()).
 @param ksize       blurring kernel size.
-@param anchor      anchor point; Point(-1,-1) means that the anchor is at the kernel center. 
+@param anchor      anchor point; anchor = [-1, -1] means that the anchor is at the kernel center. 
 @param normalize   flag, specifying whether the kernel is normalized by its area or not.
-@param borderType  border mode used to extrapolate pixels outside of the image.
+@param borderType  border mode used to extrapolate pixels outside of the image(see cv.BorderTypes).
 
 @note If you don't want to use normalized box filter, use **cv.boxFilter()**. Pass an argument
-normalize=False to the function.
+normalize = false to the function.
 
 Try it
 ------
@@ -131,8 +132,8 @@ canvas {
 var src = cv.imread("blurCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
-cv.blur(src, dst, [3,3], [-1,-1], cv.BorderTypes.BORDER_DEFAULT.value);
-//cv.boxFilter(src, dst, -1, [3,3], [-1,-1], false, cv.BorderTypes.BORDER_DEFAULT.value)
+cv.blur(src, dst, [3, 3], [-1, -1], cv.BORDER_DEFAULT);
+//cv.boxFilter(src, dst, -1, [3, 3], [-1, -1], false, cv.BORDER_DEFAULT)
 cv.imshow("blurCanvasOutput", dst);
 src.delete();
 dst.delete();
@@ -167,13 +168,13 @@ function blurHandleFiles(e) {
 
 In this, instead of box filter, gaussian kernel is used.
 
-We use the function: **cv.GaussianBlur(src, dst, ksize, sigmaX, sigmaY, borderType)** 
+We use the function: **cv.GaussianBlur (src, dst, ksize, sigmaX, sigmaY = 0, borderType = cv.BORDER_DEFAULT)** 
 @param src         input image; the image can have any number of channels, which are processed independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
 @param dst         output image of the same size and type as src.
 @param ksize       blurring kernel size.
 @param sigmaX      Gaussian kernel standard deviation in X direction.
 @param sigmaY      Gaussian kernel standard deviation in Y direction; if sigmaY is zero, it is set to be equal to sigmaX, if both sigmas are zeros, they are computed from ksize.width and ksize.height, to fully control the result regardless of possible future modifications of all this semantics, it is recommended to specify all of ksize, sigmaX, and sigmaY.
-@param borderType  pixel extrapolation method
+@param borderType  pixel extrapolation method(see cv.BorderTypes).
 
 Try it
 ------
@@ -198,7 +199,7 @@ canvas {
 var src = cv.imread("GaussianBlurCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
-cv.GaussianBlur(src, dst, [5,5], 0, 0, cv.BorderTypes.BORDER_DEFAULT.value);
+cv.GaussianBlur(src, dst, [5, 5], 0, 0, cv.BORDER_DEFAULT);
 cv.imshow("GaussianBlurCanvasOutput", dst);
 src.delete();
 dst.delete();
@@ -238,12 +239,12 @@ calculated value which may be a pixel value in the image or a new value. But in 
 central element is always replaced by some pixel value in the image. It reduces the noise
 effectively. Its kernel size should be a positive odd integer.
 
-We use the function: **cv.medianBlur(src, dst, ksize)** 
-@param src         input image; the image can have any number of channels, which are processed independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
-@param dst         output image of the same size and type as src.
-@param ksize       blurring kernel size.
+We use the function: **cv.medianBlur (src, dst, ksize)** 
+@param src         input 1-, 3-, or 4-channel image; when ksize is 3 or 5, the image depth should be cv.CV_8U, cv.CV_16U, or cv.CV_32F, for larger aperture sizes, it can only be cv.CV_8U.
+@param dst         destination array of the same size and type as src.
+@param ksize       aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
 
-@note The median filter uses BORDER_REPLICATE internally to cope with border pixels.
+@note The median filter uses cv.BORDER_REPLICATE internally to cope with border pixels.
 
 Try it
 ------
@@ -314,13 +315,13 @@ for blurring while gaussian function of intensity difference make sure only thos
 similar intensity to central pixel is considered for blurring. So it preserves the edges since
 pixels at edges will have large intensity variation.
 
-We use the function: **cv.bilateralFilter(src, dst, d, sigmaColor, sigmaSpace, borderType)** 
+We use the function: **cv.bilateralFilter (src, dst, d, sigmaColor, sigmaSpace, borderType = cv.BORDER_DEFAULT)** 
 @param src          source 8-bit or floating-point, 1-channel or 3-channel image.
 @param dst          output image of the same size and type as src.
 @param d            diameter of each pixel neighborhood that is used during filtering. If it is non-positive, it is computed from sigmaSpace.
-@param sigmaColor   filter sigma in the color space. A larger value of the parameter means that farther colors within the pixel neighborhood (see sigmaSpace) will be mixed together, resulting in larger areas of semi-equal color.
-@param sigmaSpace   filter sigma in the coordinate space. A larger value of the parameter means that farther pixels will influence each other as long as their colors are close enough (see sigmaColor ). When d>0, it specifies the neighborhood size regardless of sigmaSpace. Otherwise, d is proportional to sigmaSpace.
-@param borderType   border mode used to extrapolate pixels outside of the image.
+@param sigmaColor   filter sigma in the color space. A larger value of the parameter means that farther colors within the pixel neighborhood will be mixed together, resulting in larger areas of semi-equal color.
+@param sigmaSpace   filter sigma in the coordinate space. A larger value of the parameter means that farther pixels will influence each other as long as their colors are close enough. When d>0, it specifies the neighborhood size regardless of sigmaSpace. Otherwise, d is proportional to sigmaSpace.
+@param borderType   border mode used to extrapolate pixels outside of the image(see cv.BorderTypes).
 
 @note For simplicity, you can set the 2 sigma values to be the same. If they are small (< 10), the filter will not have much effect, whereas if they are large (> 150), they will have a very strong effect, making the image look "cartoonish". Large filters (d > 5) are very slow, so it is recommended to use d=5 for real-time applications, and perhaps d=9 for offline applications that need heavy noise filtering.
 
@@ -346,9 +347,9 @@ canvas {
 <textarea rows="9" cols="80" id="bilateralFilterTestCode" spellcheck="false">
 var src = cv.imread("bilateralFilterCanvasInput");
 var dst = new cv.Mat();
-cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGBA2RGB.value, 0);
+cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
 // You can try more different conversion
-cv.bilateralFilter(src, dst, 9, 75, 75, cv.BorderTypes.BORDER_DEFAULT.value);
+cv.bilateralFilter(src, dst, 9, 75, 75, cv.BORDER_DEFAULT);
 cv.imshow("bilateralFilterCanvasOutput", dst);
 src.delete();
 dst.delete();
@@ -375,13 +376,18 @@ function bilateralFilterHandleFiles(e) {
     loadImageToCanvas(bilateralFilterUrl, "bilateralFilterCanvasInput");
 }
 
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     document.getElementById("filter2DTryIt").disabled = false;
     document.getElementById("blurTryIt").disabled = false;
     document.getElementById("GaussianBlurTryIt").disabled = false;
     document.getElementById("medianBlurTryIt").disabled = false;
     document.getElementById("bilateralFilterTryIt").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly

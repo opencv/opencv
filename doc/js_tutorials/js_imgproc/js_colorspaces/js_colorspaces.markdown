@@ -14,13 +14,13 @@ cvtColor
 There are more than 150 color-space conversion methods available in OpenCV. But we will look into
 the most widely used one: BGR \f$\leftrightarrow\f$ Gray.
 
-We use the function: **cv.cvtColor(src, dst, code, dstCn)**
+We use the function: **cv.cvtColor (src, dst, code, dstCn = 0)**
 @param src    input image.
-@param dst    output image.
-@param code   color space conversion code.
+@param dst    output image of the same size and depth as src
+@param code   color space conversion code(see **cv.ColorConversionCodes**).
 @param dstCn  number of channels in the destination image; if the parameter is 0, the number of the channels is derived automatically from src and code.
 
-For BGR \f$\rightarrow\f$ Gray conversion we use the codes cv.ColorConversionCodes.COLOR_RGBA2GRAY.value.
+For BGR \f$\rightarrow\f$ Gray conversion we use the code cv.COLOR_RGBA2GRAY.
 
 Try it
 ------
@@ -45,7 +45,7 @@ canvas {
 var src = cv.imread("cvtColorCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
-cv.cvtColor(src, dst, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
+cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
 cv.imshow("cvtColorCanvasOutput", dst);
 src.delete();
 dst.delete();
@@ -73,7 +73,6 @@ function cvtColorHandleFiles(e) {
     var cvtColorUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(cvtColorUrl, "cvtColorCanvasInput");
 }
-
 </script>
 </body>
 \endhtmlonly
@@ -83,11 +82,11 @@ inRange
 
 Checks if array elements lie between the elements of two other arrays.
 
-We use the function: **cv.inRange(src, lowerb, upperb, dst)**
+We use the function: **cv.inRange (src, lowerb, upperb, dst)**
 @param src     first input image.
 @param lowerb  inclusive lower boundary Mat of the same size as src. 
 @param upperb  inclusive upper boundary Mat of the same size as src. 
-@param dst     output image of the same size as src and CV_8U type.
+@param dst     output image of the same size as src and cv.CV_8U type.
 
 Try it
 ------
@@ -111,13 +110,12 @@ canvas {
 <textarea rows="12" cols="80" id="inRangeTestCode" spellcheck="false">
 var src = cv.imread("inRangeCanvasInput");
 var dst = new cv.Mat();
-var lowScalar = new cv.Scalar(0,0,0,0);
-var highScalar = new cv.Scalar(200,150,200,255);
+var lowScalar = new cv.Scalar(0, 0, 0, 0);
+var highScalar = new cv.Scalar(150, 150, 150, 255);
 var low = new cv.Mat(src.cols , src.rows, src.type(), lowScalar);
 var high = new cv.Mat(src.cols , src.rows, src.type(), highScalar);
 // You can try more different conversion
 cv.inRange(src, low, high, dst);
-cv.cvtColor(dst, dst, cv.ColorConversionCodes.COLOR_GRAY2RGBA.value, 0);
 cv.imshow("inRangeCanvasOutput", dst);
 src.delete(); dst.delete(); low.delete(); high.delete(); lowScalar.delete(); highScalar.delete();
 </textarea>
@@ -142,11 +140,15 @@ function inRangeHandleFiles(e) {
     var inRangeUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(inRangeUrl, "inRangeCanvasInput");
 }
-
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     document.getElementById("inRangeTryIt").disabled = false;
     document.getElementById("cvtColorTryIt").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly

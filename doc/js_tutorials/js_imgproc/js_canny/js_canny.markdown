@@ -72,7 +72,7 @@ So what we finally get is strong edges in the image.
 Canny Edge Detection in OpenCV
 ------------------------------
 
-We use the function: **cv.Canny(image, edges, threshold1, threshold2, apertureSize, L2gradient)** 
+We use the function: **cv.Canny(image, edges, threshold1, threshold2, apertureSize = 3, L2gradient = false)** 
 @param image         8-bit input image.
 @param edges         output edge map; single channels 8-bit image, which has the same size as image.
 @param threshold1    first threshold for the hysteresis procedure.
@@ -103,7 +103,7 @@ canvas {
 <textarea rows="8" cols="80" id="CannyTestCode" spellcheck="false">
 var src = cv.imread("CannyCanvasInput");
 var dst = new cv.Mat();
-cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGB2GRAY.value, 0);
+cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different conversion
 cv.Canny(src, dst, 150, 100, 3, false);
 cv.imshow("CannyCanvasOutput", dst);
@@ -132,9 +132,14 @@ function CannyHandleFiles(e) {
     var CannyUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(CannyUrl, "CannyCanvasInput");
 }
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     document.getElementById("CannyTryIt").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly

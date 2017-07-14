@@ -14,28 +14,24 @@ Simple Thresholding
 Here, the matter is straight forward. If pixel value is greater than a threshold value, it is
 assigned one value (may be white), else it is assigned another value (may be black). 
 
-We use the function: **cv.threshold(src, dst, thresh, maxval, type)**
+We use the function: **cv.threshold (src, dst, thresh, maxval, type)**
 @param src    input array.
 @param dst    output array of the same size and type and the same number of channels as src. 
 @param thresh threshold value.
-@param maxval maximum value to use with the THRESH_BINARY and THRESH_BINARY_INV thresholding types. 
-@param type   thresholding type
+@param maxval maximum value to use with the cv.THRESH_BINARY and cv.THRESH_BINARY_INV thresholding types. 
+@param type   thresholding type(see cv.ThresholdTypes).
 
-**Warning:** 
-
-Input image should be single channel only in case of cv.ThresholdTypes.THRESH_OTSU.value or cv.ThresholdTypes.THRESH_TRIANGLE.value flags
-
-OpenCV provides different styles of thresholding and it is decided
+**thresholding type** - OpenCV provides different styles of thresholding and it is decided
 by the fourth parameter of the function. Different types are:
 
--   cv.ThresholdTypes.THRESH_BINARY.value
--   cv.ThresholdTypes.THRESH_BINARY_INV.value
--   cv.ThresholdTypes.THRESH_TRUNC.value
--   cv.ThresholdTypes.THRESH_TOZERO.value
--   cv.ThresholdTypes.THRESH_OTSU.value
--   cv.ThresholdTypes.THRESH_TRIANGLE.value
+-   cv.THRESH_BINARY
+-   cv.THRESH_BINARY_INV
+-   cv.THRESH_TRUNC
+-   cv.THRESH_TOZERO
+-   cv.THRESH_OTSU
+-   cv.THRESH_TRIANGLE
 
-Documentation clearly explain what each type is meant for. Please check out the documentation.
+@note Input image should be single channel only in case of cv.THRESH_OTSU or cv.THRESH_TRIANGLE flags
 
 Try it
 ------
@@ -60,7 +56,7 @@ canvas {
 var src = cv.imread("thresholdCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
-cv.threshold(src, dst, 177, 200, cv.ThresholdTypes.THRESH_BINARY.value)
+cv.threshold(src, dst, 177, 200, cv.THRESH_BINARY)
 cv.imshow("thresholdCanvasOutput", dst);
 src.delete();
 dst.delete();
@@ -101,19 +97,18 @@ for adaptive thresholding. In this, the algorithm calculate the threshold for a 
 image. So we get different thresholds for different regions of the same image and it gives us better
 results for images with varying illumination.
 
-We use the function: **cv.adaptiveThreshold(src, dst, maxValue, adaptiveMethod, thresholdType, blockSize, C)**
+We use the function: **cv.adaptiveThreshold (src, dst, maxValue, adaptiveMethod, thresholdType, blockSize, C)**
 @param src             source 8-bit single-channel image.
 @param dst             dstination image of the same size and the same type as src. 
-@param maxValue Non-zero value assigned to the pixels for which the condition is satisfied
+@param maxValue        non-zero value assigned to the pixels for which the condition is satisfied
 @param adaptiveMethod  adaptive thresholding algorithm to use.
-@param thresholdType   thresholding type that must be either THRESH_BINARY or THRESH_BINARY_INV.
+@param thresholdType   thresholding type that must be either cv.THRESH_BINARY or cv.THRESH_BINARY_INV.
 @param blockSize       size of a pixel neighborhood that is used to calculate a threshold value for the pixel: 3, 5, 7, and so on.
 @param C               constant subtracted from the mean or weighted mean (see the details below). Normally, it is positive but may be zero or negative as well.
 
-**adaptiveMethod** - It decides how thresholding value is calculated.
-    -   cv.AdaptiveThresholdTypes.ADAPTIVE_THRESH_MEAN_C.value : threshold value is the mean of neighbourhood area.
-    -   cv.AdaptiveThresholdTypes.ADAPTIVE_THRESH_GAUSSIAN_C.value : threshold value is the weighted sum of neighbourhood
-        values where weights are a gaussian window.
+**adaptiveMethod** - It decides how thresholding value is calculated:
+    -   cv.ADAPTIVE_THRESH_MEAN_C 
+    -   cv.ADAPTIVE_THRESH_GAUSSIAN_C 
 
 Try it
 ------
@@ -134,12 +129,12 @@ canvas {
 <div id="adaptiveThresholdCodeArea">
 <h2>Input your code</h2>
 <button id="adaptiveThresholdTryIt" disabled="true" onclick="adaptiveThresholdExecuteCode()">Try it</button><br>
-<textarea rows="11" cols="80" id="adaptiveThresholdTestCode" spellcheck="false">
+<textarea rows="9" cols="80" id="adaptiveThresholdTestCode" spellcheck="false">
 var src = cv.imread("adaptiveThresholdCanvasInput");
 var dst = new cv.Mat();
-cv.cvtColor(src, src, cv.ColorConversionCodes.COLOR_RGBA2GRAY.value, 0);
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 // You can try more different conversion
-cv.adaptiveThreshold(src, dst, 200, cv.AdaptiveThresholdTypes.ADAPTIVE_THRESH_GAUSSIAN_C.value, cv.ThresholdTypes.THRESH_BINARY.value, 3, 2)
+cv.adaptiveThreshold(src, dst, 200, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 3, 2)
 cv.imshow("adaptiveThresholdCanvasOutput", dst);
 src.delete();
 dst.delete();
@@ -165,11 +160,15 @@ function adaptiveThresholdHandleFiles(e) {
     var adaptiveThresholdUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(adaptiveThresholdUrl, "adaptiveThresholdCanvasInput");
 }
-
-document.getElementById("opencvjs").onload = function() {
+function onReady() {
     document.getElementById("thresholdTryIt").disabled = false;
     document.getElementById("adaptiveThresholdTryIt").disabled = false;
-};
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly
