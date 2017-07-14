@@ -53,12 +53,9 @@
 #include <cstring>
 #include <cctype>
 
-#ifndef OPENCV_NOSTL
-#  include <string>
-#endif
+#include <string>
 
 // import useful primitives from stl
-#ifndef OPENCV_NOSTL_TRANSITIONAL
 #  include <algorithm>
 #  include <utility>
 #  include <cstdlib> //for abs(int)
@@ -80,21 +77,6 @@ namespace cv
     using std::pow;
     using std::log;
 }
-
-#else
-namespace cv
-{
-    template<typename T> static inline T min(T a, T b) { return a < b ? a : b; }
-    template<typename T> static inline T max(T a, T b) { return a > b ? a : b; }
-    template<typename T> static inline T abs(T a) { return a < 0 ? -a : a; }
-    template<typename T> static inline void swap(T& a, T& b) { T tmp = a; a = b; b = tmp; }
-
-    template<> inline uchar abs(uchar a) { return a; }
-    template<> inline ushort abs(ushort a) { return a; }
-    template<> inline unsigned abs(unsigned a) { return a; }
-    template<> inline uint64 abs(uint64 a) { return a; }
-}
-#endif
 
 namespace cv {
 
@@ -555,7 +537,6 @@ public:
 
     String toLowerCase() const;
 
-#ifndef OPENCV_NOSTL
     String(const std::string& str);
     String(const std::string& str, size_t pos, size_t len = npos);
     String& operator=(const std::string& str);
@@ -564,7 +545,6 @@ public:
 
     friend String operator+ (const String& lhs, const std::string& rhs);
     friend String operator+ (const std::string& lhs, const String& rhs);
-#endif
 
 private:
     char*  cstr_;
@@ -1049,21 +1029,10 @@ static inline bool operator>= (const String& lhs, const char*   rhs) { return lh
 
 } // cv
 
-#ifndef OPENCV_NOSTL_TRANSITIONAL
 namespace std
 {
     static inline void swap(cv::String& a, cv::String& b) { a.swap(b); }
 }
-#else
-namespace cv
-{
-    template<> inline
-    void swap<cv::String>(cv::String& a, cv::String& b)
-    {
-        a.swap(b);
-    }
-}
-#endif
 
 #include "opencv2/core/ptr.inl.hpp"
 
