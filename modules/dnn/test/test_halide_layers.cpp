@@ -517,7 +517,8 @@ TEST_P(Concat, Accuracy)
 
     Net net;
 
-    std::vector<int> convLayerIds(numChannels.channels);
+    std::vector<int> convLayerIds;
+    convLayerIds.reserve(numChannels.channels);
     for (int i = 0, n = numChannels.channels; i < n; ++i)
     {
         if (!numChannels[i])
@@ -537,8 +538,9 @@ TEST_P(Concat, Accuracy)
         convParam.name = ss.str();
         convParam.blobs.push_back(weights);
 
-        convLayerIds[i] = net.addLayer(convParam.name, convParam.type, convParam);
-        net.connect(0, 0, convLayerIds[i], 0);
+        int layerId = net.addLayer(convParam.name, convParam.type, convParam);
+        convLayerIds.push_back(layerId);
+        net.connect(0, 0, layerId, 0);
     }
 
     LayerParams concatParam;
