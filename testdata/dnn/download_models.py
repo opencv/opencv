@@ -112,6 +112,16 @@ models = [
         url='https://www.dropbox.com/s/8apyk3uzk2vl522/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel?dl=1',
         sha='0fc294d5257f3e0c8a3c5acaa1b1f6a9b0b6ade0',
         filename='VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel'),
+    Model(
+        name='ResNet50',
+        url='https://iuxblw-bn1305.files.1drv.com/y4mdD1Zsd2g6sxdBl0nTAM2BszUAVuG1hAOjUqpXJRlwx_8LgjIPC_iUXuVppWEy_d0rD7BOtD0fW0LfGjqryaWz-p8kirErK7JO-2rtlL0OgE0mtR5zkQAU6hPihpfg-PzjSLUXO_gkD83571slXCMtmjRp1-NlUDkL2zVlusFSeGZiyTiETcD4_r4RanMqVRkJJ6n9JJdgOnbOLi3G8tn9A/ResNet-50-model.caffemodel?download&psid=1',
+        sha='b7c79ccc21ad0479cddc0dd78b1d20c4d722908d',
+        filename='ResNet-50-model.caffemodel'),
+    Model(
+        name='SqueezeNet_v1.1',
+        url='https://raw.githubusercontent.com/DeepScale/SqueezeNet/b5c3f1a23713c8b3fd7b801d229f6b04c64374a5/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel',
+        sha='3397f026368a45ae236403ccc81cfcbe8ebe1bd0',
+        filename='squeezenet_v1.1.caffemodel')
 ]
 
 # Note: models will be downloaded to current working directory
