@@ -191,6 +191,27 @@ QUnit.test("test_shape", function(assert) {
   }
 });
 
+QUnit.test("test_rotated_rect", function(assert) {
+  {
+    let rect = new cv.RotatedRect([100, 100], [100, 50], 30);
+    let points = new cv.Point2fVector();
+
+    assert.equal(rect.center[0], 100);
+    assert.equal(rect.center[1], 100);
+    assert.equal(rect.angle, 30);
+    assert.equal(rect.size[0], 100);
+    assert.equal(rect.size[1], 50);
+
+    rect.points(points);
+
+    assert.equal(points.get(0)[0], rect.boundingRect2f().x);
+    assert.equal(points.get(1)[1], rect.boundingRect2f().y);
+
+    rect.delete();
+    points.delete();
+  }
+});
+
 QUnit.test("test_filter", function(assert) {
   // C++
   //   void blur(InputArray, OutputArray, Size ksize, Point, int);

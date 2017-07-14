@@ -143,6 +143,10 @@ namespace Utils{
         return  Mat(obj.inv(type));
     }
 
+    void rotatedRectPoints(const cv::RotatedRect& obj, std::vector<cv::Point2f>& points) {
+        points.resize(4);
+        return obj.points(points.data());
+    }
 }
 
 EMSCRIPTEN_BINDINGS(Utils) {
@@ -251,28 +255,45 @@ EMSCRIPTEN_BINDINGS(Utils) {
 
     emscripten::class_<cv::RNG> ("RNG");
 
-    value_array<Size>("Size")
-        .element(&Size::height)
-        .element(&Size::width);
+#define EMSCRIPTEN_CV_SIZE(type) \
+    value_array<type>("#type") \
+        .element(&type::height) \
+        .element(&type::width);
 
+    EMSCRIPTEN_CV_SIZE(Size)
+    EMSCRIPTEN_CV_SIZE(Size2f)
 
-    value_array<Point>("Point")
-        .element(&Point::x)
-        .element(&Point::y);
+#define EMSCRIPTEN_CV_POINT(type) \
+    value_array<type>("#type") \
+        .element(&type::x) \
+        .element(&type::y); \
 
-    value_array<Point2f>("Point2f")
-        .element(&Point2f::x)
-        .element(&Point2f::y);
+    EMSCRIPTEN_CV_POINT(Point)
+    EMSCRIPTEN_CV_POINT(Point2f)
 
-    emscripten::class_<cv::Rect_<int>> ("Rect")
+#define EMSCRIPTEN_CV_RECT(type, name) \
+    emscripten::class_<cv::Rect_<type>> (name) \
+        .constructor<>() \
+        .constructor<const cv::Point_<type>&, const cv::Size_<type>&>() \
+        .constructor<type, type, type, type>() \
+        .constructor<const cv::Rect_<type>&>() \
+        .property("x", &cv::Rect_<type>::x) \
+        .property("y", &cv::Rect_<type>::y) \
+        .property("width", &cv::Rect_<type>::width) \
+        .property("height", &cv::Rect_<type>::height);
+
+    EMSCRIPTEN_CV_RECT(int, "Rect")
+    EMSCRIPTEN_CV_RECT(float, "Rect2f")
+
+    emscripten::class_<cv::RotatedRect>("RotatedRect")
         .constructor<>()
-        .constructor<const cv::Point_<int>&, const cv::Size_<int>&>()
-        .constructor<int, int, int, int>()
-        .constructor<const cv::Rect_<int>&>()
-        .property("x", &cv::Rect_<int>::x)
-        .property("y", &cv::Rect_<int>::y)
-        .property("width", &cv::Rect_<int>::width)
-        .property("height", &cv::Rect_<int>::height);
+        .constructor<const Point2f&, const Size2f&, float>()
+        .property("center", &cv::RotatedRect::center)
+        .property("size", &cv::RotatedRect::size)
+        .property("angle", &cv::RotatedRect::angle)
+        .function("points", select_overload<void(const cv::RotatedRect&, std::vector<Point2f>&)>(&Utils::rotatedRectPoints))
+        .function("boundingRect", select_overload<Rect()const>(&cv::RotatedRect::boundingRect))
+        .function("boundingRect2f", select_overload<Rect2f()const>(&cv::RotatedRect::boundingRect2f));
 
     emscripten::class_<cv::Scalar_<double>> ("Scalar")
         .constructor<>()
