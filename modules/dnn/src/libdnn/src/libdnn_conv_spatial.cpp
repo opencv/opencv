@@ -94,7 +94,7 @@ LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
     }
 
     if (hasCacheDir != true) {
-        std::cout << "Failed to create cache directory,"
+        std::cout << "Failed to create cache directory, "
                   << "will tune again for next running" << std::endl;
         return;
     }
@@ -2532,8 +2532,11 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
         dbgPrint(std::cout << "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
                  "> passed verification" << std::endl);
     } else {
-        dbgPrint(std::cout << "Verification was not successful, " <<
-                 "fallback to basic kernel" << std::endl);
+        if (auto_tuning)
+            dbgPrint(std::cout << "Verification was not successful, " <<
+                     "fallback to basic kernel" << std::endl);
+        else
+            dbgPrint(std::cout << "Auto-tuning disabled, fallback to basic kernel" << std::endl);
         create_basic_kernel(bottom, top, 1, 1, 1);
         kernel_index_ = kernelQueue.size() - 1;
         verification = verify_result(bottom, top, bottom_index_, num_,
