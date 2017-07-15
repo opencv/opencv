@@ -625,9 +625,9 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     encoder->setDestination( filename );
     bool code;
     if (!isMultiImg)
-        code = encoder->write( *pimage, params );
+        code = encoder->write( write_vec[0], params );
     else
-        code = false; //to be implemented
+        code = encoder->writemulti( write_vec, params ); //to be implemented
 
     //    CV_Assert( code );
     return code;

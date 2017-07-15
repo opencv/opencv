@@ -899,6 +899,50 @@ TEST(Imgcodecs_Tiff, decode_multipage)
     CV_GrfmtReadTifMultiPage test; test.safe_run();
 }
 
+class CV_GrfmtWriteTifMultiPage : public cvtest::BaseTest
+{
+private:
+    void compare()
+    {
+        const int page_count = 6;
+        const string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
+
+        vector<Mat> pages;
+        Mat img;
+
+        for (int i = 0; i < page_count; i++)
+        {
+            char buffer[256];
+            sprintf(buffer, "%smultipage_p%d.tif", folder.c_str(), i + 1);
+            img = imread(buffer);
+            pages.push_back(img);
+        }
+
+        string output = cv::tempfile(".tif");
+        imwrite(output, pages);
+
+        vector<Mat> read_pages;
+        imreadmulti(output, read_pages);
+
+        bool compare = true;
+        for (int i = 0; i < page_count; i++)
+        {
+            compare &= mats_equal(pages[i], read_pages[i]);
+        }
+        ASSERT_TRUE(compare);
+    }
+public:
+    void run(int)
+    {
+        compare();
+    }
+};
+
+TEST(Imgcodecs_Tiff, write_multipage)
+{
+    CV_GrfmtWriteTifMultiPage test; test.safe_run();
+}
+
 TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
