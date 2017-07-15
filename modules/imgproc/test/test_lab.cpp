@@ -239,8 +239,8 @@ static ushort LabCbrtTab_b[LAB_CBRT_TAB_SIZE_B];
 
 static bool enableBitExactness = true;
 static bool enableRGB2LabInterpolation = true;
-static bool enableLuvInterpolation = false;
 static bool enablePackedLab = true;
+//these params are used also for Luv
 enum
 {
     lab_lut_shift = 5,
@@ -248,9 +248,7 @@ enum
     lab_base_shift = 14,
     LAB_BASE = (1 << lab_base_shift),
     trilinear_shift = 8 - lab_lut_shift + 1,
-    TRILINEAR_BASE = (1 << trilinear_shift),
-    luv_lut_shift = 5,
-    LUV_LUT_DIM = (1 << luv_lut_shift)+1
+    TRILINEAR_BASE = (1 << trilinear_shift)
 };
 static int16_t RGB2LabLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
@@ -258,6 +256,8 @@ static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;
 static int abToXZ_b[LAB_BASE*9/4];
 //TODO: multiply it by 8 later
+static bool enableRGB2LuvInterpolation = false;
+static bool enableLuv2RGBInterpolation = false;
 static int16_t RGB2LuvLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
 static int16_t XYZ2LuvLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
 static int16_t Luv2RGBLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
@@ -267,38 +267,6 @@ static const softfloat vLow(-140), vHigh(122), vRange(uHigh-uLow);
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
-
-//TODO: remove
-/// to compare with SF-version
-
-static float LabCbrtTab_gold[LAB_CBRT_TAB_SIZE*4];
-
-static float sRGBGammaTab_gold[GAMMA_TAB_SIZE*4], sRGBInvGammaTab_gold[GAMMA_TAB_SIZE*4];
-
-static ushort sRGBGammaTab_b_gold[256], linearGammaTab_b_gold[256];
-
-static ushort sRGBInvGammaTab_b_gold[INV_GAMMA_TAB_SIZE], linearInvGammaTab_b_gold[INV_GAMMA_TAB_SIZE];
-static ushort LabCbrtTab_b_gold[LAB_CBRT_TAB_SIZE_B];
-
-template<typename T> inline void compareAndPrint(T a, T b, int i, string s)
-{
-    if(false && a != b) //disabled
-    {
-        cout << s << " at i = " << i << " a = " << a << " b = " << b << " (a-b) = " << (a - b) << endl;
-    }
-}
-
-static inline float applyGamma_gold(float x)
-{
-    return x <= 0.04045f ? x*(1.f/12.92f) : (float)std::pow((double)(x + 0.055)*(1./1.055), 2.4);
-}
-
-static inline float applyInvGamma_gold(float x)
-{
-    return x <= 0.0031308 ? x*12.92f : (float)(1.055*std::pow((double)x, 1./2.4) - 0.055);
-}
-
-// TODO: up to this
 
 //all constants should be presented through integers to keep bit-exactness
 static const softdouble gammaThreshold    = softdouble(809)/softdouble(20000);    //  0.04045
@@ -345,24 +313,6 @@ static void initLabTabs()
         }
         splineBuild(f, LAB_CBRT_TAB_SIZE, LabCbrtTab);
 
-        //TODO: remove
-        float f_gold[LAB_CBRT_TAB_SIZE+1], g_gold[GAMMA_TAB_SIZE+1], ig_gold[GAMMA_TAB_SIZE+1], scale_gold = 1.f/LabCbrtTabScale;
-        for(i = 0; i <= LAB_CBRT_TAB_SIZE; i++)
-        {
-            float x = i*scale_gold;
-            f_gold[i] = x < 0.008856f ? x*7.787f + 0.13793103448275862f : cvCbrt(x);
-
-            compareAndPrint(softfloat(x), (scale*softfloat(i)), i, "LabCbrtTab x");
-            compareAndPrint(softfloat(f_gold[i]), f[i], i, "LabCbrtTab f");
-        }
-        splineBuild(f_gold, LAB_CBRT_TAB_SIZE, LabCbrtTab_gold);
-
-        for(i = 0; i < LAB_CBRT_TAB_SIZE*4; i++)
-        {
-            compareAndPrint(LabCbrtTab_gold[i], LabCbrtTab[i], i, "LabCbrtTab tab");
-        }
-        //TODO: up to this
-
         scale = softfloat::one()/softfloat(GammaTabScale);
         for(i = 0; i <= GAMMA_TAB_SIZE; i++)
         {
@@ -372,27 +322,6 @@ static void initLabTabs()
         }
         splineBuild(g, GAMMA_TAB_SIZE, sRGBGammaTab);
         splineBuild(ig, GAMMA_TAB_SIZE, sRGBInvGammaTab);
-
-        //TODO: remove
-        scale_gold = 1.f/GammaTabScale;
-        for(i = 0; i <= GAMMA_TAB_SIZE; i++)
-        {
-            float x = i*scale_gold;
-            g_gold[i] = applyGamma_gold(x);
-            ig_gold[i] = applyInvGamma_gold(x);
-
-            compareAndPrint(softfloat(g_gold[i]), g[i], i, "sRGBGammaTab g");
-            compareAndPrint(softfloat(ig_gold[i]), ig[i], i, "sRGBInvGammaTab ig");
-        }
-        splineBuild(g_gold, GAMMA_TAB_SIZE, sRGBGammaTab_gold);
-        splineBuild(ig_gold, GAMMA_TAB_SIZE, sRGBInvGammaTab_gold);
-
-        for(i = 0; i < GAMMA_TAB_SIZE*4; i++)
-        {
-            compareAndPrint( sRGBGammaTab_gold[i], sRGBGammaTab[i], i, "sRGBGammaTab tab" );
-            compareAndPrint( sRGBInvGammaTab_gold[i], sRGBInvGammaTab[i], i, "sRGBInvGammaTab tab" );
-        }
-        //TODO: up to this
 
         static const softfloat intScale(255*(1 << gamma_shift));
         for(i = 0; i < 256; i++)
@@ -409,28 +338,6 @@ static void initLabTabs()
             linearInvGammaTab_b[i] = (ushort)(cvTrunc(f255*x));
         }
 
-        //TODO: remove
-        for(i = 0; i < 256; i++)
-        {
-            float x = i*(1.f/255.f);
-            sRGBGammaTab_b_gold[i] = saturate_cast<ushort>(255.f*(1 << gamma_shift)*applyGamma_gold(x));
-            linearGammaTab_b_gold[i] = (ushort)(i*(1 << gamma_shift));
-
-            compareAndPrint( sRGBGammaTab_b_gold[i], sRGBGammaTab_b[i], i, "sRGBGammaTab_b tab");
-            compareAndPrint( linearGammaTab_b_gold[i], linearGammaTab_b[i], i, "linearGammaTab_b tab");
-        }
-        float invScale_gold = 1.f/INV_GAMMA_TAB_SIZE;
-        for(i = 0; i < INV_GAMMA_TAB_SIZE; i++)
-        {
-            float x = i*invScale_gold;
-            sRGBInvGammaTab_b_gold[i] = saturate_cast<ushort>(255.f*applyInvGamma_gold(x));
-            linearInvGammaTab_b_gold[i] = (ushort)(255.f*x);
-
-            compareAndPrint( sRGBInvGammaTab_b_gold[i], sRGBInvGammaTab_b[i], i, "sRGBInvGammaTab_b tab" );
-            compareAndPrint( linearInvGammaTab_b_gold[i], linearInvGammaTab_b[i], i, "linearInvGammaTab_b tab" );
-        }
-        //TODO: up to this
-
         static const softfloat cbTabScale(softfloat::one()/(f255*(1 << gamma_shift)));
         static const softfloat lshift2(1 << lab_shift2);
         for(i = 0; i < LAB_CBRT_TAB_SIZE_B; i++)
@@ -438,16 +345,6 @@ static void initLabTabs()
             softfloat x = cbTabScale*softfloat(i);
             LabCbrtTab_b[i] = (ushort)(cvRound(lshift2 * (x < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x))));
         }
-
-        //TODO: remove
-        for(i = 0; i < LAB_CBRT_TAB_SIZE_B; i++)
-        {
-            float x = i*(1.f/(255.f*(1 << gamma_shift)));
-            LabCbrtTab_b_gold[i] = saturate_cast<ushort>((1 << lab_shift2)*(x < 0.008856f ? x*7.787f + 0.13793103448275862f : cvCbrt(x)));
-
-            compareAndPrint(LabCbrtTab_b_gold[i], LabCbrtTab_b[i], i, "LabCbrtTab_b tab" );
-        }
-        //TODO: up to this
 
         //Lookup table for L to y and ify calculations
         static const int BASE = (1 << 14);
@@ -518,28 +415,6 @@ static void initLabTabs()
                       D3 = coeffs[3], D4 = coeffs[4], D5 = coeffs[5],
                       D6 = coeffs[6], D7 = coeffs[7], D8 = coeffs[8];
 
-            //TODO: remove
-            static const float _a = 16.0f / 116.0f;
-            float coeffs_gold[9];
-
-            //RGB2Lab coeffs
-            float scaleWhite_gold[] = { 1.0f / _whitept[0], 1.0f, 1.0f / _whitept[2] };
-
-            for(i = 0; i < 3; i++ )
-            {
-                int j = i * 3;
-                coeffs_gold[j + 2] = sRGB2XYZ_D65[j]     * scaleWhite_gold[i];
-                coeffs_gold[j + 1] = sRGB2XYZ_D65[j + 1] * scaleWhite_gold[i];
-                coeffs_gold[j + 0] = sRGB2XYZ_D65[j + 2] * scaleWhite_gold[i];
-
-            }
-
-            for(i = 0; i < 9; i++)
-            {
-                compareAndPrint( softfloat(coeffs_gold[i]), coeffs[i], i, "interp coeffs");
-            }
-            //TODO: up to this
-
             //903.3f = (29/3)^3
             static const softfloat lld(LAB_LUT_DIM - 1), f116(116), f16(16), f500(500), f200(200);
             static const softfloat f100(100), f128(128), f256(256), lbase((int)LAB_BASE);
@@ -576,34 +451,6 @@ static void initLabTabs()
                         RGB2Labprev[idx]   = (int16_t)(cvRound(lbase*L/f100));
                         RGB2Labprev[idx+1] = (int16_t)(cvRound(lbase*(a + f128)/f256));
                         RGB2Labprev[idx+2] = (int16_t)(cvRound(lbase*(b + f128)/f256));
-
-                        //TODO: remove
-                        //RGB 2 Lab LUT building
-                        float R_gold = 1.0f*p/(LAB_LUT_DIM-1);
-                        float G_gold = 1.0f*q/(LAB_LUT_DIM-1);
-                        float B_gold = 1.0f*r/(LAB_LUT_DIM-1);
-
-                        R_gold = applyGamma_gold(R_gold);
-                        G_gold = applyGamma_gold(G_gold);
-                        B_gold = applyGamma_gold(B_gold);
-
-                        float X_gold = R_gold*coeffs_gold[0] + G_gold*coeffs_gold[1] + B_gold*coeffs_gold[2];
-                        float Y_gold = R_gold*coeffs_gold[3] + G_gold*coeffs_gold[4] + B_gold*coeffs_gold[5];
-                        float Z_gold = R_gold*coeffs_gold[6] + G_gold*coeffs_gold[7] + B_gold*coeffs_gold[8];
-
-                        float FX_gold = X_gold > 0.008856f ? std::pow(X_gold, _1_3f) : (7.787f * X_gold + _a);
-                        float FY_gold = Y_gold > 0.008856f ? std::pow(Y_gold, _1_3f) : (7.787f * Y_gold + _a);
-                        float FZ_gold = Z_gold > 0.008856f ? std::pow(Z_gold, _1_3f) : (7.787f * Z_gold + _a);
-
-                        float L_gold = Y_gold > 0.008856f ? (116.f * FY_gold - 16.f) : (903.3f * Y_gold);
-                        float a_gold = 500.f * (FX_gold - FY_gold);
-                        float b_gold = 200.f * (FY_gold - FZ_gold);
-
-                        compareAndPrint( RGB2Labprev[idx  ], (int16_t)cvRound(LAB_BASE*L_gold/100.0f), idx, "RGB2Labprev L" );
-                        compareAndPrint( RGB2Labprev[idx+1], (int16_t)cvRound(LAB_BASE*(a_gold+128.0f)/256.0f), idx, "RGB2Labprev a" );
-                        compareAndPrint( RGB2Labprev[idx+2], (int16_t)cvRound(LAB_BASE*(b_gold+128.0f)/256.0f), idx, "RGB2Labprev b" );
-
-                        //TODO: up to this
                     }
                 }
             }
@@ -2318,8 +2165,6 @@ struct RGB2Luvfloat
         volatile int i;
         initLabTabs();
 
-        useBitExactness = enableBitExactness;
-
         useInterpolation = (!_coeffs && !_whitept && srgb && enableLuvInterpolation);
 
         if(!_coeffs) _coeffs = sRGB2XYZ_D65;
@@ -2447,7 +2292,7 @@ struct RGB2Luvfloat
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         n *= 3;
 
-        if(useBitExactness)
+        if(useInterpolation)
         {
             for(; i < n; i += 3, src += scn)
             {
@@ -2477,7 +2322,7 @@ struct RGB2Luvfloat
 
                 dst[i] = L*100.0f;
                 dst[i + 1] = u*(float)uRange+(float)uLow;
-                dst[i + 2] = v*(float)vrange+(float)vLow;
+                dst[i + 2] = v*(float)vRange+(float)vLow;
             }
         }
 
@@ -2647,7 +2492,6 @@ struct RGB2Luvfloat
     #if CV_SSE2
     bool haveSIMD;
     #endif
-    bool useBitExactness;
     bool useInterpolation;
 };
 
@@ -2680,9 +2524,8 @@ struct Luv2RGBfloat
     {
         initLabTabs();
 
-        useBitExactness = enableBitExactness;
-
-        useInterpolation = (!_coeffs && !_whitept && srgb && enableLuvInterpolation);
+        useInterpolation = (!_coeffs && !_whitept && srgb
+                            && enableLuv2RGBInterpolation);
 
         if(!_coeffs) _coeffs = XYZ2sRGB_D65;
         if(!whitept) whitept = D65;
@@ -2799,7 +2642,7 @@ struct Luv2RGBfloat
         float _un = un, _vn = vn;
         n *= 3;
 
-        if(useBitExactness)
+        if(useInterpolation)
         {
             for (; i < n; i += 3, dst += dcn)
             {
@@ -2931,7 +2774,6 @@ struct Luv2RGBfloat
     #if CV_SSE2
     bool haveSIMD;
     #endif
-    bool useBitExactness;
     bool useInterpolation;
 };
 
@@ -2960,16 +2802,36 @@ struct RGB2Luvinteger
 {
     typedef uchar channel_type;
 
+    static const int luv_shift = ;
+
     RGB2Luvinteger( int _srccn, int blueIdx, const float* _coeffs,
                     const float* _whitept, bool _srgb )
-    : srccn(_srccn), cvt(3, blueIdx, _coeffs, _whitept, _srgb)
+    : srccn(_srccn)
     {
-        //TODO: check correctness of this expression
-        useInterpolation = (!_coeffs && !_whitept && _srgb && enableLuvInterpolation);
+        useInterpolation = (!_coeffs && !_whitept && _srgb
+                            && enableRGB2LuvInterpolation);
 
-        #if CV_SSE2
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-        #endif
+        //TODO: remove it somehow
+        if(!useInterpolation)
+            throw std::runtime_error("Not implemented");
+
+        //TODO: rewrite this
+        if(!_coeffs ) _coeffs  = sRGB2XYZ_D65;
+        if(!_whitept) _whitept = D65;
+
+        static const softfloat lshift(1 << lab_shift);
+        for(int i = 0; i < 3; i++)
+        {
+            coeffs[i*3  ] = cvRound(lshift*softfloat(_coeffs[i*3  ]));
+            coeffs[i*3+1] = cvRound(lshift*softfloat(_coeffs[i*3+1]));
+            coeffs[i*3+2] = cvRound(lshift*softfloat(_coeffs[i*3+2]));
+            if(blueIdx == 0)
+                std::swap(coeffs[i*3], coeffs[i*3+2]);
+        }
+
+        //TODO: asserts on coeffs
+
+        tab = _srgb ? sRGBGammaTab_b : linearGammaTab_b;
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -2977,7 +2839,11 @@ struct RGB2Luvinteger
         int i, j, scn = srccn;
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
 
-        if(enableBitExactness)
+        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
+        int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
+        int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        if(useInterpolation)
         {
             //TODO: this
             for(; i < n; i += 3, src += scn)
@@ -3017,10 +2883,9 @@ struct RGB2Luvinteger
     }
 
     int srccn;
-    #if CV_SSE2
-    bool haveSIMD;
-    #endif
     bool useInterpolation;
+    int coeffs[9];
+    ushort* tab;
 };
 
 
@@ -3033,9 +2898,9 @@ struct RGB2Luv_b
     : srccn(_srccn), fcvt(3, blueIdx, _coeffs, _whitept, _srgb)
     {
         //TODO: check correctness of this condition
-        useBitExactness = enableBitExactness;
-
-        useInterpolation = (!_coeffs && !_whitept && _srgb && enableLuvInterpolation);
+        useBitExactness = (!_coeffs && !_whitept && _srgb
+                           && enableBitExactness
+                           && enableRGB2LuvInterpolation);
 
         static const softfloat f255(255);
         #if CV_NEON
@@ -3242,24 +3107,27 @@ struct RGB2Luv_b
     bool haveSIMD;
     #endif
     bool useBitExactness;
-    bool useInterpolation;
 };
 
 
-//TODO: rewrite it completely
 struct Luv2RGBinteger
 {
     typedef uchar channel_type;
 
+    static const int shift = lab_shift+(base_shift-inv_gamma_shift);
+
     Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
                     const float* _whitept, bool _srgb )
-    : dstcn(_dstcn), cvt(3, blueIdx, _coeffs, _whitept, _srgb )
+    : dstcn(_dstcn)
     {
-        useInterpolation = (!_coeffs && !_whitept && _srgb && enableLuvInterpolation);
+        initLabTabs();
 
-        #if CV_SSE2
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-        #endif
+        useInterpolation = (!_coeffs && !_whitept && _srgb
+                            && enableLuv2RGBInterpolation);
+
+        //TODO: remove it somehow
+        if(!useInterpolation)
+            throw std::runtime_error("Not implemented");
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -3267,15 +3135,41 @@ struct Luv2RGBinteger
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
-        //TODO: this
+        i = 0;
+        if(useInterpolation)
+        {
+            for (; i < n*3; i += 3, dst += dcn)
+            {
+                int ro, go, bo;
+                int iL = src[i + 0], iu = src[i + 1], iv = src[i + 2];
 
+                //TODO: maybe 256?
+                iL = iL*LAB_BASE/255;
+                iu = iu*LAB_BASE/255;
+                iv = iv*LAB_BASE/255;
 
+                chooseInterpolate(iL, iu, iv, LUV_TO_RGB, ro, go, bo);
+
+                //TODO: maybe 256?
+                ro = ro*255/LAB_BASE;
+                go = go*255/LAB_BASE;
+                bo = bo*255/LAB_BASE;
+
+                //TODO: blueIdx
+                dst[0] = saturate_cast<uchar>(bo);
+                dst[1] = saturate_cast<uchar>(go);
+                dst[2] = saturate_cast<uchar>(ro);
+                if( dcn == 4 )
+                    dst[3] = alpha;
+            }
+        }
+
+        //TODO: remove useInterpolation and this comment
+        //if no other code required
     }
 
     int dstcn;
-    #if CV_SSE2
-    bool haveSIMD;
-    #endif
+    int blueIdx;
     bool useInterpolation;
 };
 
@@ -3289,9 +3183,9 @@ struct Luv2RGB_b
     : dstcn(_dstcn), fcvt(3, blueIdx, _coeffs, _whitept, _srgb )
     {
         //TODO: check correctness of this condition
-        useBitExactness = enableBitExactness;
-
-        useInterpolation = (!_coeffs && !_whitept && _srgb && enableLuvInterpolation);
+        useBitExactness = (!_coeffs && !_whitept && srgb
+                           && enableBitExactness
+                           && enableLuv2RGBInterpolation);
 
         #if CV_NEON
         static const softfloat f255(255);
@@ -3531,7 +3425,6 @@ struct Luv2RGB_b
     bool haveSIMD;
     #endif
     bool useBitExactness;
-    bool useInterpolation;
 };
 
 /////////////////
