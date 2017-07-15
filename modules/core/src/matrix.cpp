@@ -222,7 +222,7 @@ public:
 };
 namespace
 {
-    MatAllocator* g_matAllocator = NULL;
+    MatAllocator* volatile g_matAllocator = NULL;
 }
 
 
@@ -230,7 +230,11 @@ MatAllocator* Mat::getDefaultAllocator()
 {
     if (g_matAllocator == NULL)
     {
-        g_matAllocator = getStdAllocator();
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (g_matAllocator == NULL)
+        {
+            g_matAllocator = getStdAllocator();
+        }
     }
     return g_matAllocator;
 }
@@ -1125,7 +1129,7 @@ Mat Mat::diag(const Mat& d)
 
 int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) const
 {
-    return (depth() == _depth || _depth <= 0) &&
+    return data && (depth() == _depth || _depth <= 0) &&
         (isContinuous() || !_requireContinuous) &&
         ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
                         (cols == _elemChannels && channels() == 1))) ||
@@ -3126,7 +3130,7 @@ void cv::hconcat(InputArray _src, OutputArray dst)
 
 void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_TRACE_FUNCTION_SKIP_NESTED()
 
     if( nsrc == 0 || !src )
     {
@@ -4380,11 +4384,10 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 {
     CV_INSTRUMENT_REGION_IPP()
 
-    bool        sortRows        = (flags & 1) == CV_SORT_EVERY_ROW;
-    bool        sortDescending  = (flags & CV_SORT_DESCENDING) != 0;
+    bool        sortRows        = (flags & 1) == SORT_EVERY_ROW;
+    bool        sortDescending  = (flags & SORT_DESCENDING) != 0;
     int         depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
-    Ipp32s      elemSize        = (Ipp32s)src.elemSize1();
 
     IppSortIndexFunc ippsSortRadixIndex = getSortIndexFunc(depth, sortDescending);
     if(!ippsSortRadixIndex)
@@ -4401,7 +4404,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
         for(int i = 0; i < src.rows; i++)
         {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (void*)src.ptr(i), elemSize, (Ipp32s*)dst.ptr(i), src.cols, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(i), (Ipp32s)src.step[1], (Ipp32s*)dst.ptr(i), src.cols, buffer) < 0)
                 return false;
         }
     }
@@ -4418,13 +4421,13 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
         buffer.allocate(bufferSize);
 
-        Ipp32s pixStride = elemSize*dst.cols;
+        Ipp32s srcStep = (Ipp32s)src.step[0];
         for(int i = 0; i < src.cols; i++)
         {
             subRect.x = i;
             dstSub = Mat(dst, subRect);
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (void*)src.ptr(0, i), pixStride, (Ipp32s*)dstRow.ptr(), src.rows, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(0, i), srcStep, (Ipp32s*)dstRow.ptr(), src.rows, buffer) < 0)
                 return false;
 
             dstRow = dstRow.reshape(1, dstSub.rows);
@@ -5696,13 +5699,20 @@ double norm( const SparseMat& src, int normType )
     {
         if( normType == NORM_INF )
             for( i = 0; i < N; i++, ++it )
+            {
+                CV_Assert(it.ptr);
                 result = std::max(result, std::abs((double)it.value<float>()));
+            }
         else if( normType == NORM_L1 )
             for( i = 0; i < N; i++, ++it )
+            {
+                CV_Assert(it.ptr);
                 result += std::abs(it.value<float>());
+            }
         else
             for( i = 0; i < N; i++, ++it )
             {
+                CV_Assert(it.ptr);
                 double v = it.value<float>();
                 result += v*v;
             }
@@ -5711,13 +5721,20 @@ double norm( const SparseMat& src, int normType )
     {
         if( normType == NORM_INF )
             for( i = 0; i < N; i++, ++it )
+            {
+                CV_Assert(it.ptr);
                 result = std::max(result, std::abs(it.value<double>()));
+            }
         else if( normType == NORM_L1 )
             for( i = 0; i < N; i++, ++it )
+            {
+                CV_Assert(it.ptr);
                 result += std::abs(it.value<double>());
+            }
         else
             for( i = 0; i < N; i++, ++it )
             {
+                CV_Assert(it.ptr);
                 double v = it.value<double>();
                 result += v*v;
             }
@@ -5744,6 +5761,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         float minval = FLT_MAX, maxval = -FLT_MAX;
         for( i = 0; i < N; i++, ++it )
         {
+            CV_Assert(it.ptr);
             float v = it.value<float>();
             if( v < minval )
             {
@@ -5766,6 +5784,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
         double minval = DBL_MAX, maxval = -DBL_MAX;
         for( i = 0; i < N; i++, ++it )
         {
+            CV_Assert(it.ptr);
             double v = it.value<double>();
             if( v < minval )
             {
@@ -5786,10 +5805,10 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
     else
         CV_Error( CV_StsUnsupportedFormat, "Only 32f and 64f are supported" );
 
-    if( _minidx )
+    if( _minidx && minidx )
         for( i = 0; i < d; i++ )
             _minidx[i] = minidx[i];
-    if( _maxidx )
+    if( _maxidx && maxidx )
         for( i = 0; i < d; i++ )
             _maxidx[i] = maxidx[i];
 }
@@ -5898,7 +5917,7 @@ _IplImage::_IplImage(const cv::Mat& m)
 
 CvSparseMat* cvCreateSparseMat(const cv::SparseMat& sm)
 {
-    if( !sm.hdr )
+    if( !sm.hdr || sm.hdr->dims > (int)cv::SparseMat::MAX_DIM)
         return 0;
 
     CvSparseMat* m = cvCreateSparseMat(sm.hdr->dims, sm.hdr->size, sm.type());

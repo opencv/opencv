@@ -325,8 +325,14 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 #if CV_SSE2
         __m128i ithree = _mm_set1_epi32(3);
         for ( ; x <= end - 4; x += 4)
-            _mm_storeu_si128((__m128i*)(xmap + x), _mm_mullo_epi16(ithree,
-                _mm_loadu_si128((const __m128i*)(xmap + x))));
+        {
+            //emulation of _mm_mullo_epi32
+            __m128i mul_res = _mm_loadu_si128((const __m128i*)(xmap + x));
+            __m128i tmp1 = _mm_mul_epu32(ithree, mul_res);
+            __m128i tmp2 = _mm_mul_epu32( _mm_srli_si128(ithree,4), _mm_srli_si128(mul_res,4));
+            mul_res = _mm_unpacklo_epi32(_mm_shuffle_epi32(tmp1, _MM_SHUFFLE (0,0,2,0)), _mm_shuffle_epi32(tmp2, _MM_SHUFFLE (0,0,2,0)));
+            _mm_storeu_si128((__m128i*)(xmap + x), mul_res);
+        }
 #elif CV_NEON
         int32x4_t ithree = vdupq_n_s32(3);
         for ( ; x <= end - 4; x += 4)
@@ -3688,23 +3694,31 @@ void HOGDescriptor::readALTModel(String modelfile)
         String eerr("version?");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
+        fclose(modelfl);
+
         throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     if(strcmp(version_buffer,"V6.01")) {
         String eerr("version doesnot match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
+        fclose(modelfl);
+
         throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     /* read version number */
     int version = 0;
     if (!fread (&version,sizeof(int),1,modelfl))
-    { throw Exception(); }
+    {
+        fclose(modelfl);
+        throw Exception();
+    }
     if (version < 200)
     {
         String eerr("version doesnot match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
+        fclose(modelfl);
         throw Exception();
     }
     int kernel_type;
@@ -3723,6 +3737,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         nread=fread(&(coef_const),sizeof(double),1,modelfl);
         int l;
         nread=fread(&l,sizeof(int),1,modelfl);
+        CV_Assert(l >= 0 && l < 0xFFFF);
         char* custom = new char[l];
         nread=fread(custom,sizeof(char),l,modelfl);
         delete[] custom;
@@ -3743,11 +3758,13 @@ void HOGDescriptor::readALTModel(String modelfile)
     detector.clear();
     if(kernel_type == 0) { /* linear kernel */
         /* save linear wts also */
+        CV_Assert(totwords + 1 > 0 && totwords < 0xFFFF);
         double *linearwt = new double[totwords+1];
         int length = totwords;
         nread = fread(linearwt, sizeof(double), totwords + 1, modelfl);
         if(nread != static_cast<size_t>(length) + 1) {
             delete [] linearwt;
+            fclose(modelfl);
             throw Exception();
         }
 
@@ -3758,6 +3775,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         setSVMDetector(detector);
         delete [] linearwt;
     } else {
+        fclose(modelfl);
         throw Exception();
     }
     fclose(modelfl);

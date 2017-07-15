@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/detail/distortion_model.hpp"
+#include "undistort.hpp"
 
 cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
@@ -136,6 +137,10 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     cv::Matx33d matTilt = cv::Matx33d::eye();
     cv::detail::computeTiltProjectionMatrix(tauX, tauY, &matTilt);
 
+#if CV_TRY_AVX2
+    bool USE_AVX2 = cv::checkHardwareSupport(CV_CPU_AVX2);
+#endif
+
     for( int i = 0; i < size.height; i++ )
     {
         float* m1f = map1.ptr<float>(i);
@@ -144,7 +149,21 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
         ushort* m2 = (ushort*)m2f;
         double _x = i*ir[1] + ir[2], _y = i*ir[4] + ir[5], _w = i*ir[7] + ir[8];
 
-        for( int j = 0; j < size.width; j++, _x += ir[0], _y += ir[3], _w += ir[6] )
+        int j = 0;
+
+        if (m1type == CV_16SC2)
+            CV_Assert(m1 != NULL && m2 != NULL);
+        else if (m1type == CV_32FC1)
+            CV_Assert(m1f != NULL && m2f != NULL);
+        else
+            CV_Assert(m1 != NULL);
+
+#if CV_TRY_AVX2
+        if( USE_AVX2 )
+            j = cv::initUndistortRectifyMapLine_AVX(m1f, m2f, m1, m2, matTilt.val, ir, _x, _y, _w, size.width, m1type,
+                                                    k1, k2, k3, k4, k5, k6, p1, p2, s1, s2, s3, s4, u0, v0, fx, fy);
+#endif
+        for( ; j < size.width; j++, _x += ir[0], _y += ir[3], _w += ir[6] )
         {
             double w = 1./_w, x = _x*w, y = _y*w;
             double x2 = x*x, y2 = y*y;

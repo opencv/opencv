@@ -73,30 +73,30 @@ enum Code {
     StsNoMem=                   -4,  //!< insufficient memory
     StsBadArg=                  -5,  //!< function arg/param is bad
     StsBadFunc=                 -6,  //!< unsupported function
-    StsNoConv=                  -7,  //!< iter. didn't converge
+    StsNoConv=                  -7,  //!< iteration didn't converge
     StsAutoTrace=               -8,  //!< tracing
     HeaderIsNull=               -9,  //!< image header is NULL
     BadImageSize=              -10,  //!< image size is invalid
     BadOffset=                 -11,  //!< offset is invalid
     BadDataPtr=                -12,  //!<
-    BadStep=                   -13,  //!<
+    BadStep=                   -13,  //!< image step is wrong, this may happen for a non-continuous matrix.
     BadModelOrChSeq=           -14,  //!<
-    BadNumChannels=            -15,  //!<
+    BadNumChannels=            -15,  //!< bad number of channels, for example, some functions accept only single channel matrices.
     BadNumChannel1U=           -16,  //!<
-    BadDepth=                  -17,  //!<
+    BadDepth=                  -17,  //!< input image depth is not supported by the function
     BadAlphaChannel=           -18,  //!<
-    BadOrder=                  -19,  //!<
-    BadOrigin=                 -20,  //!<
-    BadAlign=                  -21,  //!<
+    BadOrder=                  -19,  //!< number of dimensions is out of range
+    BadOrigin=                 -20,  //!< incorrect input origin
+    BadAlign=                  -21,  //!< incorrect input align
     BadCallBack=               -22,  //!<
     BadTileSize=               -23,  //!<
-    BadCOI=                    -24,  //!<
-    BadROISize=                -25,  //!<
+    BadCOI=                    -24,  //!< input COI is not supported
+    BadROISize=                -25,  //!< incorrect input roi
     MaskIsTiled=               -26,  //!<
     StsNullPtr=                -27,  //!< null pointer
     StsVecLengthErr=           -28,  //!< incorrect vector length
-    StsFilterStructContentErr= -29,  //!< incorr. filter structure content
-    StsKernelStructContentErr= -30,  //!< incorr. transform kernel content
+    StsFilterStructContentErr= -29,  //!< incorrect filter structure content
+    StsKernelStructContentErr= -30,  //!< incorrect transform kernel content
     StsFilterOffsetErr=        -31,  //!< incorrect filter offset value
     StsBadSize=                -201, //!< the input/output structure size is incorrect
     StsDivByZero=              -202, //!< division by zero
@@ -113,13 +113,13 @@ enum Code {
     StsNotImplemented=         -213, //!< the requested function/feature is not implemented
     StsBadMemBlock=            -214, //!< an allocated block has been corrupted
     StsAssert=                 -215, //!< assertion failed
-    GpuNotSupported=           -216,
-    GpuApiCallError=           -217,
-    OpenGlNotSupported=        -218,
-    OpenGlApiCallError=        -219,
-    OpenCLApiCallError=        -220,
+    GpuNotSupported=           -216, //!< no CUDA support
+    GpuApiCallError=           -217, //!< GPU API call error
+    OpenGlNotSupported=        -218, //!< no OpenGL support
+    OpenGlApiCallError=        -219, //!< OpenGL API call error
+    OpenCLApiCallError=        -220, //!< OpenCL API call error
     OpenCLDoubleNotSupported=  -221,
-    OpenCLInitError=           -222,
+    OpenCLInitError=           -222, //!< OpenCL initialization error
     OpenCLNoAMDBlasFft=        -223
 };
 } //Error
@@ -381,6 +381,17 @@ CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const ch
 #define CV_Func ""
 #endif
 
+#ifdef CV_STATIC_ANALYSIS
+// In practice, some macro are not processed correctly (noreturn is not detected).
+// We need to use simplified definition for them.
+#define CV_Error(...) do { abort(); } while (0)
+#define CV_Error_(...) do { abort(); } while (0)
+#define CV_Assert(cond) do { if (!(cond)) abort(); } while (0)
+#define CV_ErrorNoReturn(...) do { abort(); } while (0)
+#define CV_ErrorNoReturn_(...) do { abort(); } while (0)
+
+#else // CV_STATIC_ANALYSIS
+
 /** @brief Call the error handler.
 
 Currently, the error handler prints the error code and the error message to the standard
@@ -420,6 +431,8 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
 
 /** same as CV_Error_(code,args), but does not return */
 #define CV_ErrorNoReturn_( code, args ) cv::errorNoReturn( code, cv::format args, CV_Func, __FILE__, __LINE__ )
+
+#endif // CV_STATIC_ANALYSIS
 
 /** replaced with CV_Assert(expr) in Debug configuration */
 #ifdef _DEBUG

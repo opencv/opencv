@@ -90,7 +90,7 @@ struct CvCapture
     virtual bool setProperty(int, double) { return 0; }
     virtual bool grabFrame() { return true; }
     virtual IplImage* retrieveFrame(int) { return 0; }
-    virtual int getCaptureDomain() { return CV_CAP_ANY; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
 };
 
 /*************************** CvVideoWriter structure ****************************/
@@ -108,7 +108,6 @@ CvCapture * cvCreateCameraCapture_DC1394_2( int index );
 CvCapture* cvCreateCameraCapture_MIL( int index );
 CvCapture* cvCreateCameraCapture_Giganetix( int index );
 CvCapture * cvCreateCameraCapture_CMU( int index );
-CV_IMPL CvCapture * cvCreateCameraCapture_TYZX( int index );
 CvCapture* cvCreateFileCapture_Win32( const char* filename );
 CvCapture* cvCreateCameraCapture_VFW( int index );
 CvCapture* cvCreateFileCapture_VFW( const char* filename );
@@ -163,6 +162,7 @@ CvCapture * cvCreateCameraCapture_Unicap  (const int     index);
 CvCapture * cvCreateCameraCapture_PvAPI  (const int     index);
 CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color );
+
 
 namespace cv
 {

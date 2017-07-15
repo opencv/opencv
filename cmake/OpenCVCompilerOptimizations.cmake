@@ -122,7 +122,7 @@ endmacro()
 
 macro(ocv_append_optimization_flag var OPT)
   if(CPU_${OPT}_FLAGS_CONFLICT)
-    string(REGEX REPLACE " ${CPU_${OPT}_FLAGS_CONFLICT}" "" ${var} " ${${var}}")
+    string(REGEX REPLACE " ${CPU_${OPT}_FLAGS_CONFLICT}" "" ${var} " ${${var}} ")
     string(REGEX REPLACE "^ +" "" ${var} "${${var}}")
   endif()
   set(${var} "${${var}} ${CPU_${OPT}_FLAGS_ON}")
@@ -143,7 +143,7 @@ elseif(" ${CMAKE_CXX_FLAGS} " MATCHES " -march=native | -xHost | /QxHost ")
 endif()
 
 if(X86 OR X86_64)
-  ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;FP16;FMA3;AVX;AVX2;AVX512")
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;FP16;FMA3;AVX;AVX2") # without AVX512
 
   ocv_update(CPU_SSE_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sse.cpp")
   ocv_update(CPU_SSE2_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sse2.cpp")
@@ -238,29 +238,33 @@ if(X86 OR X86_64)
   endif()
 
   if(NOT DEFINED CPU_DISPATCH)
-    set(CPU_DISPATCH "SSE4_1;AVX;FP16;AVX2" CACHE STRING "${HELP_CPU_DISPATCH}")
+    set(CPU_DISPATCH "SSE4_1;SSE4_2;AVX;FP16;AVX2" CACHE STRING "${HELP_CPU_DISPATCH}")
   endif()
 
   if(NOT DEFINED CPU_BASELINE)
     if(X86_64)
-      set(CPU_BASELINE "SSSE3" CACHE STRING "${HELP_CPU_BASELINE}")
+      set(CPU_BASELINE "SSE3" CACHE STRING "${HELP_CPU_BASELINE}")
     else()
       set(CPU_BASELINE "SSE2" CACHE STRING "${HELP_CPU_BASELINE}")
     endif()
   endif()
 
 elseif(ARM OR AARCH64)
+  ocv_update(CPU_NEON_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_neon.cpp")
   ocv_update(CPU_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp")
   if(NOT AARCH64)
     ocv_update(CPU_KNOWN_OPTIMIZATIONS "VFPV3;NEON;FP16")
-    ocv_update(CPU_NEON_FLAGS_ON "-mfpu=neon")
     ocv_update(CPU_VFPV3_FLAGS_ON "-mfpu=vfpv3")
+    ocv_update(CPU_NEON_FLAGS_ON "-mfpu=neon")
+    ocv_update(CPU_NEON_FLAGS_CONFLICT "-mfpu=[^ ]*")
     ocv_update(CPU_FP16_FLAGS_ON "-mfpu=neon-fp16")
-    set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
+    ocv_update(CPU_FP16_IMPLIES "NEON")
+    ocv_update(CPU_FP16_FLAGS_CONFLICT "-mfpu=[^ ]*")
   else()
     ocv_update(CPU_KNOWN_OPTIMIZATIONS "NEON;FP16")
     ocv_update(CPU_NEON_FLAGS_ON "")
-    set(CPU_BASELINE "NEON" CACHE STRING "${HELP_CPU_BASELINE}")
+    ocv_update(CPU_FP16_IMPLIES "NEON")
+    set(CPU_BASELINE "NEON;FP16" CACHE STRING "${HELP_CPU_BASELINE}")
   endif()
 endif()
 
@@ -269,6 +273,11 @@ set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
 set(CPU_DISPATCH "" CACHE STRING "${HELP_CPU_DISPATCH}")
 set_property(CACHE CPU_BASELINE PROPERTY STRINGS "" ${CPU_KNOWN_OPTIMIZATIONS})
 set_property(CACHE CPU_DISPATCH PROPERTY STRINGS "" ${CPU_KNOWN_OPTIMIZATIONS})
+
+# Update CPU_BASELINE_DETECT flag
+if(";${CPU_BASELINE};" MATCHES ";DETECT;")
+  set(CPU_BASELINE_DETECT ON)
+endif()
 
 set(CPU_BASELINE_FLAGS "")
 
@@ -378,7 +387,7 @@ foreach(OPT ${CPU_KNOWN_OPTIMIZATIONS})
   if(CPU_${OPT}_SUPPORTED)
     if(";${CPU_DISPATCH};" MATCHES ";${OPT};" AND NOT __is_from_baseline)
       list(APPEND CPU_DISPATCH_FINAL ${OPT})
-    elseif(__is_from_baseline AND NOT CPU_BASELINE_DETECT)
+    elseif(__is_from_baseline)
       list(APPEND CPU_BASELINE_FINAL ${OPT})
       ocv_append_optimization_flag(CPU_BASELINE_FLAGS ${OPT})
     endif()
@@ -483,12 +492,6 @@ macro(ocv_compiler_optimization_options)
   if(ARM)
     add_extra_compiler_option("-mfp16-format=ieee")
   endif(ARM)
-  if(ENABLE_NEON)
-    add_extra_compiler_option("-mfpu=neon")
-  endif()
-  if(ENABLE_VFPV3 AND NOT ENABLE_NEON)
-    add_extra_compiler_option("-mfpu=vfpv3")
-  endif()
 endmacro()
 
 macro(ocv_compiler_optimization_options_finalize)
@@ -587,6 +590,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
         ocv_append_dependant_targets(${TARGET_BASE_NAME} ${TARGET_BASE_NAME}_${OPT})
         set_target_properties(${TARGET_BASE_NAME}_${OPT} PROPERTIES COMPILE_DEFINITIONS "${CPU_DISPATCH_DEFINITIONS_${OPT}}")
         set_target_properties(${TARGET_BASE_NAME}_${OPT} PROPERTIES COMPILE_FLAGS "${CPU_DISPATCH_FLAGS_${OPT}}")
+        target_include_directories(${TARGET_BASE_NAME}_${OPT} PRIVATE $<TARGET_PROPERTY:${TARGET_BASE_NAME},INCLUDE_DIRECTORIES>)
         #list(APPEND __result_libs ${TARGET_BASE_NAME}_${OPT})
         list(APPEND __result "$<TARGET_OBJECTS:${TARGET_BASE_NAME}_${OPT}>")
       else()
@@ -643,12 +647,15 @@ macro(ocv_compiler_optimization_fill_cpu_config)
     if(NOT DEFINED CPU_${OPT}_FEATURE_ALIAS OR NOT "x${CPU_${OPT}_FEATURE_ALIAS}" STREQUAL "x")
       set(OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE "${OPENCV_CPU_CONTROL_DEFINITIONS_CONFIGMAKE}
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_${OPT}
+#  define CV_TRY_${OPT} 1
 #  define CV_CPU_HAS_SUPPORT_${OPT} 1
 #  define CV_CPU_CALL_${OPT}(fn, args) return (opt_${OPT}::fn args)
 #elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_${OPT}
+#  define CV_TRY_${OPT} 1
 #  define CV_CPU_HAS_SUPPORT_${OPT} (cv::checkHardwareSupport(CV_CPU_${OPT}))
 #  define CV_CPU_CALL_${OPT}(fn, args) if (CV_CPU_HAS_SUPPORT_${OPT}) return (opt_${OPT}::fn args)
 #else
+#  define CV_TRY_${OPT} 0
 #  define CV_CPU_HAS_SUPPORT_${OPT} 0
 #  define CV_CPU_CALL_${OPT}(fn, args)
 #endif

@@ -92,6 +92,7 @@ PngDecoder::PngDecoder()
     m_buf_supported = true;
     m_buf_pos = 0;
     m_description = "PNG";
+    m_bit_depth = 0;
 }
 
 

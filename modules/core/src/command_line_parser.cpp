@@ -276,10 +276,10 @@ CommandLineParser& CommandLineParser::operator = (const CommandLineParser& parse
 {
     if( this != &parser )
     {
+        CV_XADD(&parser.impl->refcount, 1);
         if(CV_XADD(&impl->refcount, -1) == 1)
             delete impl;
         impl = parser.impl;
-        CV_XADD(&impl->refcount, 1);
     }
     return *this;
 }

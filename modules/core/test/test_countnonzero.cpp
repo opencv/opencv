@@ -250,3 +250,30 @@ void CV_CountNonZeroTest::run(int)
 }
 
 TEST (Core_CountNonZero, accuracy) { CV_CountNonZeroTest test; test.safe_run(); }
+
+
+typedef testing::TestWithParam<std::tr1::tuple<int, int> > CountNonZeroND;
+
+TEST_P (CountNonZeroND, ndim)
+{
+    const int dims = std::tr1::get<0>(GetParam());
+    const int type = std::tr1::get<1>(GetParam());
+    const int ONE_SIZE = 5;
+
+    vector<int> sizes(dims);
+    fill(sizes.begin(), sizes.end(), ONE_SIZE);
+
+    Mat data(sizes, CV_MAKETYPE(type, 1));
+    data = 0;
+    EXPECT_EQ(0, cv::countNonZero(data));
+    data = Scalar::all(1);
+    int expected = static_cast<int>(pow(static_cast<float>(ONE_SIZE), dims));
+    EXPECT_EQ(expected, cv::countNonZero(data));
+}
+
+INSTANTIATE_TEST_CASE_P(Core, CountNonZeroND,
+    testing::Combine(
+        testing::Range(2, 9),
+        testing::Values(CV_8U, CV_8S, CV_32F)
+    )
+);

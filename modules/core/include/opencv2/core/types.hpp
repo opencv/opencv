@@ -572,7 +572,7 @@ public:
 
 /** @brief Template class for a 4-element vector derived from Vec.
 
-Being derived from Vec\<_Tp, 4\> , Scalar_ and Scalar can be used just as typical 4-element
+Being derived from Vec\<_Tp, 4\> , Scalar\_ and Scalar can be used just as typical 4-element
 vectors. In addition, they can be converted to/from CvScalar . The type Scalar is widely used in
 OpenCV to pass pixel values.
 */
@@ -1040,7 +1040,8 @@ Complex<_Tp> operator / (const Complex<_Tp>& a, const Complex<_Tp>& b)
 template<typename _Tp> static inline
 Complex<_Tp>& operator /= (Complex<_Tp>& a, const Complex<_Tp>& b)
 {
-    return (a = a / b);
+    a = a / b;
+    return a;
 }
 
 template<typename _Tp> static inline

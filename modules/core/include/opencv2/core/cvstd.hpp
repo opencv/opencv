@@ -49,17 +49,13 @@
 #endif
 
 #include "opencv2/core/cvdef.h"
-
 #include <cstddef>
 #include <cstring>
 #include <cctype>
 
-#ifndef OPENCV_NOSTL
-#  include <string>
-#endif
+#include <string>
 
 // import useful primitives from stl
-#ifndef OPENCV_NOSTL_TRANSITIONAL
 #  include <algorithm>
 #  include <utility>
 #  include <cstdlib> //for abs(int)
@@ -81,21 +77,6 @@ namespace cv
     using std::pow;
     using std::log;
 }
-
-#else
-namespace cv
-{
-    template<typename T> static inline T min(T a, T b) { return a < b ? a : b; }
-    template<typename T> static inline T max(T a, T b) { return a > b ? a : b; }
-    template<typename T> static inline T abs(T a) { return a < 0 ? -a : a; }
-    template<typename T> static inline void swap(T& a, T& b) { T tmp = a; a = b; b = tmp; }
-
-    template<> inline uchar abs(uchar a) { return a; }
-    template<> inline ushort abs(ushort a) { return a; }
-    template<> inline unsigned abs(unsigned a) { return a; }
-    template<> inline uint64 abs(uint64 a) { return a; }
-}
-#endif
 
 namespace cv {
 
@@ -489,7 +470,7 @@ public:
 
     static const size_t npos = size_t(-1);
 
-    explicit String();
+    String();
     String(const String& str);
     String(const String& str, size_t pos, size_t len = npos);
     String(const char* s);
@@ -556,7 +537,6 @@ public:
 
     String toLowerCase() const;
 
-#ifndef OPENCV_NOSTL
     String(const std::string& str);
     String(const std::string& str, size_t pos, size_t len = npos);
     String& operator=(const std::string& str);
@@ -565,7 +545,6 @@ public:
 
     friend String operator+ (const String& lhs, const std::string& rhs);
     friend String operator+ (const std::string& lhs, const String& rhs);
-#endif
 
 private:
     char*  cstr_;
@@ -627,6 +606,7 @@ String::String(const char* s, size_t n)
     : cstr_(0), len_(0)
 {
     if (!n) return;
+    if (!s) return;
     memcpy(allocate(n), s, n);
 }
 
@@ -634,6 +614,7 @@ inline
 String::String(size_t n, char c)
     : cstr_(0), len_(0)
 {
+    if (!n) return;
     memset(allocate(n), c, n);
 }
 
@@ -642,6 +623,7 @@ String::String(const char* first, const char* last)
     : cstr_(0), len_(0)
 {
     size_t len = (size_t)(last - first);
+    if (!len) return;
     memcpy(allocate(len), first, len);
 }
 
@@ -650,6 +632,7 @@ String::String(Iterator first, Iterator last)
     : cstr_(0), len_(0)
 {
     size_t len = (size_t)(last - first);
+    if (!len) return;
     char* str = allocate(len);
     while (first != last)
     {
@@ -955,8 +938,9 @@ size_t String::find_last_of(const char* s, size_t pos) const
 inline
 String String::toLowerCase() const
 {
+    if (!cstr_)
+        return String();
     String res(cstr_, len_);
-
     for (size_t i = 0; i < len_; ++i)
         res.cstr_[i] = (char) ::tolower(cstr_[i]);
 
@@ -1045,21 +1029,10 @@ static inline bool operator>= (const String& lhs, const char*   rhs) { return lh
 
 } // cv
 
-#ifndef OPENCV_NOSTL_TRANSITIONAL
 namespace std
 {
     static inline void swap(cv::String& a, cv::String& b) { a.swap(b); }
 }
-#else
-namespace cv
-{
-    template<> inline
-    void swap<cv::String>(cv::String& a, cv::String& b)
-    {
-        a.swap(b);
-    }
-}
-#endif
 
 #include "opencv2/core/ptr.inl.hpp"
 

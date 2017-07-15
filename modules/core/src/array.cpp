@@ -545,7 +545,7 @@ cvCreateSparseMat( int dims, const int* sizes, int type )
     if( pix_size == 0 )
         CV_Error( CV_StsUnsupportedFormat, "invalid array data type" );
 
-    if( dims <= 0 || dims > CV_MAX_DIM_HEAP )
+    if( dims <= 0 || dims > CV_MAX_DIM )
         CV_Error( CV_StsOutOfRange, "bad number of dimensions" );
 
     if( !sizes )
@@ -1839,6 +1839,7 @@ cvPtr2D( const CvArr* arr, int y, int x, int* _type )
     }
     else if( CV_IS_SPARSE_MAT( arr ))
     {
+        CV_Assert(((CvSparseMat*)arr)->dims == 2);
         int idx[] = { y, x };
         ptr = icvGetNodePtr( (CvSparseMat*)arr, idx, _type, 1, 0 );
     }

@@ -3,9 +3,6 @@
 
 using namespace cv;
 
-#define CHECK_MAT(cond) if(!(cond)){ LOGD("FAILED: " #cond); return; }
-
-
 // vector_int
 
 void Mat_to_vector_int(Mat& mat, std::vector<int>& v_int)

@@ -30,7 +30,7 @@ $ yum install numpy opencv*
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 @code{.py}
 >>> import cv2
->>> print cv2.__version__
+>>> print( cv2.__version__ )
 @endcode
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
@@ -218,7 +218,7 @@ Installation is over. All files are installed in /usr/local/ folder. But to use 
 should be able to find OpenCV module. You have two options for that.
 
 -#  **Move the module to any folder in Python Path** : Python path can be found out by entering
-    import sys;print sys.path in Python terminal. It will print out many locations. Move
+    `import sys; print(sys.path)` in Python terminal. It will print out many locations. Move
     /usr/local/lib/python2.7/site-packages/cv2.so to any of this folder. For example,
     @code{.sh}
     su mv /usr/local/lib/python2.7/site-packages/cv2.so /usr/lib/python2.7/site-packages
@@ -234,10 +234,9 @@ Thus OpenCV installation is finished. Open a terminal and try import cv2.
 
 To build the documentation, just enter following commands:
 @code{.sh}
-make docs
-make html_docs
+make doxygen
 @endcode
-Then open opencv/build/doc/_html/index.html and bookmark it in the browser.
+Then open opencv/build/doc/doxygen/html/index.html and bookmark it in the browser.
 
 Additional Resources
 --------------------

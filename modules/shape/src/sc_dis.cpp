@@ -72,6 +72,7 @@ public:
         shapeContextWeight=1.0f;
         sigma=10.0f;
         name_ = "ShapeDistanceExtractor.SCD";
+        costFlag = 0;
     }
 
     /* Destructor */

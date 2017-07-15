@@ -110,6 +110,7 @@ struct StereoSGBMParams
     int mode;
 };
 
+static const int DEFAULT_RIGHT_BORDER = -1;
 /*
  For each pixel row1[x], max(maxD, 0) <= minX <= x < maxX <= width - max(0, -minD),
  and for each disparity minD<=d<maxD the function
@@ -123,12 +124,20 @@ struct StereoSGBMParams
 static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
                             int minD, int maxD, CostType* cost,
                             PixType* buffer, const PixType* tab,
-                            int tabOfs, int )
+                            int tabOfs, int , int xrange_min = 0, int xrange_max = DEFAULT_RIGHT_BORDER )
 {
     int x, c, width = img1.cols, cn = img1.channels();
     int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+    int D = maxD - minD, width1 = maxX1 - minX1;
+    //This minX1 & maxX2 correction is defining which part of calculatable line must be calculated
+    //That is needs of parallel algorithm
+    xrange_min = (xrange_min < 0) ? 0: xrange_min;
+    xrange_max = (xrange_max == DEFAULT_RIGHT_BORDER) || (xrange_max > width1) ? width1 : xrange_max;
+    maxX1 = minX1 + xrange_max;
+    minX1 += xrange_min;
+    width1 = maxX1 - minX1;
     int minX2 = std::max(minX1 - maxD, 0), maxX2 = std::min(maxX1 - minD, width);
-    int D = maxD - minD, width1 = maxX1 - minX1, width2 = maxX2 - minX2;
+    int width2 = maxX2 - minX2;
     const PixType *row1 = img1.ptr<PixType>(y), *row2 = img2.ptr<PixType>(y);
     PixType *prow1 = buffer + width2*2, *prow2 = prow1 + width*cn*2;
 #if CV_SIMD128
@@ -146,9 +155,13 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
     int n1 = y > 0 ? -(int)img1.step : 0, s1 = y < img1.rows-1 ? (int)img1.step : 0;
     int n2 = y > 0 ? -(int)img2.step : 0, s2 = y < img2.rows-1 ? (int)img2.step : 0;
 
+    int minX_cmn = std::min(minX1,minX2)-1;
+    int maxX_cmn = std::max(maxX1,maxX2)+1;
+    minX_cmn = std::max(minX_cmn, 1);
+    maxX_cmn = std::min(maxX_cmn, width - 1);
     if( cn == 1 )
     {
-        for( x = 1; x < width-1; x++ )
+        for( x = minX_cmn; x < maxX_cmn; x++ )
         {
             prow1[x] = tab[(row1[x+1] - row1[x-1])*2 + row1[x+n1+1] - row1[x+n1-1] + row1[x+s1+1] - row1[x+s1-1]];
             prow2[width-1-x] = tab[(row2[x+1] - row2[x-1])*2 + row2[x+n2+1] - row2[x+n2-1] + row2[x+s2+1] - row2[x+s2-1]];
@@ -159,7 +172,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
     }
     else
     {
-        for( x = 1; x < width-1; x++ )
+        for( x = minX_cmn; x < maxX_cmn; x++ )
         {
             prow1[x] = tab[(row1[x*3+3] - row1[x*3-3])*2 + row1[x*3+n1+3] - row1[x*3+n1-3] + row1[x*3+s1+3] - row1[x*3+s1-3]];
             prow1[x+width] = tab[(row1[x*3+4] - row1[x*3-2])*2 + row1[x*3+n1+4] - row1[x*3+n1-2] + row1[x*3+s1+4] - row1[x*3+s1-2]];
@@ -179,10 +192,10 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
         }
     }
 
-    memset( cost, 0, width1*D*sizeof(cost[0]) );
+    memset( cost + xrange_min*D, 0, width1*D*sizeof(cost[0]) );
 
-    buffer -= minX2;
-    cost -= minX1*D + minD; // simplify the cost indices inside the loop
+    buffer -= width-1-maxX2;
+    cost -= (minX1-xrange_min)*D + minD; // simplify the cost indices inside the loop
 
     for( c = 0; c < cn*2; c++, prow1 += width, prow2 += width )
     {
@@ -191,7 +204,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
         // precompute
         //   v0 = min(row2[x-1/2], row2[x], row2[x+1/2]) and
         //   v1 = max(row2[x-1/2], row2[x], row2[x+1/2]) and
-        for( x = minX2; x < maxX2; x++ )
+        for( x = width-1-maxX2; x < width-1- minX2; x++ )
         {
             int v = prow2[x];
             int vl = x > 0 ? (v + prow2[x-1])/2 : v;
@@ -513,6 +526,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
              6: r=(1, -dy*2)
              7: r=(2, -dy)
              */
+
             for( x = x1; x != x2; x += dx )
             {
                 int xm = x*NR2, xd = xm*D2;
@@ -826,6 +840,670 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
             std::swap( minLr[0], minLr[1] );
         }
     }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+struct CalcVerticalSums: public ParallelLoopBody
+{
+    CalcVerticalSums(const Mat& _img1, const Mat& _img2, const StereoSGBMParams& params,
+                     CostType* alignedBuf, PixType* _clipTab): img1(_img1), img2(_img2), clipTab(_clipTab)
+    {
+        minD = params.minDisparity;
+        maxD = minD + params.numDisparities;
+        SW2 = SH2 = (params.SADWindowSize > 0 ? params.SADWindowSize : 5)/2;
+        ftzero = std::max(params.preFilterCap, 15) | 1;
+        P1 = params.P1 > 0 ? params.P1 : 2;
+        P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
+        height = img1.rows;
+        width = img1.cols;
+        int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+        D = maxD - minD;
+        width1 = maxX1 - minX1;
+        D2 = D + 16;
+        costBufSize = width1*D;
+        CSBufSize = costBufSize*height;
+        minLrSize = width1;
+        LrSize = minLrSize*D2;
+        hsumBufNRows = SH2*2 + 2;
+        Cbuf = alignedBuf;
+        Sbuf = Cbuf + CSBufSize;
+        hsumBuf = Sbuf + CSBufSize;
+        useSIMD = hasSIMD128();
+    }
+
+    void operator()( const Range& range ) const
+    {
+        static const CostType MAX_COST = SHRT_MAX;
+        static const int ALIGN = 16;
+        static const int TAB_OFS = 256*4;
+        static const int npasses = 2;
+        int x1 = range.start, x2 = range.end, k;
+        size_t pixDiffSize = ((x2 - x1) + 2*SW2)*D;
+        size_t auxBufsSize = pixDiffSize*sizeof(CostType) +                 //pixdiff size
+                             width*16*img1.channels()*sizeof(PixType) + 32; //tempBuf
+        Mat auxBuff;
+        auxBuff.create(1, (int)auxBufsSize, CV_8U);
+        CostType* pixDiff = (CostType*)alignPtr(auxBuff.ptr(), ALIGN);
+        PixType* tempBuf = (PixType*)(pixDiff + pixDiffSize);
+
+        // Simplification of index calculation
+        pixDiff -= (x1>SW2 ? (x1 - SW2): 0)*D;
+
+        for( int pass = 1; pass <= npasses; pass++ )
+        {
+            int y1, y2, dy;
+
+            if( pass == 1 )
+            {
+                y1 = 0; y2 = height; dy = 1;
+            }
+            else
+            {
+                y1 = height-1; y2 = -1; dy = -1;
+            }
+
+            CostType *Lr[NLR]={0}, *minLr[NLR]={0};
+
+            for( k = 0; k < NLR; k++ )
+            {
+                // shift Lr[k] and minLr[k] pointers, because we allocated them with the borders,
+                // and will occasionally use negative indices with the arrays
+                // we need to shift Lr[k] pointers by 1, to give the space for d=-1.
+                // however, then the alignment will be imperfect, i.e. bad for SSE,
+                // thus we shift the pointers by 8 (8*sizeof(short) == 16 - ideal alignment)
+                Lr[k] = hsumBuf + costBufSize*hsumBufNRows + LrSize*k + 8;
+                memset( Lr[k] + x1*D2 - 8, 0, (x2-x1)*D2*sizeof(CostType) );
+                minLr[k] = hsumBuf + costBufSize*hsumBufNRows + LrSize*NLR + minLrSize*k;
+                memset( minLr[k] + x1, 0, (x2-x1)*sizeof(CostType) );
+            }
+
+            for( int y = y1; y != y2; y += dy )
+            {
+                int x, d;
+                CostType* C = Cbuf + y*costBufSize;
+                CostType* S = Sbuf + y*costBufSize;
+
+                if( pass == 1 ) // compute C on the first pass, and reuse it on the second pass, if any.
+                {
+                    int dy1 = y == 0 ? 0 : y + SH2, dy2 = y == 0 ? SH2 : dy1;
+
+                    for( k = dy1; k <= dy2; k++ )
+                    {
+                        CostType* hsumAdd = hsumBuf + (std::min(k, height-1) % hsumBufNRows)*costBufSize;
+
+                        if( k < height )
+                        {
+                            calcPixelCostBT( img1, img2, k, minD, maxD, pixDiff, tempBuf, clipTab, TAB_OFS, ftzero, x1 - SW2, x2 + SW2);
+
+                            memset(hsumAdd + x1*D, 0, D*sizeof(CostType));
+                            for( x = (x1 - SW2)*D; x <= (x1 + SW2)*D; x += D )
+                            {
+                                int xbord = x <= 0 ? 0 : (x > (width1 - 1)*D? (width1 - 1)*D : x);
+                                for( d = 0; d < D; d++ )
+                                    hsumAdd[x1*D + d] = (CostType)(hsumAdd[x1*D + d] + pixDiff[xbord + d]);
+                            }
+
+                            if( y > 0 )
+                            {
+                                const CostType* hsumSub = hsumBuf + (std::max(y - SH2 - 1, 0) % hsumBufNRows)*costBufSize;
+                                const CostType* Cprev = C - costBufSize;
+
+                                for( d = 0; d < D; d++ )
+                                    C[x1*D + d] = (CostType)(Cprev[x1*D + d] + hsumAdd[x1*D + d] - hsumSub[x1*D + d]);
+
+                                for( x = (x1+1)*D; x < x2*D; x += D )
+                                {
+                                    const CostType* pixAdd = pixDiff + std::min(x + SW2*D, (width1-1)*D);
+                                    const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
+
+                                #if CV_SIMD128
+                                    if( useSIMD )
+                                    {
+                                        for( d = 0; d < D; d += 8 )
+                                        {
+                                            v_int16x8 hv = v_load(hsumAdd + x - D + d);
+                                            v_int16x8 Cx = v_load(Cprev + x + d);
+                                            v_int16x8 psub = v_load(pixSub + d);
+                                            v_int16x8 padd = v_load(pixAdd + d);
+                                            hv = (hv - psub + padd);
+                                            psub = v_load(hsumSub + x + d);
+                                            Cx = Cx - psub + hv;
+                                            v_store(hsumAdd + x + d, hv);
+                                            v_store(C + x + d, Cx);
+                                        }
+                                    }
+                                    else
+                                #endif
+                                    {
+                                        for( d = 0; d < D; d++ )
+                                        {
+                                            int hv = hsumAdd[x + d] = (CostType)(hsumAdd[x - D + d] + pixAdd[d] - pixSub[d]);
+                                            C[x + d] = (CostType)(Cprev[x + d] + hv - hsumSub[x + d]);
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                for( x = (x1+1)*D; x < x2*D; x += D )
+                                {
+                                    const CostType* pixAdd = pixDiff + std::min(x + SW2*D, (width1-1)*D);
+                                    const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
+
+                                    for( d = 0; d < D; d++ )
+                                        hsumAdd[x + d] = (CostType)(hsumAdd[x - D + d] + pixAdd[d] - pixSub[d]);
+                                }
+                            }
+                        }
+
+                        if( y == 0 )
+                        {
+                            int scale = k == 0 ? SH2 + 1 : 1;
+                            for( x = x1*D; x < x2*D; x++ )
+                                C[x] = (CostType)(C[x] + hsumAdd[x]*scale);
+                        }
+                    }
+
+                    // also, clear the S buffer
+                    for( k = x1*D; k < x2*D; k++ )
+                        S[k] = 0;
+                }
+
+//              [formula 13 in the paper]
+//              compute L_r(p, d) = C(p, d) +
+//              min(L_r(p-r, d),
+//              L_r(p-r, d-1) + P1,
+//              L_r(p-r, d+1) + P1,
+//              min_k L_r(p-r, k) + P2) - min_k L_r(p-r, k)
+//              where p = (x,y), r is one of the directions.
+//              we process one directions on first pass and other on second:
+//              r=(0, dy), where dy=1 on first pass and dy=-1 on second
+
+                for( x = x1; x != x2; x++ )
+                {
+                    int xd = x*D2;
+
+                    int delta = minLr[1][x] + P2;
+
+                    CostType* Lr_ppr = Lr[1] + xd;
+
+                    Lr_ppr[-1] = Lr_ppr[D] = MAX_COST;
+
+                    CostType* Lr_p = Lr[0] + xd;
+                    const CostType* Cp = C + x*D;
+                    CostType* Sp = S + x*D;
+
+                #if CV_SIMD128
+                    if( useSIMD )
+                    {
+                        v_int16x8 _P1 = v_setall_s16((short)P1);
+
+                        v_int16x8 _delta = v_setall_s16((short)delta);
+                        v_int16x8 _minL = v_setall_s16((short)MAX_COST);
+
+                        for( d = 0; d < D; d += 8 )
+                        {
+                            v_int16x8 Cpd = v_load(Cp + d);
+                            v_int16x8 L;
+
+                            L = v_load(Lr_ppr + d);
+
+                            L = v_min(L, (v_load(Lr_ppr + d - 1) + _P1));
+                            L = v_min(L, (v_load(Lr_ppr + d + 1) + _P1));
+
+                            L = v_min(L, _delta);
+                            L = ((L - _delta) + Cpd);
+
+                            v_store(Lr_p + d, L);
+
+                            // Get minimum from in L-L3
+                            _minL = v_min(_minL, L);
+
+                            v_int16x8 Sval = v_load(Sp + d);
+
+                            Sval = Sval + L;
+
+                            v_store(Sp + d, Sval);
+                        }
+
+                        v_int32x4 min1, min2, min12;
+                        v_expand(_minL, min1, min2);
+                        min12 = v_min(min1,min2);
+                        minLr[0][x] = (CostType)v_reduce_min(min12);
+                    }
+                    else
+                #endif
+                    {
+                        int minL = MAX_COST;
+
+                        for( d = 0; d < D; d++ )
+                        {
+                            int Cpd = Cp[d], L;
+
+                            L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+
+                            Lr_p[d] = (CostType)L;
+                            minL = std::min(minL, L);
+
+                            Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                        }
+                        minLr[0][x] = (CostType)minL;
+                    }
+                }
+
+                // now shift the cyclic buffers
+                std::swap( Lr[0], Lr[1] );
+                std::swap( minLr[0], minLr[1] );
+            }
+        }
+    }
+    static const int NLR = 2;
+    const Mat& img1;
+    const Mat& img2;
+    CostType* Cbuf;
+    CostType* Sbuf;
+    CostType* hsumBuf;
+    PixType* clipTab;
+    int minD;
+    int maxD;
+    int D;
+    int D2;
+    int SH2;
+    int SW2;
+    int width;
+    int width1;
+    int height;
+    int P1;
+    int P2;
+    size_t costBufSize;
+    size_t CSBufSize;
+    size_t minLrSize;
+    size_t LrSize;
+    size_t hsumBufNRows;
+    int ftzero;
+    bool useSIMD;
+};
+
+struct CalcHorizontalSums: public ParallelLoopBody
+{
+    CalcHorizontalSums(const Mat& _img1, const Mat& _img2, Mat& _disp1, const StereoSGBMParams& params,
+                     CostType* alignedBuf): img1(_img1), img2(_img2), disp1(_disp1)
+    {
+        minD = params.minDisparity;
+        maxD = minD + params.numDisparities;
+        P1 = params.P1 > 0 ? params.P1 : 2;
+        P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
+        uniquenessRatio = params.uniquenessRatio >= 0 ? params.uniquenessRatio : 10;
+        disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
+        height = img1.rows;
+        width = img1.cols;
+        minX1 = std::max(maxD, 0);
+        maxX1 = width + std::min(minD, 0);
+        INVALID_DISP = minD - 1;
+        INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
+        D = maxD - minD;
+        width1 = maxX1 - minX1;
+        costBufSize = width1*D;
+        CSBufSize = costBufSize*height;
+        D2 = D + 16;
+        LrSize = 2 * D2;
+        Cbuf = alignedBuf;
+        Sbuf = Cbuf + CSBufSize;
+        useSIMD = hasSIMD128();
+    }
+
+    void operator()( const Range& range ) const
+    {
+        int y1 = range.start, y2 = range.end;
+        size_t auxBufsSize = LrSize * sizeof(CostType) + width*(sizeof(CostType) + sizeof(DispType)) + 32;
+
+        Mat auxBuff;
+        auxBuff.create(1, (int)auxBufsSize, CV_8U);
+        CostType *Lr = ((CostType*)alignPtr(auxBuff.ptr(), ALIGN)) + 8;
+        CostType* disp2cost = Lr + LrSize;
+        DispType* disp2ptr = (DispType*)(disp2cost + width);
+
+        CostType minLr;
+
+        for( int y = y1; y != y2; y++)
+        {
+            int x, d;
+            DispType* disp1ptr = disp1.ptr<DispType>(y);
+            CostType* C = Cbuf + y*costBufSize;
+            CostType* S = Sbuf + y*costBufSize;
+
+            for( x = 0; x < width; x++ )
+            {
+                disp1ptr[x] = disp2ptr[x] = (DispType)INVALID_DISP_SCALED;
+                disp2cost[x] = MAX_COST;
+            }
+
+            // clear buffers
+            memset( Lr - 8, 0, LrSize*sizeof(CostType) );
+            Lr[-1] = Lr[D] = Lr[D2 - 1] = Lr[D2 + D] = MAX_COST;
+
+            minLr = 0;
+//          [formula 13 in the paper]
+//          compute L_r(p, d) = C(p, d) +
+//          min(L_r(p-r, d),
+//          L_r(p-r, d-1) + P1,
+//          L_r(p-r, d+1) + P1,
+//          min_k L_r(p-r, k) + P2) - min_k L_r(p-r, k)
+//          where p = (x,y), r is one of the directions.
+//          we process all the directions at once:
+//          we process one directions on first pass and other on second:
+//          r=(dx, 0), where dx=1 on first pass and dx=-1 on second
+            for( x = 0; x != width1; x++)
+            {
+                int delta = minLr + P2;
+
+                CostType* Lr_ppr = Lr + ((x&1)? 0 : D2);
+
+                CostType* Lr_p = Lr + ((x&1)? D2 :0);
+                const CostType* Cp = C + x*D;
+                CostType* Sp = S + x*D;
+
+            #if CV_SIMD128
+                if( useSIMD )
+                {
+                    v_int16x8 _P1 = v_setall_s16((short)P1);
+
+                    v_int16x8 _delta = v_setall_s16((short)delta);
+                    v_int16x8 _minL = v_setall_s16((short)MAX_COST);
+
+                    for( d = 0; d < D; d += 8 )
+                    {
+                        v_int16x8 Cpd = v_load(Cp + d);
+                        v_int16x8 L;
+
+                        L = v_load(Lr_ppr + d);
+
+                        L = v_min(L, (v_load(Lr_ppr + d - 1) + _P1));
+                        L = v_min(L, (v_load(Lr_ppr + d + 1) + _P1));
+
+                        L = v_min(L, _delta);
+                        L = ((L - _delta) + Cpd);
+
+                        v_store(Lr_p + d, L);
+
+                        // Get minimum from in L-L3
+                        _minL = v_min(_minL, L);
+
+                        v_int16x8 Sval = v_load(Sp + d);
+
+                        Sval = Sval + L;
+
+                        v_store(Sp + d, Sval);
+                    }
+
+                    v_int32x4 min1, min2, min12;
+                    v_expand(_minL, min1, min2);
+                    min12 = v_min(min1,min2);
+                    minLr = (CostType)v_reduce_min(min12);
+                }
+                else
+            #endif
+                {
+                    minLr = MAX_COST;
+                    for( d = 0; d < D; d++ )
+                    {
+                        int Cpd = Cp[d], L;
+
+                        L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+
+                        Lr_p[d] = (CostType)L;
+                        minLr = (CostType)std::min((int)minLr, L);
+
+                        Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                    }
+                }
+            }
+
+            memset( Lr - 8, 0, LrSize*sizeof(CostType) );
+            Lr[-1] = Lr[D] = Lr[D2 - 1] = Lr[D2 + D] = MAX_COST;
+
+            minLr = 0;
+
+            for( x = width1-1; x != -1; x--)
+            {
+                int delta = minLr + P2;
+
+                CostType* Lr_ppr = Lr + ((x&1)? 0 :D2);
+
+                CostType* Lr_p = Lr + ((x&1)? D2 :0);
+                const CostType* Cp = C + x*D;
+                CostType* Sp = S + x*D;
+                int minS = MAX_COST, bestDisp = -1;
+                minLr = MAX_COST;
+
+            #if CV_SIMD128
+                if( useSIMD )
+                {
+                    v_int16x8 _P1 = v_setall_s16((short)P1);
+
+                    v_int16x8 _delta = v_setall_s16((short)delta);
+                    v_int16x8 _minL = v_setall_s16((short)MAX_COST);
+
+                    v_int16x8 _minS = v_setall_s16(MAX_COST), _bestDisp = v_setall_s16(-1);
+                    v_int16x8 _d8 = v_int16x8(0, 1, 2, 3, 4, 5, 6, 7), _8 = v_setall_s16(8);
+
+                    for( d = 0; d < D; d+= 8 )
+                    {
+                        v_int16x8 Cpd = v_load(Cp + d);
+                        v_int16x8 L;
+
+                        L = v_load(Lr_ppr + d);
+
+                        L = v_min(L, (v_load(Lr_ppr + d - 1) + _P1));
+                        L = v_min(L, (v_load(Lr_ppr + d + 1) + _P1));
+
+                        L = v_min(L, _delta);
+                        L = ((L - _delta) + Cpd);
+
+                        v_store(Lr_p + d, L);
+
+                        // Get minimum from in L-L3
+                        _minL = v_min(_minL, L);
+
+                        v_int16x8 Sval = v_load(Sp + d);
+
+                        Sval = Sval + L;
+
+                        v_int16x8 mask = Sval < _minS;
+                        _minS = v_min( Sval, _minS );
+                        _bestDisp = _bestDisp ^ ((_bestDisp ^ _d8) & mask);
+                        _d8 = _d8 + _8;
+
+                        v_store(Sp + d, Sval);
+                    }
+                    v_int32x4 min1, min2, min12;
+                    v_expand(_minL, min1, min2);
+                    min12 = v_min(min1,min2);
+                    minLr = (CostType)v_reduce_min(min12);
+
+                    v_int32x4 _d0, _d1;
+                    v_expand(_minS, _d0, _d1);
+                    minS = (int)std::min(v_reduce_min(_d0), v_reduce_min(_d1));
+                    v_int16x8 v_mask = v_setall_s16((short)minS) == _minS;
+
+                    _bestDisp = (_bestDisp & v_mask) | (v_setall_s16(SHRT_MAX) & ~v_mask);
+                    v_expand(_bestDisp, _d0, _d1);
+                    bestDisp = (int)std::min(v_reduce_min(_d0), v_reduce_min(_d1));
+                }
+                else
+            #endif
+                {
+                    for( d = 0; d < D; d++ )
+                    {
+                        int Cpd = Cp[d], L;
+
+                        L = Cpd + std::min((int)Lr_ppr[d], std::min(Lr_ppr[d-1] + P1, std::min(Lr_ppr[d+1] + P1, delta))) - delta;
+
+                        Lr_p[d] = (CostType)L;
+                        minLr = (CostType)std::min((int)minLr, L);
+
+                        Sp[d] = saturate_cast<CostType>(Sp[d] + L);
+                        if( Sp[d] < minS )
+                        {
+                            minS = Sp[d];
+                            bestDisp = d;
+                        }
+                    }
+                }
+                //Some postprocessing procedures and saving
+                for( d = 0; d < D; d++ )
+                {
+                    if( Sp[d]*(100 - uniquenessRatio) < minS*100 && std::abs(bestDisp - d) > 1 )
+                        break;
+                }
+                if( d < D )
+                    continue;
+                d = bestDisp;
+                int _x2 = x + minX1 - d - minD;
+                if( disp2cost[_x2] > minS )
+                {
+                    disp2cost[_x2] = (CostType)minS;
+                    disp2ptr[_x2] = (DispType)(d + minD);
+                }
+
+                if( 0 < d && d < D-1 )
+                {
+                    // do subpixel quadratic interpolation:
+                    //   fit parabola into (x1=d-1, y1=Sp[d-1]), (x2=d, y2=Sp[d]), (x3=d+1, y3=Sp[d+1])
+                    //   then find minimum of the parabola.
+                    int denom2 = std::max(Sp[d-1] + Sp[d+1] - 2*Sp[d], 1);
+                    d = d*DISP_SCALE + ((Sp[d-1] - Sp[d+1])*DISP_SCALE + denom2)/(denom2*2);
+                }
+                else
+                    d *= DISP_SCALE;
+                disp1ptr[x + minX1] = (DispType)(d + minD*DISP_SCALE);
+            }
+            //Left-right check sanity procedure
+            for( x = minX1; x < maxX1; x++ )
+            {
+                // we round the computed disparity both towards -inf and +inf and check
+                // if either of the corresponding disparities in disp2 is consistent.
+                // This is to give the computed disparity a chance to look valid if it is.
+                int d1 = disp1ptr[x];
+                if( d1 == INVALID_DISP_SCALED )
+                    continue;
+                int _d = d1 >> DISP_SHIFT;
+                int d_ = (d1 + DISP_SCALE-1) >> DISP_SHIFT;
+                int _x = x - _d, x_ = x - d_;
+                if( 0 <= _x && _x < width && disp2ptr[_x] >= minD && std::abs(disp2ptr[_x] - _d) > disp12MaxDiff &&
+                   0 <= x_ && x_ < width && disp2ptr[x_] >= minD && std::abs(disp2ptr[x_] - d_) > disp12MaxDiff )
+                    disp1ptr[x] = (DispType)INVALID_DISP_SCALED;
+            }
+        }
+    }
+
+    static const int DISP_SHIFT = StereoMatcher::DISP_SHIFT;
+    static const int DISP_SCALE = (1 << DISP_SHIFT);
+    static const CostType MAX_COST = SHRT_MAX;
+    static const int ALIGN = 16;
+    const Mat& img1;
+    const Mat& img2;
+    Mat& disp1;
+    CostType* Cbuf;
+    CostType* Sbuf;
+    int minD;
+    int maxD;
+    int D;
+    int D2;
+    int width;
+    int width1;
+    int height;
+    int P1;
+    int P2;
+    int minX1;
+    int maxX1;
+    size_t costBufSize;
+    size_t CSBufSize;
+    size_t LrSize;
+    int INVALID_DISP;
+    int INVALID_DISP_SCALED;
+    int uniquenessRatio;
+    int disp12MaxDiff;
+    bool useSIMD;
+};
+/*
+ computes disparity for "roi" in img1 w.r.t. img2 and write it to disp1buf.
+ that is, disp1buf(x, y)=d means that img1(x+roi.x, y+roi.y) ~ img2(x+roi.x-d, y+roi.y).
+ minD <= d < maxD.
+
+ note that disp1buf will have the same size as the roi and
+ On exit disp1buf is not the final disparity, it is an intermediate result that becomes
+ final after all the tiles are processed.
+
+ the disparity in disp1buf is written with sub-pixel accuracy
+ (4 fractional bits, see StereoSGBM::DISP_SCALE),
+ using quadratic interpolation, while the disparity in disp2buf
+ is written as is, without interpolation.
+ */
+static void computeDisparitySGBM_HH4( const Mat& img1, const Mat& img2,
+                                 Mat& disp1, const StereoSGBMParams& params,
+                                 Mat& buffer )
+{
+    const int ALIGN = 16;
+    const int DISP_SHIFT = StereoMatcher::DISP_SHIFT;
+    const int DISP_SCALE = (1 << DISP_SHIFT);
+    int minD = params.minDisparity, maxD = minD + params.numDisparities;
+    Size SADWindowSize;
+    SADWindowSize.width = SADWindowSize.height = params.SADWindowSize > 0 ? params.SADWindowSize : 5;
+    int ftzero = std::max(params.preFilterCap, 15) | 1;
+    int P1 = params.P1 > 0 ? params.P1 : 2, P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
+    int k, width = disp1.cols, height = disp1.rows;
+    int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+    int D = maxD - minD, width1 = maxX1 - minX1;
+    int SH2 = SADWindowSize.height/2;
+    int INVALID_DISP = minD - 1;
+    int INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
+    const int TAB_OFS = 256*4, TAB_SIZE = 256 + TAB_OFS*2;
+    PixType clipTab[TAB_SIZE];
+
+    for( k = 0; k < TAB_SIZE; k++ )
+        clipTab[k] = (PixType)(std::min(std::max(k - TAB_OFS, -ftzero), ftzero) + ftzero);
+
+    if( minX1 >= maxX1 )
+    {
+        disp1 = Scalar::all(INVALID_DISP_SCALED);
+        return;
+    }
+
+    CV_Assert( D % 16 == 0 );
+
+    int D2 = D+16;
+
+    // the number of L_r(.,.) and min_k L_r(.,.) lines in the buffer:
+    // for dynamic programming we need the current row and
+    // the previous row, i.e. 2 rows in total
+    const int NLR = 2;
+
+    // for each possible stereo match (img1(x,y) <=> img2(x-d,y))
+    // we keep pixel difference cost (C) and the summary cost over 4 directions (S).
+    // we also keep all the partial costs for the previous line L_r(x,d) and also min_k L_r(x, k)
+    size_t costBufSize = width1*D;
+    size_t CSBufSize = costBufSize*height;
+    size_t minLrSize = width1 , LrSize = minLrSize*D2;
+    int hsumBufNRows = SH2*2 + 2;
+    size_t totalBufSize = (LrSize + minLrSize)*NLR*sizeof(CostType) + // minLr[] and Lr[]
+    costBufSize*hsumBufNRows*sizeof(CostType) +                       // hsumBuf
+    CSBufSize*2*sizeof(CostType) + 1024;                              // C, S
+
+    if( buffer.empty() || !buffer.isContinuous() ||
+        buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
+        buffer.create(1, (int)totalBufSize, CV_8U);
+
+    // summary cost over different (nDirs) directions
+    CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), ALIGN);
+
+    // add P2 to every C(x,y). it saves a few operations in the inner loops
+    for(k = 0; k < (int)CSBufSize; k++ )
+        Cbuf[k] = (CostType)P2;
+
+    parallel_for_(Range(0,width1),CalcVerticalSums(img1, img2, params, Cbuf, clipTab),8);
+    parallel_for_(Range(0,height),CalcHorizontalSums(img1, img2, disp1, params, Cbuf),8);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1482,6 +2160,8 @@ public:
 
         if(params.mode==MODE_SGBM_3WAY)
             computeDisparity3WaySGBM( left, right, disp, params, buffers, num_stripes );
+        else if(params.mode==MODE_HH4)
+            computeDisparitySGBM_HH4( left, right, disp, params, buffer );
         else
             computeDisparitySGBM( left, right, disp, params, buffer );
 

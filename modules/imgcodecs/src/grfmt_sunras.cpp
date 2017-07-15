@@ -55,6 +55,10 @@ SunRasterDecoder::SunRasterDecoder()
     m_offset = -1;
     m_signature = fmtSignSunRas;
     m_description = "SUNRAS";
+    m_bpp = 0;
+    m_encoding = RAS_STANDARD;
+    m_maptype = RMT_NONE;
+    m_maplength = 0;
 }
 
 
@@ -158,7 +162,7 @@ bool  SunRasterDecoder::readData( Mat& img )
     int color = img.channels() > 1;
     uchar* data = img.ptr();
     int step = (int)img.step;
-    uchar  gray_palette[256];
+    uchar  gray_palette[256] = {0};
     bool   result = false;
     int  src_pitch = ((m_width*m_bpp + 7)/8 + 1) & -2;
     int  nch = color ? 3 : 1;

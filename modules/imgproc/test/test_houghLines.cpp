@@ -189,7 +189,7 @@ void BaseHoughLineTest::run_test(int type)
     else if (type == PROBABILISTIC)
         count = countMatIntersection<Vec4i>(exp_lines, lines, 1e-4f, 0.f);
 
-#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && IPP_DISABLE_BLOCK
+#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
     EXPECT_GE( count, (int) (exp_lines.total() * 0.8) );
 #else
     EXPECT_EQ( count, (int) exp_lines.total());

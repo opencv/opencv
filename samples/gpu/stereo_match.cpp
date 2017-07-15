@@ -212,7 +212,7 @@ void App::run()
         // Show results
         d_disp.download(disp);
         putText(disp, text(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255));
-        imshow("disparity", disp);
+        imshow("disparity", (Mat_<uchar>)disp);
 
         handleKey((char)waitKey(3));
     }

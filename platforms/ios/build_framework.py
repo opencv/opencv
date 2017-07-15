@@ -28,7 +28,7 @@ Adding --dynamic parameter will build opencv2.framework as App Store dynamic fra
 """
 
 from __future__ import print_function
-import glob, re, os, os.path, shutil, string, sys, argparse, traceback
+import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 
 def execute(cmd, cwd = None):
@@ -166,7 +166,7 @@ class Builder:
                 "-sdk", target.lower(),
                 "-configuration", "Release",
                 "-parallelizeTargets",
-                "-jobs", "4",
+                "-jobs", str(multiprocessing.cpu_count()),
             ] + (["-target","ALL_BUILD"] if self.dynamic else [])
 
         return buildcmd

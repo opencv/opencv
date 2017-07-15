@@ -11,6 +11,8 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_LIST_DIR)
 # ----------------------------------------------------------------------------
 
 add_subdirectory(cpp)
+add_subdirectory(java/tutorial_code)
+add_subdirectory(dnn)
 add_subdirectory(gpu)
 add_subdirectory(tapi)
 
@@ -53,7 +55,9 @@ option(BUILD_EXAMPLES "Build samples" ON)
 find_package(OpenCV REQUIRED)
 
 if(MSVC)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  if(NOT ENABLE_BUILD_HARDENING)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  endif()
 
   if(NOT OpenCV_SHARED)
     foreach(flag_var
@@ -76,6 +80,7 @@ if(MSVC)
 endif()
 
 add_subdirectory(cpp)
+add_subdirectory(dnn)
 # FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
 
 add_subdirectory(opencl)

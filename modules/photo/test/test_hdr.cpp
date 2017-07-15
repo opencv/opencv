@@ -208,17 +208,17 @@ TEST(Photo_MergeRobertson, regression)
     vector<Mat> images;
     vector<float> times;
     loadExposureSeq(test_path + "exposures/", images, times);
-
     Ptr<MergeRobertson> merge = createMergeRobertson();
-
     Mat result, expected;
     loadImage(test_path + "merge/robertson.hdr", expected);
     merge->process(images, result, times);
-    Ptr<Tonemap> map = createTonemap();
-    map->process(result, result);
-    map->process(expected, expected);
 
-    checkEqual(expected, result, 1e-2f, "MergeRobertson");
+#ifdef __aarch64__
+    const float eps = 6.f;
+#else
+    const float eps = 5.f;
+#endif
+    checkEqual(expected, result, eps, "MergeRobertson");
 }
 
 TEST(Photo_CalibrateDebevec, regression)
@@ -252,5 +252,5 @@ TEST(Photo_CalibrateRobertson, regression)
 
     Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson();
     calibrate->process(images, response, times);
-    checkEqual(expected, response, 1e-3f, "CalibrateRobertson");
+    checkEqual(expected, response, 1e-1f, "CalibrateRobertson");
 }

@@ -8,6 +8,9 @@ if(APPLE_FRAMEWORK OR WINRT OR NOT PYTHON_DEFAULT_AVAILABLE OR NOT ANT_EXECUTABL
   ocv_module_disable(java)
 endif()
 
+set(the_description "The java bindings")
+ocv_add_module(java BINDINGS opencv_core opencv_imgproc)
+
 if(EXISTS ${CMAKE_BINARY_DIR}/src)
   execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/src")
 endif()
@@ -15,8 +18,6 @@ if(EXISTS ${CMAKE_BINARY_DIR}/gen)
   execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/gen")
 endif()
 
-set(the_description "The java bindings")
-ocv_add_module(java BINDINGS opencv_core opencv_imgproc)
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp")
 ocv_module_include_directories("${OpenCV_SOURCE_DIR}/include")
 
@@ -139,16 +140,30 @@ glob_more_specific_sources(AIDL "${CMAKE_CURRENT_SOURCE_DIR}/generator" handwrit
 
 # headers of OpenCV modules
 set(opencv_public_headers "")
+set(opencv_type_dicts "")
 set(generated_cpp_sources "")
 set(generated_java_sources "")
 foreach(module ${OPENCV_JAVA_MODULES})
   set(module_java_dir "${OPENCV_MODULE_opencv_${module}_LOCATION}/misc/java")
+  # custom mappings between c and java/JNI types
+  set(custom_type_dict "${module_java_dir}/gen_dict.json")
+  if(EXISTS "${custom_type_dict}")
+    list(APPEND opencv_java_type_dict_${module} ${custom_type_dict})
+  endif()
+
   set(custom_header_list "${module_java_dir}/filelist")
   if(EXISTS "${custom_header_list}")
     file(STRINGS "${custom_header_list}" module_headers)
     ocv_list_add_prefix(module_headers "${OPENCV_MODULE_opencv_${module}_LOCATION}/")
   else()
-    set(module_headers "${OPENCV_MODULE_opencv_${module}_HEADERS}")
+    set(module_headers "")
+    # TODO Implement module's "_HEADERS_PUBLIC" variable (OpenCVModule.cmake)
+    foreach(hdr ${OPENCV_MODULE_opencv_${module}_HEADERS})
+      string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
+      if(NOT hdr2 MATCHES "opencv2/${m}/private.*" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
+        list(APPEND module_headers "${hdr}")
+      endif()
+    endforeach()
   endif()
 
   if(NOT module_headers)
@@ -163,12 +178,24 @@ foreach(module ${OPENCV_JAVA_MODULES})
 
   include_directories("${module_java_dir}/src/cpp")
 
+  set(common_header_list "${module_java_dir}/filelist_common")
+  if(EXISTS "${common_header_list}")
+    file(STRINGS "${common_header_list}" __headers)
+    ocv_list_add_prefix(__headers "${OPENCV_MODULE_opencv_${module}_LOCATION}/")
+    list(APPEND opencv_java_common_headers_${module} ${__headers})
+  endif()
+
   foreach(m ${OPENCV_MODULE_opencv_${module}_DEPS})
     set(common_header_list "${OPENCV_MODULE_${m}_LOCATION}/misc/java/filelist_common")
     if(EXISTS "${common_header_list}")
       file(STRINGS "${common_header_list}" __headers)
       ocv_list_add_prefix(__headers "${OPENCV_MODULE_${m}_LOCATION}/")
       list(APPEND opencv_java_common_headers_${module} ${__headers})
+    endif()
+    set(custom_type_dict "${OPENCV_MODULE_${m}_LOCATION}/misc/java/gen_dict.json")
+    if(EXISTS "${custom_type_dict}")
+      list(APPEND opencv_java_type_dict_${module} ${custom_type_dict})
+      list(APPEND opencv_type_dicts ${custom_type_dicts})
     endif()
   endforeach()
 
@@ -180,7 +207,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
   # first run of gen_java.py (to get list of generated files)
   file(REMOVE_RECURSE "${probe_dir}")
   file(MAKE_DIRECTORY "${probe_dir}")
-  execute_process(COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}} "--common" ${opencv_java_common_headers_${module}}
+  execute_process(COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "-p" "${scripts_hdr_parser}" "-m" ${module} "-s" ${opencv_public_headers_${module}} "-c" ${opencv_java_common_headers_${module}} "-t" ${opencv_java_type_dict_${module}}
                   WORKING_DIRECTORY "${probe_dir}"
                   OUTPUT_QUIET ERROR_QUIET)
   file(GLOB_RECURSE generated_java_sources_${module} RELATIVE "${probe_dir}" "${probe_dir}/*.java")
@@ -208,20 +235,20 @@ else()
   endif()
 endif()
 
-# IMPORTANT: add dependencies to cmake (we should rerun cmake if any of these files is modified)
-add_cmake_dependencies(${scripts_gen_java} ${scripts_hdr_parser} ${opencv_public_headers})
+# IMPORTANT: add dependencies to cmake (we should rerun cmake if any of these files are modified)
+add_cmake_dependencies(${scripts_gen_java} ${scripts_hdr_parser} ${opencv_public_headers} ${opencv_type_dicts})
 
 ######################################################################################################################################
 
 # step 1: generate .cpp/.java from OpenCV headers
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen")
-set(step1_depends "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers})
+set(step1_depends "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers} ${opencv_type_dicts})
 foreach(module ${OPENCV_JAVA_MODULES})
   # second run of gen_java.py (at build time)
   add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/gen/${module}.cpp"
-                     COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}} "--common" ${opencv_java_common_headers_${module}}
+                     COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${scripts_gen_java}" "-p" "${scripts_hdr_parser}" "-m" ${module} "-s" ${opencv_public_headers_${module}} "-c" ${opencv_java_common_headers_${module}} "-t" ${opencv_java_type_dict_${module}}
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen/"
-                     DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}} ${opencv_java_common_headers_${module}}
+                     DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}} ${opencv_java_common_headers_${module}} ${opencv_java_type_dict_${module}}
                     )
 endforeach()
 
@@ -359,7 +386,7 @@ endif(ANDROID)
 
 # workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
 string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-const-variable -Wundef)
 
 ocv_add_library(${the_module} SHARED ${handwritten_h_sources} ${handwritten_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}

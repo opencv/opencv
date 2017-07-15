@@ -82,6 +82,12 @@ ExrDecoder::ExrDecoder()
     m_file = 0;
     m_red = m_green = m_blue = 0;
     m_description = "EXR";
+    m_type = ((Imf::PixelType)0);
+    m_iscolor = false;
+    m_bit_depth = 0;
+    m_isfloat = false;
+    m_ischroma = false;
+    m_native_depth = false;
 }
 
 
@@ -210,9 +216,12 @@ bool  ExrDecoder::readData( Mat& img )
         return false;
     }
 
+    AutoBuffer<char> copy_buffer;
+
     if( !m_native_depth || (!color && m_iscolor ))
     {
-        buffer = (char *)new float[ m_width * 3 ];
+        copy_buffer.allocate(sizeof(float) * m_width * 3);
+        buffer = copy_buffer;
         ystep = 0;
     }
     else
@@ -389,11 +398,6 @@ bool  ExrDecoder::readData( Mat& img )
         ChromaToBGR( (float *)data, m_height, step / xstep );
 
     close();
-
-    if( !m_native_depth || (!color && m_iscolor ))
-    {
-        delete[] buffer;
-    }
 
     return result;
 }

@@ -549,7 +549,6 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      AKAZEFeatures::Compute_Main_Orientation((*keypoints_)[i], *evolution_);
       Get_MSURF_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i));
     }
   }
@@ -643,7 +642,6 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      AKAZEFeatures::Compute_Main_Orientation((*keypoints_)[i], *evolution_);
       Get_MLDB_Full_Descriptor((*keypoints_)[i], descriptors_->ptr<unsigned char>(i));
     }
   }
@@ -784,7 +782,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
   int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
   float xf = 0.0, yf = 0.0, gweight = 0.0, ratio = 0.0;
   const int ang_size = 109;
-  float resX[ang_size], resY[ang_size], Ang[ang_size];
+  float resX[ang_size] = {0}, resY[ang_size] = {0}, Ang[ang_size];
   const int id[] = { 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6 };
 
   // Variables for computing the dominant direction
@@ -1055,19 +1053,28 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
           y2 = fRound(sample_y + 0.5f);
           x2 = fRound(sample_x + 0.5f);
 
+          // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
+          // clip values so they fit into the image
+          const MatSize& size = evolution[level].Lx.size;
+          y1 = min(max(0, y1), size[0] - 1);
+          x1 = min(max(0, x1), size[1] - 1);
+          y2 = min(max(0, y2), size[0] - 1);
+          x2 = min(max(0, x2), size[1] - 1);
+          CV_DbgAssert(evolution[level].Lx.size == evolution[level].Ly.size);
+
           fx = sample_x - x1;
           fy = sample_y - y1;
 
-          res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
-          res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
-          res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
-          res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
+          res1 = *(evolution[level].Lx.ptr<float>(y1, x1));
+          res2 = *(evolution[level].Lx.ptr<float>(y1, x2));
+          res3 = *(evolution[level].Lx.ptr<float>(y2, x1));
+          res4 = *(evolution[level].Lx.ptr<float>(y2, x2));
           rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-          res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
-          res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
-          res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
-          res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
+          res1 = *(evolution[level].Ly.ptr<float>(y1, x1));
+          res2 = *(evolution[level].Ly.ptr<float>(y1, x2));
+          res3 = *(evolution[level].Ly.ptr<float>(y2, x1));
+          res4 = *(evolution[level].Ly.ptr<float>(y2, x2));
           ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
           // Get the x and y derivatives on the rotated axis
@@ -1117,7 +1124,7 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   float di = 0.0, dx = 0.0, dy = 0.0;
   float ri = 0.0, rx = 0.0, ry = 0.0, xf = 0.0, yf = 0.0;
   float sample_x = 0.0, sample_y = 0.0, ratio = 0.0;
-  int x1 = 0, y1 = 0, sample_step = 0, pattern_size = 0;
+  int x1 = 0, y1 = 0;
   int level = 0, nsamples = 0, scale = 0;
   int dcount1 = 0, dcount2 = 0;
 
@@ -1125,9 +1132,11 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   const std::vector<TEvolution>& evolution = *evolution_;
 
   // Matrices for the M-LDB descriptor
-  Mat values_1 = Mat::zeros(4, options.descriptor_channels, CV_32FC1);
-  Mat values_2 = Mat::zeros(9, options.descriptor_channels, CV_32FC1);
-  Mat values_3 = Mat::zeros(16, options.descriptor_channels, CV_32FC1);
+  Mat values[3] = {
+    Mat::zeros(4, options.descriptor_channels, CV_32FC1),
+    Mat::zeros(9, options.descriptor_channels, CV_32FC1),
+    Mat::zeros(16, options.descriptor_channels, CV_32FC1)
+  };
 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
@@ -1136,190 +1145,72 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   yf = kpt.pt.y / ratio;
   xf = kpt.pt.x / ratio;
 
-  // First 2x2 grid
-  pattern_size = options_->descriptor_pattern_size;
-  sample_step = pattern_size;
+  // For 2x2 grid, 3x3 grid and 4x4 grid
+  const int pattern_size = options_->descriptor_pattern_size;
+  int sample_step[3] = {
+    pattern_size,
+    static_cast<int>(ceil(pattern_size*2./3.)),
+    pattern_size / 2
+  };
 
-  for (int i = -pattern_size; i < pattern_size; i += sample_step) {
-    for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-      di = dx = dy = 0.0;
-      nsamples = 0;
+  // For the three grids
+  for (int z = 0; z < 3; z++) {
+    dcount2 = 0;
+    const int step = sample_step[z];
+    for (int i = -pattern_size; i < pattern_size; i += step) {
+      for (int j = -pattern_size; j < pattern_size; j += step) {
+        di = dx = dy = 0.0;
+        nsamples = 0;
 
-      for (int k = i; k < i + sample_step; k++) {
-        for (int l = j; l < j + sample_step; l++) {
+        for (int k = i; k < i + step; k++) {
+          for (int l = j; l < j + step; l++) {
 
-          // Get the coordinates of the sample point
-          sample_y = yf + l*scale;
-          sample_x = xf + k*scale;
+            // Get the coordinates of the sample point
+            sample_y = yf + l*scale;
+            sample_x = xf + k*scale;
 
-          y1 = fRound(sample_y);
-          x1 = fRound(sample_x);
+            y1 = fRound(sample_y);
+            x1 = fRound(sample_x);
 
-          ri = *(evolution[level].Lt.ptr<float>(y1)+x1);
-          rx = *(evolution[level].Lx.ptr<float>(y1)+x1);
-          ry = *(evolution[level].Ly.ptr<float>(y1)+x1);
+            ri = *(evolution[level].Lt.ptr<float>(y1)+x1);
+            rx = *(evolution[level].Lx.ptr<float>(y1)+x1);
+            ry = *(evolution[level].Ly.ptr<float>(y1)+x1);
 
-          di += ri;
-          dx += rx;
-          dy += ry;
-          nsamples++;
+            di += ri;
+            dx += rx;
+            dy += ry;
+            nsamples++;
+          }
+        }
+
+        di /= nsamples;
+        dx /= nsamples;
+        dy /= nsamples;
+
+        float *val = values[z].ptr<float>(dcount2);
+        *(val) = di;
+        *(val+1) = dx;
+        *(val+2) = dy;
+        dcount2++;
+      }
+    }
+
+    // Do binary comparison
+    const int num = (z + 2) * (z + 2);
+    for (int i = 0; i < num; i++) {
+      for (int j = i + 1; j < num; j++) {
+        const float * valI = values[z].ptr<float>(i);
+        const float * valJ = values[z].ptr<float>(j);
+        for (int k = 0; k < 3; ++k) {
+          if (*(valI + k) > *(valJ + k)) {
+            desc[dcount1 / 8] |= (1 << (dcount1 % 8));
+          }
+          dcount1++;
         }
       }
-
-      di /= nsamples;
-      dx /= nsamples;
-      dy /= nsamples;
-
-      *(values_1.ptr<float>(dcount2)) = di;
-      *(values_1.ptr<float>(dcount2)+1) = dx;
-      *(values_1.ptr<float>(dcount2)+2) = dy;
-      dcount2++;
     }
-  }
 
-  // Do binary comparison first level
-  for (int i = 0; i < 4; i++) {
-    for (int j = i + 1; j < 4; j++) {
-      if (*(values_1.ptr<float>(i)) > *(values_1.ptr<float>(j))) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-
-      if (*(values_1.ptr<float>(i)+1) > *(values_1.ptr<float>(j)+1)) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-
-      if (*(values_1.ptr<float>(i)+2) > *(values_1.ptr<float>(j)+2)) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-    }
-  }
-
-  // Second 3x3 grid
-  sample_step = static_cast<int>(ceil(pattern_size*2. / 3.));
-  dcount2 = 0;
-
-  for (int i = -pattern_size; i < pattern_size; i += sample_step) {
-    for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-      di = dx = dy = 0.0;
-      nsamples = 0;
-
-      for (int k = i; k < i + sample_step; k++) {
-        for (int l = j; l < j + sample_step; l++) {
-
-          // Get the coordinates of the sample point
-          sample_y = yf + l*scale;
-          sample_x = xf + k*scale;
-
-          y1 = fRound(sample_y);
-          x1 = fRound(sample_x);
-
-          ri = *(evolution[level].Lt.ptr<float>(y1)+x1);
-          rx = *(evolution[level].Lx.ptr<float>(y1)+x1);
-          ry = *(evolution[level].Ly.ptr<float>(y1)+x1);
-
-          di += ri;
-          dx += rx;
-          dy += ry;
-          nsamples++;
-        }
-      }
-
-      di /= nsamples;
-      dx /= nsamples;
-      dy /= nsamples;
-
-      *(values_2.ptr<float>(dcount2)) = di;
-      *(values_2.ptr<float>(dcount2)+1) = dx;
-      *(values_2.ptr<float>(dcount2)+2) = dy;
-      dcount2++;
-    }
-  }
-
-  //Do binary comparison second level
-  dcount2 = 0;
-  for (int i = 0; i < 9; i++) {
-    for (int j = i + 1; j < 9; j++) {
-      if (*(values_2.ptr<float>(i)) > *(values_2.ptr<float>(j))) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-
-      if (*(values_2.ptr<float>(i)+1) > *(values_2.ptr<float>(j)+1)) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-
-      if (*(values_2.ptr<float>(i)+2) > *(values_2.ptr<float>(j)+2)) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-    }
-  }
-
-  // Third 4x4 grid
-  sample_step = pattern_size / 2;
-  dcount2 = 0;
-
-  for (int i = -pattern_size; i < pattern_size; i += sample_step) {
-    for (int j = -pattern_size; j < pattern_size; j += sample_step) {
-      di = dx = dy = 0.0;
-      nsamples = 0;
-
-      for (int k = i; k < i + sample_step; k++) {
-        for (int l = j; l < j + sample_step; l++) {
-
-          // Get the coordinates of the sample point
-          sample_y = yf + l*scale;
-          sample_x = xf + k*scale;
-
-          y1 = fRound(sample_y);
-          x1 = fRound(sample_x);
-
-          ri = *(evolution[level].Lt.ptr<float>(y1)+x1);
-          rx = *(evolution[level].Lx.ptr<float>(y1)+x1);
-          ry = *(evolution[level].Ly.ptr<float>(y1)+x1);
-
-          di += ri;
-          dx += rx;
-          dy += ry;
-          nsamples++;
-        }
-      }
-
-      di /= nsamples;
-      dx /= nsamples;
-      dy /= nsamples;
-
-      *(values_3.ptr<float>(dcount2)) = di;
-      *(values_3.ptr<float>(dcount2)+1) = dx;
-      *(values_3.ptr<float>(dcount2)+2) = dy;
-      dcount2++;
-    }
-  }
-
-  //Do binary comparison third level
-  dcount2 = 0;
-  for (int i = 0; i < 16; i++) {
-    for (int j = i + 1; j < 16; j++) {
-      if (*(values_3.ptr<float>(i)) > *(values_3.ptr<float>(j))) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-
-      if (*(values_3.ptr<float>(i)+1) > *(values_3.ptr<float>(j)+1)) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-
-      if (*(values_3.ptr<float>(i)+2) > *(values_3.ptr<float>(j)+2)) {
-        desc[dcount1 / 8] |= (1 << (dcount1 % 8));
-      }
-      dcount1++;
-    }
-  }
+  } // for (int z = 0; z < 3; z++)
 }
 
 void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_step, int level,
@@ -1344,12 +1235,20 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 int y1 = fRound(sample_y);
                 int x1 = fRound(sample_x);
 
-                float ri = *(evolution[level].Lt.ptr<float>(y1)+x1);
+                // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
+                // clip values so they fit into the image
+                const MatSize& size = evolution[level].Lt.size;
+                CV_DbgAssert(size == evolution[level].Lx.size &&
+                             size == evolution[level].Ly.size);
+                y1 = min(max(0, y1), size[0] - 1);
+                x1 = min(max(0, x1), size[1] - 1);
+
+                float ri = *(evolution[level].Lt.ptr<float>(y1, x1));
                 di += ri;
 
                 if(chan > 1) {
-                    float rx = *(evolution[level].Lx.ptr<float>(y1)+x1);
-                    float ry = *(evolution[level].Ly.ptr<float>(y1)+x1);
+                    float rx = *(evolution[level].Lx.ptr<float>(y1, x1));
+                    float ry = *(evolution[level].Ly.ptr<float>(y1, x1));
                     if (chan == 2) {
                       dx += sqrtf(rx*rx + ry*ry);
                     }

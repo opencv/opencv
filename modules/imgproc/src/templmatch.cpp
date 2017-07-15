@@ -135,7 +135,7 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     const double blockScale = 4.5;
     const int minBlockSize = 256;
 
-    block_size.width = cvRound(result_size.width*blockScale);
+    block_size.width = cvRound(templ_size.width*blockScale);
     block_size.width = std::max( block_size.width, minBlockSize - templ_size.width + 1 );
     block_size.width = std::min( block_size.width, result_size.width );
     block_size.height = cvRound(templ_size.height*blockScale);
@@ -477,6 +477,7 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
     integral(_image, image_sums, image_sqsums, CV_32F, CV_32F);
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(cn >= 1 && cn <= 4);
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
         format("-D CCOEFF_NORMED -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
@@ -888,12 +889,14 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
         templNorm = std::sqrt(templNorm);
         templNorm /= std::sqrt(invArea); // care of accuracy here
 
+        CV_Assert(sqsum.data != NULL);
         q0 = (double*)sqsum.data;
         q1 = q0 + templ.cols*cn;
         q2 = (double*)(sqsum.data + templ.rows*sqsum.step);
         q3 = q2 + templ.cols*cn;
     }
 
+    CV_Assert(sum.data != NULL);
     double* p0 = (double*)sum.data;
     double* p1 = p0 + templ.cols*cn;
     double* p2 = (double*)(sum.data + templ.rows*sum.step);

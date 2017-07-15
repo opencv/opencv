@@ -1635,7 +1635,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         return true;
     }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     size_t localThreads[2] = { 16, 8 };
 #else
     size_t localThreads[2] = { 16, 16 };
@@ -1650,7 +1650,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     if (localThreads[0]*localThreads[1] * 2 < (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1))
         return false;
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (dev.isNVidia())
         return false;
 #endif
@@ -2012,8 +2012,6 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
     CV_IPP_RUN_FAST(ipp_morphologyEx(op, src, dst, kernel, anchor, iterations, borderType, borderValue));
 #endif
 
-    Mat k1, k2, e1, e2; //only for hit and miss op
-
     switch( op )
     {
     case MORPH_ERODE:
@@ -2051,21 +2049,29 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
         break;
     case MORPH_HITMISS:
         CV_Assert(src.type() == CV_8UC1);
-        k1 = (kernel == 1);
-        k2 = (kernel == -1);
-        if (countNonZero(k1) <= 0)
-            e1 = src;
-        else
-            erode(src, e1, k1, anchor, iterations, borderType, borderValue);
-        if (countNonZero(k2) <= 0)
-            e2 = src;
-        else
+        if(countNonZero(kernel) <=0)
         {
+            src.copyTo(dst);
+            break;
+        }
+        {
+            Mat k1, k2, e1, e2;
+            k1 = (kernel == 1);
+            k2 = (kernel == -1);
+
+            if (countNonZero(k1) <= 0)
+                e1 = src;
+            else
+                erode(src, e1, k1, anchor, iterations, borderType, borderValue);
+
             Mat src_complement;
             bitwise_not(src, src_complement);
-            erode(src_complement, e2, k2, anchor, iterations, borderType, borderValue);
+            if (countNonZero(k2) <= 0)
+                e2 = src_complement;
+            else
+                erode(src_complement, e2, k2, anchor, iterations, borderType, borderValue);
+            dst = e1 & e2;
         }
-        dst = e1 & e2;
         break;
     default:
         CV_Error( CV_StsBadArg, "unknown morphological operation" );

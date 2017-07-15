@@ -198,8 +198,8 @@ int main(int argc, const char *argv[])
 
 The Subdiv2D class described in this section is used to perform various planar subdivision on
 a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
-using the Delaunay’s algorithm, which corresponds to the dual graph of the Voronoi diagram.
-In the figure below, the Delaunay’s triangulation is marked with black lines and the Voronoi
+using the Delaunay's algorithm, which corresponds to the dual graph of the Voronoi diagram.
+In the figure below, the Delaunay's triangulation is marked with black lines and the Voronoi
 diagram with red lines.
 
 ![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
@@ -955,7 +955,7 @@ public:
 
     /** @overload
 
-    @param rect – Rectangle that includes all of the 2D points that are to be added to the subdivision.
+    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
     The function creates an empty Delaunay subdivision where 2D points can be added using the function
     insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
@@ -965,14 +965,14 @@ public:
 
     /** @brief Creates a new empty Delaunay subdivision
 
-    @param rect – Rectangle that includes all of the 2D points that are to be added to the subdivision.
+    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
      */
     CV_WRAP void initDelaunay(Rect rect);
 
     /** @brief Insert a single point into a Delaunay triangulation.
 
-    @param pt – Point to insert.
+    @param pt Point to insert.
 
     The function inserts a single point into a subdivision and modifies the subdivision topology
     appropriately. If a point with the same coordinates exists already, no new point is added.
@@ -984,7 +984,7 @@ public:
 
     /** @brief Insert multiple points into a Delaunay triangulation.
 
-    @param ptvec – Points to insert.
+    @param ptvec Points to insert.
 
     The function inserts a vector of points into a subdivision and modifies the subdivision topology
     appropriately.
@@ -993,9 +993,9 @@ public:
 
     /** @brief Returns the location of a point within a Delaunay triangulation.
 
-    @param pt – Point to locate.
-    @param edge – Output edge that the point belongs to or is located to the right of it.
-    @param vertex – Optional output vertex the input point coincides with.
+    @param pt Point to locate.
+    @param edge Output edge that the point belongs to or is located to the right of it.
+    @param vertex Optional output vertex the input point coincides with.
 
     The function locates the input point within the subdivision and gives one of the triangle edges
     or vertices.
@@ -1008,15 +1008,15 @@ public:
        vertex will contain a pointer to the vertex.
     -  The point is outside the subdivision reference rectangle. The function returns PTLOC_OUTSIDE_RECT
        and no pointers are filled.
-    -  One of input arguments is invalid. A runtime error is raised or, if silent or “parent” error
+    -  One of input arguments is invalid. A runtime error is raised or, if silent or "parent" error
        processing mode is selected, CV_PTLOC_ERROR is returned.
      */
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
     /** @brief Finds the subdivision vertex closest to the given point.
 
-    @param pt – Input point.
-    @param nearestPt – Output subdivision vertex point.
+    @param pt Input point.
+    @param nearestPt Output subdivision vertex point.
 
     The function is another function that locates the input point within the subdivision. It finds the
     subdivision vertex that is the closest to the input point. It is not necessarily one of vertices
@@ -1029,7 +1029,7 @@ public:
 
     /** @brief Returns a list of all edges.
 
-    @param edgeList – Output vector.
+    @param edgeList Output vector.
 
     The function gives each edge as a 4 numbers vector, where each two are one of the edge
     vertices. i.e. org_x = v[0], org_y = v[1], dst_x = v[2], dst_y = v[3].
@@ -1038,7 +1038,7 @@ public:
 
     /** @brief Returns a list of the leading edge ID connected to each triangle.
 
-    @param leadingEdgeList – Output vector.
+    @param leadingEdgeList Output vector.
 
     The function gives one edge ID for each triangle.
      */
@@ -1046,7 +1046,7 @@ public:
 
     /** @brief Returns a list of all triangles.
 
-    @param triangleList – Output vector.
+    @param triangleList Output vector.
 
     The function gives each triangle as a 6 numbers vector, where each two are one of the triangle
     vertices. i.e. p1_x = v[0], p1_y = v[1], p2_x = v[2], p2_y = v[3], p3_x = v[4], p3_y = v[5].
@@ -1055,9 +1055,9 @@ public:
 
     /** @brief Returns a list of all Voroni facets.
 
-    @param idx – Vector of vertices IDs to consider. For all vertices you can pass empty vector.
-    @param facetList – Output vector of the Voroni facets.
-    @param facetCenters – Output vector of the Voroni facets center points.
+    @param idx Vector of vertices IDs to consider. For all vertices you can pass empty vector.
+    @param facetList Output vector of the Voroni facets.
+    @param facetCenters Output vector of the Voroni facets center points.
 
      */
     CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
@@ -1065,8 +1065,8 @@ public:
 
     /** @brief Returns vertex location from vertex ID.
 
-    @param vertex – vertex ID.
-    @param firstEdge – Optional. The first edge ID which is connected to the vertex.
+    @param vertex vertex ID.
+    @param firstEdge Optional. The first edge ID which is connected to the vertex.
     @returns vertex (x,y)
 
      */
@@ -1074,8 +1074,8 @@ public:
 
     /** @brief Returns one of the edges related to the given edge.
 
-    @param edge – Subdivision edge ID.
-    @param nextEdgeType - Parameter specifying which of the related edges to return.
+    @param edge Subdivision edge ID.
+    @param nextEdgeType Parameter specifying which of the related edges to return.
     The following values are possible:
     -   NEXT_AROUND_ORG next around the edge origin ( eOnext on the picture below if e is the input edge)
     -   NEXT_AROUND_DST next around the edge vertex ( eDnext )
@@ -1094,7 +1094,7 @@ public:
 
     /** @brief Returns next edge around the edge origin.
 
-    @param edge – Subdivision edge ID.
+    @param edge Subdivision edge ID.
 
     @returns an integer which is next edge ID around the edge origin: eOnext on the
     picture above if e is the input edge).
@@ -1103,8 +1103,8 @@ public:
 
     /** @brief Returns another edge of the same quad-edge.
 
-    @param edge – Subdivision edge ID.
-    @param rotate - Parameter specifying which of the edges of the same quad-edge as the input
+    @param edge Subdivision edge ID.
+    @param rotate Parameter specifying which of the edges of the same quad-edge as the input
     one to return. The following values are possible:
     -   0 - the input edge ( e on the picture below if e is the input edge)
     -   1 - the rotated edge ( eRot )
@@ -1118,8 +1118,8 @@ public:
 
     /** @brief Returns the edge origin.
 
-    @param edge – Subdivision edge ID.
-    @param orgpt – Output vertex location.
+    @param edge Subdivision edge ID.
+    @param orgpt Output vertex location.
 
     @returns vertex ID.
      */
@@ -1127,8 +1127,8 @@ public:
 
     /** @brief Returns the edge destination.
 
-    @param edge – Subdivision edge ID.
-    @param dstpt – Output vertex location.
+    @param edge Subdivision edge ID.
+    @param dstpt Output vertex location.
 
     @returns vertex ID.
      */
@@ -2181,6 +2181,9 @@ kernel center.
 @param borderValue Border value in case of a constant border. The default value has a special
 meaning.
 @sa  dilate, erode, getStructuringElement
+@note The number of iterations is the number of times erosion or dilatation operation will be applied.
+For instance, an opening operation (#MORPH_OPEN) with two iterations is equivalent to apply
+successively: erode -> erode -> dilate -> dilate (and not erode -> dilate -> erode -> dilate).
  */
 CV_EXPORTS_W void morphologyEx( InputArray src, OutputArray dst,
                                 int op, InputArray kernel,
@@ -3687,7 +3690,7 @@ data type.
 is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \times (H-h+1)\f$ .
 @param method Parameter specifying the comparison method, see cv::TemplateMatchModes
 @param mask Mask of searched template. It must have the same datatype and size with templ. It is
-not set by default.
+not set by default. Currently, only the TM_SQDIFF and TM_CCORR_NORMED methods are supported.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method, InputArray mask = noArray() );
@@ -3703,8 +3706,10 @@ image with 4 or 8 way connectivity - returns N, the total number of labels [0, N
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
-Grana's (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
+Grana (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
 for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
+This function uses parallel version of both Grana and Wu's algorithms if at least one allowed
+parallel framework is enabled and if the rows of the image are at least twice the number returned by getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
@@ -3735,7 +3740,8 @@ consideration based on the total number of labels or alternatively the total num
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
 Grana's (BBDT) and Wu's (SAUF) algorithms are supported, see the cv::ConnectedComponentsAlgorithmsTypes
 for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
-
+This function uses parallel version of both Grana and Wu's algorithms (statistics included) if at least one allowed
+parallel framework is enabled and if the rows of the image are at least twice the number returned by getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
 @param labels destination labeled image
@@ -4133,8 +4139,16 @@ enum ColormapTypes
 @param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
 @param dst The result is the colormapped source image. Note: Mat::create is called on dst.
 @param colormap The colormap to apply, see cv::ColormapTypes
- */
+*/
 CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
+
+/** @brief Applies a user colormap on a given image.
+
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
+@param dst The result is the colormapped source image. Note: Mat::create is called on dst.
+@param userColor The colormap to apply of type CV_8UC1 or CV_8UC3 and size 256
+*/
+CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray userColor);
 
 //! @} imgproc_colormap
 

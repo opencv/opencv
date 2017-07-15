@@ -54,6 +54,7 @@ public:
         regularizationParameter=0;
         name_ = "ShapeTransformer.TPS";
         tpsComputed=false;
+        transformCost = 0;
     }
 
     ThinPlateSplineShapeTransformerImpl(double _regularizationParameter)
@@ -61,6 +62,7 @@ public:
         regularizationParameter=_regularizationParameter;
         name_ = "ShapeTransformer.TPS";
         tpsComputed=false;
+        transformCost = 0;
     }
 
     /* Destructor */

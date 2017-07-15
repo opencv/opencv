@@ -63,6 +63,7 @@ WebPDecoder::WebPDecoder()
 {
     m_buf_supported = true;
     m_description = "WEBP";
+    channels = 0;
 }
 
 WebPDecoder::~WebPDecoder() {}

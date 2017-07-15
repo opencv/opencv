@@ -402,8 +402,8 @@ Mat estimateGlobalMotionRansac(
     std::vector<Point2f> subset1(params.size);
 
     // best hypothesis
-    std::vector<Point2f> subset0best(params.size);
-    std::vector<Point2f> subset1best(params.size);
+    std::vector<int> bestIndices(params.size);
+
     Mat_<float> bestM;
     int ninliersMax = -1;
 
@@ -447,14 +447,20 @@ Mat estimateGlobalMotionRansac(
         {
             bestM = M;
             ninliersMax = numinliers;
-            subset0best.swap(subset0);
-            subset1best.swap(subset1);
+            bestIndices.swap(indices);
         }
     }
 
     if (ninliersMax < params.size)
+    {
         // compute RMSE
-        bestM = estimateGlobalMotionLeastSquares(subset0best, subset1best, model, rmse);
+        for (int i = 0; i < params.size; ++i)
+        {
+            subset0[i] = points0_[bestIndices[i]];
+            subset1[i] = points1_[bestIndices[i]];
+        }
+        bestM = estimateGlobalMotionLeastSquares(subset0, subset1, model, rmse);
+    }
     else
     {
         subset0.resize(ninliersMax);

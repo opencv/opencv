@@ -316,7 +316,7 @@ protected:
     }
 };
 //new grouping function with using meanshift
-static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detectThreshold, std::vector<double>* foundWeights,
+static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detectThreshold, std::vector<double>& foundWeights,
                                       std::vector<double>& scales, Size winDetSize)
 {
     int detectionCount = (int)rectList.size();
@@ -326,14 +326,13 @@ static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detect
 
     for (int i=0; i < detectionCount; i++)
     {
-        hitWeights[i] = (*foundWeights)[i];
+        hitWeights[i] = foundWeights[i];
         hitCenter = (rectList[i].tl() + rectList[i].br())*(0.5); //center of rectangles
         hits[i] = Point3d(hitCenter.x, hitCenter.y, std::log(scales[i]));
     }
 
     rectList.clear();
-    if (foundWeights)
-        foundWeights->clear();
+    foundWeights.clear();
 
     double logZ = std::log(1.3);
     Point3d smothing(8, 16, logZ);
@@ -355,7 +354,7 @@ static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detect
         if (resultWeights[i] > detectThreshold)
         {
             rectList.push_back(resultRect);
-            foundWeights->push_back(resultWeights[i]);
+            foundWeights.push_back(resultWeights[i]);
         }
     }
 }
@@ -387,7 +386,7 @@ void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>&
 {
     CV_INSTRUMENT_REGION()
 
-    groupRectangles_meanshift(rectList, detectThreshold, &foundWeights, foundScales, winDetSize);
+    groupRectangles_meanshift(rectList, detectThreshold, foundWeights, foundScales, winDetSize);
 }
 
 
@@ -484,6 +483,8 @@ bool FeatureEvaluator::updateScaleData( Size imgsz, const std::vector<float>& _s
 
 bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _scales )
 {
+    CV_INSTRUMENT_REGION()
+
     Size imgsz = _image.size();
     bool recalcOptFeatures = updateScaleData(imgsz, _scales);
 
@@ -567,6 +568,9 @@ HaarEvaluator::HaarEvaluator()
     lbufSize = Size(0, 0);
     nchannels = 0;
     tofs = 0;
+    sqofs = 0;
+    varianceNormFactor = 0;
+    hasTiltedFeatures = false;
 }
 
 HaarEvaluator::~HaarEvaluator()
@@ -628,6 +632,8 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
 
 void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 {
+    CV_INSTRUMENT_REGION()
+
     const ScaleData& s = scaleData->at(scaleIdx);
     sqofs = hasTiltedFeatures ? sbufSize.area() * 2 : sbufSize.area();
 
@@ -670,6 +676,8 @@ void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 
 void HaarEvaluator::computeOptFeatures()
 {
+    CV_INSTRUMENT_REGION()
+
     if (hasTiltedFeatures)
         tofs = sbufSize.area();
 
@@ -764,6 +772,8 @@ LBPEvaluator::LBPEvaluator()
     features = makePtr<std::vector<Feature> >();
     optfeatures = makePtr<std::vector<OptFeature> >();
     scaleData = makePtr<std::vector<ScaleData> >();
+    optfeaturesPtr = 0;
+    pwin = 0;
 }
 
 LBPEvaluator::~LBPEvaluator()
@@ -879,6 +889,9 @@ Ptr<FeatureEvaluator> FeatureEvaluator::create( int featureType )
 
 CascadeClassifierImpl::CascadeClassifierImpl()
 {
+#ifdef HAVE_OPENCL
+    tryOpenCL = false;
+#endif
 }
 
 CascadeClassifierImpl::~CascadeClassifierImpl()
@@ -916,6 +929,8 @@ void CascadeClassifierImpl::read(const FileNode& node)
 
 int CascadeClassifierImpl::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, int scaleIdx, double& weight )
 {
+    CV_INSTRUMENT_REGION()
+
     assert( !oldCascade &&
            (data.featureType == FeatureEvaluator::HAAR ||
             data.featureType == FeatureEvaluator::LBP ||
@@ -984,6 +999,8 @@ public:
 
     void operator()(const Range& range) const
     {
+        CV_INSTRUMENT_REGION()
+
         Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
         double gypWeight = 0.;
         Size origWinSize = classifier->data.origWinSize;
@@ -1430,7 +1447,7 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
 
 CascadeClassifierImpl::Data::Data()
 {
-    stageType = featureType = ncategories = maxNodesPerTree = 0;
+    stageType = featureType = ncategories = maxNodesPerTree = minNodesPerTree = 0;
 }
 
 bool CascadeClassifierImpl::Data::read(const FileNode &root)

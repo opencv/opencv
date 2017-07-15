@@ -1,6 +1,6 @@
 if(WIN32)
     find_path( CSTRIPES_LIB_DIR
-               NAMES "С=.lib"
+               NAMES "C=.lib"
                DOC "The path to C= lib and dll")
     if(CSTRIPES_LIB_DIR)
         ocv_include_directories("${CSTRIPES_LIB_DIR}/..")

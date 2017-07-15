@@ -76,6 +76,7 @@ RBaseStream::RBaseStream()
 {
     m_start = m_end = m_current = 0;
     m_file = 0;
+    m_block_pos = 0;
     m_block_size = BS_DEF_BLOCK_SIZE;
     m_is_opened = false;
     m_allocated = false;
@@ -336,6 +337,7 @@ WBaseStream::WBaseStream()
 {
     m_start = m_end = m_current = 0;
     m_file = 0;
+    m_block_pos = 0;
     m_block_size = BS_DEF_BLOCK_SIZE;
     m_is_opened = false;
     m_buf = 0;

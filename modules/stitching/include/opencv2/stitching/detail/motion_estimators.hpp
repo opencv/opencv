@@ -149,8 +149,10 @@ protected:
     @param num_errs_per_measurement Number of error terms (components) per match
      */
     BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement)
-        : num_params_per_cam_(num_params_per_cam),
-          num_errs_per_measurement_(num_errs_per_measurement)
+        : num_images_(0), total_num_matches_(0),
+          num_params_per_cam_(num_params_per_cam),
+          num_errs_per_measurement_(num_errs_per_measurement),
+          features_(0), pairwise_matches_(0), conf_thresh_(0)
     {
         setRefinementMask(Mat::ones(3, 3, CV_8U));
         setConfThresh(1.);
@@ -199,7 +201,7 @@ protected:
     // Threshold to filter out poorly matched image pairs
     double conf_thresh_;
 
-    //Levenberg–Marquardt algorithm termination criteria
+    //Levenberg-Marquardt algorithm termination criteria
     TermCriteria term_criteria_;
 
     // Camera parameters matrix (CV_64F)

@@ -108,6 +108,7 @@ Ptr<ImageDecoder::Impl> ImageDecoder::Impl::newDecoder() const
 
 ImageEncoder::Impl::Impl()
 {
+    m_buf = 0;
     m_buf_supported = false;
 }
 

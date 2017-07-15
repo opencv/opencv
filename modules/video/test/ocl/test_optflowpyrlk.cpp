@@ -77,6 +77,7 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
 {
     static const int npoints = 1000;
     static const float eps = 0.03f;
+    static const float erreps = 0.1f;
 
     cv::Mat frame0 = readImage("optflow/RubberWhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -104,6 +105,8 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
     ASSERT_EQ(cpuStatusCPU.size(), status.size());
 
     size_t mistmatch = 0;
+    size_t errmatch = 0;
+
     for (size_t i = 0; i < nextPts.size(); ++i)
     {
         if (status[i] != cpuStatusCPU[i])
@@ -121,18 +124,27 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
             float errdiff = 0.0f;
 
             if (!eq || errdiff > 1e-1)
+            {
                 ++mistmatch;
+                continue;
+            }
+
+            eq = std::abs(cpuErr[i] - err[i]) < 0.01;
+            if(!eq)
+                ++errmatch;
         }
     }
 
     double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size());
+    double err_ratio = static_cast<double>(errmatch) / (nextPts.size());
 
     ASSERT_LE(bad_ratio, eps);
+    ASSERT_LE(err_ratio, erreps);
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlow,
                             Combine(
-                                Values(21, 25),
+                                Values(11, 15, 21, 25),
                                 Values(3, 5)
                                 )
                            );

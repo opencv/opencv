@@ -299,6 +299,8 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
 */
 Mat imread( const String& filename, int flags )
 {
+    CV_TRACE_FUNCTION();
+
     /// create the basic container
     Mat img;
 
@@ -321,6 +323,8 @@ Mat imread( const String& filename, int flags )
 */
 bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 {
+    CV_TRACE_FUNCTION();
+
     return imreadmulti_(filename, flags, mats);
 }
 
@@ -357,6 +361,8 @@ static bool imwrite_( const String& filename, const Mat& image,
 bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& params )
 {
+    CV_TRACE_FUNCTION();
+
     Mat img = _img.getMat();
     return imwrite_(filename, img, params, false);
 }
@@ -470,6 +476,8 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
 Mat imdecode( InputArray _buf, int flags )
 {
+    CV_TRACE_FUNCTION();
+
     Mat buf = _buf.getMat(), img;
     imdecode_( buf, flags, LOAD_MAT, &img );
 
@@ -478,6 +486,8 @@ Mat imdecode( InputArray _buf, int flags )
 
 Mat imdecode( InputArray _buf, int flags, Mat* dst )
 {
+    CV_TRACE_FUNCTION();
+
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
     imdecode_( buf, flags, LOAD_MAT, dst );
@@ -488,7 +498,11 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 bool imencode( const String& ext, InputArray _image,
                std::vector<uchar>& _buf, const std::vector<int>& params )
 {
+
     String filename;
+
+    CV_TRACE_FUNCTION();
+
     Mat image = _image.getMat();
     Mat buf(0, 1, CV_8U);
 

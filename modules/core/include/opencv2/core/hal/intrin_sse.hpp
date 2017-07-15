@@ -63,7 +63,7 @@ struct v_uint8x16
     typedef uchar lane_type;
     enum { nlanes = 16 };
 
-    v_uint8x16() {}
+    v_uint8x16() : val(_mm_setzero_si128()) {}
     explicit v_uint8x16(__m128i v) : val(v) {}
     v_uint8x16(uchar v0, uchar v1, uchar v2, uchar v3, uchar v4, uchar v5, uchar v6, uchar v7,
                uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
@@ -86,7 +86,7 @@ struct v_int8x16
     typedef schar lane_type;
     enum { nlanes = 16 };
 
-    v_int8x16() {}
+    v_int8x16() : val(_mm_setzero_si128()) {}
     explicit v_int8x16(__m128i v) : val(v) {}
     v_int8x16(schar v0, schar v1, schar v2, schar v3, schar v4, schar v5, schar v6, schar v7,
               schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
@@ -109,7 +109,7 @@ struct v_uint16x8
     typedef ushort lane_type;
     enum { nlanes = 8 };
 
-    v_uint16x8() {}
+    v_uint16x8() : val(_mm_setzero_si128()) {}
     explicit v_uint16x8(__m128i v) : val(v) {}
     v_uint16x8(ushort v0, ushort v1, ushort v2, ushort v3, ushort v4, ushort v5, ushort v6, ushort v7)
     {
@@ -129,7 +129,7 @@ struct v_int16x8
     typedef short lane_type;
     enum { nlanes = 8 };
 
-    v_int16x8() {}
+    v_int16x8() : val(_mm_setzero_si128()) {}
     explicit v_int16x8(__m128i v) : val(v) {}
     v_int16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
     {
@@ -148,7 +148,7 @@ struct v_uint32x4
     typedef unsigned lane_type;
     enum { nlanes = 4 };
 
-    v_uint32x4() {}
+    v_uint32x4() : val(_mm_setzero_si128()) {}
     explicit v_uint32x4(__m128i v) : val(v) {}
     v_uint32x4(unsigned v0, unsigned v1, unsigned v2, unsigned v3)
     {
@@ -166,7 +166,7 @@ struct v_int32x4
     typedef int lane_type;
     enum { nlanes = 4 };
 
-    v_int32x4() {}
+    v_int32x4() : val(_mm_setzero_si128()) {}
     explicit v_int32x4(__m128i v) : val(v) {}
     v_int32x4(int v0, int v1, int v2, int v3)
     {
@@ -184,7 +184,7 @@ struct v_float32x4
     typedef float lane_type;
     enum { nlanes = 4 };
 
-    v_float32x4() {}
+    v_float32x4() : val(_mm_setzero_ps()) {}
     explicit v_float32x4(__m128 v) : val(v) {}
     v_float32x4(float v0, float v1, float v2, float v3)
     {
@@ -202,7 +202,7 @@ struct v_uint64x2
     typedef uint64 lane_type;
     enum { nlanes = 2 };
 
-    v_uint64x2() {}
+    v_uint64x2() : val(_mm_setzero_si128()) {}
     explicit v_uint64x2(__m128i v) : val(v) {}
     v_uint64x2(uint64 v0, uint64 v1)
     {
@@ -222,7 +222,7 @@ struct v_int64x2
     typedef int64 lane_type;
     enum { nlanes = 2 };
 
-    v_int64x2() {}
+    v_int64x2() : val(_mm_setzero_si128()) {}
     explicit v_int64x2(__m128i v) : val(v) {}
     v_int64x2(int64 v0, int64 v1)
     {
@@ -242,7 +242,7 @@ struct v_float64x2
     typedef double lane_type;
     enum { nlanes = 2 };
 
-    v_float64x2() {}
+    v_float64x2() : val(_mm_setzero_pd()) {}
     explicit v_float64x2(__m128d v) : val(v) {}
     v_float64x2(double v0, double v1)
     {
@@ -261,7 +261,7 @@ struct v_float16x4
     typedef short lane_type;
     enum { nlanes = 4 };
 
-    v_float16x4() {}
+    v_float16x4() : val(_mm_setzero_si128()) {}
     explicit v_float16x4(__m128i v) : val(v) {}
     v_float16x4(short v0, short v1, short v2, short v3)
     {
@@ -899,6 +899,15 @@ inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
 OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float32x4, ps)
 OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float64x2, pd)
 
+#define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec, cast) \
+inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+{ return cast(v_reinterpret_as_f64(a) == v_reinterpret_as_f64(b)); } \
+inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+{ return cast(v_reinterpret_as_f64(a) != v_reinterpret_as_f64(b)); }
+
+OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2, v_reinterpret_as_u64);
+OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2, v_reinterpret_as_s64);
+
 OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_uint8x16, v_add_wrap, _mm_add_epi8)
 OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_int8x16, v_add_wrap, _mm_add_epi8)
 OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_uint16x8, v_add_wrap, _mm_add_epi16)
@@ -1125,6 +1134,20 @@ inline scalartype v_reduce_##func(const _Tpvec& a) \
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_uint32x4, unsigned, __m128i, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP, si128_si32)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_int32x4, int, __m128i, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP, si128_si32)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_float32x4, float, __m128, ps, _mm_castps_si128, _mm_castsi128_ps, ss_f32)
+
+inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
+                                 const v_float32x4& c, const v_float32x4& d)
+{
+#if CV_SSE3
+    __m128 ab = _mm_hadd_ps(a.val, b.val);
+    __m128 cd = _mm_hadd_ps(c.val, d.val);
+    return v_float32x4(_mm_hadd_ps(ab, cd));
+#else
+    __m128 ac = _mm_add_ps(_mm_unpacklo_ps(a.val, c.val), _mm_unpackhi_ps(a.val, c.val));
+    __m128 bd = _mm_add_ps(_mm_unpacklo_ps(b.val, d.val), _mm_unpackhi_ps(b.val, d.val));
+    return v_float32x4(_mm_add_ps(_mm_unpacklo_ps(ac, bd), _mm_unpackhi_ps(ac, bd)));
+#endif
+}
 
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_uint32x4, unsigned, max, std::max)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_uint32x4, unsigned, min, std::min)
@@ -1506,6 +1529,35 @@ inline void v_load_deinterleave(const unsigned* ptr, v_uint32x4& a, v_uint32x4& 
     v_transpose4x4(u0, u1, u2, u3, a, b, c, d);
 }
 
+inline void v_load_deinterleave(const uint64 *ptr, v_uint64x2& a, v_uint64x2& b, v_uint64x2& c)
+{
+    __m128i t0 = _mm_loadu_si128((const __m128i*)ptr);
+    __m128i t1 = _mm_loadu_si128((const __m128i*)(ptr + 2));
+    __m128i t2 = _mm_loadu_si128((const __m128i*)(ptr + 4));
+
+    a = v_uint64x2(_mm_unpacklo_epi64(t0, _mm_unpackhi_epi64(t1, t1)));
+    b = v_uint64x2(_mm_unpacklo_epi64(_mm_unpackhi_epi64(t0, t0), t2));
+    c = v_uint64x2(_mm_unpacklo_epi64(t1, _mm_unpackhi_epi64(t2, t2)));
+}
+
+inline void v_load_deinterleave(const int64 *ptr, v_int64x2& a, v_int64x2& b, v_int64x2& c)
+{
+    v_uint64x2 t0, t1, t2;
+    v_load_deinterleave((const uint64*)ptr, t0, t1, t2);
+    a = v_reinterpret_as_s64(t0);
+    b = v_reinterpret_as_s64(t1);
+    c = v_reinterpret_as_s64(t2);
+}
+
+inline void v_load_deinterleave(const double *ptr, v_float64x2& a, v_float64x2& b, v_float64x2& c)
+{
+    v_uint64x2 t0, t1, t2;
+    v_load_deinterleave((const uint64*)ptr, t0, t1, t2);
+    a = v_reinterpret_as_f64(t0);
+    b = v_reinterpret_as_f64(t1);
+    c = v_reinterpret_as_f64(t2);
+}
+
 // 2-channel, float only
 inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b)
 {
@@ -1701,6 +1753,27 @@ inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32
 
     _mm_storeu_ps(ptr, u0);
     _mm_storeu_ps((ptr + 4), u1);
+}
+
+inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b, const v_uint64x2& c)
+{
+    __m128i t0 = _mm_unpacklo_epi64(a.val, b.val);
+    __m128i t1 = _mm_unpacklo_epi64(c.val, _mm_unpackhi_epi64(a.val, a.val));
+    __m128i t2 = _mm_unpackhi_epi64(b.val, c.val);
+
+    _mm_storeu_si128((__m128i*)ptr, t0);
+    _mm_storeu_si128((__m128i*)(ptr + 2), t1);
+    _mm_storeu_si128((__m128i*)(ptr + 4), t2);
+}
+
+inline void v_store_interleave(int64 *ptr, const v_int64x2& a, const v_int64x2& b, const v_int64x2& c)
+{
+    v_store_interleave((uint64*)ptr, v_reinterpret_as_u64(a), v_reinterpret_as_u64(b), v_reinterpret_as_u64(c));
+}
+
+inline void v_store_interleave(double *ptr, const v_float64x2& a, const v_float64x2& b, const v_float64x2& c)
+{
+    v_store_interleave((uint64*)ptr, v_reinterpret_as_u64(a), v_reinterpret_as_u64(b), v_reinterpret_as_u64(c));
 }
 
 #define OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(_Tpvec, _Tp, suffix, _Tpuvec, _Tpu, usuffix) \

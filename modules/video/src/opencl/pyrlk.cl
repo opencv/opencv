@@ -258,9 +258,9 @@ inline void GetPatch(image2d_t J, float x, float y,
     *b2 = mad(diff, *Dy, *b2);
 }
 
-inline void GetError(image2d_t J, const float x, const float y, const float* Pch, float* errval)
+inline void GetError(image2d_t J, const float x, const float y, const float* Pch, float* errval, float w)
 {
-    float diff = read_imagef(J, sampler, (float2)(x,y)).x-*Pch;
+    float diff = ((((read_imagef(J, sampler, (float2)(x,y)).x * 16384) + 256) / 512) - (((*Pch * 16384) + 256) /512)) * w;
     *errval += fabs(diff);
 }
 
@@ -310,10 +310,34 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
     int xsize=get_local_size(0);
     int ysize=get_local_size(1);
     int k;
+
+#ifdef CPU
+    float wx0 = 1.0f;
+    float wy0 = 1.0f;
     int xBase = mad24(xsize, 2, xid);
     int yBase = mad24(ysize, 2, yid);
-    float wx = (xBase < c_winSize_x) ? 1 : 0;
-    float wy = (yBase < c_winSize_y) ? 1 : 0;
+    float wx1 = (xBase < c_winSize_x) ? 1 : 0;
+    float wy1 = (yBase < c_winSize_y) ? 1 : 0;
+#else
+#if WSX == 1
+    float wx0 = 1.0f;
+    int xBase = mad24(xsize, 2, xid);
+    float wx1 = (xBase < c_winSize_x) ? 1 : 0;
+#else
+    int xBase = mad24(xsize, 1, xid);
+    float wx0 = (xBase < c_winSize_x) ? 1 : 0;
+    float wx1 = 0.0f;
+#endif
+#if WSY == 1
+    float wy0 = 1.0f;
+    int yBase = mad24(ysize, 2, yid);
+    float wy1 = (yBase < c_winSize_y) ? 1 : 0;
+#else
+    int yBase = mad24(ysize, 1, yid);
+    float wy0 = (yBase < c_winSize_y) ? 1 : 0;
+    float wy1 = 0.0f;
+#endif
+#endif
 
     float2 c_halfWin = (float2)((c_winSize_x - 1)>>1, (c_winSize_y - 1)>>1);
 
@@ -354,39 +378,39 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
 
         SetPatch(IPatchLocal, 0, 1,
                  &I_patch[0][1], &dIdx_patch[0][1], &dIdy_patch[0][1],
-                 &A11, &A12, &A22,1);
+                 &A11, &A12, &A22,wx0);
 
         SetPatch(IPatchLocal, 0, 2,
                     &I_patch[0][2], &dIdx_patch[0][2], &dIdy_patch[0][2],
-                    &A11, &A12, &A22,wx);
+                    &A11, &A12, &A22,wx1);
     }
     {
         SetPatch(IPatchLocal, 1, 0,
                  &I_patch[1][0], &dIdx_patch[1][0], &dIdy_patch[1][0],
-                 &A11, &A12, &A22,1);
+                 &A11, &A12, &A22,wy0);
 
 
         SetPatch(IPatchLocal, 1,1,
                  &I_patch[1][1], &dIdx_patch[1][1], &dIdy_patch[1][1],
-                 &A11, &A12, &A22,1);
+                 &A11, &A12, &A22,wx0*wy0);
 
         SetPatch(IPatchLocal, 1,2,
                     &I_patch[1][2], &dIdx_patch[1][2], &dIdy_patch[1][2],
-                    &A11, &A12, &A22,wx);
+                    &A11, &A12, &A22,wx1*wy0);
     }
     {
         SetPatch(IPatchLocal, 2,0,
                  &I_patch[2][0], &dIdx_patch[2][0], &dIdy_patch[2][0],
-                 &A11, &A12, &A22,wy);
+                 &A11, &A12, &A22,wy1);
 
 
         SetPatch(IPatchLocal, 2,1,
                  &I_patch[2][1], &dIdx_patch[2][1], &dIdy_patch[2][1],
-                 &A11, &A12, &A22,wy);
+                 &A11, &A12, &A22,wx0*wy1);
 
         SetPatch(IPatchLocal, 2,2,
                     &I_patch[2][2], &dIdx_patch[2][2], &dIdy_patch[2][2],
-                    &A11, &A12, &A22,wx*wy);
+                    &A11, &A12, &A22,wx1*wy1);
     }
 
 
@@ -496,24 +520,24 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
     if (calcErr)
     {
         {
-            GetError(J, loc0.x, loc0.y, &I_patch[0][0], &D);
-            GetError(J, loc1.x, loc0.y, &I_patch[0][1], &D);
+            GetError(J, loc0.x, loc0.y, &I_patch[0][0], &D, 1);
+            GetError(J, loc1.x, loc0.y, &I_patch[0][1], &D, wx0);
         }
         {
-            GetError(J, loc0.x, loc1.y, &I_patch[1][0], &D);
-            GetError(J, loc1.x, loc1.y, &I_patch[1][1], &D);
+            GetError(J, loc0.x, loc1.y, &I_patch[1][0], &D, wy0);
+            GetError(J, loc1.x, loc1.y, &I_patch[1][1], &D, wx0*wy0);
         }
         if(xBase < c_winSize_x)
         {
-            GetError(J, loc2.x, loc0.y, &I_patch[0][2], &D);
-            GetError(J, loc2.x, loc1.y, &I_patch[1][2], &D);
+            GetError(J, loc2.x, loc0.y, &I_patch[0][2], &D, wx1);
+            GetError(J, loc2.x, loc1.y, &I_patch[1][2], &D, wx1*wy0);
         }
         if(yBase < c_winSize_y)
         {
-            GetError(J, loc0.x, loc2.y, &I_patch[2][0], &D);
-            GetError(J, loc1.x, loc2.y, &I_patch[2][1], &D);
+            GetError(J, loc0.x, loc2.y, &I_patch[2][0], &D, wy1);
+            GetError(J, loc1.x, loc2.y, &I_patch[2][1], &D, wx0*wy1);
             if(xBase < c_winSize_x)
-                GetError(J, loc2.x, loc2.y, &I_patch[2][2], &D);
+                GetError(J, loc2.x, loc2.y, &I_patch[2][2], &D, wx1*wy1);
         }
 
         reduce1(D, smem1, tid);
@@ -526,6 +550,6 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
         nextPts[gid] = prevPt;
 
         if (calcErr)
-            err[gid] = smem1[0] / (float)(c_winSize_x * c_winSize_y);
+            err[gid] = smem1[0] / (float)(32 * c_winSize_x * c_winSize_y);
     }
 }

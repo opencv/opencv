@@ -17,9 +17,8 @@ bin/
 *.rule
 *.tmp
 */debug
-*/CMakeFiles
-CMakeCache.txt
 *.suo
 *.log
 *.tlog
 build
+.cache

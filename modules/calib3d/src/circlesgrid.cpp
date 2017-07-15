@@ -46,6 +46,7 @@
 //#define DEBUG_CIRCLES
 
 #ifdef DEBUG_CIRCLES
+#  include <iostream>
 #  include "opencv2/opencv_modules.hpp"
 #  ifdef HAVE_OPENCV_HIGHGUI
 #    include "opencv2/highgui.hpp"
@@ -289,7 +290,7 @@ void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f>
 
 #ifdef DEBUG_CIRCLES
   drawPoints(outsideCorners, cornersImage, 2, Scalar(128));
-  imshow("corners", outsideCornersImage);
+  imshow("corners", cornersImage);
 #endif
 }
 
@@ -417,7 +418,7 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
       if(distsbuf[0] > maxRectifiedDistance)
       {
 #ifdef DEBUG_CIRCLES
-        cout << "Pattern not detected: too large rectified distance" << endl;
+        std::cout << "Pattern not detected: too large rectified distance" << std::endl;
 #endif
         centers.clear();
         return;
@@ -1535,7 +1536,7 @@ void CirclesGridFinder::getCornerSegments(const std::vector<std::vector<size_t> 
   if (!isClockwise)
   {
 #ifdef DEBUG_CIRCLES
-    cout << "Corners are counterclockwise" << endl;
+    std::cout << "Corners are counterclockwise" << std::endl;
 #endif
     std::reverse(segments.begin(), segments.end());
     std::reverse(cornerIndices.begin(), cornerIndices.end());

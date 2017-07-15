@@ -325,6 +325,9 @@ PAMDecoder::PAMDecoder()
     bit_mode = false;
     selected_fmt = CV_IMWRITE_PAM_FORMAT_NULL;
     m_description = "PAM";
+    m_maxval = 0;
+    m_channels = 0;
+    m_sampledepth = 0;
 }
 
 

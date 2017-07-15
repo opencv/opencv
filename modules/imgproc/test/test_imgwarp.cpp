@@ -1703,6 +1703,8 @@ TEST(Imgproc_Warp, multichannel)
         int width = rng.uniform(3, 333);
         int height = rng.uniform(3, 333);
         int cn = rng.uniform(1, 15);
+        if(inter == INTER_CUBIC || inter == INTER_LANCZOS4)
+            cn = rng.uniform(1, 5);
         Mat src(height, width, CV_8UC(cn)), dst;
         //randu(src, 0, 256);
         src.setTo(0.);

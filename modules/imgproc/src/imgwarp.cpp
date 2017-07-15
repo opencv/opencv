@@ -52,6 +52,7 @@
 #include "hal_replacement.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
+#include "imgwarp.hpp"
 
 using namespace cv;
 
@@ -435,8 +436,30 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     }
 
     Range range(0, dsize.height);
-    resizeNNInvoker invoker(src, dst, x_ofs, pix_size4, ify);
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+#if CV_TRY_AVX2
+    if(CV_CPU_HAS_SUPPORT_AVX2 && ((pix_size == 2) || (pix_size == 4)))
+    {
+        if(pix_size == 2)
+            opt_AVX2::resizeNN2_AVX2(range, src, dst, x_ofs, pix_size4, ify);
+        else
+            opt_AVX2::resizeNN4_AVX2(range, src, dst, x_ofs, pix_size4, ify);
+    }
+    else
+#endif
+#if CV_TRY_SSE4_1
+    if(CV_CPU_HAS_SUPPORT_SSE4_1 && ((pix_size == 2) || (pix_size == 4)))
+    {
+        if(pix_size == 2)
+            opt_SSE4_1::resizeNN2_SSE4_1(range, src, dst, x_ofs, pix_size4, ify);
+        else
+            opt_SSE4_1::resizeNN4_SSE4_1(range, src, dst, x_ofs, pix_size4, ify);
+    }
+    else
+#endif
+    {
+        resizeNNInvoker invoker(src, dst, x_ofs, pix_size4, ify);
+        parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+    }
 }
 
 
@@ -893,50 +916,14 @@ struct VResizeCubicVec_32f
     }
 };
 
-#if CV_SSE4_1
+#if CV_TRY_SSE4_1
 
 struct VResizeLanczos4Vec_32f16u
 {
     int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
-                    *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        short * dst = (short*)_dst;
-        int x = 0;
-        __m128 v_b0 = _mm_set1_ps(beta[0]), v_b1 = _mm_set1_ps(beta[1]),
-               v_b2 = _mm_set1_ps(beta[2]), v_b3 = _mm_set1_ps(beta[3]),
-               v_b4 = _mm_set1_ps(beta[4]), v_b5 = _mm_set1_ps(beta[5]),
-               v_b6 = _mm_set1_ps(beta[6]), v_b7 = _mm_set1_ps(beta[7]);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            __m128 v_dst0 = _mm_mul_ps(v_b0, _mm_loadu_ps(S0 + x));
-            v_dst0 = _mm_add_ps(v_dst0, _mm_mul_ps(v_b1, _mm_loadu_ps(S1 + x)));
-            v_dst0 = _mm_add_ps(v_dst0, _mm_mul_ps(v_b2, _mm_loadu_ps(S2 + x)));
-            v_dst0 = _mm_add_ps(v_dst0, _mm_mul_ps(v_b3, _mm_loadu_ps(S3 + x)));
-            v_dst0 = _mm_add_ps(v_dst0, _mm_mul_ps(v_b4, _mm_loadu_ps(S4 + x)));
-            v_dst0 = _mm_add_ps(v_dst0, _mm_mul_ps(v_b5, _mm_loadu_ps(S5 + x)));
-            v_dst0 = _mm_add_ps(v_dst0, _mm_mul_ps(v_b6, _mm_loadu_ps(S6 + x)));
-            v_dst0 = _mm_add_ps(v_dst0, _mm_mul_ps(v_b7, _mm_loadu_ps(S7 + x)));
-
-            __m128 v_dst1 = _mm_mul_ps(v_b0, _mm_loadu_ps(S0 + x + 4));
-            v_dst1 = _mm_add_ps(v_dst1, _mm_mul_ps(v_b1, _mm_loadu_ps(S1 + x + 4)));
-            v_dst1 = _mm_add_ps(v_dst1, _mm_mul_ps(v_b2, _mm_loadu_ps(S2 + x + 4)));
-            v_dst1 = _mm_add_ps(v_dst1, _mm_mul_ps(v_b3, _mm_loadu_ps(S3 + x + 4)));
-            v_dst1 = _mm_add_ps(v_dst1, _mm_mul_ps(v_b4, _mm_loadu_ps(S4 + x + 4)));
-            v_dst1 = _mm_add_ps(v_dst1, _mm_mul_ps(v_b5, _mm_loadu_ps(S5 + x + 4)));
-            v_dst1 = _mm_add_ps(v_dst1, _mm_mul_ps(v_b6, _mm_loadu_ps(S6 + x + 4)));
-            v_dst1 = _mm_add_ps(v_dst1, _mm_mul_ps(v_b7, _mm_loadu_ps(S7 + x + 4)));
-
-            __m128i v_dsti0 = _mm_cvtps_epi32(v_dst0);
-            __m128i v_dsti1 = _mm_cvtps_epi32(v_dst1);
-
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_packus_epi32(v_dsti0, v_dsti1));
-        }
-
-        return x;
+        if (CV_CPU_HAS_SUPPORT_SSE4_1) return opt_SSE4_1::VResizeLanczos4Vec_32f16u_SSE41(_src, _dst, _beta, width);
+        else return 0;
     }
 };
 
@@ -4946,6 +4933,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     CV_OVX_RUN(
         src.type() == CV_8UC1 && dst.type() == CV_8UC1 &&
+        !ovx::skipSmallImages<VX_KERNEL_REMAP>(src.cols, src.rows) &&
         (borderType& ~BORDER_ISOLATED) == BORDER_CONSTANT &&
         ((map1.type() == CV_32FC2 && map2.empty() && map1.size == dst.size) ||
          (map1.type() == CV_32FC1 && map2.type() == CV_32FC1 && map1.size == dst.size && map2.size == dst.size) ||
@@ -5019,10 +5007,14 @@ void cv::remap( InputArray _src, OutputArray _dst,
     {
         if( interpolation == INTER_LINEAR )
             ifunc = linear_tab[depth];
-        else if( interpolation == INTER_CUBIC )
+        else if( interpolation == INTER_CUBIC ){
             ifunc = cubic_tab[depth];
-        else if( interpolation == INTER_LANCZOS4 )
+            CV_Assert( _src.channels() <= 4 );
+        }
+        else if( interpolation == INTER_LANCZOS4 ){
             ifunc = lanczos4_tab[depth];
+            CV_Assert( _src.channels() <= 4 );
+        }
         else
             CV_Error( CV_StsBadArg, "Unknown interpolation method" );
         CV_Assert( ifunc != 0 );
@@ -5121,8 +5113,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
 #if CV_SSE2
     bool useSSE2 = checkHardwareSupport(CV_CPU_SSE2);
 #endif
-#if CV_SSE4_1
-    bool useSSE4_1 = checkHardwareSupport(CV_CPU_SSE4_1);
+#if CV_TRY_SSE4_1
+    bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
 #endif
 
     const float scale = 1.f/INTER_TAB_SIZE;
@@ -5155,29 +5147,10 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
 
                     vst2q_s16(dst1 + (x << 1), v_dst);
                 }
-                #elif CV_SSE4_1
+                #elif CV_TRY_SSE4_1
                 if (useSSE4_1)
-                {
-                    for( ; x <= size.width - 16; x += 16 )
-                    {
-                        __m128i v_dst0 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src1f + x)),
-                                                         _mm_cvtps_epi32(_mm_loadu_ps(src1f + x + 4)));
-                        __m128i v_dst1 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src1f + x + 8)),
-                                                         _mm_cvtps_epi32(_mm_loadu_ps(src1f + x + 12)));
-
-                        __m128i v_dst2 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src2f + x)),
-                                                         _mm_cvtps_epi32(_mm_loadu_ps(src2f + x + 4)));
-                        __m128i v_dst3 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src2f + x + 8)),
-                                                         _mm_cvtps_epi32(_mm_loadu_ps(src2f + x + 12)));
-
-                        _mm_interleave_epi16(v_dst0, v_dst1, v_dst2, v_dst3);
-
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2), v_dst0);
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 8), v_dst1);
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 16), v_dst2);
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 24), v_dst3);
-                    }
-                }
+                    opt_SSE4_1::convertMaps_nninterpolate32f1c16s_SSE41(src1f, src2f, dst1, size.width);
+                else
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -5212,52 +5185,10 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                                                               vandq_s32(v_ix1, v_mask)));
                     vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
                 }
-                #elif CV_SSE4_1
+                #elif CV_TRY_SSE4_1
                 if (useSSE4_1)
-                {
-                    __m128 v_its = _mm_set1_ps(INTER_TAB_SIZE);
-                    __m128i v_its1 = _mm_set1_epi32(INTER_TAB_SIZE-1);
-
-                    for( ; x <= size.width - 16; x += 16 )
-                    {
-                        __m128i v_ix0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x), v_its));
-                        __m128i v_ix1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x + 4), v_its));
-                        __m128i v_iy0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src2f + x), v_its));
-                        __m128i v_iy1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src2f + x + 4), v_its));
-
-                        __m128i v_dst10 = _mm_packs_epi32(_mm_srai_epi32(v_ix0, INTER_BITS),
-                                                          _mm_srai_epi32(v_ix1, INTER_BITS));
-                        __m128i v_dst12 = _mm_packs_epi32(_mm_srai_epi32(v_iy0, INTER_BITS),
-                                                          _mm_srai_epi32(v_iy1, INTER_BITS));
-                        __m128i v_dst20 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_iy0, v_its1), INTER_BITS),
-                                                        _mm_and_si128(v_ix0, v_its1));
-                        __m128i v_dst21 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_iy1, v_its1), INTER_BITS),
-                                                        _mm_and_si128(v_ix1, v_its1));
-                        _mm_storeu_si128((__m128i *)(dst2 + x), _mm_packus_epi32(v_dst20, v_dst21));
-
-                        v_ix0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x + 8), v_its));
-                        v_ix1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x + 12), v_its));
-                        v_iy0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src2f + x + 8), v_its));
-                        v_iy1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src2f + x + 12), v_its));
-
-                        __m128i v_dst11 = _mm_packs_epi32(_mm_srai_epi32(v_ix0, INTER_BITS),
-                                                          _mm_srai_epi32(v_ix1, INTER_BITS));
-                        __m128i v_dst13 = _mm_packs_epi32(_mm_srai_epi32(v_iy0, INTER_BITS),
-                                                          _mm_srai_epi32(v_iy1, INTER_BITS));
-                        v_dst20 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_iy0, v_its1), INTER_BITS),
-                                                _mm_and_si128(v_ix0, v_its1));
-                        v_dst21 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_iy1, v_its1), INTER_BITS),
-                                                _mm_and_si128(v_ix1, v_its1));
-                        _mm_storeu_si128((__m128i *)(dst2 + x + 8), _mm_packus_epi32(v_dst20, v_dst21));
-
-                        _mm_interleave_epi16(v_dst10, v_dst11, v_dst12, v_dst13);
-
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2), v_dst10);
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 8), v_dst11);
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 16), v_dst12);
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2 + 24), v_dst13);
-                    }
-                }
+                    opt_SSE4_1::convertMaps_32f1c16s_SSE41(src1f, src2f, dst1, dst2, size.width);
+                else
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -5318,30 +5249,10 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                                                               vandq_s32(v_ix1, v_mask)));
                     vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
                 }
-                #elif CV_SSE4_1
+                #elif CV_TRY_SSE4_1
                 if (useSSE4_1)
-                {
-                    __m128 v_its = _mm_set1_ps(INTER_TAB_SIZE);
-                    __m128i v_its1 = _mm_set1_epi32(INTER_TAB_SIZE-1);
-                    __m128i v_y_mask = _mm_set1_epi32((INTER_TAB_SIZE-1) << 16);
-
-                    for( ; x <= size.width - 4; x += 4 )
-                    {
-                        __m128i v_src0 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x * 2), v_its));
-                        __m128i v_src1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(src1f + x * 2 + 4), v_its));
-
-                        __m128i v_dst1 = _mm_packs_epi32(_mm_srai_epi32(v_src0, INTER_BITS),
-                                                         _mm_srai_epi32(v_src1, INTER_BITS));
-                        _mm_storeu_si128((__m128i *)(dst1 + x * 2), v_dst1);
-
-                        // x0 y0 x1 y1 . . .
-                        v_src0 = _mm_packs_epi32(_mm_and_si128(v_src0, v_its1),
-                                                 _mm_and_si128(v_src1, v_its1));
-                        __m128i v_dst2 = _mm_or_si128(_mm_srli_epi32(_mm_and_si128(v_src0, v_y_mask), 16 - INTER_BITS), // y0 0 y1 0 . . .
-                                                      _mm_and_si128(v_src0, v_its1)); // 0 x0 0 x1 . . .
-                        _mm_storel_epi64((__m128i *)(dst2 + x), _mm_packus_epi32(v_dst2, v_dst2));
-                    }
-                }
+                    opt_SSE4_1::convertMaps_32f2c16s_SSE41(src1f, dst1, dst2, size.width);
+                else
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -5523,11 +5434,14 @@ public:
         const int AB_BITS = MAX(10, (int)INTER_BITS);
         const int AB_SCALE = 1 << AB_BITS;
         int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, x1, y1;
+    #if CV_TRY_AVX2
+        bool useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
+    #endif
     #if CV_SSE2
         bool useSSE2 = checkHardwareSupport(CV_CPU_SSE2);
     #endif
-    #if CV_SSE4_1
-        bool useSSE4_1 = checkHardwareSupport(CV_CPU_SSE4_1);
+    #if CV_TRY_SSE4_1
+        bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
     #endif
 
         int bh0 = std::min(BLOCK_SZ/2, dst.rows);
@@ -5565,31 +5479,10 @@ public:
 
                             vst2q_s16(xy + (x1 << 1), v_dst);
                         }
-                        #elif CV_SSE4_1
+                        #elif CV_TRY_SSE4_1
                         if (useSSE4_1)
-                        {
-                            __m128i v_X0 = _mm_set1_epi32(X0);
-                            __m128i v_Y0 = _mm_set1_epi32(Y0);
-                            for ( ; x1 <= bw - 16; x1 += 16)
-                            {
-                                __m128i v_x0 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x + x1))), AB_BITS),
-                                                               _mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x + x1 + 4))), AB_BITS));
-                                __m128i v_x1 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x + x1 + 8))), AB_BITS),
-                                                               _mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x + x1 + 12))), AB_BITS));
-
-                                __m128i v_y0 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x + x1))), AB_BITS),
-                                                               _mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x + x1 + 4))), AB_BITS));
-                                __m128i v_y1 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x + x1 + 8))), AB_BITS),
-                                                               _mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x + x1 + 12))), AB_BITS));
-
-                                _mm_interleave_epi16(v_x0, v_x1, v_y0, v_y1);
-
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2), v_x0);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 8), v_x1);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 16), v_y0);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 24), v_y1);
-                            }
-                        }
+                            opt_SSE4_1::WarpAffineInvoker_Blockline_SSE41(adelta + x, bdelta + x, xy, X0, Y0, bw);
+                        else
                         #endif
                         for( ; x1 < bw; x1++ )
                         {
@@ -5603,6 +5496,10 @@ public:
                     {
                         short* alpha = A + y1*bw;
                         x1 = 0;
+                    #if CV_TRY_AVX2
+                        if ( useAVX2 )
+                            x1 = opt_AVX2::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
+                    #endif
                     #if CV_SSE2
                         if( useSSE2 )
                         {
@@ -5791,7 +5688,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     UMat dst = _dst.getUMat();
 
-    float M[9];
+    float M[9] = {0};
     int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
     Mat matM(matRows, 3, CV_32F, M), M1 = _M0.getMat();
     CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) && M1.rows == matRows && M1.cols == 3 );
@@ -5889,7 +5786,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     UMat dst = _dst.getUMat();
 
-    double M[9];
+    double M[9] = {0};
     int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
     Mat matM(matRows, 3, CV_64F, M), M1 = _M0.getMat();
     CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) &&
@@ -5964,6 +5861,10 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION()
 
+    int interpolation = flags & INTER_MAX;
+    CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
+                                        interpolation != INTER_CUBIC) );
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
                _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
@@ -5980,9 +5881,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     if( dst.data == src.data )
         src = src.clone();
 
-    double M[6];
+    double M[6] = {0};
     Mat matM(2, 3, CV_64F, M);
-    int interpolation = flags & INTER_MAX;
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
@@ -6094,18 +5994,10 @@ public:
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, width);
         bh0 = std::min(BLOCK_SZ*BLOCK_SZ/bw0, height);
 
-        #if CV_SSE4_1
-        bool haveSSE4_1 = checkHardwareSupport(CV_CPU_SSE4_1);
-        __m128d v_M0 = _mm_set1_pd(M[0]);
-        __m128d v_M3 = _mm_set1_pd(M[3]);
-        __m128d v_M6 = _mm_set1_pd(M[6]);
-        __m128d v_intmax = _mm_set1_pd((double)INT_MAX);
-        __m128d v_intmin = _mm_set1_pd((double)INT_MIN);
-        __m128d v_2 = _mm_set1_pd(2),
-                v_zero = _mm_setzero_pd(),
-                v_1 = _mm_set1_pd(1),
-                v_its = _mm_set1_pd(INTER_TAB_SIZE);
-        __m128i v_itsi1 = _mm_set1_epi32(INTER_TAB_SIZE - 1);
+        #if CV_TRY_SSE4_1
+        Ptr<opt_SSE4_1::WarpPerspectiveLine_SSE4> pwarp_impl_sse4;
+        if(CV_CPU_HAS_SUPPORT_SSE4_1)
+            pwarp_impl_sse4 = opt_SSE4_1::WarpPerspectiveLine_SSE4::getImpl(M);
         #endif
 
         for( y = range.start; y < range.end; y += bh0 )
@@ -6129,116 +6021,11 @@ public:
                     {
                         x1 = 0;
 
-                        #if CV_SSE4_1
-                        if (haveSSE4_1)
-                        {
-                            __m128d v_X0d = _mm_set1_pd(X0);
-                            __m128d v_Y0d = _mm_set1_pd(Y0);
-                            __m128d v_W0 = _mm_set1_pd(W0);
-                            __m128d v_x1 = _mm_set_pd(1, 0);
-
-                            for( ; x1 <= bw - 16; x1 += 16 )
-                            {
-                                // 0-3
-                                __m128i v_X0, v_Y0;
-                                {
-                                    __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
-                                    __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
-                                    __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_X0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
-                                    v_Y0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
-                                }
-
-                                // 4-8
-                                __m128i v_X1, v_Y1;
-                                {
-                                    __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
-                                    __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
-                                    __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_X1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
-                                    v_Y1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
-                                }
-
-                                // 8-11
-                                __m128i v_X2, v_Y2;
-                                {
-                                    __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
-                                    __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
-                                    __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_X2 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
-                                    v_Y2 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
-                                }
-
-                                // 12-15
-                                __m128i v_X3, v_Y3;
-                                {
-                                    __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
-                                    __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_1, v_W));
-                                    __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_X3 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
-                                    v_Y3 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
-                                }
-
-                                // convert to 16s
-                                v_X0 = _mm_packs_epi32(v_X0, v_X1);
-                                v_X1 = _mm_packs_epi32(v_X2, v_X3);
-                                v_Y0 = _mm_packs_epi32(v_Y0, v_Y1);
-                                v_Y1 = _mm_packs_epi32(v_Y2, v_Y3);
-
-                                _mm_interleave_epi16(v_X0, v_X1, v_Y0, v_Y1);
-
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2), v_X0);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 8), v_X1);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 16), v_Y0);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 24), v_Y1);
-                            }
-                        }
+                        #if CV_TRY_SSE4_1
+                        if (pwarp_impl_sse4)
+                            pwarp_impl_sse4->processNN(M, xy, X0, Y0, W0, bw);
+                        else
                         #endif
-
                         for( ; x1 < bw; x1++ )
                         {
                             double W = W0 + M[6]*x1;
@@ -6257,129 +6044,11 @@ public:
                         short* alpha = A + y1*bw;
                         x1 = 0;
 
-                        #if CV_SSE4_1
-                        if (haveSSE4_1)
-                        {
-                            __m128d v_X0d = _mm_set1_pd(X0);
-                            __m128d v_Y0d = _mm_set1_pd(Y0);
-                            __m128d v_W0 = _mm_set1_pd(W0);
-                            __m128d v_x1 = _mm_set_pd(1, 0);
-
-                            for( ; x1 <= bw - 16; x1 += 16 )
-                            {
-                                // 0-3
-                                __m128i v_X0, v_Y0;
-                                {
-                                    __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
-                                    __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
-                                    __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_X0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
-                                    v_Y0 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
-                                }
-
-                                // 4-8
-                                __m128i v_X1, v_Y1;
-                                {
-                                    __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
-                                    __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
-                                    __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_X1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
-                                    v_Y1 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
-                                }
-
-                                // 8-11
-                                __m128i v_X2, v_Y2;
-                                {
-                                    __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
-                                    __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
-                                    __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_X2 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
-                                    v_Y2 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
-                                }
-
-                                // 12-15
-                                __m128i v_X3, v_Y3;
-                                {
-                                    __m128d v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
-                                    __m128d v_fX0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY0 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_W = _mm_add_pd(_mm_mul_pd(v_M6, v_x1), v_W0);
-                                    v_W = _mm_andnot_pd(_mm_cmpeq_pd(v_W, v_zero), _mm_div_pd(v_its, v_W));
-                                    __m128d v_fX1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_X0d, _mm_mul_pd(v_M0, v_x1)), v_W)));
-                                    __m128d v_fY1 = _mm_max_pd(v_intmin, _mm_min_pd(v_intmax, _mm_mul_pd(_mm_add_pd(v_Y0d, _mm_mul_pd(v_M3, v_x1)), v_W)));
-                                    v_x1 = _mm_add_pd(v_x1, v_2);
-
-                                    v_X3 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fX0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fX1))));
-                                    v_Y3 = _mm_castps_si128(_mm_movelh_ps(_mm_castsi128_ps(_mm_cvtpd_epi32(v_fY0)),
-                                                                          _mm_castsi128_ps(_mm_cvtpd_epi32(v_fY1))));
-                                }
-
-                                // store alpha
-                                __m128i v_alpha0 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_Y0, v_itsi1), INTER_BITS),
-                                                                 _mm_and_si128(v_X0, v_itsi1));
-                                __m128i v_alpha1 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_Y1, v_itsi1), INTER_BITS),
-                                                                 _mm_and_si128(v_X1, v_itsi1));
-                                _mm_storeu_si128((__m128i *)(alpha + x1), _mm_packs_epi32(v_alpha0, v_alpha1));
-
-                                v_alpha0 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_Y2, v_itsi1), INTER_BITS),
-                                                         _mm_and_si128(v_X2, v_itsi1));
-                                v_alpha1 = _mm_add_epi32(_mm_slli_epi32(_mm_and_si128(v_Y3, v_itsi1), INTER_BITS),
-                                                         _mm_and_si128(v_X3, v_itsi1));
-                                _mm_storeu_si128((__m128i *)(alpha + x1 + 8), _mm_packs_epi32(v_alpha0, v_alpha1));
-
-                                // convert to 16s
-                                v_X0 = _mm_packs_epi32(_mm_srai_epi32(v_X0, INTER_BITS), _mm_srai_epi32(v_X1, INTER_BITS));
-                                v_X1 = _mm_packs_epi32(_mm_srai_epi32(v_X2, INTER_BITS), _mm_srai_epi32(v_X3, INTER_BITS));
-                                v_Y0 = _mm_packs_epi32(_mm_srai_epi32(v_Y0, INTER_BITS), _mm_srai_epi32(v_Y1, INTER_BITS));
-                                v_Y1 = _mm_packs_epi32(_mm_srai_epi32(v_Y2, INTER_BITS), _mm_srai_epi32(v_Y3, INTER_BITS));
-
-                                _mm_interleave_epi16(v_X0, v_X1, v_Y0, v_Y1);
-
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2), v_X0);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 8), v_X1);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 16), v_Y0);
-                                _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 24), v_Y1);
-                            }
-                        }
+                        #if CV_TRY_SSE4_1
+                        if (pwarp_impl_sse4)
+                            pwarp_impl_sse4->process(M, xy, alpha, X0, Y0, W0, bw);
+                        else
                         #endif
-
                         for( ; x1 < bw; x1++ )
                         {
                             double W = W0 + M[6]*x1;

@@ -614,13 +614,41 @@ struct data_t
     typedef float  f;
     typedef double d;
 
-    u u1   ;u u2   ;                i i1                           ;
-    i i2                           ;i i3                           ;
-    d d1                                                           ;
-    d d2                                                           ;
-    i i4                           ;
+    /*0x00*/ u u1   ;u u2   ;                i i1                           ;
+    /*0x08*/ i i2                           ;i i3                           ;
+    /*0x10*/ d d1                                                           ;
+    /*0x18*/ d d2                                                           ;
+    /*0x20*/ i i4                           ;i required_alignment_field_for_linux32;
+    /*
+     * OpenCV persistence.cpp stuff expects: sizeof(data_t) = alignSize(36, sizeof(largest type = double)) = 40
+     * Some compilers on some archs returns sizeof(data_t) = 36 due struct packaging UB
+     */
 
-    static inline const char * signature() { return "2u3i2di"; }
+    static inline const char * signature() {
+        if (sizeof(data_t) != 40)
+        {
+            printf("sizeof(data_t)=%d, u1=%p u2=%p i1=%p i2=%p i3=%p d1=%p d2=%p i4=%p\n", (int)sizeof(data_t),
+                    &(((data_t*)0)->u1),
+                    &(((data_t*)0)->u2),
+                    &(((data_t*)0)->i1),
+                    &(((data_t*)0)->i2),
+                    &(((data_t*)0)->i3),
+                    &(((data_t*)0)->d1),
+                    &(((data_t*)0)->d2),
+                    &(((data_t*)0)->i4)
+            );
+        }
+        CV_Assert(sizeof(data_t) == 40);
+        CV_Assert((size_t)&(((data_t*)0)->u1) == 0x0);
+        CV_Assert((size_t)&(((data_t*)0)->u2) == 0x1);
+        CV_Assert((size_t)&(((data_t*)0)->i1) == 0x4);
+        CV_Assert((size_t)&(((data_t*)0)->i2) == 0x8);
+        CV_Assert((size_t)&(((data_t*)0)->i3) == 0xc);
+        CV_Assert((size_t)&(((data_t*)0)->d1) == 0x10);
+        CV_Assert((size_t)&(((data_t*)0)->d2) == 0x18);
+        CV_Assert((size_t)&(((data_t*)0)->i4) == 0x20);
+        return "2u3i2di";
+    }
 };
 
 TEST(Core_InputOutput, filestorage_base64_basic)
@@ -718,16 +746,24 @@ TEST(Core_InputOutput, filestorage_base64_basic)
             fs.release();
         }
 
-        for (int i = 0; i < 1000; i++) {
-            // TODO: Solve this bug in `cvReadRawData`
-            //EXPECT_EQ(rawdata[i].u1, 1);
-            //EXPECT_EQ(rawdata[i].u2, 2);
-            //EXPECT_EQ(rawdata[i].i1, 1);
-            //EXPECT_EQ(rawdata[i].i2, 2);
-            //EXPECT_EQ(rawdata[i].i3, 3);
-            //EXPECT_EQ(rawdata[i].d1, 0.1);
-            //EXPECT_EQ(rawdata[i].d2, 0.2);
-            //EXPECT_EQ(rawdata[i].i4, i);
+        int errors = 0;
+        for (int i = 0; i < 1000; i++)
+        {
+            EXPECT_EQ((int)rawdata[i].u1, 1);
+            EXPECT_EQ((int)rawdata[i].u2, 2);
+            EXPECT_EQ((int)rawdata[i].i1, 1);
+            EXPECT_EQ((int)rawdata[i].i2, 2);
+            EXPECT_EQ((int)rawdata[i].i3, 3);
+            EXPECT_EQ(rawdata[i].d1, 0.1);
+            EXPECT_EQ(rawdata[i].d2, 0.2);
+            EXPECT_EQ((int)rawdata[i].i4, i);
+            if (::testing::Test::HasNonfatalFailure())
+            {
+                printf("i = %d\n", i);
+                errors++;
+            }
+            if (errors >= 3)
+                break;
         }
 
         EXPECT_TRUE(no_type_id);
@@ -741,9 +777,25 @@ TEST(Core_InputOutput, filestorage_base64_basic)
         EXPECT_EQ(_2d_in.cols   , _2d_out.cols);
         EXPECT_EQ(_2d_in.dims   , _2d_out.dims);
         EXPECT_EQ(_2d_in.depth(), _2d_out.depth());
+
+        errors = 0;
         for(int i = 0; i < _2d_out.rows; ++i)
+        {
             for (int j = 0; j < _2d_out.cols; ++j)
+            {
                 EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
+                if (::testing::Test::HasNonfatalFailure())
+                {
+                    printf("i = %d, j = %d\n", i, j);
+                    errors++;
+                }
+                if (errors >= 3)
+                {
+                    i = _2d_out.rows;
+                    break;
+                }
+            }
+        }
 
         EXPECT_EQ(_nd_in.rows   , _nd_out.rows);
         EXPECT_EQ(_nd_in.cols   , _nd_out.cols);
@@ -1059,7 +1111,11 @@ TEST(Core_InputOutput, FileStorage_DMatch)
 
     EXPECT_NO_THROW(fs << "d" << d);
     cv::String fs_result = fs.releaseAndGetString();
+#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+000 ]\n");
+#else
     EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+00 ]\n");
+#endif
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1086,12 +1142,21 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
 
     EXPECT_NO_THROW(fs << "dv" << dv);
     cv::String fs_result = fs.releaseAndGetString();
+#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+    EXPECT_STREQ(fs_result.c_str(),
+"%YAML:1.0\n"
+"---\n"
+"dv: [ 1, 2, 3, -1.5000000000000000e+000, 2, 3, 4,\n"
+"    1.5000000000000000e+000, 3, 2, 1, 5.0000000000000000e-001 ]\n"
+);
+#else
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
 "dv: [ 1, 2, 3, -1.5000000000000000e+00, 2, 3, 4, 1.5000000000000000e+00,\n"
 "    3, 2, 1, 5.0000000000000000e-01 ]\n"
 );
+#endif
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1130,6 +1195,17 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
 
     EXPECT_NO_THROW(fs << "dvv" << dvv);
     cv::String fs_result = fs.releaseAndGetString();
+#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+    EXPECT_STREQ(fs_result.c_str(),
+"%YAML:1.0\n"
+"---\n"
+"dvv:\n"
+"   - [ 1, 2, 3, -1.5000000000000000e+000, 2, 3, 4,\n"
+"       1.5000000000000000e+000, 3, 2, 1, 5.0000000000000000e-001 ]\n"
+"   - [ 3, 2, 1, 5.0000000000000000e-001, 1, 2, 3,\n"
+"       -1.5000000000000000e+000 ]\n"
+);
+#else
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
@@ -1138,6 +1214,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
 "       3, 2, 1, 5.0000000000000000e-01 ]\n"
 "   - [ 3, 2, 1, 5.0000000000000000e-01, 1, 2, 3, -1.5000000000000000e+00 ]\n"
 );
+#endif
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 

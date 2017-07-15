@@ -71,7 +71,11 @@
 #  define CV_AVX 1
 #endif
 #ifdef CV_CPU_COMPILE_FP16
-#  include <immintrin.h>
+#  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM)
+#    include <arm_neon.h>
+#  else
+#    include <immintrin.h>
+#  endif
 #  define CV_FP16 1
 #endif
 #ifdef CV_CPU_COMPILE_AVX2
@@ -104,7 +108,13 @@ struct VZeroUpperGuard {
 #endif
     inline ~VZeroUpperGuard() { _mm256_zeroupper(); }
 };
-#define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard;
+#define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard; (void)__vzeroupper_guard;
+#endif
+
+#ifdef __CV_AVX_GUARD
+#define CV_AVX_GUARD __CV_AVX_GUARD
+#else
+#define CV_AVX_GUARD
 #endif
 
 #endif // __OPENCV_BUILD

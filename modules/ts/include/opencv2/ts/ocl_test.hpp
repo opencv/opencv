@@ -42,8 +42,6 @@
 #ifndef OPENCV_TS_OCL_TEST_HPP
 #define OPENCV_TS_OCL_TEST_HPP
 
-#include "opencv2/opencv_modules.hpp"
-
 #include "opencv2/ts.hpp"
 
 #include "opencv2/imgcodecs.hpp"
@@ -94,6 +92,7 @@ do \
     EXPECT_LE(TestUtils::checkNorm1(mat), eps) \
 } while ((void)0, 0)
 
+#undef EXPECT_MAT_NEAR
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
 do \
 { \
@@ -178,6 +177,7 @@ do \
         << "Size: " << name ## _roi.size() << std::endl; \
 } while ((void)0, 0)
 
+#undef EXPECT_MAT_SIMILAR
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
 do \
 { \
@@ -325,7 +325,7 @@ struct CV_EXPORTS TSTestWithParam : public TestUtils, public ::testing::TestWith
 };
 
 #undef PARAM_TEST_CASE
-#define PARAM_TEST_CASE(name, ...) struct name : public TSTestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+#define PARAM_TEST_CASE(name, ...) struct name : public ::cvtest::ocl::TSTestWithParam< std::tr1::tuple< __VA_ARGS__ > >
 
 #ifndef IMPLEMENT_PARAM_CLASS
 #define IMPLEMENT_PARAM_CLASS(name, type) \

@@ -550,7 +550,7 @@ void exp32f( const float *_x, float *y, int n )
             __m256 yf = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(yd0)), _mm256_cvtpd_ps(yd1), 1);
 
             //_mm256_set_m128i(xi1, xi0)
-            __m256i temp = (__m256i)_mm256_insertf128_ps(_mm256_castps128_ps256((__m128)xi0), (__m128)xi1, 1);
+            __m256i temp = _mm256_castps_si256(_mm256_insertf128_ps(_mm256_castps128_ps256(_mm_castsi128_ps(xi0)), _mm_castsi128_ps(xi1), 1));
 
             yf = _mm256_mul_ps(yf, _mm256_castsi256_ps(_mm256_slli_epi32(temp, 23)));
 

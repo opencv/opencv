@@ -27,7 +27,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
 
     TEST_CYCLE_MULTIRUN(10) resize(src, dst, to);
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     SANITY_CHECK(dst, 5);
 #else
     SANITY_CHECK(dst, 1 + 1e-6);
@@ -54,7 +54,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
 
     TEST_CYCLE_MULTIRUN(10) resize(src, dst, to);
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     SANITY_CHECK(dst, 5);
 #else
     SANITY_CHECK(dst, 1 + 1e-6);

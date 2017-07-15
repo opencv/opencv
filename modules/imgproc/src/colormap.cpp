@@ -490,6 +490,22 @@ namespace colormap
         }
     };
 
+    // UserColormap .
+    class UserColorMap : public ColorMap {
+    public:
+
+        UserColorMap(Mat c) : ColorMap() {
+            init(c);
+        }
+
+        void init(Mat c) {
+            this->_lut = c;
+        }
+        void init(int n) {
+            CV_Error(Error::StsAssert, format("unused method in UserColormap init(%d).",n));
+        }
+    };
+
     void ColorMap::operator()(InputArray _src, OutputArray _dst) const
     {
         CV_INSTRUMENT_REGION()
@@ -546,4 +562,16 @@ namespace colormap
 
         delete cm;
     }
+
+    void applyColorMap(InputArray src, OutputArray dst, InputArray userColor)
+    {
+        if (userColor.size() != Size(1,256))
+            CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
+        if (userColor.type() != CV_8UC1 && userColor.type() != CV_8UC3)
+            CV_Error(Error::StsAssert, "cv::LUT only supports tables CV_8UC1 or CV_8UC3.");
+        colormap::UserColorMap cm(userColor.getMat());
+
+        (cm)(src, dst);
+    }
+
 }

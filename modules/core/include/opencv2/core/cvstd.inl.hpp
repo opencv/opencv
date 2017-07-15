@@ -44,16 +44,18 @@
 #ifndef OPENCV_CORE_CVSTDINL_HPP
 #define OPENCV_CORE_CVSTDINL_HPP
 
-#ifndef OPENCV_NOSTL
-#  include <complex>
-#  include <ostream>
-#endif
+#include <complex>
+#include <ostream>
 
 //! @cond IGNORED
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable: 4127 )
+#endif
+
 namespace cv
 {
-#ifndef OPENCV_NOSTL
 
 template<typename _Tp> class DataType< std::complex<_Tp> >
 {
@@ -151,9 +153,7 @@ FileNode::operator std::string() const
 template<> inline
 void operator >> (const FileNode& n, std::string& value)
 {
-    String val;
-    read(n, val, val);
-    value = val;
+    read(n, value, std::string());
 }
 
 template<> inline
@@ -233,14 +233,7 @@ template<typename _Tp, int n> static inline
 std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable: 4127 )
-#endif
     if(Vec<_Tp, n>::depth < CV_32F)
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
     {
         for (int i = 0; i < n - 1; ++i) {
             out << (int)vec[i] << ", ";
@@ -282,8 +275,11 @@ static inline std::ostream& operator << (std::ostream& out, const MatSize& msize
     return out;
 }
 
-#endif // OPENCV_NOSTL
 } // cv
+
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 
 //! @endcond
 
