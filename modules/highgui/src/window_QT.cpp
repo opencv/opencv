@@ -54,9 +54,12 @@
 #include <unistd.h>
 #endif
 
+// Get GL_PERSPECTIVE_CORRECTION_HINT definition, not available in GLES 2 or
+// OpenGL 3 core profile or later
 #ifdef HAVE_QT_OPENGL
-    #if defined Q_WS_X11 /* Qt4 */ || defined Q_OS_LINUX /* Qt5 */
-        #include <GL/glx.h>
+    #if defined Q_WS_X11 /* Qt4 */ || \
+        (!defined(QT_OPENGL_ES_2) && defined Q_OS_LINUX) /* Qt5 with desktop OpenGL */
+        #include <GL/gl.h>
     #endif
 #endif
 
