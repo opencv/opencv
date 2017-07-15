@@ -549,7 +549,6 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      AKAZEFeatures::Compute_Main_Orientation((*keypoints_)[i], *evolution_);
       Get_MSURF_Descriptor_64((*keypoints_)[i], descriptors_->ptr<float>(i));
     }
   }
@@ -643,7 +642,6 @@ public:
   {
     for (int i = range.start; i < range.end; i++)
     {
-      AKAZEFeatures::Compute_Main_Orientation((*keypoints_)[i], *evolution_);
       Get_MLDB_Full_Descriptor((*keypoints_)[i], descriptors_->ptr<unsigned char>(i));
     }
   }
@@ -784,7 +782,7 @@ void AKAZEFeatures::Compute_Main_Orientation(KeyPoint& kpt, const std::vector<TE
   int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
   float xf = 0.0, yf = 0.0, gweight = 0.0, ratio = 0.0;
   const int ang_size = 109;
-  float resX[ang_size], resY[ang_size], Ang[ang_size];
+  float resX[ang_size] = {0}, resY[ang_size] = {0}, Ang[ang_size];
   const int id[] = { 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6 };
 
   // Variables for computing the dominant direction
@@ -1055,19 +1053,28 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
           y2 = fRound(sample_y + 0.5f);
           x2 = fRound(sample_x + 0.5f);
 
+          // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
+          // clip values so they fit into the image
+          const MatSize& size = evolution[level].Lx.size;
+          y1 = min(max(0, y1), size[0] - 1);
+          x1 = min(max(0, x1), size[1] - 1);
+          y2 = min(max(0, y2), size[0] - 1);
+          x2 = min(max(0, x2), size[1] - 1);
+          CV_DbgAssert(evolution[level].Lx.size == evolution[level].Ly.size);
+
           fx = sample_x - x1;
           fy = sample_y - y1;
 
-          res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
-          res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
-          res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
-          res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
+          res1 = *(evolution[level].Lx.ptr<float>(y1, x1));
+          res2 = *(evolution[level].Lx.ptr<float>(y1, x2));
+          res3 = *(evolution[level].Lx.ptr<float>(y2, x1));
+          res4 = *(evolution[level].Lx.ptr<float>(y2, x2));
           rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-          res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
-          res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
-          res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
-          res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
+          res1 = *(evolution[level].Ly.ptr<float>(y1, x1));
+          res2 = *(evolution[level].Ly.ptr<float>(y1, x2));
+          res3 = *(evolution[level].Ly.ptr<float>(y2, x1));
+          res4 = *(evolution[level].Ly.ptr<float>(y2, x2));
           ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
           // Get the x and y derivatives on the rotated axis
@@ -1228,12 +1235,20 @@ void MLDB_Full_Descriptor_Invoker::MLDB_Fill_Values(float* values, int sample_st
                 int y1 = fRound(sample_y);
                 int x1 = fRound(sample_x);
 
-                float ri = *(evolution[level].Lt.ptr<float>(y1)+x1);
+                // fix crash: indexing with out-of-bounds index, this might happen near the edges of image
+                // clip values so they fit into the image
+                const MatSize& size = evolution[level].Lt.size;
+                CV_DbgAssert(size == evolution[level].Lx.size &&
+                             size == evolution[level].Ly.size);
+                y1 = min(max(0, y1), size[0] - 1);
+                x1 = min(max(0, x1), size[1] - 1);
+
+                float ri = *(evolution[level].Lt.ptr<float>(y1, x1));
                 di += ri;
 
                 if(chan > 1) {
-                    float rx = *(evolution[level].Lx.ptr<float>(y1)+x1);
-                    float ry = *(evolution[level].Ly.ptr<float>(y1)+x1);
+                    float rx = *(evolution[level].Lx.ptr<float>(y1, x1));
+                    float ry = *(evolution[level].Ly.ptr<float>(y1, x1));
                     if (chan == 2) {
                       dx += sqrtf(rx*rx + ry*ry);
                     }

@@ -350,6 +350,8 @@ public:
 
     void operator()(const Range &boundaries) const
     {
+        CV_TRACE_FUNCTION();
+
         Mat dx, dy;
         AutoBuffer<short> dxMax(0), dyMax(0);
         std::deque<uchar*> stack, borderPeaksLocal;
@@ -358,6 +360,7 @@ public:
         short *_dx, *_dy, *_dx_a = NULL, *_dy_a = NULL, *_dx_n = NULL, *_dy_n = NULL;
         uchar *_pmap;
 
+        CV_TRACE_REGION("gradient")
         if(needGradient)
         {
             Sobel(src.rowRange(rowStart, rowEnd), dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
@@ -369,6 +372,7 @@ public:
             dy = src2.rowRange(rowStart, rowEnd);
         }
 
+        CV_TRACE_REGION_NEXT("magnitude");
         if(cn > 1)
         {
             dxMax.allocate(2 * dx.cols);
@@ -740,6 +744,7 @@ public:
         uint pmapDiff = (uint)(((rowEnd == src.rows) ? map.datalimit : (map.data + boundaries.end * mapstep)) - pmapLower);
 
         // now track the edges (hysteresis thresholding)
+        CV_TRACE_REGION_NEXT("hysteresis");
         while (!stack.empty())
         {
             uchar *m = stack.back();
@@ -967,6 +972,9 @@ void Canny( InputArray _src, OutputArray _dst,
 
     const Size size = _src.size();
 
+    // we don't support inplace parameters in case with RGB/BGR src
+    CV_Assert((_dst.getObj() != _src.getObj() || _src.type() == CV_8UC1) && "Inplace parameters are not supported");
+
     _dst.create(size, CV_8U);
 
     if (!L2gradient && (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT)
@@ -1035,6 +1043,7 @@ void Canny( InputArray _src, OutputArray _dst,
 
     parallel_for_(Range(0, src.rows), parallelCanny(src, map, stack, low, high, aperture_size, L2gradient), numOfThreads);
 
+    CV_TRACE_REGION("global_hysteresis");
     // now track the edges (hysteresis thresholding)
     ptrdiff_t mapstep = map.cols;
 
@@ -1053,6 +1062,7 @@ void Canny( InputArray _src, OutputArray _dst,
         if (!m[mapstep+1])  CANNY_PUSH((m+mapstep+1), stack);
     }
 
+    CV_TRACE_REGION_NEXT("finalPass");
     parallel_for_(Range(0, src.rows), finalPass(map, dst), src.total()/(double)(1<<16));
 }
 
@@ -1105,6 +1115,7 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
 
     parallel_for_(Range(0, dx.rows), parallelCanny(dx, dy, map, stack, low, high, L2gradient), numOfThreads);
 
+    CV_TRACE_REGION("global_hysteresis")
     // now track the edges (hysteresis thresholding)
     ptrdiff_t mapstep = map.cols;
 
@@ -1123,6 +1134,7 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
         if (!m[mapstep+1])  CANNY_PUSH((m+mapstep+1), stack);
     }
 
+    CV_TRACE_REGION_NEXT("finalPass");
     parallel_for_(Range(0, dx.rows), finalPass(map, dst), dx.total()/(double)(1<<16));
 }
 

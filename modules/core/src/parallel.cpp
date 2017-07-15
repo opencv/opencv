@@ -42,6 +42,8 @@
 
 #include "precomp.hpp"
 
+#include <opencv2/core/utils/trace.private.hpp>
+
 #if defined WIN32 || defined WINCE
     #include <windows.h>
     #undef small
@@ -54,7 +56,7 @@
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
-    #if defined ANDROID
+    #if defined __ANDROID__
         #include <sys/sysconf.h>
     #elif defined __APPLE__
         #include <sys/sysctl.h>
@@ -163,10 +165,10 @@ namespace
     }
 #endif
 
-    class ParallelLoopBodyWrapper : public cv::ParallelLoopBody
+    class ParallelLoopBodyWrapperContext
     {
     public:
-        ParallelLoopBodyWrapper(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes) :
+        ParallelLoopBodyWrapperContext(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes) :
             is_rng_used(false)
         {
 
@@ -178,11 +180,16 @@ namespace
             // propagate main thread state
             rng = cv::theRNG();
 
+#ifdef OPENCV_TRACE
+            traceRootRegion = CV_TRACE_NS::details::getCurrentRegion();
+            traceRootContext = CV_TRACE_NS::details::getTraceManager().tls.get();
+#endif
+
 #ifdef ENABLE_INSTRUMENTATION
             pThreadRoot = cv::instr::getInstrumentTLSStruct().pCurrentNode;
 #endif
         }
-        ~ParallelLoopBodyWrapper()
+        ~ParallelLoopBodyWrapperContext()
         {
 #ifdef ENABLE_INSTRUMENTATION
             for(size_t i = 0; i < pThreadRoot->m_childs.size(); i++)
@@ -198,49 +205,91 @@ namespace
                 // Note: this behaviour is not equal to single-threaded mode.
                 cv::theRNG().next();
             }
-        }
-        void operator()(const cv::Range& sr) const
-        {
-#ifdef ENABLE_INSTRUMENTATION
-            {
-                cv::instr::InstrTLSStruct *pInstrTLS = &cv::instr::getInstrumentTLSStruct();
-                pInstrTLS->pCurrentNode = pThreadRoot; // Initialize TLS node for thread
-            }
+#ifdef OPENCV_TRACE
+            if (traceRootRegion)
+                CV_TRACE_NS::details::parallelForFinalize(*traceRootRegion);
 #endif
-            CV_INSTRUMENT_REGION()
-
-            // propagate main thread state
-            cv::theRNG() = rng;
-
-            cv::Range r;
-            r.start = (int)(wholeRange.start +
-                            ((uint64)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
-            r.end = sr.end >= nstripes ? wholeRange.end : (int)(wholeRange.start +
-                            ((uint64)sr.end*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
-            (*body)(r);
-
-            if (!is_rng_used && !(cv::theRNG() == rng))
-                is_rng_used = true;
         }
-        cv::Range stripeRange() const { return cv::Range(0, nstripes); }
 
-    protected:
         const cv::ParallelLoopBody* body;
         cv::Range wholeRange;
         int nstripes;
         cv::RNG rng;
         mutable bool is_rng_used;
+#ifdef OPENCV_TRACE
+        CV_TRACE_NS::details::Region* traceRootRegion;
+        CV_TRACE_NS::details::TraceManagerThreadLocal* traceRootContext;
+#endif
 #ifdef ENABLE_INSTRUMENTATION
         cv::instr::InstrNode *pThreadRoot;
 #endif
+    private:
+        ParallelLoopBodyWrapperContext(const ParallelLoopBodyWrapperContext&); // disabled
+        ParallelLoopBodyWrapperContext& operator=(const ParallelLoopBodyWrapperContext&); // disabled
+    };
+
+    class ParallelLoopBodyWrapper : public cv::ParallelLoopBody
+    {
+    public:
+        ParallelLoopBodyWrapper(ParallelLoopBodyWrapperContext& ctx_) :
+            ctx(ctx_)
+        {
+        }
+        ~ParallelLoopBodyWrapper()
+        {
+        }
+        void operator()(const cv::Range& sr) const
+        {
+#ifdef OPENCV_TRACE
+            // TODO CV_TRACE_NS::details::setCurrentRegion(rootRegion);
+            if (ctx.traceRootRegion && ctx.traceRootContext)
+                CV_TRACE_NS::details::parallelForSetRootRegion(*ctx.traceRootRegion, *ctx.traceRootContext);
+            CV__TRACE_OPENCV_FUNCTION_NAME("parallel_for_body");
+            if (ctx.traceRootRegion)
+                CV_TRACE_NS::details::parallelForAttachNestedRegion(*ctx.traceRootRegion);
+#endif
+
+#ifdef ENABLE_INSTRUMENTATION
+            {
+                cv::instr::InstrTLSStruct *pInstrTLS = &cv::instr::getInstrumentTLSStruct();
+                pInstrTLS->pCurrentNode = ctx.pThreadRoot; // Initialize TLS node for thread
+            }
+            CV_INSTRUMENT_REGION()
+#endif
+
+            // propagate main thread state
+            cv::theRNG() = ctx.rng;
+
+            cv::Range r;
+            cv::Range wholeRange = ctx.wholeRange;
+            int nstripes = ctx.nstripes;
+            r.start = (int)(wholeRange.start +
+                            ((uint64)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
+            r.end = sr.end >= nstripes ? wholeRange.end : (int)(wholeRange.start +
+                            ((uint64)sr.end*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
+
+#ifdef OPENCV_TRACE
+            CV_TRACE_ARG_VALUE(range_start, "range.start", (int64)r.start);
+            CV_TRACE_ARG_VALUE(range_end, "range.end", (int64)r.end);
+#endif
+
+            (*ctx.body)(r);
+
+            if (!ctx.is_rng_used && !(cv::theRNG() == ctx.rng))
+                ctx.is_rng_used = true;
+        }
+        cv::Range stripeRange() const { return cv::Range(0, ctx.nstripes); }
+
+    protected:
+        ParallelLoopBodyWrapperContext& ctx;
     };
 
 #if defined HAVE_TBB
     class ProxyLoopBody : public ParallelLoopBodyWrapper
     {
     public:
-        ProxyLoopBody(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes)
-        : ParallelLoopBodyWrapper(_body, _r, _nstripes)
+        ProxyLoopBody(ParallelLoopBodyWrapperContext& ctx_)
+        : ParallelLoopBodyWrapper(ctx_)
         {}
 
         void operator ()(const tbb::blocked_range<int>& range) const
@@ -261,8 +310,8 @@ namespace
     class ProxyLoopBody : public ParallelLoopBodyWrapper
     {
     public:
-        ProxyLoopBody(const cv::ParallelLoopBody& _body, const cv::Range& _r, double _nstripes)
-        : ParallelLoopBodyWrapper(_body, _r, _nstripes)
+        ProxyLoopBody(ParallelLoopBodyWrapperContext& ctx)
+        : ParallelLoopBodyWrapper(ctx)
         {}
 
         void operator ()(int i) const
@@ -316,19 +365,30 @@ static SchedPtr pplScheduler;
 
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
+#ifdef OPENCV_TRACE
+    CV__TRACE_OPENCV_FUNCTION_NAME_("parallel_for", 0);
+    CV_TRACE_ARG_VALUE(range_start, "range.start", (int64)range.start);
+    CV_TRACE_ARG_VALUE(range_end, "range.end", (int64)range.end);
+    CV_TRACE_ARG_VALUE(nstripes, "nstripes", (int64)nstripes);
+#endif
+
     CV_INSTRUMENT_REGION_MT_FORK()
     if (range.empty())
         return;
 
 #ifdef CV_PARALLEL_FRAMEWORK
 
-    if(numThreads != 0)
+    static int flagNestedParallelFor = 0;
+    bool isNotNesterParallelFor = CV_XADD(&flagNestedParallelFor, 1) == 0;
+    if(numThreads != 0 && isNotNesterParallelFor)
     {
-        ProxyLoopBody pbody(body, range, nstripes);
+        ParallelLoopBodyWrapperContext ctx(body, range, nstripes);
+        ProxyLoopBody pbody(ctx);
         cv::Range stripeRange = pbody.stripeRange();
         if( stripeRange.end - stripeRange.start == 1 )
         {
             body(range);
+            flagNestedParallelFor = 0;
             return;
         }
 
@@ -384,7 +444,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
 #error You have hacked and compiling with unsupported parallel framework
 
 #endif
-
+        flagNestedParallelFor = 0;
     }
     else
 
@@ -530,7 +590,7 @@ int cv::getThreadNum(void)
 #endif
 }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 static inline int getNumberOfCPUsImpl()
 {
    FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
@@ -581,7 +641,7 @@ int cv::getNumberOfCPUs(void)
 #endif
 
     return (int)sysinfo.dwNumberOfProcessors;
-#elif defined ANDROID
+#elif defined __ANDROID__
     static int ncpus = getNumberOfCPUsImpl();
     return ncpus;
 #elif defined __linux__

@@ -7,22 +7,11 @@
 #endif
 #include <jni.h>
 
-#ifdef __ANDROID__
-#  include <android/log.h>
-#  define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
-#  ifdef DEBUG
-#    define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
-#  else
-#    define LOGD(...)
-#  endif
-#else
-#  define LOGE(...)
-#  define LOGD(...)
-#endif
-
+#include "opencv2/java.hpp"
 #include "opencv2/core/utility.hpp"
 
 #include "converters.h"
+#include "listconverters.hpp"
 
 #ifdef _MSC_VER
 #  pragma warning(disable:4800 4244)

@@ -25,10 +25,12 @@ class Err(Exception):
 def execute(cmd, silent = False, cwd = ".", env = None):
     try:
         log.debug("Run: %s", cmd)
-        if env:
+        if env is not None:
             for k in env:
                 log.debug("    Environ: %s=%s", k, env[k])
-            env = os.environ.update(env)
+            new_env = os.environ.copy()
+            new_env.update(env)
+            env = new_env
         if silent:
             return check_output(cmd, stderr = STDOUT, cwd = cwd, env = env).decode("latin-1")
         else:

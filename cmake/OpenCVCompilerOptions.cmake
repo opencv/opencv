@@ -127,6 +127,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   add_extra_compiler_option(-Wpointer-arith)
   add_extra_compiler_option(-Wshadow)
   add_extra_compiler_option(-Wsign-promo)
+  add_extra_compiler_option(-Wuninitialized)
+  add_extra_compiler_option(-Winit-self)
 
   if(ENABLE_NOISY_WARNINGS)
     add_extra_compiler_option(-Wcast-align)
@@ -246,7 +248,9 @@ endif()
 # Extra link libs if the user selects building static libs:
 if(NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX AND NOT ANDROID)
   # Android does not need these settings because they are already set by toolchain file
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
+  if(NOT MINGW)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
+  endif()
   set(OPENCV_EXTRA_FLAGS "-fPIC ${OPENCV_EXTRA_FLAGS}")
 endif()
 

@@ -16,8 +16,9 @@ void checkIppStatus();
     cv::ipp::setIppStatus(0); \
     cv::theRNG().state = cvtest::param_seed;
 #define CV_TEST_CLEANUP ::cvtest::checkIppStatus();
-#define CV_TEST_BODY_IMPL \
+#define CV_TEST_BODY_IMPL(name) \
     { \
+       CV__TRACE_APP_FUNCTION_NAME(name); \
        try { \
           CV_TEST_INIT \
           Body(); \
@@ -53,7 +54,7 @@ void checkIppStatus();
             ::testing::Test::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV_TEST_BODY_IMPL \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV_TEST_BODY_IMPL( #test_case_name "_" #test_name ) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
 #undef TEST_F
@@ -79,7 +80,7 @@ void checkIppStatus();
             test_fixture::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_fixture, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() CV_TEST_BODY_IMPL \
+    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() CV_TEST_BODY_IMPL( #test_fixture "_" #test_name ) \
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
 #undef TEST_P
@@ -111,7 +112,7 @@ void checkIppStatus();
   int GTEST_TEST_CLASS_NAME_(test_case_name, \
                              test_name)::gtest_registering_dummy_ = \
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV_TEST_BODY_IMPL \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV_TEST_BODY_IMPL( #test_case_name "_" #test_name ) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
 
 #endif  // OPENCV_TS_EXT_HPP

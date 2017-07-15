@@ -544,7 +544,7 @@ public:
 */
 CV_EXPORTS_W Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
 
-/** @brief Class computing a dense optical flow using the Gunnar Farneback’s algorithm.
+/** @brief Class computing a dense optical flow using the Gunnar Farneback's algorithm.
  */
 class CV_EXPORTS_W FarnebackOpticalFlow : public DenseOpticalFlow
 {

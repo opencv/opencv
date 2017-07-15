@@ -1,14 +1,15 @@
 #ifndef OPENCV_TS_PERF_HPP
 #define OPENCV_TS_PERF_HPP
 
-#include "opencv2/core.hpp"
+#include "opencv2/ts.hpp"
+
 #include "ts_gtest.h"
 #include "ts_ext.hpp"
 
 #include <functional>
 
 #if !(defined(LOGD) || defined(LOGI) || defined(LOGW) || defined(LOGE))
-# if defined(ANDROID) && defined(USE_ANDROID_LOGGING)
+# if defined(__ANDROID__) && defined(USE_ANDROID_LOGGING)
 #  include <android/log.h>
 
 #  define PERF_TESTS_LOG_TAG "OpenCV_perf"
@@ -537,7 +538,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
       protected:\
        virtual void PerfTestBody();\
      };\
-     TEST_F(test_case_name, test_name){ RunPerfTestBody(); }\
+     TEST_F(test_case_name, test_name){ CV_TRACE_REGION("PERF_TEST: " #test_case_name "_" #test_name); RunPerfTestBody(); }\
     }\
     void PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name)::test_case_name::PerfTestBody()
 
@@ -575,7 +576,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
       protected:\
        virtual void PerfTestBody();\
      };\
-     TEST_F(fixture, testname){ RunPerfTestBody(); }\
+     TEST_F(fixture, testname){ CV_TRACE_REGION("PERF_TEST: " #fixture "_" #testname); RunPerfTestBody(); }\
     }\
     void PERF_PROXY_NAMESPACE_NAME_(fixture, testname)::fixture::PerfTestBody()
 
@@ -608,7 +609,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
      protected:\
       virtual void PerfTestBody();\
     };\
-    TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); }\
+    TEST_P(fixture##_##name, name /*perf*/){ CV_TRACE_REGION("PERF_TEST: " #fixture "_" #name); RunPerfTestBody(); }\
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
@@ -631,7 +632,10 @@ void dumpOpenCLDevice();
 #define TEST_DUMP_OCL_INFO
 #endif
 
+
 #define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
+    CV_TRACE_FUNCTION(); \
+    { CV_TRACE_REGION("INIT"); \
     ::perf::Regression::Init(#modulename); \
     ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), \
                            argc, argv); \
@@ -641,6 +645,7 @@ void dumpOpenCLDevice();
     ::perf::TestBase::RecordRunParameters(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     TEST_DUMP_OCL_INFO \
+    } \
     return RUN_ALL_TESTS();
 
 // impls must be an array, not a pointer; "plain" should always be one of the implementations
@@ -657,9 +662,19 @@ int main(int argc, char **argv)\
     CV_PERF_TEST_MAIN_INTERNALS(modulename, plain_only, __VA_ARGS__)\
 }
 
+//! deprecated
 #define TEST_CYCLE_N(n) for(declare.iterations(n); next() && startTimer(); stopTimer())
+//! deprecated
 #define TEST_CYCLE() for(; next() && startTimer(); stopTimer())
+//! deprecated
 #define TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); next() && startTimer(); stopTimer()) for(int r = 0; r < runsNum; ++r)
+
+#define PERF_SAMPLE_BEGIN() \
+    for(; next() && startTimer(); stopTimer()) \
+    { \
+        CV_TRACE_REGION("iteration");
+#define PERF_SAMPLE_END() \
+    }
 
 namespace perf
 {

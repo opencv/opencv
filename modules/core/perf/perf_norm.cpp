@@ -6,8 +6,10 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
+#define HAMMING_NORM_SIZES cv::Size(640, 480), cv::Size(1920, 1080)
+#define HAMMING_NORM_TYPES CV_8UC1
 
-CV_FLAGS(NormType, NORM_INF, NORM_L1, NORM_L2, NORM_TYPE_MASK, NORM_RELATIVE, NORM_MINMAX)
+CV_FLAGS(NormType, NORM_HAMMING2, NORM_HAMMING, NORM_INF, NORM_L1, NORM_L2, NORM_TYPE_MASK, NORM_RELATIVE, NORM_MINMAX)
 typedef std::tr1::tuple<Size, MatType, NormType> Size_MatType_NormType_t;
 typedef perf::TestBaseWithParam<Size_MatType_NormType_t> Size_MatType_NormType;
 
@@ -102,6 +104,60 @@ PERF_TEST_P(Size_MatType_NormType, norm2_mask,
 
     SANITY_CHECK(n, 1e-5, ERROR_RELATIVE);
 }
+
+namespace {
+typedef std::tr1::tuple<NormType, MatType, Size> PerfHamming_t;
+typedef perf::TestBaseWithParam<PerfHamming_t> PerfHamming;
+
+PERF_TEST_P(PerfHamming, norm,
+            testing::Combine(
+                testing::Values(NORM_HAMMING, NORM_HAMMING2),
+                testing::Values(HAMMING_NORM_TYPES),
+                testing::Values(HAMMING_NORM_SIZES)
+                )
+            )
+{
+    Size sz = get<2>(GetParam());
+    int matType = get<1>(GetParam());
+    int normType = get<0>(GetParam());
+
+    Mat src(sz, matType);
+    double n;
+
+    declare.in(src, WARMUP_RNG);
+
+    TEST_CYCLE() n = norm(src, normType);
+
+    (void)n;
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(PerfHamming, norm2,
+            testing::Combine(
+                testing::Values(NORM_HAMMING, NORM_HAMMING2),
+                testing::Values(HAMMING_NORM_TYPES),
+                testing::Values(HAMMING_NORM_SIZES)
+                )
+            )
+{
+    Size sz = get<2>(GetParam());
+    int matType = get<1>(GetParam());
+    int normType = get<0>(GetParam());
+
+    Mat src1(sz, matType);
+    Mat src2(sz, matType);
+    double n;
+
+    declare.in(src1, src2, WARMUP_RNG);
+
+    TEST_CYCLE() n = norm(src1, src2, normType);
+
+    (void)n;
+    SANITY_CHECK_NOTHING();
+}
+
+}
+
 
 PERF_TEST_P(Size_MatType_NormType, normalize,
             testing::Combine(

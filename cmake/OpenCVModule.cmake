@@ -683,6 +683,8 @@ macro(ocv_glob_module_sources)
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.h"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/utils/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/utils/*.h"
   )
   file(GLOB lib_hdrs_detail
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.hpp"
@@ -800,11 +802,37 @@ macro(_ocv_create_module)
     endforeach()
   endif()
 
+  if(WIN32
+      AND (BUILD_SHARED_LIBS AND NOT "x${OPENCV_MODULE_TYPE}" STREQUAL "xSTATIC")
+      AND NOT OPENCV_VS_VERSIONINFO_SKIP)
+    if(DEFINED OPENCV_VS_VERSIONINFO_FILE)
+      set(_VS_VERSION_FILE "${OPENCV_VS_VERSIONINFO_FILE}")
+    elseif(DEFINED OPENCV_VS_VERSIONINFO_${the_module}_FILE)
+      set(_VS_VERSION_FILE "${OPENCV_VS_VERSIONINFO_${the_module}_FILE}")
+    elseif(NOT OPENCV_VS_VERSIONINFO_SKIP_GENERATION)
+      set(_VS_VERSION_FILE "${CMAKE_CURRENT_BINARY_DIR}/vs_version.rc")
+      ocv_generate_vs_version_file("${_VS_VERSION_FILE}"
+        NAME "${the_module}"
+        FILEDESCRIPTION "OpenCV module: ${OPENCV_MODULE_${the_module}_DESCRIPTION}"
+        INTERNALNAME "${the_module}${OPENCV_DLLVERSION}"
+        ORIGINALFILENAME "${the_module}${OPENCV_DLLVERSION}.dll"
+      )
+    endif()
+    if(_VS_VERSION_FILE)
+      if(NOT EXISTS "${_VS_VERSION_FILE}")
+        message(STATUS "${the_module}: Required .rc file is missing: ${_VS_VERSION_FILE}")
+      endif()
+      source_group("Src" FILES "${_VS_VERSION_FILE}")
+    endif()
+  endif()
+
   source_group("Include" FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp")
   source_group("Src" FILES "${${the_module}_pch}")
   ocv_add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
     "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
-    ${${the_module}_pch} ${sub_objs})
+    ${${the_module}_pch} ${sub_objs}
+    ${_VS_VERSION_FILE}
+  )
 
   if (cuda_objs)
     target_link_libraries(${the_module} ${cuda_objs})
@@ -903,7 +931,7 @@ macro(_ocv_create_module)
     if(OPENCV_MODULE_${m}_HEADERS AND ";${OPENCV_MODULES_PUBLIC};" MATCHES ";${m};")
       foreach(hdr ${OPENCV_MODULE_${m}_HEADERS})
         string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
-        if(NOT hdr2 MATCHES "opencv2/${m}/private.*" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
+        if(NOT hdr2 MATCHES "private" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
           install(FILES ${hdr} OPTIONAL DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT dev)
         endif()
       endforeach()
@@ -1133,6 +1161,8 @@ function(ocv_add_accuracy_tests)
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
         RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
       )
+
+      ocv_append_target_property(${the_target} COMPILE_DEFINITIONS "__OPENCV_TESTS=1")
 
       if(ENABLE_SOLUTION_FOLDERS)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")

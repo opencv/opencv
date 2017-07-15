@@ -32,12 +32,16 @@ foreach(m ${OPENCV_PYTHON_MODULES})
 endforeach(m)
 
 # header blacklist
-ocv_list_filterout(opencv_hdrs "modules/.*.h$")
+ocv_list_filterout(opencv_hdrs "modules/.*\\\\.h$")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda")
 ocv_list_filterout(opencv_hdrs "modules/cuda.*")
 ocv_list_filterout(opencv_hdrs "modules/cudev")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
-ocv_list_filterout(opencv_hdrs "modules/.*/detection_based_tracker.hpp") # Conditional compilation
+ocv_list_filterout(opencv_hdrs "modules/.+/utils/.*")
+ocv_list_filterout(opencv_hdrs "modules/.*\\\\.inl\\\\.h*")
+ocv_list_filterout(opencv_hdrs "modules/.*_inl\\\\.h*")
+ocv_list_filterout(opencv_hdrs "modules/.*\\\\.details\\\\.h*")
+ocv_list_filterout(opencv_hdrs "modules/.*/detection_based_tracker\\\\.hpp") # Conditional compilation
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
@@ -46,7 +50,8 @@ set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h")
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs}")
+string(REPLACE ";" "\n" opencv_hdrs_ "${opencv_hdrs}")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs_}")
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
    COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${PYTHON_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${PYTHON}"

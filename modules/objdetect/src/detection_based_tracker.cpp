@@ -48,7 +48,7 @@
 #define USE_STD_THREADS
 #endif
 
-#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID) || defined(USE_STD_THREADS)
+#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__) || defined(USE_STD_THREADS)
 
 #include "opencv2/core/utility.hpp"
 
@@ -69,7 +69,7 @@
 #define DEBUGLOGS 0
 #endif
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #include <android/log.h>
 #define LOG_TAG "OBJECT_DETECTOR"
 #define LOGD0(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
@@ -218,6 +218,7 @@ cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(Detectio
 
     cascadeInThread = _detector;
 #ifndef USE_STD_THREADS
+    second_workthread = 0;
     int res=0;
     res=pthread_mutex_init(&mutex, NULL);//TODO: should be attributes?
     if (res) {
@@ -609,7 +610,8 @@ cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector
             && trackingDetector );
 
     if (mainDetector) {
-        separateDetectionWork.reset(new SeparateDetectionWork(*this, mainDetector, params));
+        Ptr<SeparateDetectionWork> tmp(new SeparateDetectionWork(*this, mainDetector, params));
+        separateDetectionWork.swap(tmp);
     }
 
     weightsPositionsSmoothing.push_back(1);

@@ -168,48 +168,57 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 
 void cv::namedWindow( const String& winname, int flags )
 {
+    CV_TRACE_FUNCTION();
     cvNamedWindow( winname.c_str(), flags );
 }
 
 void cv::destroyWindow( const String& winname )
 {
+    CV_TRACE_FUNCTION();
     cvDestroyWindow( winname.c_str() );
 }
 
 void cv::destroyAllWindows()
 {
+    CV_TRACE_FUNCTION();
     cvDestroyAllWindows();
 }
 
 void cv::resizeWindow( const String& winname, int width, int height )
 {
+    CV_TRACE_FUNCTION();
     cvResizeWindow( winname.c_str(), width, height );
 }
 
 void cv::moveWindow( const String& winname, int x, int y )
 {
+    CV_TRACE_FUNCTION();
     cvMoveWindow( winname.c_str(), x, y );
 }
 
 void cv::setWindowProperty(const String& winname, int prop_id, double prop_value)
 {
+    CV_TRACE_FUNCTION();
     cvSetWindowProperty( winname.c_str(), prop_id, prop_value);
 }
 
 double cv::getWindowProperty(const String& winname, int prop_id)
 {
+    CV_TRACE_FUNCTION();
     return cvGetWindowProperty(winname.c_str(), prop_id);
 }
 
 int cv::waitKeyEx(int delay)
 {
+    CV_TRACE_FUNCTION();
     return cvWaitKey(delay);
 }
 
 int cv::waitKey(int delay)
 {
+    CV_TRACE_FUNCTION();
     int code = waitKeyEx(delay);
-#ifndef HAVE_WINRT
+#ifndef WINRT
     static int use_legacy = -1;
     if (use_legacy < 0)
     {
@@ -225,42 +234,50 @@ int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)
 {
+    CV_TRACE_FUNCTION();
     return cvCreateTrackbar2(trackbarName.c_str(), winName.c_str(),
                              value, count, callback, userdata);
 }
 
 void cv::setTrackbarPos( const String& trackbarName, const String& winName, int value )
 {
+    CV_TRACE_FUNCTION();
     cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
 }
 
 void cv::setTrackbarMax(const String& trackbarName, const String& winName, int maxval)
 {
+    CV_TRACE_FUNCTION();
     cvSetTrackbarMax(trackbarName.c_str(), winName.c_str(), maxval);
 }
 
 void cv::setTrackbarMin(const String& trackbarName, const String& winName, int minval)
 {
+    CV_TRACE_FUNCTION();
     cvSetTrackbarMin(trackbarName.c_str(), winName.c_str(), minval);
 }
 
 int cv::getTrackbarPos( const String& trackbarName, const String& winName )
 {
+    CV_TRACE_FUNCTION();
     return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
 }
 
 void cv::setMouseCallback( const String& windowName, MouseCallback onMouse, void* param)
 {
+    CV_TRACE_FUNCTION();
     cvSetMouseCallback(windowName.c_str(), onMouse, param);
 }
 
 int cv::getMouseWheelDelta( int flags )
 {
+    CV_TRACE_FUNCTION();
     return CV_GET_WHEEL_DELTA(flags);
 }
 
 int cv::startWindowThread()
 {
+    CV_TRACE_FUNCTION();
     return cvStartWindowThread();
 }
 
@@ -268,16 +285,19 @@ int cv::startWindowThread()
 
 void cv::setOpenGlDrawCallback(const String& name, OpenGlDrawCallback callback, void* userdata)
 {
+    CV_TRACE_FUNCTION();
     cvSetOpenGlDrawCallback(name.c_str(), callback, userdata);
 }
 
 void cv::setOpenGlContext(const String& windowName)
 {
+    CV_TRACE_FUNCTION();
     cvSetOpenGlContext(windowName.c_str());
 }
 
 void cv::updateWindow(const String& windowName)
 {
+    CV_TRACE_FUNCTION();
     cvUpdateWindow(windowName.c_str());
 }
 
@@ -299,6 +319,7 @@ namespace
 
 void cv::imshow( const String& winname, InputArray _img )
 {
+    CV_TRACE_FUNCTION();
     const Size size = _img.size();
 #ifndef HAVE_OPENGL
     CV_Assert(size.width>0 && size.height>0);
@@ -355,6 +376,7 @@ void cv::imshow( const String& winname, InputArray _img )
 
 void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 {
+    CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
     (void) winname;
     (void) _tex;

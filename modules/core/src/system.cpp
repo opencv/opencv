@@ -44,6 +44,8 @@
 #include "precomp.hpp"
 #include <iostream>
 
+#include <opencv2/core/utils/trace.private.hpp>
+
 namespace cv {
 
 static Mutex* __initialization_mutex = NULL;
@@ -64,16 +66,16 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 # endif
 #endif
 
-#if defined ANDROID || defined __linux__ || defined __FreeBSD__
+#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <elf.h>
-#if defined ANDROID || defined __linux__
+#if defined __ANDROID__ || defined __linux__
 #  include <linux/auxvec.h>
 #endif
 #endif
 
-#if defined ANDROID
+#if defined __ANDROID__ && defined HAVE_CPUFEATURES
 #  include <cpu-features.h>
 #endif
 
@@ -204,12 +206,12 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
-#if defined ANDROID
+#if defined __ANDROID__
 #include <sys/sysconf.h>
 #endif
 #endif
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 # include <android/log.h>
 #endif
 
@@ -450,11 +452,27 @@ struct HWFeatures
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
     #elif defined __arm__ && defined __ANDROID__
+      #if defined HAVE_CPUFEATURES
         __android_log_print(ANDROID_LOG_INFO, "OpenCV", "calling android_getCpuFeatures() ...");
         uint64_t features = android_getCpuFeatures();
         __android_log_print(ANDROID_LOG_INFO, "OpenCV", "calling android_getCpuFeatures() ... Done (%llx)", features);
         have[CV_CPU_NEON] = (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
         have[CV_CPU_FP16] = (features & ANDROID_CPU_ARM_FEATURE_VFP_FP16) != 0;
+      #else
+        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "cpufeatures library is not avaialble for CPU detection");
+        #if CV_NEON
+        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- NEON instructions is enabled via build flags");
+        have[CV_CPU_NEON] = true;
+        #else
+        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- NEON instructions is NOT enabled via build flags");
+        #endif
+        #if CV_FP16
+        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- FP16 instructions is enabled via build flags");
+        have[CV_CPU_FP16] = true;
+        #else
+        __android_log_print(ANDROID_LOG_INFO, "OpenCV", "- FP16 instructions is NOT enabled via build flags");
+        #endif
+      #endif
     #elif defined __arm__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
@@ -815,7 +833,7 @@ String tempfile( const char* suffix )
     fname = temp_file;
 #endif
 # else
-#  ifdef ANDROID
+#  ifdef __ANDROID__
     //char defaultTemplate[] = "/mnt/sdcard/__opencv_temp.XXXXXX";
     char defaultTemplate[] = "/data/local/tmp/__opencv_temp.XXXXXX";
 #  else
@@ -1175,10 +1193,13 @@ Mutex::Mutex(const Mutex& m)
 
 Mutex& Mutex::operator = (const Mutex& m)
 {
-    CV_XADD(&m.impl->refcount, 1);
-    if( CV_XADD(&impl->refcount, -1) == 1 )
-        delete impl;
-    impl = m.impl;
+    if (this != &m)
+    {
+        CV_XADD(&m.impl->refcount, 1);
+        if( CV_XADD(&impl->refcount, -1) == 1 )
+            delete impl;
+        impl = m.impl;
+    }
     return *this;
 }
 
@@ -1474,6 +1495,7 @@ void TLSDataContainer::cleanup()
 
 void* TLSDataContainer::getData() const
 {
+    CV_Assert(key_ != -1 && "Can't fetch data from terminated TLS container.");
     void* pData = getTlsStorage().getData(key_); // Check if data was already allocated
     if(!pData)
     {
@@ -1517,6 +1539,99 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
     return TRUE;
 }
 #endif
+
+
+namespace {
+static int g_threadNum = 0;
+class ThreadID {
+public:
+    const int id;
+    ThreadID() :
+        id(CV_XADD(&g_threadNum, 1))
+    {
+#ifdef OPENCV_WITH_ITT
+        __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
+#endif
+    }
+};
+
+static TLSData<ThreadID>& getThreadIDTLS()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<ThreadID>, new TLSData<ThreadID>());
+}
+
+} // namespace
+int utils::getThreadID() { return getThreadIDTLS().get()->id; }
+
+bool utils::getConfigurationParameterBool(const char* name, bool defaultValue)
+{
+#ifdef NO_GETENV
+    const char* envValue = NULL;
+#else
+    const char* envValue = getenv(name);
+#endif
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    if (value == "1" || value == "True" || value == "true" || value == "TRUE")
+    {
+        return true;
+    }
+    if (value == "0" || value == "False" || value == "false" || value == "FALSE")
+    {
+        return false;
+    }
+    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
+}
+
+
+size_t utils::getConfigurationParameterSizeT(const char* name, size_t defaultValue)
+{
+#ifdef NO_GETENV
+    const char* envValue = NULL;
+#else
+    const char* envValue = getenv(name);
+#endif
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    size_t pos = 0;
+    for (; pos < value.size(); pos++)
+    {
+        if (!isdigit(value[pos]))
+            break;
+    }
+    cv::String valueStr = value.substr(0, pos);
+    cv::String suffixStr = value.substr(pos, value.length() - pos);
+    int v = atoi(valueStr.c_str());
+    if (suffixStr.length() == 0)
+        return v;
+    else if (suffixStr == "MB" || suffixStr == "Mb" || suffixStr == "mb")
+        return v * 1024 * 1024;
+    else if (suffixStr == "KB" || suffixStr == "Kb" || suffixStr == "kb")
+        return v * 1024;
+    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
+}
+
+cv::String utils::getConfigurationParameterString(const char* name, const char* defaultValue)
+{
+#ifdef NO_GETENV
+    const char* envValue = NULL;
+#else
+    const char* envValue = getenv(name);
+#endif
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    return value;
+}
+
 
 #ifdef CV_COLLECT_IMPL_DATA
 ImplCollector& getImplData()

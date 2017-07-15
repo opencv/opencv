@@ -111,14 +111,14 @@ bool clipLine( Size2l img_size, Point2l& pt1, Point2l& pt2 )
         if( c1 & 12 )
         {
             a = c1 < 8 ? 0 : bottom;
-            x1 +=  (a - y1) * (x2 - x1) / (y2 - y1);
+            x1 += (int64)((double)(a - y1) * (x2 - x1) / (y2 - y1));
             y1 = a;
             c1 = (x1 < 0) + (x1 > right) * 2;
         }
         if( c2 & 12 )
         {
             a = c2 < 8 ? 0 : bottom;
-            x2 += (a - y2) * (x2 - x1) / (y2 - y1);
+            x2 += (int64)((double)(a - y2) * (x2 - x1) / (y2 - y1));
             y2 = a;
             c2 = (x2 < 0) + (x2 > right) * 2;
         }
@@ -127,14 +127,14 @@ bool clipLine( Size2l img_size, Point2l& pt1, Point2l& pt2 )
             if( c1 )
             {
                 a = c1 == 1 ? 0 : right;
-                y1 += (a - x1) * (y2 - y1) / (x2 - x1);
+                y1 += (int64)((double)(a - x1) * (y2 - y1) / (x2 - x1));
                 x1 = a;
                 c1 = 0;
             }
             if( c2 )
             {
                 a = c2 == 1 ? 0 : right;
-                y2 += (a - x2) * (y2 - y1) / (x2 - x1);
+                y2 += (int64)((double)(a - x2) * (y2 - y1) / (x2 - x1));
                 x2 = a;
                 c2 = 0;
             }
@@ -178,6 +178,9 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         {
             ptr = img.data;
             err = plusDelta = minusDelta = plusStep = minusStep = count = 0;
+            ptr0 = 0;
+            step = 0;
+            elemSize = 0;
             return;
         }
     }
@@ -311,7 +314,7 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
 
     if( !((nch == 1 || nch == 3 || nch == 4) && img.depth() == CV_8U) )
     {
-        Line(img, Point((int)(pt1.x<<XY_SHIFT), (int)(pt1.y<<XY_SHIFT)), Point((int)(pt2.x<<XY_SHIFT), (int)(pt2.y<<XY_SHIFT)), color);
+        Line(img, Point((int)(pt1.x>>XY_SHIFT), (int)(pt1.y>>XY_SHIFT)), Point((int)(pt2.x>>XY_SHIFT), (int)(pt2.y>>XY_SHIFT)), color);
         return;
     }
 
@@ -2597,6 +2600,7 @@ cvDrawContours( void* _img, CvSeq* contour,
         void* clr = (contour->flags & CV_SEQ_FLAG_HOLE) == 0 ? ext_buf : hole_buf;
 
         cvStartReadSeq( contour, &reader, 0 );
+        CV_Assert(reader.ptr != NULL);
         if( thickness < 0 )
             pts.resize(0);
 

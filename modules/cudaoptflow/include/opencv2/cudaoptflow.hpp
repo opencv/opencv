@@ -210,7 +210,7 @@ public:
 // FarnebackOpticalFlow
 //
 
-/** @brief Class computing a dense optical flow using the Gunnar Farneback’s algorithm.
+/** @brief Class computing a dense optical flow using the Gunnar Farneback's algorithm.
  */
 class CV_EXPORTS FarnebackOpticalFlow : public DenseOpticalFlow
 {

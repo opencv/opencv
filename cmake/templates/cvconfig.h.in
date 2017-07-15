@@ -92,6 +92,9 @@
 /* GTK+ 2.x toolkit */
 #cmakedefine HAVE_GTK
 
+/* Halide support */
+#cmakedefine HAVE_HALIDE
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
@@ -205,6 +208,9 @@
 /* Intel VA-API/OpenCL */
 #cmakedefine HAVE_VA_INTEL
 
+/* Intel Media SDK */
+#cmakedefine HAVE_MFX
+
 /* Lapack */
 #cmakedefine HAVE_LAPACK
 
@@ -214,6 +220,29 @@
 /* OpenVX */
 #cmakedefine HAVE_OPENVX
 
+#if defined(HAVE_XINE)         || \
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_QTKIT)        || \
+    defined(HAVE_AVFOUNDATION) || \
+    /*defined(HAVE_OPENNI)     || too specialized */ \
+    defined(HAVE_FFMPEG)       || \
+    defined(HAVE_MSMF)
+#define HAVE_VIDEO_INPUT
+#endif
+
+#if /*defined(HAVE_XINE)       || */\
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_QTKIT)        || \
+    defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_FFMPEG)       || \
+    defined(HAVE_MSMF)
+#define HAVE_VIDEO_OUTPUT
+#endif
+
+/* OpenCV trace utilities */
+#cmakedefine OPENCV_TRACE
 
 
 #endif // OPENCV_CVCONFIG_H_INCLUDED

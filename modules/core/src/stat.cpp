@@ -53,16 +53,6 @@
 namespace cv
 {
 
-template<typename T> static inline Scalar rawToScalar(const T& v)
-{
-    Scalar s;
-    typedef typename DataType<T>::channel_type T1;
-    int i, n = DataType<T>::channels;
-    for( i = 0; i < n; i++ )
-        s.val[i] = ((T1*)&v)[i];
-    return s;
-}
-
 /****************************************************************************************\
 *                                        sum                                             *
 \****************************************************************************************/
@@ -2187,7 +2177,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 {
     const ocl::Device & dev = ocl::Device::getDefault();
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (dev.isNVidia())
         return false;
 #endif
@@ -2533,6 +2523,12 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
 {
 #if IPP_VERSION_X100 >= 700
     CV_INSTRUMENT_REGION_IPP()
+
+#if IPP_DISABLE_MINMAX_NAN_SSE42
+    // Disable 32F processing only
+    if(src.depth() == CV_32F && !(ipp::getIppFeatures()&ippCPUID_AVX))
+        return false;
+#endif
 
     IppStatus   status;
     IppDataType dataType = ippiGetDataType(src.depth());
@@ -2975,7 +2971,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 {
     const ocl::Device & d = ocl::Device::getDefault();
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (d.isNVidia())
         return false;
 #endif
@@ -3317,7 +3313,7 @@ namespace cv {
 
 static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result )
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (ocl::Device::getDefault().isNVidia())
         return false;
 #endif
@@ -4243,7 +4239,7 @@ cvNorm( const void* imgA, const void* imgB, int normType, const void* maskarr )
 
 namespace cv { namespace hal {
 
-static const uchar popCountTable[] =
+extern const uchar popCountTable[256] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
@@ -4279,154 +4275,6 @@ static const uchar popCountTable4[] =
     1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
-#if CV_AVX2
-static inline int _mm256_extract_epi32_(__m256i reg, const int i)
-{
-    CV_DECL_ALIGNED(32) int reg_data[8];
-    CV_DbgAssert(0 <= i && i < 8);
-    _mm256_store_si256((__m256i*)reg_data, reg);
-    return reg_data[i];
-}
-#endif
-
-int normHamming(const uchar* a, int n)
-{
-    int i = 0;
-    int result = 0;
-#if CV_AVX2
-    if(USE_AVX2)
-    {
-        __m256i _r0 = _mm256_setzero_si256();
-        __m256i _0 = _mm256_setzero_si256();
-        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
-        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
-
-        for(; i <= n - 32; i+= 32)
-        {
-            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
-
-            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_a0, _popcnt_mask));
-            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
-                             _mm256_and_si256(_mm256_srli_epi16(_a0, 4), _popcnt_mask));
-
-            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
-        }
-        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
-        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
-    }
-#endif // CV_AVX2
-
-#if CV_POPCNT
-    if(checkHardwareSupport(CV_CPU_POPCNT))
-    {
-#  if defined CV_POPCNT_U64
-        for(; i <= n - 8; i += 8)
-        {
-            result += (int)CV_POPCNT_U64(*(uint64*)(a + i));
-        }
-#  endif
-        for(; i <= n - 4; i += 4)
-        {
-            result += CV_POPCNT_U32(*(uint*)(a + i));
-        }
-    }
-#endif // CV_POPCNT
-
-#if CV_SIMD128
-    if(hasSIMD128())
-    {
-        v_uint32x4 t = v_setzero_u32();
-        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-        {
-            t += v_popcount(v_load(a + i));
-        }
-        result += v_reduce_sum(t);
-    }
-#endif // CV_SIMD128
-
-    for(; i <= n - 4; i += 4)
-    {
-        result += popCountTable[a[i]] + popCountTable[a[i+1]] +
-        popCountTable[a[i+2]] + popCountTable[a[i+3]];
-    }
-    for(; i < n; i++)
-    {
-        result += popCountTable[a[i]];
-    }
-    return result;
-}
-
-int normHamming(const uchar* a, const uchar* b, int n)
-{
-    int i = 0;
-    int result = 0;
-#if CV_AVX2
-    if(USE_AVX2)
-    {
-        __m256i _r0 = _mm256_setzero_si256();
-        __m256i _0 = _mm256_setzero_si256();
-        __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-                                                 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
-        __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
-
-        for(; i <= n - 32; i+= 32)
-        {
-            __m256i _a0 = _mm256_loadu_si256((const __m256i*)(a + i));
-            __m256i _b0 = _mm256_loadu_si256((const __m256i*)(b + i));
-
-            __m256i _xor = _mm256_xor_si256(_a0, _b0);
-
-            __m256i _popc0 = _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_xor, _popcnt_mask));
-            __m256i _popc1 = _mm256_shuffle_epi8(_popcnt_table,
-                             _mm256_and_si256(_mm256_srli_epi16(_xor, 4), _popcnt_mask));
-
-            _r0 = _mm256_add_epi32(_r0, _mm256_sad_epu8(_0, _mm256_add_epi8(_popc0, _popc1)));
-        }
-        _r0 = _mm256_add_epi32(_r0, _mm256_shuffle_epi32(_r0, 2));
-        result = _mm256_extract_epi32_(_mm256_add_epi32(_r0, _mm256_permute2x128_si256(_r0, _r0, 1)), 0);
-    }
-#endif // CV_AVX2
-
-#if CV_POPCNT
-    if(checkHardwareSupport(CV_CPU_POPCNT))
-    {
-#  if defined CV_POPCNT_U64
-        for(; i <= n - 8; i += 8)
-        {
-            result += (int)CV_POPCNT_U64(*(uint64*)(a + i) ^ *(uint64*)(b + i));
-        }
-#  endif
-        for(; i <= n - 4; i += 4)
-        {
-            result += CV_POPCNT_U32(*(uint*)(a + i) ^ *(uint*)(b + i));
-        }
-    }
-#endif // CV_POPCNT
-
-#if CV_SIMD128
-    if(hasSIMD128())
-    {
-        v_uint32x4 t = v_setzero_u32();
-        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-        {
-            t += v_popcount(v_load(a + i) ^ v_load(b + i));
-        }
-        result += v_reduce_sum(t);
-    }
-#endif // CV_SIMD128
-
-    for(; i <= n - 4; i += 4)
-    {
-        result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
-                popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
-    }
-    for(; i < n; i++)
-    {
-        result += popCountTable[a[i] ^ b[i]];
-    }
-    return result;
-}
 
 int normHamming(const uchar* a, int n, int cellSize)
 {
@@ -4463,11 +4311,11 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-    #if CV_ENABLE_UNROLLED
+#if CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
                 tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
-    #endif
+#endif
     for( ; i < n; i++ )
         result += tab[a[i] ^ b[i]];
     return result;

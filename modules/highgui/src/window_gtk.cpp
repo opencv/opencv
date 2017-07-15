@@ -951,7 +951,8 @@ static gboolean cvImageWidget_draw(GtkWidget* widget, cairo_t *cr, gpointer data
   }
 
   cairo_paint(cr);
-  g_object_unref(pixbuf);
+  if(pixbuf)
+      g_object_unref(pixbuf);
   return TRUE;
 }
 
@@ -1005,7 +1006,8 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
   }
 
   cairo_paint(cr);
-  g_object_unref(pixbuf);
+  if(pixbuf)
+      g_object_unref(pixbuf);
   cairo_destroy(cr);
   return TRUE;
 }
@@ -1616,6 +1618,10 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
 
         if( pos > trackbar->maxval )
             pos = trackbar->maxval;
+    }
+    else
+    {
+        CV_ERROR( CV_StsNullPtr, "No trackbar found" );
     }
 
     CV_LOCK_MUTEX();
