@@ -1468,7 +1468,7 @@ public:
      */
     void release();
 
-    //! deallocates the matrix data
+    //! internal use function, consider to use 'release' method instead; deallocates the matrix data
     void deallocate();
     //! internal use function; properly re-allocates _size, _step arrays
     void copySize(const Mat& m);
