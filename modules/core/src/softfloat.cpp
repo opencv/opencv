@@ -54,7 +54,7 @@ enum {
     tininess_afterRounding  = 1
 };
 //fixed to make softfloat code stateless
-const uint_fast8_t globalDetectTininess = tininess_afterRounding;
+static const uint_fast8_t globalDetectTininess = tininess_afterRounding;
 
 /*----------------------------------------------------------------------------
 | Software floating-point exception flags.
@@ -69,7 +69,7 @@ enum {
 
 // Disabled to make softfloat code stateless
 // This function may be changed in the future for better error handling
-inline void raiseFlags( uint_fast8_t /* flags */)
+static inline void raiseFlags( uint_fast8_t /* flags */)
 {
     //exceptionFlags |= flags;
 }
@@ -87,7 +87,7 @@ enum {
 };
 
 //fixed to make softfloat code stateless
-const uint_fast8_t globalRoundingMode = round_near_even;
+static const uint_fast8_t globalRoundingMode = round_near_even;
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
@@ -123,85 +123,65 @@ typedef softdouble float64_t;
 /*----------------------------------------------------------------------------
 | Integer-to-floating-point conversion routines.
 *----------------------------------------------------------------------------*/
-float32_t ui32_to_f32( uint32_t );
-float64_t ui32_to_f64( uint32_t );
-float32_t ui64_to_f32( uint64_t );
-float64_t ui64_to_f64( uint64_t );
-float32_t i32_to_f32( int32_t );
-float64_t i32_to_f64( int32_t );
-float32_t i64_to_f32( int64_t );
-float64_t i64_to_f64( int64_t );
+static float32_t ui32_to_f32( uint32_t );
+static float64_t ui32_to_f64( uint32_t );
+static float32_t ui64_to_f32( uint64_t );
+static float64_t ui64_to_f64( uint64_t );
+static float32_t i32_to_f32( int32_t );
+static float64_t i32_to_f64( int32_t );
+static float32_t i64_to_f32( int64_t );
+static float64_t i64_to_f64( int64_t );
 
 /*----------------------------------------------------------------------------
 | 32-bit (single-precision) floating-point operations.
 *----------------------------------------------------------------------------*/
-uint_fast32_t f32_to_ui32( float32_t, uint_fast8_t, bool );
-uint_fast64_t f32_to_ui64( float32_t, uint_fast8_t, bool );
-int_fast32_t f32_to_i32( float32_t, uint_fast8_t, bool );
-int_fast64_t f32_to_i64( float32_t, uint_fast8_t, bool );
-uint_fast32_t f32_to_ui32_r_minMag( float32_t, bool );
-uint_fast64_t f32_to_ui64_r_minMag( float32_t, bool );
-int_fast32_t f32_to_i32_r_minMag( float32_t, bool );
-int_fast64_t f32_to_i64_r_minMag( float32_t, bool );
-float64_t f32_to_f64( float32_t );
-float32_t f32_roundToInt( float32_t, uint_fast8_t, bool );
-float32_t f32_add( float32_t, float32_t );
-float32_t f32_sub( float32_t, float32_t );
-float32_t f32_mul( float32_t, float32_t );
-float32_t f32_mulAdd( float32_t, float32_t, float32_t );
-float32_t f32_div( float32_t, float32_t );
-float32_t f32_rem( float32_t, float32_t );
-float32_t f32_sqrt( float32_t );
-bool f32_eq( float32_t, float32_t );
-bool f32_le( float32_t, float32_t );
-bool f32_lt( float32_t, float32_t );
-bool f32_eq_signaling( float32_t, float32_t );
-bool f32_le_quiet( float32_t, float32_t );
-bool f32_lt_quiet( float32_t, float32_t );
-bool f32_isSignalingNaN( float32_t );
+static int_fast32_t f32_to_i32( float32_t, uint_fast8_t, bool );
+static int_fast32_t f32_to_i32_r_minMag( float32_t, bool );
+static float64_t f32_to_f64( float32_t );
+static float32_t f32_roundToInt( float32_t, uint_fast8_t, bool );
+static float32_t f32_add( float32_t, float32_t );
+static float32_t f32_sub( float32_t, float32_t );
+static float32_t f32_mul( float32_t, float32_t );
+static float32_t f32_mulAdd( float32_t, float32_t, float32_t );
+static float32_t f32_div( float32_t, float32_t );
+static float32_t f32_rem( float32_t, float32_t );
+static float32_t f32_sqrt( float32_t );
+static bool f32_eq( float32_t, float32_t );
+static bool f32_le( float32_t, float32_t );
+static bool f32_lt( float32_t, float32_t );
 
 /*----------------------------------------------------------------------------
 | 64-bit (double-precision) floating-point operations.
 *----------------------------------------------------------------------------*/
-uint_fast32_t f64_to_ui32( float64_t, uint_fast8_t, bool );
-uint_fast64_t f64_to_ui64( float64_t, uint_fast8_t, bool );
-int_fast32_t f64_to_i32( float64_t, uint_fast8_t, bool );
-int_fast64_t f64_to_i64( float64_t, uint_fast8_t, bool );
-uint_fast32_t f64_to_ui32_r_minMag( float64_t, bool );
-uint_fast64_t f64_to_ui64_r_minMag( float64_t, bool );
-int_fast32_t f64_to_i32_r_minMag( float64_t, bool );
-int_fast64_t f64_to_i64_r_minMag( float64_t, bool );
-float32_t f64_to_f32( float64_t );
-float64_t f64_roundToInt( float64_t, uint_fast8_t, bool );
-float64_t f64_add( float64_t, float64_t );
-float64_t f64_sub( float64_t, float64_t );
-float64_t f64_mul( float64_t, float64_t );
-float64_t f64_mulAdd( float64_t, float64_t, float64_t );
-float64_t f64_div( float64_t, float64_t );
-float64_t f64_rem( float64_t, float64_t );
-float64_t f64_sqrt( float64_t );
-bool f64_eq( float64_t, float64_t );
-bool f64_le( float64_t, float64_t );
-bool f64_lt( float64_t, float64_t );
-bool f64_eq_signaling( float64_t, float64_t );
-bool f64_le_quiet( float64_t, float64_t );
-bool f64_lt_quiet( float64_t, float64_t );
-bool f64_isSignalingNaN( float64_t );
+static int_fast32_t f64_to_i32( float64_t, uint_fast8_t, bool );
+static int_fast32_t f64_to_i32_r_minMag( float64_t, bool );
+static float32_t f64_to_f32( float64_t );
+static float64_t f64_roundToInt( float64_t, uint_fast8_t, bool );
+static float64_t f64_add( float64_t, float64_t );
+static float64_t f64_sub( float64_t, float64_t );
+static float64_t f64_mul( float64_t, float64_t );
+static float64_t f64_mulAdd( float64_t, float64_t, float64_t );
+static float64_t f64_div( float64_t, float64_t );
+static float64_t f64_rem( float64_t, float64_t );
+static float64_t f64_sqrt( float64_t );
+static bool f64_eq( float64_t, float64_t );
+static bool f64_le( float64_t, float64_t );
+static bool f64_lt( float64_t, float64_t );
 
 /*----------------------------------------------------------------------------
 | Ported from OpenCV and added for usability
 *----------------------------------------------------------------------------*/
 
-float32_t f32_powi( float32_t x, int y);
-float64_t f64_powi( float64_t x, int y);
+static float32_t f32_powi( float32_t x, int y);
+static float64_t f64_powi( float64_t x, int y);
 
-float32_t f32_exp( float32_t x);
-float64_t f64_exp(float64_t x);
-float32_t f32_log(float32_t x);
-float64_t f64_log(float64_t x);
-float32_t f32_cbrt(float32_t x);
-float32_t f32_pow( float32_t x, float32_t y);
-float64_t f64_pow( float64_t x, float64_t y);
+static float32_t f32_exp( float32_t x);
+static float64_t f64_exp(float64_t x);
+static float32_t f32_log(float32_t x);
+static float64_t f64_log(float64_t x);
+static float32_t f32_cbrt(float32_t x);
+static float32_t f32_pow( float32_t x, float32_t y);
+static float64_t f64_pow( float64_t x, float64_t y);
 
 /*----------------------------------------------------------------------------
 | softfloat and softdouble methods and members
@@ -437,13 +417,7 @@ enum {
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
-static uint_fast32_t softfloat_roundToUI32( bool, uint_fast64_t, uint_fast8_t, bool );
-static uint_fast64_t softfloat_roundToUI64( bool, uint_fast64_t, uint_fast64_t, uint_fast8_t, bool );
 static int_fast32_t softfloat_roundToI32( bool, uint_fast64_t, uint_fast8_t, bool );
-static int_fast64_t softfloat_roundToI64( bool, uint_fast64_t, uint_fast64_t, uint_fast8_t, bool );
-
-/*----------------------------------------------------------------------------
-*----------------------------------------------------------------------------*/
 
 struct exp16_sig32 { int_fast16_t exp; uint_fast32_t sig; };
 static struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t );
@@ -478,7 +452,7 @@ static float64_t softfloat_mulAddF64( uint_fast64_t, uint_fast64_t, uint_fast64_
 | significant bit to 1.  This shifted-and-jammed value is returned.
 *----------------------------------------------------------------------------*/
 
-inline uint64_t softfloat_shortShiftRightJam64( uint64_t a, uint_fast8_t dist )
+static inline uint64_t softfloat_shortShiftRightJam64( uint64_t a, uint_fast8_t dist )
 { return a>>dist | ((a & (((uint_fast64_t) 1<<dist) - 1)) != 0); }
 
 /*----------------------------------------------------------------------------
@@ -491,7 +465,7 @@ inline uint64_t softfloat_shortShiftRightJam64( uint64_t a, uint_fast8_t dist )
 | is zero or nonzero.
 *----------------------------------------------------------------------------*/
 
-inline uint32_t softfloat_shiftRightJam32( uint32_t a, uint_fast16_t dist )
+static inline uint32_t softfloat_shiftRightJam32( uint32_t a, uint_fast16_t dist )
 {
     //fixed unsigned unary minus: -x == ~x + 1
     return (dist < 31) ? a>>dist | ((uint32_t) (a<<((~dist + 1) & 31)) != 0) : (a != 0);
@@ -506,7 +480,7 @@ inline uint32_t softfloat_shiftRightJam32( uint32_t a, uint_fast16_t dist )
 | greater than 64, the result will be either 0 or 1, depending on whether 'a'
 | is zero or nonzero.
 *----------------------------------------------------------------------------*/
-inline uint64_t softfloat_shiftRightJam64( uint64_t a, uint_fast32_t dist )
+static inline uint64_t softfloat_shiftRightJam64( uint64_t a, uint_fast32_t dist )
 {
     //fixed unsigned unary minus: -x == ~x + 1
     return (dist < 63) ? a>>dist | ((uint64_t) (a<<((~dist + 1) & 63)) != 0) : (a != 0);
@@ -540,7 +514,7 @@ static const uint_least8_t softfloat_countLeadingZeros8[256] = {
 | Returns the number of leading 0 bits before the most-significant 1 bit of
 | 'a'.  If 'a' is zero, 32 is returned.
 *----------------------------------------------------------------------------*/
-inline uint_fast8_t softfloat_countLeadingZeros32( uint32_t a )
+static inline uint_fast8_t softfloat_countLeadingZeros32( uint32_t a )
 {
     uint_fast8_t count = 0;
     if ( a < 0x10000 ) {
@@ -607,7 +581,7 @@ static const uint16_t softfloat_approxRecipSqrt_1k1s[16] = {
 | Shifts the 128 bits formed by concatenating 'a64' and 'a0' left by the
 | number of bits given in 'dist', which must be in the range 1 to 63.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_shortShiftLeft128( uint64_t a64, uint64_t a0, uint_fast8_t dist )
+static inline struct uint128 softfloat_shortShiftLeft128( uint64_t a64, uint64_t a0, uint_fast8_t dist )
 {
     struct uint128 z;
     z.v64 = a64<<dist | a0>>(-dist & 63);
@@ -622,7 +596,7 @@ inline struct uint128 softfloat_shortShiftLeft128( uint64_t a64, uint64_t a0, ui
 | bit of the shifted value by setting the least-significant bit to 1.  This
 | shifted-and-jammed value is returned.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_shortShiftRightJam128(uint64_t a64, uint64_t a0, uint_fast8_t dist )
+static inline struct uint128 softfloat_shortShiftRightJam128(uint64_t a64, uint64_t a0, uint_fast8_t dist )
 {
     uint_fast8_t negDist = -dist;
     struct uint128 z;
@@ -630,37 +604,6 @@ inline struct uint128 softfloat_shortShiftRightJam128(uint64_t a64, uint64_t a0,
     z.v0 =
         a64<<(negDist & 63) | a0>>dist
             | ((uint64_t) (a0<<(negDist & 63)) != 0);
-    return z;
-}
-
-/*----------------------------------------------------------------------------
-| Shifts the 128 bits formed by concatenating 'a' and 'extra' right by 64
-| _plus_ the number of bits given in 'dist', which must not be zero.  This
-| shifted value is at most 64 nonzero bits and is returned in the 'v' field
-| of the 'struct uint64_extra' result.  The 64-bit 'extra' field of the result
-| contains a value formed as follows from the bits that were shifted off:  The
-| _last_ bit shifted off is the most-significant bit of the 'extra' field, and
-| the other 63 bits of the 'extra' field are all zero if and only if _all_but_
-| _the_last_ bits shifted off were all zero.
-|   (This function makes more sense if 'a' and 'extra' are considered to form
-| an unsigned fixed-point number with binary point between 'a' and 'extra'.
-| This fixed-point value is shifted right by the number of bits given in
-| 'dist', and the integer part of this shifted value is returned in the 'v'
-| field of the result.  The fractional part of the shifted value is modified
-| as described above and returned in the 'extra' field of the result.)
-*----------------------------------------------------------------------------*/
-inline struct uint64_extra softfloat_shiftRightJam64Extra(uint64_t a, uint64_t extra, uint_fast32_t dist )
-{
-    struct uint64_extra z;
-    if ( dist < 64 ) {
-        z.v = a>>dist;
-        //fixed unsigned unary minus: -x == ~x + 1
-        z.extra = a<<((~dist + 1) & 63);
-    } else {
-        z.v = 0;
-        z.extra = (dist == 64) ? a : (a != 0);
-    }
-    z.extra |= (extra != 0);
     return z;
 }
 
@@ -681,7 +624,7 @@ static struct uint128 softfloat_shiftRightJam128( uint64_t a64, uint64_t a0, uin
 | 'a0' and the 128-bit integer formed by concatenating 'b64' and 'b0'.  The
 | addition is modulo 2^128, so any carry out is lost.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_add128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
+static inline struct uint128 softfloat_add128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
 {
     struct uint128 z;
     z.v0 = a0 + b0;
@@ -694,7 +637,7 @@ inline struct uint128 softfloat_add128( uint64_t a64, uint64_t a0, uint64_t b64,
 | and 'a0' and the 128-bit integer formed by concatenating 'b64' and 'b0'.
 | The subtraction is modulo 2^128, so any borrow out (carry out) is lost.
 *----------------------------------------------------------------------------*/
-inline struct uint128 softfloat_sub128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
+static inline struct uint128 softfloat_sub128( uint64_t a64, uint64_t a0, uint64_t b64, uint64_t b0 )
 {
     struct uint128 z;
     z.v0 = a0 - b0;
@@ -713,7 +656,7 @@ static struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b );
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 
-float32_t f32_add( float32_t a, float32_t b )
+static float32_t f32_add( float32_t a, float32_t b )
 {
     uint_fast32_t uiA = a.v;
     uint_fast32_t uiB = b.v;
@@ -725,7 +668,7 @@ float32_t f32_add( float32_t a, float32_t b )
     }
 }
 
-float32_t f32_div( float32_t a, float32_t b )
+static float32_t f32_div( float32_t a, float32_t b )
 {
     uint_fast32_t uiA;
     bool signA;
@@ -823,7 +766,7 @@ float32_t f32_div( float32_t a, float32_t b )
     return float32_t::fromRaw(uiZ);
 }
 
-bool f32_eq( float32_t a, float32_t b )
+static bool f32_eq( float32_t a, float32_t b )
 {
     uint_fast32_t uiA;
     uint_fast32_t uiB;
@@ -841,26 +784,7 @@ bool f32_eq( float32_t a, float32_t b )
     return (uiA == uiB) || ! (uint32_t) ((uiA | uiB)<<1);
 }
 
-bool f32_eq_signaling( float32_t a, float32_t b )
-{
-    uint_fast32_t uiA;
-    uint_fast32_t uiB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
-        raiseFlags( flag_invalid );
-        return false;
-    }
-    return (uiA == uiB) || ! (uint32_t) ((uiA | uiB)<<1);
-}
-
-bool f32_isSignalingNaN( float32_t a )
-{
-    return softfloat_isSigNaNF32UI( a.v );
-}
-
-bool f32_le( float32_t a, float32_t b )
+static bool f32_le( float32_t a, float32_t b )
 {
     uint_fast32_t uiA;
     uint_fast32_t uiB;
@@ -879,30 +803,7 @@ bool f32_le( float32_t a, float32_t b )
             : (uiA == uiB) || (signA ^ (uiA < uiB));
 }
 
-bool f32_le_quiet( float32_t a, float32_t b )
-{
-    uint_fast32_t uiA;
-    uint_fast32_t uiB;
-    bool signA, signB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
-        if (
-            softfloat_isSigNaNF32UI( uiA ) || softfloat_isSigNaNF32UI( uiB )
-        ) {
-            raiseFlags( flag_invalid );
-        }
-        return false;
-    }
-    signA = signF32UI( uiA );
-    signB = signF32UI( uiB );
-    return
-        (signA != signB) ? signA || ! (uint32_t) ((uiA | uiB)<<1)
-            : (uiA == uiB) || (signA ^ (uiA < uiB));
-}
-
-bool f32_lt( float32_t a, float32_t b )
+static bool f32_lt( float32_t a, float32_t b )
 {
     uint_fast32_t uiA;
     uint_fast32_t uiB;
@@ -921,30 +822,7 @@ bool f32_lt( float32_t a, float32_t b )
             : (uiA != uiB) && (signA ^ (uiA < uiB));
 }
 
-bool f32_lt_quiet( float32_t a, float32_t b )
-{
-    uint_fast32_t uiA;
-    uint_fast32_t uiB;
-    bool signA, signB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF32UI( uiA ) || isNaNF32UI( uiB ) ) {
-        if (
-            softfloat_isSigNaNF32UI( uiA ) || softfloat_isSigNaNF32UI( uiB )
-        ) {
-            raiseFlags( flag_invalid );
-        }
-        return false;
-    }
-    signA = signF32UI( uiA );
-    signB = signF32UI( uiB );
-    return
-        (signA != signB) ? signA && ((uint32_t) ((uiA | uiB)<<1) != 0)
-            : (uiA != uiB) && (signA ^ (uiA < uiB));
-}
-
-float32_t f32_mulAdd( float32_t a, float32_t b, float32_t c )
+static float32_t f32_mulAdd( float32_t a, float32_t b, float32_t c )
 {
     uint_fast32_t uiA;
     uint_fast32_t uiB;
@@ -956,7 +834,7 @@ float32_t f32_mulAdd( float32_t a, float32_t b, float32_t c )
     return softfloat_mulAddF32( uiA, uiB, uiC, 0 );
 }
 
-float32_t f32_mul( float32_t a, float32_t b )
+static float32_t f32_mul( float32_t a, float32_t b )
 {
     uint_fast32_t uiA;
     bool signA;
@@ -1043,7 +921,7 @@ float32_t f32_mul( float32_t a, float32_t b )
     return float32_t::fromRaw(uiZ);
 }
 
-float32_t f32_rem( float32_t a, float32_t b )
+static float32_t f32_rem( float32_t a, float32_t b )
 {
     uint_fast32_t uiA;
     bool signA;
@@ -1163,7 +1041,7 @@ float32_t f32_rem( float32_t a, float32_t b )
     return float32_t::fromRaw(uiZ);
 }
 
-float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
+static float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
 {
     uint_fast32_t uiA;
     int_fast16_t exp;
@@ -1227,7 +1105,7 @@ float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
     return float32_t::fromRaw(uiZ);
 }
 
-float32_t f32_sqrt( float32_t a )
+static float32_t f32_sqrt( float32_t a )
 {
     uint_fast32_t uiA;
     bool signA;
@@ -1300,7 +1178,7 @@ float32_t f32_sqrt( float32_t a )
     return float32_t::fromRaw(uiZ);
 }
 
-float32_t f32_sub( float32_t a, float32_t b )
+static float32_t f32_sub( float32_t a, float32_t b )
 {
     uint_fast32_t uiA;
     uint_fast32_t uiB;
@@ -1314,7 +1192,7 @@ float32_t f32_sub( float32_t a, float32_t b )
     }
 }
 
-float64_t f32_to_f64( float32_t a )
+static float64_t f32_to_f64( float32_t a )
 {
     uint_fast32_t uiA;
     bool sign;
@@ -1359,7 +1237,7 @@ float64_t f32_to_f64( float32_t a )
     return float64_t::fromRaw(uiZ);
 }
 
-int_fast32_t f32_to_i32( float32_t a, uint_fast8_t roundingMode, bool exact )
+static int_fast32_t f32_to_i32( float32_t a, uint_fast8_t roundingMode, bool exact )
 {
     uint_fast32_t uiA;
     bool sign;
@@ -1397,7 +1275,7 @@ int_fast32_t f32_to_i32( float32_t a, uint_fast8_t roundingMode, bool exact )
     return softfloat_roundToI32( sign, sig64, roundingMode, exact );
 }
 
-int_fast32_t f32_to_i32_r_minMag( float32_t a, bool exact )
+static int_fast32_t f32_to_i32_r_minMag( float32_t a, bool exact )
 {
     uint_fast32_t uiA;
     int_fast16_t exp;
@@ -1440,254 +1318,7 @@ int_fast32_t f32_to_i32_r_minMag( float32_t a, bool exact )
     return sign ? -absZ : absZ;
 }
 
-int_fast64_t f32_to_i64( float32_t a, uint_fast8_t roundingMode, bool exact )
-{
-    uint_fast32_t uiA;
-    bool sign;
-    int_fast16_t exp;
-    uint_fast32_t sig;
-    int_fast16_t shiftDist;
-    uint_fast64_t sig64, extra;
-    struct uint64_extra sig64Extra;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    sign = signF32UI( uiA );
-    exp  = expF32UI( uiA );
-    sig  = fracF32UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    shiftDist = 0xBE - exp;
-    if ( shiftDist < 0 ) {
-        raiseFlags( flag_invalid );
-        return
-            (exp == 0xFF) && sig ? i64_fromNaN
-                : sign ? i64_fromNegOverflow : i64_fromPosOverflow;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    if ( exp ) sig |= 0x00800000;
-    sig64 = (uint_fast64_t) sig<<40;
-    extra = 0;
-    if ( shiftDist ) {
-        sig64Extra = softfloat_shiftRightJam64Extra( sig64, 0, shiftDist );
-        sig64 = sig64Extra.v;
-        extra = sig64Extra.extra;
-    }
-    return softfloat_roundToI64( sign, sig64, extra, roundingMode, exact );
-}
-
-int_fast64_t f32_to_i64_r_minMag( float32_t a, bool exact )
-{
-    uint_fast32_t uiA;
-    int_fast16_t exp;
-    uint_fast32_t sig;
-    int_fast16_t shiftDist;
-    bool sign;
-    uint_fast64_t sig64;
-    int_fast64_t absZ;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    exp = expF32UI( uiA );
-    sig = fracF32UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    shiftDist = 0xBE - exp;
-    if ( 64 <= shiftDist ) {
-        if ( exact && (exp | sig) ) {
-            raiseFlags(flag_inexact);
-        }
-        return 0;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sign = signF32UI( uiA );
-    if ( shiftDist <= 0 ) {
-        if ( uiA == packToF32UI( 1, 0xBE, 0 ) ) {
-            return -INT64_C( 0x7FFFFFFFFFFFFFFF ) - 1;
-        }
-        raiseFlags( flag_invalid );
-        return
-            (exp == 0xFF) && sig ? i64_fromNaN
-                : sign ? i64_fromNegOverflow : i64_fromPosOverflow;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sig |= 0x00800000;
-    sig64 = (uint_fast64_t) sig<<40;
-    absZ = sig64>>shiftDist;
-    shiftDist = 40 - shiftDist;
-    if ( exact && (shiftDist < 0) && (uint32_t) (sig<<(shiftDist & 31)) ) {
-        raiseFlags(flag_inexact);
-    }
-    return sign ? -absZ : absZ;
-}
-
-uint_fast32_t f32_to_ui32( float32_t a, uint_fast8_t roundingMode, bool exact )
-{
-    uint_fast32_t uiA;
-    bool sign;
-    int_fast16_t exp;
-    uint_fast32_t sig;
-    uint_fast64_t sig64;
-    int_fast16_t shiftDist;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    sign = signF32UI( uiA );
-    exp  = expF32UI( uiA );
-    sig  = fracF32UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-#if (ui32_fromNaN != ui32_fromPosOverflow) || (ui32_fromNaN != ui32_fromNegOverflow)
-    if ( (exp == 0xFF) && sig ) {
-#if (ui32_fromNaN == ui32_fromPosOverflow)
-        sign = 0;
-#elif (ui32_fromNaN == ui32_fromNegOverflow)
-        sign = 1;
-#else
-        raiseFlags( flag_invalid );
-        return ui32_fromNaN;
-#endif
-    }
-#endif
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    if ( exp ) sig |= 0x00800000;
-    sig64 = (uint_fast64_t) sig<<32;
-    shiftDist = 0xAA - exp;
-    if ( 0 < shiftDist ) sig64 = softfloat_shiftRightJam64( sig64, shiftDist );
-    return softfloat_roundToUI32( sign, sig64, roundingMode, exact );
-}
-
-uint_fast32_t f32_to_ui32_r_minMag( float32_t a, bool exact )
-{
-    uint_fast32_t uiA;
-    int_fast16_t exp;
-    uint_fast32_t sig;
-    int_fast16_t shiftDist;
-    bool sign;
-    uint_fast32_t z;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    exp = expF32UI( uiA );
-    sig = fracF32UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    shiftDist = 0x9E - exp;
-    if ( 32 <= shiftDist ) {
-        if ( exact && (exp | sig) ) {
-            raiseFlags(flag_inexact);
-        }
-        return 0;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sign = signF32UI( uiA );
-    if ( sign || (shiftDist < 0) ) {
-        raiseFlags( flag_invalid );
-        return
-            (exp == 0xFF) && sig ? ui32_fromNaN
-                : sign ? ui32_fromNegOverflow : ui32_fromPosOverflow;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sig = (sig | 0x00800000)<<8;
-    z = sig>>shiftDist;
-    if ( exact && (z<<shiftDist != sig) ) {
-        raiseFlags(flag_inexact);
-    }
-    return z;
-}
-
-uint_fast64_t f32_to_ui64( float32_t a, uint_fast8_t roundingMode, bool exact )
-{
-    uint_fast32_t uiA;
-    bool sign;
-    int_fast16_t exp;
-    uint_fast32_t sig;
-    int_fast16_t shiftDist;
-    uint_fast64_t sig64, extra;
-    struct uint64_extra sig64Extra;
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    sign = signF32UI( uiA );
-    exp  = expF32UI( uiA );
-    sig  = fracF32UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    shiftDist = 0xBE - exp;
-    if ( shiftDist < 0 ) {
-        raiseFlags( flag_invalid );
-        return
-            (exp == 0xFF) && sig ? ui64_fromNaN
-                : sign ? ui64_fromNegOverflow : ui64_fromPosOverflow;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    if ( exp ) sig |= 0x00800000;
-    sig64 = (uint_fast64_t) sig<<40;
-    extra = 0;
-    if ( shiftDist ) {
-        sig64Extra = softfloat_shiftRightJam64Extra( sig64, 0, shiftDist );
-        sig64 = sig64Extra.v;
-        extra = sig64Extra.extra;
-    }
-    return softfloat_roundToUI64( sign, sig64, extra, roundingMode, exact );
-}
-
-uint_fast64_t f32_to_ui64_r_minMag( float32_t a, bool exact )
-{
-    uint_fast32_t uiA;
-    int_fast16_t exp;
-    uint_fast32_t sig;
-    int_fast16_t shiftDist;
-    bool sign;
-    uint_fast64_t sig64, z;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    exp = expF32UI( uiA );
-    sig = fracF32UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    shiftDist = 0xBE - exp;
-    if ( 64 <= shiftDist ) {
-        if ( exact && (exp | sig) ) {
-            raiseFlags(flag_inexact);
-        }
-        return 0;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sign = signF32UI( uiA );
-    if ( sign || (shiftDist < 0) ) {
-        raiseFlags( flag_invalid );
-        return
-            (exp == 0xFF) && sig ? ui64_fromNaN
-                : sign ? ui64_fromNegOverflow : ui64_fromPosOverflow;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sig |= 0x00800000;
-    sig64 = (uint_fast64_t) sig<<40;
-    z = sig64>>shiftDist;
-    shiftDist = 40 - shiftDist;
-    if ( exact && (shiftDist < 0) && (uint32_t) (sig<<(shiftDist & 31)) ) {
-        raiseFlags(flag_inexact);
-    }
-    return z;
-}
-
-float64_t f64_add( float64_t a, float64_t b )
+static float64_t f64_add( float64_t a, float64_t b )
 {
     uint_fast64_t uiA;
     bool signA;
@@ -1705,7 +1336,7 @@ float64_t f64_add( float64_t a, float64_t b )
     }
 }
 
-float64_t f64_div( float64_t a, float64_t b )
+static float64_t f64_div( float64_t a, float64_t b )
 {
     uint_fast64_t uiA;
     bool signA;
@@ -1827,7 +1458,7 @@ float64_t f64_div( float64_t a, float64_t b )
     return float64_t::fromRaw(uiZ);
 }
 
-bool f64_eq( float64_t a, float64_t b )
+static bool f64_eq( float64_t a, float64_t b )
 {
     uint_fast64_t uiA;
     uint_fast64_t uiB;
@@ -1845,26 +1476,7 @@ bool f64_eq( float64_t a, float64_t b )
     return (uiA == uiB) || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ));
 }
 
-bool f64_eq_signaling( float64_t a, float64_t b )
-{
-    uint_fast64_t uiA;
-    uint_fast64_t uiB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
-        raiseFlags( flag_invalid );
-        return false;
-    }
-    return (uiA == uiB) || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ));
-}
-
-bool f64_isSignalingNaN( float64_t a )
-{
-    return softfloat_isSigNaNF64UI( a.v );
-}
-
-bool f64_le( float64_t a, float64_t b )
+static bool f64_le( float64_t a, float64_t b )
 {
     uint_fast64_t uiA;
     uint_fast64_t uiB;
@@ -1884,31 +1496,7 @@ bool f64_le( float64_t a, float64_t b )
             : (uiA == uiB) || (signA ^ (uiA < uiB));
 }
 
-bool f64_le_quiet( float64_t a, float64_t b )
-{
-    uint_fast64_t uiA;
-    uint_fast64_t uiB;
-    bool signA, signB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
-        if (
-            softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB )
-        ) {
-            raiseFlags( flag_invalid );
-        }
-        return false;
-    }
-    signA = signF64UI( uiA );
-    signB = signF64UI( uiB );
-    return
-        (signA != signB)
-            ? signA || ! ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
-            : (uiA == uiB) || (signA ^ (uiA < uiB));
-}
-
-bool f64_lt( float64_t a, float64_t b )
+static bool f64_lt( float64_t a, float64_t b )
 {
     uint_fast64_t uiA;
     uint_fast64_t uiB;
@@ -1928,31 +1516,7 @@ bool f64_lt( float64_t a, float64_t b )
             : (uiA != uiB) && (signA ^ (uiA < uiB));
 }
 
-bool f64_lt_quiet( float64_t a, float64_t b )
-{
-    uint_fast64_t uiA;
-    uint_fast64_t uiB;
-    bool signA, signB;
-
-    uiA = a.v;
-    uiB = b.v;
-    if ( isNaNF64UI( uiA ) || isNaNF64UI( uiB ) ) {
-        if (
-            softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB )
-        ) {
-            raiseFlags( flag_invalid );
-        }
-        return false;
-    }
-    signA = signF64UI( uiA );
-    signB = signF64UI( uiB );
-    return
-        (signA != signB)
-            ? signA && ((uiA | uiB) & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
-            : (uiA != uiB) && (signA ^ (uiA < uiB));
-}
-
-float64_t f64_mulAdd( float64_t a, float64_t b, float64_t c )
+static float64_t f64_mulAdd( float64_t a, float64_t b, float64_t c )
 {
     uint_fast64_t uiA;
     uint_fast64_t uiB;
@@ -1964,7 +1528,7 @@ float64_t f64_mulAdd( float64_t a, float64_t b, float64_t c )
     return softfloat_mulAddF64( uiA, uiB, uiC, 0 );
 }
 
-float64_t f64_mul( float64_t a, float64_t b )
+static float64_t f64_mul( float64_t a, float64_t b )
 {
     uint_fast64_t uiA;
     bool signA;
@@ -2054,7 +1618,7 @@ float64_t f64_mul( float64_t a, float64_t b )
     return float64_t::fromRaw(uiZ);
 }
 
-float64_t f64_rem( float64_t a, float64_t b )
+static float64_t f64_rem( float64_t a, float64_t b )
 {
     uint_fast64_t uiA;
     bool signA;
@@ -2190,7 +1754,7 @@ float64_t f64_rem( float64_t a, float64_t b )
     return float64_t::fromRaw(uiZ);
 }
 
-float64_t f64_roundToInt( float64_t a, uint_fast8_t roundingMode, bool exact )
+static float64_t f64_roundToInt( float64_t a, uint_fast8_t roundingMode, bool exact )
 {
     uint_fast64_t uiA;
     int_fast16_t exp;
@@ -2254,7 +1818,7 @@ float64_t f64_roundToInt( float64_t a, uint_fast8_t roundingMode, bool exact )
     return float64_t::fromRaw(uiZ);
 }
 
-float64_t f64_sqrt( float64_t a )
+static float64_t f64_sqrt( float64_t a )
 {
     uint_fast64_t uiA;
     bool signA;
@@ -2339,7 +1903,7 @@ float64_t f64_sqrt( float64_t a )
     return float64_t::fromRaw(uiZ);
 }
 
-float64_t f64_sub( float64_t a, float64_t b )
+static float64_t f64_sub( float64_t a, float64_t b )
 {
     uint_fast64_t uiA;
     bool signA;
@@ -2358,7 +1922,7 @@ float64_t f64_sub( float64_t a, float64_t b )
     }
 }
 
-float32_t f64_to_f32( float64_t a )
+static float32_t f64_to_f32( float64_t a )
 {
     uint_fast64_t uiA;
     bool sign;
@@ -2398,7 +1962,7 @@ float32_t f64_to_f32( float64_t a )
     return float32_t::fromRaw(uiZ);
 }
 
-int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exact )
+static int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exact )
 {
     uint_fast64_t uiA;
     bool sign;
@@ -2434,7 +1998,7 @@ int_fast32_t f64_to_i32( float64_t a, uint_fast8_t roundingMode, bool exact )
     return softfloat_roundToI32( sign, sig, roundingMode, exact );
 }
 
-int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
+static int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
 {
     uint_fast64_t uiA;
     int_fast16_t exp;
@@ -2484,263 +2048,7 @@ int_fast32_t f64_to_i32_r_minMag( float64_t a, bool exact )
     return sign ? -absZ : absZ;
 }
 
-int_fast64_t f64_to_i64( float64_t a, uint_fast8_t roundingMode, bool exact )
-{
-    uint_fast64_t uiA;
-    bool sign;
-    int_fast16_t exp;
-    uint_fast64_t sig;
-    int_fast16_t shiftDist;
-    struct uint64_extra sigExtra;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    sign = signF64UI( uiA );
-    exp  = expF64UI( uiA );
-    sig  = fracF64UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    if ( exp ) sig |= UINT64_C( 0x0010000000000000 );
-    shiftDist = 0x433 - exp;
-    if ( shiftDist <= 0 ) {
-        if ( shiftDist < -11 ) goto invalid;
-        sigExtra.v = sig<<-shiftDist;
-        sigExtra.extra = 0;
-    } else {
-        sigExtra = softfloat_shiftRightJam64Extra( sig, 0, shiftDist );
-    }
-    return
-        softfloat_roundToI64(
-            sign, sigExtra.v, sigExtra.extra, roundingMode, exact );
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
- invalid:
-    raiseFlags( flag_invalid );
-    return
-        (exp == 0x7FF) && fracF64UI( uiA ) ? i64_fromNaN
-            : sign ? i64_fromNegOverflow : i64_fromPosOverflow;
-}
-
-int_fast64_t f64_to_i64_r_minMag( float64_t a, bool exact )
-{
-    uint_fast64_t uiA;
-    bool sign;
-    int_fast16_t exp;
-    uint_fast64_t sig;
-    int_fast16_t shiftDist;
-    int_fast64_t absZ;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    sign = signF64UI( uiA );
-    exp  = expF64UI( uiA );
-    sig  = fracF64UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    shiftDist = 0x433 - exp;
-    if ( shiftDist <= 0 ) {
-        /*--------------------------------------------------------------------
-        *--------------------------------------------------------------------*/
-        if ( shiftDist < -10 ) {
-            if ( uiA == packToF64UI( 1, 0x43E, 0 ) ) {
-                return -INT64_C( 0x7FFFFFFFFFFFFFFF ) - 1;
-            }
-            raiseFlags( flag_invalid );
-            return
-                (exp == 0x7FF) && sig ? i64_fromNaN
-                    : sign ? i64_fromNegOverflow : i64_fromPosOverflow;
-        }
-        /*--------------------------------------------------------------------
-        *--------------------------------------------------------------------*/
-        sig |= UINT64_C( 0x0010000000000000 );
-        absZ = sig<<-shiftDist;
-    } else {
-        /*--------------------------------------------------------------------
-        *--------------------------------------------------------------------*/
-        if ( 53 <= shiftDist ) {
-            if ( exact && (exp | sig) ) {
-                raiseFlags(flag_inexact);
-            }
-            return 0;
-        }
-        /*--------------------------------------------------------------------
-        *--------------------------------------------------------------------*/
-        sig |= UINT64_C( 0x0010000000000000 );
-        absZ = sig>>shiftDist;
-        if ( exact && (absZ<<shiftDist != (int_fast64_t)sig) ) {
-            raiseFlags(flag_inexact);
-        }
-    }
-    return sign ? -absZ : absZ;
-}
-
-uint_fast32_t f64_to_ui32( float64_t a, uint_fast8_t roundingMode, bool exact )
-{
-    uint_fast64_t uiA;
-    bool sign;
-    int_fast16_t exp;
-    uint_fast64_t sig;
-    int_fast16_t shiftDist;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    sign = signF64UI( uiA );
-    exp  = expF64UI( uiA );
-    sig  = fracF64UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-#if (ui32_fromNaN != ui32_fromPosOverflow) || (ui32_fromNaN != ui32_fromNegOverflow)
-    if ( (exp == 0x7FF) && sig ) {
-#if (ui32_fromNaN == ui32_fromPosOverflow)
-        sign = 0;
-#elif (ui32_fromNaN == ui32_fromNegOverflow)
-        sign = 1;
-#else
-        raiseFlags( flag_invalid );
-        return ui32_fromNaN;
-#endif
-    }
-#endif
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    if ( exp ) sig |= UINT64_C( 0x0010000000000000 );
-    shiftDist = 0x427 - exp;
-    if ( 0 < shiftDist ) sig = softfloat_shiftRightJam64( sig, shiftDist );
-    return softfloat_roundToUI32( sign, sig, roundingMode, exact );
-}
-
-uint_fast32_t f64_to_ui32_r_minMag( float64_t a, bool exact )
-{
-    uint_fast64_t uiA;
-    int_fast16_t exp;
-    uint_fast64_t sig;
-    int_fast16_t shiftDist;
-    bool sign;
-    uint_fast32_t z;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    exp = expF64UI( uiA );
-    sig = fracF64UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    shiftDist = 0x433 - exp;
-    if ( 53 <= shiftDist ) {
-        if ( exact && (exp | sig) ) {
-            raiseFlags(flag_inexact);
-        }
-        return 0;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sign = signF64UI( uiA );
-    if ( sign || (shiftDist < 21) ) {
-        raiseFlags( flag_invalid );
-        return
-            (exp == 0x7FF) && sig ? ui32_fromNaN
-                : sign ? ui32_fromNegOverflow : ui32_fromPosOverflow;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sig |= UINT64_C( 0x0010000000000000 );
-    z = (uint_fast32_t)(sig>>shiftDist); //fixed warning on type cast
-    if ( exact && ((uint_fast64_t) z<<shiftDist != sig) ) {
-        raiseFlags(flag_inexact);
-    }
-    return z;
-}
-
-uint_fast64_t f64_to_ui64( float64_t a, uint_fast8_t roundingMode, bool exact )
-{
-    uint_fast64_t uiA;
-    bool sign;
-    int_fast16_t exp;
-    uint_fast64_t sig;
-    int_fast16_t shiftDist;
-    struct uint64_extra sigExtra;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    sign = signF64UI( uiA );
-    exp  = expF64UI( uiA );
-    sig  = fracF64UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    if ( exp ) sig |= UINT64_C( 0x0010000000000000 );
-    shiftDist = 0x433 - exp;
-    if ( shiftDist <= 0 ) {
-        if ( shiftDist < -11 ) goto invalid;
-        sigExtra.v = sig<<-shiftDist;
-        sigExtra.extra = 0;
-    } else {
-        sigExtra = softfloat_shiftRightJam64Extra( sig, 0, shiftDist );
-    }
-    return
-        softfloat_roundToUI64(
-            sign, sigExtra.v, sigExtra.extra, roundingMode, exact );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
- invalid:
-    raiseFlags( flag_invalid );
-    return
-        (exp == 0x7FF) && fracF64UI( uiA ) ? ui64_fromNaN
-            : sign ? ui64_fromNegOverflow : ui64_fromPosOverflow;
-}
-
-uint_fast64_t f64_to_ui64_r_minMag( float64_t a, bool exact )
-{
-    uint_fast64_t uiA;
-    int_fast16_t exp;
-    uint_fast64_t sig;
-    int_fast16_t shiftDist;
-    bool sign;
-    uint_fast64_t z;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiA = a.v;
-    exp = expF64UI( uiA );
-    sig = fracF64UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    shiftDist = 0x433 - exp;
-    if ( 53 <= shiftDist ) {
-        if ( exact && (exp | sig) ) {
-            raiseFlags(flag_inexact);
-        }
-        return 0;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    sign = signF64UI( uiA );
-    if ( sign ) goto invalid;
-    if ( shiftDist <= 0 ) {
-        if ( shiftDist < -11 ) goto invalid;
-        z = (sig | UINT64_C( 0x0010000000000000 ))<<-shiftDist;
-    } else {
-        sig |= UINT64_C( 0x0010000000000000 );
-        z = sig>>shiftDist;
-        if ( exact && (uint64_t) (sig<<(-shiftDist & 63)) ) {
-            raiseFlags(flag_inexact);
-        }
-    }
-    return z;
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
- invalid:
-    raiseFlags( flag_invalid );
-    return
-        (exp == 0x7FF) && sig ? ui64_fromNaN
-            : sign ? ui64_fromNegOverflow : ui64_fromPosOverflow;
-}
-
-float32_t i32_to_f32( int32_t a )
+static float32_t i32_to_f32( int32_t a )
 {
     bool sign;
     uint_fast32_t absA;
@@ -2754,7 +2062,7 @@ float32_t i32_to_f32( int32_t a )
     return softfloat_normRoundPackToF32( sign, 0x9C, absA );
 }
 
-float64_t i32_to_f64( int32_t a )
+static float64_t i32_to_f64( int32_t a )
 {
     uint_fast64_t uiZ;
     bool sign;
@@ -2775,7 +2083,7 @@ float64_t i32_to_f64( int32_t a )
     return float64_t::fromRaw(uiZ);
 }
 
-float32_t i64_to_f32( int64_t a )
+static float32_t i64_to_f32( int64_t a )
 {
     bool sign;
     uint_fast64_t absA;
@@ -2798,7 +2106,7 @@ float32_t i64_to_f32( int64_t a )
     }
 }
 
-float64_t i64_to_f64( int64_t a )
+static float64_t i64_to_f64( int64_t a )
 {
     bool sign;
     uint_fast64_t absA;
@@ -2812,7 +2120,7 @@ float64_t i64_to_f64( int64_t a )
     return softfloat_normRoundPackToF64( sign, 0x43C, absA );
 }
 
-float32_t softfloat_addMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
+static float32_t softfloat_addMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
 {
     int_fast16_t expA;
     uint_fast32_t sigA;
@@ -2893,7 +2201,7 @@ float32_t softfloat_addMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
     return float32_t::fromRaw(uiZ);
 }
 
-float64_t
+static float64_t
  softfloat_addMagsF64( uint_fast64_t uiA, uint_fast64_t uiB, bool signZ )
 {
     int_fast16_t expA;
@@ -2976,7 +2284,7 @@ float64_t
     return float64_t::fromRaw(uiZ);
 }
 
-uint32_t softfloat_approxRecipSqrt32_1( unsigned int oddExpA, uint32_t a )
+static uint32_t softfloat_approxRecipSqrt32_1( unsigned int oddExpA, uint32_t a )
 {
     int index;
     uint16_t eps, r0;
@@ -3006,7 +2314,7 @@ uint32_t softfloat_approxRecipSqrt32_1( unsigned int oddExpA, uint32_t a )
 | Converts the common NaN pointed to by `aPtr' into a 32-bit floating-point
 | NaN, and returns the bit pattern of this value as an unsigned integer.
 *----------------------------------------------------------------------------*/
-uint_fast32_t softfloat_commonNaNToF32UI( const struct commonNaN *aPtr )
+static uint_fast32_t softfloat_commonNaNToF32UI( const struct commonNaN *aPtr )
 {
     return (uint_fast32_t) aPtr->sign<<31 | 0x7FC00000 | aPtr->v64>>41;
 }
@@ -3015,14 +2323,14 @@ uint_fast32_t softfloat_commonNaNToF32UI( const struct commonNaN *aPtr )
 | Converts the common NaN pointed to by `aPtr' into a 64-bit floating-point
 | NaN, and returns the bit pattern of this value as an unsigned integer.
 *----------------------------------------------------------------------------*/
-uint_fast64_t softfloat_commonNaNToF64UI( const struct commonNaN *aPtr )
+static uint_fast64_t softfloat_commonNaNToF64UI( const struct commonNaN *aPtr )
 {
     return
         (uint_fast64_t) aPtr->sign<<63 | UINT64_C( 0x7FF8000000000000 )
             | aPtr->v64>>12;
 }
 
-uint_fast8_t softfloat_countLeadingZeros64( uint64_t a )
+static uint_fast8_t softfloat_countLeadingZeros64( uint64_t a )
 {
     uint_fast8_t count;
     uint32_t a32;
@@ -3054,7 +2362,7 @@ uint_fast8_t softfloat_countLeadingZeros64( uint64_t a )
 | location pointed to by `zPtr'.  If the NaN is a signaling NaN, the invalid
 | exception is raised.
 *----------------------------------------------------------------------------*/
-void softfloat_f32UIToCommonNaN( uint_fast32_t uiA, struct commonNaN *zPtr )
+static void softfloat_f32UIToCommonNaN( uint_fast32_t uiA, struct commonNaN *zPtr )
 {
     if ( softfloat_isSigNaNF32UI( uiA ) ) {
         raiseFlags( flag_invalid );
@@ -3070,7 +2378,7 @@ void softfloat_f32UIToCommonNaN( uint_fast32_t uiA, struct commonNaN *zPtr )
 | location pointed to by `zPtr'.  If the NaN is a signaling NaN, the invalid
 | exception is raised.
 *----------------------------------------------------------------------------*/
-void softfloat_f64UIToCommonNaN( uint_fast64_t uiA, struct commonNaN *zPtr )
+static void softfloat_f64UIToCommonNaN( uint_fast64_t uiA, struct commonNaN *zPtr )
 {
     if ( softfloat_isSigNaNF64UI( uiA ) ) {
         raiseFlags( flag_invalid );
@@ -3080,7 +2388,7 @@ void softfloat_f64UIToCommonNaN( uint_fast64_t uiA, struct commonNaN *zPtr )
     zPtr->v0   = 0;
 }
 
-struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b )
+static struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b )
 {
     uint32_t a32, a0, b32, b0;
     struct uint128 z;
@@ -3101,7 +2409,7 @@ struct uint128 softfloat_mul64To128( uint64_t a, uint64_t b )
     return z;
 }
 
-float32_t
+static float32_t
  softfloat_mulAddF32(
      uint_fast32_t uiA, uint_fast32_t uiB, uint_fast32_t uiC, uint_fast8_t op )
 {
@@ -3279,7 +2587,7 @@ float32_t
     return float32_t::fromRaw(uiZ);
 }
 
-float64_t
+static float64_t
  softfloat_mulAddF64(
      uint_fast64_t uiA, uint_fast64_t uiB, uint_fast64_t uiC, uint_fast8_t op )
 {
@@ -3475,7 +2783,7 @@ float64_t
     return float64_t::fromRaw(uiZ);
 }
 
-float32_t
+static float32_t
  softfloat_normRoundPackToF32( bool sign, int_fast16_t exp, uint_fast32_t sig )
 {
     int_fast8_t shiftDist;
@@ -3489,7 +2797,7 @@ float32_t
     }
 }
 
-float64_t
+static float64_t
  softfloat_normRoundPackToF64( bool sign, int_fast16_t exp, uint_fast64_t sig )
 {
     int_fast8_t shiftDist;
@@ -3503,7 +2811,7 @@ float64_t
     }
 }
 
-struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t sig )
+static struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t sig )
 {
     int_fast8_t shiftDist;
     struct exp16_sig32 z;
@@ -3514,7 +2822,7 @@ struct exp16_sig32 softfloat_normSubnormalF32Sig( uint_fast32_t sig )
     return z;
 }
 
-struct exp16_sig64 softfloat_normSubnormalF64Sig( uint_fast64_t sig )
+static struct exp16_sig64 softfloat_normSubnormalF64Sig( uint_fast64_t sig )
 {
     int_fast8_t shiftDist;
     struct exp16_sig64 z;
@@ -3531,7 +2839,7 @@ struct exp16_sig64 softfloat_normSubnormalF64Sig( uint_fast64_t sig )
 | the combined NaN result.  If either `uiA' or `uiB' has the pattern of a
 | signaling NaN, the invalid exception is raised.
 *----------------------------------------------------------------------------*/
-uint_fast32_t
+static uint_fast32_t
  softfloat_propagateNaNF32UI( uint_fast32_t uiA, uint_fast32_t uiB )
 {
     bool isSigNaNA;
@@ -3550,7 +2858,7 @@ uint_fast32_t
 | the combined NaN result.  If either `uiA' or `uiB' has the pattern of a
 | signaling NaN, the invalid exception is raised.
 *----------------------------------------------------------------------------*/
-uint_fast64_t
+static uint_fast64_t
  softfloat_propagateNaNF64UI( uint_fast64_t uiA, uint_fast64_t uiB )
 {
     bool isSigNaNA;
@@ -3563,7 +2871,7 @@ uint_fast64_t
     return (isNaNF64UI( uiA ) ? uiA : uiB) | UINT64_C( 0x0008000000000000 );
 }
 
-float32_t
+static float32_t
  softfloat_roundPackToF32( bool sign, int_fast16_t exp, uint_fast32_t sig )
 {
     uint_fast8_t roundingMode;
@@ -3629,7 +2937,7 @@ float32_t
     return float32_t::fromRaw(uiZ);
 }
 
-float64_t
+static float64_t
  softfloat_roundPackToF64( bool sign, int_fast16_t exp, uint_fast64_t sig )
 {
     uint_fast8_t roundingMode;
@@ -3699,7 +3007,7 @@ float64_t
     return float64_t::fromRaw(uiZ);
 }
 
-int_fast32_t
+static int_fast32_t
  softfloat_roundToI32(
      bool sign, uint_fast64_t sig, uint_fast8_t roundingMode, bool exact )
 {
@@ -3740,130 +3048,7 @@ int_fast32_t
     return sign ? i32_fromNegOverflow : i32_fromPosOverflow;
 }
 
-int_fast64_t
- softfloat_roundToI64(
-     bool sign,
-     uint_fast64_t sig,
-     uint_fast64_t sigExtra,
-     uint_fast8_t roundingMode,
-     bool exact
- )
-{
-    bool roundNearEven, doIncrement;
-    union { uint64_t ui; int64_t i; } uZ;
-    int_fast64_t z;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    roundNearEven = (roundingMode == round_near_even);
-    doIncrement = (UINT64_C( 0x8000000000000000 ) <= sigExtra);
-    if ( ! roundNearEven && (roundingMode != round_near_maxMag) ) {
-        doIncrement =
-            (roundingMode
-                 == (sign ? round_min : round_max))
-                && sigExtra;
-    }
-    if ( doIncrement ) {
-        ++sig;
-        if ( ! sig ) goto invalid;
-        sig &=
-            ~(uint_fast64_t)
-                 (! (sigExtra & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
-                      & roundNearEven);
-    }
-    //fixed unsigned unary minus: -x == ~x + 1
-    uZ.ui = sign ? (~sig + 1) : sig;
-    z = uZ.i;
-    if ( z && ((z < 0) ^ sign) ) goto invalid;
-    if ( exact && sigExtra ) {
-        raiseFlags(flag_inexact);
-    }
-    return z;
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
- invalid:
-    raiseFlags( flag_invalid );
-    return sign ? i64_fromNegOverflow : i64_fromPosOverflow;
-}
-
-uint_fast32_t
- softfloat_roundToUI32(
-     bool sign, uint_fast64_t sig, uint_fast8_t roundingMode, bool exact )
-{
-    bool roundNearEven;
-    uint_fast16_t roundIncrement, roundBits;
-    uint_fast32_t z;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    roundNearEven = (roundingMode == round_near_even);
-    roundIncrement = 0x800;
-    if ( ! roundNearEven && (roundingMode != round_near_maxMag) ) {
-        roundIncrement =
-            (roundingMode
-                 == (sign ? round_min : round_max))
-                ? 0xFFF
-                : 0;
-    }
-    roundBits = sig & 0xFFF;
-    sig += roundIncrement;
-    if ( sig & UINT64_C( 0xFFFFF00000000000 ) ) goto invalid;
-    z = (uint_fast32_t)(sig>>12); //fixed warning on type cast
-    z &= ~(uint_fast32_t) (! (roundBits ^ 0x800) & roundNearEven);
-    if ( sign && z ) goto invalid;
-    if ( exact && roundBits ) {
-        raiseFlags(flag_inexact);
-    }
-    return z;
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
- invalid:
-    raiseFlags( flag_invalid );
-    return sign ? ui32_fromNegOverflow : ui32_fromPosOverflow;
-}
-
-uint_fast64_t
- softfloat_roundToUI64(
-     bool sign,
-     uint_fast64_t sig,
-     uint_fast64_t sigExtra,
-     uint_fast8_t roundingMode,
-     bool exact
- )
-{
-    bool roundNearEven, doIncrement;
-
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    roundNearEven = (roundingMode == round_near_even);
-    doIncrement = (UINT64_C( 0x8000000000000000 ) <= sigExtra);
-    if ( ! roundNearEven && (roundingMode != round_near_maxMag) ) {
-        doIncrement =
-            (roundingMode
-                 == (sign ? round_min : round_max))
-                && sigExtra;
-    }
-    if ( doIncrement ) {
-        ++sig;
-        if ( ! sig ) goto invalid;
-        sig &=
-            ~(uint_fast64_t)
-                 (! (sigExtra & UINT64_C( 0x7FFFFFFFFFFFFFFF ))
-                      & roundNearEven);
-    }
-    if ( sign && sig ) goto invalid;
-    if ( exact && sigExtra ) {
-        raiseFlags(flag_inexact);
-    }
-    return sig;
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
- invalid:
-    raiseFlags( flag_invalid );
-    return sign ? ui64_fromNegOverflow : ui64_fromPosOverflow;
-}
-
-struct uint128
+static struct uint128
  softfloat_shiftRightJam128( uint64_t a64, uint64_t a0, uint_fast32_t dist )
 {
     uint_fast8_t u8NegDist;
@@ -3888,7 +3073,7 @@ struct uint128
     return z;
 }
 
-float32_t softfloat_subMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
+static float32_t softfloat_subMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
 {
     int_fast16_t expA;
     uint_fast32_t sigA;
@@ -3985,7 +3170,7 @@ float32_t softfloat_subMagsF32( uint_fast32_t uiA, uint_fast32_t uiB )
     return float32_t::fromRaw(uiZ);
 }
 
-float64_t
+static float64_t
  softfloat_subMagsF64( uint_fast64_t uiA, uint_fast64_t uiB, bool signZ )
 {
     int_fast16_t expA;
@@ -4080,7 +3265,7 @@ float64_t
     return float64_t::fromRaw(uiZ);
 }
 
-float32_t ui32_to_f32( uint32_t a )
+static float32_t ui32_to_f32( uint32_t a )
 {
     if ( ! a ) {
         return float32_t::fromRaw(0);
@@ -4092,7 +3277,7 @@ float32_t ui32_to_f32( uint32_t a )
     }
 }
 
-float64_t ui32_to_f64( uint32_t a )
+static float64_t ui32_to_f64( uint32_t a )
 {
     uint_fast64_t uiZ;
     int_fast8_t shiftDist;
@@ -4107,7 +3292,7 @@ float64_t ui32_to_f64( uint32_t a )
     return float64_t::fromRaw(uiZ);
 }
 
-float32_t ui64_to_f32( uint64_t a )
+static float32_t ui64_to_f32( uint64_t a )
 {
     int_fast8_t shiftDist;
     uint_fast32_t sig;
@@ -4124,7 +3309,7 @@ float32_t ui64_to_f32( uint64_t a )
     }
 }
 
-float64_t ui64_to_f64( uint64_t a )
+static float64_t ui64_to_f64( uint64_t a )
 {
     if ( ! a ) {
         return float64_t::fromRaw(0);
@@ -4222,7 +3407,7 @@ static const float64_t exp_prescale = float64_t::fromRaw(0x3ff71547652b82fe) * f
 static const float64_t exp_postscale = float64_t::one()/float64_t(1 << EXPTAB_SCALE);
 static const float64_t exp_max_val(3000*(1 << EXPTAB_SCALE)); // log10(DBL_MAX) < 3000
 
-float32_t f32_exp( float32_t x)
+static float32_t f32_exp( float32_t x)
 {
     //special cases
     if(x.isNaN()) return float32_t::nan();
@@ -4250,7 +3435,7 @@ float32_t f32_exp( float32_t x)
     return (buf * EXPPOLY_32F_A0 * float64_t::fromRaw(expTab[val0 & EXPTAB_MASK]) * ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4));
 }
 
-float64_t f64_exp(float64_t x)
+static float64_t f64_exp(float64_t x)
 {
     //special cases
     if(x.isNaN()) return float64_t::nan();
@@ -4550,7 +3735,7 @@ static const uint64_t CV_DECL_ALIGNED(16) icvLogTab[] = {
 // 0.69314718055994530941723212145818
 static const float64_t ln_2 = float64_t::fromRaw(0x3fe62e42fefa39ef);
 
-float32_t f32_log(float32_t x)
+static float32_t f32_log(float32_t x)
 {
     //special cases
     if(x.isNaN() || x < float32_t::zero()) return float32_t::nan();
@@ -4574,7 +3759,7 @@ float32_t f32_log(float32_t x)
     return y0;
 }
 
-float64_t f64_log(float64_t x)
+static float64_t f64_log(float64_t x)
 {
     //special cases
     if(x.isNaN() || x < float64_t::zero()) return float64_t::nan();
@@ -4612,7 +3797,7 @@ float64_t f64_log(float64_t x)
    Fast cube root by Ken Turkowski
    (http://www.worldserver.com/turk/computergraphics/papers.html)
 \* ************************************************************************** */
-float32_t f32_cbrt(float32_t x)
+static float32_t f32_cbrt(float32_t x)
 {
     //special cases
     if (x.isNaN()) return float32_t::nan();
@@ -4649,9 +3834,9 @@ float32_t f32_cbrt(float32_t x)
 
 /// POW functions ///
 
-float32_t f32_pow( float32_t x, float32_t y)
+static float32_t f32_pow( float32_t x, float32_t y)
 {
-    const float32_t zero = float32_t::zero(), one = float32_t::one(), inf = float32_t::inf(), nan = float32_t::nan();
+    static const float32_t zero = float32_t::zero(), one = float32_t::one(), inf = float32_t::inf(), nan = float32_t::nan();
     bool xinf = x.isInf(), yinf = y.isInf(), xnan = x.isNaN(), ynan = y.isNaN();
     float32_t ax = abs(x);
     bool useInf = (y > zero) == (ax > one);
@@ -4676,9 +3861,9 @@ float32_t f32_pow( float32_t x, float32_t y)
     return v;
 }
 
-float64_t f64_pow( float64_t x, float64_t y)
+static float64_t f64_pow( float64_t x, float64_t y)
 {
-    const float64_t zero = float64_t::zero(), one = float64_t::one(), inf = float64_t::inf(), nan = float64_t::nan();
+    static const float64_t zero = float64_t::zero(), one = float64_t::one(), inf = float64_t::inf(), nan = float64_t::nan();
     bool xinf = x.isInf(), yinf = y.isInf(), xnan = x.isNaN(), ynan = y.isNaN();
     float64_t ax = abs(x);
     bool useInf = (y > zero) == (ax > one);
@@ -4705,7 +3890,7 @@ float64_t f64_pow( float64_t x, float64_t y)
 
 // These functions are for internal use only
 
-float32_t f32_powi( float32_t x, int y)
+static float32_t f32_powi( float32_t x, int y)
 {
     float32_t v;
     //special case: (0 ** 0) == 1
@@ -4731,7 +3916,7 @@ float32_t f32_powi( float32_t x, int y)
     return v;
 }
 
-float64_t f64_powi( float64_t x, int y)
+static float64_t f64_powi( float64_t x, int y)
 {
     float64_t v;
     //special case: (0 ** 0) == 1
