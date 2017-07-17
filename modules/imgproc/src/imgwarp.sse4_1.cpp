@@ -387,19 +387,19 @@ class WarpPerspectiveLine_SSE4_Impl: public WarpPerspectiveLine_SSE4
 public:
     WarpPerspectiveLine_SSE4_Impl(const double *M)
     {
-        v_M0 = _mm_set1_pd(M[0]);
-        v_M3 = _mm_set1_pd(M[3]);
-        v_M6 = _mm_set1_pd(M[6]);
-        v_intmax = _mm_set1_pd((double)INT_MAX);
-        v_intmin = _mm_set1_pd((double)INT_MIN);
-        v_2 = _mm_set1_pd(2);
-        v_zero = _mm_setzero_pd();
-        v_1 = _mm_set1_pd(1);
-        v_its = _mm_set1_pd(INTER_TAB_SIZE);
-        v_itsi1 = _mm_set1_epi32(INTER_TAB_SIZE - 1);
+        CV_UNUSED(M);
     }
     virtual void processNN(const double *M, short* xy, double X0, double Y0, double W0, int bw)
     {
+        const __m128d v_M0 = _mm_set1_pd(M[0]);
+        const __m128d v_M3 = _mm_set1_pd(M[3]);
+        const __m128d v_M6 = _mm_set1_pd(M[6]);
+        const __m128d v_intmax = _mm_set1_pd((double)INT_MAX);
+        const __m128d v_intmin = _mm_set1_pd((double)INT_MIN);
+        const __m128d v_2 = _mm_set1_pd(2);
+        const __m128d v_zero = _mm_setzero_pd();
+        const __m128d v_1 = _mm_set1_pd(1);
+
         int x1 = 0;
         __m128d v_X0d = _mm_set1_pd(X0);
         __m128d v_Y0d = _mm_set1_pd(Y0);
@@ -521,6 +521,16 @@ public:
     }
     virtual void process(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw)
     {
+        const __m128d v_M0 = _mm_set1_pd(M[0]);
+        const __m128d v_M3 = _mm_set1_pd(M[3]);
+        const __m128d v_M6 = _mm_set1_pd(M[6]);
+        const __m128d v_intmax = _mm_set1_pd((double)INT_MAX);
+        const __m128d v_intmin = _mm_set1_pd((double)INT_MIN);
+        const __m128d v_2 = _mm_set1_pd(2);
+        const __m128d v_zero = _mm_setzero_pd();
+        const __m128d v_its = _mm_set1_pd(INTER_TAB_SIZE);
+        const __m128i v_itsi1 = _mm_set1_epi32(INTER_TAB_SIZE - 1);
+
         int x1 = 0;
 
         __m128d v_X0d = _mm_set1_pd(X0);
@@ -656,17 +666,6 @@ public:
         }
     }
     virtual ~WarpPerspectiveLine_SSE4_Impl() {};
-private:
-    __m128d v_M0;
-    __m128d v_M3;
-    __m128d v_M6;
-    __m128d v_intmax;
-    __m128d v_intmin;
-    __m128d v_2,
-            v_zero,
-            v_1,
-            v_its;
-    __m128i v_itsi1;
 };
 
 Ptr<WarpPerspectiveLine_SSE4> WarpPerspectiveLine_SSE4::getImpl(const double *M)

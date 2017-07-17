@@ -125,6 +125,7 @@ public:
                 }
             }
         }
+        _mm256_zeroupper();
     }
 
 private:
@@ -230,6 +231,7 @@ public:
                 }
             }
         }
+        _mm256_zeroupper();
     }
 
 private:
