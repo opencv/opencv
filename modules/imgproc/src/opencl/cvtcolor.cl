@@ -1755,6 +1755,7 @@ __kernel void BGR2Lab(__global const uchar * srcptr, int src_step, int src_offse
                 B = splineInterpolate(B * GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
 #endif
 
+                // 7.787f = (29/3)^3/(29*4), 0.008856f = (6/29)^3, 903.3 = (29/3)^3
                 float X = fma(R, C0, fma(G, C1, B*C2));
                 float Y = fma(R, C3, fma(G, C4, B*C5));
                 float Z = fma(R, C6, fma(G, C7, B*C8));
@@ -1794,6 +1795,7 @@ inline void Lab2BGR_f(const float * srcbuf, float * dstbuf,
           C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
     float y, fy;
+    // 903.3 = (29/3)^3, 7.787 = (29/3)^3/(29*4)
     if (li <= lThresh)
     {
         y = li / 903.3f;
