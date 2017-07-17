@@ -96,3 +96,27 @@ AKAZE_nld_step_scalar(__global const float* lt, int lt_step, int lt_offset, int 
 
     dst[c + j] = res * step_size;
 }
+
+/**
+ * @brief Compute determinant from hessians
+ * @details Compute Ldet by (Lxx.mul(Lyy) - Lxy.mul(Lxy)) * sigma
+ *
+ * @param lxx spatial derivates
+ * @param lxy spatial derivates
+ * @param lyy spatial derivates
+ * @param dst output determinant
+ * @param sigma determinant will be scaled by this sigma
+ */
+__kernel void
+AKAZE_compute_determinant(__global const float* lxx, __global const float* lxy, __global const float* lyy,
+    __global float* dst, float sigma, int size)
+{
+    int i = get_global_id(0);
+    // OpenCV plays with dimensions so we need explicit check for this
+    if (!(i < size))
+    {
+        return;
+    }
+
+    dst[i] = (lxx[i] * lyy[i] - lxy[i] * lxy[i]) * sigma;
+}

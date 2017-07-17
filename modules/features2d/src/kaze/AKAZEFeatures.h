@@ -30,11 +30,12 @@ struct Evolution
   UMat Lx, Ly;           ///< First order spatial derivatives
   UMat Lt;               ///< Evolution image
   UMat Lsmooth;          ///< Smoothed image, used only for computing determinant, released afterwards
-  Mat Ldet;             ///< Detector response
+  UMat Ldet;             ///< Detector response
 
   // the same as above, holding CPU mapping to UMats above
   Mat Mx, My;
   Mat Mt;
+  Mat Mdet;
 
   Size size;                ///< Size of the layer
   float etime;              ///< Evolution time

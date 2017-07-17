@@ -354,6 +354,8 @@ ocl_pm_g2(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast)
 static inline void
 compute_diffusivity(const UMat& Lx, const UMat& Ly, UMat& Lflow, float kcontrast, int diffusivity)
 {
+  CV_INSTRUMENT_REGION()
+
   Lflow.create(Lx.size(), Lx.type());
 
   switch (diffusivity) {
@@ -398,6 +400,7 @@ static inline void downloadPyramid(std::vector<Evolution>& evolution)
     e.Mx = e.Lx.getMat(ACCESS_READ);
     e.My = e.Ly.getMat(ACCESS_READ);
     e.Mt = e.Lt.getMat(ACCESS_READ);
+    e.Mdet = e.Ldet.getMat(ACCESS_READ);
   }
 }
 
@@ -487,6 +490,61 @@ void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 }
 
 /* ************************************************************************* */
+
+#ifdef HAVE_OPENCL
+static inline bool
+ocl_compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
+  UMat& Ldet, float sigma)
+{
+  const int total = Lxx.rows * Lxx.cols;
+  size_t globalSize[] = {(size_t)total};
+
+  ocl::Kernel ker("AKAZE_compute_determinant", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  return ker.args(
+    ocl::KernelArg::PtrReadOnly(Lxx),
+    ocl::KernelArg::PtrReadOnly(Lxy),
+    ocl::KernelArg::PtrReadOnly(Lyy),
+    ocl::KernelArg::PtrWriteOnly(Ldet),
+    sigma, total).run(1, globalSize, 0, true);
+}
+#endif // HAVE_OPENCL
+
+/**
+ * @brief Compute determinant from hessians
+ * @details Compute Ldet by (Lxx.mul(Lyy) - Lxy.mul(Lxy)) * sigma
+ *
+ * @param Lxx spatial derivates
+ * @param Lxy spatial derivates
+ * @param Lyy spatial derivates
+ * @param Ldet output determinant
+ * @param sigma determinant will be scaled by this sigma
+ */
+static inline void compute_determinant(const UMat& Lxx, const UMat& Lxy, const UMat& Lyy,
+  UMat& Ldet, float sigma)
+{
+  CV_INSTRUMENT_REGION()
+
+  Ldet.create(Lxx.size(), Lxx.type());
+
+  CV_OCL_RUN(true, ocl_compute_determinant(Lxx, Lxy, Lyy, Ldet, sigma));
+
+  // output determinant
+  Mat Mxx = Lxx.getMat(ACCESS_READ), Mxy = Lxy.getMat(ACCESS_READ), Myy = Lyy.getMat(ACCESS_READ);
+  Mat Mdet = Ldet.getMat(ACCESS_WRITE);
+  float *lxx = Mxx.ptr<float>();
+  float *lxy = Mxy.ptr<float>();
+  float *lyy = Myy.ptr<float>();
+  float *ldet = Mdet.ptr<float>();
+  const int total = Lxx.cols * Lxx.rows;
+  for (int j = 0; j < total; j++) {
+    ldet[j] = (lxx[j] * lyy[j] - lxy[j] * lxy[j]) * sigma;
+  }
+
+}
+
 class DeterminantHessianResponse : public ParallelLoopBody
 {
 public:
@@ -502,9 +560,6 @@ public:
     for (int i = range.start; i < range.end; i++)
     {
       Evolution &e = (*evolution_)[i];
-      const int total = e.Lsmooth.cols * e.Lsmooth.rows;
-      // output determinant
-      e.Ldet.create(e.Lsmooth.size(), e.Lsmooth.type());
 
       // we cannot use cv:Scharr here, because we need to handle also
       // kernel sizes other than 3, by default we are using 9x9, 5x5 and 7x7
@@ -524,16 +579,9 @@ public:
       // free Lsmooth to same some space in the pyramid, it is not needed anymore
       e.Lsmooth.release();
 
-      // compute Ldet by Lxx.mul(Lyy) - Lxy.mul(Lxy)
+      // compute determinant scaled by sigma
       const int sigma_size_quat = e.sigma_size * e.sigma_size * e.sigma_size * e.sigma_size;
-      Mat Mxx = Lxx.getMat(ACCESS_READ), Mxy = Lxy.getMat(ACCESS_READ), Myy = Lyy.getMat(ACCESS_READ);
-      float *lxx = Mxx.ptr<float>();
-      float *lxy = Mxy.ptr<float>();
-      float *lyy = Myy.ptr<float>();
-      float *ldet = e.Ldet.ptr<float>();
-      for (int j = 0; j < total; j++) {
-        ldet[j] = (lxx[j] * lyy[j] - lxy[j] * lxy[j]) * sigma_size_quat;
-      }
+      compute_determinant(Lxx, Lxy, Lyy, e.Ldet, sigma_size_quat);
     }
   }
 
@@ -583,16 +631,17 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<KeyPoint>& kpts)
   }
 
   for (size_t i = 0; i < evolution_.size(); i++) {
-    float* prev = evolution_[i].Ldet.ptr<float>(0);
-    float* curr = evolution_[i].Ldet.ptr<float>(1);
-    for (int ix = 1; ix < evolution_[i].Ldet.rows - 1; ix++) {
-      float* next = evolution_[i].Ldet.ptr<float>(ix + 1);
+    Mat Ldet = evolution_[i].Mdet;
+    const float* prev = Ldet.ptr<float>(0);
+    const float* curr = Ldet.ptr<float>(1);
+    for (int ix = 1; ix < Ldet.rows - 1; ix++) {
+      const float* next = Ldet.ptr<float>(ix + 1);
 
-      for (int jx = 1; jx < evolution_[i].Ldet.cols - 1; jx++) {
+      for (int jx = 1; jx < Ldet.cols - 1; jx++) {
         is_extremum = false;
         is_repeated = false;
         is_out = false;
-        value = *(evolution_[i].Ldet.ptr<float>(ix)+jx);
+        value = *(Ldet.ptr<float>(ix)+jx);
 
         // Filter the points with the detector threshold
         if (value > options_.dthreshold && value >= options_.min_dthreshold &&
@@ -645,8 +694,8 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<KeyPoint>& kpts)
             up_y = fRound(point.pt.y - smax*sigma_size_) - 1;
             down_y = fRound(point.pt.y + smax*sigma_size_) + 1;
 
-            if (left_x < 0 || right_x >= evolution_[i].Ldet.cols ||
-                up_y < 0 || down_y >= evolution_[i].Ldet.rows) {
+            if (left_x < 0 || right_x >= Ldet.cols ||
+                up_y < 0 || down_y >= Ldet.rows) {
               is_out = true;
             }
 
@@ -717,26 +766,27 @@ void AKAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint>& kpts)
     ratio = (float)fastpow(2, kpts[i].octave);
     x = fRound(kpts[i].pt.x / ratio);
     y = fRound(kpts[i].pt.y / ratio);
+    Mat Ldet = evolution_[kpts[i].class_id].Mdet;
 
     // Compute the gradient
-    Dx = (0.5f)*(*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y)+x + 1)
-        - *(evolution_[kpts[i].class_id].Ldet.ptr<float>(y)+x - 1));
-    Dy = (0.5f)*(*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y + 1) + x)
-        - *(evolution_[kpts[i].class_id].Ldet.ptr<float>(y - 1) + x));
+    Dx = (0.5f)*(*(Ldet.ptr<float>(y)+x + 1)
+        - *(Ldet.ptr<float>(y)+x - 1));
+    Dy = (0.5f)*(*(Ldet.ptr<float>(y + 1) + x)
+        - *(Ldet.ptr<float>(y - 1) + x));
 
     // Compute the Hessian
-    Dxx = (*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y)+x + 1)
-        + *(evolution_[kpts[i].class_id].Ldet.ptr<float>(y)+x - 1)
-        - 2.0f*(*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y)+x)));
+    Dxx = (*(Ldet.ptr<float>(y)+x + 1)
+        + *(Ldet.ptr<float>(y)+x - 1)
+        - 2.0f*(*(Ldet.ptr<float>(y)+x)));
 
-    Dyy = (*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y + 1) + x)
-        + *(evolution_[kpts[i].class_id].Ldet.ptr<float>(y - 1) + x)
-        - 2.0f*(*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y)+x)));
+    Dyy = (*(Ldet.ptr<float>(y + 1) + x)
+        + *(Ldet.ptr<float>(y - 1) + x)
+        - 2.0f*(*(Ldet.ptr<float>(y)+x)));
 
-    Dxy = (0.25f)*(*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y + 1) + x + 1)
-        + (*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y - 1) + x - 1)))
-        - (0.25f)*(*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y - 1) + x + 1)
-        + (*(evolution_[kpts[i].class_id].Ldet.ptr<float>(y + 1) + x - 1)));
+    Dxy = (0.25f)*(*(Ldet.ptr<float>(y + 1) + x + 1)
+        + (*(Ldet.ptr<float>(y - 1) + x - 1)))
+        - (0.25f)*(*(Ldet.ptr<float>(y - 1) + x + 1)
+        + (*(Ldet.ptr<float>(y + 1) + x - 1)));
 
     // Solve the linear system
     A(0, 0) = Dxx;
