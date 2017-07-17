@@ -3678,7 +3678,7 @@ cvtScale_<short, int, float>( const short* src, size_t sstep,
         if (CV_CPU_HAS_SUPPORT_AVX2)
         {
             opt_AVX2::cvtScale_s16s32f32Line_AVX2(src, dst, scale, shift, size.width);
-            return;
+            continue;
         }
         #endif
         #if CV_SSE2
