@@ -258,12 +258,13 @@ static int abToXZ_b[LAB_BASE*9/4];
 //TODO: multiply it by 8 later
 static bool enableRGB2LuvInterpolation = false;
 static bool enableLuv2RGBInterpolation = false;
-static int16_t RGB2LuvLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
-static int16_t XYZ2LuvLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
-static int16_t Luv2RGBLut_s16[LUV_LUT_DIM*LUV_LUT_DIM*LUV_LUT_DIM*3];
+static int16_t RGB2LuvLut_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
+static int16_t XYZ2LuvLut_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
+static int16_t Luv2RGBLut_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
 // Luv -> XYZ is an awful function for interpolation
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(uHigh-uLow);
+static const softfloat XYZmax(1.25f);
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -499,7 +500,8 @@ static void initLabTabs()
             }
         }
 
-        if(enableLuvInterpolation)
+        if(enableRGB2LuvInterpolation ||
+           enableLuv2RGBInterpolation)
         {
             softfloat coeffs[9];
 
@@ -521,7 +523,7 @@ static void initLabTabs()
                       C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
                       C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
-            for( int i = 0; i < 3; i++ )
+            for( i = 0; i < 3; i++ )
             {
                 coeffs[i+2*3] = softfloat(XYZ2sRGB_D65[i+0*3]);
                 coeffs[i+1*3] = softfloat(XYZ2sRGB_D65[i+1*3]);
@@ -532,19 +534,19 @@ static void initLabTabs()
                       D3 = coeffs[3], D4 = coeffs[4], D5 = coeffs[5],
                       D6 = coeffs[6], D7 = coeffs[7], D8 = coeffs[8];
 
-            static const softfloat lld(LUV_LUT_DIM - 1), lbase((int)LAB_BASE);
+            static const softfloat lld(LAB_LUT_DIM - 1), lbase((int)LAB_BASE);
             //u, v: [-134.0, 220.0], [-140.0, 122.0]
             static const softfloat f100(100);
             static const softfloat f9of4 = softfloat(9)/softfloat(4), f1of4 = softfloat::one()/softfloat(4);
-            static const softfloat f116(116), f16(16);
+            static const softfloat f116(116), f16(16), f15(15), f3(3);
             static const softfloat f9033 = softfloat(29*29*29)/softfloat(27);
-            for(int p = 0; p < LUV_LUT_DIM; p++)
+            for(int p = 0; p < LAB_LUT_DIM; p++)
             {
-                for(int q = 0; q < LUV_LUT_DIM; q++)
+                for(int q = 0; q < LAB_LUT_DIM; q++)
                 {
-                    for(int r = 0; r < LUV_LUT_DIM; r++)
+                    for(int r = 0; r < LAB_LUT_DIM; r++)
                     {
-                        int idx = p*3 + q*LUV_LUT_DIM*3 + r*LUV_LUT_DIM*LUV_LUT_DIM*3;
+                        int idx = p*3 + q*LAB_LUT_DIM*3 + r*LAB_LUT_DIM*LAB_LUT_DIM*3;
                         //RGB 2 Luv LUT building
                         {
                             softfloat R = softfloat(p)/lld;
@@ -559,10 +561,10 @@ static void initLabTabs()
                             softfloat Y = R*C3 + G*C4 + B*C5;
                             softfloat Z = R*C6 + G*C7 + B*C8;
 
-                            softfloat L = Y < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x);
+                            softfloat L = Y < lthresh ? mulAdd(Y, lscale, lbias) : cbrt(Y);
                             L = L*f116 - f16;
 
-                            softfloat d = softfloat(4*13)/max(X + 15 * Y + 3 * Z, softfloat(FLT_EPSILON));
+                            softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat(FLT_EPSILON));
                             softfloat u = L*(X*d - un);
                             softfloat v = L*(f9of4*Y*d - vn);
 
@@ -572,15 +574,16 @@ static void initLabTabs()
                         }
 
                         {
-                            //X,Y,Z ranges are lying inside white point
-                            softfloat X = softfloat(p)*softfloat(D65[0])/lld;
-                            softfloat Y = softfloat(q)*softfloat(D65[1])/lld;
-                            softfloat Z = softfloat(r)*softfloat(D65[2])/lld;
+                            //X,Y,Z ranges are lying inside white point which is D65
+                            //but we choose one upper bound for simplicity
+                            softfloat X = softfloat(p)*XYZmax/lld;
+                            softfloat Y = softfloat(q)*XYZmax/lld;
+                            softfloat Z = softfloat(r)*XYZmax/lld;
 
-                            softfloat L = Y < lthresh ? mulAdd(x, lscale, lbias) : cbrt(x);
+                            softfloat L = Y < lthresh ? mulAdd(Y, lscale, lbias) : cbrt(Y);
                             L = L*f116 - f16;
 
-                            softfloat d = softfloat(4*13)/max(X + 15 * Y + 3 * Z, softfloat(FLT_EPSILON));
+                            softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat(FLT_EPSILON));
                             softfloat u = L*(X*d - un);
                             softfloat v = L*(f9of4*Y*d - vn);
 
@@ -777,47 +780,27 @@ struct RGB2Lab_f
 
         useInterpolation = (!_coeffs && !_whitept && srgb && enableRGB2LabInterpolation);
 
-        useBitExactness = enableBitExactness;
-
         if (!_coeffs)
             _coeffs = sRGB2XYZ_D65;
         if (!_whitept)
             _whitept = D65;
 
-        if(useBitExactness)
+        softfloat scale[] = { softfloat::one() / softfloat(_whitept[0]),
+                              softfloat::one(),
+                              softfloat::one() / softfloat(_whitept[2]) };
+
+        for( int i = 0; i < _3; i++ )
         {
-            softfloat scale[] = { softfloat::one() / softfloat(_whitept[0]),
-                                  softfloat::one(),
-                                  softfloat::one() / softfloat(_whitept[2]) };
+            int j = i * 3;
+            softfloat c0 = scale[i] * softfloat(_coeffs[j    ]);
+            softfloat c1 = scale[i] * softfloat(_coeffs[j + 1]);
+            softfloat c2 = scale[i] * softfloat(_coeffs[j + 2]);
+            coeffs[j + (blueIdx ^ 2)] = c0;
+            coeffs[j + 1]             = c1;
+            coeffs[j + blueIdx]       = c2;
 
-            for( int i = 0; i < _3; i++ )
-            {
-                int j = i * 3;
-                softfloat c0 = scale[i] * softfloat(_coeffs[j    ]);
-                softfloat c1 = scale[i] * softfloat(_coeffs[j + 1]);
-                softfloat c2 = scale[i] * softfloat(_coeffs[j + 2]);
-                coeffs[j + (blueIdx ^ 2)] = c0;
-                coeffs[j + 1]             = c1;
-                coeffs[j + blueIdx]       = c2;
-
-                CV_Assert( c0 >= 0 && c1 >= 0 && c2 >= 0 &&
-                           c0 + c1 + c2 < softfloat((int)LAB_CBRT_TAB_SIZE) );
-            }
-        }
-        else
-        {
-            float scale[] = { 1.0f / _whitept[0], 1.0f, 1.0f / _whitept[2] };
-
-            for( int i = 0; i < _3; i++ )
-            {
-                int j = i * 3;
-                coeffs[j + (blueIdx ^ 2)] = _coeffs[j] * scale[i];
-                coeffs[j + 1] = _coeffs[j + 1] * scale[i];
-                coeffs[j + blueIdx] = _coeffs[j + 2] * scale[i];
-
-                CV_Assert( coeffs[j] >= 0 && coeffs[j + 1] >= 0 && coeffs[j + 2] >= 0 &&
-                           coeffs[j] + coeffs[j + 1] + coeffs[j + 2] < 1.5f*LabCbrtTabScale );
-            }
+            CV_Assert( c0 >= 0 && c1 >= 0 && c2 >= 0 &&
+                       c0 + c1 + c2 < softfloat((int)LAB_CBRT_TAB_SIZE) );
         }
     }
 
@@ -825,7 +808,7 @@ struct RGB2Lab_f
     {
         int i, scn = srccn, bIdx = blueIdx;
         float gscale = GammaTabScale;
-        const float* gammaTab = srgb ? ( useBitExactness ? sRGBGammaTab : sRGBGammaTab_gold ) : 0;
+        const float* gammaTab = srgb ? sRGBGammaTab : 0;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
               C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
@@ -971,8 +954,6 @@ struct RGB2Lab_f
     bool srgb;
     bool useInterpolation;
     int blueIdx;
-    //just for accuracy measurement purposes
-    bool useBitExactness;
 };
 
 
@@ -992,32 +973,16 @@ struct Lab2RGBfloat
         if(!_whitept)
             _whitept = D65;
 
-        //just for accuracy measurement purposes
-        useBitExactness = enableBitExactness;
-        if(enableBitExactness)
+        for( int i = 0; i < 3; i++ )
         {
-            for( int i = 0; i < 3; i++ )
-            {
-                coeffs[i+(blueIdx^2)*3] = (softfloat(_coeffs[i]  )*softfloat(_whitept[i]));
-                coeffs[i+3]             = (softfloat(_coeffs[i+3])*softfloat(_whitept[i]));
-                coeffs[i+blueIdx*3]     = (softfloat(_coeffs[i+6])*softfloat(_whitept[i]));
-            }
-
-            lThresh = softfloat(8); // 0.008856f * 903.3f  = (6/29)^3*(29/3)^3 = 8
-            fThresh = softfloat(6)/softfloat(29); // 7.787f * 0.008856f + 16.0f / 116.0f = 6/29
+            coeffs[i+(blueIdx^2)*3] = (softfloat(_coeffs[i]  )*softfloat(_whitept[i]));
+            coeffs[i+3]             = (softfloat(_coeffs[i+3])*softfloat(_whitept[i]));
+            coeffs[i+blueIdx*3]     = (softfloat(_coeffs[i+6])*softfloat(_whitept[i]));
         }
-        else
-        {
-            for( int i = 0; i < 3; i++ )
-            {
-                coeffs[i+(blueIdx^2)*3] = _coeffs[i]*_whitept[i];
-                coeffs[i+3] = _coeffs[i+3]*_whitept[i];
-                coeffs[i+blueIdx*3] = _coeffs[i+6]*_whitept[i];
-            }
 
-            lThresh = 0.008856f * 903.3f;
-            fThresh = 7.787f * 0.008856f + 16.0f / 116.0f;
-        }
+        lThresh = softfloat(8); // 0.008856f * 903.3f  = (6/29)^3*(29/3)^3 = 8
+        fThresh = softfloat(6)/softfloat(29); // 7.787f * 0.008856f + 16.0f / 116.0f = 6/29
+
         #if CV_SSE2
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
         #endif
@@ -1116,7 +1081,7 @@ struct Lab2RGBfloat
     void operator()(const float* src, float* dst, int n) const
     {
         int i = 0, dcn = dstcn;
-        const float* gammaTab = srgb ? ( useBitExactness ? sRGBInvGammaTab : sRGBInvGammaTab_gold ) : 0;
+        const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
         C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
@@ -1244,8 +1209,6 @@ struct Lab2RGBfloat
     bool haveSIMD;
     #endif
     int blueIdx;
-    //just for accuracy measurement purposes
-    bool useBitExactness;
 };
 
 
@@ -1265,32 +1228,15 @@ struct RGB2Lab_b
         if (!_whitept)
             _whitept = D65;
 
-        //just for accuracy measurement purposes
-        useBitExactness = enableBitExactness;
-        if(enableBitExactness)
+        static const softfloat lshift(1 << lab_shift);
+        for( int i = 0; i < _3; i++ )
         {
-            static const softfloat lshift(1 << lab_shift);
-            for( int i = 0; i < _3; i++ )
-            {
-                coeffs[i*3+(blueIdx^2)] = cvRound((lshift*softfloat(_coeffs[i*3  ]))/softfloat(_whitept[i]));
-                coeffs[i*3+1]           = cvRound((lshift*softfloat(_coeffs[i*3+1]))/softfloat(_whitept[i]));
-                coeffs[i*3+blueIdx]     = cvRound((lshift*softfloat(_coeffs[i*3+2]))/softfloat(_whitept[i]));
+            coeffs[i*3+(blueIdx^2)] = cvRound((lshift*softfloat(_coeffs[i*3  ]))/softfloat(_whitept[i]));
+            coeffs[i*3+1]           = cvRound((lshift*softfloat(_coeffs[i*3+1]))/softfloat(_whitept[i]));
+            coeffs[i*3+blueIdx]     = cvRound((lshift*softfloat(_coeffs[i*3+2]))/softfloat(_whitept[i]));
 
-                CV_Assert(coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
-                          coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift));
-            }
-        }
-        else
-        {
-            for( int i = 0; i < _3; i++ )
-            {
-                coeffs[i*3+(blueIdx^2)] = cvRound((float)(1 << lab_shift)*_coeffs[i*3  ]/_whitept[i]);
-                coeffs[i*3+1]           = cvRound((float)(1 << lab_shift)*_coeffs[i*3+1]/_whitept[i]);
-                coeffs[i*3+blueIdx]     = cvRound((float)(1 << lab_shift)*_coeffs[i*3+2]/_whitept[i]);
-
-                CV_Assert(coeffs[i] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
-                          coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift) );
-            }
+            CV_Assert(coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
+                    coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 2*(1 << lab_shift));
         }
     }
 
@@ -1298,9 +1244,8 @@ struct RGB2Lab_b
     {
         const int Lscale = (116*255+50)/100;
         const int Lshift = -((16*255*(1 << lab_shift2) + 50)/100);
-        const ushort* tab = srgb ? ( useBitExactness ? sRGBGammaTab_b : sRGBGammaTab_b_gold ) :
-                                   ( useBitExactness ? linearGammaTab_b : linearGammaTab_b_gold );
-        const ushort* cbrtTab = useBitExactness ? LabCbrtTab_b : LabCbrtTab_b_gold;
+        const ushort* tab = srgb ? sRGBGammaTab_b : linearGammaTab_b;
+        const ushort* cbrtTab = LabCbrtTab_b;
         int i, scn = srccn;
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
@@ -1329,8 +1274,6 @@ struct RGB2Lab_b
     int coeffs[9];
     bool srgb;
     int blueIdx;
-    // just for accuracy measurement purposes
-    bool useBitExactness;
 };
 
 
@@ -1358,28 +1301,15 @@ struct Lab2RGBinteger
         if(!_whitept)
             _whitept = D65;
 
-        if(enableBitExactness)
+        static const softfloat lshift(1 << lab_shift);
+        for(int i = 0; i < 3; i++)
         {
-            static const softfloat lshift(1 << lab_shift);
-            for(int i = 0; i < 3; i++)
-            {
-                coeffs[i+(blueIdx)*3]   = cvRound(lshift*softfloat(_coeffs[i  ])*softfloat(_whitept[i]));
-                coeffs[i+3]             = cvRound(lshift*softfloat(_coeffs[i+3])*softfloat(_whitept[i]));
-                coeffs[i+(blueIdx^2)*3] = cvRound(lshift*softfloat(_coeffs[i+6])*softfloat(_whitept[i]));
-            }
-        }
-        else
-        {
-            for(int i = 0; i < 3; i++)
-            {
-                coeffs[i+(blueIdx)*3]   = cvRound((float)(1 << lab_shift)*_coeffs[i  ]*_whitept[i]);
-                coeffs[i+3]             = cvRound((float)(1 << lab_shift)*_coeffs[i+3]*_whitept[i]);
-                coeffs[i+(blueIdx^2)*3] = cvRound((float)(1 << lab_shift)*_coeffs[i+6]*_whitept[i]);
-            }
+            coeffs[i+(blueIdx)*3]   = cvRound(lshift*softfloat(_coeffs[i  ])*softfloat(_whitept[i]));
+            coeffs[i+3]             = cvRound(lshift*softfloat(_coeffs[i+3])*softfloat(_whitept[i]));
+            coeffs[i+(blueIdx^2)*3] = cvRound(lshift*softfloat(_coeffs[i+6])*softfloat(_whitept[i]));
         }
 
-        tab = srgb ? (enableBitExactness ? sRGBInvGammaTab_b   : sRGBInvGammaTab_b_gold) :
-                     (enableBitExactness ? linearInvGammaTab_b : linearInvGammaTab_b_gold);
+        tab = srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
     }
 
     // L, a, b should be in their natural range
@@ -1954,11 +1884,9 @@ struct Lab2RGB_f
     int dstcn;
 };
 
-#undef clip
-
 ////////////////////////////////////////////////////////////////////
 
-static inline void noInterpolate(int cx, int cy, int cz, int* LUT,
+static inline void noInterpolate(int cx, int cy, int cz, int16_t* LUT,
                                  int& a, int& b, int& c)
 {
     cx = (cx >= 0) ? (cx <= LAB_BASE ? cx : LAB_BASE) : 0;
@@ -1982,7 +1910,7 @@ static inline void noInterpolate(int cx, int cy, int cz, int* LUT,
 }
 
 // cx, cy, cz are in [0; LAB_BASE]
-static inline void tetraInterpolate(int cx, int cy, int cz, int* LUT,
+static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
                                     int& a, int& b, int& c)
 {
     //LUT idx of origin pt of cube
@@ -1990,8 +1918,8 @@ static inline void tetraInterpolate(int cx, int cy, int cz, int* LUT,
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
 
-    int* baseLUT = &LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz];
-    int* p1, *p2;
+    int16_t* baseLUT = &LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz];
+    int16_t* p1, *p2;
 
     //x, y, z are [0; LAB_BASE)
     static const int bitMask = (1 << lab_base_shift) - 1;
@@ -2131,7 +2059,7 @@ static inline void chooseInterpolate(int cx, int cy, int cz, Cvt_Type type,
 {
     int ia, ib, ic;
     int icx = cx, icy = cy, icz = cz;
-    int* iLUT;
+    int16_t* iLUT;
     iLUT = (type == LUV_TO_RGB) ?
                 Luv2RGBLut_s16 :
                 (useXYZTable ? RGB2LuvLut_s16 : XYZ2LuvLut_s16);
@@ -2158,14 +2086,14 @@ struct RGB2Luvfloat
 {
     typedef float channel_type;
 
-    RGB2Luvfloat( int _srccn, int blueIdx, const float* _coeffs,
+    RGB2Luvfloat( int _srccn, int _blueIdx, const float* _coeffs,
                const float* whitept, bool _srgb )
-    : srccn(_srccn), srgb(_srgb)
+    : srccn(_srccn), blueIdx(_blueIdx), srgb(_srgb)
     {
         volatile int i;
         initLabTabs();
 
-        useInterpolation = (!_coeffs && !_whitept && srgb && enableLuvInterpolation);
+        useInterpolation = (!_coeffs && !whitept && srgb && enableRGB2LuvInterpolation);
 
         if(!_coeffs) _coeffs = sRGB2XYZ_D65;
         if(!whitept) whitept = D65;
@@ -2284,7 +2212,7 @@ struct RGB2Luvfloat
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i = 0, scn = srccn;
+        int i = 0, scn = srccn, bIdx = blueIdx;
         float gscale = GammaTabScale;
         const float* gammaTab = srgb ? sRGBGammaTab : 0;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -2312,7 +2240,10 @@ struct RGB2Luvfloat
                     float X = R*C0 + G*C1 + B*C2;
                     float Y = R*C3 + G*C4 + B*C5;
                     float Z = R*C6 + G*C7 + B*C8;
-                    R = X; G = Y; B = Z;
+
+                    R = X*(1.f/((float)XYZmax));
+                    G = Y*(1.f/((float)XYZmax));
+                    B = Z*(1.f/((float)XYZmax));
                 }
 
                 int iL, iu, iv;
@@ -2487,6 +2418,7 @@ struct RGB2Luvfloat
     }
 
     int srccn;
+    int blueIdx;
     float coeffs[9], un, vn;
     bool srgb;
     #if CV_SSE2
@@ -2518,13 +2450,13 @@ struct Luv2RGBfloat
 {
     typedef float channel_type;
 
-    Luv2RGBfloat( int _dstcn, int blueIdx, const float* _coeffs,
+    Luv2RGBfloat( int _dstcn, int _blueIdx, const float* _coeffs,
                   const float* whitept, bool _srgb )
-    : dstcn(_dstcn), srgb(_srgb)
+    : dstcn(_dstcn), blueIdx(_blueIdx), srgb(_srgb)
     {
         initLabTabs();
 
-        useInterpolation = (!_coeffs && !_whitept && srgb
+        useInterpolation = (!_coeffs && !whitept && srgb
                             && enableLuv2RGBInterpolation);
 
         if(!_coeffs) _coeffs = XYZ2sRGB_D65;
@@ -2632,7 +2564,7 @@ struct Luv2RGBfloat
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i = 0, dcn = dstcn;
+        int i = 0, dcn = dstcn, bIdx = blueIdx;
         const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -2769,6 +2701,7 @@ struct Luv2RGBfloat
     }
 
     int dstcn;
+    int blueIdx;
     float coeffs[9], un, vn;
     bool srgb;
     #if CV_SSE2
@@ -2797,16 +2730,13 @@ struct Luv2RGB_f
 };
 
 
-//TODO: rewrite it comletely
 struct RGB2Luvinteger
 {
     typedef uchar channel_type;
 
-    static const int luv_shift = ;
-
-    RGB2Luvinteger( int _srccn, int blueIdx, const float* _coeffs,
+    RGB2Luvinteger( int _srccn, int _blueIdx, const float* _coeffs,
                     const float* _whitept, bool _srgb )
-    : srccn(_srccn)
+    : srccn(_srccn), blueIdx(_blueIdx)
     {
         useInterpolation = (!_coeffs && !_whitept && _srgb
                             && enableRGB2LuvInterpolation);
@@ -2815,7 +2745,6 @@ struct RGB2Luvinteger
         if(!useInterpolation)
             throw std::runtime_error("Not implemented");
 
-        //TODO: rewrite this
         if(!_coeffs ) _coeffs  = sRGB2XYZ_D65;
         if(!_whitept) _whitept = D65;
 
@@ -2827,33 +2756,37 @@ struct RGB2Luvinteger
             coeffs[i*3+2] = cvRound(lshift*softfloat(_coeffs[i*3+2]));
             if(blueIdx == 0)
                 std::swap(coeffs[i*3], coeffs[i*3+2]);
+            CV_Assert( _coeffs[i*3] >= 0 && _coeffs[i*3+1] >= 0 && _coeffs[i*3+2] >= 0 &&
+                       softfloat(_coeffs[i*3]) +
+                       softfloat(_coeffs[i*3+1]) +
+                       softfloat(_coeffs[i*3+2]) < softfloat(1.5f) );
         }
 
         //TODO: asserts on coeffs
+        //or not
+        //CV_Assert(whitept[1] == 1.f);
 
         tab = _srgb ? sRGBGammaTab_b : linearGammaTab_b;
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        int i, j, scn = srccn;
-        float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
+        int i, scn = srccn, bIdx = blueIdx;
 
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
         int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
         int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
+        i = 0;
         if(useInterpolation)
         {
-            //TODO: this
             for(; i < n; i += 3, src += scn)
             {
                 int R = src[bIdx], G = src[1], B = src[bIdx^2];
 
+                //TODO: check 256
                 if(useXYZTable)
                 {
-                    //TODO: this
-
                     R = tab[R], G = tab[G], B = tab[B];
 
                     int fX = CV_DESCALE(R*C0 + G*C1 + B*C2, gamma_shift);
@@ -2864,25 +2797,30 @@ struct RGB2Luvinteger
                     R = (fX << (lab_base_shift - lab_shift))/255;
                     G = (fY << (lab_base_shift - lab_shift))/255;
                     B = (fZ << (lab_base_shift - lab_shift))/255;
+
+                    //TODO: replace by int calculations
+                    R = R*(1.f/((float)XYZmax));
+                    G = G*(1.f/((float)XYZmax));
+                    B = B*(1.f/((float)XYZmax));
                 }
                 else
                 {
                     R = R*LAB_BASE/255, G = G*LAB_BASE/255, B = B*LAB_BASE/255;
                 }
 
-                int L, a, b;
-                chooseInterpolate(R, G, B, RGB_TO_LAB, L, a, b);
+                int L, u, v;
+                chooseInterpolate(R, G, B, RGB_TO_LUV, L, u, v);
 
-
-                //TODO: rewrite this
+                //TODO: check 256
                 dst[i] = saturate_cast<uchar>(L/(LAB_BASE/255));
-                dst[i+1] = saturate_cast<uchar>(a/(LAB_BASE/255));
-                dst[i+2] = saturate_cast<uchar>(b/(LAB_BASE/255));
+                dst[i+1] = saturate_cast<uchar>(u/(LAB_BASE/255));
+                dst[i+2] = saturate_cast<uchar>(v/(LAB_BASE/255));
             }
         }
     }
 
     int srccn;
+    int blueIdx;
     bool useInterpolation;
     int coeffs[9];
     ushort* tab;
@@ -2895,9 +2833,10 @@ struct RGB2Luv_b
 
     RGB2Luv_b( int _srccn, int blueIdx, const float* _coeffs,
                const float* _whitept, bool _srgb )
-    : srccn(_srccn), fcvt(3, blueIdx, _coeffs, _whitept, _srgb)
+    : srccn(_srccn),
+      fcvt(3, blueIdx, _coeffs, _whitept, _srgb),
+      icvt(3, blueIdx, _coeffs, _whitept, _srgb)
     {
-        //TODO: check correctness of this condition
         useBitExactness = (!_coeffs && !_whitept && _srgb
                            && enableBitExactness
                            && enableRGB2LuvInterpolation);
@@ -3114,11 +3053,9 @@ struct Luv2RGBinteger
 {
     typedef uchar channel_type;
 
-    static const int shift = lab_shift+(base_shift-inv_gamma_shift);
-
-    Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
+    Luv2RGBinteger( int _dstcn, int _blueIdx, const float* _coeffs,
                     const float* _whitept, bool _srgb )
-    : dstcn(_dstcn)
+    : dstcn(_dstcn), blueIdx(_blueIdx)
     {
         initLabTabs();
 
@@ -3132,7 +3069,7 @@ struct Luv2RGBinteger
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        int i, j, dcn = dstcn;
+        int i, dcn = dstcn, bIdx = blueIdx;
         uchar alpha = ColorChannel<uchar>::max();
 
         i = 0;
@@ -3141,6 +3078,7 @@ struct Luv2RGBinteger
             for (; i < n*3; i += 3, dst += dcn)
             {
                 int ro, go, bo;
+                // 0 <= iL, iu, iv <= 255
                 int iL = src[i + 0], iu = src[i + 1], iv = src[i + 2];
 
                 //TODO: maybe 256?
@@ -3155,10 +3093,9 @@ struct Luv2RGBinteger
                 go = go*255/LAB_BASE;
                 bo = bo*255/LAB_BASE;
 
-                //TODO: blueIdx
-                dst[0] = saturate_cast<uchar>(bo);
-                dst[1] = saturate_cast<uchar>(go);
-                dst[2] = saturate_cast<uchar>(ro);
+                dst[  bIdx] = saturate_cast<uchar>(bo);
+                dst[     1] = saturate_cast<uchar>(go);
+                dst[bIdx^2] = saturate_cast<uchar>(ro);
                 if( dcn == 4 )
                     dst[3] = alpha;
             }
@@ -3180,10 +3117,12 @@ struct Luv2RGB_b
 
     Luv2RGB_b( int _dstcn, int blueIdx, const float* _coeffs,
                const float* _whitept, bool _srgb )
-    : dstcn(_dstcn), fcvt(3, blueIdx, _coeffs, _whitept, _srgb )
+    : dstcn(_dstcn),
+      fcvt(3, blueIdx, _coeffs, _whitept, _srgb),
+      icvt(3, blueIdx, _coeffs, _whitept, _srgb)
     {
         //TODO: check correctness of this condition
-        useBitExactness = (!_coeffs && !_whitept && srgb
+        useBitExactness = (!_coeffs && !_whitept && _srgb
                            && enableBitExactness
                            && enableLuv2RGBInterpolation);
 
@@ -3427,9 +3366,11 @@ struct Luv2RGB_b
     bool useBitExactness;
 };
 
+#undef clip
+
 /////////////////
 
-void printDiff(Mat a, string what, char* channel, double* maxMaxError, int nError)
+void printDiff(Mat a, string what, const char* channel, double* maxMaxError, int nError)
 {
     Scalar vmean, vdev;
     double vmin[3], vmax[3]; Point minPt[3], maxPt[3];
@@ -3457,7 +3398,11 @@ TEST(ImgProc_Color, LuvCheckWorking)
     const string baseDir = "/home/savuor/logs/ocv/lab_precision/";
     const bool randomFill = true;
 
-    //TODO: this
+    enableRGB2LuvInterpolation = true;
+    enableLuv2RGBInterpolation = true;
+    interType = LUV_INTER_NO;
+    useXYZTable = false;
+
     const int lutShift = (int)lab_lut_shift;
 
     //for Luv:
@@ -3540,6 +3485,7 @@ TEST(ImgProc_Color, LuvCheckWorking)
             const int ub2 = TO_BGR ? (INT_DATA ? spaceUp[2] : spaceUp_f[2]) : 256;
             for(int dim2 = lb2; dim2 < ub2; dim2++)
             {
+                int q = dim2 - lb2;
                 if(INT_DATA)
                 {
                     if(TO_BGR)
@@ -3593,38 +3539,38 @@ TEST(ImgProc_Color, LuvCheckWorking)
             {
                 if(TO_BGR)
                 {
-                    interToBgr_b(pSrc_b, pInter_b, pSize);
-                    goldToBgr_b(pSrc_b, pGold_b, pSize);
+                    interToBgr_b(pSrc_b, pInter_b, dim2size);
+                    goldToBgr_b(pSrc_b, pGold_b, dim2size);
 
-                    interFromBgr_b(pInter_b, pBackInter_b, pSize);
-                    goldFromBgr_b(pGold_b, pBackGold_b, pSize);
+                    interFromBgr_b(pInter_b, pBackInter_b, dim2size);
+                    goldFromBgr_b(pGold_b, pBackGold_b, dim2size);
                 }
                 else
                 {
-                    interFromBgr_b(pSrc_b, pInter_b, pSize);
-                    goldFromBgr_b(pSrc_b, pGold_b, pSize);
+                    interFromBgr_b(pSrc_b, pInter_b, dim2size);
+                    goldFromBgr_b(pSrc_b, pGold_b, dim2size);
 
-                    interToBgr_b(pInter_b, pBackInter_b, pSize);
-                    goldToBgr_b(pGold_b, pBackGold_b, pSize);
+                    interToBgr_b(pInter_b, pBackInter_b, dim2size);
+                    goldToBgr_b(pGold_b, pBackGold_b, dim2size);
                 }
             }
             else
             {
                 if(TO_BGR)
                 {
-                    interToBgr(pSrc, pInter, pSize);
-                    goldToBgr(pSrc, pGold, pSize);
+                    interToBgr(pSrc, pInter, dim2size);
+                    goldToBgr(pSrc, pGold, dim2size);
 
-                    interToLab(pInter, pBackInter, pSize);
-                    goldToLab(pGold, pBackGold, pSize);
+                    interFromBgr(pInter, pBackInter, dim2size);
+                    goldFromBgr(pGold, pBackGold, dim2size);
                 }
                 else
                 {
-                    interFromBgr(pSrc, pInter, pSize);
-                    goldFromBgr(pSrc, pGold, pSize);
+                    interFromBgr(pSrc, pInter, dim2size);
+                    goldFromBgr(pSrc, pGold, dim2size);
 
-                    interToBgr(pInter, pBackInter, pSize);
-                    goldToBgr(pGold, pBackGold, pSize);
+                    interToBgr(pInter, pBackInter, dim2size);
+                    goldToBgr(pGold, pBackGold, dim2size);
                 }
             }
         }
@@ -3643,20 +3589,27 @@ TEST(ImgProc_Color, LuvCheckWorking)
         Mat backInterGoldDiff = abs(mBackInter - mBackGold);
         printDiff(backInterGoldDiff, "backInterGoldDiff", channel, maxMaxError, 3);
 
-        Mat tmp = INT_DATA ? mGold : (TO_BGR ? mGold*256 : mGold+Scalar(-spaceDn_f[0], -spaceDn_f[1], -spaceDn_f[2]));
-        imwrite(format((dir + "noInter%03d.png").c_str(),  (TO_BGR ? l : blue)), tmp);
+        Scalar dn(spaceDn_f[0], spaceDn_f[1], spaceDn_f[2]);
+        /*Scalar range(spaceUp_f[0] - spaceDn_f[0], spaceUp_f[1] - spaceDn_f[1], spaceUp_f[2] - spaceDn_f[2]);*/
+        double range = max(spaceUp_f[0] - spaceDn_f[0],
+                       max(spaceUp_f[1] - spaceDn_f[1],
+                           spaceUp_f[2] - spaceDn_f[2]));
+        Mat tmp;
 
-        tmp = INT_DATA ? mInter : (TO_BGR ? mInter*256 : mInter+Scalar(-spaceDn_f[0], -spaceDn_f[1], -spaceDn_f[2]));
-        imwrite(format((dir + "useInter%03d.png").c_str(), (TO_BGR ? l : blue)), tmp);
+        tmp = INT_DATA ? mGold : (TO_BGR ? mGold*256 : (mGold-dn)*(256.f/range));
+        imwrite(format((dir + "noInter%03d.png").c_str(), dim0), tmp);
+
+        tmp = INT_DATA ? mInter : (TO_BGR ? mInter*256 : (mInter-dn)*(256.f/range));
+        imwrite(format((dir + "useInter%03d.png").c_str(), dim0), tmp);
 
         tmp = INT_DATA ? diff : (TO_BGR ? diff*256 : diff);
-        imwrite(format((dir + "absdiff%03d.png").c_str(),  (TO_BGR ? l : blue)), tmp);
+        imwrite(format((dir + "absdiff%03d.png").c_str(),  dim0), tmp);
 
         tmp = INT_DATA ? backGoldDiff : (TO_BGR ? backGoldDiff+Scalar::all(128) : backGoldDiff*256);
-        imwrite(format((dir + "backgolddiff%03d.png").c_str(),  (TO_BGR ? l : blue)), tmp);
+        imwrite(format((dir + "backgolddiff%03d.png").c_str(), dim0), tmp);
 
         tmp = INT_DATA ? backInterDiff : (TO_BGR ? backInterDiff+Scalar::all(128) : backInterDiff*256);
-        imwrite(format((dir + "backinterdiff%03d.png").c_str(), (TO_BGR ? l : blue)), tmp);
+        imwrite(format((dir + "backinterdiff%03d.png").c_str(), dim0), tmp);
 
         if(randomFill)
         {
@@ -3671,6 +3624,7 @@ TEST(ImgProc_Color, LuvCheckWorking)
                 const int ub2 = TO_BGR ? (INT_DATA ? spaceUp[2] : spaceUp_f[2]) : 256;
                 for(int dim2 = lb2; dim2 < ub2; dim2++)
                 {
+                    int q = dim2 - lb2;
                     if(INT_DATA)
                     {
                         if(TO_BGR)
@@ -3712,7 +3666,7 @@ TEST(ImgProc_Color, LuvCheckWorking)
         std::cout.flush();
         std::cout << "perf: ";
         TickMeter tm; double t;
-        //Lab to BGR
+        //Space to BGR
         tm.start();
         for(int i = 0; i < nPerfIters; i++)
         {
@@ -3725,11 +3679,11 @@ TEST(ImgProc_Color, LuvCheckWorking)
                 uchar* pInter_b = mInter.ptr<uchar>(p);
                 if(INT_DATA)
                 {
-                    interToBgr_b(pSrc_b, pInter_b, pSize);
+                    interToBgr_b(pSrc_b, pInter_b, dim2size);
                 }
                 else
                 {
-                    interToBgr(pSrc, pInter, pSize);
+                    interToBgr(pSrc, pInter, dim2size);
                 }
             }
         }
@@ -3748,18 +3702,18 @@ TEST(ImgProc_Color, LuvCheckWorking)
                 uchar* pGold_b = mGold.ptr<uchar>(p);
                 if(INT_DATA)
                 {
-                    goldToBgr_b(pSrc_b, pGold_b, pSize);
+                    goldToBgr_b(pSrc_b, pGold_b, dim2size);
                 }
                 else
                 {
-                    goldToBgr(pSrc, pGold, pSize);
+                    goldToBgr(pSrc, pGold, dim2size);
                 }
             }
         }
         tm.stop();
         t = tm.getTimeSec(); times[1] = min(times[1], t);
         std::cout << "gold "+spaceName+"2bgr: " << t << " ";
-        //RGB to Lab
+        //RGB to Space
         tm.reset(); tm.start();
         for(int i = 0; i < nPerfIters; i++)
         {
@@ -3772,11 +3726,11 @@ TEST(ImgProc_Color, LuvCheckWorking)
                 uchar* pInter_b = mInter.ptr<uchar>(p);
                 if(INT_DATA)
                 {
-                    interFromBgr_b(pSrc_b, pInter_b, pSize);
+                    interFromBgr_b(pSrc_b, pInter_b, dim2size);
                 }
                 else
                 {
-                    interFromBgr(pSrc, pInter, pSize);
+                    interFromBgr(pSrc, pInter, dim2size);
                 }
             }
         }
@@ -3786,7 +3740,7 @@ TEST(ImgProc_Color, LuvCheckWorking)
         tm.reset(); tm.start();
         for(int i = 0; i < nPerfIters; i++)
         {
-            for(size_t p = 0; p < pSize; p++)
+            for(size_t p = 0; p < dim2size; p++)
             {
                 float* pSrc   =   mSrc.ptr<float>(p);
                 float* pGold = mGold.ptr<float>(p);
@@ -3794,11 +3748,11 @@ TEST(ImgProc_Color, LuvCheckWorking)
                 uchar* pGold_b = mGold.ptr<uchar>(p);
                 if(INT_DATA)
                 {
-                    goldFromBgr_b(pSrc_b, pGold_b, pSize);
+                    goldFromBgr_b(pSrc_b, pGold_b, dim2size);
                 }
                 else
                 {
-                    goldFromBgr(pSrc, pGold, pSize);
+                    goldFromBgr(pSrc, pGold, dim2size);
                 }
             }
         }
