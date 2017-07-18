@@ -1207,7 +1207,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
 			}
 		}
 #else
-		cvStartReadSeq(nz, &reader);
+		cvStartReadSeq( nz, &reader );
 		for( j = k = 0; j < nz_count; j++ )
 		{
 			CvPoint pt;
