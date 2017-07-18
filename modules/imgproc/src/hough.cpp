@@ -44,6 +44,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
+#define HUI_TEST 1
+
 namespace cv
 {
 
@@ -1021,7 +1023,9 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     float* ddata;
     CvSeq *nz, *centers;
     float idp, dr;
-    CvSeqReader reader;
+#if !HUI_TEST
+	CvSeqReader reader;
+#endif
 
     edges.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
 
@@ -1047,14 +1051,11 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     nz = cvCreateSeq( CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), storage );
     centers = cvCreateSeq( CV_32SC1, sizeof(CvSeq), sizeof(int), storage );
 
+#if HUI_TEST
 	// Hui: here I am using a matrix for edge pixels instead of the nz sequence
-	bool huiTest = true;
-	cv::Mat mz;
-	if (huiTest)
-	{
-		mz = cv::Mat::zeros(img->rows, img->cols, CV_8UC1);
-		nz_count = 0;
-	}
+	cv::Mat mz = cv::Mat::zeros(img->rows, img->cols, CV_8UC1);
+	nz_count = 0;
+#endif
 
 	rows = img->rows;
 	cols = img->cols;
@@ -1068,10 +1069,9 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
 		const uchar* edges_row = edges->data.ptr + y*edges->step;
 		const short* dx_row = (const short*)(dx->data.ptr + y*dx->step);
 		const short* dy_row = (const short*)(dy->data.ptr + y*dy->step);
-		// Hui
-		uchar* mi;
-		if (huiTest)
-			mi = mz.ptr<uchar>(y);
+#if HUI_TEST
+		uchar* mi = mz.ptr<uchar>(y);
+#endif
 		
 		for( x = 0; x < cols; x++ )
 		{
@@ -1110,21 +1110,19 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
                 sx = -sx; sy = -sy;
             }
 
-			if (huiTest)
-			{
-				mi[x] = 1;  // indicate an edge point to consider
-				nz_count++;
-			}
-			else
-			{
-				pt.x = x; pt.y = y;
-				cvSeqPush( nz, &pt );
-			}
+#if HUI_TEST
+			mi[x] = 1;  // indicate an edge point to consider
+			nz_count++;
+#else
+			pt.x = x; pt.y = y;
+			cvSeqPush( nz, &pt );
+#endif
 		}
 	}
 
-	if (!huiTest)
-		nz_count = nz->total;
+#if !HUI_TEST
+	nz_count = nz->total;
+#endif
 	if( !nz_count )
 		return;
 	//Find possible circle centers
@@ -1181,53 +1179,50 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
 		if( j < circles->total )
 			continue;
 		// Estimate best radius
+#if HUI_TEST
 		// Here is my code
-		if (huiTest)
+		// only need to search local area of (cx, cy)
+		k = 0;
+		int xs = (int)MAX(cx - (max_radius + 1), 0);
+		int ys = (int)MAX(cy - (max_radius + 1), 0);
+		int xe = (int)MIN(cx + (max_radius + 1), cols);
+		int ye = (int)MIN(cy + (max_radius + 1), rows);
+		for (int iy = ys; iy < ye; iy++)
 		{
-			// only need to search local area of (cx, cy)
-			k = 0;
-			int xs = (int)MAX(cx - (max_radius + 1), 0);
-			int ys = (int)MAX(cy - (max_radius + 1), 0);
-			int xe = (int)MIN(cx + (max_radius + 1), cols);
-			int ye = (int)MIN(cy + (max_radius + 1), rows);
-			for (int iy = ys; iy < ye; iy++)
+			const uchar* mi = mz.ptr<uchar>(iy);
+			for (int ix = xs; ix < xe; ix++)
 			{
-				const uchar* mi = mz.ptr<uchar>(iy);
-				for (int ix = xs; ix < xe; ix++)
+				if (mi[ix] != 0)
 				{
-					if (mi[ix] != 0)
+					float _dx, _dy, _r2;
+					_dx = cx - ix; _dy = cy - iy;
+					_r2 = _dx*_dx + _dy*_dy;
+					if (min_radius2 <= _r2 && _r2 <= max_radius2)
 					{
-						float _dx, _dy, _r2;
-						_dx = cx - ix; _dy = cy - iy;
-						_r2 = _dx*_dx + _dy*_dy;
-						if (min_radius2 <= _r2 && _r2 <= max_radius2)
-						{
-							ddata[k] = _r2;
-							sort_buf[k] = k;
-							k++;
-						}
+						ddata[k] = _r2;
+						sort_buf[k] = k;
+						k++;
 					}
 				}
 			}
 		}
-		else
+#else
+		cvStartReadSeq(nz, &reader);
+		for( j = k = 0; j < nz_count; j++ )
 		{
-			cvStartReadSeq(nz, &reader);
-			for( j = k = 0; j < nz_count; j++ )
+			CvPoint pt;
+			float _dx, _dy, _r2;
+			CV_READ_SEQ_ELEM( pt, reader );
+			_dx = cx - pt.x; _dy = cy - pt.y;
+			_r2 = _dx*_dx + _dy*_dy;
+			if(min_radius2 <= _r2 && _r2 <= max_radius2 )
 			{
-				CvPoint pt;
-				float _dx, _dy, _r2;
-				CV_READ_SEQ_ELEM( pt, reader );
-				_dx = cx - pt.x; _dy = cy - pt.y;
-				_r2 = _dx*_dx + _dy*_dy;
-				if(min_radius2 <= _r2 && _r2 <= max_radius2 )
-				{
-					ddata[k] = _r2;
-					sort_buf[k] = k;
-					k++;
-				}
+				ddata[k] = _r2;
+				sort_buf[k] = k;
+				k++;
 			}
 		}
+#endif
 
 		int nz_count1 = k, start_idx = nz_count1 - 1;
 		if( nz_count1 == 0 )
