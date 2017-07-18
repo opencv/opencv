@@ -5,7 +5,7 @@
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
-//
+// 
 //
 //                           License Agreement
 //                For Open Source Computer Vision Library
@@ -926,8 +926,8 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
     {
         lines = cvCreateSeq( lineType, sizeof(CvSeq), elemSize, (CvMemStorage*)lineStorage );
     }
-    else
-    {
+	else
+	{
         mat = (CvMat*)lineStorage;
 
         if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) )
@@ -980,20 +980,20 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
         cv::Mat lx = method == CV_HOUGH_STANDARD || method == CV_HOUGH_MULTI_SCALE ?
             cv::Mat(nlines, 1, CV_32FC2, &l2[0]) : cv::Mat(nlines, 1, CV_32SC4, &l4[0]);
 
-        if (isStorage)
-        {
-            cvSeqPushMulti(lines, lx.ptr(), nlines);
-        }
+		if (isStorage)
+		{
+			cvSeqPushMulti(lines, lx.ptr(), nlines);
+		}
         else
         {
-            cv::Mat dst(nlines, 1, lx.type(), mat->data.ptr);
-            lx.copyTo(dst);
-        }
+			cv::Mat dst(nlines, 1, lx.type(), mat->data.ptr);
+			lx.copyTo(dst);
+		}
     }
 
-    if( isStorage )
-        return lines;
-    return 0;
+	if( isStorage )
+		return lines;
+	return 0;
 }
 
 
@@ -1047,24 +1047,37 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     nz = cvCreateSeq( CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), storage );
     centers = cvCreateSeq( CV_32SC1, sizeof(CvSeq), sizeof(int), storage );
 
-    rows = img->rows;
-    cols = img->cols;
-    arows = accum->rows - 2;
-    acols = accum->cols - 2;
-    adata = accum->data.i;
-    astep = accum->step/sizeof(adata[0]);
-    // Accumulate circle evidence for each edge pixel
-    for( y = 0; y < rows; y++ )
-    {
-        const uchar* edges_row = edges->data.ptr + y*edges->step;
-        const short* dx_row = (const short*)(dx->data.ptr + y*dx->step);
-        const short* dy_row = (const short*)(dy->data.ptr + y*dy->step);
+	// Hui: here I am using a matrix for edge pixels instead of the nz sequence
+	bool huiTest = true;
+	cv::Mat mz;
+	if (huiTest)
+	{
+		mz = cv::Mat::zeros(img->rows, img->cols, CV_8UC1);
+		nz_count = 0;
+	}
 
-        for( x = 0; x < cols; x++ )
-        {
-            float vx, vy;
-            int sx, sy, x0, y0, x1, y1, r;
-            CvPoint pt;
+	rows = img->rows;
+	cols = img->cols;
+	arows = accum->rows - 2;
+	acols = accum->cols - 2;
+	adata = accum->data.i;
+	astep = accum->step/sizeof(adata[0]);
+	// Accumulate circle evidence for each edge pixel
+	for( y = 0; y < rows; y++ )
+	{
+		const uchar* edges_row = edges->data.ptr + y*edges->step;
+		const short* dx_row = (const short*)(dx->data.ptr + y*dx->step);
+		const short* dy_row = (const short*)(dy->data.ptr + y*dy->step);
+		// Hui
+		uchar* mi;
+		if (huiTest)
+			mi = mz.ptr<uchar>(y);
+		
+		for( x = 0; x < cols; x++ )
+		{
+			float vx, vy;
+			int sx, sy, x0, y0, x1, y1, r;
+			CvPoint pt;
 
             vx = dx_row[x];
             vy = dy_row[x];
@@ -1097,127 +1110,168 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
                 sx = -sx; sy = -sy;
             }
 
-            pt.x = x; pt.y = y;
-            cvSeqPush( nz, &pt );
-        }
-    }
+			if (huiTest)
+			{
+				mi[x] = 1;  // indicate an edge point to consider
+				nz_count++;
+			}
+			else
+			{
+				pt.x = x; pt.y = y;
+				cvSeqPush( nz, &pt );
+			}
+		}
+	}
 
-    nz_count = nz->total;
-    if( !nz_count )
-        return;
-    //Find possible circle centers
-    for( y = 1; y < arows - 1; y++ )
-    {
-        for( x = 1; x < acols - 1; x++ )
-        {
-            int base = y*(acols+2) + x;
-            if( adata[base] > acc_threshold &&
-                adata[base] > adata[base-1] && adata[base] > adata[base+1] &&
-                adata[base] > adata[base-acols-2] && adata[base] > adata[base+acols+2] )
-                cvSeqPush(centers, &base);
-        }
-    }
+	if (!huiTest)
+		nz_count = nz->total;
+	if( !nz_count )
+		return;
+	//Find possible circle centers
+	for( y = 1; y < arows - 1; y++ )
+	{
+		for( x = 1; x < acols - 1; x++ )
+		{
+			int base = y*(acols+2) + x;
+			if( adata[base] > acc_threshold &&
+				adata[base] > adata[base-1] && adata[base] > adata[base+1] &&
+				adata[base] > adata[base-acols-2] && adata[base] > adata[base+acols+2] )
+				cvSeqPush(centers, &base);
+		}
+	}
 
-    center_count = centers->total;
-    if( !center_count )
-        return;
+	center_count = centers->total;
+	if( !center_count )
+		return;
 
-    sort_buf.resize( MAX(center_count,nz_count) );
-    cvCvtSeqToArray( centers, &sort_buf[0] );
-    /*Sort candidate centers in descending order of their accumulator values, so that the centers
-    with the most supporting pixels appear first.*/
-    std::sort(sort_buf.begin(), sort_buf.begin() + center_count, cv::hough_cmp_gt(adata));
-    cvClearSeq( centers );
-    cvSeqPushMulti( centers, &sort_buf[0], center_count );
+	sort_buf.resize( MAX(center_count,nz_count) );
+	cvCvtSeqToArray( centers, &sort_buf[0] );
+	/*Sort candidate centers in descending order of their accumulator values, so that the centers
+	with the most supporting pixels appear first.*/
+	std::sort(sort_buf.begin(), sort_buf.begin() + center_count, cv::hough_cmp_gt(adata));
+	cvClearSeq( centers );
+	cvSeqPushMulti( centers, &sort_buf[0], center_count );
 
-    dist_buf.reset(cvCreateMat( 1, nz_count, CV_32FC1 ));
-    ddata = dist_buf->data.fl;
+	dist_buf.reset(cvCreateMat( 1, nz_count, CV_32FC1 ));
+	ddata = dist_buf->data.fl;
 
-    dr = dp;
-    min_dist = MAX( min_dist, dp );
-    min_dist *= min_dist;
-    // For each found possible center
-    // Estimate radius and check support
-    for( i = 0; i < centers->total; i++ )
-    {
-        int ofs = *(int*)cvGetSeqElem( centers, i );
-        y = ofs/(acols+2);
-        x = ofs - (y)*(acols+2);
-        //Calculate circle's center in pixels
-        float cx = (float)((x + 0.5f)*dp), cy = (float)(( y + 0.5f )*dp);
-        float start_dist, dist_sum;
-        float r_best = 0;
-        int max_count = 0;
-        // Check distance with previously detected circles
-        for( j = 0; j < circles->total; j++ )
-        {
-            float* c = (float*)cvGetSeqElem( circles, j );
-            if( (c[0] - cx)*(c[0] - cx) + (c[1] - cy)*(c[1] - cy) < min_dist )
-                break;
-        }
+	dr = dp;
+	min_dist = MAX( min_dist, dp );
+	min_dist *= min_dist;
+	// For each found possible center
+	// Estimate radius and check support
+	for( i = 0; i < centers->total; i++ )
+	{
+		int ofs = *(int*)cvGetSeqElem( centers, i );
+		y = ofs/(acols+2);
+		x = ofs - (y)*(acols+2);
+		//Calculate circle's center in pixels
+		float cx = (float)((x + 0.5f)*dp), cy = (float)(( y + 0.5f )*dp);
+		float start_dist, dist_sum;
+		float r_best = 0;
+		int max_count = 0;
+		// Check distance with previously detected circles
+		for( j = 0; j < circles->total; j++ )
+		{
+			float* c = (float*)cvGetSeqElem( circles, j );
+			if( (c[0] - cx)*(c[0] - cx) + (c[1] - cy)*(c[1] - cy) < min_dist )
+				break;
+		}
 
-        if( j < circles->total )
-            continue;
-        // Estimate best radius
-        cvStartReadSeq( nz, &reader );
-        for( j = k = 0; j < nz_count; j++ )
-        {
-            CvPoint pt;
-            float _dx, _dy, _r2;
-            CV_READ_SEQ_ELEM( pt, reader );
-            _dx = cx - pt.x; _dy = cy - pt.y;
-            _r2 = _dx*_dx + _dy*_dy;
-            if(min_radius2 <= _r2 && _r2 <= max_radius2 )
-            {
-                ddata[k] = _r2;
-                sort_buf[k] = k;
-                k++;
-            }
-        }
+		if( j < circles->total )
+			continue;
+		// Estimate best radius
+		// Here is my code
+		if (huiTest)
+		{
+			// only need to search local area of (cx, cy)
+			k = 0;
+			int xs = (int)MAX(cx - (max_radius + 1), 0);
+			int ys = (int)MAX(cy - (max_radius + 1), 0);
+			int xe = (int)MIN(cx + (max_radius + 1), cols);
+			int ye = (int)MIN(cy + (max_radius + 1), rows);
+			for (int iy = ys; iy < ye; iy++)
+			{
+				const uchar* mi = mz.ptr<uchar>(iy);
+				for (int ix = xs; ix < xe; ix++)
+				{
+					if (mi[ix] != 0)
+					{
+						float _dx, _dy, _r2;
+						_dx = cx - ix; _dy = cy - iy;
+						_r2 = _dx*_dx + _dy*_dy;
+						if (min_radius2 <= _r2 && _r2 <= max_radius2)
+						{
+							ddata[k] = _r2;
+							sort_buf[k] = k;
+							k++;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			cvStartReadSeq(nz, &reader);
+			for( j = k = 0; j < nz_count; j++ )
+			{
+				CvPoint pt;
+				float _dx, _dy, _r2;
+				CV_READ_SEQ_ELEM( pt, reader );
+				_dx = cx - pt.x; _dy = cy - pt.y;
+				_r2 = _dx*_dx + _dy*_dy;
+				if(min_radius2 <= _r2 && _r2 <= max_radius2 )
+				{
+					ddata[k] = _r2;
+					sort_buf[k] = k;
+					k++;
+				}
+			}
+		}
 
-        int nz_count1 = k, start_idx = nz_count1 - 1;
-        if( nz_count1 == 0 )
-            continue;
-        dist_buf->cols = nz_count1;
-        cvPow( dist_buf, dist_buf, 0.5 );
-        // Sort non-zero pixels according to their distance from the center.
-        std::sort(sort_buf.begin(), sort_buf.begin() + nz_count1, cv::hough_cmp_gt((int*)ddata));
+		int nz_count1 = k, start_idx = nz_count1 - 1;
+		if( nz_count1 == 0 )
+			continue;
+		dist_buf->cols = nz_count1;
+		cvPow( dist_buf, dist_buf, 0.5 );
+		// Sort non-zero pixels according to their distance from the center.
+		std::sort(sort_buf.begin(), sort_buf.begin() + nz_count1, cv::hough_cmp_gt((int*)ddata));
 
-        dist_sum = start_dist = ddata[sort_buf[nz_count1-1]];
-        for( j = nz_count1 - 2; j >= 0; j-- )
-        {
-            float d = ddata[sort_buf[j]];
+		dist_sum = start_dist = ddata[sort_buf[nz_count1-1]];
+		for( j = nz_count1 - 2; j >= 0; j-- )
+		{
+			float d = ddata[sort_buf[j]];
 
-            if( d > max_radius )
-                break;
+			if( d > max_radius )
+				break;
 
-            if( d - start_dist > dr )
-            {
-                float r_cur = ddata[sort_buf[(j + start_idx)/2]];
-                if( (start_idx - j)*r_best >= max_count*r_cur ||
-                    (r_best < FLT_EPSILON && start_idx - j >= max_count) )
-                {
-                    r_best = r_cur;
-                    max_count = start_idx - j;
-                }
-                start_dist = d;
-                start_idx = j;
-                dist_sum = 0;
-            }
-            dist_sum += d;
-        }
-        // Check if the circle has enough support
-        if( max_count > acc_threshold )
-        {
-            float c[3];
-            c[0] = cx;
-            c[1] = cy;
-            c[2] = (float)r_best;
-            cvSeqPush( circles, c );
-            if( circles->total > circles_max )
-                return;
-        }
-    }
+			if( d - start_dist > dr )
+			{
+				float r_cur = ddata[sort_buf[(j + start_idx)/2]];
+				if( (start_idx - j)*r_best >= max_count*r_cur ||
+					(r_best < FLT_EPSILON && start_idx - j >= max_count) )
+				{
+					r_best = r_cur;
+					max_count = start_idx - j;
+				}
+				start_dist = d;
+				start_idx = j;
+				dist_sum = 0;
+			}
+			dist_sum += d;
+		}
+		// Check if the circle has enough support
+		if( max_count > acc_threshold )
+		{
+			float c[3];
+			c[0] = cx;
+			c[1] = cy;
+			c[2] = (float)r_best;
+			cvSeqPush( circles, c );
+			if( circles->total > circles_max )
+				return;
+		}
+	}
 }
 
 CV_IMPL CvSeq*
@@ -1259,8 +1313,8 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
         circles = cvCreateSeq( CV_32FC3, sizeof(CvSeq),
             sizeof(float)*3, (CvMemStorage*)circle_storage );
     }
-    else
-    {
+	else
+	{
         mat = (CvMat*)circle_storage;
 
         if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) ||
@@ -1295,7 +1349,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
             mat->rows = circles->total;
     }
 
-    return 0;
+	return 0;
 }
 
 
