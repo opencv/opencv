@@ -101,6 +101,9 @@ OCL_PERF_TEST_P(stitch, b12, TEST_DETECTORS)
 
 OCL_PERF_TEST_P(stitch, boat, TEST_DETECTORS)
 {
+    Size expected_dst_size(10789, 2663);
+    checkDeviceMaxMemoryAllocSize(expected_dst_size, CV_16SC3, 4);
+
     UMat pano;
 
     vector<Mat> _imgs;
@@ -132,8 +135,8 @@ OCL_PERF_TEST_P(stitch, boat, TEST_DETECTORS)
         stopTimer();
     }
 
-    EXPECT_NEAR(pano.size().width, 10789, 200);
-    EXPECT_NEAR(pano.size().height, 2663, 100);
+    EXPECT_NEAR(pano.size().width, expected_dst_size.width, 200);
+    EXPECT_NEAR(pano.size().height, expected_dst_size.height, 100);
 
     SANITY_CHECK_NOTHING();
 }
