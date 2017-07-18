@@ -205,6 +205,10 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& ra
                         const T * b_up_ptr = extended_src_.ptr<T>(start_by - template_window_half_size_ - 1 + y);
                         const T * b_down_ptr = extended_src_.ptr<T>(start_by + template_window_half_size_ + y);
 
+// MSVC 2015 generates unaligned destination for "movaps" instruction for 32-bit builds
+#if defined _MSC_VER && _MSC_VER == 1900 && !defined _WIN64
+#pragma loop(no_vector)
+#endif
                         for (int x = 0; x < search_window_size; x++)
                         {
                             // remove from current pixel sum column sum with index "first_col_num"
