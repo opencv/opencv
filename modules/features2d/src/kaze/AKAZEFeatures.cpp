@@ -580,7 +580,7 @@ public:
       e.Lsmooth.release();
 
       // compute determinant scaled by sigma
-      const int sigma_size_quat = e.sigma_size * e.sigma_size * e.sigma_size * e.sigma_size;
+      float sigma_size_quat = (float)(e.sigma_size * e.sigma_size * e.sigma_size * e.sigma_size);
       compute_determinant(Lxx, Lxy, Lyy, e.Ldet, sigma_size_quat);
     }
   }
