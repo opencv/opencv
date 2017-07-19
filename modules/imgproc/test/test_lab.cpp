@@ -254,12 +254,9 @@ static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;
 static int abToXZ_b[LAB_BASE*9/4];
-//TODO: multiply it by 8 later
+// Luv constants
 static bool enableRGB2LuvInterpolation = false;
-static bool enableLuv2RGBInterpolation = false;
-static int16_t RGB2LuvLut_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
-static int16_t XYZ2LuvLut_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
-static int16_t Luv2RGBLut_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
+static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 // Luv -> XYZ is an awful function for interpolation
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(uHigh-uLow);
@@ -499,8 +496,8 @@ static void initLabTabs()
             }
         }
 
-        if(enableRGB2LuvInterpolation ||
-           enableLuv2RGBInterpolation)
+        //TODO: integrate it with the block above
+        if(enableRGB2LuvInterpolation)
         {
             softfloat coeffs[9];
 
@@ -529,16 +526,12 @@ static void initLabTabs()
                 coeffs[i+2*3] = softfloat(XYZ2sRGB_D65[i+2*3]);
             }
 
-            softfloat D0 = coeffs[0], D1 = coeffs[1], D2 = coeffs[2],
-                      D3 = coeffs[3], D4 = coeffs[4], D5 = coeffs[5],
-                      D6 = coeffs[6], D7 = coeffs[7], D8 = coeffs[8];
-
             static const softfloat lld(LAB_LUT_DIM - 1), lbase((int)LAB_BASE);
             //u, v: [-134.0, 220.0], [-140.0, 122.0]
             static const softfloat f100(100);
-            static const softfloat f9of4 = softfloat(9)/softfloat(4), f1of4 = softfloat::one()/softfloat(4);
+            static const softfloat f9of4 = softfloat(9)/softfloat(4);
             static const softfloat f116(116), f16(16), f15(15), f3(3);
-            static const softfloat f9033 = softfloat(29*29*29)/softfloat(27);
+            AutoBuffer<int16_t> RGB2Luvprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
             for(int p = 0; p < LAB_LUT_DIM; p++)
             {
                 for(int q = 0; q < LAB_LUT_DIM; q++)
@@ -567,70 +560,38 @@ static void initLabTabs()
                             softfloat u = L*(X*d - un);
                             softfloat v = L*(f9of4*Y*d - vn);
 
-                            RGB2LuvLut_s16[idx  ] = (int16_t)cvRound(lbase*L/f100);
-                            RGB2LuvLut_s16[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
-                            RGB2LuvLut_s16[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
+                            RGB2Luvprev[idx  ] = (int16_t)cvRound(lbase*L/f100);
+                            RGB2Luvprev[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
+                            RGB2Luvprev[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
                         }
+                    }
+                }
+            }
 
-                        {
-                            //X,Y,Z ranges are lying inside white point which is D65
-                            //but we choose one upper bound for simplicity
-                            softfloat X = softfloat(p)*XYZmax/lld;
-                            softfloat Y = softfloat(q)*XYZmax/lld;
-                            softfloat Z = softfloat(r)*XYZmax/lld;
+            for(int p = 0; p < LAB_LUT_DIM; p++)
+            {
+                for(int q = 0; q < LAB_LUT_DIM; q++)
+                {
+                    for(int r = 0; r < LAB_LUT_DIM; r++)
+                    {
+                        #define FILL(_p, _q, _r) \
+                        do {\
+                            int idxold = 0;\
+                            idxold += min(p+(_p), (int)(LAB_LUT_DIM-1))*3;\
+                            idxold += min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;\
+                            idxold += min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;\
+                            int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*(_p)+2*(_q)+(_r);\
+                            RGB2LuvLUT_s16[idxnew]    = RGB2Luvprev[idxold];\
+                            RGB2LuvLUT_s16[idxnew+8]  = RGB2Luvprev[idxold+1];\
+                            RGB2LuvLUT_s16[idxnew+16] = RGB2Luvprev[idxold+2];\
+                        } while(0)
 
-                            softfloat L = Y < lthresh ? mulAdd(Y, lscale, lbias) : cbrt(Y);
-                            L = L*f116 - f16;
+                        FILL(0, 0, 0); FILL(0, 0, 1);
+                        FILL(0, 1, 0); FILL(0, 1, 1);
+                        FILL(1, 0, 0); FILL(1, 0, 1);
+                        FILL(1, 1, 0); FILL(1, 1, 1);
 
-                            softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat(FLT_EPSILON));
-                            softfloat u = L*(X*d - un);
-                            softfloat v = L*(f9of4*Y*d - vn);
-
-                            XYZ2LuvLut_s16[idx  ] = (int16_t)cvRound(lbase*L/f100);
-                            XYZ2LuvLut_s16[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
-                            XYZ2LuvLut_s16[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
-                        }
-
-                        //Luv 2 RGB LUT building
-                        {
-                            softfloat L = softfloat(p)*f100/lld;
-                            softfloat u = softfloat(q)*uRange/lld + uLow;
-                            softfloat v = softfloat(r)*vRange/lld + vLow;
-
-                            softfloat X, Y, Z;
-                            if(L >= softfloat(8))
-                            {
-                                Y = (L + f16)/f116;
-                                Y = Y*Y*Y;
-                            }
-                            else
-                            {
-                                Y = L / f9033;
-                            }
-                            softfloat up = softfloat(3)*(u + L*un);
-                            softfloat vp = f1of4/((v + L*vn));
-                            if(vp >  f1of4) vp =  f1of4;
-                            if(vp < -f1of4) vp = -f1of4;
-                            X = Y*softfloat(3)*up*vp;
-                            Z = Y*((softfloat(12*13)*L - up)*vp - softfloat(5));
-
-                            softfloat R = X*D0 + Y*D1 + Z*D2;
-                            softfloat G = X*D3 + Y*D4 + Z*D5;
-                            softfloat B = X*D6 + Y*D7 + Z*D8;
-
-                            R = min(softfloat::one(), max(softfloat::zero(), R));
-                            G = min(softfloat::one(), max(softfloat::zero(), G));
-                            B = min(softfloat::one(), max(softfloat::zero(), B));
-
-                            R = applyInvGamma(R);
-                            G = applyInvGamma(G);
-                            B = applyInvGamma(B);
-
-                            Luv2RGBLut_s16[idx  ] = (int16_t)cvRound(lbase*R);
-                            Luv2RGBLut_s16[idx+1] = (int16_t)cvRound(lbase*G);
-                            Luv2RGBLut_s16[idx+2] = (int16_t)cvRound(lbase*B);
-                            // Luv -> XYZ is an awful function for interpolation
-                        }
+                        #undef FILL
                     }
                 }
             }
@@ -644,10 +605,6 @@ static void initLabTabs()
 static inline void trilinearInterpolate(int cx, int cy, int cz, int16_t* LUT,
                                         int& a, int& b, int& c)
 {
-    //TODO: remove it later
-    //it's made for 8-cell LUT
-    throw std::runtime_error("Not implemented");
-
     //LUT idx of origin pt of cube
     int tx = cx >> (lab_base_shift - lab_lut_shift);
     int ty = cy >> (lab_base_shift - lab_lut_shift);
@@ -774,6 +731,9 @@ static inline void trilinearPackedInterpolate(const v_uint16x8 inX, const v_uint
 static inline void noInterpolate(int cx, int cy, int cz, int16_t* LUT,
                                  int& a, int& b, int& c)
 {
+    //TODO: rewrite to 8-cell LUT
+    throw std::runtime_error("Not implemented");
+
     cx = (cx >= 0) ? (cx <= LAB_BASE ? cx : LAB_BASE) : 0;
     cy = (cy >= 0) ? (cy <= LAB_BASE ? cy : LAB_BASE) : 0;
     cz = (cz >= 0) ? (cz <= LAB_BASE ? cz : LAB_BASE) : 0;
@@ -798,6 +758,9 @@ static inline void noInterpolate(int cx, int cy, int cz, int16_t* LUT,
 static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
                                     int& a, int& b, int& c)
 {
+    //TODO: rewrite to 8-cell LUT
+    throw std::runtime_error("Not implemented");
+
     //LUT idx of origin pt of cube
     int tx = cx >> (lab_base_shift - lab_lut_shift);
     int ty = cy >> (lab_base_shift - lab_lut_shift);
@@ -926,71 +889,7 @@ static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
     c = CV_DESCALE(c0*w0 + c1*w1 + c2*w2 + c3*w3, lab_base_shift);
 }
 
-// cx, cy, cz are in [0; LAB_BASE]
-static inline void trilinearBasicInterpolate(int cx, int cy, int cz, int16_t* LUT,
-                                             int& a, int& b, int& c)
-{
-    //LUT idx of origin pt of cube
-    int tx = cx >> (lab_base_shift - lab_lut_shift);
-    int ty = cy >> (lab_base_shift - lab_lut_shift);
-    int tz = cz >> (lab_base_shift - lab_lut_shift);
 
-    //x, y, z are [0; TRILINEAR_BASE)
-    static const int bitMask = (1 << trilinear_shift) - 1;
-    int x = (cx >> (lab_base_shift - 8 - 1)) & bitMask;
-    int y = (cy >> (lab_base_shift - 8 - 1)) & bitMask;
-    int z = (cz >> (lab_base_shift - 8 - 1)) & bitMask;
-
-    int w[8];
-    int16_t* ptTriLUT = &trilinearLUT[8*x + 8*TRILINEAR_BASE*y + 8*TRILINEAR_BASE*TRILINEAR_BASE*z];
-    for(int i = 0; i < 8; i++)
-    {
-        w[i] = ptTriLUT[i];
-    }
-
-    int aa[8], bb[8], cc[8];
-
-#define SETPT(n, _x, _y, _z) \
-    do\
-    {\
-        if(w[n])\
-        {\
-            int16_t* ptLUT = &LUT[3*(tx+(_x)) + 3*LAB_LUT_DIM*(ty+(_y)) + 3*LAB_LUT_DIM*LAB_LUT_DIM*(tz+(_z))];\
-            aa[n] = ptLUT[0];\
-            bb[n] = ptLUT[1];\
-            cc[n] = ptLUT[2];\
-        }\
-        else\
-        {\
-            aa[n] = bb[n] = cc[n] = 0;\
-        }\
-    }\
-    while(0)
-
-    SETPT(0, 0, 0, 0);
-    SETPT(1, 0, 0, 1);
-    SETPT(2, 0, 1, 0);
-    SETPT(3, 0, 1, 1);
-    SETPT(4, 1, 0, 0);
-    SETPT(5, 1, 0, 1);
-    SETPT(6, 1, 1, 0);
-    SETPT(7, 1, 1, 1);
-
-#undef SETPT
-
-    a = aa[0]*w[0]+aa[1]*w[1]+aa[2]*w[2]+aa[3]*w[3]+aa[4]*w[4]+aa[5]*w[5]+aa[6]*w[6]+aa[7]*w[7];
-    b = bb[0]*w[0]+bb[1]*w[1]+bb[2]*w[2]+bb[3]*w[3]+bb[4]*w[4]+bb[5]*w[5]+bb[6]*w[6]+bb[7]*w[7];
-    c = cc[0]*w[0]+cc[1]*w[1]+cc[2]*w[2]+cc[3]*w[3]+cc[4]*w[4]+cc[5]*w[5]+cc[6]*w[6]+cc[7]*w[7];
-
-    a = CV_DESCALE(a, trilinear_shift*3);
-    b = CV_DESCALE(b, trilinear_shift*3);
-    c = CV_DESCALE(c, trilinear_shift*3);
-}
-
-enum Cvt_Type
-{
-    RGB_TO_LUV, LUV_TO_RGB
-};
 enum InterType
 {
     LUV_INTER_NO,
@@ -998,17 +897,13 @@ enum InterType
     LUV_INTER_TRILINEAR,
 };
 static InterType interType = LUV_INTER_NO;
-static bool useXYZTable = false;
 
-static inline void chooseInterpolate(int cx, int cy, int cz, Cvt_Type type,
-                                     int& a, int& b, int& c)
+static inline void chooseInterpolate(int cx, int cy, int cz, int& a, int& b, int& c)
 {
     int ia, ib, ic;
     int icx = cx, icy = cy, icz = cz;
     int16_t* iLUT;
-    iLUT = (type == LUV_TO_RGB) ?
-                Luv2RGBLut_s16 :
-                (useXYZTable ? XYZ2LuvLut_s16 : RGB2LuvLut_s16 );
+    iLUT = RGB2LuvLUT_s16;
     switch (interType)
     {
     case LUV_INTER_NO:
@@ -1018,7 +913,7 @@ static inline void chooseInterpolate(int cx, int cy, int cz, Cvt_Type type,
         tetraInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
         break;
     case LUV_INTER_TRILINEAR:
-        trilinearBasicInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
+        trilinearInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
         break;
     default:
         throw std::runtime_error("What the hell, did you forget to initialize variable?!");
@@ -1178,27 +1073,9 @@ struct RGB2Luvfloat
                 float G = clip(src[1]);
                 float B = clip(src[bIdx^2]);
 
-                if(useXYZTable)
-                {
-                    if( gammaTab )
-                    {
-                        R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
-                        G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
-                        B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
-                    }
-
-                    float X = R*C0 + G*C1 + B*C2;
-                    float Y = R*C3 + G*C4 + B*C5;
-                    float Z = R*C6 + G*C7 + B*C8;
-
-                    R = X*(1.f/((float)XYZmax));
-                    G = Y*(1.f/((float)XYZmax));
-                    B = Z*(1.f/((float)XYZmax));
-                }
-
                 int iL, iu, iv;
                 int iR = cvRound(R*LAB_BASE), iG = cvRound(G*LAB_BASE), iB = cvRound(B*LAB_BASE);
-                chooseInterpolate(iR, iG, iB, RGB_TO_LUV, iL, iu, iv);
+                chooseInterpolate(iR, iG, iB, iL, iu, iv);
                 float L = iL*1.0f/LAB_BASE, u = iu*1.0f/LAB_BASE, v = iv*1.0f/LAB_BASE;
 
                 dst[i] = L*100.0f;
@@ -1400,16 +1277,11 @@ struct Luv2RGBfloat
 {
     typedef float channel_type;
 
-    Luv2RGBfloat( int _dstcn, int _blueIdx, const float* _coeffs,
+    Luv2RGBfloat( int _dstcn, int blueIdx, const float* _coeffs,
                   const float* whitept, bool _srgb )
-    : dstcn(_dstcn), blueIdx(_blueIdx), srgb(_srgb)
+    : dstcn(_dstcn),  srgb(_srgb)
     {
         initLabTabs();
-
-        //TODO: remove enableBitExactness
-        useInterpolation = (!_coeffs && !whitept && srgb
-                            && enableBitExactness
-                            && enableLuv2RGBInterpolation);
 
         if(!_coeffs) _coeffs = XYZ2sRGB_D65;
         if(!whitept) whitept = D65;
@@ -1516,7 +1388,7 @@ struct Luv2RGBfloat
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i = 0, dcn = dstcn, bIdx = blueIdx;
+        int i = 0, dcn = dstcn;
         const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -1525,31 +1397,6 @@ struct Luv2RGBfloat
         float alpha = ColorChannel<float>::max();
         float _un = un, _vn = vn;
         n *= 3;
-
-        if(useInterpolation)
-        {
-            for (; i < n; i += 3, dst += dcn)
-            {
-                float l = src[i];
-                float u = src[i + 1];
-                float v = src[i + 2];
-
-                int iL, iu, iv;
-                iL = cvRound(l*LAB_BASE/100.f);
-                iu = cvRound((u-(float)uLow)*LAB_BASE/((float)uRange));
-                iv = cvRound((v-(float)vLow)*LAB_BASE/((float)vRange));
-                int ir, ig, ib;
-                chooseInterpolate(iL, iu, iv, LUV_TO_RGB, ir, ig, ib);
-                float ro = ir*1.f/LAB_BASE;
-                float go = ig*1.f/LAB_BASE;
-                float bo = ib*1.f/LAB_BASE;
-
-                //TODO: what's wrong with bIdx again?
-                dst[bIdx^2] = ro, dst[1] = go, dst[bIdx] = bo;
-                if( dcn == 4 )
-                    dst[3] = alpha;
-            }
-        }
 
         #if CV_SSE2
         if (haveSIMD)
@@ -1654,13 +1501,11 @@ struct Luv2RGBfloat
     }
 
     int dstcn;
-    int blueIdx;
     float coeffs[9], un, vn;
     bool srgb;
     #if CV_SSE2
     bool haveSIMD;
     #endif
-    bool useInterpolation;
 };
 
 
@@ -1697,38 +1542,11 @@ struct RGB2Luvinteger
         //TODO: remove it somehow
         if(!useInterpolation)
             throw std::runtime_error("Not implemented");
-
-        if(!_coeffs ) _coeffs  = sRGB2XYZ_D65;
-        if(!_whitept) _whitept = D65;
-
-        static const softfloat lshift(1 << lab_shift);
-        for(int i = 0; i < 3; i++)
-        {
-            coeffs[i*3  ] = cvRound(lshift*softfloat(_coeffs[i*3  ]));
-            coeffs[i*3+1] = cvRound(lshift*softfloat(_coeffs[i*3+1]));
-            coeffs[i*3+2] = cvRound(lshift*softfloat(_coeffs[i*3+2]));
-            if(blueIdx == 0)
-                std::swap(coeffs[i*3], coeffs[i*3+2]);
-            CV_Assert( _coeffs[i*3] >= 0 && _coeffs[i*3+1] >= 0 && _coeffs[i*3+2] >= 0 &&
-                       softfloat(_coeffs[i*3]) +
-                       softfloat(_coeffs[i*3+1]) +
-                       softfloat(_coeffs[i*3+2]) < softfloat(1.5f) );
-        }
-
-        //TODO: asserts on coeffs
-        //or not
-        //CV_Assert(whitept[1] == 1.f);
-
-        tab = _srgb ? sRGBGammaTab_b : linearGammaTab_b;
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int i, scn = srccn, bIdx = blueIdx;
-
-        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
-        int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
-        int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
         i = 0; n *= 3;
         if(useInterpolation)
@@ -1738,31 +1556,10 @@ struct RGB2Luvinteger
                 int R = src[bIdx], G = src[1], B = src[bIdx^2];
 
                 //TODO: check 256
-                if(useXYZTable)
-                {
-                    R = tab[R], G = tab[G], B = tab[B];
-
-                    int fX = CV_DESCALE(R*C0 + G*C1 + B*C2, gamma_shift);
-                    int fY = CV_DESCALE(R*C3 + G*C4 + B*C5, gamma_shift);
-                    int fZ = CV_DESCALE(R*C6 + G*C7 + B*C8, gamma_shift);
-
-                    //fX, fY, fZ are shifted on lab_shift and x255 at tab
-                    R = (fX << (lab_base_shift - lab_shift))/255;
-                    G = (fY << (lab_base_shift - lab_shift))/255;
-                    B = (fZ << (lab_base_shift - lab_shift))/255;
-
-                    //TODO: replace by int calculations
-                    R = R*(1.f/((float)XYZmax));
-                    G = G*(1.f/((float)XYZmax));
-                    B = B*(1.f/((float)XYZmax));
-                }
-                else
-                {
-                    R = R*LAB_BASE/255, G = G*LAB_BASE/255, B = B*LAB_BASE/255;
-                }
+                R = R*LAB_BASE/255, G = G*LAB_BASE/255, B = B*LAB_BASE/255;
 
                 int L, u, v;
-                chooseInterpolate(R, G, B, RGB_TO_LUV, L, u, v);
+                chooseInterpolate(R, G, B, L, u, v);
 
                 //TODO: check 256
                 dst[i] = saturate_cast<uchar>(L/(LAB_BASE/255));
@@ -1770,13 +1567,13 @@ struct RGB2Luvinteger
                 dst[i+2] = saturate_cast<uchar>(v/(LAB_BASE/255));
             }
         }
+
+        //TODO: do we need a code for other params?
     }
 
     int srccn;
     int blueIdx;
     bool useInterpolation;
-    int coeffs[9];
-    ushort* tab;
 };
 
 
@@ -2011,56 +1808,24 @@ struct Luv2RGBinteger
     : dstcn(_dstcn), blueIdx(_blueIdx)
     {
         initLabTabs();
-
-        useInterpolation = (!_coeffs && !_whitept && _srgb
-                            && enableLuv2RGBInterpolation);
-
-        //TODO: remove it somehow
-        if(!useInterpolation)
-            throw std::runtime_error("Not implemented");
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        //TODO: remove it
+        throw std::runtime_error("Not implemented");
+
         int i, dcn = dstcn, bIdx = blueIdx;
         uchar alpha = ColorChannel<uchar>::max();
 
         i = 0;
-        if(useInterpolation)
-        {
-            for (; i < n*3; i += 3, dst += dcn)
-            {
-                int ro, go, bo;
-                // 0 <= iL, iu, iv <= 255
-                int iL = src[i + 0], iu = src[i + 1], iv = src[i + 2];
 
-                //TODO: maybe 256?
-                iL = iL*LAB_BASE/255;
-                iu = iu*LAB_BASE/255;
-                iv = iv*LAB_BASE/255;
 
-                chooseInterpolate(iL, iu, iv, LUV_TO_RGB, ro, go, bo);
-
-                //TODO: maybe 256?
-                ro = ro*255/LAB_BASE;
-                go = go*255/LAB_BASE;
-                bo = bo*255/LAB_BASE;
-
-                dst[  bIdx] = saturate_cast<uchar>(bo);
-                dst[     1] = saturate_cast<uchar>(go);
-                dst[bIdx^2] = saturate_cast<uchar>(ro);
-                if( dcn == 4 )
-                    dst[3] = alpha;
-            }
-        }
-
-        //TODO: remove useInterpolation and this comment
-        //if no other code required
+        //TODO: this
     }
 
     int dstcn;
     int blueIdx;
-    bool useInterpolation;
 };
 
 
@@ -2075,9 +1840,10 @@ struct Luv2RGB_b
       icvt(3, blueIdx, _coeffs, _whitept, _srgb)
     {
         //TODO: check correctness of this condition
-        useBitExactness = (!_coeffs && !_whitept && _srgb
-                           && enableBitExactness
-                           && enableLuv2RGBInterpolation);
+        //TODO: enable it when it is fixed
+        useBitExactness = (false &&
+                           !_coeffs && !_whitept && _srgb
+                           && enableBitExactness);
 
         #if CV_NEON
         static const softfloat f255(255);
@@ -2352,9 +2118,7 @@ TEST(ImgProc_Color, LuvCheckWorking)
     const bool randomFill = true;
 
     enableRGB2LuvInterpolation = true;
-    enableLuv2RGBInterpolation = true;
     interType = LUV_INTER_NO;
-    useXYZTable = false;
 
     const int lutShift = (int)lab_lut_shift;
 
