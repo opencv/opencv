@@ -525,9 +525,9 @@ static void initLabTabs()
 
             for( i = 0; i < 3; i++ )
             {
-                coeffs[i+2*3] = softfloat(XYZ2sRGB_D65[i+0*3]);
+                coeffs[i+0*3] = softfloat(XYZ2sRGB_D65[i+0*3]);
                 coeffs[i+1*3] = softfloat(XYZ2sRGB_D65[i+1*3]);
-                coeffs[i+0*3] = softfloat(XYZ2sRGB_D65[i+2*3]);
+                coeffs[i+2*3] = softfloat(XYZ2sRGB_D65[i+2*3]);
             }
 
             softfloat D0 = coeffs[0], D1 = coeffs[1], D2 = coeffs[2],
