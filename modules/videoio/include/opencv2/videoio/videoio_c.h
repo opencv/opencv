@@ -558,7 +558,7 @@ CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 */
 CVAPI(CvVideoWriter*) cvCreateVideoWriter( const char* filename, int fourcc,
                                            double fps, CvSize frame_size,
-                                           int is_color CV_DEFAULT(1));
+                                           int is_color CV_DEFAULT(1), int bitrate CV_DEFAULT(0));
 
 /** @brief write frame to video file
 */

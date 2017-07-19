@@ -839,6 +839,7 @@ public:
     @param frameSize Size of the video frames.
     @param isColor If it is not zero, the encoder will expect and encode color frames, otherwise it
     will work with grayscale frames (the flag is currently supported on Windows only).
+    @param bitrate If is zero, bitrate will be set automatically
 
     @b Tips:
     - With some backends `fourcc=-1` pops up the codec selection dialog from the system.
@@ -849,14 +850,14 @@ public:
     - If FFMPEG is enabled, using `codec=0; fps=0;` you can create an uncompressed (raw) video file.
     */
     CV_WRAP VideoWriter(const String& filename, int fourcc, double fps,
-                Size frameSize, bool isColor = true);
+                Size frameSize, bool isColor = true, int bitrate = 0);
 
     /** @overload
     The `apiPreference` parameter allows to specify API backends to use. Can be used to enforce a specific reader implementation
     if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_GSTREAMER.
      */
     CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
-                Size frameSize, bool isColor = true);
+                Size frameSize, bool isColor = true, int bitrate = 0);
 
     /** @brief Default destructor
 
@@ -873,12 +874,12 @@ public:
     The method first calls VideoWriter::release to close the already opened file.
      */
     CV_WRAP virtual bool open(const String& filename, int fourcc, double fps,
-                      Size frameSize, bool isColor = true);
+                      Size frameSize, bool isColor = true, int bitrate = 0);
 
     /** @overload
      */
     CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
-                      Size frameSize, bool isColor = true);
+                      Size frameSize, bool isColor = true, int bitrate = 0);
 
     /** @brief Returns true if video writer has been successfully initialized.
     */

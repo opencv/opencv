@@ -145,7 +145,7 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char* filename);
 
 
 CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color );
+                                            double fps, CvSize frameSize, int is_color, int bitrate );
 
 CvCapture * cvCreateFileCapture_QT (const char  * filename);
 CvCapture * cvCreateCameraCapture_QT  (const int     index);
