@@ -2072,6 +2072,8 @@ static inline void chooseInterpolate(int cx, int cy, int cz, Cvt_Type type,
         tetraInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
         break;
     case LUV_INTER_TRILINEAR:
+        //it's made for 8-cell LUT
+        throw std::runtime_error("Not implemented");
         trilinearInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
         break;
     default:
@@ -2093,7 +2095,10 @@ struct RGB2Luvfloat
         volatile int i;
         initLabTabs();
 
-        useInterpolation = (!_coeffs && !whitept && srgb && enableRGB2LuvInterpolation);
+        //TODO: remove enableBitExactness
+        useInterpolation = (!_coeffs && !whitept && srgb &&
+                            enableBitExactness &&
+                            enableRGB2LuvInterpolation);
 
         if(!_coeffs) _coeffs = sRGB2XYZ_D65;
         if(!whitept) whitept = D65;
@@ -2456,7 +2461,9 @@ struct Luv2RGBfloat
     {
         initLabTabs();
 
+        //TODO: remove enableBitExactness
         useInterpolation = (!_coeffs && !whitept && srgb
+                            && enableBitExactness
                             && enableLuv2RGBInterpolation);
 
         if(!_coeffs) _coeffs = XYZ2sRGB_D65;
@@ -3387,7 +3394,7 @@ void printDiff(Mat a, string what, const char* channel, double* maxMaxError, int
         maxMaxError[nError] = max(maxMaxError[nError], vmax[c]);
     }
     std::cout << std::endl;
-};
+}
 
 TEST(ImgProc_Color, LuvCheckWorking)
 {
