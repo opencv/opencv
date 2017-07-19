@@ -376,6 +376,7 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
 {
     CV_UNUSED(frameSize);
     CV_UNUSED(is_color);
+    CV_UNUSED(bitrate);
 
     CvVideoWriter *result = 0;
 
