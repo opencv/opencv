@@ -644,6 +644,10 @@ static void initLabTabs()
 static inline void trilinearInterpolate(int cx, int cy, int cz, int16_t* LUT,
                                         int& a, int& b, int& c)
 {
+    //TODO: remove it later
+    //it's made for 8-cell LUT
+    throw std::runtime_error("Not implemented");
+
     //LUT idx of origin pt of cube
     int tx = cx >> (lab_base_shift - lab_lut_shift);
     int ty = cy >> (lab_base_shift - lab_lut_shift);
@@ -922,6 +926,67 @@ static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
     c = CV_DESCALE(c0*w0 + c1*w1 + c2*w2 + c3*w3, lab_base_shift);
 }
 
+// cx, cy, cz are in [0; LAB_BASE]
+static inline void trilinearBasicInterpolate(int cx, int cy, int cz, int16_t* LUT,
+                                             int& a, int& b, int& c)
+{
+    //LUT idx of origin pt of cube
+    int tx = cx >> (lab_base_shift - lab_lut_shift);
+    int ty = cy >> (lab_base_shift - lab_lut_shift);
+    int tz = cz >> (lab_base_shift - lab_lut_shift);
+
+    //x, y, z are [0; TRILINEAR_BASE)
+    static const int bitMask = (1 << trilinear_shift) - 1;
+    int x = (cx >> (lab_base_shift - 8 - 1)) & bitMask;
+    int y = (cy >> (lab_base_shift - 8 - 1)) & bitMask;
+    int z = (cz >> (lab_base_shift - 8 - 1)) & bitMask;
+
+    int w[8];
+    int16_t* ptTriLUT = &trilinearLUT[8*x + 8*TRILINEAR_BASE*y + 8*TRILINEAR_BASE*TRILINEAR_BASE*z];
+    for(int i = 0; i < 8; i++)
+    {
+        w[i] = ptTriLUT[i];
+    }
+
+    int aa[8], bb[8], cc[8];
+
+#define SETPT(n, _x, _y, _z) \
+    do\
+    {\
+        if(w[n])\
+        {\
+            int16_t* ptLUT = &LUT[3*(tx+(_x)) + 3*LAB_LUT_DIM*(ty+(_y)) + 3*LAB_LUT_DIM*LAB_LUT_DIM*(tz+(_z))];\
+            aa[n] = ptLUT[0];\
+            bb[n] = ptLUT[1];\
+            cc[n] = ptLUT[2];\
+        }\
+        else\
+        {\
+            aa[n] = bb[n] = cc[n] = 0;\
+        }\
+    }\
+    while(0)
+
+    SETPT(0, 0, 0, 0);
+    SETPT(1, 0, 0, 1);
+    SETPT(2, 0, 1, 0);
+    SETPT(3, 0, 1, 1);
+    SETPT(4, 1, 0, 0);
+    SETPT(5, 1, 0, 1);
+    SETPT(6, 1, 1, 0);
+    SETPT(7, 1, 1, 1);
+
+#undef SETPT
+
+    a = aa[0]*w[0]+aa[1]*w[1]+aa[2]*w[2]+aa[3]*w[3]+aa[4]*w[4]+aa[5]*w[5]+aa[6]*w[6]+aa[7]*w[7];
+    b = bb[0]*w[0]+bb[1]*w[1]+bb[2]*w[2]+bb[3]*w[3]+bb[4]*w[4]+bb[5]*w[5]+bb[6]*w[6]+bb[7]*w[7];
+    c = cc[0]*w[0]+cc[1]*w[1]+cc[2]*w[2]+cc[3]*w[3]+cc[4]*w[4]+cc[5]*w[5]+cc[6]*w[6]+cc[7]*w[7];
+
+    a = CV_DESCALE(a, trilinear_shift*3);
+    b = CV_DESCALE(b, trilinear_shift*3);
+    c = CV_DESCALE(c, trilinear_shift*3);
+}
+
 enum Cvt_Type
 {
     RGB_TO_LUV, LUV_TO_RGB
@@ -953,9 +1018,7 @@ static inline void chooseInterpolate(int cx, int cy, int cz, Cvt_Type type,
         tetraInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
         break;
     case LUV_INTER_TRILINEAR:
-        //it's made for 8-cell LUT
-        throw std::runtime_error("Not implemented");
-        trilinearInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
+        trilinearBasicInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
         break;
     default:
         break;
