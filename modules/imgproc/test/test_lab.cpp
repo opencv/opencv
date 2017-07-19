@@ -1008,7 +1008,7 @@ static inline void chooseInterpolate(int cx, int cy, int cz, Cvt_Type type,
     int16_t* iLUT;
     iLUT = (type == LUV_TO_RGB) ?
                 Luv2RGBLut_s16 :
-                (useXYZTable ? RGB2LuvLut_s16 : XYZ2LuvLut_s16);
+                (useXYZTable ? XYZ2LuvLut_s16 : RGB2LuvLut_s16 );
     switch (interType)
     {
     case LUV_INTER_NO:
@@ -1021,6 +1021,7 @@ static inline void chooseInterpolate(int cx, int cy, int cz, Cvt_Type type,
         trilinearBasicInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
         break;
     default:
+        throw std::runtime_error("What the hell, did you forget to initialize variable?!");
         break;
     }
     a = ia, b = ib, c = ic;
@@ -1543,7 +1544,8 @@ struct Luv2RGBfloat
                 float go = ig*1.f/LAB_BASE;
                 float bo = ib*1.f/LAB_BASE;
 
-                dst[bIdx] = ro, dst[1] = go, dst[bIdx^2] = bo;
+                //TODO: what's wrong with bIdx again?
+                dst[bIdx^2] = ro, dst[1] = go, dst[bIdx] = bo;
                 if( dcn == 4 )
                     dst[3] = alpha;
             }
@@ -1728,7 +1730,7 @@ struct RGB2Luvinteger
         int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
         int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
-        i = 0;
+        i = 0; n *= 3;
         if(useInterpolation)
         {
             for(; i < n; i += 3, src += scn)
@@ -2464,9 +2466,9 @@ TEST(ImgProc_Color, LuvCheckWorking)
                     else
                     {
                         //BGR
-                        pRow[3*q + blueIdx]       = 1.0f*dim0;
-                        pRow[3*q + 1]             = 1.0f*dim1;
-                        pRow[3*q + (blueIdx ^ 2)] = 1.0f*dim2;
+                        pRow[3*q + blueIdx]       = 1.0f*dim0/255.f;
+                        pRow[3*q + 1]             = 1.0f*dim1/255.f;
+                        pRow[3*q + (blueIdx ^ 2)] = 1.0f*dim2/255.f;
                     }
                 }
             }
