@@ -262,6 +262,8 @@ ocl_non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float
 static inline void
 non_linear_diffusion_step(const UMat& Lt, const UMat& Lf, UMat& Lstep, float step_size)
 {
+  CV_INSTRUMENT_REGION()
+
   Lstep.create(Lt.size(), Lt.type());
 
   CV_OCL_RUN(true, ocl_non_linear_diffusion_step(Lt, Lf, Lstep, step_size));
