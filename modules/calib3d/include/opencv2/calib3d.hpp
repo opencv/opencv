@@ -237,7 +237,8 @@ enum { SOLVEPNP_ITERATIVE = 0,
        SOLVEPNP_P3P       = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
        SOLVEPNP_DLS       = 3, //!< A Direct Least-Squares (DLS) Method for PnP  @cite hesch2011direct
        SOLVEPNP_UPNP      = 4, //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
-       SOLVEPNP_AP3P      = 5  //!< An Efficient Algebraic Solution to the Perspective-Three-Point Problem @cite Ke17
+       SOLVEPNP_AP3P      = 5, //!< An Efficient Algebraic Solution to the Perspective-Three-Point Problem @cite Ke17
+       SOLVEPNP_MAX_COUNT      //!< Used for count
 };
 
 enum { CALIB_CB_ADAPTIVE_THRESH = 1,
