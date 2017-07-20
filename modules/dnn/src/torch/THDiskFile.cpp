@@ -3,9 +3,6 @@
 #include "THGeneral.h"
 #include "THDiskFile.h"
 #include "THFilePrivate.h"
-#if defined(_MSC_VER) && 1600 <= _MSC_VER
-#include <cstdint>
-#endif
 
 namespace TH
 {
