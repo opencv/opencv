@@ -375,7 +375,7 @@ Cv64suf;
 *                                    C++ 11                                              *
 \****************************************************************************************/
 #ifndef CV_CXX11
-#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1600)
+#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
 #    define CV_CXX11 1
 #  endif
 #else
