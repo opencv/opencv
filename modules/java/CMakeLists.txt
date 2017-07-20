@@ -18,6 +18,12 @@ if(EXISTS ${CMAKE_BINARY_DIR}/gen)
   execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/gen")
 endif()
 
+if(ANDROID)
+  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}")
+else()
+  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+endif()
+
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/generator/src/cpp")
 ocv_module_include_directories("${OpenCV_SOURCE_DIR}/include")
 
@@ -69,7 +75,7 @@ macro(glob_more_specific_sources _type _root _output)
   elseif(${_type} STREQUAL "CPP")
     set(_masks "${_root}/src/cpp/*.cpp")
   elseif(${_type} STREQUAL "JAVA")
-    set(_masks "${_root}/src/java/*.java")
+    set(_masks "${_root}/src/java/*.java" "${_root}/src/java/*.java.in")
   elseif(${_type} STREQUAL "AIDL")
     set(_masks "${_root}/src/java/*.aidl")
   endif()
@@ -257,22 +263,49 @@ endforeach()
 # step 3: copy files to destination
 set(step3_input_files ${generated_java_sources} ${handwritten_java_sources} ${handwritten_aidl_sources})
 set(copied_files "")
+set(java_src_dir "${OpenCV_BINARY_DIR}/src")
 foreach(java_file ${step3_input_files})
   get_filename_component(java_file_name "${java_file}" NAME)
+  set(__configure 0)
+  if (java_file_name MATCHES "\\.in$")
+    string(REGEX REPLACE "\\.in$" "" java_file_name "${java_file_name}")
+    set(__configure 1)
+  endif()
   string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
-  string(REPLACE "+" "/" java_file_name "${java_file_name}")
-  set(output_name "${OpenCV_BINARY_DIR}/src/org/opencv/${java_file_name}")
-  add_custom_command(OUTPUT "${output_name}"
-                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${java_file}" "${output_name}"
-                     MAIN_DEPENDENCY "${java_file}"
-                     DEPENDS ${step1_depends} ${generated_java_sources} ${handwritten_java_sources}
-                     COMMENT "Generating src/org/opencv/${java_file_name}"
-                    )
-  list(APPEND copied_files "${output_name}")
+  if(EXISTS "${java_file}")
+    file(STRINGS "${java_file}" PACKAGE_STR LIMIT_COUNT 1 REGEX "package.*;$")
+  else()
+    set(PACKAGE_STR "")
+  endif()
+  if(PACKAGE_STR)
+    list(GET PACKAGE_STR 0 package_name)
+    string(REGEX REPLACE "^package[ ]+" "" package_name "${package_name}")
+    string(REGEX REPLACE ";$" "" package_name "${package_name}")
+
+    string(REGEX REPLACE ".*\\+" "" java_file_name "${java_file_name}")
+    string(REPLACE "." "/" package_path "${package_name}")
+    set(output_name "${package_path}/${java_file_name}")
+  else()
+    string(REPLACE "+" "/" java_file_name "${java_file_name}")
+    set(output_name "org/opencv/${java_file_name}")
+  endif()
+  if(__configure)
+    configure_file("${java_file}" "${java_src_dir}/${output_name}" @ONLY)
+  elseif(NOT "${java_file}" MATCHES "${OpenCV_BINARY_DIR}/")
+    configure_file("${java_file}" "${java_src_dir}/${output_name}" COPYONLY)
+  else()
+    add_custom_command(OUTPUT "${java_src_dir}/${output_name}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${java_file}" "${java_src_dir}/${output_name}"
+                       MAIN_DEPENDENCY "${java_file}"
+                       DEPENDS "${java_file}"
+                       COMMENT "Generating src/${output_name}"
+    )
+  endif()
+  list(APPEND copied_files "${java_src_dir}/${output_name}")
 
   if(ANDROID)
-    get_filename_component(install_subdir "${java_file_name}" PATH)
-    install(FILES "${output_name}" DESTINATION "${JAVA_INSTALL_ROOT}/src/org/opencv/${install_subdir}" COMPONENT java)
+    get_filename_component(install_subdir "${output_name}" PATH)
+    install(FILES "${java_src_dir}/${output_name}" DESTINATION "${JAVA_INSTALL_ROOT}/src/${install_subdir}" COMPONENT java)
   endif()
 endforeach()
 
@@ -333,12 +366,6 @@ if(ANDROID AND ANDROID_EXECUTABLE)
 endif(ANDROID AND ANDROID_EXECUTABLE)
 
 set(step3_depends ${step2_depends} ${step3_input_files} ${copied_files})
-
-if(ANDROID)
-  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}")
-else()
-  set(LIB_NAME_SUFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
-endif()
 
 file(MAKE_DIRECTORY "${OpenCV_BINARY_DIR}/bin")
 

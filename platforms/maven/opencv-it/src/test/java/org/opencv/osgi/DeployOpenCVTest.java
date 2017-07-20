@@ -32,7 +32,7 @@ public class DeployOpenCVTest {
     /*
     The expected string in Karaf logs when the bundle has deployed and native library loaded.
     */
-    private static final String OPEN_CV_SUCCESSFUL_LOAD_STRING = "Successfully loaded OpenCV native library.";
+    private static final String OPENCV_SUCCESSFUL_LOAD_STRING = "Successfully loaded OpenCV native library.";
 
     private static final String KARAF_VERSION = "4.0.6";
 
@@ -65,7 +65,7 @@ public class DeployOpenCVTest {
             mavenBundle()
             .groupId("org.opencv")
             .artifactId("opencv")
-            .version("3.2.0"),
+            .version("3.3.0"),
             logLevel(LogLevelOption.LogLevel.INFO)
         };
     }
@@ -78,7 +78,7 @@ public class DeployOpenCVTest {
     public void testOpenCVNativeLibraryLoadSuccess() {
 
         Iterable<PaxLoggingEvent> loggingEvents = logService.getEvents();
-        boolean loadSuccessful = logsContainsMessage(loggingEvents, OPEN_CV_SUCCESSFUL_LOAD_STRING);
+        boolean loadSuccessful = logsContainsMessage(loggingEvents, OPENCV_SUCCESSFUL_LOAD_STRING);
 
         TestCase.assertTrue("Could not determine if OpenCV library successfully loaded from the logs.", loadSuccessful);
 
