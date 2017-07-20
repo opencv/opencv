@@ -61,22 +61,22 @@ public:
         eps[SOLVEPNP_DLS] = 1.0e-2;
         eps[SOLVEPNP_UPNP] = 1.0e-2;
         totalTestsCount = 10;
+        pointsCount = 500;
     }
     ~CV_solvePnPRansac_Test() {}
 protected:
-    void generate3DPointCloud(vector<Point3f>& points, Point3f pmin = Point3f(-1,
-        -1, 5), Point3f pmax = Point3f(1, 1, 10))
+    void generate3DPointCloud(vector<Point3f>& points,
+        Point3f pmin = Point3f(-1, -1, 5),
+        Point3f pmax = Point3f(1, 1, 10))
     {
-        const Point3f delta = pmax - pmin;
+        RNG rng = ::theRNG(); // fix the seed to use "fixed" input 3D points
+
         for (size_t i = 0; i < points.size(); i++)
         {
-            Point3f p(float(rand()) / RAND_MAX, float(rand()) / RAND_MAX,
-                float(rand()) / RAND_MAX);
-            p.x *= delta.x;
-            p.y *= delta.y;
-            p.z *= delta.z;
-            p = p + pmin;
-            points[i] = p;
+            float _x = rng.uniform(pmin.x, pmax.x);
+            float _y = rng.uniform(pmin.y, pmax.y);
+            float _z = rng.uniform(pmin.z, pmax.z);
+            points[i] = Point3f(_x, _y, _z);
         }
     }
 
@@ -138,8 +138,7 @@ protected:
             }
         }
 
-        solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
-            false, 500, 0.5f, 0.99, inliers, method);
+        solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec, false, pointsCount, 0.5f, 0.99, inliers, method);
 
         bool isTestSuccess = inliers.size() >= points.size()*0.95;
 
@@ -158,26 +157,25 @@ protected:
         ts->set_failed_test_info(cvtest::TS::OK);
 
         vector<Point3f> points, points_dls;
-        const int pointsCount = 500;
         points.resize(pointsCount);
         generate3DPointCloud(points);
 
-        const int methodsCount = 6;
         RNG rng = ts->get_rng();
 
 
         for (int mode = 0; mode < 2; mode++)
         {
-            for (int method = 0; method < methodsCount; method++)
+            for (int method = 0; method < SOLVEPNP_MAX_COUNT; method++)
             {
                 double maxError = 0;
                 int successfulTestsCount = 0;
                 for (int testIndex = 0; testIndex < totalTestsCount; testIndex++)
                 {
                     if (runTest(rng, mode, method, points, eps, maxError))
+                    {
                         successfulTestsCount++;
+                    }
                 }
-                //cout <<  maxError << " " << successfulTestsCount << endl;
                 if (successfulTestsCount < 0.7*totalTestsCount)
                 {
                     ts->printf( cvtest::TS::LOG, "Invalid accuracy for method %d, failed %d tests from %d, maximum error equals %f, distortion mode equals %d\n",
@@ -190,8 +188,9 @@ protected:
             }
         }
     }
-    double eps[6];
+    double eps[SOLVEPNP_MAX_COUNT];
     int totalTestsCount;
+    int pointsCount;
 };
 
 class CV_solvePnP_Test : public CV_solvePnPRansac_Test
@@ -201,7 +200,7 @@ public:
     {
         eps[SOLVEPNP_ITERATIVE] = 1.0e-6;
         eps[SOLVEPNP_EPNP] = 1.0e-6;
-        eps[SOLVEPNP_P3P] = 1.0e-4;
+        eps[SOLVEPNP_P3P] = 2.0e-4;
         eps[SOLVEPNP_AP3P] = 1.0e-4;
         eps[SOLVEPNP_DLS] = 1.0e-4;
         eps[SOLVEPNP_UPNP] = 1.0e-4;
@@ -216,38 +215,53 @@ protected:
         Mat trueRvec, trueTvec;
         Mat intrinsics, distCoeffs;
         generateCameraMatrix(intrinsics, rng);
-        if (method == 4) intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
+        if (method == SOLVEPNP_DLS)
+        {
+            intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
+        }
         if (mode == 0)
+        {
             distCoeffs = Mat::zeros(4, 1, CV_64FC1);
+        }
         else
+        {
             generateDistCoeffs(distCoeffs, rng);
+        }
         generatePose(trueRvec, trueTvec, rng);
 
         std::vector<Point3f> opoints;
-        if (method == 2 || method == 5)
+        switch(method)
         {
-            opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
+            case SOLVEPNP_P3P:
+            case SOLVEPNP_AP3P:
+                opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
+                break;
+            case SOLVEPNP_UPNP:
+                opoints = std::vector<Point3f>(points.begin(), points.begin()+50);
+                break;
+            default:
+                opoints = points;
+                break;
         }
-        else if(method == 3)
-        {
-            opoints = std::vector<Point3f>(points.begin(), points.begin()+50);
-        }
-        else
-            opoints = points;
 
         vector<Point2f> projectedPoints;
         projectedPoints.resize(opoints.size());
         projectPoints(Mat(opoints), trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
 
-        solvePnP(opoints, projectedPoints, intrinsics, distCoeffs, rvec, tvec,
-            false, method);
+        bool isEstimateSuccess = solvePnP(opoints, projectedPoints, intrinsics, distCoeffs, rvec, tvec, false, method);
+        if (isEstimateSuccess == false)
+        {
+            return isEstimateSuccess;
+        }
 
         double rvecDiff = norm(rvec-trueRvec), tvecDiff = norm(tvec-trueTvec);
         bool isTestSuccess = rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
 
         double error = rvecDiff > tvecDiff ? rvecDiff : tvecDiff;
         if (error > maxError)
+        {
             maxError = error;
+        }
 
         return isTestSuccess;
     }
@@ -258,7 +272,7 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
  public:
   CV_solveP3P_Test()
   {
-    eps[SOLVEPNP_P3P] = 1.0e-4;
+    eps[SOLVEPNP_P3P] = 2.0e-4;
     eps[SOLVEPNP_AP3P] = 1.0e-4;
     totalTestsCount = 1000;
   }
@@ -311,12 +325,11 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
     ts->set_failed_test_info(cvtest::TS::OK);
 
     vector<Point3f> points, points_dls;
-    const int pointsCount = 500;
     points.resize(pointsCount);
     generate3DPointCloud(points);
 
     const int methodsCount = 2;
-    int methods[methodsCount] = {SOLVEPNP_P3P, SOLVEPNP_AP3P};
+    int methods[] = {SOLVEPNP_P3P, SOLVEPNP_AP3P};
     RNG rng = ts->get_rng();
 
     for (int mode = 0; mode < 2; mode++)
@@ -330,7 +343,6 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
           if (runTest(rng, mode, methods[method], points, eps, maxError))
             successfulTestsCount++;
         }
-        //cout <<  maxError << " " << successfulTestsCount << endl;
         if (successfulTestsCount < 0.7*totalTestsCount)
         {
           ts->printf( cvtest::TS::LOG, "Invalid accuracy for method %d, failed %d tests from %d, maximum error equals %f, distortion mode equals %d\n",
