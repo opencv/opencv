@@ -29,16 +29,13 @@ CV_UndistortTest::~CV_UndistortTest() {}
 
 void CV_UndistortTest::generate3DPointCloud(vector<Point3f>& points, Point3f pmin, Point3f pmax)
 {
-    const Point3f delta = pmax - pmin;
+    RNG rng_Point = ::theRNG(); // fix the seed to use "fixed" input 3D points
     for (size_t i = 0; i < points.size(); i++)
     {
-        Point3f p(float(rand()) / RAND_MAX, float(rand()) / RAND_MAX,
-            float(rand()) / RAND_MAX);
-        p.x *= delta.x;
-        p.y *= delta.y;
-        p.z *= delta.z;
-        p = p + pmin;
-        points[i] = p;
+        float _x = rng_Point.uniform(pmin.x, pmax.x);
+        float _y = rng_Point.uniform(pmin.y, pmax.y);
+        float _z = rng_Point.uniform(pmin.z, pmax.z);
+        points[i] = Point3f(_x, _y, _z);
     }
 }
 void CV_UndistortTest::generateCameraMatrix(Mat& cameraMatrix)
