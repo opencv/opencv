@@ -255,7 +255,7 @@ static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;
 static int abToXZ_b[LAB_BASE*9/4];
 // Luv constants
-static bool enableRGB2LuvInterpolation = false;
+static const bool enableRGB2LuvInterpolation = true;
 static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 // Luv -> XYZ is an awful function for interpolation
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
@@ -602,7 +602,7 @@ static void initLabTabs()
 }
 
 // cx, cy, cz are in [0; LAB_BASE]
-static inline void trilinearInterpolate(int cx, int cy, int cz, int16_t* LUT,
+static inline void trilinearInterpolate(int cx, int cy, int cz, const int16_t* LUT,
                                         int& a, int& b, int& c)
 {
     //LUT idx of origin pt of cube
@@ -610,7 +610,7 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, int16_t* LUT,
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
 
-    int16_t* baseLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
+    const int16_t* baseLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
     int aa[8], bb[8], cc[8];
     for(int i = 0; i < 8; i++)
     {
@@ -728,7 +728,7 @@ static inline void trilinearPackedInterpolate(const v_uint16x8 inX, const v_uint
 
 ////////////////////////////////////////////////////////////////////
 
-static inline void noInterpolate(int cx, int cy, int cz, int16_t* LUT,
+static inline void noInterpolate(int cx, int cy, int cz, const int16_t* LUT,
                                  int& a, int& b, int& c)
 {
     cx = (cx >= 0) ? (cx <= LAB_BASE ? cx : LAB_BASE) : 0;
@@ -740,26 +740,23 @@ static inline void noInterpolate(int cx, int cy, int cz, int16_t* LUT,
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
 
-    int16_t* ptLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
+    const int16_t* ptLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
     a = ptLUT[0];
     b = ptLUT[8];
     c = ptLUT[16];
 }
 
 // cx, cy, cz are in [0; LAB_BASE]
-static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
+static inline void tetraInterpolate(int cx, int cy, int cz, const int16_t* LUT,
                                     int& a, int& b, int& c)
 {
-    //TODO: rewrite to 8-cell LUT
-    throw std::runtime_error("Not implemented");
-
     //LUT idx of origin pt of cube
     int tx = cx >> (lab_base_shift - lab_lut_shift);
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
 
-    int16_t* baseLUT = &LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz];
-    int16_t* p1, *p2;
+    const int16_t* baseLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
+    const int16_t* p1, *p2;
 
     //x, y, z are [0; LAB_BASE)
     static const int bitMask = (1 << lab_base_shift) - 1;
@@ -769,31 +766,30 @@ static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
 
     //sorted x, y, z
     int s0, s1, s2;
-
     if(x > y)
     {
         if(y > z)
         {
             const int x1 = 1, y1 = 0, z1 = 0;
             const int x2 = 1, y2 = 1, z2 = 0;
-            p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
-            p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+            p1 = &baseLUT[4*x1 + 2*y1 + z1];
+            p2 = &baseLUT[4*x2 + 2*y2 + z2];
             s0 = x, s1 = y, s2 = z;
         }
         else if(x > z)
         {
             const int x1 = 1, y1 = 0, z1 = 0;
             const int x2 = 1, y2 = 0, z2 = 1;
-            p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
-            p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+            p1 = &baseLUT[4*x1 + 2*y1 + z1];
+            p2 = &baseLUT[4*x2 + 2*y2 + z2];
             s0 = x, s1 = z, s2 = y;
         }
         else
         {
             const int x1 = 0, y1 = 0, z1 = 1;
             const int x2 = 1, y2 = 0, z2 = 1;
-            p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
-            p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+            p1 = &baseLUT[4*x1 + 2*y1 + z1];
+            p2 = &baseLUT[4*x2 + 2*y2 + z2];
             s0 = z, s1 = x, s2 = y;
         }
     }
@@ -805,16 +801,16 @@ static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
             {
                 const int x1 = 0, y1 = 1, z1 = 0;
                 const int x2 = 1, y2 = 1, z2 = 0;
-                p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
-                p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+                p1 = &baseLUT[4*x1 + 2*y1 + z1];
+                p2 = &baseLUT[4*x2 + 2*y2 + z2];
                 s0 = y, s1 = x, s2 = z;
             }
             else
             {
                 const int x1 = 0, y1 = 1, z1 = 0;
                 const int x2 = 0, y2 = 1, z2 = 1;
-                p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
-                p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+                p1 = &baseLUT[4*x1 + 2*y1 + z1];
+                p2 = &baseLUT[4*x2 + 2*y2 + z2];
                 s0 = y, s1 = z, s2 = x;
             }
         }
@@ -822,8 +818,8 @@ static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
         {
             const int x1 = 0, y1 = 0, z1 = 1;
             const int x2 = 0, y2 = 1, z2 = 1;
-            p1 = &baseLUT[3*x1 + 3*LAB_LUT_DIM*y1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z1];
-            p2 = &baseLUT[3*x2 + 3*LAB_LUT_DIM*y2 + 3*LAB_LUT_DIM*LAB_LUT_DIM*z2];
+            p1 = &baseLUT[4*x1 + 2*y1 + z1];
+            p2 = &baseLUT[4*x2 + 2*y2 + z2];
             s0 = z, s1 = y, s2 = x;
         }
     }
@@ -832,49 +828,22 @@ static inline void tetraInterpolate(int cx, int cy, int cz, int16_t* LUT,
     int w0 = LAB_BASE - s0, w1 = s0 - s1, w2 = s1 - s2, w3 = s2;
     int a0, a1, a2, a3, b0, b1, b2, b3, c0, c1, c2, c3;
 
-    //in case of going out of LUT bounds the corresponding weights will be zero
-    if(w0)
-    {
-        a0 = baseLUT[0];
-        b0 = baseLUT[1];
-        c0 = baseLUT[2];
-    }
-    else
-    {
-        a0 = b0 = c0 = 0;
-    }
-    if(w1)
-    {
-        a1 = p1[0];
-        b1 = p1[1];
-        c1 = p1[2];
-    }
-    else
-    {
-        a1 = b1 = c1 = 0;
-    }
-    if(w2)
-    {
-        a2 = p2[0];
-        b2 = p2[1];
-        c2 = p2[2];
-    }
-    else
-    {
-        a2 = b2 = c2 = 0;
-    }
-    if(w3)
-    {
-        a3 = baseLUT[3*1 + 3*LAB_LUT_DIM*1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*1];
-        b3 = baseLUT[3*1 + 3*LAB_LUT_DIM*1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*1 + 1];
-        c3 = baseLUT[3*1 + 3*LAB_LUT_DIM*1 + 3*LAB_LUT_DIM*LAB_LUT_DIM*1 + 2];
-    }
-    else
-    {
-        a3 = b3 = c3 = 0;
-    }
+    //we won't check the bounds since they are checked at LUT building
+    a0 = baseLUT[0];
+    b0 = baseLUT[8];
+    c0 = baseLUT[16];
 
-#undef SETPT
+    a1 = p1[0];
+    b1 = p1[8];
+    c1 = p1[16];
+
+    a2 = p2[0];
+    b2 = p2[8];
+    c2 = p2[16];
+
+    a3 = baseLUT[4*1 + 2*1 + 1];
+    b3 = baseLUT[4*1 + 2*1 + 1 + 8];
+    c3 = baseLUT[4*1 + 2*1 + 1 + 16];
 
     a = CV_DESCALE(a0*w0 + a1*w1 + a2*w2 + a3*w3, lab_base_shift);
     b = CV_DESCALE(b0*w0 + b1*w1 + b2*w2 + b3*w3, lab_base_shift);
@@ -888,30 +857,32 @@ enum InterType
     LUV_INTER_TETRA,
     LUV_INTER_TRILINEAR,
 };
-static InterType interType = LUV_INTER_NO;
+static const InterType interType = LUV_INTER_TRILINEAR;
 
 static inline void chooseInterpolate(int cx, int cy, int cz, int& a, int& b, int& c)
 {
-    int ia, ib, ic;
-    int icx = cx, icy = cy, icz = cz;
-    int16_t* iLUT;
-    iLUT = RGB2LuvLUT_s16;
+    static const int16_t* iLUT = RGB2LuvLUT_s16;
     switch (interType)
     {
     case LUV_INTER_NO:
-        noInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
+        noInterpolate(cx, cy, cz, iLUT, a, b, c);
         break;
     case LUV_INTER_TETRA:
-        tetraInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
+        tetraInterpolate(cx, cy, cz, iLUT, a, b, c);
         break;
     case LUV_INTER_TRILINEAR:
-        trilinearInterpolate(icx, icy, icz, iLUT, ia, ib, ic);
+        trilinearInterpolate(cx, cy, cz, iLUT, a, b, c);
         break;
     default:
         throw std::runtime_error("What the hell, did you forget to initialize variable?!");
         break;
     }
-    a = ia, b = ib, c = ic;
+}
+        break;
+    default:
+        throw std::runtime_error("What the hell, did you forget to initialize variable?!");
+        break;
+    }
 }
 
 ///////////////////////////////////// RGB <-> L*u*v* /////////////////////////////////////
@@ -1533,7 +1504,7 @@ struct RGB2Luvinteger
 
         //TODO: remove it somehow
         if(!useInterpolation)
-            throw std::runtime_error("Not implemented");
+            throw std::runtime_error("RGB2Luvinteger is not implemented");
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -1547,16 +1518,16 @@ struct RGB2Luvinteger
             {
                 int R = src[bIdx], G = src[1], B = src[bIdx^2];
 
-                //TODO: check 256
-                R = R*LAB_BASE/255, G = G*LAB_BASE/255, B = B*LAB_BASE/255;
+                // (LAB_BASE/255) gives more accuracy but not very much
+                static const int baseDiv = LAB_BASE/256;
+                R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
 
                 int L, u, v;
                 chooseInterpolate(R, G, B, L, u, v);
 
-                //TODO: check 256
-                dst[i] = saturate_cast<uchar>(L/(LAB_BASE/255));
-                dst[i+1] = saturate_cast<uchar>(u/(LAB_BASE/255));
-                dst[i+2] = saturate_cast<uchar>(v/(LAB_BASE/255));
+                dst[i] = saturate_cast<uchar>(L/baseDiv);
+                dst[i+1] = saturate_cast<uchar>(u/baseDiv);
+                dst[i+2] = saturate_cast<uchar>(v/baseDiv);
             }
         }
 
@@ -1805,7 +1776,7 @@ struct Luv2RGBinteger
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         //TODO: remove it
-        throw std::runtime_error("Not implemented");
+        throw std::runtime_error("Luv2RGBinteger is not implemented");
 
         int i, dcn = dstcn, bIdx = blueIdx;
         uchar alpha = ColorChannel<uchar>::max();
@@ -2102,15 +2073,16 @@ void printDiff(Mat a, string what, const char* channel, double* maxMaxError, int
 
 TEST(ImgProc_Color, LuvCheckWorking)
 {
+    //TODO: output settings in the end and in the beginning
     //settings
     const bool INT_DATA = true;
-    const bool TO_BGR   = true;
+    const bool TO_BGR   = false;
     const string spaceName = "Luv";
     const string baseDir = "/home/savuor/logs/ocv/lab_precision/";
     const bool randomFill = true;
 
-    enableRGB2LuvInterpolation = true;
-    interType = LUV_INTER_NO;
+    //enableRGB2LuvInterpolation = true;
+    //interType = LUV_INTER_TRILINEAR;
 
     const int lutShift = (int)lab_lut_shift;
 
