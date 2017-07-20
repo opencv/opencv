@@ -256,6 +256,7 @@ static const int minABvalue = -8145;
 static int abToXZ_b[LAB_BASE*9/4];
 // Luv constants
 static const bool enableRGB2LuvInterpolation = true;
+static const bool enablePackedRGB2Luv = true;
 static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 // Luv -> XYZ is an awful function for interpolation
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
@@ -878,6 +879,37 @@ static inline void chooseInterpolate(int cx, int cy, int cz, int& a, int& b, int
         break;
     }
 }
+
+// 8 inValues are in [0; LAB_BASE]
+static inline void noPackedInterpolate(const v_uint16x8 inX, const v_uint16x8 inY, const v_uint16x8 inZ,
+                                       const int16_t* LUT,
+                                       v_uint16x8& outA, v_uint16x8& outB, v_uint16x8& outC)
+{
+    throw std::runtime_error("No_inter packed not implemented");
+}
+
+// 8 inValues are in [0; LAB_BASE]
+static inline void tetraPackedInterpolate(const v_uint16x8 inX, const v_uint16x8 inY, const v_uint16x8 inZ,
+                                          const int16_t* LUT,
+                                          v_uint16x8& outA, v_uint16x8& outB, v_uint16x8& outC)
+{
+    throw std::runtime_error("Tetra_inter packed not implemented");
+}
+
+static inline void choosePackedInterpolate(const v_uint16x8 inX, const v_uint16x8 inY, const v_uint16x8 inZ,
+                                           v_uint16x8& outA, v_uint16x8& outB, v_uint16x8& outC)
+{
+    static const int16_t* iLUT = RGB2LuvLUT_s16;
+    switch (interType)
+    {
+    case LUV_INTER_NO:
+        noPackedInterpolate(inX, inY, inZ, iLUT, outA, outB, outC);
+        break;
+    case LUV_INTER_TETRA:
+        tetraPackedInterpolate(inX, inY, inZ, iLUT, outA, outB, outC);
+        break;
+    case LUV_INTER_TRILINEAR:
+        trilinearPackedInterpolate(inX, inY, inZ, iLUT, outA, outB, outC);
         break;
     default:
         throw std::runtime_error("What the hell, did you forget to initialize variable?!");
@@ -1030,6 +1062,90 @@ struct RGB2Luvfloat
 
         if(useInterpolation)
         {
+            if(enablePackedRGB2Luv)
+            {
+                static const int nPixels = 4*2;
+                for(; i < n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
+                {
+                    v_float32x4 rvec0, gvec0, bvec0, rvec1, gvec1, bvec1;
+                    v_float32x4 dummy0, dummy1;
+                    if(scn == 3)
+                    {
+                        v_load_deinterleave(src, rvec0, gvec0, bvec0);
+                        v_load_deinterleave(src + scn*4, rvec1, gvec1, bvec1);
+                    }
+                    else // scn == 4
+                    {
+                        v_load_deinterleave(src, rvec0, gvec0, bvec0, dummy0);
+                        v_load_deinterleave(src + scn*4, rvec1, gvec1, bvec1, dummy1);
+                    }
+
+                    if(bIdx)
+                    {
+                        dummy0 = rvec0; rvec0 = bvec0; bvec0 = dummy0;
+                        dummy1 = rvec1; rvec1 = bvec1; bvec1 = dummy1;
+                    }
+
+                    v_float32x4 zerof = v_setzero_f32(), onef = v_setall_f32(1.0f);
+                    /* clip() */
+                    #define clipv(r) (r) = v_min(v_max((r), zerof), onef)
+                    clipv(rvec0); clipv(rvec1);
+                    clipv(gvec0); clipv(gvec1);
+                    clipv(bvec0); clipv(bvec1);
+                    #undef clipv
+                    /* int iR = R*LAB_BASE, iG = G*LAB_BASE, iB = B*LAB_BASE */
+                    v_float32x4 basef = v_setall_f32(LAB_BASE);
+                    rvec0 *= basef, gvec0 *= basef, bvec0 *= basef;
+                    rvec1 *= basef, gvec1 *= basef, bvec1 *= basef;
+
+                    v_int32x4 irvec0, igvec0, ibvec0, irvec1, igvec1, ibvec1;
+                    irvec0 = v_round(rvec0); irvec1 = v_round(rvec1);
+                    igvec0 = v_round(gvec0); igvec1 = v_round(gvec1);
+                    ibvec0 = v_round(bvec0); ibvec1 = v_round(bvec1);
+
+                    v_int16x8 irvec, igvec, ibvec;
+                    irvec = v_pack(irvec0, irvec1);
+                    igvec = v_pack(igvec0, igvec1);
+                    ibvec = v_pack(ibvec0, ibvec1);
+
+                    v_uint16x8 uirvec = v_reinterpret_as_u16(irvec);
+                    v_uint16x8 uigvec = v_reinterpret_as_u16(igvec);
+                    v_uint16x8 uibvec = v_reinterpret_as_u16(ibvec);
+
+                    v_uint16x8 ui_lvec, ui_uvec, ui_vvec;
+                    choosePackedInterpolate(uirvec, uigvec, uibvec, ui_lvec, ui_uvec, ui_vvec);
+                    v_int16x8 i_lvec = v_reinterpret_as_s16(ui_lvec);
+                    v_int16x8 i_uvec = v_reinterpret_as_s16(ui_uvec);
+                    v_int16x8 i_vvec = v_reinterpret_as_s16(ui_vvec);
+
+                    /* float L = iL*1.0f/LAB_BASE, u = iu*1.0f/LAB_BASE, v = iv*1.0f/LAB_BASE; */
+                    v_int32x4 i_lvec0, i_uvec0, i_vvec0, i_lvec1, i_uvec1, i_vvec1;
+                    v_expand(i_lvec, i_lvec0, i_lvec1);
+                    v_expand(i_uvec, i_uvec0, i_uvec1);
+                    v_expand(i_vvec, i_vvec0, i_vvec1);
+
+                    v_float32x4 l_vec0, u_vec0, v_vec0, l_vec1, u_vec1, v_vec1;
+                    l_vec0 = v_cvt_f32(i_lvec0); l_vec1 = v_cvt_f32(i_lvec1);
+                    u_vec0 = v_cvt_f32(i_uvec0); u_vec1 = v_cvt_f32(i_uvec1);
+                    v_vec0 = v_cvt_f32(i_vvec0); v_vec1 = v_cvt_f32(i_vvec1);
+
+                    /* dst[i] = L*100.0f */
+                    l_vec0 = l_vec0*v_setall_f32(100.0f/LAB_BASE);
+                    l_vec1 = l_vec1*v_setall_f32(100.0f/LAB_BASE);
+                    /*
+                    dst[i + 1] = u*(float)uRange+(float)uLow;
+                    dst[i + 2] = v*(float)vRange+(float)vLow;
+                    */
+                    u_vec0 = u_vec0*v_setall_f32(((float)uRange)/LAB_BASE) + v_setall_f32((float)uLow);
+                    u_vec1 = u_vec1*v_setall_f32(((float)uRange)/LAB_BASE) + v_setall_f32((float)uLow);
+                    v_vec0 = v_vec0*v_setall_f32(((float)vRange)/LAB_BASE) + v_setall_f32((float)vLow);
+                    v_vec1 = v_vec1*v_setall_f32(((float)vRange)/LAB_BASE) + v_setall_f32((float)vLow);
+
+                    v_store_interleave(dst + i, l_vec0, u_vec0, v_vec0);
+                    v_store_interleave(dst + i + 3*4, l_vec1, u_vec1, v_vec1);
+                }
+            }
+
             for(; i < n; i += 3, src += scn)
             {
                 float R = clip(src[bIdx]);
@@ -1514,6 +1630,70 @@ struct RGB2Luvinteger
         i = 0; n *= 3;
         if(useInterpolation)
         {
+            if(enablePackedRGB2Luv)
+            {
+                static const int nPixels = 8*2;
+                for(; i < n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
+                {
+                    /*
+                    int R = src[bIdx], G = src[1], B = src[bIdx^2];
+                    */
+                    v_uint8x16 r16, g16, b16, dummy16;
+                    if(scn == 3)
+                    {
+                        v_load_deinterleave(src, r16, g16, b16);
+                    }
+                    else // scn == 4
+                    {
+                        v_load_deinterleave(src, r16, g16, b16, dummy16);
+                    }
+
+                    if(bIdx)
+                    {
+                        dummy16 = r16; r16 = b16; b16 = dummy16;
+                    }
+
+                    /*
+                    static const int baseDiv = LAB_BASE/256;
+                    R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
+                    */
+                    v_uint16x8 r80, r81, g80, g81, b80, b81;
+                    v_expand(r16, r80, r81);
+                    v_expand(g16, g80, g81);
+                    v_expand(b16, b80, b81);
+                    r80 = r80 << (lab_base_shift - 8);
+                    r81 = r81 << (lab_base_shift - 8);
+                    g80 = g80 << (lab_base_shift - 8);
+                    g81 = g81 << (lab_base_shift - 8);
+                    b80 = b80 << (lab_base_shift - 8);
+                    b81 = b81 << (lab_base_shift - 8);
+
+                    /*
+                    int L, u, v;
+                    chooseInterpolate(R, G, B, L, u, v);
+                    */
+                    v_uint16x8 l80, u80, v80, l81, u81, v81;
+                    choosePackedInterpolate(r80, g80, b80, l80, u80, v80);
+                    choosePackedInterpolate(r81, g81, b81, l81, u81, v81);
+
+                    /*
+                    dst[i] = saturate_cast<uchar>(L/baseDiv);
+                    dst[i+1] = saturate_cast<uchar>(u/baseDiv);
+                    dst[i+2] = saturate_cast<uchar>(v/baseDiv);
+                    */
+                    l80 = l80 >> (lab_base_shift - 8);
+                    l81 = l81 >> (lab_base_shift - 8);
+                    u80 = u80 >> (lab_base_shift - 8);
+                    u81 = u81 >> (lab_base_shift - 8);
+                    v80 = v80 >> (lab_base_shift - 8);
+                    v81 = v81 >> (lab_base_shift - 8);
+                    v_uint8x16 l16 = v_pack(l80, l81);
+                    v_uint8x16 u16 = v_pack(u80, u81);
+                    v_uint8x16 v16 = v_pack(v80, v81);
+                    v_store_interleave(dst + i, l16, u16, v16);
+                }
+            }
+
             for(; i < n; i += 3, src += scn)
             {
                 int R = src[bIdx], G = src[1], B = src[bIdx^2];
@@ -2082,6 +2262,7 @@ TEST(ImgProc_Color, LuvCheckWorking)
     const bool randomFill = true;
 
     //enableRGB2LuvInterpolation = true;
+    //enablePackedRGB2Luv = true;
     //interType = LUV_INTER_TRILINEAR;
 
     const int lutShift = (int)lab_lut_shift;
