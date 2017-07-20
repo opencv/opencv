@@ -610,7 +610,7 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, int16_t* LUT,
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
 
-    int16_t* baseLUT = &LUT[3*8*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
+    int16_t* baseLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
     int aa[8], bb[8], cc[8];
     for(int i = 0; i < 8; i++)
     {
@@ -731,9 +731,6 @@ static inline void trilinearPackedInterpolate(const v_uint16x8 inX, const v_uint
 static inline void noInterpolate(int cx, int cy, int cz, int16_t* LUT,
                                  int& a, int& b, int& c)
 {
-    //TODO: rewrite to 8-cell LUT
-    throw std::runtime_error("Not implemented");
-
     cx = (cx >= 0) ? (cx <= LAB_BASE ? cx : LAB_BASE) : 0;
     cy = (cy >= 0) ? (cy <= LAB_BASE ? cy : LAB_BASE) : 0;
     cz = (cz >= 0) ? (cz <= LAB_BASE ? cz : LAB_BASE) : 0;
@@ -743,15 +740,10 @@ static inline void noInterpolate(int cx, int cy, int cz, int16_t* LUT,
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
 
-    int a0, b0, c0;
-
-    a0 = LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz];
-    b0 = LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz + 1];
-    c0 = LUT[3*tx + 3*LAB_LUT_DIM*ty + 3*LAB_LUT_DIM*LAB_LUT_DIM*tz + 2];
-
-    a = a0;
-    b = b0;
-    c = c0;
+    int16_t* ptLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
+    a = ptLUT[0];
+    b = ptLUT[8];
+    c = ptLUT[16];
 }
 
 // cx, cy, cz are in [0; LAB_BASE]
