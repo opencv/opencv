@@ -612,10 +612,11 @@ TEST_P(Eltwise, Accuracy)
     eltwiseParam.set("operation", op);
     if (op == "sum" && weighted)
     {
+        RNG rng = cv::theRNG();
         std::vector<float> coeff(1 + numConv);
         for (int i = 0; i < coeff.size(); ++i)
         {
-            coeff[i] = ((float)rand() / RAND_MAX) * 4 - 2;
+            coeff[i] = rng.uniform(-2.0f, 2.0f);
         }
         eltwiseParam.set("coeff", DictValue::arrayReal<float*>(&coeff[0], coeff.size()));
     }
