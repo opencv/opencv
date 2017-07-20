@@ -6920,6 +6920,12 @@ FileNode FileStorage::root(int streamidx) const
     return isOpened() ? FileNode(fs, cvGetRootFileNode(fs, streamidx)) : FileNode();
 }
 
+int FileStorage::getFormat() const
+{
+    CV_Assert(!fs.empty());
+    return fs->fmt & FORMAT_MASK;
+}
+
 FileStorage& operator << (FileStorage& fs, const String& str)
 {
     CV_TRACE_REGION_VERBOSE();
