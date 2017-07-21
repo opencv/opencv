@@ -44,6 +44,7 @@ struct Evolution
   int sublevel;             ///< Image sublevel in each octave
   int sigma_size;           ///< Integer esigma. For computing the feature detector responses
   float octave_ratio;       ///< Scaling ratio of this octave. ratio = 2^octave
+  int border;               ///< Width of border where descriptors cannot be computed
 };
 
 /* ************************************************************************* */
@@ -76,8 +77,9 @@ public:
   void Create_Nonlinear_Scale_Space(InputArray img);
   void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
   void Compute_Determinant_Hessian_Response(void);
-  void Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts);
-  void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);
+  void Find_Scale_Space_Extrema(std::vector<std::vector<KeyPoint>>& keypoints_by_layers);
+  void Do_Subpixel_Refinement(std::vector<std::vector<KeyPoint>>& keypoints_by_layers,
+    std::vector<KeyPoint>& kpts);
 
   /// Feature description methods
   void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, OutputArray desc);
