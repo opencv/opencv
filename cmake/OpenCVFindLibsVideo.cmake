@@ -257,8 +257,11 @@ endif(WITH_FFMPEG)
 
 # --- VideoInput/DirectShow ---
 if(WITH_DSHOW)
-  # always have VideoInput on Windows
-  set(HAVE_DSHOW 1)
+  if(MSVC_VERSION GREATER 1499)
+    set(HAVE_DSHOW 1)
+  elseif(NOT HAVE_DSHOW)
+    check_include_file(DShow.h HAVE_DSHOW)
+  endif()
 endif(WITH_DSHOW)
 
 # --- VideoInput/Microsoft Media Foundation ---
