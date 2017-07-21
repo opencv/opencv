@@ -583,7 +583,10 @@ void SurfFeaturesFinderGpu::find(InputArray image, ImageFeatures &features)
     image_.upload(image);
 
     ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
-    cvtColor(image_, gray_image_, COLOR_BGR2GRAY);
+
+    Mat gray_image;
+	cvtColor(image, gray_image, COLOR_BGR2GRAY);
+	gray_image_.upload(gray_image);
 
     surf_.nOctaves = num_octaves_;
     surf_.nOctaveLayers = num_layers_;
