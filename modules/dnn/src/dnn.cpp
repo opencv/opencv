@@ -1240,7 +1240,7 @@ struct Net::Impl
         }
 
         layersTimings.resize(lastLayerId + 1, 0);
-        if (preferableTarget == DNN_TARGET_CPU)
+        if (0)
             fuseLayers(blobsToKeep_);
     }
 
