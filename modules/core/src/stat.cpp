@@ -2530,6 +2530,12 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         return false;
 #endif
 
+    // cv::minMaxIdx problem with index positions on AVX
+#if IPP_VERSION_X100 < 201810
+    if(!mask.empty() && _maxIdx && ipp::getIppFeatures()&ippCPUID_AVX)
+        return false;
+#endif
+
     IppStatus   status;
     IppDataType dataType = ippiGetDataType(src.depth());
     float       minVal = 0;
@@ -2561,7 +2567,7 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         size.width *= src.channels();
 
         status = ippMinMaxFun(src.ptr(), (int)src.step, size, dataType, pMinVal, pMaxVal, pMinIdx, pMaxIdx, (Ipp8u*)mask.ptr(), (int)mask.step);
-        if(status < 0 || status == ippStsNoOperation)
+        if(status < 0)
             return false;
         if(_minVal)
             *_minVal = minVal;
@@ -2569,7 +2575,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
             *_maxVal = maxVal;
         if(_minIdx)
         {
-            if(!mask.empty() && !minIdx.y && !minIdx.x)
+            // Should be just ippStsNoOperation check, but there is a bug in the function so we need additional checks
+            if(status == ippStsNoOperation && !mask.empty() && !pMinIdx->x && !pMinIdx->y)
             {
                 _minIdx[0] = -1;
                 _minIdx[1] = -1;
@@ -2582,7 +2589,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
         }
         if(_maxIdx)
         {
-            if(!mask.empty() && !maxIdx.y && !maxIdx.x)
+            // Should be just ippStsNoOperation check, but there is a bug in the function so we need additional checks
+            if(status == ippStsNoOperation && !mask.empty() && !pMaxIdx->x && !pMaxIdx->y)
             {
                 _maxIdx[0] = -1;
                 _maxIdx[1] = -1;
