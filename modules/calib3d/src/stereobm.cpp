@@ -197,7 +197,7 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
 {
     int x, y;
     const int OFS = 256*4, TABSZ = OFS*2 + 256;
-    uchar tab[TABSZ];
+    uchar tab[TABSZ] = { 0 };
     Size size = src.size();
 
     for( x = 0; x < TABSZ; x++ )
