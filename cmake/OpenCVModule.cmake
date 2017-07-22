@@ -227,7 +227,7 @@ macro(ocv_add_module _name)
       project(${the_module})
       add_definitions(
         -D_USE_MATH_DEFINES  # M_PI constant in MSVS
-        -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS  # to use C libraries from C++ code (ffmpeg)
+        -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_FORMAT_MACROS  # to use C libraries from C++ code (ffmpeg)
       )
     endif()
   endif()
