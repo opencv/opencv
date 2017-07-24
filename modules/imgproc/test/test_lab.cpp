@@ -727,325 +727,18 @@ static inline void trilinearPackedInterpolate(const v_uint16x8 inX, const v_uint
 #undef DOT_SHIFT_PACK
 }
 
-////////////////////////////////////////////////////////////////////
-
-static inline void noInterpolate(int cx, int cy, int cz, const int16_t* LUT,
-                                 int& a, int& b, int& c)
-{
-    cx = (cx >= 0) ? (cx <= LAB_BASE ? cx : LAB_BASE) : 0;
-    cy = (cy >= 0) ? (cy <= LAB_BASE ? cy : LAB_BASE) : 0;
-    cz = (cz >= 0) ? (cz <= LAB_BASE ? cz : LAB_BASE) : 0;
-
-    //LUT idx of origin pt of cube
-    int tx = cx >> (lab_base_shift - lab_lut_shift);
-    int ty = cy >> (lab_base_shift - lab_lut_shift);
-    int tz = cz >> (lab_base_shift - lab_lut_shift);
-
-    const int16_t* ptLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
-    a = ptLUT[0];
-    b = ptLUT[8];
-    c = ptLUT[16];
-}
-
-// cx, cy, cz are in [0; LAB_BASE]
-static inline void tetraInterpolate(int cx, int cy, int cz, const int16_t* LUT,
-                                    int& a, int& b, int& c)
-{
-    //LUT idx of origin pt of cube
-    int tx = cx >> (lab_base_shift - lab_lut_shift);
-    int ty = cy >> (lab_base_shift - lab_lut_shift);
-    int tz = cz >> (lab_base_shift - lab_lut_shift);
-
-    const int16_t* baseLUT = &LUT[(3*8)*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
-    const int16_t* p1, *p2;
-
-    //x, y, z are [0; LAB_BASE)
-    static const int bitMask = (1 << lab_base_shift) - 1;
-    int x = (cx << lab_lut_shift) & bitMask;
-    int y = (cy << lab_lut_shift) & bitMask;
-    int z = (cz << lab_lut_shift) & bitMask;
-
-    //sorted x, y, z
-    int s0, s1, s2;
-    if(x > y)
-    {
-        if(y > z)
-        {
-            const int x1 = 1, y1 = 0, z1 = 0;
-            const int x2 = 1, y2 = 1, z2 = 0;
-            p1 = &baseLUT[4*x1 + 2*y1 + z1];
-            p2 = &baseLUT[4*x2 + 2*y2 + z2];
-            s0 = x, s1 = y, s2 = z;
-        }
-        else if(x > z)
-        {
-            const int x1 = 1, y1 = 0, z1 = 0;
-            const int x2 = 1, y2 = 0, z2 = 1;
-            p1 = &baseLUT[4*x1 + 2*y1 + z1];
-            p2 = &baseLUT[4*x2 + 2*y2 + z2];
-            s0 = x, s1 = z, s2 = y;
-        }
-        else
-        {
-            const int x1 = 0, y1 = 0, z1 = 1;
-            const int x2 = 1, y2 = 0, z2 = 1;
-            p1 = &baseLUT[4*x1 + 2*y1 + z1];
-            p2 = &baseLUT[4*x2 + 2*y2 + z2];
-            s0 = z, s1 = x, s2 = y;
-        }
-    }
-    else
-    {
-        if(y > z)
-        {
-            if(x > z)
-            {
-                const int x1 = 0, y1 = 1, z1 = 0;
-                const int x2 = 1, y2 = 1, z2 = 0;
-                p1 = &baseLUT[4*x1 + 2*y1 + z1];
-                p2 = &baseLUT[4*x2 + 2*y2 + z2];
-                s0 = y, s1 = x, s2 = z;
-            }
-            else
-            {
-                const int x1 = 0, y1 = 1, z1 = 0;
-                const int x2 = 0, y2 = 1, z2 = 1;
-                p1 = &baseLUT[4*x1 + 2*y1 + z1];
-                p2 = &baseLUT[4*x2 + 2*y2 + z2];
-                s0 = y, s1 = z, s2 = x;
-            }
-        }
-        else
-        {
-            const int x1 = 0, y1 = 0, z1 = 1;
-            const int x2 = 0, y2 = 1, z2 = 1;
-            p1 = &baseLUT[4*x1 + 2*y1 + z1];
-            p2 = &baseLUT[4*x2 + 2*y2 + z2];
-            s0 = z, s1 = y, s2 = x;
-        }
-    }
-
-    //weights and values
-    int w0 = LAB_BASE - s0, w1 = s0 - s1, w2 = s1 - s2, w3 = s2;
-    int a0, a1, a2, a3, b0, b1, b2, b3, c0, c1, c2, c3;
-
-    //we won't check the bounds since they are checked at LUT building
-    a0 = baseLUT[0];
-    b0 = baseLUT[8];
-    c0 = baseLUT[16];
-
-    a1 = p1[0];
-    b1 = p1[8];
-    c1 = p1[16];
-
-    a2 = p2[0];
-    b2 = p2[8];
-    c2 = p2[16];
-
-    a3 = baseLUT[4*1 + 2*1 + 1];
-    b3 = baseLUT[4*1 + 2*1 + 1 + 8];
-    c3 = baseLUT[4*1 + 2*1 + 1 + 16];
-
-    a = CV_DESCALE(a0*w0 + a1*w1 + a2*w2 + a3*w3, lab_base_shift);
-    b = CV_DESCALE(b0*w0 + b1*w1 + b2*w2 + b3*w3, lab_base_shift);
-    c = CV_DESCALE(c0*w0 + c1*w1 + c2*w2 + c3*w3, lab_base_shift);
-}
-
-
-enum InterType
-{
-    LUV_INTER_NO,
-    LUV_INTER_TETRA,
-    LUV_INTER_TRILINEAR,
-};
-static const InterType interType = LUV_INTER_TRILINEAR;
-
-static inline void chooseInterpolate(int cx, int cy, int cz, int& a, int& b, int& c)
-{
-    static const int16_t* iLUT = RGB2LuvLUT_s16;
-    switch (interType)
-    {
-    case LUV_INTER_NO:
-        noInterpolate(cx, cy, cz, iLUT, a, b, c);
-        break;
-    case LUV_INTER_TETRA:
-        tetraInterpolate(cx, cy, cz, iLUT, a, b, c);
-        break;
-    case LUV_INTER_TRILINEAR:
-        trilinearInterpolate(cx, cy, cz, iLUT, a, b, c);
-        break;
-    default:
-        throw std::runtime_error("What the hell, did you forget to initialize variable?!");
-        break;
-    }
-}
-
-// 8 inValues are in [0; LAB_BASE]
-static inline void noPackedInterpolate(const v_uint16x8 inX, const v_uint16x8 inY, const v_uint16x8 inZ,
-                                       const int16_t* LUT,
-                                       v_uint16x8& outA, v_uint16x8& outB, v_uint16x8& outC)
-{
-    throw std::runtime_error("No_inter packed not implemented");
-}
-
-// 8 inValues are in [0; LAB_BASE]
-static inline void tetraPackedInterpolate(const v_uint16x8 inX, const v_uint16x8 inY, const v_uint16x8 inZ,
-                                          const int16_t* LUT,
-                                          v_uint16x8& outA, v_uint16x8& outB, v_uint16x8& outC)
-{
-    //LUT idx of origin pt of cube
-    v_uint16x8 idxsX = inX >> (lab_base_shift - lab_lut_shift);
-    v_uint16x8 idxsY = inY >> (lab_base_shift - lab_lut_shift);
-    v_uint16x8 idxsZ = inZ >> (lab_base_shift - lab_lut_shift);
-
-    //x, y, z are [0; LAB_BASE)
-    static const int bitMask = (1 << lab_base_shift) - 1;
-    v_uint16x8 bitMaskReg = v_setall_u16(bitMask);
-    v_uint16x8 fracX = (inX << lab_lut_shift) & bitMaskReg;
-    v_uint16x8 fracY = (inY << lab_lut_shift) & bitMaskReg;
-    v_uint16x8 fracZ = (inZ << lab_lut_shift) & bitMaskReg;
-
-    //load values to interpolate for pix0, pix1, .., pix7
-    v_int16x8 a0, a1, a2, a3, a4, a5, a6, a7;
-    v_int16x8 b0, b1, b2, b3, b4, b5, b6, b7;
-    v_int16x8 c0, c1, c2, c3, c4, c5, c6, c7;
-
-    v_uint32x4 addrDw0, addrDw1, addrDw10, addrDw11;
-    v_mul_expand(v_setall_u16(3*8), idxsX, addrDw0, addrDw1);
-    v_mul_expand(v_setall_u16(3*8*LAB_LUT_DIM), idxsY, addrDw10, addrDw11);
-    addrDw0 += addrDw10; addrDw1 += addrDw11;
-    v_mul_expand(v_setall_u16(3*8*LAB_LUT_DIM*LAB_LUT_DIM), idxsZ, addrDw10, addrDw11);
-    addrDw0 += addrDw10; addrDw1 += addrDw11;
-
-    uint32_t CV_DECL_ALIGNED(16) addrofs[8];
-    v_store_aligned(addrofs, addrDw0);
-    v_store_aligned(addrofs + 4, addrDw1);
-
-    const int16_t* ptr;
-#define LOAD_ABC(n) ptr = LUT + addrofs[n]; a##n = v_load(ptr); b##n = v_load(ptr + 8); c##n = v_load(ptr + 16)
-    LOAD_ABC(0);
-    LOAD_ABC(1);
-    LOAD_ABC(2);
-    LOAD_ABC(3);
-    LOAD_ABC(4);
-    LOAD_ABC(5);
-    LOAD_ABC(6);
-    LOAD_ABC(7);
-#undef LOAD_ABC
-
-    //sorted x, y, z
-    v_uint16x8 s0, s1, s2;
-    s0 = v_max(v_max(fracX, fracY), fracZ);
-    s2 = v_min(v_min(fracX, fracY), fracZ);
-    s1 = fracX + fracY + fracZ - s0 - s2;
-
-    //black boolean magic with no ifs
-    v_uint16x8 xy = fracX > fracY, yz = fracY > fracZ, xz = fracX > fracZ;
-    v_uint16x8 x1 = xy & (yz | xz), y1 = (~xy) & (yz | xz), z1 = ~(yz | (xy & xz));
-    v_uint16x8 x2 = xy | (yz & xz), y2 = (~xy) | (yz & xz), z2 = ~(yz & (xy | xz));
-
-    v_uint16x8 ones = v_setall_u16(1);
-    x1 &= ones, y1 &= ones, z1 &= ones;
-    x2 &= ones, y2 &= ones, z2 &= ones;
-    v_uint16x8 p1 = (x1 << 2) + (y1 << 1) + z1;
-    v_uint16x8 p2 = (x2 << 2) + (y2 << 1) + z2;
-
-    //weights and values
-    v_int16x8 w0 = v_setall_s16((int16_t)LAB_BASE) - v_reinterpret_as_s16(s0);
-    v_int16x8 w1 = v_reinterpret_as_s16(s0 - s1);
-    v_int16x8 w2 = v_reinterpret_as_s16(s1 - s2);
-    v_int16x8 w3 = v_reinterpret_as_s16(s2);
-
-    int16_t CV_DECL_ALIGNED(16) weights[8*4];
-    v_store_aligned(weights + 8*0, w0);
-    v_store_aligned(weights + 8*1, w1);
-    v_store_aligned(weights + 8*2, w2);
-    v_store_aligned(weights + 8*3, w3);
-    uint16_t CV_DECL_ALIGNED(16) pofs[8*2];
-    v_store_aligned(pofs,     p1);
-    v_store_aligned(pofs + 8, p2);
-
-    //interpolation weights for pix0, pix1, .., pix7
-    v_int16x8 ww0, ww1, ww2, ww3, ww4, ww5, ww6, ww7;
-    int16_t CV_DECL_ALIGNED(16) wwarr[8];
-    v_int16x8 zero8 = v_setzero_s16();
-
-#define BUILD_WEIGHTS(i) \
-    v_store_aligned(wwarr, zero8);\
-    wwarr[        0] = weights[i + 0*8];\
-    wwarr[pofs[i  ]] = weights[i + 1*8];\
-    wwarr[pofs[i+8]] = weights[i + 2*8];\
-    wwarr[        7] = weights[i + 3*8];\
-    ww##i = v_load_aligned(wwarr)
-
-    BUILD_WEIGHTS(0);
-    BUILD_WEIGHTS(1);
-    BUILD_WEIGHTS(2);
-    BUILD_WEIGHTS(3);
-    BUILD_WEIGHTS(4);
-    BUILD_WEIGHTS(5);
-    BUILD_WEIGHTS(6);
-    BUILD_WEIGHTS(7);
-#undef BUILD_WEIGHTS
-
-    //outA = descale(v_reg<8>(sum(dot(ai, wi))))
-    v_uint32x4 part0, part1;
-#define DOT_SHIFT_PACK(l, ll) \
-    part0 = v_uint32x4(v_reduce_sum(v_dotprod(l##0, ww0)),\
-                       v_reduce_sum(v_dotprod(l##1, ww1)),\
-                       v_reduce_sum(v_dotprod(l##2, ww2)),\
-                       v_reduce_sum(v_dotprod(l##3, ww3)));\
-    part1 = v_uint32x4(v_reduce_sum(v_dotprod(l##4, ww4)),\
-                       v_reduce_sum(v_dotprod(l##5, ww5)),\
-                       v_reduce_sum(v_dotprod(l##6, ww6)),\
-                       v_reduce_sum(v_dotprod(l##7, ww7)));\
-    (ll) = v_rshr_pack<lab_base_shift>(part0, part1)
-
-    DOT_SHIFT_PACK(a, outA);
-    DOT_SHIFT_PACK(b, outB);
-    DOT_SHIFT_PACK(c, outC);
-
-#undef DOT_SHIFT_PACK
-}
-
-static inline void choosePackedInterpolate(const v_uint16x8 inX, const v_uint16x8 inY, const v_uint16x8 inZ,
-                                           v_uint16x8& outA, v_uint16x8& outB, v_uint16x8& outC)
-{
-    static const int16_t* iLUT = RGB2LuvLUT_s16;
-    switch (interType)
-    {
-    case LUV_INTER_NO:
-        noPackedInterpolate(inX, inY, inZ, iLUT, outA, outB, outC);
-        break;
-    case LUV_INTER_TETRA:
-        tetraPackedInterpolate(inX, inY, inZ, iLUT, outA, outB, outC);
-        break;
-    case LUV_INTER_TRILINEAR:
-        trilinearPackedInterpolate(inX, inY, inZ, iLUT, outA, outB, outC);
-        break;
-    default:
-        throw std::runtime_error("What the hell, did you forget to initialize variable?!");
-        break;
-    }
-}
-
 ///////////////////////////////////// RGB <-> L*u*v* /////////////////////////////////////
 
 struct RGB2Luvfloat
 {
     typedef float channel_type;
 
-    RGB2Luvfloat( int _srccn, int _blueIdx, const float* _coeffs,
+    RGB2Luvfloat( int _srccn, int blueIdx, const float* _coeffs,
                const float* whitept, bool _srgb )
-    : srccn(_srccn), blueIdx(_blueIdx), srgb(_srgb)
+    : srccn(_srccn), srgb(_srgb)
     {
         volatile int i;
         initLabTabs();
-
-        //TODO: remove enableBitExactness
-        useInterpolation = (!_coeffs && !whitept && srgb &&
-                            enableBitExactness &&
-                            enableRGB2LuvInterpolation);
 
         if(!_coeffs) _coeffs = sRGB2XYZ_D65;
         if(!whitept) whitept = D65;
@@ -1164,116 +857,13 @@ struct RGB2Luvfloat
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i = 0, scn = srccn, bIdx = blueIdx;
+        int i = 0, scn = srccn;
         float gscale = GammaTabScale;
         const float* gammaTab = srgb ? sRGBGammaTab : 0;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
               C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         n *= 3;
-
-        if(useInterpolation)
-        {
-            if(enablePackedRGB2Luv)
-            {
-                static const int nPixels = 4*2;
-                for(; i < n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
-                {
-                    v_float32x4 rvec0, gvec0, bvec0, rvec1, gvec1, bvec1;
-                    v_float32x4 dummy0, dummy1;
-                    if(scn == 3)
-                    {
-                        v_load_deinterleave(src, rvec0, gvec0, bvec0);
-                        v_load_deinterleave(src + scn*4, rvec1, gvec1, bvec1);
-                    }
-                    else // scn == 4
-                    {
-                        v_load_deinterleave(src, rvec0, gvec0, bvec0, dummy0);
-                        v_load_deinterleave(src + scn*4, rvec1, gvec1, bvec1, dummy1);
-                    }
-
-                    if(bIdx)
-                    {
-                        dummy0 = rvec0; rvec0 = bvec0; bvec0 = dummy0;
-                        dummy1 = rvec1; rvec1 = bvec1; bvec1 = dummy1;
-                    }
-
-                    v_float32x4 zerof = v_setzero_f32(), onef = v_setall_f32(1.0f);
-                    /* clip() */
-                    #define clipv(r) (r) = v_min(v_max((r), zerof), onef)
-                    clipv(rvec0); clipv(rvec1);
-                    clipv(gvec0); clipv(gvec1);
-                    clipv(bvec0); clipv(bvec1);
-                    #undef clipv
-                    /* int iR = R*LAB_BASE, iG = G*LAB_BASE, iB = B*LAB_BASE */
-                    v_float32x4 basef = v_setall_f32(LAB_BASE);
-                    rvec0 *= basef, gvec0 *= basef, bvec0 *= basef;
-                    rvec1 *= basef, gvec1 *= basef, bvec1 *= basef;
-
-                    v_int32x4 irvec0, igvec0, ibvec0, irvec1, igvec1, ibvec1;
-                    irvec0 = v_round(rvec0); irvec1 = v_round(rvec1);
-                    igvec0 = v_round(gvec0); igvec1 = v_round(gvec1);
-                    ibvec0 = v_round(bvec0); ibvec1 = v_round(bvec1);
-
-                    v_int16x8 irvec, igvec, ibvec;
-                    irvec = v_pack(irvec0, irvec1);
-                    igvec = v_pack(igvec0, igvec1);
-                    ibvec = v_pack(ibvec0, ibvec1);
-
-                    v_uint16x8 uirvec = v_reinterpret_as_u16(irvec);
-                    v_uint16x8 uigvec = v_reinterpret_as_u16(igvec);
-                    v_uint16x8 uibvec = v_reinterpret_as_u16(ibvec);
-
-                    v_uint16x8 ui_lvec, ui_uvec, ui_vvec;
-                    choosePackedInterpolate(uirvec, uigvec, uibvec, ui_lvec, ui_uvec, ui_vvec);
-                    v_int16x8 i_lvec = v_reinterpret_as_s16(ui_lvec);
-                    v_int16x8 i_uvec = v_reinterpret_as_s16(ui_uvec);
-                    v_int16x8 i_vvec = v_reinterpret_as_s16(ui_vvec);
-
-                    /* float L = iL*1.0f/LAB_BASE, u = iu*1.0f/LAB_BASE, v = iv*1.0f/LAB_BASE; */
-                    v_int32x4 i_lvec0, i_uvec0, i_vvec0, i_lvec1, i_uvec1, i_vvec1;
-                    v_expand(i_lvec, i_lvec0, i_lvec1);
-                    v_expand(i_uvec, i_uvec0, i_uvec1);
-                    v_expand(i_vvec, i_vvec0, i_vvec1);
-
-                    v_float32x4 l_vec0, u_vec0, v_vec0, l_vec1, u_vec1, v_vec1;
-                    l_vec0 = v_cvt_f32(i_lvec0); l_vec1 = v_cvt_f32(i_lvec1);
-                    u_vec0 = v_cvt_f32(i_uvec0); u_vec1 = v_cvt_f32(i_uvec1);
-                    v_vec0 = v_cvt_f32(i_vvec0); v_vec1 = v_cvt_f32(i_vvec1);
-
-                    /* dst[i] = L*100.0f */
-                    l_vec0 = l_vec0*v_setall_f32(100.0f/LAB_BASE);
-                    l_vec1 = l_vec1*v_setall_f32(100.0f/LAB_BASE);
-                    /*
-                    dst[i + 1] = u*(float)uRange+(float)uLow;
-                    dst[i + 2] = v*(float)vRange+(float)vLow;
-                    */
-                    u_vec0 = u_vec0*v_setall_f32(((float)uRange)/LAB_BASE) + v_setall_f32((float)uLow);
-                    u_vec1 = u_vec1*v_setall_f32(((float)uRange)/LAB_BASE) + v_setall_f32((float)uLow);
-                    v_vec0 = v_vec0*v_setall_f32(((float)vRange)/LAB_BASE) + v_setall_f32((float)vLow);
-                    v_vec1 = v_vec1*v_setall_f32(((float)vRange)/LAB_BASE) + v_setall_f32((float)vLow);
-
-                    v_store_interleave(dst + i, l_vec0, u_vec0, v_vec0);
-                    v_store_interleave(dst + i + 3*4, l_vec1, u_vec1, v_vec1);
-                }
-            }
-
-            for(; i < n; i += 3, src += scn)
-            {
-                float R = clip(src[bIdx]);
-                float G = clip(src[1]);
-                float B = clip(src[bIdx^2]);
-
-                int iL, iu, iv;
-                int iR = cvRound(R*LAB_BASE), iG = cvRound(G*LAB_BASE), iB = cvRound(B*LAB_BASE);
-                chooseInterpolate(iR, iG, iB, iL, iu, iv);
-                float L = iL*1.0f/LAB_BASE, u = iu*1.0f/LAB_BASE, v = iv*1.0f/LAB_BASE;
-
-                dst[i] = L*100.0f;
-                dst[i + 1] = u*(float)uRange+(float)uLow;
-                dst[i + 2] = v*(float)vRange+(float)vLow;
-            }
-        }
 
         #if CV_NEON
         if (scn == 3)
@@ -1436,13 +1026,11 @@ struct RGB2Luvfloat
     }
 
     int srccn;
-    int blueIdx;
     float coeffs[9], un, vn;
     bool srgb;
     #if CV_SSE2
     bool haveSIMD;
     #endif
-    bool useInterpolation;
 };
 
 struct RGB2Luv_f
@@ -1719,116 +1307,98 @@ struct Luv2RGB_f
 };
 
 
-struct RGB2Luvinteger
+struct RGB2Luvinterpolate
 {
     typedef uchar channel_type;
 
-    RGB2Luvinteger( int _srccn, int _blueIdx, const float* _coeffs,
-                    const float* _whitept, bool _srgb )
+    RGB2Luvinterpolate( int _srccn, int _blueIdx, const float* /* _coeffs */,
+                        const float* /* _whitept */, bool /*_srgb*/ )
     : srccn(_srccn), blueIdx(_blueIdx)
-    {
-        useInterpolation = (!_coeffs && !_whitept && _srgb
-                            && enableRGB2LuvInterpolation);
-
-        //TODO: remove it somehow
-        if(!useInterpolation)
-            throw std::runtime_error("RGB2Luvinteger is not implemented");
-    }
+    { }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int i, scn = srccn, bIdx = blueIdx;
 
         i = 0; n *= 3;
-        if(useInterpolation)
+        if(enablePackedRGB2Luv)
         {
-            if(enablePackedRGB2Luv)
+            static const int nPixels = 8*2;
+            for(; i < n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
             {
-                static const int nPixels = 8*2;
-                for(; i < n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
-                {
-                    /*
+                /*
                     int R = src[bIdx], G = src[1], B = src[bIdx^2];
                     */
-                    v_uint8x16 r16, g16, b16, dummy16;
-                    if(scn == 3)
-                    {
-                        v_load_deinterleave(src, r16, g16, b16);
-                    }
-                    else // scn == 4
-                    {
-                        v_load_deinterleave(src, r16, g16, b16, dummy16);
-                    }
+                v_uint8x16 r16, g16, b16, dummy16;
+                if(scn == 3)
+                {
+                    v_load_deinterleave(src, r16, g16, b16);
+                }
+                else // scn == 4
+                {
+                    v_load_deinterleave(src, r16, g16, b16, dummy16);
+                }
 
-                    if(bIdx)
-                    {
-                        dummy16 = r16; r16 = b16; b16 = dummy16;
-                    }
+                if(bIdx)
+                {
+                    dummy16 = r16; r16 = b16; b16 = dummy16;
+                }
 
-                    /*
+                /*
                     static const int baseDiv = LAB_BASE/256;
                     R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
                     */
-                    v_uint16x8 r80, r81, g80, g81, b80, b81;
-                    v_expand(r16, r80, r81);
-                    v_expand(g16, g80, g81);
-                    v_expand(b16, b80, b81);
-                    r80 = r80 << (lab_base_shift - 8);
-                    r81 = r81 << (lab_base_shift - 8);
-                    g80 = g80 << (lab_base_shift - 8);
-                    g81 = g81 << (lab_base_shift - 8);
-                    b80 = b80 << (lab_base_shift - 8);
-                    b81 = b81 << (lab_base_shift - 8);
+                v_uint16x8 r80, r81, g80, g81, b80, b81;
+                v_expand(r16, r80, r81);
+                v_expand(g16, g80, g81);
+                v_expand(b16, b80, b81);
+                r80 = r80 << (lab_base_shift - 8); r81 = r81 << (lab_base_shift - 8);
+                g80 = g80 << (lab_base_shift - 8); g81 = g81 << (lab_base_shift - 8);
+                b80 = b80 << (lab_base_shift - 8); b81 = b81 << (lab_base_shift - 8);
 
-                    /*
+                /*
                     int L, u, v;
-                    chooseInterpolate(R, G, B, L, u, v);
+                    trilinearInterpolate(R, G, B, RGB2LuvLUT_s16, L, u, v);
                     */
-                    v_uint16x8 l80, u80, v80, l81, u81, v81;
-                    choosePackedInterpolate(r80, g80, b80, l80, u80, v80);
-                    choosePackedInterpolate(r81, g81, b81, l81, u81, v81);
+                v_uint16x8 l80, u80, v80, l81, u81, v81;
+                trilinearPackedInterpolate(r80, g80, b80, RGB2LuvLUT_s16, l80, u80, v80);
+                trilinearPackedInterpolate(r81, g81, b81, RGB2LuvLUT_s16, l81, u81, v81);
 
-                    /*
+                /*
                     dst[i] = saturate_cast<uchar>(L/baseDiv);
                     dst[i+1] = saturate_cast<uchar>(u/baseDiv);
                     dst[i+2] = saturate_cast<uchar>(v/baseDiv);
                     */
-                    l80 = l80 >> (lab_base_shift - 8);
-                    l81 = l81 >> (lab_base_shift - 8);
-                    u80 = u80 >> (lab_base_shift - 8);
-                    u81 = u81 >> (lab_base_shift - 8);
-                    v80 = v80 >> (lab_base_shift - 8);
-                    v81 = v81 >> (lab_base_shift - 8);
-                    v_uint8x16 l16 = v_pack(l80, l81);
-                    v_uint8x16 u16 = v_pack(u80, u81);
-                    v_uint8x16 v16 = v_pack(v80, v81);
-                    v_store_interleave(dst + i, l16, u16, v16);
-                }
-            }
-
-            for(; i < n; i += 3, src += scn)
-            {
-                int R = src[bIdx], G = src[1], B = src[bIdx^2];
-
-                // (LAB_BASE/255) gives more accuracy but not very much
-                static const int baseDiv = LAB_BASE/256;
-                R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
-
-                int L, u, v;
-                chooseInterpolate(R, G, B, L, u, v);
-
-                dst[i] = saturate_cast<uchar>(L/baseDiv);
-                dst[i+1] = saturate_cast<uchar>(u/baseDiv);
-                dst[i+2] = saturate_cast<uchar>(v/baseDiv);
+                l80 = l80 >> (lab_base_shift - 8); l81 = l81 >> (lab_base_shift - 8);
+                u80 = u80 >> (lab_base_shift - 8); u81 = u81 >> (lab_base_shift - 8);
+                v80 = v80 >> (lab_base_shift - 8); v81 = v81 >> (lab_base_shift - 8);
+                v_uint8x16 l16 = v_pack(l80, l81);
+                v_uint8x16 u16 = v_pack(u80, u81);
+                v_uint8x16 v16 = v_pack(v80, v81);
+                v_store_interleave(dst + i, l16, u16, v16);
             }
         }
 
-        //TODO: do we need a code for other params?
+        for(; i < n; i += 3, src += scn)
+        {
+            int R = src[bIdx], G = src[1], B = src[bIdx^2];
+
+            // (LAB_BASE/255) gives more accuracy but not very much
+            static const int baseDiv = LAB_BASE/256;
+            R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
+
+            int L, u, v;
+            trilinearInterpolate(R, G, B, RGB2LuvLUT_s16, L, u, v);
+
+            dst[i] = saturate_cast<uchar>(L/baseDiv);
+            dst[i+1] = saturate_cast<uchar>(u/baseDiv);
+            dst[i+2] = saturate_cast<uchar>(v/baseDiv);
+        }
+
     }
 
     int srccn;
     int blueIdx;
-    bool useInterpolation;
 };
 
 
@@ -1842,9 +1412,9 @@ struct RGB2Luv_b
       fcvt(3, blueIdx, _coeffs, _whitept, _srgb),
       icvt(3, blueIdx, _coeffs, _whitept, _srgb)
     {
-        useBitExactness = (!_coeffs && !_whitept && _srgb
-                           && enableBitExactness
-                           && enableRGB2LuvInterpolation);
+        useInterpolation = (!_coeffs && !_whitept && _srgb
+                            && enableBitExactness
+                            && enableRGB2LuvInterpolation);
 
         static const softfloat f255(255);
         #if CV_NEON
@@ -1890,7 +1460,7 @@ struct RGB2Luv_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        if(useBitExactness)
+        if(useInterpolation)
         {
             icvt(src, dst, n);
             return;
@@ -2039,8 +1609,8 @@ struct RGB2Luv_b
     }
 
     int srccn;
-    RGB2Luvfloat   fcvt;
-    RGB2Luvinteger icvt;
+    RGB2Luvfloat fcvt;
+    RGB2Luvinterpolate icvt;
 
     #if CV_NEON
     float32x4_t v_scale, v_scale_inv, v_coeff1, v_coeff2, v_coeff3, v_coeff4;
@@ -2050,7 +1620,7 @@ struct RGB2Luv_b
     __m128i v_zero;
     bool haveSIMD;
     #endif
-    bool useBitExactness;
+    bool useInterpolation;
 };
 
 
