@@ -9,6 +9,8 @@ LONG_TESTS_DEBUG_VALGRIND = [
     ('calib3d', 'Calib3d_InitUndistortRectifyMap.accuracy', 2017.22),
     ('dnn', 'Reproducibility*', 1000), # large DNN models
     ('features2d', 'Features2d_Feature2d.no_crash', 1235.68),
+    ('imgcodecs', 'Imgcodecs_Png.write_big', 1000), # memory limit
+    ('imgcodecs', 'Imgcodecs_Tiff.decode_tile16384x16384', 1000), # memory limit
     ('ml', 'ML_RTrees.regression', 1423.47),
     ('optflow', 'DenseOpticalFlow_DeepFlow.ReferenceAccuracy', 1360.95),
     ('optflow', 'DenseOpticalFlow_DeepFlow_perf.perf/0', 1881.59),
