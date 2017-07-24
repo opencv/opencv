@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "op_halide.hpp"
+#include "opencl_kernels_dnn.hpp"
 
 namespace cv
 {
@@ -174,10 +175,57 @@ public:
         }
     };
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        int cAxis = clamp(axis, inputs[0]->dims);
+        if (!(cAxis == 1 && outputs[0].dims == 4 && !padding))
+            return false;
+
+        int bottom_concat_axis;
+        int concat_size = inputs[0]->size[2] * inputs[0]->size[3];
+        int top_concat_axis = outputs[0].size[1];
+        int offset_concat_axis = 0;
+        UMat inpMat, outMat;
+        outMat = outputs[0].getUMat(ACCESS_READ);
+
+        ocl::Kernel ker;
+        String buildopt = String("-DDtype=") + ocl::typeToStr(inputs[0]->type()) + String(" ");
+        CV_Assert(ker.create("concat", ocl::dnn::concat_oclsrc, buildopt));
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            inpMat = inputs[i]->getUMat(ACCESS_READ);
+            bottom_concat_axis = inputs[i]->size[1];
+            size_t nthreads = inputs[i]->total();
+
+            ker.set(0, (int)nthreads);
+            ker.set(1, ocl::KernelArg::PtrReadOnly(inpMat));
+            ker.set(2, (int)inputs[i]->size[0]);
+            ker.set(3, (int)concat_size);
+            ker.set(4, (int)top_concat_axis);
+            ker.set(5, (int)bottom_concat_axis);
+            ker.set(6, (int)offset_concat_axis);
+            ker.set(7, ocl::KernelArg::PtrWriteOnly(outMat));
+
+            CV_Assert(ker.run(1, &nthreads, NULL, true));
+            offset_concat_axis += bottom_concat_axis;
+        }
+
+        return true;
+    }
+#endif
+
     void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN(ocl::Device::getDefault().isIntel(),
+                   forward_ocl(inputs, outputs, internals))
 
         int cAxis = clamp(axis, inputs[0]->dims);
         Mat& outMat = outputs[0];
