@@ -7,6 +7,7 @@ from pprint import PrettyPrinter as PP
 
 LONG_TESTS_DEBUG_VALGRIND = [
     ('calib3d', 'Calib3d_InitUndistortRectifyMap.accuracy', 2017.22),
+    ('dnn', 'Reproducibility*', 1000), # large DNN models
     ('features2d', 'Features2d_Feature2d.no_crash', 1235.68),
     ('ml', 'ML_RTrees.regression', 1423.47),
     ('optflow', 'DenseOpticalFlow_DeepFlow.ReferenceAccuracy', 1360.95),
@@ -43,10 +44,8 @@ LONG_TESTS_DEBUG_VALGRIND = [
 ]
 
 
-def longTestFilter(data):
-    res = ['*', '-']
-    for _, v, _ in data:
-        res.append(v)
+def longTestFilter(data, module = None):
+    res = ['*', '-'] + [v for _, v, m in data if module is None or m == module]
     return '--gtest_filter={}'.format(':'.join(res))
 
 
