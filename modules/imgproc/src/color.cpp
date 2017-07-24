@@ -5851,6 +5851,14 @@ static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;
 static int abToXZ_b[LAB_BASE*9/4];
+// Luv constants
+static const bool enableRGB2LuvInterpolation = true;
+static const bool enablePackedRGB2Luv = true;
+static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
+// Luv -> XYZ is an awful function for interpolation
+static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
+static const softfloat vLow(-140), vHigh(122), vRange(uHigh-uLow);
+static const softfloat XYZmax(1.25f);
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -5980,10 +5988,10 @@ static void initLabTabs()
             abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
         }
 
-        if(enableRGB2LabInterpolation)
+        if(enableRGB2LabInterpolation || enableRGB2LuvInterpolation)
         {
             const float* _whitept = D65;
-            softfloat coeffs[9];
+            softfloat scaledCoeffs[9], coeffs[9];
 
             //RGB2Lab coeffs
             softfloat scaleWhite[] = { softfloat::one()/softfloat(_whitept[0]),
@@ -5992,28 +6000,45 @@ static void initLabTabs()
 
             for(i = 0; i < 3; i++ )
             {
-                int j = i * 3;
-                coeffs[j + 2] = scaleWhite[i] * softfloat(sRGB2XYZ_D65[j    ]);
-                coeffs[j + 1] = scaleWhite[i] * softfloat(sRGB2XYZ_D65[j + 1]);
-                coeffs[j + 0] = scaleWhite[i] * softfloat(sRGB2XYZ_D65[j + 2]);
+                coeffs[i*3+2] = softfloat(sRGB2XYZ_D65[i*3  ]);
+                coeffs[i*3+1] = softfloat(sRGB2XYZ_D65[i*3+1]);
+                coeffs[i*3  ] = softfloat(sRGB2XYZ_D65[i*3+2]);
+                scaledCoeffs[i*3+2] = scaleWhite[i] * coeffs[i*3+2];
+                scaledCoeffs[i*3+1] = scaleWhite[i] * coeffs[i*3+1];
+                scaledCoeffs[i*3+0] = scaleWhite[i] * coeffs[i*3  ];
+
             }
 
-            softfloat D0 = coeffs[0], D1 = coeffs[1], D2 = coeffs[2],
-                      D3 = coeffs[3], D4 = coeffs[4], D5 = coeffs[5],
-                      D6 = coeffs[6], D7 = coeffs[7], D8 = coeffs[8];
+            softfloat S0 = scaledCoeffs[0], S1 = scaledCoeffs[1], S2 = scaledCoeffs[2],
+                      S3 = scaledCoeffs[3], S4 = scaledCoeffs[4], S5 = scaledCoeffs[5],
+                      S6 = scaledCoeffs[6], S7 = scaledCoeffs[7], S8 = scaledCoeffs[8];
+            softfloat C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+                      C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+                      C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
-            //903.3f = (29/3)^3
+            softfloat dd = softfloat(D65[0]) +
+                           softfloat(D65[1])*softfloat(15) +
+                           softfloat(D65[2])*softfloat(3);
+            dd = softfloat::one()/max(dd, softfloat(FLT_EPSILON));
+            softfloat un = dd*softfloat(13*4)*softfloat(D65[0]);
+            softfloat vn = dd*softfloat(13*9)*softfloat(D65[1]);
+
+            //u, v: [-134.0, 220.0], [-140.0, 122.0]
             static const softfloat lld(LAB_LUT_DIM - 1), f116(116), f16(16), f500(500), f200(200);
             static const softfloat f100(100), f128(128), f256(256), lbase((int)LAB_BASE);
+            //903.3f = (29/3)^3
             static const softfloat f9033 = softfloat(29*29*29)/softfloat(27);
+            static const softfloat f9of4 = softfloat(9)/softfloat(4);
+            static const softfloat f15(15), f3(3);
             AutoBuffer<int16_t> RGB2Labprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
+            AutoBuffer<int16_t> RGB2Luvprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
             for(int p = 0; p < LAB_LUT_DIM; p++)
             {
                 for(int q = 0; q < LAB_LUT_DIM; q++)
                 {
                     for(int r = 0; r < LAB_LUT_DIM; r++)
                     {
-                        //RGB 2 Lab LUT building
+                        int idx = p*3 + q*LAB_LUT_DIM*3 + r*LAB_LUT_DIM*LAB_LUT_DIM*3;
                         softfloat R = softfloat(p)/lld;
                         softfloat G = softfloat(q)/lld;
                         softfloat B = softfloat(r)/lld;
@@ -6022,22 +6047,42 @@ static void initLabTabs()
                         G = applyGamma(G);
                         B = applyGamma(B);
 
-                        softfloat X = R*D0 + G*D1 + B*D2;
-                        softfloat Y = R*D3 + G*D4 + B*D5;
-                        softfloat Z = R*D6 + G*D7 + B*D8;
+                        //RGB 2 Lab LUT building
+                        {
+                            softfloat X = R*S0 + G*S1 + B*S2;
+                            softfloat Y = R*S3 + G*S4 + B*S5;
+                            softfloat Z = R*S6 + G*S7 + B*S8;
 
-                        softfloat FX = X > lthresh ? cbrt(X) : mulAdd(X, lscale, lbias);
-                        softfloat FY = Y > lthresh ? cbrt(Y) : mulAdd(Y, lscale, lbias);
-                        softfloat FZ = Z > lthresh ? cbrt(Z) : mulAdd(Z, lscale, lbias);
+                            softfloat FX = X > lthresh ? cbrt(X) : mulAdd(X, lscale, lbias);
+                            softfloat FY = Y > lthresh ? cbrt(Y) : mulAdd(Y, lscale, lbias);
+                            softfloat FZ = Z > lthresh ? cbrt(Z) : mulAdd(Z, lscale, lbias);
 
-                        softfloat L = Y > lthresh ? (f116*FY - f16) : (f9033*Y);
-                        softfloat a = f500 * (FX - FY);
-                        softfloat b = f200 * (FY - FZ);
+                            softfloat L = Y > lthresh ? (f116*FY - f16) : (f9033*Y);
+                            softfloat a = f500 * (FX - FY);
+                            softfloat b = f200 * (FY - FZ);
 
-                        int idx = p*3 + q*LAB_LUT_DIM*3 + r*LAB_LUT_DIM*LAB_LUT_DIM*3;
-                        RGB2Labprev[idx]   = (int16_t)(cvRound(lbase*L/f100));
-                        RGB2Labprev[idx+1] = (int16_t)(cvRound(lbase*(a + f128)/f256));
-                        RGB2Labprev[idx+2] = (int16_t)(cvRound(lbase*(b + f128)/f256));
+                            RGB2Labprev[idx]   = (int16_t)(cvRound(lbase*L/f100));
+                            RGB2Labprev[idx+1] = (int16_t)(cvRound(lbase*(a + f128)/f256));
+                            RGB2Labprev[idx+2] = (int16_t)(cvRound(lbase*(b + f128)/f256));
+                        }
+
+                        //RGB 2 Luv LUT building
+                        {
+                            softfloat X = R*C0 + G*C1 + B*C2;
+                            softfloat Y = R*C3 + G*C4 + B*C5;
+                            softfloat Z = R*C6 + G*C7 + B*C8;
+
+                            softfloat L = Y < lthresh ? mulAdd(Y, lscale, lbias) : cbrt(Y);
+                            L = L*f116 - f16;
+
+                            softfloat d = softfloat(4*13)/max(X + f15 * Y + f3 * Z, softfloat(FLT_EPSILON));
+                            softfloat u = L*(X*d - un);
+                            softfloat v = L*(f9of4*Y*d - vn);
+
+                            RGB2Luvprev[idx  ] = (int16_t)cvRound(lbase*L/f100);
+                            RGB2Luvprev[idx+1] = (int16_t)cvRound(lbase*(u-uLow)/uRange);
+                            RGB2Luvprev[idx+2] = (int16_t)cvRound(lbase*(v-vLow)/vRange);
+                        }
                     }
                 }
             }
@@ -6057,6 +6102,9 @@ static void initLabTabs()
                                 RGB2LabLUT_s16[idxnew]    = RGB2Labprev[idxold];\
                                 RGB2LabLUT_s16[idxnew+8]  = RGB2Labprev[idxold+1];\
                                 RGB2LabLUT_s16[idxnew+16] = RGB2Labprev[idxold+2];\
+                                RGB2LuvLUT_s16[idxnew]    = RGB2Luvprev[idxold];\
+                                RGB2LuvLUT_s16[idxnew+8]  = RGB2Luvprev[idxold+1];\
+                                RGB2LuvLUT_s16[idxnew+16] = RGB2Luvprev[idxold+2];\
                             } while(0)
 
                         FILL(0, 0, 0); FILL(0, 0, 1);
@@ -7332,15 +7380,13 @@ struct Lab2RGB_b
     int dstcn;
 };
 
-#undef clip
-
 ///////////////////////////////////// RGB <-> L*u*v* /////////////////////////////////////
 
-struct RGB2Luv_f
+struct RGB2Luvfloat
 {
     typedef float channel_type;
 
-    RGB2Luv_f( int _srccn, int blueIdx, const float* _coeffs,
+    RGB2Luvfloat( int _srccn, int blueIdx, const float* _coeffs,
                const float* whitept, bool _srgb )
     : srccn(_srccn), srgb(_srgb)
     {
@@ -7640,6 +7686,23 @@ struct RGB2Luv_f
     #endif
 };
 
+struct RGB2Luv_f
+{
+    typedef float channel_type;
+
+    RGB2Luv_f( int _srccn, int blueIdx, const float* _coeffs,
+               const float* whitept, bool _srgb )
+    : fcvt(_srccn, blueIdx, _coeffs, whitept, _srgb), srccn(_srccn)
+    { }
+
+    void operator()(const float* src, float* dst, int n) const
+    {
+        fcvt(src, dst, n);
+    }
+
+    RGB2Luvfloat fcvt;
+    int srccn;
+};
 
 struct Luv2RGB_f
 {
@@ -7876,6 +7939,102 @@ struct Luv2RGB_f
     #endif
 };
 
+struct RGB2Luvinterpolate
+{
+    typedef uchar channel_type;
+
+    RGB2Luvinterpolate( int _srccn, int _blueIdx, const float* /* _coeffs */,
+                        const float* /* _whitept */, bool /*_srgb*/ )
+    : srccn(_srccn), blueIdx(_blueIdx)
+    {
+        initLabTabs();
+    }
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        int i, scn = srccn, bIdx = blueIdx;
+
+        i = 0; n *= 3;
+        if(enablePackedRGB2Luv)
+        {
+            static const int nPixels = 8*2;
+            for(; i < n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
+            {
+                /*
+                    int R = src[bIdx], G = src[1], B = src[bIdx^2];
+                    */
+                v_uint8x16 r16, g16, b16, dummy16;
+                if(scn == 3)
+                {
+                    v_load_deinterleave(src, r16, g16, b16);
+                }
+                else // scn == 4
+                {
+                    v_load_deinterleave(src, r16, g16, b16, dummy16);
+                }
+
+                if(bIdx)
+                {
+                    dummy16 = r16; r16 = b16; b16 = dummy16;
+                }
+
+                /*
+                    static const int baseDiv = LAB_BASE/256;
+                    R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
+                    */
+                v_uint16x8 r80, r81, g80, g81, b80, b81;
+                v_expand(r16, r80, r81);
+                v_expand(g16, g80, g81);
+                v_expand(b16, b80, b81);
+                r80 = r80 << (lab_base_shift - 8); r81 = r81 << (lab_base_shift - 8);
+                g80 = g80 << (lab_base_shift - 8); g81 = g81 << (lab_base_shift - 8);
+                b80 = b80 << (lab_base_shift - 8); b81 = b81 << (lab_base_shift - 8);
+
+                /*
+                    int L, u, v;
+                    trilinearInterpolate(R, G, B, RGB2LuvLUT_s16, L, u, v);
+                    */
+                v_uint16x8 l80, u80, v80, l81, u81, v81;
+                trilinearPackedInterpolate(r80, g80, b80, RGB2LuvLUT_s16, l80, u80, v80);
+                trilinearPackedInterpolate(r81, g81, b81, RGB2LuvLUT_s16, l81, u81, v81);
+
+                /*
+                    dst[i] = saturate_cast<uchar>(L/baseDiv);
+                    dst[i+1] = saturate_cast<uchar>(u/baseDiv);
+                    dst[i+2] = saturate_cast<uchar>(v/baseDiv);
+                    */
+                l80 = l80 >> (lab_base_shift - 8); l81 = l81 >> (lab_base_shift - 8);
+                u80 = u80 >> (lab_base_shift - 8); u81 = u81 >> (lab_base_shift - 8);
+                v80 = v80 >> (lab_base_shift - 8); v81 = v81 >> (lab_base_shift - 8);
+                v_uint8x16 l16 = v_pack(l80, l81);
+                v_uint8x16 u16 = v_pack(u80, u81);
+                v_uint8x16 v16 = v_pack(v80, v81);
+                v_store_interleave(dst + i, l16, u16, v16);
+            }
+        }
+
+        for(; i < n; i += 3, src += scn)
+        {
+            int R = src[bIdx], G = src[1], B = src[bIdx^2];
+
+            // (LAB_BASE/255) gives more accuracy but not very much
+            static const int baseDiv = LAB_BASE/256;
+            R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
+
+            int L, u, v;
+            trilinearInterpolate(R, G, B, RGB2LuvLUT_s16, L, u, v);
+
+            dst[i] = saturate_cast<uchar>(L/baseDiv);
+            dst[i+1] = saturate_cast<uchar>(u/baseDiv);
+            dst[i+2] = saturate_cast<uchar>(v/baseDiv);
+        }
+
+    }
+
+    int srccn;
+    int blueIdx;
+};
+
 
 struct RGB2Luv_b
 {
@@ -7883,21 +8042,26 @@ struct RGB2Luv_b
 
     RGB2Luv_b( int _srccn, int blueIdx, const float* _coeffs,
                const float* _whitept, bool _srgb )
-    : srccn(_srccn), cvt(3, blueIdx, _coeffs, _whitept, _srgb)
+    : srccn(_srccn),
+      fcvt(3, blueIdx, _coeffs, _whitept, _srgb),
+      icvt(3, blueIdx, _coeffs, _whitept, _srgb)
     {
-        //0.72033 = 255/(220+134), 96.525 = 134*255/(220+134)
-        //0.9732 = 255/(140+122), 136.259 = 140*255/(140+122)
+        useInterpolation = (!_coeffs && !_whitept && _srgb
+                            && enableBitExactness
+                            && enableRGB2LuvInterpolation);
+
+        static const softfloat f255(255);
         #if CV_NEON
-        v_scale_inv = vdupq_n_f32(1.f/255.f);
-        v_scale = vdupq_n_f32(2.55f);
-        v_coeff1 = vdupq_n_f32(0.72033898305084743f);
-        v_coeff2 = vdupq_n_f32(96.525423728813564f);
-        v_coeff3 = vdupq_n_f32(0.9732824427480916f);
-        v_coeff4 = vdupq_n_f32(136.259541984732824f);
+        v_scale_inv = vdupq_n_f32(softfloat::one()/f255);
+        v_scale = vdupq_n_f32(f255/softfloat(100));
+        v_coeff1 = vdupq_n_f32(f255/uRange);
+        v_coeff2 = vdupq_n_f32(-uLow*f255/uRange);
+        v_coeff3 = vdupq_n_f32(f255/vRange);
+        v_coeff4 = vdupq_n_f32(-vLow*f255/vRange);
         v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
         #elif CV_SSE2
         v_zero = _mm_setzero_si128();
-        v_scale_inv = _mm_set1_ps(1.f/255.f);
+        v_scale_inv = _mm_set1_ps(softfloat::one()/f255);
         haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
         #endif
     }
@@ -7930,12 +8094,19 @@ struct RGB2Luv_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        if(useInterpolation)
+        {
+            icvt(src, dst, n);
+            return;
+        }
+
         int i, j, scn = srccn;
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
 
+        static const softfloat f255(255);
         #if CV_SSE2
-        __m128 v_coeffs = _mm_set_ps(2.55f, 0.9732824427480916f, 0.72033898305084743f, 2.55f);
-        __m128 v_res = _mm_set_ps(0.f, 136.259541984732824f, 96.525423728813564f, 0.f);
+        __m128 v_coeffs = _mm_set_ps(f255/softfloat(100), f255/vRange, f255/uRange, f255/softfloat(100));
+        __m128 v_res = _mm_set_ps(0.f, -vLow*f255/vRange, -uLow*f255/uRange, 0.f);
         #endif
 
         for( i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )
@@ -8015,13 +8186,14 @@ struct RGB2Luv_b
                     src -= jr, j -= jr;
             }
             #endif
+            static const softfloat f255inv = softfloat::one()/f255;
             for( ; j < dn*3; j += 3, src += scn )
             {
-                buf[j] = src[0]*(1.f/255.f);
-                buf[j+1] = (float)(src[1]*(1.f/255.f));
-                buf[j+2] = (float)(src[2]*(1.f/255.f));
+                buf[j  ] = (float)(src[0]*((float)f255inv));
+                buf[j+1] = (float)(src[1]*((float)f255inv));
+                buf[j+2] = (float)(src[2]*((float)f255inv));
             }
-            cvt(buf, buf, dn);
+            fcvt(buf, buf, dn);
 
             j = 0;
             #if CV_NEON
@@ -8056,17 +8228,23 @@ struct RGB2Luv_b
             }
             #endif
 
+            static const softfloat fL = f255/softfloat(100);
+            static const softfloat fu = f255/uRange;
+            static const softfloat fv = f255/vRange;
+            static const softfloat su = -uLow*f255/uRange;
+            static const softfloat sv = -vLow*f255/vRange;
             for( ; j < dn*3; j += 3 )
             {
-                dst[j] = saturate_cast<uchar>(buf[j]*2.55f);
-                dst[j+1] = saturate_cast<uchar>(buf[j+1]*0.72033898305084743f + 96.525423728813564f);
-                dst[j+2] = saturate_cast<uchar>(buf[j+2]*0.9732824427480916f + 136.259541984732824f);
+                dst[j] = saturate_cast<uchar>(buf[j]*(float)fL);
+                dst[j+1] = saturate_cast<uchar>(buf[j+1]*(float)fu + (float)su);
+                dst[j+2] = saturate_cast<uchar>(buf[j+2]*(float)fv + (float)sv);
             }
         }
     }
 
     int srccn;
-    RGB2Luv_f cvt;
+    RGB2Luvfloat fcvt;
+    RGB2Luvinterpolate icvt;
 
     #if CV_NEON
     float32x4_t v_scale, v_scale_inv, v_coeff1, v_coeff2, v_coeff3, v_coeff4;
@@ -8076,6 +8254,7 @@ struct RGB2Luv_b
     __m128i v_zero;
     bool haveSIMD;
     #endif
+    bool useInterpolation;
 };
 
 
@@ -8316,6 +8495,7 @@ struct Luv2RGB_b
     #endif
 };
 
+#undef clip
 
 ///////////////////////////////////// YUV420 -> RGB /////////////////////////////////////
 
