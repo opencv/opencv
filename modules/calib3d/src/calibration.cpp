@@ -2780,15 +2780,16 @@ void cv::reprojectImageTo3D( InputArray _disparity,
     Mat _3dImage = __3dImage.getMat();
 
     const double bigZ = 10000.;
-    double q[4][4];
-    Mat _Q(4, 4, CV_64F, q);
+    Matx44d _Q;
     Q.convertTo(_Q, CV_64F);
 
     int x, cols = disparity.cols;
     CV_Assert( cols >= 0 );
 
-    std::vector<float> _sbuf(cols+1), _dbuf(cols*3+1);
-    float* sbuf = &_sbuf[0], *dbuf = &_dbuf[0];
+    std::vector<float> _sbuf(cols);
+    std::vector<Vec3f> _dbuf(cols);
+    float* sbuf = &_sbuf[0];
+    Vec3f* dbuf = &_dbuf[0];
     double minDisparity = FLT_MAX;
 
     // NOTE: here we quietly assume that at least one pixel in the disparity map is not defined.
@@ -2798,9 +2799,8 @@ void cv::reprojectImageTo3D( InputArray _disparity,
 
     for( int y = 0; y < disparity.rows; y++ )
     {
-        float *sptr = sbuf, *dptr = dbuf;
-        double qx = q[0][1]*y + q[0][3], qy = q[1][1]*y + q[1][3];
-        double qz = q[2][1]*y + q[2][3], qw = q[3][1]*y + q[3][3];
+        float* sptr = sbuf;
+        Vec3f* dptr = dbuf;
 
         if( stype == CV_8UC1 )
         {
@@ -2821,42 +2821,36 @@ void cv::reprojectImageTo3D( InputArray _disparity,
                 sptr[x] = (float)sptr0[x];
         }
         else
-            sptr = (float*)disparity.ptr<float>(y);
+            sptr = disparity.ptr<float>(y);
 
         if( dtype == CV_32FC3 )
-            dptr = _3dImage.ptr<float>(y);
+            dptr = _3dImage.ptr<Vec3f>(y);
 
-        for( x = 0; x < cols; x++, qx += q[0][0], qy += q[1][0], qz += q[2][0], qw += q[3][0] )
+        for( x = 0; x < cols; x++)
         {
             double d = sptr[x];
-            double iW = 1./(qw + q[3][2]*d);
-            double X = (qx + q[0][2]*d)*iW;
-            double Y = (qy + q[1][2]*d)*iW;
-            double Z = (qz + q[2][2]*d)*iW;
-            if( fabs(d-minDisparity) <= FLT_EPSILON )
-                Z = bigZ;
+            Vec4d homg_pt = _Q*Vec4d(x, y, d, 1.0);
+            dptr[x] = Vec3d(homg_pt.val);
+            dptr[x] /= homg_pt[3];
 
-            dptr[x*3] = (float)X;
-            dptr[x*3+1] = (float)Y;
-            dptr[x*3+2] = (float)Z;
+            if( fabs(d-minDisparity) <= FLT_EPSILON )
+                dptr[x][2] = bigZ;
         }
 
         if( dtype == CV_16SC3 )
         {
-            short* dptr0 = _3dImage.ptr<short>(y);
-            for( x = 0; x < cols*3; x++ )
+            Vec3s* dptr0 = _3dImage.ptr<Vec3s>(y);
+            for( x = 0; x < cols; x++ )
             {
-                int ival = cvRound(dptr[x]);
-                dptr0[x] = cv::saturate_cast<short>(ival);
+                dptr0[x] = dptr[x];
             }
         }
         else if( dtype == CV_32SC3 )
         {
-            int* dptr0 = _3dImage.ptr<int>(y);
-            for( x = 0; x < cols*3; x++ )
+            Vec3i* dptr0 = _3dImage.ptr<Vec3i>(y);
+            for( x = 0; x < cols; x++ )
             {
-                int ival = cvRound(dptr[x]);
-                dptr0[x] = ival;
+                dptr0[x] = dptr[x];
             }
         }
     }
