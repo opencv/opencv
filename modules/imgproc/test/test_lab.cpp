@@ -893,7 +893,119 @@ static inline void tetraPackedInterpolate(const v_uint16x8 inX, const v_uint16x8
                                           const int16_t* LUT,
                                           v_uint16x8& outA, v_uint16x8& outB, v_uint16x8& outC)
 {
-    throw std::runtime_error("Tetra_inter packed not implemented");
+    //LUT idx of origin pt of cube
+    v_uint16x8 idxsX = inX >> (lab_base_shift - lab_lut_shift);
+    v_uint16x8 idxsY = inY >> (lab_base_shift - lab_lut_shift);
+    v_uint16x8 idxsZ = inZ >> (lab_base_shift - lab_lut_shift);
+
+    //x, y, z are [0; LAB_BASE)
+    static const int bitMask = (1 << lab_base_shift) - 1;
+    v_uint16x8 bitMaskReg = v_setall_u16(bitMask);
+    v_uint16x8 fracX = (inX << lab_lut_shift) & bitMaskReg;
+    v_uint16x8 fracY = (inY << lab_lut_shift) & bitMaskReg;
+    v_uint16x8 fracZ = (inZ << lab_lut_shift) & bitMaskReg;
+
+    //load values to interpolate for pix0, pix1, .., pix7
+    v_int16x8 a0, a1, a2, a3, a4, a5, a6, a7;
+    v_int16x8 b0, b1, b2, b3, b4, b5, b6, b7;
+    v_int16x8 c0, c1, c2, c3, c4, c5, c6, c7;
+
+    v_uint32x4 addrDw0, addrDw1, addrDw10, addrDw11;
+    v_mul_expand(v_setall_u16(3*8), idxsX, addrDw0, addrDw1);
+    v_mul_expand(v_setall_u16(3*8*LAB_LUT_DIM), idxsY, addrDw10, addrDw11);
+    addrDw0 += addrDw10; addrDw1 += addrDw11;
+    v_mul_expand(v_setall_u16(3*8*LAB_LUT_DIM*LAB_LUT_DIM), idxsZ, addrDw10, addrDw11);
+    addrDw0 += addrDw10; addrDw1 += addrDw11;
+
+    uint32_t CV_DECL_ALIGNED(16) addrofs[8];
+    v_store_aligned(addrofs, addrDw0);
+    v_store_aligned(addrofs + 4, addrDw1);
+
+    const int16_t* ptr;
+#define LOAD_ABC(n) ptr = LUT + addrofs[n]; a##n = v_load(ptr); b##n = v_load(ptr + 8); c##n = v_load(ptr + 16)
+    LOAD_ABC(0);
+    LOAD_ABC(1);
+    LOAD_ABC(2);
+    LOAD_ABC(3);
+    LOAD_ABC(4);
+    LOAD_ABC(5);
+    LOAD_ABC(6);
+    LOAD_ABC(7);
+#undef LOAD_ABC
+
+    //sorted x, y, z
+    v_uint16x8 s0, s1, s2;
+    s0 = v_max(v_max(fracX, fracY), fracZ);
+    s2 = v_min(v_min(fracX, fracY), fracZ);
+    s1 = fracX + fracY + fracZ - s0 - s2;
+
+    //black boolean magic with no ifs
+    v_uint16x8 xy = fracX > fracY, yz = fracY > fracZ, xz = fracX > fracZ;
+    v_uint16x8 x1 = xy & (yz | xz), y1 = (~xy) & (yz | xz), z1 = ~(yz | (xy & xz));
+    v_uint16x8 x2 = xy | (yz & xz), y2 = (~xy) | (yz & xz), z2 = ~(yz & (xy | xz));
+
+    v_uint16x8 ones = v_setall_u16(1);
+    x1 &= ones, y1 &= ones, z1 &= ones;
+    x2 &= ones, y2 &= ones, z2 &= ones;
+    v_uint16x8 p1 = (x1 << 2) + (y1 << 1) + z1;
+    v_uint16x8 p2 = (x2 << 2) + (y2 << 1) + z2;
+
+    //weights and values
+    v_int16x8 w0 = v_setall_s16((int16_t)LAB_BASE) - v_reinterpret_as_s16(s0);
+    v_int16x8 w1 = v_reinterpret_as_s16(s0 - s1);
+    v_int16x8 w2 = v_reinterpret_as_s16(s1 - s2);
+    v_int16x8 w3 = v_reinterpret_as_s16(s2);
+
+    int16_t CV_DECL_ALIGNED(16) weights[8*4];
+    v_store_aligned(weights + 8*0, w0);
+    v_store_aligned(weights + 8*1, w1);
+    v_store_aligned(weights + 8*2, w2);
+    v_store_aligned(weights + 8*3, w3);
+    uint16_t CV_DECL_ALIGNED(16) pofs[8*2];
+    v_store_aligned(pofs,     p1);
+    v_store_aligned(pofs + 8, p2);
+
+    //interpolation weights for pix0, pix1, .., pix7
+    v_int16x8 ww0, ww1, ww2, ww3, ww4, ww5, ww6, ww7;
+    int16_t CV_DECL_ALIGNED(16) wwarr[8];
+    v_int16x8 zero8 = v_setzero_s16();
+
+#define BUILD_WEIGHTS(i) \
+    v_store_aligned(wwarr, zero8);\
+    wwarr[        0] = weights[i + 0*8];\
+    wwarr[pofs[i  ]] = weights[i + 1*8];\
+    wwarr[pofs[i+8]] = weights[i + 2*8];\
+    wwarr[        7] = weights[i + 3*8];\
+    ww##i = v_load_aligned(wwarr)
+
+    BUILD_WEIGHTS(0);
+    BUILD_WEIGHTS(1);
+    BUILD_WEIGHTS(2);
+    BUILD_WEIGHTS(3);
+    BUILD_WEIGHTS(4);
+    BUILD_WEIGHTS(5);
+    BUILD_WEIGHTS(6);
+    BUILD_WEIGHTS(7);
+#undef BUILD_WEIGHTS
+
+    //outA = descale(v_reg<8>(sum(dot(ai, wi))))
+    v_uint32x4 part0, part1;
+#define DOT_SHIFT_PACK(l, ll) \
+    part0 = v_uint32x4(v_reduce_sum(v_dotprod(l##0, ww0)),\
+                       v_reduce_sum(v_dotprod(l##1, ww1)),\
+                       v_reduce_sum(v_dotprod(l##2, ww2)),\
+                       v_reduce_sum(v_dotprod(l##3, ww3)));\
+    part1 = v_uint32x4(v_reduce_sum(v_dotprod(l##4, ww4)),\
+                       v_reduce_sum(v_dotprod(l##5, ww5)),\
+                       v_reduce_sum(v_dotprod(l##6, ww6)),\
+                       v_reduce_sum(v_dotprod(l##7, ww7)));\
+    (ll) = v_rshr_pack<lab_base_shift>(part0, part1)
+
+    DOT_SHIFT_PACK(a, outA);
+    DOT_SHIFT_PACK(b, outB);
+    DOT_SHIFT_PACK(c, outC);
+
+#undef DOT_SHIFT_PACK
 }
 
 static inline void choosePackedInterpolate(const v_uint16x8 inX, const v_uint16x8 inY, const v_uint16x8 inZ,
