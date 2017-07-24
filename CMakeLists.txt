@@ -4,10 +4,15 @@
 #    From the off-tree build directory, invoke:
 #      $ cmake <PATH_TO_OPENCV_ROOT>
 #
-#
-#   - OCT-2008: Initial version <joseluisblancoc@gmail.com>
-#
 # ----------------------------------------------------------------------------
+
+# Disable in-source builds to prevent source tree corruption.
+if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
+  message(FATAL_ERROR "
+FATAL: In-source builds are not allowed.
+       You should create separate directory for build files.
+")
+endif()
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
@@ -1093,13 +1098,6 @@ status("-----------------------------------------------------------------")
 status("")
 
 ocv_finalize_status()
-
-# ----------------------------------------------------------------------------
-# Warn in the case of in-source build
-# ----------------------------------------------------------------------------
-if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
-  message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
-endif()
 
 # ----------------------------------------------------------------------------
 # CPack stuff
