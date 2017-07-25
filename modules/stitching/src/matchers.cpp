@@ -583,7 +583,10 @@ void SurfFeaturesFinderGpu::find(InputArray image, ImageFeatures &features)
     image_.upload(image);
 
     ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
     Mat gray_image;
     cvtColor(image, gray_image, COLOR_BGR2GRAY);
     gray_image_.upload(gray_image);
