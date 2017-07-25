@@ -1116,7 +1116,7 @@ macro(ocv_add_testdata basedir dest_subdir)
     endif()
     if(INSTALL_TESTS)
       install(DIRECTORY ${basedir}/
-              DESTINATION ${OPENCV_TEST_DATA_INSTALL_PATH}/contrib/text
+              DESTINATION ${OPENCV_TEST_DATA_INSTALL_PATH}/${dest_subdir}
               COMPONENT "tests"
               ${ARGN}
       )
