@@ -60,7 +60,6 @@ void MatAllocator::unmap(UMatData* u) const
     if(u->urefcount == 0 && u->refcount == 0)
     {
         deallocate(u);
-        u = NULL;
     }
 }
 
@@ -461,8 +460,11 @@ void Mat::copySize(const Mat& m)
 void Mat::deallocate()
 {
     if(u)
-        (u->currAllocator ? u->currAllocator : allocator ? allocator : getDefaultAllocator())->unmap(u);
-    u = NULL;
+    {
+        UMatData* u_ = u;
+        u = NULL;
+        (u_->currAllocator ? u_->currAllocator : allocator ? allocator : getDefaultAllocator())->unmap(u_);
+    }
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
