@@ -1,18 +1,56 @@
-#ifndef _OPENCV_GREENTEA_LIBDNN_HPP_
-#define _OPENCV_GREENTEA_LIBDNN_HPP_
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (c) 2016-2017 Fabian David Tschopp, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
+#ifndef _OPENCV_LIBDNN_HPP_
+#define _OPENCV_LIBDNN_HPP_
 #include "../../precomp.hpp"
 #include <iomanip>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-
 #include "common.hpp"
 
 using namespace cv;
-
-namespace greentea
-{
 
 #ifdef HAVE_OPENCL
 struct LibDNNConvConfig
@@ -48,23 +86,6 @@ class LibDNNConvSpatial
                      Dtype* top_data, int_tp batch_size);
 
     private:
-        // Convolution parameters
-        int_tp num_axes_;
-        int_tp fmaps_in_;
-        int_tp fmaps_out_;
-        int_tp group_;
-
-        std::vector<int_tp> pad_;
-        std::vector<int_tp> stride_;
-        std::vector<int_tp> dilation_;
-        std::vector<int_tp> kernel_shape_;
-        std::vector<int_tp> im_in_shape_;
-        std::vector<int_tp> im_out_shape_;
-
-        // Compile and method flags
-        bool bias_term_;
-        Dtype bias_multiplier_;
-
         struct kernelConfig
         {
             std::string kernelName;
@@ -104,8 +125,8 @@ class LibDNNConvSpatial
         };
 
         template<class T>
-        inline void add_def(std::stringstream& ss,  // NOLINT
-                            const char* name, T value)
+        inline void addDef(std::stringstream& ss,  // NOLINT
+                           const char* name, T value)
         {
             ss << "#ifdef " << name << std::endl;
             ss << "#undef " << name << std::endl;
@@ -127,88 +148,81 @@ class LibDNNConvSpatial
         }
 
         template<class T>
-        inline void add_def(std::stringstream& ss,  // NOLINT
+        inline void addDef(std::stringstream& ss,  // NOLINT
                             const std::string name, T value)
         {
-            add_def(ss, name.c_str(), value);
+            addDef(ss, name.c_str(), value);
         }
 
-        void ForwardBenchmark(const Dtype* bottom_data, const Dtype* weight,
-                              const Dtype* bias,
-                              Dtype* top_data, int_tp batch_size);
-        void Tune(Dtype* top_data, Dtype* top_diff,
-                  const Dtype* weight, Dtype* weight_diff,
-                  const Dtype* bias, Dtype* bias_diff,
-                  const Dtype* bottom_data, Dtype* bottom_diff,
+        void tune(Dtype* top_data,
+                  const Dtype* weight,
+                  const Dtype* bias,
+                  const Dtype* bottom_data,
                   int_tp batch_size);
-        void GenerateKernels();
+        void generateKernelSrc();
         uint64 crc64(const uchar* data, size_t size, uint64 crc0 = 0);
-        std::string generate_header();
-        std::string generate_fw_defs();
-        std::string generate_fw_kernels(int_tp kernelType,
-                                        int_tp blockM,
-                                        int_tp blockK,
-                                        int_tp blockN);
+        std::string generateHeader();
+        std::string generateDefs();
+        std::string generateKernels(int_tp kernelType,
+                                    int_tp blockM,
+                                    int_tp blockK,
+                                    int_tp blockN);
 
-        ocl::Program compile_fw_kernel();
+        ocl::Program compileKernel();
         typedef std::map<std::string, ocl::Program> phash_t;
         phash_t phash;
-        void calculate_verify_data(const Dtype* bottom,
-                                   const Dtype* w,
-                                   const Dtype* bias,
-                                   Dtype* verify_data);
+        void calculateBenchmark(const Dtype* bottom,
+                                const Dtype* w,
+                                const Dtype* bias,
+                                Dtype* verify_data);
 
-        void setup_convolution(const Dtype *bottom,
-                               Dtype *top,
-                               const Dtype *verify_blob);
-        void create_convolution_kernel(const Dtype *bottom,
-                                       const Dtype *top,
-                                       int_tp kernelType,
-                                       int_tp blockWidth,
-                                       int_tp blockHeight,
-                                       int_tp blockDepth);
-        bool setup_IDLF(const Dtype *bottom,
-                        const Dtype *top, int_tp blockWidth,
-                        int_tp blockHeight,
-                        int_tp blockDepth);
-        bool create_basic_kernel(const Dtype *bottom,
-                                 const Dtype *top,
-                                 int_tp blockWidth,
-                                 int_tp blockHeight,
-                                 int_tp blockDepth);
-        bool create_gemm_like_conv_kernel(const Dtype *bottom,
-                                          const Dtype *top,
-                                          int_tp blockWidth,
-                                          int_tp blockHeight,
-                                          int_tp blockDepth);
+        void setupConvolution(const Dtype *bottom,
+                              Dtype *top,
+                              const Dtype *verify_blob);
+        void createConvolutionKernel(int_tp kernelType,
+                                     int_tp blockWidth,
+                                     int_tp blockHeight,
+                                     int_tp blockDepth);
+        bool setupIDLF(int_tp blockWidth,
+                       int_tp blockHeight,
+                       int_tp blockDepth);
+        bool createBasicKernel(int_tp blockWidth,
+                               int_tp blockHeight,
+                               int_tp blockDepth);
+        bool createGEMMLikeConvKernel(int_tp blockWidth,
+                                      int_tp blockHeight,
+                                      int_tp blockDepth);
         cl_int convolve(const Dtype *bottom,
                         const Dtype *top, int_tp index,
                         int_tp numImages,
                         kernelConfig* config);
-        float timed_convolve(const Dtype *bottom,
-                             const Dtype *top, int_tp index,
-                             int_tp numImages,
-                             kernelConfig* config);
-        bool verify_result(const Dtype *bottom,
-                           Dtype *top, int_tp index,
-                           int_tp numImages, const Dtype *verify_blob,
-                           kernelConfig* config);
-        bool tune_local_size(const Dtype *bottom,
-                             const Dtype *top, kernelConfig*);
+        float timedConvolve(const Dtype *bottom,
+                            const Dtype *top, int_tp index,
+                            int_tp numImages,
+                            kernelConfig* config);
+        bool verifyResult(const Dtype *bottom,
+                          Dtype *top,
+                          int_tp index,
+                          int_tp numImages,
+                          const Dtype *verify_blob,
+                          kernelConfig* config);
+        bool tuneLocalSize(const Dtype *bottom,
+                           const Dtype *top,
+                           kernelConfig*);
         void swizzleWeights(const Dtype *bottom,
                             const Dtype *top,
                             int_tp swizzle_factor,
                             bool interleave = false);
-        void generate_key();
-        std::string generate_specific_key(int_tp type, int_tp blockWidth,
+        void generateKey();
+        std::string generateSpecificKey(int_tp type, int_tp blockWidth,
                                           int_tp blockHeight,
                                           int_tp blockDepth);
-        void calculate_global_size(int_tp batch, int_tp* workItemOutput,
-                                   size_t* localSizes, size_t* globalSizes);
-        void load_cached_kernels(const Dtype *bottom,
-                                 const Dtype *top);
-        void SetUp(const Dtype *bottom,
-                   const Dtype *top);
+        void computeGlobalSize(int_tp batch,
+                               int_tp* workItemOutput,
+                               size_t* localSizes,
+                               size_t* globalSizes);
+        bool loadCachedConfig();
+        void prepareKernel();
         void setBufferKernelArg(const Dtype *bottom,
                                 const Dtype *top,
                                 ocl::Kernel *cl_kernel,
@@ -220,6 +234,8 @@ class LibDNNConvSpatial
         void cleanTmpSubBuffers(const Dtype *bottom,
                                 const Dtype *top);
 
+        int_tp group_;
+        bool bias_term_;
         std::map<std::tuple<cl_mem, size_t, size_t>, cl_mem> subBufferMap;
         std::vector<cl_mem> tmpSubBuffers;
         const Dtype* bottom_data_;
@@ -227,10 +243,9 @@ class LibDNNConvSpatial
         const Dtype* weight_;
         Dtype* swizzled_weights_;
         const Dtype* bias_;
-        int_tp bias_offset_;
         int_tp bottom_index_;
-        int_tp output_h_, output_w_;
-
+        int_tp output_h_;
+        int_tp output_w_;
         int_tp kernel_h_;
         int_tp kernel_w_;
         int_tp height_;
@@ -253,15 +268,11 @@ class LibDNNConvSpatial
         int_tp N_;
 
         bool tuned_;
-        bool try_cache_;
-
         std::string key_;
         std::string short_key_;
         std::string kernel_name_;
         std::stringstream cache_path_;
-
         int_tp kernel_index_;
-
         std::vector<kernelConfig*> kernelQueue;
         kernelConfig* bestKernelConfig;
 
@@ -271,9 +282,7 @@ class LibDNNConvSpatial
         int_tp channels_;
         int_tp out_spatial_dim_;
         int_tp num_output_;
-
         int_tp kernel_dim_;
-        int_tp in_spatial_dim_;
 
         int_tp kernelType_;
         int_tp blockM_;
@@ -281,7 +290,7 @@ class LibDNNConvSpatial
         int_tp blockN_;
         std::string options_;
         std::string kernel_;
-        bool phase_test_;
+        int_tp prev_kernel_type_;
 };
 
 typedef enum {
@@ -412,7 +421,7 @@ class LibDNNLRN
         bool Forward(const Dtype* bottom_data, Dtype* top_data);
 
     private:
-        void CrossChannelForward_gpu(const Dtype* bottom_data, Dtype* top_data);
+        void crossChannelForward(const Dtype* bottom_data, Dtype* top_data);
         LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type_;
         bool phase_test_;
         int_tp size_;
@@ -453,6 +462,4 @@ class LibDNNSoftmax
         Dtype *scale_data_;
 };
 #endif // HAVE_OPENCL
-
-} // namespace greentea
 #endif

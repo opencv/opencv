@@ -1,77 +1,51 @@
-#ifndef __OPENCL_VERSION__
-#define __kernel
-#define __global
-#define __constant
-#define __local
-#define get_global_id(x) 0
-#define get_global_size(x) 0
-#define get_local_id(x) 0
-#define get_local_size(x) 0
-#define FLT_MAX 0
-#define FLT_MIN 0
-#define cl_khr_fp64
-#define cl_amd_fp64
-#ifndef DISABLE_DOUBLE_SUPPORT
-#define DOUBLE_SUPPORT_AVAILABLE
-#endif //DISABLE_DOUBLE_SUPPORT
-#define CLK_LOCAL_MEM_FENCE
-#define CLK_GLOBAL_MEM_FENCE
-#define Dtype float
-#define barrier(x)
-#define atomic_cmpxchg(x, y, z) x
-#define signbit(x) x
-#define int_tp long
-#define uint_tp unsigned long
-#define int_tpc long
-#define uint_tpc unsigned long
-#endif
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 
 #define CONCAT(A,B) A##_##B
 #define TEMPLATE(name,type) CONCAT(name,type)
 
-#define TYPE_FLOAT 1
-#define TYPE_DOUBLE 2
-
-#if defined(cl_khr_fp64)
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#ifndef DISABLE_DOUBLE_SUPPORT
-#define DOUBLE_SUPPORT_AVAILABLE
-#endif //DISABLE_DOUBLE_SUPPORT
-#elif defined(cl_amd_fp64)
-#pragma OPENCL EXTENSION cl_amd_fp64 : enable
-#ifndef DISABLE_DOUBLE_SUPPORT
-#define DOUBLE_SUPPORT_AVAILABLE
-#endif //DISABLE_DOUBLE_SUPPORT
-#endif
-
-#if defined(cl_khr_int64_base_atomics)
-#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-#define ATOMICS_64_AVAILABLE
-#endif
-
-#if defined(cl_khr_int32_base_atomics)
-#pragma OPENCL EXTENSION cl_khr_int32_base_atomics : enable
-#define ATOMICS_32_AVAILABLE
-#endif
-
-#if defined(cl_khr_global_int32_base_atomics)
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#define ATOMICS_32_AVAILABLE
-#endif
-
 // Types used for parameters, offset computations and so on
 #define int_tp int
 #define uint_tp unsigned int
-
-// Definitions used to cast the types above as needed
-#define int_tpc int
-#define uint_tpc unsigned int
-
 #define Dtype float
-
-#if defined(cl_intel_subgroups)
-#pragma OPENCL EXTENSION  cl_intel_subgroups : enable
-#endif
 
 __kernel void TEMPLATE(copyImage, Dtype)
     (__global Dtype* image_data,

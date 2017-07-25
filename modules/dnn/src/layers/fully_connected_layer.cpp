@@ -57,7 +57,7 @@ public:
     enum { VEC_ALIGN = 8 };
 
 #ifdef HAVE_OPENCL
-    Ptr<greentea::LibDNNInnerProduct<float>> innerProductOp;
+    Ptr<LibDNNInnerProduct<float>> innerProductOp;
 #endif
 
     FullyConnectedLayerImpl(const LayerParams& params)
@@ -254,13 +254,13 @@ public:
 
         if (innerProductOp.empty())
         {
-            greentea::LibDNNInnerProductConfig config;
+            LibDNNInnerProductConfig config;
             config.num_output = numOutput;
             config.bias_term = bias;
             config.M = outerSize;
             config.K = innerSize;
 
-            innerProductOp = Ptr<greentea::LibDNNInnerProduct<float>>(new greentea::LibDNNInnerProduct<float>(config));
+            innerProductOp = Ptr<LibDNNInnerProduct<float>>(new LibDNNInnerProduct<float>(config));
         }
 
         UMat weights, biases;

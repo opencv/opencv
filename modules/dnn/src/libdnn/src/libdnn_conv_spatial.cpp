@@ -1,3 +1,45 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (c) 2016-2017 Fabian David Tschopp, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
 #include "../../precomp.hpp"
 #include <string>
 #include <vector>
@@ -8,30 +50,30 @@
 #include "libdnn.hpp"
 #include "benchmark.hpp"
 #include "opencl_kernels_dnn.hpp"
-#include "greentea_math_functions.hpp"
+#include "math_functions.hpp"
 
 // #define TEST_ALL_KERNELS
 
 using namespace cv;
-
-namespace greentea
-{
 
 #ifdef HAVE_OPENCL
 template<typename Dtype>
 LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
 {
     bias_term_ = config.bias_term;
-    bias_multiplier_ = config.bias_term ? 1.0 : 0.0;
     int_tp dims = config.in_shape.size();
     int_tp spatial_dims = config.kernel.size();
 
-    phase_test_ = config.phase_test;
-    num_axes_ = spatial_dims;
-    fmaps_in_ = config.in_shape[dims - spatial_dims - 1];
-    fmaps_out_ = config.out_shape[dims - spatial_dims - 1];
-
+    channels_   = config.in_shape[dims - spatial_dims - 1];
+    num_output_ = config.out_shape[dims - spatial_dims - 1];
     group_ = config.group;
+
+    std::vector<int_tp> pad_;
+    std::vector<int_tp> stride_;
+    std::vector<int_tp> dilation_;
+    std::vector<int_tp> kernel_shape_;
+    std::vector<int_tp> im_in_shape_;
+    std::vector<int_tp> im_out_shape_;
 
     for (int_tp i = 0; i < spatial_dims; ++i) {
         kernel_shape_.push_back(config.kernel[i]);
@@ -43,15 +85,14 @@ LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
     }
 
     bestKernelConfig = NULL;
+    prev_kernel_type_ = -1;
     bias_ = NULL;
     tuned_ = false;
-    try_cache_ = false;
     swizzled_weights_ = NULL;
-    channels_ = fmaps_in_;
-    num_output_ = fmaps_out_;
-    kernel_dim_ = fmaps_in_ / group_;
-    in_spatial_dim_ = 1;
+    kernel_dim_ = channels_ / group_;
     out_spatial_dim_ = 1;
+
+    int_tp in_spatial_dim_ = 1;
     for (int_tp i = 0; i < spatial_dims; ++i) {
         kernel_dim_ *= config.kernel[i];
         in_spatial_dim_ *= config.in_shape[dims - spatial_dims + i];
@@ -67,15 +108,12 @@ LibDNNConvSpatial<Dtype>::LibDNNConvSpatial(LibDNNConvConfig config)
     stride_w_ = stride_[1];
     dilation_h_ = dilation_[0];
     dilation_w_ = dilation_[1];
-
     M_ = num_output_ / group_;
     K_ = channels_ * kernel_h_ * kernel_w_ / group_;
-
     height_ = im_in_shape_[0];
     width_ = im_in_shape_[1];
     output_h_ = im_out_shape_[0];
     output_w_ = im_out_shape_[1];
-
     bottom_dim_ = channels_ * in_spatial_dim_;
     top_dim_ = num_output_ * out_spatial_dim_;
 
@@ -113,7 +151,7 @@ LibDNNConvSpatial<Dtype>::~LibDNNConvSpatial()
 }
 
 template<typename Dtype>
-std::string LibDNNConvSpatial<Dtype>::generate_header()
+std::string LibDNNConvSpatial<Dtype>::generateHeader()
 {
     std::stringstream ss;
 
@@ -184,7 +222,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_header()
 }
 
 template<typename Dtype>
-std::string LibDNNConvSpatial<Dtype>::generate_fw_defs()
+std::string LibDNNConvSpatial<Dtype>::generateDefs()
 {
     std::stringstream ss;
 
@@ -225,14 +263,14 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_defs()
     ss << "#define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))"
        << std::endl;
 
-    add_def(ss, "KERNEL_WIDTH", kernel_w_);
-    add_def(ss, "KERNEL_HEIGHT" , kernel_h_);
-    add_def(ss, "STRIDE_X", stride_w_);
-    add_def(ss, "STRIDE_Y", stride_h_);
-    add_def(ss, "DILATION_X", dilation_w_);
-    add_def(ss, "DILATION_Y", dilation_h_);
-    add_def(ss, "INPUT_PAD_W", pad_w_);
-    add_def(ss, "INPUT_PAD_H", pad_h_);
+    addDef(ss, "KERNEL_WIDTH", kernel_w_);
+    addDef(ss, "KERNEL_HEIGHT" , kernel_h_);
+    addDef(ss, "STRIDE_X", stride_w_);
+    addDef(ss, "STRIDE_Y", stride_h_);
+    addDef(ss, "DILATION_X", dilation_w_);
+    addDef(ss, "DILATION_Y", dilation_h_);
+    addDef(ss, "INPUT_PAD_W", pad_w_);
+    addDef(ss, "INPUT_PAD_H", pad_h_);
 
     return ss.str();
 }
@@ -244,10 +282,10 @@ typedef enum {
 } libdnnConvSpatialKernelType_t;
 
 template<typename Dtype>
-std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
-                                                          int_tp blockM,
-                                                          int_tp blockK,
-                                                          int_tp blockN)
+std::string LibDNNConvSpatial<Dtype>::generateKernels(int_tp kernelType,
+                                                      int_tp blockM,
+                                                      int_tp blockK,
+                                                      int_tp blockN)
 {
     std::stringstream ss;
     std::stringstream opts;
@@ -256,7 +294,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
 
     if (kernelType == KERNEL_TYPE_INTEL_IDLF) {
         simd_size = blockN;
-        kernelUKey = generate_specific_key(2, blockM, blockK, 1);
+        kernelUKey = generateSpecificKey(2, blockM, blockK, 1);
 
         // kernel name
         kernel_name_ = "IDLF_";
@@ -268,7 +306,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
 
         // options
         opts << "-cl-fast-relaxed-math -D convolve_simd=" << kernel_name_;
-        if (IsBeignet())
+        if (isBeignet())
             opts << " -D__BEIGNET__ ";
         else
             opts << " -cl-no-subgroup-ifp ";
@@ -288,26 +326,26 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         int tile_y_stride = (4 * simd_size) / tile_x;
         int invec_size = (tile_y + tile_y_stride - 1) / tile_y_stride;
 
-        add_def(ss, "SIMD_SIZE", simd_size);
-        add_def(ss, "filter_qualifier", "__global");
-        add_def(ss, "OUT_BLOCK_WIDTH", output_block_width);
-        add_def(ss, "OUT_BLOCK_HEIGHT", output_block_height);
-        add_def(ss, "LAST_BLOCK_WIDTH", last_block_width);
-        add_def(ss, "LAST_BLOCK_HEIGHT", last_block_height);
-        add_def(ss, "INPUT_DEPTH", channels_ / group_);
-        add_def(ss, "TOTAL_INPUT_DEPTH_SIZE", channels_);
-        add_def(ss, "TOTAL_OUTPUT_DEPTH", num_output_);
-        add_def(ss, "INPUT_START_X", 0);
-        add_def(ss, "INPUT_START_Y", 0);
-        add_def(ss, "INPUT_START_Z", 0);
-        add_def(ss, "NUM_FILTERS", M_);
-        add_def(ss, "OUT_BUFF_OFFSET", 0);
-        add_def(ss, "TILE_X", tile_x);
-        add_def(ss, "TILE_Y", tile_y);
-        add_def(ss, "TILE_Y_STRIDE", tile_y_stride);
-        add_def(ss, "INVEC_SIZE", invec_size);
-        add_def(ss, "ALIGNED_NUM_FILTERS", ALIGN(M_, simd_size));
-        add_def(ss, "OUT_BLOCK_SIZE", (output_block_width*output_block_height));
+        addDef(ss, "SIMD_SIZE", simd_size);
+        addDef(ss, "filter_qualifier", "__global");
+        addDef(ss, "OUT_BLOCK_WIDTH", output_block_width);
+        addDef(ss, "OUT_BLOCK_HEIGHT", output_block_height);
+        addDef(ss, "LAST_BLOCK_WIDTH", last_block_width);
+        addDef(ss, "LAST_BLOCK_HEIGHT", last_block_height);
+        addDef(ss, "INPUT_DEPTH", channels_ / group_);
+        addDef(ss, "TOTAL_INPUT_DEPTH_SIZE", channels_);
+        addDef(ss, "TOTAL_OUTPUT_DEPTH", num_output_);
+        addDef(ss, "INPUT_START_X", 0);
+        addDef(ss, "INPUT_START_Y", 0);
+        addDef(ss, "INPUT_START_Z", 0);
+        addDef(ss, "NUM_FILTERS", M_);
+        addDef(ss, "OUT_BUFF_OFFSET", 0);
+        addDef(ss, "TILE_X", tile_x);
+        addDef(ss, "TILE_Y", tile_y);
+        addDef(ss, "TILE_Y_STRIDE", tile_y_stride);
+        addDef(ss, "INVEC_SIZE", invec_size);
+        addDef(ss, "ALIGNED_NUM_FILTERS", ALIGN(M_, simd_size));
+        addDef(ss, "OUT_BLOCK_SIZE", (output_block_width*output_block_height));
 
         // kernel source
         // Each work-item computes
@@ -543,7 +581,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         ss << "}" << std::endl;
     } else if (kernelType == KERNEL_TYPE_GEMM_LIKE) {
         simd_size = blockK;
-        kernelUKey = generate_specific_key(kernelType, blockM, blockK, blockN);
+        kernelUKey = generateSpecificKey(kernelType, blockM, blockK, blockN);
         // kernel name
         kernel_name_ = "U_GEMM_LIKE_CONV_";
         kernel_name_ += kernelUKey.c_str();
@@ -566,17 +604,17 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         options_ = opts.str();
 
         int_tp tile_n_last_div8 = (M_ % 32) / 8;
-        add_def(ss, "INPUT_DEPTH", channels_);
-        add_def(ss, "WIDTH1", M_);
-        add_def(ss, "OUT_PADDING_LEFT", 0);
-        add_def(ss, "OUT_PADDING_HEIGHT", 0);
-        add_def(ss, "OUT_DEPTH", M_);
-        add_def(ss, "KERNEL_WIDTH_DIV2", kernel_w_ / 2);
-        add_def(ss, "KERNEL_SLICE_DIV2", (kernel_w_*kernel_h_)/2);
-        add_def(ss, "TILE_N_LAST", M_ % 32);
-        add_def(ss, "TILE_N_LAST_DIV8", tile_n_last_div8);
-        add_def(ss, "TILE_M", blockM);
-        add_def(ss, "TILE_N_PER_LANE", 32 / simd_size);
+        addDef(ss, "INPUT_DEPTH", channels_);
+        addDef(ss, "WIDTH1", M_);
+        addDef(ss, "OUT_PADDING_LEFT", 0);
+        addDef(ss, "OUT_PADDING_HEIGHT", 0);
+        addDef(ss, "OUT_DEPTH", M_);
+        addDef(ss, "KERNEL_WIDTH_DIV2", kernel_w_ / 2);
+        addDef(ss, "KERNEL_SLICE_DIV2", (kernel_w_*kernel_h_)/2);
+        addDef(ss, "TILE_N_LAST", M_ % 32);
+        addDef(ss, "TILE_N_LAST_DIV8", tile_n_last_div8);
+        addDef(ss, "TILE_M", blockM);
+        addDef(ss, "TILE_N_PER_LANE", 32 / simd_size);
 
         #define TYPEDEF_FLOAT_N(ele_num) \
         do { \
@@ -599,15 +637,15 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         // never used but makes compiler happy.
         ss << "typedef struct float0 { float s0; } float0;" << std::endl;
 
-        add_def(ss, "OUT_PITCH_X", "output_width");
-        add_def(ss, "OUT_PITCH_Y", "(output_width * output_height)");
-        add_def(ss, "ROW_PITCH", "input_width");
-        add_def(ss, "SLICE_PITCH", "(input_width * input_height)");
-        add_def(ss, "TILE_K", kernel_w_);
-        add_def(ss, "TILE_N", 32);
-        add_def(ss, "OUT_PITCH_Z",
+        addDef(ss, "OUT_PITCH_X", "output_width");
+        addDef(ss, "OUT_PITCH_Y", "(output_width * output_height)");
+        addDef(ss, "ROW_PITCH", "input_width");
+        addDef(ss, "SLICE_PITCH", "(input_width * input_height)");
+        addDef(ss, "TILE_K", kernel_w_);
+        addDef(ss, "TILE_N", 32);
+        addDef(ss, "OUT_PITCH_Z",
                 "(output_width * output_height * OUT_DEPTH)");
-        add_def(ss, "ALIGNED_INPUT_SIZE",
+        addDef(ss, "ALIGNED_INPUT_SIZE",
                 "(input_height * input_width * INPUT_DEPTH)");
 
         std::vector<std::string> elems16({
@@ -638,7 +676,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         // kernel source
         if (simd_size == 8)
             ss << "__attribute__((intel_reqd_sub_group_size(8)))" << std::endl;
-        else if (!IsBeignet())
+        else if (!isBeignet())
             ss << "__attribute__((intel_reqd_sub_group_size(16)))" << std::endl;
         ss << "__kernel void Conv_Interleaved(" << std::endl;
         ss << "const __global float *src0," << std::endl;
@@ -725,7 +763,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch
         // and KERNEL_WIDTH/2 rows of interleaved filter.
         ss << "int patch_depth = 0;" << std::endl;
-        if (!IsBeignet() && simd_size == 16)
+        if (!isBeignet() && simd_size == 16)
             ss << "__attribute__((opencl_unroll_hint(1)))" << std::endl;
         ss << "do" << std::endl;
         ss << "{" << std::endl;
@@ -735,7 +773,7 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
             if (blockM == 2)
                 ss << "curr_y1 = saved_y1;" << std::endl;
         }
-        if (!IsBeignet() && simd_size == 16)
+        if (!isBeignet() && simd_size == 16)
             ss << "__attribute__((opencl_unroll_hint(1)))" << std::endl;
         ss << "do" << std::endl;
         ss << "{" << std::endl;
@@ -1311,23 +1349,23 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
         ss << "#endif" << std::endl;
         ss << "}" << std::endl;
     } else if (kernelType == KERNEL_TYPE_BASIC) {
-        kernelUKey = generate_specific_key(4, blockM, blockK, blockN);
+        kernelUKey = generateSpecificKey(4, blockM, blockK, blockN);
         kernel_name_ = "BASIC_";
         kernel_name_ += kernelUKey.c_str();
 
         // opts
         opts << " -cl-fast-relaxed-math -D CFMultiNoPadding=" << kernel_name_;
-        if (IsBeignet())
+        if (isBeignet())
             opts << " -D__BEIGNET__ ";
         else
             opts << " -cl-no-subgroup-ifp ";
         options_ = opts.str();
 
         // defs
-        add_def(ss, "CHANNELS", channels_ / group_);
-        add_def(ss, "APPLY_BIAS", bias_term_);
-        add_def(ss, "OUTPUT_Z", M_);
-        add_def(ss, "ZPAR", 1);
+        addDef(ss, "CHANNELS", channels_ / group_);
+        addDef(ss, "APPLY_BIAS", bias_term_);
+        addDef(ss, "OUTPUT_Z", M_);
+        addDef(ss, "ZPAR", 1);
 
         // kernel
         ss << "#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_) "
@@ -1431,13 +1469,13 @@ std::string LibDNNConvSpatial<Dtype>::generate_fw_kernels(int_tp kernelType,
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::GenerateKernels()
+void LibDNNConvSpatial<Dtype>::generateKernelSrc()
 {
     std::stringstream ss;
 
-    ss << generate_header();
-    ss << generate_fw_defs();
-    ss << generate_fw_kernels(kernelType_, blockM_, blockK_, blockN_);
+    ss << generateHeader();
+    ss << generateDefs();
+    ss << generateKernels(kernelType_, blockM_, blockK_, blockN_);
 
     kernel_ = ss.str();
 }
@@ -1448,35 +1486,24 @@ bool LibDNNConvSpatial<Dtype>::Forward(const Dtype* bottom_data,
                                        const Dtype* bias, Dtype* top_data,
                                        int_tp batch_size)
 {
-    weight_ = weight;
-    if (bias_term_)
-        bias_ = bias;
+    cl_int ret;
     bottom_data_ = bottom_data;
     top_data_ = top_data;
-    bias_offset_ = 0;
+    weight_ = weight;
+    bias_ = bias;
     num_ = batch_size;
 
-    if (!try_cache_) {
-        load_cached_kernels(bottom_data, top_data);
-        try_cache_ = true;
-    }
+    prepareKernel();
+    ret = convolve(bottom_data_, top_data_, 0, num_, bestKernelConfig);
 
-    if (!tuned_)
-        Tune(top_data, NULL, weight, NULL, bias, NULL,
-             bottom_data, NULL, batch_size);
-
-    cl_int ret = convolve(bottom_data, top_data, 0, num_, bestKernelConfig);
     return ret == CL_SUCCESS ? true : false;
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::Tune(Dtype* top_data, Dtype* top_diff,
+void LibDNNConvSpatial<Dtype>::tune(Dtype* top_data,
                                     const Dtype* weight,
-                                    Dtype* weight_diff,
                                     const Dtype* bias,
-                                    Dtype* bias_diff,
                                     const Dtype* bottom_data,
-                                    Dtype* bottom_diff,
                                     int_tp batch_size)
 {
     cl_int err;
@@ -1486,50 +1513,33 @@ void LibDNNConvSpatial<Dtype>::Tune(Dtype* top_data, Dtype* top_diff,
     verify_data =
         reinterpret_cast<Dtype*>(clCreateBuffer((cl_context)ctx.ptr(),
                                                 CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR,
-                                                batch_size * fmaps_out_ * out_spatial_dim_ * sizeof(Dtype),
+                                                batch_size * num_output_ * out_spatial_dim_ * sizeof(Dtype),
                                                 NULL, &err));
     CHECK_EQ(err, CL_SUCCESS) << "Failed to create verify buffer." << std::endl;
 
-    calculate_verify_data(bottom_data, weight, bias, verify_data);
-    setup_convolution(bottom_data, top_data, verify_data);
+    calculateBenchmark(bottom_data, weight, bias, verify_data);
+    setupConvolution(bottom_data, top_data, verify_data);
     clReleaseMemObject((cl_mem)verify_data);
     CHECK_EQ(tuned_, true) << "Spatial convolution auto-tuning failed.";
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::calculate_verify_data(const Dtype* bottom,
-                                                     const Dtype* w,
-                                                     const Dtype* bias,
-                                                     Dtype* verify_data)
+void LibDNNConvSpatial<Dtype>::calculateBenchmark(const Dtype* bottom,
+                                                  const Dtype* w,
+                                                  const Dtype* bias,
+                                                  Dtype* verify_data)
 {
-    create_basic_kernel(bottom, verify_data, 1, 1, 1);
+    createBasicKernel(1, 1, 1);
     kernel_index_ = kernelQueue.size() - 1;
     convolve(bottom, verify_data, 0, num_, kernelQueue[kernel_index_]);
     ocl::Queue &queue = ocl::Queue::getDefault();
     clEnqueueCopyBuffer((cl_command_queue)queue.ptr(),
                         (cl_mem)top_data_,
                         (cl_mem)verify_data, 0, 0,
-                        sizeof(float) * num_ * this->top_dim_, 0, NULL, NULL);
+                        sizeof(float) * num_ * top_dim_, 0, NULL, NULL);
     phash.erase(kernelQueue[kernel_index_]->kernelName);
     kernelQueue.pop_back();
     return;
-}
-
-template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::ForwardBenchmark(const Dtype* bottom,
-                                                const Dtype* w,
-                                                const Dtype* bias,
-                                                Dtype* top,
-                                                int_tp batch_size)
-{
-    weight_ = w;
-    if (bias_term_)
-        bias_ = bias;
-    bottom_data_ = bottom;
-    top_data_ = top;
-    bias_offset_ = 0;
-    num_ = batch_size;
-    calculate_verify_data(bottom, w, bias, top);
 }
 
 #define dbg
@@ -1573,7 +1583,7 @@ uint64 LibDNNConvSpatial<Dtype>::crc64(const uchar* data, size_t size, uint64 cr
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::generate_key()
+void LibDNNConvSpatial<Dtype>::generateKey()
 {
     std::stringstream keyBuilder;
     // FIXME: to support fuse?
@@ -1603,7 +1613,7 @@ void LibDNNConvSpatial<Dtype>::generate_key()
 }
 
 template<typename Dtype>
-std::string LibDNNConvSpatial<Dtype>::generate_specific_key(int_tp type, int_tp blockWidth,
+std::string LibDNNConvSpatial<Dtype>::generateSpecificKey(int_tp type, int_tp blockWidth,
                                                             int_tp blockHeight, int_tp blockDepth)
 {
     std::stringstream keyBuilder;
@@ -1689,9 +1699,7 @@ void LibDNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
     // in test phase and not in auto tuning
     // This requires we always call convolve again with the winner configuration
     // during the auto tuning stage.
-    if (tuned_ &&
-        swizzled_weights_ != NULL &&
-        phase_test_ == true)
+    if (tuned_ && swizzled_weights_ != NULL)
         return;
 
     cl_int err;
@@ -1712,7 +1720,7 @@ void LibDNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
         ocl::Kernel oclk_copy_weight(CL_KERNEL_SELECT("copyWeightsSwizzled"), cv::ocl::dnn::conv_spatial_helper_oclsrc);
         cl_uint argIdx = 0;
 
-        int_tp channels = this->channels_ / this->group_;
+        int_tp channels = channels_ / group_;
         oclk_copy_weight.set(argIdx++, (cl_mem) weight_);
         oclk_copy_weight.set(argIdx++, (cl_mem) swizzled_weights_);
         oclk_copy_weight.set(argIdx++, kernel_w_);
@@ -1778,10 +1786,10 @@ void LibDNNConvSpatial<Dtype>::swizzleWeights(const Dtype *bottom,
 }
 
 template<>
-void LibDNNConvSpatial<float>::calculate_global_size(int_tp batch,
-                                                     int_tp* wio,    // work item output size
-                                                     size_t* lSize,  // local size
-                                                     size_t* gSize)  // global size
+void LibDNNConvSpatial<float>::computeGlobalSize(int_tp batch,
+                                                 int_tp* wio,    // work item output size
+                                                 size_t* lSize,  // local size
+                                                 size_t* gSize)  // global size
 {
     gSize[0] = ceil((fmax(static_cast<float>(output_w_) / wio[0], 1.0)) / lSize[0]) * lSize[0];
     gSize[1] = ceil((fmax(static_cast<float>(output_h_) / wio[1], 1.0)) / lSize[1]) * lSize[1];
@@ -1789,8 +1797,7 @@ void LibDNNConvSpatial<float>::calculate_global_size(int_tp batch,
 }
 
 template<>
-bool LibDNNConvSpatial<float>::create_basic_kernel(const float *bottom, const float *top,
-                                                   int_tp blockWidth,
+bool LibDNNConvSpatial<float>::createBasicKernel(int_tp blockWidth,
                                                    int_tp blockHeight, int_tp blockDepth)
 {
     int_tp workItemOutput[3];
@@ -1802,13 +1809,13 @@ bool LibDNNConvSpatial<float>::create_basic_kernel(const float *bottom, const fl
     blockM_ = blockWidth;
     blockK_ = blockHeight;
     blockN_ = blockDepth;
-    GenerateKernels();
-    compile_fw_kernel();
+    generateKernelSrc();
+    compileKernel();
 
     size_t localSize[3] = { 1, 1, 1 };
     size_t globalSize[3];
 
-    calculate_global_size(1, workItemOutput, localSize, globalSize);
+    computeGlobalSize(1, workItemOutput, localSize, globalSize);
     kernelQueue.push_back(new kernelConfig(kernel_name_, globalSize, localSize, workItemOutput,
                                            false, false, true, 4));
 
@@ -1879,6 +1886,7 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
     ocl::Kernel kernel(config->kernelName.c_str(), program);
     cl_int err = CL_SUCCESS;
 
+    int_tp bias_offset;
     if (config->kernelType == 2) {
         swizzleWeights(bottom, top, config->workItem_output[2], false);
         size_t total_bottom_size = bottom_dim_ * numImages;
@@ -1886,7 +1894,7 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
         size_t total_bias_size = M_ * group_;
         size_t total_top_size = top_dim_ * numImages;
         for (int_tp g = 0; g < group_; ++g) {
-            bias_offset_ = M_ * g;
+            bias_offset = M_ * g;
             int_tp image_offset = width_ * height_ * (channels_ / group_) * g;
             int_tp output_image_offset = output_w_ * output_h_ * M_ * g;
 
@@ -1906,8 +1914,8 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
                                    true, true);
                 setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
                                    (cl_mem) bias_,
-                                   bias_offset_,
-                                   total_bias_size - bias_offset_,
+                                   bias_offset,
+                                   total_bias_size - bias_offset,
                                    true, true);
                 setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
                                    (cl_mem) top_data_,
@@ -1947,7 +1955,7 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
         size_t total_bias_size = M_ * group_;
         size_t total_top_size = top_dim_ * numImages;
         for (int_tp g = 0; g < group_; ++g) {
-            bias_offset_ = M_ * g;
+            bias_offset = M_ * g;
             int_tp image_offset = width_ * height_ * (channels_ / group_) * g;
             int_tp output_image_offset = output_w_ * output_h_ * M_ * g;
 
@@ -1966,8 +1974,8 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
                                    true, true);
                 setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
                                    (cl_mem) bias_,
-                                   bias_offset_,
-                                   total_bias_size - bias_offset_,
+                                   bias_offset,
+                                   total_bias_size - bias_offset,
                                    true, true);
                 setBufferKernelArg(bottom, top, &kernel, argIdx++, &ctx,
                                    (cl_mem) top_data_,
@@ -2004,10 +2012,10 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
     } else {
         for (int_tp n = 0; n < numImages; ++n) {
             for (int_tp g = 0; g < group_; ++g) {
-                bias_offset_ = M_ * g;
-                int_tp image_offset = n * this->bottom_dim_
+                bias_offset = M_ * g;
+                int_tp image_offset = n * bottom_dim_
                     + width_ * height_ * (channels_ / group_) * g;
-                int_tp output_image_offset = n * this->top_dim_
+                int_tp output_image_offset = n * top_dim_
                     + output_w_ * output_h_ * M_ * g;
 
                 cl_uint argIdx = 0;
@@ -2018,7 +2026,7 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
                 kernel.set(argIdx++, (cl_mem) weight_);
                 kernel.set(argIdx++, kernel_offset);
                 kernel.set(argIdx++, (cl_mem) bias_);
-                kernel.set(argIdx++, bias_offset_);
+                kernel.set(argIdx++, bias_offset);
                 kernel.set(argIdx++, (cl_mem) top_data_);
                 kernel.set(argIdx++, output_image_offset);
                 kernel.set(argIdx++, (uint16_t)width_);
@@ -2053,9 +2061,11 @@ cl_int LibDNNConvSpatial<float>::convolve(const float *bottom, const float *top,
 }
 
 template<>
-float LibDNNConvSpatial<float>::timed_convolve(const float *bottom, const float *top,
-                                               int_tp index,
-                                               int_tp numImages, kernelConfig* config)
+float LibDNNConvSpatial<float>::timedConvolve(const float *bottom,
+                                              const float *top,
+                                              int_tp index,
+                                              int_tp numImages,
+                                              kernelConfig* config)
 {
     // warm up.
     bool saved_tuned = tuned_;
@@ -2105,7 +2115,7 @@ float LibDNNConvSpatial<float>::timed_convolve(const float *bottom, const float 
 }
 
 template<>
-bool LibDNNConvSpatial<float>::verify_result(const float *bottom, float *top,
+bool LibDNNConvSpatial<float>::verifyResult(const float *bottom, float *top,
                                              int_tp index,
                                              int_tp numImages, const float *verify_blob, kernelConfig* config)
 {
@@ -2117,26 +2127,26 @@ bool LibDNNConvSpatial<float>::verify_result(const float *bottom, float *top,
     else if (config->tested)
         return false;
 
-    greentea_gpu_set(0, numImages * this->top_dim_, (float) 0, (cl_mem) top, 0);
-    config->executionTime = timed_convolve(bottom, top, index, numImages, config);
+    libdnnSet(0, numImages * top_dim_, (float) 0, (cl_mem) top, 0);
+    config->executionTime = timedConvolve(bottom, top, index, numImages, config);
     const float *verify_data;
     float *data;
     float *tmp_verify_data;
     ocl::Queue queue = ocl::Queue::getDefault();
     data = reinterpret_cast<float *>(clEnqueueMapBuffer((cl_command_queue)queue.ptr(),
                                                         (cl_mem)top, true, CL_MAP_READ,
-                                                        0, sizeof(float) * numImages * this->top_dim_,
+                                                        0, sizeof(float) * numImages * top_dim_,
                                                         0, NULL, NULL, NULL));
     tmp_verify_data =
         reinterpret_cast<float *>(clEnqueueMapBuffer((cl_command_queue)queue.ptr(),
                                                      (cl_mem)verify_blob, true, CL_MAP_READ,
-                                                     0, sizeof(float) * numImages * this->top_dim_,
+                                                     0, sizeof(float) * numImages * top_dim_,
                                                      0, NULL, NULL, NULL));
     verify_data = tmp_verify_data;
 
     for (int_tp n = 0; n < numImages; ++n) {
         for (int_tp g = 0; g < group_; ++g) {
-            int_tp output_image_offset = n * this->top_dim_ + output_w_ * output_h_ * M_ * g;
+            int_tp output_image_offset = n * top_dim_ + output_w_ * output_h_ * M_ * g;
             for (int out_ch = 0; out_ch < M_ && !verificationFail; out_ch++)
                 for (int h = 0; h < output_h_ && !verificationFail; h++)
                     for (int w = 0; w < output_w_; w++) {
@@ -2167,7 +2177,7 @@ out:
 }
 
 template<typename Dtype>
-ocl::Program LibDNNConvSpatial<Dtype>::compile_fw_kernel()
+ocl::Program LibDNNConvSpatial<Dtype>::compileKernel()
 {
     String errmsg;
     ocl::Context ctx = ocl::Context::getDefault();
@@ -2179,9 +2189,9 @@ ocl::Program LibDNNConvSpatial<Dtype>::compile_fw_kernel()
 }
 
 template<>
-bool LibDNNConvSpatial<float>::create_gemm_like_conv_kernel(const float *bottom, const float *top,
-                                                            int_tp blockM,
-                                                            int_tp blockK, int_tp blockN)
+bool LibDNNConvSpatial<float>::createGEMMLikeConvKernel(int_tp blockM,
+                                                        int_tp blockK,
+                                                        int_tp blockN)
 {
 
     int_tp workItemOutput[3] = { blockM, blockK, blockN };
@@ -2206,8 +2216,8 @@ bool LibDNNConvSpatial<float>::create_gemm_like_conv_kernel(const float *bottom,
     blockM_ = blockM;
     blockK_ = blockK;
     blockN_ = blockN;
-    GenerateKernels();
-    ocl::Program program = compile_fw_kernel();
+    generateKernelSrc();
+    ocl::Program program = compileKernel();
 
     size_t workgroupSize_used;
     ocl::Kernel kernel(kernel_name_.c_str(), program);
@@ -2233,9 +2243,9 @@ bool LibDNNConvSpatial<float>::create_gemm_like_conv_kernel(const float *bottom,
 }
 
 template<>
-bool LibDNNConvSpatial<float>::setup_IDLF(const float *bottom, const float *top,
-                                          int_tp blockWidth,
-                                          int_tp blockHeight, int_tp simd_size)
+bool LibDNNConvSpatial<float>::setupIDLF(int_tp blockWidth,
+                                         int_tp blockHeight,
+                                         int_tp simd_size)
 {
     int_tp workItemOutput[3] = { blockWidth, blockHeight, simd_size };
     const int_tp num_output_maps = M_;
@@ -2256,8 +2266,8 @@ bool LibDNNConvSpatial<float>::setup_IDLF(const float *bottom, const float *top,
     blockK_ = blockHeight;
     blockN_ = simd_size;
 
-    GenerateKernels();
-    ocl::Program program = compile_fw_kernel();
+    generateKernelSrc();
+    ocl::Program program = compileKernel();
 
     // ClKernel kernel;
     size_t workgroupSize_used;
@@ -2284,8 +2294,9 @@ bool LibDNNConvSpatial<float>::setup_IDLF(const float *bottom, const float *top,
 }
 
 template<>
-bool LibDNNConvSpatial<float>::tune_local_size(const float *bottom, const float *top,
-                                               kernelConfig* config)
+bool LibDNNConvSpatial<float>::tuneLocalSize(const float *bottom,
+                                             const float *top,
+                                             kernelConfig* config)
 {
     if (config->use_null_local || !config->autoTune)
         return true;
@@ -2312,9 +2323,9 @@ bool LibDNNConvSpatial<float>::tune_local_size(const float *bottom, const float 
                     config->local_work_size[2] =
                         (multiplier * z == 0) ? 1 : multiplier * z;
 
-                    calculate_global_size(1, config->workItem_output,
-                                          config->local_work_size,
-                                          config->global_work_size);
+                    computeGlobalSize(1, config->workItem_output,
+                                      config->local_work_size,
+                                      config->global_work_size);
                 }
                 if (config->workItem_output[2] * config->global_work_size[2] != M_)
                     break;
@@ -2360,30 +2371,31 @@ bool LibDNNConvSpatial<float>::tune_local_size(const float *bottom, const float 
         for (int_tp li = 0; li < 3; li++)
             config->local_work_size[li] = localSize[li];
 
-        calculate_global_size(1, config->workItem_output, config->local_work_size,
-                              config->global_work_size);
+        computeGlobalSize(1, config->workItem_output,
+                          config->local_work_size,
+                          config->global_work_size);
     }
     return true;
 }
 
 template<>
-void LibDNNConvSpatial<float>::create_convolution_kernel(const float *bottom, const float *top,
-                                                         int_tp kernelType,
-                                                         int_tp blockWidth, int_tp blockHeight,
-                                                         int_tp blockDepth)
+void LibDNNConvSpatial<float>::createConvolutionKernel(int_tp kernelType,
+                                                       int_tp blockWidth,
+                                                       int_tp blockHeight,
+                                                       int_tp blockDepth)
 {
     if (kernelType == 2)
-        setup_IDLF(bottom, top, blockWidth, blockHeight, blockDepth);
+        setupIDLF(blockWidth, blockHeight, blockDepth);
     else if (kernelType == 4)
-        create_basic_kernel(bottom, top, blockWidth, blockHeight, blockDepth);
+        createBasicKernel(blockWidth, blockHeight, blockDepth);
     else if (kernelType == 5)
-        create_gemm_like_conv_kernel(bottom, top, blockWidth, blockHeight, blockDepth);
+        createGEMMLikeConvKernel(blockWidth, blockHeight, blockDepth);
     else
         assert(0);
 }
 
 template<>
-void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top,
+void LibDNNConvSpatial<float>::setupConvolution(const float *bottom, float *top,
                                                  const float *verify_blob)
 {
     char *auto_tuning = getenv("OPENCV_OPENCL_ENABLE_PROFILING");
@@ -2394,10 +2406,10 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
         int max_compute_units = ocl::Device::getDefault().maxComputeUnits();
         int kernelCnt = 0;
         if (this->group_ == 1 && ((M_ % 8 == 0) && (M_ % 32 != 24))) {
-            create_convolution_kernel(bottom, top, 5, 1, 8, 32);
-            create_convolution_kernel(bottom, top, 5, 2, 8, 32);
+            createConvolutionKernel(5, 1, 8, 32);
+            createConvolutionKernel(5, 2, 8, 32);
             if (kernel_w_ < 4 && M_ % 32 == 0)
-                create_convolution_kernel(bottom, top, 5, 1, 16, 32);
+                createConvolutionKernel(5, 1, 16, 32);
         }
 
         for (int simd_size = 8; simd_size <= 16; simd_size += 8) {
@@ -2437,7 +2449,7 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
                     int tile_y_stride = (4 * simd_size) / tile_x;
 
                     if ((tile_y + tile_y_stride - 1) / tile_y_stride < 4) {
-                        create_convolution_kernel(bottom, top, 2, width, height, simd_size);
+                        createConvolutionKernel(2, width, height, simd_size);
                         candidate++;
                     }
                     if (candidate >= 4 && height == 2)
@@ -2450,8 +2462,8 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
         }
     }
     for (int_tp x = 0; x < kernelQueue.size(); x++) {
-        if (tune_local_size(bottom, top, kernelQueue[x])) {
-            kernelQueue[x]->executionTime = timed_convolve(bottom, top, bottom_index_,
+        if (tuneLocalSize(bottom, top, kernelQueue[x])) {
+            kernelQueue[x]->executionTime = timedConvolve(bottom, top, bottom_index_,
                                                            num_, kernelQueue[x]);
         } else {
             // skip those kernels without a good local size.
@@ -2460,7 +2472,7 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
         }
         #ifdef TEST_ALL_KERNELS
         if (kernelQueue[x]->tested == false) {
-            bool verified = verify_result(bottom, top, bottom_index_, num_,
+            bool verified = verifyResult(bottom, top, bottom_index_, num_,
                                           verify_blob, kernelQueue[x]);
             if (verified == false) {
                 dbgPrint(std::cout << "Kernel "
@@ -2512,7 +2524,7 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
             }
             if (fastestKernel < 0) break;
             // Test fastest kernel
-            bool verified = verify_result(bottom, top, bottom_index_, num_,
+            bool verified = verifyResult(bottom, top, bottom_index_, num_,
                                           verify_blob, kernelQueue[fastestKernel]);
             if (verified == true) {
                 kernelQueue[fastestKernel]->verified = true;
@@ -2537,9 +2549,9 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
                      "fallback to basic kernel" << std::endl);
         else
             dbgPrint(std::cout << "Auto-tuning disabled, fallback to basic kernel" << std::endl);
-        create_basic_kernel(bottom, top, 1, 1, 1);
+        createBasicKernel(1, 1, 1);
         kernel_index_ = kernelQueue.size() - 1;
-        verification = verify_result(bottom, top, bottom_index_, num_,
+        verification = verifyResult(bottom, top, bottom_index_, num_,
                                      verify_blob, kernelQueue[kernel_index_]);
         CHECK_EQ(verification, true) << "Basic kernel failed verification." << std::endl;
     }
@@ -2570,52 +2582,59 @@ void LibDNNConvSpatial<float>::setup_convolution(const float *bottom, float *top
                      << bestKernelConfig->workItem_output[1] << " "
                      << bestKernelConfig->workItem_output[2] << " "
                      << bestKernelConfig->kernelType << " "
-                     << bestKernelConfig->global_work_size[0] << " "
-                     << bestKernelConfig->global_work_size[1] << " "
-                     << bestKernelConfig->global_work_size[2] << " "
                      << bestKernelConfig->local_work_size[0] << " "
                      << bestKernelConfig->local_work_size[1] << " "
                      << bestKernelConfig->local_work_size[2] << " "
                      << bestKernelConfig->swizzle_weights << " "
-                     << 0 << " "  // deprecated
                      << bestKernelConfig->use_null_local << " ";
         outputKernel.close();
     }
 }
 
 template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::load_cached_kernels(const Dtype *bottom, const Dtype *top)
+void LibDNNConvSpatial<Dtype>::prepareKernel()
 {
-    // Generates static key_
     std::string previous_key = key_;
-    generate_key();
-    int prev_kernel_type = 0;
-    if (tuned_) {
-        if (key_.compare(previous_key) == 0)
-            return;
-        tuned_ = false;
-        prev_kernel_type = bestKernelConfig->kernelType;
+
+    generateKey();
+    if (key_.compare(previous_key) == 0 && bestKernelConfig != NULL)
+        return;
+
+    if (bestKernelConfig)
+    {
+        prev_kernel_type_ = bestKernelConfig->kernelType;
         phash.erase(bestKernelConfig->kernelName);
         delete bestKernelConfig;
         bestKernelConfig = NULL;
     }
 
+    if (loadCachedConfig())
+        return;
+
+    tune(top_data_, weight_, bias_, bottom_data_, num_);
+}
+
+template<typename Dtype>
+bool LibDNNConvSpatial<Dtype>::loadCachedConfig()
+{
     // Find cached kernel configuration
     std::string outputFile;
     outputFile = cache_path_.str() + key_;
     std::ifstream cachedKernel(outputFile.c_str());
-    if (cachedKernel) {
+    if (cachedKernel)
+    {
         int_tp x, y, z, type;
         cachedKernel >> x;
         cachedKernel >> y;
         cachedKernel >> z;
         cachedKernel >> type;
-        if (type == 2) {
+        if (type == 2)
+        {
             if (z == 1)
                 z = 16;
             CHECK_EQ(z == 16 || z == 8, true) << "invalid SIMD size" << std::endl;
         }
-        create_convolution_kernel(bottom, top, type, x, y, z);
+        createConvolutionKernel(type, x, y, z);
         kernel_index_ = kernelQueue.size() - 1;
         if (kernel_index_ == -1) {
             std::cerr << "Failed to get kernel from cached configurations."
@@ -2624,138 +2643,29 @@ void LibDNNConvSpatial<Dtype>::load_cached_kernels(const Dtype *bottom, const Dt
                       << std::endl;
             std::string bakFile = outputFile + ".bak";
             std::rename(outputFile.c_str(), bakFile.c_str());
-            return;
+            return false;
         }
         bestKernelConfig = kernelQueue[kernel_index_];
         kernelQueue.clear();
-        // As we are using varying image size kernels now, let's skip the
-        // cached work group size and local group size here, and we already
-        // get correct work/local group size at the create_convolution kernel stage.
-        // To not break the previous trained record, for now just skipping them.
-        // Will use a totally different cache mechanism in the future.
-        size_t foo;  // for deprecated parameters.
-        cachedKernel >> foo;
-        cachedKernel >> foo;
-        cachedKernel >> foo;
         cachedKernel >> bestKernelConfig->local_work_size[0];
         cachedKernel >> bestKernelConfig->local_work_size[1];
         cachedKernel >> bestKernelConfig->local_work_size[2];
-        if (bestKernelConfig->kernelType == 1)
-            calculate_global_size(1, bestKernelConfig->workItem_output,
-                                  bestKernelConfig->local_work_size,
-                                  bestKernelConfig->global_work_size);
         cachedKernel >> bestKernelConfig->swizzle_weights;
-        cachedKernel >> foo;
         cachedKernel >> bestKernelConfig->use_null_local;
-        tuned_ = true;
         // If kernel type changed to type 2 or 4, we need to reset the swizzled
         // weights pointer to invalidate the previous swizzled weights data.
-        if (prev_kernel_type != bestKernelConfig->kernelType &&
+        if (prev_kernel_type_ != bestKernelConfig->kernelType &&
             (bestKernelConfig->kernelType == 2 || bestKernelConfig->kernelType == 5))
+        {
+            if (swizzled_weights_)
+                clReleaseMemObject((cl_mem)swizzled_weights_);
             swizzled_weights_ = NULL;
+        }
+        return true;
     }
-    return;
+    else
+        return false;
 }
 
-template<typename Dtype>
-void LibDNNConvSpatial<Dtype>::SetUp(const Dtype *bottom, const Dtype *top)
-{
-    {
-        load_cached_kernels(bottom, top);
-    }
-}
-
-template<>
-void LibDNNConvSpatial<double>::create_convolution_kernel(const double *bottom, const double *top,
-                                                          int_tp kernelType,
-                                                          int_tp blockWidth, int_tp blockHeight,
-                                                          int_tp blockDepth)
-{
-    NOT_IMPLEMENTED;
-    return;
-}
-
-template<>
-bool LibDNNConvSpatial<double>::setup_IDLF(const double *bottom, const double *top,
-                                           int_tp blockWidth,
-                                           int_tp blockHeight, int_tp blockDepth)
-{
-    NOT_IMPLEMENTED;
-    return false;
-}
-
-template<>
-bool LibDNNConvSpatial<double>::create_gemm_like_conv_kernel(const double *bottom, const double *top,
-                                                             int_tp blockWidth,
-                                                             int_tp blockHeight, int_tp blockDepth)
-{
-    NOT_IMPLEMENTED;
-    return false;
-}
-
-
-template<>
-bool LibDNNConvSpatial<double>::verify_result(const double *bottom, double *top,
-                                              int_tp index,
-                                              int_tp numImages, const double *verify_blob, kernelConfig* config)
-{
-    NOT_IMPLEMENTED;
-    return false;
-}
-
-template<>
-bool LibDNNConvSpatial<double>::create_basic_kernel(const double *bottom, const double *top,
-                                                    int_tp blockWidth,
-                                                    int_tp blockHeight, int_tp blockDepth)
-{
-    NOT_IMPLEMENTED;
-    return false;
-}
-
-template<>
-bool LibDNNConvSpatial<double>::tune_local_size(const double *bottom, const double *top,
-                                                kernelConfig* config)
-{
-    NOT_IMPLEMENTED;
-    return false;
-}
-
-template<>
-cl_int LibDNNConvSpatial<double>::convolve(const double *bottom, const double *top,
-                                           int_tp index,
-                                           int_tp numImages, kernelConfig* config)
-{
-    NOT_IMPLEMENTED;
-    return false;
-}
-
-template<>
-float LibDNNConvSpatial<double>::timed_convolve(const double *bottom, const double *top,
-                                                int_tp index,
-                                                int_tp numImages, kernelConfig* config)
-{
-    NOT_IMPLEMENTED;
-    return 0.f;
-}
-
-template<>
-void LibDNNConvSpatial<double>::setup_convolution(const double *bottom, double *top,
-                                                  const double *verify_blob)
-{
-    NOT_IMPLEMENTED;
-}
-
-template<>
-void LibDNNConvSpatial<double>::calculate_global_size(int_tp batch,
-                                                      int_tp* workItemOutput,
-                                                      size_t* localSizes, size_t* globalSizes)
-{
-    NOT_IMPLEMENTED;
-}
-
-//INSTANTIATE_CLASS(LibDNNConvSpatial);
 template class LibDNNConvSpatial<float>;
-template class LibDNNConvSpatial<double>;
 #endif // HAVE_OPENCL
-
-}  // namespace caffe

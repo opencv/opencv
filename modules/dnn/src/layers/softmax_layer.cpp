@@ -65,7 +65,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<greentea::LibDNNSoftmax<float>> softmaxOp;
+    Ptr<LibDNNSoftmax<float>> softmaxOp;
 #endif
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -92,7 +92,7 @@ public:
     {
         if (softmaxOp.empty())
         {
-            greentea::LibDNNSoftmaxConfig config;
+            LibDNNSoftmaxConfig config;
 
             int dims = inputs[0]->dims;
             config.in_shape.resize(dims);
@@ -101,7 +101,7 @@ public:
             config.axis = axisRaw;
             config.channels = inputs[0]->size[axisRaw];
 
-            softmaxOp = Ptr<greentea::LibDNNSoftmax<float>>(new greentea::LibDNNSoftmax<float>(config));
+            softmaxOp = Ptr<LibDNNSoftmax<float>>(new LibDNNSoftmax<float>(config));
         }
 
         UMat inpMat, outMat;

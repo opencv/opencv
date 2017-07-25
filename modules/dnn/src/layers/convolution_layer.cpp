@@ -151,7 +151,7 @@ public:
     Ptr<ScaleLayer> scaleLayer;
 
 #ifdef HAVE_OPENCL
-    Ptr<greentea::LibDNNConvSpatial<float>> convolutionOp;
+    Ptr<LibDNNConvSpatial<float>> convolutionOp;
 #endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
@@ -647,7 +647,7 @@ public:
 
         if (convolutionOp.empty())
         {
-            greentea::LibDNNConvConfig config;
+            LibDNNConvConfig config;
             config.in_shape = {inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3]};
             config.out_shape = {outputs[0].size[0], outputs[0].size[1], outputs[0].size[2], outputs[0].size[3]};
             config.kernel = {kernel.height, kernel.width};
@@ -659,7 +659,7 @@ public:
             config.weights_backward = false;
             config.bias_backward = false;
 
-            convolutionOp = Ptr<greentea::LibDNNConvSpatial<float>>(new greentea::LibDNNConvSpatial<float>(config));
+            convolutionOp = Ptr<LibDNNConvSpatial<float>>(new LibDNNConvSpatial<float>(config));
         }
 
         UMat weights, biases;

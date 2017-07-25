@@ -1,35 +1,67 @@
-/*
- * greentea_math_functions.cpp
- *
- *  Created on: Apr 6, 2015
- *      Author: Fabian Tschopp
- */
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (c) 2016-2017 Fabian David Tschopp, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 
 #include "../../precomp.hpp"
 #include "common.hpp"
 
 #ifdef HAVE_OPENCL
-#include "greentea_math_functions.hpp"
-
+#include "math_functions.hpp"
 #include <mutex>
 #include <cstdlib>
 #include <cstring>
 #include <vector>
-
 #include "benchmark.hpp"
 #include "opencl_kernels_dnn.hpp"
 
 using namespace cv;
-namespace greentea {
 
 struct gemm_callback_arg {
     std::vector<cl_event> evs;
     std::vector<cl_mem> imgs;
 };
 
-static void CL_CALLBACK gemm_callback (cl_event event,
-                                       cl_int event_command_exec_status,
-                                       void *user_data)
+static void CL_CALLBACK gemmCallback(cl_event event,
+                                     cl_int event_command_exec_status,
+                                     void *user_data)
 {
     struct gemm_callback_arg *arg = (struct gemm_callback_arg *) user_data;
     for(int i = 0; i < arg->evs.size(); i++)
@@ -48,7 +80,7 @@ static void CL_CALLBACK gemm_callback (cl_event event,
 // Will return image to caller if the input image is NULL. Otherwise,
 // will use the image directly. It's caller's responsibility to
 // release the created image.
-void greentea_gpu_gemm_copy_buffer_to_image(int_tp ctx_id,
+void libdnnGEMMCopyBufferToImage(int_tp ctx_id,
                                             cl_mem *image, cl_mem buffer, int offset,
                                             bool is_matrix_a, bool transpose,
                                             bool padding, int padded_height,
@@ -184,7 +216,7 @@ enum gemm_type_t
     GEMM_TYPE_MAX
 };
 
-static void greentea_gpu_fast_image_gemm(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
+static void libdnnFastImageGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
                                          const CBLAS_TRANSPOSE TransB, const int_tp M,
                                          const int_tp N, const int_tp K, const float alpha,
                                          const cl_mem A, const int_tp offA, const cl_mem B,
@@ -244,7 +276,7 @@ static void greentea_gpu_fast_image_gemm(const int_tp ctx_id, const CBLAS_TRANSP
         START_TIMER(0);
         if (!is_image_a)
         {
-            greentea_gpu_gemm_copy_buffer_to_image(ctx_id, &ImA, A, offA,
+            libdnnGEMMCopyBufferToImage(ctx_id, &ImA, A, offA,
                                                    true, TransA != CblasNoTrans,
                                                    padding_A, imageA_h, imageA_w,
                                                    heightA, widthA, 0, NULL, &ev[ev_idx]);
@@ -257,7 +289,7 @@ static void greentea_gpu_fast_image_gemm(const int_tp ctx_id, const CBLAS_TRANSP
 
         if (!is_image_b)
         {
-            greentea_gpu_gemm_copy_buffer_to_image(ctx_id, &ImB, B, offB,
+            libdnnGEMMCopyBufferToImage(ctx_id, &ImB, B, offB,
                                                    false, false,
                                                    padding_B, imageB_h, imageB_w,
                                                    heightB, widthB, 0, NULL, &ev[ev_idx]);
@@ -275,7 +307,7 @@ static void greentea_gpu_fast_image_gemm(const int_tp ctx_id, const CBLAS_TRANSP
         {
             bool padding;
             padding = !is_image_b;
-            greentea_gpu_gemm_copy_buffer_to_image(ctx_id, &ImA, A, offA,
+            libdnnGEMMCopyBufferToImage(ctx_id, &ImA, A, offA,
                                                    true, TransA != CblasNoTrans,
                                                    padding, imageA_h, imageA_w,
                                                    heightA, widthA, 0, NULL, &ev[ev_idx]);
@@ -391,10 +423,10 @@ static void greentea_gpu_fast_image_gemm(const int_tp ctx_id, const CBLAS_TRANSP
             M * N * ( 2 * K - 1.) / ( total_elapsed * 1e3 ) );
     #endif
     arg->evs.assign(ev, ev + ev_idx + 1);
-    clSetEventCallback(ev[ev_idx], CL_COMPLETE, &gemm_callback, (void*)arg);
+    clSetEventCallback(ev[ev_idx], CL_COMPLETE, &gemmCallback, (void*)arg);
 }
 
-static void greentea_gpu_fast_buffer_gemm(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
+static void libdnnFastBufferGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
                                           const CBLAS_TRANSPOSE TransB, const int_tp M,
                                           const int_tp N, const int_tp K, const float alpha,
                                           const cl_mem A, const int_tp offA, const cl_mem B,
@@ -520,7 +552,7 @@ static void greentea_gpu_fast_buffer_gemm(const int_tp ctx_id, const CBLAS_TRANS
 }
 
 template<typename Dtype>
-static void greentea_gpu_gemm_common(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
+static void libdnnGEMMCommon(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
                                      const CBLAS_TRANSPOSE TransB, const int_tp M,
                                      const int_tp N, const int_tp K, const Dtype alpha,
                                      const cl_mem A, const int_tp offA, const cl_mem B,
@@ -534,20 +566,20 @@ static void greentea_gpu_gemm_common(const int_tp ctx_id, const CBLAS_TRANSPOSE 
     if (gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 ||
         gemm_type == GEMM_TYPE_FAST_IMAGE_32_2)
     {
-        greentea_gpu_fast_image_gemm(ctx_id, TransA, TransB, M, N, K,
+        libdnnFastImageGEMM(ctx_id, TransA, TransB, M, N, K,
                                      alpha, A, offA, B, offB, beta, C,
                                      offC, is_image_a, is_image_b,
                                      gemm_type);
     }
     else if (gemm_type == GEMM_TYPE_FAST_BUFFER)
     {
-        greentea_gpu_fast_buffer_gemm(ctx_id, TransA, TransB, M, N, K,
+        libdnnFastBufferGEMM(ctx_id, TransA, TransB, M, N, K,
                                       alpha, A, offA, B, offB, beta, C,
                                       offC, gemm_type);
     }
 }
 
-static void auto_tune_gemm(int ctx_id, const CBLAS_TRANSPOSE TransA,
+static void autoTuneGEMM(int ctx_id, const CBLAS_TRANSPOSE TransA,
                            const CBLAS_TRANSPOSE TransB,
                            gemm_type_t *tuned_gemm_types,
                            bool use_fast_gemm_image)
@@ -573,7 +605,7 @@ static void auto_tune_gemm(int ctx_id, const CBLAS_TRANSPOSE TransA,
     // warm up.
     for ( int i = 0; i < gemm_tests.size(); i++ )
     {
-        greentea_gpu_gemm_common(ctx_id, TransA, TransB, M, N, K,
+        libdnnGEMMCommon(ctx_id, TransA, TransB, M, N, K,
                                  1.0f, A, 0, B, 0, 0.0f, C, 0, false, false,
                                  gemm_tests[i]);
     }
@@ -584,7 +616,7 @@ static void auto_tune_gemm(int ctx_id, const CBLAS_TRANSPOSE TransA,
     {
         int64 start, end;
         start = getTickCount();
-        greentea_gpu_gemm_common(ctx_id, TransA, TransB, M, N, K,
+        libdnnGEMMCommon(ctx_id, TransA, TransB, M, N, K,
                                  1.0f, A, 0, B, 0, 0.0f, C, 0, false, false,
                                  gemm_tests[i]);
         clFinish((cl_command_queue)ocl::Queue::getDefault().ptr());
@@ -621,28 +653,28 @@ static gemm_type_t tuned_gemm_nt_types_without_image[16] = {GEMM_TYPE_NONE};
 static gemm_type_t tuned_gemm_tn_types_without_image[16] = {GEMM_TYPE_NONE};
 static gemm_type_t tuned_gemm_tt_types_without_image[16] = {GEMM_TYPE_NONE};
 
-static void auto_tune_gemm_all(int ctx_id, bool use_fast_gemm_image)
+static void autoTuneGEMMAll(int ctx_id, bool use_fast_gemm_image)
 {
     if(use_fast_gemm_image)
     {
-        auto_tune_gemm(ctx_id, CblasNoTrans, CblasNoTrans, tuned_gemm_nn_types_with_image, true);
-        auto_tune_gemm(ctx_id, CblasNoTrans, CblasTrans, tuned_gemm_nt_types_with_image, true);
-        auto_tune_gemm(ctx_id, CblasTrans, CblasNoTrans, tuned_gemm_tn_types_with_image, true);
-        auto_tune_gemm(ctx_id, CblasTrans, CblasTrans, tuned_gemm_tt_types_with_image, true);
+        autoTuneGEMM(ctx_id, CblasNoTrans, CblasNoTrans, tuned_gemm_nn_types_with_image, true);
+        autoTuneGEMM(ctx_id, CblasNoTrans, CblasTrans, tuned_gemm_nt_types_with_image, true);
+        autoTuneGEMM(ctx_id, CblasTrans, CblasNoTrans, tuned_gemm_tn_types_with_image, true);
+        autoTuneGEMM(ctx_id, CblasTrans, CblasTrans, tuned_gemm_tt_types_with_image, true);
     }
     else
     {
-        auto_tune_gemm(ctx_id, CblasNoTrans, CblasNoTrans, tuned_gemm_nn_types_without_image, false);
-        auto_tune_gemm(ctx_id, CblasNoTrans, CblasTrans, tuned_gemm_nt_types_without_image, false);
-        auto_tune_gemm(ctx_id, CblasTrans, CblasNoTrans, tuned_gemm_tn_types_without_image, false);
-        auto_tune_gemm(ctx_id, CblasTrans, CblasTrans, tuned_gemm_tt_types_without_image, false);
+        autoTuneGEMM(ctx_id, CblasNoTrans, CblasNoTrans, tuned_gemm_nn_types_without_image, false);
+        autoTuneGEMM(ctx_id, CblasNoTrans, CblasTrans, tuned_gemm_nt_types_without_image, false);
+        autoTuneGEMM(ctx_id, CblasTrans, CblasNoTrans, tuned_gemm_tn_types_without_image, false);
+        autoTuneGEMM(ctx_id, CblasTrans, CblasTrans, tuned_gemm_tt_types_without_image, false);
     }
 }
 
-static std::mutex auto_tune_gemm_mutex;
+static std::mutex autoTuneGEMM_mutex;
 
 template<typename Dtype>
-void greentea_gpu_gemm(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
+void libdnnGEMM(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
                        const CBLAS_TRANSPOSE TransB, const int_tp M,
                        const int_tp N, const int_tp K, const Dtype alpha,
                        const cl_mem A, const int_tp offA, const cl_mem B,
@@ -688,12 +720,12 @@ void greentea_gpu_gemm(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
 
     if (0)  //disable auto tune
     {
-        std::lock_guard<std::mutex> lock(auto_tune_gemm_mutex);
+        std::lock_guard<std::mutex> lock(autoTuneGEMM_mutex);
         if (use_fast_gemm_image)
         {
             if (tuned_gemm_nn_types_with_image[ctx_id] == GEMM_TYPE_NONE)
             {
-                auto_tune_gemm_all(ctx_id, true);
+                autoTuneGEMMAll(ctx_id, true);
             }
 
             if (TransA == CblasNoTrans && TransB == CblasNoTrans)
@@ -709,7 +741,7 @@ void greentea_gpu_gemm(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
         {
             if (tuned_gemm_nn_types_without_image[ctx_id] == GEMM_TYPE_NONE)
             {
-                auto_tune_gemm_all(ctx_id, false);
+                autoTuneGEMMAll(ctx_id, false);
             }
 
             if (TransA == CblasNoTrans && TransB == CblasNoTrans)
@@ -729,12 +761,12 @@ void greentea_gpu_gemm(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
     if (is_image_a || is_image_b)
         preferred_gemm_type = GEMM_TYPE_FAST_IMAGE_32_1;
 
-    greentea_gpu_gemm_common(ctx_id, TransA, TransB, M, N, K, alpha, A, offA,
+    libdnnGEMMCommon(ctx_id, TransA, TransB, M, N, K, alpha, A, offA,
                              B, offB, beta, C, offC, is_image_a, is_image_b,
                              preferred_gemm_type);
 }
 
-template void greentea_gpu_gemm<float>(const int_tp ctx_id,
+template void libdnnGEMM<float>(const int_tp ctx_id,
                                        const CBLAS_TRANSPOSE TransA,
                                        const CBLAS_TRANSPOSE TransB,
                                        const int_tp M, const int_tp N,
@@ -745,19 +777,8 @@ template void greentea_gpu_gemm<float>(const int_tp ctx_id,
                                        const int_tp offC,
                                        const bool is_image_a,
                                        const bool is_image_b);
-template void greentea_gpu_gemm<double>(const int_tp ctx_id,
-                                        const CBLAS_TRANSPOSE TransA,
-                                        const CBLAS_TRANSPOSE TransB,
-                                        const int_tp M, const int_tp N,
-                                        const int_tp K, const double alpha,
-                                        const cl_mem A, const int_tp offA,
-                                        const cl_mem B, const int_tp offB,
-                                        const double beta, cl_mem C,
-                                        const int_tp offC,
-                                        const bool is_image_a,
-                                        const bool is_image_b);
 
-template void greentea_gpu_gemm_common<float>(const int_tp ctx_id,
+template void libdnnGEMMCommon<float>(const int_tp ctx_id,
                                        const CBLAS_TRANSPOSE TransA,
                                        const CBLAS_TRANSPOSE TransB,
                                        const int_tp M, const int_tp N,
@@ -769,21 +790,9 @@ template void greentea_gpu_gemm_common<float>(const int_tp ctx_id,
                                        const bool is_image_a,
                                        const bool is_image_b,
                                        const gemm_type_t);
-template void greentea_gpu_gemm_common<double>(const int_tp ctx_id,
-                                        const CBLAS_TRANSPOSE TransA,
-                                        const CBLAS_TRANSPOSE TransB,
-                                        const int_tp M, const int_tp N,
-                                        const int_tp K, const double alpha,
-                                        const cl_mem A, const int_tp offA,
-                                        const cl_mem B, const int_tp offB,
-                                        const double beta, cl_mem C,
-                                        const int_tp offC,
-                                        const bool is_image_a,
-                                        const bool is_image_b,
-                                        const gemm_type_t);
 
 template<typename Dtype>
-void greentea_gpu_gemv(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
+void libdnnGEMV(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
                        const int_tp M, const int_tp N, const Dtype alpha,
                        const cl_mem A, const int_tp offA, const cl_mem x,
                        const int_tp offx, const Dtype beta, cl_mem y,
@@ -860,23 +869,16 @@ void greentea_gpu_gemv(const int_tp ctx_id, const CBLAS_TRANSPOSE TransA,
     }
 }
 
-template void greentea_gpu_gemv<float>(const int_tp ctx_id,
+template void libdnnGEMV<float>(const int_tp ctx_id,
                                        const CBLAS_TRANSPOSE TransA,
                                        const int_tp M, const int_tp N,
                                        const float alpha, const cl_mem A,
                                        const int_tp offA, const cl_mem x,
                                        const int_tp offx, const float beta,
                                        cl_mem y, const int_tp offy);
-template void greentea_gpu_gemv<double>(const int_tp ctx_id,
-                                        const CBLAS_TRANSPOSE TransA,
-                                        const int_tp M, const int_tp N,
-                                        const double alpha, const cl_mem A,
-                                        const int_tp offA, const cl_mem x,
-                                        const int_tp offx, const double beta,
-                                        cl_mem y, const int_tp offy);
 
 template<typename Dtype>
-void greentea_gpu_axpy(const int_tp ctx_id, const int_tp N, const Dtype alpha,
+void libdnnAXPY(const int_tp ctx_id, const int_tp N, const Dtype alpha,
                        const cl_mem X, const int_tp offX, cl_mem Y,
                        const int_tp offY)
 {
@@ -904,17 +906,13 @@ void greentea_gpu_axpy(const int_tp ctx_id, const int_tp N, const Dtype alpha,
     }
 }
 
-template void greentea_gpu_axpy<float>(const int_tp ctx_id, const int_tp N,
+template void libdnnAXPY<float>(const int_tp ctx_id, const int_tp N,
                                        const float alpha, const cl_mem X,
                                        const int_tp offX, cl_mem Y,
                                        const int_tp offY);
-template void greentea_gpu_axpy<double>(const int_tp ctx_id, const int_tp N,
-                                        const double alpha, const cl_mem X,
-                                        const int_tp offX, cl_mem Y,
-                                        const int_tp offY);
 
 template<typename Dtype>
-void greentea_gpu_set(const int_tp ctx_id, const int_tp N, const Dtype alpha,
+void libdnnSet(const int_tp ctx_id, const int_tp N, const Dtype alpha,
                       cl_mem Y, const int_tp offY) {
     // OpenCL Version >= 1.2 approach
     // clEnqueueFillBuffer(ctx.get_queue().handle().get(),
@@ -935,14 +933,10 @@ void greentea_gpu_set(const int_tp ctx_id, const int_tp N, const Dtype alpha,
     oclk_fill.run(1, global, local, false);
 }
 
-template void greentea_gpu_set<int_tp>(const int_tp ctx_id, const int_tp N,
+template void libdnnSet<int_tp>(const int_tp ctx_id, const int_tp N,
                                        const int_tp alpha, cl_mem Y,
                                        const int_tp offY);
-template void greentea_gpu_set<float>(const int_tp ctx_id, const int_tp N,
+template void libdnnSet<float>(const int_tp ctx_id, const int_tp N,
                                       const float alpha, cl_mem Y,
                                       const int_tp offY);
-template void greentea_gpu_set<double>(const int_tp ctx_id, const int_tp N,
-                                       const double alpha, cl_mem Y,
-                                       const int_tp offY);
-}  // namespace greentea
 #endif  // HAVE_OPENCL

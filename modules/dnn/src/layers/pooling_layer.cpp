@@ -83,7 +83,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<greentea::LibDNNPool<float>> poolOp;
+    Ptr<LibDNNPool<float>> poolOp;
 #endif
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs)
@@ -114,7 +114,7 @@ public:
     {
         if (poolOp.empty())
         {
-            greentea::LibDNNPoolConfig config;
+            LibDNNPoolConfig config;
 
             config.in_shape = {inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3]};
             config.out_shape = {outputs[0].size[0], outputs[0].size[1], outputs[0].size[2], outputs[0].size[3]};
@@ -122,10 +122,10 @@ public:
             config.pad = {pad.height, pad.width};
             config.stride = {stride.height, stride.width};
             config.channels = inputs[0]->size[1];
-            config.pool_method = type == MAX ? greentea::LIBDNN_POOLING_METHOD_MAX :
-                                (type == AVE ? greentea::LIBDNN_POOLING_METHOD_AVE :
-                                               greentea::LIBDNN_POOLING_METHOD_STO);
-            poolOp = Ptr<greentea::LibDNNPool<float>>(new greentea::LibDNNPool<float>(config));
+            config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
+                                (type == AVE ? LIBDNN_POOLING_METHOD_AVE :
+                                               LIBDNN_POOLING_METHOD_STO);
+            poolOp = Ptr<LibDNNPool<float>>(new LibDNNPool<float>(config));
         }
 
         for (size_t ii = 0; ii < inputs.size(); ii++)

@@ -80,7 +80,7 @@ public:
     }
 
 #ifdef HAVE_OPENCL
-    Ptr<greentea::LibDNNLRN<float>> lrnOp;
+    Ptr<LibDNNLRN<float>> lrnOp;
 #endif
 
     virtual bool supportBackend(int backendId)
@@ -94,10 +94,10 @@ public:
     {
         if (lrnOp.empty())
         {
-            greentea::LibDNNLRNConfig config;
+            LibDNNLRNConfig config;
             config.lrn_type = type == CHANNEL_NRM ?
-                              greentea::LRNParameter_NormRegion_ACROSS_CHANNELS :
-                              greentea::LRNParameter_NormRegion_WITHIN_CHANNEL;
+                              LRNParameter_NormRegion_ACROSS_CHANNELS :
+                              LRNParameter_NormRegion_WITHIN_CHANNEL;
 
             CHECK_EQ(size % 2, 1)<< "LRN only supports odd values for local_size";
             config.local_size = size;
@@ -112,7 +112,7 @@ public:
             config.width = inputs[0]->size[3];
             config.norm_by_size = normBySize;
 
-            lrnOp = Ptr<greentea::LibDNNLRN<float>>(new greentea::LibDNNLRN<float>(config));
+            lrnOp = Ptr<LibDNNLRN<float>>(new LibDNNLRN<float>(config));
         }
 
         UMat inpMat, outMat;
