@@ -3781,6 +3781,7 @@ static char* icvJSONParseMap( CvFileStorage* fs, char* ptr, CvFileNode* node )
                     ptr = icvJSONParseMap( fs, ptr, child );
                 else
                     ptr = icvJSONParseValue( fs, ptr, child );
+                child->tag |= CV_NODE_NAMED;
             }
         }
 
