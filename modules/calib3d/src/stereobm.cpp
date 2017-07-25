@@ -227,7 +227,7 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
             v_int16x8 ftz2 = v_setall_s16((short)(ftzero*2));
             v_int16x8 z = v_setzero_s16();
 
-            for(; x <= size.width-8; x += 8 )
+            for(; x <= (size.width - 1) - 8; x += 8 )
             {
                 v_int16x8 s00 = v_reinterpret_as_s16(v_load_expand(srow0 + x + 1));
                 v_int16x8 s01 = v_reinterpret_as_s16(v_load_expand(srow0 + x - 1));
