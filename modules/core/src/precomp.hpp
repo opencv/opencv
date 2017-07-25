@@ -148,7 +148,7 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 void deleteThreadAllocData();
 #endif
 
@@ -288,7 +288,7 @@ struct CoreTLSData
 TLSData<CoreTLSData>& getCoreTlsData();
 
 #if defined(BUILD_SHARED_LIBS)
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 #define CL_RUNTIME_EXPORT __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
 #define CL_RUNTIME_EXPORT __attribute__ ((visibility ("default")))

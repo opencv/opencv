@@ -1,7 +1,7 @@
 // This sample demonstrates working on one piece of data using two GPUs.
 // It splits input into two parts and processes them separately on different GPUs.
 
-#ifdef WIN32
+#ifdef _WIN32
     #define NOMINMAX
     #include <windows.h>
 #else
@@ -25,7 +25,7 @@ using namespace cv::cuda;
 // Thread
 // OS-specific wrappers for multi-threading
 
-#ifdef WIN32
+#ifdef _WIN32
 class Thread
 {
     struct UserData

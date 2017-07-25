@@ -43,7 +43,7 @@ typedef unsigned __int64 uint64_t;
 
 #include "defines.h"
 
-#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+#if defined _WIN32 && defined(_M_ARM)
 # include <Intrin.h>
 #endif
 

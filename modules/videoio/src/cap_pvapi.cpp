@@ -46,7 +46,7 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_PVAPI
-#if !defined WIN32 && !defined _WIN32 && !defined _LINUX
+#if !defined _WIN32 && !defined _LINUX
 #define _LINUX
 #endif
 
@@ -57,7 +57,7 @@
 #endif
 
 #include <PvApi.h>
-#ifdef WIN32
+#ifdef _WIN32
 #  include <io.h>
 #else
 #  include <time.h>
@@ -91,7 +91,7 @@ public:
     }
 
 protected:
-#ifndef WIN32
+#ifndef _WIN32
     virtual void Sleep(unsigned int time);
 #endif
 
@@ -118,7 +118,7 @@ CvCaptureCAM_PvAPI::CvCaptureCAM_PvAPI()
     memset(&this->Camera, 0, sizeof(this->Camera));
 }
 
-#ifndef WIN32
+#ifndef _WIN32
 void CvCaptureCAM_PvAPI::Sleep(unsigned int time)
 {
     struct timespec t,r;
