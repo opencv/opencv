@@ -411,8 +411,9 @@ UMat::~UMat()
 
 void UMat::deallocate()
 {
-    u->currAllocator->deallocate(u);
+    UMatData* u_ = u;
     u = NULL;
+    u_->currAllocator->deallocate(u_);
 }
 
 
