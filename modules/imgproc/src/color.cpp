@@ -8043,7 +8043,7 @@ struct RGB2Luv_b
                const float* _whitept, bool _srgb )
     : srccn(_srccn),
       fcvt(3, blueIdx, _coeffs, _whitept, _srgb),
-      icvt(3, blueIdx, _coeffs, _whitept, _srgb)
+      icvt(_srccn, blueIdx, _coeffs, _whitept, _srgb)
     {
         useInterpolation = (!_coeffs && !_whitept && _srgb
                             && enableBitExactness
