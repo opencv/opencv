@@ -258,10 +258,8 @@ static int abToXZ_b[LAB_BASE*9/4];
 static const bool enableRGB2LuvInterpolation = true;
 static const bool enablePackedRGB2Luv = true;
 static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
-// Luv -> XYZ is an awful function for interpolation
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(uHigh-uLow);
-static const softfloat XYZmax(1.25f);
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
@@ -391,7 +389,9 @@ static void initLabTabs()
             abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
         }
 
-        if(enableRGB2LabInterpolation || enableRGB2LuvInterpolation)
+        //try to suppress warning
+        static const bool calcLUT = enableRGB2LabInterpolation || enableRGB2LuvInterpolation;
+        if(calcLUT)
         {
             const float* _whitept = D65;
             softfloat scaledCoeffs[9], coeffs[9];
@@ -409,7 +409,6 @@ static void initLabTabs()
                 scaledCoeffs[i*3+2] = scaleWhite[i] * coeffs[i*3+2];
                 scaledCoeffs[i*3+1] = scaleWhite[i] * coeffs[i*3+1];
                 scaledCoeffs[i*3+0] = scaleWhite[i] * coeffs[i*3  ];
-
             }
 
             softfloat S0 = scaledCoeffs[0], S1 = scaledCoeffs[1], S2 = scaledCoeffs[2],
