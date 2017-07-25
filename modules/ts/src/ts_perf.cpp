@@ -197,6 +197,10 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
 #else
     const char *data_path_dir = OPENCV_TEST_DATA_PATH;
 #endif
+
+    cvtest::addDataSearchSubDirectory("");
+    cvtest::addDataSearchSubDirectory(testSuitName);
+
     const char *path_separator = "/";
 
     if (data_path_dir)

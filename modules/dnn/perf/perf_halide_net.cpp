@@ -83,7 +83,7 @@ PERF_TEST(ResNet50, HalidePerfTest)
 PERF_TEST(SqueezeNet_v1_1, HalidePerfTest)
 {
     Net net;
-    loadNet("dnn/squeezenet_v1_1.caffemodel", "dnn/squeezenet_v1_1.prototxt",
+    loadNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt",
             "dnn/halide_scheduler_squeezenet_v1_1.yml", 227, 227, "prob",
             "caffe", DNN_TARGET_CPU, &net);
     TEST_CYCLE() net.forward();
@@ -144,7 +144,7 @@ PERF_TEST(ResNet50_opencl, HalidePerfTest)
 PERF_TEST(SqueezeNet_v1_1_opencl, HalidePerfTest)
 {
     Net net;
-    loadNet("dnn/squeezenet_v1_1.caffemodel", "dnn/squeezenet_v1_1.prototxt",
+    loadNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt",
             "dnn/halide_scheduler_opencl_squeezenet_v1_1.yml", 227, 227, "prob",
             "caffe", DNN_TARGET_OPENCL, &net);
     TEST_CYCLE() net.forward();
