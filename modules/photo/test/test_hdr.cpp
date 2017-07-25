@@ -141,9 +141,10 @@ TEST(Photo_AlignMTB, regression)
     int errors = 0;
 
     Ptr<AlignMTB> align = createAlignMTB(max_bits);
+    RNG rng = ::theRNG();
 
     for(int i = 0; i < TESTS_COUNT; i++) {
-        Point shift(rand() % max_shift, rand() % max_shift);
+        Point shift(rng.uniform(0, max_shift), rng.uniform(0, max_shift));
         Mat res;
         align->shiftMat(img, res, shift);
         Point calc = align->calculateShift(img, res);

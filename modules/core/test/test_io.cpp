@@ -1236,3 +1236,59 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
         }
     }
 }
+
+TEST(Core_InputOutput, FileStorage_format_xml)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.xml", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_XML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_xml_gz)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.xml.gz", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_XML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_json)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.json", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_JSON, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_json_gz)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.json.gz", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_JSON, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_yaml)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.yaml", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_yaml_gz)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.yaml.gz", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_yml)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.yml", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
+}
+
+TEST(Core_InputOutput, FileStorage_format_yml_gz)
+{
+    FileStorage fs;
+    fs.open("opencv_storage.yml.gz", FileStorage::WRITE | FileStorage::MEMORY);
+    EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
+}

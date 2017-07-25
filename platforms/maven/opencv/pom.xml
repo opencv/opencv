@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.opencv</groupId>
         <artifactId>opencv-parent</artifactId>
-        <version>3.2.0</version>
+        <version>3.3.0</version>
     </parent>
     <groupId>org.opencv</groupId>
     <artifactId>opencv</artifactId>
@@ -90,21 +90,6 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>execstack</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <workingDirectory>${build.directory}/lib</workingDirectory>
-                            <executable>execstack</executable>
-                            <arguments>
-                                <argument>-c</argument>
-                                <argument>libopencv_java320.so</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
                         <id>check-execstack</id>
                         <phase>process-classes</phase>
                         <goals>
@@ -115,7 +100,7 @@
                             <executable>bash</executable>
                             <arguments>
                                 <argument>execstack_check</argument>
-                                <argument>${build.directory}/lib/libopencv_java320.so</argument>
+                                <argument>${build.directory}/lib/libopencv_java${lib.version.string}.so</argument>
                             </arguments>
                         </configuration>
                     </execution>
@@ -190,10 +175,12 @@
                         <configuration>
                             <rules>
                                 <requireEnvironmentVariable>
+                                    <level>WARN</level>
                                     <variableName>ANT_HOME</variableName>
                                     <message>$ANT_HOME is not set. Build may fail.</message>
                                 </requireEnvironmentVariable>
                                 <requireEnvironmentVariable>
+                                    <level>WARN</level>
                                     <variableName>JAVA_HOME</variableName>
                                     <message>$JAVA_HOME is not set. Build WILL fail.</message>
                                 </requireEnvironmentVariable>
@@ -245,6 +232,7 @@
                 <version>3.4.1-b2</version>
                 <executions>
                     <execution>
+                        <phase>generate-sources</phase>
                         <id>cmake-generate</id>
                         <goals>
                             <goal>generate</goal>
@@ -255,15 +243,18 @@
                             <generator>Unix Makefiles</generator>
                             <options>
                                 <option>-DBUILD_SHARED_LIBS:BOOL=OFF</option>
+                                <option>-DWITH_CUDA=OFF</option>
                             </options>
                         </configuration>
                     </execution>
                     <execution>
+                        <phase>generate-sources</phase>
                         <id>cmake-compile</id>
                         <goals>
                             <goal>compile</goal>
                         </goals>
                         <configuration>
+                            <target>opencv_java</target>
                             <projectDirectory>../../../build</projectDirectory>
                         </configuration>
                     </execution>
