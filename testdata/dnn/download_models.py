@@ -114,7 +114,7 @@ models = [
         filename='VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel'),
     Model(
         name='ResNet50',
-        url='https://iuxblw-bn1305.files.1drv.com/y4mdD1Zsd2g6sxdBl0nTAM2BszUAVuG1hAOjUqpXJRlwx_8LgjIPC_iUXuVppWEy_d0rD7BOtD0fW0LfGjqryaWz-p8kirErK7JO-2rtlL0OgE0mtR5zkQAU6hPihpfg-PzjSLUXO_gkD83571slXCMtmjRp1-NlUDkL2zVlusFSeGZiyTiETcD4_r4RanMqVRkJJ6n9JJdgOnbOLi3G8tn9A/ResNet-50-model.caffemodel?download&psid=1',
+        url='https://onedrive.live.com/download?cid=4006CBB8476FF777&resid=4006CBB8476FF777%2117895&authkey=%21AAFW2%2DFVoxeVRck',
         sha='b7c79ccc21ad0479cddc0dd78b1d20c4d722908d',
         filename='ResNet-50-model.caffemodel'),
     Model(
