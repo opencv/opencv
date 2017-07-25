@@ -26,6 +26,7 @@ LONG_TESTS_DEBUG_VALGRIND = [
     ('shape', 'Shape_SCD.regression', 3311.46),
     ('tracking', 'AUKF.br_mean_squared_error', 10764.6),
     ('tracking', 'UKF.br_mean_squared_error', 5228.27),
+    ('videoio', 'Videoio_Video.ffmpeg_writebig', 1000),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_BoostDesc_LBGM.regression', 1124.51),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG120.regression', 2198.1),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG48.regression', 1958.52),
