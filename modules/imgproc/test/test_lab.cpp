@@ -259,7 +259,7 @@ static const bool enableRGB2LuvInterpolation = true;
 static const bool enablePackedRGB2Luv = true;
 static int16_t RGB2LuvLUT_s16[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
-static const softfloat vLow(-140), vHigh(122), vRange(uHigh-uLow);
+static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
 
 #define clip(value) \
     value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
