@@ -59,7 +59,7 @@ inline ivx::Context& getOpenVXHALContext()
     static thread_local ivx::Context instance = ivx::Context::create();
 #else //__cplusplus >= 201103L || _MSC_VER >= 1800
     //CXX98
-#ifdef WIN32
+#ifdef _WIN32
         static __declspec(thread) ivx::Context instance = ivx::Context::create();
 #else
         static __thread ivx::Context instance = ivx::Context::create();
