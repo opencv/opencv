@@ -12,7 +12,7 @@ Theory
 In the last few articles on contours, we have worked with several functions related to contours
 provided by OpenCV. But when we found the contours in image using **cv.findContours()** function,
 we have passed an argument, **Contour Retrieval Mode**. We usually passed **cv.RETR_LIST** or
-**cv2.RETR_TREE** and it worked nice. But what does it actually mean ?
+**cv.RETR_TREE** and it worked nice. But what does it actually mean ?
 
 Also, in the output, we got three arrays, first is the image, second is our contours, and one more
 output which we named as **hierarchy** (Please checkout the codes in previous articles). But we
@@ -42,7 +42,7 @@ simply they are in **same hierarchy level**.
 
 Next comes **contour-2a**. It can be considered as a **child of contour-2** (or in opposite way,
 contour-2 is parent of contour-2a). So let it be in **hierarchy-1**. Similarly contour-3 is child of
-contour-2 and it comes in next hierarchy. Finally contours 4,5 are the children of contour-3a, and
+contour-2a and it comes in next hierarchy. Finally contours 4,5 are the children of contour-3a, and
 they come in the last hierarchy level. From the way I numbered the boxes, I would say contour-4 is
 the first child of contour-3a (It can be contour-5 also).
 
@@ -82,8 +82,8 @@ contour-3a. For contour-3a, it is contour-3 and so on.
 @note If there is no child or parent, that field is taken as -1
 
 So now we know about the hierarchy style used in OpenCV, we can check into Contour Retrieval Modes
-in OpenCV with the help of same image given above. ie what do flags like cv2.RETR_LIST,
-cv2.RETR_TREE, cv2.RETR_CCOMP, cv2.RETR_EXTERNAL etc mean?
+in OpenCV with the help of same image given above. ie what do flags like cv.RETR_LIST,
+cv.RETR_TREE, cv.RETR_CCOMP, cv.RETR_EXTERNAL etc mean?
 
 Contour Retrieval Mode
 ----------------------
@@ -101,7 +101,7 @@ will have their corresponding values.
 
 If you use this flag, it returns only extreme outer flags. All child contours are left behind. **We
 can say, under this law, Only the eldest in every family is taken care of. It doesn't care about
-other members of the family :)**.
+other members of the family)**.
 
 
 ### 3. RETR_CCOMP
@@ -145,7 +145,7 @@ no child, parent is contour-3. So array is [-1,-1,-1,3].
 And this is the final guy, Mr.Perfect. It retrieves all the contours and creates a full family
 hierarchy list. **It even tells, who is the grandpa, father, son, grandson and even beyond... :)**.
 
-For examle, I took above image, rewrite the code for cv2.RETR_TREE, reorder the contours as per the
+For examle, I took above image, rewrite the code for cv.RETR_TREE, reorder the contours as per the
 result given by OpenCV and analyze it. Again, red letters give the contour number and green letters
 give the hierarchy order.
 

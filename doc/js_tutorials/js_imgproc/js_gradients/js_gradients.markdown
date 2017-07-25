@@ -57,6 +57,9 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err {
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -70,13 +73,14 @@ var dsty = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different conversion
 cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
-cv.Sobel(src, dsty, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
+cv.Sobel(src, dsty, cv.CV_8U, 0, 1, 3, 1, 0, cv.BORDER_DEFAULT);
 //cv.Scharr(src, dstx, cv.CV_8U, 1, 0, 1, 0, cv.BORDER_DEFAULT);
-//cv.Scharr(src, dsty, cv.CV_8U, 1, 0, 1, 0, cv.BORDER_DEFAULT);
+//cv.Scharr(src, dsty, cv.CV_8U, 0, 1, 1, 0, cv.BORDER_DEFAULT);
 cv.imshow("SobelCanvasOutputX", dstx);
 cv.imshow("SobelCanvasOutputY", dsty); 
 src.delete(); dstx.delete(); dsty.delete();
 </textarea>
+<p class="err" id="SobelErr"></p>
 </div>
 <div id="SobelShowcase">
     <div>
@@ -98,7 +102,12 @@ src.delete(); dstx.delete(); dsty.delete();
 <script>
 function SobelExecuteCode() {
     var SobelText = document.getElementById("SobelTestCode").value;
-    eval(SobelText);
+    try {
+        eval(SobelText);
+        document.getElementById("SobelErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("SobelErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "SobelCanvasInput");
@@ -125,7 +134,7 @@ We use the function: **cv.Laplacian (src, dst, ddepth, ksize = 1, scale = 1, del
 @param src         input image.
 @param dst         output image of the same size and the same number of channels as src.
 @param ddepth      output image depth.
-@param ksize       aperture size used to compute the second-derivative filters. See getDerivKernels for details. The size must be positive and odd.
+@param ksize       aperture size used to compute the second-derivative filters.
 @param scale       optional scale factor for the computed Laplacian values.
 @param delta       optional delta value that is added to the results prior to storing them in dst.
 @param borderType  pixel extrapolation method(see cv.BorderTypes).
@@ -158,6 +167,7 @@ cv.Laplacian(src, dst, cv.CV_8U, 1, 1, 0, cv.BORDER_DEFAULT);
 cv.imshow("LaplacianCanvasOutput", dst);
 src.delete(); dst.delete();
 </textarea>
+<p class="err" id="LaplacianErr"></p>
 </div>
 <div id="LaplacianShowcase">
     <div>
@@ -169,7 +179,12 @@ src.delete(); dst.delete();
 <script>
 function LaplacianExecuteCode() {
     var LaplacianText = document.getElementById("LaplacianTestCode").value;
-    eval(LaplacianText);
+    try {
+        eval(LaplacianText);
+        document.getElementById("LaplacianErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("LaplacianErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "LaplacianCanvasInput");
@@ -227,32 +242,37 @@ cv.Sobel(src, absDstx, cv.CV_64F, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 for (var i=0; i<absDstx.cols*absDstx.rows*absDstx.channels(); ++i) {
     absDstx.data64f()[i] = Math.abs(absDstx.data64f()[i]);
 }
+cv.normalize(absDstx, absDstx, 1, 0, cv.NORM_INF);
 cv.imshow("absSobelCanvasOutput8U", dstx);
 cv.imshow("absSobelCanvasOutput64F", absDstx); 
 src.delete(); dstx.delete(); absDstx.delete();
 </textarea>
+<p class="err" id="absSobelErr"></p>
 </div>
 <div id="absSobelShowcase">
     <div>
-        <div>
-            <p>Original</p>
-            <canvas id="absSobelCanvasInput"></canvas>
-            <input type="file" id="absSobelInput" name="file" />
-        </div>       
-        <div>
-            <p>Sobel X(cv.CV_8U)</p>
-            <canvas id="absSobelCanvasOutput8U"></canvas>
-        </div>
-        <div>
-            <p>Sobel X(cv.CV_64F)</p>
-            <canvas id="absSobelCanvasOutput64F"></canvas>
-        </div>
+        <p>Original</p>
+        <canvas id="absSobelCanvasInput"></canvas>
+        <input type="file" id="absSobelInput" name="file" />
+    </div>       
+    <div>
+        <p>Sobel X(cv.CV_8U)</p>
+        <canvas id="absSobelCanvasOutput8U"></canvas>
+    </div>
+    <div>
+        <p>Sobel X(cv.CV_64F)</p>
+        <canvas id="absSobelCanvasOutput64F"></canvas>
     </div>
 </div>
 <script>
 function absSobelExecuteCode() {
     var absSobelText = document.getElementById("absSobelTestCode").value;
-    eval(absSobelText);
+    try {
+        eval(absSobelText);
+        document.getElementById("absSobelErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("absSobelErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("LinuxLogo.jpg", "absSobelCanvasInput");

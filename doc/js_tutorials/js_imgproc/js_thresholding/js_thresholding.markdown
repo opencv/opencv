@@ -46,6 +46,9 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err{
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -61,6 +64,7 @@ cv.imshow("thresholdCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
+<p class="err" id="thresholdErr"></p>
 </div>
 <div id="thresholdShowcase">
     <div>
@@ -74,7 +78,12 @@ dst.delete();
 <script>
 function thresholdExecuteCode() {
     var thresholdText = document.getElementById("thresholdTestCode").value;
-    eval(thresholdText);
+    try {
+        eval(thresholdText);
+        document.getElementById("thresholdErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("thresholdErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "thresholdCanvasInput");
@@ -139,6 +148,7 @@ cv.imshow("adaptiveThresholdCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
+<p class="err" id="adaptiveThresholdErr"></p>
 </div>
 <div id="adaptiveThresholdShowcase">
     <div>
@@ -150,7 +160,12 @@ dst.delete();
 <script>
 function adaptiveThresholdExecuteCode() {
     var adaptiveThresholdText = document.getElementById("adaptiveThresholdTestCode").value;
-    eval(adaptiveThresholdText);
+    try {
+        eval(adaptiveThresholdText);
+        document.getElementById("adaptiveThresholdErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("adaptiveThresholdErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "adaptiveThresholdCanvasInput");

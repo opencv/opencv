@@ -56,6 +56,9 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err {
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -71,6 +74,7 @@ cv.imshow("pyrDownCanvasOutput", dst);
 src.delete(); 
 dst.delete();
 </textarea>
+<p class="err" id="pyrDownErr"></p>
 </div>
 <div id="pyrDownShowcase">
     <div>
@@ -84,7 +88,12 @@ dst.delete();
 <script>
 function pyrDownExecuteCode() {
     var pyrDownText = document.getElementById("pyrDownTestCode").value;
-    eval(pyrDownText);
+    try {
+        eval(pyrDownText);
+        document.getElementById("pyrDownErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("pyrDownErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "pyrDownCanvasInput");
@@ -135,6 +144,7 @@ cv.imshow("pyrUpCanvasOutput", dst);
 src.delete(); 
 dst.delete();
 </textarea>
+<p class="err" id="pyrUpErr"></p>
 </div>
 <div id="pyrUpShowcase">
     <div>
@@ -146,7 +156,12 @@ dst.delete();
 <script>
 function pyrUpExecuteCode() {
     var pyrUpText = document.getElementById("pyrUpTestCode").value;
-    eval(pyrUpText);
+    try {
+        eval(pyrUpText);
+        document.getElementById("pyrUpErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("pyrUpErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "pyrUpCanvasInput");

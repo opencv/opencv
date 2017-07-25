@@ -55,6 +55,9 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err{
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -65,12 +68,13 @@ canvas {
 var src = cv.imread("erodeCanvasInput");
 var dst = new cv.Mat();
 var M = cv.Mat.ones(5, 5, cv.CV_8U);
-var S = new cv.Scalar();
+var color = new cv.Scalar();
 // You can try more different conversion
-cv.erode(src, dst, M, [-1, -1], 1, cv.BORDER_CONSTANT, S)
+cv.erode(src, dst, M, [-1, -1], 1, cv.BORDER_CONSTANT, color)
 cv.imshow("erodeCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); S.delete();
+src.delete(); dst.delete(); M.delete(); color.delete();
 </textarea>
+<p class="err" id="erodeErr"></p>
 </div>
 <div id="erodeShowcase">
     <div>
@@ -84,7 +88,12 @@ src.delete(); dst.delete(); M.delete(); S.delete();
 <script>
 function erodeExecuteCode() {
     var erodeText = document.getElementById("erodeTestCode").value;
-    eval(erodeText);
+    try {
+        eval(erodeText);
+        document.getElementById("erodeErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("erodeErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("LinuxLogo.jpg", "erodeCanvasInput");
@@ -138,12 +147,13 @@ canvas {
 var src = cv.imread("dilateCanvasInput");
 var dst = new cv.Mat();
 var M = cv.Mat.ones(5, 5, cv.CV_8U);
-var S = new cv.Scalar();
+var color = new cv.Scalar();
 // You can try more different conversion
-cv.dilate(src, dst, M, [-1, -1], 1, cv.BORDER_CONSTANT, S)
+cv.dilate(src, dst, M, [-1, -1], 1, cv.BORDER_CONSTANT, color)
 cv.imshow("dilateCanvasOutput", dst);
-src.delete(); dst.delete(); M.delete(); S.delete();
+src.delete(); dst.delete(); M.delete(); color.delete();
 </textarea>
+<p class="err" id="dilateErr"></p>
 </div>
 <div id="dilateShowcase">
     <div>
@@ -155,7 +165,12 @@ src.delete(); dst.delete(); M.delete(); S.delete();
 <script>
 function dilateExecuteCode() {
     var dilateText = document.getElementById("dilateTestCode").value;
-    eval(dilateText);
+    try {
+        eval(dilateText);
+        document.getElementById("dilateErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("dilateErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("LinuxLogo.jpg", "dilateCanvasInput");
@@ -165,11 +180,20 @@ function dilateHandleFiles(e) {
     var dilateUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(dilateUrl, "dilateCanvasInput");
 }
+function onReady() {
+    document.getElementById("erodeTryIt").disabled = false;
+    document.getElementById("dilateTryIt").disabled = false;
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
 </script>
 </body>
 \endhtmlonly
 
-@note cv.morphologyEx() should be in the white list to implement following functions.
+@note cv.morphologyEx() which can do Opening, Closing, Morphological Gradient and Top Hat morphological operation is not in the white list.
 
 ### 3. Opening
 
@@ -208,61 +232,5 @@ rectangular shape. But in some cases, you may need elliptical/circular shaped ke
 purpose, OpenCV has a function, **cv.getStructuringElement()**. You just pass the shape and size of
 the kernel, you get the desired kernel.
 
-Try it
-------
+@note cv.getStructuringElement() which can generate elliptical/circular shaped kernels in morphological operation is not in the white list.
 
-Here is a demo. Canvas elements named getStructuringElementCanvasInput and getStructuringElementCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
-
-@note cv.getStructuringElement() should be in the white list to implement Structuring Element.
-
-\htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
-</head>
-<body>
-<div id="getStructuringElementCodeArea">
-<h2>Input your code</h2>
-<button id="getStructuringElementTryIt" disabled="true" onclick="getStructuringElementExecuteCode()">Try it</button><br>
-<textarea rows="11" cols="80" id="getStructuringElementTestCode" spellcheck="false">
-
-</textarea>
-</div>
-<div id="getStructuringElementShowcase">
-    <div>
-        <canvas id="getStructuringElementCanvasInput"></canvas>
-        <canvas id="getStructuringElementCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="getStructuringElementInput" name="file" />
-</div>
-<script>
-function getStructuringElementExecuteCode() {
-    var getStructuringElementText = document.getElementById("getStructuringElementTestCode").value;
-    eval(getStructuringElementText);
-}
-
-loadImageToCanvas("lena.jpg", "getStructuringElementCanvasInput");
-var getStructuringElementInputElement = document.getElementById("getStructuringElementInput");
-getStructuringElementInputElement.addEventListener("change", getStructuringElementHandleFiles, false);
-function getStructuringElementHandleFiles(e) {
-    var getStructuringElementUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(getStructuringElementUrl, "getStructuringElementCanvasInput");
-}
-function onReady() {
-    document.getElementById("erodeTryIt").disabled = false;
-    document.getElementById("dilateTryIt").disabled = false;
-    document.getElementById("getStructuringElementTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
-}
-</script>
-</body>
-\endhtmlonly

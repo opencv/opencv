@@ -16,7 +16,7 @@ It is the ratio of width to height of bounding rect of the object.
 \f[Aspect \; Ratio = \frac{Width}{Height}\f]
 @code{.js}
 var rect = cv.boundingRect(contours.get(0));
-var aspect_ratio = rect.width/rect.height;
+var aspectRatio = rect.width / rect.height;
 @endcode
 
 2. Extent
@@ -28,8 +28,8 @@ Extent is the ratio of contour area to bounding rectangle area.
 @code{.js}
 var area = cv.contourArea(contours.get(0), false);
 var rect = cv.boundingRect(contours.get(0));
-var rect_area = rect.width*rect.height;
-var extent = area/rect_area;
+var rectArea = rect.width * rect.height;
+var extent = area / rectArea;
 @endcode
 
 3. Solidity
@@ -41,8 +41,8 @@ Solidity is the ratio of contour area to its convex hull area.
 @code{.js}
 var area = cv.contourArea(contours.get(0), false);
 cv.convexHull(contours.get(0), hull, false, true);
-var hull_area = cv.contourArea(hull, false);
-var solidity = area/hull_area;
+var hullArea = cv.contourArea(hull, false);
+var solidity = area / hullArea;
 @endcode
 
 4. Equivalent Diameter
@@ -53,18 +53,17 @@ Equivalent Diameter is the diameter of the circle whose area is same as the cont
 \f[Equivalent \; Diameter = \sqrt{\frac{4 \times Contour \; Area}{\pi}}\f]
 @code{.js}
 var area = cv.contourArea(contours.get(0), false);
-var equi_diameter = Math.sqrt(4*area/Math.PI);
+var equiDiameter = Math.sqrt(4 * area / Math.PI);
 @endcode
 
 5. Orientation
 --------------
 
-@note RotatedRect cv::fitEllipse(InputArray points)	
-
 Orientation is the angle at which object is directed. Following method also gives the Major Axis and
 Minor Axis lengths.
 @code{.js}
-(x,y),(MA,ma),angle = cv2.fitEllipse(cnt)
+var rotatedRect = cv.fitEllipse(contours.get(0));
+var angle = rotatedRect.angle;
 @endcode
 
 6. Mask and Pixel Points
@@ -83,6 +82,9 @@ We use the function: **cv.transpose (src, dst)**
 canvas {
     border: 1px solid black;
 }
+.err {
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -94,10 +96,11 @@ var src = cv.imread("transposeCanvasInput");
 var dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 120, 200, cv.THRESH_BINARY);
-cv.transpose(src, dst)
+cv.transpose(src, dst);
 cv.imshow("transposeCanvasOutput", dst);
 src.delete(); dst.delete();
 </textarea>
+<p class="err" id="transposeErr"></p>
 </div>
 <div id="transposeShowcase">
     <div>
@@ -111,7 +114,12 @@ src.delete(); dst.delete();
 <script>
 function transposeExecuteCode() {
     var transposeText = document.getElementById("transposeTestCode").value;
-    eval(transposeText);
+    try {
+        eval(transposeText);
+        document.getElementById("transposeErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("transposeErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "transposeCanvasInput");
@@ -139,12 +147,12 @@ if (typeof cv !== 'undefined') {
 7. Maximum Value, Minimum Value and their locations
 ---------------------------------------------------
 
-@note cv.minMaxLoc() is in ignore_list
-
 We can find these parameters using a mask image.
 @code{.js}
-min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(imgray,mask = mask)
+
 @endcode
+
+@note cv.minMaxLoc() which can finds the global minimum and maximum in an array is in ignore_list.
 
 8. Mean Color or Mean Intensity
 -------------------------------
@@ -157,6 +165,6 @@ We use the function: **cv.mean(src, mask)**
 @param mask  optional operation mask.
 
 @code{.js}
-var a = cv.mean(src, new cv.Mat);
+var a = cv.mean(src, cv.Mat());
 @endcode
 

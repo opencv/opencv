@@ -20,58 +20,7 @@ will try an averaging filter on an image. A 5x5 averaging filter kernel will loo
 
 \f[K =  \frac{1}{25} \begin{bmatrix} 1 & 1 & 1 & 1 & 1  \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \end{bmatrix}\f]
 
-Try it
-------
-
-Here is a demo. Canvas elements named filter2DCanvasInput and filter2DCanvasOutput have been prepared. Choose an image and
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
-
-@note cv.filter2D() should be in the white list to implement 2D Convolution.
-
-\htmlonly
-<!DOCTYPE html>
-<head>
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>
-</head>
-<body>
-<div id="filter2DCodeArea">
-<h2>Input your code</h2>
-<button id="filter2DTryIt" disabled="true" onclick="filter2DExecuteCode()">Try it</button><br>
-<textarea rows="11" cols="80" id="filter2DTestCode" spellcheck="false">
-
-</textarea>
-</div>
-<div id="filter2DShowcase">
-    <div>
-        <canvas id="filter2DCanvasInput"></canvas>
-        <canvas id="filter2DCanvasOutput"></canvas>
-    </div>
-    <input type="file" id="filter2DInput" name="file" />
-</div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
-<script>
-function filter2DExecuteCode() {
-    var filter2DText = document.getElementById("filter2DTestCode").value;
-    eval(filter2DText);
-}
-
-loadImageToCanvas("lena.jpg", "filter2DCanvasInput");
-var filter2DInputElement = document.getElementById("filter2DInput");
-filter2DInputElement.addEventListener("change", filter2DHandleFiles, false);
-function filter2DHandleFiles(e) {
-    var filter2DUrl = URL.createObjectURL(e.target.files[0]);
-    loadImageToCanvas(filter2DUrl, "filter2DCanvasInput");
-}
-
-</script>
-</body>
-\endhtmlonly
-
+@note cv.filter2D() which can convolve an arbitrary kernel with an image is not in the white list.
 
 Image Blurring (Image Smoothing)
 --------------------------------
@@ -122,6 +71,9 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err{
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -133,11 +85,12 @@ var src = cv.imread("blurCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
 cv.blur(src, dst, [3, 3], [-1, -1], cv.BORDER_DEFAULT);
-//cv.boxFilter(src, dst, -1, [3, 3], [-1, -1], false, cv.BORDER_DEFAULT)
+//cv.boxFilter(src, dst, -1, [3, 3], [-1, -1], true, cv.BORDER_DEFAULT)
 cv.imshow("blurCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
+<p class="err" id="blurErr"></p>
 </div>
 <div id="blurShowcase">
     <div>
@@ -146,10 +99,17 @@ dst.delete();
     </div>
     <input type="file" id="blurInput" name="file" />
 </div>
+<script src="utils.js"></script>
+<script async src="opencv.js" id="opencvjs"></script>
 <script>
 function blurExecuteCode() {
     var blurText = document.getElementById("blurTestCode").value;
-    eval(blurText);
+    try {
+        eval(blurText);
+        document.getElementById("blurErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("blurErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "blurCanvasInput");
@@ -204,6 +164,7 @@ cv.imshow("GaussianBlurCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
+<p class="err" id="GaussianBlurErr"></p>
 </div>
 <div id="GaussianBlurShowcase">
     <div>
@@ -215,7 +176,12 @@ dst.delete();
 <script>
 function GaussianBlurExecuteCode() {
     var GaussianBlurText = document.getElementById("GaussianBlurTestCode").value;
-    eval(GaussianBlurText);
+    try {
+        eval(GaussianBlurText);
+        document.getElementById("GaussianBlurErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("GaussianBlurErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "GaussianBlurCanvasInput");
@@ -240,7 +206,7 @@ central element is always replaced by some pixel value in the image. It reduces 
 effectively. Its kernel size should be a positive odd integer.
 
 We use the function: **cv.medianBlur (src, dst, ksize)** 
-@param src         input 1-, 3-, or 4-channel image; when ksize is 3 or 5, the image depth should be cv.CV_8U, cv.CV_16U, or cv.CV_32F, for larger aperture sizes, it can only be cv.CV_8U.
+@param src         input 1, 3, or 4 channel image; when ksize is 3 or 5, the image depth should be cv.CV_8U, cv.CV_16U, or cv.CV_32F, for larger aperture sizes, it can only be cv.CV_8U.
 @param dst         destination array of the same size and type as src.
 @param ksize       aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
 
@@ -274,6 +240,7 @@ cv.imshow("medianBlurCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
+<p class="err" id="medianBlurErr"></p>
 </div>
 <div id="medianBlurShowcase">
     <div>
@@ -285,7 +252,12 @@ dst.delete();
 <script>
 function medianBlurExecuteCode() {
     var medianBlurText = document.getElementById("medianBlurTestCode").value;
-    eval(medianBlurText);
+    try {
+        eval(medianBlurText);
+        document.getElementById("medianBlurErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("medianBlurErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "medianBlurCanvasInput");
@@ -354,6 +326,7 @@ cv.imshow("bilateralFilterCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
+<p class="err" id="bilateralFilterErr"></p>
 </div>
 <div id="bilateralFilterShowcase">
     <div>
@@ -365,7 +338,12 @@ dst.delete();
 <script>
 function bilateralFilterExecuteCode() {
     var bilateralFilterText = document.getElementById("bilateralFilterTestCode").value;
-    eval(bilateralFilterText);
+    try {
+        eval(bilateralFilterText);
+        document.getElementById("bilateralFilterErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("bilateralFilterErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "bilateralFilterCanvasInput");
@@ -377,7 +355,6 @@ function bilateralFilterHandleFiles(e) {
 }
 
 function onReady() {
-    document.getElementById("filter2DTryIt").disabled = false;
     document.getElementById("blurTryIt").disabled = false;
     document.getElementById("GaussianBlurTryIt").disabled = false;
     document.getElementById("medianBlurTryIt").disabled = false;

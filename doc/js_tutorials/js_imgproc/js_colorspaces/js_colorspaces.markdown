@@ -5,14 +5,14 @@ Goal
 ----
 
 -   In this tutorial, you will learn how to convert images from one color-space to another, like
-    BGR \f$\leftrightarrow\f$ Gray, BGR \f$\leftrightarrow\f$ HSV etc.
+    RGB \f$\leftrightarrow\f$ Gray, RGB \f$\leftrightarrow\f$ HSV etc.
 -   You will learn following functions : **cv.cvtColor()**, **cv.inRange()** etc.
 
 cvtColor
 --------------------
 
 There are more than 150 color-space conversion methods available in OpenCV. But we will look into
-the most widely used one: BGR \f$\leftrightarrow\f$ Gray.
+the most widely used one: RGB \f$\leftrightarrow\f$ Gray.
 
 We use the function: **cv.cvtColor (src, dst, code, dstCn = 0)**
 @param src    input image.
@@ -20,7 +20,7 @@ We use the function: **cv.cvtColor (src, dst, code, dstCn = 0)**
 @param code   color space conversion code(see **cv.ColorConversionCodes**).
 @param dstCn  number of channels in the destination image; if the parameter is 0, the number of the channels is derived automatically from src and code.
 
-For BGR \f$\rightarrow\f$ Gray conversion we use the code cv.COLOR_RGBA2GRAY.
+For RGB \f$\rightarrow\f$ Gray conversion we use the code cv.COLOR_RGBA2GRAY.
 
 Try it
 ------
@@ -35,13 +35,16 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err {
+    color: red;
+}
 </style>
 </head>
 <body>
 <div id="cvtColorCodeArea">
 <h2>Input your code</h2>
 <button id="cvtColorTryIt" disabled="true" onclick="cvtColorExecuteCode()">Try it</button><br>
-<textarea rows="8" cols="80" id="cvtColorTestCode" spellcheck="false">
+<textarea rows="7" cols="80" id="cvtColorTestCode" spellcheck="false">
 var src = cv.imread("cvtColorCanvasInput");
 var dst = new cv.Mat();
 // You can try more different conversion
@@ -50,6 +53,7 @@ cv.imshow("cvtColorCanvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
+<p class="err" id="cvtColorErr"></p>
 </div>
 <div id="cvtColorShowcase">
     <div>
@@ -63,7 +67,12 @@ dst.delete();
 <script>
 function cvtColorExecuteCode() {
     var cvtColorText = document.getElementById("cvtColorTestCode").value;
-    eval(cvtColorText);
+    try {
+        eval(cvtColorText);
+        document.getElementById("cvtColorErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("cvtColorErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "cvtColorCanvasInput");
@@ -112,13 +121,14 @@ var src = cv.imread("inRangeCanvasInput");
 var dst = new cv.Mat();
 var lowScalar = new cv.Scalar(0, 0, 0, 0);
 var highScalar = new cv.Scalar(150, 150, 150, 255);
-var low = new cv.Mat(src.cols , src.rows, src.type(), lowScalar);
-var high = new cv.Mat(src.cols , src.rows, src.type(), highScalar);
+var low = new cv.Mat(src.rows , src.cols, src.type(), lowScalar);
+var high = new cv.Mat(src.rows , src.cols, src.type(), highScalar);
 // You can try more different conversion
 cv.inRange(src, low, high, dst);
 cv.imshow("inRangeCanvasOutput", dst);
 src.delete(); dst.delete(); low.delete(); high.delete(); lowScalar.delete(); highScalar.delete();
 </textarea>
+<p class="err" id="inRangeErr"></p>
 </div>
 <div id="inRangeShowcase">
     <div>
@@ -130,7 +140,12 @@ src.delete(); dst.delete(); low.delete(); high.delete(); lowScalar.delete(); hig
 <script>
 function inRangeExecuteCode() {
     var inRangeText = document.getElementById("inRangeTestCode").value;
-    eval(inRangeText);
+    try {
+        eval(inRangeText);
+        document.getElementById("inRangeErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("inRangeErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "inRangeCanvasInput");

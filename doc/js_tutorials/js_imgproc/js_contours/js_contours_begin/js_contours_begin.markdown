@@ -35,14 +35,14 @@ We use the functions: **cv.findContours (image, contours, hierarchy, mode, metho
 @param method        contour approximation method(see cv.ContourApproximationModes).
 @param offset        optional offset by which every contour point is shifted. This is useful if the contours are extracted from the image ROI and then they should be analyzed in the whole image context.
 
-**cv.drawContours (image, contours, contourIdx, color, thickness = 1, lineType = cv.LINE_8, hierarchy = Scalar(), maxLevel = INT_MAX, offset = [0, 0])** 
+**cv.drawContours (image, contours, contourIdx, color, thickness = 1, lineType = cv.LINE_8, hierarchy = cv.Mat(), maxLevel = INT_MAX, offset = [0, 0])** 
 @param image         destination image.
 @param contours      all the input contours. 
 @param contourIdx    parameter indicating a contour to draw. If it is negative, all the contours are drawn.
 @param color         color of the contours.
 @param thickness     thickness of lines the contours are drawn with. If it is negative, the contour interiors are drawn.
 @param lineType      line connectivity(see cv.LineTypes).
-@param hierarchy     optional information about hierarchy. It is only needed if you want to draw only some of the contours (see maxLevel ).
+@param hierarchy     optional information about hierarchy. It is only needed if you want to draw only some of the contours(see maxLevel).
 
 @param maxLevel      maximal level for drawn contours. If it is 0, only the specified contour is drawn. If it is 1, the function draws the contour(s) and all the nested contours. If it is 2, the function draws the contours, all the nested contours, all the nested-to-nested contours, and so on. This parameter is only taken into account when there is hierarchy available.
 @param offset        optional contour shift parameter. 
@@ -60,13 +60,16 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err {
+    color: red;
+}
 </style>
 </head>
 <body>
 <div id="contoursCodeArea">
 <h2>Input your code</h2>
 <button id="contoursTryIt" disabled="true" onclick="contoursExecuteCode()">Try it</button><br>
-<textarea rows="17" cols="80" id="contoursTestCode" spellcheck="false">
+<textarea rows="17" cols="90" id="contoursTestCode" spellcheck="false">
 var src = cv.imread("contoursCanvasInput");
 var dst = new cv.Mat.zeros(src.cols, src.rows, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
@@ -75,7 +78,7 @@ var contours  = new cv.MatVector();
 var hierarchy = new cv.Mat();
 // You can try more different conversion
 cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE, [0, 0]);
-for (var i=0; i<contours.size(); ++i)
+for (var i = 0; i < contours.size(); ++i)
 {
     var color = new cv.Scalar(Math.random()*255, Math.random()*255, Math.random()*255);
     cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100, [0, 0]);
@@ -84,6 +87,7 @@ for (var i=0; i<contours.size(); ++i)
 cv.imshow("contoursCanvasOutput", dst);
 src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); 
 </textarea>
+<p class="err" id="contoursErr"></p>
 </div>
 <div id="contoursShowcase">
     <div>
@@ -97,7 +101,12 @@ src.delete(); dst.delete(); contours.delete(); hierarchy.delete();
 <script>
 function contoursExecuteCode() {
     var contoursText = document.getElementById("contoursTestCode").value;
-    eval(contoursText);
+    try {
+        eval(contoursText);
+        document.getElementById("contoursErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("contoursErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "contoursCanvasInput");

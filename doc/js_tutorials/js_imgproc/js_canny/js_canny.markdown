@@ -12,8 +12,7 @@ In this chapter, we will learn about
 Theory
 ------
 
-Canny Edge Detection is a popular edge detection algorithm. It was developed by John F. Canny in
-1986. It is a multi-stage algorithm and we will go through each stages.
+Canny Edge Detection is a popular edge detection algorithm. It was developed by John F. Canny in 1986. It is a multi-stage algorithm and we will go through each stages.
 
 -#  **Noise Reduction**
 
@@ -94,6 +93,9 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err {
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -105,10 +107,11 @@ var src = cv.imread("CannyCanvasInput");
 var dst = new cv.Mat();
 cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different conversion
-cv.Canny(src, dst, 150, 100, 3, false);
+cv.Canny(src, dst, 50, 100, 3, false);
 cv.imshow("CannyCanvasOutput", dst);
 src.delete(); dst.delete();
 </textarea>
+<p class="err" id="CannyErr"></p>
 </div>
 <div id="CannyShowcase">
     <div>
@@ -122,7 +125,12 @@ src.delete(); dst.delete();
 <script>
 function CannyExecuteCode() {
     var CannyText = document.getElementById("CannyTestCode").value;
-    eval(CannyText);
+    try {
+        eval(CannyText);
+        document.getElementById("CannyErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("CannyErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "CannyCanvasInput");
