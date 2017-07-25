@@ -100,7 +100,7 @@ struct TorchImporter : public ::cv::dnn::Importer
     typedef std::map<String, std::pair<int, Mat> > TensorsMap;
     Net net;
 
-    THFile *file;
+    cv::Ptr<THFile> file;
     std::set<int> readedIndexes;
     std::map<int, Mat> storages;
     std::map<int, Mat> tensors;
@@ -126,7 +126,7 @@ struct TorchImporter : public ::cv::dnn::Importer
         rootModule = curModule = NULL;
         moduleCounter = 0;
 
-        file = THDiskFile_new(filename.c_str(), "r", 0);
+        file = cv::Ptr<THFile>(THDiskFile_new(filename.c_str(), "r", 0), THFile_free);
         CV_Assert(file && THFile_isOpened(file));
 
         if (isBinary)
@@ -976,18 +976,20 @@ struct TorchImporter : public ::cv::dnn::Importer
     {
         CV_TRACE_FUNCTION();
 
-        if (rootModule == NULL)
-        {
-            rootModule = new Module("Sequential");
-            curModule = rootModule;
+        CV_Assert(rootModule == NULL);
+        cv::Ptr<Module> rootModule_ = cv::makePtr<Module>("Sequential");
+        rootModule = rootModule_.get();
+        curModule = rootModule;
 
-            THFile_seek(file, 0);
-            readObject();
-        }
+        THFile_seek(file, 0);
+        readObject();
 
         net = net_;
         std::vector<std::pair<int, Module*> > addedModules;
         fill(rootModule, addedModules);
+
+        rootModule = NULL;
+        curModule = NULL;
     }
 };
 
