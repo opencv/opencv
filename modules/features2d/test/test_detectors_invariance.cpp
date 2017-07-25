@@ -166,7 +166,7 @@ TEST_P(DetectorScaleInvariance, scale)
     {
         float scale = 1.f + scaleIdx * 0.5f;
         Mat image1;
-        resize(image0, image1, Size(), 1./scale, 1./scale);
+        resize(image0, image1, Size(), 1./scale, 1./scale, INTER_LINEAR_EXACT);
 
         vector<KeyPoint> keypoints1, osiKeypoints1; // osi - original size image
         featureDetector->detect(image1, keypoints1);

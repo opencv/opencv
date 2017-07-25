@@ -344,7 +344,7 @@ int main( int argc, char** argv )
             for ( size_t j = 0; j < detections.size(); j++ )
             {
                 Mat detection = full_neg_lst[i]( detections[j] ).clone();
-                resize( detection, detection, pos_image_size );
+                resize( detection, detection, pos_image_size, 0, 0, INTER_LINEAR_EXACT);
                 neg_lst.push_back( detection );
             }
 

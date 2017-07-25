@@ -233,7 +233,7 @@ void Decolor::weak_order(Mat img, vector <double> &alf)
     if((h + w) > 800)
     {
         sizefactor = (double)800/(h+w);
-        resize(img,img,Size(round_num(h*sizefactor),round_num(w*sizefactor)));
+        resize(img,img,Size(round_num(h*sizefactor),round_num(w*sizefactor)), 0, 0, INTER_LINEAR_EXACT);
     }
 
     Mat curIm = Mat(img.size(),CV_32FC1);
@@ -309,7 +309,7 @@ void Decolor::grad_system(Mat img, vector < vector < double > > &polyGrad,
     if((h + w) > 800)
     {
         sizefactor = (double)800/(h+w);
-        resize(img,img,Size(round_num(h*sizefactor),round_num(w*sizefactor)));
+        resize(img,img,Size(round_num(h*sizefactor),round_num(w*sizefactor)), 0, 0, INTER_LINEAR_EXACT);
     }
 
     h = img.size().height;

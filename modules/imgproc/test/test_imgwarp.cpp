@@ -335,6 +335,30 @@ void CV_ResizeTest::prepare_to_validation( int /*test_case_idx*/ )
     cvReleaseMat( &y_idx );
 }
 
+class CV_ResizeExactTest : public CV_ResizeTest
+{
+public:
+    CV_ResizeExactTest();
+
+protected:
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types);
+};
+
+
+CV_ResizeExactTest::CV_ResizeExactTest() : CV_ResizeTest()
+{
+    max_interpolation = 1;
+}
+
+
+void CV_ResizeExactTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types)
+{
+    CV_ResizeTest::get_test_array_types_and_sizes(test_case_idx, sizes, types);
+    interpolation = INTER_LINEAR_EXACT;
+    if (CV_MAT_DEPTH(types[INPUT][0]) == CV_32F ||
+        CV_MAT_DEPTH(types[INPUT][0]) == CV_64F)
+        types[INPUT][0] = types[INPUT_OUTPUT][0] = types[REF_INPUT_OUTPUT][0] = CV_MAKETYPE(CV_8U, CV_MAT_CN(types[INPUT][0]));
+}
 
 /////////////////////////
 
@@ -1589,6 +1613,7 @@ TEST(Imgproc_resize_area, regression_quarter_round)
 //////////////////////////////////////////////////////////////////////////
 
 TEST(Imgproc_Resize, accuracy) { CV_ResizeTest test; test.safe_run(); }
+TEST(Imgproc_ResizeExact, accuracy) { CV_ResizeExactTest test; test.safe_run(); }
 TEST(Imgproc_WarpAffine, accuracy) { CV_WarpAffineTest test; test.safe_run(); }
 TEST(Imgproc_WarpPerspective, accuracy) { CV_WarpPerspectiveTest test; test.safe_run(); }
 TEST(Imgproc_Remap, accuracy) { CV_RemapTest test; test.safe_run(); }

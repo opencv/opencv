@@ -279,6 +279,8 @@ enum InterpolationFlags{
     INTER_AREA           = 3,
     /** Lanczos interpolation over 8x8 neighborhood */
     INTER_LANCZOS4       = 4,
+    /** Bit exact bilinear interpolation */
+    INTER_LINEAR_EXACT = 5,
     /** mask for interpolation codes */
     INTER_MAX            = 7,
     /** flag, fills all of the destination image pixels. If some of them correspond to outliers in the
