@@ -462,6 +462,11 @@ public:
      */
     static String getDefaultObjectName(const String& filename);
 
+    /** @brief Returns the current format.
+     * @returns The current format, see FileStorage::Mode
+     */
+    CV_WRAP int getFormat() const;
+
     Ptr<CvFileStorage> fs; //!< the underlying C FileStorage structure
     String elname; //!< the currently written element
     std::vector<char> structs; //!< the stack of written structures
