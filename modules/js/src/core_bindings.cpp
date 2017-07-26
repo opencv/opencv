@@ -147,6 +147,10 @@ namespace Utils{
         points.resize(4);
         return obj.points(points.data());
     }
+
+    int cvMatDepth(int flags) {
+        return CV_MAT_DEPTH(flags);
+    }
 }
 
 EMSCRIPTEN_BINDINGS(Utils) {
@@ -306,6 +310,10 @@ EMSCRIPTEN_BINDINGS(Utils) {
 
     function("matFromArray", &Utils::matFromArray);
 
+    function("morphologyDefaultBorderValue", &cv::morphologyDefaultBorderValue);
+
+    function("CV_MAT_DEPTH", &Utils::cvMatDepth);
+
     constant("CV_8UC1", CV_8UC1) ;
     constant("CV_8UC2", CV_8UC2) ;
     constant("CV_8UC3", CV_8UC3) ;
@@ -348,4 +356,7 @@ EMSCRIPTEN_BINDINGS(Utils) {
     constant("CV_32S",  CV_32S);
     constant("CV_32F", CV_32F);
     constant("CV_64F", CV_64F);
+
+    constant("INT_MIN", INT_MIN);
+    constant("INT_MAX", INT_MAX);
 }
