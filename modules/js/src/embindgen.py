@@ -47,7 +47,7 @@ func_table = {}
 ignore_list = ['locate',  #int&
                'minEnclosingCircle',  #float&
                'checkRange',
-               'minMaxLoc',
+               'minMaxLoc',   #double*
                'floodFill',
                'phaseCorrelate',
                'randShuffle',
@@ -70,13 +70,17 @@ white_list = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not'
                    'integral','integral2','line','matchTemplate','medianBlur','moments','putText','pyrDown','pyrUp','rectangle','remap',\
                    'resize','sepFilter2D','threshold','undistort','warpAffine','warpPerspective','watershed', 'groupRectangles', 'CamShift',\
                    'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', 'estimateRigidTransform',\
-                   'findTransformECC', 'meanShift'],
+                   'findTransformECC', 'meanShift', 'getRotationMatrix2D', 'getPerspectiveTransform', 'filter2D', 'morphologyEx',\
+                   'getStructuringElement', 'convertScaleAbs', 'isContourConvex', 'minAreaRect', 'minEnclosingCircle', 'fitLine',\
+                   'minMaxLoc', 'convexityDefects', 'pointPolygonTest', 'matchShapes', 'createCLAHE', 'dft', 'getOptimalDFTSize',\
+                   'HoughLines', 'HoughLinesP', 'HoughCircles'],
               'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
               'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
               'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
               'BackgroundSubtractor': ['apply', 'getBackgroundImage'],
               'Algorithm': [],
-              'Moments': []
+              'Moments': [],
+              'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']
               }
 
 # Features to be exported
