@@ -3665,7 +3665,6 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
         {
             CV_PARSE_ERROR( "Unrecognized value" );
         }
-        ptr++;
     }
 
     return ptr;
