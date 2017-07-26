@@ -51,6 +51,10 @@ using namespace cv::cuda;
 using xfeatures2d::SURF;
 #endif
 
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#  include "opencv2/cudaimgproc.hpp"
+#endif
+
 namespace {
 
 struct DistIdxPair
@@ -583,13 +587,7 @@ void SurfFeaturesFinderGpu::find(InputArray image, ImageFeatures &features)
     image_.upload(image);
 
     ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
-    Mat gray_image;
-    cvtColor(image, gray_image, COLOR_BGR2GRAY);
-    gray_image_.upload(gray_image);
+    cv::cuda::cvtColor(image_, gray_image_, COLOR_BGR2GRAY);
 
     surf_.nOctaves = num_octaves_;
     surf_.nOctaveLayers = num_layers_;
