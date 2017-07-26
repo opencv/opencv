@@ -108,6 +108,14 @@ namespace Utils{
         obj.convertTo(m, rtype, alpha, beta);
     }
 
+    void convertTo_1(const Mat& obj, Mat& m, int rtype) {
+        obj.convertTo(m, rtype);
+    }
+
+    void convertTo_2(const Mat& obj, Mat& m, int rtype, double alpha) {
+        obj.convertTo(m, rtype, alpha);
+    }
+
     Size matSize(const cv::Mat& mat) {
         return  mat.size();
     }
@@ -190,6 +198,8 @@ EMSCRIPTEN_BINDINGS(Utils) {
         //.function("assignTo", select_overload<void(Mat&, int)const>(&cv::Mat::assignTo))
         .function("channels", select_overload<int()const>(&cv::Mat::channels))
         .function("convertTo",  select_overload<void(const Mat&, Mat&, int, double, double)>(&Utils::convertTo))
+        .function("convertTo",  select_overload<void(const Mat&, Mat&, int)>(&Utils::convertTo_1))
+        .function("convertTo",  select_overload<void(const Mat&, Mat&, int, double)>(&Utils::convertTo_2))
         .function("total", select_overload<size_t()const>(&cv::Mat::total))
         .function("row", select_overload<Mat(int)const>(&cv::Mat::row))
         .class_function("eye",select_overload<Mat(int, int, int)>(&Utils::eye))

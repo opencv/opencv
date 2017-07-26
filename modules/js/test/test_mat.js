@@ -317,6 +317,14 @@ QUnit.test("test_mat_miscs", function(assert) {
         let view = grayMat.data();
         assert.equal(view[0], (1 * 2) + 1);
 
+        mat.convertTo(grayMat, cv.CV_8U);
+        // dest = 1 * source(x, y) + 0.
+        assert.equal(view[0], 1);
+
+        mat.convertTo(grayMat, cv.CV_8U, 2);
+        // dest = 2 * source(x, y) + 0.
+        assert.equal(view[0], 2);
+
         grayMat.delete();
         mat.delete();
     }
