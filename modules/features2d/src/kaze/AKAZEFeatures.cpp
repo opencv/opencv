@@ -845,8 +845,8 @@ void AKAZEFeatures::Do_Subpixel_Refinement(
         continue; // Ignore the point that is not stable
 
       // Refine the coordinates
-      kp.pt.x += dx * ratio;
-      kp.pt.y += dy * ratio;
+      kp.pt.x += dx * ratio + .5f*(ratio-1.f);
+      kp.pt.y += dy * ratio + .5f*(ratio-1.f);
 
       kp.angle = 0.0;
       kp.size *= 2.0f; // In OpenCV the size of a keypoint is the diameter
