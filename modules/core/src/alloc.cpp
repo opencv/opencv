@@ -55,7 +55,7 @@ static void* OutOfMemoryError(size_t size)
 
 #if CV_USE_SYSTEM_MALLOC
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 void deleteThreadAllocData() {}
 #endif
 
@@ -93,7 +93,7 @@ void fastFree(void* ptr)
 
 #define STAT(stmt)
 
-#ifdef WIN32
+#ifdef _WIN32
 #if (_WIN32_WINNT >= 0x0602)
 #include <synchapi.h>
 #endif
@@ -126,7 +126,7 @@ void SystemFree(void* ptr, size_t)
 {
     free(ptr);
 }
-#else //WIN32
+#else //_WIN32
 
 #include <sys/mman.h>
 
@@ -155,7 +155,7 @@ void SystemFree(void* ptr, size_t size)
 {
     munmap(ptr, size);
 }
-#endif //WIN32
+#endif //_WIN32
 
 struct AutoLock
 {
@@ -399,7 +399,7 @@ struct ThreadData
 
     Block* bins[MAX_BIN+1][3];
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifdef WINCE
 #   define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
 #endif //WINCE
@@ -418,7 +418,7 @@ struct ThreadData
         }
         return data;
     }
-#else //WIN32
+#else //_WIN32
     static void deleteData(void* data)
     {
         delete (ThreadData*)data;
@@ -438,10 +438,10 @@ struct ThreadData
         }
         return data;
     }
-#endif //WIN32
+#endif //_WIN32
 };
 
-#ifdef WIN32
+#ifdef _WIN32
 DWORD ThreadData::tlsKey = TLS_OUT_OF_INDEXES;
 
 void deleteThreadAllocData()
@@ -450,9 +450,9 @@ void deleteThreadAllocData()
         delete (ThreadData*)TlsGetValue( ThreadData::tlsKey );
 }
 
-#else //WIN32
+#else //_WIN32
 pthread_key_t ThreadData::tlsKey = 0;
-#endif //WIN32
+#endif //_WIN32
 
 #if 0
 static void checkList(ThreadData* tls, int idx)

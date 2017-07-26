@@ -71,7 +71,7 @@ CUDA_TEST_P(Video, Reader)
 //////////////////////////////////////////////////////
 // VideoWriter
 
-#ifdef WIN32
+#ifdef _WIN32
 
 CUDA_TEST_P(Video, Writer)
 {
@@ -116,7 +116,7 @@ CUDA_TEST_P(Video, Writer)
     }
 }
 
-#endif // WIN32
+#endif // _WIN32
 
 INSTANTIATE_TEST_CASE_P(CUDA_Codec, Video, testing::Combine(
     ALL_DEVICES,

@@ -1,7 +1,7 @@
 
 #include "precomp.hpp"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <xiApi.h>
 #else
 #include <m3api/xiApi.h>
@@ -55,7 +55,7 @@ CvCapture* cvCreateCameraCapture_XIMEA( int index )
 // Enumerate connected devices
 void CvCaptureCAM_XIMEA::init()
 {
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
     xiGetNumberDevices( &numDevices);
 #else
     // try second re-enumeration if first one fails
@@ -84,7 +84,7 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
 
     if((mvret = xiOpenDevice( wIndex, &hmv)) != XI_OK)
     {
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
         errMsg("Open XI_DEVICE failed", mvret);
         return false;
 #else
@@ -1751,7 +1751,7 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
         error_message = "Unknown error value";
     }
 
-    #if defined WIN32 || defined _WIN32
+    #if defined _WIN32
     char buf[512]="";
     sprintf( buf, "%s : %d, %s\n", msg, errNum, error_message.c_str());
     OutputDebugString(buf);

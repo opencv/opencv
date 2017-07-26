@@ -732,7 +732,7 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
     if( m_buf )
         m_buf->reserve( alignSize(stripCount*8 + fileStep*height + 256, 256) );
 
-/*#if defined _DEBUG || !defined WIN32
+/*#if defined _DEBUG || !defined _WIN32
     int uncompressedRowSize = rowsPerStrip * fileStep;
 #endif*/
     int directoryOffset = 0;
