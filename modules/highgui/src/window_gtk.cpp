@@ -42,7 +42,7 @@
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
 
-#ifndef WIN32
+#ifndef _WIN32
 
 #if defined (HAVE_GTK)
 
@@ -2097,6 +2097,6 @@ CV_IMPL int cvWaitKey( int delay )
 
 
 #endif  // HAVE_GTK
-#endif  // WIN32
+#endif  // _WIN32
 
 /* End of file. */

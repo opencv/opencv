@@ -209,7 +209,7 @@ make & enjoy!
 
 #include "precomp.hpp"
 
-#if !defined WIN32 && (defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO)
+#if !defined _WIN32 && (defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO)
 
 #include <stdio.h>
 #include <unistd.h>

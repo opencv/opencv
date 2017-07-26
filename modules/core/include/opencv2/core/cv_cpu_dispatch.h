@@ -86,7 +86,7 @@
 #  define CV_FMA3 1
 #endif
 
-#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+#if defined _WIN32 && defined(_M_ARM)
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
@@ -128,7 +128,7 @@ struct VZeroUpperGuard {
 #  define CV_MMX 1
 #  define CV_SSE 1
 #  define CV_SSE2 1
-#elif (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+#elif defined _WIN32 && defined(_M_ARM)
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1

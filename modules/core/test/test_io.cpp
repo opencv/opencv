@@ -1318,3 +1318,30 @@ TEST(Core_InputOutput, FileStorage_json_named_nodes)
     ASSERT_EQ(fs["array"].name(), "array");
     fs.release();
 }
+
+TEST(Core_InputOutput, FileStorage_json_bool)
+{
+    std::string test =
+        "{ "
+            "\"str_true\": \"true\","
+            "\"map_value\": {"
+                "\"int_value\": -33333,\n"
+                "\"bool_true\": true,"
+                "\"str_false\": \"false\","
+            "},"
+            "\"bool_false\": false, \n"
+            "\"array\": [0.1, 0.2]"
+        "}";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    ASSERT_TRUE(fs["str_true"].isString());
+    ASSERT_TRUE(fs["map_value"]["bool_true"].isInt());
+    ASSERT_TRUE(fs["map_value"]["str_false"].isString());
+    ASSERT_TRUE(fs["bool_false"].isInt());
+
+    ASSERT_EQ((std::string)fs["str_true"], "true");
+    ASSERT_EQ((int)fs["map_value"]["bool_true"], 1);
+    ASSERT_EQ((std::string)fs["map_value"]["str_false"], "false");
+    ASSERT_EQ((int)fs["bool_false"], 0);
+    fs.release();
+}

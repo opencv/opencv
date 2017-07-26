@@ -58,7 +58,7 @@
 #ifdef HAVE_NVCUVID
     #include <nvcuvid.h>
 
-    #ifdef WIN32
+    #ifdef _WIN32
         #define NOMINMAX
         #include <windows.h>
         #ifdef HAVE_NVCUVENC
