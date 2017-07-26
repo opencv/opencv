@@ -1,0 +1,1147 @@
+file {
+  name: "tensor_shape.proto"
+  package: "tensorflow"
+  message_type {
+    name: "TensorShapeProto"
+    field {
+      name: "dim"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.TensorShapeProto.Dim"
+      json_name: "dim"
+    }
+    field {
+      name: "unknown_rank"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "unknownRank"
+    }
+    nested_type {
+      name: "Dim"
+      field {
+        name: "size"
+        number: 1
+        label: LABEL_OPTIONAL
+        type: TYPE_INT64
+        json_name: "size"
+      }
+      field {
+        name: "name"
+        number: 2
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "name"
+      }
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "TensorShapeProtos"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}
+file {
+  name: "types.proto"
+  package: "tensorflow"
+  enum_type {
+    name: "DataType"
+    value {
+      name: "DT_INVALID"
+      number: 0
+    }
+    value {
+      name: "DT_FLOAT"
+      number: 1
+    }
+    value {
+      name: "DT_DOUBLE"
+      number: 2
+    }
+    value {
+      name: "DT_INT32"
+      number: 3
+    }
+    value {
+      name: "DT_UINT8"
+      number: 4
+    }
+    value {
+      name: "DT_INT16"
+      number: 5
+    }
+    value {
+      name: "DT_INT8"
+      number: 6
+    }
+    value {
+      name: "DT_STRING"
+      number: 7
+    }
+    value {
+      name: "DT_COMPLEX64"
+      number: 8
+    }
+    value {
+      name: "DT_INT64"
+      number: 9
+    }
+    value {
+      name: "DT_BOOL"
+      number: 10
+    }
+    value {
+      name: "DT_QINT8"
+      number: 11
+    }
+    value {
+      name: "DT_QUINT8"
+      number: 12
+    }
+    value {
+      name: "DT_QINT32"
+      number: 13
+    }
+    value {
+      name: "DT_BFLOAT16"
+      number: 14
+    }
+    value {
+      name: "DT_QINT16"
+      number: 15
+    }
+    value {
+      name: "DT_QUINT16"
+      number: 16
+    }
+    value {
+      name: "DT_UINT16"
+      number: 17
+    }
+    value {
+      name: "DT_COMPLEX128"
+      number: 18
+    }
+    value {
+      name: "DT_HALF"
+      number: 19
+    }
+    value {
+      name: "DT_RESOURCE"
+      number: 20
+    }
+    value {
+      name: "DT_VARIANT"
+      number: 21
+    }
+    value {
+      name: "DT_UINT32"
+      number: 22
+    }
+    value {
+      name: "DT_UINT64"
+      number: 23
+    }
+    value {
+      name: "DT_FLOAT_REF"
+      number: 101
+    }
+    value {
+      name: "DT_DOUBLE_REF"
+      number: 102
+    }
+    value {
+      name: "DT_INT32_REF"
+      number: 103
+    }
+    value {
+      name: "DT_UINT8_REF"
+      number: 104
+    }
+    value {
+      name: "DT_INT16_REF"
+      number: 105
+    }
+    value {
+      name: "DT_INT8_REF"
+      number: 106
+    }
+    value {
+      name: "DT_STRING_REF"
+      number: 107
+    }
+    value {
+      name: "DT_COMPLEX64_REF"
+      number: 108
+    }
+    value {
+      name: "DT_INT64_REF"
+      number: 109
+    }
+    value {
+      name: "DT_BOOL_REF"
+      number: 110
+    }
+    value {
+      name: "DT_QINT8_REF"
+      number: 111
+    }
+    value {
+      name: "DT_QUINT8_REF"
+      number: 112
+    }
+    value {
+      name: "DT_QINT32_REF"
+      number: 113
+    }
+    value {
+      name: "DT_BFLOAT16_REF"
+      number: 114
+    }
+    value {
+      name: "DT_QINT16_REF"
+      number: 115
+    }
+    value {
+      name: "DT_QUINT16_REF"
+      number: 116
+    }
+    value {
+      name: "DT_UINT16_REF"
+      number: 117
+    }
+    value {
+      name: "DT_COMPLEX128_REF"
+      number: 118
+    }
+    value {
+      name: "DT_HALF_REF"
+      number: 119
+    }
+    value {
+      name: "DT_RESOURCE_REF"
+      number: 120
+    }
+    value {
+      name: "DT_VARIANT_REF"
+      number: 121
+    }
+    value {
+      name: "DT_UINT32_REF"
+      number: 122
+    }
+    value {
+      name: "DT_UINT64_REF"
+      number: 123
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "TypesProtos"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}
+file {
+  name: "tensor.proto"
+  package: "tensorflow"
+  dependency: "tensor_shape.proto"
+  dependency: "types.proto"
+  message_type {
+    name: "TensorProto"
+    field {
+      name: "dtype"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".tensorflow.DataType"
+      json_name: "dtype"
+    }
+    field {
+      name: "tensor_shape"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.TensorShapeProto"
+      json_name: "tensorShape"
+    }
+    field {
+      name: "version_number"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "versionNumber"
+    }
+    field {
+      name: "tensor_content"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "tensorContent"
+    }
+    field {
+      name: "half_val"
+      number: 13
+      label: LABEL_REPEATED
+      type: TYPE_INT32
+      options {
+        packed: true
+      }
+      json_name: "halfVal"
+    }
+    field {
+      name: "float_val"
+      number: 5
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      options {
+        packed: true
+      }
+      json_name: "floatVal"
+    }
+    field {
+      name: "double_val"
+      number: 6
+      label: LABEL_REPEATED
+      type: TYPE_DOUBLE
+      options {
+        packed: true
+      }
+      json_name: "doubleVal"
+    }
+    field {
+      name: "int_val"
+      number: 7
+      label: LABEL_REPEATED
+      type: TYPE_INT32
+      options {
+        packed: true
+      }
+      json_name: "intVal"
+    }
+    field {
+      name: "string_val"
+      number: 8
+      label: LABEL_REPEATED
+      type: TYPE_BYTES
+      json_name: "stringVal"
+    }
+    field {
+      name: "scomplex_val"
+      number: 9
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      options {
+        packed: true
+      }
+      json_name: "scomplexVal"
+    }
+    field {
+      name: "int64_val"
+      number: 10
+      label: LABEL_REPEATED
+      type: TYPE_INT64
+      options {
+        packed: true
+      }
+      json_name: "int64Val"
+    }
+    field {
+      name: "bool_val"
+      number: 11
+      label: LABEL_REPEATED
+      type: TYPE_BOOL
+      options {
+        packed: true
+      }
+      json_name: "boolVal"
+    }
+    field {
+      name: "dcomplex_val"
+      number: 12
+      label: LABEL_REPEATED
+      type: TYPE_DOUBLE
+      options {
+        packed: true
+      }
+      json_name: "dcomplexVal"
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "TensorProtos"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}
+file {
+  name: "attr_value.proto"
+  package: "tensorflow"
+  dependency: "tensor.proto"
+  dependency: "tensor_shape.proto"
+  dependency: "types.proto"
+  message_type {
+    name: "AttrValue"
+    field {
+      name: "s"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      oneof_index: 0
+      json_name: "s"
+    }
+    field {
+      name: "i"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      oneof_index: 0
+      json_name: "i"
+    }
+    field {
+      name: "f"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      oneof_index: 0
+      json_name: "f"
+    }
+    field {
+      name: "b"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      oneof_index: 0
+      json_name: "b"
+    }
+    field {
+      name: "type"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".tensorflow.DataType"
+      oneof_index: 0
+      json_name: "type"
+    }
+    field {
+      name: "shape"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.TensorShapeProto"
+      oneof_index: 0
+      json_name: "shape"
+    }
+    field {
+      name: "tensor"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.TensorProto"
+      oneof_index: 0
+      json_name: "tensor"
+    }
+    field {
+      name: "list"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.AttrValue.ListValue"
+      oneof_index: 0
+      json_name: "list"
+    }
+    field {
+      name: "func"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.NameAttrList"
+      oneof_index: 0
+      json_name: "func"
+    }
+    field {
+      name: "placeholder"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      oneof_index: 0
+      json_name: "placeholder"
+    }
+    nested_type {
+      name: "ListValue"
+      field {
+        name: "s"
+        number: 2
+        label: LABEL_REPEATED
+        type: TYPE_BYTES
+        json_name: "s"
+      }
+      field {
+        name: "i"
+        number: 3
+        label: LABEL_REPEATED
+        type: TYPE_INT64
+        options {
+          packed: true
+        }
+        json_name: "i"
+      }
+      field {
+        name: "f"
+        number: 4
+        label: LABEL_REPEATED
+        type: TYPE_FLOAT
+        options {
+          packed: true
+        }
+        json_name: "f"
+      }
+      field {
+        name: "b"
+        number: 5
+        label: LABEL_REPEATED
+        type: TYPE_BOOL
+        options {
+          packed: true
+        }
+        json_name: "b"
+      }
+      field {
+        name: "type"
+        number: 6
+        label: LABEL_REPEATED
+        type: TYPE_ENUM
+        type_name: ".tensorflow.DataType"
+        options {
+          packed: true
+        }
+        json_name: "type"
+      }
+      field {
+        name: "shape"
+        number: 7
+        label: LABEL_REPEATED
+        type: TYPE_MESSAGE
+        type_name: ".tensorflow.TensorShapeProto"
+        json_name: "shape"
+      }
+      field {
+        name: "tensor"
+        number: 8
+        label: LABEL_REPEATED
+        type: TYPE_MESSAGE
+        type_name: ".tensorflow.TensorProto"
+        json_name: "tensor"
+      }
+    }
+    oneof_decl {
+      name: "value"
+    }
+  }
+  message_type {
+    name: "NameAttrList"
+    field {
+      name: "name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "attr"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.NameAttrList.AttrEntry"
+      json_name: "attr"
+    }
+    nested_type {
+      name: "AttrEntry"
+      field {
+        name: "key"
+        number: 1
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "key"
+      }
+      field {
+        name: "value"
+        number: 2
+        label: LABEL_OPTIONAL
+        type: TYPE_MESSAGE
+        type_name: ".tensorflow.AttrValue"
+        json_name: "value"
+      }
+      options {
+        map_entry: true
+      }
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "AttrValueProtos"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}
+file {
+  name: "op_def.proto"
+  package: "tensorflow"
+  dependency: "attr_value.proto"
+  dependency: "types.proto"
+  message_type {
+    name: "OpDef"
+    field {
+      name: "name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "input_arg"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.OpDef.ArgDef"
+      json_name: "inputArg"
+    }
+    field {
+      name: "output_arg"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.OpDef.ArgDef"
+      json_name: "outputArg"
+    }
+    field {
+      name: "attr"
+      number: 4
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.OpDef.AttrDef"
+      json_name: "attr"
+    }
+    field {
+      name: "deprecation"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.OpDeprecation"
+      json_name: "deprecation"
+    }
+    field {
+      name: "summary"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "summary"
+    }
+    field {
+      name: "description"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "description"
+    }
+    field {
+      name: "is_commutative"
+      number: 18
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "isCommutative"
+    }
+    field {
+      name: "is_aggregate"
+      number: 16
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "isAggregate"
+    }
+    field {
+      name: "is_stateful"
+      number: 17
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "isStateful"
+    }
+    field {
+      name: "allows_uninitialized_input"
+      number: 19
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "allowsUninitializedInput"
+    }
+    nested_type {
+      name: "ArgDef"
+      field {
+        name: "name"
+        number: 1
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "name"
+      }
+      field {
+        name: "description"
+        number: 2
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "description"
+      }
+      field {
+        name: "type"
+        number: 3
+        label: LABEL_OPTIONAL
+        type: TYPE_ENUM
+        type_name: ".tensorflow.DataType"
+        json_name: "type"
+      }
+      field {
+        name: "type_attr"
+        number: 4
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "typeAttr"
+      }
+      field {
+        name: "number_attr"
+        number: 5
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "numberAttr"
+      }
+      field {
+        name: "type_list_attr"
+        number: 6
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "typeListAttr"
+      }
+      field {
+        name: "is_ref"
+        number: 16
+        label: LABEL_OPTIONAL
+        type: TYPE_BOOL
+        json_name: "isRef"
+      }
+    }
+    nested_type {
+      name: "AttrDef"
+      field {
+        name: "name"
+        number: 1
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "name"
+      }
+      field {
+        name: "type"
+        number: 2
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "type"
+      }
+      field {
+        name: "default_value"
+        number: 3
+        label: LABEL_OPTIONAL
+        type: TYPE_MESSAGE
+        type_name: ".tensorflow.AttrValue"
+        json_name: "defaultValue"
+      }
+      field {
+        name: "description"
+        number: 4
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "description"
+      }
+      field {
+        name: "has_minimum"
+        number: 5
+        label: LABEL_OPTIONAL
+        type: TYPE_BOOL
+        json_name: "hasMinimum"
+      }
+      field {
+        name: "minimum"
+        number: 6
+        label: LABEL_OPTIONAL
+        type: TYPE_INT64
+        json_name: "minimum"
+      }
+      field {
+        name: "allowed_values"
+        number: 7
+        label: LABEL_OPTIONAL
+        type: TYPE_MESSAGE
+        type_name: ".tensorflow.AttrValue"
+        json_name: "allowedValues"
+      }
+    }
+  }
+  message_type {
+    name: "OpDeprecation"
+    field {
+      name: "version"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "version"
+    }
+    field {
+      name: "explanation"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "explanation"
+    }
+  }
+  message_type {
+    name: "OpList"
+    field {
+      name: "op"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.OpDef"
+      json_name: "op"
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "OpDefProtos"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}
+file {
+  name: "function.proto"
+  package: "tensorflow"
+  dependency: "attr_value.proto"
+  dependency: "op_def.proto"
+  message_type {
+    name: "FunctionDefLibrary"
+    field {
+      name: "function"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.FunctionDef"
+      json_name: "function"
+    }
+    field {
+      name: "gradient"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.GradientDef"
+      json_name: "gradient"
+    }
+  }
+  message_type {
+    name: "FunctionDef"
+    field {
+      name: "signature"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.OpDef"
+      json_name: "signature"
+    }
+    field {
+      name: "node"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.FunctionDef.Node"
+      json_name: "node"
+    }
+    nested_type {
+      name: "Node"
+      field {
+        name: "ret"
+        number: 1
+        label: LABEL_REPEATED
+        type: TYPE_STRING
+        json_name: "ret"
+      }
+      field {
+        name: "op"
+        number: 2
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "op"
+      }
+      field {
+        name: "arg"
+        number: 3
+        label: LABEL_REPEATED
+        type: TYPE_STRING
+        json_name: "arg"
+      }
+      field {
+        name: "dep"
+        number: 4
+        label: LABEL_REPEATED
+        type: TYPE_STRING
+        json_name: "dep"
+      }
+      field {
+        name: "attr"
+        number: 5
+        label: LABEL_REPEATED
+        type: TYPE_MESSAGE
+        type_name: ".tensorflow.FunctionDef.Node.AttrEntry"
+        json_name: "attr"
+      }
+      nested_type {
+        name: "AttrEntry"
+        field {
+          name: "key"
+          number: 1
+          label: LABEL_OPTIONAL
+          type: TYPE_STRING
+          json_name: "key"
+        }
+        field {
+          name: "value"
+          number: 2
+          label: LABEL_OPTIONAL
+          type: TYPE_MESSAGE
+          type_name: ".tensorflow.AttrValue"
+          json_name: "value"
+        }
+        options {
+          map_entry: true
+        }
+      }
+    }
+  }
+  message_type {
+    name: "GradientDef"
+    field {
+      name: "function_name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "functionName"
+    }
+    field {
+      name: "gradient_func"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "gradientFunc"
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "FunctionProtos"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}
+file {
+  name: "versions.proto"
+  package: "tensorflow"
+  message_type {
+    name: "VersionDef"
+    field {
+      name: "producer"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "producer"
+    }
+    field {
+      name: "min_consumer"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "minConsumer"
+    }
+    field {
+      name: "bad_consumers"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_INT32
+      json_name: "badConsumers"
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "VersionsProtos"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}
+file {
+  name: "graph.proto"
+  package: "tensorflow"
+  dependency: "attr_value.proto"
+  dependency: "function.proto"
+  dependency: "versions.proto"
+  message_type {
+    name: "GraphDef"
+    field {
+      name: "node"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.NodeDef"
+      json_name: "node"
+    }
+    field {
+      name: "versions"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.VersionDef"
+      json_name: "versions"
+    }
+    field {
+      name: "version"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      options {
+        deprecated: true
+      }
+      json_name: "version"
+    }
+    field {
+      name: "library"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.FunctionDefLibrary"
+      json_name: "library"
+    }
+  }
+  message_type {
+    name: "NodeDef"
+    field {
+      name: "name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "op"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "op"
+    }
+    field {
+      name: "input"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "input"
+    }
+    field {
+      name: "device"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "device"
+    }
+    field {
+      name: "attr"
+      number: 5
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".tensorflow.NodeDef.AttrEntry"
+      json_name: "attr"
+    }
+    nested_type {
+      name: "AttrEntry"
+      field {
+        name: "key"
+        number: 1
+        label: LABEL_OPTIONAL
+        type: TYPE_STRING
+        json_name: "key"
+      }
+      field {
+        name: "value"
+        number: 2
+        label: LABEL_OPTIONAL
+        type: TYPE_MESSAGE
+        type_name: ".tensorflow.AttrValue"
+        json_name: "value"
+      }
+      options {
+        map_entry: true
+      }
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "GraphProtos"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}
+file {
+  name: "resource_handle.proto"
+  package: "tensorflow"
+  message_type {
+    name: "ResourceHandleProto"
+    field {
+      name: "device"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "device"
+    }
+    field {
+      name: "container"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "container"
+    }
+    field {
+      name: "name"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "hash_code"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT64
+      json_name: "hashCode"
+    }
+    field {
+      name: "maybe_type_name"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "maybeTypeName"
+    }
+  }
+  options {
+    java_package: "org.tensorflow.framework"
+    java_outer_classname: "ResourceHandle"
+    java_multiple_files: true
+    cc_enable_arenas: true
+  }
+  syntax: "proto3"
+}

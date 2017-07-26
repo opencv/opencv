@@ -42,7 +42,9 @@
 #include "precomp.hpp"
 #include <opencv2/dnn/layer.details.hpp>
 
+#ifdef HAVE_PROTOBUF
 #include <google/protobuf/stubs/common.h>
+#endif  // HAVE_PROTOBUF
 
 namespace cv {
 namespace dnn {
@@ -58,6 +60,7 @@ Mutex& getInitializationMutex()
 // force initialization (single-threaded environment)
 Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 
+#ifdef HAVE_PROTOBUF
 namespace {
 using namespace google::protobuf;
 class ProtobufShutdown {
@@ -71,12 +74,15 @@ public:
     }
 };
 } // namespace
+#endif  // HAVE_PROTOBUF
 
 void initializeLayerFactory()
 {
     CV_TRACE_FUNCTION();
 
+    #ifdef HAVE_PROTOBUF
     static ProtobufShutdown protobufShutdown; (void)protobufShutdown;
+    #endif  // HAVE_PROTOBUF
 
     CV_DNN_REGISTER_LAYER_CLASS(Slice,          SliceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Split,          SplitLayer);

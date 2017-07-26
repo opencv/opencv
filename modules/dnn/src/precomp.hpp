@@ -47,6 +47,9 @@
 #include "cvconfig.h"
 #include <opencv2/dnn.hpp>
 #include <opencv2/dnn/all_layers.hpp>
+#ifndef HAVE_PROTOBUF
+#include <opencv2/protobuf_parser.hpp>
+#endif  // HAVE_PROTOBUF
 
 namespace cv { namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN

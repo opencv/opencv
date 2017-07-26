@@ -32,9 +32,10 @@ enum DataType {
   DT_UINT16 = 17;
   DT_COMPLEX128 = 18;  // Double-precision complex
   DT_HALF = 19;
-
-  // TODO(josh11b): DT_GENERIC_PROTO = ??;
-  // TODO(jeff,josh11b): DT_UINT64?  DT_UINT32?
+  DT_RESOURCE = 20;
+  DT_VARIANT = 21;  // Arbitrary C++ data types
+  DT_UINT32 = 22;
+  DT_UINT64 = 23;
 
   // Do not use!  These are only for parameters.  Every enum above
   // should have a corresponding value below (verified by types_test).
@@ -57,4 +58,8 @@ enum DataType {
   DT_UINT16_REF = 117;
   DT_COMPLEX128_REF = 118;
   DT_HALF_REF = 119;
+  DT_RESOURCE_REF = 120;
+  DT_VARIANT_REF = 121;
+  DT_UINT32_REF = 122;
+  DT_UINT64_REF = 123;
 }

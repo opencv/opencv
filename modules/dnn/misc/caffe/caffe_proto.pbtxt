@@ -1,0 +1,4383 @@
+file {
+  name: "caffe.proto"
+  package: "caffe"
+  message_type {
+    name: "BlobShape"
+    field {
+      name: "dim"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_INT64
+      options {
+        packed: true
+      }
+      json_name: "dim"
+    }
+  }
+  message_type {
+    name: "BlobProto"
+    field {
+      name: "shape"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobShape"
+      json_name: "shape"
+    }
+    field {
+      name: "data"
+      number: 5
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      options {
+        packed: true
+      }
+      json_name: "data"
+    }
+    field {
+      name: "diff"
+      number: 6
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      options {
+        packed: true
+      }
+      json_name: "diff"
+    }
+    field {
+      name: "double_data"
+      number: 8
+      label: LABEL_REPEATED
+      type: TYPE_DOUBLE
+      options {
+        packed: true
+      }
+      json_name: "doubleData"
+    }
+    field {
+      name: "double_diff"
+      number: 9
+      label: LABEL_REPEATED
+      type: TYPE_DOUBLE
+      options {
+        packed: true
+      }
+      json_name: "doubleDiff"
+    }
+    field {
+      name: "raw_data_type"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.Type"
+      json_name: "rawDataType"
+    }
+    field {
+      name: "raw_data"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      options {
+        packed: false
+      }
+      json_name: "rawData"
+    }
+    field {
+      name: "num"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "num"
+    }
+    field {
+      name: "channels"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "channels"
+    }
+    field {
+      name: "height"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "height"
+    }
+    field {
+      name: "width"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "width"
+    }
+  }
+  message_type {
+    name: "BlobProtoVector"
+    field {
+      name: "blobs"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobProto"
+      json_name: "blobs"
+    }
+  }
+  message_type {
+    name: "PermuteParameter"
+    field {
+      name: "order"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "order"
+    }
+  }
+  message_type {
+    name: "NormalizeBBoxParameter"
+    field {
+      name: "across_spatial"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "acrossSpatial"
+    }
+    field {
+      name: "scale_filler"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "scaleFiller"
+    }
+    field {
+      name: "channel_shared"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "channelShared"
+    }
+    field {
+      name: "eps"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1e-10"
+      json_name: "eps"
+    }
+  }
+  message_type {
+    name: "PriorBoxParameter"
+    field {
+      name: "min_size"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "minSize"
+    }
+    field {
+      name: "max_size"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "maxSize"
+    }
+    field {
+      name: "aspect_ratio"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "aspectRatio"
+    }
+    field {
+      name: "flip"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "flip"
+    }
+    field {
+      name: "clip"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "clip"
+    }
+    field {
+      name: "variance"
+      number: 6
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "variance"
+    }
+    field {
+      name: "img_size"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "imgSize"
+    }
+    field {
+      name: "img_h"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "imgH"
+    }
+    field {
+      name: "img_w"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "imgW"
+    }
+    field {
+      name: "step"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "step"
+    }
+    field {
+      name: "step_h"
+      number: 11
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "stepH"
+    }
+    field {
+      name: "step_w"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "stepW"
+    }
+    field {
+      name: "offset"
+      number: 13
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.5"
+      json_name: "offset"
+    }
+    field {
+      name: "additional_y_offset"
+      number: 14
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "additionalYOffset"
+    }
+    enum_type {
+      name: "CodeType"
+      value {
+        name: "CORNER"
+        number: 1
+      }
+      value {
+        name: "CENTER_SIZE"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "DetectionOutputParameter"
+    field {
+      name: "num_classes"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "numClasses"
+    }
+    field {
+      name: "share_location"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "shareLocation"
+    }
+    field {
+      name: "background_label_id"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "backgroundLabelId"
+    }
+    field {
+      name: "nms_param"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NonMaximumSuppressionParameter"
+      json_name: "nmsParam"
+    }
+    field {
+      name: "save_output_param"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.SaveOutputParameter"
+      json_name: "saveOutputParam"
+    }
+    field {
+      name: "code_type"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.PriorBoxParameter.CodeType"
+      default_value: "CORNER"
+      json_name: "codeType"
+    }
+    field {
+      name: "variance_encoded_in_target"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "varianceEncodedInTarget"
+    }
+    field {
+      name: "keep_top_k"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "-1"
+      json_name: "keepTopK"
+    }
+    field {
+      name: "confidence_threshold"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "confidenceThreshold"
+    }
+  }
+  message_type {
+    name: "Datum"
+    field {
+      name: "channels"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "channels"
+    }
+    field {
+      name: "height"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "height"
+    }
+    field {
+      name: "width"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "width"
+    }
+    field {
+      name: "data"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_BYTES
+      json_name: "data"
+    }
+    field {
+      name: "label"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "label"
+    }
+    field {
+      name: "float_data"
+      number: 6
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "floatData"
+    }
+    field {
+      name: "encoded"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "encoded"
+    }
+  }
+  message_type {
+    name: "FillerParameter"
+    field {
+      name: "type"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      default_value: "constant"
+      json_name: "type"
+    }
+    field {
+      name: "value"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0"
+      json_name: "value"
+    }
+    field {
+      name: "min"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0"
+      json_name: "min"
+    }
+    field {
+      name: "max"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "max"
+    }
+    field {
+      name: "mean"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0"
+      json_name: "mean"
+    }
+    field {
+      name: "std"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "std"
+    }
+    field {
+      name: "sparse"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "-1"
+      json_name: "sparse"
+    }
+    field {
+      name: "variance_norm"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.FillerParameter.VarianceNorm"
+      default_value: "FAN_IN"
+      json_name: "varianceNorm"
+    }
+    enum_type {
+      name: "VarianceNorm"
+      value {
+        name: "FAN_IN"
+        number: 0
+      }
+      value {
+        name: "FAN_OUT"
+        number: 1
+      }
+      value {
+        name: "AVERAGE"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "NetParameter"
+    field {
+      name: "name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "input"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "input"
+    }
+    field {
+      name: "input_shape"
+      number: 8
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobShape"
+      json_name: "inputShape"
+    }
+    field {
+      name: "input_dim"
+      number: 4
+      label: LABEL_REPEATED
+      type: TYPE_INT32
+      json_name: "inputDim"
+    }
+    field {
+      name: "force_backward"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "forceBackward"
+    }
+    field {
+      name: "state"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetState"
+      json_name: "state"
+    }
+    field {
+      name: "debug_info"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "debugInfo"
+    }
+    field {
+      name: "layer"
+      number: 100
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.LayerParameter"
+      json_name: "layer"
+    }
+    field {
+      name: "layers"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.V1LayerParameter"
+      json_name: "layers"
+    }
+  }
+  message_type {
+    name: "SolverParameter"
+    field {
+      name: "net"
+      number: 24
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "net"
+    }
+    field {
+      name: "net_param"
+      number: 25
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetParameter"
+      json_name: "netParam"
+    }
+    field {
+      name: "train_net"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "trainNet"
+    }
+    field {
+      name: "test_net"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "testNet"
+    }
+    field {
+      name: "train_net_param"
+      number: 21
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetParameter"
+      json_name: "trainNetParam"
+    }
+    field {
+      name: "test_net_param"
+      number: 22
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetParameter"
+      json_name: "testNetParam"
+    }
+    field {
+      name: "train_state"
+      number: 26
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetState"
+      json_name: "trainState"
+    }
+    field {
+      name: "test_state"
+      number: 27
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetState"
+      json_name: "testState"
+    }
+    field {
+      name: "test_iter"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_INT32
+      json_name: "testIter"
+    }
+    field {
+      name: "test_interval"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "testInterval"
+    }
+    field {
+      name: "test_compute_loss"
+      number: 19
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "testComputeLoss"
+    }
+    field {
+      name: "test_initialization"
+      number: 32
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "testInitialization"
+    }
+    field {
+      name: "base_lr"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "baseLr"
+    }
+    field {
+      name: "display"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "display"
+    }
+    field {
+      name: "average_loss"
+      number: 33
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "averageLoss"
+    }
+    field {
+      name: "max_iter"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "maxIter"
+    }
+    field {
+      name: "iter_size"
+      number: 36
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "iterSize"
+    }
+    field {
+      name: "lr_policy"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "lrPolicy"
+    }
+    field {
+      name: "gamma"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "gamma"
+    }
+    field {
+      name: "power"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "power"
+    }
+    field {
+      name: "momentum"
+      number: 11
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "momentum"
+    }
+    field {
+      name: "weight_decay"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "weightDecay"
+    }
+    field {
+      name: "regularization_type"
+      number: 29
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      default_value: "L2"
+      json_name: "regularizationType"
+    }
+    field {
+      name: "stepsize"
+      number: 13
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "stepsize"
+    }
+    field {
+      name: "stepvalue"
+      number: 34
+      label: LABEL_REPEATED
+      type: TYPE_INT32
+      json_name: "stepvalue"
+    }
+    field {
+      name: "clip_gradients"
+      number: 35
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "-1"
+      json_name: "clipGradients"
+    }
+    field {
+      name: "snapshot"
+      number: 14
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "snapshot"
+    }
+    field {
+      name: "snapshot_prefix"
+      number: 15
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "snapshotPrefix"
+    }
+    field {
+      name: "snapshot_diff"
+      number: 16
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "snapshotDiff"
+    }
+    field {
+      name: "snapshot_format"
+      number: 37
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.SolverParameter.SnapshotFormat"
+      default_value: "BINARYPROTO"
+      json_name: "snapshotFormat"
+    }
+    field {
+      name: "solver_mode"
+      number: 17
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.SolverParameter.SolverMode"
+      default_value: "GPU"
+      json_name: "solverMode"
+    }
+    field {
+      name: "device_id"
+      number: 18
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "deviceId"
+    }
+    field {
+      name: "random_seed"
+      number: 20
+      label: LABEL_OPTIONAL
+      type: TYPE_INT64
+      default_value: "-1"
+      json_name: "randomSeed"
+    }
+    field {
+      name: "type"
+      number: 40
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      default_value: "SGD"
+      json_name: "type"
+    }
+    field {
+      name: "delta"
+      number: 31
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1e-08"
+      json_name: "delta"
+    }
+    field {
+      name: "momentum2"
+      number: 39
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.999"
+      json_name: "momentum2"
+    }
+    field {
+      name: "rms_decay"
+      number: 38
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.99"
+      json_name: "rmsDecay"
+    }
+    field {
+      name: "debug_info"
+      number: 23
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "debugInfo"
+    }
+    field {
+      name: "snapshot_after_train"
+      number: 28
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "snapshotAfterTrain"
+    }
+    field {
+      name: "solver_type"
+      number: 30
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.SolverParameter.SolverType"
+      default_value: "SGD"
+      json_name: "solverType"
+    }
+    enum_type {
+      name: "SnapshotFormat"
+      value {
+        name: "HDF5"
+        number: 0
+      }
+      value {
+        name: "BINARYPROTO"
+        number: 1
+      }
+    }
+    enum_type {
+      name: "SolverMode"
+      value {
+        name: "CPU"
+        number: 0
+      }
+      value {
+        name: "GPU"
+        number: 1
+      }
+    }
+    enum_type {
+      name: "SolverType"
+      value {
+        name: "SGD"
+        number: 0
+      }
+      value {
+        name: "NESTEROV"
+        number: 1
+      }
+      value {
+        name: "ADAGRAD"
+        number: 2
+      }
+      value {
+        name: "RMSPROP"
+        number: 3
+      }
+      value {
+        name: "ADADELTA"
+        number: 4
+      }
+      value {
+        name: "ADAM"
+        number: 5
+      }
+    }
+  }
+  message_type {
+    name: "SolverState"
+    field {
+      name: "iter"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "iter"
+    }
+    field {
+      name: "learned_net"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "learnedNet"
+    }
+    field {
+      name: "history"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobProto"
+      json_name: "history"
+    }
+    field {
+      name: "current_step"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "currentStep"
+    }
+  }
+  message_type {
+    name: "NetState"
+    field {
+      name: "phase"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.Phase"
+      default_value: "TEST"
+      json_name: "phase"
+    }
+    field {
+      name: "level"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "level"
+    }
+    field {
+      name: "stage"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "stage"
+    }
+  }
+  message_type {
+    name: "NetStateRule"
+    field {
+      name: "phase"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.Phase"
+      json_name: "phase"
+    }
+    field {
+      name: "min_level"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "minLevel"
+    }
+    field {
+      name: "max_level"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "maxLevel"
+    }
+    field {
+      name: "stage"
+      number: 4
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "stage"
+    }
+    field {
+      name: "not_stage"
+      number: 5
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "notStage"
+    }
+  }
+  message_type {
+    name: "ParamSpec"
+    field {
+      name: "name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "share_mode"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.ParamSpec.DimCheckMode"
+      json_name: "shareMode"
+    }
+    field {
+      name: "lr_mult"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "lrMult"
+    }
+    field {
+      name: "decay_mult"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "decayMult"
+    }
+    enum_type {
+      name: "DimCheckMode"
+      value {
+        name: "STRICT"
+        number: 0
+      }
+      value {
+        name: "PERMISSIVE"
+        number: 1
+      }
+    }
+  }
+  message_type {
+    name: "LayerParameter"
+    field {
+      name: "name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "type"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "type"
+    }
+    field {
+      name: "bottom"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "bottom"
+    }
+    field {
+      name: "top"
+      number: 4
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "top"
+    }
+    field {
+      name: "phase"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.Phase"
+      json_name: "phase"
+    }
+    field {
+      name: "loss_weight"
+      number: 5
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "lossWeight"
+    }
+    field {
+      name: "param"
+      number: 6
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ParamSpec"
+      json_name: "param"
+    }
+    field {
+      name: "blobs"
+      number: 7
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobProto"
+      json_name: "blobs"
+    }
+    field {
+      name: "propagate_down"
+      number: 11
+      label: LABEL_REPEATED
+      type: TYPE_BOOL
+      json_name: "propagateDown"
+    }
+    field {
+      name: "include"
+      number: 8
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetStateRule"
+      json_name: "include"
+    }
+    field {
+      name: "exclude"
+      number: 9
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetStateRule"
+      json_name: "exclude"
+    }
+    field {
+      name: "transform_param"
+      number: 100
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.TransformationParameter"
+      json_name: "transformParam"
+    }
+    field {
+      name: "loss_param"
+      number: 101
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.LossParameter"
+      json_name: "lossParam"
+    }
+    field {
+      name: "accuracy_param"
+      number: 102
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.AccuracyParameter"
+      json_name: "accuracyParam"
+    }
+    field {
+      name: "argmax_param"
+      number: 103
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ArgMaxParameter"
+      json_name: "argmaxParam"
+    }
+    field {
+      name: "batch_norm_param"
+      number: 139
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BatchNormParameter"
+      json_name: "batchNormParam"
+    }
+    field {
+      name: "bias_param"
+      number: 141
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BiasParameter"
+      json_name: "biasParam"
+    }
+    field {
+      name: "concat_param"
+      number: 104
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ConcatParameter"
+      json_name: "concatParam"
+    }
+    field {
+      name: "contrastive_loss_param"
+      number: 105
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ContrastiveLossParameter"
+      json_name: "contrastiveLossParam"
+    }
+    field {
+      name: "convolution_param"
+      number: 106
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ConvolutionParameter"
+      json_name: "convolutionParam"
+    }
+    field {
+      name: "crop_param"
+      number: 144
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.CropParameter"
+      json_name: "cropParam"
+    }
+    field {
+      name: "data_param"
+      number: 107
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.DataParameter"
+      json_name: "dataParam"
+    }
+    field {
+      name: "detection_output_param"
+      number: 147
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.DetectionOutputParameter"
+      json_name: "detectionOutputParam"
+    }
+    field {
+      name: "dropout_param"
+      number: 108
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.DropoutParameter"
+      json_name: "dropoutParam"
+    }
+    field {
+      name: "dummy_data_param"
+      number: 109
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.DummyDataParameter"
+      json_name: "dummyDataParam"
+    }
+    field {
+      name: "eltwise_param"
+      number: 110
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.EltwiseParameter"
+      json_name: "eltwiseParam"
+    }
+    field {
+      name: "elu_param"
+      number: 140
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ELUParameter"
+      json_name: "eluParam"
+    }
+    field {
+      name: "embed_param"
+      number: 137
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.EmbedParameter"
+      json_name: "embedParam"
+    }
+    field {
+      name: "exp_param"
+      number: 111
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ExpParameter"
+      json_name: "expParam"
+    }
+    field {
+      name: "flatten_param"
+      number: 135
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FlattenParameter"
+      json_name: "flattenParam"
+    }
+    field {
+      name: "hdf5_data_param"
+      number: 112
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.HDF5DataParameter"
+      json_name: "hdf5DataParam"
+    }
+    field {
+      name: "hdf5_output_param"
+      number: 113
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.HDF5OutputParameter"
+      json_name: "hdf5OutputParam"
+    }
+    field {
+      name: "hinge_loss_param"
+      number: 114
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.HingeLossParameter"
+      json_name: "hingeLossParam"
+    }
+    field {
+      name: "image_data_param"
+      number: 115
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ImageDataParameter"
+      json_name: "imageDataParam"
+    }
+    field {
+      name: "infogain_loss_param"
+      number: 116
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.InfogainLossParameter"
+      json_name: "infogainLossParam"
+    }
+    field {
+      name: "inner_product_param"
+      number: 117
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.InnerProductParameter"
+      json_name: "innerProductParam"
+    }
+    field {
+      name: "input_param"
+      number: 143
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.InputParameter"
+      json_name: "inputParam"
+    }
+    field {
+      name: "log_param"
+      number: 134
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.LogParameter"
+      json_name: "logParam"
+    }
+    field {
+      name: "lrn_param"
+      number: 118
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.LRNParameter"
+      json_name: "lrnParam"
+    }
+    field {
+      name: "memory_data_param"
+      number: 119
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.MemoryDataParameter"
+      json_name: "memoryDataParam"
+    }
+    field {
+      name: "mvn_param"
+      number: 120
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.MVNParameter"
+      json_name: "mvnParam"
+    }
+    field {
+      name: "norm_param"
+      number: 149
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NormalizeBBoxParameter"
+      json_name: "normParam"
+    }
+    field {
+      name: "permute_param"
+      number: 148
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.PermuteParameter"
+      json_name: "permuteParam"
+    }
+    field {
+      name: "parameter_param"
+      number: 145
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ParameterParameter"
+      json_name: "parameterParam"
+    }
+    field {
+      name: "pooling_param"
+      number: 121
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.PoolingParameter"
+      json_name: "poolingParam"
+    }
+    field {
+      name: "power_param"
+      number: 122
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.PowerParameter"
+      json_name: "powerParam"
+    }
+    field {
+      name: "prelu_param"
+      number: 131
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.PReLUParameter"
+      json_name: "preluParam"
+    }
+    field {
+      name: "prior_box_param"
+      number: 150
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.PriorBoxParameter"
+      json_name: "priorBoxParam"
+    }
+    field {
+      name: "python_param"
+      number: 130
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.PythonParameter"
+      json_name: "pythonParam"
+    }
+    field {
+      name: "recurrent_param"
+      number: 146
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.RecurrentParameter"
+      json_name: "recurrentParam"
+    }
+    field {
+      name: "reduction_param"
+      number: 136
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ReductionParameter"
+      json_name: "reductionParam"
+    }
+    field {
+      name: "relu_param"
+      number: 123
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ReLUParameter"
+      json_name: "reluParam"
+    }
+    field {
+      name: "reshape_param"
+      number: 133
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ReshapeParameter"
+      json_name: "reshapeParam"
+    }
+    field {
+      name: "scale_param"
+      number: 142
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ScaleParameter"
+      json_name: "scaleParam"
+    }
+    field {
+      name: "sigmoid_param"
+      number: 124
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.SigmoidParameter"
+      json_name: "sigmoidParam"
+    }
+    field {
+      name: "softmax_param"
+      number: 125
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.SoftmaxParameter"
+      json_name: "softmaxParam"
+    }
+    field {
+      name: "spp_param"
+      number: 132
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.SPPParameter"
+      json_name: "sppParam"
+    }
+    field {
+      name: "slice_param"
+      number: 126
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.SliceParameter"
+      json_name: "sliceParam"
+    }
+    field {
+      name: "tanh_param"
+      number: 127
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.TanHParameter"
+      json_name: "tanhParam"
+    }
+    field {
+      name: "threshold_param"
+      number: 128
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ThresholdParameter"
+      json_name: "thresholdParam"
+    }
+    field {
+      name: "tile_param"
+      number: 138
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.TileParameter"
+      json_name: "tileParam"
+    }
+    field {
+      name: "window_data_param"
+      number: 129
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.WindowDataParameter"
+      json_name: "windowDataParam"
+    }
+  }
+  message_type {
+    name: "TransformationParameter"
+    field {
+      name: "scale"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "scale"
+    }
+    field {
+      name: "mirror"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "mirror"
+    }
+    field {
+      name: "crop_size"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "cropSize"
+    }
+    field {
+      name: "mean_file"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "meanFile"
+    }
+    field {
+      name: "mean_value"
+      number: 5
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "meanValue"
+    }
+    field {
+      name: "force_color"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "forceColor"
+    }
+    field {
+      name: "force_gray"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "forceGray"
+    }
+  }
+  message_type {
+    name: "LossParameter"
+    field {
+      name: "ignore_label"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "ignoreLabel"
+    }
+    field {
+      name: "normalization"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.LossParameter.NormalizationMode"
+      default_value: "VALID"
+      json_name: "normalization"
+    }
+    field {
+      name: "normalize"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "normalize"
+    }
+    enum_type {
+      name: "NormalizationMode"
+      value {
+        name: "FULL"
+        number: 0
+      }
+      value {
+        name: "VALID"
+        number: 1
+      }
+      value {
+        name: "BATCH_SIZE"
+        number: 2
+      }
+      value {
+        name: "NONE"
+        number: 3
+      }
+    }
+  }
+  message_type {
+    name: "AccuracyParameter"
+    field {
+      name: "top_k"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "topK"
+    }
+    field {
+      name: "axis"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "ignore_label"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "ignoreLabel"
+    }
+  }
+  message_type {
+    name: "ArgMaxParameter"
+    field {
+      name: "out_max_val"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "outMaxVal"
+    }
+    field {
+      name: "top_k"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "topK"
+    }
+    field {
+      name: "axis"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "axis"
+    }
+  }
+  message_type {
+    name: "ConcatParameter"
+    field {
+      name: "axis"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "concat_dim"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "concatDim"
+    }
+  }
+  message_type {
+    name: "BatchNormParameter"
+    field {
+      name: "use_global_stats"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "useGlobalStats"
+    }
+    field {
+      name: "moving_average_fraction"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.999"
+      json_name: "movingAverageFraction"
+    }
+    field {
+      name: "eps"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1e-05"
+      json_name: "eps"
+    }
+  }
+  message_type {
+    name: "BiasParameter"
+    field {
+      name: "axis"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "num_axes"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "numAxes"
+    }
+    field {
+      name: "filler"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "filler"
+    }
+  }
+  message_type {
+    name: "ContrastiveLossParameter"
+    field {
+      name: "margin"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "margin"
+    }
+    field {
+      name: "legacy_version"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "legacyVersion"
+    }
+  }
+  message_type {
+    name: "ConvolutionParameter"
+    field {
+      name: "num_output"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "numOutput"
+    }
+    field {
+      name: "bias_term"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "biasTerm"
+    }
+    field {
+      name: "pad"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "pad"
+    }
+    field {
+      name: "kernel_size"
+      number: 4
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "kernelSize"
+    }
+    field {
+      name: "stride"
+      number: 6
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "stride"
+    }
+    field {
+      name: "dilation"
+      number: 18
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "dilation"
+    }
+    field {
+      name: "pad_h"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "padH"
+    }
+    field {
+      name: "pad_w"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "padW"
+    }
+    field {
+      name: "kernel_h"
+      number: 11
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "kernelH"
+    }
+    field {
+      name: "kernel_w"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "kernelW"
+    }
+    field {
+      name: "stride_h"
+      number: 13
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "strideH"
+    }
+    field {
+      name: "stride_w"
+      number: 14
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "strideW"
+    }
+    field {
+      name: "group"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "group"
+    }
+    field {
+      name: "weight_filler"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "weightFiller"
+    }
+    field {
+      name: "bias_filler"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "biasFiller"
+    }
+    field {
+      name: "engine"
+      number: 15
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.ConvolutionParameter.Engine"
+      default_value: "DEFAULT"
+      json_name: "engine"
+    }
+    field {
+      name: "axis"
+      number: 16
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "force_nd_im2col"
+      number: 17
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "forceNdIm2col"
+    }
+    enum_type {
+      name: "Engine"
+      value {
+        name: "DEFAULT"
+        number: 0
+      }
+      value {
+        name: "CAFFE"
+        number: 1
+      }
+      value {
+        name: "CUDNN"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "CropParameter"
+    field {
+      name: "axis"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "2"
+      json_name: "axis"
+    }
+    field {
+      name: "offset"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "offset"
+    }
+  }
+  message_type {
+    name: "DataParameter"
+    field {
+      name: "source"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "source"
+    }
+    field {
+      name: "batch_size"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "batchSize"
+    }
+    field {
+      name: "rand_skip"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "randSkip"
+    }
+    field {
+      name: "backend"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.DataParameter.DB"
+      default_value: "LEVELDB"
+      json_name: "backend"
+    }
+    field {
+      name: "scale"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "scale"
+    }
+    field {
+      name: "mean_file"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "meanFile"
+    }
+    field {
+      name: "crop_size"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "cropSize"
+    }
+    field {
+      name: "mirror"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "mirror"
+    }
+    field {
+      name: "force_encoded_color"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "forceEncodedColor"
+    }
+    field {
+      name: "prefetch"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "4"
+      json_name: "prefetch"
+    }
+    enum_type {
+      name: "DB"
+      value {
+        name: "LEVELDB"
+        number: 0
+      }
+      value {
+        name: "LMDB"
+        number: 1
+      }
+    }
+  }
+  message_type {
+    name: "NonMaximumSuppressionParameter"
+    field {
+      name: "nms_threshold"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.3"
+      json_name: "nmsThreshold"
+    }
+    field {
+      name: "top_k"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "topK"
+    }
+    field {
+      name: "eta"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "eta"
+    }
+  }
+  message_type {
+    name: "SaveOutputParameter"
+    field {
+      name: "output_directory"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "outputDirectory"
+    }
+    field {
+      name: "output_name_prefix"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "outputNamePrefix"
+    }
+    field {
+      name: "output_format"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "outputFormat"
+    }
+    field {
+      name: "label_map_file"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "labelMapFile"
+    }
+    field {
+      name: "name_size_file"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "nameSizeFile"
+    }
+    field {
+      name: "num_test_image"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "numTestImage"
+    }
+  }
+  message_type {
+    name: "DropoutParameter"
+    field {
+      name: "dropout_ratio"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.5"
+      json_name: "dropoutRatio"
+    }
+  }
+  message_type {
+    name: "DummyDataParameter"
+    field {
+      name: "data_filler"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "dataFiller"
+    }
+    field {
+      name: "shape"
+      number: 6
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobShape"
+      json_name: "shape"
+    }
+    field {
+      name: "num"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "num"
+    }
+    field {
+      name: "channels"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "channels"
+    }
+    field {
+      name: "height"
+      number: 4
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "height"
+    }
+    field {
+      name: "width"
+      number: 5
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "width"
+    }
+  }
+  message_type {
+    name: "EltwiseParameter"
+    field {
+      name: "operation"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.EltwiseParameter.EltwiseOp"
+      default_value: "SUM"
+      json_name: "operation"
+    }
+    field {
+      name: "coeff"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "coeff"
+    }
+    field {
+      name: "stable_prod_grad"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "stableProdGrad"
+    }
+    enum_type {
+      name: "EltwiseOp"
+      value {
+        name: "PROD"
+        number: 0
+      }
+      value {
+        name: "SUM"
+        number: 1
+      }
+      value {
+        name: "MAX"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "ELUParameter"
+    field {
+      name: "alpha"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "alpha"
+    }
+  }
+  message_type {
+    name: "EmbedParameter"
+    field {
+      name: "num_output"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "numOutput"
+    }
+    field {
+      name: "input_dim"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "inputDim"
+    }
+    field {
+      name: "bias_term"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "biasTerm"
+    }
+    field {
+      name: "weight_filler"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "weightFiller"
+    }
+    field {
+      name: "bias_filler"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "biasFiller"
+    }
+  }
+  message_type {
+    name: "ExpParameter"
+    field {
+      name: "base"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "-1"
+      json_name: "base"
+    }
+    field {
+      name: "scale"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "scale"
+    }
+    field {
+      name: "shift"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0"
+      json_name: "shift"
+    }
+  }
+  message_type {
+    name: "FlattenParameter"
+    field {
+      name: "axis"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "end_axis"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "-1"
+      json_name: "endAxis"
+    }
+  }
+  message_type {
+    name: "HDF5DataParameter"
+    field {
+      name: "source"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "source"
+    }
+    field {
+      name: "batch_size"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "batchSize"
+    }
+    field {
+      name: "shuffle"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "shuffle"
+    }
+  }
+  message_type {
+    name: "HDF5OutputParameter"
+    field {
+      name: "file_name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "fileName"
+    }
+  }
+  message_type {
+    name: "HingeLossParameter"
+    field {
+      name: "norm"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.HingeLossParameter.Norm"
+      default_value: "L1"
+      json_name: "norm"
+    }
+    enum_type {
+      name: "Norm"
+      value {
+        name: "L1"
+        number: 1
+      }
+      value {
+        name: "L2"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "ImageDataParameter"
+    field {
+      name: "source"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "source"
+    }
+    field {
+      name: "batch_size"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "batchSize"
+    }
+    field {
+      name: "rand_skip"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "randSkip"
+    }
+    field {
+      name: "shuffle"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "shuffle"
+    }
+    field {
+      name: "new_height"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "newHeight"
+    }
+    field {
+      name: "new_width"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "newWidth"
+    }
+    field {
+      name: "is_color"
+      number: 11
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "isColor"
+    }
+    field {
+      name: "scale"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "scale"
+    }
+    field {
+      name: "mean_file"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "meanFile"
+    }
+    field {
+      name: "crop_size"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "cropSize"
+    }
+    field {
+      name: "mirror"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "mirror"
+    }
+    field {
+      name: "root_folder"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      default_value: ""
+      json_name: "rootFolder"
+    }
+  }
+  message_type {
+    name: "InfogainLossParameter"
+    field {
+      name: "source"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "source"
+    }
+  }
+  message_type {
+    name: "InnerProductParameter"
+    field {
+      name: "num_output"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "numOutput"
+    }
+    field {
+      name: "bias_term"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "biasTerm"
+    }
+    field {
+      name: "weight_filler"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "weightFiller"
+    }
+    field {
+      name: "bias_filler"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "biasFiller"
+    }
+    field {
+      name: "axis"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "transpose"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "transpose"
+    }
+  }
+  message_type {
+    name: "InputParameter"
+    field {
+      name: "shape"
+      number: 1
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobShape"
+      json_name: "shape"
+    }
+  }
+  message_type {
+    name: "LogParameter"
+    field {
+      name: "base"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "-1"
+      json_name: "base"
+    }
+    field {
+      name: "scale"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "scale"
+    }
+    field {
+      name: "shift"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0"
+      json_name: "shift"
+    }
+  }
+  message_type {
+    name: "LRNParameter"
+    field {
+      name: "local_size"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "5"
+      json_name: "localSize"
+    }
+    field {
+      name: "alpha"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "alpha"
+    }
+    field {
+      name: "beta"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.75"
+      json_name: "beta"
+    }
+    field {
+      name: "norm_region"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.LRNParameter.NormRegion"
+      default_value: "ACROSS_CHANNELS"
+      json_name: "normRegion"
+    }
+    field {
+      name: "k"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "k"
+    }
+    field {
+      name: "engine"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.LRNParameter.Engine"
+      default_value: "DEFAULT"
+      json_name: "engine"
+    }
+    enum_type {
+      name: "NormRegion"
+      value {
+        name: "ACROSS_CHANNELS"
+        number: 0
+      }
+      value {
+        name: "WITHIN_CHANNEL"
+        number: 1
+      }
+    }
+    enum_type {
+      name: "Engine"
+      value {
+        name: "DEFAULT"
+        number: 0
+      }
+      value {
+        name: "CAFFE"
+        number: 1
+      }
+      value {
+        name: "CUDNN"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "MemoryDataParameter"
+    field {
+      name: "batch_size"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "batchSize"
+    }
+    field {
+      name: "channels"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "channels"
+    }
+    field {
+      name: "height"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "height"
+    }
+    field {
+      name: "width"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "width"
+    }
+  }
+  message_type {
+    name: "MVNParameter"
+    field {
+      name: "normalize_variance"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "normalizeVariance"
+    }
+    field {
+      name: "across_channels"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "acrossChannels"
+    }
+    field {
+      name: "eps"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1e-09"
+      json_name: "eps"
+    }
+  }
+  message_type {
+    name: "ParameterParameter"
+    field {
+      name: "shape"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobShape"
+      json_name: "shape"
+    }
+  }
+  message_type {
+    name: "PoolingParameter"
+    field {
+      name: "pool"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.PoolingParameter.PoolMethod"
+      default_value: "MAX"
+      json_name: "pool"
+    }
+    field {
+      name: "pad"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "pad"
+    }
+    field {
+      name: "pad_h"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "padH"
+    }
+    field {
+      name: "pad_w"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "padW"
+    }
+    field {
+      name: "kernel_size"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "kernelSize"
+    }
+    field {
+      name: "kernel_h"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "kernelH"
+    }
+    field {
+      name: "kernel_w"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "kernelW"
+    }
+    field {
+      name: "stride"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "stride"
+    }
+    field {
+      name: "stride_h"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "strideH"
+    }
+    field {
+      name: "stride_w"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "strideW"
+    }
+    field {
+      name: "engine"
+      number: 11
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.PoolingParameter.Engine"
+      default_value: "DEFAULT"
+      json_name: "engine"
+    }
+    field {
+      name: "global_pooling"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "globalPooling"
+    }
+    field {
+      name: "ceil_mode"
+      number: 13
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "ceilMode"
+    }
+    enum_type {
+      name: "PoolMethod"
+      value {
+        name: "MAX"
+        number: 0
+      }
+      value {
+        name: "AVE"
+        number: 1
+      }
+      value {
+        name: "STOCHASTIC"
+        number: 2
+      }
+    }
+    enum_type {
+      name: "Engine"
+      value {
+        name: "DEFAULT"
+        number: 0
+      }
+      value {
+        name: "CAFFE"
+        number: 1
+      }
+      value {
+        name: "CUDNN"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "PowerParameter"
+    field {
+      name: "power"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "power"
+    }
+    field {
+      name: "scale"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "scale"
+    }
+    field {
+      name: "shift"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0"
+      json_name: "shift"
+    }
+  }
+  message_type {
+    name: "PythonParameter"
+    field {
+      name: "module"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "module"
+    }
+    field {
+      name: "layer"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "layer"
+    }
+    field {
+      name: "param_str"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      default_value: ""
+      json_name: "paramStr"
+    }
+    field {
+      name: "share_in_parallel"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "shareInParallel"
+    }
+  }
+  message_type {
+    name: "RecurrentParameter"
+    field {
+      name: "num_output"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "numOutput"
+    }
+    field {
+      name: "weight_filler"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "weightFiller"
+    }
+    field {
+      name: "bias_filler"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "biasFiller"
+    }
+    field {
+      name: "debug_info"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "debugInfo"
+    }
+    field {
+      name: "expose_hidden"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "exposeHidden"
+    }
+  }
+  message_type {
+    name: "ReductionParameter"
+    field {
+      name: "operation"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.ReductionParameter.ReductionOp"
+      default_value: "SUM"
+      json_name: "operation"
+    }
+    field {
+      name: "axis"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "axis"
+    }
+    field {
+      name: "coeff"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "coeff"
+    }
+    enum_type {
+      name: "ReductionOp"
+      value {
+        name: "SUM"
+        number: 1
+      }
+      value {
+        name: "ASUM"
+        number: 2
+      }
+      value {
+        name: "SUMSQ"
+        number: 3
+      }
+      value {
+        name: "MEAN"
+        number: 4
+      }
+    }
+  }
+  message_type {
+    name: "ReLUParameter"
+    field {
+      name: "negative_slope"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0"
+      json_name: "negativeSlope"
+    }
+    field {
+      name: "engine"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.ReLUParameter.Engine"
+      default_value: "DEFAULT"
+      json_name: "engine"
+    }
+    enum_type {
+      name: "Engine"
+      value {
+        name: "DEFAULT"
+        number: 0
+      }
+      value {
+        name: "CAFFE"
+        number: 1
+      }
+      value {
+        name: "CUDNN"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "ReshapeParameter"
+    field {
+      name: "shape"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobShape"
+      json_name: "shape"
+    }
+    field {
+      name: "axis"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "axis"
+    }
+    field {
+      name: "num_axes"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "-1"
+      json_name: "numAxes"
+    }
+  }
+  message_type {
+    name: "ScaleParameter"
+    field {
+      name: "axis"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "num_axes"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "numAxes"
+    }
+    field {
+      name: "filler"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "filler"
+    }
+    field {
+      name: "bias_term"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "biasTerm"
+    }
+    field {
+      name: "bias_filler"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "biasFiller"
+    }
+  }
+  message_type {
+    name: "SigmoidParameter"
+    field {
+      name: "engine"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.SigmoidParameter.Engine"
+      default_value: "DEFAULT"
+      json_name: "engine"
+    }
+    enum_type {
+      name: "Engine"
+      value {
+        name: "DEFAULT"
+        number: 0
+      }
+      value {
+        name: "CAFFE"
+        number: 1
+      }
+      value {
+        name: "CUDNN"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "SliceParameter"
+    field {
+      name: "axis"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "slice_point"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_UINT32
+      json_name: "slicePoint"
+    }
+    field {
+      name: "slice_dim"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "sliceDim"
+    }
+  }
+  message_type {
+    name: "SoftmaxParameter"
+    field {
+      name: "engine"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.SoftmaxParameter.Engine"
+      default_value: "DEFAULT"
+      json_name: "engine"
+    }
+    field {
+      name: "axis"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    enum_type {
+      name: "Engine"
+      value {
+        name: "DEFAULT"
+        number: 0
+      }
+      value {
+        name: "CAFFE"
+        number: 1
+      }
+      value {
+        name: "CUDNN"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "TanHParameter"
+    field {
+      name: "engine"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.TanHParameter.Engine"
+      default_value: "DEFAULT"
+      json_name: "engine"
+    }
+    enum_type {
+      name: "Engine"
+      value {
+        name: "DEFAULT"
+        number: 0
+      }
+      value {
+        name: "CAFFE"
+        number: 1
+      }
+      value {
+        name: "CUDNN"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "TileParameter"
+    field {
+      name: "axis"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "1"
+      json_name: "axis"
+    }
+    field {
+      name: "tiles"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "tiles"
+    }
+  }
+  message_type {
+    name: "ThresholdParameter"
+    field {
+      name: "threshold"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0"
+      json_name: "threshold"
+    }
+  }
+  message_type {
+    name: "WindowDataParameter"
+    field {
+      name: "source"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "source"
+    }
+    field {
+      name: "scale"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "scale"
+    }
+    field {
+      name: "mean_file"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "meanFile"
+    }
+    field {
+      name: "batch_size"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "batchSize"
+    }
+    field {
+      name: "crop_size"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "cropSize"
+    }
+    field {
+      name: "mirror"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "mirror"
+    }
+    field {
+      name: "fg_threshold"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.5"
+      json_name: "fgThreshold"
+    }
+    field {
+      name: "bg_threshold"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.5"
+      json_name: "bgThreshold"
+    }
+    field {
+      name: "fg_fraction"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.25"
+      json_name: "fgFraction"
+    }
+    field {
+      name: "context_pad"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "contextPad"
+    }
+    field {
+      name: "crop_mode"
+      number: 11
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      default_value: "warp"
+      json_name: "cropMode"
+    }
+    field {
+      name: "cache_images"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "cacheImages"
+    }
+    field {
+      name: "root_folder"
+      number: 13
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      default_value: ""
+      json_name: "rootFolder"
+    }
+  }
+  message_type {
+    name: "SPPParameter"
+    field {
+      name: "pyramid_height"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "pyramidHeight"
+    }
+    field {
+      name: "pool"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.SPPParameter.PoolMethod"
+      default_value: "MAX"
+      json_name: "pool"
+    }
+    field {
+      name: "engine"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.SPPParameter.Engine"
+      default_value: "DEFAULT"
+      json_name: "engine"
+    }
+    enum_type {
+      name: "PoolMethod"
+      value {
+        name: "MAX"
+        number: 0
+      }
+      value {
+        name: "AVE"
+        number: 1
+      }
+      value {
+        name: "STOCHASTIC"
+        number: 2
+      }
+    }
+    enum_type {
+      name: "Engine"
+      value {
+        name: "DEFAULT"
+        number: 0
+      }
+      value {
+        name: "CAFFE"
+        number: 1
+      }
+      value {
+        name: "CUDNN"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "V1LayerParameter"
+    field {
+      name: "bottom"
+      number: 2
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "bottom"
+    }
+    field {
+      name: "top"
+      number: 3
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "top"
+    }
+    field {
+      name: "name"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "include"
+      number: 32
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetStateRule"
+      json_name: "include"
+    }
+    field {
+      name: "exclude"
+      number: 33
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.NetStateRule"
+      json_name: "exclude"
+    }
+    field {
+      name: "type"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.V1LayerParameter.LayerType"
+      json_name: "type"
+    }
+    field {
+      name: "blobs"
+      number: 6
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobProto"
+      json_name: "blobs"
+    }
+    field {
+      name: "param"
+      number: 1001
+      label: LABEL_REPEATED
+      type: TYPE_STRING
+      json_name: "param"
+    }
+    field {
+      name: "blob_share_mode"
+      number: 1002
+      label: LABEL_REPEATED
+      type: TYPE_ENUM
+      type_name: ".caffe.V1LayerParameter.DimCheckMode"
+      json_name: "blobShareMode"
+    }
+    field {
+      name: "blobs_lr"
+      number: 7
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "blobsLr"
+    }
+    field {
+      name: "weight_decay"
+      number: 8
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "weightDecay"
+    }
+    field {
+      name: "loss_weight"
+      number: 35
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "lossWeight"
+    }
+    field {
+      name: "accuracy_param"
+      number: 27
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.AccuracyParameter"
+      json_name: "accuracyParam"
+    }
+    field {
+      name: "argmax_param"
+      number: 23
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ArgMaxParameter"
+      json_name: "argmaxParam"
+    }
+    field {
+      name: "concat_param"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ConcatParameter"
+      json_name: "concatParam"
+    }
+    field {
+      name: "contrastive_loss_param"
+      number: 40
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ContrastiveLossParameter"
+      json_name: "contrastiveLossParam"
+    }
+    field {
+      name: "convolution_param"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ConvolutionParameter"
+      json_name: "convolutionParam"
+    }
+    field {
+      name: "data_param"
+      number: 11
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.DataParameter"
+      json_name: "dataParam"
+    }
+    field {
+      name: "dropout_param"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.DropoutParameter"
+      json_name: "dropoutParam"
+    }
+    field {
+      name: "dummy_data_param"
+      number: 26
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.DummyDataParameter"
+      json_name: "dummyDataParam"
+    }
+    field {
+      name: "eltwise_param"
+      number: 24
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.EltwiseParameter"
+      json_name: "eltwiseParam"
+    }
+    field {
+      name: "exp_param"
+      number: 41
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ExpParameter"
+      json_name: "expParam"
+    }
+    field {
+      name: "hdf5_data_param"
+      number: 13
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.HDF5DataParameter"
+      json_name: "hdf5DataParam"
+    }
+    field {
+      name: "hdf5_output_param"
+      number: 14
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.HDF5OutputParameter"
+      json_name: "hdf5OutputParam"
+    }
+    field {
+      name: "hinge_loss_param"
+      number: 29
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.HingeLossParameter"
+      json_name: "hingeLossParam"
+    }
+    field {
+      name: "image_data_param"
+      number: 15
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ImageDataParameter"
+      json_name: "imageDataParam"
+    }
+    field {
+      name: "infogain_loss_param"
+      number: 16
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.InfogainLossParameter"
+      json_name: "infogainLossParam"
+    }
+    field {
+      name: "inner_product_param"
+      number: 17
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.InnerProductParameter"
+      json_name: "innerProductParam"
+    }
+    field {
+      name: "lrn_param"
+      number: 18
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.LRNParameter"
+      json_name: "lrnParam"
+    }
+    field {
+      name: "memory_data_param"
+      number: 22
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.MemoryDataParameter"
+      json_name: "memoryDataParam"
+    }
+    field {
+      name: "mvn_param"
+      number: 34
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.MVNParameter"
+      json_name: "mvnParam"
+    }
+    field {
+      name: "pooling_param"
+      number: 19
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.PoolingParameter"
+      json_name: "poolingParam"
+    }
+    field {
+      name: "power_param"
+      number: 21
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.PowerParameter"
+      json_name: "powerParam"
+    }
+    field {
+      name: "relu_param"
+      number: 30
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ReLUParameter"
+      json_name: "reluParam"
+    }
+    field {
+      name: "sigmoid_param"
+      number: 38
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.SigmoidParameter"
+      json_name: "sigmoidParam"
+    }
+    field {
+      name: "softmax_param"
+      number: 39
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.SoftmaxParameter"
+      json_name: "softmaxParam"
+    }
+    field {
+      name: "slice_param"
+      number: 31
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.SliceParameter"
+      json_name: "sliceParam"
+    }
+    field {
+      name: "tanh_param"
+      number: 37
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.TanHParameter"
+      json_name: "tanhParam"
+    }
+    field {
+      name: "threshold_param"
+      number: 25
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.ThresholdParameter"
+      json_name: "thresholdParam"
+    }
+    field {
+      name: "window_data_param"
+      number: 20
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.WindowDataParameter"
+      json_name: "windowDataParam"
+    }
+    field {
+      name: "transform_param"
+      number: 36
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.TransformationParameter"
+      json_name: "transformParam"
+    }
+    field {
+      name: "loss_param"
+      number: 42
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.LossParameter"
+      json_name: "lossParam"
+    }
+    field {
+      name: "layer"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.V0LayerParameter"
+      json_name: "layer"
+    }
+    enum_type {
+      name: "LayerType"
+      value {
+        name: "NONE"
+        number: 0
+      }
+      value {
+        name: "ABSVAL"
+        number: 35
+      }
+      value {
+        name: "ACCURACY"
+        number: 1
+      }
+      value {
+        name: "ARGMAX"
+        number: 30
+      }
+      value {
+        name: "BNLL"
+        number: 2
+      }
+      value {
+        name: "CONCAT"
+        number: 3
+      }
+      value {
+        name: "CONTRASTIVE_LOSS"
+        number: 37
+      }
+      value {
+        name: "CONVOLUTION"
+        number: 4
+      }
+      value {
+        name: "DATA"
+        number: 5
+      }
+      value {
+        name: "DECONVOLUTION"
+        number: 39
+      }
+      value {
+        name: "DROPOUT"
+        number: 6
+      }
+      value {
+        name: "DUMMY_DATA"
+        number: 32
+      }
+      value {
+        name: "EUCLIDEAN_LOSS"
+        number: 7
+      }
+      value {
+        name: "ELTWISE"
+        number: 25
+      }
+      value {
+        name: "EXP"
+        number: 38
+      }
+      value {
+        name: "FLATTEN"
+        number: 8
+      }
+      value {
+        name: "HDF5_DATA"
+        number: 9
+      }
+      value {
+        name: "HDF5_OUTPUT"
+        number: 10
+      }
+      value {
+        name: "HINGE_LOSS"
+        number: 28
+      }
+      value {
+        name: "IM2COL"
+        number: 11
+      }
+      value {
+        name: "IMAGE_DATA"
+        number: 12
+      }
+      value {
+        name: "INFOGAIN_LOSS"
+        number: 13
+      }
+      value {
+        name: "INNER_PRODUCT"
+        number: 14
+      }
+      value {
+        name: "LRN"
+        number: 15
+      }
+      value {
+        name: "MEMORY_DATA"
+        number: 29
+      }
+      value {
+        name: "MULTINOMIAL_LOGISTIC_LOSS"
+        number: 16
+      }
+      value {
+        name: "MVN"
+        number: 34
+      }
+      value {
+        name: "POOLING"
+        number: 17
+      }
+      value {
+        name: "POWER"
+        number: 26
+      }
+      value {
+        name: "RELU"
+        number: 18
+      }
+      value {
+        name: "SIGMOID"
+        number: 19
+      }
+      value {
+        name: "SIGMOID_CROSS_ENTROPY_LOSS"
+        number: 27
+      }
+      value {
+        name: "SILENCE"
+        number: 36
+      }
+      value {
+        name: "SOFTMAX"
+        number: 20
+      }
+      value {
+        name: "SOFTMAX_LOSS"
+        number: 21
+      }
+      value {
+        name: "SPLIT"
+        number: 22
+      }
+      value {
+        name: "SLICE"
+        number: 33
+      }
+      value {
+        name: "TANH"
+        number: 23
+      }
+      value {
+        name: "WINDOW_DATA"
+        number: 24
+      }
+      value {
+        name: "THRESHOLD"
+        number: 31
+      }
+    }
+    enum_type {
+      name: "DimCheckMode"
+      value {
+        name: "STRICT"
+        number: 0
+      }
+      value {
+        name: "PERMISSIVE"
+        number: 1
+      }
+    }
+  }
+  message_type {
+    name: "V0LayerParameter"
+    field {
+      name: "name"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "name"
+    }
+    field {
+      name: "type"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "type"
+    }
+    field {
+      name: "num_output"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "numOutput"
+    }
+    field {
+      name: "biasterm"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "true"
+      json_name: "biasterm"
+    }
+    field {
+      name: "weight_filler"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "weightFiller"
+    }
+    field {
+      name: "bias_filler"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "biasFiller"
+    }
+    field {
+      name: "pad"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "pad"
+    }
+    field {
+      name: "kernelsize"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "kernelsize"
+    }
+    field {
+      name: "group"
+      number: 9
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "group"
+    }
+    field {
+      name: "stride"
+      number: 10
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "stride"
+    }
+    field {
+      name: "pool"
+      number: 11
+      label: LABEL_OPTIONAL
+      type: TYPE_ENUM
+      type_name: ".caffe.V0LayerParameter.PoolMethod"
+      default_value: "MAX"
+      json_name: "pool"
+    }
+    field {
+      name: "dropout_ratio"
+      number: 12
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.5"
+      json_name: "dropoutRatio"
+    }
+    field {
+      name: "local_size"
+      number: 13
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "5"
+      json_name: "localSize"
+    }
+    field {
+      name: "alpha"
+      number: 14
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "alpha"
+    }
+    field {
+      name: "beta"
+      number: 15
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.75"
+      json_name: "beta"
+    }
+    field {
+      name: "k"
+      number: 22
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "k"
+    }
+    field {
+      name: "source"
+      number: 16
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "source"
+    }
+    field {
+      name: "scale"
+      number: 17
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "1"
+      json_name: "scale"
+    }
+    field {
+      name: "meanfile"
+      number: 18
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      json_name: "meanfile"
+    }
+    field {
+      name: "batchsize"
+      number: 19
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      json_name: "batchsize"
+    }
+    field {
+      name: "cropsize"
+      number: 20
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "cropsize"
+    }
+    field {
+      name: "mirror"
+      number: 21
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "mirror"
+    }
+    field {
+      name: "blobs"
+      number: 50
+      label: LABEL_REPEATED
+      type: TYPE_MESSAGE
+      type_name: ".caffe.BlobProto"
+      json_name: "blobs"
+    }
+    field {
+      name: "blobs_lr"
+      number: 51
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "blobsLr"
+    }
+    field {
+      name: "weight_decay"
+      number: 52
+      label: LABEL_REPEATED
+      type: TYPE_FLOAT
+      json_name: "weightDecay"
+    }
+    field {
+      name: "rand_skip"
+      number: 53
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "randSkip"
+    }
+    field {
+      name: "det_fg_threshold"
+      number: 54
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.5"
+      json_name: "detFgThreshold"
+    }
+    field {
+      name: "det_bg_threshold"
+      number: 55
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.5"
+      json_name: "detBgThreshold"
+    }
+    field {
+      name: "det_fg_fraction"
+      number: 56
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      default_value: "0.25"
+      json_name: "detFgFraction"
+    }
+    field {
+      name: "det_context_pad"
+      number: 58
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "0"
+      json_name: "detContextPad"
+    }
+    field {
+      name: "det_crop_mode"
+      number: 59
+      label: LABEL_OPTIONAL
+      type: TYPE_STRING
+      default_value: "warp"
+      json_name: "detCropMode"
+    }
+    field {
+      name: "new_num"
+      number: 60
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "newNum"
+    }
+    field {
+      name: "new_channels"
+      number: 61
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "newChannels"
+    }
+    field {
+      name: "new_height"
+      number: 62
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "newHeight"
+    }
+    field {
+      name: "new_width"
+      number: 63
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      default_value: "0"
+      json_name: "newWidth"
+    }
+    field {
+      name: "shuffle_images"
+      number: 64
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "shuffleImages"
+    }
+    field {
+      name: "concat_dim"
+      number: 65
+      label: LABEL_OPTIONAL
+      type: TYPE_UINT32
+      default_value: "1"
+      json_name: "concatDim"
+    }
+    field {
+      name: "hdf5_output_param"
+      number: 1001
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.HDF5OutputParameter"
+      json_name: "hdf5OutputParam"
+    }
+    enum_type {
+      name: "PoolMethod"
+      value {
+        name: "MAX"
+        number: 0
+      }
+      value {
+        name: "AVE"
+        number: 1
+      }
+      value {
+        name: "STOCHASTIC"
+        number: 2
+      }
+    }
+  }
+  message_type {
+    name: "PReLUParameter"
+    field {
+      name: "filler"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_MESSAGE
+      type_name: ".caffe.FillerParameter"
+      json_name: "filler"
+    }
+    field {
+      name: "channel_shared"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      default_value: "false"
+      json_name: "channelShared"
+    }
+  }
+  message_type {
+    name: "NormalizedBBox"
+    field {
+      name: "xmin"
+      number: 1
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "xmin"
+    }
+    field {
+      name: "ymin"
+      number: 2
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "ymin"
+    }
+    field {
+      name: "xmax"
+      number: 3
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "xmax"
+    }
+    field {
+      name: "ymax"
+      number: 4
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "ymax"
+    }
+    field {
+      name: "label"
+      number: 5
+      label: LABEL_OPTIONAL
+      type: TYPE_INT32
+      json_name: "label"
+    }
+    field {
+      name: "difficult"
+      number: 6
+      label: LABEL_OPTIONAL
+      type: TYPE_BOOL
+      json_name: "difficult"
+    }
+    field {
+      name: "score"
+      number: 7
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "score"
+    }
+    field {
+      name: "size"
+      number: 8
+      label: LABEL_OPTIONAL
+      type: TYPE_FLOAT
+      json_name: "size"
+    }
+  }
+  enum_type {
+    name: "Type"
+    value {
+      name: "DOUBLE"
+      number: 0
+    }
+    value {
+      name: "FLOAT"
+      number: 1
+    }
+    value {
+      name: "FLOAT16"
+      number: 2
+    }
+    value {
+      name: "INT"
+      number: 3
+    }
+    value {
+      name: "UINT"
+      number: 4
+    }
+  }
+  enum_type {
+    name: "Phase"
+    value {
+      name: "TRAIN"
+      number: 0
+    }
+    value {
+      name: "TEST"
+      number: 1
+    }
+  }
+}
