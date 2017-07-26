@@ -51,7 +51,7 @@ const std::string keys =
     "{e epsilon      | 0.0001        | ECC's convergence epsilon }"
     "{o outputWarp   | outWarp.ecc   | output warp (matrix) filename }"
     "{m motionType   | affine        | type of motion (translation, euclidean, affine, homography) }"
-    "{v verbose      | 0             | display initial and final images }"
+    "{v verbose      | 1             | display initial and final images }"
     "{w warpedImfile | warpedECC.png | warped input image }"
     "{h help | | print help message }"
 ;
@@ -165,10 +165,10 @@ static void draw_warped_roi(Mat& image, const int width, const int height, Mat& 
     GET_HOMO_VALUES(U, bottom_right.x, bottom_right.y);
 
     // draw the warped perimeter
-    line(image, top_left, top_right, Scalar(255,0,255));
-    line(image, top_right, bottom_right, Scalar(255,0,255));
-    line(image, bottom_right, bottom_left, Scalar(255,0,255));
-    line(image, bottom_left, top_left, Scalar(255,0,255));
+    line(image, top_left, top_right, Scalar(255));
+    line(image, top_right, bottom_right, Scalar(255));
+    line(image, bottom_right, bottom_left, Scalar(255));
+    line(image, bottom_left, top_left, Scalar(255));
 }
 
 int main (const int argc, const char * argv[])
@@ -177,17 +177,9 @@ int main (const int argc, const char * argv[])
     CommandLineParser parser(argc, argv, keys);
     parser.about("ECC demo");
 
-    if (argc < 2) {
-        parser.printMessage();
-        help();
-        return 1;
-    }
-    if (parser.has("help"))
-    {
-        parser.printMessage();
-        help();
-        return 1;
-    }
+    parser.printMessage();
+    help();
+
     string imgFile = parser.get<string>(0);
     string tempImgFile = parser.get<string>(1);
     string inWarpFile = parser.get<string>(2);
@@ -239,10 +231,10 @@ int main (const int argc, const char * argv[])
         }
 
     }
-    else{ //apply random waro to input image
+    else{ //apply random warp to input image
         resize(inputImage, target_image, Size(216, 216));
         Mat warpGround;
-        cv::RNG rng;
+        RNG rng(getTickCount());
         double angle;
         switch (mode_temp) {
         case MOTION_TRANSLATION:
@@ -299,7 +291,7 @@ int main (const int argc, const char * argv[])
     }
     else {
 
-        printf("\n ->Perfomarnce Warning: Identity warp ideally assumes images of "
+        printf("\n ->Performance Warning: Identity warp ideally assumes images of "
             "similar size. If the deformation is strong, the identity warp may not "
             "be a good initialization. \n");
 
@@ -363,7 +355,8 @@ int main (const int argc, const char * argv[])
         namedWindow ("warped image",   WINDOW_AUTOSIZE);
         namedWindow ("error (black: no error)", WINDOW_AUTOSIZE);
 
-        moveWindow  ("template", 350, 350);
+        moveWindow  ("image", 20, 300);
+        moveWindow  ("template", 300, 300);
         moveWindow  ("warped image",   600, 300);
         moveWindow  ("error (black: no error)", 900, 300);
 

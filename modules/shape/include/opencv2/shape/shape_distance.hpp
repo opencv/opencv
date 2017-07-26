@@ -53,6 +53,9 @@ namespace cv
 //! @addtogroup shape
 //! @{
 
+/** @example shape_example.cpp
+An example using shape distance algorithm
+*/
 /** @brief Abstract base class for shape distance algorithms.
  */
 class CV_EXPORTS_W ShapeDistanceExtractor : public Algorithm
