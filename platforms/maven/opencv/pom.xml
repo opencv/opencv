@@ -67,6 +67,10 @@
                             <workingDirectory>${project.basedir}/scripts</workingDirectory>
                             <arguments>
                                 <argument>deb_package_check</argument>
+                                <argument>-olibpng-dev|libpng12-dev</argument>
+                                <argument>-olibopenjp2-7-dev|libjasper-dev</argument>
+                                <argument>-opython-dev</argument>
+                                <argument>-opython-numpy</argument>
                                 <argument>build-essential</argument>
                                 <argument>cmake</argument>
                                 <argument>git</argument>
@@ -75,14 +79,10 @@
                                 <argument>libavcodec-dev</argument>
                                 <argument>libavformat-dev</argument>
                                 <argument>libswscale-dev</argument>
-                                <argument>python-dev</argument>
-                                <argument>python-numpy</argument>
                                 <argument>libtbb2</argument>
                                 <argument>libtbb-dev</argument>
                                 <argument>libjpeg-dev</argument>
-                                <argument>libpng12-dev</argument>
                                 <argument>libtiff5-dev</argument>
-                                <argument>libjasper-dev</argument>
                                 <argument>libdc1394-22-dev</argument>
                                 <argument>execstack</argument>
                                 <argument>ant</argument>
@@ -182,13 +182,13 @@
                                 <requireEnvironmentVariable>
                                     <level>WARN</level>
                                     <variableName>JAVA_HOME</variableName>
-                                    <message>$JAVA_HOME is not set. Build WILL fail.</message>
+                                    <message>$JAVA_HOME is not set. Build may fail.</message>
                                 </requireEnvironmentVariable>
                                 <requireEnvironmentVariable>
                                     <level>WARN</level>
                                     <variableName>MAKEFLAGS</variableName>
                                     <message>No MAKEFLAGS environment variable. Build may be slow.
-                                        To speed up the build you can try exporting MAKEFLAGS=-jX where X equals the number of parallel builds.</message>
+To speed up the build you can try exporting MAKEFLAGS=-jX where X equals the number of parallel builds.</message>
                                 </requireEnvironmentVariable>
                             </rules>
                         </configuration>
