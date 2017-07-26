@@ -1184,7 +1184,7 @@ void DigitalCameraCapture::message(MsgType msgType, const char * msg,
         msgsBuffer << out;
     }
 #if !defined(NDEBUG)
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
     ::OutputDebugString(out.c_str());
 #else
     fputs(out.c_str(), stderr);

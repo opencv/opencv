@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#if (defined WIN32 || defined _WIN32) && defined HAVE_DSHOW
+#if defined _WIN32 && defined HAVE_DSHOW
 #include "cap_dshow.hpp"
 
 /*

@@ -79,7 +79,7 @@ Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 #  include <cpu-features.h>
 #endif
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
 #endif
@@ -655,7 +655,7 @@ bool useOptimized(void)
 
 int64 getTickCount(void)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
     return (int64)counter.QuadPart;
@@ -675,7 +675,7 @@ int64 getTickCount(void)
 
 double getTickFrequency(void)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     return (double)freq.QuadPart;
@@ -737,7 +737,7 @@ int64 getCPUTickCount(void)
 
 #endif
 
-#elif defined _MSC_VER && defined WIN32 && defined _M_IX86
+#elif defined _MSC_VER && defined _WIN32 && defined _M_IX86
 
 int64 getCPUTickCount(void)
 {
@@ -799,7 +799,7 @@ String tempfile( const char* suffix )
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 #ifdef WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
     std::wstring temp_dir = GetTempPathWinRT();
@@ -1124,7 +1124,7 @@ bool __termination = false;
 namespace cv
 {
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 
 struct Mutex::Impl
 {
@@ -1210,7 +1210,7 @@ bool Mutex::trylock() { return impl->trylock(); }
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
 #endif
@@ -1229,16 +1229,16 @@ public:
     void  SetData(void *pData);
 
 private:
-#ifdef WIN32
+#ifdef _WIN32
 #ifndef WINRT
     DWORD tlsKey;
 #endif
-#else // WIN32
+#else // _WIN32
     pthread_key_t  tlsKey;
 #endif
 };
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifdef WINRT
 static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
@@ -1270,7 +1270,7 @@ void  TlsAbstraction::SetData(void *pData)
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
 }
 #endif
-#else // WIN32
+#else // _WIN32
 TlsAbstraction::TlsAbstraction()
 {
     CV_Assert(pthread_key_create(&tlsKey, NULL) == 0);
@@ -1511,7 +1511,7 @@ TLSData<CoreTLSData>& getCoreTlsData()
     CV_SINGLETON_LAZY_INIT_REF(TLSData<CoreTLSData>, new TLSData<CoreTLSData>())
 }
 
-#if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#if defined CVAPI_EXPORTS && defined _WIN32 && !defined WINCE
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif

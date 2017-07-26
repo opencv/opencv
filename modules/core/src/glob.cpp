@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
 # include <windows.h>
 const char dir_separators[] = "/\\";
 const char native_separator = '\\';
@@ -139,7 +139,7 @@ const char native_separator = '/';
 
 static bool isDir(const cv::String& path, DIR* dir)
 {
-#if defined WIN32 || defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined WINCE
     DWORD attributes;
     BOOL status = TRUE;
     if (dir)

@@ -1655,7 +1655,7 @@ Context& initializeContextFromGL()
 
         cl_context_properties properties[] =
         {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
             CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
