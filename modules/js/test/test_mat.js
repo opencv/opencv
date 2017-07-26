@@ -145,7 +145,7 @@ QUnit.test("test_mat_creation", function(assert) {
     }
     //   clone
     {
-    let mat = cv.Mat.ones(5, 5, cv.CV_8UC1);
+        let mat = cv.Mat.ones(5, 5, cv.CV_8UC1);
         let mat2 = mat.clone();
 
         assert.equal(mat.channels, mat2.channels);
@@ -157,6 +157,42 @@ QUnit.test("test_mat_creation", function(assert) {
 
         mat.delete();
         mat2.delete();
+    }
+    // copyTo
+    {
+        let mat = cv.Mat.ones(5, 5, cv.CV_8UC1);
+        let mat2 = new cv.Mat();
+        mat.copyTo(mat2);
+
+        assert.equal(mat.channels, mat2.channels);
+        assert.equal(mat.size()[0], mat2.size()[0]);
+        assert.equal(mat.size()[1], mat2.size()[1]);
+
+        assert.deepEqual(mat.data(), mat2.data());
+
+
+        mat.delete();
+        mat2.delete();
+    }
+    // copyTo1
+    {
+        let mat = cv.Mat.ones(5, 5, cv.CV_8UC1);
+        let mat2 = new cv.Mat();
+        let s = new cv.Scalar(1);
+        let mask = new cv.Mat(5, 5, cv.CV_8UC1, s);
+        mat.copyTo(mat2, mask);
+
+        assert.equal(mat.channels, mat2.channels);
+        assert.equal(mat.size()[0], mat2.size()[0]);
+        assert.equal(mat.size()[1], mat2.size()[1]);
+
+        assert.deepEqual(mat.data(), mat2.data());
+
+
+        mat.delete();
+        mat2.delete();
+        s.delete();
+        mask.delete();
     }
 });
 

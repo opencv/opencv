@@ -151,6 +151,14 @@ namespace Utils{
         return  Mat(obj.inv(type));
     }
 
+    void matCopyTo(const cv::Mat& obj, cv::Mat& mat) {
+        return obj.copyTo(mat);
+    }
+
+    void matCopyTo_1(const cv::Mat& obj, cv::Mat& mat, const cv::Mat& mask) {
+        return obj.copyTo(mat, mask);
+    }
+
     void rotatedRectPoints(const cv::RotatedRect& obj, std::vector<cv::Point2f>& points) {
         points.resize(4);
         return obj.points(points.data());
@@ -209,8 +217,8 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .function("rowRange", select_overload<Mat(int, int)const>(&cv::Mat::rowRange))
         .function("rowRange", select_overload<Mat(const Range&)const>(&cv::Mat::rowRange))
 
-        .function("copyTo", select_overload<void(OutputArray)const>(&cv::Mat::copyTo))
-        .function("copyTo", select_overload<void(OutputArray, InputArray)const>(&cv::Mat::copyTo))
+        .function("copyTo", select_overload<void(const Mat&, Mat&)>(&Utils::matCopyTo))
+        .function("copyTo", select_overload<void(const Mat&, Mat&, const Mat&)>(&Utils::matCopyTo_1))
         .function("elemSize", select_overload<size_t()const>(&cv::Mat::elemSize))
 
         .function("type", select_overload<int()const>(&cv::Mat::type))
