@@ -61,6 +61,24 @@ QUnit.test("Background Segmentation", function(assert) {
 		assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
 
 		mog2.delete();
+
+		mog2 = new cv.BackgroundSubtractorMOG2();
+
+		assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
+
+		mog2.delete();
+
+		mog2 = new cv.BackgroundSubtractorMOG2(history);
+
+		assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
+
+		mog2.delete();
+
+		mog2 = new cv.BackgroundSubtractorMOG2(history, varThreshold);
+
+		assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
+
+		mog2.delete();
 	}
 
 });

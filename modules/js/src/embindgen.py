@@ -503,12 +503,13 @@ class JSWrapperGenerator(object):
                 # Binding
                 if class_info:
                     if factory:
-                        # print("Factory Function: ", c_func_name, len(variant.args), class_info.name)
+                        # print("Factory Function: ", c_func_name, len(variant.args) - j, class_info.name)
                         if variant.is_pure_virtual:
                             # FIXME: workaround for pure virtual in constructor
                             # e.g. DescriptorMatcher_clone_wrapper
                             continue
-                        args_num = len(variant.args)
+                        # consider the default parameter variants
+                        args_num = len(variant.args) - j
                         if args_num in class_info.constructor_arg_num:
                             # FIXME: workaournd for constructor overload with same args number
                             # e.g. DescriptorMatcher
