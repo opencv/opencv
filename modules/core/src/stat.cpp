@@ -1547,7 +1547,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
     bool haveMask = _mask.kind() != _InputArray::NONE;
     int nz = haveMask ? -1 : (int)_src.total();
-    Scalar mean, stddev;
+    Scalar mean(0), stddev(0);
     const int cn = _src.channels();
     if (cn > 4)
         return false;
