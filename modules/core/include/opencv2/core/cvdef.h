@@ -328,6 +328,17 @@ Cv64suf;
 #endif
 
 /****************************************************************************************\
+*                                    Thread sanitizer                                    *
+\****************************************************************************************/
+#ifndef CV_THREAD_SANITIZER
+# if defined(__has_feature)
+#   if __has_feature(thread_sanitizer)
+#     define CV_THREAD_SANITIZER
+#   endif
+# endif
+#endif
+
+/****************************************************************************************\
 *          exchange-add operation for atomic operations on reference counters            *
 \****************************************************************************************/
 
