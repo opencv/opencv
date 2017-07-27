@@ -233,6 +233,30 @@ QUnit.test("test_rotated_rect", function(assert) {
   }
 });
 
+QUnit.test("test_min_enclosing", function(assert) {
+  {
+    let points = new cv.Mat(4, 1, cv.CV_32FC2);
+    let circle = new cv.Circle();
+
+    points.data32f()[0] = 0;
+    points.data32f()[1] = 0;
+    points.data32f()[2] = 1;
+    points.data32f()[3] = 0;
+    points.data32f()[4] = 1;
+    points.data32f()[5] = 1;
+    points.data32f()[6] = 0;
+    points.data32f()[7] = 1;
+
+    cv.minEnclosingCircle(points, circle);
+
+    assert.deepEqual(circle.center, [0.5, 0.5]);
+    assert.ok(Math.abs(circle.radius - Math.sqrt(2) / 2) < 0.001);
+
+    circle.delete();
+    points.delete();
+  }
+});
+
 QUnit.test("test_filter", function(assert) {
   // C++
   //   void blur(InputArray, OutputArray, Size ksize, Point, int);

@@ -183,6 +183,16 @@ namespace Utils{
     void minMaxLoc_1(const cv::Mat& src, MinMaxLocResult& result) {
         return cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc);
     }
+
+    class Circle {
+      public:
+        Point2f center;
+        float radius;
+    };
+
+    void minEnclosingCircle(const cv::Mat& points, Circle& circle) {
+        return cv::minEnclosingCircle(points, circle.center, circle.radius);
+    }
 }
 
 EMSCRIPTEN_BINDINGS(Utils) {
@@ -348,6 +358,13 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .property("maxVal", &Utils::MinMaxLocResult::maxVal)
         .property("minLoc", &Utils::MinMaxLocResult::minLoc)
         .property("maxLoc", &Utils::MinMaxLocResult::maxLoc);
+
+    emscripten::class_<Utils::Circle>("Circle")
+        .constructor<>()
+        .property("center", &Utils::Circle::center)
+        .property("radius", &Utils::Circle::radius);
+
+    function("minEnclosingCircle", select_overload<void(const cv::Mat&, Utils::Circle&)>(&Utils::minEnclosingCircle));
 
     function("minMaxLoc", select_overload<void(const cv::Mat&, Utils::MinMaxLocResult&, const cv::Mat&)>(&Utils::minMaxLoc));
 
