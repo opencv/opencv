@@ -1396,7 +1396,9 @@ public:
     // Get data by TLS storage index
     void* getData(size_t slotIdx) const
     {
+#ifndef CV_THREAD_SANITIZER
         CV_Assert(tlsSlotsSize > slotIdx);
+#endif
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(threadData && threadData->slots.size() > slotIdx)
@@ -1426,7 +1428,9 @@ public:
     // Set data to storage index
     void setData(size_t slotIdx, void* pData)
     {
+#ifndef CV_THREAD_SANITIZER
         CV_Assert(tlsSlotsSize > slotIdx);
+#endif
 
         ThreadData* threadData = (ThreadData*)tls.GetData();
         if(!threadData)
