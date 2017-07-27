@@ -81,11 +81,6 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
       step.octave_ratio = (float)power;
       step.border = fRound(smax * step.sigma_size) + 1;
 
-      // // if image becames too small small we can not compute any descriptors
-      // if (step.border * 2 + 1 >= level_width || step.border * 2 + 1 >= level_height) {
-      //   break;
-      // }
-
       evolution_.push_back(step);
     }
   }
@@ -620,53 +615,37 @@ void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
   CV_INSTRUMENT_REGION()
 
   kpts.clear();
-  std::vector<vector<KeyPoint>> keypoints_by_layers;
+  std::vector<Mat> keypoints_by_layers;
   Find_Scale_Space_Extrema(keypoints_by_layers);
   Do_Subpixel_Refinement(keypoints_by_layers, kpts);
 }
 
 /**
  * @brief This method searches v for a neighbor point of the point candidate p
- * @param p The keypoint candidate to search a neighbor
- * @param v The vector to store the points to be searched
- * @param offset The starting location in the vector v to be searched at
- * @param idx The index of the vector v if a neighbor is found
+ * @param x Coordinates of the keypoint candidate to search a neighbor
+ * @param y Coordinates of the keypoint candidate to search a neighbor
+ * @param mask Matrix holding keypoints positions
+ * @param search_radius neighbour radius for searching keypoints
+ * @param idx The index to mask, pointing to keypoint found.
  * @return true if a neighbor point is found; false otherwise
  */
-inline bool
-find_neighbor_point(const KeyPoint &p, const vector<KeyPoint> &v, const int offset, int &idx)
+static inline bool
+find_neighbor_point(const int x, const int y, const Mat &mask, const int search_radius, int &idx)
 {
-  const int sz = (int)v.size();
-
-  for (int i = offset; i < sz; i++) {
-    if (v[i].class_id == -1) // Skip a deleted point
-      continue;
-
-    float dx = p.pt.x - v[i].pt.x;
-    float dy = p.pt.y - v[i].pt.y;
-    if (dx * dx + dy * dy <= p.size * p.size) {
-      idx = i;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-inline bool
-find_neighbor_point_inv(const KeyPoint &p, const vector<KeyPoint> &v, const int offset, int &idx)
-{
-  const int sz = (int)v.size();
-
-  for (int i = offset; i < sz; i++) {
-    if (v[i].class_id == -1) // Skip a deleted point
-      continue;
-
-    float dx = p.pt.x - v[i].pt.x;
-    float dy = p.pt.y - v[i].pt.y;
-    if (dx * dx + dy * dy <= v[i].size * v[i].size) {
-      idx = i;
-      return true;
+  // search neighborhood for keypoints
+  for (int i = y - search_radius; i < y + search_radius; ++i) {
+    const uchar *curr = mask.ptr<uchar>(i);
+    for (int j = x - search_radius; j < x + search_radius; ++j) {
+      if (curr[j] == 0) {
+        continue; // skip non-keypoint
+      }
+      // fine-compare with L2 metric (L2 is smaller than our search window)
+      int dx = j - x;
+      int dy = i - y;
+      if (dx * dx + dy * dy <= search_radius * search_radius) {
+        idx = i * mask.cols + j;
+        return true;
+      }
     }
   }
 
@@ -680,9 +659,8 @@ class FindKeypointsSameScale : public ParallelLoopBody
 {
 public:
     explicit FindKeypointsSameScale(const std::vector<Evolution>& ev,
-      std::vector<vector<KeyPoint>>& kpts, float derivative_factor, float dthreshold)
-    : evolution_(&ev), keypoints_by_layers_(&kpts), derivative_factor_(derivative_factor),
-      dthreshold_(dthreshold)
+      std::vector<Mat>& kpts, float dthreshold)
+    : evolution_(&ev), keypoints_by_layers_(&kpts), dthreshold_(dthreshold)
   {}
 
   void operator()(const Range& range) const
@@ -690,21 +668,23 @@ public:
     for (int i = range.start; i < range.end; i++)
     {
       const Evolution &e = (*evolution_)[i];
-      vector<KeyPoint> &kpts = (*keypoints_by_layers_)[i];
-      // this is reasonably small, but saves a lot of allocations
-      kpts.clear();
-      kpts.reserve(256);
+      Mat &kpts = (*keypoints_by_layers_)[i];
+      // this mask will hold positions of keypoints in this level
+      kpts = Mat::zeros(e.Mdet.size(), CV_8UC1);
 
+      // if border is too big we shouldn't search any keypoints
       if (e.border + 1 >= e.Ldet.rows)
         continue;
 
       const float * prev = e.Mdet.ptr<float>(e.border - 1);
       const float * curr = e.Mdet.ptr<float>(e.border    );
       const float * next = e.Mdet.ptr<float>(e.border + 1);
+      const float * ldet = e.Mdet.ptr<float>();
+      uchar *mask = kpts.ptr<uchar>();
+      const int search_radius = e.sigma_size; // size of keypoint in this level
 
       for (int y = e.border; y < e.Ldet.rows - e.border; y++) {
         for (int x = e.border; x < e.Ldet.cols - e.border; x++) {
-
           const float value = curr[x];
 
           // Filter the points with the detector threshold
@@ -717,25 +697,17 @@ public:
           if (value <= next[x-1] || value <= next[x  ] || value <= next[x+1])
             continue;
 
-          // create new keypoint
-          KeyPoint point;
-          point.pt.x = x * e.octave_ratio;
-          point.pt.y = y * e.octave_ratio;
-          point.size = e.esigma * derivative_factor_;
-          point.angle = -1;
-          point.response = value;
-          point.octave = e.octave;
-          point.class_id = i;
-
           int idx = 0;
           // Compare response with the same scale
-          if (find_neighbor_point(point, kpts, 0, idx)) {
-            if (point.response > kpts[idx].response)
-              kpts[idx] = point;  // Replace the old point
-            continue;
+          if (find_neighbor_point(x, y, kpts, search_radius, idx)) {
+            if (value > ldet[idx]) {
+              mask[idx] = 0;  // clear old point - we have better candidate now
+            } else {
+              continue; // there already is a better keypoint
+            }
           }
 
-          kpts.push_back(point);
+          kpts.at<uchar>(y, x) = 1; // we have a new keypoint
         }
 
         prev = curr;
@@ -747,8 +719,7 @@ public:
 
 private:
   const std::vector<Evolution>*  evolution_;
-  std::vector<vector<KeyPoint>>* keypoints_by_layers_;
-  float derivative_factor_; ///< Factor for the multiscale derivatives
+  std::vector<Mat>* keypoints_by_layers_;
   float dthreshold_; ///< Detector response threshold to accept point
 };
 
@@ -756,7 +727,7 @@ private:
  * @brief This method finds extrema in the nonlinear scale space
  * @param keypoints_by_layers Output vectors of detected keypoints; one vector for each evolution level
  */
-void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<vector<KeyPoint>>& keypoints_by_layers)
+void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_layers)
 {
   CV_INSTRUMENT_REGION()
 
@@ -764,33 +735,67 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<vector<KeyPoint>>& keyp
 
   // find points in the same level
   parallel_for_(Range(0, (int)evolution_.size()),
-    FindKeypointsSameScale(evolution_, keypoints_by_layers, options_.derivative_factor, options_.dthreshold));
+    FindKeypointsSameScale(evolution_, keypoints_by_layers, options_.dthreshold));
 
   // Filter points with the lower scale level
   for (size_t i = 1; i < keypoints_by_layers.size(); i++) {
-    for (size_t j = 0; j < keypoints_by_layers[i].size(); j++) {
-      KeyPoint& pt = keypoints_by_layers[i][j];
-      int idx = 0;
-      while (find_neighbor_point(pt, keypoints_by_layers[i - 1], idx, idx)) {
-        if (pt.response > keypoints_by_layers[i - 1][idx].response)
-          keypoints_by_layers[i - 1][idx].class_id = -1;
-        // else this pt may be pruned by the upper scale
-        ++idx;
+    // constants for this level
+    const Mat &keypoints = keypoints_by_layers[i];
+    const uchar *const kpts = keypoints_by_layers[i].ptr<uchar>();
+    uchar *const kpts_prev = keypoints_by_layers[i-1].ptr<uchar>();
+    const float *const ldet = evolution_[i].Mdet.ptr<float>();
+    const float *const ldet_prev = evolution_[i-1].Mdet.ptr<float>();
+    // ratios are just powers of 2
+    const int diff_ratio = (int)evolution_[i].octave_ratio / (int)evolution_[i-1].octave_ratio;
+    const int search_radius = evolution_[i].sigma_size * diff_ratio; // size of keypoint in this level
+
+    size_t j = 0;
+    for (int y = 0; y < keypoints.rows; y++) {
+      for (int x = 0; x < keypoints.cols; x++, j++) {
+        if (kpts[j] == 0) {
+          continue; // skip non-keypoints
+        }
+        int idx = 0;
+        // project point to lower scale layer
+        const int p_x = x * diff_ratio;
+        const int p_y = y * diff_ratio;
+        if (find_neighbor_point(p_x, p_y, keypoints_by_layers[i-1], search_radius, idx)) {
+          if (ldet[j] > ldet_prev[idx]) {
+            kpts_prev[idx] = 0;  // clear keypoint in lower layer
+          }
+          // else this pt may be pruned by the upper scale
+        }
       }
     }
   }
 
   // Now filter points with the upper scale level (the other direction)
-  for (int i = keypoints_by_layers.size() - 2; i >= 0; i--) {
-    for (size_t j = 0; j < keypoints_by_layers[i].size(); j++) {
-      KeyPoint& pt = keypoints_by_layers[i][j];
-      if (pt.class_id == -1) // Skip a deleted point
-          continue;
-      int idx = 0;
-      while (find_neighbor_point_inv(pt, keypoints_by_layers[i + 1], idx, idx)) {
-        if (pt.response > keypoints_by_layers[i + 1][idx].response)
-          keypoints_by_layers[i + 1][idx].class_id = -1;
-        ++idx;
+  for (int i = (int)keypoints_by_layers.size() - 2; i >= 0; i--) {
+    // constants for this level
+    const Mat &keypoints = keypoints_by_layers[i];
+    const uchar *const kpts = keypoints_by_layers[i].ptr<uchar>();
+    uchar *const kpts_next = keypoints_by_layers[i+1].ptr<uchar>();
+    const float *const ldet = evolution_[i].Mdet.ptr<float>();
+    const float *const ldet_next = evolution_[i+1].Mdet.ptr<float>();
+    // ratios are just powers of 2, i+1 ratio is always greater or equal to i
+    const int diff_ratio = (int)evolution_[i+1].octave_ratio / (int)evolution_[i].octave_ratio;
+    const int search_radius = evolution_[i+1].sigma_size; // size of keypoints in upper level
+
+    size_t j = 0;
+    for (int y = 0; y < keypoints.rows; y++) {
+      for (int x = 0; x < keypoints.cols; x++, j++) {
+        if (kpts[j] == 0) {
+          continue; // skip non-keypoints
+        }
+        int idx = 0;
+        // project point to upper scale layer
+        const int p_x = x / diff_ratio;
+        const int p_y = y / diff_ratio;
+        if (find_neighbor_point(p_x, p_y, keypoints_by_layers[i+1], search_radius, idx)) {
+          if (ldet[j] > ldet_next[idx]) {
+            kpts_next[idx] = 0;  // clear keypoint in upper layer
+          }
+        }
       }
     }
   }
@@ -803,56 +808,68 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<vector<KeyPoint>>& keyp
  * @param kpts Output vector of the final refined keypoints
  */
 void AKAZEFeatures::Do_Subpixel_Refinement(
-  std::vector<std::vector<KeyPoint>>& keypoints_by_layers, std::vector<KeyPoint>& kpts)
+  std::vector<Mat>& keypoints_by_layers, std::vector<KeyPoint>& output_keypoints)
 {
   CV_INSTRUMENT_REGION()
 
   for (size_t i = 0; i < keypoints_by_layers.size(); i++) {
-    const float * const ldet = evolution_[i].Mdet.ptr<float>();
-    const float ratio = evolution_[i].octave_ratio;
-    const int cols = evolution_[i].Ldet.cols;
+    const Evolution &e = evolution_[i];
+    const float * const ldet = e.Mdet.ptr<float>();
+    const float ratio = e.octave_ratio;
+    const int cols = e.Ldet.cols;
+    const Mat& keypoints = keypoints_by_layers[i];
+    const uchar *const kpts = keypoints.ptr<uchar>();
 
-    for (size_t j = 0; j < keypoints_by_layers[i].size(); j++) {
-      KeyPoint &kp = keypoints_by_layers[i][j];
+    size_t j = 0;
+    for (int y = 0; y < keypoints.rows; y++) {
+      for (int x = 0; x < keypoints.cols; x++, j++) {
+        if (kpts[j] == 0) {
+          continue; // skip non-keypoints
+        }
 
-      if (kp.class_id == -1)
-        continue; // Skip a deleted keypoint
+        // create a new keypoint
+        KeyPoint kp;
+        kp.pt.x = x * e.octave_ratio;
+        kp.pt.y = y * e.octave_ratio;
+        kp.size = e.esigma * options_.derivative_factor;
+        kp.angle = -1;
+        kp.response = ldet[j];
+        kp.octave = e.octave;
+        kp.class_id = static_cast<int>(i);
 
-      int x = (int)(kp.pt.x / ratio);
-      int y = (int)(kp.pt.y / ratio);
+        // Compute the gradient
+        float Dx = 0.5f * (ldet[ y     *cols + x + 1] - ldet[ y     *cols + x - 1]);
+        float Dy = 0.5f * (ldet[(y + 1)*cols + x    ] - ldet[(y - 1)*cols + x    ]);
 
-      // Compute the gradient
-      float Dx = 0.5f * (ldet[ y     *cols + x + 1] - ldet[ y     *cols + x - 1]);
-      float Dy = 0.5f * (ldet[(y + 1)*cols + x    ] - ldet[(y - 1)*cols + x    ]);
+        // Compute the Hessian
+        float Dxx = ldet[ y     *cols + x + 1] + ldet[ y     *cols + x - 1] - 2.0f * ldet[y*cols + x];
+        float Dyy = ldet[(y + 1)*cols + x    ] + ldet[(y - 1)*cols + x    ] - 2.0f * ldet[y*cols + x];
+        float Dxy = 0.25f * (ldet[(y + 1)*cols + x + 1] + ldet[(y - 1)*cols + x - 1] -
+                            ldet[(y - 1)*cols + x + 1] - ldet[(y + 1)*cols + x - 1]);
 
-      // Compute the Hessian
-      float Dxx = ldet[ y     *cols + x + 1] + ldet[ y     *cols + x - 1] - 2.0f * ldet[y*cols + x];
-      float Dyy = ldet[(y + 1)*cols + x    ] + ldet[(y - 1)*cols + x    ] - 2.0f * ldet[y*cols + x];
-      float Dxy = 0.25f * (ldet[(y + 1)*cols + x + 1] + ldet[(y - 1)*cols + x - 1] -
-                          ldet[(y - 1)*cols + x + 1] - ldet[(y + 1)*cols + x - 1]);
+        // Solve the linear system
+        Matx22f A( Dxx, Dxy,
+                   Dxy, Dyy );
+        Vec2f   b( -Dx, -Dy );
+        Vec2f   dst( 0.0f, 0.0f );
+        solve(A, b, dst, DECOMP_LU);
 
-      // Solve the linear system
-      Matx22f A{ Dxx, Dxy,
-                 Dxy, Dyy };
-      Vec2f   b{ -Dx, -Dy };
-      Vec2f   dst{ 0.0f, 0.0f };
-      solve(A, b, dst, DECOMP_LU);
+        float dx = dst(0);
+        float dy = dst(1);
 
-      float dx = dst(0);
-      float dy = dst(1);
+        if (fabs(dx) > 1.0f || fabs(dy) > 1.0f)
+          continue; // Ignore the point that is not stable
 
-      if (fabs(dx) > 1.0f || fabs(dy) > 1.0f)
-        continue; // Ignore the point that is not stable
+        // Refine the coordinates
+        kp.pt.x += dx * ratio + .5f*(ratio-1.f);
+        kp.pt.y += dy * ratio + .5f*(ratio-1.f);
 
-      // Refine the coordinates
-      kp.pt.x += dx * ratio + .5f*(ratio-1.f);
-      kp.pt.y += dy * ratio + .5f*(ratio-1.f);
+        kp.angle = 0.0;
+        kp.size *= 2.0f; // In OpenCV the size of a keypoint is the diameter
 
-      kp.angle = 0.0;
-      kp.size *= 2.0f; // In OpenCV the size of a keypoint is the diameter
-
-      // Push the refined keypoint to the final storage
-      kpts.push_back(kp);
+        // Push the refined keypoint to the final storage
+        output_keypoints.push_back(kp);
+      }
     }
   }
 }

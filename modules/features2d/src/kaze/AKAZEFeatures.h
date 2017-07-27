@@ -77,8 +77,8 @@ public:
   void Create_Nonlinear_Scale_Space(InputArray img);
   void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
   void Compute_Determinant_Hessian_Response(void);
-  void Find_Scale_Space_Extrema(std::vector<std::vector<KeyPoint>>& keypoints_by_layers);
-  void Do_Subpixel_Refinement(std::vector<std::vector<KeyPoint>>& keypoints_by_layers,
+  void Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_layers);
+  void Do_Subpixel_Refinement(std::vector<Mat>& keypoints_by_layers,
     std::vector<KeyPoint>& kpts);
 
   /// Feature description methods
