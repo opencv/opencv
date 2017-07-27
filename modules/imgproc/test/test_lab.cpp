@@ -1568,30 +1568,162 @@ struct Luv2RGBinteger
 {
     typedef uchar channel_type;
 
-    Luv2RGBinteger( int _dstcn, int _blueIdx, const float* _coeffs,
+    //TODO: rewrite it
+    static const int base_shift = 14;
+    static const int BASE = (1 << base_shift);
+    // lThresh == (6/29)^3 * (29/3)^3 * BASE/100
+    static const int lThresh = 1311;
+    // fThresh == ((29/3)^3/(29*4) * (6/29)^3 + 16/116)*BASE
+    static const int fThresh = 3390;
+    // base16_116 == BASE*16/116
+    static const int base16_116 = 2260;
     static const int shift = lab_shift+(base_shift-inv_gamma_shift);
+
+
+    Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
                     const float* _whitept, bool _srgb )
-    : dstcn(_dstcn), blueIdx(_blueIdx)
+    : dstcn(_dstcn)
     {
         initLabTabs();
+
+        if(!_coeffs)  _coeffs = XYZ2sRGB_D65;
+        if(!_whitept) _whitept = D65;
+
+        //TODO: rewrite this
+        for( int i = 0; i < 3; i++ )
+        {
+            coeffs[i+blueIdx*3] = _coeffs[i];
+            coeffs[i+3] = _coeffs[i+3];
+            coeffs[i+(blueIdx^2)*3] = _coeffs[i+6];
+        }
+
+        softfloat d = softfloat(_whitept[0]) +
+                      softfloat(_whitept[1])*softfloat(15) +
+                      softfloat(_whitept[2])*softfloat(3);
+        d = softfloat::one()/max(d, softfloat(FLT_EPSILON));
+        un = softfloat(4*13)*d*softfloat(_whitept[0]);
+        vn = softfloat(9*13)*d*softfloat(_whitept[1]);
+
+        CV_Assert(_whitept[1] == 1.f);
+
+        //TODO: rewrite this
+//        static const softfloat lshift(1 << lab_shift);
+//        for(int i = 0; i < 3; i++)
+//        {
+//            coeffs[i+(blueIdx)*3]   = cvRound(lshift*softfloat(_coeffs[i  ])*softfloat(_whitept[i]));
+//            coeffs[i+3]             = cvRound(lshift*softfloat(_coeffs[i+3])*softfloat(_whitept[i]));
+//            coeffs[i+(blueIdx^2)*3] = cvRound(lshift*softfloat(_coeffs[i+6])*softfloat(_whitept[i]));
+//        }
+
+        tab = _srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
+    }
+
+    //TODO: rewrite this
+    // L, u, v should be in their natural range
+    inline void process(const uchar LL, const uchar uu, const uchar vv, int& ro, int& go, int& bo) const
+    {
+        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
+        float C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
+        float C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        float L = ((float)LL)*100.f/255.f;
+        float u = ((float)uu)*uRange/255.f + (float)uLow;
+        float v = ((float)vv)*vRange/255.f + (float)vLow;
+
+        float _un = un, _vn = vn;
+
+        float X, Y, Z;
+        if(L >= 8)
+        {
+            Y = (L + 16.f) * (1.f/116.f);
+            Y = Y*Y*Y;
+        }
+        else
+        {
+            Y = L * (1.0f/903.3f); // L*(3./29.)^3
+        }
+        float up = 3.f*(u + L*_un);
+        float vp = 0.25f/(v + L*_vn);
+        if(vp >  0.25f) vp =  0.25f;
+        if(vp < -0.25f) vp = -0.25f;
+        X = Y*3.f*up*vp;
+        Z = Y*(((12.f*13.f)*L - up)*vp - 5.f);
+
+        float R = X*C0 + Y*C1 + Z*C2;
+        float G = X*C3 + Y*C4 + Z*C5;
+        float B = X*C6 + Y*C7 + Z*C8;
+
+        ro = R*((int)INV_GAMMA_TAB_SIZE-1);
+        go = G*((int)INV_GAMMA_TAB_SIZE-1);
+        bo = B*((int)INV_GAMMA_TAB_SIZE-1);
+
+        //TODO: up to this
+        ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
+        go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
+        bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
+
+        ro = tab[ro];
+        go = tab[go];
+        bo = tab[bo];
+
+
+
+//        int x, y, z;
+//        int ify;
+
+//        y   = LabToYF_b[LL*2  ];
+//        ify = LabToYF_b[LL*2+1];
+
+//        //float fxz[] = { ai / 500.0f + fy, fy - bi / 200.0f };
+//        int adiv, bdiv;
+//        adiv = aa*BASE/500 - 128*BASE/500, bdiv = bb*BASE/200 - 128*BASE/200;
+
+//        int ifxz[] = {ify + adiv, ify - bdiv};
+
+//        for(int k = 0; k < 2; k++)
+//        {
+//            int& v = ifxz[k];
+//            v = abToXZ_b[v-minABvalue];
+//        }
+//        x = ifxz[0]; /* y = y */; z = ifxz[1];
+
+//        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
+//        int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
+//        int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+//        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
+//        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
+//        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        //TODO: remove it
-        throw std::runtime_error("Luv2RGBinteger is not implemented");
-
-        int i, dcn = dstcn, bIdx = blueIdx;
+        int i, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
         i = 0;
 
+        //TODO: add packed version
 
-        //TODO: this
+        for (; i < n*3; i += 3, dst += dcn)
+        {
+            int ro, go, bo;
+            process(src[i + 0], src[i + 1], src[i + 2], ro, go, bo);
+
+            dst[0] = saturate_cast<uchar>(bo);
+            dst[1] = saturate_cast<uchar>(go);
+            dst[2] = saturate_cast<uchar>(ro);
+            if( dcn == 4 )
+                dst[3] = alpha;
+        }
+
     }
 
     int dstcn;
-    int blueIdx;
+    //TODO: rewrite this
+    float coeffs[9], un, vn;
+    //int coeffs[9];
+    ushort* tab;
 };
 
 
@@ -1606,9 +1738,7 @@ struct Luv2RGB_b
       icvt(_dstcn, blueIdx, _coeffs, _whitept, _srgb)
     {
         //TODO: check correctness of this condition
-        //TODO: enable it when it is fixed
-        useBitExactness = (false &&
-                           !_coeffs && !_whitept && _srgb
+        useBitExactness = (!_coeffs && !_whitept && _srgb
                            && enableBitExactness);
 
         #if CV_NEON
