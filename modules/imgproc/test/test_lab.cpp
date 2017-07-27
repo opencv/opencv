@@ -1569,6 +1569,7 @@ struct Luv2RGBinteger
     typedef uchar channel_type;
 
     Luv2RGBinteger( int _dstcn, int _blueIdx, const float* _coeffs,
+    static const int shift = lab_shift+(base_shift-inv_gamma_shift);
                     const float* _whitept, bool _srgb )
     : dstcn(_dstcn), blueIdx(_blueIdx)
     {
@@ -1738,8 +1739,8 @@ struct Luv2RGB_b
             for( ; j < dn*3; j += 3 )
             {
                 buf[j] = src[j]*((float)f100by255);
-                buf[j+1] = (float)(src[j+1]*(float)fu - (float)uLow);
-                buf[j+2] = (float)(src[j+2]*(float)fv - (float)vLow);
+                buf[j+1] = (float)(src[j+1]*(float)fu + (float)uLow);
+                buf[j+2] = (float)(src[j+2]*(float)fv + (float)vLow);
             }
             fcvt(buf, buf, dn);
 
@@ -1875,10 +1876,9 @@ void printDiff(Mat a, string what, const char* channel, double* maxMaxError, int
 
 TEST(ImgProc_Color, LuvCheckWorking)
 {
-    //TODO: output settings in the end and in the beginning
     //settings
     const bool INT_DATA = true;
-    const bool TO_BGR   = false;
+    const bool TO_BGR   = true;
     const string spaceName = "Luv";
     const string baseDir = "/home/savuor/logs/ocv/lab_precision/";
     const bool randomFill = true;
@@ -1889,9 +1889,14 @@ TEST(ImgProc_Color, LuvCheckWorking)
 
     const int lutShift = (int)lab_lut_shift;
 
+    std::cout << std::endl << (TO_BGR ? spaceName+"2RGB" : "RGB2"+spaceName ) << " ";
+    std::cout << "lut_shift " << lutShift << " ";
+    std::cout << (INT_DATA ? "int" : "float") << " ";
+    std::cout << endl;
+
     //for Luv:
     const int   spaceDn  [3] = {  0,    0,    0};
-    const int   spaceUp  [3] = {100,  256,  256};
+    const int   spaceUp  [3] = {256,  256,  256};
     const float spaceDn_f[3] = {  0, -134, -140};
     const float spaceUp_f[3] = {100,  220,  122};
     //for Lab:
@@ -2251,6 +2256,7 @@ TEST(ImgProc_Color, LuvCheckWorking)
     //max-max channel errors
     std::cout << std::endl << (TO_BGR ? spaceName+"2RGB" : "RGB2"+spaceName ) << " ";
     std::cout << "lut_shift " << lutShift << " ";
+    std::cout << (INT_DATA ? "int" : "float") << " ";
     for(int i = 0; i < 4; i++)
     {
         std::cout << maxMaxError[i] << "\t";
