@@ -167,6 +167,22 @@ namespace Utils{
     int cvMatDepth(int flags) {
         return CV_MAT_DEPTH(flags);
     }
+
+    class MinMaxLocResult {
+      public:
+        double minVal;
+        double maxVal;
+        Point minLoc;
+        Point maxLoc;
+    };
+
+    void minMaxLoc(const cv::Mat& src, MinMaxLocResult& result, const cv::Mat& mask) {
+        return cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc, mask);
+    }
+
+    void minMaxLoc_1(const cv::Mat& src, MinMaxLocResult& result) {
+        return cv::minMaxLoc(src, &result.minVal, &result.maxVal, &result.minLoc, &result.maxLoc);
+    }
 }
 
 EMSCRIPTEN_BINDINGS(Utils) {
@@ -325,6 +341,17 @@ EMSCRIPTEN_BINDINGS(Utils) {
         .constructor<double, double, double, double>()
         .class_function("all", &cv::Scalar_<double>::all)
         .function("isReal", select_overload<bool()const>(&cv::Scalar_<double>::isReal));
+
+    emscripten::class_<Utils::MinMaxLocResult>("MinMaxLocResult")
+        .constructor<>()
+        .property("minVal", &Utils::MinMaxLocResult::minVal)
+        .property("maxVal", &Utils::MinMaxLocResult::maxVal)
+        .property("minLoc", &Utils::MinMaxLocResult::minLoc)
+        .property("maxLoc", &Utils::MinMaxLocResult::maxLoc);
+
+    function("minMaxLoc", select_overload<void(const cv::Mat&, Utils::MinMaxLocResult&, const cv::Mat&)>(&Utils::minMaxLoc));
+
+    function("minMaxLoc", select_overload<void(const cv::Mat&, Utils::MinMaxLocResult&)>(&Utils::minMaxLoc_1));
 
     function("matFromArray", &Utils::matFromArray);
 
