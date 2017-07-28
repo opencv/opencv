@@ -17,7 +17,7 @@ using namespace cv::cuda;
 static void help()
 {
     cout << "\nThis program demonstrates using SURF_CUDA features detector, descriptor extractor and BruteForceMatcher_CUDA" << endl;
-    cout << "\nUsage:\n\tmatcher_simple_gpu --left <image1> --right <image2>" << endl;
+    cout << "\nUsage:\n\tsurf_keypoint_matcher --left <image1> --right <image2>" << endl;
 }
 
 int main(int argc, char* argv[])
