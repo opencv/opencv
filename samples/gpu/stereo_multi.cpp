@@ -355,7 +355,7 @@ int main(int argc, char** argv)
 {
     if (argc != 3)
     {
-        cerr << "Usage: stereo_multi_gpu <left_video> <right_video>" << endl;
+        cerr << "Usage: stereo_multi <left_video> <right_video>" << endl;
         return -1;
     }
 
