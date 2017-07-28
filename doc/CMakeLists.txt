@@ -205,7 +205,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     list(APPEND js_tutorials_assets_deps "${f}" "${opencv_tutorial_html_dir}/${fname}")
   endforeach()
 
-  add_custom_target(doxygen
+  add_custom_target(doxygen_cpp
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
     DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps} ${js_tutorials_assets_deps}
   )
@@ -213,6 +213,28 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
     DESTINATION "${OPENCV_DOC_INSTALL_PATH}"
     COMPONENT "docs" OPTIONAL
   )
+
+  if(BUILD_opencv_python2)
+    add_custom_target(doxygen_python
+      COMMAND ${PYTHON2_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/python_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/"
+      DEPENDS doxygen_cpp opencv_python2
+    )
+    add_custom_target(doxygen
+      DEPENDS doxygen_cpp doxygen_python
+    )
+  elseif(BUILD_opencv_python3)
+    add_custom_target(doxygen_python
+      COMMAND ${PYTHON3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/python_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/"
+      DEPENDS doxygen_cpp opencv_python3
+    )
+    add_custom_target(doxygen
+      DEPENDS doxygen_cpp doxygen_python
+    )
+  else()
+    add_custom_target(doxygen
+      DEPENDS doxygen_cpp
+    )
+  endif()
 
   # Alias to build/install docs only
   add_custom_target(install_docs
