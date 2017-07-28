@@ -1,4 +1,4 @@
-Hough Circle Transform (cv.HoughCircles() is not in the white list) {#tutorial_js_houghcircles}
+Hough Circle Transform {#tutorial_js_houghcircles}
 ======================
 
 Goal
@@ -6,7 +6,7 @@ Goal
 
 In this chapter,
     -   We will learn to use Hough Transform to find circles in an image.
-    -   We will see these functions: **cv2.HoughCircles()**
+    -   We will see these functions: **cv.HoughCircles()**
 
 Theory
 ------
@@ -17,36 +17,97 @@ equation, we can see we have 3 parameters, so we need a 3D accumulator for hough
 would be highly ineffective. So OpenCV uses more trickier method, **Hough Gradient Method** which
 uses the gradient information of edges.
 
-The function we use here is **cv2.HoughCircles()**. It has plenty of arguments which are well
-explained in the documentation. So we directly go to the code.
-@code{.py}
-import cv2
-import numpy as np
+We use the function: **cv.HoughCircles (image, circles, method, dp, minDist, param1 = 100, param2 = 100, minRadius = 0, maxRadius = 0)** 
 
-img = cv2.imread('opencv-logo-white.png',0)
-img = cv2.medianBlur(img,5)
-cimg = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+@param image       8-bit, single-channel, grayscale input image.
+@param circles     output vector of found circles(cv.CV_32FC3 type). Each vector is encoded as a 3-element floating-point vector (x,y,radius) .
+@param method      detection method(see cv.HoughModes). Currently, the only implemented method is HOUGH_GRADIENT
+@param dp      	   inverse ratio of the accumulator resolution to the image resolution. For example, if dp = 1 , the accumulator has the same resolution as the input image. If dp = 2 , the accumulator has half as big width and height.
+@param minDist     minimum distance between the centers of the detected circles. If the parameter is too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is too large, some circles may be missed.
+@param param1      first method-specific parameter. In case of HOUGH_GRADIENT , it is the higher threshold of the two passed to the Canny edge detector (the lower one is twice smaller).
+@param param2      second method-specific parameter. In case of HOUGH_GRADIENT , it is the accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected. Circles, corresponding to the larger accumulator values, will be returned first.
+@param minRadius   minimum circle radius.
+@param maxRadius   maximum circle radius.
 
-circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,20,
-                            param1=50,param2=30,minRadius=0,maxRadius=0)
+Try it
+------
 
-circles = np.uint16(np.around(circles))
-for i in circles[0,:]:
-    # draw the outer circle
-    cv2.circle(cimg,(i[0],i[1]),i[2],(0,255,0),2)
-    # draw the center of the circle
-    cv2.circle(cimg,(i[0],i[1]),2,(0,0,255),3)
+Here is a demo. Canvas elements named HoughCirclesPCanvasInput and HoughCirclesPCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
-cv2.imshow('detected circles',cimg)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-@endcode
-Result is shown below:
+\htmlonly
+<!DOCTYPE html>
+<head>
+<style>
+canvas {
+    border: 1px solid black;
+}
+.err {
+    color: red;
+}
+</style>
+</head>
+<body>
+<div id="HoughCirclesPCodeArea">
+<h2>Input your code</h2>
+<button id="HoughCirclesPTryIt" disabled="true" onclick="HoughCirclesPExecuteCode()">Try it</button><br>
+<textarea rows="17" cols="80" id="HoughCirclesPTestCode" spellcheck="false">
+var src = cv.imread("HoughCirclesPCanvasInput");
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
+var circles = new cv.Mat();
+var color = new cv.Scalar(255, 0, 0);
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+// You can try more different conversion
+cv.HoughCircles(src, circles, cv.HOUGH_GRADIENT, 1, 45, 75, 40, 0, 0);
+// draw circles
+for(var i = 0; i < circles.cols; ++i)
+{
+    var x = circles.data32f()[i * 3];
+    var y = circles.data32f()[i * 3 + 1];
+    var radius = circles.data32f()[i * 3 + 2];
+    cv.circle(dst, [x, y], radius, color);
+}
+cv.imshow("HoughCirclesPCanvasOutput", dst);
+src.delete(); dst.delete(); circles.delete(); color.delete();
+</textarea>
+<p class="err" id="HoughCirclesPErr"></p>
+</div>
+<div id="HoughCirclesPShowcase">
+    <div>
+        <canvas id="HoughCirclesPCanvasInput"></canvas>
+        <canvas id="HoughCirclesPCanvasOutput"></canvas>
+    </div>
+    <input type="file" id="HoughCirclesPInput" name="file" />
+</div>
+<script src="utils.js"></script>
+<script async src="opencv.js" id="opencvjs"></script>
+<script>
+function HoughCirclesPExecuteCode() {
+    var HoughCirclesPText = document.getElementById("HoughCirclesPTestCode").value;
+    try {
+        eval(HoughCirclesPText);
+        document.getElementById("HoughCirclesPErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("HoughCirclesPErr").innerHTML = err;
+    }
+}
 
-![image](images/houghcircles2.jpg)
+loadImageToCanvas("coins.jpg", "HoughCirclesPCanvasInput");
+var HoughCirclesPInputElement = document.getElementById("HoughCirclesPInput");
+HoughCirclesPInputElement.addEventListener("change", HoughCirclesPHandleFiles, false);
+function HoughCirclesPHandleFiles(e) {
+    var HoughCirclesPUrl = URL.createObjectURL(e.target.files[0]);
+    loadImageToCanvas(HoughCirclesPUrl, "HoughCirclesPCanvasInput");
+}
 
-Additional Resources
---------------------
-
-Exercises
----------
+function onReady() {
+    document.getElementById("HoughCirclesPTryIt").disabled = false;
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
+</script>
+</body>
+\endhtmlonly

@@ -130,16 +130,17 @@ cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 var faceCoclor = new cv.Scalar(255, 0, 0, 255), eyeCoclor = new cv.Scalar(0, 0, 255, 255);
 var faces = new cv.RectVector(), eyes = new cv.RectVector();
 var face_cascade = new cv.CascadeClassifier(), eye_cascade = new cv.CascadeClassifier();
-
+// load pre-trained classifiers
 face_cascade.load("haarcascade_frontalface_default.xml");
 eye_cascade.load("haarcascade_eye.xml");
-
+// detect faces 
 face_cascade.detectMultiScale(gray, faces, 1.1, 3, 0, [0, 0], [0, 0]);
 for(var i = 0; i < faces.size(); ++i)
 {
     var roiGray = gray.getROI_Rect(faces.get(i));
     var roiSrc = src.getROI_Rect(faces.get(i));
     cv.rectangle(src, [faces.get(i).x, faces.get(i).y], [faces.get(i).x + faces.get(i).width, faces.get(i).y + faces.get(i).height], faceCoclor);
+    // detect eyes in face ROI
     eye_cascade.detectMultiScale(roiGray, eyes);
     for (var j = 0; j < eyes.size(); ++j)
     {

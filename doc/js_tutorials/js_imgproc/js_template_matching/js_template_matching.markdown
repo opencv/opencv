@@ -42,8 +42,6 @@ Try it
 Here is a demo. Canvas elements named imageCanvasInput, templateCanvasInput and matchTemplateCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
-@note cv.minMaxLoc() can finds the global minimum and maximum in an array.
-
 \htmlonly
 <!DOCTYPE html>
 <head>
@@ -60,25 +58,20 @@ canvas {
 <div id="matchTemplateCodeArea">
 <h2>Input your code</h2>
 <button id="matchTemplateTryIt" disabled="true" onclick="matchTemplateExecuteCode()">Try it</button><br>
-<textarea rows="17" cols="80" id="matchTemplateTestCode" spellcheck="false">
+<textarea rows="13" cols="80" id="matchTemplateTestCode" spellcheck="false">
 var src = cv.imread("imageCanvasInput");
 var templ = cv.imread("templateCanvasInput");
 var dst = new cv.Mat();
-var none = new cv.Mat();
-cv.matchTemplate(src, templ, dst, cv.TM_CCOEFF, none);
-var max = 0;
-var maxPoint = [0, 0];
+var mask = new cv.Mat();
+cv.matchTemplate(src, templ, dst, cv.TM_CCOEFF, mask);
+var result = new cv.MinMaxLocResult();
+cv.minMaxLoc(dst, result, mask);
+var max = result.maxVal;
+var maxPoint = result.maxLoc;
 var color = new cv.Scalar(255, 0, 0, 255);
-for(var i = 0; i < dst.rows; i++)
-    for(var j = 0; j < dst.cols; j++) 
-        if (dst.get_float_at(i, j) > max)
-        {
-            max = dst.get_float_at(i, j);
-            maxPoint = [j, i];
-        }
 cv.rectangle(src, [maxPoint[0], maxPoint[1]], [maxPoint[0] + templ.cols, maxPoint[1] + templ.rows], color, 2, cv.LINE_8, 0);
 cv.imshow("matchTemplateCanvasOutput", src);
-src.delete(); dst.delete(); none.delete(); color.delete();
+src.delete(); dst.delete(); color.delete(); result.delete(); mask.delete()
 </textarea>
 <p class="err" id="matchTemplateErr"></p>
 </div>

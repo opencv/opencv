@@ -189,15 +189,16 @@ where:
 
 \f[\begin{array}{l} \alpha =  scale \cdot \cos \theta , \\ \beta =  scale \cdot \sin \theta \end{array}\f]
 
-We use the function: **cv.warpAffine (src, dst, M, dsize, flags, borderMode, borderValue)**
+We use the function: **cv.getRotationMatrix2D (center, angle, scale)**
+@param center    center of the rotation in the source image.
+@param angle     rotation angle in degrees. Positive values mean counter-clockwise rotation (the coordinate origin is assumed to be the top-left corner).
+@param scale     isotropic scale factor.
 
 Try it
 ------
 
 Here is a demo. Canvas elements named rotateWarpAffineCanvasInput and rotateWarpAffineCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
-
-@note cv.getRotationMatrix2D() which can find an affine matrix of 2D rotation is not in the white list.
 
 \htmlonly
 <!DOCTYPE html>
@@ -212,21 +213,12 @@ canvas {
 <div id="rotateWarpAffineCodeArea">
 <h2>Input your code</h2>
 <button id="rotateWarpAffineTryIt" disabled="true" onclick="rotateWarpAffineExecuteCode()">Try it</button><br>
-<textarea rows="19" cols="80" id="rotateWarpAffineTestCode" spellcheck="false">
+<textarea rows="9" cols="80" id="rotateWarpAffineTestCode" spellcheck="false">
 var src = cv.imread("rotateWarpAffineCanvasInput");
 var dst = new cv.Mat();
 var M = new cv.Mat([2, 3], cv.CV_64FC1);
 var color = new cv.Scalar();
-var degree = 45;
-var angle = degree * Math.PI / 180.;
-var alpha = Math.cos(angle);
-var beta = Math.sin(angle);
-M.data64f()[0] = alpha,
-M.data64f()[1] = beta,
-M.data64f()[2] = (1 - alpha) * src.cols / 2 - beta * src.rows / 2,
-M.data64f()[3] = -beta,
-M.data64f()[4] = alpha,
-M.data64f()[5] = beta * src.cols / 2 + (1 - alpha) * src.rows / 2;
+M = cv.getRotationMatrix2D([src.cols / 2, src.rows / 2], 45, 1)
 // You can try more different conversion
 cv.warpAffine(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
 cv.imshow("rotateWarpAffineCanvasOutput", dst);
@@ -297,7 +289,7 @@ canvas {
 <button id="getAffineTransformTryIt" disabled="true" onclick="getAffineTransformExecuteCode()">Try it</button><br>
 <textarea rows="22" cols="80" id="getAffineTransformTestCode" spellcheck="false">
 var src = cv.imread("getAffineTransformCanvasInput");
-var dst = new cv.Mat(src.cols, src.rows, src.type());
+var dst = new cv.Mat();
 var srcTri = new cv.Mat(3, 1, cv.CV_32FC2); 
 var dstTri = new cv.Mat(3, 1, cv.CV_32FC2);
 var color = new cv.Scalar();
@@ -352,11 +344,9 @@ function getAffineTransformHandleFiles(e) {
 
 ### Perspective Transformation
 
-For perspective transformation, you need a 3x3 transformation matrix. Straight lines will remain
-straight even after the transformation. Apply **cv.warpPerspective** with this 3x3 transformation
-matrix.
+For perspective transformation, you need a 3x3 transformation matrix. Straight lines will remain straight even after the transformation. To find this transformation matrix, you need 4 points on the input image and corresponding points on the output image. Among these 4 points, 3 of them should not be collinear. Then transformation matrix can be found by the function **cv.getPerspectiveTransform**. Then apply **cv.warpPerspective** with this 3x3 transformation matrix.
 
-We use the function: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER_LINEAR, borderMode = cv.BORDER_CONSTANT, borderValue = cv.Scalar())**
+We use the functions: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER_LINEAR, borderMode = cv.BORDER_CONSTANT, borderValue = cv.Scalar())**
 
 @param src          input image.
 @param dst          output image that has the size dsize and the same type as src.
@@ -365,6 +355,11 @@ We use the function: **cv.warpPerspective (src, dst, M, dsize, flags = cv.INTER_
 @param flags        combination of interpolation methods (cv.INTER_LINEAR or cv.INTER_NEAREST) and the optional flag WARP_INVERSE_MAP, that sets M as the inverse transformation (𝚍𝚜𝚝→𝚜𝚛𝚌).    
 @param borderMode   pixel extrapolation method (cv.BORDER_CONSTANT or cv.BORDER_REPLICATE).
 @param borderValue  value used in case of a constant border; by default, it is 0.
+
+**cv.getPerspectiveTransform (src, dst)**
+
+@param src          coordinates of quadrangle vertices in the source image.
+@param dst          coordinates of the corresponding quadrangle vertices in the destination image.
 
 Try it
 ------
@@ -385,14 +380,29 @@ canvas {
 <div id="warpPerspectiveCodeArea">
 <h2>Input your code</h2>
 <button id="warpPerspectiveTryIt" disabled="true" onclick="warpPerspectiveExecuteCode()">Try it</button><br>
-<textarea rows="12" cols="80" id="warpPerspectiveTestCode" spellcheck="false">
+<textarea rows="26" cols="80" id="warpPerspectiveTestCode" spellcheck="false">
 var src = cv.imread("warpPerspectiveCanvasInput");
 var dst = new cv.Mat();
 var M = new cv.Mat([3, 3], cv.CV_64FC1);
-var color = new cv.Scalar()
-M.data64f()[0]=1;M.data64f()[1]=0.1;M.data64f()[2]=-65;
-M.data64f()[3]=0;M.data64f()[4]=1.1;M.data64f()[5]=-75;
-M.data64f()[6]=0;M.data64f()[7]=0;  M.data64f()[8]=1;
+var srcTri = new cv.Mat(4, 1, cv.CV_32FC2); 
+var dstTri = new cv.Mat(4, 1, cv.CV_32FC2);
+var color = new cv.Scalar();
+
+//[data32f()[0], data32f()[1]] is the first point
+srcTri.data32f()[0] = 56; srcTri.data32f()[1] = 65;
+//[data32f()[2], data32f()[3]] is the sescond point
+srcTri.data32f()[2] = 368; srcTri.data32f()[3] = 52;
+//[data32f()[4], data32f()[5]] is the third point
+srcTri.data32f()[4] = 28; srcTri.data32f()[5] = 387;
+//[data32f()[6], data32f()[7]] is the fourth point
+srcTri.data32f()[6] = 389; srcTri.data32f()[7] = 390;
+
+dstTri.data32f()[0] = 0; dstTri.data32f()[1] = 0;
+dstTri.data32f()[2] = 300; dstTri.data32f()[3] = 0;
+dstTri.data32f()[4] = 0; dstTri.data32f()[5] = 300;
+dstTri.data32f()[6] = 300; dstTri.data32f()[7] = 300;
+
+M = cv.getPerspectiveTransform(srcTri, dstTri);
 // You can try more different conversion
 cv.warpPerspective(src, dst, M, [src.rows, src.cols], cv.INTER_LINEAR, cv.BORDER_CONSTANT, color);
 cv.imshow("warpPerspectiveCanvasOutput", dst);
@@ -441,5 +451,3 @@ if (typeof cv !== 'undefined') {
 </script>
 </body>
 \endhtmlonly
-
-@note cv.getPerspectiveTransform() which can find the transformation matrix from 4 points on the input image and corresponding points on the output image is not in the white list.

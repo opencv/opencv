@@ -1,4 +1,4 @@
-Hough Line Transform (cv.HoughLines() is not in the white list) {#tutorial_js_houghlines}
+Hough Line Transform {#tutorial_js_houghlines}
 ====================
 
 Goal
@@ -66,9 +66,8 @@ Input image should be a binary image, so apply threshold or use canny edge detec
 applying hough transform. 
 
 We use the function: **cv.HoughLines (image, lines, rho, theta, threshold, srn = 0, stn = 0, min_theta = 0, max_theta = Math.PI)** 
-
 @param image       8-bit, single-channel binary source image. The image may be modified by the function.
-@param lines       output vector of lines. Each line is represented by a two-element vector (ρ,θ) . ρ is the distance from the coordinate origin (0,0). θ is the line rotation angle in radians.
+@param lines       output vector of lines(cv.32FC2 type). Each line is represented by a two-element vector (ρ,θ) . ρ is the distance from the coordinate origin (0,0). θ is the line rotation angle in radians.
 @param rho    	   distance resolution of the accumulator in pixels.
 @param theta       angle resolution of the accumulator in radians.
 @param threshold   accumulator threshold parameter. Only those lines are returned that get enough votes
@@ -83,14 +82,15 @@ Try it
 Here is a demo. Canvas elements named HoughLinesCanvasInput and HoughLinesCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
-@note cv.minMaxLoc() can finds the global minimum and maximum in an array.
-
 \htmlonly
 <!DOCTYPE html>
 <head>
 <style>
 canvas {
     border: 1px solid black;
+}
+.err {
+    color: red;
 }
 </style>
 </head>
@@ -100,11 +100,27 @@ canvas {
 <button id="HoughLinesTryIt" disabled="true" onclick="HoughLinesExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="80" id="HoughLinesTestCode" spellcheck="false">
 var src = cv.imread("HoughLinesCanvasInput");
-cv.cvtColor(src, src, cv.COLOR_BGRA2GRAY, 0);
-
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
+var lines = new cv.Mat();
+var color = new cv.Scalar(255, 0, 0);
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+cv.Canny(src, src, 50, 200, 3);
+// You can try more different conversion
+cv.HoughLines(src, lines, 1, Math.PI / 180, 50, 0, 0, 0, Math.PI);
+// draw lines
+for(var i = 0; i < lines.rows; ++i)
+{
+    var rho = lines.data32f()[i * 2], theta = lines.data32f()[i * 2 + 1];
+    var a = Math.cos(theta), b = Math.sin(theta);
+    var x0 = a * rho, y0 = b * rho;
+    var startPoint = [x0 - 1000 * b, y0 + 1000 * a];
+    var endPoint = [x0 + 1000 * b, y0 - 1000 * a];
+    cv.line(dst, startPoint, endPoint, color);
+}
 cv.imshow("HoughLinesCanvasOutput", dst);
-src.delete(); dst.delete(); 
+src.delete(); dst.delete(); lines.delete(); color.delete();
 </textarea>
+<p class="err" id="HoughLinesErr"></p>
 </div>
 <div id="HoughLinesShowcase">
     <div>
@@ -118,24 +134,20 @@ src.delete(); dst.delete();
 <script>
 function HoughLinesExecuteCode() {
     var HoughLinesText = document.getElementById("HoughLinesTestCode").value;
-    eval(HoughLinesText);
+    try {
+        eval(HoughLinesText);
+        document.getElementById("HoughLinesErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("HoughLinesErr").innerHTML = err;
+    }
 }
 
-loadImageToCanvas("lena.jpg", "HoughLinesCanvasInput");
+loadImageToCanvas("LinuxLogo.jpg", "HoughLinesCanvasInput");
 var HoughLinesInputElement = document.getElementById("HoughLinesInput");
 HoughLinesInputElement.addEventListener("change", HoughLinesHandleFiles, false);
 function HoughLinesHandleFiles(e) {
     var HoughLinesUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(HoughLinesUrl, "HoughLinesCanvasInput");
-}
-
-function onReady() {
-    document.getElementById("HoughLinesTryIt").disabled = false;
-}
-if (typeof cv !== 'undefined') {
-    onReady();
-} else {
-    document.getElementById("opencvjs").onload = onReady;
 }
 </script>
 </body>
@@ -154,22 +166,88 @@ Hough Transform and Probabilistic Hough Transform in Hough space. (Image Courtes
 ![image](images/houghlines4.png)
 
 OpenCV implementation is based on Robust Detection of Lines Using the Progressive Probabilistic
-Hough Transform by Matas, J. and Galambos, C. and Kittler, J.V. @cite Matas00. The function used is
-**cv2.HoughLinesP()**. It has two new arguments.
--   **minLineLength** - Minimum length of line. Line segments shorter than this are rejected.
--   **maxLineGap** - Maximum allowed gap between line segments to treat them as a single line.
+Hough Transform by Matas, J. and Galambos, C. and Kittler, J.V. @cite Matas00.
 
-Best thing is that, it directly returns the two endpoints of lines. In previous case, you got only
-the parameters of lines, and you had to find all the points. Here, everything is direct and simple.
-@include probabilistic_hough_line_transform.py
-See the results below:
+We use the function: **cv.HoughLinesP (image, lines, rho, theta, threshold, minLineLength = 0, maxLineGap = 0)** 
 
-![image](images/houghlines5.jpg)
+@param image          8-bit, single-channel binary source image. The image may be modified by the function.
+@param lines          output vector of lines(cv.32SC4 type). Each line is represented by a 4-element vector (x1,y1,x2,y2) ,where (x1,y1) and (x2,y2) are the ending points of each detected line segment.
+@param rho            distance resolution of the accumulator in pixels.
+@param theta          angle resolution of the accumulator in radians.
+@param threshold      accumulator threshold parameter. Only those lines are returned that get enough votes
+@param minLineLength  minimum line length. Line segments shorter than that are rejected.
+@param maxLineGap     maximum allowed gap between points on the same line to link them.
 
-Additional Resources
---------------------
+Try it
+------
 
--#  [Hough Transform on Wikipedia](http://en.wikipedia.org/wiki/Hough_transform)
+Here is a demo. Canvas elements named HoughLinesPCanvasInput and HoughLinesPCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
-Exercises
----------
+\htmlonly
+<!DOCTYPE html>
+<head>
+</head>
+<body>
+<div id="HoughLinesPCodeArea">
+<h2>Input your code</h2>
+<button id="HoughLinesPTryIt" disabled="true" onclick="HoughLinesPExecuteCode()">Try it</button><br>
+<textarea rows="17" cols="80" id="HoughLinesPTestCode" spellcheck="false">
+var src = cv.imread("HoughLinesPCanvasInput");
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
+var lines = new cv.Mat();
+var color = new cv.Scalar(255, 0, 0);
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+cv.Canny(src, src, 50, 200, 3);
+// You can try more different conversion
+cv.HoughLinesP(src, lines, 1, Math.PI / 180, 40, 0, 0);
+// draw lines
+for(var i = 0; i < lines.rows; ++i)
+{
+    var startPoint = [lines.data32s()[i * 4], lines.data32s()[i * 4 + 1]];
+    var endPoint = [lines.data32s()[i * 4 + 2], lines.data32s()[i * 4 + 3]];
+    cv.line(dst, startPoint, endPoint, color);
+}
+cv.imshow("HoughLinesPCanvasOutput", dst);
+src.delete(); dst.delete(); lines.delete(); color.delete();
+</textarea>
+<p class="err" id="HoughLinesPErr"></p>
+</div>
+<div id="HoughLinesPShowcase">
+    <div>
+        <canvas id="HoughLinesPCanvasInput"></canvas>
+        <canvas id="HoughLinesPCanvasOutput"></canvas>
+    </div>
+    <input type="file" id="HoughLinesPInput" name="file" />
+</div>
+<script>
+function HoughLinesPExecuteCode() {
+    var HoughLinesPText = document.getElementById("HoughLinesPTestCode").value;
+    try {
+        eval(HoughLinesPText);
+        document.getElementById("HoughLinesPErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("HoughLinesPErr").innerHTML = err;
+    }
+}
+
+loadImageToCanvas("LinuxLogo.jpg", "HoughLinesPCanvasInput");
+var HoughLinesPInputElement = document.getElementById("HoughLinesPInput");
+HoughLinesPInputElement.addEventListener("change", HoughLinesPHandleFiles, false);
+function HoughLinesPHandleFiles(e) {
+    var HoughLinesPUrl = URL.createObjectURL(e.target.files[0]);
+    loadImageToCanvas(HoughLinesPUrl, "HoughLinesPCanvasInput");
+}
+
+function onReady() {
+    document.getElementById("HoughLinesPTryIt").disabled = false;
+    document.getElementById("HoughLinesTryIt").disabled = false;
+}
+if (typeof cv !== 'undefined') {
+    onReady();
+} else {
+    document.getElementById("opencvjs").onload = onReady;
+}
+</script>
+</body>
+\endhtmlonly

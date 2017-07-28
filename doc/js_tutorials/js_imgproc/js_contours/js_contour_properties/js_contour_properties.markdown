@@ -147,12 +147,21 @@ if (typeof cv !== 'undefined') {
 7. Maximum Value, Minimum Value and their locations
 ---------------------------------------------------
 
-We can find these parameters using a mask image.
-@code{.js}
+We use the function: **cv.minMaxLoc(src, result, mask)** 
+@param src      input single-channel array.
+@param result   result include minVal, maxVal, minLoc and maxLoc
+@param mask     optional mask used to select a sub-array.
 
+@code{.js}
+var result = new cv.MinMaxLocResult();
+cv.minMaxLoc(src, result, mask);
+var minVal = result.minVal;
+var maxVal = result.maxVal;
+var minLoc = result.minLoc;
+var maxLoc = result.maxLoc;
+result.delete();
 @endcode
 
-@note cv.minMaxLoc() which can finds the global minimum and maximum in an array is in ignore_list.
 
 8. Mean Color or Mean Intensity
 -------------------------------

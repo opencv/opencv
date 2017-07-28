@@ -102,8 +102,92 @@ function equalizeHistHandleFiles(e) {
     var equalizeHistUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(equalizeHistUrl, "equalizeHistCanvasInput");
 }
+</script>
+</body>
+\endhtmlonly
+
+CLAHE (Contrast Limited Adaptive Histogram Equalization)
+--------------------------------------------------------
+
+In **adaptive histogram equalization**, image is divided into small blocks called "tiles" (tileSize is 8x8 by default in OpenCV). Then each of these blocks are histogram equalized as usual. So in a small area, histogram would confine to a small region
+(unless there is noise). If noise is there, it will be amplified. To avoid this, **contrast limiting** is applied. If any histogram bin is above the specified contrast limit (by default 40 in OpenCV), those pixels are clipped and distributed uniformly to other bins before applying histogram equalization. After equalization, to remove artifacts in tile borders, bilinear interpolation is applied.
+
+We use the function: **cv.CLAHE (clipLimit = 40, tileGridSize = [8, 8])** 
+
+@param clipLimit      threshold for contrast limiting.
+@param tileGridSize   size of grid for histogram equalization. Input image will be divided into equally sized rectangular tiles. tileGridSize defines the number of tiles in row and column.
+
+Try it
+------
+
+Here is a demo. Canvas elements named createCLAHECanvasInput, equalCanvasOutput and createCLAHECanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+
+\htmlonly
+<!DOCTYPE html>
+<head>
+<style>
+canvas {
+    border: 1px solid black;
+}
+.err {
+    color: red;
+}
+</style>
+</head>
+<body>
+<div id="createCLAHECodeArea">
+<h2>Input your code</h2>
+<button id="createCLAHETryIt" disabled="true" onclick="createCLAHEExecuteCode()">Try it</button><br>
+<textarea rows="9" cols="80" id="createCLAHETestCode" spellcheck="false">
+var src = cv.imread("createCLAHECanvasInput");
+var equalDst = new cv.Mat(), claheDst = new cv.Mat();
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+cv.equalizeHist(src, equalDst);
+var clahe = new cv.CLAHE(40, [8, 8]);
+clahe.apply(src, claheDst);
+cv.imshow("equalCanvasOutput", equalDst);
+cv.imshow("createCLAHECanvasOutput", claheDst);
+src.delete(); equalDst.delete(); claheDst.delete();
+</textarea>
+<p class="err" id="createCLAHEErr"></p>
+</div>
+<div id="createCLAHEShowcase">
+    <div>
+        <p>Original</p>
+        <canvas id="createCLAHECanvasInput"></canvas>
+        <input type="file" id="createCLAHEInput" name="file" />
+    </div>
+    <div>
+        <p>EqualizeHist Image</p>
+        <canvas id="equalCanvasOutput"></canvas>
+    </div>
+    <div>
+        <p>CreateCLAHE Image</p>
+        <canvas id="createCLAHECanvasOutput"></canvas>
+    </div>
+</div>
+<script>
+function createCLAHEExecuteCode() {
+    var createCLAHEText = document.getElementById("createCLAHETestCode").value;
+    try {
+        eval(createCLAHEText);
+        document.getElementById("createCLAHEErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("createCLAHEErr").innerHTML = err;
+    }
+}
+
+loadImageToCanvas("lena.jpg", "createCLAHECanvasInput");
+var createCLAHEInputElement = document.getElementById("createCLAHEInput");
+createCLAHEInputElement.addEventListener("change", createCLAHEHandleFiles, false);
+function createCLAHEHandleFiles(e) {
+    var createCLAHEUrl = URL.createObjectURL(e.target.files[0]);
+    loadImageToCanvas(createCLAHEUrl, "createCLAHECanvasInput");
+}
 
 function onReady() {
+    document.getElementById("createCLAHETryIt").disabled = false;
     document.getElementById("equalizeHistTryIt").disabled = false;
 }
 if (typeof cv !== 'undefined') {
@@ -114,48 +198,3 @@ if (typeof cv !== 'undefined') {
 </script>
 </body>
 \endhtmlonly
-
-CLAHE (Contrast Limited Adaptive Histogram Equalization)
---------------------------------------------------------
-
-@note cv.createCLAHE() is not in the white list.
-
-The first histogram equalization we just saw, considers the global contrast of the image. In many
-cases, it is not a good idea. For example, below image shows an input image and its result after
-global histogram equalization.
-
-![image](images/clahe_1.jpg)
-
-It is true that the background contrast has improved after histogram equalization. But compare the
-face of statue in both images. We lost most of the information there due to over-brightness. It is
-because its histogram is not confined to a particular region as we saw in previous cases (Try to
-plot histogram of input image, you will get more intuition).
-
-So to solve this problem, **adaptive histogram equalization** is used. In this, image is divided
-into small blocks called "tiles" (tileSize is 8x8 by default in OpenCV). Then each of these blocks
-are histogram equalized as usual. So in a small area, histogram would confine to a small region
-(unless there is noise). If noise is there, it will be amplified. To avoid this, **contrast
-limiting** is applied. If any histogram bin is above the specified contrast limit (by default 40 in
-OpenCV), those pixels are clipped and distributed uniformly to other bins before applying histogram
-equalization. After equalization, to remove artifacts in tile borders, bilinear interpolation is
-applied.
-
-Below code snippet shows how to apply CLAHE in OpenCV:
-@code{.py}
-import numpy as np
-import cv2
-
-img = cv2.imread('tsukuba_l.png',0)
-
-# create a CLAHE object (Arguments are optional).
-clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-cl1 = clahe.apply(img)
-
-cv2.imwrite('clahe_2.jpg',cl1)
-@endcode
-See the result below and compare it with results above, especially the statue region:
-
-![image](images/clahe_2.jpg)
-
-
-

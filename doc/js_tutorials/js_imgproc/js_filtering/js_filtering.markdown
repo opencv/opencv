@@ -20,7 +20,78 @@ will try an averaging filter on an image. A 5x5 averaging filter kernel will loo
 
 \f[K =  \frac{1}{25} \begin{bmatrix} 1 & 1 & 1 & 1 & 1  \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \\ 1 & 1 & 1 & 1 & 1 \end{bmatrix}\f]
 
-@note cv.filter2D() which can convolve an arbitrary kernel with an image is not in the white list.
+We use the functions: **cv.filter2D (src, dst, ddepth, kernel, anchor = [-1, -1], delta = 0, borderType = cv.BORDER_DEFAULT)** 
+@param src         input image.
+@param dst         output image of the same size and the same number of channels as src.
+@param ddepth      desired depth of the destination image.
+@param kernel      convolution kernel (or rather a correlation kernel), a single-channel floating point matrix; if you want to apply different kernels to different channels, split the image into separate color planes using split and process them individually.
+@param anchor      anchor of the kernel that indicates the relative position of a filtered point within the kernel; the anchor should lie within the kernel; default value [-1, -1] means that the anchor is at the kernel center.
+@param delta       optional value added to the filtered pixels before storing them in dst.
+@param borderType  pixel extrapolation method(see cv.BorderTypes).
+
+Try it
+------
+
+Here is a demo. Canvas elements named filterCanvasInput and filterCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+
+\htmlonly
+<!DOCTYPE html>
+<head>
+<style>
+canvas {
+    border: 1px solid black;
+}
+.err{
+    color: red;
+}
+</style>
+</head>
+<body>
+<div id="filterCodeArea">
+<h2>Input your code</h2>
+<button id="filterTryIt" disabled="true" onclick="filterExecuteCode()">Try it</button><br>
+<textarea rows="7" cols="80" id="filterTestCode" spellcheck="false">
+var src = cv.imread("filterCanvasInput");
+var dst = new cv.Mat();
+var M = cv.Mat.eye(3, 3, cv.CV_32FC1);
+// You can try more different conversion
+cv.filter2D(src, dst, cv.CV_8U, M, [-1, -1], 0, cv.BORDER_DEFAULT);
+cv.imshow("filterCanvasOutput", dst);
+src.delete(); dst.delete(); M.delete();
+</textarea>
+<p class="err" id="filterErr"></p>
+</div>
+<div id="filterShowcase">
+    <div>
+        <canvas id="filterCanvasInput"></canvas>
+        <canvas id="filterCanvasOutput"></canvas>
+    </div>
+    <input type="file" id="filterInput" name="file" />
+</div>
+<script src="utils.js"></script>
+<script async src="opencv.js" id="opencvjs"></script>
+<script>
+function filterExecuteCode() {
+    var filterText = document.getElementById("filterTestCode").value;
+    try {
+        eval(filterText);
+        document.getElementById("filterErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("filterErr").innerHTML = err;
+    }
+}
+
+loadImageToCanvas("lena.jpg", "filterCanvasInput");
+var filterInputElement = document.getElementById("filterInput");
+filterInputElement.addEventListener("change", filterHandleFiles, false);
+function filterHandleFiles(e) {
+    var filterUrl = URL.createObjectURL(e.target.files[0]);
+    loadImageToCanvas(filterUrl, "filterCanvasInput");
+}
+</script>
+</body>
+\endhtmlonly
 
 Image Blurring (Image Smoothing)
 --------------------------------
@@ -71,9 +142,6 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
-.err{
-    color: red;
-}
 </style>
 </head>
 <body>
@@ -99,8 +167,6 @@ dst.delete();
     </div>
     <input type="file" id="blurInput" name="file" />
 </div>
-<script src="utils.js"></script>
-<script async src="opencv.js" id="opencvjs"></script>
 <script>
 function blurExecuteCode() {
     var blurText = document.getElementById("blurTestCode").value;
@@ -359,6 +425,7 @@ function onReady() {
     document.getElementById("GaussianBlurTryIt").disabled = false;
     document.getElementById("medianBlurTryIt").disabled = false;
     document.getElementById("bilateralFilterTryIt").disabled = false;
+    document.getElementById("filterTryIt").disabled = false;
 }
 if (typeof cv !== 'undefined') {
     onReady();

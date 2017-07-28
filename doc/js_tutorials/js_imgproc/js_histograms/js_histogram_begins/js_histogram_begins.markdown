@@ -51,8 +51,6 @@ Try it
 Here is a demo. Canvas elements named calcHistCanvasInput and calcHistCanvasOutput have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
-@note cv.minMaxLoc() can finds the global minimum and maximum in an array.
-
 \htmlonly
 <!DOCTYPE html>
 <head>
@@ -79,20 +77,18 @@ var channels = [0], histSize = [256], ranges = [0,255];
 var hist = new cv.Mat(), mask = new cv.Mat(), color = new cv.Scalar(255, 255, 255);
 var scale = 2;
 cv.calcHist(srcVec, channels, mask, hist, histSize, ranges, accumulate);
-var max = 0;
-for(var i = 0; i < histSize[0]; i++)
-{
-    if(hist.data32f()[i] > max)
-        max = hist.data32f()[i];
-}
+var result = new cv.MinMaxLocResult();
+cv.minMaxLoc(hist, result, mask);
+var max = result.maxVal;
 var dst = new cv.Mat.zeros(src.rows, histSize[0] * scale, cv.CV_8UC3);
+// draw histogram
 for(var i = 0; i < histSize[0]; i++)
 {
     var binVal = hist.data32f()[i] * src.rows / max;
     cv.rectangle(dst, [i * scale, src.rows - 1], [(i + 1) * scale - 1, src.rows - binVal], color, cv.FILLED);
 }
 cv.imshow("calcHistCanvasOutput", dst);
-src.delete(); dst.delete(); srcVec.delete(); mask.delete(); hist.delete(); color.delete();
+src.delete(); dst.delete(); srcVec.delete(); mask.delete(); hist.delete(); color.delete(); result.delete();
 </textarea>
 <p class="err" id="calcHistErr"></p>
 </div>

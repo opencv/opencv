@@ -94,10 +94,10 @@ var src = cv.imread("grabCutCanvasInput");
 cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
 var mask = new cv.Mat(), bgdModel = new cv.Mat(), fgdModel = new cv.Mat();
 var rect = new cv.Rect(50, 50, 260, 280);
-cv.grabCut(src, mask, rect, bgdModel, fgdModel, 1, cv.GC_INIT_WITH_RECT)
-var i,j;
-for(i = 0; i < src.rows; i++)
-    for(j = 0; j < src.cols; j++) 
+cv.grabCut(src, mask, rect, bgdModel, fgdModel, 1, cv.GC_INIT_WITH_RECT);
+// draw foreground
+for(var i = 0; i < src.rows; i++)
+    for(var j = 0; j < src.cols; j++) 
     {
         var srcNum = i * src.cols * src.channels() + j * src.channels();
         var maskNum = i * mask.cols * mask.channels() + j * mask.channels();
@@ -109,6 +109,7 @@ for(i = 0; i < src.rows; i++)
         }
     }
 var color = new cv.Scalar(0, 0, 255);
+// draw grab rect
 cv.rectangle(src, [rect.x, rect.y], [rect.x + rect.width, rect.y + rect.height], color);
 cv.imshow("grabCutCanvasOutput", src);
 src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete(); rect.delete(); color.delete();

@@ -71,16 +71,17 @@ canvas {
 <button id="contoursTryIt" disabled="true" onclick="contoursExecuteCode()">Try it</button><br>
 <textarea rows="17" cols="90" id="contoursTestCode" spellcheck="false">
 var src = cv.imread("contoursCanvasInput");
-var dst = new cv.Mat.zeros(src.cols, src.rows, cv.CV_8UC3);
+var dst = cv.Mat.zeros(src.cols, src.rows, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 120, 200, cv.THRESH_BINARY);
 var contours  = new cv.MatVector();
 var hierarchy = new cv.Mat();
 // You can try more different conversion
 cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE, [0, 0]);
+// draw contours with random Scalar
 for (var i = 0; i < contours.size(); ++i)
 {
-    var color = new cv.Scalar(Math.random()*255, Math.random()*255, Math.random()*255);
+    var color = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
     cv.drawContours(dst, contours, i, color, 1, cv.LINE_8, hierarchy, 100, [0, 0]);
     color.delete();
 }

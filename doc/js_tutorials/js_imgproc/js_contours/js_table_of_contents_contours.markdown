@@ -15,6 +15,11 @@ Contours in OpenCV {#tutorial_js_table_of_contents_contours}
     Learn
     to find different properties of contours like Solidity, Mean Intensity etc.
 
+-   @subpage tutorial_js_contours_more_functions
+
+    Learn
+    to find convexity defects, pointPolygonTest, match different shapes etc.
+
 -   @subpage tutorial_js_contours_hierarchy
 
     Learn

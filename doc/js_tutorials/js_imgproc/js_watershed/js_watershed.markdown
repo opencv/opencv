@@ -93,9 +93,12 @@ canvas {
 <button id="thresholdTryIt" disabled="true" onclick="thresholdExecuteCode()">Try it</button><br>
 <textarea rows="7" cols="80" id="thresholdTestCode" spellcheck="false">
 var src = cv.imread("imgCanvasInput");
-var dst = new cv.Mat(), gray = new cv.Mat(); 
+var dst = new cv.Mat(), gray = new cv.Mat();
+
+// gray and threshold image 
 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
+
 cv.imshow("thresholdCanvasOutput", gray);
 src.delete(); dst.delete(); gray.delete();
 </textarea>
@@ -152,6 +155,7 @@ var dst = new cv.Mat(), gray = new cv.Mat(), opening = new cv.Mat(), coinsBg = n
 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
 
+// get background
 var M = cv.Mat.ones(3, 3, cv.CV_8U);
 cv.erode(gray, gray, M);
 cv.dilate(gray, opening, M);
@@ -217,6 +221,7 @@ cv.erode(gray, gray, M);
 cv.dilate(gray, opening, M);
 cv.dilate(opening, coinsBg, M, [-1, -1], 3);
 
+// distance transform
 cv.distanceTransform(opening, distTrans, cv.DIST_L2, 5);
 cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
 
@@ -243,7 +248,6 @@ function distanceTransformExecuteCode() {
 </script>
 </body>
 \endhtmlonly
-
 
 In the thresholded image, we get some regions of coins which we are sure of coins
 and they are detached now. (In some cases, you may be interested in only foreground segmentation,
@@ -276,6 +280,7 @@ cv.dilate(opening, coinsBg, M, [-1, -1], 3);
 cv.distanceTransform(opening, distTrans, cv.DIST_L2, 5);
 cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
 
+// get foreground
 cv.threshold(distTrans, coinsFg, 0.7 * 1, 255, cv.THRESH_BINARY);
 
 cv.imshow("foregroundCanvasOutput", coinsFg);
@@ -349,21 +354,22 @@ canvas {
 <textarea rows="25" cols="90" id="watershedTestCode" spellcheck="false">
 var src = cv.imread("watershedCanvasInput");
 var dst = new cv.Mat(), gray = new cv.Mat(), opening = new cv.Mat(), coinsBg = new cv.Mat(), coinsFg = new cv.Mat(), distTrans = new cv.Mat(), unknown = new cv.Mat(), markers = new cv.Mat(); 
-
+// gray and threshold image 
 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(gray, gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
-
+// get background
 var M = cv.Mat.ones(3, 3, cv.CV_8U);
 cv.erode(gray, gray, M);
 cv.dilate(gray, opening, M);
 cv.dilate(opening, coinsBg, M, [-1, -1], 3);
+// distance transform
 cv.distanceTransform(opening, distTrans, cv.DIST_L2, 5);
 cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
-
+// get foreground
 cv.threshold(distTrans, coinsFg, 0.7 * 1, 255, cv.THRESH_BINARY);
 coinsFg.convertTo(coinsFg, cv.CV_8U, 1, 0);
 cv.subtract(coinsBg, coinsFg, unknown);
-
+// get connected components markers
 cv.connectedComponents(coinsFg, markers);
 var i, j;
 for(i = 0; i < markers.rows; i++)
@@ -379,6 +385,7 @@ for(i = 0; i < markers.rows; i++)
     }
 cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
 cv.watershed(src, markers);
+// draw barriers
 for(i = 0; i < markers.rows; i++)
     for(j = 0; j < markers.cols; j++) 
     {
@@ -386,8 +393,8 @@ for(i = 0; i < markers.rows; i++)
         if(markers.data32s()[markersNum] == -1)
         {
             var srcNum = i * src.cols * src.channels() + j * src.channels();
-            src.data()[srcNum] = 255;       //R
-            src.data()[srcNum + 1] = 0;   //G
+            src.data()[srcNum] = 255;   //R
+            src.data()[srcNum + 1] = 0; //G
             src.data()[srcNum + 2] = 0; //B
         }
     }

@@ -44,7 +44,7 @@ canvas {
 <button id="momentsTryIt" disabled="true" onclick="momentsExecuteCode()">Try it</button><br>
 <textarea rows="12" cols="90" id="momentsTestCode" spellcheck="false">
 var src = cv.imread("momentsCanvasInput");
-var dst = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
 var contours  = new cv.MatVector();
@@ -128,7 +128,7 @@ canvas {
 <button id="areaTryIt" disabled="true" onclick="areaExecuteCode()">Try it</button><br>
 <textarea rows="12" cols="90" id="areaTestCode" spellcheck="false">
 var src = cv.imread("areaCanvasInput");
-var dst = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
 var contours  = new cv.MatVector();
@@ -201,7 +201,7 @@ canvas {
 <button id="perimeterTryIt" disabled="true" onclick="perimeterExecuteCode()">Try it</button><br>
 <textarea rows="12" cols="90" id="perimeterTestCode" spellcheck="false">
 var src = cv.imread("perimeterCanvasInput");
-var dst = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
 var contours  = new cv.MatVector();
@@ -277,26 +277,27 @@ canvas {
 <div id="approxPolyDPCodeArea">
 <h2>Input your code</h2>
 <button id="approxPolyDPTryIt" disabled="true" onclick="approxPolyDPExecuteCode()">Try it</button><br>
-<textarea rows="23" cols="90" id="approxPolyDPTestCode" spellcheck="false">
+<textarea rows="20" cols="90" id="approxPolyDPTestCode" spellcheck="false">
 var src = cv.imread("approxPolyDPCanvasInput");
-var dst = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 100, 200, cv.THRESH_BINARY);
 var contours  = new cv.MatVector();
 var hierarchy = new cv.Mat();
 var poly = new cv.MatVector();
 cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE, [0,0]);
-//poly.resize(contours.size(), new cv.Mat())
+// approximates each contour to polygon
 for(var i = 0 ; i < contours.size(); ++i)
 {
-    // You can try more different conversion
     let tmp = new cv.Mat();
+    // You can try more different conversion
     cv.approxPolyDP(contours.get(i), tmp, 3, true);
     poly.push_back(tmp);
 }
+// draw contours with random Scalar
 for(var i = 0 ; i < contours.size(); ++i)
 {
-    var color = new cv.Scalar(Math.random()*255, Math.random()*255, Math.random()*255);
+    var color = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
     cv.drawContours( dst, poly, i, color, 1, 8, hierarchy, 0, [0,0]);
     color.delete();
 }
@@ -373,14 +374,14 @@ canvas {
 <button id="convexHullTryIt" disabled="true" onclick="convexHullExecuteCode()">Try it</button><br>
 <textarea rows="24" cols="90" id="convexHullTestCode" spellcheck="false">
 var src = cv.imread("convexHullCanvasInput");
-var dst = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 100, 200, cv.THRESH_BINARY);
 var contours  = new cv.MatVector();
 var hierarchy = new cv.Mat();
 var hull = new cv.MatVector();
 cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE, [0,0]);
-//hull.resize(contours.size(), new cv.Mat());
+// approximates each contour to convex hull
 for(var i = 0 ; i < contours.size(); ++i)
 {
     // You can try more different conversion
@@ -388,12 +389,12 @@ for(var i = 0 ; i < contours.size(); ++i)
     cv.convexHull(contours.get(i), tmp, false, true);
     hull.push_back(tmp);
 }
+// draw contours with random Scalar
 for(var i = 0 ; i < contours.size(); ++i)
 {
-    var colorHull = new cv.Scalar(Math.random()*255, Math.random()*255, Math.random()*255);
+    var colorHull = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
     cv.drawContours(dst, hull, i, colorHull, 1, 8, hierarchy, 0, [0,0]);
-    var colorContours = new cv.Scalar(Math.random()*255, Math.random()*255, Math.random()*255);
-
+    var colorContours = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
     colorHull.delete(); colorContours.delete();
 }
 cv.imshow("convexHullCanvasOutput", dst);
@@ -430,13 +431,15 @@ function convexHullHandleFiles(e) {
 </body>
 \endhtmlonly
 
-@note cv.isContourConvex() which  can check if a curve is convex or not is not in the white list.
-
 6. Checking Convexity
 ---------------------
 
 There is a function to check if a curve is convex or not, **cv.isContourConvex()**. It just return
 whether True or False. Not a big deal.
+
+@code{.js}
+cv.isContourConvex(contours.get(i));
+@endcode
 
 7. Bounding Rectangle
 ---------------------
@@ -472,7 +475,7 @@ canvas {
 <button id="boundingRectTryIt" disabled="true" onclick="boundingRectExecuteCode()">Try it</button><br>
 <textarea rows="15" cols="90" id="boundingRectTestCode" spellcheck="false">
 var src = cv.imread("boundingRectCanvasInput");
-var dst = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
 var contours  = new cv.MatVector();
@@ -525,7 +528,76 @@ Here, bounding rectangle is drawn with minimum area, so it considers the rotatio
 We use the function: **cv.minAreaRect (points)** 
 @param points        input 2D point set.
 
-@note cv.minAreaRect() can finds a rotated rectangle of the minimum area is not in the white list.
+Try it
+------
+
+Here is a demo. Canvas elements named minAreaRectCanvasInput and minAreaRectCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+
+\htmlonly
+<!DOCTYPE html>
+<head>
+<style>
+canvas {
+    border: 1px solid black;
+}
+</style>
+</head>
+<body>
+<div id="minAreaRectCodeArea">
+<h2>Input your code</h2>
+<button id="minAreaRectTryIt" disabled="true" onclick="minAreaRectExecuteCode()">Try it</button><br>
+<textarea rows="18" cols="90" id="minAreaRectTestCode" spellcheck="false">
+var src = cv.imread("minAreaRectCanvasInput");
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
+var contours  = new cv.MatVector();
+var hierarchy = new cv.Mat();
+cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE, [0,0]);
+// You can try more different conversion
+var rotatedRect = cv.minAreaRect(contours.get(0));
+var vertices = new cv.Point2fVector()
+rotatedRect.points(vertices);
+var contoursColor = new cv.Scalar(255, 255, 255);
+var rectangleColor = new cv.Scalar(255, 0, 0);
+cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100, [0,0]);
+// draw rotatedRect
+for (var i = 0; i < 4; i++)
+    cv.line(dst, vertices.get(i), vertices.get((i + 1) % 4), rectangleColor, 2, cv.LINE_AA, 0);
+cv.imshow("minAreaRectCanvasOutput", dst);
+src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); rotatedRect.delete(); contoursColor.delete(); rectangleColor.delete();
+</textarea>
+<p class="err" id="minAreaRectErr"></p>
+</div>
+<div id="minAreaRectShowcase">
+    <div>
+        <canvas id="minAreaRectCanvasInput"></canvas>
+        <canvas id="minAreaRectCanvasOutput"></canvas>
+    </div>
+    <input type="file" id="minAreaRectInput" name="file" />
+</div>
+<script>
+function minAreaRectExecuteCode() {
+    var minAreaRectText = document.getElementById("minAreaRectTestCode").value;
+    try {
+        eval(minAreaRectText);
+        document.getElementById("minAreaRectErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("minAreaRectErr").innerHTML = err;
+    }
+}
+
+loadImageToCanvas("LinuxLogo.jpg", "minAreaRectCanvasInput");
+var minAreaRectInputElement = document.getElementById("minAreaRectInput");
+minAreaRectInputElement.addEventListener("change", minAreaRectHandleFiles, false);
+function minAreaRectHandleFiles(e) {
+    var minAreaRectUrl = URL.createObjectURL(e.target.files[0]);
+    loadImageToCanvas(minAreaRectUrl, "minAreaRectCanvasInput");
+}
+</script>
+</body>
+\endhtmlonly
 
 8. Minimum Enclosing Circle
 ---------------------------
@@ -533,12 +605,86 @@ We use the function: **cv.minAreaRect (points)**
 Next we find the circumcircle of an object using the function **cv.minEnclosingCircle()**. It is a
 circle which completely covers the object with minimum area.
 
-We use the function: **cv.minEnclosingCircle (points, center, radius)** 
+We use the functions: **cv.minEnclosingCircle (points, circle)** 
 @param points        input 2D point set.
-@param center        output center of the circle.
-@param radius        output radius of the circle.
+@param circle        output circle.
 
-@note cv.minEnclosingCircle() which can find the circumcircle of an object is not in the white list.
+**cv.circle (img, center, radius, color, thickness = 1, lineType = cv.LINE_8, shift = 0)** 
+@param img          image where the circle is drawn.
+@param center       center of the circle.
+@param radius       radius of the circle.
+@param color        circle color.
+@param thickness    thickness of the circle outline, if positive. Negative thickness means that a filled circle is to be drawn.
+@param lineType     type of the circle boundary. 
+@param shift        number of fractional bits in the coordinates of the center and in the radius value.
+
+Try it
+------
+
+Here is a demo. Canvas elements named minEnclosingCircleCanvasInput and minEnclosingCircleCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+
+\htmlonly
+<!DOCTYPE html>
+<head>
+<style>
+canvas {
+    border: 1px solid black;
+}
+</style>
+</head>
+<body>
+<div id="minEnclosingCircleCodeArea">
+<h2>Input your code</h2>
+<button id="minEnclosingCircleTryIt" disabled="true" onclick="minEnclosingCircleExecuteCode()">Try it</button><br>
+<textarea rows="18" cols="90" id="minEnclosingCircleTestCode" spellcheck="false">
+var src = cv.imread("minEnclosingCircleCanvasInput");
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
+var contours  = new cv.MatVector();
+var hierarchy = new cv.Mat();
+cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE, [0,0]);
+// You can try more different conversion
+var circle = new cv.Circle;
+cv.minEnclosingCircle (contours.get(0), circle);
+var contoursColor = new cv.Scalar(255, 255, 255);
+var circleColor = new cv.Scalar(255, 0, 0);
+cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100, [0,0]);
+cv.circle(dst, circle.center, circle.radius, circleColor)
+cv.imshow("minEnclosingCircleCanvasOutput", dst);
+src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); circle.delete(); contoursColor.delete(); circleColor.delete();
+</textarea>
+<p class="err" id="minEnclosingCircleErr"></p>
+</div>
+<div id="minEnclosingCircleShowcase">
+    <div>
+        <canvas id="minEnclosingCircleCanvasInput"></canvas>
+        <canvas id="minEnclosingCircleCanvasOutput"></canvas>
+    </div>
+    <input type="file" id="minEnclosingCircleInput" name="file" />
+</div>
+<script>
+function minEnclosingCircleExecuteCode() {
+    var minEnclosingCircleText = document.getElementById("minEnclosingCircleTestCode").value;
+    try {
+        eval(minEnclosingCircleText);
+        document.getElementById("minEnclosingCircleErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("minEnclosingCircleErr").innerHTML = err;
+    }
+}
+
+loadImageToCanvas("LinuxLogo.jpg", "minEnclosingCircleCanvasInput");
+var minEnclosingCircleInputElement = document.getElementById("minEnclosingCircleInput");
+minEnclosingCircleInputElement.addEventListener("change", minEnclosingCircleHandleFiles, false);
+function minEnclosingCircleHandleFiles(e) {
+    var minEnclosingCircleUrl = URL.createObjectURL(e.target.files[0]);
+    loadImageToCanvas(minEnclosingCircleUrl, "minEnclosingCircleCanvasInput");
+}
+</script>
+</body>
+\endhtmlonly
 
 9. Fitting an Ellipse
 ---------------------
@@ -576,7 +722,7 @@ canvas {
 <button id="fitEllipseTryIt" disabled="true" onclick="fitEllipseExecuteCode()">Try it</button><br>
 <textarea rows="15" cols="90" id="fitEllipseTestCode" spellcheck="false">
 var src = cv.imread("fitEllipseCanvasInput");
-var dst = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
 var contours  = new cv.MatVector();
@@ -618,6 +764,99 @@ function fitEllipseHandleFiles(e) {
     var fitEllipseUrl = URL.createObjectURL(e.target.files[0]);
     loadImageToCanvas(fitEllipseUrl, "fitEllipseCanvasInput");
 }
+</script>
+</body>
+\endhtmlonly
+
+10. Fitting a Line
+------------------
+
+Similarly we can fit a line to a set of points. We can approximate a straight line to it.
+
+We use the functions: **cv.fitLine (points, line, distType, param, reps, aeps)** 
+@param points     input 2D point set.
+@param line       output line parameters. It should be a Mat of 4 elements[vx, vy, x0, y0], where [vx, vy] is a normalized vector collinear to the line and [x0, y0] is a point on the line.
+@param distType   distance used by the M-estimator(see cv.DistanceTypes).
+@param param      numerical parameter ( C ) for some types of distances. If it is 0, an optimal value is chosen.
+@param reps       sufficient accuracy for the radius (distance between the coordinate origin and the line).
+@param aeps       sufficient accuracy for the angle. 0.01 would be a good default value for reps and aeps.
+
+**cv.line (img, pt1, pt2, color, thickness = 1, lineType = cv.LINE_8, shift = 0)** 
+@param img          image.
+@param pt1          first point of the line segment.
+@param pt2          second point of the line segment.
+@param color        line color.
+@param thickness    line thickness.
+@param lineType     type of the line,. 
+@param shift        number of fractional bits in the point coordinates.
+
+Try it
+------
+
+Here is a demo. Canvas elements named fitLineCanvasInput and fitLineCanvasOutput have been prepared. Choose an image and
+click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+
+\htmlonly
+<!DOCTYPE html>
+<head>
+<style>
+canvas {
+    border: 1px solid black;
+}
+</style>
+</head>
+<body>
+<div id="fitLineCodeArea">
+<h2>Input your code</h2>
+<button id="fitLineTryIt" disabled="true" onclick="fitLineExecuteCode()">Try it</button><br>
+<textarea rows="19" cols="90" id="fitLineTestCode" spellcheck="false">
+var src = cv.imread("fitLineCanvasInput");
+var dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
+cv.threshold(src, src, 177, 200, cv.THRESH_BINARY);
+var contours  = new cv.MatVector();
+var hierarchy = new cv.Mat();
+var line = new cv.Mat();
+cv.findContours(src, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE, [0,0]);
+// You can try more different conversion
+cv.fitLine(contours.get(0), line, cv.DIST_L2, 0, 0.01, 0.01);
+var contoursColor = new cv.Scalar(255, 255, 255);
+var lineColor = new cv.Scalar(255, 0, 0);
+cv.drawContours(dst, contours, 0, contoursColor, 1, 8, hierarchy, 100, [0,0]);
+var vx= line.data32f()[0], vy = line.data32f()[1]; x = line.data32f()[2], y = line.data32f()[3];
+var lefty = Math.round((-x * vy / vx) + y);
+var righty = Math.round(((src.cols - x) * vy / vx) + y);
+cv.line(dst, [src.cols - 1, righty], [0, lefty], lineColor, 2, cv.LINE_AA, 0);
+cv.imshow("fitLineCanvasOutput", dst);
+src.delete(); dst.delete(); contours.delete(); hierarchy.delete(); line.delete(); lineColor.delete(); contoursColor.delete();
+</textarea>
+<p class="err" id="fitLineErr"></p>
+</div>
+<div id="fitLineShowcase">
+    <div>
+        <canvas id="fitLineCanvasInput"></canvas>
+        <canvas id="fitLineCanvasOutput"></canvas>
+    </div>
+    <input type="file" id="fitLineInput" name="file" />
+</div>
+<script>
+function fitLineExecuteCode() {
+    var fitLineText = document.getElementById("fitLineTestCode").value;
+    try {
+        eval(fitLineText);
+        document.getElementById("fitLineErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("fitLineErr").innerHTML = err;
+    }
+}
+
+loadImageToCanvas("LinuxLogo.jpg", "fitLineCanvasInput");
+var fitLineInputElement = document.getElementById("fitLineInput");
+fitLineInputElement.addEventListener("change", fitLineHandleFiles, false);
+function fitLineHandleFiles(e) {
+    var fitLineUrl = URL.createObjectURL(e.target.files[0]);
+    loadImageToCanvas(fitLineUrl, "fitLineCanvasInput");
+}
 function onReady() {
     document.getElementById("momentsTryIt").disabled = false;
     document.getElementById("areaTryIt").disabled = false;
@@ -626,6 +865,9 @@ function onReady() {
     document.getElementById("convexHullTryIt").disabled = false;
     document.getElementById("boundingRectTryIt").disabled = false;
     document.getElementById("fitEllipseTryIt").disabled = false;
+    document.getElementById("minAreaRectTryIt").disabled = false;
+    document.getElementById("fitLineTryIt").disabled = false;
+    document.getElementById("minEnclosingCircleTryIt").disabled = false;
 }
 if (typeof cv !== 'undefined') {
     onReady();
@@ -635,13 +877,3 @@ if (typeof cv !== 'undefined') {
 </script>
 </body>
 \endhtmlonly
-
-10. Fitting a Line
-------------------
-
-Similarly we can fit a line to a set of points. Below image contains a set of white points. We can
-approximate a straight line to it.
-
-![image](images/fitline.jpg)
-
-@note cv.fitLine() which can fit a line to a set of points is not in the white list.

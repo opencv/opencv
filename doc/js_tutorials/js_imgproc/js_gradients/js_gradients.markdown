@@ -216,7 +216,11 @@ Try it
 Here is a demo. Canvas elements named absSobelCanvasInput, absSobelCanvasOutput8U and absSobelCanvasOutput64F have been prepared. Choose an image and
 click `Try it` to see the result. And you can change the code in the textbox to investigate more.
 
-@note cv.convertScaleAbs() should be in the white list to simplify the operation.
+We use the function: **cv.convertScaleAbs (src, dst, alpha = 1, beta = 0)** 
+@param src     input array.
+@param dst     output array.
+@param alpha   optional scale factor.
+@param beta    optional delta added to the scaled values.
 
 \htmlonly
 <!DOCTYPE html>
@@ -231,7 +235,7 @@ canvas {
 <div id="absSobelCodeArea">
 <h2>Input your code</h2>
 <button id="absSobelTryIt" disabled="true" onclick="absSobelExecuteCode()">Try it</button><br>
-<textarea rows="15" cols="80" id="absSobelTestCode" spellcheck="false">
+<textarea rows="11" cols="80" id="absSobelTestCode" spellcheck="false">
 var src = cv.imread("absSobelCanvasInput");
 var dstx = new cv.Mat();
 var absDstx = new cv.Mat();
@@ -239,10 +243,7 @@ cv.cvtColor(src, src, cv.COLOR_RGB2GRAY, 0);
 // You can try more different conversion
 cv.Sobel(src, dstx, cv.CV_8U, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
 cv.Sobel(src, absDstx, cv.CV_64F, 1, 0, 3, 1, 0, cv.BORDER_DEFAULT);
-for (var i=0; i<absDstx.cols*absDstx.rows*absDstx.channels(); ++i) {
-    absDstx.data64f()[i] = Math.abs(absDstx.data64f()[i]);
-}
-cv.normalize(absDstx, absDstx, 1, 0, cv.NORM_INF);
+cv.convertScaleAbs(absDstx, absDstx, 1, 0);
 cv.imshow("absSobelCanvasOutput8U", dstx);
 cv.imshow("absSobelCanvasOutput64F", absDstx); 
 src.delete(); dstx.delete(); absDstx.delete();
