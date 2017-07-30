@@ -99,7 +99,7 @@ private:
 static void printHelp()
 {
     cout << "Histogram of Oriented Gradients descriptor and detector sample.\n"
-         << "\nUsage: hog_gpu\n"
+         << "\nUsage: hog\n"
          << "  (<image>|--video <vide>|--camera <camera_id>) # frames source\n"
          << "  or"
          << "  (--folder <folder_path>) # load images from folder\n"
