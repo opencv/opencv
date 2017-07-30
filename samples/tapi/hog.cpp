@@ -28,16 +28,6 @@ public:
     void workBegin();
     void workEnd();
     string workFps() const;
-    string message() const;
-
-
-// This function test if gpu_rst matches cpu_rst.
-// If the two vectors are not equal, it will return the difference in vector size
-// Else if will return
-// (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
-    double checkRectSimilarity(Size sz,
-                               std::vector<Rect>& cpu_rst,
-                               std::vector<Rect>& gpu_rst);
 private:
     App operator=(App&);
 
