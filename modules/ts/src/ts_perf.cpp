@@ -1212,6 +1212,18 @@ int64 TestBase::_calibrate()
         }
     };
 
+    // Initialize ThreadPool
+    class _dummyParallel : public ParallelLoopBody
+    {
+    public:
+       void operator()(const cv::Range& range) const
+       {
+           // nothing
+           CV_UNUSED(range);
+       }
+    };
+    parallel_for_(cv::Range(0, 1000), _dummyParallel());
+
     _timeadjustment = 0;
     _helper h;
     h.PerfTestBody();
@@ -1838,6 +1850,8 @@ void TestBase::SetUp()
 
     if (param_threads >= 0)
         cv::setNumThreads(param_threads);
+    else
+        cv::setNumThreads(-1);
 
 #ifdef __ANDROID__
     if (param_affinity_mask)
