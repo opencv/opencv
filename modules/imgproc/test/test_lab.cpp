@@ -1589,12 +1589,12 @@ struct Luv2RGBinteger
         if(!_coeffs)  _coeffs = XYZ2sRGB_D65;
         if(!_whitept) _whitept = D65;
 
-        //TODO: rewrite this
-        for( int i = 0; i < 3; i++ )
+        static const softfloat lshift(1 << lab_shift);
+        for(int i = 0; i < 3; i++)
         {
-            coeffs[i+blueIdx*3] = _coeffs[i];
-            coeffs[i+3] = _coeffs[i+3];
-            coeffs[i+(blueIdx^2)*3] = _coeffs[i+6];
+            coeffs[i+blueIdx*3]     = cvRound(lshift*softfloat(_coeffs[i]));
+            coeffs[i+3]             = cvRound(lshift*softfloat(_coeffs[i+3]));
+            coeffs[i+(blueIdx^2)*3] = cvRound(lshift*softfloat(_coeffs[i+6]));
         }
 
         softfloat d = softfloat(_whitept[0]) +
@@ -1606,15 +1606,6 @@ struct Luv2RGBinteger
 
         CV_Assert(_whitept[1] == 1.f);
 
-        //TODO: rewrite this
-//        static const softfloat lshift(1 << lab_shift);
-//        for(int i = 0; i < 3; i++)
-//        {
-//            coeffs[i+(blueIdx)*3]   = cvRound(lshift*softfloat(_coeffs[i  ])*softfloat(_whitept[i]));
-//            coeffs[i+3]             = cvRound(lshift*softfloat(_coeffs[i+3])*softfloat(_whitept[i]));
-//            coeffs[i+(blueIdx^2)*3] = cvRound(lshift*softfloat(_coeffs[i+6])*softfloat(_whitept[i]));
-//        }
-
         tab = _srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
     }
 
@@ -1622,10 +1613,6 @@ struct Luv2RGBinteger
     // L, u, v should be in their natural range
     inline void process(const uchar LL, const uchar uu, const uchar vv, int& ro, int& go, int& bo) const
     {
-        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
-        float C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
-        float C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-
         float L = ((float)LL)*100.f/255.f;
         float u = ((float)uu)*uRange/255.f + (float)uLow;
         float v = ((float)vv)*vRange/255.f + (float)vLow;
@@ -1649,13 +1636,75 @@ struct Luv2RGBinteger
         X = Y*3.f*up*vp;
         Z = Y*(((12.f*13.f)*L - up)*vp - 5.f);
 
-        float R = X*C0 + Y*C1 + Z*C2;
-        float G = X*C3 + Y*C4 + Z*C5;
-        float B = X*C6 + Y*C7 + Z*C8;
+        int x = X*BASE, y = Y*BASE, z = Z*BASE;
+        //TODO: make an effective way to measure only good colors
+        //limit X, Y, Z to [0, 2] to fit white point
+        x = max(0, min(2*BASE, x)); y = max(0, min(2*BASE, y)); z = max(0, min(2*BASE, z));
 
-        ro = R*((int)INV_GAMMA_TAB_SIZE-1);
-        go = G*((int)INV_GAMMA_TAB_SIZE-1);
-        bo = B*((int)INV_GAMMA_TAB_SIZE-1);
+        /*
+        static float minup = 100.f, maxup = -100.f;
+        static float minvp = 100.f, maxvp = -100.f;
+        if(up > maxup) { maxup = up; cout << "max up: " << maxup << endl; }
+        if(up < minup) { minup = up; cout << "min up: " << minup << endl; }
+        if(vp > maxvp) { maxvp = vp; cout << "max vp: " << maxvp << endl; }
+        if(abs(vp) < minvp) { minvp = abs(vp); cout << "min abs(vp): " << minvp << endl; }
+        */
+
+        /*
+            min up: -402
+            min abs diff up: 0.010407
+            max up: 1431.57
+
+            min vp: -0.25
+            min abs(vp): 0.00034207
+            max vp:  0.25
+
+        min x: -382561 = -23,34967041015625*BASE
+        max x: 395723 = 24,15301513671875*BASE
+
+        min y: 0      = 0
+        max y: 16384  = BASE
+
+        min z: -579186 = -35,3507080078125*BASE
+        max z: 599806  = 36,6092529296875*BASE
+        */
+
+        /*
+        static int maxx = 0, minx = 0, maxy = 0, miny = 0, maxz = 0, minz = 0;
+        if(x > maxx) { maxx = x; cout << "max x: " << maxx << endl; }
+        if(x < minx) { minx = x; cout << "min x: " << minx << endl; }
+        if(y > maxy) { maxy = y; cout << "max y: " << maxy << endl; }
+        if(y < miny) { miny = y; cout << "min y: " << miny << endl; }
+        if(z > maxz) { maxz = z; cout << "max z: " << maxz << endl; }
+        if(z < minz) { minz = z; cout << "min z: " << minz << endl; }
+        */
+        //cout << "grepstring";
+        //cout << " " << L;
+        //cout << " " << u;
+        //cout << " " << v;
+        //cout << " " << up;
+        //cout << " " << vp;
+        //cout << " " << X;
+        //cout << " " << Y;
+        //cout << " " << Z;
+        //cout << endl;
+
+        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
+        int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
+        int C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        //TODO: is this overflow here?
+        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
+        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
+        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
+
+//        float R = X*C0 + Y*C1 + Z*C2;
+//        float G = X*C3 + Y*C4 + Z*C5;
+//        float B = X*C6 + Y*C7 + Z*C8;
+
+//        ro = R*((int)INV_GAMMA_TAB_SIZE-1);
+//        go = G*((int)INV_GAMMA_TAB_SIZE-1);
+//        bo = B*((int)INV_GAMMA_TAB_SIZE-1);
 
         //TODO: up to this
         ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
@@ -1721,7 +1770,8 @@ struct Luv2RGBinteger
 
     int dstcn;
     //TODO: rewrite this
-    float coeffs[9], un, vn;
+    int coeffs[9];
+    float un, vn;
     //int coeffs[9];
     ushort* tab;
 };
