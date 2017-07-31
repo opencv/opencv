@@ -87,11 +87,11 @@ namespace Utils{
     }
 
     // returning MatSize
-    static std::vector<int> getMatSize(const cv::Mat& mat)
+    static emscripten::val getMatSize(const cv::Mat& mat)
     {
-      std::vector<int> size;
+      emscripten::val size = emscripten::val::array();
       for (int i = 0; i < mat.dims; i++) {
-        size.push_back(mat.size[i]);
+        size.call<void>("push", mat.size[i]);
       }
       return size;
     }

@@ -49,11 +49,10 @@ QUnit.test("test_mat_creation", function(assert) {
         assert.ok(mat.empty() === false);
 
         let size = mat.size();
-        assert.ok(size.size() === 2);
-        assert.equal(size.get(0), 10);
-        assert.equal(size.get(1), 20);
+        assert.ok(size.length === 2);
+        assert.equal(size[0], 10);
+        assert.equal(size[1], 20);
 
-        size.delete();
         mat.delete();
     }
 
@@ -90,11 +89,10 @@ QUnit.test("test_mat_creation", function(assert) {
         assert.ok(mat.empty() === false);
 
         let size = mat.size();
-        assert.ok(size.size() === 2);
-        assert.ok(size.get(0) === 10);
-        assert.ok(size.get(1) === 10);
+        assert.ok(size.length === 2);
+        assert.ok(size[0] === 10);
+        assert.ok(size[1] === 10);
 
-        size.delete();
         mat.delete();
     }
 
@@ -122,11 +120,10 @@ QUnit.test("test_mat_creation", function(assert) {
         let size = mat.size();
 
         assert.ok(mat.type() === cv.CV_8UC3);
-        assert.ok(size.get(0) === 10);
-        assert.ok(size.get(1) === 5);
+        assert.ok(size[0] === 10);
+        assert.ok(size[1] === 5);
         assert.ok(mat.channels() === 3);
 
-        size.delete();
         mat.delete();
     }
     //  Mat::create(Size, int)
@@ -136,11 +133,10 @@ QUnit.test("test_mat_creation", function(assert) {
         let size = mat.size();
 
         assert.ok(mat.type() === cv.CV_8UC4);
-        assert.ok(size.get(0) === 10);
-        assert.ok(size.get(1) === 5);
+        assert.ok(size[0] === 10);
+        assert.ok(size[1] === 5);
         assert.ok(mat.channels() === 4);
 
-        size.delete();
         mat.delete();
     }
     //   clone
