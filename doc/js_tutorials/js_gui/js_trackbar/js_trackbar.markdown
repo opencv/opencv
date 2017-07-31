@@ -71,6 +71,9 @@ And you can change the callback function and investigate more.
 canvas {
     border: 1px solid black;
 }
+.err {
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -84,6 +87,7 @@ cv.addWeighted( src1, alpha, src2, beta, 0.0, dst, -1);
 cv.imshow("canvasOutput", dst);
 dst.delete();
 </textarea>
+<p class="err" id="tbErr"></p>
 </div>
 <div id="showcase">
     <div>
@@ -103,7 +107,12 @@ var trackbar = document.getElementById('trackbar');
 function addWeighted(value) {
     weightValue.value = value;    
     var text = document.getElementById("TestCode").value;
-    eval(text);
+    try {
+        eval(text);
+        document.getElementById("tbErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("tbErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("LinuxLogo.jpg", "canvasInput1");

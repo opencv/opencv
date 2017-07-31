@@ -78,6 +78,9 @@ click `Try it` to see the result. And you can change the code in the textbox to 
 canvas {
     border: 1px solid black;
 }
+.err {
+    color: red;
+}
 </style>
 </head>
 <body>
@@ -94,6 +97,7 @@ cv.imshow("canvasOutput", dst);
 src.delete();
 dst.delete();
 </textarea>
+<p class="err" id="imErr"></p>
 </div>
 <div id="showcase">
     <div>
@@ -107,7 +111,12 @@ dst.delete();
 <script>
 function executeCode() {
     var text = document.getElementById("TestCode").value;
-    eval(text);
+    try {
+        eval(text);
+        document.getElementById("imErr").innerHTML = " ";
+    } catch(err) {
+        document.getElementById("imErr").innerHTML = err;
+    }
 }
 
 loadImageToCanvas("lena.jpg", "canvasInput");

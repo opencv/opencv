@@ -66,17 +66,14 @@ textbox, and you can change it to investigate more.
 \htmlonly
 <head>
 <style>
-.hiddenCanvas {
-    display:none;
-}
-.contentarea {
-    display:inline;
-}
 canvas {
     border: 1px solid black;
 }
 video {
     border: 1px solid black;
+}
+.err {
+    color: red;
 }
 </style>
 </head>
@@ -91,11 +88,10 @@ src.data().set(context.getImageData(0, 0, width, height).data);
 cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
 cv.imshow("canvasOutput", dst);
 </textarea>
-</div><br>
-
-<div class="hiddenCanvas">
-<canvas id="canvasFrame"></canvas>
+<p class="err" id="vdErr"></p>
 </div>
+<canvas id="canvasFrame" hidden></canvas>
+
 <div id="contentarea">
     <button id="startup" disabled="true" onclick="startup()">start</button>
     <input type="checkbox" id="checkbox" disabled="true" onchange="checkboxChange()">processing</input>
@@ -183,7 +179,12 @@ function playProcessedVideo() {
     loopIndex = setInterval(
         function() {
             var text = document.getElementById("TestCode").value;
-            eval(text);
+            try {
+                eval(text);
+                document.getElementById("vdErr").innerHTML = " ";
+            } catch(err) {
+                document.getElementById("vdErr").innerHTML = err;
+            }
         }, 33);
 }
 
