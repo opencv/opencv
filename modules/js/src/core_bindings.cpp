@@ -351,14 +351,11 @@ EMSCRIPTEN_BINDINGS(Utils) {
     function("_rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&Utils::rotatedRectBoundingRect));
     function("_rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&Utils::rotatedRectBoundingRect2f));
 
-    emscripten::class_<cv::Scalar_<double>> ("Scalar")
-        .constructor<>()
-        .constructor<double>()
-        .constructor<double, double>()
-        .constructor<double, double, double>()
-        .constructor<double, double, double, double>()
-        .class_function("all", &cv::Scalar_<double>::all)
-        .function("isReal", select_overload<bool()const>(&cv::Scalar_<double>::isReal));
+    emscripten::value_array<cv::Scalar_<double>> ("Scalar")
+        .element(index<0>())
+        .element(index<1>())
+        .element(index<2>())
+        .element(index<3>());
 
     emscripten::class_<Utils::MinMaxLocResult>("MinMaxLocResult")
         .constructor<>()
