@@ -62,10 +62,9 @@
 #define OCL_CHECK(condition) \
     do { \
         cl_int error = (condition); \
-        CHECK_EQ(error, CL_SUCCESS) << " " << clGetErrorString(error); \
+        CHECK_EQ(error, CL_SUCCESS) << " " << cv::ocl::getOpenCLErrorString(error); \
     } while (0)
 
-const char* clGetErrorString(cl_int error);
 bool isBeignet();
 void allocateMemory(void** ptr, uint_tp size, int_tp flags);
 
