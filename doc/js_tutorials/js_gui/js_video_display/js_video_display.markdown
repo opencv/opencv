@@ -32,6 +32,9 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: false })
 });
 @endcode
 
+@note This function is needless when you just capture video from a video file. But notice that 
+<video> tag only supports video formats of Ogg(Theora), WebM(VP8/VP9) or MP4(H.264).
+
 Playing video
 -------------
 Now, the browser gets the camera stream. Then we use CanvasRenderingContext2D.drawImage() method 
