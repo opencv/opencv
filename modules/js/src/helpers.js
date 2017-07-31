@@ -172,3 +172,18 @@ RotatedRect.prototype.boundingRect2f = function () {
 }
 
 Module["RotatedRect"] = RotatedRect;
+
+function Scalar(v0, v1, v2, v3) {
+    this.push(typeof(v0) === 'undefined' ? 0 : v0);
+    this.push(typeof(v1) === 'undefined' ? 0 : v1);
+    this.push(typeof(v2) === 'undefined' ? 0 : v2);
+    this.push(typeof(v3) === 'undefined' ? 0 : v3);
+}
+
+Scalar.prototype = new Array;
+
+Scalar.all = function(v) {
+    return new Scalar(v, v, v, v);
+}
+
+Module["Scalar"] = Scalar;

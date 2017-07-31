@@ -175,7 +175,7 @@ QUnit.test("test_mat_creation", function(assert) {
     {
         let mat = cv.Mat.ones(5, 5, cv.CV_8UC1);
         let mat2 = new cv.Mat();
-        let mask = new cv.Mat(5, 5, cv.CV_8UC1, [1, 0, 0, 0]);
+        let mask = new cv.Mat(5, 5, cv.CV_8UC1, new cv.Scalar(1));
         mat.copyTo(mat2, mask);
 
         assert.equal(mat.channels, mat2.channels);
