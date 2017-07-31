@@ -2,6 +2,10 @@ if(WINRT)
   ocv_module_disable(dnn)
 endif()
 
+if(DEFINED BUILD_opencv_dnn AND NOT BUILD_opencv_dnn)
+  return()
+endif()
+
 include(${OpenCV_SOURCE_DIR}/cmake/OpenCVFindLibProtobuf.cmake)
 if(NOT Protobuf_FOUND)
   ocv_module_disable(opencv_dnn)
