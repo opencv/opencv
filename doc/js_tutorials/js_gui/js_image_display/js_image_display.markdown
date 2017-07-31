@@ -27,7 +27,9 @@ Then use cv.matFromArray to construct a cv.Mat.
 var src = cv.matFromArray(imgData, cv.CV_8UC4);
 @endcode
 
-@note Cause canvas only support 8-bit RGBA image, the cv.Mat type is cv.CV_8UC4.
+@note Cause canvas only support 8-bit RGBA image, the cv.Mat type is cv.CV_8UC4. It is different 
+from native OpenCV, cause images returned and shown by the native **imread** and **imshow** have the channels 
+stored in BGR order.
 
 
 Display an image
@@ -39,7 +41,7 @@ var dst = new cv.Mat();
 // scale and shift are used to map the data to [0, 255].
 src.convertTo(dst, cv.CV_8U, scale, shift); 
 // *** is GRAY, RGB, or RGBA, according to src.channels() is 1, 3 or 4.
-cv.cvtColor(dst, dst, cv.COLOR_***2RGBA, 0); 
+cv.cvtColor(dst, dst, cv.COLOR_***2RGBA); 
 @endcode
 
 Then new an ImageData obj from dst.
@@ -57,8 +59,8 @@ canvas.height = imgData.height;
 ctx.putImageData(imgData, 0, 0);
 @endcode
 
-In addition, OpenCV-JavaScript implements image read and show using the above method. You can use cv.imread and 
-cv.imshow to read image from html canvas and display it.
+In addition, OpenCV-JavaScript implements image read and show using the above method. You can use 
+cv.imread and cv.imshow to read image from html canvas and display it.
 @code{.js}
 var img = cv.imread("canvasInput");
 cv.imshow("canvasOutput", img);
@@ -68,8 +70,9 @@ img.delete();
 Try it
 ------
 
-Here is the demo for above code. Canvas elements named canvasInput and canvasOutput have been prepared. Choose an image and 
-click `Try it` to see the result. And you can change the code in the textbox to investigate more.
+Here is the demo for above code. Canvas elements named canvasInput and canvasOutput have been prepared. 
+Choose an image and click `Try it` to see the result. And you can change the code in the textbox to 
+investigate more.
 
 \htmlonly
 <!DOCTYPE html>
@@ -92,7 +95,7 @@ var src = cv.imread("canvasInput");
 var dst = new cv.Mat();
 // To distinguish the input and output, we graying the image.
 // You can try more different conversion
-cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY, 0);
+cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
 cv.imshow("canvasOutput", dst);
 src.delete();
 dst.delete();
