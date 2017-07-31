@@ -1,6 +1,6 @@
 Module["imread"] = function(canvasID) {
     var canvas = document.getElementById(canvasID);
-    if (canvas === null || !(canvas instanceof HTMLCanvasElement))  { console.warn("Please input the valid canvas id."); return; }
+    if (canvas === null || !(canvas instanceof HTMLCanvasElement))  { throw("Please input the valid canvas id."); return; }
     var ctx = canvas.getContext("2d");
     var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     return cv.matFromArray(imgData, cv.CV_8UC4);
@@ -8,7 +8,7 @@ Module["imread"] = function(canvasID) {
 
 Module["imshow"] = function(canvasID, mat) {
     var canvas = document.getElementById(canvasID);
-    if (canvas === null || !(canvas instanceof HTMLCanvasElement))  { console.warn("Please input the valid canvas id."); return; }
+    if (canvas === null || !(canvas instanceof HTMLCanvasElement))  { throw("Please input the valid canvas id."); return; }
     var img = new cv.Mat();
 
     // convert the mat type to cv.CV_8U
@@ -28,7 +28,7 @@ Module["imshow"] = function(canvasID, mat) {
         case cv.CV_8UC4:
             break;
         default:
-            console.warn("Bad number of channels (Source image must have 1, 3 or 4 channels)");
+            throw("Bad number of channels (Source image must have 1, 3 or 4 channels)");
             return;
     }
     var imgData = new ImageData(new Uint8ClampedArray(img.data()), img.cols, img.rows);
