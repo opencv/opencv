@@ -151,7 +151,7 @@ public:
     Ptr<ScaleLayer> scaleLayer;
 
 #ifdef HAVE_OPENCL
-    Ptr<LibDNNConvSpatial<float>> convolutionOp;
+    Ptr<LibDNNConvSpatial<float> > convolutionOp;
 #endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const
@@ -659,7 +659,7 @@ public:
             config.weights_backward = false;
             config.bias_backward = false;
 
-            convolutionOp = Ptr<LibDNNConvSpatial<float>>(new LibDNNConvSpatial<float>(config));
+            convolutionOp = Ptr<LibDNNConvSpatial<float> >(new LibDNNConvSpatial<float>(config));
         }
 
         UMat weights, biases;
