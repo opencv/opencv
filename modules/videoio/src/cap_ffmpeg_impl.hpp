@@ -453,6 +453,8 @@ struct CvCapture_FFMPEG
 */
     char              * filename;
 
+    RTSPLowerTransport lower_transport;
+
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     AVDictionary *dict;
 #endif
@@ -480,6 +482,7 @@ void CvCapture_FFMPEG::init()
     frame_number = 0;
     eps_zero = 0.000025;
 
+    lower_transport = RTSP_LOWER_TRANSPORT_TCP;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     dict = NULL;
 #endif
@@ -781,7 +784,22 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #endif
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
-    av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+    switch(lower_transport)
+    {
+      // See https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/rtsp.c#L82
+    case RTSP_LOWER_TRANSPORT_UDP:
+        av_dict_set(&dict, "rtsp_transport", "udp", 0);
+        break;
+    case RTSP_LOWER_TRANSPORT_TCP:
+        av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+        break;
+    case RTSP_LOWER_TRANSPORT_UDP_MULTICAST:
+        av_dict_set(&dict, "rtsp_transport", "udp_multicast", 0);
+        break;
+    case RTSP_LOWER_TRANSPORT_HTTP:
+        av_dict_set(&dict, "rtsp_transport", "http", 0);
+        break;
+    }
     int err = avformat_open_input(&ic, _filename, NULL, &dict);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
@@ -1267,6 +1285,9 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
 
             picture_pts=(int64_t)value;
         }
+        break;
+    case CV_FFMPEG_CAP_PROP_TRANSPORT:
+        lower_transport = static_cast<int>(value);
         break;
     default:
         return false;
