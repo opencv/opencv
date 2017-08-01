@@ -49,6 +49,8 @@ Module["VideoCapture"] = function(videoID) {
     if (video === null || !(video instanceof HTMLVideoElement))
         { throw("Please input the valid video id."); return; }
     var canvas = document.createElement("canvas");
+    canvas.width = video.width;
+    canvas.height = video.height;
     var ctx = canvas.getContext("2d");
 
     this.read = function(frame) {
