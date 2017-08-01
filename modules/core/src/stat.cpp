@@ -1547,7 +1547,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
     bool haveMask = _mask.kind() != _InputArray::NONE;
     int nz = haveMask ? -1 : (int)_src.total();
-    Scalar mean, stddev;
+    Scalar mean(0), stddev(0);
     const int cn = _src.channels();
     if (cn > 4)
         return false;
@@ -1739,6 +1739,13 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
+
+#if IPP_VERSION_X100 < 201801
+    // IPP_DISABLE: C3C functions can read outside of allocated memory
+    if (cn > 1)
+        return false;
+#endif
+
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )

@@ -156,6 +156,8 @@ private:
 
 void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask )
 {
+    CV_INSTRUMENT_REGION()
+
     if( mask.empty() )
         return;
 

@@ -533,6 +533,12 @@ macro(ocv_finalize_status)
       execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OPENCV_BUILD_INFO_FILE}" "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc" OUTPUT_QUIET)
     endif()
   endif()
+
+  if(UNIX)
+    install(FILES "${OpenCV_SOURCE_DIR}/platforms/scripts/valgrind.supp"
+                  "${OpenCV_SOURCE_DIR}/platforms/scripts/valgrind_3rdparty.supp"
+            DESTINATION "${OPENCV_OTHER_INSTALL_PATH}" COMPONENT "dev")
+  endif()
 endmacro()
 
 

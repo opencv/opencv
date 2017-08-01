@@ -35,7 +35,8 @@ typedef perf::TestBaseWithParam<Feature2DType_String_t> feature2d;
 
 #define TEST_IMAGES testing::Values(\
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
-    "stitching/a3.png")
+    "stitching/a3.png", \
+    "stitching/s2.jpg")
 
 static inline Ptr<Feature2D> getFeature2D(Feature2DType type)
 {

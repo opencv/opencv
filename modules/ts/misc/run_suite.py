@@ -103,10 +103,15 @@ class TestSuite(object):
     def wrapInValgrind(self, cmd = []):
         if self.options.valgrind:
             res = ['valgrind']
-            if self.options.valgrind_supp:
-                res.append("--suppressions=%s" % self.options.valgrind_supp)
+            supp = self.options.valgrind_supp or []
+            for f in supp:
+                if os.path.isfile(f):
+                    res.append("--suppressions=%s" % f)
+                else:
+                    print("WARNING: Valgrind suppression file is missing, SKIP: %s" % f)
             res.extend(self.options.valgrind_opt)
-            return res + cmd + [longTestFilter(LONG_TESTS_DEBUG_VALGRIND)]
+            has_gtest_filter = next((True for x in cmd if x.startswith('--gtest_filter=')), False)
+            return res + cmd + ([longTestFilter(LONG_TESTS_DEBUG_VALGRIND)] if not has_gtest_filter else [])
         return cmd
 
     def tryCommand(self, cmd):
