@@ -651,8 +651,15 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         if( !f )
             return 0;
         size_t bufSize = buf.cols*buf.rows*buf.elemSize();
-        fwrite( buf.ptr(), 1, bufSize, f );
-        fclose(f);
+        if( fwrite( buf.ptr(), 1, bufSize, f ) != bufSize )
+        {
+            fclose( f );
+            CV_Error( CV_StsError, "failed to write image data to temporary file" );
+        }
+        if( fclose(f) != 0 )
+        {
+            CV_Error( CV_StsError, "failed to write image data to temporary file" );
+        }
         decoder->setSource(filename);
     }
 
