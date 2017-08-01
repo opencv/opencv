@@ -1803,12 +1803,17 @@ Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
 template<typename _Tp> static inline
 Rect_<_Tp>& operator |= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
 {
-    _Tp x1 = std::min(a.x, b.x);
-    _Tp y1 = std::min(a.y, b.y);
-    a.width = std::max(a.x + a.width, b.x + b.width) - x1;
-    a.height = std::max(a.y + a.height, b.y + b.height) - y1;
-    a.x = x1;
-    a.y = y1;
+    if (!a.area()) {
+        a = b;
+    }
+    else if (b.area()) {
+        _Tp x1 = std::min(a.x, b.x);
+        _Tp y1 = std::min(a.y, b.y);
+        a.width = std::max(a.x + a.width, b.x + b.width) - x1;
+        a.height = std::max(a.y + a.height, b.y + b.height) - y1;
+        a.x = x1;
+        a.y = y1;
+    }
     return a;
 }
 
